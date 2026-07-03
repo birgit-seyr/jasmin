@@ -1,0 +1,77 @@
+.delivery-tours-table {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.delivery-tours-table table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.delivery-tours-table th,
+.delivery-tours-table td {
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.delivery-tours-table th {
+  background-color: var(--color-bg-elevated);
+  font-weight: 600;
+}
+
+.tour-slot {
+  min-height: 32px;
+  margin: 2px 0;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  background-color: var(--color-bg-base);
+  transition: all 0.2s ease;
+}
+
+.tour-slot:hover {
+  border-color: var(--color-payments);
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.1);
+}
+
+.tour-slot.drop-target {
+  border: 2px dashed var(--color-payments);
+  background-color: #e6f7ff;
+}
+
+.draggable-station {
+  cursor: move;
+  transition: all 0.2s ease;
+}
+
+.draggable-station:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.draggable-station.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+}
+
+.station-assigned {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border);
+}
+
+.station-unassigned {
+  background-color: var(--color-bg-base);
+  border-color: #40a9ff;
+}
+
+.category-row {
+  transition: background-color 0.2s ease;
+}
+
+.remove-button {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.tour-slot:hover .remove-button {
+  opacity: 1;
+}

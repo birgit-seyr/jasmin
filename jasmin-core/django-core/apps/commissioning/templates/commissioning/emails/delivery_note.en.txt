@@ -1,0 +1,9 @@
+Delivery note {{ delivery_note.number }}
+
+Hi {{ reseller.name }},
+
+attached is the delivery note from {{ delivery_note.date }}{% if delivery_note.order_number %} for order {{ delivery_note.order_number }}{% endif %} as a PDF.
+
+The paper delivery note still rides with the goods in the box; this email is for advance notice and your bookkeeping.
+
+— The {{ tenant_name }} team

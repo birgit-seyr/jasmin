@@ -1,0 +1,164 @@
+tests_utils/ — Test Coverage Overview
+=====================================
+
+test_basic_utils.py
+-------------------
+Source: apps/commissioning/utils/basic_utils.py
+DB required: No
+
+  TestStrToBool
+    - truthy values ("true", "True", "TRUE", "1", "yes", "Yes", "YES")
+    - falsy values ("false", "0", "no", "", "anything", "nope", "2")
+    - None input returns None
+
+  TestExtractAmountsFromKeys
+    - basic key extraction (amount_<id> → {id: value})
+    - custom prefix (qty_)
+    - ignores non-matching keys
+    - ignores bare prefix (amount_ with nothing after)
+    - empty dict
+    - nanoid-style IDs with underscores
+
+  TestSizeOrderAnnotation
+    - returns Django Case expression with IntegerField output
+    - maps all SizeOptions choices
+    - ordering matches enum index order
+
+  TestCreateShareArticleSorter / TestSortShareArticles
+    - sorts by name first
+    - sorts by unit within same name
+    - sorts by size within same name and unit
+    - unknown unit sorts last
+    - missing fields default to empty string
+    - accepts custom choices (UnitOptions, SizeVegetableOptions)
+    - empty list
+
+
+test_composite_id_utils.py
+--------------------------
+Source: apps/commissioning/utils/composite_id_utils.py
+DB required: No
+
+  TestParseCompositeId
+    - valid composite ID → dict with 7 fields
+    - None string values parsed as Python None
+    - all-None optional fields
+    - too few parts → ValueError
+    - too many parts → ValueError
+    - non-integer year → ValueError
+
+  TestBuildCompositeId
+    - basic build → underscore-joined string
+    - None values become "None" string
+    - roundtrip: build → parse recovers original values
+    - roundtrip with None values
+
+
+test_deletion_utils.py
+----------------------
+Source: apps/commissioning/utils/deletion_utils.py
+DB required: Partially (can_delete_instance needs tenant)
+
+  TestNormalizeModelNames (no DB)
+    - string names → set of strings
+    - model classes → set of class names
+    - mixed input (strings + classes)
+    - empty list → empty set
+
+  TestCanDeleteInstance (DB + tenant fixture)
+    - instance with no relations → can delete
+    - instance with PROTECT FK → cannot delete
+    - exclude_models parameter skips specified relations
+
+
+test_validation_utils.py
+------------------------
+Source: apps/commissioning/utils/validation_utils.py
+DB required: No
+
+  TestValidateAndParseIntParams
+    - valid params return parsed int list
+    - missing param → raises InvalidQueryParam (400, field set)
+    - non-integer value → raises InvalidQueryParam
+    - year out of range (1900 < 2000) → raises InvalidQueryParam
+    - week out of range high (54 > 53) → raises InvalidQueryParam
+    - week out of range low (0 < 1) → raises InvalidQueryParam
+    - "week" alias also validated (same range as delivery_week)
+    - custom ranges override defaults
+    - source="data" reads from POST body
+    - param without range passes any int
+    - boundary values (2000/1 and 2100/53) accepted
+
+  TestValidateOptionalIntParams
+    - all present → parsed dict
+    - all missing → dict with None values
+    - partial present
+    - invalid value → raises InvalidQueryParam
+
+  TestValidateYearWeekDay
+    - valid year/week/day → (int, int, int) tuple
+    - missing day_number → raises InvalidQueryParam
+
+  TestValidateYearWithOptionalWeekDay
+    - year only → dict with None week/day
+    - all params → full dict
+    - missing year → raises InvalidQueryParam
+
+  TestValidateBulkDocumentRequest
+    - valid delivery_note request
+    - valid invoice with date
+    - empty ids → raises RequiredFieldMissing
+    - ids not a list → raises RequiredFieldMissing
+    - invalid model name → raises CommissioningError (bulk_documents.model_invalid)
+    - missing ids → raises RequiredFieldMissing
+
+
+test_delivery_utils.py
+----------------------
+Source: apps/commissioning/utils/delivery_utils.py
+DB required: Yes (all functions query models)
+
+  TestGetSharesDeliveryDayFromDayNumber
+    - matching day returns (SharesDeliveryDay, date)
+    - no matching day raises SharesDeliveryDayNotFound (404)
+    - correct date calculation from year/week/day_number
+
+  TestGetDeliveryStationDaysFromSharesDeliveryDay
+    - returns station days for given delivery day
+    - results ordered by tour_number, stop_order
+    - only returns active station days
+
+  TestGetActiveShareTypeVariations
+    - returns variations with actual deliveries
+    - excludes joker deliveries
+    - returns distinct variations
+
+
+test_field_utils.py
+-------------------
+Source: apps/commissioning/utils/field_utils.py
+DB required: Partially (build_storage_fields / extract_storage_fields need DB)
+
+  TestExtractSelectedStorageId (no DB)
+    - returns ID of storage set to True
+    - returns None when no storage is True
+    - returns None for empty dict
+    - ignores bare "storage_" key
+    - only matches value True (not truthy)
+
+  TestCleanStorageFields (no DB)
+    - removes all storage_* keys in-place
+    - leaves non-storage keys intact
+    - handles empty dict
+    - handles dict with no storage keys
+
+  TestBuildStorageFields (DB + tenant fixture)
+    - builds fields for all active storages
+    - sets correct storage to True when entry has storage
+    - all False when entry is None
+    - ignores inactive storages
+
+  TestExtractStorageFieldsFromData (DB + tenant fixture)
+    - extracts only storage fields matching active storages
+    - ignores non-storage fields
+    - ignores storage fields for non-existent storages

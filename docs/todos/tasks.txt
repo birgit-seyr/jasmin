@@ -1,0 +1,442 @@
+==================================================================
+JASMIN — UNIFIED TASKS BACKLOG
+==================================================================
+Merged from the old tasks.txt + huey-to-do.txt (2026-06-03).
+Single source of truth from here on; huey-to-do.txt now just points
+back to this file.
+
+Each task lists:
+  WHAT      — concrete deliverable
+  WHY       — what auditor question / incident scenario it answers
+  HOW       — exact steps / files / commands
+  EFFORT    — rough estimate
+  TIER      — see PRIORITY LIST below
+
+Format is intentionally terse so it stays usable as a real backlog.
+
+
+==================================================================
+PRIORITY LIST  (read this section first)
+==================================================================
+
+TIER 1 — Quick wins, do BEFORE first prod deploy
+   (each one closes a real audit checklist item)
+
+  [x] DPIA decision document              DONE 2026-06-03
+      docs/gdpr/dpia-assessment.md
+  [x] StringAgg ordering→order_by rename  DONE (was already fixed in
+      code — only entry was stale; single StringAgg site at
+      apps/commissioning/viewsets/resellers_viewsets.py:436 already
+      uses ``order_by=``)
+  [x] Log retention policy (writedown)    DONE 2026-06-03
+      Already in docs/gdpr/retention-policy.md; updated the action-
+      items section + added the RotatingFileHandler enforcement note
+  [-] Restore auditlog for Tenant +       DECIDED: SKIP 2026-06-03
+      TenantSettings                       (see explanation below)
+  [x] Backup pruning Huey task            DONE 2026-06-03
+      ``prune_old_backups`` in
+      apps/shared/tenants/tasks.py + tests in
+      apps/shared/tenants/tests/test_backup_pruning.py.
+      Implements full GFS (daily 30d / weekly 52w / monthly forever).
+      Replaces the primitive ``find -mtime +30 -delete`` step in
+      backups/backup.sh, which is now removed. Required the volume
+      mount on the huey service in docker-compose.yml + a
+      ``BACKUP_DIR`` setting in config/settings.py.
+  [x] Dependabot triage SLA               DONE 2026-06-03
+      docs/security/sla.md (includes the incident-response SLAs +
+      the currently-suppressed pyjwt advisory rationale)
+
+----------------------------------------------------------------------
+SKIP NOTE — Restore auditlog for Tenant + TenantSettings (2026-06-03)
+----------------------------------------------------------------------
+
+Cannot ship without forking django-auditlog. Root cause: the
+``auditlog.LogEntry.actor`` field is a hard FK to
+``settings.AUTH_USER_MODEL`` (= ``accounts.JasminUser``, which lives
+in TENANT_APPS only). Moving the auditlog migrations into
+SHARED_APPS so ``public.auditlog_logentry`` exists fails on the
+foreign-key resolution: the FK target table
+``public.accounts_jasminuser`` doesn't exist in the public schema —
+JasminUser is tenant-scoped by design.
+
+Confirmed via the failed attempt logged in audit_checklist.txt
+Section 2 "Audit trail" under [PART] (2026-05-20 / rolled back same
+day).
+
+Three paths considered, none warranted:
+  - Fork django-auditlog to make ``actor`` nullable + drop the FK.
+    Heavy maintenance burden for a non-feature.
+  - Build a parallel ``PublicAuditLogEntry`` model just for public-
+    schema events. Doubles the audit machinery.
+  - Accept the structured ``tenant.created`` / ``tenant.updated`` /
+    ``user.roles_changed`` lines already going to auth.log as the
+    forensics surface for Tenant + TenantSettings changes.
+
+We chose path 3. The audit log gap is "no queryable diff for
+Tenant/TenantSettings rows" — defensible because (a) those tables
+change rarely (super-admin actions only), (b) the structured log
+lines cover the "who did what when" question regulators ask, and
+(c) the gap is documented openly in audit_checklist.txt.
+
+Re-trigger if either:
+  - django-auditlog ships a nullable-actor / generic-actor release
+  - A tenant explicitly asks for queryable diff on these tables.
+
+TIER 2 — Real code work, plan for one of the next sprints
+   (each is meaningful effort but not blocking deploy)
+
+  [ ] Off-site backups (Hetzner Storage   ~2 hours code + ~30 min
+      Box recommended)                    Hetzner sign-up. Full
+                                          runbook in the OPEN —
+                                          INFRASTRUCTURE / SRE
+                                          section below.
+  [ ] Central log aggregation             ~half day  ops-config heavy
+  [ ] Uptime / status monitoring          ~1-2h      ops-config
+
+TIER 3 — Operational / per-tenant, NOT code
+   (tracked here so they don't get forgotten)
+
+  [ ] Sub-processor list                  per tenant
+  [ ] Employee training                   per tenant
+  [ ] Designate data-protection contact   per tenant + 1 tenant setting
+
+TIER 4 — Defer until triggered
+   (don't build speculatively; the doc explains the trigger)
+
+  [ ] Penetration test                    after first prod ramp-up
+  [ ] Delivery-station capacity decision  needs product call first
+  [ ] Past-write server-side protection   if any tenant asks
+  [ ] ChargeSchedule drift detector       after a real drift incident
+
+
+
+
+==================================================================
+OPEN — INFRASTRUCTURE / SRE
+==================================================================
+
+[ ] Off-site backups                                           TIER 2
+    WHAT    Mirror every nightly encrypted pg_dump to an offsite
+            location that lives outside the Linode prod VM's fate
+            (separate provider, separate failure domain). Recovery
+            target: even if the Linode VM + its disk + the Linode
+            account are all gone, the backups survive.
+
+    WHY     Today ``BACKUP_DIR=/backups`` is bind-mounted from the
+            Linode VM's filesystem. Loses on:
+              - Linode VM disk failure
+              - Linode account compromise (attacker rm -rf's volume)
+              - Ransomware that encrypts both the DB and /backups
+            Auditor question this answers: "What's your DR plan?"
+
+    ARCHITECTURE
+            Two-copy story, not a move:
+              Postgres on Linode VM
+                   │ pg_dump → gzip → gpg encrypt
+                   ▼
+              /backups on Linode VM     ← BACKUP_DIR, GFS-pruned by
+                                          the Huey ``prune_old_backups``
+                                          task we already shipped
+                   │ nightly rsync after each dump
+                   ▼
+              Hetzner Storage Box       ← independent provider,
+                                          independent failure domain
+            The local copy stays the fast-restore path. You only pull
+            from Hetzner if the Linode copy is gone.
+
+    RECOMMENDED  Hetzner Storage Box.
+            Why: €3.20/mo for 1 TB, SFTP/SSH/rsync target out of the
+            box, separate German provider (clean failure-domain
+            separation from a US/Linode/AWS setup), no S3 dance.
+            Alternative if you ever need true object-storage semantics:
+            Hetzner Object Storage (S3-compatible, pay per GB).
+
+    CONCRETE STEPS WHEN YOU'RE READY (~2 hours of actual work):
+
+      1. Sign up for a Hetzner Storage Box (1 TB plan is fine).
+         Note the host (e.g. ``u123456.your-storagebox.de``) and
+         username.
+
+      2. Generate a dedicated SSH keypair for backup uploads on a
+         throwaway local machine:
+           ssh-keygen -t ed25519 -N "" -f ./hetzner_backup_id_ed25519
+         Upload the PUBLIC key to the Storage Box via Hetzner's web
+         UI ("SSH keys"). Keep the private key in your password
+         manager + drop it into a docker secret on prod.
+
+      3. Add these to prod ``.env``:
+           HETZNER_STORAGEBOX_HOST=u123456.your-storagebox.de
+           HETZNER_STORAGEBOX_USER=u123456
+
+      4. In ``docker-compose.yml`` for the ``backup`` service, mount
+         the private key read-only:
+           volumes:
+             - ./backups:/backups:rw
+             - ./secrets/hetzner_backup_id_ed25519:/etc/backup-ssh/id_rsa:ro
+
+      5. Extend ``backups/backup.sh`` ``do_backup()`` with the rsync
+         step at the very end:
+           if [ -n "${HETZNER_STORAGEBOX_HOST:-}" ]; then
+               rsync -av --delete-after \
+                   -e "ssh -i /etc/backup-ssh/id_rsa \
+                       -o StrictHostKeyChecking=accept-new \
+                       -o UserKnownHostsFields=/dev/null" \
+                   "$BACKUP_DIR/" \
+                   "${HETZNER_STORAGEBOX_USER}@${HETZNER_STORAGEBOX_HOST}:backups/"
+           fi
+         ``--delete-after`` means the Hetzner copy tracks the local
+         GFS-pruned set automatically — no separate offsite retention
+         logic, the Huey task is still the single source of truth.
+
+      6. Smoke test ONCE manually:
+           docker compose exec backup /backup.sh now
+         Confirm: (a) local /backups got a new file, (b) ``ssh ...
+         storagebox.de ls backups/`` from a workstation sees it too.
+
+      7. Restore drill from the Hetzner copy, per
+         ``docs/security/restore-drill.md`` — pull the latest .sql.gz.gpg from
+         Hetzner to a sandbox, replay it, assert row counts. This is
+         the auditor-defensible "we proved the offsite chain works
+         end-to-end" demo. Append the drill record to
+         ``docs/security/restore-drills/``.
+
+      8. Flip the audit_checklist.txt Section 3 "Backups" entries
+         (currently ``[GAP] Backups are local-only``) to ``[OK]`` with
+         a pointer to this section + the first drill report.
+
+    WHAT STAYS THE SAME
+      - ``BACKUP_DIR`` stays ``/backups`` (local copy is the fast
+        path).
+      - GPG encryption stays mandatory (Hetzner staff can read disk
+        contents; AES-256 with your key means they can't).
+      - The Huey ``prune_old_backups`` task stays local-only. The
+        rsync ``--delete-after`` propagates its decisions offsite for
+        free.
+      - No Django code change. This entire item is shell + docker-
+        compose + env-var work.
+
+    GOTCHAS WORTH KNOWING
+      - First rsync after a new GPG key rotation will re-upload
+        EVERY file (ciphertext changes). Expect a one-night bandwidth
+        spike on key rotations.
+      - StrictHostKeyChecking=accept-new only accepts on first
+        connection. Pin the actual host key into the ssh config file
+        for true MITM resistance once you've verified the fingerprint
+        against Hetzner's official one.
+      - Don't lose the GPG passphrase + the SSH private key. They're
+        the only things between the ciphertext on Hetzner and a
+        readable backup. Treat them with the same discipline as the
+        DJANGO_SECRET_KEY rotation runbook.
+
+    EFFORT  2 hours of actual coding once you have Hetzner credentials.
+            Sign-up + key generation + first-rsync verification adds
+            another ~30 min.
+
+
+
+[ ] Uptime / status monitoring                                 TIER 2
+    WHAT    Public status page or internal Uptime Kuma watching
+            /api/health/.
+    WHY     B2B customers expect it. Also a fast signal on prod
+            outages.
+    HOW     Self-host Uptime Kuma in docker-compose, or pay
+            BetterStack / statuspage.io.
+    EFFORT  1-2 hours.
+
+[ ] Central log aggregation                                    TIER 2
+    WHAT    Ship app.log / auth.log / security.log off-box to
+            Grafana Loki / Elastic / Better Stack.
+    WHY     Logs currently live only on the prod container. Audit
+            also asks: "Where do you read these centrally?"
+    HOW     Sidecar like promtail or Vector pointed at the mounted
+            logs_volume.
+    EFFORT  Half a day incl. retention config.
+
+
+
+
+==================================================================
+OPEN — GDPR / DSGVO
+==================================================================
+
+
+[ ] Sub-processor list                                         TIER 3
+    WHAT    Document third-party services that touch PII: hosting
+            provider, SendGrid/Anymail, payment gateway, Sentry,
+            backup storage.
+    WHY     Privacy policy must list these; each needs its own DPA.
+    HOW     Per-tenant operational task. One section in each
+            tenant's privacy_policy_html (now editable via the
+            ConfigurationGDPR editor).
+    EFFORT  Per tenant.
+
+[ ] Employee training                                          TIER 3
+    WHAT    Staff/admins handling member data should know: what
+            counts as personal data, how to handle a SAR request,
+            how to escalate a suspected breach, who their DPO
+            contact is.
+    HOW     1-page checklist + 30-min walkthrough is enough.
+    EFFORT  Per tenant.
+
+[ ] Designate data-protection contact person                   TIER 3
+    WHAT    Even when a DPO isn't required, every tenant needs a
+            named person to receive Art. 15-17 requests.
+    HOW     Configure their email as the "office_email" or similar
+            tenant setting; route GDPR mails there.
+    EFFORT  1 tenant setting + per-tenant org work.
+
+
+==================================================================
+OPEN — TAX / ACCOUNTING (GoBD / BAO §132)
+==================================================================
+
+
+[ ] 10-year invoice retention HARD guarantee                   TIER 4
+    WHAT    Beyond the "is_finalized blocks edits + auditlog records
+            attempts" we already have, optionally add a DB trigger
+            that blocks DELETE on finalized InvoiceReseller rows.
+    WHY     §147 AO (DE) / §132 BAO (AT). is_finalized prevents
+            edits but DELETE could still happen via raw SQL.
+    HOW     Cheapest: backup retention + the off-site bucket. A
+            CHECK / TRIGGER on Postgres is overkill until a real
+            incident demands it.
+    EFFORT  1-2 hours if a tenant ever explicitly asks.
+
+
+==================================================================
+OPEN — SECURITY
+==================================================================
+
+
+
+[ ] Past-write server-side protection                          TIER 4
+    WHAT    Reject PATCH/DELETE on rows belonging to closed fiscal
+            periods unless an explicit override flag is sent.
+    WHY     Today the "isPast" lockout is purely UI. A user with
+            devtools can bypass. Not a realistic external threat,
+            but the only remaining gap for "we cannot edit closed
+            years even by mistake."
+    HOW     Mixin ``RejectPastWriteMixin`` that overrides
+            ``perform_update`` and ``perform_destroy`` on viewsets
+            that mutate week-keyed data (ShareContent, Order, etc.).
+            See text/past_edit_protection_design.md.
+    EFFORT  4-6 hours.
+    TRIGGER If any tenant ever asks "can you make sure I can't
+            accidentally edit last year's closed books?"
+
+
+
+
+==================================================================
+OPEN — PRODUCT / OPTIONAL
+==================================================================
+
+[ ] Delivery-station capacity: pick "soft" vs "hard"           TIER 4
+    WHAT    Decide product-side whether
+            ``DeliveryStationDay.capacity`` is purely a soft hint
+            for office staff (today: rendered via
+            ``get_free_capacity``, never enforced) or a hard cap
+            that should refuse new signups when full.
+
+            If hard: every signup / subscription / member-creation
+            path MUST do the capacity check INSIDE a transaction
+            that has row-locked the ``DeliveryStationDay`` first.
+
+            Pattern to use (mirrors ``save_with_number_retry``):
+              with transaction.atomic():
+                  dsd = (DeliveryStationDay.objects
+                         .select_for_update()
+                         .get(pk=station_day_id))
+                  occupied = dsd.get_occupied_capacity(year, week)
+                  if dsd.capacity is not None and occupied >= dsd.capacity:
+                      raise CapacityExceeded(...)
+                  ... create subscription / membership ...
+
+    WHY     Surfaced as a LOW finding in the race-conditions audit
+            (docs/code/engineering-audit-playbook.md, Pass #7). Not a bug today
+            (no enforcement = no race), but the moment someone adds
+            a naive "if free < 1: raise" it becomes one.
+
+            Open product questions:
+              - Is overbooking ever legitimate (waiting-list
+                tolerated)? If yes, a waitlist queue may fit better.
+              - Per-station-day capacity, or tour-level / station-
+                level rollups?
+              - Desired UX on hit-cap: 409 to the signup form,
+                fall-through to waitlist, or alert office?
+
+    EFFORT  1-2 days once product decision is made.
+
+[ ] ChargeSchedule drift detector                              TIER 4
+    FILE     apps/payments/tasks.py
+    SCHED    crontab(hour="6", minute="0", day_of_week="0") # weekly
+    WHAT     For every active Subscription, recompute the expected
+             ChargeSchedule and compare to what's in the DB. Log a
+             warning for any divergence (excluding already-issued /
+             paid rows).
+    WHY      Catches the "we changed price / start date / cycle but
+             nobody re-ran the materialiser" failure mode.
+    TRIGGER  After a real drift incident. Until then, the existing
+             billing tests + nightly hash-check are sufficient.
+
+
+==================================================================
+HUEY CONVENTIONS (preserved from old huey-to-do.txt)
+==================================================================
+
+Production runs under docker-compose with a dedicated ``huey``
+service (see docker-compose.yml). Scheduled work belongs there,
+NOT in host cron / a sidecar cron container / cron-inside-the-
+backend-container. Reasons:
+
+  - One scheduler to run, monitor, and reason about.
+  - Tasks share the Django app context (ORM, settings, logging,
+    auditlog).
+  - Failures land in the Huey worker logs alongside the worker's
+    other output — one log to grep instead of two.
+  - No host coupling: redeploys don't drift away from a crontab
+    the person who set it up forgot to commit.
+
+Conventions
+-----------
+  - File:   ``apps/<app>/tasks.py`` (Huey autodiscovers this name
+            via ``huey.contrib.djhuey``).
+  - Decor:  ``@db_periodic_task(crontab(...))`` from
+            ``huey.contrib.djhuey``.
+  - Multi-tenant: tasks that touch tenant-scoped tables MUST
+            iterate via ``Tenant.objects.exclude(schema_name="public")``
+            and use ``schema_context(tenant.schema_name)`` per tenant.
+  - Logging: log via ``logging.getLogger(...)``; the huey service's
+            stdout goes to its container log.
+  - Return value: if you want
+            ``python manage.py run_periodic_tasks_now`` to print a
+            one-line observation summary, return a flat
+            ``dict[str, int]`` from the task body — the command
+            formats it as ``key=value key=value``. Returning ``None``
+            is fine; the runner just prints no summary.
+
+Bootstrap
+---------
+Before any of these can run, uncomment + adapt the ``HUEY`` config
+block in ``config/settings.py``. Switch ``huey_class`` from
+``SqliteHuey`` to ``RedisHuey`` — Redis already runs in
+docker-compose. Confirm ``"periodic": True`` in the consumer block.
+
+To register a new periodic task in the dev/QA runner, add it to
+the ``TASK_REGISTRY`` in
+apps/shared/tenants/management/commands/run_periodic_tasks_now.py.
+
+
+==================================================================
+WHAT STAYS OUT OF HUEY
+==================================================================
+
+  - pg_dump backups themselves. Run dumps from a sidecar container
+    with read-only DB credentials, scoped to write-only access to
+    the backups volume; keep that container small and single-purpose.
+    (Backup pruning IS in Huey — that's a different concern.)
+  - TLS certificate renewal (already handled by certbot in
+    docker-compose).
+  - Anything that needs to run when the Huey worker is down
+    (e.g. health checks for the worker itself).
+</content>

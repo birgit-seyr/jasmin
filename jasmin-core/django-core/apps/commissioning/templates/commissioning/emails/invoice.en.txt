@@ -1,0 +1,12 @@
+Invoice {{ invoice.number }}
+
+Hi {{ reseller.name }},
+
+Please find your invoice for {{ invoice.period }} attached.
+
+Total: {{ invoice.total }}
+Due date: {{ invoice.due_date }}
+
+Bank details: {{ tenant.bank_details }}
+
+— The {{ tenant_name }} team

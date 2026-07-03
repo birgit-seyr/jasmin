@@ -1,0 +1,7 @@
+Hallo {{ member.first_name }},
+
+gute Nachrichten — dein Mitgliedsantrag{% if tenant_name %} für {{ tenant_name }}{% endif %} wurde angenommen.
+{% if member.member_number %}
+Deine Mitgliedsnummer ist #{{ member.member_number }}.
+{% endif %}
+Du kannst dich mit dem Passwort einloggen, das du bei der Registrierung gewählt hast.

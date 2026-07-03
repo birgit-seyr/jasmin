@@ -1,0 +1,11 @@
+/* Consolidated truck-prep packing list — see
+   pages/commissioning/CommissioningListPacking.tsx. One section per active
+   share option. The per-option heading hugs its table, and each section
+   leaves a clear gap below before the next one. */
+.commissioning-list-packing-section {
+  margin-top: 2.5rem;
+}
+
+.commissioning-list-packing-section__heading {
+  margin-bottom: -1em;
+}

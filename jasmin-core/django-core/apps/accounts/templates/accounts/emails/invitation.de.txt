@@ -1,0 +1,10 @@
+Hallo {{ user.first_name }},
+
+du wurdest eingeladen, {{ tenant_name }} beizutreten.
+
+Öffne diesen Link, um dein Passwort zu setzen und dein Konto zu aktivieren:
+
+  {{ accept_url }}
+
+Diese Einladung läuft am {{ expires_at }} ab.
+Wenn du diese E-Mail nicht erwartet hast, kannst du sie einfach ignorieren.

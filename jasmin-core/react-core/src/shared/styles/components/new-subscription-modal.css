@@ -1,0 +1,31 @@
+/* Styles for the NewSubscriptionModal variation picker + detail step.
+   Extracted from inline styles so the markup stays declarative. */
+
+.new-subscription-card-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.new-subscription-card-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-bg-base);
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.new-subscription-detail-image {
+  max-width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+}

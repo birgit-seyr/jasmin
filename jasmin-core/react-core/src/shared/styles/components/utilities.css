@@ -1,0 +1,65 @@
+/* Small utility classes that get reached for repeatedly across
+   pages. Each one was extracted on 2026-06-09 from the inline-style
+   audit (see ``docs/code/inline-style-audit.md``) — only patterns
+   that appeared in 3+ call sites with consistent values landed here.
+   One-offs and variants are still allowed inline.
+
+   When a new utility lands here, the rule is: it has to (a) appear
+   in 3+ files in the current codebase, (b) use only design-token
+   colors (no fresh hex literals), and (c) be one declaration block
+   — no descendants, no media-query branches. If a pattern needs
+   variants, it goes in its own component CSS file.
+*/
+
+/* ------------------------------------------------------------------ */
+/* .json-viewer                                                        */
+/* ------------------------------------------------------------------ */
+/* Pre-block used to display formatted JSON inside a modal / drawer
+   (VVT export, SuperAdmin ops checklist, ImportShares preview, …).
+   Light-mode background + subtle padding + max-height + scroll, so
+   long payloads don't blow out the modal. Migrates from the inline
+   ``style={{ maxHeight: "60vh", overflow: "auto", background:
+   "var(--color-bg-subtle)", padding: 12, fontSize: 12, lineHeight:
+   1.5, borderRadius: 4 }}`` shape that recurred in 5+ sites. */
+.json-viewer {
+  max-height: 60vh;
+  overflow: auto;
+  background: var(--color-bg-subtle);
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  border-radius: var(--border-radius);
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* .section-divider, .section-divider--lg                              */
+/* ------------------------------------------------------------------ */
+/* Vertical rhythm between major sub-sections within a single page.
+   Recurred as ``style={{ marginTop: "2em", marginBottom: "1em" }}``
+   (lg variant: ``"4em"`` top). Use the modifier when the section
+   below is visually heavier (a whole table block vs. just a couple
+   of buttons). Wrapping a heading row in this is the canonical use. */
+.section-divider {
+  margin-top: 2em;
+  margin-bottom: 1em;
+}
+.section-divider--lg {
+  margin-top: 4em;
+  margin-bottom: 1em;
+}
+
+/* ------------------------------------------------------------------ */
+/* .icon-title-row                                                     */
+/* ------------------------------------------------------------------ */
+/* Flex row used as a Card / Drawer title where an icon sits to the
+   left of the title text (VVTExportCard, etc.). AntD's <Space>
+   handles this for top-level titles, but inside a custom Card
+   header (or a section heading) plain flex is leaner — and it can
+   be combined with ``.section-divider`` to get both spacing and
+   alignment in one wrapper. */
+.icon-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

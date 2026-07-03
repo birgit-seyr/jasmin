@@ -1,0 +1,51 @@
+/* ============================================================
+ * Style entry point.
+ *
+ * Order matters:
+ *   1. globals  — design tokens + base resets (variables first!)
+ *   2. layout   — true page chrome (sidebar, top navigation)
+ *   3. components — reusable, component-scoped styles
+ *   4. themes   — theme switches & dark-mode overrides (last)
+ * ============================================================ */
+
+/* 1. Globals */
+@import './globals/variables.css';
+@import './globals/base.css';
+@import './globals/typography.css';
+@import './globals/antd.css';
+
+/* 2. Layout (page chrome) */
+@import './layout/sidebar.css';
+@import './layout/topnavigation.css';
+
+/* 3. Components (reusable building blocks) */
+@import './components/alerts.css';
+@import './components/auth.css';
+@import './components/buttons.css';
+@import './components/card-headers.css';
+@import './components/checkbox.css';
+@import './components/delivery-tours.css';
+@import './components/diff-cell.css';
+@import './components/email-templates.css';
+@import './components/info-card.css';
+@import './components/invoices.css';
+@import './components/member-cards.css';
+@import './components/menu.css';
+@import './components/new-subscription-modal.css';
+@import './components/step-up-modal.css';
+@import './components/packing-list.css';
+@import './components/popconfirm.css';
+@import './components/selectors.css';
+@import './components/summary-stats-card.css';
+@import './components/super-admin.css';
+@import './components/tables.css';
+@import './components/tabs.css';
+@import './components/tooltip.css';
+@import './components/utilities.css';
+@import './components/variations-totals-card.css';
+@import './components/warnings.css';
+
+/* 4. Themes */
+@import './themes/light-dark.css';
+@import './themes/dark-mode.css';
+

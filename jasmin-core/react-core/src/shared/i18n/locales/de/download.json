@@ -1,0 +1,23 @@
+{
+    "harvesting_list": "Ernteliste herunterladen",
+    "harvesting_lists": "Erntelisten herunterladen",
+    "packing_list": "Packliste herunterladen",
+    "packing_list_all_stations": "Packliste alle Packstationen",
+    "packing_list_bulk": "Packliste herunterladen",
+    "packing_list_bulk_member": "\"Was ihr nehmen könnt\" herunterladen",
+    "selected_labels": "Etiketten herunterladen", 
+    "purchase_list": "Bestellliste herunterladen",
+    "washing_list": "Waschliste herunterladen", 
+    "cleaning_list": "Putzliste herunterladen",
+    "selected_delivery_notes_bulk_pdf": "Lieferscheine als pdf herunterladen",
+    "selected_delivery_notes_bulk_zip": "Lieferscheine als zip herunterladen", 
+    "selected_invoices_bulk_pdf": "Rechnungen als pdf herunterladen",
+    "selected_invoices_bulk_zip": "Rechnungen als zip herunterladen", 
+    "commissioning_list": "Kommissionierliste herunterladen",
+    "commissioning_list_packing": "Kommissionier-Liste Packen herunterladen",
+    "deliveries_overview": "Tourlisten herunterladen",
+    "delivery_details_station": "Abholliste herunterladen",
+    "all_pdf_for_this_day": "Abhollisten für diesen Tag",
+    "all_pdf_for_this_week": "Abhollisten für diese Woche",
+    "csv_template": "Leere CSV-Vorlage herunterladen"
+}

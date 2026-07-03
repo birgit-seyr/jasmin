@@ -1,0 +1,40 @@
+.variations-totals-card {
+  margin-top: 2em;
+  margin-bottom: 1em;
+  padding: 12px 16px;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--border-radius);
+  box-shadow: 0 1px 2px var(--color-shadow);
+  /* Reserve space so layout doesn't shift when empty */
+  min-height: 5.5em;
+  box-sizing: border-box;
+  width: 20%;
+}
+
+@media (max-width: 768px) {
+  .variations-totals-card {
+    width: 100%;
+  }
+}
+
+.variations-totals-card-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.variations-totals-card-list {
+  margin: 0;
+  padding-left: 1.25em;
+}
+
+.variations-totals-card-list li {
+  line-height: 1.6;
+}
+
+.variations-totals-card-empty {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}

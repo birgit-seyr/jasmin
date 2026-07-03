@@ -1,0 +1,10 @@
+# Linode DNS plugin credentials for certbot.
+#
+# 1. Linode Cloud Manager → Profile → API Tokens → Create A Personal Access Token
+#    Scopes: Domains = Read/Write. Everything else = None. Expiry: never (or rotate yearly).
+# 2. Copy this file to ./certbots/linode.ini and paste the token below.
+# 3. chmod 600 ./certbots/linode.ini
+# 4. Make sure ./certbots/linode.ini is in .gitignore (already covered by *.ini).
+#
+dns_linode_key = paste-your-linode-personal-access-token-here
+dns_linode_version = 4

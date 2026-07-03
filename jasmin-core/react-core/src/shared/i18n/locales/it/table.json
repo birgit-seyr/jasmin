@@ -1,0 +1,17 @@
+{
+    "no_data": "No data available.",
+    "yes": "yes",
+    "no": "no",
+    "cancel_confirm": "Sure to cancel?", 
+    "delete_confirm": "Sure to delete?", 
+    "add_plus_icon": "", 
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add_record": "New Entry", 
+    "past_week_readonly": "Data are in the past and can not be modified anymore.",
+    "edit_record": "Edit Entry",
+    "items_per_page": "/ page", 
+    "search_placeholder": "Search..."
+  }

@@ -1,0 +1,112 @@
+:root {
+  /* Brand Colors */
+  /* --color-primary: rgb(156, 20, 131); */
+  --color-primary: rgb(34, 108, 71);
+  --color-primary-hover: rgb(29, 96, 62);
+  --color-primary-active: rgb(136, 0, 111);
+
+  --color-primary-light: rgba(206, 221, 207);
+
+  
+  /* Additional theme colors */
+  --color-success: #52c41a;
+  --color-warning: #faad14;
+  --color-error: #ff4d4f;
+  --color-info: #632c9e;
+  
+  /* Custom colors */
+  --color-accent: #f0f2f5;
+
+  --color-border-tabs: #a39d9d;
+
+  --color-joker: #faad14;
+  --color-card-green-border: #52c41a;
+  --color-payments: #1890ff;
+
+  /* Commissioning: share-content vs order-content distinction */
+  --color-share-content: #2e7d32;
+  --color-order-content: #81c784;
+
+  /* Surface & text colors for components */
+  --color-bg-base: #ffffff;
+  --color-bg-elevated: #fafafa;
+  --color-bg-subtle: #f5f5f5;
+  --color-bg-hover: #f0f0f0;
+  --color-border: #d9d9d9;
+  --color-border-light: #f0f0f0;
+  --color-border-subtle: #e8e8e8;
+  --color-text-primary: #213547;
+  --color-text-secondary: #666;
+  /* tertiary/muted darkened to clear WCAG AA 4.5:1 on the white base
+     (#999 was ~2.85:1, #8c8c8c ~3.4:1 — both failed). */
+  --color-text-tertiary: #767676;
+  --color-text-muted: #717171;
+  --color-text-disabled: rgba(0, 0, 0, 0.25);
+  --color-shadow: rgba(0, 0, 0, 0.1);
+  --color-shadow-strong: rgba(0, 0, 0, 0.15);
+  --color-highlight: #fff7e6;
+
+  /* Surface variants */
+  --color-page-bg: #f0f2f5;
+  --color-success-bg: #f6ffed;
+  --color-info-bg: #f0f9ff;
+  --color-border-soft: #e0e0e0;
+
+  /* Brand gradients */
+  --gradient-primary: linear-gradient(135deg, #226c47 0%, #764ba2 100%);
+  --gradient-superadmin: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  
+  /* Layout */
+  --border-radius: 6px;
+  --sidebar-width: 300px;
+  --sidebar-collapsed-width: 80px;
+  --sidebar-padding: 12px;
+  --table-border-radius: 3px;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+}
+
+/* Dark theme overrides */
+:root.dark {
+  --color-primary: rgb(76, 175, 120);
+  --color-primary-hover: rgb(96, 195, 140);
+  --color-primary-active: rgb(56, 155, 100);
+  --color-primary-light: rgba(76, 175, 120, 0.15);
+  --color-accent: #1f1f1f;
+  --color-border-tabs: #555;
+
+  --color-bg-base: #141414;
+  --color-bg-elevated: #1f1f1f;
+  --color-bg-subtle: #262626;
+  --color-bg-hover: #303030;
+  --color-border: #424242;
+  --color-border-light: #303030;
+  --color-border-subtle: #383838;
+  --color-text-primary: #e0e0e0;
+  --color-text-secondary: #a0a0a0;
+  /* tertiary lightened to clear WCAG AA 4.5:1 on the dark base (#737373 was
+     ~3.9:1); muted #888 already passes (~5.2:1) so it's left as-is. */
+  --color-text-tertiary: #808080;
+  --color-text-muted: #888;
+  --color-text-disabled: rgba(255, 255, 255, 0.25);
+  --color-shadow: rgba(0, 0, 0, 0.3);
+  --color-shadow-strong: rgba(0, 0, 0, 0.45);
+  --color-highlight: #2b2111;
+
+  /* Surface variants (dark) */
+  --color-page-bg: #1a1a1a;
+  --color-success-bg: #162312;
+  --color-info-bg: #111d2c;
+  --color-border-soft: #424242;
+
+  /* Commissioning (dark) */
+  --color-share-content: #66bb6a;
+  --color-order-content: #a5d6a7;
+}
+
+

@@ -1,0 +1,94 @@
+/* Modern Navigation Styles */
+.top-navigation-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+/* Logo hover effect */
+.logo-image:hover {
+  transform: scale(1.05);
+}
+
+/* Sidebar toggle hover effect */
+.sidebar-toggle:hover {
+  background-color: rgba(32, 95, 82, 0.08) !important;
+  border-color: rgba(32, 95, 82, 0.2) !important;
+}
+
+/* Modern menu styling */
+.modern-nav-menu {
+  flex: 1;
+  justify-content: center;
+}
+
+.modern-nav-menu .ant-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+  height: 48px;
+  border-radius: 8px;
+  margin: 0 4px;
+  transition: all 0.2s ease;
+  border-bottom: none !important;
+}
+
+.modern-nav-menu .ant-menu-item:hover {
+  background-color: rgba(32, 95, 82, 0.06);
+  color: rgb(32, 95, 82);
+}
+
+.modern-nav-menu .ant-menu-item-selected {
+  background-color: rgba(32, 95, 82, 0.1) !important;
+  color: rgb(32, 95, 82) !important;
+  font-weight: 600;
+}
+
+.modern-nav-menu .ant-menu-item-selected::after {
+  display: none;
+}
+
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .modern-nav-menu .ant-menu-item {
+    padding: 0 12px;
+    margin: 0 2px;
+  }
+}
+
+/* Smooth transitions for theme changes */
+.ant-layout-header {
+  transition: all 0.3s ease;
+}
+
+/* Custom divider styling */
+.ant-divider-vertical {
+  border-color: rgba(32, 95, 82, 0.15);
+  height: 24px;
+}
+
+/* A11Y-27: skip-to-main-content link — off-screen until keyboard focus, then
+   pinned top-left above the nav. Off-screen (not display:none) so it stays
+   focusable as the first Tab stop. */
+.skip-to-main-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10000;
+  padding: 8px 16px;
+  background: var(--color-bg-base);
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.skip-to-main-link:focus {
+  left: 8px;
+  top: 8px;
+}

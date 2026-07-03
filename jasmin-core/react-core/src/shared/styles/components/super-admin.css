@@ -1,0 +1,487 @@
+/* Super-admin platform components.
+ *
+ * Class library used by SuperAdminDashboard, TenantDetail, and the related
+ * modals/forms. Replaces the dense inline `style={{}}` objects that were
+ * scattered throughout those pages.
+ *
+ * Naming: `.sa-*` (super-admin). Generic enough to reuse if other simple
+ * white-card / modal screens want the same look without pulling in AntD.
+ */
+
+/* ---------- Brand gradient utilities ---------- */
+.gradient-primary {
+  background: var(--gradient-primary);
+}
+
+.gradient-superadmin {
+  background: var(--gradient-superadmin);
+}
+
+/* ---------- Page chrome ---------- */
+.sa-page {
+  min-height: 100vh;
+  background: var(--color-bg-subtle);
+}
+
+.sa-page-content {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.sa-page-content--narrow {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ---------- Cards & sections ---------- */
+.sa-card {
+  background: var(--color-bg-base);
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sa-section {
+  background: var(--color-bg-base);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.sa-section-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sa-section-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sa-section-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.sa-section-footer {
+  padding: 16px 24px;
+  background: var(--color-bg-elevated);
+  border-top: 1px solid var(--color-border-soft);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+/* ---------- Tables ---------- */
+.sa-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sa-table thead tr {
+  background: var(--color-bg-subtle);
+}
+
+.sa-table th {
+  text-align: left;
+  padding: 12px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.sa-table td {
+  padding: 16px 24px;
+  font-size: 14px;
+}
+
+.sa-table tbody tr {
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+/* ---------- Modal ---------- */
+.sa-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.sa-modal {
+  background: var(--color-bg-base);
+  padding: 32px;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.sa-modal-title {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+.sa-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+/* ---------- Form ---------- */
+.sa-form-group {
+  margin-bottom: 20px;
+}
+
+.sa-form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.sa-form-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.sa-form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.sa-form-row > * {
+  flex: 1;
+}
+
+.sa-help-text {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.sa-form-divider {
+  border: none;
+  border-top: 1px solid var(--color-border-soft);
+  margin: 24px 0;
+}
+
+/* ---------- Buttons ---------- */
+.sa-btn {
+  padding: 10px 20px;
+  color: var(--color-bg-base);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sa-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.sa-btn--primary {
+  background: var(--gradient-superadmin);
+}
+
+.sa-btn--success {
+  background: #1e5812;
+}
+
+.sa-btn--detail {
+  padding: 6px 12px;
+  background: #107518;
+  font-size: 13px;
+  font-weight: 400;
+  border-radius: 4px;
+}
+
+.sa-btn--info {
+  background: #2196f3;
+}
+
+.sa-btn--danger {
+  background: #f44336;
+}
+
+.sa-btn--header {
+  padding: 8px 16px;
+  background: #1e5812;
+  font-size: 14px;
+}
+
+.sa-btn--cancel {
+  background: var(--color-bg-subtle);
+  color: inherit;
+  font-weight: 400;
+}
+
+/* ---------- Status badge ---------- */
+.sa-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sa-badge--active {
+  background: #95df9b;
+  color: #2e7d32;
+}
+
+.sa-badge--inactive {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* ---------- Loading / error fullscreen states ---------- */
+.sa-fullscreen-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 18px;
+  color: var(--color-text-secondary);
+}
+
+.sa-fullscreen-error {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  gap: 20px;
+}
+
+/* ---------- Header band ---------- */
+.sa-app-header {
+  background: var(--color-bg-base);
+  border-bottom: 1px solid var(--color-border-soft);
+  padding: 16px 24px;
+}
+
+.sa-hero-band {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--color-bg-base);
+}
+
+.sa-hero-image {
+  max-width: 600px;
+  width: 100%;
+  height: auto;
+}
+
+/* ---------- Tenant stats grid ---------- */
+.sa-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.sa-stat-label {
+  margin: 0 0 8px 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.sa-stat-value {
+  font-size: 32px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* ---------- Roles selector pill ---------- */
+.sa-role-pill {
+  padding: 4px 12px;
+  background: var(--color-bg-hover);
+  color: var(--color-text-secondary);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sa-role-pill--selected {
+  background: #667eea;
+  color: var(--color-bg-base);
+}
+
+/* ---------- Tenant detail page ---------- */
+.sa-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sa-detail-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.sa-card--lg {
+  padding: 32px;
+}
+
+.sa-detail-heading {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+.sa-subheading {
+  margin-top: 32px;
+  margin-bottom: 16px;
+}
+
+.sa-detail-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.sa-detail-row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
+}
+
+.sa-detail-row-label {
+  color: var(--color-text-secondary);
+}
+
+.sa-status-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sa-domain-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sa-domain-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--color-bg-subtle);
+  border-radius: 6px;
+}
+
+.sa-domain-primary {
+  padding: 2px 8px;
+  background: #2196f3;
+  color: var(--color-bg-base);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.sa-toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sa-table-scroll {
+  overflow-x: auto;
+}
+
+.sa-table-empty {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.sa-status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.sa-status-dot--on {
+  background: var(--color-share-content);
+}
+
+.sa-status-dot--off {
+  background: var(--color-border-soft);
+}
+
+.sa-roles-edit {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sa-roles-view {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  cursor: pointer;
+}
+
+.sa-role-chip {
+  padding: 2px 8px;
+  background: var(--color-bg-hover);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.sa-role-chip--selectable {
+  cursor: pointer;
+  user-select: none;
+  color: var(--color-text-secondary);
+}
+
+.sa-role-chip--selected {
+  background: #667eea;
+  color: var(--color-bg-base);
+}
+
+.sa-role-empty {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+.sa-icon-btn {
+  padding: 2px 8px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--color-bg-base);
+}
+
+.sa-icon-btn--save {
+  background: #4caf50;
+  margin-left: 4px;
+}
+
+.sa-icon-btn--cancel {
+  background: #f44336;
+}
+
+.sa-status-pill {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}

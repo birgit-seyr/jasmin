@@ -1,0 +1,18 @@
+{
+    "main": "Main navigation",
+    "skip_to_main": "Skip to main content",
+    "dashboard": "Dashboard",
+    "abos": "Shares",
+    "commissioning": "Commissioning",
+    "cultivation": "Cultivation",
+    "configuration": "Configuration",
+    "configuration.header1": "General Configuration",
+    "configuration.header2": "Configuration for Members",
+    "configuration.header3": "Configuration for Shares",
+    "members": "Members",
+    "staff": "Staff",
+    "warehouse": "Equipment & Supplies",
+    "economics": "Economics",
+    "exports": "Exports",
+    "imports": "Imports"
+  }

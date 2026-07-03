@@ -1,0 +1,8 @@
+/* Override Ant Design's CSS variables */
+.ant-menu {
+  --ant-primary-color: var(--color-primary-light);
+}
+
+.ant-menu-item-selected {
+  background-color: var(--color-primary-light) !important;
+}

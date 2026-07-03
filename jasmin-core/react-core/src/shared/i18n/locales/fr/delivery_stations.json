@@ -1,0 +1,21 @@
+ {
+    "list_delivery_stations": "List Delivery Stations", 
+    "is_active": "aktiv",
+    "first_name": "first name",
+    "last_name": "last name",
+    "company_name": "company name",
+    "number": "number",
+    "address": "address",
+    "zip_code": "zip code",
+    "city": "city", 
+    "mo": "Mo",
+    "di": "Tu",
+    "mi": "We",
+    "do": "Th",
+    "fr": "Fr",
+    "sa": "Sa",
+    "so": "Su",
+    "delivery_days": "Delivery Days",
+    "is_also_reseller": "is also reseller"
+
+  }

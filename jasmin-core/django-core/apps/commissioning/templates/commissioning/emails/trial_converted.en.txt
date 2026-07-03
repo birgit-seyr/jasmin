@@ -1,0 +1,12 @@
+Hi {{ member.first_name }},
+
+with your first cooperative share you are now officially a member
+of {{ tenant_name }}.
+
+{% if member.member_number %}Your member number is #{{ member.member_number }}.{% endif %}
+{% if entry_date %}Date of entry (GenG §30): {{ entry_date }}.{% endif %}
+
+{% if portal_url %}In the member portal you can find your shares,
+contributions, and subscriptions: {{ portal_url }}{% endif %}
+
+— The {{ tenant_name }} team

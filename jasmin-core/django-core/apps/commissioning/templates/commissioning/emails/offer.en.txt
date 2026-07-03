@@ -1,0 +1,7 @@
+Hi {{ reseller.name }},
+
+Your offer for {{ offer.period }} is ready. Open the order sheet to place your order — each delivery day shows its own order deadline there.
+
+{{ offer_url }}
+
+— The {{ tenant_name }} team

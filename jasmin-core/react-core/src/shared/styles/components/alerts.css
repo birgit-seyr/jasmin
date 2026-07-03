@@ -1,0 +1,55 @@
+/* Inline alert banner used inline within page body (e.g. inventory note). */
+.alert-banner {
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.alert-banner-danger {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  color: #a8071a;
+}
+
+/* Inline error notice (login forms, tenant detail diagnostics).
+   Replaces the recurring inline triple { background: "#fee", border: "1px solid #fcc", color: "#c33" } */
+.alert-error {
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 6px;
+  padding: 12px;
+  color: #c33;
+  font-size: 14px;
+}
+
+:root.dark .alert-error {
+  background: #2a1215;
+  border-color: #5c2223;
+  color: #ff7875;
+}
+
+/* Inline success notice (form save confirmations).
+   Replaces the recurring { background: "#e8f5e9", border: "1px solid #a5d6a7" } pattern. */
+.alert-success {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 6px;
+  padding: 12px;
+  color: var(--color-share-content);
+  font-size: 14px;
+}
+
+:root.dark .alert-success {
+  background: #162312;
+  border-color: #274916;
+  color: #95de64;
+}
+
+/* Centered empty / placeholder block for tables with no rows. */
+.empty-state-block {
+  margin-top: 2em;
+  padding: 2em;
+  text-align: center;
+  color: var(--color-text-tertiary);
+}

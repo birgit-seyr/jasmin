@@ -1,0 +1,289 @@
+tests_model_methods_and_mixins/ — Test Coverage Overview
+=========================================================
+
+test_jasmin_model.py
+-------------------
+Source: apps/commissioning/models/base.py
+DB required: Yes (needs tenant for save)
+
+  TestGenerateJasminId
+    - returns string of correct length (ID_LENGTH = 12)
+    - uses only characters from JASMIN_ID_ALPHABET
+    - generates unique IDs across calls
+
+  TestJasminModelGetDisplayId
+    - formats short IDs as uppercase with dashes every 3 chars
+    - returns empty string when id is empty/None
+
+  TestJasminModelIdCollisionRetry
+    - saves successfully on first attempt (normal case)
+    - retries with new ID on IntegrityError collision
+
+
+test_time_bound_mixin.py
+------------------------
+Source: apps/commissioning/models/mixin.py (TimeBoundMixin)
+DB required: Yes (overlap validation queries siblings)
+
+  TestValidateWeekBoundaries
+    - valid_from on Monday passes
+    - valid_from on non-Monday raises ValidationError
+    - valid_until on Sunday passes
+    - valid_until on non-Sunday raises ValidationError
+    - valid_until=None passes (open-ended)
+
+  TestValidateDateRange
+    - valid_until >= valid_from passes
+    - valid_until < valid_from raises ValidationError
+    - valid_until == valid_from passes (same day)
+
+  TestValidateNoOverlap
+    - non-overlapping periods pass
+    - overlapping periods raise ValidationError
+    - open-ended period overlaps with new record detected
+    - same-group overlap blocked, different-group allowed
+    - editing existing record excludes self from overlap check
+
+  TestHandleSuccession
+    - closes current open record by setting valid_until
+    - returns None when no existing record to succeed
+    - raises ValueError when overlap_unique_fields not defined
+    - raises ValueError when valid_from missing from new_data
+
+
+test_admin_confirmable_mixin.py
+-------------------------------
+Source: apps/commissioning/models/mixin.py (AdminConfirmableMixin)
+DB required: Yes (uses Member which has the mixin)
+
+  TestConfirm
+    - sets admin_confirmed=True, stores user and timestamp
+    - clears any prior rejection reason
+    - save=False skips DB write
+
+  TestReject
+    - sets admin_confirmed=False, stores rejection reason
+    - save=False skips DB write
+
+  TestProperties
+    - is_confirmed returns True when confirmed
+    - is_pending returns True when not confirmed and no rejection
+
+
+test_finalizable_mixin.py
+-------------------------
+Source: apps/commissioning/models/mixin.py (FinalizableMixin, FinalizedProtectedMixin)
+DB required: Yes (needs Offer for finalization workflow)
+
+  TestFinalize
+    - first finalize returns True, sets is_finalized/finalized_at/finalized_by
+    - second finalize on already-finalized record returns False (idempotent)
+
+  TestUnfinalize
+    - resets is_finalized, finalized_at, finalized_by to None/False
+
+  TestFinalizedProtected
+    - save() on finalized record raises ValidationError
+    - save(update_fields=["is_finalized"]) allowed (finalization step itself)
+    - delete() on finalized record raises ValidationError
+    - save() on non-finalized record works normally
+
+
+test_waiting_list_mixin.py
+--------------------------
+Source: apps/commissioning/models/mixin.py (WaitingListMixin)
+DB required: Yes (uses Subscription which has the mixin)
+
+  TestAddToWaitingList
+    - sets on_waiting_list=True and status=PENDING
+
+  TestNotifySpotAvailable
+    - sets status=SPOT_AVAILABLE and notification timestamps
+    - default expiry is 7 days from now
+
+  TestConfirmSpot
+    - sets status=CONFIRMED, on_waiting_list=False
+
+  TestDeclineSpot
+    - sets status=DECLINED, on_waiting_list=False
+
+  TestMarkAsExpired
+    - sets status=EXPIRED, on_waiting_list=False
+
+  TestProperties
+    - is_awaiting_confirmation True when SPOT_AVAILABLE
+    - has_expired_notification True when past expiry and SPOT_AVAILABLE
+
+
+test_logging_date_mixin.py
+--------------------------
+Source: apps/commissioning/models/mixin.py (DateDocumentMixin, CreatedMixin, ArchivableMixin)
+DB required: Yes
+
+  TestDateDocumentMixin
+    - auto-sets date to today when no date provided
+    - preserves explicit date when provided
+
+  TestArchivableMixin
+    - get_archive_cutoff_date returns correct date
+    - is_archived True for old records, False for recent ones
+
+
+test_numbered_document_mixin.py
+-------------------------------
+Source: apps/commissioning/models/mixin.py (NumberedDocumentMixin)
+DB required: Yes (queries TenantSettings + max number)
+
+  TestGetTenantSettingsFields
+    - returns correct tuple for "order" type
+    - returns correct tuple for "delivery_note" type
+    - returns correct tuple for "invoice_reseller" type
+    - raises ValueError for unknown type
+
+  TestGenerateNumber
+    - generates sequential numbers (1, 2, 3...)
+    - does not overwrite existing number
+
+
+test_model_methods.py
+---------------------
+Source: various model files
+DB required: Yes
+
+  TestJasminModelGetDisplayId (basics — ContactEntity.name)
+    - company_name takes priority over first/last name
+    - falls back to first+last name when no company
+    - returns None when no names at all
+
+  TestShareArticleGetAmountPerPu
+    - returns KG amount for "KG" unit
+    - returns PCS amount for "PCS" unit
+    - returns BUNCH amount for "BUNCH" unit
+    - returns None for unknown unit
+    - handles None unit input
+
+  TestShareSave (shares — auto-populate day defaults)
+    - auto-populates harvesting/packing/washing/cleaning days from delivery_day
+    - does not overwrite explicit day values
+    - handles delivery_day without defaults (None)
+
+  TestShareDeliveryClean
+    - passes when delivery_day matches share's delivery_day
+    - raises ValidationError when delivery_day mismatch
+
+  TestShareTypeClean (circular packing reference detection)
+    - no packing reference passes
+    - self-reference raises ValidationError
+    - circular chain (A→B→A) raises ValidationError
+
+  TestShareTypeVariationClean (date bound validation)
+    - variation valid_from before share_type valid_from raises error
+    - variation valid_until after share_type valid_until raises error
+    - valid date range passes
+
+  TestDeliveryStationDayClean (time range validation)
+    - valid time ranges pass
+    - delivery end before begin raises error
+    - pickup end before begin raises error
+
+  TestUserInvitationSave
+    - auto-sets expires_at to 7 days from now
+    - preserves explicit expires_at
+
+  TestUserInvitationIsExpired
+    - True when past expires_at and status="sent"
+    - False when not yet expired
+
+  TestSubscriptionProperties
+    - is_current True for active subscription
+    - is_current False for future/past subscription
+    - is_expired True when valid_until in past
+    - is_expired False for open-ended subscription
+    - days_until_expiry calculates correctly
+    - days_until_expiry None for open-ended
+
+  TestSubscriptionRenew
+    - creates new subscription starting day after valid_until
+    - links to previous subscription
+    - raises ValueError for open-ended subscription
+
+  TestSubscriptionExtend
+    - extends valid_until by specified days
+    - raises ValueError for open-ended subscription
+
+  TestMemberLoanClean
+    - end_date before start_date raises error
+    - paid_back_date before start_date raises error
+    - valid dates pass
+
+  TestMovementShareArticleClean
+    - INVENTORY with no source FK passes
+    - INVENTORY with source FK raises error
+    - non-INVENTORY with no source FK raises error
+    - non-INVENTORY with multiple source FKs raises error
+    - auto-sets movement_type from source FK on save
+
+  TestOfferAvailability
+    - check_availability True when enough stock
+    - check_availability False when insufficient
+    - update_available_amount decrements correctly
+    - update_available_amount raises error when over-ordering
+
+
+test_order_content_resolvers.py
+-------------------------------
+Source: apps/commissioning/models/resellers.py (OrderContent.resolve_*)
+DB required: Yes (uses factories)
+
+Lock-down for the SINGLE source of truth for resolving an
+OrderContent's effective share_article and amount_per_pu. unit and
+size are direct OrderContent columns (NOT resolved) — when an OC is
+created from an offer the service copies offer.unit / offer.size onto
+the row, so the on-row value is always populated.
+
+Model invariant: OrderContent has EXACTLY ONE of (offer,
+share_article) populated. The resolver's precedence between the two
+is therefore academic — only one branch is ever live on a persisted
+row.
+
+If any of these tests fail, the regression is almost certainly that
+someone reintroduced an inline ``offer.X if offer else content.X``
+pattern somewhere — fix the caller (route through resolve_*), don't
+loosen the test.
+
+  TestExactlyOneItemTypeInvariant
+    - clean() raises when both offer and share_article set
+    - clean() raises when neither offer nor share_article set
+
+  TestResolveShareArticle
+    - offer-bound OC → returns offer.share_article
+    - ad-hoc OC (no offer) → returns content.share_article
+
+  TestResolveAmountPerPu
+    - offer.amount_per_pu wins
+    - no-offer ad-hoc: falls back to article.get_amount_per_pu_for_reseller(content.unit) for KG/PCS
+    - falls back to 1 when article has no value for the line's unit
+    - offer.amount_per_pu == 0 is falsy and falls through to offer's article
+
+  TestLineNettoIsUnitBased
+    - line_netto = amount × price_per_unit (amount is in UNITS, price is
+      €/unit); amount_per_pu does NOT enter pricing (DOC-1/DOC-2 fix)
+    - ad-hoc OC and offer-bound OC both ignore amount_per_pu for the net,
+      keeping order == delivery-note == invoice line totals
+
+  TestCommissioningListUsesResolver
+    - _build_content_entry returns article's amount_per_pu when no offer
+    - _build_content_entry returns offer's amount_per_pu when offer set
+
+
+test_subscription_variation_lock.py
+-----------------------------------
+Source: apps/commissioning/models/members.py (Subscription.clean)
+DB required: Yes (needs tenant for save)
+
+  TestSubscriptionVariationLock
+    - share_type_variation change is blocked once the subscription is
+      admin-confirmed (raises SubscriptionVariationLocked — the materialised
+      Shares / ShareDeliveries are keyed by it)
+    - change is allowed while the subscription is an unconfirmed draft
+    - unrelated saves (e.g. setting cancellation_reason) are not blocked

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Löschung deiner Daten bestätigen</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
+      Hallo {{ user.first_name|default:"zusammen" }},
+    </h1>
+
+    <p>
+      Wir haben eine Anfrage erhalten, alle deine personenbezogenen Daten bei
+      {% if tenant_name %}<strong>{{ tenant_name }}</strong>{% else %}der Plattform{% endif %} zu löschen
+      (DSGVO Artikel 17 — Recht auf Vergessenwerden).
+    </p>
+
+    <p>
+      Damit wir wirklich sicher sind, dass die Anfrage von dir kommt,
+      bitten wir dich, die Löschung über den folgenden Link zu bestätigen:
+    </p>
+
+    <p style="margin: 32px 0;">
+      <a href="{{ confirm_url }}"
+         style="display: inline-block; padding: 12px 20px; background: #b00020; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        Löschung jetzt bestätigen
+      </a>
+    </p>
+
+    <p style="color: #555; font-size: 14px;">
+      Oder kopiere diesen Link in deinen Browser:<br />
+      <a href="{{ confirm_url }}" style="color: #b00020; word-break: break-all;">{{ confirm_url }}</a>
+    </p>
+
+    {% if requires_admin_approval %}
+    <p style="color: #555; font-size: 14px; margin-top: 24px;">
+      <strong>Hinweis:</strong> Nach deiner Bestätigung prüft das Büro die
+      Anfrage noch einmal manuell, bevor die Daten endgültig anonymisiert werden.
+    </p>
+    {% endif %}
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      Dieser Link ist 24 Stunden lang gültig und kann nur einmal verwendet werden.
+      Wenn du die Löschung nicht angefragt hast, ignoriere diese E-Mail einfach
+      — dein Konto bleibt unverändert.
+    </p>
+  </body>
+</html>

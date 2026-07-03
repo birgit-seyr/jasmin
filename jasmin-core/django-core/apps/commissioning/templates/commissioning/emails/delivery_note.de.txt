@@ -1,0 +1,9 @@
+Lieferschein {{ delivery_note.number }}
+
+Hallo {{ reseller.name }},
+
+anbei findest du den Lieferschein vom {{ delivery_note.date }}{% if delivery_note.order_number %} zur Bestellung {{ delivery_note.order_number }}{% endif %} als PDF.
+
+Der gedruckte Lieferschein liegt wie immer in der Lieferkiste; diese E-Mail ist nur als Vorab-Information bzw. für deine Buchhaltung gedacht.
+
+— Das Team von {{ tenant_name }}

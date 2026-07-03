@@ -1,0 +1,45 @@
+/* Add to your global CSS or component styles */
+.ant-table-thead > tr > th {
+  min-height: 54px; /* Set consistent header height */
+}
+
+.ant-table-tbody > tr > td {
+  min-height: 54px; /* Set consistent cell height */
+}
+
+.ant-table-column-sorters {
+  min-width: 20px; /* Reserve space for sorters */
+}
+
+/* Prevent table container from shifting */
+.ant-table-container {
+  min-height: 200px; /* Set minimum height based on your content */
+}
+
+/* Fix table body shifting */
+.ant-table-body {
+  min-height: 150px; /* Reserve space for content */
+}
+/* Reserve space for main content area */
+.ant-layout-content {
+  min-height: calc(100vh - 64px); /* Adjust based on your header height */
+  padding: 24px; /* Set consistent padding */
+}
+
+/* If you have dynamic content loading */
+.content-container {
+  min-height: 400px; /* Reserve space while content loads */
+}
+/* Prevent menu overflow shifts */
+.ant-menu-overflow {
+  min-height: 46px; /* Set consistent menu height */
+}
+
+.ant-menu-horizontal {
+  line-height: 46px; /* Consistent line height */
+}
+
+/* Reserve space for menu items */
+.ant-menu-item {
+  min-width: 80px; /* Adjust based on your menu items */
+}

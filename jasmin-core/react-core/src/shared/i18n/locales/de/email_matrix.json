@@ -1,0 +1,39 @@
+{
+    "purpose": "Zweck",
+    "recipient": "Empfänger",
+    "subject": "Betreff",
+    "status_col": "Status",
+    "sent_at": "Versandt",
+    "delivered_at": "Zugestellt",
+    "accounts": {
+        "invitation": "Einladung",
+        "password_reset": "Passwort-Reset",
+        "application_received": "Antrag erhalten",
+        "application_approved": "Mitglied eingetragen",
+        "application_rejected": "Antrag abgelehnt",
+        "welcome_user": "Willkommen"
+    },
+    "commissioning": {
+        "trial_converted": "Probe → Mitglied",
+        "member_cancelled": "Kündigung",
+        "offer": "Angebot",
+        "invoice": "Rechnung",
+        "delivery_note": "Lieferschein",
+        "invoice_reminder": "Zahlungserinnerung"
+    },
+    "gdpr": {
+        "deletion_confirm": "Lösch-Bestätigung",
+        "deletion_approved": "Löschung freigegeben",
+        "deletion_rejected": "Löschung abgelehnt"
+    },
+    "status": {
+        "pending": "Ausstehend",
+        "sent": "Gesendet",
+        "delivered": "Zugestellt",
+        "bounced": "Bounce (hart)",
+        "deferred": "Verzögert",
+        "complained": "Als Spam markiert",
+        "rejected": "Provider-Ablehnung",
+        "failed": "Versand-Fehler"
+    }
+}

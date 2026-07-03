@@ -1,0 +1,7 @@
+Active,Number,Name,Customer Number,Is Reseller,Is Seller,Is Supplier,Is Donation Recipient,Is Active Reseller,Is Active Seller
+is_active,number,name,customer_number,is_reseller,is_seller,is_supplier,is_donation_recipient,is_active_reseller,is_active_seller
+true|false,integer,string,integer,true|false,true|false,true|false,true|false,true|false,true|false
+true,300,Bio Markt Wien,10001,true,false,false,false,true,false
+true,301,Hof Schmidt,10002,false,true,true,false,false,true
+true,302,Foodsharing Verein,10003,false,false,false,true,false,false
+true,300,Duplicate Number,10004,true,false,false,false,true,false

@@ -1,0 +1,33 @@
+/* DiffCell — snapshot-vs-current diff badge.
+ *
+ * Used by InvoiceModal and DeliveryNoteModal (line-item + crate tables)
+ * to highlight values that have been edited away from the upstream
+ * document snapshot. Scoped to ``.jasmin-diff-cell`` so it does NOT bleed
+ * into unrelated tables.
+ */
+
+.jasmin-diff-cell {
+  display: block;
+}
+
+.jasmin-diff-cell__value--changed {
+  color: var(--color-error);
+}
+
+.jasmin-diff-cell__original {
+  font-size: 0.85em;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.jasmin-diff-cell__icon {
+  margin-right: 4px;
+}
+
+:root.dark .jasmin-diff-cell__value--changed {
+  color: #ff7875;
+}
+
+:root.dark .jasmin-diff-cell__original {
+  color: #a6a6a6;
+}

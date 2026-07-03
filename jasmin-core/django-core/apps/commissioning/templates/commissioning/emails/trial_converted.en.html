@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Welcome as a member</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Hi {{ member.first_name }},</h1>
+    <p>
+      with your first cooperative share you are now officially a
+      member{% if tenant_name %} of <strong>{{ tenant_name }}</strong>{% endif %}.
+    </p>
+    {% if member.member_number %}
+      <p>Your member number is <strong>#{{ member.member_number }}</strong>.</p>
+    {% endif %}
+    {% if entry_date %}
+      <p>Date of entry (GenG §30): <strong>{{ entry_date }}</strong>.</p>
+    {% endif %}
+    {% if portal_url %}
+      <p>
+        In the
+        <a href="{{ portal_url }}" style="color: #1f6feb;">member portal</a>
+        you can find your shares, contributions, and subscriptions.
+      </p>
+    {% endif %}
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      If anything is unclear, get in touch with us.
+    </p>
+  </body>
+</html>

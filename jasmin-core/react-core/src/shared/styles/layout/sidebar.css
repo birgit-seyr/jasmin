@@ -1,0 +1,176 @@
+.sidebar {
+  width: var(--sidebar-width) !important;
+  min-width: var(--sidebar-width) !important;
+  flex: 0 0 var(--sidebar-width) !important;
+  padding: var(--sidebar-padding) !important;
+  border-right: 1px solid var(--color-bg-hover);
+  background: var(--color-bg-elevated);
+  transition: all 0.2s ease;
+}
+
+.sidebar.ant-layout-sider-collapsed {
+  width: var(--sidebar-collapsed-width) !important;
+  min-width: var(--sidebar-collapsed-width) !important;
+  flex: 0 0 var(--sidebar-collapsed-width) !important;
+}
+
+/* Hover to completely un-collapse */
+.sidebar.ant-layout-sider-collapsed:hover {
+  width: var(--sidebar-width) !important;
+  min-width: var(--sidebar-width) !important;
+  flex: 0 0 var(--sidebar-width) !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+/* Disable ALL popups/tooltips when collapsed */
+.sidebar.ant-layout-sider-collapsed .ant-menu-submenu-popup,
+.sidebar.ant-layout-sider-collapsed .ant-tooltip,
+.sidebar.ant-layout-sider-collapsed .ant-menu-submenu-placement-right {
+  display: none !important;
+}
+
+/* Make menu behave as uncollapsed on hover */
+.sidebar.ant-layout-sider-collapsed:hover .ant-menu {
+  width: 100% !important;
+}
+
+.sidebar.ant-layout-sider-collapsed:hover .ant-menu-item,
+.sidebar.ant-layout-sider-collapsed:hover .ant-menu-submenu {
+  width: 100% !important;
+  padding-left: 24px !important;
+}
+
+.sidebar.ant-layout-sider-collapsed:hover .ant-menu-item-icon {
+  margin-right: 10px !important;
+}
+
+.sidebar-header {
+  margin-left: 8px;
+  margin-bottom: 12px;
+  margin-top: 12px;
+  text-transform: uppercase;
+  font-size: 1.2em;
+  font-weight: 300;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+/* Hide header in collapsed state, show on hover */
+.sidebar.ant-layout-sider-collapsed .sidebar-header {
+  opacity: 0;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.sidebar.ant-layout-sider-collapsed:hover .sidebar-header {
+  opacity: 1;
+  height: auto;
+  margin-left: 8px;
+  margin-bottom: 12px;
+  margin-top: 12px;
+}
+
+.sidebar-section-header {
+  font-size: 0.9em;
+  line-height: 1.1;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.sidebar-section-header-small {
+  font-size: 1em;
+  line-height: 1.1;
+  font-weight: 300;
+  font-variant: small-caps !important;
+}
+
+.sidebar-section-header:not(:first-child) {
+  margin-top: 16px;
+}
+
+.sidebar-link {
+  font-size: 1em;
+  line-height: 1.1;
+  font-weight: 200 !important;
+  font-variant: small-caps;
+}
+
+.sidebar .ant-badge {
+  width: 100%;
+}
+
+.sidebar-badge .ant-badge-count {
+  background-color: #b51e21; /* Custom red */
+  font-size: 10px;
+  height: 18px;
+  min-width: 18px;
+  line-height: 18px;
+  padding: 0 4px;
+  box-shadow: 0 0 0 1px var(--color-bg-base);
+}
+
+.sidebar-badge .ant-badge-count-sm {
+  height: 16px;
+  min-width: 16px;
+  line-height: 16px;
+  font-size: 9px;
+}
+.sidebar .ant-menu-item .ant-badge {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-container {
+  transition: width 0.3s ease-in-out;
+  overflow: hidden;
+  position: relative;
+}
+
+.sidebar-container.collapsed {
+  width: 4px; /* Thin green bar */
+  min-width: 20px;
+  background-color: var(--color-primary) !important; /* Ant Design green */
+  overflow: hidden;
+  transition: width 0.3s ease;
+}
+
+/* Force all child elements to have transparent background when collapsed */
+.sidebar-container.collapsed .sidebar,
+.sidebar-container.collapsed .ant-layout-sider,
+.sidebar-container.collapsed .ant-menu {
+  background-color: transparent !important;
+}
+
+.sidebar-container.collapsed:hover {
+  width: 250px; /* Expand to full width on hover */
+  background-color: transparent !important;
+}
+
+/* Restore backgrounds on hover */
+.sidebar-container.collapsed:hover .sidebar,
+.sidebar-container.collapsed:hover .ant-layout-sider {
+  background-color: var(--color-bg-elevated) !important;
+}
+
+.sidebar-container.collapsed:hover .ant-menu {
+  background-color: transparent !important;
+}
+
+.sidebar-container.expanded {
+  width: 250px;
+  min-width: 250px;
+  transition: width 0.3s ease;
+}
+
+/* Hide sidebar content when collapsed */
+.sidebar-container.collapsed .ant-menu {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar-container.collapsed:hover .ant-menu {
+  opacity: 1;
+  pointer-events: auto;
+}

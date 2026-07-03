@@ -1,0 +1,9 @@
+{
+    "commissioning": "Exports Commissioning",
+    "economics": "Exports Economics",
+    "warehouse": "Exports Equipment & Supplies",
+    "staff": "Exports Staff",
+    "cultivation": "Exports Cultivation",
+    "members": "Exports Members",
+    "list_exports": "List Commissioning"
+  }

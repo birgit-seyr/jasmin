@@ -1,0 +1,13 @@
+Hallo {{ member.first_name }},
+
+hiermit bestätigen wir deinen Austritt aus {{ tenant_name }}.
+
+{% if cancelled_effective_at %}Austrittsdatum (GenG §30): {{ cancelled_effective_at }}.{% endif %}
+{% if member.member_number %}Deine bisherige Mitgliedsnummer ist #{{ member.member_number }}. Wir bewahren sie für die gesetzliche Aufbewahrungsfrist auf.{% endif %}
+
+Über die Auseinandersetzung deines Geschäftsguthabens melden wir
+uns gesondert.
+
+Solltest du Fragen haben, antworte gerne direkt auf diese E-Mail.
+
+— Das Team von {{ tenant_name }}

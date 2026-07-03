@@ -1,0 +1,15 @@
+A GDPR deletion request is waiting for approval
+
+Someone has confirmed a GDPR Article 17 ("right to erasure") deletion request
+at {{ tenant_name|default:"your platform" }}.
+
+The request is now in the "awaiting office approval" state and must be
+reviewed and either approved or rejected (with a reason) before the actual
+anonymisation runs.
+
+Open in the office:
+{{ review_url }}
+
+This message intentionally does NOT include any details about the requesting
+person — the request details are only visible on the configuration page,
+which requires sign-in.

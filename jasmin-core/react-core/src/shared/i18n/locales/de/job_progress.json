@@ -1,0 +1,17 @@
+{
+  "title": "Hintergrundjob",
+  "queued": "In Warteschlange",
+  "running": "Läuft",
+  "done": "Fertig",
+  "failed": "Fehlgeschlagen",
+  "counters": "{{processed}} von {{total}} verarbeitet · {{successful}} erfolgreich · {{failed}} fehlgeschlagen",
+  "per_item_results": "Ergebnisse pro Eintrag",
+  "col_target": "Empfänger:in",
+  "col_outcome": "Status",
+  "col_detail": "Details",
+  "success": "Gesendet",
+  "failure": "Fehlgeschlagen",
+  "already_sent": "Bereits gesendet",
+  "announce_done": "Vorgang abgeschlossen.",
+  "announce_failed": "Vorgang fehlgeschlagen."
+}

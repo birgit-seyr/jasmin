@@ -1,0 +1,300 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel an in-flight run if a new commit lands on the same branch/PR.
+# Saves CI minutes and surfaces only the freshest result on a PR.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (type-check, lint, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: jasmin-core/react-core
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: jasmin-core/react-core/.nvmrc
+          cache: npm
+          cache-dependency-path: jasmin-core/react-core/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm run test:run
+
+      - name: Production build
+        run: npm run build
+
+      - name: Bundle size budget
+        # Fails if a heavy dependency lands on the boot critical path (the
+        # PERF regression class — e.g. a vendor lib pulled into the entry via a
+        # barrel re-export). Parses dist/index.html for the preloaded chunks and
+        # checks gzip budgets. See scripts/check-bundle-size.mjs.
+        run: npm run size
+
+      - name: Security audit (npm, production deps only)
+        # Fails on high/critical advisories in the SHIPPED (runtime) tree.
+        # ``--omit=dev`` excludes dev tooling (lint/build/codegen vulns), which
+        # are surfaced advisory-only in the step below. npm has no native
+        # per-advisory ignore, so the script filters ``npm audit --json`` and
+        # allow-lists specific advisories with a documented reason — currently
+        # only the quill HTML-export XSS (no upstream fix; quill output is
+        # DOMPurify-sanitised on render). See scripts/check-prod-audit.mjs.
+        run: node scripts/check-prod-audit.mjs
+
+      - name: Security audit (npm, full tree — advisory only)
+        # Reports dev-dep vulns for visibility but doesn't fail. Use the
+        # run log to triage; Dependabot opens upgrade PRs weekly.
+        run: npm audit --audit-level=high || true
+        continue-on-error: true
+
+  backend:
+    name: Backend (pytest, black, flake8)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: jasmin-core/django-core
+
+    # Postgres service for django-tenants tests. The schema setup happens at
+    # session-scope inside the pytest fixtures (see apps/commissioning/tests/conftest.py).
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: jasmin
+          POSTGRES_USER: jasmin
+          POSTGRES_PASSWORD: jasmin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Matches the test-fixture expectations + standard Django settings.
+      DJANGO_SETTINGS_MODULE: config.settings
+      POSTGRES_DB: jasmin
+      POSTGRES_USER: jasmin
+      POSTGRES_PASSWORD: jasmin
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      DJANGO_SECRET_KEY: ci-only-not-secret
+      FIELD_ENCRYPTION_KEY: HeQ7tkqHP7nVB1hA7VkX0SVIan3y_NUFrjyeDnfzcXk=
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        id: setup-python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install Poetry
+        run: pipx install poetry==1.8.3
+
+      - name: Verify lock is in sync with pyproject
+        # Catches a dependency added/bumped in pyproject.toml without
+        # re-locking — a drifted lock means "installs fine here, missing after a
+        # clean image rebuild". Fails here instead of at Docker build / deploy.
+        run: poetry check --lock
+
+      - name: Configure Poetry cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-${{ runner.os }}-${{ hashFiles('jasmin-core/django-core/poetry.lock') }}
+
+      - name: Install dependencies
+        # ``pipx install poetry`` runs Poetry under the runner's DEFAULT Python
+        # (3.12), and Poetry's interpreter auto-discovery doesn't reliably find
+        # the 3.14 that setup-python installed — so it errors "3.12.3 is not
+        # supported by the project (^3.14)". Point Poetry at the exact
+        # interpreter via setup-python's ``python-path`` output before install.
+        run: |
+          poetry env use "${{ steps.setup-python.outputs.python-path }}"
+          poetry install --no-interaction --no-ansi
+
+      - name: Format check (black)
+        run: poetry run black --check apps config
+
+      - name: Lint (ruff)
+        run: poetry run ruff check apps config
+
+      - name: Tests (pytest)
+        run: poetry run pytest --maxfail=5 -q
+
+      - name: API schema is up-to-date
+        # Regenerate the OpenAPI schema from the live serializer/viewset
+        # code and fail if it differs from the committed ../react-core/schema.yml.
+        # Catches "someone changed a serializer and forgot to run
+        # `make generate-api`" before it ships as a silent frontend break.
+        # Fix when this fails: run `make generate-api` locally and commit
+        # both schema.yml + src/api/generated/ updates.
+        run: |
+          poetry run python manage.py spectacular --file ../react-core/schema.yml
+          git diff --exit-code ../react-core/schema.yml
+
+      - name: Security audit
+        # Suppressed advisories — each one MUST have a docs/tasks.txt
+        # entry tracking why we accepted the risk and when to re-check.
+        #
+        #   PYSEC-2025-183 (pyjwt) — disputed by upstream: "the key
+        #     length is chosen by the application that uses the
+        #     library". Our DJANGO_SECRET_KEY is enforced long + random
+        #     in prod, so the advisory does not apply to our usage.
+        #     No patched release available; suppression is permanent
+        #     unless the advisory's scope changes.
+        run: poetry run pip-audit --strict --ignore-vuln PYSEC-2025-183
+
+  gateway:
+    name: Gateway (super-admin allowlist + nginx config)
+    runs-on: ubuntu-latest
+    # The super-admin platform host is protected ONLY by an nginx IP allowlist
+    # (super-admins skip 2FA on the strength of it — see config/settings.py).
+    # Django enforces nothing, so this job makes that infra control verifiable:
+    # a regression in the allowlist or the dedicated server block fails here
+    # instead of silently leaving super-admin password-only at deploy time.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Verify super-admin IP allowlist guardrail
+        # Fail-closed deny-all terminal directive + dedicated super-admin
+        # server block + allowlist include. Pure shell, no nginx needed.
+        run: ./scripts/verify_super_admin_allowlist.sh
+
+      - name: Validate rendered nginx config (nginx -t)
+        # Render the prod template the way docker-compose's gateway command
+        # does and syntax-check it on the exact prod image, so a broken
+        # template is caught here rather than when the gateway container
+        # refuses to boot in production. A throwaway self-signed cert
+        # satisfies the ssl_certificate paths; the hosts entry lets nginx
+        # resolve the upstream names at config-load.
+        run: |
+          cat > /tmp/nginx_check.sh <<'EOF'
+          set -eu
+          apk add --no-cache openssl >/dev/null 2>&1
+          export FRONTEND_DOMAIN=ci.example.test SUPER_ADMIN_SUBDOMAIN=adminci
+          export BACKEND_HOST=backend BACKEND_PORT=8000 FRONTEND_HOST=frontend FRONTEND_PORT=80
+          echo "127.0.0.1 backend frontend" >> /etc/hosts
+          mkdir -p /etc/letsencrypt/live/$FRONTEND_DOMAIN
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -keyout /etc/letsencrypt/live/$FRONTEND_DOMAIN/privkey.pem \
+            -out /etc/letsencrypt/live/$FRONTEND_DOMAIN/fullchain.pem \
+            -subj "/CN=$FRONTEND_DOMAIN" >/dev/null 2>&1
+          cp /work/super_admin_allowed_ips.conf /etc/nginx/super_admin_allowed_ips.conf
+          # Security-header snippets included by the template (CFG-4); the
+          # gateway mounts these too, so they must be present for `nginx -t`.
+          cp /work/security_headers.conf /etc/nginx/security_headers.conf
+          cp /work/security_headers_admin.conf /etc/nginx/security_headers_admin.conf
+          envsubst '$FRONTEND_DOMAIN $SUPER_ADMIN_SUBDOMAIN $BACKEND_HOST $BACKEND_PORT $FRONTEND_HOST $FRONTEND_PORT' \
+            < /work/nginx.conf.template > /etc/nginx/nginx.conf
+          out=$(nginx -t 2>&1) || { echo "$out"; exit 1; }
+          echo "$out"
+          # `nginx -t` exits 0 on a "conflicting server name" — but that
+          # warning means the super-admin host is shadowed by the wildcard
+          # block and its allowlist never applies. Treat it as a failure.
+          if echo "$out" | grep -qiE 'conflicting server name'; then
+            echo "FAIL: nginx reported a conflicting server name — super-admin host would route to the wrong (unrestricted) block"
+            exit 1
+          fi
+          EOF
+          docker run --rm \
+            -v "$PWD/nginx:/work:ro" \
+            -v /tmp/nginx_check.sh:/tmp/nginx_check.sh:ro \
+            nginx:1.27-alpine sh /tmp/nginx_check.sh
+
+  docker-smoke:
+    name: Docker smoke (backend image builds + boots + serves)
+    runs-on: ubuntu-latest
+    # The ``backend`` job installs deps directly on the runner via Poetry — it
+    # never exercises the Docker IMAGE, the entrypoint, or a from-scratch boot.
+    # This job builds the real dev backend image and boots the stack (postgres +
+    # redis + migrations + dev-tenant seed + runserver) until /health/ answers
+    # 200, so a broken Dockerfile, a dependency missing from the lock, a failing
+    # migration, or an entrypoint regression fails HERE instead of at
+    # ``make dev-up`` on a developer's machine (or worse, at deploy).
+    #
+    # It cannot reproduce a STALE LOCAL venv volume (CI volumes are always
+    # fresh — the `backend_venv_dev` mount repopulates from the built image);
+    # that is precisely the point — a green run here is the "clean boot works"
+    # baseline, so a local breakage is known to be environmental (fix locally
+    # with `docker volume rm jasmin-platform_backend_venv_dev && make dev-up`).
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Build + start backend (postgres, redis, migrations, runserver)
+        # ``up backend`` also starts its depends_on (postgres, redis). The dev
+        # compose is self-contained — every var has a ${VAR:-default}, so no
+        # .env file is needed. Detached; the next step polls for readiness.
+        run: docker compose -f docker-compose.dev.yml up -d --build backend
+
+      - name: Wait for /health/ to return 200
+        # Fresh-DB tenant migrations + the dev-tenant seed run before runserver,
+        # so allow a few minutes. /health/ is answered by middleware BEFORE
+        # tenant resolution, so it 200s with no tenant/auth. The backend maps
+        # 127.0.0.1:8000 on the host.
+        run: |
+          timeout 300 bash -c '
+            until [ "$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/health/)" = "200" ]; do
+              echo "waiting for backend /health/ ..."
+              sleep 5
+            done
+          '
+          echo "backend is serving /health/ 200"
+
+      - name: Dump backend logs on failure
+        if: failure()
+        run: |
+          docker compose -f docker-compose.dev.yml ps
+          docker compose -f docker-compose.dev.yml logs --no-color backend
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.dev.yml down -v
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    # Backstop for the gitleaks pre-commit hook (.pre-commit-config.yaml): that
+    # hook only protects developers who ran `pre-commit install` and can be
+    # bypassed with `--no-verify`, so the secret scan is enforced here for
+    # everyone too. The shared .gitleaks.toml (extends the default ruleset +
+    # allowlists the known dev placeholders) drives both, and the version is
+    # pinned to match the hook. Scans the working tree (gitleaks `dir`, which
+    # skips .git/dist/node_modules via the config) and fails on any
+    # non-allowlisted secret.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Run gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" \
+            ghcr.io/gitleaks/gitleaks:v8.28.0 \
+            dir /repo --config=/repo/.gitleaks.toml --no-banner --redact --verbose

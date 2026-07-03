@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Confirm deletion of your personal data</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
+      Hello {{ user.first_name|default:"there" }},
+    </h1>
+
+    <p>
+      We received a request to delete all your personal data at
+      {% if tenant_name %}<strong>{{ tenant_name }}</strong>{% else %}the platform{% endif %}
+      (GDPR Article 17 — right to erasure).
+    </p>
+
+    <p>
+      To make sure this request came from you, please confirm the
+      deletion by following the link below:
+    </p>
+
+    <p style="margin: 32px 0;">
+      <a href="{{ confirm_url }}"
+         style="display: inline-block; padding: 12px 20px; background: #b00020; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        Confirm deletion
+      </a>
+    </p>
+
+    <p style="color: #555; font-size: 14px;">
+      Or copy this link into your browser:<br />
+      <a href="{{ confirm_url }}" style="color: #b00020; word-break: break-all;">{{ confirm_url }}</a>
+    </p>
+
+    {% if requires_admin_approval %}
+    <p style="color: #555; font-size: 14px; margin-top: 24px;">
+      <strong>Note:</strong> After you confirm, the office will review
+      the request manually before your data is finally anonymized.
+    </p>
+    {% endif %}
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      This link is valid for 24 hours and can only be used once.
+      If you did not request deletion, please ignore this email
+      — your account will remain unchanged.
+    </p>
+  </body>
+</html>

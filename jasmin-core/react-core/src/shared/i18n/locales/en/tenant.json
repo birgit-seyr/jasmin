@@ -1,0 +1,52 @@
+{
+  "title": "General",
+  "basic_info": {
+    "title": "Basic information",
+    "name": "Name of the organization / company",
+    "description": "Description",
+    "tenant_language": "Language"
+  },
+  "address": {
+    "title": "Address",
+    "address": "Street and house number",
+    "zip_code": "Postal code",
+    "city": "City",
+    "country": "Country"
+  },
+  "organization": {
+    "title": "Other",
+    "organic_control_number": "Organic control number",
+    "fiscal_year_start_month": "Start of fiscal year",
+    "tenant_language": "Language",
+    "iban": "IBAN",
+    "iban_desc": "Bank account of the cooperative. Used as the creditor account in the SEPA direct debit XML file (pain.008).",
+    "sepa_creditor_id": "SEPA creditor ID",
+    "sepa_creditor_id_desc": "Assigned by the bank when setting up the SEPA direct debit scheme (e.g. \"DE98ZZZ09999999999\"). Required for the pain.008 XML.",
+    "sepa_creditor_name": "SEPA creditor name",
+    "sepa_creditor_name_desc": "Name of the cooperative as it appears on the SEPA mandate. Embedded in every pain.008 file; max. 70 characters.",
+    "sepa_creditor_bic": "SEPA creditor BIC",
+    "sepa_creditor_bic_desc": "BIC of the cooperative's house bank (e.g. \"COBADEFFXXX\" for Commerzbank). Required for the pain.008 XML — the bank provides this code when setting up SEPA.",
+    "sepa_creditor_bic_invalid": "Invalid BIC. A BIC is 8 or 11 characters and starts with 6 letters (e.g. \"COBADEFFXXX\").",
+    "sepa_remittance_template": "Payment reference (template)",
+    "sepa_remittance_template_desc": "The text members see on their bank statement.",
+    "uid": "VAT ID number"
+  },
+  "sepa": {
+    "title": "SEPA Direct Debit",
+    "description": "Bank details and texts for the SEPA direct-debit collection (pain.008).",
+    "remittance_insert": "Insert placeholder:",
+    "remittance_preview": "Preview"
+  },
+  "files": {
+    "title": "Logos",
+    "upload_logo": "Upload logo",
+    "current_logo": "Current logo",
+    "upload_favicon": "Upload favicon",
+    "current_favicon": "Current favicon",
+    "current_bio_logo": "Current organic logo",
+    "upload_bio_logo": "Upload organic logo"
+  },
+  "email": "email",
+  "email_for_orders": "email for orders",
+  "phone_number": "Phone"
+}

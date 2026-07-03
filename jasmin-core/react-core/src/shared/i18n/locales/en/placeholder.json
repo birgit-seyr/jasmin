@@ -1,0 +1,11 @@
+{
+  "delivery_station_selector": "Select Delivery Station",
+  "share_type_selector": "Select Sharetype",
+  "storage_selector": "Select Storage",
+  "reseller_selector": "Select Reseller",
+  "offer_group_selector": "Select Offer Group",
+  "seller_selector": "Select Seller",
+  "member_selector": "Select Member",
+  "share_article_selector": "Select Vegetable/Fruit",
+  "shares_delivery_day_selector": "Select Delivery Day"
+}

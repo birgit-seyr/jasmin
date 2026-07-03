@@ -1,0 +1,9 @@
+Hi {{ member.first_name }},
+
+Thank you for your interest in becoming a member{% if tenant_name %} of {{ tenant_name }}{% endif %}.
+
+Unfortunately we are unable to approve your application at this time.
+{% if member.admin_rejection_reason %}
+Reason: {{ member.admin_rejection_reason }}
+{% endif %}
+If you have questions please get in touch with us.

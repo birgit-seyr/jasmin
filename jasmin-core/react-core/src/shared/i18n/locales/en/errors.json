@@ -1,0 +1,372 @@
+{
+    "commissioning": {
+        "past_week": "This week is in the past and cannot be modified anymore.",
+        "share_days_locked": "The day fields on this share are locked because ShareContent already exists for it.",
+        "already_finalized": "This record is finalized and cannot be modified anymore.",
+        "invalid": "Invalid input — please check the data and try again.",
+        "not_enough_stock": "Not enough stock for this action."
+    },
+    "stock": {
+        "insufficient": "Not enough stock for this action.",
+        "amount_negative": "Amount must not be negative.",
+        "amount_not_number": "Amount must be a number."
+    },
+    "subscription": {
+        "start_too_soon": "The subscription can't start before {{earliest}} ({{min_weeks}} week(s) lead time).",
+        "already_confirmed": "This subscription is already confirmed.",
+        "confirmed_immutable": "A confirmed subscription can no longer be edited or deleted — end it via cancellation instead.",
+        "variation_locked": "A confirmed subscription's share-type variation can no longer be changed — create a new subscription instead.",
+        "renewal_variation_unavailable": "Auto-renewal found no share-type variation of the same size covering the whole new term. Add or extend a matching variation.",
+        "renewal_price_unavailable": "Auto-renewal could not resolve a price for the renewal term. Configure a price for the new term and renew again.",
+        "cancel": {
+            "invalid": "The cancellation is invalid — please check the date.",
+            "not_confirmed": "Only confirmed subscriptions can be cancelled.",
+            "not_sunday": "The cancellation date must fall on a Sunday (end of the delivery week).",
+            "in_past": "The cancellation date can't be in the past — the earliest possible is the next Sunday.",
+            "before_valid_from": "The cancellation date must be on or after the subscription's start date.",
+            "after_valid_until": "The cancellation date must be on or before the subscription's end date.",
+            "no_sunday_remains": "No valid Sunday remains between today and the subscription's end — let the term expire naturally.",
+            "effective_at_format": "Invalid date format — expected YYYY-MM-DD.",
+            "effective_at_required": "An effective date is required."
+        },
+        "open_ended_not_allowed": "A subscription must have an end date. Open-ended subscriptions are not allowed.",
+        "no_active_price": "This share-type variation has no valid price for the chosen start date. Please pick a different start date or variation.",
+        "solidarity_price_below_minimum": "The chosen price ({{chosen}}) is below the minimum price ({{minimum}}) for this share-type variation. Please choose a price of at least {{minimum}}.",
+        "delivery_station_day_out_of_range": "The selected delivery-station day doesn't cover the whole subscription term — it starts after the subscription begins or ends (with no successor day) before the subscription ends. Please choose a delivery-station day that covers the term.",
+        "bulk_renew": {
+            "ids_required": "Provide a non-empty list of subscription ids.",
+            "too_many_ids": "At most 500 subscriptions can be renewed per request."
+        },
+        "cancel_draft": "Draft subscriptions cannot be cancelled — delete them instead.",
+        "renewal_chain_number_missing": "The predecessor subscription has no subscription number to inherit — fix the predecessor's numbering first, then renew again."
+    },
+    "member": {
+        "already_confirmed": "This member is already confirmed.",
+        "link_conflict": "Cannot link — this user is already attached to a different member.",
+        "user_already_linked": "This user is already linked to a member.",
+        "user_in_blocked_status": "This user is blocked and cannot be invited.",
+        "user_already_active": "This user is already active — no invitation needed.",
+        "no_email": "This member has no email address — please add one first.",
+        "invitation_invalid": "This invitation is no longer valid.",
+        "coop_shares_out_of_range": "This member's number of cooperative shares ({{total}}) is outside the allowed range. Please adjust the cooperative shares before confirming the member.",
+        "coop_shares_out_of_range_range": "This member has {{total}} cooperative share(s). The allowed range is between {{minimum}} and {{maximum}}. Please adjust the cooperative shares before confirming the member.",
+        "coop_shares_out_of_range_min": "This member has {{total}} cooperative share(s) but needs at least {{minimum}}. Please adjust the cooperative shares before confirming the member.",
+        "coop_shares_out_of_range_max": "This member has {{total}} cooperative share(s); at most {{maximum}} are allowed. Please adjust the cooperative shares before confirming the member.",
+        "profile_not_linked": "No member profile is linked to this user account.",
+        "locked_after_admin_confirmation": "This field is legally fixed once the member is confirmed and can no longer be changed.",
+        "already_cancelled": "This membership is already cancelled.",
+        "has_active_subscriptions": "You can only cancel once you have no active subscriptions. Please cancel or let your subscriptions expire first.",
+        "not_found": "Member not found.",
+        "cancel": {
+            "effective_at_format": "Invalid date format — expected YYYY-MM-DD.",
+            "effective_at_in_past": "The effective date cannot be in the past.",
+            "effective_at_required": "An effective date is required."
+        },
+        "confirmed_immutable": "A confirmed member can’t be deleted — end the membership via cancellation instead."
+    },
+    "coop_share": {
+        "contract_agreement_required": "Please agree to the subscription contract to subscribe cooperative shares.",
+        "value_not_configured": "The value of one cooperative share is not configured. Please contact the office.",
+        "invalid_amount": "The number of coop shares must be greater than 0.",
+        "confirmed_immutable": "A confirmed cooperative share can’t be deleted — cancel the share (or the member) instead."
+    },
+    "share": {
+        "not_found": "Share not found."
+    },
+    "share_article": {
+        "not_found": "Share article not found.",
+        "invalid_share_option": "Invalid share option."
+    },
+    "share_type": {
+        "succession_has_active_variations": "Can't start a new share type while the current one still has variations active on or after this date. End those variations first, or choose a later start date.",
+        "shortening_strands_variation": "Can't end this share type on the given date: some variations are open or end after it and would outlive their parent. End or shorten those variations first, or choose a later end date.",
+        "invalid_share_option": "Invalid share option."
+    },
+    "time_bound": {
+        "succession_start_before_predecessor": "Can't start a new record before the existing open record it would succeed. Choose a start date on or after the existing record's, or close the existing record first."
+    },
+    "share_type_variation": {
+        "not_found": "Share type variation not found.",
+        "outside_share_type_range": "A variation's validity must lie within its share type's validity — it can't start before the share type, nor end after it (or stay open once the share type has ended).",
+        "succession_has_active_subscriptions": "A new variation for this share type and size can only start after the last subscription on the current one has ended. End those subscriptions first, or choose a later start date.",
+        "shortening_strands_subscriptions": "Can't end this variation on the given date: some subscriptions are open or end after it and would outlive their variation. End those subscriptions first, or choose a later end date.",
+        "missing_bulk": "One or more of the given share type variations do not exist."
+    },
+    "tenant_settings": {
+        "coop_shares_bounds_inverted": "The minimum number of coop shares cannot exceed the maximum."
+    },
+    "share_content": {
+        "invalid": "Invalid share content input — please check the data.",
+        "not_found": "Share content not found.",
+        "invalid_composite_id": "Invalid share content id.",
+        "invalid_pk": "Invalid share content id.",
+        "missing_required": "Missing required fields: year, delivery week, or share article."
+    },
+    "delivery_note": {
+        "finalize_failed": "Could not finalize the delivery note before creating the invoice.",
+        "not_found": "Delivery note not found.",
+        "already_exists": "A delivery note already exists for this order.",
+        "already_finalized": "This delivery note is already finalized and can no longer be changed.",
+        "empty": "Cannot finalize a delivery note with no items."
+    },
+    "delivery_day": {
+        "not_found": "Delivery day not found.",
+        "required": "The delivery day is required.",
+        "valid_from_in_past": "A delivery day cannot be created with a valid-from date in the past."
+    },
+    "delivery_station": {
+        "invalid": "Invalid delivery station input — please check the data.",
+        "over_capacity": "This delivery station is full for week {{week}}/{{year}} ({{occupied}}/{{capacity}}). Please pick another station.",
+        "capacity_below_occupancy": "Capacity can't be set to {{capacity}} — {{peak}} share(s) are already booked for week {{week}}/{{year}}. Please choose at least {{peak}}.",
+        "in_use": "This delivery station cannot be deleted while deliveries still reference its pickup days. Move or end those deliveries first.",
+        "not_found": "Delivery station does not exist."
+    },
+    "delivery_exception": {
+        "invalid_range": "The delivery-pause period is invalid — it must start on a Monday, end on a Sunday, and the start must not be after the end.",
+        "overlap": "The period overlaps an existing delivery pause for this share-type variation.",
+        "locked": "This delivery pause has already started or lies in the past and can no longer be changed or deleted."
+    },
+    "invoice": {
+        "not_found": "Invoice not found.",
+        "cannot_cancel_self": "An invoice cannot cancel itself.",
+        "circular_cancellation": "Cancellation reference loop detected — please check the link.",
+        "storno_missing_target": "A storno invoice must reference the invoice being cancelled.",
+        "cannot_storno_storno": "Cannot storno a storno.",
+        "already_exists": "An invoice already exists for this delivery note.",
+        "already_finalized": "This invoice is already finalized and can no longer be changed.",
+        "dn_not_finalized": "The delivery note is not finalized yet.",
+        "empty": "Cannot finalize an invoice with no items.",
+        "mixed_resellers": "All delivery notes must belong to the same reseller.",
+        "no_delivery_notes": "No delivery notes were provided.",
+        "not_cancellable": "This invoice cannot be cancelled."
+    },
+    "order": {
+        "not_found": "Order not found.",
+        "already_finalized": "This order is already finalized and can no longer be changed."
+    },
+    "order_content": {
+        "not_found": "Order line not found.",
+        "finalized": "Cannot update a finalized order content.",
+        "insufficient_stock": "Not enough stock available."
+    },
+    "packing_list": {
+        "amounts_diverge_across_stations": "Packing amounts differ between delivery stations. Select a delivery station (or tour) to view the packing list."
+    },
+    "reseller": {
+        "not_found": "Reseller not found.",
+        "invalid": "Invalid reseller input — please check the data.",
+        "already_linked": "This reseller is already linked to a different user.",
+        "customer_role_required": "Reseller link is only available for the 'customer' role.",
+        "email_missing": "This reseller has no billing email address configured."
+    },
+    "storage": {
+        "not_found": "Storage not found."
+    },
+    "offer": {
+        "not_found": "Offer not found."
+    },
+    "offer_group": {
+        "not_found": "Offer group not found.",
+        "cannot_delete_default": "The default offer group cannot be deleted."
+    },
+    "export": {
+        "invalid_dates": "Invalid date range for export — please check the start and end dates."
+    },
+    "admin_user": {
+        "not_found": "Admin user not found.",
+        "invalid": "Invalid admin user input.",
+        "not_pending_invitation": "No pending invitation exists for this user."
+    },
+    "auth": {
+        "error": "Authentication failed.",
+        "invalid_credentials": "Login failed — email or password is incorrect.",
+        "invalid_token": "Session invalid or expired — please sign in again.",
+        "missing_fields": "Please fill in all required fields.",
+        "refresh_missing": "Session expired — please sign in again.",
+        "tenant_mismatch": "This account does not belong to this tenant.",
+        "tenant_missing": "No tenant specified.",
+        "account_blocked": "This account is blocked.",
+        "step_up_required": "This action requires re-authentication to confirm identity.",
+        "two_factor": {
+            "already_enrolled": "Two-factor authentication (2FA) is already set up.",
+            "challenge_invalid": "The 2FA challenge is invalid or expired — please sign in again.",
+            "enrolment_required": "This role requires two-factor authentication (2FA) to be set up.",
+            "invalid_code": "The 2FA code is incorrect — please try again.",
+            "not_enrolled": "No two-factor authentication (2FA) is set up for this account."
+        }
+    },
+    "password_reset": {
+        "invalid_link": "This password reset link is invalid or expired.",
+        "weak_password": "Password too weak — please pick a stronger one."
+    },
+    "invitation": {
+        "invalid": "This invitation is no longer valid."
+    },
+    "registration": {
+        "failed": "Registration failed — please try again.",
+        "host_disabled": "Registration is not available on this host.",
+        "weak_password": "The password is too weak — please choose a stronger one."
+    },
+    "profile": {
+        "permission_denied": "You don't have permission to modify this profile."
+    },
+    "required_field": {
+        "missing": "Required field missing — please fill it in."
+    },
+    "bad_request": "Invalid request — please check the data.",
+    "forbidden": "You don't have permission for this action.",
+    "not_found": "Record not found.",
+    "conflict": "Cannot perform action — another record is blocking it.",
+    "rate_limited": "Too many requests — please wait a moment and try again.",
+    "internal_error": "Internal error — please try again or contact support.",
+    "auth_error": "Authentication failed.",
+    "query": {
+        "invalid_param": "Invalid request parameter — please check your input and try again."
+    },
+    "shares_delivery_day": {
+        "not_found": "No active delivery day found for the given day.",
+        "tours_reduced_while_in_use": "This delivery day is already in use — the number of tours can only be increased, not reduced. Lowering it would strand deliveries on the removed tours.",
+        "shortening_strands_children": "This delivery day can't end on that date: future station-days or shares would outlive it and be stranded. Create a successor instead (add a new delivery day), or pick a later end date.",
+        "succession_coverage_gap": "Couldn't complete the delivery-day succession: a station has no station-day covering the affected week on the new day. Set up that station-day first, then retry.",
+        "in_use": "This delivery day cannot be deleted because shares already reference it. Once used, it can no longer be removed."
+    },
+    "delivery_station_day": {
+        "shortening_strands_children": "This station-day can't end on that date: future deliveries or capacity reservations would outlive it and be stranded. Create a successor station-day (which migrates them), or pick a later end date.",
+        "in_use": "This pickup day cannot be deleted while deliveries still reference it. Move or end those deliveries first."
+    },
+    "inventory_entry": {
+        "not_found": "Inventory entry not found."
+    },
+    "data_import": {
+        "invalid": "The uploaded file could not be imported — please check the file and try again."
+    },
+    "customer": {
+        "profile_not_linked": "No customer profile is linked to this user account."
+    },
+    "bulk_documents": {
+        "model_invalid": "Invalid document type — must be a delivery note or an invoice."
+    },
+    "billing_run": {
+        "invalid_period": "The end date must be on or after the start date.",
+        "no_eligible_charges": "No eligible planned charges found in the selected period.",
+        "no_valid_mandates": "No charges with a valid SEPA mandate found.",
+        "not_draft": "This billing run has already been exported and cannot be re-exported.",
+        "no_charges": "This billing run has no charges.",
+        "invalid_collection_date": "The collection date must not be in the past.",
+        "mixed_currency": "The due charges have different currencies. A billing run must use a single currency."
+    },
+    "sepa": {
+        "export_invalid": "Cannot export SEPA file: required creditor or debtor fields are missing."
+    },
+    "crate_delivery_note_content": {
+        "missing_required": "Delivery note, crate type and amount are required."
+    },
+    "crate_content_invoice": {
+        "missing_required": "Invoice, crate type and amount are required."
+    },
+    "amount": {
+        "invalid": "Invalid amount — please enter a valid number."
+    },
+    "composite_id": {
+        "invalid": "Invalid id — please reload the page and try again."
+    },
+    "authz": {
+        "cross_owner_access": "No access to another owner's data.",
+        "no_linked_owner": "No owning record is linked to this account — this action is not possible.",
+        "privilege_required": "This action is restricted to office staff."
+    },
+    "captcha": {
+        "verification_failed": "Captcha verification failed — please try again."
+    },
+    "consent": {
+        "already_revoked": "This consent has already been revoked.",
+        "document_in_use": "This consent document is already in use and cannot be deleted — publish a new version instead.",
+        "document_not_found": "Consent document not found.",
+        "target_member_unresolved": "No target member could be inferred from the request."
+    },
+    "crate": {
+        "not_found": "Crate not found."
+    },
+    "document": {
+        "date_required": "A date is required for this document.",
+        "not_finalized": "The document must be finalized before a PDF can be uploaded.",
+        "pdf_missing": "No PDF has been uploaded yet — please upload the PDF first."
+    },
+    "email_template": {
+        "dispatch_failed": "Sending the email failed — please try again later.",
+        "not_found": "Email template not found.",
+        "test_send_no_recipient": "No recipient address is available for the test send.",
+        "undeclared_placeholders": "The template uses variables that are not available for this email: {{placeholders}}. Please use only the variables shown."
+    },
+    "forecast": {
+        "not_found": "Forecast not found."
+    },
+    "gdpr": {
+        "deletion_not_pending_admin": "This deletion request is not awaiting approval and cannot be processed.",
+        "deletion_token_expired": "The deletion confirmation link has expired — please request deletion again.",
+        "deletion_token_invalid": "The deletion confirmation link is invalid.",
+        "error": "GDPR action not possible — please check the current state.",
+        "missing_rejection_reason": "A rejection reason is required.",
+        "retention_active": "Anonymization not possible — a statutory retention period is still active."
+    },
+    "optin": {
+        "deadline_passed": "The opt-in deadline has passed and can no longer be changed.",
+        "not_applicable": "This delivery does not use opt-in.",
+        "no_member_context": "No member context available."
+    },
+    "trial": {
+        "members_not_allowed": "Trial members are not allowed for this tenant.",
+        "subscriptions_not_allowed": "Trial subscriptions are not allowed for this tenant.",
+        "subscriptions_only_for_full_members": "Trial subscriptions are only allowed for full members for this tenant."
+    },
+    "uploaded_document": {
+        "invalid": "The uploaded document is invalid — please check the file type and content."
+    },
+    "virtual_component": {
+        "not_physical": "This variation is not a physical variation and cannot be used as a component.",
+        "physical_variation_not_found": "The specified physical variation could not be found."
+    },
+    "bulk_copy_offers": {
+        "ids_required": "Provide a non-empty list of offer ids.",
+        "offer_group_required": "An offer group is required."
+    },
+    "bulk_invoice_reminder": {
+        "ids_required": "Provide a non-empty list of ids.",
+        "model_invalid": "model must be 'invoice'."
+    },
+    "bulk_set_paid": {
+        "ids_required": "Provide a non-empty list of order ids.",
+        "model_invalid": "model must be 'invoice'."
+    },
+    "summary_invoice": {
+        "ids_required": "Provide a non-empty list of order ids.",
+        "no_valid_dns": "No valid delivery notes found to create a summary invoice."
+    },
+    "crate_order_content": {
+        "not_found": "Crate order content not found."
+    },
+    "default_share_content": {
+        "invalid_composite_id": "Invalid default share content id.",
+        "no_amounts": "No share type variation amounts were provided."
+    },
+    "delivery_station_fee": {
+        "invalid_range": "Start date must be on or before the end date."
+    },
+    "documentation": {
+        "invalid_model": "Invalid documentation model."
+    },
+    "finalize": {
+        "ids_not_list": "ids must be a list.",
+        "ids_required": "The ids parameter is required.",
+        "model_not_found": "The requested model was not found.",
+        "model_required": "The model parameter is required.",
+        "one_way_model": "Finalized documents are legally immutable and cannot be unfinalized. To reverse, create a storno; to revise, issue a correction document."
+    },
+    "share_import": {
+        "apply_failed": "The import could not be applied.",
+        "invalid_status": "The import batch is in a status that cannot be applied (needs preview_ready or validated)."
+    },
+    "shares_day_change": {
+        "missing_required": "Year and delivery week are required."
+    }
+}

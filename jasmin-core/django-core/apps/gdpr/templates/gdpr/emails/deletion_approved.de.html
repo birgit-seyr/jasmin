@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Löschung deiner Daten abgeschlossen</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
+      Hallo {{ user.first_name|default:"zusammen" }},
+    </h1>
+
+    <p>
+      deine Anfrage, alle deine personenbezogenen Daten bei
+      {% if tenant_name %}<strong>{{ tenant_name }}</strong>{% else %}der Plattform{% endif %}
+      zu löschen, wurde vom Büro freigegeben und ist jetzt abgeschlossen
+      (DSGVO Artikel 17 — Recht auf Vergessenwerden).
+    </p>
+
+    <p>
+      Folgende Daten sind aus unseren Systemen entfernt bzw. anonymisiert:
+      Name, Anschrift, Kontaktdaten, Zahlungsinformationen und alle weiteren
+      direkt mit deiner Person verknüpften Felder.
+    </p>
+
+    <p style="color: #555; font-size: 14px; margin-top: 24px;">
+      <strong>Hinweis zur gesetzlichen Aufbewahrung:</strong> Einzelne
+      Datensätze (z. B. Genossenschaftsanteile-Historie, abgeschlossene
+      Rechnungen) müssen wir gemäß GenG §31 bzw. HGB §257 noch
+      gesetzlich vorgeschrieben aufbewahren. Diese Datensätze enthalten
+      keine direkten Identifikationsmerkmale mehr.
+    </p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      Wenn du Rückfragen zur Löschung hast, antworte gerne auf diese E-Mail.
+    </p>
+  </body>
+</html>

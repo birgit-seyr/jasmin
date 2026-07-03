@@ -1,0 +1,7 @@
+Active,First Name,Last Name,Email,Address,Zip,City,Country
+is_active,first_name,last_name,email,address,zip_code,city,country
+true|false,string,string,string,string,string,string,string
+true,Anna,Müller,anna.mueller@example.com,Marktplatz 1,1010,Wien,AT
+true,Bernhard,Klein,bernhard.klein@example.com,Hauptstraße 42,1020,Wien,AT
+true,Clara,Schmidt,clara.schmidt@example.com,Linke Wienzeile 7,1060,Wien,AT
+true,Bad,Email,not-an-email,Some Street 1,1010,Wien,AT

@@ -1,0 +1,74 @@
+version: 2
+updates:
+  # Backend Python deps
+  - package-ecosystem: "pip"
+    directory: "/jasmin-core/django-core"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "backend"]
+    groups:
+      patch-and-minor:
+        update-types: ["minor", "patch"]
+    # redis 8 (redis-py) is a breaking major — defer until we do that upgrade
+    # deliberately. Minor/patch still flow through the group above.
+    ignore:
+      - dependency-name: "redis"
+        update-types: ["version-update:semver-major"]
+
+  # Frontend npm deps
+  - package-ecosystem: "npm"
+    directory: "/jasmin-core/react-core"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "frontend"]
+    groups:
+      patch-and-minor:
+        update-types: ["minor", "patch"]
+    # Defer MAJOR bumps of dev-tooling we upgrade deliberately — each needs a
+    # migration (eslint flat-config, vitest config API, MUI core 9). This stops
+    # Dependabot re-opening the same red major PR every week; minor/patch for
+    # these still flow through the group above. Remove an entry when you're
+    # ready to do that upgrade.
+    ignore:
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitejs/plugin-react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@mui/icons-material"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions versions themselves
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels: ["dependencies", "ci"]
+
+  # Docker base images in the backend Dockerfile (python:*-slim, …)
+  - package-ecosystem: "docker"
+    directory: "/jasmin-core/django-core"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "docker"]
+
+  # Docker base images in the frontend Dockerfile (node:*, nginx:*)
+  - package-ecosystem: "docker"
+    directory: "/jasmin-core/react-core"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "docker"]
+
+  # Image tags pinned in the compose files (postgres, redis, nginx, certbot,
+  # glitchtip, uptime-kuma, mailhog). Recent Dependabot's docker ecosystem
+  # scans docker-compose*.yml in the directory, not just Dockerfiles. If your
+  # Dependabot version doesn't pick these up, a Trivy image-scan CI job is the
+  # robust fallback for compose-only images.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "docker"]

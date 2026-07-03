@@ -1,0 +1,17 @@
+{
+  "title": "Background job",
+  "queued": "Queued",
+  "running": "Running",
+  "done": "Done",
+  "failed": "Failed",
+  "counters": "{{processed}} of {{total}} processed · {{successful}} successful · {{failed}} failed",
+  "per_item_results": "Results per entry",
+  "col_target": "Recipient",
+  "col_outcome": "Status",
+  "col_detail": "Details",
+  "success": "Sent",
+  "failure": "Failed",
+  "already_sent": "Already sent",
+  "announce_done": "Operation completed.",
+  "announce_failed": "Operation failed."
+}

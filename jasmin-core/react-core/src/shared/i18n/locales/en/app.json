@@ -1,0 +1,12 @@
+{
+    "title": "Jasmin CSA",
+    "loading": "Loading...",
+    "routes": {
+        "staff_dashboard": "Staff Dashboard",
+        "weekly_staff_plan": "Weekly Staff Plan",
+        "saturday_shifts": "Saturday Shifts",
+        "weekly_plan_categories": "Weekly Plan Categories",
+        "employees": "Employees",
+        "warehouse_dashboard": "Warehouse Dashboard"
+    }
+  }

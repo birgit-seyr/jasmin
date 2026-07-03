@@ -1,0 +1,58 @@
+{
+  "card_title": "Consents",
+  "empty": "No consents recorded for this member yet.",
+  "load_error": "Could not load consents.",
+  "consented_at": "Consented",
+  "revoked_at": "Revoked",
+  "revoke": "Revoke",
+  "download": "PDF",
+  "revoke_title": "Revoke consent",
+  "revoke_warning": "Revoking this consent stops the processing that relies on it. Some features may stop working immediately.",
+  "revoke_reason_placeholder": "Optional reason (logged in the audit trail)",
+  "no_ua": "(no User-Agent)",
+  "kind": {
+    "privacy": "Privacy policy",
+    "sepa": "SEPA mandate",
+    "withdrawal": "Withdrawal terms",
+    "terms": "Terms of service",
+    "coop_contract": "Subscription contract"
+  },
+  "admin": {
+    "title": "Consent documents",
+    "subtitle": "Manage versioned policy / mandate / terms text. Rows are append-only — to revise a document, publish a new version with a later effective date.",
+    "filter_kind": "Kind",
+    "new_version": "New version",
+    "publish": "Publish",
+    "created": "Consent document version created.",
+    "view_body": "View",
+    "valid_from": "effective from",
+    "col_kind": "Kind",
+    "col_version": "Version",
+    "col_title": "Title",
+    "col_effective_from": "Effective from",
+    "col_hash": "SHA-256",
+    "title_placeholder": "Display title (optional)",
+    "body_label": "Body (verbatim text shown to members)",
+    "append_only_notice": "Publishing this version automatically closes the previous active one from the chosen date onward. Earlier versions stay unchanged and auditable.",
+    "append_only_explainer": "Consent documents are append-only. To change a text, publish a new version with a later effective date. The previous version is closed automatically — already-given consents stay linked to the original version."
+  },
+  "block": {
+    "missing_document_title": "Consent text not available",
+    "missing_document_body": "No active consent document is published for kind '{{kind}}' / locale '{{locale}}'. An office staff member must upload one first.",
+    "version_label": "Version",
+    "effective_label": "effective from",
+    "agree": {
+      "default": "I agree to this document",
+      "privacy": "I have read and agree to the privacy policy",
+      "sepa": "I authorise the SEPA Direct Debit mandate",
+      "withdrawal": "I acknowledge the withdrawal terms",
+      "terms": "I agree to the terms of service",
+      "coop_contract": "I have read and agree to the subscription contract"
+    }
+  },
+  "print": {
+    "action": "Print",
+    "paper_required_hint": "This document must be printed, signed, and mailed to the following address:",
+    "signature_line": "Place, date, signature"
+  }
+}

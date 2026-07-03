@@ -1,0 +1,12 @@
+{
+    "title": "Jasmin CSA",
+    "loading": "Laden...",
+    "routes": {
+        "staff_dashboard": "MitarbeiterInnen-Dashboard",
+        "weekly_staff_plan": "Wochenplan MitarbeiterInnen",
+        "saturday_shifts": "Samstagsschichten",
+        "weekly_plan_categories": "Wochenplan-Kategorien",
+        "employees": "MitarbeiterInnen",
+        "warehouse_dashboard": "Betriebsmittel-Dashboard"
+    }
+}

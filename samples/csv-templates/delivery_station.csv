@@ -1,0 +1,7 @@
+Active,Number,Short Name,Info,Self Service,Is Also Reseller,Is Also Seller,Fee Per Box,Fee Per Month
+is_active,number,short_name,info,self_service,is_also_reseller,is_also_seller,fee_per_box,fee_per_month
+true|false,integer,string,string,true|false,true|false,true|false,integer,integer
+true,201,WIEN-NORD,Pickup north of city centre,true,false,false,0,0
+true,202,WIEN-SUED,Pickup south of city centre,false,false,false,0,0
+true,203,GRAZ-1,Pickup point near university,true,false,false,0,0
+true,201,WIEN-DUP,Row with duplicate number — should fail unique constraint,false,false,false,0,0

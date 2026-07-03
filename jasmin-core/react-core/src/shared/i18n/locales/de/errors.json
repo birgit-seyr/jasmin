@@ -1,0 +1,372 @@
+{
+    "commissioning": {
+        "past_week": "Diese Woche liegt in der Vergangenheit und kann nicht mehr geändert werden.",
+        "share_days_locked": "Die Tage dieses Anteils sind gesperrt, weil bereits Sharecontent dafür existiert.",
+        "already_finalized": "Dieser Datensatz ist bereits finalisiert und kann nicht mehr geändert werden.",
+        "invalid": "Eingabe ungültig — bitte die Daten prüfen und erneut speichern.",
+        "not_enough_stock": "Nicht genug Bestand für diese Aktion."
+    },
+    "stock": {
+        "insufficient": "Nicht genug Bestand für diese Aktion.",
+        "amount_negative": "Die Menge darf nicht negativ sein.",
+        "amount_not_number": "Die Menge muss eine Zahl sein."
+    },
+    "subscription": {
+        "start_too_soon": "Das Abo kann frühestens am {{earliest}} starten ({{min_weeks}} Woche(n) Vorlauf).",
+        "already_confirmed": "Dieses Abo ist bereits bestätigt.",
+        "confirmed_immutable": "Ein bestätigtes Abo kann nicht mehr geändert oder gelöscht werden — stattdessen über die Kündigung beenden.",
+        "variation_locked": "Die Anteilsvariante eines bestätigten Abos kann nicht mehr geändert werden — bitte ein neues Abo anlegen.",
+        "renewal_variation_unavailable": "Für die automatische Verlängerung gibt es keine Anteilsvariante derselben Größe, die den gesamten neuen Zeitraum abdeckt. Bitte eine passende Variante anlegen oder verlängern.",
+        "renewal_price_unavailable": "Für den Verlängerungszeitraum konnte kein Preis ermittelt werden. Bitte für den neuen Zeitraum einen Preis hinterlegen und erneut verlängern.",
+        "cancel": {
+            "invalid": "Die Kündigung ist ungültig — bitte das Datum prüfen.",
+            "not_confirmed": "Nur bestätigte Abos können gekündigt werden.",
+            "not_sunday": "Das Kündigungsdatum muss auf einen Sonntag fallen (Ende der Lieferwoche).",
+            "in_past": "Das Kündigungsdatum darf nicht in der Vergangenheit liegen — frühestens der nächste Sonntag ist möglich.",
+            "before_valid_from": "Das Kündigungsdatum muss am oder nach dem Startdatum des Abos liegen.",
+            "after_valid_until": "Das Kündigungsdatum muss am oder vor dem Enddatum des Abos liegen.",
+            "no_sunday_remains": "Zwischen heute und dem Abo-Ende liegt kein gültiger Sonntag mehr — das Abo läuft regulär aus.",
+            "effective_at_format": "Ungültiges Datumsformat — erwartet wird JJJJ-MM-TT.",
+            "effective_at_required": "Bitte ein Kündigungsdatum angeben."
+        },
+        "open_ended_not_allowed": "Ein Abo muss ein End-Datum haben. Unbefristete Abos sind nicht zulässig.",
+        "no_active_price": "Für diese Anteilsvariante gibt es zum gewählten Startdatum keinen gültigen Preis. Bitte wähle ein anderes Startdatum oder eine andere Variante.",
+        "solidarity_price_below_minimum": "Der gewählte Preis ({{chosen}}) liegt unter dem Mindestpreis ({{minimum}}) für diese Anteilsvariante. Bitte einen Preis von mindestens {{minimum}} wählen.",
+        "delivery_station_day_out_of_range": "Der gewählte Lieferstationstag deckt nicht den gesamten Abozeitraum ab — er beginnt nach dem Abostart oder endet (ohne Nachfolge-Tag) vor dem Aboende. Bitte einen Lieferstationstag wählen, der den gesamten Zeitraum abdeckt.",
+        "bulk_renew": {
+            "ids_required": "Bitte mindestens ein Abo auswählen.",
+            "too_many_ids": "Es können höchstens 500 Abos pro Anfrage verlängert werden."
+        },
+        "cancel_draft": "Abo-Entwürfe können nicht gekündigt werden — bitte stattdessen löschen.",
+        "renewal_chain_number_missing": "Das Vorgänger-Abo hat keine Abo-Nummer, die vererbt werden kann — bitte zuerst die Nummerierung des Vorgängers korrigieren und dann erneut verlängern."
+    },
+    "member": {
+        "already_confirmed": "Dieses Mitglied ist bereits bestätigt.",
+        "link_conflict": "Verknüpfung nicht möglich — dieser User ist bereits einem anderen Mitglied zugeordnet.",
+        "user_already_linked": "Dieser User ist bereits mit einem Mitglied verknüpft.",
+        "user_in_blocked_status": "Dieser User ist gesperrt und kann nicht eingeladen werden.",
+        "user_already_active": "Dieser User ist bereits aktiv — keine Einladung mehr nötig.",
+        "no_email": "Diesem Mitglied fehlt eine E-Mail-Adresse — bitte erst eintragen.",
+        "invitation_invalid": "Diese Einladung ist nicht (mehr) gültig.",
+        "coop_shares_out_of_range": "Die Anzahl der Genossenschaftsanteile ({{total}}) dieses Mitglieds liegt außerhalb des erlaubten Bereichs. Bitte passe die Genossenschaftsanteile an, bevor du das Mitglied bestätigst.",
+        "coop_shares_out_of_range_range": "Dieses Mitglied hat {{total}} Genossenschaftsanteil(e). Erlaubt sind zwischen {{minimum}} und {{maximum}}. Bitte passe die Genossenschaftsanteile an, bevor du das Mitglied bestätigst.",
+        "coop_shares_out_of_range_min": "Dieses Mitglied hat {{total}} Genossenschaftsanteil(e), benötigt aber mindestens {{minimum}}. Bitte passe die Genossenschaftsanteile an, bevor du das Mitglied bestätigst.",
+        "coop_shares_out_of_range_max": "Dieses Mitglied hat {{total}} Genossenschaftsanteil(e), erlaubt sind höchstens {{maximum}}. Bitte passe die Genossenschaftsanteile an, bevor du das Mitglied bestätigst.",
+        "profile_not_linked": "Mit diesem Benutzerkonto ist kein Mitgliedsprofil verknüpft.",
+        "locked_after_admin_confirmation": "Dieses Feld ist nach der Bestätigung des Mitglieds gesetzlich fixiert und kann nicht mehr geändert werden.",
+        "already_cancelled": "Diese Mitgliedschaft ist bereits gekündigt.",
+        "has_active_subscriptions": "Eine Kündigung ist nur möglich, wenn keine aktiven Abos mehr bestehen. Bitte zuerst die Abos kündigen oder auslaufen lassen.",
+        "not_found": "Mitglied nicht gefunden.",
+        "cancel": {
+            "effective_at_format": "Ungültiges Datumsformat — erwartet wird JJJJ-MM-TT.",
+            "effective_at_in_past": "Das Kündigungsdatum darf nicht in der Vergangenheit liegen.",
+            "effective_at_required": "Bitte ein Kündigungsdatum angeben."
+        },
+        "confirmed_immutable": "Ein bestätigtes Mitglied kann nicht gelöscht werden — stattdessen über die Kündigung beenden."
+    },
+    "coop_share": {
+        "contract_agreement_required": "Bitte stimme dem Zeichnungsvertrag zu, um Genossenschaftsanteile zu zeichnen.",
+        "value_not_configured": "Der Wert eines Genossenschaftsanteils ist nicht konfiguriert. Bitte wende dich an das Büro.",
+        "invalid_amount": "Die Anzahl der Genossenschaftsanteile muss größer als 0 sein.",
+        "confirmed_immutable": "Ein bestätigter Geschäftsanteil kann nicht gelöscht werden — stattdessen den Anteil (oder das Mitglied) kündigen."
+    },
+    "share": {
+        "not_found": "Anteil nicht gefunden."
+    },
+    "share_article": {
+        "not_found": "Artikel nicht gefunden.",
+        "invalid_share_option": "Ungültige Anteilsoption."
+    },
+    "share_type": {
+        "succession_has_active_variations": "Es kann kein neuer Anteilstyp begonnen werden, solange der aktuelle noch Varianten hat, die an oder nach diesem Datum aktiv sind. Beende zuerst diese Varianten oder wähle ein späteres Startdatum.",
+        "shortening_strands_variation": "Der Anteilstyp kann nicht zu diesem Datum beendet werden: Es gibt Varianten, die offen sind oder danach enden und damit ihren Anteilstyp überdauern würden. Beende oder verkürze zuerst diese Varianten oder wähle ein späteres Enddatum.",
+        "invalid_share_option": "Ungültige Anteilsoption."
+    },
+    "time_bound": {
+        "succession_start_before_predecessor": "Es kann kein neuer Eintrag vor dem bestehenden offenen Eintrag begonnen werden, den er ablösen würde. Wähle ein Startdatum am oder nach dem des bestehenden Eintrags, oder schließe den bestehenden Eintrag zuerst."
+    },
+    "share_type_variation": {
+        "not_found": "Anteilsvariation nicht gefunden.",
+        "outside_share_type_range": "Die Gültigkeit der Variante muss innerhalb der Gültigkeit ihres Anteilstyps liegen – sie darf nicht vor dem Anteilstyp beginnen und nicht nach ihm enden bzw. offen bleiben, wenn der Anteilstyp endet.",
+        "succession_has_active_subscriptions": "Eine neue Variante für diese Kombination aus Anteilstyp und Größe kann erst beginnen, nachdem das letzte Abo der aktuellen Variante geendet hat. Beende zuerst diese Abos oder wähle ein späteres Startdatum.",
+        "shortening_strands_subscriptions": "Die Variante kann nicht zu diesem Datum beendet werden: Es gibt Abos, die offen sind oder danach enden und damit ihre Variante überdauern würden. Beende zuerst diese Abos oder wähle ein späteres Enddatum.",
+        "missing_bulk": "Mindestens eine der angegebenen Anteilsvarianten existiert nicht."
+    },
+    "tenant_settings": {
+        "coop_shares_bounds_inverted": "Die Mindestanzahl an Geschäftsanteilen darf die Höchstanzahl nicht überschreiten."
+    },
+    "share_content": {
+        "invalid": "Eintrag ungültig — bitte die Daten prüfen.",
+        "not_found": "Eintrag nicht gefunden.",
+        "invalid_composite_id": "Ungültige Kennung für den Anteilsinhalt.",
+        "invalid_pk": "Ungültige Kennung für den Anteilsinhalt.",
+        "missing_required": "Pflichtfelder fehlen: Jahr, Lieferwoche oder Anteilsartikel."
+    },
+    "delivery_note": {
+        "finalize_failed": "Lieferschein konnte vor der Rechnungserstellung nicht finalisiert werden.",
+        "not_found": "Lieferschein nicht gefunden.",
+        "already_exists": "Für diese Bestellung existiert bereits ein Lieferschein.",
+        "already_finalized": "Dieser Lieferschein ist bereits finalisiert und kann nicht mehr geändert werden.",
+        "empty": "Der Lieferschein kann nicht finalisiert werden, da er keine Positionen enthält."
+    },
+    "delivery_day": {
+        "not_found": "Liefertag nicht gefunden.",
+        "required": "Der Liefertag ist erforderlich.",
+        "valid_from_in_past": "Ein Liefertag kann nicht mit einem Gültig-ab-Datum in der Vergangenheit angelegt werden."
+    },
+    "delivery_station": {
+        "invalid": "Verteilstation ungültig — bitte die Eingabe prüfen.",
+        "over_capacity": "Diese Verteilstation ist für KW {{week}}/{{year}} voll ({{occupied}}/{{capacity}}). Bitte eine andere Station wählen.",
+        "capacity_below_occupancy": "Kapazität kann nicht auf {{capacity}} gesetzt werden — in KW {{week}}/{{year}} sind bereits {{peak}} Anteile gebucht. Bitte mindestens {{peak}} wählen.",
+        "in_use": "Diese Verteilstation kann nicht gelöscht werden, weil noch Lieferungen auf ihre Abholtage verweisen. Bitte zuerst die Lieferungen verschieben oder beenden.",
+        "not_found": "Verteilstation nicht gefunden."
+    },
+    "delivery_exception": {
+        "invalid_range": "Der Zeitraum der Lieferpause ist ungültig — Beginn muss ein Montag, Ende ein Sonntag sein, und der Beginn darf nicht nach dem Ende liegen.",
+        "overlap": "Für diese Anteilsvariante überschneidet sich der Zeitraum mit einer bestehenden Lieferpause.",
+        "locked": "Diese Lieferpause hat bereits begonnen oder liegt in der Vergangenheit und kann nicht mehr geändert oder gelöscht werden."
+    },
+    "invoice": {
+        "not_found": "Rechnung nicht gefunden.",
+        "cannot_cancel_self": "Eine Rechnung kann sich nicht selbst stornieren.",
+        "circular_cancellation": "Stornierungs-Kreislauf erkannt — bitte die Verknüpfung prüfen.",
+        "storno_missing_target": "Eine Storno-Rechnung muss eine zu stornierende Rechnung referenzieren.",
+        "cannot_storno_storno": "Eine Storno-Rechnung kann nicht selbst storniert werden.",
+        "already_exists": "Für diesen Lieferschein existiert bereits eine Rechnung.",
+        "already_finalized": "Diese Rechnung ist bereits finalisiert und kann nicht mehr geändert werden.",
+        "dn_not_finalized": "Der Lieferschein ist noch nicht finalisiert.",
+        "empty": "Die Rechnung kann nicht finalisiert werden, da sie keine Positionen enthält.",
+        "mixed_resellers": "Alle Lieferscheine müssen zum selben Wiederverkäufer gehören.",
+        "no_delivery_notes": "Es wurden keine Lieferscheine angegeben.",
+        "not_cancellable": "Diese Rechnung kann nicht storniert werden."
+    },
+    "order": {
+        "not_found": "Bestellung nicht gefunden.",
+        "already_finalized": "Diese Bestellung ist bereits finalisiert und kann nicht mehr geändert werden."
+    },
+    "order_content": {
+        "not_found": "Bestellposition nicht gefunden.",
+        "finalized": "Eine finalisierte Bestellposition kann nicht mehr geändert werden.",
+        "insufficient_stock": "Nicht genügend Bestand verfügbar."
+    },
+    "packing_list": {
+        "amounts_diverge_across_stations": "Die Packmengen unterscheiden sich je nach Verteilstation. Bitte eine Verteilstation (oder Tour) auswählen, um die Packliste anzuzeigen."
+    },
+    "reseller": {
+        "not_found": "Wiederverkäufer nicht gefunden.",
+        "invalid": "Wiederverkäufer-Eingabe ungültig — bitte die Daten prüfen.",
+        "already_linked": "Dieser Wiederverkäufer ist bereits mit einem anderen User verknüpft.",
+        "customer_role_required": "Eine Wiederverkäufer-Verknüpfung ist nur für die Rolle 'Kunde' möglich.",
+        "email_missing": "Für diesen Wiederverkäufer ist keine Rechnungs-E-Mail-Adresse hinterlegt."
+    },
+    "storage": {
+        "not_found": "Lager nicht gefunden."
+    },
+    "offer": {
+        "not_found": "Angebot nicht gefunden."
+    },
+    "offer_group": {
+        "not_found": "Angebotsgruppe nicht gefunden.",
+        "cannot_delete_default": "Die Standard-Angebotsgruppe kann nicht gelöscht werden."
+    },
+    "export": {
+        "invalid_dates": "Ungültiger Datumsbereich für den Export — bitte Anfangs- und Enddatum prüfen."
+    },
+    "admin_user": {
+        "not_found": "Admin-User nicht gefunden.",
+        "invalid": "Admin-User-Eingabe ungültig.",
+        "not_pending_invitation": "Für diesen User gibt es keine ausstehende Einladung."
+    },
+    "auth": {
+        "error": "Authentifizierung fehlgeschlagen.",
+        "invalid_credentials": "Login fehlgeschlagen — E-Mail oder Passwort stimmt nicht.",
+        "invalid_token": "Sitzung ungültig oder abgelaufen — bitte erneut anmelden.",
+        "missing_fields": "Bitte alle Pflichtfelder ausfüllen.",
+        "refresh_missing": "Sitzung abgelaufen — bitte erneut anmelden.",
+        "tenant_mismatch": "Dieser Account gehört nicht zu diesem Mandanten.",
+        "tenant_missing": "Mandant nicht angegeben.",
+        "account_blocked": "Dieser Account ist gesperrt.",
+        "step_up_required": "Für diese Aktion ist eine erneute Bestätigung der Identität erforderlich.",
+        "two_factor": {
+            "already_enrolled": "Die Zwei-Faktor-Authentifizierung (2FA) ist bereits eingerichtet.",
+            "challenge_invalid": "Die 2FA-Anfrage ist ungültig oder abgelaufen — bitte erneut anmelden.",
+            "enrolment_required": "Für diese Rolle ist die Einrichtung der Zwei-Faktor-Authentifizierung (2FA) erforderlich.",
+            "invalid_code": "Der 2FA-Code stimmt nicht — bitte erneut versuchen.",
+            "not_enrolled": "Für diesen Account ist keine Zwei-Faktor-Authentifizierung (2FA) eingerichtet."
+        }
+    },
+    "password_reset": {
+        "invalid_link": "Dieser Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen.",
+        "weak_password": "Passwort zu schwach — bitte ein stärkeres wählen."
+    },
+    "invitation": {
+        "invalid": "Diese Einladung ist nicht (mehr) gültig."
+    },
+    "registration": {
+        "failed": "Registrierung fehlgeschlagen — bitte erneut versuchen.",
+        "host_disabled": "Die Registrierung ist auf diesem Host nicht verfügbar.",
+        "weak_password": "Das Passwort ist zu schwach — bitte ein sichereres Passwort wählen."
+    },
+    "profile": {
+        "permission_denied": "Keine Berechtigung, dieses Profil zu ändern."
+    },
+    "required_field": {
+        "missing": "Pflichtfeld fehlt — bitte ausfüllen."
+    },
+    "bad_request": "Ungültige Anfrage — bitte die Daten prüfen.",
+    "forbidden": "Keine Berechtigung für diese Aktion.",
+    "not_found": "Datensatz nicht gefunden.",
+    "conflict": "Aktion nicht möglich — anderer Datensatz blockiert sie.",
+    "rate_limited": "Zu viele Anfragen — bitte einen Moment warten und erneut versuchen.",
+    "internal_error": "Interner Fehler — bitte erneut versuchen oder den Support kontaktieren.",
+    "auth_error": "Authentifizierung fehlgeschlagen.",
+    "query": {
+        "invalid_param": "Ungültiger Anfrage-Parameter — bitte Eingabe prüfen und erneut versuchen."
+    },
+    "shares_delivery_day": {
+        "not_found": "Für den angegebenen Tag wurde kein aktiver Liefertag gefunden.",
+        "tours_reduced_while_in_use": "Dieser Liefertag wird bereits verwendet – die Anzahl der Touren kann nur erhöht, nicht verringert werden. Eine Verringerung würde Lieferungen auf den entfernten Touren verwaisen lassen.",
+        "shortening_strands_children": "Dieser Liefertag kann nicht zu diesem Datum beendet werden: Zukünftige Stationstage oder Anteile würden danach noch bestehen und verwaisen. Lege stattdessen über eine Nachfolge (neuen Liefertag anlegen) einen Nachfolger an oder wähle ein späteres Enddatum.",
+        "succession_coverage_gap": "Die Liefertag-Nachfolge konnte nicht abgeschlossen werden: Für eine Station fehlt am neuen Tag ein Stationstag, der die betroffene Woche abdeckt. Richte diesen Stationstag zuerst ein und versuche es erneut.",
+        "in_use": "Dieser Liefertag kann nicht gelöscht werden, weil er bereits von Anteilen verwendet wird. Einmal verwendet, kann er nicht mehr entfernt werden."
+    },
+    "delivery_station_day": {
+        "shortening_strands_children": "Dieser Stationstag kann nicht zu diesem Datum beendet werden: Zukünftige Lieferungen oder Kapazitätsreservierungen würden danach noch bestehen und verwaisen. Lege stattdessen einen Nachfolge-Stationstag an (der sie überträgt) oder wähle ein späteres Enddatum.",
+        "in_use": "Dieser Abholtag kann nicht gelöscht werden, weil noch Lieferungen darauf verweisen. Bitte zuerst die Lieferungen verschieben oder beenden."
+    },
+    "inventory_entry": {
+        "not_found": "Inventureintrag nicht gefunden."
+    },
+    "data_import": {
+        "invalid": "Die hochgeladene Datei konnte nicht importiert werden — bitte Datei prüfen und erneut versuchen."
+    },
+    "customer": {
+        "profile_not_linked": "Mit diesem Benutzerkonto ist kein Kundenprofil verknüpft."
+    },
+    "bulk_documents": {
+        "model_invalid": "Ungültiger Dokumenttyp — muss Lieferschein oder Rechnung sein."
+    },
+    "billing_run": {
+        "invalid_period": "Das End-Datum muss nach dem Start-Datum liegen.",
+        "no_eligible_charges": "Keine fälligen geplanten Abbuchungen im gewählten Zeitraum gefunden.",
+        "no_valid_mandates": "Keine Abbuchungen mit gültigem SEPA-Mandat gefunden.",
+        "not_draft": "Dieser Abrechnungslauf wurde bereits exportiert und kann nicht erneut exportiert werden.",
+        "no_charges": "Dieser Abrechnungslauf enthält keine Abbuchungen.",
+        "invalid_collection_date": "Das Abbuchungsdatum darf nicht in der Vergangenheit liegen.",
+        "mixed_currency": "Die fälligen Abbuchungen haben unterschiedliche Währungen. Ein Lastschriftlauf muss eine einheitliche Währung haben."
+    },
+    "sepa": {
+        "export_invalid": "SEPA-Export nicht möglich: erforderliche Gläubiger- oder Zahlungspflichtige-Daten fehlen."
+    },
+    "crate_delivery_note_content": {
+        "missing_required": "Lieferschein, Kistentyp und Menge sind erforderlich."
+    },
+    "crate_content_invoice": {
+        "missing_required": "Rechnung, Kistentyp und Menge sind erforderlich."
+    },
+    "amount": {
+        "invalid": "Menge ungültig — bitte eine gültige Zahl eingeben."
+    },
+    "composite_id": {
+        "invalid": "Ungültige ID — bitte die Seite neu laden und erneut versuchen."
+    },
+    "authz": {
+        "cross_owner_access": "Kein Zugriff auf die Daten eines anderen Eigentümers.",
+        "no_linked_owner": "Mit diesem Account ist kein User-Datensatz verknüpft — diese Aktion ist nicht möglich.",
+        "privilege_required": "Diese Aktion ist nur dem Büro vorbehalten."
+    },
+    "captcha": {
+        "verification_failed": "Captcha-Prüfung fehlgeschlagen — bitte erneut versuchen."
+    },
+    "consent": {
+        "already_revoked": "Diese Einwilligung wurde bereits widerrufen.",
+        "document_in_use": "Dieses Einwilligungsdokument wird bereits verwendet und kann nicht gelöscht werden — stattdessen eine neue Version veröffentlichen.",
+        "document_not_found": "Einwilligungsdokument nicht gefunden.",
+        "target_member_unresolved": "Es konnte kein Ziel-Mitglied aus der Anfrage ermittelt werden."
+    },
+    "crate": {
+        "not_found": "Kiste nicht gefunden."
+    },
+    "document": {
+        "date_required": "Für dieses Dokument ist ein Datum erforderlich.",
+        "not_finalized": "Das Dokument muss zuerst finalisiert werden, bevor ein PDF hochgeladen werden kann.",
+        "pdf_missing": "Es wurde noch kein PDF hochgeladen — bitte zuerst das PDF hochladen."
+    },
+    "email_template": {
+        "dispatch_failed": "Der E-Mail-Versand ist fehlgeschlagen — bitte später erneut versuchen.",
+        "not_found": "E-Mail-Vorlage nicht gefunden.",
+        "test_send_no_recipient": "Für den Testversand ist keine Empfängeradresse vorhanden.",
+        "undeclared_placeholders": "Die Vorlage verwendet Platzhalter, die für diese E-Mail nicht verfügbar sind: {{placeholders}}. Bitte nur die angezeigten Variablen verwenden."
+    },
+    "forecast": {
+        "not_found": "Prognose nicht gefunden."
+    },
+    "gdpr": {
+        "deletion_not_pending_admin": "Diese Löschanfrage wartet nicht auf eine Freigabe und kann nicht bearbeitet werden.",
+        "deletion_token_expired": "Der Bestätigungslink zur Löschung ist abgelaufen — bitte die Löschung erneut anfordern.",
+        "deletion_token_invalid": "Der Bestätigungslink zur Löschung ist ungültig.",
+        "error": "DSGVO-Vorgang nicht möglich — bitte den aktuellen Status prüfen.",
+        "missing_rejection_reason": "Ein Ablehnungsgrund ist erforderlich.",
+        "retention_active": "Anonymisierung nicht möglich — es besteht noch eine gesetzliche Aufbewahrungsfrist."
+    },
+    "optin": {
+        "deadline_passed": "Die Frist für die Anmeldung ist abgelaufen und kann nicht mehr geändert werden.",
+        "not_applicable": "Für diese Lieferung ist keine Anmeldung vorgesehen.",
+        "no_member_context": "Kein Mitgliedskontext vorhanden."
+    },
+    "trial": {
+        "members_not_allowed": "Probemitglieder sind bei diesem Mandanten nicht zulässig.",
+        "subscriptions_not_allowed": "Probeabos sind bei diesem Mandanten nicht zulässig.",
+        "subscriptions_only_for_full_members": "Probeabos sind bei diesem Mandanten nur für Vollmitglieder zulässig."
+    },
+    "uploaded_document": {
+        "invalid": "Das hochgeladene Dokument ist ungültig — bitte Dateityp und Inhalt prüfen."
+    },
+    "virtual_component": {
+        "not_physical": "Diese Variation ist keine physische Variation und kann nicht als Komponente verwendet werden.",
+        "physical_variation_not_found": "Die angegebene physische Variation wurde nicht gefunden."
+    },
+    "bulk_copy_offers": {
+        "ids_required": "Bitte mindestens ein Angebot auswählen.",
+        "offer_group_required": "Bitte eine Angebotsgruppe angeben."
+    },
+    "bulk_invoice_reminder": {
+        "ids_required": "Bitte mindestens einen Eintrag auswählen.",
+        "model_invalid": "Ungültiger Typ — es werden nur Rechnungen unterstützt."
+    },
+    "bulk_set_paid": {
+        "ids_required": "Bitte mindestens eine Bestellung auswählen.",
+        "model_invalid": "Ungültiger Typ — es werden nur Rechnungen unterstützt."
+    },
+    "summary_invoice": {
+        "ids_required": "Bitte mindestens eine Bestellung auswählen.",
+        "no_valid_dns": "Keine gültigen Lieferscheine gefunden, um eine Sammelrechnung zu erstellen."
+    },
+    "crate_order_content": {
+        "not_found": "Kisten-Bestellposition nicht gefunden."
+    },
+    "default_share_content": {
+        "invalid_composite_id": "Ungültige Kennung für die Standard-Anteilsinhalte.",
+        "no_amounts": "Es wurden keine Mengen für Anteilsvarianten angegeben."
+    },
+    "delivery_station_fee": {
+        "invalid_range": "Das Startdatum muss am oder vor dem Enddatum liegen."
+    },
+    "documentation": {
+        "invalid_model": "Ungültiger Modelltyp für die Dokumentation."
+    },
+    "finalize": {
+        "ids_not_list": "„ids“ muss eine Liste sein.",
+        "ids_required": "Der Parameter „ids“ ist erforderlich.",
+        "model_not_found": "Der angegebene Modelltyp wurde nicht gefunden.",
+        "model_required": "Der Parameter „model“ ist erforderlich.",
+        "one_way_model": "Finalisierte Belege sind gesetzlich unveränderlich und können nicht wieder entfinalisiert werden. Für eine Rückabwicklung bitte eine Stornierung erstellen, für eine Korrektur ein Korrekturdokument."
+    },
+    "share_import": {
+        "apply_failed": "Der Import konnte nicht angewendet werden.",
+        "invalid_status": "Der Import-Batch ist in einem Status, der nicht angewendet werden kann (benötigt „preview_ready“ oder „validated“)."
+    },
+    "shares_day_change": {
+        "missing_required": "Jahr und Lieferwoche sind erforderlich."
+    }
+}

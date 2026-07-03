@@ -1,0 +1,11 @@
+{
+  "delivery_station_selector": "Verteilstation auswählen",
+  "share_type_selector": "Anteil auswählen", 
+  "storage_selector": "Lager auswählen", 
+  "reseller_selector": "Wiederverkäufer auswählen",
+  "offer_group_selector": "Angebotsgruppe auswählen",
+  "seller_selector": "Verkäufer auswählen",
+  "member_selector": "Mitglied auswählen",
+  "share_article_selector": "Gemüse/Obst auswählen",
+  "shares_delivery_day_selector": "Liefertag auswählen"
+}

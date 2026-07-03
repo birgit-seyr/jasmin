@@ -1,0 +1,7 @@
+Hallo {{ reseller.name }},
+
+dein Angebot für {{ offer.period }} ist bereit. Öffne das Bestellformular, um zu bestellen — der Bestellschluss wird dort je Liefertag angezeigt.
+
+{{ offer_url }}
+
+— Das Team von {{ tenant_name }}

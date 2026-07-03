@@ -1,0 +1,240 @@
+[tool.poetry]
+name = "jasmin-django-core"
+version = "0.1.0"
+description = "Jasmin Django App"
+authors = []
+license = "AGPL-3.0-or-later"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.14"
+django = "^5.2.8"
+django-admin-interface = "^0.32.0"
+django-colorfield = "^0.14.0"
+django-cors-headers = "^4.4.0"
+django-filter = "^25.2"
+djangorestframework = "^3.15.2"
+djangorestframework-simplejwt = "^5.5.1"
+gunicorn = "^26.0.0"
+huey = "^3.0.0"
+isoweek = "^1.3.3"
+nanoid = "^2.0.0"
+openpyxl = "^3.1.5"
+psycopg2-binary = "^2.9.10"
+python-dateutil = "^2.9.0"
+requests = "^2.32.3"
+weasyprint = "^68.0"
+
+django-tenants = "^3.10"
+drf-spectacular = "^0.29.0"
+django-localflavor = "^5.0"
+redis = "^7.1.0"
+django-encrypted-model-fields = "^0.6.5"
+time-machine = "^3.2.0"
+django-axes = "^8.3.1"
+django-zxcvbn-password-validator = "^1.6.0"
+django-auditlog = "^3.4.1"
+ruff = "^0.15.13"
+jwcrypto = ">=1.5.7"
+# Transitive (pulled in by djangorestframework-simplejwt + redis[jwt]).
+# Pinned explicitly to dodge PYSEC-2026-{175,177,178,179} on 2.12.x.
+pyjwt = ">=2.13"
+# Hardened XML parser for user-uploaded e-invoice XML (XXE / entity-expansion
+# defenses). Already present transitively via py-serializable; pinned directly
+# so the e-invoice upload path can't lose it if that transitive edge changes.
+defusedxml = "^0.7.1"
+sentry-sdk = "^2.20.0"
+# Two-factor auth (TOTP + recovery codes). The base ``django-otp``
+# pulls in the ORM models; ``django-otp-totp`` adds the RFC 6238
+# 30-second TOTP plugin used by Google Authenticator, 1Password,
+# Bitwarden, etc. See ``apps/accounts/services/two_factor_service.py``.
+django-otp = "^1.5"
+# SEPA Direct Debit XML (pain.008.001.02) generator. Used by
+# ``apps/payments/services.py::BillingRunService._build_pain008_xml``
+# to produce ISO 20022-compliant batch debit files for upload to
+# any SEPA-zone bank. Pinned at ^2.6 (current major). The library
+# is small (~600 lines), well-maintained, and validates against the
+# bundled XSD on every export — we rely on ``validate=True`` in the
+# generator so a malformed file is rejected before it can ever be
+# handed to the office.
+sepaxml = "^2.6"
+cryptography = ">=48.0.1,<49"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.3"
+pytest-cov = "^7.1.0"
+pytest-django = "^4.5"
+black = "^26.3.1"
+factory-boy = "^3.3"
+ruff = "^0.15.13"
+pip-audit = "^2.10.0"
+pre-commit = "^4.6.0"
+# Per-request query-count summary printed to the runserver console.
+# Surfaces N+1s during development as you click through pages.
+# Middleware is wired in ``config/settings.py`` only when ``DEBUG=True``,
+# so production is unaffected. The
+# ``apps/payments/tests/test_query_count_locks.py`` perf-lock tests
+# still own regression-prevention in CI — this is the "spot it while
+# writing new code" complement.
+django-querycount = "^0.8"
+vulture = "^2.16"
+
+[tool.django]
+settings_module = "config.settings"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+pythonpath = ["."]
+testpaths = ["apps"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+# Silence a known upstream-only DeprecationWarning from
+# ``drf_spectacular 0.29.0`` under Python 3.14: ``plumbing.py:1340``
+# walks ``typing._UnionGenericAlias`` to recognise old-style union
+# hints, but Python 3.14 deprecated that internal (``types.UnionType``
+# covers the ``X | Y`` syntax now, so the check is redundant). The
+# OpenAPI schema test exercises every viewset + serializer, which
+# hits this isinstance() ~135 times per run — pure noise, no caller
+# of ours touches the deprecated symbol. Remove this filter once we
+# upgrade to a drf-spectacular release that drops the
+# ``_UnionGenericAlias`` reference (track at
+# https://github.com/tfranzel/drf-spectacular).
+filterwarnings = [
+    "ignore:'_UnionGenericAlias' is deprecated:DeprecationWarning:drf_spectacular.plumbing",
+    # ``sepaxml 2.7.0`` (debit.py:401 and :491) tests an lxml element
+    # for truthiness with ``if <Element>:`` — lxml deprecated that
+    # because a present-but-empty element used to test truthy in the
+    # old behaviour. The right pattern is ``is not None`` or
+    # ``len(elem)``. Every pain.008 generation in our SEPA billing
+    # tests hits both lines, so each test adds a fresh pair of
+    # warnings. Pure upstream noise; the XML we generate is unaffected
+    # because the relevant nodes are always populated (we always
+    # supply a postal address). Drop this filter once sepaxml ships a
+    # release that fixes the check.
+    "ignore:Testing an element's truth value will always return True:DeprecationWarning:sepaxml.debit",
+]
+
+# Coverage config (consumed by ``pytest-cov`` via the ``--cov`` flag).
+# Run locally with: ``poetry run pytest --cov=apps --cov-report=term``
+# CI integration deliberately deferred — wire ``--cov=apps
+# --cov-report=term`` into ``.github/workflows/ci.yml`` once a baseline
+# % is established locally, then pick ``--cov-fail-under=<N>`` 5-10
+# points below the baseline so accidental dips fail CI but won't get
+# disabled on day one. See docs/code/engineering-audit-playbook.md, Test coverage
+# measurement pass.
+[tool.coverage.run]
+source = ["apps"]
+# Line coverage only. Branch coverage is noisier (false negatives on
+# correct defensive code) and not worth the extra signal at this scale.
+branch = false
+omit = [
+    # Generated / scaffolding — never user-written code.
+    "*/migrations/*",
+    # Tests are the measurement instrument; their own coverage isn't
+    # the metric. Conftest.py is fixture wiring, also exempt.
+    "*/tests/*",
+    "*/conftest.py",
+    # Re-export shims; pyflakes already catches dead imports here.
+    "*/__init__.py",
+    # Research solver code, allow-listed in [tool.ruff.lint.per-file-ignores] too.
+    "apps/cultivation/solver/*",
+    # Operator one-off scripts (seed data, manual reconciliation,
+    # createsuperadmin, etc.). Run manually by ops, not part of any
+    # user-facing code path. See docs/code/test-coverage-priorities.md
+    # Tier 4 for the rationale. Exception: rotate_field_encryption
+    # has its own tests because it touches encrypted-data integrity.
+    "*/management/commands/*",
+]
+
+[tool.coverage.report]
+# Lines that won't be exercised by tests by design — exclude from the
+# denominator so the % reflects real test gaps, not unreachable lines.
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    # Ellipsis-bodied abstract methods / Protocol declarations.
+    "\\.\\.\\.\\s*$",
+]
+show_missing = true
+skip_covered = false
+precision = 1
+
+# Ruff replaces flake8/isort/pyupgrade with a single fast tool.
+# Install: `poetry add --group dev ruff`
+# Run:     `poetry run ruff check apps core config`
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["migrations", "venv", "staticfiles", "media"]
+
+[tool.ruff.lint]
+# E,F  = pycodestyle/pyflakes baseline (matches what flake8 enforced)
+# B    = flake8-bugbear (common Python pitfalls)
+# BLE  = flake8-blind-except — the core/exception_handler.py contract relies
+#        on this: every bare `except Exception:` in a view/service hides a
+#        bug or leaks a 500.
+# UP   = pyupgrade (Py 3.11+ syntax)
+# I    = isort (import order)
+select = ["E", "F", "B", "BLE", "UP", "I"]
+ignore = [
+    "E501",  # line-too-long — handled by black
+    "B008",  # function call in default arg — common in Django (e.g. `models.SET_NULL`)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests may legitimately catch broad exceptions and use `assert`.
+# F811 — pytest fixture shadowing (def tenant_settings(tenant): redeclares
+# the imported fixture name) is a standard pattern and not a bug.
+"**/tests/**" = ["BLE001", "B011"]
+"**/conftest.py" = ["BLE001", "B011", "F811"]
+# Management commands are operator tools, not user-facing API. The
+# "try every task / row, don't stop the batch on one failure" pattern
+# legitimately needs a broad ``except Exception`` — same exemption
+# rationale as tests/conftest.
+"**/management/commands/**" = ["BLE001"]
+# Huey periodic tasks (apps/*/tasks.py) iterate every tenant schema
+# in a single run. A broken schema on one tenant must not block the
+# sweep from running on every other tenant — same "try every row,
+# don't stop the batch" rationale as management commands. See the
+# Background task reliability pass in docs/code/engineering-audit-playbook.md.
+"**/tasks.py" = ["BLE001"]
+# Package __init__.py files re-export submodule symbols so callers can do
+# `from apps.staff.models import Employee` instead of `from apps.staff.models.basics import Employee`.
+# Ruff flags those as F401 unused-import, but they're the package's public API.
+"**/__init__.py" = ["F401"]
+# Migrations are generated — don't lint them.
+"**/migrations/**" = ["ALL"]
+# Optimization solver code is research-style — skip it for now.
+"apps/cultivation/solver/**" = ["ALL"]
+# Django settings split: settings.py star-imports a local override file by
+# convention. F403/F405 are noise here, the alternative is a manifest of
+# every override which is more maintenance for less safety.
+"config/settings*.py" = ["F403", "F405"]
+# Legacy BLE001 allowlists removed by the silent-defaults audit pass
+# (see docs/code/engineering-audit-playbook.md, Pass #1). All sites in
+# apps/commissioning/services, apps/notifications, and apps/shared
+# were either narrowed to specific exception families or left as
+# `try / except Exception: logger.exception(); raise` (which BLE001
+# exempts via its re-raise rule). No remaining `# noqa: BLE001` lines
+# in production code.
+
+[tool.vulture]
+min_confidence = 80
+ignore_decorators = ["@action", "@api_view", "@receiver", "@admin.register", "@cached_property", "@property", "@staticmethod", "@classmethod"]
+exclude = ["*/migrations/*", "*/tests/*"]
+paths = ["apps"]
+# API-shape parameter names that callers pass by keyword. The ``_``-prefix
+# convention works for positionals but BREAKS keyword-dispatched callers
+# (Django signal receivers are called as ``receiver(sender=..., **named)``
+# so the parameter MUST be named ``sender``).
+#   - sender: every @receiver function on every signal
+#   - perm:   ``has_perm(perm, obj)`` auth-backend hook
+ignore_names = ["sender", "perm"]

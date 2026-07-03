@@ -1,0 +1,7 @@
+Hallo {{ user.first_name }},
+
+willkommen bei {{ tenant_name }}! Dein Konto ist jetzt aktiv.
+
+Logge dich auf {{ portal_url }} ein.
+
+— Das Team von {{ tenant_name }}

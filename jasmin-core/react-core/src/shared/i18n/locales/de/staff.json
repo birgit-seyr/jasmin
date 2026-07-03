@@ -1,0 +1,20 @@
+{
+    "staff": "MitarbeiterInnen", 
+    "saturdays": "Samstagsdienste",
+    "weekly_plan": "Wochenplan",
+    "weekly_staff_plan": "Wochenplan",
+    "shifts": "Schichten", 
+    "copy_from_week": "kopieren von KW ", 
+    "max_lines": "max. Zeilen",
+    "name": "Bezeichnung", 
+    "short_name_for_weekly_plan": "Name für Wochenplan",
+    "employees": "MitarbeiterInnen",
+    "saturday_shifts": "Samstagsdienste",
+    "weekly_plan_categories": "Wochenplan-Kategorien",
+    "copy_weekly_plan_from": "Wochenplan kopieren von",
+    "real_hours": "Ist-Stunden",
+    "summary": "Zusammenfassung",
+    "target_hours": "Soll-Stunden",
+    "total_hours": "Gesamtstunden",
+    "weekly_plan_copied_success": "Wochenplan erfolgreich kopiert"
+}

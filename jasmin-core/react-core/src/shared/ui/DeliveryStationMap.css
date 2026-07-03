@@ -1,0 +1,43 @@
+/*
+ * Styles for DeliveryStationMap. These MUST be global (not a CSS module):
+ * Leaflet's ``L.divIcon`` injects raw HTML with a literal ``className``, so a
+ * hashed module class name would never match the rendered marker.
+ */
+
+.jasmin-station-map {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-border, #d9d9d9);
+}
+
+/* The Leaflet map canvas must have an explicit height or it collapses to 0. */
+.jasmin-station-map .leaflet-container {
+  width: 100%;
+  height: 100%;
+  font: inherit;
+}
+
+/* Circular pin rendered via divIcon (avoids Leaflet's bundler-broken PNG
+ * default marker assets entirely). */
+.jasmin-station-marker {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  background: #4caf50;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.jasmin-station-marker--selected {
+  background: #1677ff;
+  width: 24px;
+  height: 24px;
+}
+
+.jasmin-station-marker--disabled {
+  background: #bdbdbd;
+  cursor: not-allowed;
+}

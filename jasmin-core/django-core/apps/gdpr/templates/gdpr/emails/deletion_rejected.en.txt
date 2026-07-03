@@ -1,0 +1,10 @@
+Hello {{ user.first_name }},
+
+your request to delete all your personal data at {{ tenant_name }} cannot be carried out at this time.
+
+Reason from the office:
+{{ reason }}
+
+Your account is unchanged. Once the points above are resolved, you can submit a new deletion request from your profile.
+
+Questions? Just reply to this email.

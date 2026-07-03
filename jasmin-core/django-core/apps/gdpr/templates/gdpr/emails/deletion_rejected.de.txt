@@ -1,0 +1,10 @@
+Hallo {{ user.first_name }},
+
+deine Anfrage, alle deine personenbezogenen Daten bei {{ tenant_name }} zu löschen, kann zum jetzigen Zeitpunkt leider nicht ausgeführt werden.
+
+Begründung des Büros:
+{{ reason }}
+
+Dein Konto bleibt unverändert. Sobald die genannten Punkte geklärt sind, kannst du die Löschung über dein Profil erneut anfragen.
+
+Bei Rückfragen antworte gerne auf diese E-Mail.

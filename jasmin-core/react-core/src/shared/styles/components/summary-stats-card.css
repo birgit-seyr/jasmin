@@ -1,0 +1,39 @@
+/* Reusable totals strip — see components/ui/SummaryStatsCard.tsx.
+   Stats sit side-by-side, each sized to its own content, and only wrap to
+   the next line when the row genuinely runs out of width. All colors are
+   tokens so dark mode reactivates without overrides. */
+.summary-stats-card {
+  margin: 16px 0;
+  padding: 8px 16px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 28px;
+}
+
+/* Optional caption above the stats row (e.g. "Active subscriptions per
+   variation") — full-width so the stats wrap beneath it. */
+.summary-stats-card__title {
+  flex-basis: 100%;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.summary-stats-card__item {
+  white-space: nowrap;
+}
+
+.summary-stats-card__label {
+  font-size: 0.85em;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+
+.summary-stats-card__value {
+  font-size: 1.2em;
+  font-weight: bold;
+}

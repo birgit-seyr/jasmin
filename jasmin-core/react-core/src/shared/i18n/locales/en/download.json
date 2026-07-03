@@ -1,0 +1,23 @@
+{
+  "harvesting_list": "Download harvesting list",
+  "harvesting_lists": "Download harvesting lists",
+  "packing_list": "Download packing list",
+  "packing_list_all_stations": "Packing list all stations",
+  "packing_list_bulk": "Download bulk packing list",
+  "packing_list_bulk_member": "Download \"what you can take\"",
+  "selected_labels": "Download selected labels",
+  "purchase_list": "Download order list",
+  "washing_list": "Download washing list",
+  "cleaning_list": "Download cleaning list",
+  "selected_delivery_notes_bulk_pdf": "Download delivery notes as PDF",
+  "selected_delivery_notes_bulk_zip": "Download delivery notes as ZIP",
+  "selected_invoices_bulk_pdf": "Download invoices as PDF",
+  "selected_invoices_bulk_zip": "Download invoices as ZIP",
+  "commissioning_list": "Download commissioning list",
+  "commissioning_list_packing": "Download packing commissioning list",
+  "deliveries_overview": "Download deliveries overview",
+  "delivery_details_station": "Download pickup list",
+  "all_pdf_for_this_day": "All stations for this day",
+  "all_pdf_for_this_week": "All stations for this week",
+  "csv_template": "Download empty CSV template"
+}

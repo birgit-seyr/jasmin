@@ -1,0 +1,52 @@
+/* Inline warnings, error messages, mode banners. */
+
+/* Warning shown when viewing past data (read-only weeks). */
+.past-warning-message {
+  margin-top: 2.5em;
+  padding: 5px;
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 6px;
+  width: 40em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.past-warning-message__icon {
+  color: #ffa800;
+}
+
+/* Inline mode header (e.g. "Packing list mode") */
+.packing-list-mode {
+  font-weight: bold;
+  margin-top: 1.5em;
+  color: rgb(119, 34, 34);
+  font-size: 1.1em;
+}
+
+/* Custom error toast styling for antd message component */
+.custom-error-message .ant-message-notice-content {
+  background-color: var(--color-error);
+  color: rgb(8, 7, 7);
+  font-size: 1.2em;
+  font-weight: 500;
+  width: 30em;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3) !important;
+}
+
+/* Dismiss control for the centred validation-error toast (notify.validationError).
+   A real <button> for keyboard/AT access; styling mirrors the previous inline
+   "×" span (no visual change). */
+.validation-error-dismiss {
+  margin-left: 8px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  color: inherit;
+  line-height: inherit;
+}

@@ -1,0 +1,15 @@
+{
+  "title": "Aktivitätsverlauf",
+  "created": "Erstellt",
+  "updated": "Aktualisiert",
+  "invited": "Eingeladen",
+  "accepted": "Angenommen",
+  "admin_confirmed": "Genehmigt",
+  "admin_rejected": "Abgelehnt",
+  "paid": "Bezahlt",
+  "cancelled": "Storniert",
+  "effective_at": "wirksam am",
+  "expires": "Läuft ab",
+  "no_data": "Keine Aktivitätsdaten verfügbar.",
+  "reason": "Grund"
+}

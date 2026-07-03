@@ -1,0 +1,8 @@
+Hi {{ member.first_name }},
+
+We've received your application to become a member{% if tenant_name %} of {{ tenant_name }}{% endif %}.
+
+Our team will review it and get back to you. In the meantime you can sign in
+with the password you chose to track the status.
+
+Thanks for your interest!

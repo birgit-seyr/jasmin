@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Auto-renewal: subscriptions that could not be renewed</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Auto-renewal: subscriptions that could not be renewed</h1>
+    <p>
+      During the nightly auto-renewal run at <strong>{{ tenant_name }}</strong>
+      on {{ run_date }}, <strong>{{ failure_count }}</strong> subscription(s) could
+      <strong>not</strong> be renewed. These members currently have no follow-on
+      subscription — please review and renew them manually if needed:
+    </p>
+    <ul style="line-height: 1.6;">
+      {{ renewal_failures_html }}
+    </ul>
+    <p><a href="{{ review_url }}">{{ review_url }}</a></p>
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      Automated notification.
+    </p>
+  </body>
+</html>

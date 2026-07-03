@@ -1,0 +1,60 @@
+.with-orders {
+  color: green !important;
+}
+
+.without-orders {
+  color: rgb(67, 66, 66) !important;
+  /* color: inherit; */
+}
+.day-select-differs .ant-select-selector {
+  border-color: red !important;
+}
+
+/* Day selects with violet border */
+.day-select-violet .ant-select-selector {
+  border-color: #743984 !important; /* violet */
+  border-width: 2px !important;
+}
+
+.day-select-violet.ant-select-focused .ant-select-selector {
+  border-color: #743984 !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2) !important;
+}
+
+.day-select-violet.ant-select-disabled .ant-select-selector {
+  border-color: #807d83 !important; /* lighter violet when disabled */
+}
+
+
+.bold-select .ant-select-selection-item,
+.bold-select .ant-select-selection-placeholder {
+  font-weight: 700 !important;
+  color: var(--color-primary) !important;
+}
+
+.week-selector-select .ant-select-selector {
+  border-color: var(--color-primary) !important;
+  box-shadow: 
+  0 2px 4px rgba(34, 108, 71, 0.1),
+  0 4px 8px rgba(34, 108, 71, 0.15),
+  0 8px 16px rgba(34, 108, 71, 0.1),
+  0 16px 32px rgba(34, 108, 71, 0.05);
+}
+
+.week-selector-select:hover .ant-select-selector {
+  border-color: var(--color-primary-hover) !important;
+}
+
+.week-selector-select.ant-select-focused .ant-select-selector {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-light) !important;
+}
+
+.week-selector-small-buttons {
+  border-color: var(--color-primary) !important;
+  box-shadow: 
+  0 2px 4px rgba(34, 108, 71, 0.1),
+  0 4px 8px rgba(34, 108, 71, 0.15),
+  0 8px 16px rgba(34, 108, 71, 0.1),
+  0 16px 32px rgba(34, 108, 71, 0.05);
+}

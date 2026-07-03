@@ -1,0 +1,8 @@
+Hallo {{ member.first_name }},
+
+wir haben deinen Mitgliedsantrag{% if tenant_name %} für {{ tenant_name }}{% endif %} erhalten.
+
+Unser Team wird ihn prüfen und sich bei dir melden. In der Zwischenzeit kannst du
+dich mit dem von dir gewählten Passwort einloggen, um den Status zu verfolgen.
+
+Vielen Dank für dein Interesse!

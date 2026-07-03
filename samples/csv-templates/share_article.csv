@@ -1,0 +1,7 @@
+Active,Article Number,Name,Default Movement Unit,Description,Is Extra,Is Purchased,For Markets,Is Sold To Resellers
+is_active,article_number,name,default_movement_unit,description,is_extra,is_purchased,for_markets,is_sold_to_resellers
+true|false,string,string,string,string,true|false,true|false,true|false,true|false
+true,SA001,Tomato Red,KG,Vine-ripened red tomatoes,false,false,false,true
+true,SA002,Carrot Bunch,BUNCH,Field-grown carrots with greens,false,false,false,true
+true,SA003,Spinach,KG,Fresh leaf spinach,false,true,false,false
+true,SA004,,KG,Row with missing name — should fail validation,false,false,false,false

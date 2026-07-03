@@ -1,0 +1,56 @@
+# Run on every `git commit` after `pre-commit install`.
+#
+# Backend formatters/linters run via pre-commit's own isolated repo hooks.
+# Version drift control: the `rev:` pins below must stay in sync with what
+# `poetry show ruff` / `poetry show black` report inside
+# `jasmin-core/django-core`. Run `pre-commit autoupdate` periodically and
+# bump pyproject.toml in tandem.
+#
+# Frontend lint runs via npm in the local repo because it needs the
+# project's eslint config + plugin tree.
+#
+# To skip on a one-off commit:
+#   SKIP=ruff git commit -m "wip"          # skip one hook
+#   git commit -m "wip" --no-verify        # skip them all (use sparingly)
+#
+# To run manually across the whole repo (useful for the first install or after
+# a big refactor):
+#   pre-commit run --all-files
+
+repos:
+  # ── Secret scanning ─────────────────────────────────────────
+  # Blocks commits that introduce credentials/keys. Known intentional
+  # dev placeholders (tracked .env.dev template, compose defaults) are
+  # allowlisted in .gitleaks.toml so normal commits aren't blocked.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
+
+  # ── Backend lint ────────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.13
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^jasmin-core/django-core/(apps|config|core)/.*\.py$
+
+  # ── Backend format ──────────────────────────────────────────
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 26.5.1
+    hooks:
+      - id: black
+        files: ^jasmin-core/django-core/(apps|config|core)/.*\.py$
+
+  # ── Frontend lint ───────────────────────────────────────────
+  - repo: local
+    hooks:
+      # `npm run lint` lints the whole src tree. Slightly slower than
+      # passing individual files, but uses the project's eslint config
+      # exactly as CI does — no risk of "lints clean locally, fails CI".
+      - id: eslint
+        name: eslint (frontend lint)
+        entry: bash -c 'cd jasmin-core/react-core && npm run lint'
+        language: system
+        files: ^jasmin-core/react-core/src/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false

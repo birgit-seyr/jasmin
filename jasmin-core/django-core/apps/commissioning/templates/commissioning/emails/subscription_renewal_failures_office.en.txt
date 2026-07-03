@@ -1,0 +1,10 @@
+Hello {{ tenant_name }} team,
+
+during the nightly auto-renewal run on {{ run_date }}, {{ failure_count }} subscription(s) could NOT be renewed. These members currently have no follow-on subscription — please review and renew them manually if needed:
+
+{{ renewal_failures_text }}
+
+To the subscription management:
+{{ review_url }}
+
+— Automated notification.

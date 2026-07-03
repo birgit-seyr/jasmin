@@ -1,0 +1,419 @@
+/* ============================================================
+   Custom Ant Design tables
+   - .custom-forecast-table  (commissioning / planning, green)
+   - .custom-staff-table     (staff, blue)
+   - .account-values-table   (finance, blue)
+   - .compact-logging-table  (logs, compact)
+   - Shared: summary rows, sticky columns, zebra striping,
+     column-group separators, sortable hints, helpers.
+   ============================================================ */
+
+/* Invoices: the per-reseller group table sits flush under its card title. */
+.invoice-group-table {
+  margin-top: -2em;
+}
+
+/* --- Custom Forecast Table (green theme) ---------------------------------- */
+.custom-forecast-table {
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow:
+    0 2px 4px rgba(34, 108, 71, 0.1),
+    0 4px 8px rgba(34, 108, 71, 0.15),
+    0 8px 16px rgba(34, 108, 71, 0.1),
+    0 16px 32px rgba(34, 108, 71, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  min-height: 0 !important;
+}
+
+.custom-forecast-table .ant-table {
+  border-radius: var(--table-border-radius) !important;
+  border: 1px solid var(--color-bg-hover);
+}
+
+.custom-forecast-table .ant-table-container {
+  border-radius: var(--table-border-radius) !important;
+}
+
+/* The wrapper above is min-height:0, but the inner container/body still inherit
+   the global ~200px/150px reservation (styles/globals/antd.css) — contradictory
+   dead space. Drop it so custom-forecast (EditableTable) lists hug their rows. */
+.custom-forecast-table .ant-table-container,
+.custom-forecast-table .ant-table-body {
+  min-height: 0 !important;
+}
+
+.custom-forecast-table .ant-table-thead > tr > th {
+  background-color: var(--color-primary-light) !important;
+  color: rgb(10, 9, 9) !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  border-bottom: 2px solid var(--color-primary) !important;
+}
+
+.custom-forecast-table .ant-table-thead > tr:first-child > th:first-child {
+  border-top-left-radius: var(--border-radius) !important;
+}
+
+.custom-forecast-table .ant-table-thead > tr:first-child > th:last-child {
+  border-top-right-radius: var(--border-radius) !important;
+}
+
+/* Vertical grid lines on every column. The stronger `.column-group-start`
+   rule below wins where present (more specific selector). */
+.custom-forecast-table .ant-table-thead > tr > th,
+.custom-forecast-table .ant-table-tbody > tr > td {
+  border-left: 1px solid var(--color-bg-hover);
+}
+.custom-forecast-table .ant-table-thead > tr > th:first-child,
+.custom-forecast-table .ant-table-tbody > tr > td:first-child {
+  border-left: none;
+}
+
+/* Column group separators */
+.custom-forecast-table .ant-table-thead > tr > th.column-group-start,
+.custom-forecast-table .ant-table-tbody > tr > td.column-group-start {
+  border-left: 2px solid var(--color-primary) !important;
+}
+
+/* Light separator between share-type-variation groups */
+.custom-forecast-table .ant-table-thead > tr > th.column-variation-start,
+.custom-forecast-table .ant-table-tbody > tr > td.column-variation-start {
+  border-left: 1px solid var(--color-primary)  !important;
+}
+
+/* Zebra striping */
+.custom-forecast-table .ant-table-tbody > tr.ant-table-row:nth-child(odd) > td {
+  background-color: #ebf6e2 !important;
+}
+.custom-forecast-table .ant-table-tbody > tr.ant-table-row:nth-child(even) > td {
+  background-color: var(--color-bg-base) !important;
+}
+.custom-forecast-table .ant-table-tbody > tr.ant-table-row:hover > td {
+  background-color: #dbf3f3 !important;
+}
+
+/* First summary row in harvest planning table */
+.custom-forecast-table .ant-table-summary tr:first-child td {
+  background-color: #f7e6ff !important;
+  border-top: 2px solid var(--color-payments) !important;
+  border-bottom: 2px solid var(--color-payments) !important;
+}
+
+/* --- Custom Staff Table (blue theme) ------------------------------------- */
+.custom-staff-table {
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow:
+    0 2px 4px rgba(34, 71, 108, 0.1),
+    0 4px 8px rgba(34, 71, 108, 0.15),
+    0 8px 16px rgba(34, 71, 108, 0.1),
+    0 16px 32px rgba(34, 71, 108, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.custom-staff-table .ant-table {
+  border-radius: var(--table-border-radius) !important;
+  border: 1px solid #e6f4ff;
+}
+
+.custom-staff-table .ant-table-container {
+  border-radius: var(--table-border-radius) !important;
+}
+
+.custom-staff-table .ant-table-thead > tr > th {
+  background-color: #e6f4ff !important;
+  color: rgb(10, 9, 9) !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  border-bottom: 2px solid var(--color-payments) !important;
+}
+
+.custom-staff-table .ant-table-thead > tr:first-child > th:first-child {
+  border-top-left-radius: var(--border-radius) !important;
+}
+
+.custom-staff-table .ant-table-thead > tr:first-child > th:last-child {
+  border-top-right-radius: var(--border-radius) !important;
+}
+
+.custom-staff-table .ant-table-tbody > tr.ant-table-row:nth-child(odd) > td {
+  background-color: #f0f8ff !important;
+}
+.custom-staff-table .ant-table-tbody > tr.ant-table-row:nth-child(even) > td {
+  background-color: var(--color-bg-base) !important;
+}
+.custom-staff-table .ant-table-tbody > tr.ant-table-row:hover > td {
+  background-color: #d6ebff !important;
+}
+
+/* --- Account Values Table (blue/finance theme) --------------------------- */
+.account-values-table {
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow:
+    0 2px 4px rgba(24, 144, 255, 0.1),
+    0 4px 8px rgba(24, 144, 255, 0.15),
+    0 8px 16px rgba(24, 144, 255, 0.1),
+    0 16px 32px rgba(24, 144, 255, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.account-values-table .ant-table {
+  border-radius: var(--table-border-radius) !important;
+  border: 1px solid #d6e4ff;
+}
+
+.account-values-table .ant-table-container {
+  border-radius: var(--table-border-radius) !important;
+}
+
+.account-values-table .ant-table-thead > tr > th {
+  background-color: #e6f0ff !important;
+  color: rgb(10, 9, 9) !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  border-bottom: 2px solid var(--color-payments) !important;
+}
+
+.account-values-table .ant-table-thead > tr:first-child > th:first-child {
+  border-top-left-radius: var(--border-radius) !important;
+}
+.account-values-table .ant-table-thead > tr:first-child > th:last-child {
+  border-top-right-radius: var(--border-radius) !important;
+}
+
+.account-values-table .ant-table-tbody > tr.ant-table-row:nth-child(odd) > td {
+  background-color: #f0f7ff !important;
+}
+.account-values-table .ant-table-tbody > tr.ant-table-row:nth-child(even) > td {
+  background-color: var(--color-bg-base) !important;
+}
+.account-values-table .ant-table-tbody > tr.ant-table-row:hover > td {
+  background-color: #d6e8ff !important;
+}
+
+/* Fixed columns background */
+.account-values-table .ant-table-thead .ant-table-cell-fix-left,
+.account-values-table .ant-table-thead .ant-table-cell-fix-right {
+  background-color: #e6f0ff !important;
+}
+.account-values-table .ant-table-tbody .ant-table-cell-fix-left,
+.account-values-table .ant-table-tbody .ant-table-cell-fix-right {
+  background-color: inherit !important;
+}
+
+.account-values-table .ant-table-summary tr {
+  background-color: #d6e4ff !important;
+}
+.account-values-table .ant-table-summary td {
+  background-color: #d6e4ff !important;
+  font-weight: 600;
+  border-top: 2px solid var(--color-payments) !important;
+}
+
+.account-values-table .value-positive {
+  color: #3f8600;
+}
+.account-values-table .value-negative {
+  color: #cf1322;
+}
+
+/* --- Compact logging table ----------------------------------------------- */
+.compact-logging-table {
+  font-size: 0.85em;
+}
+.compact-logging-table .ant-table-thead > tr > th {
+  padding: 6px 8px;
+  font-size: 0.85em;
+  background-color: var(--color-success-bg) !important;
+}
+.compact-logging-table .ant-table-tbody > tr > td {
+  padding: 4px 8px;
+  font-size: 0.85em;
+}
+.compact-logging-table .ant-table {
+  font-size: 0.85em;
+}
+.compact-logging-table .ant-pagination {
+  font-size: 0.85em;
+}
+
+/* --- Generic helpers ----------------------------------------------------- */
+.bordered-table {
+  border: 1px solid var(--color-primary) !important;
+  border-radius: 5px;
+}
+
+/* Small dense table that lives inside a Card (e.g. the per-reseller
+   commissioning cards). The global ``.ant-table-container`` /
+   ``.ant-table-body`` min-height rules in
+   ``styles/globals/antd.css`` reserve ~200px / 150px to prevent
+   layout shift during loading — fine for big standalone tables but
+   leaves several centimetres of dead space below cards that hold
+   only a handful of rows. Override here so the card hugs its
+   content. */
+.compact-table .ant-table-container,
+.compact-table .ant-table-body {
+  min-height: 0 !important;
+}
+
+/* Same fix for any table inside a modal (DeliveryNoteModal, InvoiceModal, …):
+   the ~200px/150px reservation is dead space below a handful of rows in a
+   dialog. Standalone page tables keep it (load-time layout-shift guard). */
+.ant-modal-body .ant-table-container,
+.ant-modal-body .ant-table-body {
+  min-height: 0 !important;
+}
+
+/* Action buttons / links rendered inside a column for a NOT-yet-saved row (the
+   new-row placeholder, or any row without an id) are disabled: they would
+   otherwise fire against a missing record id. EditableCell tags such cells with
+   ``editable-cell-unsaved``. The action column (save / cancel) is never tagged,
+   so the new row can still be saved. Inputs / checkboxes are unaffected — they
+   live in the edit branch, not these display cells. */
+.editable-cell-unsaved button,
+.editable-cell-unsaved a,
+.editable-cell-unsaved .ant-btn {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.checkbox-column-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.7em !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.variation-separator {
+  border-left: 2px solid var(--color-border-subtle);
+  padding-left: 8px;
+}
+
+.changed-day {
+  color: #a8071a;
+  font-weight: bold;
+}
+
+.read-only-amounts-planning {
+  font-size: 0.85em !important;
+}
+
+.joker-taken-row,
+.joker-taken-row td {
+  color: var(--color-text-tertiary) !important;
+}
+
+.charges-subtotal-row,
+.charges-subtotal-row td {
+  background: #daefc8 !important;
+  font-weight: 500;
+}
+
+/* --- Sticky columns ------------------------------------------------------ */
+.sticky-column {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 10 !important;
+  background: white !important;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.ant-table-thead .sticky-column {
+  background: var(--color-bg-elevated) !important;
+}
+
+/* --- Summary rows (generic) ---------------------------------------------- */
+.summary-row {
+  background-color: var(--color-bg-subtle);
+  border-top: 2px solid var(--color-border);
+  font-weight: 700;
+}
+.summary-row td {
+  font-weight: 700;
+}
+
+.ant-table-summary tr {
+  background-color: #f3cdd9 !important;
+  height: 32px !important;
+}
+
+.ant-table-summary td {
+  background-color: #f3cdd9 !important;
+  font-size: 0.9em !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  line-height: 1.2 !important;
+  font-weight: 600;
+}
+
+.ant-table-summary td div {
+  font-size: 0.9em !important;
+  line-height: 1.2 !important;
+}
+
+.ant-table-summary tr:first-child {
+  border-top: 2px solid #f3cdd9;
+}
+
+.ant-table-summary .ant-table-cell {
+  text-align: center !important;
+}
+
+.summary-cell-alignment {
+  text-align: center !important;
+}
+
+.summary-cell-left {
+  text-align: left !important;
+}
+.summary-cell-right {
+  text-align: right !important;
+}
+.summary-cell-center {
+  text-align: center !important;
+}
+
+/* Customer order-amount cell: the placed-order tag reads as a status badge,
+   so render it a touch larger than AntD's default 12px Tag. */
+.order-amount-tag {
+  font-size: 0.9rem;
+  padding: 2px 10px;
+  line-height: 1.6;
+}
+
+/* Cancelled (exited) members in the members table: strike through the row's
+   text and mute it, so an exited member reads as intentionally crossed out.
+   ``line-through`` only affects text, so the action-icon cells (link, status)
+   stay legible. */
+.member-row--cancelled td {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+.member-row--cancelled {
+  opacity: 0.75;
+}
+
+/* Members holding active subscriptions: tint first/last name cells dark green
+   so the office spots subscribed members at a glance. Scoped to the name
+   columns (``col-member-name``) within an active-subs row. */
+.member-row--has-active-subs .col-member-name {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+/* Abos belonging to a cancelled (exited) member: struck through + muted, the
+   same terminal treatment as the exited member's own row
+   (``member-row--cancelled``), keyed on the member's cancellation not the
+   subscription's. ``line-through`` only affects text, so action-icon cells
+   stay legible. */
+.abo-row--cancelled td {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+.abo-row--cancelled {
+  opacity: 0.75;
+}

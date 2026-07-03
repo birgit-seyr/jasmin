@@ -1,0 +1,39 @@
+{
+    "purpose": "Purpose",
+    "recipient": "Recipient",
+    "subject": "Subject",
+    "status_col": "Status",
+    "sent_at": "Sent",
+    "delivered_at": "Delivered",
+    "accounts": {
+        "invitation": "Invitation",
+        "password_reset": "Password reset",
+        "application_received": "Application received",
+        "application_approved": "Application approved",
+        "application_rejected": "Application rejected",
+        "welcome_user": "Welcome"
+    },
+    "commissioning": {
+        "trial_converted": "Trial → member",
+        "member_cancelled": "Cancellation",
+        "offer": "Offer",
+        "invoice": "Invoice",
+        "delivery_note": "Delivery note",
+        "invoice_reminder": "Invoice reminder"
+    },
+    "gdpr": {
+        "deletion_confirm": "Deletion confirm",
+        "deletion_approved": "Deletion approved",
+        "deletion_rejected": "Deletion rejected"
+    },
+    "status": {
+        "pending": "Pending",
+        "sent": "Sent",
+        "delivered": "Delivered",
+        "bounced": "Hard bounce",
+        "deferred": "Deferred",
+        "complained": "Marked as spam",
+        "rejected": "Provider rejected",
+        "failed": "Send failed"
+    }
+}

@@ -1,0 +1,12 @@
+Hallo {{ member.first_name }},
+
+mit deinem ersten Geschäftsanteil bist du jetzt offiziell Mitglied
+bei {{ tenant_name }}.
+
+{% if member.member_number %}Deine Mitgliedsnummer ist #{{ member.member_number }}.{% endif %}
+{% if entry_date %}Eintrittsdatum (GenG §30): {{ entry_date }}.{% endif %}
+
+{% if portal_url %}Im Mitgliederportal findest du deine Anteile, Beiträge
+und Abonnements: {{ portal_url }}{% endif %}
+
+— Das Team von {{ tenant_name }}

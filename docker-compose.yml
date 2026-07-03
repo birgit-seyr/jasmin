@@ -1,0 +1,529 @@
+# =============================================================================
+# Jasmin Platform - PRODUCTION compose
+#
+# Usage:
+#   cp .env.example .env   # then edit
+#   docker compose pull
+#   docker compose build
+#   docker compose up -d
+#
+# Stack:
+#   postgres  - DB (data on named volume)
+#   redis     - cache / huey broker
+#   backend   - Django + gunicorn
+#   huey      - background task worker
+#   frontend  - SPA served by nginx (built at image time)
+#   gateway   - public-facing nginx (TLS, routing)
+#   uptime-kuma - self-hosted uptime monitor (NOT publicly exposed; SSH tunnel)
+#   certbot   - Let's Encrypt renewal loop
+# =============================================================================
+
+x-backend-env: &backend-env
+  DJANGO_SETTINGS_MODULE: config.settings
+  RUNNING_IN_DOCKER: "True"
+  DEBUG: "False"
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+  POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+  POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+  REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?DJANGO_ALLOWED_HOSTS is required}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+  FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?FIELD_ENCRYPTION_KEY is required}
+  EMAIL_HOST: ${EMAIL_HOST:-}
+  EMAIL_PORT: ${EMAIL_PORT:-587}
+  EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+  EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+  EMAIL_USE_TLS: ${EMAIL_USE_TLS:-True}
+  DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-}
+  SERVER_EMAIL: ${SERVER_EMAIL:-}
+  EMAIL_ADMIN: ${EMAIL_ADMIN:-}
+  FRONTEND_DOMAIN: ${FRONTEND_DOMAIN:?FRONTEND_DOMAIN is required}
+  TIME_ZONE: ${TIME_ZONE:-UTC}
+  # Sentry-compatible DSN. Empty = SDK no-op. After first deploy:
+  # ssh-tunnel into the GlitchTip UI, create a project, paste its DSN
+  # in .env. The DSN's host should be ``glitchtip-web:8000`` (over
+  # ``jasmin-net``) for backend-side capture.
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  # Security controls read from os.environ by config/settings.py. Without these
+  # the backend container silently falls back to (permissive) defaults: the IP
+  # allowlist middleware no-ops, the platform subdomain defaults to "marillen",
+  # and captcha / step-up / CSRF-origin / proxy-depth config is ignored.
+  # Defaults MUST match settings.py — ``${VAR:-}`` sets the var to an empty
+  # STRING when unset, and os.environ.get(name, default) returns "" (not the
+  # default) for a present-but-empty var, so a bare ``:-`` would blank a
+  # meaningful default (e.g. the captcha verify URL).
+  SUPER_ADMIN_SUBDOMAIN: ${SUPER_ADMIN_SUBDOMAIN:-marillen}
+  SUPER_ADMIN_ALLOWED_IPS: ${SUPER_ADMIN_ALLOWED_IPS:-}
+  TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-1}
+  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+  SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS:-31536000}
+  # Secret-key rotation: verify in-flight JWTs / signed links against the old
+  # key during a rotation window (see settings.py SECRET_KEY_FALLBACKS).
+  DJANGO_SECRET_KEY_FALLBACK: ${DJANGO_SECRET_KEY_FALLBACK:-}
+  FRIENDLY_CAPTCHA_ENABLED: ${FRIENDLY_CAPTCHA_ENABLED:-False}
+  FRIENDLY_CAPTCHA_SITEKEY: ${FRIENDLY_CAPTCHA_SITEKEY:-}
+  FRIENDLY_CAPTCHA_SECRET: ${FRIENDLY_CAPTCHA_SECRET:-}
+  FRIENDLY_CAPTCHA_VERIFY_URL: ${FRIENDLY_CAPTCHA_VERIFY_URL:-https://api.friendlycaptcha.com/api/v1/siteverify}
+  FRIENDLY_CAPTCHA_TIMEOUT_SECONDS: ${FRIENDLY_CAPTCHA_TIMEOUT_SECONDS:-5.0}
+  STEP_UP_TTL_SECONDS: ${STEP_UP_TTL_SECONDS:-300}
+  STEP_UP_REQUIRES_TOTP: ${STEP_UP_REQUIRES_TOTP:-False}
+
+# Bounded container logs. Without this every service uses the default json-file
+# driver with no size cap, so logs pile up on the same disk as postgres_data
+# → disk-full outage. Referenced (``logging: *default-logging``) by every
+# service below. ~50 MB/service ceiling (10m × 5 rotated files).
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+# -----------------------------------------------------------------------------
+# Per-service resource caps (mem_limit / pids_limit, plus cpus on the
+# non-critical observability stack). Without these every container can consume
+# unbounded host memory/CPU — and because GlitchTip shares the prod postgres
+# (separate ``glitchtip`` DB) and redis (db index 2), a GlitchTip event spike,
+# a runaway Huey job, or a heavy WeasyPrint render could OOM the host and take
+# down the single-instance postgres (a SPOF for the whole platform). The caps
+# bound the blast radius: the observability stack (glitchtip-web/worker,
+# uptime-kuma) is capped well below postgres/backend so it can't starve the DB,
+# and postgres carries a memory reservation. Values target an ~8 GB / 4-core
+# host — TUNE THEM to the actual host (sum of mem_limit should leave headroom
+# for the kernel + page cache). pids_limit is fork-bomb protection.
+# -----------------------------------------------------------------------------
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 2g
+    mem_reservation: 512m
+    pids_limit: 256
+    # Default /dev/shm is 64MB; parallel multi-schema queries (hash joins,
+    # parallel workers) can exhaust it and error out. 256MB gives headroom.
+    shm_size: 256m
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups:rw
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [jasmin-net]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 512m
+    pids_limit: 128
+    # Auth even though redis is internal-network-only: one breached
+    # container on jasmin-net must not get free cache + Huey queue
+    # access. Use a URL-safe password (it is embedded in REDIS_URL).
+    # --maxmemory (below mem_limit) + noeviction: when the working set hits the
+    # cap, redis REJECTS new writes instead of being OOM-killed by the kernel —
+    # which would drop the Huey task queue that shares this instance (db 0).
+    # noeviction (not allkeys-lru) because losing queued tasks is worse than a
+    # transient cache-write failure, and maxmemory-policy is instance-global so
+    # cache + broker can't get different policies here.
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD:?REDIS_PASSWORD is required}",
+        "--maxmemory",
+        "384mb",
+        "--maxmemory-policy",
+        "noeviction",
+      ]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      # $$ defers expansion to the container shell so the password is
+      # read from the environment at probe time.
+      test:
+        [
+          "CMD-SHELL",
+          'redis-cli --no-auth-warning -a "$$REDIS_PASSWORD" ping | grep -q PONG',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [jasmin-net]
+
+  backend:
+    build:
+      context: ./jasmin-core/django-core
+      target: runtime
+    image: jasmin/backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 1500m
+    pids_limit: 512
+    environment: *backend-env
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    # /health/ returns 200 only once gunicorn is up — i.e. AFTER the
+    # entrypoint's migrate_schemas (--shared + --tenant). This makes "healthy"
+    # mean "migrated", which gates huey below so it can't run tasks against a
+    # half-migrated schema. start_period is generous to cover a long
+    # multi-tenant migrate without flapping. (python is always present; the
+    # runtime image has no curl/wget.)
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 10s
+      # Sized past the worst-case first-boot migrate: /health/ only 200s AFTER
+      # migrate_schemas (--shared + --tenant), and a large multi-tenant migrate
+      # can run for many minutes. Too-tight a window marks the backend unhealthy
+      # and aborts the deploy (huey depends_on backend:service_healthy).
+      retries: 40
+      start_period: 600s
+    networks: [jasmin-net]
+    # Graceful shutdown: gunicorn gets time to finish in-flight requests on
+    # ``up -d`` / redeploy instead of the default 10s SIGTERM→SIGKILL.
+    stop_grace_period: 90s
+
+  huey:
+    image: jasmin/backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    logging: *default-logging
+    # Redis-Huey does NOT re-enqueue a SIGKILLed in-flight task, so give a long
+    # task time to finish on shutdown rather than losing it after the default
+    # 10s grace.
+    stop_grace_period: 120s
+    mem_limit: 1g
+    pids_limit: 512
+    environment:
+      <<: *backend-env
+      SKIP_MIGRATIONS: "1"
+      SKIP_COLLECTSTATIC: "1"
+    volumes:
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+      # Read-write so ``prune_old_backups`` (apps/shared/tenants/tasks.py)
+      # can delete backups outside the retention window. The actual
+      # pg_dump writes happen in the dedicated ``backup`` container
+      # (see backups/backup.sh) — huey only prunes, never produces
+      # backups.
+      - ./backups:/backups:rw
+    command: ["huey"]
+    healthcheck:
+      # huey_heartbeat (apps/notifications/tasks.py) rewrites this file every
+      # minute while the scheduler + a worker are alive. A missing/stale file
+      # means a dead OR wedged consumer (all threads blocked) — which otherwise
+      # "looks up" while every job and periodic sweep silently stops — so fail
+      # the check and let the restart policy replace it. Complements the
+      # app-level reconcile_stale_background_jobs watchdog + its admin alert.
+      test:
+        - CMD-SHELL
+        - "python -c 'import os,sys,time; sys.exit(0 if os.path.exists(sys.argv[1]) and time.time()-os.path.getmtime(sys.argv[1])<180 else 1)' /tmp/huey_heartbeat"
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    depends_on:
+      # service_healthy (not service_started): wait until the backend's
+      # /health/ passes, which is only after migrate_schemas has run — so huey
+      # never executes a task against a partially-migrated schema.
+      backend:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [jasmin-net]
+
+  # Nightly encrypted DB backup (closes audit CFG-1). pg_dump | gzip |
+  # gpg(AES256) → the shared ./backups volume, on BACKUP_SCHEDULE (cron, one
+  # dump on startup then on schedule). This is the WRITER that the huey
+  # ``prune_old_backups`` task and ``scripts/restore_drill.sh`` assume — without
+  # it there are ZERO backups behind a complete-looking façade. An offsite copy
+  # (e.g. a Hetzner Storage Box) is a separate, later step.
+  backup:
+    build:
+      context: ./backups
+    image: jasmin/backup:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 512m
+    pids_limit: 128
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      # Required — the symmetric passphrase for the *.sql.gz.gpg dumps. Compose
+      # fails fast if it is unset: an unencrypted dump is a GDPR problem and a
+      # dump you can't decrypt is worthless. Keep this key OFF this host.
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY is required for backups}
+      # Cron expression; defaults to 02:00 daily (matches backup.sh).
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
+      # Uploaded media (invoice/delivery-note PDFs, e-invoice XML, tenant
+      # logos) is archived alongside the DB dump from this read-only mount.
+      MEDIA_DIR: /app/media
+      # Off-host push scaffold: set RCLONE_REMOTE (+ mount an rclone config and
+      # point RCLONE_CONFIG at it) to copy each encrypted artifact off-host.
+      # Unset -> local-only backups.
+      RCLONE_REMOTE: ${RCLONE_REMOTE:-}
+      RCLONE_CONFIG: ${RCLONE_CONFIG:-}
+    volumes:
+      - ./backups:/backups:rw
+      # Read-only source for the media archive step in backup.sh.
+      - media_volume:/app/media:ro
+      # To enable the off-host push, mount an rclone config and set
+      # RCLONE_CONFIG=/rclone.conf (+ RCLONE_REMOTE) in .env:
+      # - ./backups/rclone.conf:/rclone.conf:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [jasmin-net]
+
+  frontend:
+    build:
+      context: ./jasmin-core/react-core
+      target: nginx
+      args:
+        # Empty by default: orval-generated paths already start with /api/, so a
+        # "/api" baseURL would double-prefix to /api/api/... and 404 everything.
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_APP_NAME: ${VITE_APP_NAME:-Jasmin Platform}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        # Baked into the bundle at build time (superAdminHost.ts); must be
+        # passed here or it silently defaults to "marillen" in every build.
+        VITE_SUPER_ADMIN_SUBDOMAIN: ${VITE_SUPER_ADMIN_SUBDOMAIN:-marillen}
+    image: jasmin/frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 128m
+    pids_limit: 64
+    networks: [jasmin-net]
+
+  gateway:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 192m
+    pids_limit: 128
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      FRONTEND_DOMAIN: ${FRONTEND_DOMAIN}
+      SUPER_ADMIN_SUBDOMAIN: ${SUPER_ADMIN_SUBDOMAIN:-marillen}
+      BACKEND_HOST: backend
+      BACKEND_PORT: "8000"
+      FRONTEND_HOST: frontend
+      FRONTEND_PORT: "80"
+    volumes:
+      - ./nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+      - ./nginx/super_admin_allowed_ips.conf:/etc/nginx/super_admin_allowed_ips.conf:ro
+      - ./nginx/security_headers.conf:/etc/nginx/security_headers.conf:ro
+      - ./nginx/security_headers_admin.conf:/etc/nginx/security_headers_admin.conf:ro
+      - static_volume:/app/staticfiles:ro
+      - media_volume:/app/media:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    # The background loop reloads nginx every 12h so it picks up certs that
+    # certbot renews into the shared ``certbot_conf`` volume. nginx loads the
+    # certificate into memory at start and serves it until reloaded, so
+    # without this the gateway would keep presenting the OLD cert and go to a
+    # full HTTPS outage ~60-90 days after deploy (renewal lands on disk, never
+    # in the running process). 12h matches the certbot renew cadence; reload
+    # is zero-downtime. ``exec`` keeps nginx as PID 1 for graceful shutdown;
+    # the reload loop is disowned via ``( … & )`` and its first reload only
+    # fires after the initial 12h sleep, by which point nginx is up.
+    command: >
+      /bin/sh -c "envsubst '$$FRONTEND_DOMAIN $$SUPER_ADMIN_SUBDOMAIN $$BACKEND_HOST $$BACKEND_PORT $$FRONTEND_HOST $$FRONTEND_PORT'
+                  < /etc/nginx/templates/nginx.conf.template
+                  > /etc/nginx/nginx.conf
+                  && nginx -t
+                  && (while :; do sleep 12h & wait $${!}; nginx -s reload; done &)
+                  && exec nginx -g 'daemon off;'"
+    depends_on:
+      - backend
+      - frontend
+    networks: [jasmin-net]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  uptime-kuma:
+    # Self-hosted uptime monitor. NOT exposed to the public internet —
+    # the UI is reachable only via SSH tunnel:
+    #
+    #     ssh -L 3001:localhost:3001 <host>
+    #     # then open http://localhost:3001 in your browser
+    #
+    # When you want to flip this into a public status page, add an
+    # nginx server block under e.g. ``status.${FRONTEND_DOMAIN}`` that
+    # proxies to ``uptime-kuma:3001`` (it joins ``jasmin-net`` so the
+    # gateway can reach it via service-name DNS), reuse the wildcard
+    # TLS cert, and only THEN add an exposed port here. Until then,
+    # tunnel access keeps the Node admin UI off the internet.
+    #
+    # Configure monitors against the public-facing URL, NOT the
+    # internal ``backend`` service. That way Kuma is testing what an
+    # actual user would hit — TLS, gateway, backend, all the way
+    # through.  Example: ``https://${FRONTEND_DOMAIN}/health/``
+    image: louislam/uptime-kuma:1
+    restart: unless-stopped
+    logging: *default-logging
+    # Non-critical observability — capped (incl. CPU) so it can never starve
+    # postgres/backend.
+    mem_limit: 256m
+    pids_limit: 128
+    cpus: 0.5
+    volumes:
+      - uptime_kuma_data:/app/data
+    networks: [jasmin-net]
+
+  # ---- GlitchTip (self-hosted, Sentry-compatible error monitor) -----------
+  # Shares the prod postgres + redis to keep the stack small:
+  #   - Separate database ``glitchtip`` on the same postgres instance, owned by
+  #     a DEDICATED least-privileged role (NOT the tenant-DB superuser) so a
+  #     GlitchTip compromise can't yield the tenant-DB credentials. One-time
+  #     setup before first ``up`` (uses GLITCHTIP_DB_USER/GLITCHTIP_DB_PASSWORD
+  #     from .env):
+  #         docker compose exec postgres psql -U ${POSTGRES_USER} -c \
+  #           "CREATE ROLE glitchtip LOGIN PASSWORD '<GLITCHTIP_DB_PASSWORD>';"
+  #         docker compose exec postgres psql -U ${POSTGRES_USER} -c \
+  #           "CREATE DATABASE glitchtip OWNER glitchtip;"
+  #   - Redis DB index 2 (Jasmin uses 0).
+  #
+  # UI is NOT exposed publicly — reach via SSH tunnel:
+  #     ssh -L 8004:localhost:8004 <host>
+  #     # open http://localhost:8004 to create admin + projects, copy DSN
+  #
+  # The DJANGO backend can reach it over ``jasmin-net`` (the
+  # ``SENTRY_DSN`` you paste into .env uses ``http://glitchtip-web:8000``)
+  # so server-side exceptions are captured immediately.
+  #
+  # FRONTEND error capture requires a public-facing route since the
+  # browser posts events directly to GlitchTip. When you're ready:
+  # add an nginx server block under e.g. ``errors.${FRONTEND_DOMAIN}``
+  # that proxies to ``glitchtip-web:8000``, reuse the wildcard cert,
+  # and set ``VITE_SENTRY_DSN`` to the public URL. Until then,
+  # frontend errors stay in the browser console.
+  glitchtip-web:
+    # Pinned to a specific published patch (not the floating ``v4`` major tag)
+    # for reproducible observability deploys — same rationale as the certbot
+    # pin below. A floating major can silently pull a release with breaking
+    # migrations against the SHARED prod postgres (glitchtip DB on the same
+    # instance). Bump deliberately via the docker Dependabot entry.
+    image: glitchtip/glitchtip:v4.1.0
+    restart: unless-stopped
+    logging: *default-logging
+    # Non-critical observability — capped (incl. CPU) so an event spike can
+    # never starve the prod postgres/redis it shares.
+    mem_limit: 768m
+    pids_limit: 256
+    cpus: 1.0
+    environment:
+      DATABASE_URL: postgres://${GLITCHTIP_DB_USER:-glitchtip}:${GLITCHTIP_DB_PASSWORD:?GLITCHTIP_DB_PASSWORD is required (create the dedicated glitchtip DB role — see comment above)}@postgres:5432/glitchtip
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?GLITCHTIP_SECRET_KEY is required}
+      PORT: "8000"
+      EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+      DEFAULT_FROM_EMAIL: ${SERVER_EMAIL:-noreply@jasmin.coop}
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:?GLITCHTIP_DOMAIN is required}
+      CELERY_WORKER_AUTOSCALE: "1,3"
+      ENABLE_USER_REGISTRATION: "false"
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/2
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [jasmin-net]
+
+  glitchtip-worker:
+    # Pinned to a specific published patch (not the floating ``v4`` major tag)
+    # for reproducible observability deploys — same rationale as the certbot
+    # pin below. A floating major can silently pull a release with breaking
+    # migrations against the SHARED prod postgres (glitchtip DB on the same
+    # instance). Bump deliberately via the docker Dependabot entry.
+    image: glitchtip/glitchtip:v4.1.0
+    restart: unless-stopped
+    logging: *default-logging
+    # Non-critical observability — capped (incl. CPU); CELERY_WORKER_AUTOSCALE
+    # 1,3 below can otherwise burst and contend with the app on the shared DB.
+    mem_limit: 768m
+    pids_limit: 256
+    cpus: 1.0
+    command: ./bin/run-celery-with-beat.sh
+    environment:
+      DATABASE_URL: postgres://${GLITCHTIP_DB_USER:-glitchtip}:${GLITCHTIP_DB_PASSWORD:?GLITCHTIP_DB_PASSWORD is required (create the dedicated glitchtip DB role — see comment above)}@postgres:5432/glitchtip
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?GLITCHTIP_SECRET_KEY is required}
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:?GLITCHTIP_DOMAIN is required}
+      CELERY_WORKER_AUTOSCALE: "1,3"
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/2
+      EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+      DEFAULT_FROM_EMAIL: ${SERVER_EMAIL:-noreply@jasmin.coop}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      glitchtip-web:
+        condition: service_started
+    networks: [jasmin-net]
+
+  certbot:
+    # Wildcard certs require DNS-01 validation. We use the Linode DNS plugin.
+    # Initial issuance: ./certbots/init-wildcard-cert.sh
+    # Pinned (not :latest) for reproducible TLS renewals — a silent certbot
+    # swap could break renewals. Bump via the docker Dependabot entry.
+    image: certbot/dns-linode:v5.6.0
+    restart: unless-stopped
+    logging: *default-logging
+    mem_limit: 128m
+    pids_limit: 64
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+      - ./certbots/linode.ini:/linode.ini:ro
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+                  while :; do
+                      certbot renew
+                          --dns-linode
+                          --dns-linode-credentials /linode.ini
+                          --dns-linode-propagation-seconds 120
+                          --quiet;
+                      sleep 12h & wait $${!};
+                  done"
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
+  logs_volume:
+  uptime_kuma_data:
+  certbot_conf:
+  certbot_www:
+
+networks:
+  jasmin-net:
+    driver: bridge

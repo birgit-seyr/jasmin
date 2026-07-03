@@ -1,0 +1,136 @@
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- Layout utilities ---- */
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flex-baseline {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.flex-min {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Centering: the single most-duplicated inline flex shape (spinners, overlays,
+   avatars). */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Vertical-centered row; supply the gap separately (.gap-8/12/16) or inline. */
+.flex-center-y {
+  display: flex;
+  align-items: center;
+}
+
+/* Column stack; pair with a gap util or use <Flex vertical gap>. */
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Right-aligned action rows (modal footers). */
+.flex-end {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Gap tokens to compose with the flex utilities above. */
+.gap-8 {
+  gap: 8px;
+}
+
+.gap-12 {
+  gap: 12px;
+}
+
+.gap-16 {
+  gap: 16px;
+}
+
+/* Sized utilities (replaces recurring inline style={{ width: "100%" }} etc.) */
+.w-full {
+  width: 100%;
+}
+
+.w-max {
+  width: max-content;
+}
+
+.mb-1em {
+  margin-bottom: 1em;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+/* Page width constraint — recurring `width:100%, maxWidth:800px` pattern. */
+.page-narrow {
+  width: 100%;
+  max-width: 800px;
+}
+
+.loading-placeholder {
+  text-align: center;
+  padding: 50px;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  
+}
+
+a {
+  font-weight: 500;
+  color: #398b54;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #398b54;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}

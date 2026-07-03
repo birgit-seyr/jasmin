@@ -1,0 +1,9 @@
+{
+  "button": "Upload CSV",
+  "failed": "Upload failed",
+  "result_title": "Import result",
+  "summary": "{{total}} rows processed · {{successful}} successful · {{failed}} failed",
+  "errors_heading": "Failed rows",
+  "col_row": "Row",
+  "col_error": "Error"
+}

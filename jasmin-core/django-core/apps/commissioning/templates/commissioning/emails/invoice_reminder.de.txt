@@ -1,0 +1,13 @@
+Zahlungserinnerung
+
+Hallo {{ reseller.name }},
+
+laut unseren Aufzeichnungen sind folgende Rechnungen noch offen:
+
+{{ invoices_text }}
+
+Falls du bereits gezahlt hast, ist diese Nachricht gegenstandslos.
+
+Bankverbindung: {{ tenant.bank_details }}
+
+— Das Team von {{ tenant_name }}

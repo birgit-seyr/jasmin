@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Withdrawal confirmed</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Hi {{ member.first_name }},</h1>
+    <p>
+      this is to confirm your withdrawal
+      {% if tenant_name %}from <strong>{{ tenant_name }}</strong>{% endif %}.
+    </p>
+    {% if cancelled_effective_at %}
+      <p>
+        Date of withdrawal (GenG §30):
+        <strong>{{ cancelled_effective_at }}</strong>.
+      </p>
+    {% endif %}
+    {% if member.member_number %}
+      <p>
+        Your former member number is
+        <strong>#{{ member.member_number }}</strong>. We retain it
+        for the statutory record-keeping period.
+      </p>
+    {% endif %}
+    <p>
+      We will contact you separately about the payout of your
+      cooperative share balance.
+    </p>
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      If you have any questions, please reply to this email.
+    </p>
+  </body>
+</html>

@@ -1,0 +1,26 @@
+/* Small square status indicator (e.g. active vs upcoming subscriptions on the
+   member detail page). Colours live here, not inline, so they theme/centralise. */
+.status-square {
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 2px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.status-square--active {
+  background: var(--color-success);
+}
+
+/* "coming / not yet started" — a blue distinct from the green active state.
+   No blue token exists in variables.css (--color-info is purple), so the
+   standard processing-blue is defined here. */
+.status-square--upcoming {
+  background: var(--color-payments);
+}
+
+/* "pending / not yet confirmed" — gold, matching the pending status tag. */
+.status-square--pending {
+  background: var(--color-warning);
+}

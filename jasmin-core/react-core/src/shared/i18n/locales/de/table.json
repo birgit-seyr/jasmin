@@ -1,0 +1,28 @@
+{
+    "no_data": "Keine Daten verfügbar.",
+    "yes": "ja",
+    "no": "nein",
+    "cancel_confirm": "Sicher abbrechen?", 
+    "delete_confirm": "Sicher löschen?",
+    "add_plus_icon": "",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "edit": "Bearbeiten",
+    "delete": "Löschen", 
+    "add_record": "Neuer Eintrag",
+    "past_week_readonly": "Daten sind in der Vergangenheit und können nicht mehr bearbeitet werden.",
+    "edit_record": "Eintrag bearbeiten",
+    "items_per_page": "/ Seite",
+    "search_placeholder": "Suchen...",
+    "packing_for_days": "alle Tage werden gleich gepackt",
+    "packing_for_tours": "Es wird nach Touren gepackt.",
+    "packing_for_stations": "Es wird nach Verteilstationen gepackt.", 
+    "required": "*",
+    "save_failed_title": "Speichern fehlgeschlagen",
+    "save_failed_hint": "Bitte die Daten korrigieren und erneut speichern.",
+    "save_failed_generic": "Beim Speichern ist ein Fehler aufgetreten.",
+    "load_failed_title": "Laden fehlgeschlagen",
+    "load_failed_hint": "Bitte erneut versuchen.",
+    "retry": "Erneut versuchen"
+
+  }

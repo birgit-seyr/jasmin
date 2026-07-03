@@ -1,0 +1,52 @@
+{
+  "title": "Allgemeines",
+  "basic_info": {
+    "title": "Grundinformationen",
+    "name": "Name der Organisation / des Unternehmens",
+    "description": "Beschreibung",
+    "tenant_language": "Sprache"
+  },
+  "address": {
+    "title": "Adresse",
+    "address": "Straße und Hausnummer",
+    "zip_code": "Postleitzahl",
+    "city": "Stadt",
+    "country": "Land"
+  },
+  "organization": {
+    "title": "Sonstiges",
+    "organic_control_number": "Bio-Kontrollnummer",
+    "fiscal_year_start_month": "Beginn Geschäftsjahr",
+    "tenant_language": "Sprache",
+    "iban": "IBAN",
+    "iban_desc": "Bankkonto der Genossenschaft. Wird als Gläubigerkonto in die SEPA-Lastschrift-XML-Datei (pain.008) übernommen.",
+    "sepa_creditor_id": "SEPA-Gläubiger-ID",
+    "sepa_creditor_id_desc": "Wird von der Bank bei Einrichtung des SEPA-Lastschriftverfahrens vergeben (z. B. „DE98ZZZ09999999999\"). Wird für die pain.008-XML benötigt.",
+    "sepa_creditor_name": "SEPA-Gläubigername",
+    "sepa_creditor_name_desc": "Name der Genossenschaft, wie er auf dem SEPA-Mandat erscheint. Wird in jede pain.008-Datei eingebettet; max. 70 Zeichen.",
+    "sepa_creditor_bic": "SEPA-Gläubiger-BIC",
+    "sepa_creditor_bic_desc": "BIC der Hausbank der Genossenschaft (z. B. „COBADEFFXXX\" für Commerzbank). Wird für die pain.008-XML benötigt — die Bank teilt diesen Code bei der SEPA-Einrichtung mit.",
+    "sepa_creditor_bic_invalid": "Ungültige BIC. Eine BIC hat 8 oder 11 Zeichen und beginnt mit 6 Buchstaben (z. B. „COBADEFFXXX“).",
+    "sepa_remittance_template": "Verwendungszweck (Vorlage)",
+    "sepa_remittance_template_desc": "Text, den Mitglieder auf ihrem Kontoauszug sehen.",
+    "uid": "UID-Nummer"
+  },
+  "sepa": {
+    "title": "SEPA-Lastschrift",
+    "description": "Bankverbindung und Texte für den SEPA-Lastschrifteinzug (pain.008).",
+    "remittance_insert": "Platzhalter einfügen:",
+    "remittance_preview": "Vorschau"
+  },
+  "files": {
+    "title": "Logos",
+    "upload_logo": "Logo hochladen",
+    "current_logo": "Aktuelles Logo",
+    "upload_favicon": "Favicon hochladen",
+    "current_favicon": "Aktuelles Favicon",
+    "current_bio_logo": "Aktuelles Bio-Logo",
+    "upload_bio_logo": "Bio-Logo hochladen"
+  },
+  "email": "email",
+  "email_for_orders": "email für Bestellungen",
+  "phone_number": "Telefon"
+}

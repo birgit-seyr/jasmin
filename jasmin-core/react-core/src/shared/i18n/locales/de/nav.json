@@ -1,0 +1,15 @@
+{
+    "main": "Hauptnavigation",
+    "skip_to_main": "Zum Hauptinhalt springen",
+    "dashboard": "Dashboard",
+    "abos": "Anteile",
+    "commissioning": "Kommissionierung",
+    "cultivation": "Anbau",
+    "configuration": "Konfiguration",
+    "members": "Mitglieder",
+    "staff": "MitarbeiterInnen",
+    "warehouse": "Betriebsmittel",
+    "economics": "Wirtschaft", 
+    "exports": "Exporte",
+    "imports": "Importe"
+}

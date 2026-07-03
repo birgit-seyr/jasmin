@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Invoice {{ invoice.number }}</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 640px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Invoice {{ invoice.number }}</h1>
+
+    <p>Hi {{ reseller.name }},</p>
+
+    <p>please find your invoice for {{ invoice.period }} attached.</p>
+
+    <p>
+      Total: <strong>{{ invoice.total }}</strong><br />
+      Due date: {{ invoice.due_date }}
+    </p>
+
+    <p>Bank details: {{ tenant.bank_details }}</p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">— The {{ tenant_name }} team</p>
+  </body>
+</html>

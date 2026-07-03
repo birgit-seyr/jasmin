@@ -1,0 +1,122 @@
+/**
+ * THE single fullness computation for delivery-station-days, shared by every
+ * capacity display (NewSubscriptionModal tag/flag, Abos row greying,
+ * WaitingListAbos). All consumers must fetch ``capacity_by_week`` with the
+ * SAME wide window (``CAPACITY_WINDOW_PARAMS``) so week keys are always
+ * present for any realistic term — a narrower, differently-anchored fetch is
+ * exactly what made the modal and the Abos table disagree.
+ *
+ * Semantics: a station-day is FULL for a term when ANY term week has
+ * ``free <= 0``. Weeks missing from the window read as available — the
+ * backend create/confirm capacity check stays the authority (it 409s with
+ * ``delivery_station.over_capacity``).
+ *
+ * NOTE: capacity counts HARVEST boxes only (backend `_CAPACITY_SHARE_OPTIONS`)
+ * — add-on shares (chicken, honey, bread, ...) ride along in the base box and
+ * neither consume nor see capacity.
+ */
+
+import dayjs from "dayjs";
+import type { CapacityWeekEntry } from "@shared/api/generated/models";
+
+// Re-exported under the historical name: the shape now comes from the
+// generated model (the backend schema types capacity_by_week precisely), so
+// a backend rename of occupied/free breaks compilation here instead of
+// silently zeroing the fullness math.
+export type { CapacityWeekEntry };
+
+export interface StationDayTermCapacity {
+  /** DSD-wide capacity (null = unlimited). */
+  total: number | null;
+  /** Tightest week's free slots across the term (null when unknown). */
+  minFree: number | null;
+  /** Busiest week's occupancy across the term (the binding constraint —
+   * Abos renders it as "peak/total"). */
+  peakOccupied: number;
+  /** Week key ("<iso-year>-<iso-week>") of the busiest week, null when no
+   * term week carried data. */
+  peakWeekKey: string | null;
+  /** True when any term week has zero free slots. */
+  isFull: boolean;
+}
+
+/** Wide fixed capacity window: week 1 of this year, two years ahead — matches
+ * every consumer so the same DSD always carries the same week keys. */
+export function capacityWindowParams(): {
+  year: number;
+  delivery_week: number;
+  num_weeks: number;
+} {
+  return { year: dayjs().year(), delivery_week: 1, num_weeks: 104 };
+}
+
+/** Share options that CONSUME station capacity (mirror of the backend
+ * `_CAPACITY_SHARE_OPTIONS`; note HARVEST_SHARE_FRUIT is the stored value of
+ * the fruits-only option). Add-on variations (chicken, honey, bread, ...)
+ * neither consume nor display capacity — never offer them a waitlist. */
+export const CAPACITY_SHARE_OPTIONS: readonly string[] = [
+  "HARVEST_SHARE",
+  "HARVEST_SHARE_FRUIT",
+];
+
+export function stationDayTermCapacity(
+  capacity: number | null | undefined,
+  capacityByWeek: Record<string, CapacityWeekEntry> | null | undefined,
+  termWeekKeys: readonly string[],
+): StationDayTermCapacity {
+  const total = capacity ?? null;
+  let minFree: number | null = null;
+  let peakOccupied = 0;
+  let peakWeekKey: string | null = null;
+  let isFull = false;
+  if (capacityByWeek) {
+    for (const key of termWeekKeys) {
+      const week = capacityByWeek[key];
+      if (!week) continue;
+      if (week.occupied > peakOccupied || peakWeekKey == null) {
+        peakOccupied = Math.max(peakOccupied, week.occupied);
+        if (week.occupied >= peakOccupied) peakWeekKey = key;
+      }
+      if (week.free == null) continue;
+      minFree = minFree == null ? week.free : Math.min(minFree, week.free);
+      if (week.free <= 0) isFull = true;
+    }
+  }
+  return { total, minFree, peakOccupied, peakWeekKey, isFull };
+}
+
+/** Forward-looking capacity-floor window: current ISO week, 78 weeks ahead.
+ * Used when the question is "how low may the office set capacity?" — the
+ * floor is the busiest CURRENT-OR-FUTURE week's occupancy (mirrors the
+ * backend validate_capacity / peak_occupied_from_week contract; past weeks
+ * must not inflate the floor). */
+export function capacityFloorParams(): {
+  year: number;
+  delivery_week: number;
+  num_weeks: number;
+} {
+  const now = dayjs();
+  return {
+    year: now.isoWeekYear(),
+    delivery_week: now.isoWeek(),
+    num_weeks: 78,
+  };
+}
+
+/** Week keys matching capacityFloorParams() — current ISO week forward. */
+export function capacityFloorWeekKeys(): string[] {
+  const { num_weeks } = capacityFloorParams();
+  const keys: string[] = [];
+  let cursor = dayjs().startOf("isoWeek");
+  for (let i = 0; i < num_weeks; i += 1) {
+    keys.push(`${cursor.isoWeekYear()}-${cursor.isoWeek()}`);
+    cursor = cursor.add(1, "week");
+  }
+  return keys;
+}
+
+/** "2026-30" -> "30/2026" for user-facing week labels. */
+export function formatWeekKey(weekKey: string): string {
+  const [year, week] = weekKey.split("-");
+  return `${week}/${year}`;
+}

@@ -1,0 +1,81 @@
+Viewset Tests Overview
+======================
+145 tests | 36 test classes | 8 files
+Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
+
+
+test_badge_viewsets.py (9 tests)
+────────────────────────────────
+  TestUnConfirmedSubscriptionsViewSet     3 tests   unconfirmed_subscriptions badge count
+  TestUnConfirmedTrialSubscriptionsViewSet 3 tests  unconfirmed_trial_subscriptions badge count
+  TestUnConfirmedMembersViewSet           3 tests   unconfirmed_members badge count
+
+test_basics_viewsets.py (33 tests)
+──────────────────────────────────
+  TestSeasonViewSet                       3 tests   list, create (with valid_from/valid_until)
+  TestStorageViewSet                      5 tests   list, isPast active/inactive filter, ordering
+  TestShareArticleViewSet                 3 tests   list, isPast active filter
+  TestDefaultShareArticleInShareViewSet  19 tests   list/filter (article/variation/type), CRUD,
+                                                    bulk_upsert (create/update/delete on null|0,
+                                                    fallback unit, explicit unit, scope filter,
+                                                    404 on missing share_article, 400 on bad payload),
+                                                    permissions (member/anon)
+
+test_choices_viewsets.py (8 tests)
+──────────────────────────────────
+  TestSharesDeliveryDayViewSet            3 tests   list, retrieve
+  TestOrdersDeliveryDayViewSet            2 tests   list
+  TestPaymentCycleViewSet                 3 tests   list, is_active filter
+
+test_delivery_viewsets.py (20 tests)
+────────────────────────────────────
+  TestDeliveryStationViewSet              7 tests   list, filter is_active, retrieve, filter by member (confirmed only), member-role read
+  TestDeliveryStationDayViewSet          11 tests   list, filter by station/day, capacity by week
+  TestDeliveryToursViewSet                2 tests   requires delivery_day param, list with day
+
+test_documentation_viewsets.py (19 tests)
+─────────────────────────────────────────
+  TestPlotViewSet                         6 tests   list, filter is_active, create, retrieve, delete
+  TestWasteViewSet                        2 tests   list
+  TestHarvestViewSet                      2 tests   list
+  TestPurchaseViewSet                     2 tests   list
+  TestForecastViewSet                     3 tests   list, filter by year/week
+  TestBulkSetAsExpected                   4 tests   harvest/purchase set-as-expected valid (204);
+                                                    malformed item 400 (serializer.is_valid wiring)
+
+test_members_viewsets.py (15 tests)
+───────────────────────────────────
+  TestMemberViewSet                       8 tests   list, filter active/trial, confirm, reject, retrieve
+  TestSubscriptionViewSet                 4 tests   list, filter is_trial, filter by member
+  TestCoopShareViewSet                    3 tests   list, filter by member
+
+test_shares_viewsets.py (30 tests)
+──────────────────────────────────
+  TestShareTypeViewSet                    7 tests   list, filter share_option, create/update uppercase, invalid 400
+  TestShareTypeVariationViewSet           5 tests   list, filter by share_type/physical/internal_name
+  TestShareTypeVariationGrossPriceViewSet 3 tests   list, filter by variation
+  TestShareViewSet                        4 tests   list, filter year/week, get_days action
+  TestDefaultShareContentBulkCreateValidation 3 tests  valid amount_<var> cell persists (200); missing field 400; NaN/non-finite 400
+  TestDefaultShareContentBulkUpdateValidation 2 tests  composite-id PUT replaces slot amount; bad-typed field 400
+  TestHarvestSharePlanningViewSet         4 tests   create persists ShareContent + station; null note ok;
+                                                    missing field 400; no-amounts 400
+  TestVirtualComponentsViewSet            3 tests   create 201 + persisted component; missing virtual_variation 400;
+                                                    non-physical component 400
+
+test_resellers_viewsets.py (20 tests)
+─────────────────────────────────────
+  TestResellerViewSet                     6 tests   list, filter is_reseller/is_active_reseller, retrieve, delete
+  TestOfferGroupViewSet                   2 tests   list
+  TestOfferViewSet                        3 tests   list, filter by year/week
+  TestOrderContentViewSet                 1 test    list
+  TestInvoiceResellerViewSet              6 tests   list, upload_pdf requires finalized, create_storno guards, protected fields read-only on update
+  TestDeliveryNoteResellerViewSet         3 tests   list, upload_pdf requires finalized
+  TestCommissioningListViewSet            2 tests   requires params, returns for valid params
+
+test_consents_viewsets.py (22 tests) — DSGVO-critical access matrix
+───────────────────────────────────────────────────────────────────
+  TestConsentDocumentReadAccess           6 tests   anon + member + office all 200; current/ 200 + clean 404
+  TestConsentDocumentWriteAccess          6 tests   anon 401/403, member 403; office 201; PROTECTed delete → 409
+  TestConsentRecordCreate                 7 tests   member pinned to self; spoof attempt → 403; office can act on behalf; IP from X-Forwarded-For; UA captured; unknown document → 404
+  TestConsentRecordListScoping            4 tests   anon blocked; member sees only own; office sees all; ?member= filter
+  TestConsentRecordRevoke                 5 tests   anon blocked; owner revokes own; non-owning member → 404 (not leaked); office revokes any; double-revoke → 409

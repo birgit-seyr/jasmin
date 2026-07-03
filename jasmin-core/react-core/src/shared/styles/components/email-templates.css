@@ -1,0 +1,65 @@
+/* Email template editor — friendly variable chips inside Quill. */
+
+.email-tpl-var {
+  display: inline-block;
+  padding: 0 6px;
+  margin: 0 1px;
+  background: var(--color-info-bg);
+  color: #0958d9;
+  border: 1px solid #91caff;
+  border-radius: 10px;
+  font-size: 0.9em;
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+
+.email-tpl-var::before {
+  content: "{ ";
+  opacity: 0.45;
+  font-weight: 600;
+}
+
+.email-tpl-var::after {
+  content: " }";
+  opacity: 0.45;
+  font-weight: 600;
+}
+
+/* Make the WYSIWYG body comfortably tall in the editor modal. */
+.email-tpl-editor .ql-container {
+  min-height: 420px;
+  font-size: 14px;
+}
+
+.email-tpl-editor .ql-editor {
+  min-height: 420px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Subject line: render Quill as a single-line input. */
+.email-tpl-subject .ql-toolbar {
+  display: none;
+}
+
+.email-tpl-subject .ql-container {
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  margin-top: 4px;
+}
+
+.email-tpl-subject .ql-editor {
+  min-height: 0;
+  padding: 4px 11px;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.email-tpl-subject .ql-editor p {
+  margin: 0;
+}

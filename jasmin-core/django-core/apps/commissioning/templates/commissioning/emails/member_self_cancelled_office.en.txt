@@ -1,0 +1,12 @@
+Hi {{ tenant_name }} team,
+
+a member has cancelled their own membership (via the member portal).
+
+Member: {{ member.first_name }} {{ member.last_name }}{% if member.member_number %} (member number #{{ member.member_number }}){% endif %}
+{% if cancelled_effective_at %}Date of withdrawal (GenG §30): {{ cancelled_effective_at }}{% endif %}
+
+Please review the withdrawal and handle the payout of the cooperative
+share balance:
+{{ review_url }}
+
+— Automatic notification from {{ tenant_name }}

@@ -1,0 +1,313 @@
+/* =============================================
+   Dark mode overrides for Ant Design components
+   and custom table/layout classes
+   ============================================= */
+
+/* --- Tables: zebra rows, headers, sticky cols --- */
+:root.dark .custom-forecast-table .ant-table {
+  border-color: var(--color-border) !important;
+}
+:root.dark .custom-forecast-table .ant-table-thead > tr > th {
+  background-color: #1a3a2a !important;
+  color: var(--color-text-primary) !important;
+  border-bottom-color: var(--color-primary) !important;
+}
+:root.dark .custom-forecast-table .ant-table-tbody > tr.ant-table-row:nth-child(odd) > td {
+  background-color: #1a2e1f !important;
+}
+:root.dark .custom-forecast-table .ant-table-tbody > tr.ant-table-row:nth-child(even) > td {
+  background-color: var(--color-bg-base) !important;
+}
+:root.dark .custom-forecast-table .ant-table-tbody > tr.ant-table-row:hover > td {
+  background-color: #1a3535 !important;
+}
+
+/* Staff table */
+:root.dark .custom-staff-table .ant-table {
+  border-color: var(--color-border) !important;
+}
+:root.dark .custom-staff-table .ant-table-thead > tr > th {
+  background-color: #1a2a3a !important;
+  color: var(--color-text-primary) !important;
+  border-bottom-color: #1890ff !important;
+}
+:root.dark .custom-staff-table .ant-table-tbody > tr.ant-table-row:nth-child(odd) > td {
+  background-color: #141e2a !important;
+}
+:root.dark .custom-staff-table .ant-table-tbody > tr.ant-table-row:nth-child(even) > td {
+  background-color: var(--color-bg-base) !important;
+}
+:root.dark .custom-staff-table .ant-table-tbody > tr.ant-table-row:hover > td {
+  background-color: #1a2a40 !important;
+}
+
+/* Account values table */
+:root.dark .account-values-table .ant-table {
+  border-color: var(--color-border) !important;
+}
+:root.dark .account-values-table .ant-table-thead > tr > th {
+  background-color: #1a2a3a !important;
+  color: var(--color-text-primary) !important;
+}
+:root.dark .account-values-table .ant-table-tbody > tr.ant-table-row:nth-child(odd) > td {
+  background-color: #141e2a !important;
+}
+:root.dark .account-values-table .ant-table-tbody > tr.ant-table-row:nth-child(even) > td {
+  background-color: var(--color-bg-base) !important;
+}
+:root.dark .account-values-table .ant-table-tbody > tr.ant-table-row:hover > td {
+  background-color: #1a2a40 !important;
+}
+:root.dark .account-values-table .ant-table-thead .ant-table-cell-fix-left,
+:root.dark .account-values-table .ant-table-thead .ant-table-cell-fix-right {
+  background-color: #1a2a3a !important;
+}
+:root.dark .account-values-table .ant-table-summary tr,
+:root.dark .account-values-table .ant-table-summary td {
+  background-color: #1a2a3a !important;
+}
+
+/* Summary rows */
+:root.dark .ant-table-summary tr {
+  background-color: #3a1a2a !important;
+}
+:root.dark .ant-table-summary td {
+  background-color: #3a1a2a !important;
+}
+:root.dark .custom-forecast-table .ant-table-summary tr:first-child td {
+  background-color: #2a1a3a !important;
+}
+:root.dark .summary-row {
+  background-color: var(--color-bg-subtle) !important;
+  border-top-color: var(--color-border) !important;
+}
+
+/* Sticky columns */
+:root.dark .sticky-column {
+  background: var(--color-bg-base) !important;
+  box-shadow: 2px 0 4px var(--color-shadow) !important;
+}
+:root.dark .ant-table-thead .sticky-column {
+  background: var(--color-bg-elevated) !important;
+}
+
+/* Compact logging table */
+:root.dark .compact-logging-table .ant-table-thead > tr > th {
+  background-color: #1a2e1f !important;
+}
+
+/* The .order-info panel's surface/border/accent come from design tokens
+   (info-card.css), which adapt to dark mode on their own — no override here. */
+
+/* --- Card headers --- */
+:root.dark .tenant-card-header .ant-card-head {
+  background-color: #142a30;
+  border-bottom-color: #1a3a40;
+}
+:root.dark .settings-card-header .ant-card-head {
+  background-color: #141e2a;
+  border-bottom-color: #1a2a3a;
+}
+
+/* --- Borders on custom tables --- */
+:root.dark .custom-forecast-table,
+:root.dark .custom-staff-table,
+:root.dark .account-values-table {
+  border-color: var(--color-shadow);
+}
+
+/* --- 3D Buttons dark mode --- */
+:root.dark .small-squared-button-3d {
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a) !important;
+  box-shadow: 
+    4px 4px 8px rgba(0, 0, 0, 0.4),
+    -2px -2px 6px rgba(60, 60, 60, 0.3),
+    inset 1px 1px 2px rgba(60, 60, 60, 0.2) !important;
+}
+:root.dark .small-squared-button-3d:hover {
+  background: linear-gradient(145deg, #333, #222) !important;
+  box-shadow: 
+    6px 6px 12px rgba(0, 0, 0, 0.5),
+    -3px -3px 8px rgba(70, 70, 70, 0.3),
+    inset 1px 1px 3px rgba(70, 70, 70, 0.3) !important;
+}
+:root.dark .small-squared-button-3d:active {
+  background: linear-gradient(145deg, #1a1a1a, #111) !important;
+}
+:root.dark .small-squared-button-3d:disabled,
+:root.dark .small-squared-button-3d:disabled:hover {
+  background: linear-gradient(145deg, #262626, #1a1a1a) !important;
+  box-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.3),
+    -1px -1px 3px rgba(50, 50, 50, 0.2) !important;
+}
+:root.dark .small-squared-button-3d-bold {
+  background: linear-gradient(145deg, #2a2a2a, #181818) !important;
+  box-shadow: 
+    6px 6px 12px rgba(0, 0, 0, 0.5),
+    -4px -4px 8px rgba(60, 60, 60, 0.3),
+    inset 2px 2px 4px rgba(60, 60, 60, 0.2) !important;
+}
+:root.dark .small-squared-button-neomorphic {
+  background: #1f1f1f !important;
+  box-shadow: 
+    8px 8px 16px rgba(0, 0, 0, 0.5),
+    -8px -8px 16px rgba(50, 50, 50, 0.3) !important;
+}
+:root.dark .small-squared-button-neomorphic:active {
+  box-shadow: 
+    inset 4px 4px 8px rgba(0, 0, 0, 0.5),
+    inset -4px -4px 8px rgba(50, 50, 50, 0.3) !important;
+}
+
+/* Status button dark variants */
+:root.dark .small-squared-button-3d.status-confirmed {
+  background: linear-gradient(145deg, #2b2111, #1f1a0d) !important;
+}
+:root.dark .small-squared-button-3d.status-pending {
+  background: linear-gradient(145deg, #2b1111, #1f0d0d) !important;
+}
+:root.dark .small-squared-button-3d.status-active {
+  background: linear-gradient(145deg, #112b11, #0d1f0d) !important;
+}
+
+/* --- Download button dark --- */
+:root.dark .download-button {
+  background-color: rgb(100, 70, 130) !important;
+  color: var(--color-text-primary) !important;
+}
+:root.dark .download-button:disabled {
+  background: linear-gradient(145deg, #262626, #1a1a1a) !important;
+  color: var(--color-text-disabled) !important;
+}
+
+/* --- Mark state buttons dark --- */
+:root.dark .mark-state {
+  color: var(--color-text-primary) !important;
+}
+
+/* --- Sidebar dark --- */
+:root.dark .sidebar {
+  border-right-color: #303030;
+  background: #1f1f1f;
+}
+:root.dark .sidebar.ant-layout-sider-collapsed:hover {
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.45);
+}
+:root.dark .sidebar-badge .ant-badge-count {
+  box-shadow: 0 0 0 1px #141414;
+}
+:root.dark .sidebar-container.collapsed:hover .sidebar,
+:root.dark .sidebar-container.collapsed:hover .ant-layout-sider {
+  background-color: #1f1f1f !important;
+}
+
+/* --- Buttons dark --- */
+:root.dark .long-squared-button,
+:root.dark .small-squared-button {
+  border-color: #424242 !important;
+}
+:root.dark .disabled-gray.ant-btn:disabled,
+:root.dark .disabled-gray.ant-btn:disabled:hover {
+  background-color: #262626 !important;
+  border-color: #424242 !important;
+  color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* --- Tooltip dark --- */
+:root.dark .custom-tooltip .ant-tooltip-inner {
+  background-color: #1f1f1f !important;
+  border-color: #383838 !important;
+  color: #a0a0a0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
+}
+:root.dark .custom-tooltip .ant-tooltip-arrow::before {
+  background-color: #1f1f1f !important;
+  border-color: #383838 !important;
+}
+
+/* --- Tabs dark --- */
+:root.dark .custom-tabs .ant-tabs-tab {
+  background-color: #1a2e1f !important;
+}
+:root.dark .custom-tabs .ant-tabs-tab-active {
+  background-color: #1a3a2a !important;
+}
+:root.dark .custom-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--color-text-primary) !important;
+}
+:root.dark .custom-tabs .ant-tabs-tab:hover:not(.ant-tabs-tab-active) {
+  background-color: #303030 !important;
+}
+
+/* --- Delivery tours dark --- */
+:root.dark .delivery-tours-table th,
+:root.dark .delivery-tours-table td {
+  border-color: #424242;
+}
+:root.dark .delivery-tours-table th {
+  background-color: #1f1f1f;
+}
+:root.dark .tour-slot {
+  border-color: #383838;
+  background-color: #141414;
+}
+:root.dark .tour-slot.drop-target {
+  border-color: #1890ff;
+  background-color: #111a2e;
+}
+:root.dark .station-assigned {
+  background-color: #262626;
+  border-color: #424242;
+}
+:root.dark .station-unassigned {
+  background-color: #141414;
+}
+
+/* --- Summary row dark --- */
+:root.dark .summary-row {
+  background-color: #262626 !important;
+  border-top-color: #424242 !important;
+}
+
+/* --- Table misc dark --- */
+:root.dark .small-explainer-text {
+  color: var(--color-primary);
+}
+:root.dark .variation-separator {
+  border-left-color: #383838;
+}
+:root.dark .sticky-column {
+  background: #141414 !important;
+}
+:root.dark .ant-table-thead .sticky-column {
+  background: #1f1f1f !important;
+}
+:root.dark .past-warning-message {
+  background: #2b2111;
+  border-color: #5a4020;
+}
+:root.dark .joker-taken-row,
+:root.dark .joker-taken-row td {
+  color: var(--color-text-tertiary) !important;
+}
+:root.dark .changed-day {
+  color: #ff7875;
+}
+:root.dark .order-label {
+  color: #a0a0a0;
+}
+:root.dark .order-value {
+  color: #e0e0e0;
+}
+
+/* --- Error message dark --- */
+:root.dark .custom-error-message .ant-message-notice-content {
+  color: #e0e0e0;
+}
+
+/* --- Green checkbox dark --- */
+:root.dark .green-checkbox .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #2a5a1a !important;
+  border-color: #2a5a1a !important;
+}

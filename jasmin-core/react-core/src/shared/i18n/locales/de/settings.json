@@ -1,0 +1,369 @@
+{
+  "title": "App Einstellungen",
+  "save": "Einstellungen speichern",
+  "save_failed": "Einstellung konnte nicht gespeichert werden.",
+  "reset": "Änderungen zurücksetzen",
+  "unsaved_changes": "Ungespeicherte Änderungen",
+  "save_success": "Einstellungen erfolgreich gespeichert",
+  "unsaved_changes_warning": "Es gibt ungespeicherte Änderungen. Beim Verlassen der Seite gehen sie verloren.",
+  "unsaved_changes_title": "Ungespeicherte Änderungen",
+  "general": {
+    "title": "Allgemeine Einstellungen",
+    "currency": "Währung",
+    "timezone": "Zeitzone",
+    "language": "Sprache",
+    "dateFormat": "Datumsformat",
+    "csvFormat": "CSV-Format",
+    "numberLocale": "Zahlenformat",
+    "csvFormat_de": "Deutsch (Trenner: \";\", Dezimal: \",\", Datum: TT.MM.JJJJ)",
+    "csvFormat_en": "Englisch (Trenner: \",\", Dezimal: \".\", Datum: JJJJ-MM-TT)",
+    "timeFormat": "Zeitformat"
+  },
+  "navigation": {
+    "title": "Anzeige Module",
+    "show_members": "Modul MITGLIEDER",
+    "show_abos": "Modul ABOS",
+    "show_commissioning": "Modul KOMMISSIONIERUNG",
+    "show_staff": "Modul MITARBEITERINNEN",
+    "show_warehouse": "Modul BETRIEBSMITTEL",
+    "show_economics": "Modul WIRTSCHAFTLICHKEIT",
+    "show_cultivation": "Modul ANBAUPLANUNG"
+  },
+  "ai": {
+    "title": "KI-Einstellungen",
+    "claude_enabled": "Claude KI aktivieren"
+  },
+  "months": {
+    "january": "Januar",
+    "february": "Februar",
+    "march": "März",
+    "april": "April",
+    "may": "Mai",
+    "june": "Juni",
+    "july": "Juli",
+    "august": "August",
+    "september": "September",
+    "october": "Oktober",
+    "november": "November",
+    "december": "Dezember"
+  },
+  "gdpr": {
+    "deletion_gate": {
+      "title": "Löschanträge",
+      "description": "Steuert, wie DSGVO-Löschanträge (Art. 17) bearbeitet werden."
+    },
+    "require_admin_approval": {
+      "label": "Admin-Freigabe für Löschanträge erforderlich",
+      "description": "Wenn aktiv (Standard), muss das Büro jeden Löschantrag nach der E-Mail-Bestätigung manuell freigeben. Wenn deaktiviert, wird der Antrag direkt nach dem Klick auf den Bestätigungslink ausgeführt — schneller, aber ohne menschliche Endprüfung. Löschungen von Konten mit Staff-/Admin-Rolle benötigen unabhängig von dieser Einstellung immer eine manuelle Freigabe."
+    }
+  },
+  "members": {
+    "title": "Mitglieder-Einstellungen",
+    "trial": {
+      "title": "Probe-Mitglieder"
+    },
+    "allows_trial_members": "Probe-Mitglieder erlauben",
+    "allows_trial_members_desc": "Probe-Mitgliedschaften für neue Nutzer aktivieren",
+   
+    "only_members_trial_subs": "Nur Mitglieder können Probe-Abonnements haben",
+    "only_members_trial_subs_desc": "Probe-Abonnements auf bestehende Mitglieder beschränken",
+    "subscriptions": {
+      "title": "Abonnement-Regeln"
+    },
+    "must_have_subscriptions": "Mitglieder müssen Abonnements haben",
+    "must_have_subscriptions_desc": "Alle Mitglieder müssen mindestens ein Abonnement haben",
+    "only_members_subscriptions": "Nur Mitglieder können Abonnements haben",
+    "only_members_subscriptions_desc": "Abonnements nur für registrierte Mitglieder",
+    "staff_special_conditions": "Sonderkonditionen für MitarbeiterInnen-Abonnements",
+    "staff_special_conditions_desc": "Spezielle Preise/Bedingungen für MitarbeiterInnen anwenden",
+    "loans": {
+      "title": "Mitglieder-Darlehen"
+    },
+    "uses_member_loans": "Mitglieder-Darlehen aktivieren",
+    "uses_member_loans_desc": "Mitgliedern erlauben, der Genossenschaft Darlehen zu geben",
+    "coop_shares": {
+      "title": "Genossenschaftsanteile"
+    },
+    "has_coop_shares": "Genossenschaftsanteile verwenden",
+    "has_coop_shares_desc": "Genossenschaftsanteils-System aktivieren",
+    "value_one_share": "Wert pro Genossenschaftsanteil",
+    "value_one_share_desc": "Monetärer Wert eines Genossenschaftsanteils",
+    "min_shares": "Mindestanzahl Anteile",
+    "min_shares_desc": "Mindestanzahl Anteile für Mitgliedschaft",
+    "max_shares": "Maximale Anzahl Anteile",
+    "max_shares_desc": "Maximale Anzahl Anteile pro Mitglied",
+    "coop_payback_retention": "Behaltefrist für Anteile gekündigter Mitglieder",
+    "coop_payback_retention_desc": "Monate, die Genossenschaftsanteile nach dem Austritt eines Mitglieds in der Genossenschaft verbleiben, bevor sie zur Rückzahlung fällig werden (0 = sofort fällig).",
+    "months_suffix": "Monate",
+    "paper_signature": {
+      "title": "Unterschrift auf Papier"
+    },
+    "requires_paper_signature_for_membership": "Papier-Unterschrift für Mitgliedschaft",
+    "requires_paper_signature_for_membership_desc": "Wenn aktiviert, müssen die Mitgliedschafts-Einwilligungen ausgedruckt, unterschrieben und ans Büro geschickt werden. Das Büro vermerkt den Eingang manuell."
+  },
+  "payments": {
+    "strategy": {
+      "title": "Zahlungen Anteile",
+      "description": "Wie die Beträge für Mitgliederabos pro Zahlungszyklus berechnet werden."
+    },
+    "due": {
+      "title": "Fälligkeit"
+    },
+    "sepa": {
+      "title": "SEPA-Einzug"
+    },
+    "billing_strategy": "Zahlungen Anteile",
+    "billing_strategy_desc": "EXACT_PER_PERIOD rechnet genau die Lieferungen ab, die im jeweiligen Zyklus liegen. SMOOTHED verteilt den Gesamtbetrag gleichmäßig über alle Zyklen der Vertragslaufzeit.",
+    "strategy_exact": "Exakt pro Zeitraum (tatsächliche Lieferungen zählen)",
+    "strategy_smoothed": "Geglättet über die gesamte Vertragslaufzeit",
+    "strategy_smoothed_disabled": "Geglättet über die gesamte Vertragslaufzeit (vorübergehend nicht verfügbar)",
+    "bills_joker_deliveries": "Joker-Lieferungen abrechnen",
+    "bills_joker_deliveries_desc": "Wenn deaktiviert, werden als Joker markierte Lieferungen nicht abgerechnet.",
+    "allows_solidarity_pricing": "Solidarpreise erlauben",
+    "allows_solidarity_pricing_desc": "Mitglieder dürfen den Preis pro Lieferung selbst festlegen (mindestens die hinterlegte Untergrenze der Variante; nach oben offen). Der Richtpreis wird als Vorschlag angezeigt.",
+    "requires_paper_signature_for_sepa_mandate": "Papier-Unterschrift für SEPA-Mandat",
+    "requires_paper_signature_for_sepa_mandate_desc": "Wenn aktiviert, muss das SEPA-Mandat ausgedruckt, unterschrieben und ans Büro geschickt werden. Das Büro vermerkt den Eingang manuell.",
+    "due_day": "Fälligkeitstag im Monat",
+    "due_day_desc": "Tag im Monat, an dem die Abbuchung fällig ist. Maximal 28, um Probleme mit kurzen Monaten zu vermeiden.",
+    "sepa_collection_day": "SEPA-Einzugstag im Monat",
+    "sepa_collection_day_desc": "Standard-Tag im Monat, an dem die Bank den SEPA-Lastschrifteinzug ausführen soll. Wird beim Erstellen eines Abbuchungslaufs als Einzugsdatum vorgeschlagen. Maximal 28."
+  },
+  "shares": {
+    "title": "Anteils-Einstellungen"
+  },
+  "commissioning": {
+    "layout": {
+      "title": "Layout"
+    },
+    "logistics": {
+      "title": "Logistik"
+    },
+    "percentage_added_to_bulk_packing_list_description": "kann direkt bei jedem Gemüse angepasst werden",
+    "percentage_added_to_bulk_packing_list": "zusätzliche % für Packlisten (nur relevant, wenn Mitglieder ihre Kisten selbst packen)‚",
+    "allow_upload_for_data_lists": "Daten über csv hinaufladbar",
+    "allow_upload_for_data_lists_desc": "Um größere Datenmenge in die Daten-Listen zu laden (z.b. Gemüse für Anteile), können csv Dateien verwenden werden zum Upload.",
+    "uploads_weekly_amount_desc": "über eine csv-Datei",
+    "show_seller_name_in_share": "Name des Lieferanten für Zukaufs-Artikel in Kisten für die Mitglieder anzeigen.",
+    "packing_mode": "Pack-Modus",
+    "packing_mode_description": "Wie Mitglieder ihre Anteile erhalten. Kisten: alle Anteile werden pro Lieferstation vorgepackt. Bulk: Mitglieder bedienen sich aus Bulk-Kisten. Gemischt: pro Variation einzeln wählbar.",
+    "packing_mode_boxes": "Kisten werden vorgepackt / es werden fertige Kisten an die Verteilstationen geliefert",
+    "packing_mode_bulk": "Mitglieder packen ihre Kisten an Verteilstationen selbst",
+    "packing_mode_mixed": "gemischt (pro Anteilsart wählbar)",
+    "number_packing_stations": "Anzahl Packstationen",
+    "show_size_column": "Gemüse-Größen Spalte anzeigen",
+    "show_summary_in_harvest_share_planning_on_top": "Summen-Zeilen in Kistenplanung oben anzeigen", 
+    "sales": {
+      "title": "Vertriebskanäle"
+    },
+    "default_planning_mode_basic": "nach Tagen",
+    "default_planning_mode_tours": "nach Touren",
+    "default_planning_mode_stations": "nach Verteilstationen",
+    "default_planning_mode": "geplant wird: ", 
+    "default_planning_mode_description": "Das ist nur die Voreinstellung. Kann jede Woche geändert werden.",
+    "has_markets": "Verkauf auf Märkten",
+    "sells_to_resellers": "Verkauf an Wiederverkäufer",
+    "different_offer_groups": "Verschiedene Angebotsgruppen",
+    "tax_rates": {
+      "title": "Standard-Steuersätze",
+      "description": "Diese Standard-Steuersätze werden beim Anlegen neuer Preise vorausgefüllt. Sie können an jeder Stelle in der App angepasst werden."
+    },
+    "default_tax_rate_articles": "Standard-Steuersatz Artikel (%)",
+    "default_tax_rate_crates": "Standard-Steuersatz Leergut (%)",
+    "default_tax_rate_shares": "Standard-Steuersatz Anteile (%)",
+    "planning": {
+      "title": "Schnittstellen"
+    },
+    "uploads_weekly_amount": "Wöchentliche Anteilsmengen hochladen",
+    "manual_weekly_amount": "Wöchentliche Anteilsmengen manuell erfassen",
+    "season": {
+      "title": "Saison-Einstellungen"
+    },
+    "season_start": "Saisonbeginn",
+    "season_start_week": "Saisonbeginn (KW 1–53)",
+    "shares": {
+      "title": "Anteils-Typen"
+    },
+    "has_veg_shares": "Gemüse-Anteile",
+    "has_fruit_shares": "Obst-Anteile",
+    "has_chicken_shares": "Hühner-Anteile",
+    "has_oil_shares": "Öl-Anteile",
+    "has_honey_shares": "Honig-Anteile",
+    "has_grain_shares": "Getreide-Anteile",
+    "has_bread_shares": "Brot-Anteile",
+    "share_types": {
+      "title": "Kistentypen"
+    },
+    "trial": {
+      "title": "Probe-Anteile",
+      "description": "Steuert, ob Probemitgliedschaften möglich sind und welche Bedingungen dafür gelten."
+    },
+    "allows_trial_shares": "Probe-Anteile erlauben",
+    "trial_duration": "Probe-Anteils-Dauer (Anzahl Lieferungen)",
+    "allows_trial_subscriptions": "Probe-Abos erlauben",
+    "allowed_trial_subscription_duration": "Erlaubte Dauer der Probe-Abos (Wochen)",
+    "allowed_trial_subscription_duration_desc": "Maximale Laufzeit einer Probemitgliedschaft.",
+    "allows_trial_subscriptions_for_trial_members": "Probe-Abos für Probemitglieder",
+    "allows_trial_subscriptions_for_trial_members_desc": "Bestimmt, ob auch Probemitglieder Probe-Abos abschließen können.",
+    "uses_jokers_for_trial_subscriptions": "Joker für Probe-Abos verwenden",
+    "uses_jokers_for_trial_subscriptions_desc": "Bestimmt, ob Joker auch auf Probe-Abos angerechnet werden.",
+    "jokers": {
+      "title": "Joker-System"
+    },
+    "uses_jokers": "Joker aktivieren",
+    "default_amount_jokers": "Anzahl Joker",
+    "default_amount_jokers_description": "Dies kann für die einzelnen Anteils-Typen angepasst werden.",
+    "jokers_for_trial": "Joker für Probe-Abonnements verwenden",
+    "donation_jokers": "Spenden-Joker aktivieren",
+    "default_amount_of_donation_jokers": "Zusätzliche Spenden-Joker",
+        "default_amount_of_donation_jokers_description": "Dies kann für die einzelnen Anteils-Typen angepasst werden.",
+
+    "subscriptions": {
+      "title": "Abonnement-Verwaltung"
+    },
+    "end_at_season_end": "Abonnements enden mit Saisonende",
+    "end_after_year": "Abonnements enden nach einem Jahr",
+    "auto_renewed": "Abonnements automatisch verlängern",
+    "min_weeks_cancel": "Mindestwochen zur Kündigung vor Ende",
+    "min_weeks_cancel_description": "Mindestanzahl an Wochen, die ein Abo vor seinem Ende gekündigt werden muss.",
+    "share_type_changes": "Änderung der Anteilsgrössen im laufenden Abo erlauben",
+    "allows_share_variation_optin": "On-off Anteile zulassen (Opt-in pro Lieferung)",
+    "allows_share_variation_optin_desc": "Einzelne Anteilsvarianten können freigegeben werden, so dass sie spontan wochenweise dazubestellt werden können."
+  },
+  "configure_prices": "Preise & Größen konfigurieren",
+  "reseller": {
+    "footer_left_placeholder": "Linke Fußzeile eingeben (z.B. Firmenkontaktdaten)...",
+    "footer_middle_placeholder": "Mittlere Fußzeile eingeben (z.B. Bankverbindung)...",
+    "footer_right_placeholder": "Rechte Fußzeile eingeben (z.B. Steuerinformationen)...",
+    "invoice_entry_1_placeholder": "Rechnungs-Einleitungstext eingeben...",
+    "invoice_entry_2_placeholder": "Zusätzlichen Rechnungstext eingeben...",
+    "invoice_entry_3_placeholder": "Zusätzlichen Rechnungstext eingeben...",
+    "invoice_greeting_1_placeholder": "Abschlussgruß eingeben (z.B. Mit freundlichen Grüßen)...",
+    "invoice_greeting_2_placeholder": "Zusätzlichen Grußtext eingeben...",
+    "invoice_greeting_3_placeholder": "Zusätzlichen Grußtext eingeben...",
+    "delivery_entry_1_placeholder": "Lieferschein-Einleitungstext eingeben...",
+    "delivery_entry_1_description": "Dieser Text erscheint auf Lieferscheinen oberhalb der Tabelle mit den Artikeln. Erste Zeile.",
+    "delivery_entry_2_description": "Dieser Text erscheint auf Lieferscheinen oberhalb der Tabelle mit den Artikeln. Zweite Zeile.",
+    "delivery_entry_3_description": "Dieser Text erscheint auf Lieferscheinen oberhalb der Tabelle mit den Artikeln. Dritte Zeile.",
+    "delivery_greeting_1_description": "Dieser Text erscheint auf Lieferscheinen unterhalb der Tabelle mit den Artikeln. Erste Zeile.",
+    "delivery_greeting_2_description": "Dieser Text erscheint auf Lieferscheinen unterhalb der Tabelle mit den Artikeln. Zweite Zeile.",
+    "delivery_greeting_3_description": "Dieser Text erscheint auf Lieferscheinen unterhalb der Tabelle mit den Artikeln. Dritte Zeile.",
+    "invoice_entry_1_description": "Dieser Text erscheint auf Rechnungen oberhalb der Tabelle mit den Artikeln. Erste Zeile.",
+    "invoice_entry_2_description": "Dieser Text erscheint auf Rechnungen oberhalb der Tabelle mit den Artikeln. Zweite Zeile.",
+    "invoice_entry_3_description": "Dieser Text erscheint auf Rechnungen oberhalb der Tabelle mit den Artikeln. Dritte Zeile.",
+    "invoice_greeting_1_description": "Dieser Text erscheint auf Rechnungen unterhalb der Tabelle mit den Artikeln. Erste Zeile.",
+    "invoice_greeting_2_description": "Dieser Text erscheint auf Rechnungen unterhalb der Tabelle mit den Artikeln. Zweite Zeile.",   
+    "invoice_greeting_3_description": "Dieser Text erscheint auf Rechnungen unterhalb der Tabelle mit den Artikeln. Dritte Zeile.",
+    "footer_left_description": "Dieser Text erscheint in der linken Spalte der Fußzeile auf Rechnungen und Lieferscheinen.",
+    "footer_middle_description": "Dieser Text erscheint in der mittleren Spalte der Fußzeile auf Rechnungen und Lieferscheinen.",
+    "footer_right_description": "Dieser Text erscheint in der rechten Spalte der Fußzeile auf Rechnungen und Lieferscheinen.",
+
+    "delivery_entry_2_placeholder": "Zusätzlichen Lieferscheintext eingeben...",
+    "delivery_entry_3_placeholder": "Zusätzlichen Lieferscheintext eingeben...",
+    "delivery_greeting_1_placeholder": "Abschlussgruß eingeben...",
+    "delivery_greeting_2_placeholder": "Zusätzlichen Grußtext eingeben...",
+    "delivery_greeting_3_placeholder": "Zusätzlichen Grußtext eingeben...",
+    "payment_numbering": {
+      "title": "Zahlungsbedingungen & Dokumentennummerierung"
+    },
+    "payment_terms": "Zahlungsziel (Tage)",
+    "payment_terms_desc": "Anzahl Tage bis zur Fälligkeit der Zahlung für Wiederverkäufer",
+    "order_prefix": "Bestellnummern-Präfix",
+    "order_prefix_desc": "Präfix für Bestellnummern (z.B. BE-2024-001)",
+    "order_numbers_reset": "Bestellnummern bei Jahreswechsel zurücksetzen",
+    "order_numbers_reset_desc": "Bestellnummerierung jedes Jahr bei 1 beginnen",
+    "delivery_note_prefix": "Lieferschein-Präfix",
+    "delivery_note_reset": "Lieferscheinnummern bei Jahreswechsel zurücksetzen",
+    "delivery_note_numbers_reset_desc": "Lieferscheinnummerierung jedes Jahr bei 1 beginnen",
+    "invoice_prefix": "Rechnungsnummern-Präfix",
+    "correction_prefix": "Korrekturrechnung-Präfix",
+    "invoice_reset": "Rechnungsnummern bei Jahreswechsel zurücksetzen",
+    "invoice_numbers_reset_desc": "Rechnungsnummerierung jedes Jahr bei 1 beginnen",
+    "offer_settings": {
+      "title": "Angebots-Einstellungen",
+      "description": "Konfiguration der Preisstaffeln für Angebote an Wiederverkäufer. Es können bis zu drei Staffeln definiert werden."
+    },
+    "offer_tiers": "Preisstaffeln",
+    "offer_tiers_desc": "Staffelpreise ab einer bestimmten Anzahl Verpackungseinheiten (VPE). Die erste Staffel beginnt immer ab 1 VPE.",
+    "offer_tier_from": "ab",
+    "offer_tier_pu": "VPE",
+    "offer_tier_label": "Staffel",
+    "offer_prices_are_per_pu": "Preise im Angebot pro VPE anzeigen",
+    "offer_prices_are_per_pu_desc": "Wenn aktiviert, werden die Preise im Angebot pro Verpackungseinheit (VPE) statt pro Kilogramm/Stück angezeigt.",
+    "footer": {
+      "title": "Dokumenten-Fußzeilen"
+    },
+    "footer_left": "Linke Spalte",
+    "footer_middle": "Mittlere Spalte",
+    "footer_right": "Rechte Spalte",
+    "invoice_text": {
+      "title": "Rechnungs-Textzeilen"
+    },
+    "invoice_entry_1": "Einleitungszeile 1",
+    "invoice_entry_2": "Einleitungszeile 2",
+    "invoice_entry_3": "Einleitungszeile 3",
+    "invoice_greeting_1": "Grußzeile 1",
+    "invoice_greeting_2": "Grußzeile 2",
+    "invoice_greeting_3": "Grußzeile 3",
+    "offer_text": {
+      "title": "Angebots-Textzeilen"
+    },
+    "offer_entry_1": "Einleitungszeile 1",
+    "offer_entry_2": "Einleitungszeile 2",
+    "offer_entry_3": "Einleitungszeile 3",
+    "offer_entry_1_description": "Dieser Text erscheint auf Angeboten an Wiederverkäufer oberhalb der Tabelle mit den Artikeln. Erste Zeile.",
+    "offer_entry_2_description": "Dieser Text erscheint auf Angeboten an Wiederverkäufer oberhalb der Tabelle mit den Artikeln. Zweite Zeile.",
+    "offer_entry_3_description": "Dieser Text erscheint auf Angeboten an Wiederverkäufer oberhalb der Tabelle mit den Artikeln. Dritte Zeile.",
+    "offer_entry_1_placeholder": "Angebots-Einleitungstext eingeben...",
+    "offer_entry_2_placeholder": "Zusätzlichen Angebotstext eingeben...",
+    "offer_entry_3_placeholder": "Zusätzlichen Angebotstext eingeben...",
+    "offer_greeting_1": "Grußzeile 1",
+    "offer_greeting_2": "Grußzeile 2",
+    "offer_greeting_3": "Grußzeile 3",
+    "offer_greeting_1_description": "Dieser Text erscheint auf Angeboten an Wiederverkäufer unterhalb der Tabelle mit den Artikeln. Erste Zeile.",
+    "offer_greeting_2_description": "Dieser Text erscheint auf Angeboten an Wiederverkäufer unterhalb der Tabelle mit den Artikeln. Zweite Zeile.",
+    "offer_greeting_3_description": "Dieser Text erscheint auf Angeboten an Wiederverkäufer unterhalb der Tabelle mit den Artikeln. Dritte Zeile.",
+    "offer_greeting_1_placeholder": "Abschlussgruß eingeben...",
+    "offer_greeting_2_placeholder": "Zusätzlichen Grußtext eingeben...",
+    "offer_greeting_3_placeholder": "Zusätzlichen Grußtext eingeben...",
+    "offer_order_instructions": "Bestellhinweise",
+    "offer_order_instructions_description": "Freier Text, der zwischen den Einleitungszeilen und der Angebotstabelle erscheint. Typischer Inhalt: Bestellannahme, Bestellschluss, Versand der Bestellung.",
+    "offer_order_instructions_placeholder": "Bestellhinweise eingeben (z.B. Bestellschluss Donnerstag 12:00 Uhr)...",
+    "correction_invoice_prefix": "Präfix Korrektur- / Storno-Rechnungsnummer",
+    "preview": {
+      "title": "Vorschau mit aktuellem Text",
+      "description": "Erzeugt eine Beispiel-PDF mit Test-Daten, damit man sehen kann, wie die Dokument aussehen.",
+      "delivery_note": "Vorschau Lieferschein",
+      "invoice": "Vorschau Rechnung",
+      "offer": "Vorschau Angebot"
+    },
+    "delivery_text": {
+      "title": "Lieferschein-Textzeilen"
+    },
+    "delivery_entry_1": "Einleitungszeile 1",
+    "delivery_entry_2": "Einleitungszeile 2",
+    "delivery_entry_3": "Einleitungszeile 3",
+    "delivery_greeting_1": "Grußzeile 1",
+    "delivery_greeting_2": "Grußzeile 2",
+    "delivery_greeting_3": "Grußzeile 3"
+  },
+  "saved": "Gespeichert",
+  "saving": "Wird gespeichert …",
+  "subscriptions": {
+    "trial": {
+      "title": "Probemitgliedschaft",
+      "description": "Steuert, ob Probemitgliedschaften möglich sind und welche Bedingungen dafür gelten."
+    },
+     "info_sentence_about_trial_subscriptions": "Kurzbeschreibung Probe-Abos",
+    "info_sentence_about_trial_subscriptions_desc": "z.B.: Probe-Abos sind für 4 Wochen möglich, enden dann automatisch.",
+    "allows_trial_subscriptions": "Probe-Abos erlauben",
+    "allowed_trial_subscription_duration": "Erlaubte Dauer der Probe-Abos (Wochen)",
+    "allowed_trial_subscription_duration_desc": "Maximale Laufzeit einer Probemitgliedschaft.",
+    "allows_trial_subscriptions_for_trial_members": "Probe-Abos für Probemitglieder",
+    "allows_trial_subscriptions_for_trial_members_desc": "Bestimmt, ob auch Probemitglieder Probe-Abos abschließen können.",
+    "uses_jokers_for_trial_subscriptions": "Joker für Probe-Abos verwenden",
+    "uses_jokers_for_trial_subscriptions_desc": "Bestimmt, ob Joker auch auf Probe-Abos angerechnet werden.",
+    "share_types": {
+      "title": "Kistentypen"
+    }
+  }
+}

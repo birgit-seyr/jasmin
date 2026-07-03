@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Deletion request awaiting approval</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
+      A GDPR deletion request is waiting for approval
+    </h1>
+
+    <p>
+      Someone has confirmed a GDPR Article 17 ("right to erasure") deletion
+      request at
+      {% if tenant_name %}<strong>{{ tenant_name }}</strong>{% else %}your platform{% endif %}.
+    </p>
+
+    <p>
+      The request is now in the <em>"awaiting office approval"</em> state and
+      must be reviewed and either approved or rejected (with a reason) before
+      the actual anonymisation runs.
+    </p>
+
+    <p style="margin: 32px 0;">
+      <a href="{{ review_url }}"
+         style="display: inline-block; padding: 12px 20px; background: #1f6feb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        Open in the office
+      </a>
+    </p>
+
+    <p style="color: #555; font-size: 14px;">
+      Or copy this link into your browser:<br />
+      <a href="{{ review_url }}" style="color: #1f6feb; word-break: break-all;">{{ review_url }}</a>
+    </p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      This message intentionally does NOT include any details about the
+      requesting person — the request details are only visible on the
+      configuration page, which requires sign-in.
+    </p>
+  </body>
+</html>

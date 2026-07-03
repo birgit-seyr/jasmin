@@ -1,0 +1,19 @@
+/* Step-up authentication modal.
+   The modal renders above the AntD ConfigProvider (mounted in App.jsx),
+   so it doesn't inherit the tenant's colorPrimary token. Override the
+   primary button colour here using the globally available CSS variables. */
+
+.step-up-modal .ant-btn-primary {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.step-up-modal .ant-btn-primary:not(:disabled):hover {
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.step-up-modal .ant-btn-primary:not(:disabled):active {
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}

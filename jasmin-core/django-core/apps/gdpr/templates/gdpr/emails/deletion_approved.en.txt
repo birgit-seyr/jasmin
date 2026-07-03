@@ -1,0 +1,9 @@
+Hello {{ user.first_name }},
+
+your request to delete all your personal data at {{ tenant_name }} has been approved by the office and is now complete (GDPR Art. 17).
+
+Removed or anonymised: name, address, contact details, payment information, and every other field directly tied to your identity.
+
+Note on statutory retention: a few records (e.g. cooperative-share history, finalised invoices) must legally be kept under GenG §31 / HGB §257. These no longer contain direct identifiers.
+
+Questions? Just reply to this email.

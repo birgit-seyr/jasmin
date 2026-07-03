@@ -1,0 +1,10 @@
+/* Ant Design Popconfirm tweaks (equal-width buttons). */
+.ant-popconfirm .ant-popconfirm-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.ant-popconfirm .ant-popconfirm-buttons .ant-btn {
+  flex: 1;
+  min-width: 60px;
+}

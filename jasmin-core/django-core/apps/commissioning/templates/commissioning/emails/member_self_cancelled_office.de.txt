@@ -1,0 +1,12 @@
+Hallo {{ tenant_name }}-Team,
+
+ein Mitglied hat seine Mitgliedschaft selbst gekündigt (über das Mitgliederportal).
+
+Mitglied: {{ member.first_name }} {{ member.last_name }}{% if member.member_number %} (Mitgliedsnummer #{{ member.member_number }}){% endif %}
+{% if cancelled_effective_at %}Austrittsdatum (GenG §30): {{ cancelled_effective_at }}{% endif %}
+
+Bitte prüft den Austritt und kümmert euch um die Auseinandersetzung des
+Geschäftsguthabens:
+{{ review_url }}
+
+— Automatische Benachrichtigung.

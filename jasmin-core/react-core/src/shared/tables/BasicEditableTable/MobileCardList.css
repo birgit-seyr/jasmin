@@ -1,0 +1,106 @@
+/* ─── MobileCardList ───────────────────────────────────────────────────────── */
+
+.mobile-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.mobile-card-list-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 120px;
+}
+
+.mobile-card-empty {
+  padding: 32px 0;
+}
+
+.mobile-card-add-btn {
+  margin-bottom: 8px;
+}
+
+/* ─── Card item ──────────────────────────────────────────────────────────── */
+
+.mobile-card-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid rgba(11, 59, 35, 0.25);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+
+.mobile-card-item:active {
+  box-shadow: 0 0 0 2px rgba(32, 95, 82, 0.2);
+}
+
+.mobile-card-finalized {
+  border-left: 3px solid #52c41a;
+}
+
+/* ─── Content area ───────────────────────────────────────────────────────── */
+
+.mobile-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mobile-card-finalized-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #52c41a;
+  flex-shrink: 0;
+}
+
+.mobile-card-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.mobile-card-detail-label {
+  color: #bfbfbf;
+}
+
+/* ─── Tags ───────────────────────────────────────────────────────────────── */
+
+.mobile-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.mobile-card-tag {
+  font-size: 10px !important;
+  line-height: 1.4 !important;
+  padding: 0 4px !important;
+  margin: 0 !important;
+  border-radius: 4px !important;
+}
+
+/* ─── Actions ────────────────────────────────────────────────────────────── */
+
+.mobile-card-actions {
+  flex-shrink: 0;
+  margin-left: 8px;
+}

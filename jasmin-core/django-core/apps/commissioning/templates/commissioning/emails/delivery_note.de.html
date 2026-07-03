@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Lieferschein {{ delivery_note.number }}</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 640px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Lieferschein {{ delivery_note.number }}</h1>
+
+    <p>Hallo {{ reseller.name }},</p>
+
+    <p>anbei findest du den Lieferschein vom {{ delivery_note.date }}{% if delivery_note.order_number %} zur Bestellung {{ delivery_note.order_number }}{% endif %} als PDF.</p>
+
+    <p>Der gedruckte Lieferschein liegt wie immer in der Lieferkiste; diese E-Mail ist nur als Vorab-Information bzw. für deine Buchhaltung gedacht.</p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">— Das Team von {{ tenant_name }}</p>
+  </body>
+</html>

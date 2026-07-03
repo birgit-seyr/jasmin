@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Automatische Verlängerung: fehlgeschlagene Abos</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Automatische Verlängerung: fehlgeschlagene Abos</h1>
+    <p>
+      Beim nächtlichen automatischen Verlängerungslauf bei
+      <strong>{{ tenant_name }}</strong> am {{ run_date }} konnten
+      <strong>{{ failure_count }}</strong> Abo(s) <strong>nicht</strong> verlängert werden.
+      Diese Mitglieder haben derzeit kein Folge-Abo — bitte prüfen und ggf. manuell verlängern:
+    </p>
+    <ul style="line-height: 1.6;">
+      {{ renewal_failures_html }}
+    </ul>
+    <p><a href="{{ review_url }}">{{ review_url }}</a></p>
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      Automatische Benachrichtigung.
+    </p>
+  </body>
+</html>

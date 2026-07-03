@@ -1,0 +1,7 @@
+Jasmin – Test email
+
+Hi,
+
+this test message comes from your Jasmin platform {{ tenant_name }}. If you can read it, your SMTP configuration works and Jasmin can now send automated emails (invitations, invoices, delivery notes, ...) to you and your members.
+
+— The Jasmin platform

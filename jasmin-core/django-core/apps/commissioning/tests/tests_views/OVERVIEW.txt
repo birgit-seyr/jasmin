@@ -1,0 +1,230 @@
+================================================================================
+COMMISSIONING APP — VIEW TESTS OVERVIEW
+================================================================================
+
+Directory: apps/commissioning/tests/tests_views/
+Total files: 9
+Total tests: 110
+
+================================================================================
+1. test_share_options_views.py  (5 tests)
+   Views: share_options_list, active_share_options_list
+--------------------------------------------------------------------------------
+   TestShareOptionsList
+     - test_returns_list_of_options
+     - test_options_have_expected_keys
+
+   TestActiveShareOptionsList
+     - test_no_active_variations
+     - test_active_harvest_share
+     - test_fruit_and_veg_separate
+
+================================================================================
+2. test_documentation_overview_view.py  (8 tests)
+   View: DocumentationOverviewView (GET)
+--------------------------------------------------------------------------------
+   TestDocumentationOverviewGet
+     - test_harvest_aggregation
+     - test_purchase_aggregation
+     - test_waste_aggregation
+     - test_empty_when_no_data
+     - test_filters_by_day
+     - test_missing_share_article_returns_400
+     - test_invalid_source_returns_400
+     - test_missing_year_returns_400
+
+================================================================================
+3. test_statistic_views.py  (8 tests)
+   Views: member_growth_statistics, historical_share_variation_averages
+--------------------------------------------------------------------------------
+   TestMemberGrowthStatistics
+     - test_returns_data_grouped_by_month
+     - test_filter_by_year
+     - test_cumulative_total
+     - test_invalid_period_returns_400
+     - test_empty_when_no_members
+
+   TestHistoricalShareVariationAverages
+     - test_returns_averages
+     - test_missing_params_returns_400
+     - test_empty_for_no_data
+
+================================================================================
+4. test_finalize_views.py  (15 tests)
+   Views: BulkFinalizeView, BulkUnfinalizeView,
+          BulkFinalizeShareContentView, BulkUnfinalizeShareContentView
+--------------------------------------------------------------------------------
+   TestBulkFinalizeView
+     - test_finalizes_orders
+     - test_already_finalized
+     - test_missing_model_returns_400
+     - test_missing_ids_returns_400
+     - test_empty_ids_returns_400
+     - test_nonexistent_ids_returns_404
+     - test_invalid_model_returns_400
+
+   TestBulkUnfinalizeView
+     - test_unfinalizes_orders
+     - test_404_if_none_are_finalized
+     - test_missing_model_returns_400
+
+   TestBulkFinalizeShareContentView
+     - test_finalizes_share_content
+     - test_empty_ids_returns_400
+     - test_nonexistent_ids_returns_404
+
+   TestBulkUnfinalizeShareContentView
+     - test_unfinalizes_share_content
+     - test_empty_ids_returns_400
+
+================================================================================
+5. test_reseller_views.py  (24 tests)
+   Views: DaysWithOrdersView, 
+          CombinedOrderOverviewView, BulkCopyOffersToNextWeekView,
+          BulkCopyOffersToOfferGroupView, SetInvoiceNoteView,
+          BulkFinalizeDocumentsView, BulkDeleteDocumentsView,
+          BulkSetToPaidDocumentsView
+--------------------------------------------------------------------------------
+   TestDaysWithOrdersView
+     - test_returns_distinct_days
+     - test_empty_when_no_orders
+     - test_missing_params_returns_400
+
+   TestCombinedOrderOverviewView
+     - test_returns_orders
+     - test_filters_by_reseller
+     - test_includes_delivery_note_info
+     - test_empty_without_orders
+
+   TestBulkCopyOffersToNextWeekView
+     - test_copies_offers
+     - test_empty_ids_returns_400
+
+   TestBulkCopyOffersToOfferGroupView
+     - test_copies_to_group
+     - test_missing_offer_group_returns_400
+
+   TestSetInvoiceNoteView
+     - test_sets_note
+
+   TestBulkFinalizeDocumentsView
+     - test_missing_model_returns_400
+     - test_invalid_model_returns_400
+     - test_no_orders_returns_404
+
+   TestBulkDeleteDocumentsView
+     - test_deletes_delivery_note
+     - test_cannot_delete_finalized
+     - test_invalid_model_returns_400
+
+   TestBulkSetToPaidDocumentsView
+     - test_only_invoice_model_accepted
+     - test_empty_ids_returns_400
+     - test_no_orders_returns_404
+
+================================================================================
+6. test_stock_views.py  (29 tests)
+   Views: CurrentStockComparisonView (GET/PATCH/DELETE),
+          bulk_finalize_current_stock, bulk_set_as_expected_current_stock,
+          bulk_set_to_zero_current_stock, StorageLoggingView
+--------------------------------------------------------------------------------
+   TestCurrentStockComparisonGet
+     - test_returns_stock_data
+     - test_empty_for_no_movements
+     - test_missing_params_returns_400
+     - test_filters_by_storage
+
+   TestCurrentStockComparisonPatch
+     - test_creates_inventory
+     - test_updates_existing_inventory
+     - test_invalid_composite_id_returns_400
+     - test_negative_amount_returns_400
+
+   TestCurrentStockComparisonDelete
+     - test_deletes_inventory
+     - test_delete_nonexistent_returns_404
+
+   TestBulkFinalizeCurrentStock
+     - test_no_ids_returns_400
+     - test_finalizes_stock
+
+   TestBulkSetAsExpectedCurrentStock
+     - test_no_ids_returns_400
+     - test_creates_inventory_at_theoretical_and_balance_holds
+     - test_missing_theoretical_stock_is_per_item_error
+     - test_existing_real_inventory_is_left_untouched
+     - test_multiple_entities_each_set_to_its_own_theoretical
+
+   TestBulkSetToZeroCurrentStock
+     - test_no_ids_returns_400
+     - test_creates_zero_inventory_and_balance_drops_to_zero
+     - test_works_without_theoretical_stock
+     - test_multiple_entities_all_zeroed
+     - test_rerun_is_a_noop_no_duplicate_inventory
+     - test_invalid_id_collected_in_errors_others_succeed
+
+   TestStorageLoggingView
+     - test_returns_events
+     - test_missing_storage_returns_400
+     - test_filters_by_article
+     - test_date_range_filter
+
+================================================================================
+7. test_share_views.py  (9 tests)
+   Views: ShareContentGranularityView, ShareTypeVariationsTotalsView,
+          ShareVariationAmountsForPlanningView
+--------------------------------------------------------------------------------
+   TestShareContentGranularityView
+     - test_empty_data_returns_ok
+     - test_missing_params_returns_400
+     - test_consistent_data_returns_true
+
+   TestShareTypeVariationsTotalsView
+     - test_missing_delivery_day_returns_400
+     - test_returns_variations
+     - test_missing_year_returns_400
+
+   TestShareVariationAmountsForPlanningView
+     - test_missing_share_option_returns_400
+     - test_returns_planning_data
+     - test_missing_year_returns_400
+
+================================================================================
+8. test_my_data_views.py  (14 tests)
+   Views: my_member_data_view (GET/PATCH), my_customer_data_view (GET/PATCH)
+--------------------------------------------------------------------------------
+   TestMyMemberDataGet
+     - test_anonymous_returns_401
+     - test_user_without_member_returns_404
+     - test_returns_editable_and_readonly_fields
+
+   TestMyMemberDataPatch
+     - test_patches_address_and_returns_fresh_state
+     - test_patches_iban_returns_stored_indicator
+     - test_rejects_invalid_iban
+     - test_silently_drops_disallowed_fields
+     - test_other_user_cannot_patch_my_member
+
+   TestMyCustomerDataGet
+     - test_anonymous_returns_401
+     - test_user_without_reseller_returns_404
+     - test_returns_contact_plus_customer_number
+
+   TestMyCustomerDataPatch
+     - test_patches_contact_fields
+     - test_does_not_touch_reseller_invoice_fields
+
+================================================================================
+9. test_delivery_views.py  (7 tests)
+   View: DeliveryStationsToursOverviewView (GET)
+--------------------------------------------------------------------------------
+   TestDeliveryStationsToursOverviewView
+     - test_missing_year_returns_400
+     - test_missing_delivery_week_returns_400
+     - test_missing_day_number_returns_400
+     - test_no_delivery_day_returns_404
+     - test_returns_overview_with_tours
+     - test_response_contains_year_and_week
+     - test_invalid_year_returns_400
+
+================================================================================

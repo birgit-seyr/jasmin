@@ -1,0 +1,378 @@
+from __future__ import annotations
+
+from collections import defaultdict
+from decimal import Decimal
+from typing import Any
+
+from isoweek import Week
+
+from ..errors import PackingAmountsDivergeAcrossStations
+from ..models import (
+    DeliveryStation,
+    DeliveryStationDay,
+    ShareArticle,
+    ShareContent,
+    ShareTypeVariation,
+)
+from ..utils import sort_share_articles
+from ..utils.basic_utils import size_order_annotation
+from ..utils.share_type_variation_amounts import (
+    batch_get_physical_variation_totals_for_week,
+)
+from ..utils.weight import quantize_weight
+
+_UNSET = object()  # sentinel: "not hoisted" vs a legitimately None delivery_day
+
+
+class PackingListService:
+    @staticmethod
+    def _active_share_type_variations(
+        year: int,
+        delivery_week: int,
+        share_type: str,
+        is_packed_bulk: bool | None = None,
+    ) -> list[ShareTypeVariation]:
+        """Active variations of ``share_type`` for the delivery week, in
+        display order. Loop-invariant across delivery stations, so the bulk
+        path resolves it once and hands it to ``get_packing_list``."""
+        active_at_date = Week(year, delivery_week).saturday()
+        qs = (
+            ShareTypeVariation.current.active_at_date(active_at_date)
+            .filter(share_type=share_type)
+            .annotate(size_order=size_order_annotation())
+            .order_by("sort_order", "size_order")
+        )
+        if is_packed_bulk is not None:
+            qs = qs.filter(is_packed_bulk=is_packed_bulk)
+        return list(qs)
+
+    @staticmethod
+    def get_packing_list(
+        year: int,
+        delivery_week: int,
+        day_number: int,
+        share_type: str,
+        is_past: bool,
+        delivery_station: str | None = None,
+        tour: str | None = None,
+        packing_station: int | None = None,
+        is_packed_bulk: bool | None = None,
+        *,
+        # Loop-invariant values the bulk path computes once and hands down so
+        # each station stops re-running the variation query + the
+        # exists()/first() delivery_day probe. _UNSET keeps a legitimately
+        # None delivery_day distinguishable from "caller didn't hoist it".
+        _hoisted_variations: list[ShareTypeVariation] | None = None,
+        _hoisted_delivery_day: Any = _UNSET,
+    ) -> list[dict[str, Any]]:
+        iso_week = Week(year, delivery_week)
+        active_at_date = iso_week.saturday()
+
+        if _hoisted_variations is not None:
+            share_type_variations = _hoisted_variations
+        else:
+            share_type_variations = PackingListService._active_share_type_variations(
+                year, delivery_week, share_type, is_packed_bulk
+            )
+
+        manager = ShareContent.active.for_period(is_past=is_past)
+
+        share_contents = manager.filter(
+            share__year=year,
+            share__delivery_week=delivery_week,
+            share__delivery_day__day_number=day_number,
+            share__share_type_variation__share_type=share_type,
+        )
+        if is_packed_bulk is not None:
+            share_contents = share_contents.filter(
+                share__share_type_variation__is_packed_bulk=is_packed_bulk
+            )
+
+        if _hoisted_delivery_day is not _UNSET:
+            delivery_day = _hoisted_delivery_day
+        else:
+            first = share_contents.first()
+            delivery_day = first.share.delivery_day if first is not None else None
+
+        if delivery_station is not None:
+            share_contents = share_contents.filter(delivery_station=delivery_station)
+
+        if tour is not None:
+            tour_station_ids = (
+                DeliveryStationDay.current.active_at_date(active_at_date)
+                .filter(
+                    delivery_day=delivery_day,
+                    tour_number=tour,
+                )
+                .values_list("delivery_station_id", flat=True)
+            )
+            share_contents = share_contents.filter(
+                delivery_station_id__in=tour_station_ids
+            )
+
+        if packing_station is not None:
+            share_contents = share_contents.filter(packing_station=packing_station)
+
+        share_contents = share_contents.values(
+            "share_article__id",
+            "share_article__name",
+            "unit",
+            "size",
+            "amount",
+            "share__share_type_variation__id",
+            "share__delivery_day_id",
+            "note",
+            "backup_share_article__id",
+            "backup_share_article__name",
+            "backup_unit",
+            "backup_size",
+            "packing_station",
+        ).order_by("share_article__name", "unit", "size")
+
+        # Build variation key list once
+        variation_keys = [f"variation_{v.id}" for v in share_type_variations]
+
+        # Organize data by share article
+        articles_dict: dict[str, dict[str, Any]] = {}
+        # Safety net for the all-stations view (no delivery_station scope): the
+        # same (article, unit, size, variation) cell can receive rows from
+        # several stations WITHIN ONE DELIVERY DAY. Collapsing them keeps an
+        # arbitrary one, which is only correct when their amounts AGREE — the
+        # office's per-delivery-day granularity guard (days_ok) keeps the
+        # all-stations view to exactly those consistent cases. If they diverge,
+        # refuse loudly rather than silently drop a station's amount. The cell is
+        # keyed by delivery day too: days_ok is computed PER delivery day, so two
+        # delivery days that share a packing day may legitimately differ and must
+        # NOT trip this. (Skipped when a concrete station scopes the request:
+        # there's one row per cell then, so no collapse.)
+        seen_amounts: dict[tuple[str, str, str], Any] = {}
+        for content in share_contents:
+            composite_key = (
+                f"{content['share_article__id']}_{content['unit']}_{content['size']}"
+            )
+
+            if composite_key not in articles_dict:
+                article_entry: dict[str, Any] = {
+                    "id": composite_key,
+                    "share_article": content["share_article__id"],
+                    "share_article_name": content["share_article__name"],
+                    "unit": content["unit"],
+                    "size": content["size"],
+                    "note": content["note"] or "",
+                    "backup_share_article": content["backup_share_article__id"],
+                    "backup_share_article_name": content["backup_share_article__name"],
+                    "backup_share_article_unit": content["backup_unit"],
+                    "backup_share_article_size": content["backup_size"],
+                    "packing_station": content["packing_station"],
+                }
+                for variation_key in variation_keys:
+                    article_entry[variation_key] = 0
+                articles_dict[composite_key] = article_entry
+
+            variation_key = f'variation_{content["share__share_type_variation__id"]}'
+            amount = content["amount"] or 0
+            if delivery_station is None:
+                cell = (
+                    composite_key,
+                    variation_key,
+                    content["share__delivery_day_id"],
+                )
+                if cell in seen_amounts and seen_amounts[cell] != amount:
+                    raise PackingAmountsDivergeAcrossStations(
+                        share_article_id=content["share_article__id"],
+                        unit=content["unit"],
+                        size=content["size"],
+                        variation_id=content["share__share_type_variation__id"],
+                        amounts=[seen_amounts[cell], amount],
+                    )
+                seen_amounts[cell] = amount
+            articles_dict[composite_key][variation_key] = amount
+
+        # Filter out entries where all variation amounts are 0
+        filtered_results = [
+            item
+            for item in articles_dict.values()
+            if any(item.get(variation_key, 0) > 0 for variation_key in variation_keys)
+        ]
+
+        if packing_station is None:
+            # Group by packing station, then sort each group
+            grouped_by_station: defaultdict[int | None, list[dict[str, Any]]] = (
+                defaultdict(list)
+            )
+            for item in filtered_results:
+                grouped_by_station[item.get("packing_station")].append(item)
+
+            result: list[dict[str, Any]] = []
+            for station_key in sorted(
+                grouped_by_station.keys(), key=lambda x: x if x is not None else 0
+            ):
+                result.extend(sort_share_articles(grouped_by_station[station_key]))
+        else:
+            result = sort_share_articles(filtered_results)
+
+        return result
+
+    @staticmethod
+    def get_packing_list_bulk(
+        year: int,
+        delivery_week: int,
+        day_number: int,
+        share_type: str,
+        is_past: bool,
+        delivery_station: str | None = None,
+        is_packed_bulk: bool | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        Per-delivery-station bulk packing list.
+
+        For each ``(delivery_station, share_article)`` combination, returns
+        the total physical amount needed by summing
+        ``amount_per_share × physical_share_type_variation_count`` across
+        every variation. Virtual share_type_variations are resolved into
+        their physical components by
+        ``get_physical_share_type_variation_totals(..., delivery_station=
+        <station>)`` — ``ShareContent`` rows reference only physical
+        variations, so the multiplier must come from the resolved physical
+        variation count.
+
+        The per-(article × variation) amount map is computed per station
+        (inside the loop) because ``ShareContent.amount`` can differ across
+        stations for the same (article, variation); a global lookup would
+        let one station's amount overwrite another's via the shared
+        ``(article, unit, size)`` composite key.
+        """
+        manager = ShareContent.active.for_period(is_past=is_past)
+        share_contents = manager.filter(
+            share__year=year,
+            share__delivery_week=delivery_week,
+            share__delivery_day__day_number=day_number,
+            share__share_type_variation__share_type=share_type,
+        ).select_related("share")
+        if is_packed_bulk is not None:
+            share_contents = share_contents.filter(
+                share__share_type_variation__is_packed_bulk=is_packed_bulk
+            )
+
+        first = share_contents.first()
+        if first is None:
+            return []
+
+        delivery_day = first.share.delivery_day
+
+        if delivery_station is not None:
+            share_contents = share_contents.filter(delivery_station=delivery_station)
+
+        station_ids = list(
+            share_contents.values_list("delivery_station_id", flat=True)
+            .distinct()
+            .order_by("delivery_station_id")
+        )
+        stations_by_id: dict[str, DeliveryStation] = {
+            s.id: s for s in DeliveryStation.objects.filter(id__in=station_ids)
+        }
+
+        # Buffer percentages per article — bulk totals get multiplied by
+        # ``(pct / 100 + 1)``. NULL / 0 keeps the multiplier at 1.0.
+        bulk_pct_by_article: dict[str, int] = dict(
+            ShareArticle.objects.values_list(
+                "id", "percentage_added_to_bulk_packing_list"
+            )
+        )
+
+        # Resolve every (variation × station) physical total for this delivery
+        # day in ONE batched aggregation up front, then look it up per station
+        # — instead of re-running the resolver inside the station loop (which
+        # fired a demand query per variation per station).
+        physical_variations = ShareTypeVariation.objects.filter(
+            variation_type="physical", share_type=share_type
+        )
+        station_variation_totals = batch_get_physical_variation_totals_for_week(
+            physical_variations, year, delivery_week
+        )["station"]
+        delivery_day_id = delivery_day.id
+        totals_by_station: defaultdict[str, dict[str, int]] = defaultdict(dict)
+        for (day_id, pv_id, station_key), total in station_variation_totals.items():
+            if day_id == delivery_day_id:
+                totals_by_station[station_key][pv_id] = total
+
+        # Resolve the station-invariant active variations once; together with
+        # the delivery_day already computed above, the per-station calls below
+        # reuse them instead of re-querying the variation list + delivery_day
+        # probe per station.
+        hoisted_variations = PackingListService._active_share_type_variations(
+            year, delivery_week, share_type, is_packed_bulk
+        )
+
+        rows: list[dict[str, Any]] = []
+        for station_id in station_ids:
+            station = stations_by_id.get(station_id)
+            if station is None:
+                continue
+
+            station_packing_list = PackingListService.get_packing_list(
+                year=year,
+                delivery_week=delivery_week,
+                day_number=day_number,
+                share_type=share_type,
+                is_past=is_past,
+                delivery_station=station_id,
+                is_packed_bulk=is_packed_bulk,
+                _hoisted_variations=hoisted_variations,
+                _hoisted_delivery_day=delivery_day,
+            )
+            if not station_packing_list:
+                continue
+
+            variation_keys = [
+                k for k in station_packing_list[0] if k.startswith("variation_")
+            ]
+
+            variation_count_map: dict[str, int] = totals_by_station.get(station_id, {})
+
+            for item in station_packing_list:
+                # Keep the running total in Decimal end-to-end — ``float(amount)``
+                # introduces binary-fp drift (e.g. 10.78 → 10.780000000000001)
+                # that surfaces straight in the packing list. Amount is a
+                # DecimalField (3dp); counts are ints.
+                total_amount = Decimal("0")
+                for variation_key in variation_keys:
+                    variation_id = variation_key.replace("variation_", "")
+                    amount_per_share = item.get(variation_key, 0) or 0
+                    variation_count = variation_count_map.get(variation_id, 0)
+                    total_amount += Decimal(str(amount_per_share)) * variation_count
+
+                if total_amount <= 0:
+                    continue
+
+                pct = bulk_pct_by_article.get(item["share_article"]) or 0
+                total_amount = quantize_weight(
+                    total_amount * (Decimal(pct) / Decimal(100) + 1)
+                )
+
+                rows.append(
+                    {
+                        "id": f"{station.id}_{item['id']}",
+                        "delivery_station": station.id,
+                        "delivery_station_name": str(station),
+                        "share_article": item["share_article"],
+                        "share_article_name": item["share_article_name"],
+                        "unit": item["unit"],
+                        "size": item["size"],
+                        # Float at the boundary (the existing contract), but
+                        # computed from the quantized Decimal above — so the
+                        # value is clean (no 10.780000000000001 drift).
+                        "total_amount": float(total_amount),
+                        "note": item.get("note", ""),
+                    }
+                )
+
+        grouped: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
+        for row in rows:
+            grouped[row["delivery_station_name"]].append(row)
+
+        sorted_rows: list[dict[str, Any]] = []
+        for station_name in sorted(grouped):
+            sorted_rows.extend(sort_share_articles(grouped[station_name]))
+
+        return sorted_rows

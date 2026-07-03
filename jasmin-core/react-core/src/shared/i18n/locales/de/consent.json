@@ -1,0 +1,58 @@
+{
+  "card_title": "Einwilligungen",
+  "empty": "Für dieses Mitglied wurden noch keine Einwilligungen erfasst.",
+  "load_error": "Einwilligungen konnten nicht geladen werden.",
+  "consented_at": "Zugestimmt",
+  "revoked_at": "Widerrufen",
+  "revoke": "Widerrufen",
+  "download": "PDF",
+  "revoke_title": "Einwilligung widerrufen",
+  "revoke_warning": "Mit dem Widerruf endet die zugrundeliegende Verarbeitung. Manche Funktionen können sofort eingeschränkt sein.",
+  "revoke_reason_placeholder": "Optionaler Grund (wird im Audit-Log gespeichert)",
+  "no_ua": "(kein User-Agent)",
+  "kind": {
+    "privacy": "Datenschutz",
+    "sepa": "SEPA-Mandat",
+    "withdrawal": "Widerrufsbelehrung",
+    "terms": "Nutzungsbedingungen",
+    "coop_contract": "Zeichnungsvertrag"
+  },
+  "admin": {
+    "title": "Einwilligungsdokumente",
+    "subtitle": "Verwaltet versionierte Texte für Datenschutz / SEPA-Mandat / Widerruf / AGB.",
+    "filter_kind": "Art",
+    "new_version": "Neue Version",
+    "publish": "Veröffentlichen",
+    "created": "Einwilligungsdokument-Version erstellt.",
+    "view_body": "Anzeigen",
+    "valid_from": "gültig ab",
+    "col_kind": "Art",
+    "col_version": "Version",
+    "col_title": "Titel",
+    "col_effective_from": "gültig ab",
+    "col_hash": "SHA-256",
+    "title_placeholder": "Anzeigetitel (optional)",
+    "body_label": "Text (wortgetreu, wie er Mitgliedern angezeigt wird)",
+    "append_only_notice": "Eine neue Version ersetzt die bisherige automatisch ab dem gewählten Datum. Bestehende Versionen bleiben unverändert und auditierbar.",
+    "append_only_explainer": "Einwilligungsdokumente sind append-only. Um einen Text zu ändern, legst du eine neue Version mit späterem Gültigkeitsdatum an. Die vorherige Version wird automatisch geschlossen — bereits erteilte Zustimmungen bleiben mit ihrer ursprünglichen Version verknüpft."
+  },
+  "block": {
+    "missing_document_title": "Einwilligungstext nicht verfügbar",
+    "missing_document_body": "Für die Art „{{kind}}'' / Sprache „{{locale}}'' ist kein gültiges Einwilligungsdokument hinterlegt. Ein Mitarbeiter im Büro muss zunächst eines hochladen.",
+    "version_label": "Version",
+    "effective_label": "gültig ab",
+    "agree": {
+      "default": "Ich stimme diesem Dokument zu",
+      "privacy": "Ich habe die Datenschutzerklärung gelesen und stimme ihr zu",
+      "sepa": "Ich erteile das SEPA-Lastschriftmandat",
+      "withdrawal": "Ich habe die Widerrufsbelehrung zur Kenntnis genommen",
+      "terms": "Ich stimme den Nutzungsbedingungen zu",
+      "coop_contract": "Ich habe den Zeichnungsvertrag gelesen und stimme ihm zu"
+    }
+  },
+  "print": {
+    "action": "Drucken",
+    "paper_required_hint": "Dieses Dokument bitte ausdrucken, ausfüllen, unterschreiben und per Post an folgende Adresse senden:",
+    "signature_line": "Ort, Datum, Unterschrift"
+  }
+}

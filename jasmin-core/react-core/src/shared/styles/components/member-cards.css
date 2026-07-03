@@ -1,0 +1,76 @@
+/* ============================================================
+ * Member dashboard cards
+ *
+ * Shared chrome for the cards inside MemberOverview / MemberPage
+ * (subscriptions, deliveries, payments, joker, etc.).
+ * Each variant just changes the accent border color.
+ * ============================================================ */
+
+.member-card {
+  margin-bottom: 24px;
+  border: 1px solid;
+}
+.member-card-top {
+  margin-top: 24;
+  background-color: var(--color-payments);
+}
+
+/* Members list header row: summary stats on the left, the CSV export button
+ * pushed to the right of the page. Wraps on narrow viewports. */
+.members-list-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+/* Use when the card sits below another card and we want vertical breathing
+   room without a bottom margin. */
+.member-card--top-spaced {
+  margin-top: 24px;
+  margin-bottom: 0;
+}
+
+/* Accent variants — keep them aligned with the existing CSS variables in
+   variables.css. Only the border color changes. */
+.blue-border {
+  border-color: var(--color-payments);
+}
+
+
+.green-border {
+  border-color: var(--color-card-green-border);
+}
+
+/* Bluish TITLE bar only — tints the AntD card header (``.ant-card-head``), not
+   the body. Standalone: add ``member-card--blue-title`` to any Card's
+   className. ``> .ant-card-head`` (0,2,0) outranks AntD's head rule. */
+.member-card--blue-title > .ant-card-head {
+  background-color: rgba(34, 108, 71, 0.381);
+}
+
+/* On mobile the card head's title + action button (e.g. "+ new subscription",
+   "subscribe coop shares") don't fit on one line and the button overlaps the
+   title. AntD gives the title ``flex: 1`` so it just shrinks (a plain
+   ``flex-wrap`` never triggers); stack the head vertically instead so the
+   button sits below the title. The head is a ``justify-content: center`` column
+   (min-height 56 = 24 title + 2×16 padding), so centering the whole stacked
+   block would lift the title to the top — top-align it and add back the ~16px
+   so the title keeps its original y (button just extends below). Matches the
+   768px useIsMobile breakpoint. */
+@media (max-width: 768px) {
+  .member-card > .ant-card-head {
+    justify-content: flex-start;
+    padding-block: 16px;
+  }
+  .member-card > .ant-card-head > .ant-card-head-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+    row-gap: 8px;
+  }
+  .member-card > .ant-card-head > .ant-card-head-wrapper > .ant-card-extra {
+    margin-inline-start: 0;
+  }
+}

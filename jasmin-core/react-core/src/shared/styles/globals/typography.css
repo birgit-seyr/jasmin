@@ -1,0 +1,173 @@
+h1 {
+  font-size: 1.8em;
+  line-height: 1.1;
+  font-weight: 300;
+  /* font-style: italic; */
+  text-transform: uppercase;
+}
+
+
+h2 {
+  font-size: 1.5em;
+  line-height: 1.1;
+  font-weight: 300;
+
+
+}
+
+h3 {
+  font-size: 1em;
+  line-height: 1.1;
+  font-weight: 400;
+  text-transform: uppercase;
+
+}
+
+h4 {
+  font-size: 1.3em;
+  line-height: 1.1;
+  font-weight: 400;
+  text-transform: uppercase;
+
+}
+h5 {
+  font-size: 1em;
+  line-height: 1.1;
+  font-weight: 400;
+  text-transform: uppercase;
+
+}
+
+/* ---- Inline text helpers ---- */
+
+/* Pure font-size utilities (no color/margin side effects). Use these
+   instead of inline style={{ fontSize: "0.Xem" }} for the common ramp. */
+.text-sm {
+  font-size: 0.9em;
+}
+
+.text-xs {
+  font-size: 0.8em;
+}
+
+.text-2xs {
+  font-size: 0.75em;
+}
+
+.text-meta {
+  font-size: 0.8em;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.text-hint {
+  font-size: 0.75em;
+  color: var(--color-text-tertiary);
+  margin-left: 6px;
+}
+
+.text-muted-xs {
+  color: var(--color-text-muted);
+  font-size: 0.75em;
+}
+
+.text-secondary {
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+}
+
+/* Slightly larger / darker meta hint, used for inline secondary info that
+   should sit closer to body text (e.g. note column rows, plot/bed lines). */
+.text-hint-md {
+  font-size: 0.9em;
+  color: var(--color-text-secondary);
+}
+
+/* Semantic colors for the share-content vs order-content distinction
+   used throughout the commissioning pages. */
+.text-share-content {
+  color: var(--color-share-content);
+}
+
+.text-order-content {
+  color: var(--color-order-content);
+}
+
+.text-preline {
+  white-space: pre-line;
+}
+
+.text-bold {
+  font-weight: bold;
+}
+
+/* Semantic status colors — wired to theme variables so they switch in dark mode. */
+.text-success {
+  color: var(--color-success);
+}
+
+.text-error {
+  color: var(--color-error);
+}
+
+.text-warning {
+  color: var(--color-warning);
+}
+
+.text-info {
+  color: var(--color-info);
+}
+
+/* Generic muted helpers (used as plain inline color, no font-size override). */
+.text-muted {
+  color: var(--color-text-tertiary);
+}
+
+/* Purple accent (e.g. PurchaseList "next week" indicator). */
+.text-purple-accent {
+  color: #7b1fa2;
+  font-weight: 500;
+}
+
+.imitating-bold-select {
+  font-weight: 700 !important;
+  color: var(--color-primary) !important;
+}
+/* --- Misc text utilities (small headers, hints, summaries) ----------- */
+.sum-text {
+  font-weight: 700;
+  margin-top: 2.5em;
+}
+
+.small-explainer-text {
+  font-size: 0.7em;
+  color: #34733f;
+  margin-top: 0.5em;
+  margin-left: 0.5em;
+}
+
+.tiny-title {
+  font-size: 0.6em;
+}
+
+.small-title {
+  font-size: 0.85em;
+}
+
+.backup-title {
+  font-size: 0.8em;
+}
+
+/* Visually-hidden text: removed from the visual layout but still read by
+   assistive technology. Use for screen-reader-only labels / status text. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

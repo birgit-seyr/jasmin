@@ -1,0 +1,27 @@
+{
+    "mo": "MO",
+    "di": "DI",
+    "mi": "MI",
+    "do": "DO",
+    "fr": "FR",
+    "sa": "SA",
+    "so": "SO",
+    "tu": "DI",
+    "we": "MI",
+    "th": "DO",
+  
+    "su": "SO",
+    "pickup_time_begin": "Abholzeit von",
+    "pickup_time_end": "Abholzeit bis",
+    "additional_pickup_days": "zusätzliche Abholtage",
+    "special_instructions": "Abhol-Infos",
+    "station_delivery_days_details": "Details zu den Abholtagen",
+    "station_details": "Details zur Verteilstation", 
+    "joker_taken": "Joker für diese Woche?",
+    "donation_joker_taken": "Spende-Joker für diese Woche? (Anteil wird gespendet, Beitrag bleibt)",
+    "station": "Abholtag & Abholort",
+    "select_station": "Verteilstation auswählen",
+    "free_spots_remaining": "noch {{count}} freie Plätze",
+    "free_spots_of_total": "freie Plätze ({{free}}/{{total}})",
+    "map_pick_hint": "Oder auf der Karte auswählen"
+  }

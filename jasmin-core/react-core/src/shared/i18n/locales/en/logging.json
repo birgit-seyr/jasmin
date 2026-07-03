@@ -1,0 +1,15 @@
+{
+  "title": "Activity history",
+  "created": "Created",
+  "updated": "Updated",
+  "invited": "Invited",
+  "accepted": "Accepted",
+  "admin_confirmed": "Approved",
+  "admin_rejected": "Rejected",
+  "paid": "Paid",
+  "cancelled": "Cancelled",
+  "effective_at": "Effective on",
+  "expires": "Expires",
+  "no_data": "No activity data available.",
+  "reason": "Reason"
+}

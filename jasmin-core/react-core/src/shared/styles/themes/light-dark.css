@@ -1,0 +1,23 @@
+:root {
+  color: #213547;
+  background-color: var(--color-bg-base);
+}
+
+:root.dark {
+  color: var(--color-border-soft);
+  background-color: #141414;
+}
+
+:root.dark a {
+  color: var(--color-primary);
+}
+
+:root.dark a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Only style plain (unclassed) buttons in dark mode — never override AntD or
+   any themed button (e.g. .ant-btn-primary keeps its dark-green primary color). */
+:root.dark button:not([class]) {
+  background-color: #1f1f1f;
+}

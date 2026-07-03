@@ -1,0 +1,284 @@
+# =============================================================================
+# Jasmin Platform - DEVELOPMENT compose
+#
+# Usage:
+#   cp .env.dev.example .env.dev
+#   docker compose -f docker-compose.dev.yml --env-file .env.dev up --build
+#
+# Behavior:
+#   - postgres exposed on host :5433 (so it doesn't clash with a local pg)
+#   - django runs `runserver` with source bind-mounted (auto reload)
+#   - vite dev server runs with HMR (proxied by gateway nginx)
+#   - mailhog UI on http://localhost:8025
+#   - gateway nginx on http://localhost:3000
+#       host wildcard: add `127.0.0.1 test.localhost` to /etc/hosts
+# =============================================================================
+
+x-backend-env: &backend-env
+  DJANGO_SETTINGS_MODULE: config.settings
+  RUNNING_IN_DOCKER: "True"
+  DEBUG: "True"
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-secret-key-change-in-production}
+  POSTGRES_DB: ${POSTGRES_DB:-jasmin}
+  POSTGRES_USER: ${POSTGRES_USER:-jasmin}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-DontForgetMeAgain}
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+  REDIS_URL: redis://redis:6379/0
+  DJANGO_ALLOWED_HOSTS: .localhost,localhost,127.0.0.1,backend,gateway
+  CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+  FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:-HeQ7tkqHP7nVB1hA7VkX0SVIan3y_NUFrjyeDnfzcXk=}
+  EMAIL_HOST: mailhog
+  EMAIL_PORT: 1025
+  EMAIL_USE_TLS: "False"
+  EMAIL_HOST_USER: ""
+  EMAIL_HOST_PASSWORD: ""
+  FRONTEND_DOMAIN: localhost:3000
+  TIME_ZONE: ${TIME_ZONE:-Europe/Berlin}
+  # Sentry-compatible DSN. Empty = SDK no-op (default in dev).
+  SENTRY_DSN: ${SENTRY_DSN:-}
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-jasmin}
+      POSTGRES_USER: ${POSTGRES_USER:-jasmin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-DontForgetMeAgain}
+    ports:
+      # Loopback-only: on a shared network (office LAN, café wifi) the
+      # dev DB must not be reachable from other hosts.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-jasmin} -d ${POSTGRES_DB:-jasmin}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [jasmin-dev]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [jasmin-dev]
+
+  backend:
+    build:
+      context: ./jasmin-core/django-core
+      target: dev
+    environment:
+      <<: *backend-env
+      # Seed the local test tenant (test.localhost) + admin/persona logins on
+      # startup — see docker_entrypoint.sh. Dev-only: the seed command refuses
+      # to run when DEBUG is False, so this can never reach production.
+      SEED_DEV_TENANT: "1"
+    volumes:
+      - ./jasmin-core/django-core:/app
+      # Keep container's venv from being shadowed by the host bind mount
+      - backend_venv_dev:/app/.venv
+      - static_volume_dev:/app/staticfiles
+      - media_volume_dev:/app/media
+      - logs_volume_dev:/app/logs
+      # test_error_code_i18n_coverage reads the frontend errors.json at
+      # ``<django-core>.parent/react-core/src/shared/i18n/locales``. In the
+      # container django-core is /app, so that resolves to /react-core/... —
+      # mount the locales there (read-only) so `make pytest` finds them.
+      - ./jasmin-core/react-core/src/shared/i18n/locales:/react-core/src/shared/i18n/locales:ro
+    ports:
+      # Loopback-only: developers reach the app via the gateway on :3000;
+      # direct :8000 is local-only and must not be reachable from other
+      # hosts on a shared network (office LAN, café wifi).
+      - "127.0.0.1:8000:8000"
+    command: ["runserver"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [jasmin-dev]
+
+  # Huey background-task consumer for the dev stack. Without it every enqueued
+  # task (forecast recompute, bulk sends) queues to Redis with no consumer and
+  # never runs — the no-Docker `make huey` only covers the host flow. The
+  # ``backend`` service owns migrations (SKIP_MIGRATIONS here); huey just
+  # consumes, after the backend has started.
+  huey:
+    build:
+      context: ./jasmin-core/django-core
+      target: dev
+    environment:
+      <<: *backend-env
+      SKIP_MIGRATIONS: "1"
+      SKIP_COLLECTSTATIC: "1"
+    volumes:
+      - ./jasmin-core/django-core:/app
+      - backend_venv_dev:/app/.venv
+      - logs_volume_dev:/app/logs
+    command: ["huey"]
+    healthcheck:
+      # huey_heartbeat (apps/notifications/tasks.py) rewrites this file every
+      # minute; a missing/stale file means a dead or wedged consumer → restart.
+      test:
+        - CMD-SHELL
+        - "python -c 'import os,sys,time; sys.exit(0 if os.path.exists(sys.argv[1]) and time.time()-os.path.getmtime(sys.argv[1])<180 else 1)' /tmp/huey_heartbeat"
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    depends_on:
+      backend: { condition: service_started }
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [jasmin-dev]
+
+  frontend:
+    build:
+      context: ./jasmin-core/react-core
+      target: dev
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
+      # MUST be empty: the generated API client already includes the ``/api``
+      # prefix in every path (e.g. ``/api/tenants/current/``), and api.ts uses
+      # this as the axios baseURL. Setting it to ``/api`` produces doubled
+      # ``/api/api/...`` requests that 404. Same-origin ("") is correct — the
+      # gateway proxies ``/api`` to the backend.
+      VITE_API_URL: ""
+    volumes:
+      - ./jasmin-core/react-core:/app
+      - frontend_node_modules_dev:/app/node_modules
+    ports:
+      - "5173:5173"
+    networks: [jasmin-dev]
+
+  gateway:
+    image: nginx:1.27-alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./nginx/nginx.conf.local:/etc/nginx/nginx.conf:ro
+      - static_volume_dev:/app/staticfiles:ro
+      - media_volume_dev:/app/media:ro
+    depends_on:
+      - backend
+      - frontend
+    networks: [jasmin-dev]
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks: [jasmin-dev]
+
+  uptime-kuma:
+    # Self-hosted uptime monitor. UI on http://localhost:3001.
+    # First-load asks you to set an admin username + password.
+    #
+    # Two ways to point a monitor at the backend depending on where
+    # Django is running:
+    #
+    #   - Django inside docker (full ``up``):
+    #         http://backend:8000/health/
+    #     (resolves over the ``jasmin-dev`` docker network.)
+    #
+    #   - Django on the host (``poetry run runserver``):
+    #         http://host.docker.internal:8000/health/
+    #     ``host.docker.internal`` is Docker Desktop's built-in alias
+    #     for the host machine. The ``extra_hosts`` line below adds the
+    #     same mapping for native Linux (Docker Desktop already
+    #     provides it on macOS / Windows). Safe to keep cross-platform.
+    image: louislam/uptime-kuma:1
+    # Opt-in: not started by ``make dev-up`` / a bare ``up``. Run the
+    # observability extras with ``docker compose --profile observability up``.
+    profiles: ["observability"]
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime_kuma_data_dev:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks: [jasmin-dev]
+
+  # ---- GlitchTip (self-hosted, Sentry-compatible error monitor) -----------
+  # Shares the dev postgres + redis to keep the stack small:
+  #   - Separate database ``glitchtip`` on the same postgres instance
+  #     (run the CREATE DATABASE once — see comment on glitchtip-web).
+  #   - Redis DB index 2 (Jasmin uses 0; this avoids collisions).
+  # UI on http://localhost:8004. First-load asks you to create the
+  # admin user; then create a project, copy its DSN, and paste it
+  # into ``.env.dev`` as ``SENTRY_DSN`` (backend) and ``VITE_SENTRY_DSN``
+  # (frontend). Restart Django + Vite so the SDK init picks it up.
+  glitchtip-web:
+    # One-time setup before first ``up``:
+    #   docker compose -f docker-compose.dev.yml exec postgres \
+    #     psql -U ${POSTGRES_USER:-jasmin} -c \
+    #     "CREATE DATABASE glitchtip OWNER ${POSTGRES_USER:-jasmin};"
+    # Pinned to a published patch tag (the floating ``v4`` major was pulled
+    # from Docker Hub); keep this in sync with the prod compose pin.
+    image: glitchtip/glitchtip:v4.1.0
+    # Opt-in (see uptime-kuma): excluded from ``make dev-up``. Enable with
+    # ``docker compose --profile observability up``.
+    profiles: ["observability"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-jasmin}:${POSTGRES_PASSWORD:-DontForgetMeAgain}@postgres:5432/glitchtip
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-dev-glitchtip-secret-key-change-in-prod}
+      PORT: "8000"
+      EMAIL_URL: smtp://mailhog:1025
+      DEFAULT_FROM_EMAIL: glitchtip@localhost
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:-http://localhost:8004}
+      CELERY_WORKER_AUTOSCALE: "1,3"
+      ENABLE_USER_REGISTRATION: "true" # dev only — flip to false in prod
+      REDIS_URL: redis://redis:6379/2
+    ports:
+      - "8004:8000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [jasmin-dev]
+
+  glitchtip-worker:
+    # Pinned patch tag — keep in sync with glitchtip-web above and the prod pin.
+    image: glitchtip/glitchtip:v4.1.0
+    profiles: ["observability"] # opt-in (see glitchtip-web)
+    command: ./bin/run-celery-with-beat.sh
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-jasmin}:${POSTGRES_PASSWORD:-DontForgetMeAgain}@postgres:5432/glitchtip
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-dev-glitchtip-secret-key-change-in-prod}
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:-http://localhost:8004}
+      CELERY_WORKER_AUTOSCALE: "1,3"
+      REDIS_URL: redis://redis:6379/2
+      EMAIL_URL: smtp://mailhog:1025
+      DEFAULT_FROM_EMAIL: glitchtip@localhost
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      glitchtip-web:
+        condition: service_started
+    networks: [jasmin-dev]
+
+volumes:
+  postgres_data_dev:
+  redis_data_dev:
+  static_volume_dev:
+  media_volume_dev:
+  logs_volume_dev:
+  backend_venv_dev:
+  frontend_node_modules_dev:
+  uptime_kuma_data_dev:
+
+networks:
+  jasmin-dev:
+    driver: bridge

@@ -1,0 +1,9 @@
+Hallo {{ member.first_name }},
+
+vielen Dank für dein Interesse, Mitglied{% if tenant_name %} bei {{ tenant_name }}{% endif %} zu werden.
+
+Leider können wir deinen Antrag derzeit nicht annehmen.
+{% if member.admin_rejection_reason %}
+Begründung: {{ member.admin_rejection_reason }}
+{% endif %}
+Bei Fragen kannst du dich gerne bei uns melden.

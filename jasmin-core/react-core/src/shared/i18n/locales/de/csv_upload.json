@@ -1,0 +1,9 @@
+{
+  "button": "CSV hochladen",
+  "failed": "Upload fehlgeschlagen",
+  "result_title": "Import-Ergebnis",
+  "summary": "{{total}} Zeilen verarbeitet · {{successful}} erfolgreich · {{failed}} fehlgeschlagen",
+  "errors_heading": "Fehlgeschlagene Zeilen",
+  "col_row": "Zeile",
+  "col_error": "Fehler"
+}

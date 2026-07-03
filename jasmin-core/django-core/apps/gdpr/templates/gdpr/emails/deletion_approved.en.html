@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Your data deletion is complete</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
+      Hello {{ user.first_name|default:"there" }},
+    </h1>
+
+    <p>
+      your request to delete all your personal data at
+      {% if tenant_name %}<strong>{{ tenant_name }}</strong>{% else %}the platform{% endif %}
+      has been approved by the office and is now complete
+      (GDPR Article 17 — Right to be Forgotten).
+    </p>
+
+    <p>
+      The following has been removed or anonymised: your name, address,
+      contact details, payment information, and every other field directly
+      tied to your identity.
+    </p>
+
+    <p style="color: #555; font-size: 14px; margin-top: 24px;">
+      <strong>Note on statutory retention:</strong> a few records (e.g.
+      cooperative-share history, finalised invoices) must legally be kept
+      under GenG §31 / HGB §257. These no longer contain direct identifiers.
+    </p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      If you have any questions about the deletion, just reply to this email.
+    </p>
+  </body>
+</html>

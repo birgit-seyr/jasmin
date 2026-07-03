@@ -1,0 +1,11 @@
+Hello {{ user.first_name }},
+
+We received a request to delete all your personal data at {{ tenant_name }} (GDPR Art. 17).
+
+To make sure this request came from you, please confirm the deletion via this link (valid for 24 hours):
+
+{{ confirm_url }}
+
+{% if requires_admin_approval %}After you confirm, the office will review the request manually before your data is finally anonymized.
+{% endif %}
+If you did not request deletion, please ignore this email — your account will remain unchanged.

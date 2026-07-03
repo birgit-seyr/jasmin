@@ -1,0 +1,12 @@
+Rechnung {{ invoice.number }}
+
+Hallo {{ reseller.name }},
+
+anbei findest du deine Rechnung für {{ invoice.period }}.
+
+Gesamtbetrag: {{ invoice.total }}
+Fällig bis: {{ invoice.due_date }}
+
+Bankverbindung: {{ tenant.bank_details }}
+
+— Das Team von {{ tenant_name }}

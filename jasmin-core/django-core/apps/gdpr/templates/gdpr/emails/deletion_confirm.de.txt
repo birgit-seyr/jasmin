@@ -1,0 +1,11 @@
+Hallo {{ user.first_name }},
+
+du hast angefragt, alle deine personenbezogenen Daten bei {{ tenant_name }} zu löschen (DSGVO Art. 17).
+
+Damit wir sicher sind, dass die Anfrage von dir kommt, bitte bestätige die Löschung über diesen Link (24 Stunden gültig):
+
+{{ confirm_url }}
+
+{% if requires_admin_approval %}Nach deiner Bestätigung prüft das Büro die Anfrage noch einmal manuell, bevor die Daten endgültig anonymisiert werden.
+{% endif %}
+Wenn du dies nicht angefragt hast, ignoriere diese E-Mail einfach — dein Konto bleibt unverändert.

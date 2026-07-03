@@ -1,0 +1,10 @@
+Hallo {{ tenant_name }}-Team,
+
+beim nächtlichen automatischen Verlängerungslauf am {{ run_date }} konnten {{ failure_count }} Abo(s) NICHT verlängert werden. Diese Mitglieder haben derzeit kein Folge-Abo — bitte prüfen und ggf. manuell verlängern:
+
+{{ renewal_failures_text }}
+
+Zur Abo-Verwaltung:
+{{ review_url }}
+
+— Automatische Benachrichtigung.

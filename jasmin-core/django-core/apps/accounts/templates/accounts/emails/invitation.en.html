@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>You've been invited</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
+      Hi {{ user.first_name }},
+    </h1>
+
+    <p>
+      You've been invited to join
+      <strong>{{ tenant_name }}</strong>.
+      Click the button below to set your password and finish creating your account.
+    </p>
+
+    <p style="margin: 32px 0;">
+      <a href="{{ accept_url }}"
+         style="display: inline-block; padding: 12px 20px; background: #1d603e; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        Set my password
+      </a>
+    </p>
+
+    <p style="color: #555; font-size: 14px;">
+      Or copy this link into your browser:<br />
+      <a href="{{ accept_url }}" style="color: #1d603e; word-break: break-all;">{{ accept_url }}</a>
+    </p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      This invitation expires on {{ expires_at }}.
+      If you weren't expecting this email you can safely ignore it.
+    </p>
+  </body>
+</html>

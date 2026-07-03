@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["orval.config.ts"],
+  "project": ["src/**/*.{ts,tsx,js,jsx}"],
+  "ignore": ["src/api/generated/**"],
+  "ignoreDependencies": [
+    "postcss",
+    "autoprefixer",
+    "tailwindcss",
+    "@ant-design/cssinjs",
+    "buffer"
+  ]
+}

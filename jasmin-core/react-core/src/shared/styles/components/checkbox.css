@@ -1,0 +1,36 @@
+/* Custom Ant Design checkbox variants */
+
+/* Generic green checkbox (used as a "selected/active" cue) */
+.green-checkbox .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #d5eac4 !important;
+  border-color: #d5eac4 !important;
+}
+
+/* Trial-status checkbox: visual encoding of trial state.
+ * Unchecked + Disabled  -> light gray  ("not on trial")
+ * Checked + Enabled     -> green       ("trial active")
+ * Checked + Disabled    -> orange      ("trial finalized")
+ */
+.is-trial-checkbox.ant-checkbox-wrapper-disabled .ant-checkbox-inner,
+.is-trial-checkbox .ant-checkbox-disabled .ant-checkbox-inner {
+  background-color: #c9c8c8 !important;
+  border-color: #f1f0f0 !important;
+  opacity: 1 !important;
+}
+
+.is-trial-checkbox.ant-checkbox-wrapper-checked .ant-checkbox-inner,
+.is-trial-checkbox .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: var(--color-success) !important;
+  border-color: var(--color-success) !important;
+}
+
+.is-trial-checkbox.ant-checkbox-wrapper-checked.ant-checkbox-wrapper-disabled .ant-checkbox-inner,
+.is-trial-checkbox .ant-checkbox-checked.ant-checkbox-disabled .ant-checkbox-inner {
+  background-color: #ff8800 !important;
+  border-color: #ff9800 !important;
+  opacity: 1 !important;
+}
+
+.is-trial-checkbox .ant-checkbox-checked .ant-checkbox-inner::after {
+  border-color: var(--color-bg-base) !important;
+}

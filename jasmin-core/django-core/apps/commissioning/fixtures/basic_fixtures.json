@@ -1,0 +1,73 @@
+[
+  {
+    "model": "commissioning.paymentcycle",
+    "pk": "pc01Weekly",
+    "fields": {
+      "is_active": true,
+      "choice": "WEEKLY"
+    }
+  },
+  {
+    "model": "commissioning.paymentcycle",
+    "pk": "pc02Biweek",
+    "fields": {
+      "is_active": true,
+      "choice": "BIWEEKLY"
+    }
+  },
+  {
+    "model": "commissioning.paymentcycle",
+    "pk": "pc03Monthly",
+    "fields": {
+      "is_active": true,
+      "choice": "MONTHLY"
+    }
+  },
+  {
+    "model": "commissioning.paymentcycle",
+    "pk": "pc04Quarter",
+    "fields": {
+      "is_active": true,
+      "choice": "QUARTERLY"
+    }
+  },
+  {
+    "model": "commissioning.paymentcycle",
+    "pk": "pc05SemiAnn",
+    "fields": {
+      "is_active": true,
+      "choice": "SEMI_ANNUALLY"
+    }
+  },
+  {
+    "model": "commissioning.paymentcycle",
+    "pk": "pc06Annual",
+    "fields": {
+      "is_active": true,
+      "choice": "ANNUALLY"
+    }
+  },
+   {
+    "model": "commissioning.storage",
+    "pk": "storage01s",
+    "fields": {
+      "is_active": true,
+      "description": "Kurzzeitlager",
+      "name": "Kurz",
+      "is_short_term_harvest_storage": true,
+      "is_long_term_harvest_storage": false
+    }
+  },
+   {
+    "model": "commissioning.storage",
+    "pk": "storage02l",
+    "fields": {
+      "is_active": true,
+      "description": "Langzeitlager",
+      "name": "Lang",
+      "is_short_term_harvest_storage": false,
+      "is_long_term_harvest_storage": true
+    }
+  }
+]
+

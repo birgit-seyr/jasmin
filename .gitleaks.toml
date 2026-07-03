@@ -1,0 +1,45 @@
+# gitleaks config — extends the upstream default ruleset and allowlists
+# the project's known, intentional dev placeholders so the pre-commit
+# hook doesn't block normal commits.
+#
+# .env.dev is intentionally TRACKED as the dev template (do not gitignore
+# it). Its values, the compose `${VAR:-default}` fallbacks, and the
+# settings.py dev defaults are non-secret placeholders that must not be
+# flagged. Real secrets only ever live in the (untracked) .env / .env.local.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Jasmin intentional dev placeholders and template env files"
+
+# Template / dev env files that legitimately carry placeholder values.
+paths = [
+  '''\.env\.dev$''',
+  '''\.env\.dev\.example$''',
+  '''\.env\.example$''',
+  '''\.env\.local$''',
+  # Build output / dependencies / git internals: never a source of secrets,
+  # and scanning them only yields false positives (minified vendor bundles,
+  # packed objects). dist/ + node_modules/ are gitignored (absent in a CI
+  # checkout); .git/ is excluded so the directory scan doesn't re-flag history.
+  '''(^|/)node_modules/''',
+  '''(^|/)dist/''',
+  '''(^|/)\.git/''',
+]
+
+# Exact dev placeholder values (settings.py dev defaults, compose
+# `${VAR:-default}` fallbacks, .env.dev template). These are well-known,
+# non-secret, and shared in the public repo on purpose.
+regexes = [
+  '''dev-secret-key-change-in-production''',
+  '''dev-glitchtip-secret-key-change-in-prod''',
+  '''HeQ7tkqHP7nVB1hA7VkX0SVIan3y_NUFrjyeDnfzcXk=''',
+  '''DontForgetMeAgain''',
+  # .env.example documented placeholders.
+  '''change-me(-[a-z0-9-]+)?''',
+  # Public, non-secret JasminModel id alphabet (the nanoid charset) — flagged
+  # as high-entropy by the generic-api-key rule; identical in every
+  # ``*/constants.py`` (commissioning, staff, …), never a credential.
+  '''ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789''',
+]

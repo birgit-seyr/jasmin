@@ -1,0 +1,432 @@
+# =============================================================================
+# Jasmin gateway - PRODUCTION (template, processed with envsubst)
+#
+# Substituted variables:
+#   ${FRONTEND_DOMAIN}        - apex domain, e.g. jasmin.example.com
+#   ${SUPER_ADMIN_SUBDOMAIN}  - super-admin host label, e.g. "marillen"
+#                               (its dedicated server block is IP-restricted)
+#   ${BACKEND_HOST}           - usually "backend"
+#   ${BACKEND_PORT}           - usually "8000"
+#   ${FRONTEND_HOST}          - usually "frontend"
+#   ${FRONTEND_PORT}          - usually "80"
+#
+# Layout:
+#   :80   -> ACME challenge + redirect to HTTPS
+#   :443  -> TLS termination, routes /api /static /media to Django
+#            and everything else to the SPA nginx container
+# =============================================================================
+events {
+    worker_connections 2048;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    server_tokens off;
+
+    client_max_body_size 50M;
+
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" "$http_user_agent" '
+                    'host="$host" rt=$request_time ut=$upstream_response_time';
+    access_log /var/log/nginx/access.log main;
+    error_log  /var/log/nginx/error.log warn;
+
+    gzip on;
+    gzip_proxied any;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_comp_level 5;
+    gzip_types 
+        text/plain text/css text/xml application/json
+        application/javascript application/xml+rss
+        application/atom+xml image/svg+xml;
+
+    upstream jasmin_backend  { server ${BACKEND_HOST}:${BACKEND_PORT}; keepalive 32; }
+    upstream jasmin_frontend { server ${FRONTEND_HOST}:${FRONTEND_PORT}; keepalive 32; }
+
+    # ---- Rate limiting -----------------------------------------------------
+    # `login_zone`  - protects credential endpoints from brute-force / spray
+    #                 attacks. 10 requests per minute per source IP.
+    # `api_zone`    - generic per-IP cap on the API surface. Burst absorbs
+    #                 short page-load spikes; rate keeps a single IP from
+    #                 saturating the backend.
+    # 429 responses are returned when limits are exceeded (instead of 503).
+    limit_req_zone $binary_remote_addr zone=login_zone:10m rate=10r/m;
+    limit_req_zone $binary_remote_addr zone=api_zone:10m   rate=60r/s;
+    limit_req_status 429;
+    limit_conn_zone $binary_remote_addr zone=conn_per_ip:10m;
+
+    # ---- Common security headers (applied to https server) ----------------
+    map $sent_http_content_type $cache_control_for_static {
+        default                                 "public, max-age=2592000";
+        ~*application/javascript|text/css       "public, max-age=31536000, immutable";
+    }
+
+    # ---- HTTP -> HTTPS + ACME --------------------------------------------
+    server {
+        listen      80 default_server;
+        listen      [::]:80 default_server;
+        server_name ${FRONTEND_DOMAIN} *.${FRONTEND_DOMAIN};
+
+        location /.well-known/acme-challenge/ {
+            root /var/www/certbot;
+        }
+
+        # Plaintext health endpoint for the container healthcheck. MUST stay
+        # above the catch-all redirect below: the docker-compose healthcheck
+        # probes ``http://127.0.0.1/health/`` with busybox wget, which would
+        # otherwise follow the 301 to HTTPS and fail TLS verification (the
+        # served cert's CN is ${FRONTEND_DOMAIN}, not 127.0.0.1) — leaving the
+        # gateway permanently ``unhealthy``. Answer 200 on plain HTTP instead.
+        location = /health/ {
+            access_log off;
+            add_header Content-Type text/plain;
+            return 200 "ok\n";
+        }
+
+        location / {
+            return 301 https://$host$request_uri;
+        }
+    }
+
+    # ---- HTTPS gateway ----------------------------------------------------
+    server {
+        listen      443 ssl;
+        listen      [::]:443 ssl;
+        http2       on;
+        server_name ${FRONTEND_DOMAIN} *.${FRONTEND_DOMAIN};
+
+        ssl_certificate     /etc/letsencrypt/live/${FRONTEND_DOMAIN}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/${FRONTEND_DOMAIN}/privkey.pem;
+        ssl_protocols       TLSv1.2 TLSv1.3;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+        ssl_session_cache   shared:SSL:10m;
+        ssl_session_timeout 1d;
+        ssl_stapling        on;
+        ssl_stapling_verify on;
+
+        # Security headers. NOTE: because nginx add_header inheritance is
+        # all-or-nothing per level, this same snippet is re-included inside
+        # every location below that sets its own add_header (/static/,
+        # /_protected_media/) — otherwise those responses drop ALL of these.
+        include /etc/nginx/security_headers.conf;
+
+        # Per-IP connection cap (defense against slow-loris / fork-bomb).
+        limit_conn conn_per_ip 50;
+
+        # ------- Auth endpoints (login + refresh) - tighter rate limit -----
+        location = /api/auth/login/ {
+            limit_req zone=login_zone burst=5 nodelay;
+            proxy_pass http://jasmin_backend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location = /api/auth/register/ {
+            limit_req zone=login_zone burst=3 nodelay;
+            proxy_pass http://jasmin_backend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # JWT refresh — bot-replays a stolen token; harder to mass-spam but
+        # still credential-adjacent, so we cap it on the login_zone.
+        location = /api/auth/refresh/ {
+            limit_req zone=login_zone burst=5 nodelay;
+            proxy_pass http://jasmin_backend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Password-reset request — every successful POST sends an email and
+        # writes a token row. Cheap to abuse, expensive to absorb.
+        location = /api/auth/password-reset/request/ {
+            limit_req zone=login_zone burst=3 nodelay;
+            proxy_pass http://jasmin_backend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Password-reset confirm — accepts a token + new password; brute-force
+        # of the reset token would happen here. Same posture as login.
+        location = /api/auth/password-reset/confirm/ {
+            limit_req zone=login_zone burst=3 nodelay;
+            proxy_pass http://jasmin_backend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Invitation accept — accepts a secret invitation token. Same brute-
+        # force surface as password-reset/confirm.
+        location = /api/auth/invitations/accept/ {
+            limit_req zone=login_zone burst=3 nodelay;
+            proxy_pass http://jasmin_backend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # ------- Super-admin API is NOT served on tenant / apex hosts -------
+        # The super-admin platform API lives in the public-schema URLconf, so
+        # it is reachable wherever a request resolves to the public schema —
+        # which includes the apex ${FRONTEND_DOMAIN} (docker_entrypoint.sh maps
+        # the apex Domain to the public tenant). This wildcard block has NO IP
+        # allowlist, so without this guard the platform-root API would be
+        # reachable here from ANY IP — defeating the allowlist that is the only
+        # control standing in for 2FA on super-admin. It is legitimately served
+        # ONLY by the dedicated, IP-allowlisted ${SUPER_ADMIN_SUBDOMAIN} block
+        # below. ``/api/super-admin/`` is a longer prefix than ``/api/`` so it
+        # wins for these paths. Return 404 so the endpoint's existence isn't
+        # even confirmed to an off-allowlist scanner.
+        location /api/super-admin/ {
+            return 404;
+        }
+
+        # ------- Backend ----------------------------------------------------
+        location /api/ {
+            limit_req zone=api_zone burst=120 nodelay;
+            proxy_pass http://jasmin_backend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_http_version 1.1;
+            proxy_set_header   Connection      "";
+            proxy_read_timeout 120s;
+            proxy_connect_timeout 60s;
+        }
+
+        location /health/ {
+            proxy_pass http://jasmin_backend;
+            access_log off;
+        }
+
+        # ------- Django static / media -------------------------------------
+        location /static/ {
+            alias /app/staticfiles/;
+            access_log off;
+            expires 1y;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+            # Re-include the security headers: this location's own add_header
+            # otherwise voids the server-level set (nginx all-or-nothing rule).
+            include /etc/nginx/security_headers.conf;
+        }
+
+        # Media is auth-gated: Django validates the signed ?st= token
+        # (core/protected_media.py) and answers with X-Accel-Redirect
+        # to the internal location below — nginx still does the file
+        # I/O, Django never streams bytes.
+        location /media/ {
+            # Every /media/ hit now runs Django token validation before
+            # nginx serves the file — rate-limit it like the other
+            # backend-proxied locations so an unauthenticated flood
+            # can't grind the validation path. ``burst=120`` matches the
+            # /api/ allowance (a page can reference many images at once).
+            limit_req zone=api_zone burst=120 nodelay;
+            proxy_pass http://jasmin_backend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_http_version 1.1;
+            proxy_set_header   Connection      "";
+        }
+
+        location /_protected_media/ {
+            internal;
+            alias /app/media/;
+            access_log off;
+            # ``private``: media holds tenant documents (invoice PDFs
+            # with PII) — browsers may cache, shared proxies/CDNs must
+            # not. ``nosniff`` pins the extension-derived MIME type so
+            # a crafted upload can't be content-sniffed into HTML.
+            # (No ``Content-Disposition: attachment`` — the office
+            # previews invoice PDFs in-tab; upload content is
+            # magic-byte-validated server-side.)
+            # Single authoritative Cache-Control: ``expires`` would emit
+            # a second, non-``private`` Cache-Control header that naive
+            # intermediaries may honour.
+            add_header Cache-Control "private, max-age=2592000";
+            add_header X-Content-Type-Options "nosniff";
+            # Re-include the security headers: this location's own add_header
+            # otherwise voids the server-level set (nginx all-or-nothing rule).
+            # Critical here — these are tenant invoice PDFs (PII): without
+            # X-Frame-Options / CSP they could be framed for clickjacking.
+            include /etc/nginx/security_headers.conf;
+        }
+
+        # ------- SPA (frontend container) ----------------------------------
+        location / {
+            proxy_pass http://jasmin_frontend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_http_version 1.1;
+            proxy_set_header   Connection      "";
+        }
+    }
+
+    # ---- HTTPS gateway: SUPER-ADMIN (IP-restricted) -----------------------
+    # Dedicated server block for the super-admin host. nginx prefers exact
+    # server_name matches over the *.${FRONTEND_DOMAIN} wildcard above, so
+    # this block handles ALL traffic to ${SUPER_ADMIN_SUBDOMAIN}.${FRONTEND_DOMAIN}
+    # while tenant subdomains continue to be served by the wildcard block.
+    #
+    # Edit nginx/super_admin_allowed_ips.conf to add/remove allowed IPs,
+    # then: docker compose exec gateway nginx -s reload
+    # CAVEAT: that file is bind-mounted as a SINGLE FILE, so an inode-
+    # replacing edit (vim / sed -i / cp) leaves this container serving the
+    # stale allowlist even after `nginx -s reload`. Run
+    # `docker compose restart gateway` after such an edit (the durable fix
+    # is a directory bind-mount).
+    server {
+        listen      443 ssl;
+        listen      [::]:443 ssl;
+        http2       on;
+        server_name ${SUPER_ADMIN_SUBDOMAIN}.${FRONTEND_DOMAIN};
+
+        # IP allowlist - checked before any routing. Returns 403 for non-allowed.
+        include /etc/nginx/super_admin_allowed_ips.conf;
+
+        ssl_certificate     /etc/letsencrypt/live/${FRONTEND_DOMAIN}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/${FRONTEND_DOMAIN}/privkey.pem;
+        ssl_protocols       TLSv1.2 TLSv1.3;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+        ssl_session_cache   shared:SSL:10m;
+        ssl_session_timeout 1d;
+        ssl_stapling        on;
+        ssl_stapling_verify on;
+
+        # Security headers (stricter than the tenant block: DENY + no-referrer
+        # + X-Robots-Tag). As above, nginx add_header inheritance is
+        # all-or-nothing, so /static/ + /_protected_media/ below re-include the
+        # default snippet to avoid serving those resources bare.
+        include /etc/nginx/security_headers_admin.conf;
+
+        limit_conn conn_per_ip 50;
+
+        # ------- Auth endpoints (super-admin) ------------------------------
+        location = /api/super-admin/auth/login/ {
+            limit_req zone=login_zone burst=3 nodelay;
+            proxy_pass http://jasmin_backend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location = /api/super-admin/auth/refresh/ {
+            limit_req zone=login_zone burst=5 nodelay;
+            proxy_pass http://jasmin_backend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # ------- Backend ----------------------------------------------------
+        location /api/ {
+            limit_req zone=api_zone burst=120 nodelay;
+            proxy_pass http://jasmin_backend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_http_version 1.1;
+            proxy_set_header   Connection      "";
+            proxy_read_timeout 120s;
+            proxy_connect_timeout 60s;
+        }
+
+        location /health/ {
+            proxy_pass http://jasmin_backend;
+            access_log off;
+        }
+
+        # ------- Django static / media -------------------------------------
+        location /static/ {
+            alias /app/staticfiles/;
+            access_log off;
+            expires 1y;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+            # Re-include the security headers: this location's own add_header
+            # otherwise voids the server-level set (nginx all-or-nothing rule).
+            include /etc/nginx/security_headers.conf;
+        }
+
+        # Media is auth-gated: Django validates the signed ?st= token
+        # (core/protected_media.py) and answers with X-Accel-Redirect
+        # to the internal location below — nginx still does the file
+        # I/O, Django never streams bytes.
+        location /media/ {
+            # Every /media/ hit now runs Django token validation before
+            # nginx serves the file — rate-limit it like the other
+            # backend-proxied locations so an unauthenticated flood
+            # can't grind the validation path. ``burst=120`` matches the
+            # /api/ allowance (a page can reference many images at once).
+            limit_req zone=api_zone burst=120 nodelay;
+            proxy_pass http://jasmin_backend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_http_version 1.1;
+            proxy_set_header   Connection      "";
+        }
+
+        location /_protected_media/ {
+            internal;
+            alias /app/media/;
+            access_log off;
+            # ``private``: media holds tenant documents (invoice PDFs
+            # with PII) — browsers may cache, shared proxies/CDNs must
+            # not. ``nosniff`` pins the extension-derived MIME type so
+            # a crafted upload can't be content-sniffed into HTML.
+            # (No ``Content-Disposition: attachment`` — the office
+            # previews invoice PDFs in-tab; upload content is
+            # magic-byte-validated server-side.)
+            # Single authoritative Cache-Control: ``expires`` would emit
+            # a second, non-``private`` Cache-Control header that naive
+            # intermediaries may honour.
+            add_header Cache-Control "private, max-age=2592000";
+            add_header X-Content-Type-Options "nosniff";
+            # Re-include the security headers: this location's own add_header
+            # otherwise voids the server-level set (nginx all-or-nothing rule).
+            # Critical here — these are tenant invoice PDFs (PII): without
+            # X-Frame-Options / CSP they could be framed for clickjacking.
+            include /etc/nginx/security_headers.conf;
+        }
+
+        # ------- SPA (frontend container) ----------------------------------
+        location / {
+            proxy_pass http://jasmin_frontend;
+            proxy_set_header Host              $host;
+            proxy_set_header X-Real-IP         $remote_addr;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_http_version 1.1;
+            proxy_set_header   Connection      "";
+        }
+    }
+}

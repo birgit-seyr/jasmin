@@ -1,0 +1,33 @@
+/* Card head colour variants for Ant Design <Card> headers. */
+
+/* Used in ConfigurationGeneral.jsx (tenant section) */
+.tenant-card-header .ant-card-head {
+  background-color: #b4ebf4ff;
+  border-bottom: 2px solid #96dfeaff;
+}
+
+/* Used in ConfigurationGeneral.jsx (settings section) */
+.settings-card-header .ant-card-head {
+  background-color: #f0f5ff;
+  border-bottom: 2px solid #d6e4ff;
+}
+
+/* Reseller info chip used in commissioning views. */
+.reseller-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  background-color: #f6daf5;
+  padding: 0.5em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.reseller-card-header-note {
+  font-weight: 400;
+  font-size: 0.85em;
+  color: var(--color-text-secondary);
+  text-transform: none;
+}

@@ -1,0 +1,181 @@
+import {
+  FileTextOutlined,
+  MailOutlined,
+  SafetyOutlined,
+  SettingOutlined,
+  TeamOutlined,
+  EuroCircleOutlined,
+} from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import { filterByRole, useRoles, type RoleGatedItem } from "@shared/auth";
+import SidebarShell from "./SidebarShell";
+
+interface ConfigurationSidebarProps {
+  collapsed?: boolean;
+  openKeys?: string[];
+  onOpenChange?: (keys: string[]) => void;
+}
+
+export default function ConfigurationSidebar({
+  openKeys,
+  onOpenChange,
+}: ConfigurationSidebarProps) {
+  const { t } = useTranslation();
+  const flags = useRoles();
+
+  const items = [
+    {
+      key: "configuration-general",
+
+      requireRole: "isAdmin",
+      icon: <SettingOutlined />,
+      label: (
+        <Link to="/configuration/general">{t("configuration.general")}</Link>
+      ),
+    },
+    {
+      key: "configuration-app",
+
+      requireRole: "isAdmin",
+      icon: <SettingOutlined />,
+      label: <Link to="/configuration/app">{t("configuration.app")}</Link>,
+    },
+    {
+      key: "configuration-members",
+
+      requireRole: "isAdmin",
+      icon: <SettingOutlined />,
+      label: (
+        <Link to="/configuration/members">{t("configuration.members")}</Link>
+      ),
+    },
+    {
+      key: "configuration-subscriptions",
+
+      requireRole: "isAdmin",
+      icon: <SettingOutlined />,
+      label: (
+        <Link to="/configuration/subscriptions">
+          {t("configuration.subscriptions")}
+        </Link>
+      ),
+    },
+    {
+      key: "configuration-payments",
+
+      requireRole: "isAdmin",
+      icon: <EuroCircleOutlined />,
+      label: (
+        <Link to="/configuration/payments">
+          {t("configuration.payments")}
+        </Link>
+      ),
+    },
+    {
+      key: "configuration-time-management",
+
+      requireRole: "isAdmin",
+      icon: <SettingOutlined />,
+      label: (
+        <Link to="/configuration/time-management">
+          {t("configuration.time_management")}
+        </Link>
+      ),
+    },
+
+    {
+      key: "configuration-commissioning",
+
+      requireRole: "isAdmin",
+      icon: <SettingOutlined />,
+      label: (
+        <Link to="/configuration/commissioning">
+          {t("configuration.commissioning")}
+        </Link>
+      ),
+    },
+    {
+      key: "configuration-reseller-documents",
+
+      requireRole: "isAdmin",
+      icon: <SettingOutlined />,
+      label: (
+        <Link to="/configuration/reseller-documents">
+          {t("configuration.reseller_documents")}
+        </Link>
+      ),
+    },
+    {
+      key: "configuration-email",
+
+      requireRole: "isAdmin",
+      icon: <MailOutlined />,
+      label: (
+        <Link to="/configuration/email">
+          {t("configuration.email")}
+        </Link>
+      ),
+    },
+    {
+      key: "configuration-email-templates",
+
+      requireRole: "isAdmin",
+      icon: <MailOutlined />,
+      label: (
+        <Link to="/configuration/email-templates">
+          {t("configuration.email_templates")}
+        </Link>
+      ),
+    },
+    {
+      key: "configuration-email-log",
+
+      requireRole: "isOffice",
+      icon: <MailOutlined />,
+      label: (
+        <Link to="/configuration/email-log">
+          {t("configuration.email_log")}
+        </Link>
+      ),
+    },
+    {
+      key: "configuration-gdpr",
+
+      requireRole: "isAdmin",
+      icon: <SafetyOutlined />,
+      label: (
+        <Link to="/configuration/gdpr">
+          {t("configuration.data_protection")}
+        </Link>
+      ),
+    },
+    {
+      key: "configuration-consents",
+
+      requireRole: "isAdmin",
+      icon: <FileTextOutlined />,
+      label: (
+        <Link to="/configuration/consents">
+          {t("consent.admin.title")}
+        </Link>
+      ),
+    },
+
+    {
+      key: "configuration-users",
+      requireRole: "isAdmin",
+      icon: <TeamOutlined />,
+      label: <Link to="/configuration/users">{t("users.title")}</Link>,
+    },
+  ];
+
+  return (
+    <SidebarShell
+      header={t("configuration.sidebar-header")}
+      items={filterByRole(items as unknown as RoleGatedItem[], flags)}
+      openKeys={openKeys}
+      onOpenChange={onOpenChange}
+    />
+  );
+}

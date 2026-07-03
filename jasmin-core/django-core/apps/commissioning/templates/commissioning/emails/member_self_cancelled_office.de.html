@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Selbstkündigung eines Mitglieds</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Selbstkündigung eines Mitglieds</h1>
+    <p>
+      Ein Mitglied hat seine Mitgliedschaft
+      {% if tenant_name %}bei <strong>{{ tenant_name }}</strong>{% endif %}
+      selbst gekündigt (über das Mitgliederportal).
+    </p>
+    <p>
+      Mitglied: <strong>{{ member.first_name }} {{ member.last_name }}</strong>{% if member.member_number %} (Mitgliedsnummer <strong>#{{ member.member_number }}</strong>){% endif %}
+    </p>
+    {% if cancelled_effective_at %}
+      <p>Austrittsdatum (GenG §30): <strong>{{ cancelled_effective_at }}</strong></p>
+    {% endif %}
+    <p>
+      Bitte prüft den Austritt und kümmert euch um die Auseinandersetzung
+      des Geschäftsguthabens:
+    </p>
+    <p><a href="{{ review_url }}">{{ review_url }}</a></p>
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      Automatische Benachrichtigung.
+    </p>
+  </body>
+</html>

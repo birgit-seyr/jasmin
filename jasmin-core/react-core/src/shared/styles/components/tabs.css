@@ -1,0 +1,118 @@
+.custom-tabs .ant-tabs-tab {
+  width: 20em !important;
+  min-width: 20em !important;
+  max-width: 20em !important;
+  text-align: center;
+  flex: none !important;
+  border: none !important;
+  background-color: #e1f5ce !important;
+  transition: background-color 0.3s ease;
+  padding: 4px 8px !important; /* Reduced padding */
+  margin-right: 4mm !important; /* 4mm gap between tabs */
+  border-radius: 6px 6px 0 0;
+}
+
+/* Active tab styling - green background */
+.custom-tabs .ant-tabs-tab-active {
+  background-color: #c2ebae !important;
+  border: none !important;
+  border-radius: 6px 6px 0 0;
+}
+
+/* Active tab text color - make it white for better contrast */
+.custom-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: rgb(13, 12, 12) !important;
+}
+
+/* Reduce padding inside the tab button */
+.custom-tabs .ant-tabs-tab-btn {
+  width: 100%;
+  justify-content: center;
+  padding: 4px 8px !important; /* Reduced internal padding */
+}
+
+/* Reduce padding for the h5 elements inside tabs */
+.custom-tabs .ant-tabs-tab h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0;
+  padding: 0 !important; /* Remove any default padding */
+}
+
+/* Hover effect for inactive tabs */
+.custom-tabs .ant-tabs-tab:hover:not(.ant-tabs-tab-active) {
+  background-color: var(--color-bg-hover) !important;
+  border-radius: 6px 6px 0 0;
+}
+
+/* Remove default Ant Design borders */
+.custom-tabs .ant-tabs-nav::before {
+  border-bottom: none !important;
+}
+
+.custom-tabs .ant-tabs-content-holder {
+  border: none !important;
+  border-top: none !important;
+}
+
+.custom-tabs .ant-tabs-nav-list {
+  width: auto;
+}
+
+/* Remove spacing between tabs since we don't have borders */
+.custom-tabs .ant-tabs-tab + .ant-tabs-tab {
+  margin-left: 0;
+}
+
+/* Make sure last tab doesn't have margin */
+.custom-tabs .ant-tabs-tab:last-child {
+  margin-right: 0 !important;
+}
+
+/* ---------------------------------------------------------------
+ * Orders view switcher — branded card-type tabs
+ *
+ * AntD ``type="card"`` tabs whose active card is tinted with the
+ * primary color and fuses into a bordered content panel below, so the
+ * offers / articles / crates views read clearly as a switcher.
+ * Token-driven, so it follows light/dark mode automatically.
+ * --------------------------------------------------------------- */
+
+.orders-view-switcher .ant-tabs-nav {
+  margin-bottom: 0;
+}
+
+/* Tab cards: rounded tops. */
+.orders-view-switcher .ant-tabs-tab {
+  border-radius: 8px 8px 0 0 !important;
+}
+
+/* Active card: pale primary tint + primary border + bold primary label.
+   Its bottom edge opens (and overlaps the panel border by 1px) so the card
+   visually fuses into the content panel below. */
+.orders-view-switcher .ant-tabs-tab.ant-tabs-tab-active {
+  background-color: var(--color-primary-light) !important;
+  border-color: var(--color-primary) !important;
+  border-bottom-color: var(--color-primary-light) !important;
+  margin-bottom: -1px;
+}
+.orders-view-switcher .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--color-primary) !important;
+  font-weight: 600;
+}
+
+/* Inactive cards: hint the primary color on hover. */
+.orders-view-switcher
+  .ant-tabs-tab:not(.ant-tabs-tab-active):hover
+  .ant-tabs-tab-btn {
+  color: var(--color-primary) !important;
+}
+
+/* Content panel: a bordered box the active card fuses into. */
+.orders-view-switcher .ant-tabs-content-holder {
+  border: 1px solid var(--color-primary);
+  border-radius: 0 8px 8px 8px;
+  padding: 1.25em;
+  background-color: var(--color-bg-base);
+}
