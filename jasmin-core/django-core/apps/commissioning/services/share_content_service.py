@@ -1065,10 +1065,52 @@ class ShareContentService:
             # forecast scaffold to the frontend.
             return list(ShareContent.objects.filter(**slot_filter))
 
+        # Preserve the backup plan across the wipe-and-rebuild. It lives on
+        # ShareContent (backup_share_article/unit/size + backup_amount), but the
+        # rebuild from ``data`` carries only the MAIN amounts — so without this,
+        # editing any cell silently drops the row's whole backup plan. Key it by
+        # the ShareContent's own identity within the slot, ``(share,
+        # delivery_station)`` (its unique constraint), so a PER-STATION backup is
+        # preserved exactly rather than collapsed onto a single value.
+        preserved_backup: dict[tuple[str, str | None], tuple[Any, ...]] = {}
+        for old in old_share_contents:
+            if old.backup_share_article_id or old.backup_amount:
+                preserved_backup[(old.share_id, old.delivery_station_id)] = (
+                    old.backup_share_article_id,
+                    old.backup_unit,
+                    old.backup_size,
+                    old.backup_amount,
+                )
+
         old_share_contents.delete()
         share_contents = self.process_share_planning_data(
             data, collect_movements=deferred_movements
         )
+
+        # Re-stamp each rebuilt row from its matching (share, delivery_station).
+        if preserved_backup:
+            to_restamp = []
+            for sc in share_contents:
+                backup = preserved_backup.get((sc.share_id, sc.delivery_station_id))
+                if backup is None:
+                    continue
+                (
+                    sc.backup_share_article_id,
+                    sc.backup_unit,
+                    sc.backup_size,
+                    sc.backup_amount,
+                ) = backup
+                to_restamp.append(sc)
+            if to_restamp:
+                ShareContent.objects.bulk_update(
+                    to_restamp,
+                    [
+                        "backup_share_article",
+                        "backup_unit",
+                        "backup_size",
+                        "backup_amount",
+                    ],
+                )
 
         if old_movements:
             deferred_movements.extend(old_movements)

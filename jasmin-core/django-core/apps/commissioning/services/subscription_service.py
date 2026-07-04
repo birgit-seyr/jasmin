@@ -160,7 +160,17 @@ class SubscriptionService:
         previous_station_day_id = subscription.default_delivery_station_day_id
         was_waitlisted = subscription.on_waiting_list
         for field, value in validated_data.items():
-            setattr(subscription, field, value)
+            # ``member`` and ``share_type_variation`` are writable id STRINGS on
+            # the serializer (CharField) — mirror ``_create_subscription`` and
+            # assign them to the FK's ``_id`` attribute. Django rejects a raw pk
+            # on the plain FK attribute ("must be a Member instance"); other FK
+            # fields arrive as model instances and set directly.
+            if field in ("member", "share_type_variation") and isinstance(
+                value, str
+            ):
+                setattr(subscription, f"{field}_id", value)
+            else:
+                setattr(subscription, field, value)
         subscription.save()
         if subscription.on_waiting_list:
             # Waitlisted drafts hold no capacity, so there is nothing to

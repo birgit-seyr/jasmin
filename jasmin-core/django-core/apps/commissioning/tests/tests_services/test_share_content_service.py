@@ -11,6 +11,7 @@ from apps.commissioning.models import ShareContent
 from apps.commissioning.services.share_content_service import ShareContentService
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
+    DeliveryStationFactory,
     ShareArticleFactory,
     ShareContentFactory,
     ShareFactory,
@@ -478,6 +479,84 @@ class TestReplaceSharePlanningEmptyClear:
         assert not MovementShareArticle.objects.filter(
             share_content=forecast_row, movement_type="SHARECONTENT"
         ).exists()
+
+
+# ---------------------------------------------------------------------------
+# replace_share_planning  (backup preservation)
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestReplaceSharePlanningPreservesBackup:
+    """A row edit (non-empty payload) wipes-and-rebuilds the slot's
+    ShareContent rows; the backup plan (substitute article + per-cell
+    backup_amount, keyed by (delivery_day, variation)) must SURVIVE the
+    rebuild. It lives on ShareContent, but the rebuild payload carries only
+    the MAIN amounts — so without explicit preservation it is silently lost.
+    """
+
+    @patch.object(
+        ShareContentService, "create_all_theoretical_objects", return_value={}
+    )
+    @patch.object(ShareContentService, "create_movements", return_value=[])
+    def test_backup_survives_row_amount_update(
+        self, _mock_movements, _mock_theo, tenant
+    ):
+        article = ShareArticleFactory()
+        backup_article = ShareArticleFactory()
+        variation = ShareTypeVariationFactory()
+        delivery_day = SharesDeliveryDayFactory(day_number=2)
+        station = DeliveryStationFactory()
+        DeliveryStationDayFactory(delivery_day=delivery_day, delivery_station=station)
+        share = ShareFactory(
+            year=2026,
+            delivery_week=15,
+            delivery_day=delivery_day,
+            share_type_variation=variation,
+        )
+        row = ShareContentFactory(
+            share=share,
+            share_article=article,
+            delivery_station=station,
+            amount=Decimal("10"),
+            unit="KG",
+            size="M",
+        )
+        row.backup_share_article = backup_article
+        row.backup_unit = "KG"
+        row.backup_size = "M"
+        row.backup_amount = Decimal("4")
+        row.save()
+
+        # Edit the MAIN amount (10 -> 20) for THIS station — the wipe-and-rebuild
+        # that used to drop the backup on the rebuilt (share, station) row.
+        ShareContentService().replace_share_planning(
+            year=2026,
+            delivery_week=15,
+            share_article_id=str(article.pk),
+            unit="KG",
+            size="M",
+            data={
+                # year/delivery_week ride along in the real frontend payload
+                "year": 2026,
+                "delivery_week": 15,
+                (
+                    f"day_{delivery_day.pk}_variation_{variation.pk}"
+                    f"_station_{station.pk}"
+                ): "20",
+            },
+        )
+
+        rebuilt = ShareContent.objects.get(
+            share=share,
+            share_article=article,
+            delivery_station=station,
+            unit="KG",
+            size="M",
+        )
+        assert rebuilt.amount == Decimal("20")  # main amount updated
+        assert rebuilt.backup_share_article_id == backup_article.id
+        assert rebuilt.backup_unit == "KG"
+        assert rebuilt.backup_size == "M"
+        assert rebuilt.backup_amount == Decimal("4")  # backup preserved per station
 
 
 # ---------------------------------------------------------------------------

@@ -126,11 +126,18 @@ class PackingListService:
             "backup_share_article__name",
             "backup_unit",
             "backup_size",
+            "backup_amount",
             "packing_station",
         ).order_by("share_article__name", "unit", "size")
 
         # Build variation key list once
         variation_keys = [f"variation_{v.id}" for v in share_type_variations]
+        # Parallel ``backup_variation_<id>`` keys carry each row's per-variation
+        # BACKUP quantity (ShareContent.backup_amount) so the packing list can
+        # show the backup article's own amounts beside the mains, not a guess.
+        backup_variation_keys = [
+            f"backup_variation_{v.id}" for v in share_type_variations
+        ]
 
         # Organize data by share article
         articles_dict: dict[str, dict[str, Any]] = {}
@@ -167,6 +174,8 @@ class PackingListService:
                 }
                 for variation_key in variation_keys:
                     article_entry[variation_key] = 0
+                for backup_variation_key in backup_variation_keys:
+                    article_entry[backup_variation_key] = 0
                 articles_dict[composite_key] = article_entry
 
             variation_key = f'variation_{content["share__share_type_variation__id"]}'
@@ -187,6 +196,12 @@ class PackingListService:
                     )
                 seen_amounts[cell] = amount
             articles_dict[composite_key][variation_key] = amount
+            backup_variation_key = (
+                f'backup_variation_{content["share__share_type_variation__id"]}'
+            )
+            articles_dict[composite_key][backup_variation_key] = (
+                content["backup_amount"] or 0
+            )
 
         # Filter out entries where all variation amounts are 0
         filtered_results = [
