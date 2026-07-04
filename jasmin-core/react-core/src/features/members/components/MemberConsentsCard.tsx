@@ -4,6 +4,21 @@ import {
   DownloadOutlined,
   StopOutlined,
 } from "@ant-design/icons";
+import { useTimeFormat } from "@hooks/index";
+import {
+  getCommissioningConsentsListQueryKey,
+  getCommissioningMembersRetrieveQueryKey,
+  useCommissioningConsentsList,
+  useCommissioningConsentsRevokeCreate,
+} from "@shared/api/generated/commissioning/commissioning";
+import type {
+  ConsentDocumentSummary,
+  ConsentRecord,
+  ConsentRecordRevoke,
+} from "@shared/api/generated/models";
+import { downloadConsentPdf } from "@shared/consent/downloadConsentPdf";
+import { notify } from "@shared/utils";
+import { getErrorMessage } from "@shared/utils/apiError";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
@@ -15,26 +30,10 @@ import {
   Space,
   Spin,
   Tag,
-  Tooltip,
   Typography,
 } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  getCommissioningConsentsListQueryKey,
-  getCommissioningMembersRetrieveQueryKey,
-  useCommissioningConsentsList,
-  useCommissioningConsentsRevokeCreate,
-} from "@shared/api/generated/commissioning/commissioning";
-import { useTimeFormat } from "@hooks/index";
-import { downloadConsentPdf } from "@shared/consent/downloadConsentPdf";
-import { notify } from "@shared/utils";
-import { getErrorMessage } from "@shared/utils/apiError";
-import type {
-  ConsentDocumentSummary,
-  ConsentRecord,
-  ConsentRecordRevoke,
-} from "@shared/api/generated/models";
 
 const { Text } = Typography;
 
@@ -117,10 +116,10 @@ const MemberConsentsCard = ({
   if (isLoading) {
     return (
       <Card
-      title={t("consent.card_title")}
-      className="member-card--blue-title"
-      style={{ marginTop: 24 }}
-    >
+        title={t("consent.card_title")}
+        className="member-card--blue-title"
+        style={{ marginTop: 24 }}
+      >
         <Spin />
       </Card>
     );
@@ -129,10 +128,10 @@ const MemberConsentsCard = ({
   if (error) {
     return (
       <Card
-      title={t("consent.card_title")}
-      className="member-card--blue-title"
-      style={{ marginTop: 24 }}
-    >
+        title={t("consent.card_title")}
+        className="member-card--blue-title"
+        style={{ marginTop: 24 }}
+      >
         <Alert type="error" showIcon message={t("consent.load_error")} />
       </Card>
     );
@@ -141,7 +140,7 @@ const MemberConsentsCard = ({
   return (
     <Card
       title={t("consent.card_title")}
-      className="member-card--blue-title"
+      className="member-card--blue-title blue-border"
       style={{ marginTop: 24 }}
     >
       {records.length === 0 ? (

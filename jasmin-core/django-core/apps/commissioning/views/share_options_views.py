@@ -56,7 +56,7 @@ def share_options_list(request: Request) -> Response:
 def active_share_options_list(request: Request) -> Response:
     """Return which share options have active share type variations."""
     today = timezone.localdate()
-    active_variations = ShareTypeVariation.current.active_at_date(today)
+    active_variations = ShareTypeVariation.current.active_at_date_or_future(today)
     active_options: set[str] = set(
         active_variations.values_list("share_type__share_option", flat=True)
     )

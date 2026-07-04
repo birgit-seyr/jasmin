@@ -49,7 +49,11 @@ http {
         # ------- Backend ---------------------------------------------------
         location /api/ {
             proxy_pass http://jasmin_backend;
-            proxy_set_header Host              $host;
+            # $http_host (keeps the :3000 dev port), not $host (strips it): the
+            # backend's request.get_host() feeds DRF build_absolute_uri(), which
+            # builds media/picture URLs. With $host they come out portless
+            # (http://test.localhost/media/...) -> browser hits :80 -> broken img.
+            proxy_set_header Host              $http_host;
             proxy_set_header X-Real-IP         $remote_addr;
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
@@ -58,7 +62,7 @@ http {
 
         location /admin/ {
             proxy_pass http://jasmin_backend;
-            proxy_set_header Host              $host;
+            proxy_set_header Host              $http_host;
             proxy_set_header X-Real-IP         $remote_addr;
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
@@ -80,7 +84,7 @@ http {
         # streams the file itself — no X-Accel internal location needed.
         location /media/ {
             proxy_pass http://jasmin_backend;
-            proxy_set_header Host $host;
+            proxy_set_header Host $http_host;
             access_log off;
         }
 

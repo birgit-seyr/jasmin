@@ -86,16 +86,14 @@ const MemberEmailsModal: FC<MemberEmailsModalProps> = ({
         dataIndex: "sent_at",
         key: "sent_at",
         width: "11em",
-        render: (value: string | null) =>
-          value ? formatDateTime(value) : "—",
+        render: (value: string | null) => (value ? formatDateTime(value) : "—"),
       },
       {
         title: t("email_matrix.delivered_at"),
         dataIndex: "delivered_at",
         key: "delivered_at",
         width: "11em",
-        render: (value: string | null) =>
-          value ? formatDateTime(value) : "—",
+        render: (value: string | null) => (value ? formatDateTime(value) : "—"),
       },
     ],
     [t, formatDateTime],
@@ -110,9 +108,7 @@ const MemberEmailsModal: FC<MemberEmailsModalProps> = ({
       }
       open={isOpen}
       onCancel={onClose}
-      footer={[
-        <ModalCloseFooter key="close" onClose={onClose} />,
-      ]}
+      footer={[<ModalCloseFooter key="close" onClose={onClose} />]}
       width={1000}
     >
       <Table<MemberEmailLog>
@@ -121,6 +117,7 @@ const MemberEmailsModal: FC<MemberEmailsModalProps> = ({
         rowKey="id"
         loading={isLoading}
         pagination={{ pageSize: 20 }}
+        className="custom-forecast-table"
         size="small"
         locale={{
           emptyText: t("members.no_emails_sent"),

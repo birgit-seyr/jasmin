@@ -3,8 +3,8 @@
     "recipient": "Empfänger",
     "subject": "Betreff",
     "status_col": "Status",
-    "sent_at": "Versandt",
-    "delivered_at": "Zugestellt",
+    "sent_at": "versandt",
+    "delivered_at": "zugestellt",
     "accounts": {
         "invitation": "Einladung",
         "password_reset": "Passwort-Reset",
