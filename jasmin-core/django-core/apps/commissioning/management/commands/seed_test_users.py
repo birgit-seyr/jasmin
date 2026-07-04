@@ -12,6 +12,7 @@ you like.
 
 Users seeded — every account uses password ``Test-Test-2026``:
 
+    test-admin@example.com          roles=[admin]
     test-member@example.com         roles=[member]
         + linked Member row
     test-customer@example.com       roles=[customer]
@@ -47,6 +48,13 @@ from apps.commissioning.models import Member, Reseller
 # ``link``: which domain row to attach to the user. ``None`` skips the
 # link (pure staff / office logins have no member / reseller side).
 SPECS = [
+    {
+        "email": "test-admin@example.com",
+        "first_name": "Test",
+        "last_name": "Admin",
+        "roles": [Role.ADMIN],
+        "link": None,
+    },
     {
         "email": "test-member@example.com",
         "first_name": "Test",
