@@ -27,9 +27,9 @@ interface UseForecastColumnsArgs {
   // literals spread into `children` (which get cast on return), so they're
   // typed loosely here to avoid forcing the page's `.map()` memos to carry
   // full `EditableColumnConfig` literal types.
-  shareVariationColumns: Record<string, unknown>[];
+  shareTypeVariationColumns: Record<string, unknown>[];
   shareTypeVariationsFruitsCount: number;
-  shareVariationFruitsColumns: Record<string, unknown>[];
+  shareTypeVariationFruitsColumns: Record<string, unknown>[];
   onForAllVegChange: (value: unknown) => Record<string, unknown>;
   onForAllFruitChange: (value: unknown) => Record<string, unknown>;
   sells_to_resellers: boolean;
@@ -49,9 +49,9 @@ export function useForecastColumns({
   noteColumn,
   fruit_and_veg_shares_are_separate,
   shareTypeVariationsCount,
-  shareVariationColumns,
+  shareTypeVariationColumns,
   shareTypeVariationsFruitsCount,
-  shareVariationFruitsColumns,
+  shareTypeVariationFruitsColumns,
   onForAllVegChange,
   onForAllFruitChange,
   sells_to_resellers,
@@ -96,7 +96,7 @@ export function useForecastColumns({
                         className: "column-group-start",
                         onFieldChange: onForAllVegChange,
                       },
-                      ...shareVariationColumns,
+                      ...shareTypeVariationColumns,
                     ],
                   },
                 ]
@@ -130,7 +130,7 @@ export function useForecastColumns({
                         className: "column-group-start",
                         onFieldChange: onForAllFruitChange,
                       },
-                      ...shareVariationFruitsColumns,
+                      ...shareTypeVariationFruitsColumns,
                     ],
                   },
                 ]
@@ -162,7 +162,7 @@ export function useForecastColumns({
                   className: "column-group-start",
                   onFieldChange: onForAllVegChange,
                 },
-                ...shareVariationColumns,
+                ...shareTypeVariationColumns,
               ],
             },
           ]),
@@ -262,9 +262,9 @@ export function useForecastColumns({
     amountUnitSizeColumns,
     fruit_and_veg_shares_are_separate,
     shareTypeVariationsCount,
-    shareVariationColumns,
+    shareTypeVariationColumns,
     shareTypeVariationsFruitsCount,
-    shareVariationFruitsColumns,
+    shareTypeVariationFruitsColumns,
     onForAllVegChange,
     onForAllFruitChange,
     sells_to_resellers,

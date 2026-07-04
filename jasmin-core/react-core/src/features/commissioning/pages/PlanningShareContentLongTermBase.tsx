@@ -192,7 +192,7 @@ export default function PlanningLongTermHarvestSharesBase({
     shareTypeVariationFilters,
   );
 
-  const shareVariationColumns: EditableColumnConfig<TableRecord>[] =
+  const shareTypeVariationColumns: EditableColumnConfig<TableRecord>[] =
     useMemo(() => {
       return shareTypeVariations.map(
         (variation): EditableColumnConfig<TableRecord> => ({
@@ -236,7 +236,7 @@ export default function PlanningLongTermHarvestSharesBase({
         dataIndex: "_amount_group",
         key: "amount",
         width: "8em",
-        children: [...shareVariationColumns],
+        children: [...shareTypeVariationColumns],
       },
 
       {
@@ -433,7 +433,7 @@ export default function PlanningLongTermHarvestSharesBase({
     [
       shareArticleColumn,
       amountUnitSizeColumns,
-      shareVariationColumns,
+      shareTypeVariationColumns,
       sellerColumn,
       noteColumn,
       t,

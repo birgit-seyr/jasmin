@@ -35,7 +35,7 @@ import {
   useDeliveryStationDays,
   usePaymentCycles,
   useShareTypes,
-  useShareVariationSizeOptions,
+  useShareTypeVariationSizeOptions,
   useSubscriptionTerm,
   useTenant,
 } from "@hooks/index";
@@ -79,7 +79,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   const { t } = useTranslation();
   const { currencySymbol } = useCurrency();
   const { dateFormat, formatDate } = useDateFormat();
-  const { getShareVariationSizeLabel } = useShareVariationSizeOptions();
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
   // A member subscribing for THEMSELVES uses the member-scoped endpoint. The
   // price is read-only (derived server-side) UNLESS the tenant allows
   // solidarity pricing, in which case the member may choose it (>= the
@@ -607,7 +607,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
               aria-label={t("common.back")}
             />
             {selectedVariation.share_type_name} –{" "}
-            {getShareVariationSizeLabel(selectedVariation.size ?? "")}
+            {getShareTypeVariationSizeLabel(selectedVariation.size ?? "")}
           </Space>
         ) : (
           t("members.additional_subscription")
@@ -661,14 +661,14 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                               />
                             ) : (
                               <div className="new-subscription-card-placeholder">
-                                {getShareVariationSizeLabel(
+                                {getShareTypeVariationSizeLabel(
                                   variation.size ?? "",
                                 )}
                               </div>
                             )}
                             <div className="flex-min">
                               <Text strong style={{ fontSize: 14 }}>
-                                {getShareVariationSizeLabel(
+                                {getShareTypeVariationSizeLabel(
                                   variation.size ?? "",
                                 )}
                               </Text>

@@ -540,7 +540,7 @@ class TestCleaningListAggregation:
 @pytest.mark.django_db
 class TestPlanningVariationCountsExcludeJokers:
     """The frontend ``PlanningHarvestSharesBase`` page reads variation totals
-    from ``ShareVariationAmountsForPlanningView``, which delegates to
+    from ``ShareTypeVariationAmountsForPlanningView``, which delegates to
     ``batch_get_physical_variation_totals_for_week``. That helper filters
     ``ShareDelivery.objects.filter(joker_taken=False, ...)`` so the displayed
     count must reflect only "real" (non-joker) deliveries.

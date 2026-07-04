@@ -22,7 +22,7 @@ import { useRoles } from "@shared/auth";
 import {
   useActiveStatusColumn,
   useNumberFormat,
-  useShareVariationSizeOptions,
+  useShareTypeVariationSizeOptions,
   useTenant,
   useTimeBoundColumns,
 } from "@hooks/index";
@@ -98,8 +98,8 @@ export default function ShareTypeVariationModal({
   // When False, the three opt-in configuration columns are hidden;
   // backend also refuses to persist ``requires_optin=True`` in that
   // state (see ``ShareTypeVariation.clean``).
-  const allows_share_variation_optin = getSetting(
-    "allows_share_variation_optin",
+  const allows_share_type_variation_optin = getSetting(
+    "allows_share_type_variation_optin",
     false,
   ) as boolean;
   const permissions = useMemo(
@@ -115,8 +115,8 @@ export default function ShareTypeVariationModal({
   const queryClient = useQueryClient();
 
   const { crates } = useCrates();
-  const { shareVariationSizeOptions, getShareVariationSizeLabel } =
-    useShareVariationSizeOptions();
+  const { shareTypeVariationSizeOptions, getShareTypeVariationSizeLabel } =
+    useShareTypeVariationSizeOptions();
 
   // future → active → past (blue-green-grey), consistent with the other
   // status-column tables.
@@ -309,13 +309,13 @@ export default function ShareTypeVariationModal({
           dataIndex: "size",
           key: "size",
           inputType: "select",
-          options: shareVariationSizeOptions,
+          options: shareTypeVariationSizeOptions,
           required: true,
           disabled: isFieldDisabled,
           width: "7em",
           render: (value: unknown) =>
             value ? (
-              <strong>{getShareVariationSizeLabel(value as string)}</strong>
+              <strong>{getShareTypeVariationSizeLabel(value as string)}</strong>
             ) : (
               ""
             ),
@@ -494,7 +494,7 @@ export default function ShareTypeVariationModal({
         // Hidden entirely when the tenant hasn't enabled the feature.
         // Backend mirrors this with a ``ValidationError`` on
         // ``ShareTypeVariation.clean()`` so admin saves can't bypass.
-        ...(allows_share_variation_optin
+        ...(allows_share_type_variation_optin
           ? [
               {
                 title: (
@@ -561,8 +561,8 @@ export default function ShareTypeVariationModal({
     [
       t,
       crates,
-      shareVariationSizeOptions,
-      getShareVariationSizeLabel,
+      shareTypeVariationSizeOptions,
+      getShareTypeVariationSizeLabel,
       activeStatusColumn,
       format,
       handleOpenDescriptionModal,
@@ -572,7 +572,7 @@ export default function ShareTypeVariationModal({
       validFromColumn,
       validUntilColumn,
       packing_mode,
-      allows_share_variation_optin,
+      allows_share_type_variation_optin,
     ],
   );
 

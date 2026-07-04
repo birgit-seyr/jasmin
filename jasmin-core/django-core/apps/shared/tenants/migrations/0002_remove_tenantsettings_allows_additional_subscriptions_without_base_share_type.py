@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('tenants', '0001_initial'),
+        ("tenants", "0001_initial"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='tenantsettings',
-            name='allows_additional_subscriptions_without_base_share_type',
+            model_name="tenantsettings",
+            name="allows_additional_subscriptions_without_base_share_type",
         ),
     ]

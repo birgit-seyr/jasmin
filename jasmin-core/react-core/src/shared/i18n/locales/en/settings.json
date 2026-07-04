@@ -222,8 +222,8 @@
     "min_weeks_cancel": "Minimum Weeks to Cancel Before End",
     "min_weeks_cancel_description": "Minimum number of weeks before its end by which a subscription must be cancelled.",
     "share_type_changes": "Allow Share Size Changes During Active Subscription",
-    "allows_share_variation_optin": "Allow on-off shares (opt-in per delivery)",
-    "allows_share_variation_optin_desc": "Individual share variations can be released so that they can be added spontaneously on a week-by-week basis."
+    "allows_share_type_variation_optin": "Allow on-off shares (opt-in per delivery)",
+    "allows_share_type_variation_optin_desc": "Individual share variations can be released so that they can be added spontaneously on a week-by-week basis."
   },
   "configure_prices": "Configure Prices & Sizes",
   "reseller": {

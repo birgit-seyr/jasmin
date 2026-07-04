@@ -7,7 +7,7 @@ export { useCurrentDays } from './useCurrentDays';
 export { useDeliveryStations } from './useDeliveryStations';
 export { useDocumentationSummaryPage } from './useDocumentationSummaryPage';
 export { useHarvestingListData } from './useHarvestingListData';
-export { useHistoricalShareVariationAverages } from './useHistoricalShareTypeVariationAverage';
+export { useHistoricalShareTypeVariationAverages } from './useHistoricalShareTypeVariationAverage';
 export { useOfferGroups } from './useOfferGroups';
 export { useOfferOptions } from './useOfferOptions';
 export { useOfferTiers } from './useOfferTiers';

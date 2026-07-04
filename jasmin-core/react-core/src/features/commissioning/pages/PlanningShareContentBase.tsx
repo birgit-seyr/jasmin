@@ -14,7 +14,7 @@ import {
   commissioningHarvestSharePlanningUpdate,
   getCommissioningHarvestSharePlanningListQueryKey,
   useCommissioningHarvestSharePlanningList,
-  useCommissioningShareVariationAmountsForPlanningRetrieve,
+  useCommissioningShareTypeVariationAmountsForPlanningRetrieve,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningGranularityRetrieveParams,
@@ -59,7 +59,7 @@ import {
   useAmountUnitSizeColumns,
   useDeliveryDayColumns,
   useFinalColumn,
-  useHistoricalShareVariationAverages,
+  useHistoricalShareTypeVariationAverages,
   usePlanningHarvestSharesColumns,
   usePlanningSummaryData,
   useShareArticleColumn,
@@ -192,7 +192,7 @@ export default function PlanningHarvestSharesBase({
   // same filter as ShareTypeVariationViewSet — so both queries fire in
   // parallel and the planning page renders in roughly half the wall-clock
   // time it used to.
-  const { data: historicalAverages } = useHistoricalShareVariationAverages({
+  const { data: historicalAverages } = useHistoricalShareTypeVariationAverages({
     year: selectedYear,
     delivery_week: selectedWeek ?? nextWeek,
     share_option: shareOption,
@@ -536,14 +536,14 @@ export default function PlanningHarvestSharesBase({
     return filterDataByPlanned(data);
   }, [data, filterDataByPlanned]);
 
-  const { data: shareVariationAmountsRaw } =
-    useCommissioningShareVariationAmountsForPlanningRetrieve(listParams, {
+  const { data: shareTypeVariationAmountsRaw } =
+    useCommissioningShareTypeVariationAmountsForPlanningRetrieve(listParams, {
       query: { enabled: hasVariationColumns },
     });
-  const shareVariationAmounts = shareVariationAmountsRaw ?? null;
+  const shareTypeVariationAmounts = shareTypeVariationAmountsRaw ?? null;
 
   const {
-    shareVariationAmountsSummary,
+    shareTypeVariationAmountsSummary,
     dayVariationSums,
     dayVariationCounts,
     averageWeightSubData,
@@ -555,7 +555,7 @@ export default function PlanningHarvestSharesBase({
     planningMode,
     data,
     vegetables_and_fruits,
-    shareVariationAmounts,
+    shareTypeVariationAmounts,
   });
 
   // Live still-free indicator: forecast + current stock − Σ (planned per day).
@@ -580,7 +580,7 @@ export default function PlanningHarvestSharesBase({
             record as Record<string, unknown>,
             deliveryDay,
             shareTypeVariations,
-            shareVariationAmountsSummary,
+            shareTypeVariationAmountsSummary,
             planningMode,
           ),
         0,
@@ -591,7 +591,7 @@ export default function PlanningHarvestSharesBase({
     [
       shareDeliveryDays,
       shareTypeVariations,
-      shareVariationAmountsSummary,
+      shareTypeVariationAmountsSummary,
       planningMode,
     ],
   );
@@ -603,7 +603,7 @@ export default function PlanningHarvestSharesBase({
     showDetailedColumns,
     planningMode,
     showForecastClassification,
-    shareVariationAmountsSummary,
+    shareTypeVariationAmountsSummary,
   });
 
   const columns = usePlanningHarvestSharesColumns({
@@ -826,8 +826,8 @@ export default function PlanningHarvestSharesBase({
               ? [
                   {
                     columns: summaryColumns,
-                    label: t("commissioning.share_variation_amounts"),
-                    data: shareVariationAmountsSummary,
+                    label: t("commissioning.share_type_variation_amounts"),
+                    data: shareTypeVariationAmountsSummary,
                     style: {
                       backgroundColor: "var(--color-bg-base)",
                       fontSize: "1.1em",

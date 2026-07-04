@@ -141,7 +141,7 @@ export default function Step7Done({ data, back }: StepProps) {
         <Descriptions.Item label={t("auth.registration.step5.coop_shares")}>
           {data.coop_shares_count}
         </Descriptions.Item>
-        <Descriptions.Item label={t("auth.registration.step5.share_variation")}>
+        <Descriptions.Item label={t("auth.registration.step5.share_type_variation")}>
           {data.share_type_variation_id} × {data.quantity}
         </Descriptions.Item>
         <Descriptions.Item label={t("auth.registration.step5.consents")}>

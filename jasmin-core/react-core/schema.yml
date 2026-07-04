@@ -10467,9 +10467,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
-  /api/commissioning/historical_share_variation_averages/:
+  /api/commissioning/historical_share_type_variation_averages/:
     get:
-      operationId: commissioning_historical_share_variation_averages_retrieve
+      operationId: commissioning_historical_share_type_variation_averages_retrieve
       description: "\n    Calculate historical averages for share variation amounts
         based on past years' data.\n    Useful for predicting future share contents
         based on historical patterns.\n    "
@@ -18886,6 +18886,91 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/commissioning/share_type_variation_amounts_for_planning/:
+    get:
+      operationId: commissioning_share_type_variation_amounts_for_planning_retrieve
+      description: "\n        Get comprehensive planning data for all variations,
+        days, tours, and stations\n        for a given week. Returns a dictionary
+        with keys for different planning modes:\n        \n        - **Basic mode**:
+        `day_{day_id}_variation_{variation_id}`\n        - **Tour mode**: `day_{day_id}_variation_{variation_id}_tour_{tour_number}`\n
+        \       - **Station mode**: `day_{day_id}_variation_{variation_id}_station_{station_id}`\n
+        \       \n        Use this endpoint to get a complete overview for weekly
+        planning across all\n        delivery scenarios.\n        "
+      summary: Get all share variation amounts for planning
+      parameters:
+      - in: query
+        name: delivery_week
+        schema:
+          type: integer
+        description: ISO week number (1-53)
+        required: true
+        examples:
+          Week1:
+            value: 1
+            summary: Week 1
+          Week26:
+            value: 26
+            summary: Week 26
+          Week52:
+            value: 52
+            summary: Week 52
+      - in: query
+        name: share_option
+        schema:
+          type: string
+          enum:
+          - BREAD_SHARE
+          - CHICKEN_SHARE
+          - GRAIN_SHARE
+          - HARVEST_SHARE
+          - HARVEST_SHARE_FRUIT
+          - HONEY_SHARE
+          - OIL_SHARE
+        description: Share option (e.g. GEMUESE, OBST)
+        required: true
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Year (YYYY format)
+        required: true
+        examples:
+          '2024':
+            value: 2024
+          '2025':
+            value: 2025
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+                  description: Variation count for this key combination
+                example:
+                  day_monday-id_variation_small-id: 15
+                  day_monday-id_variation_small-id_tour_1: 10
+                  day_monday-id_variation_small-id_tour_2: 5
+                  day_monday-id_variation_small-id_station_downtown: 8
+                  day_monday-id_variation_large-id: 8
+          description: Planning data with variation counts for all combinations
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/commissioning/share_type_variation_price/:
     get:
       operationId: commissioning_share_type_variation_price_list
@@ -20242,91 +20327,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
         '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
-  /api/commissioning/share_variation_amounts_for_planning/:
-    get:
-      operationId: commissioning_share_variation_amounts_for_planning_retrieve
-      description: "\n        Get comprehensive planning data for all variations,
-        days, tours, and stations\n        for a given week. Returns a dictionary
-        with keys for different planning modes:\n        \n        - **Basic mode**:
-        `day_{day_id}_variation_{variation_id}`\n        - **Tour mode**: `day_{day_id}_variation_{variation_id}_tour_{tour_number}`\n
-        \       - **Station mode**: `day_{day_id}_variation_{variation_id}_station_{station_id}`\n
-        \       \n        Use this endpoint to get a complete overview for weekly
-        planning across all\n        delivery scenarios.\n        "
-      summary: Get all share variation amounts for planning
-      parameters:
-      - in: query
-        name: delivery_week
-        schema:
-          type: integer
-        description: ISO week number (1-53)
-        required: true
-        examples:
-          Week1:
-            value: 1
-            summary: Week 1
-          Week26:
-            value: 26
-            summary: Week 26
-          Week52:
-            value: 52
-            summary: Week 52
-      - in: query
-        name: share_option
-        schema:
-          type: string
-          enum:
-          - BREAD_SHARE
-          - CHICKEN_SHARE
-          - GRAIN_SHARE
-          - HARVEST_SHARE
-          - HARVEST_SHARE_FRUIT
-          - HONEY_SHARE
-          - OIL_SHARE
-        description: Share option (e.g. GEMUESE, OBST)
-        required: true
-      - in: query
-        name: year
-        schema:
-          type: integer
-        description: Year (YYYY format)
-        required: true
-        examples:
-          '2024':
-            value: 2024
-          '2025':
-            value: 2025
-      tags:
-      - commissioning
-      security:
-      - tenantBoundJwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  type: integer
-                  description: Variation count for this key combination
-                example:
-                  day_monday-id_variation_small-id: 15
-                  day_monday-id_variation_small-id_tour_1: 10
-                  day_monday-id_variation_small-id_tour_2: 5
-                  day_monday-id_variation_small-id_station_downtown: 8
-                  day_monday-id_variation_large-id: 8
-          description: Planning data with variation counts for all combinations
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: ''
-        '401':
           content:
             application/json:
               schema:
@@ -35839,7 +35839,7 @@ components:
           nullable: true
         needs_complex_planning:
           type: boolean
-        is_base_share_type:
+        is_additional_share_type:
           type: boolean
         amount_of_jokers:
           type: integer
@@ -35849,9 +35849,6 @@ components:
           type: integer
           maximum: 2147483647
           minimum: -2147483648
-        gets_packed_with:
-          type: string
-          nullable: true
         can_be_deleted:
           type: boolean
           readOnly: true
@@ -37179,8 +37176,6 @@ components:
           type: integer
           maximum: 2147483647
           minimum: -2147483648
-        uses_member_loans:
-          type: boolean
         value_one_coop_share:
           type: integer
           maximum: 2147483647
@@ -37197,6 +37192,8 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
+        uses_member_loans:
+          type: boolean
         season_start_week:
           type: integer
           maximum: 53
@@ -37206,9 +37203,7 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
-        allows_additional_subscriptions_without_base_share_type:
-          type: boolean
-        allows_share_variation_optin:
+        allows_share_type_variation_optin:
           type: boolean
         allows_trial_subscriptions:
           type: boolean
@@ -37477,8 +37472,6 @@ components:
           type: integer
           maximum: 2147483647
           minimum: -2147483648
-        uses_member_loans:
-          type: boolean
         value_one_coop_share:
           type: integer
           maximum: 2147483647
@@ -37495,6 +37488,8 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
+        uses_member_loans:
+          type: boolean
         season_start_week:
           type: integer
           maximum: 53
@@ -37504,9 +37499,7 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
-        allows_additional_subscriptions_without_base_share_type:
-          type: boolean
-        allows_share_variation_optin:
+        allows_share_type_variation_optin:
           type: boolean
         allows_trial_subscriptions:
           type: boolean

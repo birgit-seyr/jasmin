@@ -17,7 +17,7 @@ from apps.commissioning.tests.factories import (
 
 URL_GRANULARITY = reverse("granularity")
 URL_VARIATION_TOTALS = reverse("share_type_variations_totals")
-URL_PLANNING = reverse("share_variation_amounts_for_planning")
+URL_PLANNING = reverse("share_type_variation_amounts_for_planning")
 
 
 # ---------------------------------------------------------------------------
@@ -123,10 +123,10 @@ class TestShareTypeVariationsTotalsView:
 
 
 # ---------------------------------------------------------------------------
-# ShareVariationAmountsForPlanningView
+# ShareTypeVariationAmountsForPlanningView
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
-class TestShareVariationAmountsForPlanningView:
+class TestShareTypeVariationAmountsForPlanningView:
     def test_missing_share_option_returns_400(self, api_client, tenant):
         resp = api_client.get(URL_PLANNING, {"year": 2026, "delivery_week": 15})
         assert resp.status_code == status.HTTP_400_BAD_REQUEST

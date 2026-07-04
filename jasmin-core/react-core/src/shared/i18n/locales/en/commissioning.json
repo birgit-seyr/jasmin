@@ -338,7 +338,7 @@
   "show_delivery_stations": "show distribution stations",
   "save_tour_plans": "save tour planning",
   "details": "details",
-  "share_variation_amounts": "number of shares",
+  "share_type_variation_amounts": "number of shares",
   "set_as_expected_stock": "confirm expected stock",
   "set_as_expected_harvest": "confirm expected harvest",
   "set_to_zero": "set actual stock to 0",

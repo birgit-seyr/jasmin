@@ -40,7 +40,7 @@ interface UseDeliveryDayColumnsParams {
    *  per-day "planned amount" live as the user types into variation cells.
    *  Optional so existing callers that don't display planned_amount aren't
    *  forced to pass it. */
-  shareVariationAmountsSummary?: Record<string, string>;
+  shareTypeVariationAmountsSummary?: Record<string, string>;
 }
 
 export function useDeliveryDayColumns({
@@ -50,7 +50,7 @@ export function useDeliveryDayColumns({
   showDetailedColumns,
   planningMode,
   showForecastClassification,
-  shareVariationAmountsSummary,
+  shareTypeVariationAmountsSummary,
 }: UseDeliveryDayColumnsParams) {
   const { t } = useTranslation();
   const { format } = useNumberFormat();
@@ -287,12 +287,12 @@ export function useDeliveryDayColumns({
       // is provided we fall back to the saved value to stay
       // backwards-compatible.
       render: (value: unknown, record: TableRecord) => {
-        const planned = shareVariationAmountsSummary
+        const planned = shareTypeVariationAmountsSummary
           ? computePlannedAmountForDay(
               record as Record<string, unknown>,
               deliveryDay,
               shareTypeVariations,
-              shareVariationAmountsSummary,
+              shareTypeVariationAmountsSummary,
               planningMode,
             )
           : Number(value) || 0;
@@ -409,7 +409,7 @@ export function useDeliveryDayColumns({
     showDetailedColumns,
     planningMode,
     showForecastClassification,
-    shareVariationAmountsSummary,
+    shareTypeVariationAmountsSummary,
     t,
     format,
   ]);

@@ -23,7 +23,6 @@ export interface TenantSettings {
    * @maximum 2147483647
    */
   coop_shares_payment_after_admin_confirmation_in_days?: number;
-  uses_member_loans?: boolean;
   /**
    * @minimum 0
    * @maximum 2147483647
@@ -44,6 +43,7 @@ export interface TenantSettings {
    * @maximum 2147483647
    */
   retention_period_cancelled_members_coop_shares_in_months?: number;
+  uses_member_loans?: boolean;
   /**
    * @minimum 1
    * @maximum 53
@@ -55,8 +55,7 @@ export interface TenantSettings {
    * @maximum 2147483647
    */
   min_weeks_from_creation_to_start_delivery?: number;
-  allows_additional_subscriptions_without_base_share_type?: boolean;
-  allows_share_variation_optin?: boolean;
+  allows_share_type_variation_optin?: boolean;
   allows_trial_subscriptions?: boolean;
   /**
    * @minimum 0

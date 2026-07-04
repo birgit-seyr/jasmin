@@ -218,7 +218,7 @@ def _compute_variation_averages(
     return {key: float(value) for key, value in averages.items()}
 
 
-def calculate_historical_share_variation_averages(
+def calculate_historical_share_type_variation_averages(
     share_type_variation_ids, year, delivery_week, years_back=2
 ):
     """

@@ -9,7 +9,7 @@ import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ShareDelivery } from "@shared/api/generated/models";
-import { useDateFormat, useShareVariationSizeOptions } from "@hooks/index";
+import { useDateFormat, useShareTypeVariationSizeOptions } from "@hooks/index";
 
 const { Text } = Typography;
 
@@ -41,7 +41,7 @@ const UpcomingDeliveriesCard = ({
   const { formatDate } = useDateFormat();
   const [futureCount, setFutureCount] = useState(PAGE_SIZE);
   const [pastCount, setPastCount] = useState(0);
-  const { getShareVariationSizeLabel } = useShareVariationSizeOptions();
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
 
   const getWeekdayLabel = useCallback(
     (dayNumber: number) => {
@@ -201,7 +201,7 @@ const UpcomingDeliveriesCard = ({
               {delivery.ordered_share_type_name ??
                 delivery.share_type_name ??
                 ""}{" "}
-              {getShareVariationSizeLabel(
+              {getShareTypeVariationSizeLabel(
                 delivery.ordered_variation_name ??
                   delivery.share_type_variation_size ??
                   "",
@@ -245,7 +245,7 @@ const UpcomingDeliveriesCard = ({
     currentYear,
     currentWeek,
     t,
-    getShareVariationSizeLabel,
+    getShareTypeVariationSizeLabel,
     getWeekdayLabel,
     getDeliveryDate,
     formatDate,

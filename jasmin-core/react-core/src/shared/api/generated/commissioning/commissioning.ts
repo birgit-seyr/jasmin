@@ -99,8 +99,8 @@ import type {
   CommissioningHarvestExportCsvRetrieveParams,
   CommissioningHarvestListParams,
   CommissioningHarvestSharePlanningListParams,
-  CommissioningHistoricalShareVariationAveragesRetrieve200,
-  CommissioningHistoricalShareVariationAveragesRetrieveParams,
+  CommissioningHistoricalShareTypeVariationAveragesRetrieve200,
+  CommissioningHistoricalShareTypeVariationAveragesRetrieveParams,
   CommissioningInvoiceContentsListParams,
   CommissioningInvoicesListParams,
   CommissioningInvoicesUploadPdfCreateBody,
@@ -134,12 +134,12 @@ import type {
   CommissioningShareDeliveryPendingOptinListParams,
   CommissioningShareDeliveryVariationDeliveryCountsListParams,
   CommissioningShareImportBatchesListParams,
+  CommissioningShareTypeVariationAmountsForPlanningRetrieve200,
+  CommissioningShareTypeVariationAmountsForPlanningRetrieveParams,
   CommissioningShareTypeVariationPriceListParams,
   CommissioningShareTypeVariationsListParams,
   CommissioningShareTypeVariationsTotalsRetrieveParams,
   CommissioningShareTypesListParams,
-  CommissioningShareVariationAmountsForPlanningRetrieve200,
-  CommissioningShareVariationAmountsForPlanningRetrieveParams,
   CommissioningSharesBulkUpdateUpdateParams,
   CommissioningSharesDeliveryDaysListParams,
   CommissioningSharesExportCsvRetrieveParams,
@@ -13123,14 +13123,14 @@ const {mutation: mutationOptions} = options ?
     
  * @summary Get historical share variation averages
  */
-export const commissioningHistoricalShareVariationAveragesRetrieve = (
-    params: CommissioningHistoricalShareVariationAveragesRetrieveParams,
+export const commissioningHistoricalShareTypeVariationAveragesRetrieve = (
+    params: CommissioningHistoricalShareTypeVariationAveragesRetrieveParams,
  signal?: AbortSignal
 ) => {
       
       
-      return axiosService<CommissioningHistoricalShareVariationAveragesRetrieve200>(
-      {url: `/api/commissioning/historical_share_variation_averages/`, method: 'GET',
+      return axiosService<CommissioningHistoricalShareTypeVariationAveragesRetrieve200>(
+      {url: `/api/commissioning/historical_share_type_variation_averages/`, method: 'GET',
         params, signal
     },
       );
@@ -13139,69 +13139,69 @@ export const commissioningHistoricalShareVariationAveragesRetrieve = (
 
 
 
-export const getCommissioningHistoricalShareVariationAveragesRetrieveQueryKey = (params?: CommissioningHistoricalShareVariationAveragesRetrieveParams,) => {
+export const getCommissioningHistoricalShareTypeVariationAveragesRetrieveQueryKey = (params?: CommissioningHistoricalShareTypeVariationAveragesRetrieveParams,) => {
     return [
-    `/api/commissioning/historical_share_variation_averages/`, ...(params ? [params]: [])
+    `/api/commissioning/historical_share_type_variation_averages/`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getCommissioningHistoricalShareVariationAveragesRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>, TError = ErrorResponse>(params: CommissioningHistoricalShareVariationAveragesRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>, TError, TData>>, }
+export const getCommissioningHistoricalShareTypeVariationAveragesRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>, TError = ErrorResponse>(params: CommissioningHistoricalShareTypeVariationAveragesRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getCommissioningHistoricalShareVariationAveragesRetrieveQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningHistoricalShareTypeVariationAveragesRetrieveQueryKey(params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>> = ({ signal }) => commissioningHistoricalShareVariationAveragesRetrieve(params, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>> = ({ signal }) => commissioningHistoricalShareTypeVariationAveragesRetrieve(params, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type CommissioningHistoricalShareVariationAveragesRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>>
-export type CommissioningHistoricalShareVariationAveragesRetrieveQueryError = ErrorResponse
+export type CommissioningHistoricalShareTypeVariationAveragesRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>>
+export type CommissioningHistoricalShareTypeVariationAveragesRetrieveQueryError = ErrorResponse
 
 
-export function useCommissioningHistoricalShareVariationAveragesRetrieve<TData = Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>, TError = ErrorResponse>(
- params: CommissioningHistoricalShareVariationAveragesRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>, TError, TData>> & Pick<
+export function useCommissioningHistoricalShareTypeVariationAveragesRetrieve<TData = Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningHistoricalShareTypeVariationAveragesRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>,
+          Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>,
           TError,
-          Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>
+          Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>
         > , 'initialData'
       >, }
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCommissioningHistoricalShareVariationAveragesRetrieve<TData = Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>, TError = ErrorResponse>(
- params: CommissioningHistoricalShareVariationAveragesRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>, TError, TData>> & Pick<
+export function useCommissioningHistoricalShareTypeVariationAveragesRetrieve<TData = Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningHistoricalShareTypeVariationAveragesRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>,
+          Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>,
           TError,
-          Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>
+          Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>
         > , 'initialData'
       >, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCommissioningHistoricalShareVariationAveragesRetrieve<TData = Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>, TError = ErrorResponse>(
- params: CommissioningHistoricalShareVariationAveragesRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>, TError, TData>>, }
+export function useCommissioningHistoricalShareTypeVariationAveragesRetrieve<TData = Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningHistoricalShareTypeVariationAveragesRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get historical share variation averages
  */
 
-export function useCommissioningHistoricalShareVariationAveragesRetrieve<TData = Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>, TError = ErrorResponse>(
- params: CommissioningHistoricalShareVariationAveragesRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningHistoricalShareVariationAveragesRetrieve>>, TError, TData>>, }
+export function useCommissioningHistoricalShareTypeVariationAveragesRetrieve<TData = Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningHistoricalShareTypeVariationAveragesRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningHistoricalShareTypeVariationAveragesRetrieve>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getCommissioningHistoricalShareVariationAveragesRetrieveQueryOptions(params,options)
+  const queryOptions = getCommissioningHistoricalShareTypeVariationAveragesRetrieveQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -24911,6 +24911,110 @@ export function useCommissioningShareOptionsActiveRetrieve<TData = Awaited<Retur
 
 
 /**
+ * 
+        Get comprehensive planning data for all variations, days, tours, and stations
+        for a given week. Returns a dictionary with keys for different planning modes:
+        
+        - **Basic mode**: `day_{day_id}_variation_{variation_id}`
+        - **Tour mode**: `day_{day_id}_variation_{variation_id}_tour_{tour_number}`
+        - **Station mode**: `day_{day_id}_variation_{variation_id}_station_{station_id}`
+        
+        Use this endpoint to get a complete overview for weekly planning across all
+        delivery scenarios.
+        
+ * @summary Get all share variation amounts for planning
+ */
+export const commissioningShareTypeVariationAmountsForPlanningRetrieve = (
+    params: CommissioningShareTypeVariationAmountsForPlanningRetrieveParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<CommissioningShareTypeVariationAmountsForPlanningRetrieve200>(
+      {url: `/api/commissioning/share_type_variation_amounts_for_planning/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningShareTypeVariationAmountsForPlanningRetrieveQueryKey = (params?: CommissioningShareTypeVariationAmountsForPlanningRetrieveParams,) => {
+    return [
+    `/api/commissioning/share_type_variation_amounts_for_planning/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningShareTypeVariationAmountsForPlanningRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>, TError = ErrorResponse>(params: CommissioningShareTypeVariationAmountsForPlanningRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningShareTypeVariationAmountsForPlanningRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>> = ({ signal }) => commissioningShareTypeVariationAmountsForPlanningRetrieve(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningShareTypeVariationAmountsForPlanningRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>>
+export type CommissioningShareTypeVariationAmountsForPlanningRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningShareTypeVariationAmountsForPlanningRetrieve<TData = Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningShareTypeVariationAmountsForPlanningRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningShareTypeVariationAmountsForPlanningRetrieve<TData = Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningShareTypeVariationAmountsForPlanningRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningShareTypeVariationAmountsForPlanningRetrieve<TData = Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningShareTypeVariationAmountsForPlanningRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get all share variation amounts for planning
+ */
+
+export function useCommissioningShareTypeVariationAmountsForPlanningRetrieve<TData = Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningShareTypeVariationAmountsForPlanningRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationAmountsForPlanningRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningShareTypeVariationAmountsForPlanningRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
  * ViewSet mixin that maps DRF actions to permission classes.
 
 Usage:
@@ -26686,110 +26790,6 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * 
-        Get comprehensive planning data for all variations, days, tours, and stations
-        for a given week. Returns a dictionary with keys for different planning modes:
-        
-        - **Basic mode**: `day_{day_id}_variation_{variation_id}`
-        - **Tour mode**: `day_{day_id}_variation_{variation_id}_tour_{tour_number}`
-        - **Station mode**: `day_{day_id}_variation_{variation_id}_station_{station_id}`
-        
-        Use this endpoint to get a complete overview for weekly planning across all
-        delivery scenarios.
-        
- * @summary Get all share variation amounts for planning
- */
-export const commissioningShareVariationAmountsForPlanningRetrieve = (
-    params: CommissioningShareVariationAmountsForPlanningRetrieveParams,
- signal?: AbortSignal
-) => {
-      
-      
-      return axiosService<CommissioningShareVariationAmountsForPlanningRetrieve200>(
-      {url: `/api/commissioning/share_variation_amounts_for_planning/`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-  
-
-
-
-export const getCommissioningShareVariationAmountsForPlanningRetrieveQueryKey = (params?: CommissioningShareVariationAmountsForPlanningRetrieveParams,) => {
-    return [
-    `/api/commissioning/share_variation_amounts_for_planning/`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getCommissioningShareVariationAmountsForPlanningRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>, TError = ErrorResponse>(params: CommissioningShareVariationAmountsForPlanningRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getCommissioningShareVariationAmountsForPlanningRetrieveQueryKey(params);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>> = ({ signal }) => commissioningShareVariationAmountsForPlanningRetrieve(params, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type CommissioningShareVariationAmountsForPlanningRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>>
-export type CommissioningShareVariationAmountsForPlanningRetrieveQueryError = ErrorResponse
-
-
-export function useCommissioningShareVariationAmountsForPlanningRetrieve<TData = Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>, TError = ErrorResponse>(
- params: CommissioningShareVariationAmountsForPlanningRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>,
-          TError,
-          Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCommissioningShareVariationAmountsForPlanningRetrieve<TData = Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>, TError = ErrorResponse>(
- params: CommissioningShareVariationAmountsForPlanningRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>,
-          TError,
-          Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCommissioningShareVariationAmountsForPlanningRetrieve<TData = Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>, TError = ErrorResponse>(
- params: CommissioningShareVariationAmountsForPlanningRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary Get all share variation amounts for planning
- */
-
-export function useCommissioningShareVariationAmountsForPlanningRetrieve<TData = Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>, TError = ErrorResponse>(
- params: CommissioningShareVariationAmountsForPlanningRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareVariationAmountsForPlanningRetrieve>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getCommissioningShareVariationAmountsForPlanningRetrieveQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
-}
-
-
-
-
-/**
  * ViewSet mixin that maps DRF actions to permission classes.
 
 Usage:

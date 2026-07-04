@@ -62,7 +62,7 @@ class ShareType(JasminModel, TimeBoundMixin):
     # or is it like a honey share 500g honey each month...
     # from this the frontend derives a different ui ...
     needs_complex_planning = models.BooleanField(default=True)
-    # this determines whethe this is packed on its own or put together with something. 
+    # this determines whethe this is packed on its own or put together with something.
     is_additional_share_type = models.BooleanField(default=True)
     amount_of_jokers = models.IntegerField(default=0)
     amount_of_donation_jokers = models.IntegerField(default=0)
@@ -91,21 +91,6 @@ class ShareType(JasminModel, TimeBoundMixin):
 
     def clean(self) -> None:
         super().clean()
-        if self.gets_packed_with:
-            visited: set[str] = set()
-            current = self.gets_packed_with
-
-            while current:
-                if current.id in visited:
-                    raise ValidationError("Circular packing reference detected")
-
-                visited.add(current.id)
-
-                if current == self or current.id == self.id:
-                    raise ValidationError("Cannot pack with itself")
-
-                current = current.gets_packed_with
-
         # A child variation must stay nested in this share type's validity
         # window. Shortening (or closing) the parent must not strand a child
         # that is open (valid_until=None) or ends after the new parent end —
@@ -334,13 +319,16 @@ class ShareTypeVariation(JasminModel, TimeBoundMixin):
 
             tenant = connection.tenant
             current_settings = TenantSettings.get_current_settings(tenant)
-            if current_settings and not current_settings.allows_share_variation_optin:
+            if (
+                current_settings
+                and not current_settings.allows_share_type_variation_optin
+            ):
                 raise ValidationError(
                     {
                         "requires_optin": (
                             "Per-delivery opt-in is not enabled for this "
                             "tenant. Enable "
-                            "``allows_share_variation_optin`` in tenant "
+                            "``allows_share_type_variation_optin`` in tenant "
                             "settings before flagging a variation as on-off."
                         )
                     }

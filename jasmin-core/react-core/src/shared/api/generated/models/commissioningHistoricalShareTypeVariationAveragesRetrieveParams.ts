@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type CommissioningHistoricalShareVariationAveragesRetrieveParams = {
+export type CommissioningHistoricalShareTypeVariationAveragesRetrieveParams = {
 /**
  * When using `share_option`: only consider variations active at this date. Ignored if `share_type_variation_ids` given.
  */

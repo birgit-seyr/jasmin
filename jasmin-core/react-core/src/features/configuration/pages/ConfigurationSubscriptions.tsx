@@ -33,7 +33,7 @@ import {
   useActiveShareOptions,
   useActiveStatusColumn,
   useInvalidateAfterTableMutation,
-  useShareVariationSizeOptions,
+  useShareTypeVariationSizeOptions,
   useTimeBoundColumns,
 } from "@hooks/index";
 import { getDateRangeStatus, isFieldDisabled } from "@shared/utils";
@@ -157,7 +157,7 @@ function ShareTypeTable({
   );
 }
 
-interface ShareVariationModalState {
+interface ShareTypeVariationModalState {
   visible: boolean;
   shareType: string | null;
   shareTypeName: string;
@@ -187,7 +187,7 @@ export default function ConfigurationSubscriptions() {
     activeStatusSeededRef.current = true;
   }, [fetchedActiveShareOptions, loadingActiveStatus]);
 
-  const { getShareVariationSizeLabel } = useShareVariationSizeOptions();
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
 
   const handleActiveStatusChange = useCallback(
     (shareOption: ShareOption, hasActive: boolean) => {
@@ -213,16 +213,16 @@ export default function ConfigurationSubscriptions() {
     [t],
   );
 
-  const [shareVariationModal, setShareVariationModal] =
-    useState<ShareVariationModalState>({
+  const [shareTypeVariationModal, setShareTypeVariationModal] =
+    useState<ShareTypeVariationModalState>({
       visible: false,
       shareType: null,
       shareTypeName: "",
     });
 
-  const openShareVariationModal = useCallback(
+  const openShareTypeVariationModal = useCallback(
     (shareTypeId: string, shareTypeName: string) => {
-      setShareVariationModal({
+      setShareTypeVariationModal({
         visible: true,
         shareType: shareTypeId,
         shareTypeName,
@@ -231,17 +231,17 @@ export default function ConfigurationSubscriptions() {
     [],
   );
 
-  const closeShareVariationModal = useCallback(() => {
-    setShareVariationModal({
+  const closeShareTypeVariationModal = useCallback(() => {
+    setShareTypeVariationModal({
       visible: false,
       shareType: null,
       shareTypeName: "",
     });
   }, []);
 
-  const handleSaveShareVariations = useCallback(() => {
-    closeShareVariationModal();
-  }, [closeShareVariationModal]);
+  const handleSaveShareTypeVariations = useCallback(() => {
+    closeShareTypeVariationModal();
+  }, [closeShareTypeVariationModal]);
 
   const activeStatusColumn = useActiveStatusColumn({
     defaultSortOrder: "descend",
@@ -311,7 +311,7 @@ export default function ConfigurationSubscriptions() {
           width: "12em",
           readOnly: true,
           align: "left",
-          render: (value: string) => <>{getShareVariationSizeLabel(value)}</>,
+          render: (value: string) => <>{getShareTypeVariationSizeLabel(value)}</>,
         },
         {
           title: (
@@ -382,7 +382,7 @@ export default function ConfigurationSubscriptions() {
               type="primary"
               size="small"
               onClick={() =>
-                openShareVariationModal(
+                openShareTypeVariationModal(
                   String(record.id),
                   String(
                     record.name ||
@@ -399,11 +399,11 @@ export default function ConfigurationSubscriptions() {
         },
       ] as EditableColumnConfig<TableRecord>[],
     [
-      openShareVariationModal,
+      openShareTypeVariationModal,
       activeStatusColumn,
       validFromColumn,
       validUntilColumn,
-      getShareVariationSizeLabel,
+      getShareTypeVariationSizeLabel,
       t,
     ],
   );
@@ -520,10 +520,10 @@ export default function ConfigurationSubscriptions() {
             // any save that would flip ``requires_optin=True``.
             // Existing on-off variations stay configured but their
             // toggles are inert until the flag flips back on.
-            key: "allows_share_variation_optin",
-            label: t("settings.commissioning.allows_share_variation_optin"),
+            key: "allows_share_type_variation_optin",
+            label: t("settings.commissioning.allows_share_type_variation_optin"),
             description: t(
-              "settings.commissioning.allows_share_variation_optin_desc",
+              "settings.commissioning.allows_share_type_variation_optin_desc",
             ),
             type: "checkbox",
             defaultValue: false,
@@ -663,11 +663,11 @@ export default function ConfigurationSubscriptions() {
       />
 
       <ShareTypeVariationModal
-        visible={shareVariationModal.visible}
-        share_type={shareVariationModal.shareType}
-        share_type_name={shareVariationModal.shareTypeName}
-        onClose={closeShareVariationModal}
-        onSave={handleSaveShareVariations}
+        visible={shareTypeVariationModal.visible}
+        share_type={shareTypeVariationModal.shareType}
+        share_type_name={shareTypeVariationModal.shareTypeName}
+        onClose={closeShareTypeVariationModal}
+        onSave={handleSaveShareTypeVariations}
       />
     </>
   );

@@ -157,7 +157,7 @@ class TestOnOffJokerMutualExclusion:
                 tenant=connection.tenant,
                 valid_from=timezone.now() - datetime.timedelta(seconds=1),
             )
-        settings.allows_share_variation_optin = True
+        settings.allows_share_type_variation_optin = True
         settings.save()
 
     def test_optin_variation_on_jokered_share_type_rejected(self, tenant):

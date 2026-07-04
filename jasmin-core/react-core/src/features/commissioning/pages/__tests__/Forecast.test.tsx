@@ -76,6 +76,10 @@ vi.mock("@hooks/index", async () => {
       onDeleteSuccess: vi.fn(),
       recentlyAddedIds: new Set<string>(),
     }),
+    // Size-label getter for the per-variation column headers ("für GANZ").
+    useShareTypeVariationSizeOptions: () => ({
+      getShareTypeVariationSizeLabel: (s: string) => s,
+    }),
   };
 });
 

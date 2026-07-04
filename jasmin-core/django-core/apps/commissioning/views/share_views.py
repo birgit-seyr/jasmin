@@ -336,7 +336,7 @@ class ShareTypeVariationsTotalsView(APIViewRolePermissionsMixin, APIView):
         }
 
 
-class ShareVariationAmountsForPlanningView(APIViewRolePermissionsMixin, APIView):
+class ShareTypeVariationAmountsForPlanningView(APIViewRolePermissionsMixin, APIView):
     read_permission = IsStaff
     write_permission = IsOffice
     """

@@ -1,6 +1,6 @@
 import { createEnumOptionsHook } from "./internal/createEnumOptionsHook";
 
-const SHARE_VARIATION_SIZE_OPTIONS = {
+const SHARE_TYPE_VARIATION_SIZE_OPTIONS = {
   XS: "XS",
   S: "S",
   M: "M",
@@ -12,7 +12,7 @@ const SHARE_VARIATION_SIZE_OPTIONS = {
   ONE_SIZE: "ONE_SIZE",
 } as const;
 
-const labels: Record<keyof typeof SHARE_VARIATION_SIZE_OPTIONS, string> = {
+const labels: Record<keyof typeof SHARE_TYPE_VARIATION_SIZE_OPTIONS, string> = {
   XS: "commissioning.XS",
   S: "commissioning.S",
   M: "commissioning.M",
@@ -25,7 +25,7 @@ const labels: Record<keyof typeof SHARE_VARIATION_SIZE_OPTIONS, string> = {
 };
 
 const { useEnumOptions } = createEnumOptionsHook(
-  SHARE_VARIATION_SIZE_OPTIONS,
+  SHARE_TYPE_VARIATION_SIZE_OPTIONS,
   (value, t) => t(labels[value]),
   // Multi-value lookup: split on comma, translate each, rejoin.
   (value, opts) =>
@@ -39,12 +39,12 @@ const { useEnumOptions } = createEnumOptionsHook(
           .join(", "),
 );
 
-export const useShareVariationSizeOptions = () => {
+export const useShareTypeVariationSizeOptions = () => {
   const { options, getLabel } = useEnumOptions();
   return {
-    SHARE_VARIATION_SIZE_OPTIONS,
-    shareVariationSizeOptions: options,
-    getShareVariationSizeLabel: getLabel,
+    SHARE_TYPE_VARIATION_SIZE_OPTIONS,
+    shareTypeVariationSizeOptions: options,
+    getShareTypeVariationSizeLabel: getLabel,
   };
 };
 

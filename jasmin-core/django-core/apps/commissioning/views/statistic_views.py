@@ -24,7 +24,7 @@ from ..errors import InvalidQueryParam
 from ..models import Member
 from ..schemas import get_delivery_week_parameter, get_year_parameter
 from ..serializers import MemberGrowthStatisticSerializer
-from ..services import calculate_historical_share_variation_averages
+from ..services import calculate_historical_share_type_variation_averages
 from ..utils.query_params import validate_query_params
 
 
@@ -170,7 +170,7 @@ def member_growth_statistics(request: Request) -> Response:
 )
 @api_view(["GET"])
 @permission_classes([IsStaff])
-def historical_share_variation_averages(request: Request) -> Response:
+def historical_share_type_variation_averages(request: Request) -> Response:
     """
     Get historical averages for share variation amounts.
 
@@ -185,7 +185,7 @@ def historical_share_variation_averages(request: Request) -> Response:
     variation_ids: list[str] = params["variation_ids"]
     years_back: int = params["years_back"]
 
-    averages: dict = calculate_historical_share_variation_averages(
+    averages: dict = calculate_historical_share_type_variation_averages(
         share_type_variation_ids=variation_ids,
         year=year,
         delivery_week=delivery_week,

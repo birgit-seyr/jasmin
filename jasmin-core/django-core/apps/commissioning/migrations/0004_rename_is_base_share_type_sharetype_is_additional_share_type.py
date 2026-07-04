@@ -6,13 +6,13 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('commissioning', '0003_remove_sharetype_gets_packed_with'),
+        ("commissioning", "0003_remove_sharetype_gets_packed_with"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='sharetype',
-            old_name='is_base_share_type',
-            new_name='is_additional_share_type',
+            model_name="sharetype",
+            old_name="is_base_share_type",
+            new_name="is_additional_share_type",
         ),
     ]

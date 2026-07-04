@@ -1,4 +1,4 @@
-import { useCommissioningHistoricalShareVariationAveragesRetrieve } from '@shared/api/generated/commissioning/commissioning';
+import { useCommissioningHistoricalShareTypeVariationAveragesRetrieve } from '@shared/api/generated/commissioning/commissioning';
 
 interface HistoricalAverageParams {
   year?: number;
@@ -26,7 +26,7 @@ interface HistoricalAverageParams {
   enabled?: boolean;
 }
 
-export const useHistoricalShareVariationAverages = (
+export const useHistoricalShareTypeVariationAverages = (
   params: HistoricalAverageParams,
 ) => {
   const enabledByIds =
@@ -40,7 +40,7 @@ export const useHistoricalShareVariationAverages = (
   );
 
   const { data, isLoading, error } =
-    useCommissioningHistoricalShareVariationAveragesRetrieve(
+    useCommissioningHistoricalShareTypeVariationAveragesRetrieve(
       {
         year: params.year!,
         delivery_week: params.delivery_week!,
@@ -51,7 +51,7 @@ export const useHistoricalShareVariationAverages = (
         ...(params.share_option && { share_option: params.share_option }),
         ...(params.active_at_date && { active_at_date: params.active_at_date }),
         years_back: params.years_back ?? 2,
-      } as Parameters<typeof useCommissioningHistoricalShareVariationAveragesRetrieve>[0],
+      } as Parameters<typeof useCommissioningHistoricalShareTypeVariationAveragesRetrieve>[0],
       { query: { enabled } },
     );
 

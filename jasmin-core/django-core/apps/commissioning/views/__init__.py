@@ -37,11 +37,11 @@ from .reseller_views import (
 from .share_options_views import active_share_options_list, share_options_list
 from .share_views import (
     ShareContentGranularityView,
+    ShareTypeVariationAmountsForPlanningView,
     ShareTypeVariationsTotalsView,
-    ShareVariationAmountsForPlanningView,
 )
 from .statistic_views import (
-    historical_share_variation_averages,
+    historical_share_type_variation_averages,
     member_growth_statistics,
 )
 from .stock_views import (

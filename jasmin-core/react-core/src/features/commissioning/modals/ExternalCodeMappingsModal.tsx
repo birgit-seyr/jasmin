@@ -14,7 +14,7 @@ import {
 import type { ExternalCodeMapping } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { useDateFormat } from "@hooks/configuration/useDateFormat";
-import { useShareVariationSizeOptions } from "@hooks/useShareVariationSizeOptions";
+import { useShareTypeVariationSizeOptions } from "@hooks/useShareTypeVariationSizeOptions";
 import {
   EditableTable,
   gatedByPermission,
@@ -56,7 +56,7 @@ export default function ExternalCodeMappingsModal({
   const { t } = useTranslation();
   const { isOffice } = useRoles();
   const permissions = useMemo(() => gatedByPermission(isOffice), [isOffice]);
-  const { getShareVariationSizeLabel } = useShareVariationSizeOptions();
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
   const { formatDate } = useDateFormat();
   const { noteColumn } = useNoteColumn();
 
@@ -100,14 +100,14 @@ export default function ExternalCodeMappingsModal({
       (variationsData ?? [])
         .filter((v) => !!v.id)
         .map((v) => {
-          const sizeLabel = v.size ? getShareVariationSizeLabel(v.size) : "";
+          const sizeLabel = v.size ? getShareTypeVariationSizeLabel(v.size) : "";
           const parts = [v.share_type_name, sizeLabel].filter(Boolean);
           return {
             value: v.id as string,
             label: `${v.id} — ${parts.join(" · ") || t("import_shares.mappings.no_label")}`,
           };
         }),
-    [variationsData, getShareVariationSizeLabel, t],
+    [variationsData, getShareTypeVariationSizeLabel, t],
   );
 
   const stationOptions = useMemo<SelectOption[]>(

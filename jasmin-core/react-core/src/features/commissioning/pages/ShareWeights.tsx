@@ -30,7 +30,7 @@ import { ExplainerText } from "@shared/ui";
 import {
   useInvalidateAfterTableMutation,
   useNumberFormat,
-  useShareVariationSizeOptions,
+  useShareTypeVariationSizeOptions,
 } from "@hooks/index";
 
 const currentYear = dayjs().year();
@@ -41,7 +41,7 @@ type ShareRow = Share & TableRecord;
 export default function ShareWeights() {
   const { t } = useTranslation();
   const { format } = useNumberFormat();
-  const { getShareVariationSizeLabel } = useShareVariationSizeOptions();
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
   const { canEdit } = useRoles();
   const permissions = useMemo(
     () => gatedByPermissionOnlyEdit(canEdit),
@@ -113,7 +113,7 @@ export default function ShareWeights() {
         width: "14em",
         render: (_: unknown, record: ShareRow) => {
           const typeName = record.share_type_name ?? "";
-          const sizeLabel = getShareVariationSizeLabel(
+          const sizeLabel = getShareTypeVariationSizeLabel(
             record.share_type_variation_size ?? "",
           );
           // lint-allow: no-raw-decimal — both args are display strings, not numbers.
@@ -169,7 +169,7 @@ export default function ShareWeights() {
         },
       },
     ],
-    [t, getShareVariationSizeLabel, format],
+    [t, getShareTypeVariationSizeLabel, format],
   );
 
   return (

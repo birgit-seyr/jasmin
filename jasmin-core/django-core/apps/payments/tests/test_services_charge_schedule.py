@@ -791,8 +791,8 @@ class TestOptinExclusion:
 
     def _optin_subscription(self, tenant_settings, member):
         # A requires_optin variation can only be saved once the tenant opts in.
-        tenant_settings.allows_share_variation_optin = True
-        tenant_settings.save(update_fields=["allows_share_variation_optin"])
+        tenant_settings.allows_share_type_variation_optin = True
+        tenant_settings.save(update_fields=["allows_share_type_variation_optin"])
         share_type = ShareTypeFactory(valid_from=datetime.date(2026, 1, 5))
         variation = ShareTypeVariationFactory(
             share_type=share_type,
@@ -872,8 +872,8 @@ class TestIsOptedInForDeliveryProperty:
 
     def _delivery(self, *, day_number, requires_optin, is_opted_in, tenant_settings):
         if requires_optin:
-            tenant_settings.allows_share_variation_optin = True
-            tenant_settings.save(update_fields=["allows_share_variation_optin"])
+            tenant_settings.allows_share_type_variation_optin = True
+            tenant_settings.save(update_fields=["allows_share_type_variation_optin"])
         variation = ShareTypeVariationFactory(
             requires_optin=requires_optin,
             default_optin_state=is_opted_in,

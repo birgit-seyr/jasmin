@@ -7,7 +7,7 @@ from decimal import Decimal
 import pytest
 
 from apps.commissioning.services.statistics import (
-    calculate_historical_share_variation_averages,
+    calculate_historical_share_type_variation_averages,
 )
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
@@ -19,7 +19,7 @@ from apps.commissioning.tests.factories import (
 
 
 # ---------------------------------------------------------------------------
-# calculate_historical_share_variation_averages (multiple)
+# calculate_historical_share_type_variation_averages (multiple)
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestCalculateHistoricalAveragesMultiple:
@@ -27,12 +27,14 @@ class TestCalculateHistoricalAveragesMultiple:
         v1 = ShareTypeVariationFactory()
         v2 = ShareTypeVariationFactory()
 
-        result = calculate_historical_share_variation_averages([v1.pk, v2.pk], 2026, 15)
+        result = calculate_historical_share_type_variation_averages(
+            [v1.pk, v2.pk], 2026, 15
+        )
         # With no data, should return empty
         assert result == {}
 
     def test_skips_nonexistent_variations(self, tenant):
-        result = calculate_historical_share_variation_averages([999999], 2026, 15)
+        result = calculate_historical_share_type_variation_averages([999999], 2026, 15)
         assert result == {}
 
 
@@ -73,14 +75,14 @@ class TestHistoricalAveragesQueryCount:
             self._make_variation_with_content(delivery_day, dsd) for _ in range(2)
         ]
         with CaptureQueriesContext(connection) as ctx_small:
-            calculate_historical_share_variation_averages(few_ids, 2026, 15)
+            calculate_historical_share_type_variation_averages(few_ids, 2026, 15)
         small = len(ctx_small.captured_queries)
 
         many_ids = few_ids + [
             self._make_variation_with_content(delivery_day, dsd) for _ in range(6)
         ]
         with CaptureQueriesContext(connection) as ctx_large:
-            calculate_historical_share_variation_averages(many_ids, 2026, 15)
+            calculate_historical_share_type_variation_averages(many_ids, 2026, 15)
         large = len(ctx_large.captured_queries)
 
         assert large - small <= 2, (

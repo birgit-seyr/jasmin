@@ -6,4 +6,4 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type CommissioningShareVariationAmountsForPlanningRetrieve200 = {[key: string]: number};
+export type CommissioningHistoricalShareTypeVariationAveragesRetrieve200 = {[key: string]: number};

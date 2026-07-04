@@ -162,29 +162,6 @@ class TestShareDeliveryClean:
 
 
 # ---------------------------------------------------------------------------
-# ShareType.clean  (circular packing reference detection)
-# ---------------------------------------------------------------------------
-@pytest.mark.django_db
-class TestShareTypeClean:
-    def test_no_packing_ref_passes(self, tenant):
-        st = ShareTypeFactory(gets_packed_with=None)
-        st.clean()  # should not raise
-
-    def test_self_reference_raises(self, tenant):
-        st = ShareTypeFactory()
-        st.gets_packed_with = st
-        with pytest.raises(ValidationError, match="Cannot pack with itself"):
-            st.clean()
-
-    def test_circular_chain_raises(self, tenant):
-        st_a = ShareTypeFactory()
-        st_b = ShareTypeFactory(share_option="CHICKEN_SHARE", gets_packed_with=st_a)
-        st_a.gets_packed_with = st_b
-        with pytest.raises(ValidationError, match="Cannot pack with itself"):
-            st_a.clean()
-
-
-# ---------------------------------------------------------------------------
 # ShareTypeVariation.clean  (date bound validation)
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db

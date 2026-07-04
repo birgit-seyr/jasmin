@@ -27,7 +27,7 @@ const STEPS = [
     Component: Step3CoopShares,
   },
   {
-    titleKey: "auth.registration.steps.share_variation",
+    titleKey: "auth.registration.steps.share_type_variation",
     Component: Step4ShareTypeVariation,
   },
   {

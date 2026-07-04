@@ -215,7 +215,7 @@ class TenantSettings(JasminModel):
     # variations stay configured on the model but behave as plain
     # variations (no per-delivery toggle, no opt-in card on
     # MemberDetail).
-    allows_share_variation_optin = models.BooleanField(default=False)
+    allows_share_type_variation_optin = models.BooleanField(default=False)
 
     # Trial subscriptions — gates short-term, non-committal subscription
     # offerings. Despite the historical "trial_shares" naming, these

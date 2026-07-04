@@ -27,7 +27,6 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import { DateRangeStatusLegend, ExplainerText } from "@shared/ui";
 import { Badge, Button } from "antd";
-import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 // Imported directly from the source module (not the ``hooks`` barrel) to
@@ -243,24 +242,6 @@ export default function Abos() {
       }),
     [],
   );
-
-  // Active subscriptions per variation — the "how many of each" strip above the
-  // table. "Active" = admin-confirmed + not cancelled + not past its end date.
-  // A FUTURE-starting term (valid_from ahead of today) still counts: it's a
-  // committed subscription the office has already confirmed, just not delivering
-  // yet. (Trials are included; cancelled / draft / ended terms are excluded.)
-  const activeVariationStats = useMemo(() => {
-    const today = dayjs().format("YYYY-MM-DD"); // tenant-local, not UTC
-    const counts = new Map<string, number>();
-    for (const row of data as AboRecord[]) {
-      if (!row.admin_confirmed || row.cancelled_at) continue;
-      if (row.valid_until && row.valid_until < today) continue;
-      const label = row.share_type_variation_string?.trim();
-      if (!label) continue;
-      counts.set(label, (counts.get(label) ?? 0) + 1);
-    }
-    return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [data]);
 
   // "Needs attention" quick filter toggled by the page badge below: the
   // subscriptions still awaiting admin confirmation (unconfirmed, not rejected,

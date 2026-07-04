@@ -1,4 +1,4 @@
-"""Tests for statistic_views.py — member_growth_statistics & historical_share_variation_averages."""
+"""Tests for statistic_views.py — member_growth_statistics & historical_share_type_variation_averages."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from apps.commissioning.tests.factories import (
 )
 
 URL_MEMBER_GROWTH = reverse("member_growth_statistics")
-URL_VARIATION_AVERAGES = reverse("historical_share_variation_averages")
+URL_VARIATION_AVERAGES = reverse("historical_share_type_variation_averages")
 
 
 # ---------------------------------------------------------------------------
@@ -64,10 +64,10 @@ class TestMemberGrowthStatistics:
 
 
 # ---------------------------------------------------------------------------
-# historical_share_variation_averages
+# historical_share_type_variation_averages
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
-class TestHistoricalShareVariationAverages:
+class TestHistoricalShareTypeVariationAverages:
     def test_returns_averages(self, api_client, tenant):
         variation = ShareTypeVariationFactory()
         dd = SharesDeliveryDayFactory()

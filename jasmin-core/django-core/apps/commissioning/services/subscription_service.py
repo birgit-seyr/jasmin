@@ -165,9 +165,7 @@ class SubscriptionService:
             # assign them to the FK's ``_id`` attribute. Django rejects a raw pk
             # on the plain FK attribute ("must be a Member instance"); other FK
             # fields arrive as model instances and set directly.
-            if field in ("member", "share_type_variation") and isinstance(
-                value, str
-            ):
+            if field in ("member", "share_type_variation") and isinstance(value, str):
                 setattr(subscription, f"{field}_id", value)
             else:
                 setattr(subscription, field, value)

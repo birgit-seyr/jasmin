@@ -11,7 +11,7 @@ import type {
   ShareTypeVariation,
 } from "@shared/api/generated/models";
 import { toOptions, type Option } from "./internal/toOptions";
-import { useShareVariationSizeOptions } from "./useShareVariationSizeOptions";
+import { useShareTypeVariationSizeOptions } from "./useShareTypeVariationSizeOptions";
 
 // a list of all share_type_variations from all share_types
 // used for select in abos
@@ -52,7 +52,7 @@ export const useAllShareTypeVariations = (
   shareTypes: ShareTypeRef[] | undefined,
   baseParams: Omit<CommissioningShareTypeVariationsListParams, "share_type"> = {},
 ) => {
-  const { getShareVariationSizeLabel } = useShareVariationSizeOptions();
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
   const queryClient = useQueryClient();
 
   // ``baseParams`` is part of every per-shareType queryKey, so a
@@ -95,7 +95,7 @@ export const useAllShareTypeVariations = (
         ...toOptions(
           q.data,
           (stv) =>
-            `${stv.share_type_name} ${getShareVariationSizeLabel(stv.size ?? "")}`,
+            `${stv.share_type_name} ${getShareTypeVariationSizeLabel(stv.size ?? "")}`,
         ),
       );
     }
@@ -117,7 +117,7 @@ export const useAllShareTypeVariations = (
     // unset sort orders at the top — matches the backend's
     // ``PositiveIntegerField(default=0)``.
     return deduped.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-  }, [queries, getShareVariationSizeLabel]);
+  }, [queries, getShareTypeVariationSizeLabel]);
 
   const loading = queries.some((q) => q.isPending);
   const error = queries.find((q) => q.error)?.error ?? null;

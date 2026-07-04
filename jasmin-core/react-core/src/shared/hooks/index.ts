@@ -24,7 +24,7 @@ export { usePaymentCycles } from './usePaymentCycles';
 export { useNumberFormat } from './useNumberFormat';
 export { useSettingsManager } from './configuration/useSettingsManager';
 export { useShareTypes } from './useShareTypes';
-export { useShareVariationSizeOptions } from './useShareVariationSizeOptions';
+export { useShareTypeVariationSizeOptions } from './useShareTypeVariationSizeOptions';
 export { useSubscriptionTerm } from './useSubscriptionTerm';
 export { useTableRowSelection } from './useTableRowSelection';
 export { useTenant } from './configuration/useTenant';

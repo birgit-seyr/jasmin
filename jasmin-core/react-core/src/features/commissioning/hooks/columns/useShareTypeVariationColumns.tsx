@@ -10,6 +10,7 @@ import type {
 import type { ShareTypeVariationOption } from "../useShareTypeVariations";
 import { useShareTypeVariations } from "../useShareTypeVariations";
 import { useNumberFormat } from "@hooks/useNumberFormat";
+import { useShareTypeVariationSizeOptions } from "@hooks/useShareTypeVariationSizeOptions";
 import { variationColumnKey } from "./columnKeys";
 
 // Re-exported for existing importers (barrel + pages) — the canonical
@@ -66,6 +67,7 @@ export const useShareTypeVariationColumns = (
     filters ?? {},
   );
   const { locale } = useNumberFormat();
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
 
   const shareTypeGroups = useMemo<ShareTypeVariationGroup[]>(() => {
     const groups = new Map<string, ShareTypeVariationGroup>();
@@ -110,7 +112,11 @@ export const useShareTypeVariationColumns = (
     return shareTypeGroups.map((group): EditableColumnConfig<TableRecord> => {
       const children: EditableColumnConfig<TableRecord>[] =
         group.variations.map((variation, childIdx) => ({
-          title: <span style={{ fontSize: "0.85em" }}>{variation.size}</span>,
+          title: (
+            <span style={{ fontSize: "0.85em" }}>
+              {getShareTypeVariationSizeLabel(variation.size)}
+            </span>
+          ),
           dataIndex: variationColumnKey(variation.id!),
           key: variationColumnKey(variation.id!),
           align: "center",
@@ -134,7 +140,9 @@ export const useShareTypeVariationColumns = (
           title: (
             <>
               {group.share_type_name}
-              {onlyVariation?.size ? ` - ${onlyVariation.size}` : ""}
+              {onlyVariation?.size
+                ? ` - ${getShareTypeVariationSizeLabel(onlyVariation.size)}`
+                : ""}
             </>
           ),
           className: "column-group-start",
@@ -150,7 +158,14 @@ export const useShareTypeVariationColumns = (
         children,
       };
     });
-  }, [shareTypeGroups, renderCell, width, inputType, locale]);
+  }, [
+    shareTypeGroups,
+    renderCell,
+    width,
+    inputType,
+    locale,
+    getShareTypeVariationSizeLabel,
+  ]);
 
   return { variationColumns, variations, shareTypeGroups, loading };
 };

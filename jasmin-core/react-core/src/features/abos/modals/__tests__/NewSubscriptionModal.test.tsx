@@ -94,8 +94,8 @@ vi.mock("@hooks/index", () => ({
     dateFormat: "DD.MM.YYYY",
     formatDate: (d: dayjs.Dayjs) => d.format("DD.MM.YYYY"),
   }),
-  useShareVariationSizeOptions: () => ({
-    getShareVariationSizeLabel: (s: string) => s,
+  useShareTypeVariationSizeOptions: () => ({
+    getShareTypeVariationSizeLabel: (s: string) => s,
   }),
   useTenant: () => ({ getSetting: getSettingMock }),
   useSubscriptionTerm: () => ({

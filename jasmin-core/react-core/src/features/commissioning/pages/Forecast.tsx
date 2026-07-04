@@ -35,7 +35,7 @@ import { BulkActionButton, ExplainerText, PastWarningMessage } from '@shared/ui'
 import { AddShareArticleEntry } from '@features/commissioning/components';
 import { isWeekInPast, notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
-import { useActiveShareOptions, useInvalidateAfterTableMutation, useIsMobile, useNoteColumn, useTableRowSelection, useTenant } from '@hooks/index';
+import { useActiveShareOptions, useInvalidateAfterTableMutation, useIsMobile, useNoteColumn, useShareTypeVariationSizeOptions, useTableRowSelection, useTenant } from '@hooks/index';
 import { useAmountUnitSizeColumns, useFinalColumn, useForecastColumns, useOfferGroups, usePlots, useShareArticleColumn, useShareArticles, useShareTypeVariations, variationColumnKey } from '@features/commissioning/hooks';
 
 const currentYear = dayjs().year();
@@ -57,6 +57,7 @@ export default function Forecast() {
 
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
   const { canEdit } = useRoles();
   const permissions = useMemo(
     () => gatedByPermission(!isPast && canEdit),
@@ -327,10 +328,16 @@ export default function Forecast() {
     [fruitVariationKeys],
   );
 
-  const shareVariationColumns = useMemo(() => {
+  const shareTypeVariationColumns = useMemo(() => {
     return (
       shareTypeVariations?.map((variation) => ({
-        title: <>{t("commissioning.for_size", { size: variation.size })}</>,
+        title: (
+          <>
+            {t("commissioning.for_size", {
+              size: getShareTypeVariationSizeLabel(variation.size),
+            })}
+          </>
+        ),
         dataIndex: variationColumnKey(variation.id!),
         inputType: "checkbox",
         key: variationColumnKey(variation.id!),
@@ -338,12 +345,18 @@ export default function Forecast() {
         onFieldChange: onVegVariationChange,
       })) || []
     );
-  }, [shareTypeVariations, t, onVegVariationChange]);
+  }, [shareTypeVariations, t, onVegVariationChange, getShareTypeVariationSizeLabel]);
 
-  const shareVariationFruitsColumns = useMemo(() => {
+  const shareTypeVariationFruitsColumns = useMemo(() => {
     return (
       shareTypeVariationsFruits?.map((variation) => ({
-        title: <>{t("commissioning.for_size", { size: variation.size })}</>,
+        title: (
+          <>
+            {t("commissioning.for_size", {
+              size: getShareTypeVariationSizeLabel(variation.size),
+            })}
+          </>
+        ),
         dataIndex: variationColumnKey(variation.id!),
         inputType: "checkbox",
         key: variationColumnKey(variation.id!),
@@ -351,7 +364,12 @@ export default function Forecast() {
         onFieldChange: onFruitVariationChange,
       })) || []
     );
-  }, [shareTypeVariationsFruits, t, onFruitVariationChange]);
+  }, [
+    shareTypeVariationsFruits,
+    t,
+    onFruitVariationChange,
+    getShareTypeVariationSizeLabel,
+  ]);
 
   const offerGroupColumns = useMemo(() => {
     return (
@@ -380,9 +398,9 @@ export default function Forecast() {
     noteColumn,
     fruit_and_veg_shares_are_separate,
     shareTypeVariationsCount,
-    shareVariationColumns,
+    shareTypeVariationColumns,
     shareTypeVariationsFruitsCount,
-    shareVariationFruitsColumns,
+    shareTypeVariationFruitsColumns,
     onForAllVegChange,
     onForAllFruitChange,
     sells_to_resellers: Boolean(sells_to_resellers),

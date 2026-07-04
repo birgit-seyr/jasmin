@@ -226,8 +226,8 @@
     "min_weeks_cancel": "Mindestwochen zur Kündigung vor Ende",
     "min_weeks_cancel_description": "Mindestanzahl an Wochen, die ein Abo vor seinem Ende gekündigt werden muss.",
     "share_type_changes": "Änderung der Anteilsgrössen im laufenden Abo erlauben",
-    "allows_share_variation_optin": "On-off Anteile zulassen (Opt-in pro Lieferung)",
-    "allows_share_variation_optin_desc": "Einzelne Anteilsvarianten können freigegeben werden, so dass sie spontan wochenweise dazubestellt werden können."
+    "allows_share_type_variation_optin": "On-off Anteile zulassen (Opt-in pro Lieferung)",
+    "allows_share_type_variation_optin_desc": "Einzelne Anteilsvarianten können freigegeben werden, so dass sie spontan wochenweise dazubestellt werden können."
   },
   "configure_prices": "Preise & Größen konfigurieren",
   "reseller": {

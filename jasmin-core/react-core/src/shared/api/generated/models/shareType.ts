@@ -38,7 +38,7 @@ export interface ShareType {
   /** @nullable */
   delivery_cycle?: ShareTypeDeliveryCycle;
   needs_complex_planning?: boolean;
-  is_base_share_type?: boolean;
+  is_additional_share_type?: boolean;
   /**
    * @minimum -2147483648
    * @maximum 2147483647
@@ -49,7 +49,5 @@ export interface ShareType {
    * @maximum 2147483647
    */
   amount_of_donation_jokers?: number;
-  /** @nullable */
-  gets_packed_with?: string | null;
   readonly can_be_deleted?: boolean;
 }

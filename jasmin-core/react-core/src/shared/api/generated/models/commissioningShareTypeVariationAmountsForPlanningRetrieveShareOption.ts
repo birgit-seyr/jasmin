@@ -6,11 +6,11 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type CommissioningShareVariationAmountsForPlanningRetrieveShareOption = typeof CommissioningShareVariationAmountsForPlanningRetrieveShareOption[keyof typeof CommissioningShareVariationAmountsForPlanningRetrieveShareOption];
+export type CommissioningShareTypeVariationAmountsForPlanningRetrieveShareOption = typeof CommissioningShareTypeVariationAmountsForPlanningRetrieveShareOption[keyof typeof CommissioningShareTypeVariationAmountsForPlanningRetrieveShareOption];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const CommissioningShareVariationAmountsForPlanningRetrieveShareOption = {
+export const CommissioningShareTypeVariationAmountsForPlanningRetrieveShareOption = {
   BREAD_SHARE: 'BREAD_SHARE',
   CHICKEN_SHARE: 'CHICKEN_SHARE',
   GRAIN_SHARE: 'GRAIN_SHARE',

@@ -8,7 +8,7 @@ import {
   organicStatusTagColor,
   type OrganicStatus,
   useOrganicGate,
-  useShareVariationSizeOptions,
+  useShareTypeVariationSizeOptions,
   useTenant,
   useUnitOptions,
 } from "@hooks/index";
@@ -60,7 +60,7 @@ const CurrentWeekDeliveryCard = ({
   const { getSetting } = useTenant();
   const usesJokers = getSetting("uses_jokers", true);
   const { enabled: organicGateEnabled } = useOrganicGate();
-  const { getShareVariationSizeLabel } = useShareVariationSizeOptions();
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
 
   const showSellerName =
     getSetting(
@@ -77,7 +77,7 @@ const CurrentWeekDeliveryCard = ({
     for (const delivery of currentWeekDeliveries) {
       const shareTypeName =
         delivery.ordered_share_type_name ?? delivery.share_type_name ?? "";
-      const orderedSize = getShareVariationSizeLabel(
+      const orderedSize = getShareTypeVariationSizeLabel(
         delivery.ordered_variation_name ??
           delivery.share_type_variation_size ??
           "?",
@@ -89,7 +89,7 @@ const CurrentWeekDeliveryCard = ({
         delivery.ordered_variation_type ??
         delivery.share_type_variation_type ??
         "physical";
-      const physicalName = getShareVariationSizeLabel(
+      const physicalName = getShareTypeVariationSizeLabel(
         delivery.share_type_variation_size ?? "?",
       );
 
@@ -144,7 +144,7 @@ const CurrentWeekDeliveryCard = ({
     }
 
     return Object.values(grouped);
-  }, [shareDeliveries, currentYear, currentWeek, getShareVariationSizeLabel]);
+  }, [shareDeliveries, currentYear, currentWeek, getShareTypeVariationSizeLabel]);
 
   const renderArticle = (item: ArticleItem, index: number, total: number) => (
     <List.Item

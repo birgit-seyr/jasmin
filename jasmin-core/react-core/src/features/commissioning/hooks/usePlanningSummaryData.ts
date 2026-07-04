@@ -15,7 +15,7 @@ interface UsePlanningSummaryDataParams {
   planningMode: string;
   data: TableRecord[];
   vegetables_and_fruits: ShareArticleOption[] | undefined;
-  shareVariationAmounts: Record<string, unknown> | null;
+  shareTypeVariationAmounts: Record<string, unknown> | null;
 }
 
 /**
@@ -33,7 +33,7 @@ export function computePlannedAmountForDay(
   record: Record<string, unknown>,
   deliveryDay: DeliveryDay,
   shareTypeVariations: ShareTypeVariationOption[],
-  shareVariationAmountsSummary: Record<string, string>,
+  shareTypeVariationAmountsSummary: Record<string, string>,
   planningMode: string,
 ): number {
   let total = 0;
@@ -45,7 +45,7 @@ export function computePlannedAmountForDay(
           variationId: variation.id!,
           tour: tourNumber,
         });
-        const count = Number(shareVariationAmountsSummary[key]) || 0;
+        const count = Number(shareTypeVariationAmountsSummary[key]) || 0;
         const perShare = Number(record[key]) || 0;
         total += count * perShare;
       });
@@ -56,7 +56,7 @@ export function computePlannedAmountForDay(
           variationId: variation.id!,
           station: station.id,
         });
-        const count = Number(shareVariationAmountsSummary[key]) || 0;
+        const count = Number(shareTypeVariationAmountsSummary[key]) || 0;
         const perShare = Number(record[key]) || 0;
         total += count * perShare;
       });
@@ -65,7 +65,7 @@ export function computePlannedAmountForDay(
         dayId: deliveryDay.id!,
         variationId: variation.id!,
       });
-      const count = Number(shareVariationAmountsSummary[key]) || 0;
+      const count = Number(shareTypeVariationAmountsSummary[key]) || 0;
       const perShare = Number(record[key]) || 0;
       total += count * perShare;
     }
@@ -79,10 +79,10 @@ export function usePlanningSummaryData({
   planningMode,
   data,
   vegetables_and_fruits,
-  shareVariationAmounts,
+  shareTypeVariationAmounts,
 }: UsePlanningSummaryDataParams) {
-  const shareVariationAmountsSummary = useMemo(() => {
-    if (!shareVariationAmounts) {
+  const shareTypeVariationAmountsSummary = useMemo(() => {
+    if (!shareTypeVariationAmounts) {
       return {};
     }
 
@@ -96,7 +96,7 @@ export function usePlanningSummaryData({
             variationId: variation.id!,
           });
           summary[key] = String(
-            Math.round((shareVariationAmounts[key] as number) || 0),
+            Math.round((shareTypeVariationAmounts[key] as number) || 0),
           );
         } else if (planningMode === "tours") {
           deliveryDay.used_tours?.forEach((tourNumber: number) => {
@@ -106,7 +106,7 @@ export function usePlanningSummaryData({
           tour: tourNumber,
         });
             summary[key] = String(
-              Math.round((shareVariationAmounts[key] as number) || 0),
+              Math.round((shareTypeVariationAmounts[key] as number) || 0),
             );
           });
         } else if (planningMode === "stations") {
@@ -117,7 +117,7 @@ export function usePlanningSummaryData({
           station: station.id,
         });
             summary[key] = String(
-              Math.round((shareVariationAmounts[key] as number) || 0),
+              Math.round((shareTypeVariationAmounts[key] as number) || 0),
             );
           });
         }
@@ -126,7 +126,7 @@ export function usePlanningSummaryData({
 
     return summary;
   }, [
-    shareVariationAmounts,
+    shareTypeVariationAmounts,
     shareDeliveryDays,
     shareTypeVariations,
     planningMode,
@@ -397,7 +397,7 @@ export function usePlanningSummaryData({
   }, [shareDeliveryDays, shareTypeVariations, planningMode]);
 
   return {
-    shareVariationAmountsSummary,
+    shareTypeVariationAmountsSummary,
     dayVariationSums,
     dayVariationCounts,
     averageWeightSubData,

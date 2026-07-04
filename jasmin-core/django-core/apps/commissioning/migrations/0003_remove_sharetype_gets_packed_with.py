@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('commissioning', '0002_finalized_protection_and_reference_data'),
+        ("commissioning", "0002_finalized_protection_and_reference_data"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='sharetype',
-            name='gets_packed_with',
+            model_name="sharetype",
+            name="gets_packed_with",
         ),
     ]
