@@ -464,9 +464,16 @@ class TestVirtualVariationShipPredicateAndCapacity:
         )
 
         share_type = ShareTypeFactory(share_option="HARVEST_SHARE")
+        # The virtual and both physicals share this share_type, so each needs a
+        # distinct ``size``: the ``sharetypevariation_one_open_per_type_size``
+        # constraint forbids two open variations with the same (share_type,
+        # size). Pin the virtual to "M" instead of letting the factory's global
+        # ``size`` Iterator pick — otherwise it intermittently lands on "S"/"L"
+        # and collides with a physical below (order-dependent flake).
         virtual = ShareTypeVariationFactory(
             share_type=share_type,
             variation_type="virtual",
+            size="M",
             requires_optin=requires_optin,
             default_optin_state=default_optin_state,
         )

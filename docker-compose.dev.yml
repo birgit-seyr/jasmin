@@ -98,6 +98,11 @@ services:
       # container django-core is /app, so that resolves to /react-core/... —
       # mount the locales there (read-only) so `make pytest` finds them.
       - ./jasmin-core/react-core/src/shared/i18n/locales:/react-core/src/shared/i18n/locales:ro
+      # test_frontend_sync parses react-core/src/shared/auth/roles.ts. The
+      # i18n mount above already materialises /react-core in the container, so
+      # that test's "react-core is present" check would otherwise fire and fail
+      # loudly. Mount the auth dir (read-only) so the role-sync contract runs.
+      - ./jasmin-core/react-core/src/shared/auth:/react-core/src/shared/auth:ro
     ports:
       # Loopback-only: developers reach the app via the gateway on :3000;
       # direct :8000 is local-only and must not be reachable from other
