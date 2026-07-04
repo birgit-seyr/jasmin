@@ -50,7 +50,10 @@ export const useAmountUnitSizeColumns = (config: AmountUnitSizeConfig = {}) => {
         dataIndex: "size",
         key: "size",
         inputType: "select",
-        required: false,
+        // Size is one of S/M/L — a required select so EditableTable's
+        // withClearOption does NOT prepend a blank/null option. A page that
+        // genuinely needs a clearable size can still pass overrides.size.required.
+        required: true,
         hidden: !showSizeColumn,
         width: "7em",
         align: "center",
