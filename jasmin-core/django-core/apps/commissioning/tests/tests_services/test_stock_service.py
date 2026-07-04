@@ -138,13 +138,16 @@ class TestGetTheoreticalCurrentStock:
             date=_dt(2026, 15, 1),
         )
 
-        # INVENTORY movement on target day: +5 (counted stock adjustment)
+        # INVENTORY movement on target day: +5 delta, a REAL count of 25
+        # (counted_amount set — the "this is a count" signal the read path and
+        # the snapshot cascade both key on).
         MovementShareArticleFactory(
             share_article=article,
             storage=storage,
             unit="KG",
             size="M",
             amount=Decimal("5"),
+            counted_amount=Decimal("25"),
             movement_type="INVENTORY",
             date=_dt(2026, 15, 2),
         )
@@ -191,6 +194,44 @@ class TestGetTheoreticalCurrentStock:
         assert len(result) == 1
         key = (str(article.pk), "KG", "M", str(s1.pk))
         assert result[key]["theoretical_current_stock"] == 10.0
+
+    def test_metadata_only_inventory_reads_as_uncounted(self, tenant):
+        """goods-flow audit #2 (read side): a metadata-only INVENTORY row
+        (counted_amount IS NULL — flags toggled, no count) reads as UNcounted
+        (current_stock_amount=None), NOT a phantom count equal to theoretical.
+        The flag stays visible; is_finalized reflects the row (False here)."""
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        # Balance seed (+50) on an earlier day — feeds the running balance but is
+        # not part of the target day's inventory map.
+        MovementShareArticleFactory(
+            share_article=article,
+            storage=storage,
+            unit="KG",
+            size="M",
+            amount=Decimal("50"),
+            movement_type="INVENTORY",
+            date=_dt(2026, 15, 0),
+        )
+        # Metadata-only row ON the target day: zero delta, no count, washed=True.
+        MovementShareArticleFactory(
+            share_article=article,
+            storage=storage,
+            unit="KG",
+            size="M",
+            amount=Decimal("0"),
+            counted_amount=None,
+            washed=True,
+            movement_type="INVENTORY",
+            date=_dt(2026, 15, 2),
+        )
+
+        result = StockService.get_theoretical_current_stock(2026, 15, 2)
+        key = (str(article.pk), "KG", "M", str(storage.pk))
+        assert result[key]["theoretical_current_stock"] == 50.0
+        assert result[key]["current_stock_amount"] is None  # NOT a phantom 50
+        assert result[key]["washed"] is True
+        assert result[key]["is_finalized"] is False
 
 
 @pytest.mark.django_db
@@ -255,13 +296,15 @@ class TestGetTheoreticalCurrentStockFastPath:
                 size="M",
                 balance=Decimal("30.000"),  # post-correction current balance
             )
-            # Today's INVENTORY with a +5 correction → theoretical (pre-corr) is 25
+            # Today's INVENTORY with a +5 correction → theoretical (pre-corr) is 25.
+            # A REAL count of 30 (counted_amount set — the "this is a count" signal).
             MovementShareArticleFactory(
                 share_article=article,
                 storage=storage,
                 unit="KG",
                 size="M",
                 amount=Decimal("5"),
+                counted_amount=Decimal("30"),
                 movement_type="INVENTORY",
                 date=_dt(2026, 20, 1, hour=8),
             )

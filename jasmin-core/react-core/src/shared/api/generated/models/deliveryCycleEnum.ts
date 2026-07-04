@@ -10,10 +10,8 @@
  * * `WEEKLY` - Weekly
 * `ODD_WEEKS` - Odd Weeks
 * `EVEN_WEEKS` - Even Weeks
-* `MONTHLY` - Monthly
-* `QUARTERLY` - Quarterly
-* `HALF_YEARLY` - Half Yearly
-* `YEARLY` - Yearly
+* `ALL_THREE_WEEKS` - All Three Weeks
+* `ALL_FOUR_WEEKS` - All Four Weeks
  */
 export type DeliveryCycleEnum = typeof DeliveryCycleEnum[keyof typeof DeliveryCycleEnum];
 
@@ -23,8 +21,6 @@ export const DeliveryCycleEnum = {
   WEEKLY: 'WEEKLY',
   ODD_WEEKS: 'ODD_WEEKS',
   EVEN_WEEKS: 'EVEN_WEEKS',
-  MONTHLY: 'MONTHLY',
-  QUARTERLY: 'QUARTERLY',
-  HALF_YEARLY: 'HALF_YEARLY',
-  YEARLY: 'YEARLY',
+  ALL_THREE_WEEKS: 'ALL_THREE_WEEKS',
+  ALL_FOUR_WEEKS: 'ALL_FOUR_WEEKS',
 } as const;

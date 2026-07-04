@@ -18,13 +18,19 @@ from apps.commissioning.models import Order, OrderContent
 from apps.commissioning.tests.factories import (
     HarvestFactory,
     MovementShareArticleFactory,
+    OfferFactory,
     OrderContentFactory,
     OrderFactory,
     ShareArticleFactory,
+    ShareContentFactory,
     ShareDeliveryFactory,
     ShareFactory,
     ShareTypeVariationFactory,
+    StorageFactory,
     SubscriptionFactory,
+    TheoreticalHarvestFactory,
+    TheoreticalPurchaseFactory,
+    TheoreticalWashAmountFactory,
 )
 from apps.commissioning.tests.factories.days import DeliveryStationDayFactory
 
@@ -190,3 +196,85 @@ class TestOnOffJokerMutualExclusion:
         variation = ShareTypeVariationFactory(requires_optin=True)
         # 0 jokers (factory default) → joker guard not triggered.
         variation.clean()
+
+
+# ───────────── Washing × cleaning mutual exclusion (O-1 / O-2) ─────────────
+@pytest.mark.django_db
+class TestWashingCleaningMutuallyExclusive:
+    """DB-level CheckConstraint: a line is washed OR cleaned, never both.
+
+    The planning/offers/orders grid already clears one flag when the other is set;
+    these constraints mirror that at the DB so the API / imports / bulk paths can't
+    write the both-true state that double-transfers a long-term line long→short in
+    the goods-flow (goods-flow-audit finding #1). ``.update()`` bypasses save()/
+    full_clean() — the DB guard must still fire.
+    """
+
+    @pytest.mark.parametrize(
+        "make_row",
+        [
+            pytest.param(ShareContentFactory, id="sharecontent"),
+            pytest.param(OfferFactory, id="offer"),
+            pytest.param(OrderContentFactory, id="ordercontent"),
+        ],
+    )
+    def test_both_flags_true_raises(self, tenant, make_row):
+        row = make_row()
+        with pytest.raises(IntegrityError):
+            with transaction.atomic():
+                type(row).objects.filter(pk=row.pk).update(washing=True, cleaning=True)
+
+    def test_single_flag_and_nulls_pass(self, tenant):
+        # Every combo except (True, True) is allowed — including NULL washing, which
+        # the goods-flow reads as falsy, so it must not trip the constraint.
+        content = ShareContentFactory()
+        qs = type(content).objects.filter(pk=content.pk)
+        qs.update(washing=True, cleaning=False)
+        qs.update(washing=False, cleaning=True)
+        qs.update(washing=False, cleaning=False)
+        qs.update(washing=None, cleaning=True)
+        content.refresh_from_db()
+        assert content.washing is None
+        assert content.cleaning is True
+
+
+# ───────── Harvest/purchase theoretical storage invariant (finding #9) ─────────
+@pytest.mark.django_db
+class TestHarvestStorageInvariant:
+    """Harvest & purchase theoreticals accept EITHER harvest storage (short- OR
+    long-term): a ``comes_from_long_term`` line is deposited in long-term storage
+    at harvest (``Storage.select_harvest``), so requiring short-term made every
+    such ``TheoreticalHarvest`` violate its own invariant (latent under
+    bulk_create, a 500 on a later PATCH). Wash/clean theoreticals still lock to
+    short-term. The factories call ``save()`` → ``full_clean()``, so a rejected
+    storage raises at creation.
+    """
+
+    def test_harvest_accepts_long_term_storage(self, tenant):
+        long_term = StorageFactory(is_long_term_harvest_storage=True)
+        th = TheoreticalHarvestFactory(storage=long_term)
+        th.full_clean()  # explicit — must not raise
+        assert th.storage.is_long_term_harvest_storage
+
+    def test_harvest_accepts_short_term_storage(self, tenant):
+        short_term = StorageFactory(is_short_term_harvest_storage=True)
+        th = TheoreticalHarvestFactory(storage=short_term)
+        th.full_clean()
+        assert th.storage.is_short_term_harvest_storage
+
+    def test_harvest_rejects_general_storage(self, tenant):
+        general = StorageFactory()  # neither harvest flag set
+        with pytest.raises(ValidationError):
+            TheoreticalHarvestFactory(storage=general)
+
+    def test_purchase_accepts_long_term_storage(self, tenant):
+        long_term = StorageFactory(is_long_term_harvest_storage=True)
+        tp = TheoreticalPurchaseFactory(storage=long_term)
+        tp.full_clean()
+        assert tp.storage.is_long_term_harvest_storage
+
+    def test_wash_still_rejects_long_term_storage(self, tenant):
+        # Regression: wash/clean theoreticals must stay short-term-locked.
+        long_term = StorageFactory(is_long_term_harvest_storage=True)
+        with pytest.raises(ValidationError):
+            TheoreticalWashAmountFactory(storage=long_term)

@@ -62,6 +62,44 @@ class RequiresShortTermStorageMixin(models.Model):
         super().save(*args, **kwargs)
 
 
+class RequiresHarvestStorageMixin(models.Model):
+    """Storage must be a harvest storage — short-term OR long-term.
+
+    Harvest and purchase theoreticals follow ``Storage.select_harvest``: a line
+    that ``comes_from_long_term_storage`` is DEPOSITED in long-term storage at
+    harvest (the WASH/CLEAN transfer pair later relocates it to short-term). So —
+    unlike the wash/clean theoreticals, which always land short-term via
+    ``_processing_storage`` and keep ``RequiresShortTermStorageMixin`` — a harvest
+    (or purchase) row must accept EITHER harvest storage. Requiring short-term
+    here made every long-term-line ``TheoreticalHarvest`` violate its own
+    invariant (latent because ``bulk_create`` bypasses ``full_clean``; a later
+    PATCH via the viewset would raise a 500). See goods-flow audit finding #9.
+    """
+
+    class Meta:
+        abstract = True
+
+    def clean(self) -> None:
+        super().clean()
+        if not self.storage_id:
+            raise ValidationError({"storage": "Storage is required."})
+        if not (
+            self.storage.is_short_term_harvest_storage
+            or self.storage.is_long_term_harvest_storage
+        ):
+            raise ValidationError(
+                {
+                    "storage": (
+                        "Storage must be a harvest storage (short- or long-term)."
+                    )
+                }
+            )
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
 class Forecast(
     JasminModel, DocumentationMixin, FinalizableMixin, CreatedMixin, ArchivableMixin
 ):
@@ -141,7 +179,7 @@ class ForecastOfferGroup(JasminModel):
 class TheoreticalHarvest(
     JasminModel,
     DocumentationMixin,
-    RequiresShortTermStorageMixin,
+    RequiresHarvestStorageMixin,
     CreatedMixin,
     ArchivableMixin,
 ):
@@ -165,7 +203,7 @@ class TheoreticalHarvest(
 class AdditionalTheoreticalHarvest(
     JasminModel,
     DocumentationMixin,
-    RequiresShortTermStorageMixin,
+    RequiresHarvestStorageMixin,
     CreatedMixin,
     ArchivableMixin,
 ):
@@ -257,7 +295,7 @@ class Waste(JasminModel, DocumentationMixin, CreatedMixin, ArchivableMixin):
 class TheoreticalPurchase(
     JasminModel,
     DocumentationMixin,
-    RequiresShortTermStorageMixin,
+    RequiresHarvestStorageMixin,
     CreatedMixin,
     ArchivableMixin,
 ):
@@ -285,7 +323,7 @@ class TheoreticalPurchase(
 class AdditionalTheoreticalPurchase(
     JasminModel,
     DocumentationMixin,
-    RequiresShortTermStorageMixin,
+    RequiresHarvestStorageMixin,
     CreatedMixin,
     ArchivableMixin,
 ):

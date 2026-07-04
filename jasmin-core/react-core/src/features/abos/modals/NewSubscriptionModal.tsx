@@ -47,6 +47,7 @@ import {
 } from "@features/abos/utils/stationCapacity";
 import { DeliveryStationMap } from "@shared/ui";
 import type { DeliveryStationMapMarker } from "@shared/ui";
+import ToolTipIcon from "@shared/ui/ToolTipIcon";
 import { notify } from "@shared/utils";
 import { getErrorCode, getErrorMessage } from "@shared/utils/apiError";
 
@@ -898,16 +899,40 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
             <Col span={16}>
               <Form.Item
                 name="price_per_delivery"
-                label={t("abos.price_per_delivery")}
+                label={
+                  <>
+                    {t("abos.price_per_delivery")}
+                    {allowsSolidarity && (
+                      <ToolTipIcon
+                        title={t("abos.solidarity_pricing_tooltip")}
+                      />
+                    )}
+                  </>
+                }
                 rules={[{ required: true, message: t("common.required") }]}
                 extra={
                   allowsSolidarity && liveVariation?.active_price_per_delivery
-                    ? t("abos.reference_price_hint", {
-                        price: Number.parseFloat(
-                          liveVariation.active_price_per_delivery,
-                        ).toFixed(2),
-                        currency: currencySymbol,
-                      })
+                    ? [
+                        // Richtpreis (recommended reference price).
+                        t("abos.reference_price_hint", {
+                          price: Number.parseFloat(
+                            liveVariation.active_price_per_delivery,
+                          ).toFixed(2),
+                          currency: currencySymbol,
+                        }),
+                        // Untere Grenze (solidarity floor the office/member may
+                        // not go below — same value the InputNumber min enforces).
+                        liveVariation?.active_solidarity_min_price_per_delivery
+                          ? t("abos.solidarity_floor_hint", {
+                              price: Number.parseFloat(
+                                liveVariation.active_solidarity_min_price_per_delivery,
+                              ).toFixed(2),
+                              currency: currencySymbol,
+                            })
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
                     : undefined
                 }
               >
@@ -930,6 +955,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                   suffix={currencySymbol}
                   // Members can set their own price ONLY when solidarity pricing
                   // is enabled; otherwise it's pre-filled + derived server-side.
+                  // Office can always override it.
                   disabled={isMemberOnly && !allowsSolidarity}
                 />
               </Form.Item>

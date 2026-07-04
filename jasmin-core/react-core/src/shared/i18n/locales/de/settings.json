@@ -113,7 +113,7 @@
       "title": "SEPA-Einzug"
     },
     "billing_strategy": "Zahlungen Anteile",
-    "billing_strategy_desc": "EXACT_PER_PERIOD rechnet genau die Lieferungen ab, die im jeweiligen Zyklus liegen. SMOOTHED verteilt den Gesamtbetrag gleichmäßig über alle Zyklen der Vertragslaufzeit.",
+    "billing_strategy_desc": "_exakt_ rechnet genau die Lieferungen ab, die im jeweiligen Zyklus liegen. _geglättet_ verteilt den Gesamtbetrag gleichmäßig über alle Zyklen der Vertragslaufzeit. _geglättet_ ist zur Zeit nicht verfügbar.",
     "strategy_exact": "Exakt pro Zeitraum (tatsächliche Lieferungen zählen)",
     "strategy_smoothed": "Geglättet über die gesamte Vertragslaufzeit",
     "strategy_smoothed_disabled": "Geglättet über die gesamte Vertragslaufzeit (vorübergehend nicht verfügbar)",

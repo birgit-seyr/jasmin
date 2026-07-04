@@ -222,6 +222,73 @@ class TestCreateMovements:
         assert len(remainder) == 1
         assert remainder[0].amount == Decimal("-7")
 
+    def _totals_by_storage(self, movements):
+        totals: dict = {}
+        for m in movements:
+            totals[m.storage_id] = totals.get(m.storage_id, Decimal("0")) + m.amount
+        return totals
+
+    def test_sibling_sources_share_per_storage_stock(self, tenant):
+        """goods-flow audit #3: two sources for the same (article, unit, size) in
+        the SAME snapshot draw from ONE shared per-storage pool. Storage X holds
+        10; two demands of 6 → X depletes to 0 (−10 total, drawn once) and the
+        uncovered 2 spills to short-term (−2). Before the fix each sibling
+        allocated against the full 10 → −6/−6 on X (a phantom −2 parked there)."""
+        short = StorageFactory(is_short_term_harvest_storage=True)
+        x = StorageFactory()
+        article = ShareArticleFactory()
+        sc = ShareContentFactory(share_article=article)
+
+        stocks = [{"storage_id": x.pk, "amount": Decimal("10"), "is_finalized": False}]
+
+        with patch(
+            "apps.commissioning.services.movements.calculate_current_stock_for_allocation",
+            return_value=stocks,
+        ), patch(
+            "apps.commissioning.services.snapshot_service.SnapshotService.cascade_for_movements",
+        ):
+            movements = create_movements(
+                [
+                    self._make_source(article, sc, amount=Decimal("6")),
+                    self._make_source(article, sc, amount=Decimal("6")),
+                ]
+            )
+
+        totals = self._totals_by_storage(movements)
+        assert totals[x.pk] == Decimal("-10")  # storage X drawn ONCE, to empty
+        assert totals[short.pk] == Decimal("-2")  # uncovered remainder spills
+        assert sum(m.amount for m in movements) == Decimal("-12")  # full demand
+
+    def test_sources_in_different_snapshots_do_not_share_stock(self, tenant):
+        """Scoping guard: the shared counter is keyed by snapshot, so two sources
+        for the same article in DIFFERENT snapshots (here different packing days)
+        each draw against their OWN per-storage pool — no cross-snapshot
+        depletion, no spurious short-term spill."""
+        short = StorageFactory(is_short_term_harvest_storage=True)
+        x = StorageFactory()
+        article = ShareArticleFactory()
+        sc = ShareContentFactory(share_article=article)
+
+        stocks = [{"storage_id": x.pk, "amount": Decimal("10"), "is_finalized": False}]
+
+        with patch(
+            "apps.commissioning.services.movements.calculate_current_stock_for_allocation",
+            return_value=stocks,
+        ), patch(
+            "apps.commissioning.services.snapshot_service.SnapshotService.cascade_for_movements",
+        ):
+            movements = create_movements(
+                [
+                    self._make_source(article, sc, amount=Decimal("6"), packing_day=1),
+                    self._make_source(article, sc, amount=Decimal("6"), packing_day=2),
+                ]
+            )
+
+        totals = self._totals_by_storage(movements)
+        # Each source independently takes 6 from X; nothing spills to short-term.
+        assert totals[x.pk] == Decimal("-12")
+        assert short.pk not in totals
+
     def test_returns_empty_for_no_sources(self, tenant):
         result = create_movements([])
         assert result == []

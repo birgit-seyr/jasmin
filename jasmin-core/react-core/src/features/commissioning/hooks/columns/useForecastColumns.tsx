@@ -76,7 +76,7 @@ export function useForecastColumns({
       ...amountUnitSizeColumns,
       ...(fruit_and_veg_shares_are_separate
         ? [
-            ...(shareTypeVariationsCount > 1
+            ...(shareTypeVariationsCount > 0
               ? [
                   {
                     title: (
@@ -84,7 +84,7 @@ export function useForecastColumns({
                         {t("commissioning.for_veg_shares")}
                       </span>
                     ),
-                    key: "for_shares",
+                    key: "for_veg_shares",
                     className: "column-group-start",
                     children: [
                       {
@@ -110,7 +110,7 @@ export function useForecastColumns({
                     className: "column-group-start",
                   },
                 ]),
-            ...(shareTypeVariationsFruitsCount > 1
+            ...(shareTypeVariationsFruitsCount > 0
               ? [
                   {
                     title: (
@@ -118,7 +118,7 @@ export function useForecastColumns({
                         {t("commissioning.for_fruit_shares")}
                       </span>
                     ),
-                    key: "for_shares",
+                    key: "for_fruit_shares",
                     className: "column-group-start",
                     children: [
                       {

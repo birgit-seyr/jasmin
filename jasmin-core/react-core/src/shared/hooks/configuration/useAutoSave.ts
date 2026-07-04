@@ -80,6 +80,14 @@ export function useAutoSave(opts: UseAutoSaveOptions): UseAutoSaveReturn {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [delay, setDelay] = useState(debounceMs);
+  // Monotonic counter bumped on EVERY ``markChanged``. It's what makes the
+  // debounce actually reset per keystroke: on the 2nd+ keystroke ``hasChanges``
+  // (already true) and ``delay`` (already the debounce window) don't change, so
+  // without this the arming effect's deps would be identical, React would skip
+  // the effect, and the timer from the FIRST keystroke would fire mid-typing.
+  // Bumping this each change re-runs the effect → clears the pending timer →
+  // re-arms it, so the save only fires once typing pauses for the full window.
+  const [changeTick, setChangeTick] = useState(0);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep a ref to the latest ``save`` so the autosave effect doesn't
@@ -119,6 +127,9 @@ export function useAutoSave(opts: UseAutoSaveOptions): UseAutoSaveReturn {
       // A fresh edit clears any prior failure and re-arms the autosave.
       setSaveError(false);
       setDelay(fieldType && IMMEDIATE_TYPES.has(fieldType) ? 0 : debounceMs);
+      // Always changes → guarantees the debounce effect re-runs and RESTARTS
+      // the timer, even when hasChanges/delay are unchanged (rapid typing).
+      setChangeTick((n) => n + 1);
     },
     [debounceMs],
   );
@@ -132,7 +143,8 @@ export function useAutoSave(opts: UseAutoSaveOptions): UseAutoSaveReturn {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [enabled, hasChanges, saving, saveError, delay, flush]);
+    // ``changeTick`` is included so every keystroke re-arms (resets) the timer.
+  }, [enabled, hasChanges, saving, saveError, delay, changeTick, flush]);
 
   return { hasChanges, saving, saveError, markChanged, flush };
 }

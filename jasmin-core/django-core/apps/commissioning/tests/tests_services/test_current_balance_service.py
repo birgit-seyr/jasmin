@@ -248,3 +248,114 @@ class TestCascadeHookUpdatesBalance:
             share_article=article, unit="KG", size="M", storage=storage
         )
         assert row.balance == Decimal("8.000")
+
+
+@pytest.mark.django_db
+class TestSnapshotDrift:
+    """Audit #7: reconcile must also detect + repair corrupt ``StockSnapshot``
+    baselines, not just the current-balance projection — a snapshot wrong at its
+    own date re-drifts every future ``from_ledger=False`` recompute and every
+    historical ``compute_balance(up_to=...)`` even when the current total is fine.
+    """
+
+    def _corrupt_fixture(self, article, storage):
+        # True ledger: +10 @ 05-01, +5 @ 05-10 → total 15; truth @ 05-05 is 10.
+        for day, amt in ((1, "10.000"), (10, "5.000")):
+            MovementShareArticleFactory(
+                share_article=article,
+                storage=storage,
+                unit="KG",
+                size="M",
+                amount=Decimal(amt),
+                date=_ts(2026, 5, day),
+                movement_type="INVENTORY",
+            )
+        # A CORRUPT snapshot: claims 100 @ 05-05 (truth there is 10).
+        StockSnapshot.objects.create(
+            share_article=article,
+            unit="KG",
+            size="M",
+            storage=storage,
+            snapshot_date=_ts(2026, 5, 5),
+            balance=Decimal("100.000"),
+        )
+
+    def test_get_snapshot_drift_flags_corrupt_snapshot(self, tenant):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        self._corrupt_fixture(article, storage)
+
+        drift = CurrentBalanceService.get_snapshot_drift()
+        assert len(drift) == 1
+        assert drift[0]["stored"] == Decimal("100.000")
+        assert drift[0]["expected"] == Decimal("10.000")  # true ledger @ 05-05
+        assert drift[0]["entity"] == (str(article.id), "KG", "M", str(storage.id))
+
+    def test_no_snapshot_drift_when_consistent(self, tenant):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        MovementShareArticleFactory(
+            share_article=article,
+            storage=storage,
+            unit="KG",
+            size="M",
+            amount=Decimal("10.000"),
+            date=_ts(2026, 5, 1),
+            movement_type="INVENTORY",
+        )
+        SnapshotService.create_snapshot_for_entity(
+            article.id, "KG", "M", storage.id, snapshot_date=_ts(2026, 5, 5)
+        )
+        assert CurrentBalanceService.get_snapshot_drift() == []
+
+    def test_repair_clears_drift_and_survives_recompute(self, tenant):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        self._corrupt_fixture(article, storage)
+        # The corrupt baseline makes a snapshot-based recompute wrong (100 + 5).
+        assert SnapshotService.compute_balance(
+            article.id, "KG", "M", storage.id
+        ) == Decimal("105.000")
+
+        CurrentBalanceService.repair_snapshots_for_entity(
+            article.id, "KG", "M", storage.id
+        )
+
+        assert CurrentBalanceService.get_snapshot_drift() == []
+        # A subsequent snapshot-baselined recompute no longer re-drifts.
+        assert SnapshotService.compute_balance(
+            article.id, "KG", "M", storage.id
+        ) == Decimal("15.000")
+        assert CurrentBalanceService.get_drift() == []
+
+    def test_repair_fixes_historical_query(self, tenant):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        self._corrupt_fixture(article, storage)
+        # Before: a historical query at 05-06 reads the corrupt 05-05 baseline.
+        assert SnapshotService.compute_balance(
+            article.id, "KG", "M", storage.id, up_to=_ts(2026, 5, 6)
+        ) == Decimal("100.000")
+
+        CurrentBalanceService.repair_snapshots_for_entity(
+            article.id, "KG", "M", storage.id
+        )
+
+        # After: no snapshot at/before 05-06 → falls back to the raw ledger → 10.
+        assert SnapshotService.compute_balance(
+            article.id, "KG", "M", storage.id, up_to=_ts(2026, 5, 6)
+        ) == Decimal("10.000")
+
+    def test_reconcile_command_fix_repairs_snapshots(self, tenant):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        self._corrupt_fixture(article, storage)
+        assert CurrentBalanceService.get_snapshot_drift()  # drift present
+
+        call_command("reconcile_current_stock", "--fix", stdout=StringIO())
+
+        assert CurrentBalanceService.get_snapshot_drift() == []

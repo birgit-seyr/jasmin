@@ -9,6 +9,7 @@ import type { StatusSquareVariant } from "@shared/ui";
 import { useDateFormat } from "@hooks/index";
 import PastSubscriptionsModal from "../modals/PastSubscriptionsModal";
 import SubscriptionDetailModal from "../modals/SubscriptionDetailModal";
+import { useShareTypeVariationSizeOptions } from "@hooks/useShareTypeVariationSizeOptions";
 
 const { Text } = Typography;
 
@@ -60,6 +61,8 @@ const ActiveSubscriptionsCard = ({
     return { active, coming, pending, past };
   }, [subscriptions]);
 
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
+
   const rowTitle = (variant: StatusSquareVariant) => {
     if (variant === "active") return t("members.currently_active");
     if (variant === "upcoming") return t("members.future_active");
@@ -102,7 +105,8 @@ const ActiveSubscriptionsCard = ({
             </Tag>
           )}
           <Text strong>
-            {sub.share_type_name} {sub.share_type_variation_size}
+            {sub.share_type_name}{" "}
+            {getShareTypeVariationSizeLabel(sub.share_type_variation_size ?? "")}
           </Text>
           {total > 0 && (
             <Text style={{ color: "var(--color-joker)", fontSize: 12 }}>

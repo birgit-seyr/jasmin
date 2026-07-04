@@ -137,10 +137,26 @@ function ShareTypeTable({
     [shareOption],
   );
 
+  // HARVEST_SHARE and HARVEST_SHARE_FRUIT are the primary harvest shares — they
+  // can never be an "additional" share type (an add-on like eggs/bread), so lock
+  // that checkbox in those two tables (for existing AND new rows). Every other
+  // share_option keeps the normal row-status gate (``isFieldDisabled``).
+  const effectiveColumns = useMemo(() => {
+    const lockAdditional =
+      shareOption === ShareTypeEnum.HARVEST_SHARE ||
+      shareOption === ShareTypeEnum.HARVEST_SHARE_FRUIT;
+    if (!lockAdditional) return columns;
+    return columns.map((col) =>
+      col.key === "is_additional_share_type"
+        ? { ...col, disabled: true }
+        : col,
+    );
+  }, [columns, shareOption]);
+
   return (
     <>
       <EditableTable
-        columns={columns}
+        columns={effectiveColumns}
         apiFunctions={apiFunctions}
         initialData={data}
         loading={isLoading}
@@ -165,6 +181,7 @@ interface ShareTypeVariationModalState {
 
 export default function ConfigurationSubscriptions() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
   const {
     activeShareOptions: fetchedActiveShareOptions,
@@ -237,7 +254,14 @@ export default function ConfigurationSubscriptions() {
       shareType: null,
       shareTypeName: "",
     });
-  }, []);
+    // Reload the share-types table(s) on close — editing a share type's
+    // variations in the modal can change what the parent table derives (e.g.
+    // the "active sizes" / sizes-in-use column). The base key prefix-matches
+    // every per-share_option ShareTypeTable list query.
+    queryClient.invalidateQueries({
+      queryKey: getCommissioningShareTypesListQueryKey(),
+    });
+  }, [queryClient]);
 
   const handleSaveShareTypeVariations = useCallback(() => {
     closeShareTypeVariationModal();
@@ -280,20 +304,22 @@ export default function ConfigurationSubscriptions() {
             { label: t("commissioning.weekly"), value: "WEEKLY" },
             { label: t("commissioning.odd_weeks"), value: "ODD_WEEKS" },
             { label: t("commissioning.even_weeks"), value: "EVEN_WEEKS" },
-            { label: t("commissioning.monthly"), value: "MONTHLY" },
-            { label: t("commissioning.quarterly"), value: "QUARTERLY" },
-            { label: t("commissioning.half_yearly"), value: "HALF_YEARLY" },
-            { label: t("commissioning.yearly"), value: "YEARLY" },
+            {
+              label: t("commissioning.all_three_weeks"),
+              value: "ALL_THREE_WEEKS",
+            },
+            {
+              label: t("commissioning.all_four_weeks"),
+              value: "ALL_FOUR_WEEKS",
+            },
           ],
           render: (value: string) => {
             const option: Record<string, string> = {
               WEEKLY: t("commissioning.weekly"),
               ODD_WEEKS: t("commissioning.odd_weeks"),
               EVEN_WEEKS: t("commissioning.even_weeks"),
-              MONTHLY: t("commissioning.monthly"),
-              QUARTERLY: t("commissioning.quarterly"),
-              HALF_YEARLY: t("commissioning.half_yearly"),
-              YEARLY: t("commissioning.yearly"),
+              ALL_THREE_WEEKS: t("commissioning.all_three_weeks"),
+              ALL_FOUR_WEEKS: t("commissioning.all_four_weeks"),
             };
             return option[value] || value;
           },

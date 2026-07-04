@@ -1,7 +1,7 @@
 import { Empty, List, Modal, Space, Tag, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import type { Subscription } from "@shared/api/generated/models";
-import { useDateFormat } from "@hooks/index";
+import { useDateFormat, useShareTypeVariationSizeOptions } from "@hooks/index";
 
 const { Text } = Typography;
 
@@ -24,6 +24,7 @@ export default function PastSubscriptionsModal({
 }: PastSubscriptionsModalProps) {
   const { t } = useTranslation();
   const { formatDate } = useDateFormat();
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
 
   return (
     <Modal
@@ -56,7 +57,10 @@ export default function PastSubscriptionsModal({
                     <Tag style={{ margin: 0 }}>{sub.quantity}×</Tag>
                   )}
                   <Text strong>
-                    {sub.share_type_name} {sub.share_type_variation_size}
+                    {sub.share_type_name}{" "}
+                    {getShareTypeVariationSizeLabel(
+                      sub.share_type_variation_size ?? "",
+                    )}
                   </Text>
                   {total > 0 && (
                     <Text style={{ color: "var(--color-joker)", fontSize: 12 }}>

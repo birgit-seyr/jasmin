@@ -21,13 +21,17 @@ class CultivationOriginOptions(models.TextChoices):
 
 
 class DeliveryCycleOptions(models.TextChoices):
+    # Week-stride cadences only — every value maps to a well-defined set of
+    # delivery weeks. ODD/EVEN are ISO-week parity (biweekly load-split);
+    # ALL_THREE/ALL_FOUR are "every Nth delivery week" from the subscription's
+    # start. Month-based cycles were removed: "monthly" can't be materialised
+    # without a day-of-month / week-of-month rule, so it needs its own model
+    # field before it can come back (see docs/todos).
     WEEKLY = "WEEKLY"
     ODD_WEEKS = "ODD_WEEKS"
     EVEN_WEEKS = "EVEN_WEEKS"
-    MONTHLY = "MONTHLY"
-    QUARTERLY = "QUARTERLY"
-    HALF_YEARLY = "HALF_YEARLY"
-    YEARLY = "YEARLY"
+    ALL_THREE_WEEKS = "ALL_THREE_WEEKS"
+    ALL_FOUR_WEEKS = "ALL_FOUR_WEEKS"
 
 
 class SizeOptions(models.TextChoices):

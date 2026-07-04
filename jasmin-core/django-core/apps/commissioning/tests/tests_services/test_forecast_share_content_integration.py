@@ -745,7 +745,9 @@ class TestUpdateRecomputesAffectedShares:
         update_data = _forecast_data(article, stv)
         update_data["amount"] = 200
 
-        with patch("apps.commissioning.tasks.recompute_shares_async") as mock_recompute:
+        with patch(
+            "apps.commissioning.services.forecast_service.recompute_shares"
+        ) as mock_recompute:
             with _patch_totals(totals):
                 with django_capture_on_commit_callbacks(execute=True):
                     svc.update_forecast_with_related_objects(forecast, update_data)
@@ -756,7 +758,7 @@ class TestUpdateRecomputesAffectedShares:
             )
             scheduled_ids: set[str] = set()
             for call in mock_recompute.call_args_list:
-                scheduled_ids.update(call.kwargs["share_ids"])
+                scheduled_ids.update(call.args[0])
             assert surviving_share_ids <= scheduled_ids
 
     def test_heavy_update_does_not_predelete_harvest_theoreticals(
@@ -806,7 +808,7 @@ class TestUpdateRecomputesAffectedShares:
         # movements) must still be present, NOT pre-deleted by the update.
         update_data = _forecast_data(article, stv)
         update_data["amount"] = 200
-        with patch("apps.commissioning.tasks.recompute_shares_async"):
+        with patch("apps.commissioning.services.forecast_service.recompute_shares"):
             with _patch_totals(totals):
                 with django_capture_on_commit_callbacks(execute=True):
                     svc.update_forecast_with_related_objects(forecast, update_data)
@@ -833,7 +835,9 @@ class TestUpdateRecomputesAffectedShares:
                 _forecast_data(article, stv)
             )
 
-        with patch("apps.commissioning.tasks.recompute_shares_async") as mock_recompute:
+        with patch(
+            "apps.commissioning.services.forecast_service.recompute_shares"
+        ) as mock_recompute:
             with django_capture_on_commit_callbacks(execute=True):
                 svc.update_forecast_with_related_objects(
                     forecast, {"note": "just a note"}
@@ -867,7 +871,7 @@ class TestAdoptedForecastlessSharesAreRecomputed:
     def _scheduled_ids(mock_recompute) -> set[str]:
         scheduled: set[str] = set()
         for call in mock_recompute.call_args_list:
-            scheduled.update(call.kwargs["share_ids"])
+            scheduled.update(call.args[0])
         return scheduled
 
     def test_create_recomputes_adopted_forecastless_share(
@@ -894,7 +898,9 @@ class TestAdoptedForecastlessSharesAreRecomputed:
         assert not TheoreticalHarvest.objects.filter(share_content=sc).exists()
 
         svc = ForecastService()
-        with patch("apps.commissioning.tasks.recompute_shares_async") as mock_recompute:
+        with patch(
+            "apps.commissioning.services.forecast_service.recompute_shares"
+        ) as mock_recompute:
             with _patch_totals(totals):
                 with django_capture_on_commit_callbacks(execute=True):
                     forecast = svc.create_forecast_with_related_objects(
@@ -945,7 +951,9 @@ class TestAdoptedForecastlessSharesAreRecomputed:
         # to ``share2`` and adopts the pre-existing forecastless ``sc2``.
         update_data = _forecast_data(article, stv)
         update_data[f"variation_{stv2.pk}"] = True
-        with patch("apps.commissioning.tasks.recompute_shares_async") as mock_recompute:
+        with patch(
+            "apps.commissioning.services.forecast_service.recompute_shares"
+        ) as mock_recompute:
             with _patch_totals(totals):
                 with django_capture_on_commit_callbacks(execute=True):
                     svc.update_forecast_with_related_objects(forecast, update_data)
@@ -982,7 +990,7 @@ class TestAdoptedForecastlessSharesAreRecomputed:
         svc = ForecastService()
         # The create defers its recompute; suppress the deferred task so we can
         # drive the recompute deterministically below.
-        with patch("apps.commissioning.tasks.recompute_shares_async"):
+        with patch("apps.commissioning.services.forecast_service.recompute_shares"):
             with _patch_totals(totals):
                 forecast = svc.create_forecast_with_related_objects(
                     _forecast_data(article, stv)

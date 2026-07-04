@@ -7,7 +7,8 @@ import { useCommissioningShareDeliveryVariationDeliveryCountsList } from "@share
 import type { CommissioningShareDeliveryVariationDeliveryCountsListParams } from "@shared/api/generated/models";
 import { ShareTypeSelector, WeekSelector } from "@shared/selectors";
 import { ExplainerText, LabeledSwitch } from "@shared/ui";
-import { dayAmountKey, usePlanningAxes } from '@features/commissioning/hooks';
+import { dayAmountKey, usePlanningAxes } from "@features/commissioning/hooks";
+import { useShareTypeVariationSizeOptions } from "@hooks/useShareTypeVariationSizeOptions";
 
 const currentYear = dayjs().year();
 const currentWeek = dayjs().isoWeek();
@@ -38,6 +39,7 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
   const [showDeliveryStations, setShowDeliveryStations] = useState(false);
 
   const { t } = useTranslation();
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
 
   // Day axis via the shared planning-axes hook (single source of truth — see
   // docs/day-variation-columns-audit.md). No shareOption is passed, so the
@@ -102,6 +104,7 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
         align: "center",
         width: "5em",
         fixed: "left",
+        render: (value) => getShareTypeVariationSizeLabel(value),
       },
     ];
 
@@ -184,7 +187,13 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
     } else {
       return [...baseColumns, ...deliveryDayColumns];
     }
-  }, [shareDeliveryDays, t, showTours, showDeliveryStations]);
+  }, [
+    shareDeliveryDays,
+    t,
+    showTours,
+    showDeliveryStations,
+    getShareTypeVariationSizeLabel,
+  ]);
 
   return (
     <div>

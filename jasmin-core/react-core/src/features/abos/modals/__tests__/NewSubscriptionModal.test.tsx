@@ -4,10 +4,11 @@
  * The modal lets a MEMBER set their own ``price_per_delivery`` only when the
  * tenant has ``allows_solidarity_pricing`` on; otherwise the field is disabled
  * and the price is NOT sent (the backend forces the reference price). The OFFICE
- * path always sends the price. The audit flagged zero coverage for this gate, so
- * a refactor of the ``isMemberOnly && !allowsSolidarity`` condition (or the
- * spread-when-on payload) could silently let a member submit a custom price with
- * solidarity off. These tests pin the user-visible gate.
+ * path always sends the price (and office can always override it). The audit
+ * flagged zero coverage for this gate, so a refactor of the
+ * ``isMemberOnly && !allowsSolidarity`` condition (or the spread-when-on
+ * payload) could silently let a member submit a custom price with solidarity
+ * off. These tests pin the user-visible gate.
  *
  * Boundary mocked: every ``@hooks/index`` hook (the modal's data layer),
  * ``useRoles`` (member vs office), the two generated create fns, ``notify`` and
@@ -312,7 +313,7 @@ describe("NewSubscriptionModal — solidarity price gating", () => {
 
   it("office path: price field enabled and always sent, regardless of toggle", async () => {
     rolesMock.mockReturnValue({ isMemberOnly: false });
-    // Solidarity OFF — office still sends the price.
+    // Solidarity OFF — office can still override + always sends the price.
     getSettingMock.mockImplementation((k: string, fb?: unknown) =>
       k === "allows_solidarity_pricing" ? false : fb,
     );

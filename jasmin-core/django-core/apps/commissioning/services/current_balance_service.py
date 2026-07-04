@@ -216,3 +216,88 @@ class CurrentBalanceService:
             if key not in seen and expected != Decimal("0"):
                 drift.append({"entity": key, "stored": None, "expected": expected})
         return drift
+
+    @staticmethod
+    def get_snapshot_drift() -> list[dict]:
+        """Compare every ``StockSnapshot``'s stored balance against the raw ledger
+        sum up to its ``snapshot_date`` (goods-flow audit #7).
+
+        ``get_drift`` only checks the CURRENT total, so a snapshot that is wrong at
+        its own date but masked by a correct LATER snapshot (or whose error nets
+        out of the current total) is invisible to it — yet it still poisons every
+        ``compute_balance(from_ledger=False)`` that baselines off it and every
+        historical ``compute_balance(up_to=...)`` between it and the next snapshot.
+        Reconcile was snapshot-blind: ``--fix`` rewrote only ``CurrentStockBalance``
+        and left the corrupt baseline in place to re-drift on the next movement.
+
+        Returns one entry per drifted snapshot: ``{"entity", "snapshot_date",
+        "stored", "expected"}``. One aggregate per snapshot — fine for an
+        out-of-band maintenance command.
+        """
+        from decimal import Decimal
+
+        from django.db.models import Sum
+
+        from ..models import MovementShareArticle, StockSnapshot
+
+        drift: list[dict] = []
+        for snap in StockSnapshot.objects.iterator():
+            expected = MovementShareArticle.objects.filter(
+                share_article_id=snap.share_article_id,
+                unit=snap.unit,
+                size=snap.size,
+                storage_id=snap.storage_id,
+                date__lte=snap.snapshot_date,
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+            if expected != snap.balance:
+                drift.append(
+                    {
+                        "entity": _normalize(
+                            snap.share_article_id,
+                            snap.unit,
+                            snap.size,
+                            snap.storage_id,
+                        ),
+                        "snapshot_date": snap.snapshot_date,
+                        "stored": snap.balance,
+                        "expected": expected,
+                    }
+                )
+        return drift
+
+    @staticmethod
+    @transaction.atomic
+    def repair_snapshots_for_entity(
+        share_article_id: str,
+        unit: str | None,
+        size: str | None,
+        storage_id: str | None,
+    ) -> None:
+        """Rebuild an entity's snapshots from the ledger (goods-flow audit #7).
+
+        DROP ALL of the entity's snapshots first — with none present,
+        ``compute_balance`` falls back to the full raw-ledger sum and cannot
+        re-read a corrupt baseline — then reseed ONE fresh ``now`` snapshot (its
+        balance recomputed from the ledger) so current reads stay O(1), and
+        recompute the current balance. Historical ``compute_balance(up_to=<past>)``
+        queries find no snapshot at/ before that past date and likewise fall back
+        to the ledger, so they are correct too. Runs under the entity's
+        ``current_balance`` lock so it serializes with concurrent cascades; keeping
+        the repair here (not in ``recompute_for_entity``) leaves that hot path's
+        single raw-ledger responsibility untouched.
+        """
+        from core.db_locks import acquire_advisory_xact_lock
+
+        acquire_advisory_xact_lock(
+            f"current_balance:{share_article_id}:{unit or ''}:{size or ''}"
+            f":{storage_id or ''}"
+        )
+        SnapshotService.delete_snapshots_for_entity(
+            share_article_id, unit, size, storage_id
+        )
+        SnapshotService.create_snapshot_for_entity(
+            share_article_id, unit, size, storage_id
+        )
+        CurrentBalanceService.recompute_for_entity(
+            share_article_id, unit, size, storage_id, from_ledger=True
+        )

@@ -31,8 +31,17 @@ from ..models import (
     Subscription,
 )
 from .capacity_reservation_service import CapacityReservationService
+from .delivery_cycle import filter_weeks_by_delivery_cycle
 
 logger = logging.getLogger(__name__)
+
+
+def _delivery_cycle_of(subscription: Subscription) -> str | None:
+    """The ``ShareType.delivery_cycle`` governing this subscription's cadence,
+    or ``None`` (→ weekly) when any link in the chain is missing."""
+    variation = getattr(subscription, "share_type_variation", None)
+    share_type = getattr(variation, "share_type", None)
+    return getattr(share_type, "delivery_cycle", None)
 
 
 class SubscriptionService:
@@ -391,9 +400,15 @@ class SubscriptionService:
         start_date: datetime.date,
         end_date: datetime.date,
         delivery_day: int,
+        delivery_cycle: str | None = None,
     ) -> list[tuple[int, int]]:
         """Return ``(year, isoweek)`` tuples between *start_date* and *end_date*
         that contain the given *delivery_day* (0=Monday … 5=Saturday).
+
+        When *delivery_cycle* (``ShareType.delivery_cycle``) is given, the full
+        weekly cadence is reduced to that cycle's delivery weeks: WEEKLY/blank →
+        every week, ODD_WEEKS/EVEN_WEEKS → matching ISO-week parity, and the
+        month-based cycles → every Nth week. See services/delivery_cycle.py.
         """
         # Convert delivery_day (0-5) to isoweekday (1-6)
         iso_delivery_day = delivery_day + 1
@@ -410,7 +425,9 @@ class SubscriptionService:
             delivery_weeks.append((year, week))
             current_date += timedelta(days=7)
 
-        return delivery_weeks
+        # Reduce the full weekly cadence to the configured cycle's delivery weeks
+        # (WEEKLY keeps all; ODD/EVEN by parity; ALL_THREE/ALL_FOUR by stride).
+        return filter_weeks_by_delivery_cycle(delivery_weeks, delivery_cycle)
 
     @staticmethod
     def resolve_station_days_by_week(
@@ -436,7 +453,10 @@ class SubscriptionService:
 
         day_number = default_delivery_station_day.delivery_day.day_number
         year_weeks = SubscriptionService._get_delivery_weeks(
-            subscription.valid_from, subscription.valid_until, day_number
+            subscription.valid_from,
+            subscription.valid_until,
+            day_number,
+            _delivery_cycle_of(subscription),
         )
         if not year_weeks:
             return {}
@@ -506,6 +526,7 @@ class SubscriptionService:
             subscription.valid_from,
             subscription.valid_until,
             delivery_day_obj.day_number,
+            _delivery_cycle_of(subscription),
         )
 
         if not delivery_weeks:

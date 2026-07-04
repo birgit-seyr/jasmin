@@ -154,11 +154,10 @@ class TestForecastUpdatePerf:
     def test_amount_update_routes_to_heavy_path(self, tenant):
         """Sanity check that ``_is_light_update`` rejects an amount edit.
 
-        Pre-2026-06-08 the heavy path was wall-clock-detectable
-        (~600 ms) so timing was a fine proxy for "the heavy path
-        ran". Now that ``recompute_shares`` is deferred to a Huey
-        task, the heavy path itself runs in <20 ms — the wall-clock
-        check no longer separates light from heavy.
+        The heavy path runs ``recompute_shares`` synchronously, so its
+        wall-clock cost varies with the fixture (number of variations /
+        deliveries) — a timing threshold is a noisy proxy for "the heavy
+        path ran".
 
         Assert directly on the dispatch decision instead: the
         contract is "amount changes MUST take the heavy path so
@@ -194,8 +193,7 @@ class TestForecastUpdatePerf:
         the downstream theoreticals get rebuilt.
 
         Same rationale as ``test_amount_update_routes_to_heavy_path``:
-        wall-clock is no longer a reliable signal post-Huey-defer; we
-        assert on the dispatch decision directly.
+        we assert on the dispatch decision directly rather than timing.
         """
         forecast, _ = self._make_forecast_with_variations(variation_count=2)
         new_variation = ShareTypeVariationFactory()
@@ -213,58 +211,6 @@ class TestForecastUpdatePerf:
             "Did ``_is_light_update`` accidentally treat a NEW "
             "variation flag as a no-op? That would leave ShareContent "
             "rows out of sync with ForecastShareTypeVariation."
-        )
-
-    def test_create_returns_fast_with_recompute_deferred(self, tenant):
-        """CREATE path returns in <250 ms because ``recompute_shares``
-        is deferred to a Huey task (see Option B in
-        docs/todos/perf-audit-editabletables.md).
-
-        Pre-defer: ~700 ms (recompute fired synchronously at the end of
-        ``_create_or_update_share_contents``). Post-defer: the save
-        commits + enqueues + returns; the actual recompute runs on the
-        Huey worker.
-
-        Budget is loose (~3× the measured value on dev) so legitimate
-        prefetch / bulk_create growth doesn't trip it, but a regression
-        that re-introduces the synchronous recompute call here would
-        balloon back to ~700 ms and fail loudly.
-
-        We don't assert that recompute didn't run at all — under
-        ``HUEY.immediate = False`` (the test default) Huey tasks are
-        enqueued, never executed — so the recompute side-effects don't
-        happen in this test. A separate dedicated test should verify
-        the enqueue payload if we ever want to lock down the contract.
-        """
-        article = ShareArticleFactory()
-        storage = StorageFactory(is_short_term_harvest_storage=True)
-        variation = ShareTypeVariationFactory()
-
-        svc = ForecastService()
-
-        elapsed = _measure_ms(
-            lambda: svc.create_forecast_with_related_objects(
-                {
-                    "amount": Decimal("100"),
-                    "unit": "KG",
-                    "size": "M",
-                    "year": 2026,
-                    "delivery_week": 15,
-                    "share_article": article,
-                    "storage": storage,
-                    f"variation_{variation.pk}": True,
-                }
-            )
-        )
-
-        assert elapsed < 250, (
-            f"forecast CREATE took {elapsed:.0f}ms, expected <250ms. "
-            f"A change must have re-introduced a synchronous "
-            f"recompute_shares call inside "
-            f"``_create_or_update_share_contents`` — verify it's still "
-            f"wrapped in ``transaction.on_commit(lambda: "
-            f"recompute_shares_async(...))`` instead of being called "
-            f"directly."
         )
 
     def test_re_asserted_relation_flags_stay_on_light_path(self, tenant):

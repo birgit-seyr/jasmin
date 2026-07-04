@@ -10,8 +10,8 @@ export function paymentCycleLabel(t: TFunction, code?: string | null): string {
 }
 
 /**
- * Localize a DeliveryCycleOptions code (WEEKLY, ODD_WEEKS, EVEN_WEEKS, MONTHLY,
- * QUARTERLY, HALF_YEARLY, YEARLY) via the shared `commissioning.*` keys.
+ * Localize a DeliveryCycleOptions code (WEEKLY, ODD_WEEKS, EVEN_WEEKS,
+ * ALL_THREE_WEEKS, ALL_FOUR_WEEKS) via the shared `commissioning.*` keys.
  */
 export function deliveryCycleLabel(t: TFunction, code?: string | null): string {
   if (!code) return "—";

@@ -12,6 +12,7 @@ Both sources follow the same algorithm:
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from decimal import Decimal
 from typing import Any
 
@@ -196,16 +197,28 @@ def create_movements(
 
     stock_map_by_snapshot: dict[tuple[int, int, int], dict] = {}
     stock_cache: dict[int, list[dict[str, Any]]] = {}
+    # Remember each source's snapshot key so Phase 2 can scope the shared
+    # per-storage consumption counter to the exact snapshot (goods-flow audit #3).
+    snapshot_key_by_src: dict[int, tuple[int, int, int]] = {}
     all_storage_ids: set[Any] = set()
     snapshot_entity_filter = {"share_article_id": article_ids} if article_ids else None
 
     for src in sources:
-        snapshot_key = (src.year, src.delivery_week, src.packing_day)
+        # As-of alignment (goods-flow audit #8): the movement is DATED at the
+        # week-rollback week (``_compute_packing_datetime`` → the previous ISO
+        # week when ``packing_day > delivery_day``), so its allocation stock
+        # must be read as-of that SAME rolled-back week. Reading at the delivery
+        # week (the old behaviour) pulls in 7 extra days of movements and skews
+        # the per-storage allocation.
+        rolled_year, rolled_week = compute_rolled_back_week(
+            src.year, src.delivery_week, src.packing_day, src.delivery_day
+        )
+        snapshot_key = (rolled_year, rolled_week, src.packing_day)
         stock_map = stock_map_by_snapshot.get(snapshot_key)
         if stock_map is None:
             stock_map = StockService.get_theoretical_current_stock(
-                src.year,
-                src.delivery_week,
+                rolled_year,
+                rolled_week,
                 src.packing_day,
                 storage=None,
                 entity_filter=snapshot_entity_filter,
@@ -215,12 +228,13 @@ def create_movements(
             share_article=src.share_article,
             unit=src.unit,
             size=src.size,
-            year=src.year,
-            delivery_week=src.delivery_week,
+            year=rolled_year,
+            delivery_week=rolled_week,
             day_number=src.packing_day,
             stock_map=stock_map,
         )
         stock_cache[id(src)] = stocks
+        snapshot_key_by_src[id(src)] = snapshot_key
         for s in stocks:
             if s["storage_id"]:
                 all_storage_ids.add(s["storage_id"])
@@ -233,6 +247,15 @@ def create_movements(
 
     # ── Build movements ──
     movements_to_create: list[MovementShareArticle] = []
+
+    # Shared per-storage availability across sibling sources: two sources that
+    # read the SAME snapshot AND the same (article, unit, size, storage) draw
+    # from the SAME physical stock, so decrement it as each consumes — otherwise
+    # every sibling allocates against the FULL amount and parks a phantom deficit
+    # on that storage (goods-flow audit #3). Keyed by the snapshot
+    # (rolled_year, rolled_week, packing_day) + (article, unit, size, storage) so
+    # it never bleeds across weeks/snapshots. Sources draw in list order.
+    consumed_by_key: dict[tuple, Decimal] = defaultdict(Decimal)
 
     for src in sources:
         packing_dt = _compute_packing_datetime(
@@ -266,15 +289,25 @@ def create_movements(
             continue
 
         remaining = total_amount
+        snapshot_key = snapshot_key_by_src[id(src)]
         for stock in available_stocks:
             if remaining <= 0:
                 break
 
-            stock_amount = Decimal(str(stock["amount"]))
-            take = min(remaining, stock_amount)
-            storage_obj = (
-                storage_by_id.get(stock["storage_id"]) if stock["storage_id"] else None
+            storage_id = stock["storage_id"]
+            key = (
+                *snapshot_key,
+                src.share_article.id,
+                src.unit,
+                src.size,
+                storage_id,
             )
+            # What's left on this storage after earlier siblings drew from it.
+            stock_amount = Decimal(str(stock["amount"])) - consumed_by_key[key]
+            if stock_amount <= 0:
+                continue
+            take = min(remaining, stock_amount)
+            storage_obj = storage_by_id.get(storage_id) if storage_id else None
 
             movements_to_create.append(
                 MovementShareArticle(
@@ -284,6 +317,7 @@ def create_movements(
                 )
             )
             remaining -= take
+            consumed_by_key[key] += take
 
         # Stock ran out before covering the full demand. Record the uncovered
         # remainder against short-term storage so the ledger's total outflow

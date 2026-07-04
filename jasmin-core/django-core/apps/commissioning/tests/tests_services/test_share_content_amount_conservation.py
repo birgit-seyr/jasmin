@@ -345,39 +345,54 @@ class TestTheoreticalCleanAmount:
         assert Decimal(str(tc.amount)) == _expected_total(Decimal("2"), qty)
 
 
-# ── 5) End-to-end: all four objects on one ShareContent ─────────────────
+# ── 5) End-to-end: every downstream object agrees ───────────────────────
 @pytest.mark.django_db
 class TestEndToEndOneShareContent:
-    """For a washing+cleaning, forecasted article, every downstream object
-    should report the same total amount (sc.amount * subscription_qty)."""
+    """For a forecasted article, every downstream object should report the same
+    total amount (sc.amount * subscription_qty). Wash and clean are mutually
+    exclusive per line (DB constraint), so the end-to-end check runs one washed
+    line and one cleaned line — each with harvest + its processing step + movement.
+    """
 
     def test_movement_and_all_theoreticals_agree(self, tenant):
-        sc, qty = _build_scenario(
+        # Distinct delivery days so the two scenarios don't collide on the
+        # ``sharesdeliveryday_one_open_per_day_number`` constraint.
+        sc_wash, qty = _build_scenario(
             sc_amount=Decimal("2"),
             subscription_quantities=[5],
             washing=True,
+            delivery_day_number=5,
+        )
+        sc_clean, _ = _build_scenario(
+            sc_amount=Decimal("2"),
+            subscription_quantities=[5],
             cleaning=True,
+            delivery_day_number=4,
         )
         svc = ShareContentService()
-        svc.create_all_theoretical_objects([sc])
-        svc.create_movements([sc])
+        svc.create_all_theoretical_objects([sc_wash, sc_clean])
+        svc.create_movements([sc_wash, sc_clean])
 
         expected = _expected_total(Decimal("2"), qty)
 
-        movement_total = sum(
-            m.amount
-            for m in MovementShareArticle.objects.filter(
-                share_content=sc, movement_type="SHARECONTENT"
+        for sc in (sc_wash, sc_clean):
+            movement_total = sum(
+                m.amount
+                for m in MovementShareArticle.objects.filter(
+                    share_content=sc, movement_type="SHARECONTENT"
+                )
             )
-        )
-        th = TheoreticalHarvest.objects.get(share_content=sc)
-        tw = TheoreticalWashAmount.objects.get(share_content=sc)
-        tc = TheoreticalCleanAmount.objects.get(share_content=sc)
+            assert movement_total == -expected
+            th = TheoreticalHarvest.objects.get(share_content=sc)
+            assert Decimal(str(th.amount)) == expected
 
-        assert movement_total == -expected
-        assert Decimal(str(th.amount)) == expected
+        tw = TheoreticalWashAmount.objects.get(share_content=sc_wash)
+        tc = TheoreticalCleanAmount.objects.get(share_content=sc_clean)
         assert Decimal(str(tw.amount)) == expected
         assert Decimal(str(tc.amount)) == expected
+        # Mutually exclusive: the washed line has no clean theoretical, and v.v.
+        assert not TheoreticalCleanAmount.objects.filter(share_content=sc_wash).exists()
+        assert not TheoreticalWashAmount.objects.filter(share_content=sc_clean).exists()
 
 
 # ── 6) Multiple Share variations in the same week ───────────────────────

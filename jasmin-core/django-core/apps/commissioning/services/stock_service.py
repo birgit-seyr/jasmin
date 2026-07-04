@@ -82,6 +82,10 @@ def _days_inventory_map(
             # the theoretical baseline subtracts every same-day correction,
             # not just the last. Display fields keep the last row's.
             "amount": prior_amount + (movement.amount or Decimal("0")),
+            # ``counted_amount IS NULL`` marks a metadata-only row (flags/note
+            # toggled, no count) — the read path must not treat it as a count
+            # (goods-flow audit #2). Keep the last row's, like the display fields.
+            "counted_amount": movement.counted_amount,
             "is_finalized": movement.is_finalized,
             "washed": movement.washed,
             "cleaned": movement.cleaned,
@@ -105,8 +109,15 @@ def _build_result_row(
 
     # theoretical = balance without today's INVENTORY correction
     theoretical = running_balance - inv_delta  # Decimal
-    # counted = balance including the correction (= absolute counted)
-    counted = running_balance if has_inventory else None  # Decimal | None
+    # A metadata-only INVENTORY row (goods-flow audit #2) has ``counted_amount IS
+    # NULL``: it toggles flags/note but leaves the stock uncounted, so it must NOT
+    # report a phantom count = theoretical. Gate the counted value on an ACTUAL
+    # count. ``is_finalized`` and the flags/note stay on row presence
+    # (``has_inventory``) so a finalized-but-uncounted row still reports its real
+    # finalized state and a fresh flags-only row reads False (entry, not counted),
+    # not None (no entry). ``counted`` = balance including the correction.
+    has_count = has_inventory and inv_data.get("counted_amount") is not None
+    counted = running_balance if has_count else None  # Decimal | None
 
     return {
         # Convert to float at the JSON boundary so the wire shape

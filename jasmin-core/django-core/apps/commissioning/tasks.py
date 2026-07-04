@@ -3,7 +3,6 @@ import logging
 
 from django.conf import settings
 from django.utils import timezone
-from django_tenants.utils import schema_context
 from huey import crontab
 from huey.contrib.djhuey import db_periodic_task, db_task
 
@@ -344,57 +343,6 @@ def run_bulk_offer_send(
             email_ctx=email_ctx,
             progress_cb=job.progress,
         )
-
-
-@db_task(retries=2, retry_delay=30)
-def recompute_shares_async(
-    *,
-    schema_name: str,
-    share_ids: list[str],
-) -> None:
-    """Rebuild theoreticals + SHARECONTENT movements for ``share_ids``.
-
-    Deferred form of ``apps.commissioning.services.recompute.recompute_shares``.
-    Called via ``transaction.on_commit(...)`` from
-    ``ForecastService.create_forecast_with_related_objects`` so the
-    office's save returns immediately (~100 ms instead of ~700 ms);
-    the heavy delete-and-rebuild runs on the Huey worker in the
-    background. The downstream pages that read theoreticals
-    (DocumentationHarvest, packing lists) see stale data for the
-    few seconds between commit and the task firing — acceptable
-    because the office typically adds many forecast rows in a row
-    before navigating to those pages.
-
-    No ``BackgroundJob`` row / progress tracking. The office doesn't
-    poll this; it's a fire-and-forget continuation of the save. A
-    failure here will not roll back the save (the row is committed),
-    so on a permanent failure the theoreticals stay stale until the
-    next forecast edit triggers another recompute.
-
-    Bounded retries: ``recompute_shares`` -> ``recompute_for_shares`` is
-    ``@transaction.atomic``, so a FAILED attempt rolls back entirely (no
-    partially-applied delete/rebuild) and a retry just re-runs the
-    wipe-and-rebuild cleanly — there is no double-create hazard the old
-    ``retries=0`` worried about. We log the failure and RE-RAISE so Huey
-    retries transient errors (lock timeouts, DB hiccups); after the budget
-    is exhausted the final failure surfaces (ops log + Huey failed-task
-    record / error reporter) instead of silently leaving the week stale.
-    """
-    from apps.commissioning.services.recompute import recompute_shares
-
-    with schema_context(schema_name):
-        try:
-            recompute_shares(share_ids)
-        except Exception:
-            ops_log.exception(
-                "recompute_shares_async.failed schema=%s share_count=%d",
-                schema_name,
-                len(share_ids),
-            )
-            # Re-raise so Huey retries (the rebuild is atomic + idempotent)
-            # and the final, post-retry failure is visible rather than
-            # swallowed into a silently-stale planning week.
-            raise
 
 
 @db_task(retries=0)

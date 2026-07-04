@@ -63,7 +63,7 @@ class ShareType(JasminModel, TimeBoundMixin):
     # from this the frontend derives a different ui ...
     needs_complex_planning = models.BooleanField(default=True)
     # this determines whethe this is packed on its own or put together with something.
-    is_additional_share_type = models.BooleanField(default=True)
+    is_additional_share_type = models.BooleanField(default=False)
     amount_of_jokers = models.IntegerField(default=0)
     amount_of_donation_jokers = models.IntegerField(default=0)
 
@@ -785,6 +785,15 @@ class ShareContent(CreatedMixin, FinalizableMixin, ArchivableMixin, JasminModel)
             models.UniqueConstraint(
                 fields=["share", "share_article", "delivery_station", "unit", "size"],
                 name="sharecontent_unique_share_article_station_unit_size",
+            ),
+            # A line is washed OR cleaned, never both — the planning grid enforces
+            # this in the UI (checking one clears the other). Mirror it at the DB so
+            # the API / imports / bulk paths can't drift: both flags true makes the
+            # goods-flow relocate a long-term line long→short TWICE (phantom stock).
+            # NULL/False combos pass; only (True, True) is rejected.
+            models.CheckConstraint(
+                condition=~(models.Q(washing=True) & models.Q(cleaning=True)),
+                name="sharecontent_washing_cleaning_mutually_exclusive",
             ),
         ]
 

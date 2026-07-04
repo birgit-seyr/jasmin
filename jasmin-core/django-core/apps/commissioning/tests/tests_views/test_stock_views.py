@@ -231,6 +231,69 @@ class TestCurrentStockComparisonPatch:
         resp = api_client.patch(url, {"amount": -5}, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_metadata_only_patch_preserves_theoretical_stock(self, api_client, tenant):
+        """goods-flow audit #2: a PATCH with only a flag (no ``amount``) on an
+        entity that has theoretical stock and no prior count must NOT zero it.
+        Before the fix it wrote a ``0 − theoretical`` correction → stock read 0.
+        Now it records a metadata-only row (counted_amount=None, zero delta)."""
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        _seed_theoretical_stock(article, storage, 50)
+        cid = _make_composite_id(article, "KG", "M", storage)
+        url = reverse("current_stock_comparison_detail", args=[cid])
+
+        resp = api_client.patch(url, {"washed": True}, format="json")
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["amount"] is None  # no phantom count in the response
+        assert resp.data["washed"] is True
+
+        inv = _inventory_for(article, storage)
+        assert inv.counted_amount is None  # "not counted yet"
+        assert inv.amount == Decimal("0")  # zero delta — theoretical intact
+        assert inv.washed is True
+        # The theoretical stock is preserved (50), not zeroed.
+        assert _balance(article, storage) == Decimal("50")
+
+    def test_amount_patch_still_corrects_stock(self, api_client, tenant):
+        """Regression: a PATCH WITH an amount still nets counted − theoretical."""
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        _seed_theoretical_stock(article, storage, 50)
+        cid = _make_composite_id(article, "KG", "M", storage)
+        url = reverse("current_stock_comparison_detail", args=[cid])
+
+        resp = api_client.patch(url, {"amount": 30}, format="json")
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["amount"] == 30
+
+        inv = _inventory_for(article, storage)
+        assert inv.counted_amount == Decimal("30.000")
+        assert inv.amount == Decimal("-20.000")  # 30 − 50
+        assert _balance(article, storage) == Decimal("30")
+
+    def test_metadata_only_patch_keeps_existing_count(self, api_client, tenant):
+        """A flag-only PATCH on an already-counted entity toggles the flag but
+        leaves the count and balance untouched."""
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        _seed_theoretical_stock(article, storage, 50)
+        cid = _make_composite_id(article, "KG", "M", storage)
+        url = reverse("current_stock_comparison_detail", args=[cid])
+
+        assert (
+            api_client.patch(url, {"amount": 40}, format="json").status_code
+            == status.HTTP_201_CREATED
+        )
+        resp = api_client.patch(url, {"washed": True}, format="json")
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["amount"] == 40  # existing count still reported
+        assert resp.data["washed"] is True
+
+        inv = _inventory_for(article, storage)
+        assert inv.counted_amount == Decimal("40.000")  # count preserved
+        assert inv.washed is True
+        assert _balance(article, storage) == Decimal("40")
+
 
 # ---------------------------------------------------------------------------
 # CurrentStockComparisonView — DELETE

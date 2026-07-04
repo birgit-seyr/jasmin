@@ -18,8 +18,13 @@ import datetime
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
+
 from apps.commissioning.services.current_balance_service import CurrentBalanceService
 from apps.commissioning.services.snapshot_service import SnapshotService
+from apps.commissioning.services.theoretical_objects import (
+    recalculate_actual_corrections,
+)
 
 
 def test_acquire_locks_for_entities_sorted_and_deduped():
@@ -78,4 +83,41 @@ def test_cascade_for_movements_processes_entities_sorted():
         ("art1", None, None, None),
         ("art1", "KG", "M", "s1"),
         ("art2", "KG", "M", "s1"),
+    ]
+
+
+def _correction_ref(share_article_id, unit, size, storage_id, movement_type):
+    return SimpleNamespace(
+        share_article_id=share_article_id,
+        unit=unit,
+        size=size,
+        storage_id=storage_id,
+        movement_type=movement_type,
+    )
+
+
+@pytest.mark.django_db
+def test_recalculate_actual_corrections_locks_theoretical_sum_sorted(tenant):
+    """goods-flow audit #6: ``recalculate_actual_corrections`` must serialize with
+    the count-entry path by taking the SAME ``theoretical_sum:*`` xact lock, once
+    per dimension, in canonical (None-coerced) sorted order — so a recompute and a
+    count entry can't net against different theoretical sets (write-skew), and two
+    recomputes can't deadlock (AB/BA). The lock key is byte-for-byte the one
+    ``GenericDocumentationService._sum_theoretical`` builds."""
+    # Deliberately unsorted, with a None-bearing dimension and a duplicate.
+    refs = [
+        _correction_ref("art2", "KG", "M", "s1", "HARVEST"),
+        _correction_ref("art1", "KG", "M", "s1", "HARVEST"),
+        _correction_ref("art1", None, None, None, "HARVEST"),
+        _correction_ref("art2", "KG", "M", "s1", "HARVEST"),  # duplicate — collapses
+    ]
+
+    with patch("core.db_locks.acquire_advisory_xact_lock") as mock_lock:
+        recalculate_actual_corrections(refs)
+
+    acquired = [call.args[0] for call in mock_lock.call_args_list]
+    assert acquired == [
+        "theoretical_sum:art1::::HARVEST",
+        "theoretical_sum:art1:KG:M:s1:HARVEST",
+        "theoretical_sum:art2:KG:M:s1:HARVEST",
     ]

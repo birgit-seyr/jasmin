@@ -109,7 +109,13 @@ class TheoreticalSourceData:
 
     @property
     def needs_harvest(self) -> bool:
-        return self.has_forecast
+        # A purchased article is supplied via TheoreticalPurchase, never
+        # harvested — even if it ALSO carries a Forecast row (planning can
+        # attach one). Without the ``not is_purchased`` guard both a harvest AND
+        # a purchase are built for it, supplying the same demand twice
+        # (goods-flow audit #4). ``needs_harvest`` / ``needs_purchase`` are thus
+        # mutually exclusive.
+        return self.has_forecast and not self.is_purchased
 
     @property
     def needs_purchase(self) -> bool:
@@ -789,6 +795,7 @@ def _recalculate_actual_corrections_for_movements(
     )
 
 
+@transaction.atomic
 def recalculate_actual_corrections(
     reference_movements: list[MovementShareArticle],
     movement_types: set[str] | None = None,
@@ -808,6 +815,8 @@ def recalculate_actual_corrections(
     ``create_theoretical_objects``). The correction rows are saved either way.
     """
     from django.db.models import Q
+
+    from core.db_locks import acquire_advisory_xact_lock
 
     from .snapshot_service import SnapshotService
 
@@ -829,7 +838,21 @@ def recalculate_actual_corrections(
 
     cascaded_movements: list[MovementShareArticle] = []
 
-    for sa_id, unit, size, storage_id, mtype in dimension_keys:
+    # Serialize per-dimension with the count-entry path (goods-flow audit #6): a
+    # concurrent recompute and an actual-count entry must net against the SAME
+    # theoretical set, else write-skew leaves the correction permanently off.
+    # Take the same ``theoretical_sum:*`` transaction lock ``_sum_theoretical``
+    # takes, in canonical sorted dimension order so two acquirers can't deadlock
+    # (AB/BA). Held to the outer commit and acquired BEFORE the current_balance
+    # cascade below, preserving the global theoretical_sum → current_balance order.
+    for sa_id, unit, size, storage_id, mtype in sorted(
+        dimension_keys,
+        key=lambda k: (k[0], k[1] or "", k[2] or "", k[3] or "", k[4]),
+    ):
+        acquire_advisory_xact_lock(
+            f"theoretical_sum:{sa_id}:{unit or ''}:{size or ''}"
+            f":{storage_id or ''}:{mtype}"
+        )
         # Find actual correction movements for this dimension
         q = Q(
             share_article_id=sa_id,

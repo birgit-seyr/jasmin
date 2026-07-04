@@ -2,7 +2,11 @@ import { Alert, Descriptions, Modal, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Subscription } from "@shared/api/generated/models";
-import { useCurrency, useDateFormat } from "@hooks/index";
+import {
+  useCurrency,
+  useDateFormat,
+  useShareTypeVariationSizeOptions,
+} from "@hooks/index";
 import { deliveryCycleLabel, paymentCycleLabel } from "@shared/utils/cycleLabels";
 import DeliveryStationMemberModal from "./DeliveryStationMemberModal";
 
@@ -23,6 +27,7 @@ export default function SubscriptionDetailModal({
   const { t } = useTranslation();
   const { formatDate } = useDateFormat();
   const { currencySymbol } = useCurrency();
+  const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
   const [stationDayId, setStationDayId] = useState<string | null>(null);
 
   // This modal is mounted permanently by ActiveSubscriptionsCard (only the
@@ -56,7 +61,9 @@ export default function SubscriptionDetailModal({
           <Descriptions column={1} bordered size="small">
             <Descriptions.Item label={t("members.share_type")}>
               {subscription.share_type_name}{" "}
-              {subscription.share_type_variation_size}
+              {getShareTypeVariationSizeLabel(
+                subscription.share_type_variation_size ?? "",
+              )}
             </Descriptions.Item>
             <Descriptions.Item label={t("members.term")}>
               {formatDate(subscription.valid_from)}

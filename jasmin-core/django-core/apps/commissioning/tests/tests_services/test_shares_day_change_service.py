@@ -90,8 +90,11 @@ def _build_share_with_content(
     cleaning_day: int = 1,
     packing_day: int = 5,
     with_forecast: bool = True,
-    cleaning: bool = True,
+    # washing/cleaning are mutually exclusive per line (DB constraint) — default to
+    # a washed line. Tests that need BOTH steps use
+    # ``_build_share_with_wash_and_clean_contents`` (two lines: one washed, one cleaned).
     washing: bool = True,
+    cleaning: bool = False,
 ):
     """Create a Share + ShareContent (+ optional Forecast) ready for recompute tests."""
     storage = StorageFactory(is_short_term_harvest_storage=True)
@@ -140,6 +143,75 @@ def _build_share_with_content(
         "seller",
     ).get(pk=sc.pk)
     return share, sc, storage
+
+
+def _build_share_with_wash_and_clean_contents(
+    *,
+    year: int = FUTURE_YEAR,
+    delivery_week: int = FUTURE_WEEK,
+    delivery_day_number: int = 5,  # Saturday
+    harvesting_day: int = 1,
+    washing_day: int = 1,
+    cleaning_day: int = 1,
+    packing_day: int = 5,
+    with_forecast: bool = True,
+):
+    """One Share with TWO ShareContents — one washed, one cleaned.
+
+    A line can't be both washed and cleaned (DB constraint), so a share whose
+    goods-flow spans both steps is modelled as two lines (distinct articles).
+    Returns ``(share, sc_wash, sc_clean, storage)``.
+    """
+    storage = StorageFactory(is_short_term_harvest_storage=True)
+    sdd = SharesDeliveryDayFactory(day_number=delivery_day_number)
+    stv = ShareTypeVariationFactory()
+    share = ShareFactory(
+        year=year,
+        delivery_week=delivery_week,
+        delivery_day=sdd,
+        share_type_variation=stv,
+        harvesting_day=harvesting_day,
+        washing_day=washing_day,
+        cleaning_day=cleaning_day,
+        packing_day=packing_day,
+    )
+    station = DeliveryStationFactory()
+    DeliveryStationDayFactory(delivery_station=station, delivery_day=sdd)
+
+    contents = []
+    for washed in (True, False):
+        article = ShareArticleFactory()
+        forecast = None
+        if with_forecast:
+            forecast = ForecastFactory(
+                share_article=article,
+                year=year,
+                delivery_week=delivery_week,
+                size="M",
+                storage=storage,
+            )
+        sc = ShareContentFactory(
+            share=share,
+            share_article=article,
+            delivery_station=station,
+            amount=Decimal("5"),
+            unit="KG",
+            size="M",
+            forecast=forecast,
+            washing=washed,
+            cleaning=not washed,
+        )
+        contents.append(
+            ShareContent.objects.select_related(
+                "share__share_type_variation",
+                "share__delivery_day",
+                "share_article",
+                "forecast",
+                "seller",
+            ).get(pk=sc.pk)
+        )
+    sc_wash, sc_clean = contents
+    return share, sc_wash, sc_clean, storage
 
 
 # ═══════════════════════════════════════════════════════
@@ -339,23 +411,26 @@ class TestRecomputeOnDayChange:
         assert new_th.year == FUTURE_YEAR
 
     def test_washing_and_cleaning_day_change(self, tenant):
-        share, sc, _storage = _build_share_with_content(
+        # A washed line and a cleaned line on the same share; a Share-level
+        # washing_day/cleaning_day change must recompute both.
+        share, sc_wash, sc_clean, _storage = _build_share_with_wash_and_clean_contents(
             washing_day=1,
             cleaning_day=1,
             delivery_day_number=5,
             with_forecast=False,
         )
-        with _patch_totals(_make_totals([sc])):
+        contents = [sc_wash, sc_clean]
+        with _patch_totals(_make_totals(contents)):
             from apps.commissioning.services.share_content_service import (
                 ShareContentService,
             )
 
-            ShareContentService().create_all_theoretical_objects([sc])
+            ShareContentService().create_all_theoretical_objects(contents)
 
-        old_wash_id = TheoreticalWashAmount.objects.get(share_content=sc).id
-        old_clean_id = TheoreticalCleanAmount.objects.get(share_content=sc).id
+        old_wash_id = TheoreticalWashAmount.objects.get(share_content=sc_wash).id
+        old_clean_id = TheoreticalCleanAmount.objects.get(share_content=sc_clean).id
 
-        with _patch_totals(_make_totals([sc])):
+        with _patch_totals(_make_totals(contents)):
             SharesDayChangeService.apply(
                 year=FUTURE_YEAR,
                 delivery_week=FUTURE_WEEK,
@@ -366,8 +441,8 @@ class TestRecomputeOnDayChange:
         assert not TheoreticalWashAmount.objects.filter(id=old_wash_id).exists()
         assert not TheoreticalCleanAmount.objects.filter(id=old_clean_id).exists()
 
-        new_wash = TheoreticalWashAmount.objects.get(share_content=sc)
-        new_clean = TheoreticalCleanAmount.objects.get(share_content=sc)
+        new_wash = TheoreticalWashAmount.objects.get(share_content=sc_wash)
+        new_clean = TheoreticalCleanAmount.objects.get(share_content=sc_clean)
         assert new_wash.day_number == 2
         assert new_clean.day_number == 4
 
@@ -611,72 +686,84 @@ class TestPostChangeConsistency:
         )
         from apps.commissioning.services.snapshot_service import SnapshotService
 
-        share, sc, storage = _build_share_with_content(
+        # Wash and clean can't coexist on one line, so the goods-flow that spans
+        # both steps is two lines (one washed, one cleaned) on the same share.
+        share, sc_wash, sc_clean, storage = _build_share_with_wash_and_clean_contents(
             delivery_day_number=5,  # Saturday
             harvesting_day=1,
             washing_day=1,
             cleaning_day=1,
             packing_day=5,
             with_forecast=True,
-            washing=True,
-            cleaning=True,
         )
+        contents = [sc_wash, sc_clean]
         svc = ShareContentService()
 
         # ── Build initial state: theoreticals + movements ──
-        with _patch_totals(_make_totals([sc], quantity=4)):
-            svc.create_all_theoretical_objects([sc])
-            svc.create_movements([sc])
+        with _patch_totals(_make_totals(contents, quantity=4)):
+            svc.create_all_theoretical_objects(contents)
+            svc.create_movements(contents)
 
-        # Sanity: we actually got rows
-        assert TheoreticalHarvest.objects.filter(share_content=sc).exists()
-        assert TheoreticalWashAmount.objects.filter(share_content=sc).exists()
-        assert TheoreticalCleanAmount.objects.filter(share_content=sc).exists()
+        # Sanity: we actually got rows — harvest on both, wash on the washed line,
+        # clean on the cleaned line, movements on both.
+        assert (
+            TheoreticalHarvest.objects.filter(share_content__in=contents).count() == 2
+        )
+        assert TheoreticalWashAmount.objects.filter(share_content=sc_wash).exists()
+        assert TheoreticalCleanAmount.objects.filter(share_content=sc_clean).exists()
         assert MovementShareArticle.objects.filter(
-            share_content=sc, movement_type="SHARECONTENT"
+            share_content__in=contents, movement_type="SHARECONTENT"
         ).exists()
 
         # Capture per-day distribution (so we can assert it actually moved)
         old_harvest_days = sorted(
-            TheoreticalHarvest.objects.filter(share_content=sc).values_list(
+            TheoreticalHarvest.objects.filter(share_content__in=contents).values_list(
                 "day_number", flat=True
             )
         )
         old_wash_days = sorted(
-            TheoreticalWashAmount.objects.filter(share_content=sc).values_list(
-                "day_number", flat=True
-            )
+            TheoreticalWashAmount.objects.filter(
+                share_content__in=contents
+            ).values_list("day_number", flat=True)
         )
         old_clean_days = sorted(
-            TheoreticalCleanAmount.objects.filter(share_content=sc).values_list(
-                "day_number", flat=True
-            )
+            TheoreticalCleanAmount.objects.filter(
+                share_content__in=contents
+            ).values_list("day_number", flat=True)
         )
-        assert old_harvest_days == [1]
+        assert old_harvest_days == [1, 1]
         assert old_wash_days == [1]
         assert old_clean_days == [1]
 
         # ── Snapshot the invariants ──
-        old_th_totals = _theoretical_total([sc])
-        old_mv_totals = _movement_totals([sc])
+        old_th_totals = _theoretical_total(contents)
+        old_mv_totals = _movement_totals(contents)
 
-        # End-of-time balance per (article, unit, size, storage)
-        # Using a far-future date so all movements are included.
+        # End-of-time balance per (article, unit, size, storage) — one per line
+        # (the two lines carry distinct articles). Using a far-future date so all
+        # movements are included.
         from datetime import datetime as _dt
 
         from django.utils.timezone import make_aware as _make_aware
 
         far_future = _make_aware(_dt(FUTURE_YEAR + 5, 1, 1))
-        old_balance_short_term = SnapshotService.compute_balance(
-            share_article_id=sc.share_article_id,
-            unit=sc.unit,
-            size=sc.size,
-            storage_id=storage.id,
-            up_to=far_future,
-        )
+
+        def _balances():
+            return {
+                sc.share_article_id: SnapshotService.compute_balance(
+                    share_article_id=sc.share_article_id,
+                    unit=sc.unit,
+                    size=sc.size,
+                    storage_id=storage.id,
+                    up_to=far_future,
+                )
+                for sc in contents
+            }
+
+        old_balances = _balances()
 
         # ── Apply day change: shift every relevant day ──
-        with _patch_totals(_make_totals([sc], quantity=4)):
+        with _patch_totals(_make_totals(contents, quantity=4)):
             result = SharesDayChangeService.apply(
                 year=FUTURE_YEAR,
                 delivery_week=FUTURE_WEEK,
@@ -694,31 +781,32 @@ class TestPostChangeConsistency:
             "cleaning_day",
             "packing_day",
         }
-        assert sc.id in result["recomputed_share_content_ids"]
+        assert sc_wash.id in result["recomputed_share_content_ids"]
+        assert sc_clean.id in result["recomputed_share_content_ids"]
 
         # ── Days actually moved ──
         new_harvest_days = sorted(
-            TheoreticalHarvest.objects.filter(share_content=sc).values_list(
+            TheoreticalHarvest.objects.filter(share_content__in=contents).values_list(
                 "day_number", flat=True
             )
         )
         new_wash_days = sorted(
-            TheoreticalWashAmount.objects.filter(share_content=sc).values_list(
-                "day_number", flat=True
-            )
+            TheoreticalWashAmount.objects.filter(
+                share_content__in=contents
+            ).values_list("day_number", flat=True)
         )
         new_clean_days = sorted(
-            TheoreticalCleanAmount.objects.filter(share_content=sc).values_list(
-                "day_number", flat=True
-            )
+            TheoreticalCleanAmount.objects.filter(
+                share_content__in=contents
+            ).values_list("day_number", flat=True)
         )
-        assert new_harvest_days == [3]
+        assert new_harvest_days == [3, 3]
         assert new_wash_days == [4]
         assert new_clean_days == [4]
 
         # ── Total amounts unchanged (the invariant) ──
-        new_th_totals = _theoretical_total([sc])
-        new_mv_totals = _movement_totals([sc])
+        new_th_totals = _theoretical_total(contents)
+        new_mv_totals = _movement_totals(contents)
         assert new_th_totals == old_th_totals, (
             "Theoretical amounts must be conserved across a day change "
             f"(old={old_th_totals}, new={new_th_totals})"
@@ -728,17 +816,11 @@ class TestPostChangeConsistency:
             f"(old={old_mv_totals}, new={new_mv_totals})"
         )
 
-        # ── End-of-time balance unchanged ──
-        new_balance_short_term = SnapshotService.compute_balance(
-            share_article_id=sc.share_article_id,
-            unit=sc.unit,
-            size=sc.size,
-            storage_id=storage.id,
-            up_to=far_future,
-        )
-        assert new_balance_short_term == old_balance_short_term, (
+        # ── End-of-time balance unchanged (per line/article) ──
+        new_balances = _balances()
+        assert new_balances == old_balances, (
             "End-of-time stock balance must be invariant under day changes "
-            f"(old={old_balance_short_term}, new={new_balance_short_term})"
+            f"(old={old_balances}, new={new_balances})"
         )
 
         # ── There are no orphaned movements pointing at deleted theoreticals ──

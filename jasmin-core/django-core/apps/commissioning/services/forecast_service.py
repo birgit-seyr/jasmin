@@ -24,6 +24,7 @@ from ..models import (
     TheoreticalHarvest,
 )
 from ..utils import sort_share_articles
+from .recompute import recompute_shares
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +163,7 @@ class ForecastService:
         # relink can only fix rows that already have theoreticals, never create
         # missing ones. ``recompute_shares`` is idempotent, so folding in rows
         # whose numbers are unchanged is safe.
-        self._schedule_share_recompute(
+        self._recompute_affected_shares(
             {str(share_content.share_id) for share_content in created}
             | {str(share_content.share_id) for share_content in updated}
         )
@@ -247,7 +248,7 @@ class ForecastService:
         # single deduped set keeps the demand aggregation batched (one recompute
         # call, not N+1 per share); the overlap with ``affected_share_ids`` is
         # deduped away.
-        self._schedule_share_recompute(
+        self._recompute_affected_shares(
             affected_share_ids
             | {str(share_content.share_id) for share_content in created}
             | {str(share_content.share_id) for share_content in updated}
@@ -779,16 +780,14 @@ class ForecastService:
         return created, share_contents_to_update
 
     @staticmethod
-    def _schedule_share_recompute(share_ids: set[str]) -> None:
-        """Defer a recompute of *share_ids* to after the current
-        transaction commits (via Huey ``recompute_shares_async``).
+    def _recompute_affected_shares(share_ids: set[str]) -> None:
+        """Rebuild theoreticals + SHARECONTENT movements for *share_ids*
+        synchronously, as part of the current forecast save.
 
-        Deferring keeps the office save fast (~500 ms saved vs the
-        synchronous path); ``on_commit`` guarantees the task never fires
-        on a rolled-back transaction (which would recompute shares that
-        don't exist). The downstream theoreticals are stale for the few
-        seconds between commit and the task firing — acceptable, matching
-        the rest of the service's write paths.
+        Runs inside the caller's ``@transaction.atomic`` block, so the
+        recompute is atomic with the save: if it fails, the whole save
+        rolls back (no half-written forecast with stale theoreticals), and
+        downstream pages see fresh data the instant the request returns.
 
         Empty input is a no-op. ``recompute_shares`` is idempotent and
         early-returns for shares with no ShareContent, so passing a
@@ -799,15 +798,7 @@ class ForecastService:
         if not share_ids:
             return
 
-        from django.db import connection
-
-        from ..tasks import recompute_shares_async
-
-        ids = list(share_ids)
-        schema_name = connection.schema_name
-        transaction.on_commit(
-            lambda: recompute_shares_async(schema_name=schema_name, share_ids=ids)
-        )
+        recompute_shares(list(share_ids))
 
     @transaction.atomic
     def _update_share_type_variations(

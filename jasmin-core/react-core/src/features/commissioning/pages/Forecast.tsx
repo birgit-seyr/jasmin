@@ -78,19 +78,22 @@ export default function Forecast() {
   const { offerGroups, offerGroupsCount } = useOfferGroups();
 
   const shareTypeVariationFilters = useMemo(() => {
-    const baseFilters = {
+    return {
       physical: true,
       active_at_date: dayjs()
         .year(selectedYear)
         .isoWeek(selectedWeek ?? currentWeek)
         .isoWeekday(6)
         .format("YYYY-MM-DD"),
+      // Forecast is a HARVEST forecast — ALWAYS scope to harvest-share
+      // variations. The fruit-share variations are fetched separately
+      // (``shareTypeVariationFiltersFruits``) only when the tenant runs fruit
+      // and veg as separate shares. Previously the "not separate" case dropped
+      // ``share_option`` entirely, so the query returned EVERY share option
+      // (egg / chicken / …) once no fruit share was active.
+      share_option: ShareTypeEnum.HARVEST_SHARE,
     };
-
-    return fruit_and_veg_shares_are_separate
-      ? { ...baseFilters, share_option: ShareTypeEnum.HARVEST_SHARE }
-      : baseFilters;
-  }, [selectedYear, selectedWeek, fruit_and_veg_shares_are_separate]);
+  }, [selectedYear, selectedWeek]);
   const { shareTypeVariations, shareTypeVariationsCount } =
     useShareTypeVariations(shareTypeVariationFilters);
 

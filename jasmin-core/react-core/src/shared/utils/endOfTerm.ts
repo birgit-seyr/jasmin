@@ -5,26 +5,22 @@ import dayjs, { type Dayjs } from "dayjs";
  * number of CALENDAR WEEKS between deliveries.
  *
  * Used to convert the tenant's trial length (``count of deliveries``)
- * into a Sunday-aligned ``valid_until``. Month-based cycles are kept
- * as their weeks-equivalent (4 / 13 / 26 / 52) so the result lands on
- * a Sunday deterministically — calendar-month arithmetic would force
- * a Sunday-snap and surface DST / month-length edge cases. The office
- * can override ``valid_until`` for non-weekly variations where this
- * approximation drifts (e.g. a 3-MONTHLY trial of ~13.0 vs 13.04
- * weeks).
+ * into a Sunday-aligned ``valid_until``. Every cycle is a plain week
+ * stride, so the span is exact: N deliveries × weeks-per-delivery from
+ * a Monday ``valid_from`` lands on a Monday, and ``- 1 day`` makes it a
+ * deterministic Sunday.
  *
  * Unknown / null cycle falls back to ``1`` (WEEKLY) — matches the
- * backend default and keeps the auto-fill safe for legacy rows
- * without an explicit delivery_cycle.
+ * backend default and keeps the auto-fill safe for legacy rows without
+ * an explicit delivery_cycle. Keep in sync with the backend
+ * ``services/delivery_cycle.py``.
  */
 const WEEKS_PER_DELIVERY_BY_CYCLE: Record<string, number> = {
   WEEKLY: 1,
   ODD_WEEKS: 2,
   EVEN_WEEKS: 2,
-  MONTHLY: 4,
-  QUARTERLY: 13,
-  HALF_YEARLY: 26,
-  YEARLY: 52,
+  ALL_THREE_WEEKS: 3,
+  ALL_FOUR_WEEKS: 4,
 };
 
 export function weeksPerDelivery(
@@ -61,10 +57,9 @@ export interface EndOfTermSettings {
    *  the right number of calendar weeks. */
   trialDurationInDeliveries?: number | null | undefined;
   /** Calendar weeks between deliveries for the trial's variation —
-   *  1 (WEEKLY), 2 (ODD/EVEN_WEEKS), 4 (MONTHLY), 13 (QUARTERLY),
-   *  26 (HALF_YEARLY), 52 (YEARLY). Defaults to ``1`` when missing
-   *  so a brand-new row with no variation picked yet still gets a
-   *  reasonable auto-fill. */
+   *  1 (WEEKLY), 2 (ODD/EVEN_WEEKS), 3 (ALL_THREE_WEEKS),
+   *  4 (ALL_FOUR_WEEKS). Defaults to ``1`` when missing so a brand-new
+   *  row with no variation picked yet still gets a reasonable auto-fill. */
   trialWeeksPerDelivery?: number | null | undefined;
 }
 
@@ -77,8 +72,8 @@ export interface EndOfTermSettings {
  *     ``validFrom + (N * trialWeeksPerDelivery) weeks - 1 day``
  *     (Sunday). Cycle-aware: a 4-delivery trial spans 4 weeks for a
  *     WEEKLY variation, 8 weeks for an ODD_WEEKS / EVEN_WEEKS
- *     variation, ~16 weeks (4 × 4) for a MONTHLY one, and so on
- *     (see ``WEEKS_PER_DELIVERY_BY_CYCLE``). This branch wins over
+ *     variation, 16 weeks (4 × 4) for an ALL_FOUR_WEEKS one (see
+ *     ``WEEKS_PER_DELIVERY_BY_CYCLE``). This branch wins over
  *     the season / one-year branches so a trial inside a
  *     season-based tenant still gets its short ad-hoc term.
  *   * ``subscriptionsEndAtEndOfSeason`` AND a valid

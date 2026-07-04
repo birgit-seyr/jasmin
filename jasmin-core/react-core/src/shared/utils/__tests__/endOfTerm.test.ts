@@ -188,7 +188,7 @@ describe("computeValidUntil", () => {
       expect(result?.isoWeekday()).toBe(7);
     });
 
-    it("spans 4 weeks per delivery for a MONTHLY variation", () => {
+    it("spans 4 weeks per delivery for an ALL_FOUR_WEEKS variation", () => {
       // 3 deliveries × 4 weeks = 12 weeks.
       // 2026-04-06 + 12 weeks = 2026-06-29 (Monday). -1 day = 2026-06-28.
       const result = computeValidUntil(MON("2026-04-06"), {
@@ -197,7 +197,7 @@ describe("computeValidUntil", () => {
         seasonStartWeek: null,
         isTrial: true,
         trialDurationInDeliveries: 3,
-        trialWeeksPerDelivery: weeksPerDelivery("MONTHLY"),
+        trialWeeksPerDelivery: weeksPerDelivery("ALL_FOUR_WEEKS"),
       });
       expect(result?.format("YYYY-MM-DD")).toBe("2026-06-28");
       expect(result?.isoWeekday()).toBe(7);
@@ -305,10 +305,8 @@ describe("computeValidUntil — Sunday invariant", () => {
     "WEEKLY",
     "ODD_WEEKS",
     "EVEN_WEEKS",
-    "MONTHLY",
-    "QUARTERLY",
-    "HALF_YEARLY",
-    "YEARLY",
+    "ALL_THREE_WEEKS",
+    "ALL_FOUR_WEEKS",
   ] as const;
 
   it.each(MONDAYS_2026)(
@@ -345,7 +343,7 @@ describe("computeValidUntil — Sunday invariant", () => {
         seasonStartWeek: null,
         isTrial: true,
         trialDurationInDeliveries: 4.7 as unknown as number,
-        trialWeeksPerDelivery: weeksPerDelivery("MONTHLY"),
+        trialWeeksPerDelivery: weeksPerDelivery("ALL_FOUR_WEEKS"),
       });
       expect(result?.isoWeekday()).toBe(7);
     },
@@ -381,10 +379,8 @@ describe("weeksPerDelivery", () => {
     ["WEEKLY", 1],
     ["ODD_WEEKS", 2],
     ["EVEN_WEEKS", 2],
-    ["MONTHLY", 4],
-    ["QUARTERLY", 13],
-    ["HALF_YEARLY", 26],
-    ["YEARLY", 52],
+    ["ALL_THREE_WEEKS", 3],
+    ["ALL_FOUR_WEEKS", 4],
   ] as const)("maps %s → %d weeks per delivery", (cycle, expected) => {
     expect(weeksPerDelivery(cycle)).toBe(expected);
   });

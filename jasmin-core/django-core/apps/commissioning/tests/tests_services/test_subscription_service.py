@@ -58,6 +58,22 @@ class TestGetDeliveryWeeks:
         assert len(weeks) == 1
         assert weeks[0] == (2026, 15)
 
+    def test_delivery_cycle_reduces_the_weekly_cadence(self):
+        # Wednesdays wk 15..24 (10 consecutive weeks) — the full weekly cadence.
+        start = datetime.date(2026, 4, 6)  # Monday
+        end = datetime.date(2026, 6, 14)  # Sunday
+        weekly = SubscriptionService._get_delivery_weeks(start, end, 2)
+        assert weekly == [(2026, w) for w in range(15, 25)]
+
+        # A cycle thins that cadence by ISO-week modulo: ODD_WEEKS keeps odd
+        # weeks (15,17,…); ALL_THREE_WEEKS keeps week % 3 == 1 (16,19,22).
+        assert SubscriptionService._get_delivery_weeks(start, end, 2, "ODD_WEEKS") == [
+            (2026, w) for w in (15, 17, 19, 21, 23)
+        ]
+        assert SubscriptionService._get_delivery_weeks(
+            start, end, 2, "ALL_THREE_WEEKS"
+        ) == [(2026, 16), (2026, 19), (2026, 22)]
+
     def test_year_boundary(self):
         start = datetime.date(2025, 12, 29)  # Monday
         end = datetime.date(2026, 1, 11)  # Sunday

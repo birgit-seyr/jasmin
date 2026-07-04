@@ -471,8 +471,7 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         description=(
             "Wird an das Büro gesendet, wenn ein Mitglied seine "
             "Mitgliedschaft selbst über das Portal kündigt — damit das "
-            "Büro den Austritt prüfen und die Auseinandersetzung des "
-            "Geschäftsguthabens veranlassen kann."
+            "Büro den Austritt prüfen kann."
         ),
         default_template="commissioning/emails/member_self_cancelled_office",
         default_subject=(
@@ -761,7 +760,7 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
     ),
     "gdpr.deletion_pending_admin_office": EmailTemplateSpec(
         slug="gdpr.deletion_pending_admin_office",
-        label="Löschanfrage wartet auf Freigabe (Büro-Benachrichtigung)",
+        label="Löschanfrage wartet auf Freigabe (Büro)",
         description=(
             "Push-Benachrichtigung an das Büro, wenn jemand seine "
             "DSGVO-Löschanfrage per E-Mail-Link bestätigt hat und die "

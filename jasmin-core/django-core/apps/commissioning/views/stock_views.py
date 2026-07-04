@@ -259,17 +259,29 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
         # baseline without rebuilding it (MOV-7).
 
         if not existing:
-            # Compute the correction delta: counted − running_balance
-            running_balance = SnapshotService.compute_balance(
-                str(share_article.id),
-                parsed["unit"],
-                parsed["size"],
-                str(storage.id) if storage else None,
-                up_to=inventory_date_end,
-            )
-            # Decimal arithmetic so ``correction`` lands in the
-            # DecimalField without binary-fp drift.
-            correction = (amount or Decimal("0")) - running_balance
+            # A metadata-only PATCH (no ``amount``) must NOT write a zeroing
+            # correction against the theoretical balance (goods-flow audit #2):
+            # with ``amount`` absent the old code computed ``0 − running_balance``,
+            # an INVENTORY delta that cancelled the theoretical stock to 0. It
+            # only toggles flags/note, so record a ZERO-delta row with
+            # ``counted_amount = None`` ("not counted yet") — the balance is
+            # preserved and the read path / cascade treat the row as uncounted.
+            # A supplied ``amount`` still nets against the running balance.
+            if amount is None:
+                correction = Decimal("0")
+                counted = None
+            else:
+                running_balance = SnapshotService.compute_balance(
+                    str(share_article.id),
+                    parsed["unit"],
+                    parsed["size"],
+                    str(storage.id) if storage else None,
+                    up_to=inventory_date_end,
+                )
+                # Decimal arithmetic so ``correction`` lands in the
+                # DecimalField without binary-fp drift.
+                correction = amount - running_balance
+                counted = amount
 
             try:
                 # Savepoint so a lost race (MOV-6: one_inventory_per_entity_day)
@@ -283,7 +295,7 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
                         size=parsed["size"],
                         storage=storage,
                         amount=correction,
-                        counted_amount=amount or Decimal("0"),
+                        counted_amount=counted,
                         for_shares=request.data.get("for_shares", True),
                         for_resellers=request.data.get("for_resellers", False),
                         for_markets=request.data.get("for_markets", False),
@@ -369,11 +381,14 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
             created = False
 
         # Compute the absolute counted value for the response.
-        # amount is the user-supplied absolute value; when absent, derive it
-        # from the running balance (which includes the stored correction delta).
+        # amount is the user-supplied absolute value; when absent, derive it from
+        # the running balance (which includes the stored correction delta) — but
+        # ONLY for a genuinely counted row. A metadata-only row has
+        # ``counted_amount = None`` (goods-flow audit #2) and must report no
+        # counted value, not a phantom count equal to the theoretical balance.
         if amount is not None:
             response_amount = amount
-        elif inventory.amount is not None:
+        elif inventory.counted_amount is not None:
             response_balance = SnapshotService.compute_balance(
                 str(share_article.id),
                 parsed["unit"],

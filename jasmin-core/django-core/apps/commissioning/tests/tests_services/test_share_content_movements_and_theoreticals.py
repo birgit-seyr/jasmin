@@ -399,7 +399,9 @@ class TestShareContentDeleteCascadesRelatedObjects:
         ).exists()
 
     def test_delete_removes_all_related_at_once(self, tenant):
-        """Purchased article with forecast → both harvest and purchase theoreticals."""
+        """Purchased article WITH a forecast → a PURCHASE theoretical only, not a
+        harvest (they are mutually exclusive — goods-flow audit #4). Deleting the
+        ShareContent then cascades to the purchase + movements."""
         article = ShareArticleFactory(is_purchased=True)
         sc, _storage = _setup_share_content(tenant, article=article, forecast=True)
         svc = ShareContentService()
@@ -409,7 +411,9 @@ class TestShareContentDeleteCascadesRelatedObjects:
             svc.create_all_theoretical_objects([sc])
             svc.create_movements([sc])
 
-        assert TheoreticalHarvest.objects.filter(share_content=sc).exists()
+        # A purchased article is supplied via purchase, never harvested — even
+        # with a forecast attached (that would double-supply the same demand).
+        assert not TheoreticalHarvest.objects.filter(share_content=sc).exists()
         assert TheoreticalPurchase.objects.filter(share_content=sc).exists()
         assert MovementShareArticle.objects.filter(share_content=sc).exists()
 

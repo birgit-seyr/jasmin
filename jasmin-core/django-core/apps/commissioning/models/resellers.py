@@ -319,6 +319,13 @@ class Offer(FinalizableMixin, FinalizedProtectedMixin, JasminModel):
                 condition=models.Q(reseller__isnull=True),
                 name="offer_unique_general_per_slot",
             ),
+            # Washed OR cleaned, never both (matches the planning/offers grid UI and
+            # the OrderContent it seeds). Both-true double-transfers a long-term line
+            # long→short in the goods-flow. NULL/False pass; only (True, True) fails.
+            models.CheckConstraint(
+                condition=~(models.Q(washing=True) & models.Q(cleaning=True)),
+                name="offer_washing_cleaning_mutually_exclusive",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -478,6 +485,13 @@ class OrderContent(FinalizableMixin, FinalizedProtectedMixin, OrderableItem):
                 fields=["order", "offer"],
                 name="unique_offer_per_order",
                 condition=models.Q(offer__isnull=False),
+            ),
+            # Washed OR cleaned, never both (matches the orders grid UI + the offer
+            # it inherits from). Both-true double-transfers a long-term line long→short
+            # in the goods-flow. NULL/False pass; only (True, True) is rejected.
+            models.CheckConstraint(
+                condition=~(models.Q(washing=True) & models.Q(cleaning=True)),
+                name="ordercontent_washing_cleaning_mutually_exclusive",
             ),
         ]
 
