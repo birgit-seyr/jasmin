@@ -34,6 +34,12 @@ updates:
     ignore:
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
+      # Scoped eslint packages (@eslint/js, @eslint/eslintrc, …) share the flat-
+      # config migration with `eslint` above, but the unscoped entry does NOT
+      # match a scoped name — so their majors slipped through and reopened a red
+      # PR every week. Defer them too until we do the eslint upgrade.
+      - dependency-name: "@eslint/*"
+        update-types: ["version-update:semver-major"]
       - dependency-name: "vitest"
         update-types: ["version-update:semver-major"]
       - dependency-name: "@vitejs/plugin-react"
