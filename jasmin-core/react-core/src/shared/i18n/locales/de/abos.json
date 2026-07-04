@@ -1,6 +1,6 @@
 {
   "abos": "Anteile",
-  "attention_chip": "Abos offen",
+  "attention_chip": "noch unbestätigte Abos",
   "subscription_number": "#",
   "active_subscriptions_per_variation": "Aktive Abos je Variante",
   "bulk_renew": "verlängern",

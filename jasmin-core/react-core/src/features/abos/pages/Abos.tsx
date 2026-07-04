@@ -5,10 +5,9 @@
  * ``useAbosColumns``.
  */
 
-import { useCallback, useMemo, useState } from "react";
-import { Badge, Button } from "antd";
-import dayjs from "dayjs";
-import { useTranslation } from "react-i18next";
+import { AdminConfirmationModalAbos } from "@features/abos/modals/AdminConfirmationModalAbos";
+import { CancelSubscriptionModal } from "@features/abos/modals/CancelSubscriptionModal";
+import { RejectAboModal } from "@features/abos/modals/RejectAboModal";
 import {
   commissioningAbosCreate,
   commissioningAbosDestroy,
@@ -17,9 +16,6 @@ import {
 import type { Subscription } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { LoggingModal } from "@shared/modals";
-import { AdminConfirmationModalAbos } from "@features/abos/modals/AdminConfirmationModalAbos";
-import { CancelSubscriptionModal } from "@features/abos/modals/CancelSubscriptionModal";
-import { RejectAboModal } from "@features/abos/modals/RejectAboModal";
 import {
   EditableTable,
   gatedByPermission,
@@ -29,20 +25,20 @@ import type {
   ApiFunctions,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import {
-  DateRangeStatusLegend,
-  ExplainerText,
-  SummaryStatsCard,
-} from "@shared/ui";
+import { DateRangeStatusLegend, ExplainerText } from "@shared/ui";
+import { Badge, Button } from "antd";
+import dayjs from "dayjs";
+import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 // Imported directly from the source module (not the ``hooks`` barrel) to
 // avoid a Rollup chunk cycle: the barrel re-exports ``useAbosColumns`` while
 // that module transitively depends back on the barrel (via the ``ui`` barrel).
-import { useAbosColumns } from "@features/abos/hooks/columns/useAbosColumns";
-import { useDateFormat, useTableRowSelection } from "@hooks/index";
-import { useAbosData } from "@features/abos/hooks/useAbosData";
 import AbosBulkActions from "@features/abos/components/AbosBulkActions";
+import { useAbosColumns } from "@features/abos/hooks/columns/useAbosColumns";
 import { useAdminConfirmationModalAbos } from "@features/abos/hooks/modals/useAdminConfirmationModalAbos";
 import { useRejectAboModal } from "@features/abos/hooks/modals/useRejectAboModal";
+import { useAbosData } from "@features/abos/hooks/useAbosData";
+import { useDateFormat, useTableRowSelection } from "@hooks/index";
 import { notify } from "@shared/utils";
 import type { AboRecord } from "./types";
 import { validateCancelledDate as validateCancelledDatePure } from "./validation";
@@ -294,15 +290,6 @@ export default function Abos() {
     <div>
       <h1>{t("abos.abos")}</h1>
 
-      {activeVariationStats.length > 0 && (
-        <SummaryStatsCard
-          title={t("abos.active_subscriptions_per_variation")}
-          stats={activeVariationStats.map(([label, count]) => ({
-            label,
-            value: count,
-          }))}
-        />
-      )}
       {pendingConfirmationCount > 0 && (
         <Badge count={pendingConfirmationCount} size="small">
           <Button
