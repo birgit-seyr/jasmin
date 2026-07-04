@@ -64,6 +64,12 @@ coverage.xml
 
 # Docker
 .env
+# Real per-environment secret files (keep only the *.example templates tracked).
+# .env.dev holds live DJANGO_SECRET_KEY / FIELD_ENCRYPTION_KEY / POSTGRES_PASSWORD
+# and must never be committed — it was purged from history, see docs/secrets-purge.md.
+.env.dev
+.env.*
+!.env*.example
 
 # IDE
 .idea/
