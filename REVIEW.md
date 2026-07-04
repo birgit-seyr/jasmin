@@ -123,6 +123,8 @@ link to — jumping ahead leaves you with empty dropdowns.
    per-tour breakdowns shown in the packing list and the station overview, so
    they come last, once every station exists and has its delivery days.
 
+
+
 ## Terminology
 
 The `Share*` family is the #1 source of naming confusion. Two axes cause it:
