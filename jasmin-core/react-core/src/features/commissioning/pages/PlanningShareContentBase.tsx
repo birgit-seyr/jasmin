@@ -51,6 +51,11 @@ import {
 } from "@hooks/index";
 import {
   computePlannedAmountForDay,
+  dayHarvestedKey,
+  dayPlannedAmountKey,
+  dayVariationKey,
+  parseDayVariationKey,
+  planningModeTier,
   useAmountUnitSizeColumns,
   useDeliveryDayColumns,
   useFinalColumn,
@@ -59,9 +64,8 @@ import {
   usePlanningSummaryData,
   useShareArticleColumn,
   useShareArticles,
+  usePlanningAxes,
   useShareContentGranularity,
-  useShareDeliveryDays,
-  useShareTypeVariations,
   useWashingCleaningColumns,
 } from "@features/commissioning/hooks";
 import type { DeliveryDay } from "@features/commissioning/hooks/columns/useDeliveryDayColumns";
@@ -163,20 +167,24 @@ export default function PlanningHarvestSharesBase({
     true,
   ) as boolean;
 
-  const shareTypeVariationFilters = useMemo(() => {
-    return {
-      physical: true,
-      active_at_date: dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek ?? nextWeek)
-        .isoWeekday(6)
-        .format("YYYY-MM-DD"),
-      share_option: shareOption,
-    };
-  }, [selectedYear, selectedWeek, shareOption]);
-
-  const { shareTypeVariations, loading: shareTypeVariationsLoading } =
-    useShareTypeVariations(shareTypeVariationFilters);
+  // Single source of truth for the (day × variation) axes — see
+  // docs/day-variation-columns-audit.md. The base grid AND the BackupModal
+  // consume this same hook, so their day/variation sets can never diverge
+  // (which is exactly how the modal-shows-station-less-day bug crept in).
+  const {
+    shareDeliveryDays: rawShareDeliveryDays,
+    shareTypeVariations,
+    toursExist,
+    activeAtDate,
+    daysLoading: shareDeliveryDaysLoading,
+    variationsLoading: shareTypeVariationsLoading,
+  } = usePlanningAxes({
+    year: selectedYear,
+    week: selectedWeek ?? nextWeek,
+    shareOption,
+    requireStations: true,
+    needTours: true,
+  });
 
   // Historical-averages used to wait for `shareTypeVariations` to resolve so
   // it could pass `share_type_variation_ids`. The backend now accepts
@@ -187,8 +195,8 @@ export default function PlanningHarvestSharesBase({
   const { data: historicalAverages } = useHistoricalShareVariationAverages({
     year: selectedYear,
     delivery_week: selectedWeek ?? nextWeek,
-    share_option: shareTypeVariationFilters.share_option,
-    active_at_date: shareTypeVariationFilters.active_at_date,
+    share_option: shareOption,
+    active_at_date: activeAtDate,
     years_back: 2,
     // No share-type variations → the backend resolves none and 400s; skip it.
     enabled: shareTypeVariations.length > 0,
@@ -196,25 +204,6 @@ export default function PlanningHarvestSharesBase({
 
   const { refetch: refetchShareArticles } =
     useShareArticles(shareArticleFilters);
-
-  const shareDeliveryDaysFilters = useMemo(
-    () => ({
-      active_at_date: dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek ?? nextWeek)
-        .isoWeekday(6)
-        .format("YYYY-MM-DD"),
-      get_delivery_stations: true,
-      need_info_on_tours: true,
-    }),
-    [selectedYear, selectedWeek],
-  );
-
-  const {
-    shareDeliveryDays: rawShareDeliveryDays,
-    toursExist,
-    loading: shareDeliveryDaysLoading,
-  } = useShareDeliveryDays(shareDeliveryDaysFilters);
 
   // Cast to extended type that correctly types delivery_stations as array
   const shareDeliveryDays = useMemo(
@@ -285,15 +274,17 @@ export default function PlanningHarvestSharesBase({
       // First, initialize ALL possible day_ fields based on your column structure
       // this is important to ensure a correct granularity check.
       shareDeliveryDays.forEach((deliveryDay) => {
+        const dayId = deliveryDay.id!;
         shareTypeVariations.forEach((variation: ShareTypeVariationOption) => {
+          const variationId = variation.id!;
           // Basic variation field
-          const basicKey = `day_${deliveryDay.id}_variation_${variation.id}`;
+          const basicKey = dayVariationKey({ dayId, variationId });
           processedRecord[basicKey] = processedRecord[basicKey] || 0;
 
           // Tour fields (if in tours mode)
           if (planningMode === "tours" && deliveryDay.used_tours) {
             deliveryDay.used_tours.forEach((tourNumber: number) => {
-              const tourKey = `day_${deliveryDay.id}_variation_${variation.id}_tour_${tourNumber}`;
+              const tourKey = dayVariationKey({ dayId, variationId, tour: tourNumber });
               processedRecord[tourKey] = processedRecord[tourKey] || 0;
             });
           }
@@ -301,15 +292,15 @@ export default function PlanningHarvestSharesBase({
           // Station fields (if in stations mode)
           if (planningMode === "stations" && deliveryDay.delivery_stations) {
             deliveryDay.delivery_stations.forEach((station) => {
-              const stationKey = `day_${deliveryDay.id}_variation_${variation.id}_station_${station.id}`;
+              const stationKey = dayVariationKey({ dayId, variationId, station: station.id });
               processedRecord[stationKey] = processedRecord[stationKey] || 0;
             });
           }
         });
 
         // Planned amount and harvested fields
-        const plannedKey = `day_${deliveryDay.id}_planned_amount`;
-        const harvestedKey = `day_${deliveryDay.id}_harvested`;
+        const plannedKey = dayPlannedAmountKey(dayId);
+        const harvestedKey = dayHarvestedKey(dayId);
         processedRecord[plannedKey] = processedRecord[plannedKey] || 0;
         processedRecord[harvestedKey] = processedRecord[harvestedKey] || 0;
       });
@@ -375,22 +366,17 @@ export default function PlanningHarvestSharesBase({
       // strings on the surviving tier become 0 (the wire signal for
       // "user cleared this cell"; backend treats "all zero on the
       // surviving tier" as "no human plan").
-      const STATION_RE = /_station_/;
-      const TOUR_RE = /_tour_/;
+      const activeTier = planningModeTier(planningMode);
       Object.keys(processedData).forEach((key) => {
-        if (!key.startsWith("day_") || !key.includes("_variation_")) {
+        // Only our own (unprefixed) day×variation cells are subject to the
+        // tier drop — a `backup_…` field on the record must pass through
+        // untouched.
+        const parsed = parseDayVariationKey(key);
+        if (!parsed || parsed.prefix !== "") {
           return;
         }
-        const hasStation = STATION_RE.test(key);
-        const hasTour = TOUR_RE.test(key);
-        const isBare = !hasStation && !hasTour;
 
-        const matchesMode =
-          (planningMode === "basic" && isBare) ||
-          (planningMode === "tours" && hasTour) ||
-          (planningMode === "stations" && hasStation);
-
-        if (!matchesMode) {
+        if (parsed.tier !== activeTier) {
           delete processedData[key];
           return;
         }
@@ -532,9 +518,10 @@ export default function PlanningHarvestSharesBase({
       }
 
       return dataToFilter.filter((item) => {
-        // Check if any day_ field has a value > 0
+        // Any of OUR (unprefixed) day×variation cells has a value > 0. A
+        // `backup_…` field is skipped (its prefix isn't empty).
         return Object.keys(item).some((key) => {
-          if (key.startsWith("day_") && key.includes("_variation_")) {
+          if (parseDayVariationKey(key)?.prefix === "") {
             const value = parseFloat(String(item[key])) || 0;
             return value > 0;
           }
@@ -908,6 +895,7 @@ export default function PlanningHarvestSharesBase({
         year={selectedYear}
         delivery_week={selectedWeek ?? nextWeek}
         shareOption={shareOption}
+        showDaysTogether={showDaysTogether}
         onSave={() => {
           invalidateData(); // Refresh the main table
         }}

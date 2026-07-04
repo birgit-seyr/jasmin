@@ -20,6 +20,8 @@ export { useSellers } from './useSellers';
 export { useShareArticles } from './useShareArticles';
 export { useShareContentGranularity } from './useShareContentGranularity';
 export { useShareDeliveryDays } from './useShareDeliveryDays';
+export { usePlanningAxes } from './usePlanningAxes';
+export type { PlanningAxes, UsePlanningAxesParams } from './usePlanningAxes';
 export { useShareOptions } from './useShareOptions';
 export { useShareTypeVariations } from './useShareTypeVariations';
 export { useShareTypeVariationsAmounts } from './useShareTypeVariationsAmounts';
@@ -43,6 +45,22 @@ export {
   useShareTypeVariationColumns,
   variationColumnKey,
 } from './columns/useShareTypeVariationColumns';
+export {
+  dayVariationKey,
+  dayPlannedAmountKey,
+  dayHarvestedKey,
+  dayAmountKey,
+  variationAmountKey,
+  parseDayVariationKey,
+  isDayVariationKey,
+  dayVariationTier,
+  planningModeTier,
+} from './columns/columnKeys';
+export type {
+  ColumnKeyTier,
+  ParsedDayVariationKey,
+  DayVariationKeyParts,
+} from './columns/columnKeys';
 export { useStorageColumns } from './columns/useStorageColumns';
 export { useWashingCleaningColumns } from './columns/useWashingCleaningColumns';
 // modal-state hook

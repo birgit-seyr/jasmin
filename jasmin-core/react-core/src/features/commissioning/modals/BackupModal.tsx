@@ -1,15 +1,19 @@
 import { Modal } from "antd";
 import ModalCloseFooter from "@shared/modals/ModalCloseFooter";
-import dayjs from "dayjs";
 import type { Key, ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { commissioningHarvestSharePlanningBackupUpdate } from "@shared/api/generated/commissioning/commissioning";
 import type { HarvestSharePlanningBackupRequest } from "@shared/api/generated/models/harvestSharePlanningBackupRequest";
-import type { ShareTypeEnum } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
-import { useNumberFormat, useSizeOptions, useUnitOptions } from '@hooks/index';
-import { useShareArticles, useShareDeliveryDays, useShareTypeVariations } from '@features/commissioning/hooks';
+import { useNumberFormat, useSizeOptions, useUnitOptions } from "@hooks/index";
+import {
+  dayVariationKey,
+  parseDayVariationKey,
+  useShareArticles,
+  usePlanningAxes,
+  variationColumnKey,
+} from "@features/commissioning/hooks";
 import { gatedByPermissionOnlyEdit } from "@shared/tables/tablePermissions";
 import type { ShareTypeVariationOption } from "@features/commissioning/hooks/useShareTypeVariations";
 import { EditableTable, wrapApiFunctions } from "@shared/tables";
@@ -35,6 +39,9 @@ interface BackupModalProps {
   delivery_week: number;
   shareOption: string;
   onSave?: () => void;
+  // Mirror the base planning table's day/variation nesting: true =
+  // variation-major (size group, day children), false = day-major.
+  showDaysTogether?: boolean;
 }
 
 export default function BackupModal({
@@ -45,6 +52,7 @@ export default function BackupModal({
   delivery_week,
   shareOption,
   onSave,
+  showDaysTogether = false,
 }: BackupModalProps) {
   const [backupData, setBackupData] = useState<BackupDataRecord[] | null>(null);
   const { t } = useTranslation();
@@ -64,63 +72,58 @@ export default function BackupModal({
     is_purchased: false,
   });
 
-  const shareDeliveryDaysFilters = useMemo(() => {
-    if (!year || !delivery_week) return null;
+  // Single source of truth for the day/variation axes — the same hook the base
+  // planning page uses, so the backup grid's day and variation sets can never
+  // drift from the base table (requireStations mirrors the base page's
+  // get_delivery_stations:true, which drops station-less days). See
+  // docs/day-variation-columns-audit.md.
+  const { shareDeliveryDays, shareTypeVariations } = usePlanningAxes({
+    year,
+    week: delivery_week,
+    shareOption,
+    requireStations: true,
+    needTours: false,
+  });
 
-    return {
-      active_at_date: dayjs()
-        .year(year)
-        .isoWeek(delivery_week)
-        .isoWeekday(6)
-        .format("YYYY-MM-DD"),
-      get_delivery_stations: false,
-      need_info_on_tours: false,
-    };
-  }, [year, delivery_week]);
-
-  const shareTypeVariationFilters = useMemo(() => {
-    if (!year || !delivery_week || !shareOption) return null;
-
-    return {
-      physical: true,
-      active_at_date: dayjs()
-        .year(year)
-        .isoWeek(delivery_week)
-        .isoWeekday(6)
-        .format("YYYY-MM-DD"),
-      // shareOption is always a valid ShareOptions value here (guarded above);
-      // the list param is now the generated enum, so narrow the string prop.
-      share_option: shareOption as ShareTypeEnum,
-    };
-  }, [year, delivery_week, shareOption]);
-
-  const { shareDeliveryDays } = useShareDeliveryDays(
-    shareDeliveryDaysFilters ?? undefined,
-  );
-  const { shareTypeVariations } = useShareTypeVariations(
-    shareTypeVariationFilters ?? null,
-  );
-
+  // Build the editable row ONCE per open (keyed on the backup's id), not on
+  // every dependency change. `data` is a frozen snapshot from the parent
+  // (setSelectedBackupData) that is never refreshed after a save; the
+  // share-day / variation queries refetch under the global staleTime=0 (e.g.
+  // the save invalidates them), which used to re-run this effect and overwrite
+  // the just-saved edit with the stale `data` — so the change only appeared
+  // after reopening. Guarding on data.id keeps the in-table (onDataChange)
+  // values authoritative until the modal is actually reopened.
+  const builtForIdRef = useRef<Key | null>(null);
   useEffect(() => {
-    if (visible && data && shareDeliveryDays && shareTypeVariations) {
-      const row: BackupDataRecord = {
-        id: data.id,
-        key: data.id as Key,
-        backup_share_article: data.backup_share_article,
-        backup_share_article_name: data.backup_share_article_name,
-        backup_unit: data.backup_unit,
-        backup_size: data.backup_size,
-      };
-
-      shareDeliveryDays.forEach((deliveryDay) => {
-        shareTypeVariations.forEach((variation) => {
-          const backupKey = `backup_day_${deliveryDay.id}_variation_${variation.id}`;
-          row[backupKey] = data[backupKey] || 0;
-        });
-      });
-
-      setBackupData([row]);
+    if (!visible) {
+      builtForIdRef.current = null; // reset so a reopen rebuilds from fresh data
+      return;
     }
+    if (!data || !shareDeliveryDays || !shareTypeVariations) return;
+    if (builtForIdRef.current === (data.id as Key)) return;
+    builtForIdRef.current = data.id as Key;
+
+    const row: BackupDataRecord = {
+      id: data.id,
+      key: data.id as Key,
+      backup_share_article: data.backup_share_article,
+      backup_share_article_name: data.backup_share_article_name,
+      backup_unit: data.backup_unit,
+      backup_size: data.backup_size,
+    };
+
+    shareDeliveryDays.forEach((deliveryDay) => {
+      shareTypeVariations.forEach((variation) => {
+        const backupKey = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          prefix: "backup_",
+        });
+        row[backupKey] = data[backupKey] || 0;
+      });
+    });
+
+    setBackupData([row]);
   }, [visible, data, shareDeliveryDays, shareTypeVariations]);
 
   const handleDataChange = useCallback((newData: TableRecord[]) => {
@@ -168,34 +171,80 @@ export default function BackupModal({
       },
     ];
 
+    const renderBackupCell = (value: unknown) => {
+      const numValue = Number(value);
+      if (isNaN(numValue) || numValue === 0) return "";
+      return data?.unit === "KG" ? format(numValue, 2) : format(numValue, 1);
+    };
+    // Match the base table's size label (t("commissioning.<size>")).
+    const variationTitle = (variation: ShareTypeVariationOption): ReactNode =>
+      variation.size
+        ? t(`commissioning.${variation.size}`)
+        : ((variation.label ?? "") as ReactNode);
+
+    // Mirror the base planning table's nesting so the backup grid matches it
+    // column-for-column. ``showDaysTogether`` = variation-major (size group,
+    // day children); otherwise day-major (day group, variation children). The
+    // leaf dataIndex is always ``backup_day_<day>_variation_<var>`` — only the
+    // grouping changes, so the data binding is identical either way.
     const dayVariationColumns: EditableColumnConfig<TableRecord>[] =
-      shareDeliveryDays.map(
-        (deliveryDay): EditableColumnConfig<TableRecord> => ({
-          title: deliveryDay.label as ReactNode,
-          dataIndex: `backup_day_${deliveryDay.id}`,
-          key: `backup_day_${deliveryDay.id}`,
-          align: "center",
-          children: shareTypeVariations.map(
+      showDaysTogether
+        ? shareTypeVariations.map(
             (
               variation: ShareTypeVariationOption,
             ): EditableColumnConfig<TableRecord> => ({
-              title: (variation.size || variation.label) as ReactNode,
-              dataIndex: `backup_day_${deliveryDay.id}_variation_${variation.id}`,
-              key: `backup_day_${deliveryDay.id}_variation_${variation.id}`,
-              inputType: "positive_decimal2",
+              title: variationTitle(variation),
+              dataIndex: variationColumnKey(variation.id!, "backup_"),
+              key: `backup_variation_group_${variation.id}`,
               align: "center",
-              width: "6em",
-              render: (value: unknown) => {
-                const numValue = Number(value);
-                if (isNaN(numValue) || numValue === 0) return "";
-                return data?.unit === "KG"
-                  ? format(numValue, 2)
-                  : format(numValue, 1);
-              },
+              children: shareDeliveryDays.map(
+                (deliveryDay): EditableColumnConfig<TableRecord> => {
+                  const leafKey = dayVariationKey({
+                    dayId: deliveryDay.id!,
+                    variationId: variation.id!,
+                    prefix: "backup_",
+                  });
+                  return {
+                    title: deliveryDay.label as ReactNode,
+                    dataIndex: leafKey,
+                    key: leafKey,
+                    inputType: "positive_decimal2",
+                    align: "center",
+                    width: "6em",
+                    render: renderBackupCell,
+                  };
+                },
+              ),
             }),
-          ),
-        }),
-      );
+          )
+        : shareDeliveryDays.map(
+            (deliveryDay): EditableColumnConfig<TableRecord> => ({
+              title: deliveryDay.label as ReactNode,
+              dataIndex: `backup_day_${deliveryDay.id}`,
+              key: `backup_day_${deliveryDay.id}`,
+              align: "center",
+              children: shareTypeVariations.map(
+                (
+                  variation: ShareTypeVariationOption,
+                ): EditableColumnConfig<TableRecord> => {
+                  const leafKey = dayVariationKey({
+                    dayId: deliveryDay.id!,
+                    variationId: variation.id!,
+                    prefix: "backup_",
+                  });
+                  return {
+                    title: variationTitle(variation),
+                    dataIndex: leafKey,
+                    key: leafKey,
+                    inputType: "positive_decimal2",
+                    align: "center",
+                    width: "6em",
+                    render: renderBackupCell,
+                  };
+                },
+              ),
+            }),
+          );
 
     return [...baseColumns, ...dayVariationColumns];
   }, [
@@ -209,15 +258,23 @@ export default function BackupModal({
     format,
     getUnitLabel,
     getSizeLabel,
+    showDaysTogether,
   ]);
 
   const customSave = useCallback((transformedData: Record<string, unknown>) => {
     const payload: Record<string, unknown> = {};
 
     Object.keys(transformedData).forEach((key) => {
-      if (key.startsWith("backup_day_")) {
-        // Strip "backup_" prefix so the backend gets "day_{id}_variation_{id}"
-        const strippedKey = key.replace("backup_", "");
+      const parsed = parseDayVariationKey(key);
+      if (parsed?.prefix === "backup_") {
+        // Rebuild WITHOUT the "backup_" prefix so the backend gets the plain
+        // "day_{id}_variation_{id}" (+ tour/station tier) key it stores under.
+        const strippedKey = dayVariationKey({
+          dayId: parsed.dayId,
+          variationId: parsed.variationId,
+          tour: parsed.tour,
+          station: parsed.station,
+        });
         payload[strippedKey] = transformedData[key] || 0;
       } else if (
         key === "backup_share_article" ||
@@ -258,10 +315,9 @@ export default function BackupModal({
       }
       open={visible}
       onCancel={onClose}
-      width={1200}
-      footer={[
-        <ModalCloseFooter key="close" onClose={onClose} />,
-      ]}
+      width={800}
+      destroyOnHidden
+      footer={[<ModalCloseFooter key="close" onClose={onClose} />]}
     >
       <p
         style={{

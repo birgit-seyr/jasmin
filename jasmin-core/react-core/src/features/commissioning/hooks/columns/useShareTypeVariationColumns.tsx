@@ -10,15 +10,17 @@ import type {
 import type { ShareTypeVariationOption } from "../useShareTypeVariations";
 import { useShareTypeVariations } from "../useShareTypeVariations";
 import { useNumberFormat } from "@hooks/useNumberFormat";
+import { variationColumnKey } from "./columnKeys";
+
+// Re-exported for existing importers (barrel + pages) — the canonical
+// definition now lives in ./columnKeys alongside the day×variation helpers.
+export { variationColumnKey };
 
 export interface ShareTypeVariationGroup {
   share_type_id: string;
   share_type_name: string;
   variations: ShareTypeVariationOption[];
 }
-
-export const variationColumnKey = (variationId: string) =>
-  `variation_${variationId}`;
 
 export interface UseShareTypeVariationColumnsConfig {
   /** Query params forwarded to `useShareTypeVariations` (e.g. `active_at_date`). */

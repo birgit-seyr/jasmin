@@ -9,6 +9,12 @@ import { useNumberFormat } from "@hooks/useNumberFormat";
 import type { ShareDeliveryDayOption } from "../useShareDeliveryDays";
 import type { ShareTypeVariationOption } from "../useShareTypeVariations";
 import { computePlannedAmountForDay } from "../usePlanningSummaryData";
+import {
+  dayHarvestedKey,
+  dayPlannedAmountKey,
+  dayVariationKey,
+  variationColumnKey,
+} from "./columnKeys";
 
 // Orval types delivery_stations as string, but runtime data is an array of objects
 interface DeliveryStation {
@@ -96,9 +102,17 @@ export function useDeliveryDayColumns({
       variation: ShareTypeVariationOption,
     ): EditableColumnConfig<TableRecord> => ({
       title: deliveryDay.label,
-      dataIndex: `day_${deliveryDay.id}_variation_${variation.id}`,
-      key: `day_${deliveryDay.id}_variation_${variation.id}`,
-      inputType: "positive_integer",
+      dataIndex: dayVariationKey({
+        dayId: deliveryDay.id!,
+        variationId: variation.id!,
+      }),
+      key: dayVariationKey({ dayId: deliveryDay.id!, variationId: variation.id! }),
+      // Same (day, variation) cell as the day-major layout and the tour/station
+      // leaves — all `positive_decimal2`. This is the "days together" (variation-
+      // major) rendering of it, so it must accept the same precision; it used to
+      // be `positive_integer`, silently forbidding decimals only in this toggle
+      // state (see docs/day-variation-columns-audit.md, Phase 4).
+      inputType: "positive_decimal2",
       align: "center",
       width: AMOUNT_COLUMN_WIDTH,
       render: (value: unknown, record: TableRecord) =>
@@ -110,8 +124,11 @@ export function useDeliveryDayColumns({
       variation: ShareTypeVariationOption,
     ): EditableColumnConfig<TableRecord> => ({
       title: deliveryDay.label,
-      dataIndex: `day_${deliveryDay.id}_variation_${variation.id}`,
-      key: `day_${deliveryDay.id}_variation_${variation.id}`,
+      dataIndex: dayVariationKey({
+        dayId: deliveryDay.id!,
+        variationId: variation.id!,
+      }),
+      key: dayVariationKey({ dayId: deliveryDay.id!, variationId: variation.id! }),
       align: "center",
       children: Array.from(
         { length: deliveryDay.used_tours?.length || 0 },
@@ -121,8 +138,16 @@ export function useDeliveryDayColumns({
 
           return {
             title: `T${tourNumber}`,
-            dataIndex: `day_${deliveryDay.id}_variation_${variation.id}_tour_${tourNumber}`,
-            key: `day_${deliveryDay.id}_variation_${variation.id}_tour_${tourNumber}`,
+            dataIndex: dayVariationKey({
+              dayId: deliveryDay.id!,
+              variationId: variation.id!,
+              tour: tourNumber,
+            }),
+            key: dayVariationKey({
+              dayId: deliveryDay.id!,
+              variationId: variation.id!,
+              tour: tourNumber,
+            }),
             inputType: "positive_decimal2",
             align: "center",
             width: AMOUNT_COLUMN_WIDTH,
@@ -138,14 +163,25 @@ export function useDeliveryDayColumns({
       variation: ShareTypeVariationOption,
     ): EditableColumnConfig<TableRecord> => ({
       title: deliveryDay.label,
-      dataIndex: `day_${deliveryDay.id}_variation_${variation.id}`,
-      key: `day_${deliveryDay.id}_variation_${variation.id}`,
+      dataIndex: dayVariationKey({
+        dayId: deliveryDay.id!,
+        variationId: variation.id!,
+      }),
+      key: dayVariationKey({ dayId: deliveryDay.id!, variationId: variation.id! }),
       align: "center",
       children:
         deliveryDay.delivery_stations?.map((station) => ({
           title: `${station.short_name}`,
-          dataIndex: `day_${deliveryDay.id}_variation_${variation.id}_station_${station.id}`,
-          key: `day_${deliveryDay.id}_variation_${variation.id}_station_${station.id}`,
+          dataIndex: dayVariationKey({
+            dayId: deliveryDay.id!,
+            variationId: variation.id!,
+            station: station.id,
+          }),
+          key: dayVariationKey({
+            dayId: deliveryDay.id!,
+            variationId: variation.id!,
+            station: station.id,
+          }),
           inputType: "positive_decimal2",
           align: "center",
           width: STATIONS_COLUMN_WIDTH,
@@ -158,10 +194,13 @@ export function useDeliveryDayColumns({
       deliveryDay: DeliveryDay,
       variation: ShareTypeVariationOption,
     ): EditableColumnConfig<TableRecord> => {
+      const dayId = deliveryDay.id!;
+      const variationId = variation.id!;
+      const bareKey = dayVariationKey({ dayId, variationId });
       const baseColumn = {
         title: t(`commissioning.${variation.size}`),
-        dataIndex: `day_${deliveryDay.id}_variation_${variation.id}`,
-        key: `day_${deliveryDay.id}_variation_${variation.id}`,
+        dataIndex: bareKey,
+        key: bareKey,
         align: "center" as const,
       };
 
@@ -173,11 +212,16 @@ export function useDeliveryDayColumns({
             (_, tourIndex) => {
               const tourNumber =
                 deliveryDay.used_tours?.[tourIndex] || tourIndex + 1;
+              const tourKey = dayVariationKey({
+                dayId,
+                variationId,
+                tour: tourNumber,
+              });
 
               return {
                 title: `T${tourNumber}`,
-                dataIndex: `day_${deliveryDay.id}_variation_${variation.id}_tour_${tourNumber}`,
-                key: `day_${deliveryDay.id}_variation_${variation.id}_tour_${tourNumber}`,
+                dataIndex: tourKey,
+                key: tourKey,
                 inputType: "positive_decimal2",
                 align: "center",
                 width: AMOUNT_COLUMN_WIDTH,
@@ -191,21 +235,28 @@ export function useDeliveryDayColumns({
         return {
           ...baseColumn,
           children:
-            deliveryDay.delivery_stations?.map((station) => ({
-              title: `${station.short_name}`,
-              dataIndex: `day_${deliveryDay.id}_variation_${variation.id}_station_${station.id}`,
-              key: `day_${deliveryDay.id}_variation_${variation.id}_station_${station.id}`,
-              inputType: "positive_decimal2",
-              align: "center",
-              width: STATIONS_COLUMN_WIDTH,
-              render: (value: unknown, record: TableRecord) =>
-                renderVariationCell(value, record, variation.id as string),
-            })) || [],
+            deliveryDay.delivery_stations?.map((station) => {
+              const stationKey = dayVariationKey({
+                dayId,
+                variationId,
+                station: station.id,
+              });
+              return {
+                title: `${station.short_name}`,
+                dataIndex: stationKey,
+                key: stationKey,
+                inputType: "positive_decimal2",
+                align: "center",
+                width: STATIONS_COLUMN_WIDTH,
+                render: (value: unknown, record: TableRecord) =>
+                  renderVariationCell(value, record, variation.id as string),
+              };
+            }) || [],
         };
       } else {
         return {
           ...baseColumn,
-          dataIndex: `day_${deliveryDay.id}_variation_${variation.id}`,
+          dataIndex: bareKey,
           inputType: "positive_decimal2",
           width: AMOUNT_COLUMN_WIDTH,
           render: (value: unknown, record: TableRecord) =>
@@ -222,8 +273,8 @@ export function useDeliveryDayColumns({
           {t("commissioning.total_planned_amount")}
         </div>
       ),
-      dataIndex: `day_${deliveryDay.id}_planned_amount`,
-      key: `day_${deliveryDay.id}_planned_amount`,
+      dataIndex: dayPlannedAmountKey(deliveryDay.id!),
+      key: dayPlannedAmountKey(deliveryDay.id!),
       inputType: "positive_integer",
       align: "center",
       width: "4.5em",
@@ -262,8 +313,8 @@ export function useDeliveryDayColumns({
           <ToolTipIcon title={t("tooltip.available_amount_harvest")} />
         </div>
       ),
-      dataIndex: `day_${deliveryDay.id}_harvested`,
-      key: `day_${deliveryDay.id}_harvested`,
+      dataIndex: dayHarvestedKey(deliveryDay.id!),
+      key: dayHarvestedKey(deliveryDay.id!),
       inputType: "text",
       align: "center",
       width: "5em",
@@ -317,8 +368,8 @@ export function useDeliveryDayColumns({
       return shareTypeVariations.map(
         (variation: ShareTypeVariationOption, varIndex): EditableColumnConfig<TableRecord> => ({
           title: t(`commissioning.${variation.size}`),
-          dataIndex: `variation_${variation.id}`,
-          key: `variation_${variation.id}`,
+          dataIndex: variationColumnKey(variation.id!),
+          key: variationColumnKey(variation.id!),
           className: varIndex === 0 ? "column-group-start" : "column-group-start column-variation-start",
           align: "center",
           children: withGroupStart(

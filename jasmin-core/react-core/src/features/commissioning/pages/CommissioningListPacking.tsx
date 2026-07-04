@@ -17,6 +17,7 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import { MobileStack } from "@shared/ui";
 import {
+  dayPlannedAmountKey,
   useAmountUnitSizeColumns,
   usePackingModeShareGroups,
   useShareArticleColumn,
@@ -60,7 +61,7 @@ function buildRows(
   deliveryDayId: string | null,
 ): PackingRow[] {
   if (!Array.isArray(rawData) || !deliveryDayId) return [];
-  const plannedKey = `day_${deliveryDayId}_planned_amount`;
+  const plannedKey = dayPlannedAmountKey(deliveryDayId);
   const result: PackingRow[] = [];
   for (const row of rawData) {
     const rawAmount = row[plannedKey];

@@ -5,6 +5,7 @@ import {
   useShareArticleColumn,
   useShareArticles,
   useShareTypeVariations,
+  variationAmountKey,
 } from "@features/commissioning/hooks";
 import {
   useInvalidateAfterTableMutation,
@@ -196,9 +197,14 @@ export default function PlanningLongTermHarvestSharesBase({
       return shareTypeVariations.map(
         (variation): EditableColumnConfig<TableRecord> => ({
           title: t(`commissioning.${variation.size}`),
-          dataIndex: `amount_${variation.id}`,
+          // dataIndex AND key must be the SAME wire field. The default-share
+          // backend keys amounts by variation id as `amount_<id>` (there is no
+          // day axis here); previously `key` said `variation_<id>` while
+          // `dataIndex` said `amount_<id>` — a latent footgun. See
+          // docs/day-variation-columns-audit.md (Phase 4).
+          dataIndex: variationAmountKey(variation.id!),
           inputType: "positive_decimal2",
-          key: `variation_${variation.id}`,
+          key: variationAmountKey(variation.id!),
           align: "center",
           width: "5em",
           render: (value: unknown, record: TableRecord) => {

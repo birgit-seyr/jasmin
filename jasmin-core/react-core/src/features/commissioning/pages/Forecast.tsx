@@ -36,7 +36,7 @@ import { AddShareArticleEntry } from '@features/commissioning/components';
 import { isWeekInPast, notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { useActiveShareOptions, useInvalidateAfterTableMutation, useIsMobile, useNoteColumn, useTableRowSelection, useTenant } from '@hooks/index';
-import { useAmountUnitSizeColumns, useFinalColumn, useForecastColumns, useOfferGroups, usePlots, useShareArticleColumn, useShareArticles, useShareTypeVariations } from '@features/commissioning/hooks';
+import { useAmountUnitSizeColumns, useFinalColumn, useForecastColumns, useOfferGroups, usePlots, useShareArticleColumn, useShareArticles, useShareTypeVariations, variationColumnKey } from '@features/commissioning/hooks';
 
 const currentYear = dayjs().year();
 const currentWeek = dayjs().isoWeek();
@@ -237,7 +237,7 @@ export default function Forecast() {
           ...(shareTypeVariationsCount > 1 &&
             Object.fromEntries(
               (shareTypeVariations ?? []).map((v) => [
-                `variation_${v.id}`,
+                variationColumnKey(v.id!),
                 true,
               ]),
             )),
@@ -246,7 +246,7 @@ export default function Forecast() {
             ...(shareTypeVariationsFruitsCount > 1 &&
               Object.fromEntries(
                 (shareTypeVariationsFruits ?? []).map((v) => [
-                  `variation_${v.id}`,
+                  variationColumnKey(v.id!),
                   true,
                 ]),
               )),
@@ -278,11 +278,11 @@ export default function Forecast() {
   // variation re-ticks the master. (``setFieldsValue`` doesn't fire onChange,
   // so these can't loop.)
   const vegVariationKeys = useMemo(
-    () => (shareTypeVariations ?? []).map((v) => `variation_${v.id}`),
+    () => (shareTypeVariations ?? []).map((v) => variationColumnKey(v.id!)),
     [shareTypeVariations],
   );
   const fruitVariationKeys = useMemo(
-    () => (shareTypeVariationsFruits ?? []).map((v) => `variation_${v.id}`),
+    () => (shareTypeVariationsFruits ?? []).map((v) => variationColumnKey(v.id!)),
     [shareTypeVariationsFruits],
   );
 
@@ -331,9 +331,9 @@ export default function Forecast() {
     return (
       shareTypeVariations?.map((variation) => ({
         title: <>{t("commissioning.for_size", { size: variation.size })}</>,
-        dataIndex: `variation_${variation.id}`,
+        dataIndex: variationColumnKey(variation.id!),
         inputType: "checkbox",
-        key: `variation_${variation.id}`,
+        key: variationColumnKey(variation.id!),
         align: "center",
         onFieldChange: onVegVariationChange,
       })) || []
@@ -344,9 +344,9 @@ export default function Forecast() {
     return (
       shareTypeVariationsFruits?.map((variation) => ({
         title: <>{t("commissioning.for_size", { size: variation.size })}</>,
-        dataIndex: `variation_${variation.id}`,
+        dataIndex: variationColumnKey(variation.id!),
         inputType: "checkbox",
-        key: `variation_${variation.id}`,
+        key: variationColumnKey(variation.id!),
         align: "center",
         onFieldChange: onFruitVariationChange,
       })) || []

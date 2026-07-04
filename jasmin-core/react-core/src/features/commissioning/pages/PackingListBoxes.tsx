@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -28,7 +29,7 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText } from "@shared/ui";
 import { useInvalidateAfterTableMutation, useIsMobile, useNoteColumn, useNumberFormat, useSizeOptions, useTenant, useUnitOptions } from '@hooks/index';
-import { useAmountUnitSizeColumns, useShareArticleColumn } from '@features/commissioning/hooks';
+import { useAmountUnitSizeColumns, useShareArticleColumn, variationColumnKey } from '@features/commissioning/hooks';
 import type { ShareTypeOption } from "@hooks/useShareTypes";
 import type { ShareTypeVariationOption } from "@features/commissioning/hooks/useShareTypeVariations";
 import dayjs from "dayjs";
@@ -49,6 +50,26 @@ const shareArticleFilters = {
 const widthShareArticle = "30%";
 const widthAmountUnitSize = "10%";
 const widthVariation = "10%";
+
+// A packing-list row can carry a BACKUP article (the substitute veg planned in
+// the BackupModal). When present we render its name / unit / size / per-variation
+// amount as a second, GREY line inside the SAME cell — so the backup reads as a
+// sub-line of the vegetable it backs up, in the right columns.
+const BACKUP_SUBLINE_STYLE: CSSProperties = {
+  color: "var(--color-text-secondary)",
+  fontSize: "0.85em",
+  lineHeight: 1.2,
+};
+
+function withBackupSubline(main: ReactNode, backup: ReactNode): ReactNode {
+  if (backup === null || backup === undefined || backup === "") return main ?? "";
+  return (
+    <>
+      <div>{main}</div>
+      <div style={BACKUP_SUBLINE_STYLE}>{backup}</div>
+    </>
+  );
+}
 
 // The boxes endpoint accepts ``is_packed_bulk`` for the MIXED packing-mode
 // split. Generated params type lags until ``npm run generate-api`` is rerun.
@@ -260,7 +281,7 @@ function BoxesBody({
     if (!allStationsData || !shell.shareTypeVariations.length) return null;
 
     const variationKeys = shell.shareTypeVariations.map(
-      (v: ShareTypeVariationOption) => `variation_${v.id}`,
+      (v: ShareTypeVariationOption) => variationColumnKey(v.id!),
     );
 
     const grouped = new Map<number, TableRecord[]>();
@@ -290,7 +311,7 @@ function BoxesBody({
         .map((v: ShareTypeVariationOption) => ({
           id: v.id,
           size: v.size,
-          totalQuantity: totalsMap.get(`variation_${v.id}`) ?? 0,
+          totalQuantity: totalsMap.get(variationColumnKey(v.id!)) ?? 0,
         }))
         .filter((vt: { totalQuantity: number }) => vt.totalQuantity > 0);
 
@@ -311,25 +332,33 @@ function BoxesBody({
           variation: ShareTypeVariationOption,
         ): EditableColumnConfig<TableRecord> => ({
           title: t(`commissioning.${variation.size}`),
-          dataIndex: `variation_${variation.id}`,
-          key: `variation_${variation.id}`,
+          dataIndex: variationColumnKey(variation.id!),
+          key: variationColumnKey(variation.id!),
           inputType: "positive_integer",
           align: "center",
           width: "5em",
-          render: (value: unknown) => {
-            if (value === null || value === undefined || value === "") return "";
-            const n = Number(value);
-            // Hide zeros — matches the mobile card's filter
-            // ``v.value !== 0`` so empty buckets look the same on
-            // desktop and PDF.
-            if (!Number.isFinite(n) || n === 0) return "";
-            return format(n, 0);
+          render: (value: unknown, record: TableRecord) => {
+            const fmtAmount = (v: unknown): string => {
+              if (v === null || v === undefined || v === "") return "";
+              const n = Number(v);
+              // Hide zeros — matches the mobile card's filter
+              // ``v.value !== 0`` so empty buckets look the same on
+              // desktop and PDF.
+              if (!Number.isFinite(n) || n === 0) return "";
+              return format(n, 0);
+            };
+            // Row's own backup amount for THIS variation (backend emits
+            // backup_variation_<id> beside variation_<id>).
+            const backupAmount = record?.backup_share_article_name
+              ? fmtAmount(record[variationColumnKey(variation.id!, "backup_")])
+              : "";
+            return withBackupSubline(fmtAmount(value), backupAmount);
           },
           pdf: {
             include: true,
             width: widthVariation,
             align: "center",
-            dataKey: `variation_${variation.id}`,
+            dataKey: variationColumnKey(variation.id!),
             title: t(`commissioning.${variation.size}`),
           },
         }),
@@ -342,6 +371,17 @@ function BoxesBody({
       {
         ...shareArticleColumn,
         disabled: (record: TableRecord) => record.key != -1,
+        render: (value: unknown, record: TableRecord, index: number) => {
+          const original = shareArticleColumn.render
+            ? shareArticleColumn.render(value, record, index)
+            : ((record.share_article_name as ReactNode) ??
+              (value as ReactNode) ??
+              "");
+          const backup = record?.backup_share_article_name
+            ? `${t("commissioning.backup")}: ${record.backup_share_article_name}`
+            : null;
+          return withBackupSubline(original, backup);
+        },
         pdf: {
           include: true,
           width: widthShareArticle,
@@ -351,21 +391,43 @@ function BoxesBody({
         },
       },
       ...amountUnitSizeColumns.map(
-        (col): EditableColumnConfig<TableRecord> => ({
-          ...col,
-          pdf: {
-            include: true,
-            width: widthAmountUnitSize,
-            align: "center",
-            dataKey:
-              col.dataIndex === "unit"
-                ? "unit_label"
-                : col.dataIndex === "size"
-                  ? "size_label"
-                  : col.dataIndex,
-            title: col.title,
-          },
-        }),
+        (col): EditableColumnConfig<TableRecord> => {
+          const isUnit = col.dataIndex === "unit";
+          const isSize = col.dataIndex === "size";
+          return {
+            ...col,
+            render: (value: unknown, record: TableRecord, index: number) => {
+              const original = col.render
+                ? col.render(value, record, index)
+                : ((value as ReactNode) ?? "");
+              let backup: ReactNode = null;
+              if (record?.backup_share_article_name) {
+                if (isUnit && record.backup_share_article_unit) {
+                  backup = getUnitLabel(
+                    record.backup_share_article_unit as string,
+                  );
+                } else if (isSize && record.backup_share_article_size) {
+                  backup = getSizeLabel(
+                    record.backup_share_article_size as string,
+                  );
+                }
+              }
+              return withBackupSubline(original, backup);
+            },
+            pdf: {
+              include: true,
+              width: widthAmountUnitSize,
+              align: "center",
+              dataKey:
+                col.dataIndex === "unit"
+                  ? "unit_label"
+                  : col.dataIndex === "size"
+                    ? "size_label"
+                    : col.dataIndex,
+              title: col.title,
+            },
+          };
+        },
       ),
     ];
 
@@ -392,6 +454,8 @@ function BoxesBody({
     shareArticleColumn,
     amountUnitSizeColumns,
     noteColumn,
+    getUnitLabel,
+    getSizeLabel,
   ]);
 
   const apiFunctions = useMemo<ApiFunctions>(

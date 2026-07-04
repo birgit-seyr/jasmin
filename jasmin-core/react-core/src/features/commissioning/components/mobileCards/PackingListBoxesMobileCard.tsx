@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useSizeOptions, useUnitOptions } from "@hooks/index";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
+import { variationColumnKey } from "@features/commissioning/hooks/columns/columnKeys";
 import {
   MobileCard,
   MobileCardContent,
@@ -34,7 +35,7 @@ export function PackingListBoxesMobileCard({
   const variations = shareTypeVariations
     .map((v) => ({
       label: t(`commissioning.${v.size}`),
-      value: (record as Record<string, unknown>)[`variation_${v.id}`] as
+      value: (record as Record<string, unknown>)[variationColumnKey(v.id!)] as
         | number
         | string
         | null

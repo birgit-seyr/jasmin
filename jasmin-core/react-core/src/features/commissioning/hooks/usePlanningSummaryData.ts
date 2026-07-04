@@ -3,6 +3,11 @@ import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import type { ShareArticleOption } from "./useShareArticles";
 import type { ShareTypeVariationOption } from "./useShareTypeVariations";
 import type { DeliveryDay } from "./columns/useDeliveryDayColumns";
+import {
+  dayVariationKey,
+  parseDayVariationKey,
+  planningModeTier,
+} from "./columns/columnKeys";
 
 interface UsePlanningSummaryDataParams {
   shareDeliveryDays: DeliveryDay[];
@@ -35,20 +40,31 @@ export function computePlannedAmountForDay(
   for (const variation of shareTypeVariations) {
     if (planningMode === "tours") {
       deliveryDay.used_tours?.forEach((tourNumber: number) => {
-        const key = `day_${deliveryDay.id}_variation_${variation.id}_tour_${tourNumber}`;
+        const key = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          tour: tourNumber,
+        });
         const count = Number(shareVariationAmountsSummary[key]) || 0;
         const perShare = Number(record[key]) || 0;
         total += count * perShare;
       });
     } else if (planningMode === "stations") {
       deliveryDay.delivery_stations?.forEach((station) => {
-        const key = `day_${deliveryDay.id}_variation_${variation.id}_station_${station.id}`;
+        const key = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          station: station.id,
+        });
         const count = Number(shareVariationAmountsSummary[key]) || 0;
         const perShare = Number(record[key]) || 0;
         total += count * perShare;
       });
     } else {
-      const key = `day_${deliveryDay.id}_variation_${variation.id}`;
+      const key = dayVariationKey({
+        dayId: deliveryDay.id!,
+        variationId: variation.id!,
+      });
       const count = Number(shareVariationAmountsSummary[key]) || 0;
       const perShare = Number(record[key]) || 0;
       total += count * perShare;
@@ -75,20 +91,31 @@ export function usePlanningSummaryData({
     shareDeliveryDays.forEach((deliveryDay) => {
       shareTypeVariations.forEach((variation: ShareTypeVariationOption) => {
         if (planningMode === "basic") {
-          const key = `day_${deliveryDay.id}_variation_${variation.id}`;
+          const key = dayVariationKey({
+            dayId: deliveryDay.id!,
+            variationId: variation.id!,
+          });
           summary[key] = String(
             Math.round((shareVariationAmounts[key] as number) || 0),
           );
         } else if (planningMode === "tours") {
           deliveryDay.used_tours?.forEach((tourNumber: number) => {
-            const key = `day_${deliveryDay.id}_variation_${variation.id}_tour_${tourNumber}`;
+            const key = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          tour: tourNumber,
+        });
             summary[key] = String(
               Math.round((shareVariationAmounts[key] as number) || 0),
             );
           });
         } else if (planningMode === "stations") {
           deliveryDay.delivery_stations?.forEach((station) => {
-            const key = `day_${deliveryDay.id}_variation_${variation.id}_station_${station.id}`;
+            const key = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          station: station.id,
+        });
             summary[key] = String(
               Math.round((shareVariationAmounts[key] as number) || 0),
             );
@@ -109,23 +136,17 @@ export function usePlanningSummaryData({
     (tableData: TableRecord[]) => {
       const sums: Record<string, number> = {};
       const dayVariationKeys = new Set<string>();
+      const activeTier = planningModeTier(planningMode);
 
       tableData.forEach((item) => {
         Object.keys(item).forEach((key) => {
-          if (key.startsWith("day_") && key.includes("_variation_")) {
-            if (planningMode === "basic") {
-              if (!key.includes("_tour_") && !key.includes("_station_")) {
-                dayVariationKeys.add(key);
-              }
-            } else if (planningMode === "tours") {
-              if (key.includes("_tour_") && !key.includes("_station_")) {
-                dayVariationKeys.add(key);
-              }
-            } else if (planningMode === "stations") {
-              if (key.includes("_station_")) {
-                dayVariationKeys.add(key);
-              }
-            }
+          // Only unprefixed cells for the ACTIVE mode's tier. Parsing (instead
+          // of substring scans) keeps the `prefix === ""` guard explicit:
+          // planning rows also carry `backup_day_…_variation_…` fields (they
+          // seed the BackupModal) which must NOT count toward these totals.
+          const parsed = parseDayVariationKey(key);
+          if (parsed?.prefix === "" && parsed.tier === activeTier) {
+            dayVariationKeys.add(key);
           }
         });
       });
@@ -179,6 +200,7 @@ export function usePlanningSummaryData({
     (tableData: TableRecord[]) => {
       const totals: Record<string, number> = {};
       const dayVariationKeys = new Set<string>();
+      const activeTier = planningModeTier(planningMode);
 
       const priceMap = new Map(
         vegetables_and_fruits?.map((article: ShareArticleOption) => [
@@ -189,20 +211,13 @@ export function usePlanningSummaryData({
 
       tableData.forEach((item) => {
         Object.keys(item).forEach((key) => {
-          if (key.startsWith("day_") && key.includes("_variation_")) {
-            if (planningMode === "basic") {
-              if (!key.includes("_tour_") && !key.includes("_station_")) {
-                dayVariationKeys.add(key);
-              }
-            } else if (planningMode === "tours") {
-              if (key.includes("_tour_") && !key.includes("_station_")) {
-                dayVariationKeys.add(key);
-              }
-            } else if (planningMode === "stations") {
-              if (key.includes("_station_")) {
-                dayVariationKeys.add(key);
-              }
-            }
+          // Only unprefixed cells for the ACTIVE mode's tier. Parsing (instead
+          // of substring scans) keeps the `prefix === ""` guard explicit:
+          // planning rows also carry `backup_day_…_variation_…` fields (they
+          // seed the BackupModal) which must NOT count toward these totals.
+          const parsed = parseDayVariationKey(key);
+          if (parsed?.prefix === "" && parsed.tier === activeTier) {
+            dayVariationKeys.add(key);
           }
         });
       });
@@ -276,16 +291,27 @@ export function usePlanningSummaryData({
         );
         if (!avgWeight) return;
         if (planningMode === "basic") {
-          const key = `day_${deliveryDay.id}_variation_${variation.id}`;
+          const key = dayVariationKey({
+            dayId: deliveryDay.id!,
+            variationId: variation.id!,
+          });
           subData[key] = avgWeight;
         } else if (planningMode === "tours") {
           deliveryDay.used_tours?.forEach((tourNumber: number) => {
-            const key = `day_${deliveryDay.id}_variation_${variation.id}_tour_${tourNumber}`;
+            const key = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          tour: tourNumber,
+        });
             subData[key] = avgWeight;
           });
         } else if (planningMode === "stations") {
           deliveryDay.delivery_stations?.forEach((station) => {
-            const key = `day_${deliveryDay.id}_variation_${variation.id}_station_${station.id}`;
+            const key = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          station: station.id,
+        });
             subData[key] = avgWeight;
           });
         }
@@ -303,16 +329,27 @@ export function usePlanningSummaryData({
         );
         if (!priceSumArticles) return;
         if (planningMode === "basic") {
-          const key = `day_${deliveryDay.id}_variation_${variation.id}`;
+          const key = dayVariationKey({
+            dayId: deliveryDay.id!,
+            variationId: variation.id!,
+          });
           subData[key] = priceSumArticles;
         } else if (planningMode === "tours") {
           deliveryDay.used_tours?.forEach((tourNumber: number) => {
-            const key = `day_${deliveryDay.id}_variation_${variation.id}_tour_${tourNumber}`;
+            const key = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          tour: tourNumber,
+        });
             subData[key] = priceSumArticles;
           });
         } else if (planningMode === "stations") {
           deliveryDay.delivery_stations?.forEach((station) => {
-            const key = `day_${deliveryDay.id}_variation_${variation.id}_station_${station.id}`;
+            const key = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          station: station.id,
+        });
             subData[key] = priceSumArticles;
           });
         }
@@ -327,18 +364,29 @@ export function usePlanningSummaryData({
     shareDeliveryDays.forEach((deliveryDay) => {
       shareTypeVariations.forEach((variation: ShareTypeVariationOption) => {
         if (planningMode === "basic") {
-          const key = `day_${deliveryDay.id}_variation_${variation.id}`;
+          const key = dayVariationKey({
+            dayId: deliveryDay.id!,
+            variationId: variation.id!,
+          });
           if (!key.includes("_tour_") && !key.includes("_station_")) {
             dayVariationKeys.push(key);
           }
         } else if (planningMode === "tours") {
           deliveryDay.used_tours?.forEach((tourNumber: number) => {
-            const key = `day_${deliveryDay.id}_variation_${variation.id}_tour_${tourNumber}`;
+            const key = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          tour: tourNumber,
+        });
             dayVariationKeys.push(key);
           });
         } else if (planningMode === "stations") {
           deliveryDay.delivery_stations?.forEach((station) => {
-            const key = `day_${deliveryDay.id}_variation_${variation.id}_station_${station.id}`;
+            const key = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          station: station.id,
+        });
             dayVariationKeys.push(key);
           });
         }

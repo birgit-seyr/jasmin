@@ -6,6 +6,7 @@ import {
   View,
 } from "@react-pdf/renderer";
 import type { TFunction } from "i18next";
+import { variationColumnKey } from "@features/commissioning/hooks/columns/columnKeys";
 import { listStyles } from "./listPdfBase";
 import {
   ListPDFFooter,
@@ -189,7 +190,7 @@ function PackingListPageContent({
                 style={[listStyles.cell, localStyles.colVariation, listStyles.cellCenter]}
               >
                 <Text>
-                  {(item[`variation_${variation.id}`] as string) || ""}
+                  {(item[variationColumnKey(variation.id!)] as string) || ""}
                 </Text>
               </View>
             ))}

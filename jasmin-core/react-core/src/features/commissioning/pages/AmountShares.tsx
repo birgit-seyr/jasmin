@@ -7,7 +7,7 @@ import { useCommissioningShareDeliveryVariationDeliveryCountsList } from "@share
 import type { CommissioningShareDeliveryVariationDeliveryCountsListParams } from "@shared/api/generated/models";
 import { ShareTypeSelector, WeekSelector } from "@shared/selectors";
 import { ExplainerText, LabeledSwitch } from "@shared/ui";
-import { useShareDeliveryDays } from '@features/commissioning/hooks';
+import { dayAmountKey, usePlanningAxes } from '@features/commissioning/hooks';
 
 const currentYear = dayjs().year();
 const currentWeek = dayjs().isoWeek();
@@ -39,22 +39,16 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
 
   const { t } = useTranslation();
 
-  // delivery days — derived purely from the selected year/week (no effect).
-  const shareDeliveryDaysFilters = useMemo(
-    () => ({
-      active_at_date: dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek ?? currentWeek)
-        .isoWeekday(6)
-        .format("YYYY-MM-DD"),
-      get_delivery_stations: true,
-      need_info_on_tours: true,
-    }),
-    [selectedYear, selectedWeek],
-  );
-  const { shareDeliveryDays, toursExist } = useShareDeliveryDays(
-    shareDeliveryDaysFilters,
-  );
+  // Day axis via the shared planning-axes hook (single source of truth — see
+  // docs/day-variation-columns-audit.md). No shareOption is passed, so the
+  // variation query stays gated off; this page derives its own variation rows
+  // from the delivery-counts endpoint and only needs the day columns here.
+  const { shareDeliveryDays, toursExist } = usePlanningAxes({
+    year: selectedYear,
+    week: selectedWeek ?? currentWeek,
+    requireStations: true,
+    needTours: true,
+  });
 
   const queryParams = useMemo<
     CommissioningShareDeliveryVariationDeliveryCountsListParams | undefined
@@ -115,8 +109,8 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
     const deliveryDayColumns: ColumnsType<VariationRow> = shareDeliveryDays.map(
       (deliveryDay) => ({
         title: t(`commissioning.weekdays.${deliveryDay.day_number}`),
-        dataIndex: `amount_day_${deliveryDay.id}`,
-        key: `amount_day_${deliveryDay.id}`,
+        dataIndex: dayAmountKey({ dayId: deliveryDay.id! }),
+        key: dayAmountKey({ dayId: deliveryDay.id! }),
         align: "center" as const,
         width: "6em",
         render: (value: number | null) => value || 0,
@@ -126,7 +120,7 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
     const deliveryDayTourColumns: ColumnsType<VariationRow> =
       shareDeliveryDays.map((deliveryDay) => ({
         title: t(`commissioning.weekdays.${deliveryDay.day_number}`),
-        key: `amount_day_${deliveryDay.id}`,
+        key: dayAmountKey({ dayId: deliveryDay.id! }),
         align: "center" as const,
         children: Array.from(
           // only include the tours that have delivery_stations assigned to them
@@ -134,11 +128,15 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
           (_, tourIndex) => {
             const tourNumber =
               deliveryDay.used_tours?.[tourIndex] || tourIndex + 1;
+            const tourKey = dayAmountKey({
+              dayId: deliveryDay.id!,
+              tour: tourNumber,
+            });
 
             return {
               title: `T${tourNumber}`,
-              dataIndex: `amount_day_${deliveryDay.id}_tour_${tourNumber}`,
-              key: `amount_day_${deliveryDay.id}_tour_${tourNumber}`,
+              dataIndex: tourKey,
+              key: tourKey,
               align: "center" as const,
               width: "6em",
               render: (value: number | null) => value || 0,
@@ -148,47 +146,37 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
       }));
 
     const deliveryDayDeliveryStationColumns: ColumnsType<VariationRow> =
-      shareDeliveryDays.map((deliveryDay) => ({
-        title: t(`commissioning.weekdays.${deliveryDay.day_number}`),
-        key: `amount_day_${deliveryDay.id}`,
-        align: "center" as const,
-        children: Array.from(
-          // Use delivery_stations array length, or fallback to 0
-          {
-            length:
-              (
-                deliveryDay.delivery_stations as unknown as
-                  | DeliveryStation[]
-                  | undefined
-              )?.length || 0,
-          },
-          (_, index) => {
-            // Get the actual delivery station from the array
-            const deliveryStation = (
-              deliveryDay.delivery_stations as unknown as DeliveryStation[]
-            )?.[index];
-
-            // Use the station's short_name or number for the title
-            const stationTitle =
-              deliveryStation?.short_name ||
-              deliveryStation?.number ||
-              `S${index + 1}`;
-
+      shareDeliveryDays.map((deliveryDay) => {
+        const stations =
+          (deliveryDay.delivery_stations as unknown as
+            | DeliveryStation[]
+            | undefined) ?? [];
+        return {
+          title: t(`commissioning.weekdays.${deliveryDay.day_number}`),
+          key: dayAmountKey({ dayId: deliveryDay.id! }),
+          align: "center" as const,
+          // Map the delivery_stations array DIRECTLY so each column keys off the
+          // station's real id. The backend emits
+          // `amount_day_<dayId>_station_<stationId>`; the old code built the key
+          // from a positional `index + 1` when the id was missing, which can
+          // never match that (a station id is a UUID) — see
+          // docs/day-variation-columns-audit.md (Phase 4).
+          children: stations.map((station, index) => {
+            const stationKey = dayAmountKey({
+              dayId: deliveryDay.id!,
+              station: station.id,
+            });
             return {
-              title: stationTitle,
-              dataIndex: `amount_day_${deliveryDay.id}_station_${
-                deliveryStation?.id || index + 1
-              }`,
-              key: `amount_day_${deliveryDay.id}_station_${
-                deliveryStation?.id || index + 1
-              }`,
+              title: station.short_name || station.number || `S${index + 1}`,
+              dataIndex: stationKey,
+              key: stationKey,
               align: "center" as const,
               width: "8em",
               render: (value: number | null) => value || 0,
             };
-          },
-        ),
-      }));
+          }),
+        };
+      });
     if (showTours) {
       return [...baseColumns, ...deliveryDayTourColumns];
     } else if (showDeliveryStations) {
