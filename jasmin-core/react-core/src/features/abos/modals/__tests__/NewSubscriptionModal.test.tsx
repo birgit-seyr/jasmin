@@ -104,6 +104,9 @@ vi.mock("@hooks/index", () => ({
     endAfterOneYear: false,
     computeValidUntil: () => null,
     isValidUntilAuto: () => false,
+    // The earliest sellable start — the modal reads this for the default
+    // pricing date (before valid_from is picked). A fixed future Monday.
+    earliestValidFrom: dayjs().startOf("isoWeek").add(2, "week"),
     // Permit any Monday on/after a fixed past date so the test's chosen
     // valid_from validates regardless of when the suite runs.
     disabledValidFromDate: (current: unknown) =>

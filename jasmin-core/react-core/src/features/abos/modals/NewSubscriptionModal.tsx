@@ -100,6 +100,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     computeValidUntil,
     isValidUntilAuto,
     disabledValidFromDate,
+    earliestValidFrom,
   } = useSubscriptionTerm();
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
@@ -113,9 +114,12 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // The chosen start date drives the variation PRICE annotation, so the
   // displayed solidarity floor / reference match what the backend enforces (it
   // resolves the time-bound gross-price window at valid_from, not today).
-  // Defaults to today during the selection step (before a date is picked).
+  // Before a date is picked, default to the EARLIEST possible start
+  // (now + min_weeks_from_creation_to_start_delivery, per tenant settings) —
+  // NOT today. The first sellable delivery is weeks out, so its price window is
+  // the one to show on the cards and prefill; today's price may not even apply.
   const validFrom = Form.useWatch("valid_from", form) as Dayjs | undefined;
-  const pricingDate = (validFrom ?? dayjs()).format("YYYY-MM-DD");
+  const pricingDate = (validFrom ?? earliestValidFrom).format("YYYY-MM-DD");
 
   const { shareTypes } = useShareTypes({
     active_at_date: dayjs().format("YYYY-MM-DD"),
@@ -143,6 +147,19 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         : null,
     [shareTypeVariations, selectedVariation],
   );
+
+  // Re-prefill the price when the reference for the effective start date
+  // changes: ``active_price_per_delivery`` is annotated at ``pricingDate``
+  // (the chosen valid_from, or the earliest possible start), so crossing a
+  // time-bound gross-price boundary must update the field — otherwise the
+  // office would submit the selection-time (earliest-start) price for a later
+  // term. Keyed on the price VALUE, not valid_from, so a manual solidarity
+  // edit within the SAME price window is preserved.
+  useEffect(() => {
+    const reference = liveVariation?.active_price_per_delivery;
+    if (reference == null) return;
+    form.setFieldsValue({ price_per_delivery: Number.parseFloat(reference) });
+  }, [liveVariation?.active_price_per_delivery, form]);
 
   // ── Capacity window ──────────────────────────────────────────────
   // A station's free slots depend on the subscription's term, so the
