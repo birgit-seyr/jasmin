@@ -1,7 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, Space } from "antd";
-import { useCallback, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { authAdminUsersPartialUpdate } from "@shared/api/generated/auth/auth";
 import {
   commissioningMembersCreate,
@@ -14,19 +10,35 @@ import {
 import type { Member } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { ROLES } from "@shared/auth/roles";
+import { useQueryClient } from "@tanstack/react-query";
+import { Badge, Button, Space } from "antd";
+import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 // Imported directly from its source module (not the ``modals`` barrel) to
 // avoid a Rollup chunk cycle: the barrel re-exports this modal while the
 // modal transitively depends back on the barrel (via the ``hooks`` barrel).
-import { AdminConfirmationModalMembers } from "@features/members/modals/AdminConfirmationModalMembers";
-import { InviteUserModal, LoggingModal, UserInfoModal } from "@shared/modals";
+import { useAdminConfirmationModalMembers } from "@features/members/hooks/modals/useAdminConfirmationModalMembers";
+import { useRejectMemberModal } from "@features/members/hooks/modals/useRejectMemberModal";
 import {
   CancelMembershipModal,
   CoopSharesModal,
   MemberBankDetailsModal,
   MemberEmailsModal,
 } from "@features/members/modals";
-import { RejectMemberModal } from "@features/members/modals/RejectMemberModal";
+import { AdminConfirmationModalMembers } from "@features/members/modals/AdminConfirmationModalMembers";
 import ExportCsvMemberRegister from "@features/members/modals/ExportCsvMemberRegister";
+import { RejectMemberModal } from "@features/members/modals/RejectMemberModal";
+import {
+  useContactColumns,
+  useDateFormat,
+  useInvalidateAfterTableMutation,
+  useNoteColumn,
+  useNumberFormat,
+  useTableRowSelection,
+  useTenant,
+  useUserInfoModal,
+} from "@hooks/index";
+import { InviteUserModal, LoggingModal, UserInfoModal } from "@shared/modals";
 import {
   adminConfirmationColumn,
   EditableTable,
@@ -46,27 +58,12 @@ import {
   SummaryStatsCard,
   ToolTipIcon,
 } from "@shared/ui";
-import {
-  useContactColumns,
-  useDateFormat,
-  useInvalidateAfterTableMutation,
-  useNoteColumn,
-  useNumberFormat,
-  useTableRowSelection,
-  useTenant,
-  useUserInfoModal,
-} from "@hooks/index";
-import { useMemberStatusColumn } from "@features/members/hooks/columns/useMemberStatusColumn";
-import { useAdminConfirmationModalMembers } from "@features/members/hooks/modals/useAdminConfirmationModalMembers";
-import { useRejectMemberModal } from "@features/members/hooks/modals/useRejectMemberModal";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import type { MemberRecord } from "./types";
 
 export default function Members() {
   const queryClient = useQueryClient();
-
-  const statusColumn = useMemberStatusColumn();
 
   const { t } = useTranslation();
   const { isOffice } = useRoles();
@@ -124,8 +121,9 @@ export default function Members() {
   const [emailsRecord, setEmailsRecord] = useState<MemberRecord | null>(null);
   const [cancelRecord, setCancelRecord] = useState<MemberRecord | null>(null);
   const [bankRecord, setBankRecord] = useState<MemberRecord | null>(null);
-  const [coopSharesRecord, setCoopSharesRecord] =
-    useState<MemberRecord | null>(null);
+  const [coopSharesRecord, setCoopSharesRecord] = useState<MemberRecord | null>(
+    null,
+  );
   const [inviteRow, setInviteRow] = useState<MemberRecord | null>(null);
 
   // Capture as a primitive so the columns useMemo can depend on a
@@ -275,7 +273,6 @@ export default function Members() {
 
   const columns: EditableColumnConfig<MemberRecord>[] = useMemo(
     () => [
-      statusColumn,
       {
         title: <div className="checkbox-column-title">Link</div>,
         dataIndex: "link",
@@ -650,7 +647,6 @@ export default function Members() {
       },
     ],
     [
-      statusColumn,
       t,
       handleOpenAdminConfirmationModal,
       handleOpenUserInfoModal,
@@ -789,7 +785,9 @@ export default function Members() {
                 size="small"
                 type={attentionFilter === "coop" ? "primary" : "default"}
                 onClick={() =>
-                  setAttentionFilter((prev) => (prev === "coop" ? null : "coop"))
+                  setAttentionFilter((prev) =>
+                    prev === "coop" ? null : "coop",
+                  )
                 }
               >
                 {t("members.attention_chip_coop")}
