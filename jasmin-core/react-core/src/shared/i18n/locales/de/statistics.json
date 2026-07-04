@@ -1,0 +1,13 @@
+{
+  "title": "Statistik",
+  "subtitle": "Überblick über Mitglieder und Anteilsvarianten",
+  "sample_notice": "Beispieldaten – diese Seite ist ein Gerüst; die Diagramme zeigen vorerst Platzhalterwerte.",
+  "kpi_members": "Mitglieder",
+  "kpi_active_subscriptions": "Aktive Abos",
+  "kpi_variations": "Anteilsvarianten",
+  "kpi_avg_price": "Ø Preis / Lieferung",
+  "chart_variations_by_size": "Varianten nach Größe",
+  "chart_members_over_time": "Mitglieder im Zeitverlauf",
+  "series_members": "Mitglieder gesamt",
+  "series_variations": "Anzahl Varianten"
+}

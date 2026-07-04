@@ -39,9 +39,11 @@ import months from './months.json';
 import tenant from './tenant.json';
 import validation from './validation.json';
 import about from './about.json';
+import statistics from './statistics.json';
 
 export default {
   about,
+  statistics,
   errors,
   economics,
   tooltip,

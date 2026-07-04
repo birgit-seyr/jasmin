@@ -17,6 +17,9 @@ const OverviewMembers = lazy(
 const MemberLoans = lazy(() => import("@features/members/pages/MemberLoans"));
 const StaffDetail = lazy(() => import("@features/members/pages/StaffDetail"));
 const SepaMandates = lazy(() => import("@features/members/pages/SepaMandates"));
+const StatisticsPage = lazy(
+  () => import("@features/members/pages/StatisticsPage"),
+);
 
 export const membersRoutes: AppRoute[] = [
   {
@@ -82,6 +85,14 @@ export const membersRoutes: AppRoute[] = [
     element: (
       <RequireRole flag="isOffice">
         <SepaMandates />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/members/statistics",
+    element: (
+      <RequireRole flag="isOffice">
+        <StatisticsPage />
       </RequireRole>
     ),
   },

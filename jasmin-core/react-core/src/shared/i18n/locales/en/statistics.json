@@ -1,0 +1,13 @@
+{
+  "title": "Statistics",
+  "subtitle": "Overview of members and share-type variations",
+  "sample_notice": "Sample data – this page is a scaffold; the charts show placeholder values for now.",
+  "kpi_members": "Members",
+  "kpi_active_subscriptions": "Active subscriptions",
+  "kpi_variations": "Share variations",
+  "kpi_avg_price": "Avg price / delivery",
+  "chart_variations_by_size": "Variations by size",
+  "chart_members_over_time": "Members over time",
+  "series_members": "Total members",
+  "series_variations": "Variation count"
+}

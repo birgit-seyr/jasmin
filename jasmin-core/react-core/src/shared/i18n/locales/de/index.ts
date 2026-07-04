@@ -40,9 +40,11 @@ import job_progress from './job_progress.json';
 import logging from './logging.json';
 import months from './months.json';
 import about from './about.json';
+import statistics from './statistics.json';
 
 export default {
   about,
+  statistics,
   errors,
   economics,
   email_config,
