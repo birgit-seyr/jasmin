@@ -173,11 +173,9 @@ class TenantSettings(JasminModel):
 
     # Cooperative shares
     has_coop_shares = models.BooleanField(default=True)  # done
-
     coop_shares_payment_after_admin_confirmation_in_days = models.IntegerField(
         default=14
     )
-    uses_member_loans = models.BooleanField(default=False)
     # Whole-currency value of one cooperative share (matches CoopShare.
     # value_one_coop_share, also a PositiveIntegerField) — shares are sold in
     # whole units, so no sub-unit precision is needed.
@@ -191,6 +189,7 @@ class TenantSettings(JasminModel):
     retention_period_cancelled_members_coop_shares_in_months = (
         models.PositiveIntegerField(default=0)
     )
+    uses_member_loans = models.BooleanField(default=False)
 
     # Season and timing
     # ``season_start_week`` is the ISO calendar week (1–53) the
@@ -206,10 +205,6 @@ class TenantSettings(JasminModel):
         validators=[MinValueValidator(1), MaxValueValidator(53)],
     )
     min_weeks_from_creation_to_start_delivery = models.PositiveIntegerField(default=2)
-
-    allows_additional_subscriptions_without_base_share_type = models.BooleanField(
-        default=True
-    )
 
     # On-off (per-delivery opt-in) feature gate. Tenant-wide kill
     # switch for the ``ShareTypeVariation.requires_optin`` mechanism:

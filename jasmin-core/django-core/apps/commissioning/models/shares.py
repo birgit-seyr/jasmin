@@ -55,14 +55,6 @@ class ShareType(JasminModel, TimeBoundMixin):
     share_option = models.CharField(
         max_length=200, choices=ShareOptions.choices, blank=True, null=True
     )
-
-    gets_packed_with = models.ForeignKey(
-        "self",
-        on_delete=models.PROTECT,
-        blank=True,
-        null=True,
-        related_name="+",
-    )
     delivery_cycle = models.CharField(
         max_length=16, choices=DeliveryCycleOptions.choices, blank=True, null=True
     )
@@ -70,9 +62,8 @@ class ShareType(JasminModel, TimeBoundMixin):
     # or is it like a honey share 500g honey each month...
     # from this the frontend derives a different ui ...
     needs_complex_planning = models.BooleanField(default=True)
-    # this is for the tenantsetting allow_additional_subscriptions_without_subscriptions_to_base_share_type
-    # to determine which is the base
-    is_base_share_type = models.BooleanField(default=True)
+    # this determines whethe this is packed on its own or put together with something. 
+    is_additional_share_type = models.BooleanField(default=True)
     amount_of_jokers = models.IntegerField(default=0)
     amount_of_donation_jokers = models.IntegerField(default=0)
 

@@ -345,19 +345,19 @@ export default function ConfigurationSubscriptions() {
               ? "-"
               : record.amount_of_donation_jokers,
         },
-        // {
-        //   title: (
-        //     <>
-        //       {t("commissioning.must_be_subscribed_to")}{" "}
-        //       <ToolTipIcon title={t("tooltip.must_be_subscribed_to")} />
-        //     </>
-        //   ),
-        //   dataIndex: "must_be_subscribed_to",
-        //   key: "must_be_subscribed_to",
-        //   inputType: "checkbox",
-        //   align: "center",
-        //   disabled: isFieldDisabled,
-        // },
+        {
+          title: (
+            <>
+              {t("commissioning.is_additional_share_type")}{" "}
+              <ToolTipIcon title={t("tooltip.is_additional_share_type")} />
+            </>
+          ),
+          dataIndex: "is_additional_share_type",
+          key: "is_additional_share_type",
+          inputType: "checkbox",
+          align: "center",
+          disabled: isFieldDisabled,
+        },
         {
           title: (
             <>
