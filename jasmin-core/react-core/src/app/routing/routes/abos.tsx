@@ -13,7 +13,6 @@ const Jokers = lazy(() => import("@features/abos/pages/Jokers"));
 const WaitingListAbos = lazy(
   () => import("@features/abos/pages/WaitingListAbos"),
 );
-const OverviewAbos = lazy(() => import("@features/abos/pages/OverviewAbos"));
 const ShareDeliveries = lazy(
   () => import("@features/abos/pages/ShareDeliveries"),
 );
@@ -86,14 +85,7 @@ export const abosRoutes: AppRoute[] = [
       </RequireRole>
     ),
   },
-  {
-    path: "/abos/overview-abos",
-    element: (
-      <RequireRole flag="isOffice">
-        <OverviewAbos />
-      </RequireRole>
-    ),
-  },
+
   {
     path: "/abos/pledge-round",
     element: (

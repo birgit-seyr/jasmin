@@ -20,6 +20,8 @@ import type { AboRecord } from "@features/abos/pages/types";
 import {
   capacityWindowParams,
   stationDayTermCapacity,
+  termCapacity,
+  termWeekKeys,
 } from "@features/abos/utils/stationCapacity";
 import { useAllShareTypeVariations } from "@hooks/useAllShareTypeVariations";
 import { useDateFormat } from "@hooks/configuration/useDateFormat";
@@ -56,8 +58,15 @@ export function useAbosData() {
   // implicit index signature, which the hook's index-signed ``ShareTypeRef``
   // parameter requires — this bridges the two without a cast.
   const shareTypeRefs: { id?: string | null }[] = shareTypes;
+  // Variations additionally carry the wide capacity window so each option's
+  // ``capacity_by_week`` is populated for term-aware fullness — the SAME window
+  // the station-days fetch uses, so both capacity axes share one contract.
+  const variationParams = useMemo(
+    () => ({ ...shareTypeParams, ...capacityWindowParams() }),
+    [shareTypeParams],
+  );
   const { shareTypeVariations: allShareTypeVariations } =
-    useAllShareTypeVariations(shareTypeRefs, shareTypeParams);
+    useAllShareTypeVariations(shareTypeRefs, variationParams);
 
   // ``variation.share_type`` is the FK id; ``shareTypes`` carries
   // the ``delivery_cycle`` we need for cycle-aware trial-term math.
@@ -89,7 +98,7 @@ export function useAbosData() {
   // Fetch abos data using Orval-generated hook. ``isFetching`` (not
   // ``isLoading``) so the grid overlay shows on every refetch — with the
   // global ``staleTime: 0`` a cached remount has ``isLoading === false``.
-  // Waitlisted drafts are excluded — they live on the WaitingListAbos page
+  // WaitingListed drafts are excluded — they live on the WaitingListAbos page
   // until the office promotes them via confirm.
   const { data: abosData, isFetching } = useCommissioningAbosList({
     on_waiting_list: false,
@@ -165,18 +174,14 @@ export function useAbosData() {
       // Grey out station-days that are full in ANY week of this row's period
       // (valid_from → valid_until, year-rollover correct via isoWeekYear). The
       // currently-assigned one stays selectable so an edit isn't blocked.
+      // ``termWeekKeys`` is the SHARED term→weeks expansion (variation options
+      // use it too) — open-ended terms fall back to a one-year window.
       const endDate = record.valid_until
         ? dayjs(record.valid_until, dateFormat, true).isValid()
           ? dayjs(record.valid_until, dateFormat, true)
           : dayjs(record.valid_until, "YYYY-MM-DD", true)
-        : rowDate.add(1, "year");
-      const periodWeekKeys: string[] = [];
-      let cursor = rowDate.startOf("isoWeek");
-      const periodEnd = endDate.isValid() ? endDate : rowDate.add(1, "year");
-      while (cursor.isSameOrBefore(periodEnd, "day")) {
-        periodWeekKeys.push(`${cursor.isoWeekYear()}-${cursor.isoWeek()}`);
-        cursor = cursor.add(1, "week");
-      }
+        : null;
+      const periodWeekKeys = termWeekKeys(rowDate, endDate);
 
       return result.map((dsd) => {
         const isAssigned =
@@ -184,12 +189,13 @@ export function useAbosData() {
         // Peak occupancy across the row's period — the binding constraint and
         // what the greying (full in ANY week) keys off. Shown as (peak/total),
         // mirroring the per-week (occupied/total) label in ShareDeliveries.
-        // SAME evaluator as the NewSubscriptionModal tag/waitlist flag — one
+        // SAME evaluator as the NewSubscriptionModal tag/waiting_list flag — one
         // source of truth for "full for this term".
         const { total, peakOccupied, isFull } = stationDayTermCapacity(
           dsd.capacity,
           dsd.capacity_by_week,
           periodWeekKeys,
+          Number(record.quantity) || 1,
         );
 
         const label =
@@ -207,6 +213,51 @@ export function useAbosData() {
     [allDeliveryStationDays, parsedDeliveryStationDays, dateFormat],
   );
 
+  // Per-row, term-aware variation options: a variation is "sold out" for a row
+  // when the busiest ("peak") ISO week across the row's term has no free slot —
+  // the SAME per-week ``capacity_by_week`` + ``termCapacity`` evaluator the
+  // station-day options, the new-subscription modal and the office capacity
+  // overview all read (one source of truth). Sold-out variations are marked
+  // ``disabled``; the shared column un-greys + tags them "sold out".
+  const getShareTypeVariationsForRow = useCallback(
+    (record: AboRecord) => {
+      const parse = (v: string) =>
+        dayjs(v, dateFormat, true).isValid()
+          ? dayjs(v, dateFormat, true)
+          : dayjs(v, "YYYY-MM-DD", true);
+      // Default to a "subscribe now, run a year" window when the row has no
+      // term yet (a fresh add-row) so fullness shows BEFORE valid_from is set.
+      const parsedFrom = record.valid_from ? parse(record.valid_from) : null;
+      const rowStart =
+        parsedFrom && parsedFrom.isValid() ? parsedFrom : dayjs().startOf("day");
+      const parsedUntil = record.valid_until ? parse(record.valid_until) : null;
+      const weekKeys = termWeekKeys(
+        rowStart,
+        parsedUntil && parsedUntil.isValid() ? parsedUntil : null,
+      );
+
+      return allShareTypeVariations.map((v) => {
+        const isAssigned = v.value === record.share_type_variation;
+        const { total, peakOccupied, isFull } = termCapacity(
+          v.capacity,
+          v.capacity_by_week,
+          weekKeys,
+          Number(record.quantity) || 1,
+        );
+        const label =
+          total != null ? `${v.label} (${peakOccupied}/${total})` : v.label;
+        return {
+          ...v,
+          label,
+          // The currently-assigned variation stays selectable even when full so
+          // editing other fields on the row isn't blocked.
+          disabled: isFull && !isAssigned,
+        };
+      });
+    },
+    [allShareTypeVariations, dateFormat],
+  );
+
   return {
     data,
     isFetching,
@@ -219,5 +270,6 @@ export function useAbosData() {
     allShareTypeVariations,
     variationDeliveryCycleById,
     getDeliveryStationDaysForRow,
+    getShareTypeVariationsForRow,
   };
 }

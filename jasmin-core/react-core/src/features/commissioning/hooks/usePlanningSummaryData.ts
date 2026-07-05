@@ -1,5 +1,13 @@
 import { useCallback, useMemo } from "react";
-import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
+import type { TFunction } from "i18next";
+import type {
+  SummaryRow,
+  TableRecord,
+} from "@shared/tables/BasicEditableTable/types";
+import {
+  SUMMARY_ROW_STYLE,
+  SUMMARY_ROW_STYLE_HIGHLIGHT,
+} from "@shared/tables/summaryRowStyle";
 import type { ShareArticleOption } from "./useShareArticles";
 import type { ShareTypeVariationOption } from "./useShareTypeVariations";
 import type { DeliveryDay } from "./columns/useDeliveryDayColumns";
@@ -16,6 +24,12 @@ interface UsePlanningSummaryDataParams {
   data: TableRecord[];
   vegetables_and_fruits: ShareArticleOption[] | undefined;
   shareTypeVariationAmounts: Record<string, unknown> | null;
+  // Passed in so the hook can assemble the ready-to-render ``summaryRows`` (kept
+  // out of the page): translations, the currency suffix, and the historical
+  // 2-year averages row's data.
+  t: TFunction;
+  currencySymbol: string;
+  historicalAverages: Record<string, string | number> | null | undefined;
 }
 
 /**
@@ -80,6 +94,9 @@ export function usePlanningSummaryData({
   data,
   vegetables_and_fruits,
   shareTypeVariationAmounts,
+  t,
+  currencySymbol,
+  historicalAverages,
 }: UsePlanningSummaryDataParams) {
   const shareTypeVariationAmountsSummary = useMemo(() => {
     if (!shareTypeVariationAmounts) {
@@ -396,6 +413,59 @@ export function usePlanningSummaryData({
     return dayVariationKeys;
   }, [shareDeliveryDays, shareTypeVariations, planningMode]);
 
+  // Ready-to-render summary rows — assembled here (not in the page) so the two
+  // amount rows, the price row and the historical row share one definition and
+  // one style source (SUMMARY_ROW_STYLE / _HIGHLIGHT). The page just gates them
+  // behind its "show summary rows" toggle.
+  const summaryRows = useMemo<SummaryRow[]>(
+    () => [
+      {
+        columns: summaryColumns,
+        label: t("commissioning.share_type_variation_amounts"),
+        data: shareTypeVariationAmountsSummary,
+        style: SUMMARY_ROW_STYLE,
+      },
+      {
+        columns: summaryColumns,
+        label: t("commissioning.summary_label_harvest_share_planning"),
+        subLabel: t("commissioning.predetermined_value"),
+        data: dayVariationSums,
+        suffix: "kg",
+        subData: averageWeightSubData,
+        subSuffix: "kg",
+        style: SUMMARY_ROW_STYLE,
+      },
+      {
+        columns: summaryColumns,
+        label: t("commissioning.second_summary_label_harvest_share_planning"),
+        subLabel: t("commissioning.predetermined_value"),
+        data: dayVariationCounts,
+        suffix: currencySymbol,
+        subData: priceSumArticlesSubData,
+        subSuffix: currencySymbol,
+        style: SUMMARY_ROW_STYLE,
+      },
+      {
+        columns: summaryColumns,
+        label: t("commissioning.historical_average_2y"),
+        data: (historicalAverages || {}) as Record<string, string | number>,
+        suffix: "kg",
+        style: SUMMARY_ROW_STYLE_HIGHLIGHT,
+      },
+    ],
+    [
+      summaryColumns,
+      shareTypeVariationAmountsSummary,
+      dayVariationSums,
+      averageWeightSubData,
+      dayVariationCounts,
+      priceSumArticlesSubData,
+      historicalAverages,
+      currencySymbol,
+      t,
+    ],
+  );
+
   return {
     shareTypeVariationAmountsSummary,
     dayVariationSums,
@@ -403,5 +473,6 @@ export function usePlanningSummaryData({
     averageWeightSubData,
     priceSumArticlesSubData,
     summaryColumns,
+    summaryRows,
   };
 }

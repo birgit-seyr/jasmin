@@ -292,6 +292,37 @@ export default function DocumentationHarvest() {
     ],
   );
 
+  // Staff can add + edit while the week isn't past; delete is additionally
+  // hidden on mobile, and a row can only be deleted while it carries no
+  // recorded (or additional) theoretical harvest amount.
+  const permissions = useMemo(
+    () => ({
+      canAdd: isStaff && !isPast,
+      canEdit: isStaff && !isPast,
+      canDelete: isStaff && !isPast && !isMobile,
+      canDeleteRecord: (record: TableRecord) => {
+        if (record.key === -1 || !record.id) {
+          return true;
+        }
+        const r = record as Record<string, unknown>;
+        if (
+          r.theoretical_harvest_amount != null &&
+          r.theoretical_harvest_amount != 0
+        ) {
+          return false;
+        }
+        if (
+          r.additional_theoretical_harvest_amount != null &&
+          r.additional_theoretical_harvest_amount != 0
+        ) {
+          return false;
+        }
+        return true;
+      },
+    }),
+    [isStaff, isPast, isMobile],
+  );
+
   return (
     <div>
       <h1>{t("commissioning.documentation_harvest")}</h1>
@@ -398,30 +429,7 @@ export default function DocumentationHarvest() {
         loading={isFetching}
         customSave={customSave}
         customEdit={customEdit}
-        permissions={{
-          canAdd: isStaff && !isPast,
-          canEdit: isStaff && !isPast,
-          canDelete: isStaff && !isPast && !isMobile,
-          canDeleteRecord: (record: TableRecord) => {
-            if (record.key === -1 || !record.id) {
-              return true;
-            }
-            const r = record as Record<string, unknown>;
-            if (
-              r.theoretical_harvest_amount != null &&
-              r.theoretical_harvest_amount != 0
-            ) {
-              return false;
-            }
-            if (
-              r.additional_theoretical_harvest_amount != null &&
-              r.additional_theoretical_harvest_amount != 0
-            ) {
-              return false;
-            }
-            return true;
-          },
-        }}
+        permissions={permissions}
         rowSelection={!isPast && !isMobile ? rowSelectionConfig : undefined}
         onSelectedRowsChange={handleRowSelectionChange}
         selectedRowKeys={selectedRowKeys}

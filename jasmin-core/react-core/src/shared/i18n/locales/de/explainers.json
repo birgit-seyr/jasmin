@@ -24,7 +24,7 @@
     "invoices": "",
     "harvesting_list": "", 
     "simple_planning_additional_share_types":           "Dieser Anteilstyp braucht keine wöchentliche Planung. Sobald die einfache Planung verfügbar ist, legst du die gleichbleibende Zusammenstellung hier einmalig fest – sie gilt dann über alle Wochen.",
-
+"payment_resellers": "Es werden nur Rechnungen angezeigt, die bereits finalisiert wurden.",
     "packing_list_boxes": "",
     "share_weights": "Hier können bis zu vier Gewichte eingetragen werden, für die Statistik.", 
     "waiting_list": "Ist der gewählte Abholtag einer Verteilstation voll, wird ein neues Abo automatisch zum Warteliste-Eintrag: Es belegt keinen Platz und erzeugt weder Lieferungen noch Zahlungen. Wird ein Platz frei, gibt das Büro den Eintrag über die normale Freigabe frei – dabei wird die Kapazität erneut geprüft, solange der Tag voll ist, wird die Freigabe abgelehnt. Die Position gilt pro Station und Abholtag (Reihenfolge des Eintragens) und ist nur zur Information – die Freigabe kann in beliebiger Reihenfolge erfolgen.",

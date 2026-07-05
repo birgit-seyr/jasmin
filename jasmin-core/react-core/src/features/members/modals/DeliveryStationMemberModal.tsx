@@ -106,10 +106,7 @@ export default function DeliveryStationMemberModal({
           <Descriptions column={1} size="small" bordered>
             <Descriptions.Item
               label={
-                <Space size={4}>
-                  <CalendarOutlined />
-                  {t("delivery_stations.pickup_day")}
-                </Space>
+                <Space size={4}>{t("delivery_stations.pickup_day")}</Space>
               }
             >
               {weekdayLabel(t, stationDay.delivery_day_number)}
@@ -117,10 +114,7 @@ export default function DeliveryStationMemberModal({
 
             <Descriptions.Item
               label={
-                <Space size={4}>
-                  <ClockCircleOutlined />
-                  {t("delivery_stations.pickup_times")}
-                </Space>
+                <Space size={4}>{t("delivery_stations.pickup_times")}</Space>
               }
             >
               {pickup}

@@ -382,6 +382,9 @@ class SubscriptionSerializer(
         # admin-confirm fields. See migration 0023 for the field
         # addition.
         read_only_fields = (
+            # Server-inferred at enqueue (which capacity gate was full) — never
+            # client-set. See ``SubscriptionService._infer_waiting_list_reason``.
+            "waiting_list_reason",
             # Admin-confirm triplet — stamped exclusively by the
             # ``POST /subscriptions/{id}/confirm/`` action (which runs the
             # capacity backstop, materialises shares/deliveries/charges and

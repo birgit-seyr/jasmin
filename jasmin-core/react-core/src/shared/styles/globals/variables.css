@@ -7,13 +7,12 @@
 
   --color-primary-light: rgba(206, 221, 207);
 
-  
   /* Additional theme colors */
   --color-success: #52c41a;
   --color-warning: #faad14;
   --color-error: #ff4d4f;
   --color-info: #632c9e;
-  
+
   /* Custom colors */
   --color-accent: #f0f2f5;
 
@@ -21,7 +20,7 @@
 
   --color-joker: #faad14;
   --color-card-green-border: #52c41a;
-  --color-payments: #1890ff;
+  --color-future-blue: #1890ff;
 
   /* Commissioning: share-content vs order-content distinction */
   --color-share-content: #2e7d32;
@@ -55,14 +54,14 @@
   /* Brand gradients */
   --gradient-primary: linear-gradient(135deg, #226c47 0%, #764ba2 100%);
   --gradient-superadmin: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  
+
   /* Layout */
   --border-radius: 6px;
   --sidebar-width: 300px;
   --sidebar-collapsed-width: 80px;
   --sidebar-padding: 12px;
   --table-border-radius: 3px;
-  
+
   /* Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
@@ -108,5 +107,3 @@
   --color-share-content: #66bb6a;
   --color-order-content: #a5d6a7;
 }
-
-

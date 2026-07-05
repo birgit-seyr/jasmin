@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { WaitingListStatusEnum } from './waitingListStatusEnum';
+import type { SubscriptionWaitingListReason } from './subscriptionWaitingListReason';
 
 /**
  * Read/write serializer for `Subscription`.
@@ -102,6 +103,10 @@ Pass-through cases:
   notification_expires_at?: string | null;
   /** @nullable */
   response_received_at?: string | null;
+  /** @nullable */
+  readonly notification_token?: string | null;
+  /** @nullable */
+  readonly waiting_list_reason?: SubscriptionWaitingListReason;
   /**
    * @minimum 0
    * @maximum 2147483647

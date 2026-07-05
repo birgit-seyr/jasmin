@@ -1,20 +1,19 @@
-import { Fragment, isValidElement, useMemo } from "react";
-import type { Key, ReactNode } from "react";
-import { Button, Space, Popconfirm, Checkbox, Tag, Empty, Spin } from "antd";
 import {
-  EditOutlined,
   DeleteOutlined,
-  PlusOutlined,
   InfoCircleOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
+import { Button, Popconfirm, Space, Spin, Tag } from "antd";
+import type { Key, ReactNode } from "react";
+import { Fragment, isValidElement, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import "./MobileCardList.css";
 import type {
   EditableColumnConfig,
+  SelectOption,
   TablePermissions,
   TableRecord,
-  SelectOption,
 } from "./types";
-import "./MobileCardList.css";
 
 /** Columns whose dataIndex starts with one of these prefixes are shown as tags. */
 const TAG_PREFIXES = ["variation_", "offer_group_", "for_all_"];
@@ -54,9 +53,7 @@ function resolveDisplay<T extends TableRecord>(
   // Select → map value to label
   if (col.inputType === "select" && col.options) {
     const opts =
-      typeof col.options === "function"
-        ? col.options(record)
-        : col.options;
+      typeof col.options === "function" ? col.options(record) : col.options;
     const match = (opts as SelectOption[]).find(
       (o) => String(o.value) === String(raw),
     );
@@ -147,7 +144,9 @@ function MobileCardList<T extends TableRecord>({
     );
   }
 
-  const activeData = data.filter((r) => r.key !== -1 && r.key !== "summary-row");
+  const activeData = data.filter(
+    (r) => r.key !== -1 && r.key !== "summary-row",
+  );
 
   return (
     <div className="mobile-card-list">
@@ -165,7 +164,14 @@ function MobileCardList<T extends TableRecord>({
       )}
 
       {activeData.length === 0 ? (
-        <div className="mobile-card-empty" style={{ textAlign: "center", padding: "24px 0", color: "var(--color-text-muted)" }}>
+        <div
+          className="mobile-card-empty"
+          style={{
+            textAlign: "center",
+            padding: "24px 0",
+            color: "var(--color-text-muted)",
+          }}
+        >
           {t("table.no_data")}
         </div>
       ) : (
@@ -213,7 +219,16 @@ function MobileCardList<T extends TableRecord>({
               role={canEditRecord ? "button" : undefined}
               tabIndex={canEditRecord ? 0 : undefined}
               onClick={() => canEditRecord && onEdit(record)}
-              onKeyDown={canEditRecord ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onEdit(record); } } : undefined}
+              onKeyDown={
+                canEditRecord
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onEdit(record);
+                      }
+                    }
+                  : undefined
+              }
             >
               {/* Left: content */}
               <div className="mobile-card-content">

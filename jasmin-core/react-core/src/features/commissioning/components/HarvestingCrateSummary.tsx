@@ -90,7 +90,7 @@ export default function HarvestingCrateSummary({
         dataSource={crateSummary}
         pagination={false}
         size="small"
-        className="bordered-table"
+        className="compact-table custom-forecast-table"
         style={{ width: "22em", marginTop: "1em" }}
         locale={{
           emptyText: <div style={{ height: "2em" }}>{t("table.no_data")}</div>,

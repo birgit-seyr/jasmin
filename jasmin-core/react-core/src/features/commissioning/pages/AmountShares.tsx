@@ -1,14 +1,17 @@
+import { NoVariationColumnsBanner } from "@features/commissioning/components";
+import { dayAmountKey, usePlanningAxes } from "@features/commissioning/hooks";
+import { useShareTypes } from "@hooks/index";
+import { useShareTypeVariationSizeOptions } from "@hooks/useShareTypeVariationSizeOptions";
+import { useCommissioningShareDeliveryVariationDeliveryCountsList } from "@shared/api/generated/commissioning/commissioning";
+import type { CommissioningShareDeliveryVariationDeliveryCountsListParams } from "@shared/api/generated/models";
+import { ShareTypeSelector, WeekSelector } from "@shared/selectors";
+import { ExplainerText, LabeledSwitch } from "@shared/ui";
 import { Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useCommissioningShareDeliveryVariationDeliveryCountsList } from "@shared/api/generated/commissioning/commissioning";
-import type { CommissioningShareDeliveryVariationDeliveryCountsListParams } from "@shared/api/generated/models";
-import { ShareTypeSelector, WeekSelector } from "@shared/selectors";
-import { ExplainerText, LabeledSwitch } from "@shared/ui";
-import { dayAmountKey, usePlanningAxes } from "@features/commissioning/hooks";
-import { useShareTypeVariationSizeOptions } from "@hooks/useShareTypeVariationSizeOptions";
+import { activeAtDateForWeek } from "@shared/utils";
 
 const currentYear = dayjs().year();
 const currentWeek = dayjs().isoWeek();
@@ -51,6 +54,15 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
     requireStations: true,
     needTours: true,
   });
+
+  const shareTypeParams = useMemo(
+    () => ({
+      active_at_date: activeAtDateForWeek(selectedYear, selectedWeek),
+    }),
+    [selectedYear, selectedWeek],
+  );
+  const { shareTypes } = useShareTypes(shareTypeParams);
+  const hasShareTypes = shareTypes.length > 0;
 
   const queryParams = useMemo<
     CommissioningShareDeliveryVariationDeliveryCountsListParams | undefined
@@ -216,37 +228,23 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
         delivery_week={selectedWeek}
       />
 
-      {/* Check if there are no active delivery days */}
-      {shareDeliveryDays.length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "2em",
-            backgroundColor: "var(--color-bg-subtle)",
-            borderRadius: "8px",
-            margin: "2em 0",
-          }}
-        >
-          <h3>{t("commissioning.no_active_delivery_days")}</h3>
-          <p>{t("commissioning.no_active_delivery_days_message")}</p>
-        </div>
-      ) : (
-        <>
-          {toursExist && (
-            <div className="section-divider">
-              <LabeledSwitch
-                value={showTours}
-                onChange={(checked: boolean) => {
-                  setShowTours(checked);
-                  if (checked) {
-                    setShowDeliveryStations(false);
-                  }
-                }}
-                label={t("commissioning.show_tours")}
-                withEyeIcons
-              />
-            </div>
-          )}
+      <>
+        {toursExist && (
+          <div className="section-divider">
+            <LabeledSwitch
+              value={showTours}
+              onChange={(checked: boolean) => {
+                setShowTours(checked);
+                if (checked) {
+                  setShowDeliveryStations(false);
+                }
+              }}
+              label={t("commissioning.show_tours")}
+              withEyeIcons
+            />
+          </div>
+        )}
+        {hasShareTypes && (
           <div
             style={{
               marginTop: toursExist ? "0.5em" : "2em",
@@ -265,8 +263,10 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
               withEyeIcons
             />
           </div>
+        )}
 
-          <div style={{ height: "2em" }}></div>
+        <div style={{ height: "2em" }}></div>
+        {hasShareTypes ? (
           <Table
             columns={columns}
             dataSource={tableData}
@@ -280,8 +280,11 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
               ),
             }}
           />
-        </>
-      )}
+        ) : (
+          <NoVariationColumnsBanner />
+        )}
+      </>
+
       <ExplainerText title={t("common.info")}>
         {jokerMode
           ? t("explainers.amount_jokers")

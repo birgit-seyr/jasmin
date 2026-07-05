@@ -20,7 +20,11 @@ import type {
 } from "@shared/api/generated/models";
 import { JobProgressDrawer } from "@shared/ui/JobProgressDrawer";
 import { ResellerSelector, WeekSelector } from "@shared/selectors";
-import { EditableTable, wrapApiFunctions } from "@shared/tables";
+import {
+  EditableTable,
+  gatedByPermissionOnlyEdit,
+  wrapApiFunctions,
+} from "@shared/tables";
 import type {
   ApiFunctions,
   EditableColumnConfig,
@@ -249,6 +253,9 @@ export default function PaymentsResellers() {
     return filtered;
   }, [data, showOnlyNotPaid]);
 
+  // Reseller payments are edit-only (add/delete disabled).
+  const permissions = useMemo(() => gatedByPermissionOnlyEdit(true), []);
+
   return (
     <div>
       <h1>{t("commissioning.payments")}</h1>
@@ -357,16 +364,6 @@ export default function PaymentsResellers() {
           />
         </div>
       )}
-      <div
-        style={{
-          display: "flex",
-          gap: "8px",
-          flexWrap: "wrap",
-          marginBottom: "-3em",
-        }}
-      >
-        <h6>{t("commissioning.payment_only_finalized_invoices")}</h6>
-      </div>
 
       <EditableTable
         key={`${selectedYear}-${selectedWeek}-${selectedReseller}`}
@@ -375,7 +372,7 @@ export default function PaymentsResellers() {
         focusIndex="share_article_name"
         initialData={filteredData}
         loading={isFetching}
-        permissions={{ canAdd: false, canEdit: true, canDelete: false }}
+        permissions={permissions}
         onSaveSuccess={onSaveSuccess}
         onDeleteSuccess={onDeleteSuccess}
         rowSelection={rowSelectionConfig}
@@ -386,7 +383,7 @@ export default function PaymentsResellers() {
       />
 
       <ExplainerText title={t("common.info")}>
-        {t("explainers.create_multiple_delivery_notes")}
+        {t("explainers.payment_resellers")}
       </ExplainerText>
 
       <JobProgressDrawer

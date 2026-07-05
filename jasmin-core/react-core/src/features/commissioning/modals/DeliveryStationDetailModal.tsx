@@ -15,7 +15,11 @@ import {
 } from "@shared/api/generated/commissioning/commissioning";
 import type { DeliveryStationDay } from "@shared/api/generated/models/deliveryStationDay";
 import type { CommissioningDeliveryStationsDaysListParams } from "@shared/api/generated/models";
-import { useActiveStatusColumn, useDateFormat, useTimeBoundColumns } from '@hooks/index';
+import {
+  useActiveStatusColumn,
+  useDateFormat,
+  useTimeBoundColumns,
+} from "@hooks/index";
 import {
   capacityFloorParams,
   capacityFloorWeekKeys,
@@ -23,11 +27,15 @@ import {
   stationDayTermCapacity,
 } from "@features/abos/utils/stationCapacity";
 import type { CapacityWeekEntry } from "@features/abos/utils/stationCapacity";
-import { useShareDeliveryDays } from '@features/commissioning/hooks';
+import { useShareDeliveryDays } from "@features/commissioning/hooks";
 import type { ShareDeliveryDayOption } from "@features/commissioning/hooks/useShareDeliveryDays";
 import { getStatusColor, notify } from "@shared/utils";
 import { getWeekdayChoices } from "@shared/utils/weekdayChoices";
-import { EditableTable, permissionsWithDeletable, wrapApiFunctions } from "@shared/tables";
+import {
+  EditableTable,
+  permissionsWithDeletable,
+  wrapApiFunctions,
+} from "@shared/tables";
 import type {
   ApiFunctions,
   EditableColumnConfig,
@@ -104,10 +112,13 @@ const DeliveryStationDetailModal: FC<DeliveryStationDetailModalProps> = ({
   // table's ``loading`` uses ``isFetching`` so a revisit (cached under the
   // global staleTime:0) shows a grid refresh spinner instead of silently
   // swapping stale rows for fresh ones.
-  const { data: rawData, isLoading: loading, isFetching } =
-    useCommissioningDeliveryStationsDaysList(listParams, {
-      query: { enabled: visible && !!deliveryStation?.id },
-    });
+  const {
+    data: rawData,
+    isLoading: loading,
+    isFetching,
+  } = useCommissioningDeliveryStationsDaysList(listParams, {
+    query: { enabled: visible && !!deliveryStation?.id },
+  });
 
   const data = useMemo(
     () => (rawData ?? []) as unknown as StationDayRecord[],
@@ -380,6 +391,7 @@ const DeliveryStationDetailModal: FC<DeliveryStationDetailModalProps> = ({
           inputType: "positive_integer",
           width: "6em",
           align: "center",
+          required: true,
         },
         {
           // Busiest current-or-future week's occupancy — the floor below
@@ -530,9 +542,7 @@ const DeliveryStationDetailModal: FC<DeliveryStationDetailModalProps> = ({
         // starts fresh — no carry-over of the previous station's rows, draft,
         // or recentlyAddedIds pins.
         destroyOnHidden
-        footer={[
-          <ModalCloseFooter key="close" onClose={onClose} />,
-        ]}
+        footer={[<ModalCloseFooter key="close" onClose={onClose} />]}
       >
         {loading ? (
           <div className="loading-placeholder">
@@ -549,7 +559,9 @@ const DeliveryStationDetailModal: FC<DeliveryStationDetailModalProps> = ({
               onDeleteSuccess={invalidateData}
               permissions={permissions}
               uniqueCheck={["delivery_day", "tour_number", "valid_from"]}
-              uniqueCheckMessage={t("validation.unique.delivery_day_tour_number_valid_from")}
+              uniqueCheckMessage={t(
+                "validation.unique.delivery_day_tour_number_valid_from",
+              )}
               customSave={customSave}
               forceInlineMode={true}
             />

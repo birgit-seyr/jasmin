@@ -19,6 +19,7 @@
   "modal_toggle": "Inline <-> Modal; nicht für alle Seiten möglich.",
   "sent_via_email": "an WVK",
   "grouping_mode_date": "nach Lieferschein-Datum",
+  "is_additional_share_type": "Wird nicht extra gepackt, sondern zu einem anderen - z.B. Ernteanteil dazugepackt.",
   "delivery_station_day": "Hier sieht man die belegte / gesamte Kapazität der Verteilstation an diesem Tag. Wenn hier schon 100% belegt sind, können keine weiteren Anteile mit diesem Liefertag gebucht werden, außer sie haben einen anderen Verteilstationstag.",
   "csv_export_harvest": "Hier wird die Ernte für alle Lager gemeinsam exportiert.",
   "capacity": "Das ist die Kapazität der Ernte-Anteile (also Gemüse-, und falls separat Obst-Anteil), die Zusatzanteile zählen hier nicht dazu, weil angenommen wird, dass sie in die Kisten mitgepackt werden.",

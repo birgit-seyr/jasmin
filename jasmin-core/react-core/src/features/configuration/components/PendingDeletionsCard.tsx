@@ -7,13 +7,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Card,
-  Empty,
   Space,
   Table,
   Tag,
   Tooltip,
   Typography,
 } from "antd";
+import { EmptyHint } from "@shared/ui";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -192,7 +192,7 @@ export default function PendingDeletionsCard({
         {t("gdpr.pending_deletions_description")}
       </Paragraph>
       {pending.length === 0 && !isFetching ? (
-        <Empty description={t("gdpr.no_pending")} />
+        <EmptyHint>{t("gdpr.no_pending")}</EmptyHint>
       ) : (
         <Table
           columns={columns}

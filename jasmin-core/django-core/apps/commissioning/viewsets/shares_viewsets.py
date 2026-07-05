@@ -286,6 +286,20 @@ class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                     "return all variations."
                 ),
             ),
+            # Window for the per-week ``capacity_by_week`` field (same contract
+            # as the delivery-station-days endpoint). Omit all three → the field
+            # is null (no term-aware capacity requested).
+            get_year_parameter(required=False),
+            get_delivery_week_parameter(required=False),
+            OpenApiParameter(
+                name="num_weeks",
+                type=OpenApiTypes.INT,
+                required=False,
+                description=(
+                    "Number of weeks of per-variation capacity_by_week to "
+                    "return (default: 52). Needs year + delivery_week."
+                ),
+            ),
         ],
     )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:

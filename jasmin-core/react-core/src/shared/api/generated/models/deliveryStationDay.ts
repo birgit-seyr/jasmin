@@ -71,9 +71,8 @@ export interface DeliveryStationDay {
   /**
    * @minimum 0
    * @maximum 2147483647
-   * @nullable
    */
-  capacity?: number | null;
+  capacity?: number;
   delivery_station: string;
   delivery_day: string;
   readonly can_be_deleted?: boolean;

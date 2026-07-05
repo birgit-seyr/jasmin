@@ -23,8 +23,14 @@ from core.serializers import ErrorResponseSerializer
 from ..errors import InvalidQueryParam
 from ..models import Member
 from ..schemas import get_delivery_week_parameter, get_year_parameter
-from ..serializers import MemberGrowthStatisticSerializer
-from ..services import calculate_historical_share_type_variation_averages
+from ..serializers import (
+    MemberDashboardStatisticsSerializer,
+    MemberGrowthStatisticSerializer,
+)
+from ..services import (
+    calculate_historical_share_type_variation_averages,
+    calculate_member_dashboard_statistics,
+)
 from ..utils.query_params import validate_query_params
 
 
@@ -110,6 +116,27 @@ def member_growth_statistics(request: Request) -> Response:
     # Serialize and return
     serializer = MemberGrowthStatisticSerializer(result, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    summary="Get member dashboard statistics",
+    description="""
+    Snapshot ("today") of member and cooperative-share statistics: member counts
+    (total / active / trial / confirmed / pending / cancelled), average member
+    age, and cooperative-share sums (total / confirmed / pending / paid / unpaid /
+    payback-due).
+    """,
+    responses={200: MemberDashboardStatisticsSerializer},
+)
+@api_view(["GET"])
+@permission_classes([IsOffice])
+def member_dashboard_statistics(request: Request) -> Response:
+    """Return the member + cooperative-share snapshot for the office dashboard."""
+    data = calculate_member_dashboard_statistics()
+    return Response(
+        MemberDashboardStatisticsSerializer(data).data,
+        status=status.HTTP_200_OK,
+    )
 
 
 @extend_schema(

@@ -12,7 +12,7 @@ const DEFAULT_STATUS_CONFIG: Record<string, StatusConfig> = {
     labelKey: "common.active",
   },
   future: {
-    color: "var(--color-payments)",
+    color: "var(--color-future-blue)",
     labelKey: "common.future",
   },
   inactive: {

@@ -1,4 +1,5 @@
 import logging
+from datetime import date
 
 from drf_spectacular.utils import extend_schema_field
 from isoweek import Week
@@ -16,6 +17,7 @@ from ..models import (
     Subscription,
 )
 from ..utils.dynamic_keys import AMOUNT_KEY_PREFIX, DAY_VARIATION_RE
+from .delivery_serializer import CapacityWeekEntrySerializer
 from .dynamic_keys import DynamicAmountKeysMixin
 from .serializers_mixin import DeletableMixin, NameFieldMixin
 
@@ -70,10 +72,109 @@ class ShareTypeVariationSerializer(
     active_solidarity_min_price_per_delivery = serializers.DecimalField(
         max_digits=8, decimal_places=2, read_only=True, allow_null=True
     )
+    # Farm-wide production cap occupancy (see ``ShareTypeVariation.capacity``):
+    # how much is subscribed today and how much is free. ``capacity_free`` is
+    # ``None`` when ``capacity`` is NULL (unlimited) — the frontend greys out /
+    # offers the waiting list when it hits 0.
+    capacity_occupied = serializers.SerializerMethodField()
+    capacity_free = serializers.SerializerMethodField()
+    # Per-ISO-week occupancy — THE term-aware source of truth (the flat
+    # ``capacity_occupied``/``capacity_free`` above are only a TODAY snapshot).
+    # Same ``{"<year>-<week>": {occupied, free}}`` shape as the station-day's
+    # ``capacity_by_week`` so the frontend's one ``termCapacity`` evaluator
+    # reads both. Populated only when the request carries ``year`` +
+    # ``delivery_week`` (else ``None``); a term is full when its busiest ("peak")
+    # week has ``free <= 0`` — exactly what ``VariationCapacityService`` blocks.
+    capacity_by_week = serializers.SerializerMethodField()
 
     class Meta:
         model = ShareTypeVariation
         fields = "__all__"
+
+    def _occupied(self, obj: ShareTypeVariation) -> int:
+        # Cache on the instance so the two capacity fields share one query.
+        cached = getattr(obj, "_capacity_occupied_cache", None)
+        if cached is None:
+            cached = obj.get_occupied_capacity()
+            obj._capacity_occupied_cache = cached
+        return cached
+
+    def get_capacity_occupied(self, obj: ShareTypeVariation) -> int:
+        return self._occupied(obj)
+
+    def get_capacity_free(self, obj: ShareTypeVariation) -> int | None:
+        if obj.capacity is None:
+            return None
+        return max(0, obj.capacity - self._occupied(obj))
+
+    def _get_year_and_weeks(self):
+        """Return (year, start_week, num_weeks) from request params, mirroring
+        ``DeliveryStationDaySerializer._get_year_and_weeks`` so both capacity
+        axes share the SAME window contract on the wire."""
+        request = self.context.get("request")
+        if not request:
+            return None, None, 52
+        from ..utils.query_params import validate_query_params
+
+        parsed = validate_query_params(
+            request,
+            optional=["year", "delivery_week", "num_weeks"],
+        )
+        year = parsed["year"]
+        start_week = parsed["delivery_week"]
+        num_weeks = parsed["num_weeks"]
+        if year is not None and start_week is not None:
+            return year, start_week, num_weeks
+        return None, None, 52
+
+    def _batched_variation_counts(self, year_weeks):
+        """Occupancy for every variation in THIS serialization run, computed
+        once and cached on the shared child serializer (kills the per-row
+        N+1)."""
+        cached = getattr(self, "_variation_counts_cache", None)
+        if cached is not None:
+            return cached
+
+        from ..services.variation_capacity_service import VariationCapacityService
+
+        # ``self.parent.instance`` is the whole page under ``many=True``; fall
+        # back to the single instance when serialized on its own.
+        if self.parent is not None and self.parent.instance is not None:
+            instances = list(self.parent.instance)
+        else:
+            instances = [self.instance]
+        variation_ids = [obj.id for obj in instances if getattr(obj, "id", None)]
+
+        counts = VariationCapacityService.capacity_counts_by_week(
+            variation_ids=variation_ids,
+            year_weeks=year_weeks,
+        )
+        self._variation_counts_cache = counts
+        return counts
+
+    @extend_schema_field(
+        serializers.DictField(child=CapacityWeekEntrySerializer(), allow_null=True)
+    )
+    def get_capacity_by_week(self, obj: ShareTypeVariation):
+        year, start_week, num_weeks = self._get_year_and_weeks()
+        if year is None or start_week is None:
+            return None
+        from ..utils.iso_week_utils import iso_week_range
+
+        # ``date.fromisocalendar`` raises on an out-of-range start_week; return
+        # None (same guard as the station-day serializer) rather than 500.
+        try:
+            date.fromisocalendar(year, start_week, 1)
+        except ValueError:
+            return None
+        year_weeks = iso_week_range(year, start_week, num_weeks)
+        counts = self._batched_variation_counts(year_weeks)
+        result = {}
+        for current_year, week in year_weeks:
+            occupied = counts.get((obj.id, current_year, week), 0)
+            free = None if obj.capacity is None else max(0, obj.capacity - occupied)
+            result[f"{current_year}-{week}"] = {"occupied": occupied, "free": free}
+        return result
 
     def validate(self, attrs):
         attrs = super().validate(attrs)

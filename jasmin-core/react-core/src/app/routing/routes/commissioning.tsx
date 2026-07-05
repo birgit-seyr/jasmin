@@ -141,7 +141,6 @@ const PlanningLongTermHarvestSharesFruitsOnly = lazy(
     import("@/features/commissioning/pages/PlanningShareContentLongTermHARVESTSHAREFRUIT"),
 );
 const ShareDays = lazy(() => import("@features/commissioning/pages/ShareDays"));
-const Workflow = lazy(() => import("@features/commissioning/pages/Workflow"));
 const PurchaseList = lazy(
   () => import("@features/commissioning/pages/PurchaseList"),
 );
@@ -216,14 +215,6 @@ export const commissioningRoutes: AppRoute[] = [
     ),
   },
 
-  {
-    path: "/commissioning/workflow",
-    element: (
-      <RequireRole flag="isStaff">
-        <Workflow />
-      </RequireRole>
-    ),
-  },
   {
     path: "/commissioning/list-storages",
     element: (

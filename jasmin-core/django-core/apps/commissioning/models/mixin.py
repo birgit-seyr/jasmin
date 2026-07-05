@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import uuid
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -1101,6 +1102,13 @@ class WaitingListMixin(models.Model):
     notification_sent_at = models.DateTimeField(blank=True, null=True)
     notification_expires_at = models.DateTimeField(blank=True, null=True)
     response_received_at = models.DateTimeField(blank=True, null=True)
+    # Single-use magic-link token for the "a spot is available" email — the
+    # member accepts/declines their offer WITHOUT logging in (mirrors the
+    # invitation flow). Set when the offer is made; cleared on accept / decline /
+    # expiry so a stale link can't be replayed.
+    notification_token = models.UUIDField(
+        blank=True, null=True, db_index=True, editable=False
+    )
 
     class Meta:
         abstract = True
@@ -1149,23 +1157,28 @@ class WaitingListMixin(models.Model):
         self.waiting_list_status = self.WaitingListStatus.SPOT_AVAILABLE
         self.notification_sent_at = timezone.now()
         self.notification_expires_at = timezone.now() + timedelta(days=expiry_days)
+        # Fresh single-use token per offer — a re-offer invalidates any old link.
+        self.notification_token = uuid.uuid4()
         self.save()
 
     def confirm_spot(self) -> None:
         self.waiting_list_status = self.WaitingListStatus.CONFIRMED
         self.response_received_at = timezone.now()
         self.on_waiting_list = False
+        self.notification_token = None  # link consumed
         self.save()
 
     def decline_spot(self) -> None:
         self.waiting_list_status = self.WaitingListStatus.DECLINED
         self.response_received_at = timezone.now()
         self.on_waiting_list = False
+        self.notification_token = None  # link consumed
         self.save()
 
     def mark_as_expired(self) -> None:
         self.waiting_list_status = self.WaitingListStatus.EXPIRED
         self.on_waiting_list = False
+        self.notification_token = None  # link dead
         self.save()
 
     @property

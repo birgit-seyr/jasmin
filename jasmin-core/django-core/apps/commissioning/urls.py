@@ -39,9 +39,15 @@ from .views import (
     bulk_set_as_expected_current_stock,
     bulk_set_to_zero_current_stock,
     historical_share_type_variation_averages,
+    member_dashboard_statistics,
     member_growth_statistics,
     offer_sending_status,
     share_options_list,
+)
+from .views.waiting_list_offer_views import (
+    WaitingListOfferAcceptView,
+    WaitingListOfferDeclineView,
+    WaitingListOfferDetailView,
 )
 from .viewsets import (
     CommissioningListViewSet,
@@ -305,6 +311,23 @@ urlpatterns = [
         ShareTypeVariationsTotalsView.as_view(),
         name="share_type_variations_totals",
     ),
+    # Public (no-login) waiting-list offer acceptance — the token IS the
+    # credential. GET the offer, then POST accept / decline.
+    path(
+        "waiting_list_offers/<uuid:token>/",
+        WaitingListOfferDetailView.as_view(),
+        name="waiting_list_offer_detail",
+    ),
+    path(
+        "waiting_list_offers/<uuid:token>/accept/",
+        WaitingListOfferAcceptView.as_view(),
+        name="waiting_list_offer_accept",
+    ),
+    path(
+        "waiting_list_offers/<uuid:token>/decline/",
+        WaitingListOfferDeclineView.as_view(),
+        name="waiting_list_offer_decline",
+    ),
     # Scope methods per URL: the list URL has only GET (the bulk-read
     # entry point), the detail URL has PATCH + DELETE (single-row
     # mutations keyed by composite_id). `as_view(http_method_names=…)`
@@ -350,6 +373,11 @@ urlpatterns = [
         "member_growth_statistics/",
         member_growth_statistics,
         name="member_growth_statistics",
+    ),
+    path(
+        "member_dashboard_statistics/",
+        member_dashboard_statistics,
+        name="member_dashboard_statistics",
     ),
     path(
         "historical_share_type_variation_averages/",

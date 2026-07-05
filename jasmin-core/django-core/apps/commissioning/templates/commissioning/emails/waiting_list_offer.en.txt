@@ -1,0 +1,12 @@
+Hi {{ member.first_name }},
+
+Good news — a spot has opened up{% if tenant_name %} at {{ tenant_name }}{% endif %} for the subscription you're on the waiting list for:
+{% if variation_name %}- {{ variation_name }}{% endif %}
+{% if delivery_station_name %}- Pick-up: {{ delivery_station_name }}{% endif %}
+{% if valid_from %}- Starting: {{ valid_from }}{% endif %}
+
+If you'd still like it, please confirm{% if expires_at %} by {{ expires_at }}{% endif %}:
+
+{{ accept_url }}
+
+The link lets you accept or decline without logging in. If you don't respond in time, the spot is offered to the next person in line.

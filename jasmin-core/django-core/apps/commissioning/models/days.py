@@ -112,7 +112,7 @@ class DeliveryStationDay(JasminModel, TimeBoundMixin):
     )  # which tour this object is in (tour is an integer)
     stop_order = models.PositiveIntegerField(null=True, blank=True)
     capacity = models.PositiveIntegerField(
-        null=True, blank=True
+        default=50
     )  # maximum number of shares that can be delivered to this station on this day
 
     class Meta:

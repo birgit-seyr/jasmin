@@ -1453,6 +1453,69 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/commissioning/abos/{id}/offer_spot/:
+    post:
+      operationId: commissioning_abos_offer_spot_create
+      description: 'Offer a freed spot to a queued waiting-list member: holds both
+        capacity axes (station-day reservation + status-counted variation hold) for
+        the response window and emails the member a magic link to accept/decline without
+        logging in. Optional ``price_per_delivery`` lets the office set the price
+        at offer time (a waiting_list entry may be a year old). Only a PENDING waiting-list
+        entry can be offered; a capacity 409 means the slot filled up between the
+        office''s view and the click.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der subscription identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfferSpotRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfferSpotRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfferSpotRequest'
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/commissioning/abos/{id}/reject/:
     post:
       operationId: commissioning_abos_reject_create
@@ -11523,6 +11586,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/commissioning/member_dashboard_statistics/:
+    get:
+      operationId: commissioning_member_dashboard_statistics_retrieve
+      description: "\n    Snapshot (\"today\") of member and cooperative-share statistics:
+        member counts\n    (total / active / trial / confirmed / pending / cancelled),
+        average member\n    age, and cooperative-share sums (total / confirmed / pending
+        / paid / unpaid /\n    payback-due).\n    "
+      summary: Get member dashboard statistics
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberDashboardStatistics'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/commissioning/member_growth_statistics/:
     get:
       operationId: commissioning_member_growth_statistics_list
@@ -19407,6 +19495,21 @@ paths:
           format: date
         description: Filter for records active at the given date (YYYY-MM-DD)
       - in: query
+        name: delivery_week
+        schema:
+          type: integer
+        description: ISO week number (1-53)
+        examples:
+          Week1:
+            value: 1
+            summary: Week 1
+          Week26:
+            value: 26
+            summary: Week 26
+          Week52:
+            value: 52
+            summary: Week 52
+      - in: query
         name: include_future
         schema:
           type: boolean
@@ -19419,6 +19522,12 @@ paths:
           type: boolean
         description: Filter by per-variation bulk-packing flag. Only meaningful in
           MIXED packing mode; omit to return all variations.
+      - in: query
+        name: num_weeks
+        schema:
+          type: integer
+        description: 'Number of weeks of per-variation capacity_by_week to return
+          (default: 52). Needs year + delivery_week.'
       - in: query
         name: physical
         schema:
@@ -19447,6 +19556,16 @@ paths:
         schema:
           type: boolean
         description: Filter for virtual variations only
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Year (YYYY format)
+        examples:
+          '2024':
+            value: 2024
+          '2025':
+            value: 2025
       tags:
       - commissioning
       security:
@@ -23633,6 +23752,123 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
         '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/waiting_list_offers/{token}/:
+    get:
+      operationId: commissioning_waiting_list_offers_retrieve
+      description: GET the offer behind a token — drives the member's accept/decline
+        page.
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - commissioning
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitingListOfferDetail'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/waiting_list_offers/{token}/accept/:
+    post:
+      operationId: commissioning_waiting_list_offers_accept_create
+      description: |-
+        The member accepts — the subscription leaves the waiting list as a
+        normal, not-yet-admin-confirmed abo.
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - commissioning
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitingListOfferDetail'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/waiting_list_offers/{token}/decline/:
+    post:
+      operationId: commissioning_waiting_list_offers_decline_create
+      description: The member declines — the held slot is freed.
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - commissioning
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitingListOfferDetail'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
           content:
             application/json:
               schema:
@@ -29217,7 +29453,6 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
-          nullable: true
         delivery_station:
           type: string
         delivery_day:
@@ -31038,6 +31273,11 @@ components:
           type: string
           format: date-time
           nullable: true
+        notification_token:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         is_active:
           type: boolean
         entry_date:
@@ -31284,6 +31524,11 @@ components:
           type: string
           format: date-time
           nullable: true
+        notification_token:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         is_active:
           type: boolean
         entry_date:
@@ -31426,6 +31671,56 @@ components:
           type: string
           readOnly: true
           nullable: true
+    MemberDashboardStatistics:
+      type: object
+      description: Snapshot ("today") of member + cooperative-share statistics.
+      properties:
+        total_members:
+          type: integer
+        trial_members:
+          type: integer
+        confirmed_members:
+          type: integer
+        pending_members:
+          type: integer
+        cancelled_members:
+          type: integer
+        average_age:
+          type: number
+          format: double
+          description: Average age (years) of current members with a known birth date
+        total_coop_shares:
+          type: number
+          format: double
+        confirmed_coop_shares:
+          type: number
+          format: double
+        pending_coop_shares:
+          type: number
+          format: double
+        paid_coop_shares:
+          type: number
+          format: double
+        unpaid_coop_shares:
+          type: number
+          format: double
+        payback_due_coop_shares:
+          type: number
+          format: double
+          description: Shares owed back to cancelled members, not yet paid back
+      required:
+      - average_age
+      - cancelled_members
+      - confirmed_coop_shares
+      - confirmed_members
+      - paid_coop_shares
+      - payback_due_coop_shares
+      - pending_coop_shares
+      - pending_members
+      - total_coop_shares
+      - total_members
+      - trial_members
+      - unpaid_coop_shares
     MemberEmailLog:
       type: object
       description: |-
@@ -32176,6 +32471,14 @@ components:
       - name
       - sent
       - sent_at
+    OfferSpotRequest:
+      type: object
+      properties:
+        price_per_delivery:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          nullable: true
     OrderContent:
       type: object
       description: |-
@@ -35898,6 +36201,19 @@ components:
           pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
           readOnly: true
           nullable: true
+        capacity_occupied:
+          type: integer
+          readOnly: true
+        capacity_free:
+          type: integer
+          nullable: true
+          readOnly: true
+        capacity_by_week:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/CapacityWeekEntry'
+          nullable: true
+          readOnly: true
         valid_from:
           type: string
           format: date
@@ -35925,7 +36241,6 @@ components:
           type: integer
           maximum: 2147483647
           minimum: -2147483648
-          nullable: true
         sort_order:
           type: integer
           maximum: 2147483647
@@ -36719,6 +37034,16 @@ components:
         response_received_at:
           type: string
           format: date-time
+          nullable: true
+        notification_token:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        waiting_list_reason:
+          allOf:
+          - $ref: '#/components/schemas/WaitingListReasonEnum'
+          readOnly: true
           nullable: true
         subscription_number:
           type: integer
@@ -38344,6 +38669,60 @@ components:
       required:
       - party
       - role
+    WaitingListOfferDetail:
+      type: object
+      properties:
+        member_first_name:
+          type: string
+        variation_name:
+          type: string
+        variation_size:
+          type: string
+        delivery_station_name:
+          type: string
+        delivery_station_address:
+          type: string
+        valid_from:
+          type: string
+          nullable: true
+        valid_until:
+          type: string
+          nullable: true
+        quantity:
+          type: integer
+        price_per_delivery:
+          type: string
+          nullable: true
+        status:
+          type: string
+        expires_at:
+          type: string
+          nullable: true
+        expired:
+          type: boolean
+      required:
+      - delivery_station_address
+      - delivery_station_name
+      - expired
+      - expires_at
+      - member_first_name
+      - price_per_delivery
+      - quantity
+      - status
+      - valid_from
+      - valid_until
+      - variation_name
+      - variation_size
+    WaitingListReasonEnum:
+      enum:
+      - delivery_station_full
+      - variation_full
+      - manual
+      type: string
+      description: |-
+        * `delivery_station_full` - Delivery station full
+        * `variation_full` - Share type sold out
+        * `manual` - Manually queued
     WaitingListStatusEnum:
       enum:
       - not_on_list

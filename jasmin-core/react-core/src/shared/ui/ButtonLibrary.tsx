@@ -39,43 +39,67 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
   },
   logging: {
     type: "text",
-    icon: <HistoryOutlined style={{ color: "var(--color-payments)", fontSize: "1em" }} />,
+    icon: (
+      <HistoryOutlined
+        style={{ color: "var(--color-future-blue)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "Activity Log",
   },
   emails: {
     type: "text",
-    icon: <MailOutlined style={{ color: "var(--color-payments)", fontSize: "1em" }} />,
+    icon: (
+      <MailOutlined
+        style={{ color: "var(--color-future-blue)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "Sent emails",
   },
   coopshares: {
     type: "text",
-    icon: <BankOutlined style={{ color: "var(--color-primary)", fontSize: "1em" }} />,
+    icon: (
+      <BankOutlined
+        style={{ color: "var(--color-primary)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "Coop shares",
   },
   bankDetails: {
     type: "text",
-    icon: <CreditCardOutlined style={{ color: "var(--color-payments)", fontSize: "1em" }} />,
+    icon: (
+      <CreditCardOutlined
+        style={{ color: "var(--color-future-blue)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "Edit bank details",
   },
   coopsharesAlert: {
     type: "text",
-    icon: <BankOutlined style={{ color: "var(--color-error)", fontSize: "1em" }} />,
+    icon: (
+      <BankOutlined style={{ color: "var(--color-error)", fontSize: "1em" }} />
+    ),
     className: "small-squared-button",
     tooltip: "Coop shares — none on file",
   },
   cancel: {
     type: "text",
-    icon: <StopOutlined style={{ color: "var(--color-error)", fontSize: "1em" }} />,
+    icon: (
+      <StopOutlined style={{ color: "var(--color-error)", fontSize: "1em" }} />
+    ),
     className: "small-squared-button",
     tooltip: "Cancel",
   },
   ok: {
     type: "text",
-    icon: <CheckCircleOutlined style={{ color: "var(--color-success)", fontSize: "1em" }} />,
+    icon: (
+      <CheckCircleOutlined
+        style={{ color: "var(--color-success)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "ok",
   },
@@ -91,7 +115,11 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
   },
   adminConfirmed: {
     type: "text",
-    icon: <CheckCircleOutlined style={{ color: "var(--color-bg-base)", fontSize: "1em" }} />,
+    icon: (
+      <CheckCircleOutlined
+        style={{ color: "var(--color-bg-base)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "Admin confirmed",
     style: {
@@ -101,13 +129,21 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
   },
   adminPending: {
     type: "text",
-    icon: <ClockCircleOutlined style={{ color: "var(--color-warning)", fontSize: "1em" }} />,
+    icon: (
+      <ClockCircleOutlined
+        style={{ color: "var(--color-warning)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "Admin confirmation pending",
   },
   adminRejected: {
     type: "text",
-    icon: <CloseCircleOutlined style={{ color: "var(--color-bg-base)", fontSize: "1em" }} />,
+    icon: (
+      <CloseCircleOutlined
+        style={{ color: "var(--color-bg-base)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "Application rejected",
     style: {
@@ -117,37 +153,59 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
   },
   userActive: {
     type: "text",
-    icon: <UserOutlined style={{ color: "var(--color-success)", fontSize: "1em" }} />,
+    icon: (
+      <UserOutlined
+        style={{ color: "var(--color-success)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "User account active",
   },
   userPendingApproval: {
     type: "text",
-    icon: <ClockCircleOutlined style={{ color: "var(--color-warning)", fontSize: "1em" }} />,
+    icon: (
+      <ClockCircleOutlined
+        style={{ color: "var(--color-warning)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "Pending admin approval",
   },
   userPendingInvitation: {
     type: "text",
-    icon: <MailOutlined style={{ color: "var(--color-payments)", fontSize: "1em" }} />,
+    icon: (
+      <MailOutlined
+        style={{ color: "var(--color-future-blue)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "Invitation sent",
   },
   userPendingInvitationExpired: {
     type: "text",
-    icon: <MailOutlined style={{ color: "var(--color-error)", fontSize: "1em" }} />,
+    icon: (
+      <MailOutlined style={{ color: "var(--color-error)", fontSize: "1em" }} />
+    ),
     className: "small-squared-button",
     tooltip: "Invitation expired",
   },
   userInactive: {
     type: "text",
-    icon: <UserOutlined style={{ color: "var(--color-text-tertiary)", fontSize: "1em" }} />,
+    icon: (
+      <UserOutlined
+        style={{ color: "var(--color-text-tertiary)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "User account inactive",
   },
   userInvited: {
     type: "text",
-    icon: <MailOutlined style={{ color: "var(--color-warning)", fontSize: "1em" }} />,
+    icon: (
+      <MailOutlined
+        style={{ color: "var(--color-warning)", fontSize: "1em" }}
+      />
+    ),
     className: "small-squared-button",
     tooltip: "Invitation sent",
   },

@@ -3,23 +3,17 @@ import { RequireRole } from "@shared/auth";
 import type { AppRoute } from "../types";
 
 const DashboardMembers = lazy(
-  () => import("@features/members/pages/DashboardMembers"),
+  () => import("@/features/members/pages/DashboardMembers"),
 );
 const Members = lazy(() => import("@features/members/pages/Members"));
 const MemberDetail = lazy(() => import("@features/members/pages/MemberDetail"));
 const DebitsMembers = lazy(
   () => import("@features/members/pages/DebitsMembers"),
 );
-const OverviewMembers = lazy(
-  () => import("@features/members/pages/OverviewMembers"),
-);
 
 const MemberLoans = lazy(() => import("@features/members/pages/MemberLoans"));
 const StaffDetail = lazy(() => import("@features/members/pages/StaffDetail"));
 const SepaMandates = lazy(() => import("@features/members/pages/SepaMandates"));
-const StatisticsPage = lazy(
-  () => import("@features/members/pages/StatisticsPage"),
-);
 
 export const membersRoutes: AppRoute[] = [
   {
@@ -72,27 +66,12 @@ export const membersRoutes: AppRoute[] = [
       </RequireRole>
     ),
   },
-  {
-    path: "/members/overview-members",
-    element: (
-      <RequireRole flag="isOffice">
-        <OverviewMembers />
-      </RequireRole>
-    ),
-  },
+
   {
     path: "/members/sepa-mandates",
     element: (
       <RequireRole flag="isOffice">
         <SepaMandates />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/members/statistics",
-    element: (
-      <RequireRole flag="isOffice">
-        <StatisticsPage />
       </RequireRole>
     ),
   },

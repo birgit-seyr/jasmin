@@ -1,5 +1,6 @@
 import { ReloadOutlined } from "@ant-design/icons";
-import { Button, Card, Empty, Space, Table, Tag, Typography } from "antd";
+import { Button, Card, Space, Table, Tag, Typography } from "antd";
+import { EmptyHint } from "@shared/ui";
 import type { TFunction } from "i18next";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -138,9 +139,7 @@ export default function DecidedDeletionsCard() {
       style={{ width: "100%" }}
     >
       {rows.length === 0 && !isFetching ? (
-        <Empty
-          description={t("gdpr.no_decided")}
-        />
+        <EmptyHint>{t("gdpr.no_decided")}</EmptyHint>
       ) : (
         <Table
           columns={columns}

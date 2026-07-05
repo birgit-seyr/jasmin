@@ -33,7 +33,6 @@ import {
   useDateFormat,
   useInvalidateAfterTableMutation,
   useNoteColumn,
-  useNumberFormat,
   useTableRowSelection,
   useTenant,
   useUserInfoModal,
@@ -55,9 +54,9 @@ import {
   ExplainerText,
   LinkButton,
   StatusButton,
-  SummaryStatsCard,
   ToolTipIcon,
 } from "@shared/ui";
+import MemberStatsCards from "@features/members/components/MemberStatsCards";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import type { MemberRecord } from "./types";
@@ -231,7 +230,6 @@ export default function Members() {
   // view. Only shown when the tenant has coop shares enabled — for
   // tenants without ``has_coop_shares`` the equity column is hidden
   // and the total would be meaningless.
-  const { format } = useNumberFormat();
   const totalCoopShares = useMemo(
     () =>
       data.reduce(
@@ -240,6 +238,7 @@ export default function Members() {
       ),
     [data],
   );
+
 
   // No ``list`` here: this page owns the data via ``useCommissioningMembersList``
   // and passes it as ``initialData``. Adding ``list`` would make EditableTable
@@ -735,21 +734,9 @@ export default function Members() {
       <h1>{t("members.list_members")}</h1>
 
       <div className="members-list-toolbar">
-        <SummaryStatsCard
-          stats={[
-            {
-              label: t("members.total_members"),
-              value: format(data.length, 0),
-            },
-            ...(has_coop_shares
-              ? [
-                  {
-                    label: t("members.total_shares"),
-                    value: totalCoopShares ? format(totalCoopShares, 0) : "",
-                  },
-                ]
-              : []),
-          ]}
+        <MemberStatsCards
+          fallbackMemberCount={data.length}
+          fallbackCoopShares={totalCoopShares}
         />
         {isOffice && (
           <Button
@@ -763,7 +750,7 @@ export default function Members() {
 
       {(pendingMembersCount > 0 ||
         (has_coop_shares && pendingCoopCount > 0)) && (
-        <Space style={{ marginBottom: 12 }} wrap>
+        <Space style={{ marginBottom: 12 }} size="large" wrap>
           {pendingMembersCount > 0 && (
             <Badge count={pendingMembersCount} size="small">
               <Button

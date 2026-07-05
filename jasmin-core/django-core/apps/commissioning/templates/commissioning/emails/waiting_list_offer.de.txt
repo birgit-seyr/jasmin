@@ -1,0 +1,12 @@
+Hallo {{ member.first_name }},
+
+gute Nachrichten — bei{% if tenant_name %} {{ tenant_name }}{% endif %} ist ein Platz für das Abo frei geworden, für das du auf der Warteliste stehst:
+{% if variation_name %}- {{ variation_name }}{% endif %}
+{% if delivery_station_name %}- Abholung: {{ delivery_station_name }}{% endif %}
+{% if valid_from %}- Beginn: {{ valid_from }}{% endif %}
+
+Wenn du ihn noch möchtest, bestätige bitte{% if expires_at %} bis {{ expires_at }}{% endif %}:
+
+{{ accept_url }}
+
+Über den Link kannst du ohne Login zusagen oder ablehnen. Wenn du nicht rechtzeitig antwortest, wird der Platz der nächsten Person angeboten.

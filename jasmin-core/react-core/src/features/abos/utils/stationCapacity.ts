@@ -53,7 +53,7 @@ export function capacityWindowParams(): {
 /** Share options that CONSUME station capacity (mirror of the backend
  * `_CAPACITY_SHARE_OPTIONS`; note HARVEST_SHARE_FRUIT is the stored value of
  * the fruits-only option). Add-on variations (chicken, honey, bread, ...)
- * neither consume nor display capacity — never offer them a waitlist. */
+ * neither consume nor display capacity — never offer them a waiting_list. */
 export const CAPACITY_SHARE_OPTIONS: readonly string[] = [
   "HARVEST_SHARE",
   "HARVEST_SHARE_FRUIT",
@@ -62,15 +62,19 @@ export const CAPACITY_SHARE_OPTIONS: readonly string[] = [
 export function stationDayTermCapacity(
   capacity: number | null | undefined,
   capacityByWeek: Record<string, CapacityWeekEntry> | null | undefined,
-  termWeekKeys: readonly string[],
+  weekKeys: readonly string[],
+  // Shares the order needs. ``isFull`` is quantity-aware: the term is full when
+  // the tightest week can't fit ``quantity`` more shares — matching the backend
+  // gate (peak + quantity > capacity), not just "zero free". A quantity=3 order
+  // into a week with 2 free must waiting_list, exactly as the backend enforces.
+  quantity: number = 1,
 ): StationDayTermCapacity {
   const total = capacity ?? null;
   let minFree: number | null = null;
   let peakOccupied = 0;
   let peakWeekKey: string | null = null;
-  let isFull = false;
   if (capacityByWeek) {
-    for (const key of termWeekKeys) {
+    for (const key of weekKeys) {
       const week = capacityByWeek[key];
       if (!week) continue;
       if (week.occupied > peakOccupied || peakWeekKey == null) {
@@ -79,10 +83,38 @@ export function stationDayTermCapacity(
       }
       if (week.free == null) continue;
       minFree = minFree == null ? week.free : Math.min(minFree, week.free);
-      if (week.free <= 0) isFull = true;
     }
   }
+  const needed = quantity > 0 ? quantity : 1;
+  const isFull = minFree != null && minFree < needed;
   return { total, minFree, peakOccupied, peakWeekKey, isFull };
+}
+
+/** The fullness evaluator is shape-generic — capacity + per-week
+ * ``{occupied, free}`` → peak/isFull for a term — so the SAME function serves
+ * the farm-wide ``ShareTypeVariation`` production cap. Aliased for call-site
+ * clarity; this is THE one evaluator every capacity display (station-day AND
+ * variation, in the modal, the abos select, and the office overview) reads. */
+export const termCapacity = stationDayTermCapacity;
+export type TermCapacity = StationDayTermCapacity;
+
+/** ISO week keys ("<iso-year>-<iso-week>") spanning ``[from, until]`` inclusive,
+ * matching the keys in ``capacity_by_week``. Open-ended terms (invalid/absent
+ * ``until``) fall back to a one-year window from ``from``. Shared by the
+ * station-day and variation option builders so the term→weeks expansion can't
+ * drift between the two axes. */
+export function termWeekKeys(
+  from: dayjs.Dayjs,
+  until: dayjs.Dayjs | null | undefined,
+): string[] {
+  const keys: string[] = [];
+  const end = until && until.isValid() ? until : from.add(1, "year");
+  let cursor = from.startOf("isoWeek");
+  while (cursor.isSameOrBefore(end, "day")) {
+    keys.push(`${cursor.isoWeekYear()}-${cursor.isoWeek()}`);
+    cursor = cursor.add(1, "week");
+  }
+  return keys;
 }
 
 /** Forward-looking capacity-floor window: current ISO week, 78 weeks ahead.

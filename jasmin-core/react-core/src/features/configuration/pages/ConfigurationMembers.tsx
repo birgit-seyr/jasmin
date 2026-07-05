@@ -98,6 +98,7 @@ export default function ConfigurationMembers() {
             description: t("settings.members.uses_member_loans_desc"),
             type: "checkbox",
             defaultValue: false,
+            disabled: true,
           },
         ],
       },
@@ -107,7 +108,9 @@ export default function ConfigurationMembers() {
         settings: [
           {
             key: "requires_paper_signature_for_membership",
-            label: t("settings.members.requires_paper_signature_for_membership"),
+            label: t(
+              "settings.members.requires_paper_signature_for_membership",
+            ),
             description: t(
               "settings.members.requires_paper_signature_for_membership_desc",
             ),

@@ -692,184 +692,175 @@ export default function Invoices() {
         />
       </div>
 
-      <Card style={{ marginBottom: 24 }}>
-        <div className="flex-between">
-          <div>
-            <Radio.Group
-              value={groupingMode}
-              onChange={(e) => setGroupingMode(e.target.value)}
-              style={{ marginLeft: 16 }}
+      <div className="flex-between">
+        <div>
+          <Radio.Group
+            value={groupingMode}
+            onChange={(e) => setGroupingMode(e.target.value)}
+          >
+            <Radio.Button
+              value={GROUPING_MODES.NONE}
+              className={
+                groupingMode === GROUPING_MODES.NONE
+                  ? "invoice-grouping-active"
+                  : undefined
+              }
             >
-              <Radio.Button
-                value={GROUPING_MODES.NONE}
-                className={
-                  groupingMode === GROUPING_MODES.NONE
-                    ? "invoice-grouping-active"
-                    : undefined
-                }
-              >
-                <TableOutlined /> {t("commissioning.table_view")}
-              </Radio.Button>
-              <Radio.Button
-                value={GROUPING_MODES.WEEK}
-                className={
-                  groupingMode === GROUPING_MODES.WEEK
-                    ? "invoice-grouping-active"
-                    : undefined
-                }
-              >
-                <CalendarOutlined /> {t("commissioning.group_by_week")}
-              </Radio.Button>
-              <Radio.Button
-                value={GROUPING_MODES.MONTH}
-                className={
-                  groupingMode === GROUPING_MODES.MONTH
-                    ? "invoice-grouping-active"
-                    : undefined
-                }
-              >
-                <CalendarOutlined /> {t("commissioning.group_by_month")}
-              </Radio.Button>
-            </Radio.Group>
-            <ToolTipIcon title={t("tooltip.grouping_mode_date")} />
-          </div>
+              <TableOutlined /> {t("commissioning.table_view")}
+            </Radio.Button>
+            <Radio.Button
+              value={GROUPING_MODES.WEEK}
+              className={
+                groupingMode === GROUPING_MODES.WEEK
+                  ? "invoice-grouping-active"
+                  : undefined
+              }
+            >
+              <CalendarOutlined /> {t("commissioning.group_by_week")}
+            </Radio.Button>
+            <Radio.Button
+              value={GROUPING_MODES.MONTH}
+              className={
+                groupingMode === GROUPING_MODES.MONTH
+                  ? "invoice-grouping-active"
+                  : undefined
+              }
+            >
+              <CalendarOutlined /> {t("commissioning.group_by_month")}
+            </Radio.Button>
+          </Radio.Group>
+          <ToolTipIcon title={t("tooltip.grouping_mode_date")} />
         </div>
-        <div style={{ marginTop: "2em", marginBottom: "-2em" }}>
-          <strong>{t("commissioning.for_selected")}</strong>
-        </div>
-        <div className="button-row">
-          {" "}
-          <BulkActionButton
-            selectedIds={selectedRowKeys}
-            apiFunction={(payload) =>
-              commissioningBulkCreateSummaryInvoiceFromOrdersCreate({
-                ids: payload.ids as string[],
-              })
-            }
-            buttonText={t("commissioning.create_summary_invoice_for_selected")}
-            buttonProps={{ type: "primary" }}
-            disabled={
-              selectedRowKeys.length < 2 ||
-              data.some(
-                (item) =>
-                  selectedRowKeys.includes(item.id) &&
-                  item.has_finalized_invoice,
-              )
-            }
-            onSuccess={invalidateData}
-          />
-          <ToolTipIcon
-            title={t("tooltip.create_summary_invoice_for_selected")}
-          />
-          <BulkActionButton
-            selectedIds={selectedRowKeys}
-            apiFunction={(payload) =>
-              commissioningBulkCreateDocumentsFromOrdersCreate({
-                ids: payload.ids as string[],
-                model: "invoice" as const,
-              })
-            }
-            buttonText={t("commissioning.create_invoice_for_selected")}
-            buttonProps={{ type: "primary" }}
-            disabled={
-              selectedRowKeys.length === 0 ||
-              data.some(
-                (item) =>
-                  selectedRowKeys.includes(item.id) &&
-                  item.has_finalized_invoice,
-              )
-            }
-            onSuccess={invalidateData}
-          />
-          <ToolTipIcon title={t("tooltip.create_invoice_for_selected")} />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            flexWrap: "wrap",
-            marginTop: "-20px",
-          }}
-        >
-          <BulkActionButton
-            selectedIds={selectedRowKeys}
-            apiFunction={(payload) =>
-              commissioningBulkDeleteDocumentsCreate({
-                ids: payload.ids as string[],
-                model: "invoice" as const,
-              })
-            }
-            buttonText={t("commissioning.delete_invoices")}
-            buttonProps={{ type: "primary" }}
-            onSuccess={invalidateData}
-            disabled={
-              selectedRowKeys.length === 0 ||
-              data.some(
-                (item) =>
-                  selectedRowKeys.includes(item.id) &&
-                  item.has_finalized_invoice,
-              ) ||
-              data.some(
-                (item) =>
-                  selectedRowKeys.includes(item.id) &&
-                  item.has_invoice === false,
-              )
-            }
-          />
-          <ToolTipIcon title={t("tooltip.delete_invoices")} />
+      </div>
+      <div style={{ marginTop: "2em", marginBottom: "-2em" }}>
+        <strong>{t("commissioning.for_selected")}</strong>
+      </div>
+      <div className="button-row">
+        {" "}
+        <BulkActionButton
+          selectedIds={selectedRowKeys}
+          apiFunction={(payload) =>
+            commissioningBulkCreateSummaryInvoiceFromOrdersCreate({
+              ids: payload.ids as string[],
+            })
+          }
+          buttonText={t("commissioning.create_summary_invoice_for_selected")}
+          buttonProps={{ type: "primary" }}
+          disabled={
+            selectedRowKeys.length < 2 ||
+            data.some(
+              (item) =>
+                selectedRowKeys.includes(item.id) && item.has_finalized_invoice,
+            )
+          }
+          onSuccess={invalidateData}
+        />
+        <ToolTipIcon title={t("tooltip.create_summary_invoice_for_selected")} />
+        <BulkActionButton
+          selectedIds={selectedRowKeys}
+          apiFunction={(payload) =>
+            commissioningBulkCreateDocumentsFromOrdersCreate({
+              ids: payload.ids as string[],
+              model: "invoice" as const,
+            })
+          }
+          buttonText={t("commissioning.create_invoice_for_selected")}
+          buttonProps={{ type: "primary" }}
+          disabled={
+            selectedRowKeys.length === 0 ||
+            data.some(
+              (item) =>
+                selectedRowKeys.includes(item.id) && item.has_finalized_invoice,
+            )
+          }
+          onSuccess={invalidateData}
+        />
+        <ToolTipIcon title={t("tooltip.create_invoice_for_selected")} />
+      </div>
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          flexWrap: "wrap",
+          marginTop: "-20px",
+        }}
+      >
+        <BulkActionButton
+          selectedIds={selectedRowKeys}
+          apiFunction={(payload) =>
+            commissioningBulkDeleteDocumentsCreate({
+              ids: payload.ids as string[],
+              model: "invoice" as const,
+            })
+          }
+          buttonText={t("commissioning.delete_invoices")}
+          buttonProps={{ type: "primary" }}
+          onSuccess={invalidateData}
+          disabled={
+            selectedRowKeys.length === 0 ||
+            data.some(
+              (item) =>
+                selectedRowKeys.includes(item.id) && item.has_finalized_invoice,
+            ) ||
+            data.some(
+              (item) =>
+                selectedRowKeys.includes(item.id) && item.has_invoice === false,
+            )
+          }
+        />
+        <ToolTipIcon title={t("tooltip.delete_invoices")} />
 
-          <BulkActionButton
-            selectedIds={selectedRowKeys}
-            apiFunction={(payload) =>
-              commissioningBulkFinalizeDocumentsCreate({
-                ids: payload.ids as string[],
-                model: "invoice" as const,
-              })
-            }
-            buttonText={t("commissioning.finalize_invoices")}
-            buttonProps={{ type: "primary", danger: true }}
-            disabled={
-              selectedRowKeys.length === 0 ||
-              data.some(
-                (item) =>
-                  selectedRowKeys.includes(item.id) &&
-                  item.has_finalized_invoice === true,
-              )
-            }
-            onSuccess={handleFinalizeInvoicesSuccess}
-          />
-          <ToolTipIcon title={t("tooltip.finalize_invoices")} />
-        </div>
-        <div style={{ marginTop: "2em", marginBottom: "-2em" }}>
-          <strong>{t("resellers.for_selected_finalized")}</strong>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            flexWrap: "wrap",
-            marginBottom: "16px",
-            marginTop: "-20px",
-          }}
-        >
-          {/* Bulk send-email / download-ZIP (and download-PDF) are disabled
+        <BulkActionButton
+          selectedIds={selectedRowKeys}
+          apiFunction={(payload) =>
+            commissioningBulkFinalizeDocumentsCreate({
+              ids: payload.ids as string[],
+              model: "invoice" as const,
+            })
+          }
+          buttonText={t("commissioning.finalize_invoices")}
+          buttonProps={{ type: "primary", danger: true }}
+          disabled={
+            selectedRowKeys.length === 0 ||
+            data.some(
+              (item) =>
+                selectedRowKeys.includes(item.id) &&
+                item.has_finalized_invoice === true,
+            )
+          }
+          onSuccess={handleFinalizeInvoicesSuccess}
+        />
+        <ToolTipIcon title={t("tooltip.finalize_invoices")} />
+      </div>
+      <div style={{ marginTop: "2em", marginBottom: "-2em" }}>
+        <strong>{t("resellers.for_selected_finalized")}</strong>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          flexWrap: "wrap",
+          marginBottom: "16px",
+          marginTop: "-20px",
+        }}
+      >
+        {/* Bulk send-email / download-ZIP (and download-PDF) are disabled
               placeholders: the backend routes don't exist yet (a click used to
               404). Re-enable with the real endpoint + per-row disabled logic
               once they land. */}
-          <BulkActionButton
-            selectedIds={selectedRowKeys}
-            buttonText={t("resellers.send_via_email_resellers")}
-            buttonProps={{ type: "primary" }}
-            disabled
-          />
-          <BulkActionButton
-            selectedIds={selectedRowKeys}
-            buttonText={t("download.selected_invoices_bulk_zip")}
-            buttonProps={{ type: "primary" }}
-            disabled
-          />
-        </div>
-      </Card>
+        <BulkActionButton
+          selectedIds={selectedRowKeys}
+          buttonText={t("resellers.send_via_email_resellers")}
+          buttonProps={{ type: "primary" }}
+          disabled
+        />
+        <BulkActionButton
+          selectedIds={selectedRowKeys}
+          buttonText={t("download.selected_invoices_bulk_zip")}
+          buttonProps={{ type: "primary" }}
+          disabled
+        />
+      </div>
 
       {groupingMode === GROUPING_MODES.NONE
         ? renderTableView()

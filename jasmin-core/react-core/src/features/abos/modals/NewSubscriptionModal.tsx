@@ -44,6 +44,8 @@ import {
   CAPACITY_SHARE_OPTIONS,
   capacityWindowParams,
   stationDayTermCapacity,
+  termCapacity,
+  termWeekKeys,
 } from "@features/abos/utils/stationCapacity";
 import { DeliveryStationMap } from "@shared/ui";
 import type { DeliveryStationMapMarker } from "@shared/ui";
@@ -105,10 +107,12 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   } = useSubscriptionTerm();
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
-  // Set when the backend refused a NORMAL create with
-  // delivery_station.over_capacity — renders an inline offer to retry the
-  // same create as a waiting-list entry (server-authoritative fullness).
-  const [waitlistOffer, setWaitlistOffer] = useState(false);
+  // Set when the backend refused a NORMAL create with an over-capacity 409 —
+  // renders an inline offer to retry as a waiting-list entry. The value records
+  // WHICH axis was full (station vs variation) so the offer text matches.
+  const [waitingListOffer, setWaitingListOffer] = useState<
+    null | "station" | "variation"
+  >(null);
   const [selectedVariation, setSelectedVariation] =
     useState<ShareTypeVariationOption | null>(null);
 
@@ -133,6 +137,10 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   const { shareTypeVariations } = useAllShareTypeVariations(shareTypeRefs, {
     active_at_date: pricingDate,
     include_future: true,
+    // Wide capacity window so each variation carries capacity_by_week for the
+    // term-aware sold-out check below — the SAME window the station-days and
+    // the Abos table use.
+    ...capacityWindowParams(),
   });
   const { paymentCycles } = usePaymentCycles();
 
@@ -169,24 +177,21 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // values already sit on ISO-week boundaries.
   const validUntil = Form.useWatch("valid_until", form) as Dayjs | undefined;
   const isTrial = Form.useWatch("is_trial", form) as boolean | undefined;
+  // Watched so the fullness checks are quantity-aware: a full-enough station /
+  // variation for THIS many shares waiting_lists, matching the backend gate.
+  const quantity = (Form.useWatch("quantity", form) as number | undefined) ?? 1;
   const validFromMs = validFrom ? validFrom.valueOf() : null;
   const validUntilMs = validUntil ? validUntil.valueOf() : null;
 
-  // Every ``"<iso-year>-<iso-week>"`` key in the term. Falls back to the
-  // start week alone when there's no end date yet, so an open-ended term
-  // doesn't grey out a station for one busy week far in the future.
-  const periodWeekKeys = useMemo(() => {
-    const start = (validFrom ?? dayjs()).startOf("isoWeek");
-    const end = validUntil ? validUntil.startOf("isoWeek") : start;
-    const keys: string[] = [];
-    let cursor = start;
-    while (cursor.isSameOrBefore(end, "week") && keys.length < 60) {
-      keys.push(`${cursor.isoWeekYear()}-${cursor.isoWeek()}`);
-      cursor = cursor.add(1, "week");
-    }
-    return keys.length ? keys : [`${start.isoWeekYear()}-${start.isoWeek()}`];
+  // Every ``"<iso-year>-<iso-week>"`` key in the term — via the SHARED
+  // ``termWeekKeys`` so the modal's fullness evaluation matches the Abos select,
+  // the capacity overview, and the backend for the same term (no bespoke week
+  // math that could disagree). Open-ended terms span a one-year window.
+  const periodWeekKeys = useMemo(
+    () => termWeekKeys(validFrom ?? dayjs(), validUntil ?? null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [validFromMs, validUntilMs]);
+    [validFromMs, validUntilMs],
+  );
 
   // ``capacity_by_week`` is only populated when the request carries
   // year + delivery_week + num_weeks. Use the SAME wide fixed window as the
@@ -300,7 +305,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // answered a different question than the one that matters). Capacity also
   // only applies to harvest variations — add-on shares (chicken, honey, …)
   // ride along in the base box and never consume a slot, so they never see
-  // a full tag or a waitlist offer.
+  // a full tag or a waiting_list offer.
   const termKnown = Boolean(validFrom && validUntil);
   const capacityRelevant = useMemo(() => {
     if (!selectedVariation) return false;
@@ -323,6 +328,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
             dsd.capacity,
             dsd.capacity_by_week,
             periodWeekKeys,
+            quantity,
           )
         : { total: null, minFree: null, isFull: false };
       return {
@@ -333,7 +339,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         isFull,
       };
     });
-  }, [deliveryStationDays, periodWeekKeys, showCapacity]);
+  }, [deliveryStationDays, periodWeekKeys, showCapacity, quantity]);
 
   // Currently-picked station-day (shared with the Select via the same form
   // field), used to highlight the matching map marker.
@@ -417,7 +423,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
               >
                 {day.label}
                 {day.isFull
-                  ? ` · ${t("abos.station_full_waitlist")}`
+                  ? ` · ${t("abos.station_full_waiting_list")}`
                   : day.total != null && day.free != null
                     ? ` · ${t("delivery.free_spots_of_total", {
                         free: day.free,
@@ -441,6 +447,30 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     [stationOptions, selectedStationDay],
   );
 
+  // The OTHER capacity axis: the variation's farm-wide production cap is full
+  // for the term — its busiest ("peak") ISO week has no free slot. Uses the
+  // SAME per-week ``capacity_by_week`` + ``termCapacity`` evaluator as the
+  // station-day above (and the Abos select + capacity overview), so what the
+  // office sees here matches what the backend blocks. ``null`` cap = unlimited.
+  const selectedVariationIsFull = useMemo(
+    () =>
+      termCapacity(
+        liveVariation?.capacity,
+        liveVariation?.capacity_by_week,
+        periodWeekKeys,
+        quantity,
+      ).isFull,
+    [
+      liveVariation?.capacity,
+      liveVariation?.capacity_by_week,
+      periodWeekKeys,
+      quantity,
+    ],
+  );
+
+  // Either capacity gate being full routes the order to the waiting list.
+  const isFullForTerm = selectedStationIsFull || selectedVariationIsFull;
+
   const handleSelectVariation = useCallback(
     (variation: ShareTypeVariationOption) => {
       setSelectedVariation(variation);
@@ -455,14 +485,14 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
 
   const handleBack = useCallback(() => {
     setSelectedVariation(null);
-    setWaitlistOffer(false);
+    setWaitingListOffer(null);
     form.resetFields();
   }, [form]);
 
   const handleCancel = useCallback(() => {
     form.resetFields();
     setSelectedVariation(null);
-    setWaitlistOffer(false);
+    setWaitingListOffer(null);
     onCancel();
   }, [form, onCancel]);
 
@@ -471,9 +501,9 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // actual term. The client-side ``selectedStationIsFull`` is only a proactive
   // hint (its capacity_by_week snapshot can be anchored to a different week
   // window than the finally-chosen term) — so on that 409 we OFFER the
-  // waitlist and retry with the flag instead of surfacing a dead-end error.
+  // waiting_list and retry with the flag instead of surfacing a dead-end error.
   const performCreate = useCallback(
-    async (forceWaitlist: boolean) => {
+    async (forceWaitingList: boolean) => {
       if (!selectedVariation) return;
 
       let values: {
@@ -491,7 +521,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         return; // antd already surfaced the field errors
       }
 
-      const asWaitlist = forceWaitlist || selectedStationIsFull;
+      const asWaitingList = forceWaitingList || isFullForTerm;
       setSaving(true);
       try {
         const validFromStr = values.valid_from.format("YYYY-MM-DD");
@@ -513,7 +543,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
             valid_until: validUntilStr ?? "",
             default_delivery_station_day:
               values.default_delivery_station_day ?? "",
-            on_waiting_list: asWaitlist,
+            on_waiting_list: asWaitingList,
             ...(allowsSolidarity && values.price_per_delivery != null
               ? { price_per_delivery: String(values.price_per_delivery) }
               : {}),
@@ -529,27 +559,33 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
             payment_cycle: values.payment_cycle,
             default_delivery_station_day: values.default_delivery_station_day,
             is_trial: values.is_trial ?? false,
-            on_waiting_list: asWaitlist,
+            on_waiting_list: asWaitingList,
           };
           await commissioningAbosCreate(payload as Subscription);
         }
-        setWaitlistOffer(false);
+        setWaitingListOffer(null);
         notify.success(
-          asWaitlist
-            ? t("abos.subscription_waitlisted")
+          asWaitingList
+            ? t("abos.subscription_waiting_listed")
             : t("members.subscription_created"),
         );
         form.resetFields();
         setSelectedVariation(null);
         onSuccess();
       } catch (error) {
+        const code = getErrorCode(error);
         if (
-          !asWaitlist &&
-          getErrorCode(error) === "delivery_station.over_capacity"
+          !asWaitingList &&
+          (code === "delivery_station.over_capacity" ||
+            code === "share_type_variation.over_capacity")
         ) {
-          // Station full for the chosen term — offer the waiting list inline
-          // instead of a dead-end error toast.
-          setWaitlistOffer(true);
+          // Station-day OR variation full for the chosen term — offer the
+          // waiting list inline instead of a dead-end error toast.
+          setWaitingListOffer(
+            code === "share_type_variation.over_capacity"
+              ? "variation"
+              : "station",
+          );
         } else {
           notify.error(getErrorMessage(error, t("common.error")));
           console.error("Failed to create subscription:", error);
@@ -566,7 +602,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       t,
       isMemberOnly,
       allowsSolidarity,
-      selectedStationIsFull,
+      isFullForTerm,
     ],
   );
 
@@ -815,7 +851,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                       {option.label}
                       {isFull && (
                         <Tag color="orange" style={{ marginLeft: 8 }}>
-                          {t("abos.station_full_waitlist")}
+                          {t("abos.station_full_waiting_list")}
                         </Tag>
                       )}
                     </span>
@@ -830,21 +866,29 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
             />
           </Form.Item>
 
-          {selectedStationIsFull && !waitlistOffer && (
+          {isFullForTerm && !waitingListOffer && (
             <Alert
               type="warning"
               showIcon
               style={{ marginBottom: 16 }}
-              message={t("abos.waitlist_notice")}
+              message={
+                selectedVariationIsFull
+                  ? t("abos.waiting_list_notice_variation")
+                  : t("abos.waiting_list_notice")
+              }
             />
           )}
 
-          {waitlistOffer && (
+          {waitingListOffer && (
             <Alert
               type="warning"
               showIcon
               style={{ marginBottom: 16 }}
-              message={t("abos.waitlist_offer_text")}
+              message={
+                waitingListOffer === "variation"
+                  ? t("abos.waiting_list_offer_text_variation")
+                  : t("abos.waiting_list_offer_text")
+              }
               action={
                 <Button
                   size="small"
@@ -852,11 +896,11 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                   loading={saving}
                   onClick={() => performCreate(true)}
                 >
-                  {t("abos.waitlist_offer_confirm")}
+                  {t("abos.waiting_list_offer_confirm")}
                 </Button>
               }
               closable
-              onClose={() => setWaitlistOffer(false)}
+              onClose={() => setWaitingListOffer(null)}
             />
           )}
 

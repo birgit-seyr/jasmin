@@ -17,7 +17,11 @@ import type {
 } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { WeekSelector } from "@shared/selectors";
-import { EditableTable, wrapApiFunctions } from "@shared/tables";
+import {
+  EditableTable,
+  gatedByPermissionOnlyEdit,
+  wrapApiFunctions,
+} from "@shared/tables";
 import type {
   ApiFunctions,
   EditableColumnConfig,
@@ -292,6 +296,12 @@ export default function ShareDays() {
     [t, weekdayChoices],
   );
 
+  // Share days are edit-only, and only while the week isn't in the past.
+  const permissions = useMemo(
+    () => gatedByPermissionOnlyEdit(!isPast && isOffice),
+    [isPast, isOffice],
+  );
+
   return (
     <div>
       <h1>{t("configuration.time_management_title")}</h1>
@@ -314,11 +324,7 @@ export default function ShareDays() {
         onDeleteSuccess={onDeleteSuccess}
         customSave={customSave}
         customUpdate={customUpdate}
-        permissions={{
-          canAdd: false,
-          canEdit: !isPast && isOffice,
-          canDelete: false,
-        }}
+        permissions={permissions}
         className="w-max custom-forecast-table"
       />
       <ExplainerText title={t("common.info")}>

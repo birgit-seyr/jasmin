@@ -42,6 +42,7 @@ from .share_views import (
 )
 from .statistic_views import (
     historical_share_type_variation_averages,
+    member_dashboard_statistics,
     member_growth_statistics,
 )
 from .stock_views import (

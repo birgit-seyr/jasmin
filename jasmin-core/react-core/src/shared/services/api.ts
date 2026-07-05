@@ -93,6 +93,27 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
+// Public magic-link / entry pages a LOGGED-OUT user legitimately lands on via a
+// URL (often a tokenized deep-link from an email). The boot-time silent refresh
+// 401s for these users, and nudging them to /login would hijack the page —
+// e.g. a member opening their waiting-list offer link, or an invitee setting a
+// password. On these paths we clear the session but DON'T redirect; JasminApp's
+// unauthenticated routes then render the page in place. Protected pages are not
+// listed, so a mid-session expiry there still bounces to /login as intended.
+const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/privacy-policy"];
+const PUBLIC_PATH_PREFIXES = [
+  "/set-password/",
+  "/reset-password/",
+  "/waiting-list-offer/",
+];
+
+function isPublicPath(pathname: string): boolean {
+  return (
+    PUBLIC_PATHS.includes(pathname) ||
+    PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  );
+}
+
 // ---- Response interceptor: silent refresh on 401 -------------------------
 function handleRefreshFailure() {
   // Refresh failed → user is logged out. Clear the in-memory token so
@@ -107,12 +128,13 @@ function handleRefreshFailure() {
   } catch {
     /* no-op */
   }
-  // Best effort: nudge the URL to /login so the back-stack is sane.
-  // Wrapped in try/catch — history may not be available in tests.
+  // Best effort: nudge the URL to /login so the back-stack is sane — but NOT
+  // on public deep-link pages, where a logged-out visitor belongs (redirecting
+  // them would break the emailed offer / set-password / reset links).
   try {
     if (
       typeof window !== "undefined" &&
-      window.location.pathname !== "/login"
+      !isPublicPath(window.location.pathname)
     ) {
       window.history.replaceState({}, "", loginRedirectPath());
       window.dispatchEvent(new PopStateEvent("popstate"));

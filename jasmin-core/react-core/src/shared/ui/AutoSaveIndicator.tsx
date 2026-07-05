@@ -34,7 +34,7 @@ export default function AutoSaveIndicator({
     <div style={{ minHeight: 22 }}>
       {saving ? (
         <Space size="small">
-          <SyncOutlined spin style={{ color: "var(--color-payments)" }} />
+          <SyncOutlined spin style={{ color: "var(--color-future-blue)" }} />
           <Text type="secondary">{t("settings.saving")}</Text>
         </Space>
       ) : showSaved && !hasChanges ? (

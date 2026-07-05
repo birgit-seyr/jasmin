@@ -20,8 +20,8 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, HideInactiveSwitch } from "@shared/ui";
-import { useInvalidateAfterTableMutation } from '@hooks/index';
-import { useIsActiveColumn } from '@features/commissioning/hooks';
+import { useInvalidateAfterTableMutation } from "@hooks/index";
+import { useIsActiveColumn } from "@features/commissioning/hooks";
 export default function ListPlots() {
   const [hideInactive, setHideInactive] = useState(true);
   const queryClient = useQueryClient();
@@ -114,7 +114,6 @@ export default function ListPlots() {
         uniqueCheck={["name"]}
         uniqueCheckMessage={t("validation.unique.name")}
         permissions={permissions}
-        showSearchBar={true}
       />
       <ExplainerText title={t("common.info")}>
         {t("explainers.list_plots")}

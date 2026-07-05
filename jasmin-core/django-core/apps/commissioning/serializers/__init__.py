@@ -63,7 +63,6 @@ from .finalize_serializer import (
 )
 from .logs_serializer import (
     InventoryEntrySerializer,
-    MemberGrowthStatisticSerializer,
     StockComparisonSerializer,
     StorageLoggingEntrySerializer,
     TheoreticalCleanAmountSerializer,
@@ -126,4 +125,8 @@ from .shares_serializer import (
     VirtualVariationComponentListItemSerializer,
     VirtualVariationComponentsRequestSerializer,
     VirtualVariationComponentsResponseSerializer,
+)
+from .statistics_serializer import (
+    MemberDashboardStatisticsSerializer,
+    MemberGrowthStatisticSerializer,
 )

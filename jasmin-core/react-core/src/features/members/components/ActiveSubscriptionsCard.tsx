@@ -1,10 +1,10 @@
 import { HistoryOutlined, PlusOutlined } from "@ant-design/icons";
-import { Button, Card, Divider, Empty, Space, Tag, Typography } from "antd";
+import { Button, Card, Divider, Space, Tag, Typography } from "antd";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Subscription } from "@shared/api/generated/models";
-import { StatusSquare } from "@shared/ui";
+import { EmptyHint, StatusSquare, ToolTipIcon } from "@shared/ui";
 import type { StatusSquareVariant } from "@shared/ui";
 import { useDateFormat } from "@hooks/index";
 import PastSubscriptionsModal from "../modals/PastSubscriptionsModal";
@@ -108,6 +108,14 @@ const ActiveSubscriptionsCard = ({
             {sub.share_type_name}{" "}
             {getShareTypeVariationSizeLabel(sub.share_type_variation_size ?? "")}
           </Text>
+          {sub.on_waiting_list && (
+            <Space size={2} style={{ alignItems: "center" }}>
+              <Tag color="orange" style={{ margin: 0 }}>
+                {t("members.on_waiting_list")}
+              </Tag>
+              <ToolTipIcon title={t("members.waiting_list_tooltip")} />
+            </Space>
+          )}
           {total > 0 && (
             <Text style={{ color: "var(--color-joker)", fontSize: 12 }}>
               (
@@ -202,10 +210,7 @@ const ActiveSubscriptionsCard = ({
         coming.length === 0 &&
         pending.length === 0 &&
         past.length === 0 && (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={t("members.no_active_subscriptions")}
-          />
+          <EmptyHint>{t("members.no_active_subscriptions")}</EmptyHint>
         )}
 
       <PastSubscriptionsModal

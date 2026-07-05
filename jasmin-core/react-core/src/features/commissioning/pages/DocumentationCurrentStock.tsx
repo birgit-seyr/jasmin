@@ -338,6 +338,16 @@ export default function DocumentationCurrentStock() {
     ],
   );
 
+  // Staff can add + edit while the week isn't past; rows are never deleted here.
+  const permissions = useMemo(
+    () => ({
+      canAdd: isStaff && !isPast,
+      canEdit: isStaff && !isPast,
+      canDelete: false,
+    }),
+    [isStaff, isPast],
+  );
+
   return (
     <div>
       <h1>{t("commissioning.documentation_amounts")}</h1>
@@ -436,11 +446,7 @@ export default function DocumentationCurrentStock() {
         customSave={customSave}
         customEdit={customEdit}
         customUpdate={customUpdate}
-        permissions={{
-          canAdd: isStaff && !isPast,
-          canEdit: isStaff && !isPast,
-          canDelete: false,
-        }}
+        permissions={permissions}
         rowSelection={!isPast && !isMobile ? rowSelectionConfig : undefined}
         onSelectedRowsChange={handleRowSelectionChange}
         selectedRowKeys={selectedRowKeys}

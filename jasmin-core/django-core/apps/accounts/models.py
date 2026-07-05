@@ -121,13 +121,11 @@ class JasminUser(JasminModel, AbstractBaseUser, PermissionsMixin):
         max_length=10,
         choices=[("light", "Light"), ("dark", "Dark")],
         default="light",
-        help_text="User preferred theme",
     )
     edit_mode = models.CharField(
         max_length=10,
         choices=[("inline", "Inline Editing"), ("modal", "Modal Editing")],
         default="inline",
-        help_text="User preferred editing mode",
     )
     roles = models.JSONField(
         default=list, blank=True, null=True, help_text="List of roles this user has"

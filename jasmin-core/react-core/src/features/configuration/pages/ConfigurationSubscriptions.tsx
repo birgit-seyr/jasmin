@@ -147,9 +147,7 @@ function ShareTypeTable({
       shareOption === ShareTypeEnum.HARVEST_SHARE_FRUIT;
     if (!lockAdditional) return columns;
     return columns.map((col) =>
-      col.key === "is_additional_share_type"
-        ? { ...col, disabled: true }
-        : col,
+      col.key === "is_additional_share_type" ? { ...col, disabled: true } : col,
     );
   }, [columns, shareOption]);
 
@@ -337,7 +335,9 @@ export default function ConfigurationSubscriptions() {
           width: "12em",
           readOnly: true,
           align: "left",
-          render: (value: string) => <>{getShareTypeVariationSizeLabel(value)}</>,
+          render: (value: string) => (
+            <>{getShareTypeVariationSizeLabel(value)}</>
+          ),
         },
         {
           title: (
@@ -395,7 +395,6 @@ export default function ConfigurationSubscriptions() {
           key: "needs_complex_planning",
           inputType: "checkbox",
           align: "center",
-          disabled: isFieldDisabled,
         },
         {
           title: "",
@@ -403,6 +402,7 @@ export default function ConfigurationSubscriptions() {
           key: "variations_action",
           disabled: true,
           readOnly: true,
+          width: "16em",
           render: (_: unknown, record: TableRecord) => (
             <Button
               type="primary"
@@ -547,7 +547,9 @@ export default function ConfigurationSubscriptions() {
             // Existing on-off variations stay configured but their
             // toggles are inert until the flag flips back on.
             key: "allows_share_type_variation_optin",
-            label: t("settings.commissioning.allows_share_type_variation_optin"),
+            label: t(
+              "settings.commissioning.allows_share_type_variation_optin",
+            ),
             description: t(
               "settings.commissioning.allows_share_type_variation_optin_desc",
             ),

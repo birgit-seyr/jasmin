@@ -189,6 +189,58 @@ class DeliveryStationOverCapacity(ConflictError):
         )
 
 
+class ShareTypeVariationOverCapacity(ConflictError):
+    """A share-type variation is sold out for the requested term — its
+    farm-wide production cap (``ShareTypeVariation.capacity``) is exhausted.
+
+    ``Conflict`` (409), not 400: the request is well-formed, but the state
+    (the variation is full) forbids it. Twin of ``DeliveryStationOverCapacity``
+    on the OTHER capacity axis — logistics (station-day) vs production
+    (variation). The frontend greys out full variations from the free count; this
+    is the race-time backstop when two orders target the last share.
+    """
+
+    code = "share_type_variation.over_capacity"
+
+    def __init__(
+        self,
+        *,
+        share_type_variation_id: str,
+        capacity: int | None = None,
+        occupied: int | None = None,
+    ) -> None:
+        super().__init__(
+            f"Share type variation {share_type_variation_id} is sold out "
+            f"({occupied}/{capacity}).",
+            details={
+                "share_type_variation_id": str(share_type_variation_id),
+                "capacity": capacity,
+                "occupied": occupied,
+            },
+        )
+
+
+class WaitingListOfferNotAvailable(BadRequestError):
+    """Cannot offer a freed spot for this subscription — it isn't a PENDING
+    waiting-list entry (already offered, already promoted, or never queued)."""
+
+    code = "waiting_list_offer.not_available"
+
+
+class WaitingListOfferInvalid(NotFoundError):
+    """The waiting-list offer link is invalid — no open (spot-available) offer
+    matches the token (already used, declined, expired, or never existed)."""
+
+    code = "waiting_list_offer.invalid"
+
+
+class WaitingListOfferExpired(ConflictError):
+    """The waiting-list offer link has expired — the member's response window
+    elapsed before they accepted."""
+
+    code = "waiting_list_offer.expired"
+
+
 class DeliveryStationCapacityBelowOccupancy(BadRequestError):
     """Refuse setting a station-day's capacity below what's already booked for
     a current/future week.

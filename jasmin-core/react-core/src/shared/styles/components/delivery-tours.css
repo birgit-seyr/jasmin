@@ -1,5 +1,6 @@
 .delivery-tours-table {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .delivery-tours-table table {
@@ -29,12 +30,12 @@
 }
 
 .tour-slot:hover {
-  border-color: var(--color-payments);
+  border-color: var(--color-future-blue);
   box-shadow: 0 2px 4px rgba(24, 144, 255, 0.1);
 }
 
 .tour-slot.drop-target {
-  border: 2px dashed var(--color-payments);
+  border: 2px dashed var(--color-future-blue);
   background-color: #e6f7ff;
 }
 

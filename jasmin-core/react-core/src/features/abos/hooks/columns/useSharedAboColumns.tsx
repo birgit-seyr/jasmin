@@ -9,7 +9,10 @@
 
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { EditableColumnConfig } from "@shared/tables/BasicEditableTable/types";
+import type {
+  EditableColumnConfig,
+  SelectOption,
+} from "@shared/tables/BasicEditableTable/types";
 import type { AboRecord } from "@features/abos/pages/types";
 
 type AboColumn = EditableColumnConfig<AboRecord>;
@@ -40,6 +43,46 @@ export function useSharedAboColumns({
   deliveryStationDayAlign,
 }: SharedAboColumnOptions) {
   const { t } = useTranslation();
+
+  // Quick-text capacity hints in the dropdowns (the colour tag lives in the
+  // member modal). A sold-out variation / full station stays SELECTABLE — saving
+  // it routes to the waiting list (the abos table catches the over-capacity 409
+  // and retries as a waiting-list entry). Both rely on the option's ``disabled``
+  // flag, which the per-row option builders set term-aware; here we un-grey it
+  // and append the text tag.
+  const soldOutLabel = t("abos.sold_out");
+  const variationOptions = useMemo(() => {
+    const decorate = (opts: SelectOption[]): SelectOption[] =>
+      opts.map((opt) =>
+        opt.disabled
+          ? { ...opt, disabled: false, label: `${opt.label} — ${soldOutLabel}` }
+          : opt,
+      );
+    if (typeof shareTypeVariationOptions === "function") {
+      const fn = shareTypeVariationOptions;
+      return (record: AboRecord) => decorate(fn(record));
+    }
+    return decorate(shareTypeVariationOptions ?? []);
+  }, [shareTypeVariationOptions, soldOutLabel]);
+
+  // Full station-days are already flagged ``disabled`` (term-aware, per row) by
+  // ``getDeliveryStationDaysForRow``. Instead of greying them out, keep them
+  // SELECTABLE and tag them "full – waiting list" — picking one routes the save
+  // to the waiting list (via the abos table's over-capacity 409 retry).
+  const fullLabel = t("abos.station_full_waiting_list");
+  const stationOptions = useMemo(() => {
+    const decorate = (opts: SelectOption[]): SelectOption[] =>
+      opts.map((opt) =>
+        opt.disabled
+          ? { ...opt, disabled: false, label: `${opt.label} — ${fullLabel}` }
+          : opt,
+      );
+    if (typeof deliveryStationDayOptions === "function") {
+      const fn = deliveryStationDayOptions;
+      return (record: AboRecord) => decorate(fn(record));
+    }
+    return decorate(deliveryStationDayOptions ?? []);
+  }, [deliveryStationDayOptions, fullLabel]);
 
   const displayIdColumn = useMemo<AboColumn>(
     () => ({
@@ -91,7 +134,7 @@ export function useSharedAboColumns({
       fixed: true,
       align: "left",
       width: shareTypeVariationWidth,
-      options: shareTypeVariationOptions,
+      options: variationOptions,
       foreignKey: {
         valueField: "share_type_variation",
         displayField: "share_type_variation_string",
@@ -104,7 +147,7 @@ export function useSharedAboColumns({
     [
       t,
       shareTypeVariationWidth,
-      shareTypeVariationOptions,
+      variationOptions,
       disabled,
       onShareTypeVariationChange,
       shareTypeVariationRender,
@@ -134,7 +177,7 @@ export function useSharedAboColumns({
       required: true,
       align: deliveryStationDayAlign,
       width: "16em",
-      options: deliveryStationDayOptions,
+      options: stationOptions,
       foreignKey: {
         valueField: "default_delivery_station_day",
         displayField: "default_delivery_station_day_string",
@@ -169,7 +212,7 @@ export function useSharedAboColumns({
           : (value as string);
       },
     }),
-    [t, deliveryStationDayAlign, deliveryStationDayOptions, disabled],
+    [t, deliveryStationDayAlign, stationOptions, disabled],
   );
 
   return {

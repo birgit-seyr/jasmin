@@ -13,6 +13,10 @@ export type CommissioningShareTypeVariationsListParams = {
  */
 active_at_date?: string;
 /**
+ * ISO week number (1-53)
+ */
+delivery_week?: number;
+/**
  * Widen the validity filter to current + future variations (active on the reference date OR starting after it), excluding only already-ended ones. Reference date = active_at_date if given, else today.
  */
 include_future?: boolean;
@@ -20,6 +24,10 @@ include_future?: boolean;
  * Filter by per-variation bulk-packing flag. Only meaningful in MIXED packing mode; omit to return all variations.
  */
 is_packed_bulk?: boolean;
+/**
+ * Number of weeks of per-variation capacity_by_week to return (default: 52). Needs year + delivery_week.
+ */
+num_weeks?: number;
 /**
  * Filter for physical variations only
  */
@@ -36,4 +44,8 @@ share_type?: string;
  * Filter for virtual variations only
  */
 virtual?: boolean;
+/**
+ * Year (YYYY format)
+ */
+year?: number;
 };

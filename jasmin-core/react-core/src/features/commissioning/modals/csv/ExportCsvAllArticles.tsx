@@ -1,5 +1,6 @@
 import { DownloadOutlined } from "@ant-design/icons";
-import { Button, DatePicker, Empty, Modal, Spin } from "antd";
+import { Button, DatePicker, Modal, Spin } from "antd";
+import { EmptyHint } from "@shared/ui";
 import dayjs, { Dayjs } from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -292,7 +293,7 @@ export default function ExportCsvAllArticles({
       )}
 
       {!loading && rows && rows.length === 0 && (
-        <Empty description={t("common.no_data")} />
+        <EmptyHint>{t("common.no_data")}</EmptyHint>
       )}
 
       {!loading && rows && rows.length > 0 && (

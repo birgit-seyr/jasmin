@@ -17,7 +17,7 @@
    No blue token exists in variables.css (--color-info is purple), so the
    standard processing-blue is defined here. */
 .status-square--upcoming {
-  background: var(--color-payments);
+  background: var(--color-future-blue);
 }
 
 /* "pending / not yet confirmed" — gold, matching the pending status tag. */

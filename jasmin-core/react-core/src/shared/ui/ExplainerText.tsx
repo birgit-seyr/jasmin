@@ -40,7 +40,7 @@ const presets: Record<string, PresetConfig> = {
     icon: <InfoCircleOutlined />,
     backgroundColor: "var(--color-info-bg)",
     borderColor: "#91d5ff",
-    iconColor: "var(--color-payments)",
+    iconColor: "var(--color-future-blue)",
   },
   error: {
     icon: <WarningOutlined />,

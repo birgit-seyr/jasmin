@@ -20,6 +20,7 @@ import SetPasswordPage from "@features/auth/pages/SetPasswordPage";
 import ForgotPasswordPage from "@features/auth/pages/ForgotPasswordPage";
 import ResetPasswordPage from "@features/auth/pages/ResetPasswordPage";
 import PrivacyPolicyPage from "@features/public/pages/PrivacyPolicyPage";
+import WaitingListOfferPage from "@features/public/pages/WaitingListOfferPage";
 
 const MemberDetail = lazy(() => import("@features/members/pages/MemberDetail"));
 const CustomerOrderPage = lazy(
@@ -95,6 +96,10 @@ export default function JasminApp() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegistrationPage />} />
           <Route path="/set-password/:token" element={<SetPasswordPage />} />
+          <Route
+            path="/waiting-list-offer/:token"
+            element={<WaitingListOfferPage />}
+          />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route
             path="/reset-password/:uid/:token"

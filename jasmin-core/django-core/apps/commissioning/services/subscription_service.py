@@ -17,6 +17,7 @@ from ..errors import (
     CancellationBeforeValidFrom,
     CancellationInPast,
     CancellationNotSunday,
+    DeliveryStationOverCapacity,
     NoSundayRemainsInTerm,
     SubscriptionDeliveryStationDayOutOfRange,
     SubscriptionNotConfirmed,
@@ -32,6 +33,7 @@ from ..models import (
 )
 from .capacity_reservation_service import CapacityReservationService
 from .delivery_cycle import filter_weeks_by_delivery_cycle
+from .variation_capacity_service import VariationCapacityService
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +132,10 @@ class SubscriptionService:
         if subscription.on_waiting_list:
             self._enqueue_on_waiting_list(subscription)
         else:
+            # Both capacity gates: farm-wide variation cap AND per-week
+            # station-day slot. Either full raises (and rolls back the create) —
+            # the frontend then re-submits the order as a waiting-list entry.
+            VariationCapacityService.assert_capacity_available(subscription)
             CapacityReservationService.reserve_for_subscription(subscription)
         return subscription
 
@@ -150,9 +156,33 @@ class SubscriptionService:
         )
         subscription.waiting_list_status = Subscription.WaitingListStatus.PENDING
         subscription.waiting_list_position = (highest or 0) + 1
-        subscription.save(
-            update_fields=["waiting_list_status", "waiting_list_position"]
+        subscription.waiting_list_reason = (
+            SubscriptionService._infer_waiting_list_reason(subscription)
         )
+        subscription.save(
+            update_fields=[
+                "waiting_list_status",
+                "waiting_list_position",
+                "waiting_list_reason",
+            ]
+        )
+
+    @staticmethod
+    def _infer_waiting_list_reason(subscription: Subscription) -> str:
+        """Why is this subscription being queued? Variation sold out takes
+        precedence (cheap farm-wide check); else a full station-day; else it's a
+        manual office decision. Purely informational for the office."""
+        if VariationCapacityService.is_over_capacity(subscription):
+            return Subscription.WaitingListReason.VARIATION_FULL
+        try:
+            # Read-only fullness probe (creates no reservations); raises when the
+            # station-day is full for any week of the term.
+            CapacityReservationService.assert_capacity_available_for_confirm(
+                subscription
+            )
+        except DeliveryStationOverCapacity:
+            return Subscription.WaitingListReason.DELIVERY_STATION_FULL
+        return Subscription.WaitingListReason.MANUAL
 
     @transaction.atomic
     def update_draft_subscription(
@@ -167,7 +197,7 @@ class SubscriptionService:
         ``subscription.admin_confirmed is False``.
         """
         previous_station_day_id = subscription.default_delivery_station_day_id
-        was_waitlisted = subscription.on_waiting_list
+        was_waiting_listed = subscription.on_waiting_list
         for field, value in validated_data.items():
             # ``member`` and ``share_type_variation`` are writable id STRINGS on
             # the serializer (CharField) — mirror ``_create_subscription`` and
@@ -180,12 +210,12 @@ class SubscriptionService:
                 setattr(subscription, field, value)
         subscription.save()
         if subscription.on_waiting_list:
-            # Waitlisted drafts hold no capacity, so there is nothing to
+            # WaitingListed drafts hold no capacity, so there is nothing to
             # re-reserve (reserving would 409 on the very full station the
             # entry is queued for).
-            if not was_waitlisted:
+            if not was_waiting_listed:
                 # Draft flipped ONTO the list: drop its capacity holds (a
-                # waitlist entry holds nothing) and queue it.
+                # waiting_list entry holds nothing) and queue it.
                 CapacityReservationService.release_for_subscription(subscription)
                 self._enqueue_on_waiting_list(subscription)
             elif (
@@ -195,10 +225,11 @@ class SubscriptionService:
                 # end of that day's list.
                 self._enqueue_on_waiting_list(subscription)
             return subscription
-        if was_waitlisted:
-            # Leaving the list needs a real slot: reserve first (raises
-            # DeliveryStationOverCapacity while the station is full — the flip
-            # rolls back), then clear the queue state.
+        if was_waiting_listed:
+            # Leaving the list needs a real slot on BOTH axes: variation cap
+            # + station-day slot. Either full raises (and rolls the flip back),
+            # then clear the queue state.
+            VariationCapacityService.assert_capacity_available(subscription)
             CapacityReservationService.reserve_for_subscription(subscription)
             subscription.waiting_list_status = (
                 Subscription.WaitingListStatus.NOT_ON_LIST
@@ -208,7 +239,9 @@ class SubscriptionService:
                 update_fields=["waiting_list_status", "waiting_list_position"]
             )
             return subscription
-        # Re-reserve against the (possibly changed) station-day / period.
+        # Re-check both caps against the (possibly changed) variation /
+        # station-day / period, then re-reserve the station-day slot.
+        VariationCapacityService.assert_capacity_available(subscription)
         CapacityReservationService.reserve_for_subscription(subscription)
         return subscription
 
@@ -230,6 +263,24 @@ class SubscriptionService:
                 subscription.pk,
             )
             return subscription
+        # Fresh confirm = no ShareDeliveries yet. Re-confirm is idempotent on the
+        # delivery side and skips the capacity gates (the sub already holds its
+        # slots); the charge service does its own diffing.
+        fresh_confirm = not ShareDelivery.objects.filter(
+            subscription=subscription
+        ).exists()
+
+        # Authoritative production-cap gate FIRST — before the DSD gate below and
+        # before the no-DSD early return. Two reasons:
+        #   * it locks the ShareTypeVariation, and taking that lock BEFORE the
+        #     station-day locks (matching create/update) keeps ONE canonical lock
+        #     order, so a concurrent create + confirm can't deadlock (ABBA);
+        #   * a DSD-less sub materialises no deliveries but still occupies the
+        #     variation's farm-wide cap, so it must be gated too (else two
+        #     DSD-less drafts can both confirm past the cap).
+        if fresh_confirm:
+            VariationCapacityService.assert_capacity_available(subscription)
+
         if not subscription.default_delivery_station_day_id:
             logger.info(
                 "Subscription %s has no default DSD; skipping materialise",
@@ -237,15 +288,13 @@ class SubscriptionService:
             )
             return subscription
 
-        # Only create ShareDeliveries if none exist yet — re-confirm is a no-op
-        # for the delivery side; the charge service handles its own diffing.
-        if not ShareDelivery.objects.filter(subscription=subscription).exists():
-            # Race-safe backstop: the draft reserved these slots, but the hold
-            # may have lapsed (TTL) and been taken in the meantime. Re-check
-            # under a row lock before materialising; raises
-            # ``DeliveryStationOverCapacity`` (and rolls back) if a week is now
-            # full. Then drop our reservations — the real deliveries hold the
-            # slots from here, so keeping them would double-count.
+        if fresh_confirm:
+            # DSD logistics gate (locks the station-day weeks) — taken AFTER the
+            # variation lock per the order above. The draft reserved these slots,
+            # but the hold may have lapsed (TTL) and been taken; re-check under a
+            # row lock, raising ``DeliveryStationOverCapacity`` (and rolling back)
+            # if a week is now full. Then drop our reservations — the real
+            # deliveries hold the slots from here, so keeping them double-counts.
             CapacityReservationService.assert_capacity_available_for_confirm(
                 subscription
             )
@@ -254,8 +303,8 @@ class SubscriptionService:
             CapacityReservationService.release_for_subscription(subscription)
 
         if subscription.on_waiting_list:
-            # The office confirmed a waitlisted subscription: the capacity
-            # backstop above proved a slot is free now (waitlist entries hold
+            # The office confirmed a waiting_listed subscription: the capacity
+            # backstop above proved a slot is free now (waiting_list entries hold
             # no reservation, so the check counts everyone else). This IS the
             # promotion — leave the waiting list and record the confirmation.
             subscription.confirm_spot()

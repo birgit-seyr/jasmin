@@ -8,6 +8,10 @@ export { useCurrency } from './configuration/useCurrency';
 export { useAutoSave } from './configuration/useAutoSave';
 export { useDateFormat } from './configuration/useDateFormat';
 export { useDateRangePresets } from './configuration/useDateRangePresets';
+export {
+  useFiscalYearRangeState,
+  currentFiscalYearRange,
+} from './configuration/useFiscalYearRange';
 export { useTimeFormat } from './configuration/useTimeFormat';
 export { useDeliveryStationDays } from './useDeliveryStationDays';
 export { useInvalidateAfterTableMutation } from './useInvalidateAfterTableMutation';

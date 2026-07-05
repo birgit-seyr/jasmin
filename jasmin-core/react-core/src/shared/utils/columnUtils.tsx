@@ -89,7 +89,7 @@ export const createDateRangeStatusRenderer = (
         tooltip: t("members.currently_active"),
       },
       future: {
-        color: "var(--color-payments)", // Blue
+        color: "var(--color-future-blue)", // Blue
         tooltip: t("members.future_active"),
       },
       inactive: {
@@ -154,7 +154,7 @@ export const getStatusColor = (
 
   // Future (blue) - valid_from is in the future
   if (from && from.isAfter(now, "day")) {
-    return "var(--color-payments)"; // blue
+    return "var(--color-future-blue)"; // blue
   }
 
   // Past (grey) - valid_until is in the past

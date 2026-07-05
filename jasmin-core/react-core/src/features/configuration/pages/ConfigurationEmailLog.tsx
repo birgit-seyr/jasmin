@@ -113,8 +113,7 @@ export default function ConfigurationEmailLog() {
         dataIndex: "sent_at",
         key: "sent_at",
         width: "11em",
-        render: (value: string | null) =>
-          value ? formatDateTime(value) : "—",
+        render: (value: string | null) => (value ? formatDateTime(value) : "—"),
       },
     ],
     [t, formatDateTime],
@@ -122,7 +121,7 @@ export default function ConfigurationEmailLog() {
 
   return (
     <div>
-      <div className="filter-bar">
+      <div className="filter-bar" style={{ marginBottom: "2em" }}>
         <Input
           placeholder={t("email_matrix.recipient")}
           value={recipientFilter}
@@ -157,6 +156,7 @@ export default function ConfigurationEmailLog() {
       <Table<EmailLog>
         columns={columns}
         dataSource={rows}
+        className="custom-forecast-table"
         rowKey="id"
         loading={isFetching}
         pagination={{ pageSize: 50, showSizeChanger: true }}

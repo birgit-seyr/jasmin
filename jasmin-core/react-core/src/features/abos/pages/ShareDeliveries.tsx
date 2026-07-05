@@ -73,13 +73,12 @@ export default function ShareDeliveries() {
     selectedRowKeys,
     onSelectedRowsChange: handleRowSelectionChange,
     rowSelection: rowSelectionConfig,
-  } = useTableRowSelection(
-    (record: ShareDeliveryRecord) =>
-      Boolean(
-        record.key === -1 ||
-          (record.delivery_date &&
-            dayjs(record.delivery_date).isSameOrBefore(dayjs(), "day")),
-      ),
+  } = useTableRowSelection((record: ShareDeliveryRecord) =>
+    Boolean(
+      record.key === -1 ||
+      (record.delivery_date &&
+        dayjs(record.delivery_date).isSameOrBefore(dayjs(), "day")),
+    ),
   );
 
   // Capacity is shown per row as ``(occupied/capacity)`` for the row's week,
@@ -290,18 +289,7 @@ export default function ShareDeliveries() {
         align: "center",
         width: "5em",
       },
-      {
-        title: "",
-        dataIndex: "delivery_station_day_id",
-        key: "delivery_station_day_id",
-        disabled: true,
-        readOnly: true,
-        align: "center",
-        width: "10em",
-        render: (_value: unknown, record: ShareDeliveryRecord) => (
-          <span className="text-xs">{record.delivery_station_day}</span>
-        ),
-      },
+
       noteColumn,
     ],
     [t, deliveryStationDays, uses_jokers, formatDate, selectedYear, noteColumn],

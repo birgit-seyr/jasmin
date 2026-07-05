@@ -56,7 +56,10 @@ from apps.commissioning.models import (
     ShareTypeVariation,
     Subscription,
 )
-from apps.shared.tenants.models import Tenant
+from apps.commissioning.services.member_cancellation import (
+    cancel_member_with_coop_shares,
+)
+from apps.shared.tenants.models import Tenant, TenantSettings
 
 EMAIL_PREFIX = "demo_seed_member_"
 PASSWORD = "Test-Test-2026"
@@ -91,7 +94,7 @@ class Command(BaseCommand):
     def handle(self, *args: Any, **options: Any) -> None:
         schema = options["schema"]
         try:
-            Tenant.objects.get(schema_name=schema)
+            tenant = Tenant.objects.get(schema_name=schema)
         except Tenant.DoesNotExist:
             self.stderr.write(self.style.ERROR(f"Tenant '{schema}' not found."))
             return
@@ -100,21 +103,38 @@ class Command(BaseCommand):
             if options["clean"]:
                 self._clean()
                 return
-            self._check_catalogue()
-            self._seed(count=options["count"], seed=options["seed"])
+            can_seed_subs = self._check_catalogue()
+            self._seed(
+                tenant=tenant,
+                count=options["count"],
+                seed=options["seed"],
+                can_seed_subs=can_seed_subs,
+            )
 
     # ------------------------------------------------------------------
     # Clean
     # ------------------------------------------------------------------
     def _clean(self) -> None:
-        # CoopShares and Subscriptions cascade off Member; users we
-        # delete explicitly because the OneToOne ``user`` link uses
+        # A Member has several PROTECT children, so they must be removed first
+        # (in dependency order) or ``members.delete()`` raises ProtectedError:
+        #   * ChargeSchedule — auto-generated for confirmed subscriptions;
+        #     PROTECTs BOTH the member and the subscription, so it goes first.
+        #   * Subscription — CASCADEs off Member, but delete explicitly so its
+        #     charge schedules are already gone.
+        #   * BillingProfile (SEPA) + CoopShare — PROTECT the member.
+        # Users we delete explicitly because the OneToOne ``user`` link uses
         # SET_NULL on Member but we want the user gone too.
+        from apps.payments.models import BillingProfile, ChargeSchedule
+
         members = Member.objects.filter(email__startswith=EMAIL_PREFIX)
         user_ids = list(
             members.exclude(user__isnull=True).values_list("user_id", flat=True)
         )
         n_members = members.count()
+        ChargeSchedule.objects.filter(member__in=members).delete()
+        Subscription.objects.filter(member__in=members).delete()
+        BillingProfile.objects.filter(member__in=members).delete()
+        CoopShare.objects.filter(member__in=members).delete()
         members.delete()
         n_users = JasminUser.objects.filter(id__in=user_ids).delete()[0]
         self.stdout.write(
@@ -126,7 +146,12 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------
     # Catalogue prerequisites
     # ------------------------------------------------------------------
-    def _check_catalogue(self) -> None:
+    def _check_catalogue(self) -> bool:
+        """Warn (don't fail) when the subscription catalogue is incomplete.
+
+        Members + coop shares don't need it; only subscriptions do. Returns
+        whether the catalogue is complete enough to also seed subscriptions.
+        """
         missing: list[str] = []
         variations = list(ShareTypeVariation.objects.all())
         cycles = list(PaymentCycle.objects.filter(is_active=True))
@@ -145,21 +170,40 @@ class Command(BaseCommand):
         if not delivery_station_days:
             missing.append("DeliveryStationDay (open / valid_until IS NULL)")
         if missing:
-            raise SystemExit(
-                "Cannot seed demo members — the tenant catalogue is missing: "
-                + ", ".join(missing)
-                + ".\nConfigure these via the office UI first."
+            self.stdout.write(
+                self.style.WARNING(
+                    "Catalogue incomplete ("
+                    + ", ".join(missing)
+                    + ") — seeding members + coop shares only; subscriptions "
+                    "skipped. Configure these via the office UI to seed subs too."
+                )
             )
+            return False
+        return True
 
     # ------------------------------------------------------------------
     # Seed
     # ------------------------------------------------------------------
-    def _seed(self, *, count: int, seed: int) -> None:
+    def _seed(
+        self, *, tenant: Tenant, count: int, seed: int, can_seed_subs: bool = True
+    ) -> None:
         rng = random.Random(seed)
         variations = list(ShareTypeVariation.objects.all())
         cycles = list(PaymentCycle.objects.filter(is_active=True))
         delivery_station_days = list(
             DeliveryStationDay.objects.filter(valid_until__isnull=True)
+        )
+        # Coop-share value is a tenant-wide setting (PositiveIntegerField, no
+        # model default), so every CoopShare must carry it.
+        tenant_settings = TenantSettings.get_current_settings(tenant)
+        value_one_coop_share = (
+            tenant_settings.value_one_coop_share if tenant_settings else 100
+        )
+        # Confirmed non-trial members must hold at least this many coop shares
+        # (tenant rule enforced in CoopShare.clean); make each member's FIRST
+        # purchase meet it so the running total is valid at every insert.
+        min_coop_shares = (
+            tenant_settings.min_number_coop_shares if tenant_settings else 3
         )
 
         first_names = _NAMES_FIRST
@@ -167,6 +211,7 @@ class Command(BaseCommand):
         today = timezone.now().date()
 
         confirmed_count = paid_share_count = subs_count = users_count = 0
+        cancelled_count = 0
 
         for idx in range(count):
             email = f"{EMAIL_PREFIX}{idx:02d}@example.com"
@@ -194,11 +239,15 @@ class Command(BaseCommand):
                 users_count += 1
 
             with transaction.atomic():
+                # Adult birth date (20-70y) so the "average age" tile has data;
+                # entry_date (set below on confirm) is always after birth_date.
+                birth_date = today - timedelta(days=rng.randint(20 * 365, 70 * 365))
                 member, created = Member.objects.get_or_create(
                     email=email,
                     defaults={
                         "first_name": first,
                         "last_name": last,
+                        "birth_date": birth_date,
                         "is_active": rng.random() > 0.05,  # 5% inactive
                         "is_trial": rng.random() < 0.10,  # 10% trial
                         "user": user,
@@ -240,16 +289,20 @@ class Command(BaseCommand):
                     rng,
                     [(0, 10), (1, 50), (2, 20), (3, 10), (5, 7), (10, 3)],
                 )
-                for _ in range(share_count):
+                for i in range(share_count):
                     due = today - timedelta(days=rng.randint(0, 365))
                     paid_at = (
                         timezone.now() - timedelta(days=rng.randint(0, 300))
                         if rng.random() < 0.70
                         else None
                     )
+                    chosen = rng.choice([1, 1, 1, 2, 5])
+                    # First purchase carries the member over the tenant minimum.
+                    amount = max(chosen, min_coop_shares) if i == 0 else chosen
                     CoopShare.objects.create(
                         member=member,
-                        amount_of_coop_shares=Decimal(rng.choice([1, 1, 1, 2, 5])),
+                        amount_of_coop_shares=Decimal(amount),
+                        value_one_coop_share=value_one_coop_share,
                         due_date=due,
                         paid_at=paid_at,
                         admin_confirmed=is_confirmed,
@@ -259,33 +312,46 @@ class Command(BaseCommand):
                         paid_share_count += 1
 
                 # Subscriptions — 0..3, each on a distinct variation; a
-                # member can hold multiple subscriptions.
-                if is_confirmed:
-                    sub_count = _weighted_choice(
-                        rng, [(0, 30), (1, 50), (2, 15), (3, 5)]
+                # member can hold multiple subscriptions. Skipped entirely when
+                # the catalogue (variations / cycles / open DSDs) is incomplete.
+                if can_seed_subs:
+                    if is_confirmed:
+                        sub_count = _weighted_choice(
+                            rng, [(0, 30), (1, 50), (2, 15), (3, 5)]
+                        )
+                    else:
+                        # Unconfirmed members usually still have a pending sub.
+                        sub_count = _weighted_choice(rng, [(0, 70), (1, 30)])
+                    chosen_variations = rng.sample(
+                        variations, k=min(sub_count, len(variations))
                     )
-                else:
-                    # Unconfirmed members usually still have a pending sub.
-                    sub_count = _weighted_choice(rng, [(0, 70), (1, 30)])
-                chosen_variations = rng.sample(
-                    variations, k=min(sub_count, len(variations))
-                )
-                for variation in chosen_variations:
-                    if self._create_subscription(
-                        rng=rng,
-                        member=member,
-                        variation=variation,
-                        cycles=cycles,
-                        delivery_station_days=delivery_station_days,
-                        is_member_confirmed=is_confirmed,
-                        today=today,
-                    ):
-                        subs_count += 1
+                    for variation in chosen_variations:
+                        if self._create_subscription(
+                            rng=rng,
+                            member=member,
+                            variation=variation,
+                            cycles=cycles,
+                            delivery_station_days=delivery_station_days,
+                            is_member_confirmed=is_confirmed,
+                            today=today,
+                        ):
+                            subs_count += 1
+
+                # ~8% of confirmed members have left (cancelled): stamp the exit
+                # + snapshot each coop share's payback_due_date so the "cancelled"
+                # + "to pay back" tiles have data. force=True also ends any active
+                # subscription in the same transaction.
+                if is_confirmed and rng.random() < 0.08:
+                    cancel_member_with_coop_shares(
+                        member, force=True, reason="demo seed"
+                    )
+                    cancelled_count += 1
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seeded {count} demo member(s): "
                 f"{confirmed_count} confirmed, "
+                f"{cancelled_count} cancelled, "
                 f"{users_count} with login (password={PASSWORD!r}), "
                 f"{paid_share_count} paid coop shares, "
                 f"{subs_count} subscriptions."

@@ -1,12 +1,11 @@
+import { useTenant } from "@hooks/index";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import Diversity3Icon from "@mui/icons-material/Diversity3";
-import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import TollIcon from "@mui/icons-material/Toll";
+import { filterByRole, useRoles, type RoleGatedItem } from "@shared/auth";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { filterByRole, useRoles, type RoleGatedItem } from "@shared/auth";
-import { useTenant } from "@hooks/index";
 import SidebarShell from "./SidebarShell";
 
 interface MembersSidebarProps {
@@ -44,22 +43,7 @@ export default function MembersSidebar({
           },
         ]
       : []),
-    {
-      key: "members-overview",
 
-      requireRole: "isOffice",
-      icon: <BarChartIcon />,
-      label: (
-        <Link to="/members/overview-members">{t("members.overview")}</Link>
-      ),
-    },
-    {
-      key: "members-statistics",
-
-      requireRole: "isOffice",
-      icon: <QueryStatsIcon />,
-      label: <Link to="/members/statistics">{t("statistics.title")}</Link>,
-    },
     {
       key: "members-sepa-mandates",
 

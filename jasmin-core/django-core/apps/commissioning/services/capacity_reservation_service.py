@@ -343,7 +343,7 @@ class CapacityReservationService:
         """Drop this subscription's reservations.
 
         Called at confirm (once the real ``ShareDelivery`` rows hold the slots,
-        else occupancy double-counts), on waitlist flips, on member-cancel of a
+        else occupancy double-counts), on waiting_list flips, on member-cancel of a
         draft, and on reject. Deleting the Subscription ROW also frees them via
         the ``on_delete=CASCADE`` FK — but reject only STAMPS flags (no row
         delete), so the reject path must call this explicitly.

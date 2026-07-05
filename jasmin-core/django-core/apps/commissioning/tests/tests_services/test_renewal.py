@@ -23,6 +23,7 @@ from apps.commissioning.services.renewal import (
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
     MemberFactory,
+    ShareTypeFactory,
     ShareTypeVariationFactory,
     ShareTypeVariationGrossPriceFactory,
     SubscriptionFactory,
@@ -238,8 +239,16 @@ class TestRunRenewals:
         # day_number=2 SharesDeliveryDay (global one-open-per-day_number scope).
         dsd = DeliveryStationDayFactory()
         good = _renewable_sub(default_delivery_station_day=dsd)
+        # Isolate this variation on its OWN share type: ``good``'s auto-created
+        # variation uses the factory's global size Iterator, which can land on
+        # "L" and collide with an explicit ``size="L"`` here on the shared
+        # (get_or_create) HARVEST_SHARE type — an order-dependent one-open-per-
+        # type-size flake surfaced by other tests' factory calls.
         ended_variation = ShareTypeVariationFactory(
-            size="L", valid_from=_VALID_FROM, valid_until=_VALID_UNTIL
+            share_type=ShareTypeFactory(share_option="HARVEST_SHARE_FRUIT"),
+            size="L",
+            valid_from=_VALID_FROM,
+            valid_until=_VALID_UNTIL,
         )
         bad = _renewable_sub(
             share_type_variation=ended_variation, default_delivery_station_day=dsd

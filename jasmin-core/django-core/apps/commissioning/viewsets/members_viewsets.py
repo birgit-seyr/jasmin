@@ -956,6 +956,42 @@ class SubscriptionViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         description=(
+            "Offer a freed spot to a queued waiting-list member: holds both "
+            "capacity axes (station-day reservation + status-counted variation "
+            "hold) for the response window and emails the member a magic link "
+            "to accept/decline without logging in. Optional "
+            "``price_per_delivery`` lets the office set the price at offer time "
+            "(a waiting_list entry may be a year old). Only a PENDING waiting-list "
+            "entry can be offered; a capacity 409 means the slot filled up "
+            "between the office's view and the click."
+        ),
+        request=inline_serializer(
+            name="OfferSpotRequest",
+            fields={
+                "price_per_delivery": drf_serializers.DecimalField(
+                    max_digits=8,
+                    decimal_places=2,
+                    required=False,
+                    allow_null=True,
+                ),
+            },
+        ),
+        responses={200: SubscriptionSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="offer_spot")
+    def offer_spot(self, request: Request, pk: str | None = None) -> Response:
+        from ..services.waiting_list_offer_service import WaitingListOfferService
+
+        subscription: Subscription = self.get_object()
+        WaitingListOfferService.offer_spot(
+            subscription,
+            price_per_delivery=request.data.get("price_per_delivery"),
+        )
+        updated = self.get_queryset().filter(id=subscription.id).first()
+        return Response(self.get_serializer(updated).data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        description=(
             "Reject a pending subscription application. Stamps "
             "``admin_rejected_at`` + ``admin_rejection_reason`` so the "
             "office UI surfaces the decision; ``admin_confirmed`` "
@@ -1002,7 +1038,7 @@ class SubscriptionViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         # Free the draft's held station-day capacity. The reject stamps flags
         # but does NOT delete the row, so the CASCADE that would otherwise drop
         # the CapacityReservation never fires — without this, the rejected
-        # applicant keeps blocking the slot (and any waitlist promotion) until
+        # applicant keeps blocking the slot (and any waiting_list promotion) until
         # the 14-day TTL lapses.
         from ..services.capacity_reservation_service import (
             CapacityReservationService,

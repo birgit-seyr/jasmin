@@ -5,6 +5,7 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { ShareTypeVariationCapacityByWeek } from './shareTypeVariationCapacityByWeek';
 import type { VariationTypeEnum } from './variationTypeEnum';
 import type { SizeEnum } from './sizeEnum';
 
@@ -28,6 +29,11 @@ export interface ShareTypeVariation {
    * @pattern ^-?\d{0,6}(?:\.\d{0,2})?$
    */
   readonly active_solidarity_min_price_per_delivery?: string | null;
+  readonly capacity_occupied?: number;
+  /** @nullable */
+  readonly capacity_free?: number | null;
+  /** @nullable */
+  readonly capacity_by_week?: ShareTypeVariationCapacityByWeek;
   valid_from: string;
   /** @nullable */
   valid_until?: string | null;
@@ -45,9 +51,8 @@ export interface ShareTypeVariation {
   /**
    * @minimum -2147483648
    * @maximum 2147483647
-   * @nullable
    */
-  capacity?: number | null;
+  capacity?: number;
   /**
    * @minimum 0
    * @maximum 2147483647

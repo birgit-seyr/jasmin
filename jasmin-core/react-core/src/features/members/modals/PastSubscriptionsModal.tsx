@@ -1,4 +1,5 @@
-import { Empty, List, Modal, Space, Tag, Typography } from "antd";
+import { List, Modal, Space, Tag, Typography } from "antd";
+import { EmptyHint } from "@shared/ui";
 import { useTranslation } from "react-i18next";
 import type { Subscription } from "@shared/api/generated/models";
 import { useDateFormat, useShareTypeVariationSizeOptions } from "@hooks/index";
@@ -35,10 +36,7 @@ export default function PastSubscriptionsModal({
       width={560}
     >
       {subscriptions.length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={t("members.no_past_subscriptions")}
-        />
+        <EmptyHint>{t("members.no_past_subscriptions")}</EmptyHint>
       ) : (
         <List
           size="small"

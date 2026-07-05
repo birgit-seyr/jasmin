@@ -1,11 +1,37 @@
-import { AppstoreOutlined, UnorderedListOutlined } from "@ant-design/icons";
-import { useQueryClient } from "@tanstack/react-query";
-import type { FormInstance } from "antd";
-import { Button, Space } from "antd";
-import dayjs from "dayjs";
-import type { Key } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import {
+  AddShareArticleEntry,
+  NoVariationColumnsBanner,
+} from "@features/commissioning/components";
+import {
+  computePlannedAmountForDay,
+  dayHarvestedKey,
+  dayPlannedAmountKey,
+  dayVariationKey,
+  parseDayVariationKey,
+  planningModeTier,
+  useAmountUnitSizeColumns,
+  useDeliveryDayColumns,
+  useFinalColumn,
+  useHistoricalShareTypeVariationAverages,
+  usePlanningAxes,
+  usePlanningHarvestSharesColumns,
+  usePlanningSummaryData,
+  useShareArticleColumn,
+  useShareArticles,
+  useShareContentGranularity,
+  useWashingCleaningColumns,
+} from "@features/commissioning/hooks";
+import type { DeliveryDay } from "@features/commissioning/hooks/columns/useDeliveryDayColumns";
+import type { ShareArticleOption } from "@features/commissioning/hooks/useShareArticles";
+import type { ShareTypeVariationOption } from "@features/commissioning/hooks/useShareTypeVariations";
+import { BackupModal } from "@features/commissioning/modals";
+import {
+  useCurrency,
+  useNoteColumn,
+  useTableRowSelection,
+  useTenant,
+  useUnitOptions,
+} from "@hooks/index";
 import {
   commissioningBulkFinalizeShareContentCreate,
   commissioningBulkUnfinalizeShareContentCreate,
@@ -25,7 +51,6 @@ import type {
 } from "@shared/api/generated/models";
 import { ShareTypeEnum } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
-import { BackupModal } from "@features/commissioning/modals";
 import { PlanningModeSelector, WeekSelector } from "@shared/selectors";
 import { EditableTable, gatedByPermission } from "@shared/tables";
 import type {
@@ -38,40 +63,14 @@ import {
   LabeledSwitch,
   PastWarningMessage,
 } from "@shared/ui";
-import {
-  AddShareArticleEntry,
-  NoVariationColumnsBanner,
-} from "@features/commissioning/components";
-import {
-  useCurrency,
-  useNoteColumn,
-  useTableRowSelection,
-  useTenant,
-  useUnitOptions,
-} from "@hooks/index";
-import {
-  computePlannedAmountForDay,
-  dayHarvestedKey,
-  dayPlannedAmountKey,
-  dayVariationKey,
-  parseDayVariationKey,
-  planningModeTier,
-  useAmountUnitSizeColumns,
-  useDeliveryDayColumns,
-  useFinalColumn,
-  useHistoricalShareTypeVariationAverages,
-  usePlanningHarvestSharesColumns,
-  usePlanningSummaryData,
-  useShareArticleColumn,
-  useShareArticles,
-  usePlanningAxes,
-  useShareContentGranularity,
-  useWashingCleaningColumns,
-} from "@features/commissioning/hooks";
-import type { DeliveryDay } from "@features/commissioning/hooks/columns/useDeliveryDayColumns";
-import type { ShareArticleOption } from "@features/commissioning/hooks/useShareArticles";
-import type { ShareTypeVariationOption } from "@features/commissioning/hooks/useShareTypeVariations";
 import { hasPurchasedSuffix, isWeekInPast } from "@shared/utils";
+import { useQueryClient } from "@tanstack/react-query";
+import type { FormInstance } from "antd";
+import { Button, Space } from "antd";
+import dayjs from "dayjs";
+import type { Key } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const currentYear = dayjs().year();
 const nextWeek = dayjs().isoWeek();
@@ -284,7 +283,11 @@ export default function PlanningHarvestSharesBase({
           // Tour fields (if in tours mode)
           if (planningMode === "tours" && deliveryDay.used_tours) {
             deliveryDay.used_tours.forEach((tourNumber: number) => {
-              const tourKey = dayVariationKey({ dayId, variationId, tour: tourNumber });
+              const tourKey = dayVariationKey({
+                dayId,
+                variationId,
+                tour: tourNumber,
+              });
               processedRecord[tourKey] = processedRecord[tourKey] || 0;
             });
           }
@@ -292,7 +295,11 @@ export default function PlanningHarvestSharesBase({
           // Station fields (if in stations mode)
           if (planningMode === "stations" && deliveryDay.delivery_stations) {
             deliveryDay.delivery_stations.forEach((station) => {
-              const stationKey = dayVariationKey({ dayId, variationId, station: station.id });
+              const stationKey = dayVariationKey({
+                dayId,
+                variationId,
+                station: station.id,
+              });
               processedRecord[stationKey] = processedRecord[stationKey] || 0;
             });
           }
@@ -542,21 +549,21 @@ export default function PlanningHarvestSharesBase({
     });
   const shareTypeVariationAmounts = shareTypeVariationAmountsRaw ?? null;
 
-  const {
-    shareTypeVariationAmountsSummary,
-    dayVariationSums,
-    dayVariationCounts,
-    averageWeightSubData,
-    priceSumArticlesSubData,
-    summaryColumns,
-  } = usePlanningSummaryData({
-    shareDeliveryDays,
-    shareTypeVariations,
-    planningMode,
-    data,
-    vegetables_and_fruits,
-    shareTypeVariationAmounts,
-  });
+  const { shareTypeVariationAmountsSummary, summaryRows } =
+    usePlanningSummaryData({
+      shareDeliveryDays,
+      shareTypeVariations,
+      planningMode,
+      data,
+      vegetables_and_fruits,
+      shareTypeVariationAmounts,
+      t,
+      currencySymbol,
+      historicalAverages: historicalAverages as
+        | Record<string, string | number>
+        | null
+        | undefined,
+    });
 
   // Live still-free indicator: forecast + current stock − Σ (planned per day).
   // Per-day planned is derived from the same variation-cell values the user
@@ -681,17 +688,12 @@ export default function PlanningHarvestSharesBase({
             marginTop: "1em",
             marginBottom: "2em",
             display: "flex",
+            flexWrap: "wrap",
             alignItems: "flex-start",
-            gap: "2em",
+            gap: "1.5em 2.5em",
           }}
         >
-          <div
-            className="flex-col"
-            style={{
-              gap: "0.5em",
-              marginTop: "1em",
-            }}
-          >
+          <div className="flex-col" style={{ gap: "0.5em" }}>
             <LabeledSwitch
               value={showDetailedColumns}
               onChange={setShowDetailedColumns}
@@ -719,43 +721,32 @@ export default function PlanningHarvestSharesBase({
             />
           </div>
 
-          <PlanningModeSelector
-            key={`${daysOk}-${toursOk}`}
-            value={planningMode}
-            onChange={setPlanningMode}
-            disabled={isPast}
-            toursExist={toursExist}
-            daysOk={daysOk ?? undefined}
-            toursOk={toursOk ?? undefined}
-          />
-        </div>
-      )}
-      {showGrid && (
-        <div
-          style={{
-            marginTop: "-4em",
-            marginBottom: "2em",
-            display: "flex",
-            alignItems: "center",
-            gap: "1em",
-          }}
-        >
-          <Space.Compact>
-            <Button
-              type={showDaysTogether ? "default" : "primary"}
-              icon={<UnorderedListOutlined />}
-              onClick={() => setShowDaysTogether(false)}
-            >
-              {t("commissioning.separate_days")}
-            </Button>
-            <Button
-              type={showDaysTogether ? "primary" : "default"}
-              icon={<AppstoreOutlined />}
-              onClick={() => setShowDaysTogether(true)}
-            >
-              {t("commissioning.combined_view")}
-            </Button>
-          </Space.Compact>
+          {/* Planning-view controls: granularity + how days are grouped. */}
+          <div className="flex-col" style={{ gap: "0.75em" }}>
+            <PlanningModeSelector
+              key={`${daysOk}-${toursOk}`}
+              value={planningMode}
+              onChange={setPlanningMode}
+              disabled={isPast}
+              toursExist={toursExist}
+              daysOk={daysOk ?? undefined}
+              toursOk={toursOk ?? undefined}
+            />
+            <Space.Compact>
+              <Button
+                type={showDaysTogether ? "default" : "primary"}
+                onClick={() => setShowDaysTogether(false)}
+              >
+                {t("commissioning.separate_days")}
+              </Button>
+              <Button
+                type={showDaysTogether ? "primary" : "default"}
+                onClick={() => setShowDaysTogether(true)}
+              >
+                {t("commissioning.combined_view")}
+              </Button>
+            </Space.Compact>
+          </div>
         </div>
       )}
 
@@ -821,65 +812,7 @@ export default function PlanningHarvestSharesBase({
             showSummaryInHarvestSharePlanningOnTop ? "top" : "bottom"
           }
           summaryLabelColumnIndex={1}
-          summaryRows={
-            showSummaryRows
-              ? [
-                  {
-                    columns: summaryColumns,
-                    label: t("commissioning.share_type_variation_amounts"),
-                    data: shareTypeVariationAmountsSummary,
-                    style: {
-                      backgroundColor: "var(--color-bg-base)",
-                      fontSize: "1.1em",
-                    },
-                  },
-                  {
-                    columns: summaryColumns,
-                    label: t(
-                      "commissioning.summary_label_harvest_share_planning",
-                    ),
-                    subLabel: t("commissioning.predetermined_value"),
-                    data: dayVariationSums,
-                    suffix: "kg",
-                    subData: averageWeightSubData,
-                    subSuffix: "kg",
-                    style: {
-                      backgroundColor: "var(--color-bg-base)",
-                      fontSize: "1.1em",
-                    },
-                  },
-                  {
-                    columns: summaryColumns,
-                    label: t(
-                      "commissioning.second_summary_label_harvest_share_planning",
-                    ),
-                    subLabel: t("commissioning.predetermined_value"),
-                    data: dayVariationCounts,
-                    suffix: currencySymbol,
-                    subData: priceSumArticlesSubData,
-                    subSuffix: currencySymbol,
-                    style: {
-                      backgroundColor: "var(--color-bg-base)",
-                      fontSize: "1.1em",
-                    },
-                  },
-                  {
-                    columns: summaryColumns,
-                    label: t("commissioning.historical_average_2y"),
-                    data: (historicalAverages || {}) as Record<
-                      string,
-                      string | number
-                    >,
-                    suffix: "kg",
-                    style: {
-                      backgroundColor: "var(--color-info-bg)",
-                      fontSize: "1.0em",
-                      fontStyle: "italic",
-                    },
-                  },
-                ]
-              : []
-          }
+          summaryRows={showSummaryRows ? summaryRows : []}
         />
       ) : (
         <NoVariationColumnsBanner />

@@ -1,5 +1,6 @@
 import { EnvironmentOutlined } from "@ant-design/icons";
-import { Button, Card, Empty, Space } from "antd";
+import { Button, Card, Space } from "antd";
+import { EmptyHint } from "@shared/ui";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useCommissioningDeliveryStationsDaysList } from "@shared/api/generated/commissioning/commissioning";
@@ -63,10 +64,7 @@ export default function DeliveryStationDaysCard({
       styles={{ body: { padding: "12px 16px" } }}
     >
       {rows.length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={t("members.no_delivery_stations")}
-        />
+        <EmptyHint>{t("members.no_delivery_stations")}</EmptyHint>
       ) : (
         <Space direction="vertical" size={4} className="w-full">
           {rows.map((stationDay) => (

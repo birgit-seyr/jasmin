@@ -369,3 +369,29 @@ def run_bulk_invoice_reminder_send(
             email_ctx=email_ctx,
             progress_cb=job.progress,
         )
+
+
+@db_periodic_task(crontab(minute="*/30"), retries=1, retry_delay=120)
+def expire_stale_waiting_list_offers() -> None:
+    """Expire spot-available waiting-list offers whose response window lapsed,
+    freeing the held station-day + variation capacity for the next in line.
+
+    Runs every 30 min so a freed slot isn't held long after a member goes
+    quiet. Occupancy already ignores a lapsed offer (the
+    ``notification_expires_at`` time check), so this is cleanup of the status +
+    the station-day reservation rows, not a correctness gate.
+    """
+    from apps.commissioning.services.waiting_list_offer_service import (
+        WaitingListOfferService,
+    )
+
+    def sweep(tenant):
+        count = WaitingListOfferService.expire_stale_offers()
+        if count:
+            ops_log.info(
+                "waiting_list.offers_expired tenant=%s count=%s",
+                tenant.schema_name,
+                count,
+            )
+
+    for_each_tenant(sweep, label="waiting_list.expire_offers", logger=ops_log)

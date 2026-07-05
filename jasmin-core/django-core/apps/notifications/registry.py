@@ -417,6 +417,57 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
             "portal_url": "https://app.example.org",
         },
     ),
+    "commissioning.waiting_list_offer": EmailTemplateSpec(
+        slug="commissioning.waiting_list_offer",
+        label="Warteliste: Platz frei",
+        description=(
+            "Wird an ein Wartelisten-Mitglied gesendet, wenn das Büro einen "
+            "frei gewordenen Platz anbietet. Enthält einen Einmal-Link zum "
+            "Annehmen oder Ablehnen — ohne Login."
+        ),
+        default_template="commissioning/emails/waiting_list_offer",
+        default_subject="Ein Platz ist frei geworden bei {{ tenant_name }}",
+        default_subject_en="A spot has opened up at {{ tenant_name }}",
+        category="members",
+        variables=[
+            _TENANT_NAME,
+            _MEMBER_FIRST,
+            EmailVariable(
+                name="variation_name",
+                label="Anteilsart",
+                description="Name der angebotenen Anteilsart.",
+            ),
+            EmailVariable(
+                name="delivery_station_name",
+                label="Verteilstation",
+                description="Verteilstation/Liefertag des Abos.",
+            ),
+            EmailVariable(
+                name="valid_from",
+                label="Startdatum",
+                description="Startdatum des Abos.",
+            ),
+            EmailVariable(
+                name="accept_url",
+                label="Annehmen-Link",
+                description="Einmaliger Link zum Annehmen oder Ablehnen des Platzes.",
+            ),
+            EmailVariable(
+                name="expires_at",
+                label="Frist",
+                description="Bis wann das Angebot gültig ist.",
+            ),
+        ],
+        sample={
+            "tenant_name": "Beispiel-Solawi",
+            "member": {"first_name": "Maria"},
+            "variation_name": "Ernteanteil M",
+            "delivery_station_name": "Mo - Markthalle",
+            "valid_from": "06.07.2026",
+            "accept_url": "https://app.example.org/waiting_list-offer/abc123",
+            "expires_at": "13.07.2026, 23:59",
+        },
+    ),
     "commissioning.member_cancelled": EmailTemplateSpec(
         slug="commissioning.member_cancelled",
         label="Austritt bestätigt",

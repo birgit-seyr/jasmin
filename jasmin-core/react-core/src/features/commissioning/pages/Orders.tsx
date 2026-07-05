@@ -11,6 +11,7 @@ import {
   EditableTable,
   gatedByPermission,
   gatedByPermissionOnlyEdit,
+  SUMMARY_ROW_STYLE,
 } from "@shared/tables";
 import type {
   EditableColumnConfig,
@@ -293,6 +294,7 @@ export default function Orders() {
                     data: summaryDataOffers,
                     suffix: "",
                     summaryLabelColSpan: 3,
+                    style: SUMMARY_ROW_STYLE,
                   },
                 ]}
               />
@@ -333,6 +335,7 @@ export default function Orders() {
                   data: summaryDataArticles,
                   suffix: "",
                   summaryLabelColSpan: 3,
+                  style: SUMMARY_ROW_STYLE,
                 },
               ]}
             />
@@ -378,6 +381,7 @@ export default function Orders() {
                   label: t("commissioning.sum"),
                   data: summaryDataCrates,
                   suffix: "",
+                  style: SUMMARY_ROW_STYLE,
                 },
               ]}
             />

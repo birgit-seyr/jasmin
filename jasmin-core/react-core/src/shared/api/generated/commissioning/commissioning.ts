@@ -212,6 +212,7 @@ import type {
   Member,
   MemberCancelResult,
   MemberCreateRequest,
+  MemberDashboardStatistics,
   MemberGrowthStatistic,
   MemberLoan,
   MyCoopShareSubscribe,
@@ -224,6 +225,7 @@ import type {
   Offer,
   OfferGroup,
   OfferSendingStatus,
+  OfferSpotRequest,
   OrderContent,
   OrderContentDeleteResponse,
   OrderContentItem,
@@ -290,6 +292,7 @@ import type {
   VirtualVariationComponentListItem,
   VirtualVariationComponentsRequest,
   VirtualVariationComponentsResponse,
+  WaitingListOfferDetail,
   Waste
 } from '.././models';
 
@@ -932,6 +935,68 @@ const {mutation: mutationOptions} = options ?
       > => {
 
       const mutationOptions = getCommissioningAbosConfirmCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Offer a freed spot to a queued waiting-list member: holds both capacity axes (station-day reservation + status-counted variation hold) for the response window and emails the member a magic link to accept/decline without logging in. Optional ``price_per_delivery`` lets the office set the price at offer time (a waiting_list entry may be a year old). Only a PENDING waiting-list entry can be offered; a capacity 409 means the slot filled up between the office's view and the click.
+ */
+export const commissioningAbosOfferSpotCreate = (
+    id: string,
+    offerSpotRequest: OfferSpotRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<Subscription>(
+      {url: `/api/commissioning/abos/${id}/offer_spot/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: offerSpotRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getCommissioningAbosOfferSpotCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningAbosOfferSpotCreate>>, TError,{id: string;data: OfferSpotRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningAbosOfferSpotCreate>>, TError,{id: string;data: OfferSpotRequest}, TContext> => {
+
+const mutationKey = ['commissioningAbosOfferSpotCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningAbosOfferSpotCreate>>, {id: string;data: OfferSpotRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningAbosOfferSpotCreate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningAbosOfferSpotCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningAbosOfferSpotCreate>>>
+    export type CommissioningAbosOfferSpotCreateMutationBody = OfferSpotRequest
+    export type CommissioningAbosOfferSpotCreateMutationError = ErrorResponse
+
+    export const useCommissioningAbosOfferSpotCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningAbosOfferSpotCreate>>, TError,{id: string;data: OfferSpotRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningAbosOfferSpotCreate>>,
+        TError,
+        {id: string;data: OfferSpotRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningAbosOfferSpotCreateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
@@ -14507,6 +14572,104 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * 
+    Snapshot ("today") of member and cooperative-share statistics: member counts
+    (total / active / trial / confirmed / pending / cancelled), average member
+    age, and cooperative-share sums (total / confirmed / pending / paid / unpaid /
+    payback-due).
+    
+ * @summary Get member dashboard statistics
+ */
+export const commissioningMemberDashboardStatisticsRetrieve = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<MemberDashboardStatistics>(
+      {url: `/api/commissioning/member_dashboard_statistics/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningMemberDashboardStatisticsRetrieveQueryKey = () => {
+    return [
+    `/api/commissioning/member_dashboard_statistics/`
+    ] as const;
+    }
+
+    
+export const getCommissioningMemberDashboardStatisticsRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>, TError = ErrorResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningMemberDashboardStatisticsRetrieveQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>> = ({ signal }) => commissioningMemberDashboardStatisticsRetrieve(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningMemberDashboardStatisticsRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>>
+export type CommissioningMemberDashboardStatisticsRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningMemberDashboardStatisticsRetrieve<TData = Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>, TError = ErrorResponse>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMemberDashboardStatisticsRetrieve<TData = Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>, TError = ErrorResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMemberDashboardStatisticsRetrieve<TData = Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>, TError = ErrorResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get member dashboard statistics
+ */
+
+export function useCommissioningMemberDashboardStatisticsRetrieve<TData = Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>, TError = ErrorResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMemberDashboardStatisticsRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningMemberDashboardStatisticsRetrieveQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
  * 
     Returns member growth statistics over time, showing new members per period
     and cumulative total. Can be filtered by time period and date range.
@@ -31478,6 +31641,214 @@ const {mutation: mutationOptions} = options ?
       > => {
 
       const mutationOptions = getCommissioningVirtualVariationComponentsCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * GET the offer behind a token — drives the member's accept/decline page.
+ */
+export const commissioningWaitingListOffersRetrieve = (
+    token: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<WaitingListOfferDetail>(
+      {url: `/api/commissioning/waiting_list_offers/${token}/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningWaitingListOffersRetrieveQueryKey = (token?: string,) => {
+    return [
+    `/api/commissioning/waiting_list_offers/${token}/`
+    ] as const;
+    }
+
+    
+export const getCommissioningWaitingListOffersRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>, TError = ErrorResponse>(token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningWaitingListOffersRetrieveQueryKey(token);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>> = ({ signal }) => commissioningWaitingListOffersRetrieve(token, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(token), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningWaitingListOffersRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>>
+export type CommissioningWaitingListOffersRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningWaitingListOffersRetrieve<TData = Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>, TError = ErrorResponse>(
+ token: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningWaitingListOffersRetrieve<TData = Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>, TError = ErrorResponse>(
+ token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningWaitingListOffersRetrieve<TData = Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>, TError = ErrorResponse>(
+ token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningWaitingListOffersRetrieve<TData = Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>, TError = ErrorResponse>(
+ token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWaitingListOffersRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningWaitingListOffersRetrieveQueryOptions(token,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * The member accepts — the subscription leaves the waiting list as a
+normal, not-yet-admin-confirmed abo.
+ */
+export const commissioningWaitingListOffersAcceptCreate = (
+    token: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<WaitingListOfferDetail>(
+      {url: `/api/commissioning/waiting_list_offers/${token}/accept/`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getCommissioningWaitingListOffersAcceptCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningWaitingListOffersAcceptCreate>>, TError,{token: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningWaitingListOffersAcceptCreate>>, TError,{token: string}, TContext> => {
+
+const mutationKey = ['commissioningWaitingListOffersAcceptCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningWaitingListOffersAcceptCreate>>, {token: string}> = (props) => {
+          const {token} = props ?? {};
+
+          return  commissioningWaitingListOffersAcceptCreate(token,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningWaitingListOffersAcceptCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningWaitingListOffersAcceptCreate>>>
+    
+    export type CommissioningWaitingListOffersAcceptCreateMutationError = ErrorResponse
+
+    export const useCommissioningWaitingListOffersAcceptCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningWaitingListOffersAcceptCreate>>, TError,{token: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningWaitingListOffersAcceptCreate>>,
+        TError,
+        {token: string},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningWaitingListOffersAcceptCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * The member declines — the held slot is freed.
+ */
+export const commissioningWaitingListOffersDeclineCreate = (
+    token: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<WaitingListOfferDetail>(
+      {url: `/api/commissioning/waiting_list_offers/${token}/decline/`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getCommissioningWaitingListOffersDeclineCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningWaitingListOffersDeclineCreate>>, TError,{token: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningWaitingListOffersDeclineCreate>>, TError,{token: string}, TContext> => {
+
+const mutationKey = ['commissioningWaitingListOffersDeclineCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningWaitingListOffersDeclineCreate>>, {token: string}> = (props) => {
+          const {token} = props ?? {};
+
+          return  commissioningWaitingListOffersDeclineCreate(token,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningWaitingListOffersDeclineCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningWaitingListOffersDeclineCreate>>>
+    
+    export type CommissioningWaitingListOffersDeclineCreateMutationError = ErrorResponse
+
+    export const useCommissioningWaitingListOffersDeclineCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningWaitingListOffersDeclineCreate>>, TError,{token: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningWaitingListOffersDeclineCreate>>,
+        TError,
+        {token: string},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningWaitingListOffersDeclineCreateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

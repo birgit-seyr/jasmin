@@ -40,6 +40,7 @@ export function useAbosColumns({
   allShareTypeVariations,
   variationDeliveryCycleById,
   getDeliveryStationDaysForRow,
+  getShareTypeVariationsForRow,
   getAdminStatus,
   onOpenAdminConfirmation,
   adminStatusSorter,
@@ -52,6 +53,7 @@ export function useAbosColumns({
   allShareTypeVariations: AbosData["allShareTypeVariations"];
   variationDeliveryCycleById: AbosData["variationDeliveryCycleById"];
   getDeliveryStationDaysForRow: AbosData["getDeliveryStationDaysForRow"];
+  getShareTypeVariationsForRow: AbosData["getShareTypeVariationsForRow"];
   getAdminStatus: AdminConfirmation["getAdminStatus"];
   onOpenAdminConfirmation: AdminConfirmation["handleOpenAdminConfirmationModal"];
   /** Pinned wrapper around ``getAdminStatusSorter`` — the page owns it
@@ -364,7 +366,7 @@ export function useAbosColumns({
     disabled: aboIsConfirmed,
     memberOptions,
     memberWidth: "16em",
-    shareTypeVariationOptions: allShareTypeVariations,
+    shareTypeVariationOptions: getShareTypeVariationsForRow,
     shareTypeVariationWidth: "16em",
     onShareTypeVariationChange: handleShareTypeVariationChange,
     shareTypeVariationRender: renderShareTypeVariation,
@@ -448,27 +450,6 @@ export function useAbosColumns({
       },
 
       memberColumn,
-
-      shareTypeVariationColumn,
-
-      ...(allows_trial_subscriptions
-        ? ([
-            {
-              title: <>{t("members.is_trial")}</>,
-              dataIndex: "is_trial",
-              key: "is_trial",
-              inputType: "checkbox",
-              required: false,
-              align: "center",
-              sortable: true,
-              // Toggling ``is_trial`` recomputes ``valid_until``:
-              //   * ON  → ``valid_from + allowed_trial_subscription_duration weeks - 1 day``
-              //   * OFF → falls back to the season / one-year branch
-              //     in ``computeValidUntil``.
-              onFieldChange: handleIsTrialChange,
-            },
-          ] as EditableColumnConfig<AboRecord>[])
-        : []),
       {
         ...validFromColumn,
         // Override the generic Monday-only rule with the subscription one:
@@ -491,6 +472,71 @@ export function useAbosColumns({
         // just retains the ability to type a different date.
         disabled: aboIsConfirmed,
         sortable: true,
+      },
+      shareTypeVariationColumn,
+
+      ...(allows_trial_subscriptions
+        ? ([
+            {
+              title: <>{t("members.is_trial")}</>,
+              dataIndex: "is_trial",
+              key: "is_trial",
+              inputType: "checkbox",
+              required: false,
+              align: "center",
+              sortable: true,
+              // Toggling ``is_trial`` recomputes ``valid_until``:
+              //   * ON  → ``valid_from + allowed_trial_subscription_duration weeks - 1 day``
+              //   * OFF → falls back to the season / one-year branch
+              //     in ``computeValidUntil``.
+              onFieldChange: handleIsTrialChange,
+            },
+          ] as EditableColumnConfig<AboRecord>[])
+        : []),
+      quantityColumn,
+
+      deliveryStationDayColumn,
+
+      {
+        title: <>{t("members.weekly_price")}</>,
+        dataIndex: "price_per_delivery",
+        key: "price_per_delivery",
+        inputType: "positive_decimal2",
+        required: true,
+        align: "center",
+        width: "6em",
+        suffix: currencySymbol,
+        disabled: aboIsConfirmed,
+        render: (_: unknown, record: AboRecord) => (
+          <>
+            {record.price_per_delivery
+              ? format(Number(record.price_per_delivery), 2)
+              : ""}{" "}
+            {currencySymbol}
+          </>
+        ),
+      },
+      {
+        title: <>{t("members.payment_cycle")}</>,
+        dataIndex: "payment_cycle_name",
+        key: "payment_cycle_name",
+        inputType: "select",
+        required: true,
+        align: "center",
+        width: "12em",
+        options: paymentCycles,
+        foreignKey: {
+          valueField: "payment_cycle",
+          displayField: "payment_cycle_name",
+        },
+        disabled: aboIsConfirmed,
+        render: (value: unknown) =>
+          value
+            ? t(
+                `configuration.payment_cycle_${(value as string).toLowerCase()}`,
+                value as string,
+              )
+            : "",
       },
       {
         title: <>{t("members.deliveries")}</>,
@@ -538,51 +584,6 @@ export function useAbosColumns({
           );
         },
       },
-
-      quantityColumn,
-      {
-        title: <>{t("members.weekly_price")}</>,
-        dataIndex: "price_per_delivery",
-        key: "price_per_delivery",
-        inputType: "positive_decimal2",
-        required: true,
-        align: "center",
-        width: "6em",
-        suffix: currencySymbol,
-        disabled: aboIsConfirmed,
-        render: (_: unknown, record: AboRecord) => (
-          <>
-            {record.price_per_delivery
-              ? format(Number(record.price_per_delivery), 2)
-              : ""}{" "}
-            {currencySymbol}
-          </>
-        ),
-      },
-      {
-        title: <>{t("members.payment_cycle")}</>,
-        dataIndex: "payment_cycle_name",
-        key: "payment_cycle_name",
-        inputType: "select",
-        required: true,
-        align: "center",
-        width: "12em",
-        options: paymentCycles,
-        foreignKey: {
-          valueField: "payment_cycle",
-          displayField: "payment_cycle_name",
-        },
-        disabled: aboIsConfirmed,
-        render: (value: unknown) =>
-          value
-            ? t(
-                `configuration.payment_cycle_${(value as string).toLowerCase()}`,
-                value as string,
-              )
-            : "",
-      },
-      deliveryStationDayColumn,
-
       // Auto-renewal cancellation deadline. Pre-computed server-side
       // (see ``SubscriptionSerializer.get_automatically_renewed_at``)
       // so this column doesn't redo dayjs parsing per row per render.

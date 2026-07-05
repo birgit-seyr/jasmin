@@ -36,13 +36,6 @@ export default function AboSidebar({
       icon: <AppsIcon />,
       label: <Link to="/abos/abos">{t("abos.shares")}</Link>,
     },
-    {
-      key: "abo-emails",
-
-      requireRole: "isOffice",
-      icon: <MailOutlineIcon />,
-      label: <Link to="/abos/abos-emails">{t("abos.emails")}</Link>,
-    },
 
     {
       key: "abos-waiting-list",
@@ -50,6 +43,13 @@ export default function AboSidebar({
       requireRole: "isOffice",
       icon: <UnfoldMoreDoubleIcon />,
       label: <Link to="/abos/waiting-list-abos">{t("abos.waiting_list")}</Link>,
+    },
+    {
+      key: "abo-emails",
+
+      requireRole: "isOffice",
+      icon: <MailOutlineIcon />,
+      label: <Link to="/abos/abos-emails">{t("abos.emails")}</Link>,
     },
     {
       key: "abos-deliveries-overview",
@@ -86,13 +86,6 @@ export default function AboSidebar({
       label: <Link to="/abos/debits-abos">{t("abos.debits")}</Link>,
     },
 
-    {
-      key: "abos-overview",
-
-      requireRole: "isOffice",
-      icon: <BarChartIcon />,
-      label: <Link to="/abos/overview-abos">{t("abos.overview")}</Link>,
-    },
     ...(uses_pledge_round
       ? [
           {

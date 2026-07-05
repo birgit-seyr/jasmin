@@ -1,7 +1,7 @@
 """API-level tests for the subscription waiting list — the exact office/member
 HTTP flows, through the real serializers and viewsets.
 
-Covers the reported bug ("a waitlist create lands in the main Abos list and can
+Covers the reported bug ("a waiting_list create lands in the main Abos list and can
 be admin-confirmed"): flag survival through POST /abos/, the on_waiting_list
 list filter, the confirm-time capacity backstop, promotion after a slot frees,
 PATCH flag-flip coherence, and the by-design non-harvest capacity exemption.
@@ -94,8 +94,8 @@ def _harvest_variation():
 
 
 @pytest.mark.django_db
-class TestWaitlistCreateApi:
-    def test_office_create_with_flag_waitlists(self, api_client, tenant):
+class TestWaitingListCreateApi:
+    def test_office_create_with_flag_waiting_lists(self, api_client, tenant):
         dsd = _make_dsd(capacity=1)
         _occupy_slot(dsd)
 
@@ -128,9 +128,9 @@ class TestWaitlistCreateApi:
         assert resp.status_code == status.HTTP_409_CONFLICT, resp.data
         assert resp.data["code"] == "delivery_station.over_capacity"
 
-    def test_list_filter_separates_waitlisted(self, api_client, tenant):
+    def test_list_filter_separates_waiting_listed(self, api_client, tenant):
         dsd = _make_dsd(capacity=5)
-        waitlisted = SubscriptionFactory(
+        waiting_listed = SubscriptionFactory(
             default_delivery_station_day=dsd,
             valid_from=VALID_FROM,
             valid_until=VALID_UNTIL,
@@ -150,15 +150,15 @@ class TestWaitlistCreateApi:
         ids_true = {row["id"] for row in listed_true.data}
         ids_all = {row["id"] for row in listed_all.data}
 
-        # The main Abos page filters on_waiting_list=false — a waitlisted row
+        # The main Abos page filters on_waiting_list=false — a waiting_listed row
         # must NEVER appear there (the reported bug's first symptom).
-        assert str(waitlisted.id) not in ids_false
+        assert str(waiting_listed.id) not in ids_false
         assert str(normal.id) in ids_false
-        assert str(waitlisted.id) in ids_true
+        assert str(waiting_listed.id) in ids_true
         assert str(normal.id) not in ids_true
-        assert {str(waitlisted.id), str(normal.id)} <= ids_all
+        assert {str(waiting_listed.id), str(normal.id)} <= ids_all
 
-    def test_member_subscribe_with_flag_waitlists(self, member_user, tenant):
+    def test_member_subscribe_with_flag_waiting_lists(self, member_user, tenant):
         dsd = _make_dsd(capacity=1)
         _occupy_slot(dsd)
         member = MemberFactory(user=member_user)
@@ -194,8 +194,10 @@ class TestWaitlistCreateApi:
 
 
 @pytest.mark.django_db
-class TestWaitlistConfirmApi:
-    def test_confirm_while_full_is_409_and_stays_waitlisted(self, api_client, tenant):
+class TestWaitingListConfirmApi:
+    def test_confirm_while_full_is_409_and_stays_waiting_listed(
+        self, api_client, tenant
+    ):
         dsd = _make_dsd(capacity=1)
         _occupy_slot(dsd)
         resp = api_client.post(
@@ -239,11 +241,11 @@ class TestWaitlistConfirmApi:
 
 
 @pytest.mark.django_db
-class TestWaitlistPatchFlipApi:
+class TestWaitingListPatchFlipApi:
     """Flipping on_waiting_list on a DRAFT via PATCH must keep the whole
-    waitlist state coherent (flag vs status vs position vs reservations)."""
+    waiting_list state coherent (flag vs status vs position vs reservations)."""
 
-    def test_patch_flip_to_waitlisted_enqueues_and_releases_holds(
+    def test_patch_flip_to_waiting_listed_enqueues_and_releases_holds(
         self, api_client, tenant
     ):
         dsd = _make_dsd(capacity=5)
@@ -269,10 +271,10 @@ class TestWaitlistPatchFlipApi:
             subscription.waiting_list_status == Subscription.WaitingListStatus.PENDING
         )
         assert subscription.waiting_list_position is not None
-        # A waitlist entry holds NO capacity — the draft's reservation must go.
+        # A waiting_list entry holds NO capacity — the draft's reservation must go.
         assert not CapacityReservation.objects.filter(subscription_id=sub_id).exists()
 
-    def test_patch_flip_off_waitlist_requires_capacity(self, api_client, tenant):
+    def test_patch_flip_off_waiting_list_requires_capacity(self, api_client, tenant):
         dsd = _make_dsd(capacity=1)
         _occupy_slot(dsd)
         created = api_client.post(
@@ -294,7 +296,7 @@ class TestWaitlistPatchFlipApi:
         subscription = Subscription.objects.get(id=sub_id)
         assert subscription.on_waiting_list is True
 
-    def test_patch_flip_off_waitlist_with_capacity_reserves_and_clears(
+    def test_patch_flip_off_waiting_list_with_capacity_reserves_and_clears(
         self, api_client, tenant
     ):
         dsd = _make_dsd(capacity=5)

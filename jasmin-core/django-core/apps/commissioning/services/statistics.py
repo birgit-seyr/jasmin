@@ -238,3 +238,56 @@ def calculate_historical_share_type_variation_averages(
     return _compute_variation_averages(
         list(share_type_variation_ids), year, delivery_week, years_back
     )
+
+
+def calculate_member_dashboard_statistics() -> dict:
+    """Snapshot ("today") of member + cooperative-share statistics.
+
+    Cooperative-share figures are SUMS of ``amount_of_coop_shares`` (the number
+    of shares), not row counts. "Live" excludes cancelled shares; the payback
+    figure is the opposite — shares owed back to exited members.
+    """
+    from django.db.models import Sum
+    from django.utils import timezone
+
+    from ..models import CoopShare, Member
+
+    members = Member.objects.all()
+    total_members = members.count()
+    trial_members = members.filter(is_trial=True).count()
+    confirmed_members = members.filter(admin_confirmed=True).count()
+    pending_members = members.filter(
+        admin_confirmed=False, cancelled_at__isnull=True
+    ).count()
+    cancelled_members = members.filter(cancelled_at__isnull=False).count()
+
+    # Average age of current (non-cancelled) members with a known birth date.
+    today = timezone.localdate()
+    birth_dates = members.filter(
+        cancelled_at__isnull=True, birth_date__isnull=False
+    ).values_list("birth_date", flat=True)
+    ages = [(today - bd).days / 365.25 for bd in birth_dates]
+    average_age = round(sum(ages) / len(ages), 1) if ages else 0.0
+
+    def _shares(qs) -> float:
+        return float(qs.aggregate(s=Sum("amount_of_coop_shares"))["s"] or 0)
+
+    live = CoopShare.objects.filter(cancelled_at__isnull=True)
+    return {
+        "total_members": total_members,
+        "trial_members": trial_members,
+        "confirmed_members": confirmed_members,
+        "pending_members": pending_members,
+        "cancelled_members": cancelled_members,
+        "average_age": average_age,
+        "total_coop_shares": _shares(live),
+        "confirmed_coop_shares": _shares(live.filter(admin_confirmed=True)),
+        "pending_coop_shares": _shares(live.filter(admin_confirmed=False)),
+        "paid_coop_shares": _shares(live.filter(paid_at__isnull=False)),
+        "unpaid_coop_shares": _shares(live.filter(paid_at__isnull=True)),
+        "payback_due_coop_shares": _shares(
+            CoopShare.objects.filter(
+                payback_due_date__isnull=False, paid_back_date__isnull=True
+            )
+        ),
+    }

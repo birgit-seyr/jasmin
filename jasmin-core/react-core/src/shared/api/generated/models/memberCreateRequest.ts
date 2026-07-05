@@ -48,6 +48,8 @@ export interface MemberCreateRequest {
   notification_expires_at?: string | null;
   /** @nullable */
   response_received_at?: string | null;
+  /** @nullable */
+  readonly notification_token?: string | null;
   is_active?: boolean;
   /** @nullable */
   readonly entry_date?: string | null;

@@ -47,6 +47,23 @@ class TestDeliveryStationViewSet:
         resp = api_client.get(url)
         assert resp.status_code == status.HTTP_200_OK
 
+    def test_can_be_deleted_reflects_delivery_station_days(self, api_client, tenant):
+        # A station configured with a delivery-station-day is undeletable: the
+        # day CASCADEs off the station but is itself PROTECTed downstream
+        # (import demand rows / share content / a member's default station-day),
+        # so deleting the station would raise ProtectedError mid-cascade. The
+        # office must not be offered a delete button -> can_be_deleted is False.
+        # A bare station (no days) is still deletable.
+        plain = DeliveryStationFactory()
+        dsd = DeliveryStationDayFactory()
+        configured = dsd.delivery_station
+
+        resp = api_client.get(self.URL)
+        assert resp.status_code == status.HTTP_200_OK
+        flags = {s["id"]: s["can_be_deleted"] for s in resp.data}
+        assert flags[str(plain.id)] is True
+        assert flags[str(configured.id)] is False
+
     def test_filter_by_member_returns_only_subscribed_stations(
         self, api_client, tenant
     ):
@@ -348,27 +365,6 @@ class TestDeliveryStationDayViewSet:
         entry = next(e for e in resp.data if e["id"] == str(dsd.id))
         assert entry["capacity_by_week"]["2026-15"]["occupied"] == 0
         assert entry["capacity_by_week"]["2026-15"]["free"] == 10
-
-    def test_capacity_null_when_no_limit(self, api_client, tenant):
-        dd = SharesDeliveryDayFactory(day_number=1)
-        dsd = DeliveryStationDayFactory(delivery_day=dd, capacity=None)
-
-        harvest_type = ShareTypeFactory(share_option="HARVEST_SHARE")
-        harvest_var = ShareTypeVariationFactory(share_type=harvest_type)
-        share = ShareFactory(
-            delivery_day=dd,
-            share_type_variation=harvest_var,
-            year=2026,
-            delivery_week=15,
-        )
-        ShareDeliveryFactory(share=share, delivery_station_day=dsd)
-
-        resp = api_client.get(
-            self.URL, {"year": 2026, "delivery_week": 15, "num_weeks": 1}
-        )
-        entry = next(e for e in resp.data if e["id"] == str(dsd.id))
-        assert entry["capacity_by_week"]["2026-15"]["occupied"] == 1
-        assert entry["capacity_by_week"]["2026-15"]["free"] is None
 
 
 # ---------------------------------------------------------------------------

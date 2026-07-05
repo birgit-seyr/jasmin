@@ -73,7 +73,6 @@ export default function ListDeliveryStations() {
   const contactColumns = useContactColumns({
     translationPrefix: "delivery_stations",
     overrides: {
-      companyName: { disabled: isFieldDisabled },
       address: {
         inputType: "text",
         required: true,

@@ -19,11 +19,14 @@ import type {
   TheoreticalPurchase,
   TheoreticalWashAmount,
 } from "@shared/api/generated/models";
-import { YearSelector } from '@shared/selectors';
-import { ShareArticleSelector, StorageSelector } from '@features/commissioning/selectors';
+import { YearSelector } from "@shared/selectors";
+import {
+  ShareArticleSelector,
+  StorageSelector,
+} from "@features/commissioning/selectors";
 import { ExplainerText } from "@shared/ui";
-import { useDateFormat, useNumberFormat } from '@hooks/index';
-import { useAmountUnitSizeColumns } from '@features/commissioning/hooks';
+import { useDateFormat, useNumberFormat } from "@hooks/index";
+import { useAmountUnitSizeColumns } from "@features/commissioning/hooks";
 
 const { RangePicker } = DatePicker;
 const currentYear = dayjs().year();
@@ -502,7 +505,7 @@ export default function LoggingStorage() {
       </div>
 
       {selectedStorage && (
-        <div className="compact-logging-table">
+        <div>
           <Table
             columns={columns}
             dataSource={data}
@@ -510,7 +513,7 @@ export default function LoggingStorage() {
             size="small"
             loading={loading}
             rowKey="id"
-            className="w-max"
+            className="w-max custom-forecast-table"
             locale={{
               emptyText: (
                 <div style={{ height: "4em" }}>{t("table.no_data")}</div>
@@ -567,7 +570,7 @@ export default function LoggingStorage() {
         </span>
       </div>
 
-      <div className="compact-logging-table">
+      <div>
         <Table
           columns={workflowColumns}
           dataSource={workflowData}
@@ -575,7 +578,7 @@ export default function LoggingStorage() {
           size="small"
           loading={workflowLoading}
           rowKey="id"
-          className="w-max"
+          className="w-max custom-forecast-table"
           locale={{
             emptyText: (
               <div style={{ height: "4em" }}>{t("table.no_data")}</div>

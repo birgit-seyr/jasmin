@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { Button, Space, Tag } from "antd";
 import dayjs from "dayjs";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   commissioningAbosCreate,
@@ -8,6 +9,7 @@ import {
   commissioningAbosPartialUpdate,
   getCommissioningAbosListQueryKey,
   useCommissioningAbosList,
+  useCommissioningAbosOfferSpotCreate,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningAbosListParams,
@@ -15,11 +17,14 @@ import type {
 } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { AdminConfirmationModalAbos } from "@features/abos/modals/AdminConfirmationModalAbos";
+import { CapacityOverview } from "@features/abos/components/CapacityOverview";
+import { OfferSpotModal } from "@features/abos/modals/OfferSpotModal";
 import {
-  EditableTable,
-  gatedByPermission,
-  wrapApiFunctions,
-} from "@shared/tables";
+  capacityWindowParams,
+  termCapacity,
+  termWeekKeys,
+} from "@features/abos/utils/stationCapacity";
+import { EditableTable, wrapApiFunctions } from "@shared/tables";
 import type {
   ApiFunctions,
   EditableColumnConfig,
@@ -39,12 +44,19 @@ import {
 import { useAdminConfirmationModalAbos } from "@features/abos/hooks/modals/useAdminConfirmationModalAbos";
 import { useSharedAboColumns } from "@features/abos/hooks/columns/useSharedAboColumns";
 import { notify } from "@shared/utils";
+import { getErrorCode } from "@shared/utils/apiError";
 import type { AboRecord } from "./types";
 
 export default function WaitingListAbos() {
   const { t } = useTranslation();
   const { isOffice } = useRoles();
-  const permissions = useMemo(() => gatedByPermission(isOffice), [isOffice]);
+  // Waiting-list entries are created by the subscribe flow (a full variation /
+  // station routes the order here), never added by hand — so no add + no
+  // inline edit. The office can only remove an entry (delete).
+  const permissions = useMemo(
+    () => ({ canAdd: false, canEdit: false, canDelete: isOffice }),
+    [isOffice],
+  );
   const queryClient = useQueryClient();
   const { dateFormat, formatDate } = useDateFormat();
 
@@ -64,14 +76,34 @@ export default function WaitingListAbos() {
     [shareTypeParams],
   );
   const { shareTypes } = useShareTypes(shareParamsWithFuture);
-  const { deliveryStationDays } = useDeliveryStationDays(shareTypeParams);
+  // Wide fixed capacity window so both the variations and the station-days
+  // carry ``capacity_by_week`` for the range-selectable capacity overview —
+  // the SAME window the Abos table + new-subscription modal use.
+  const capacityWindow = useMemo(() => capacityWindowParams(), []);
+  // ``active_at_date_or_future`` (not ``active_at_date``): a station-day that
+  // only STARTS next week is still relevant to capacity planning, so include
+  // current + upcoming ones — otherwise the overview is empty until every
+  // station-day's valid_from has passed.
+  const { deliveryStationDays } = useDeliveryStationDays(
+    useMemo(
+      () => ({
+        active_at_date_or_future: dayjs().format("YYYY-MM-DD"),
+        ...capacityWindow,
+      }),
+      [capacityWindow],
+    ),
+  );
 
   // Literal-typed alias: the interface-based ``ShareTypeOption`` has no
   // implicit index signature, which the hook's index-signed ``ShareTypeRef``
   // parameter requires — this bridges the two without a cast.
   const shareTypeRefs: { id?: string | null }[] = shareTypes;
+  const variationParams = useMemo(
+    () => ({ ...shareParamsWithFuture, ...capacityWindow }),
+    [shareParamsWithFuture, capacityWindow],
+  );
   const { shareTypeVariations: allShareTypeVariations } =
-    useAllShareTypeVariations(shareTypeRefs, shareParamsWithFuture);
+    useAllShareTypeVariations(shareTypeRefs, variationParams);
 
   // row selection state and handler:
   const {
@@ -282,8 +314,115 @@ export default function WaitingListAbos() {
     [allShareTypeVariations],
   );
 
+  // ── Waiting-list offer: "is this row claimable now?" + the Notify button ──
+  // A row is claimable when BOTH its variation (production cap) and its
+  // station-day (logistics cap) have room for its term + quantity — the SAME
+  // termCapacity evaluator the modal / abos-select / overview use. Offering
+  // holds the slot, so an already-offered (SPOT_AVAILABLE) row reads as full
+  // here and can't be double-offered.
+  const offerMutation = useCommissioningAbosOfferSpotCreate();
+
+  const variationById = useMemo(() => {
+    const map = new Map<string, (typeof allShareTypeVariations)[number]>();
+    for (const v of allShareTypeVariations) map.set(String(v.value), v);
+    return map;
+  }, [allShareTypeVariations]);
+  const stationDayById = useMemo(() => {
+    const map = new Map<string, (typeof deliveryStationDays)[number]>();
+    for (const d of deliveryStationDays) map.set(String(d.value), d);
+    return map;
+  }, [deliveryStationDays]);
+
+  const rowAvailability = useCallback(
+    (record: AboRecord) => {
+      const parse = (v: string) =>
+        dayjs(v, dateFormat, true).isValid()
+          ? dayjs(v, dateFormat, true)
+          : dayjs(v, "YYYY-MM-DD", true);
+      const from = record.valid_from ? parse(record.valid_from) : null;
+      if (!from || !from.isValid()) {
+        return { variationFull: false, stationFull: false, claimable: false };
+      }
+      const until = record.valid_until ? parse(record.valid_until) : null;
+      const weekKeys = termWeekKeys(
+        from,
+        until && until.isValid() ? until : null,
+      );
+      const qty = Number(record.quantity) || 1;
+      const variation = variationById.get(String(record.share_type_variation));
+      const station = stationDayById.get(
+        String(record.default_delivery_station_day),
+      );
+      const variationFull = variation
+        ? termCapacity(
+            variation.capacity,
+            variation.capacity_by_week,
+            weekKeys,
+            qty,
+          ).isFull
+        : false;
+      const stationFull = station
+        ? termCapacity(
+            station.capacity,
+            station.capacity_by_week,
+            weekKeys,
+            qty,
+          ).isFull
+        : false;
+      return {
+        variationFull,
+        stationFull,
+        claimable: !variationFull && !stationFull,
+      };
+    },
+    [variationById, stationDayById, dateFormat],
+  );
+
+  // The Notify button opens a "Review & send" modal (price adjustment) rather
+  // than firing immediately.
+  const [offerRecord, setOfferRecord] = useState<AboRecord | null>(null);
+  const offerSuggestedPrice = useMemo(() => {
+    if (!offerRecord) return null;
+    const variation = variationById.get(
+      String(offerRecord.share_type_variation),
+    );
+    const price = variation?.active_price_per_delivery;
+    return price != null ? Number(price) : null;
+  }, [offerRecord, variationById]);
+
+  const handleOffer = useCallback(
+    (record: AboRecord, price: number | null) => {
+      if (!record.id) return;
+      offerMutation.mutate(
+        {
+          id: String(record.id),
+          data: {
+            price_per_delivery: price != null ? String(price) : null,
+          },
+        },
+        {
+          onSuccess: () => {
+            notify.success(t("abos.offer_sent"));
+            setOfferRecord(null);
+            invalidateData();
+          },
+          onError: (error) => {
+            const code = getErrorCode(error);
+            notify.error(
+              code === "share_type_variation.over_capacity"
+                ? t("abos.offer_variation_full")
+                : code === "delivery_station.over_capacity"
+                  ? t("abos.offer_station_full")
+                  : t("abos.offer_failed"),
+            );
+          },
+        },
+      );
+    },
+    [offerMutation, invalidateData, t],
+  );
+
   const {
-    displayIdColumn,
     memberColumn,
     shareTypeVariationColumn,
     quantityColumn,
@@ -301,7 +440,6 @@ export default function WaitingListAbos() {
 
   const columns: EditableColumnConfig<AboRecord>[] = useMemo(
     () => [
-      displayIdColumn,
       {
         // FIFO queue position per station-day — informational; the office may
         // promote out of order via the normal confirm flow.
@@ -316,6 +454,84 @@ export default function WaitingListAbos() {
         width: "5em",
         sortable: true,
         defaultSortOrder: "ascend" as const,
+      },
+      {
+        // Server-inferred at enqueue: which capacity gate sent this to the
+        // list (variation sold out / station full), or a manual office queue.
+        title: <>{t("abos.waiting_list_reason")}</>,
+        dataIndex: "waiting_list_reason",
+        key: "waiting_list_reason",
+        disabled: true,
+        readOnly: true,
+        align: "center",
+        width: "9em",
+        sortable: true,
+        render: (value: unknown) => {
+          const reason = (value as string | null) ?? null;
+          if (!reason) return null;
+          const color =
+            reason === "variation_full"
+              ? "orange"
+              : reason === "delivery_station_full"
+                ? "gold"
+                : "default";
+          return (
+            <Tag color={color}>{t(`abos.waiting_list_reason_${reason}`)}</Tag>
+          );
+        },
+      },
+      {
+        // "Can this row be given a spot now?" + the Notify button. Once offered
+        // (SPOT_AVAILABLE) the row shows an awaiting-response tag instead.
+        title: <>{t("abos.availability")}</>,
+        dataIndex: "waiting_list_status",
+        key: "availability",
+        disabled: true,
+        readOnly: true,
+        align: "left",
+        width: "24em",
+        render: (_value: unknown, record: AboRecord) => {
+          if (record.key === -1) return null;
+          if (record.waiting_list_status === "spot_available") {
+            return (
+              <Tag color="blue">
+                {record.notification_expires_at
+                  ? t("abos.offered_until", {
+                      date: formatDate(record.notification_expires_at),
+                    })
+                  : t("abos.offered")}
+              </Tag>
+            );
+          }
+          const { claimable, variationFull, stationFull } =
+            rowAvailability(record);
+          if (!claimable) {
+            const reason = variationFull
+              ? t("abos.availability_variation_full")
+              : stationFull
+                ? t("abos.availability_station_full")
+                : t("abos.availability_waiting");
+            return (
+              <span style={{ color: "var(--color-text-tertiary)" }}>
+                {reason}
+              </span>
+            );
+          }
+          return (
+            <Space>
+              <Tag color="green">{t("abos.available_now")}</Tag>
+              {isOffice && (
+                <Button
+                  size="small"
+                  type="primary"
+                  onClick={() => setOfferRecord(record)}
+                >
+                  {t("abos.notify_member")}
+                </Button>
+              )}
+            </Space>
+          );
+        },
       },
       {
         title: <>{t("members.created_at")}</>,
@@ -337,11 +553,12 @@ export default function WaitingListAbos() {
       t,
       aboHasStarted,
       formatDate,
-      displayIdColumn,
       memberColumn,
       shareTypeVariationColumn,
       quantityColumn,
       deliveryStationDayColumn,
+      rowAvailability,
+      isOffice,
     ],
   );
 
@@ -364,6 +581,11 @@ export default function WaitingListAbos() {
     <div>
       <h1>{t("abos.waiting_list")}</h1>
 
+      <CapacityOverview
+        variations={allShareTypeVariations}
+        stationDays={deliveryStationDays}
+      />
+
       <EditableTable
         columns={columns}
         apiFunctions={apiFunctions}
@@ -375,7 +597,9 @@ export default function WaitingListAbos() {
         customSave={customSave}
         customEdit={customEdit}
         uniqueCheck={["member", "share_type_variation", "valid_from"]}
-        uniqueCheckMessage={t("validation.unique.member_share_type_variation_valid_from")}
+        uniqueCheckMessage={t(
+          "validation.unique.member_share_type_variation_valid_from",
+        )}
         permissions={permissions}
         pagination={true}
         showSearchBar={true}
@@ -395,6 +619,17 @@ export default function WaitingListAbos() {
         abo={selectedAboForConfirmation}
         onConfirm={confirmAbo}
         loading={adminModalLoading}
+      />
+
+      <OfferSpotModal
+        open={offerRecord !== null}
+        record={offerRecord}
+        suggestedPrice={offerSuggestedPrice}
+        loading={offerMutation.isPending}
+        onCancel={() => setOfferRecord(null)}
+        onConfirm={(price) => {
+          if (offerRecord) handleOffer(offerRecord, price);
+        }}
       />
     </div>
   );

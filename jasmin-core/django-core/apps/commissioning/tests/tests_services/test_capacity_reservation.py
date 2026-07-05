@@ -53,7 +53,7 @@ def _past():
     return timezone.now() - datetime.timedelta(days=1)
 
 
-def _make_dsd(*, capacity=None, day_number=DAY_NUMBER):
+def _make_dsd(*, capacity=10, day_number=DAY_NUMBER):
     dd = SharesDeliveryDayFactory(day_number=day_number)
     return DeliveryStationDayFactory(delivery_day=dd, capacity=capacity)
 
@@ -244,12 +244,6 @@ class TestReserveForSubscription:
 
         with pytest.raises(DeliveryStationOverCapacity):
             CapacityReservationService.reserve_for_subscription(sub)
-        assert not CapacityReservation.objects.filter(subscription=sub).exists()
-
-    def test_noop_when_no_capacity_limit(self, tenant):
-        dsd = _make_dsd(capacity=None)  # unlimited
-        sub = _make_subscription(dsd=dsd)
-        CapacityReservationService.reserve_for_subscription(sub)
         assert not CapacityReservation.objects.filter(subscription=sub).exists()
 
     def test_reserves_against_per_week_successor_dsd(self, tenant):
@@ -457,16 +451,6 @@ class TestAssertShareDeliveryFits:
             year=2026,
             week=2,
             share_option="CHICKEN_SHARE",
-        )
-
-    def test_noop_when_no_capacity_limit(self, tenant):
-        dsd = _make_dsd(capacity=None)
-        _fill_one_slot(dsd, 2026, 2)
-        CapacityReservationService.assert_share_delivery_fits(
-            delivery_station_day_id=dsd.id,
-            year=2026,
-            week=2,
-            share_option="HARVEST_SHARE",
         )
 
     def test_moving_delivery_already_here_is_discounted(self, tenant):
@@ -750,16 +734,6 @@ class TestAssertRestoreFits:
             week=3,
             share_option="HARVEST_SHARE",
             quantity=1,
-        )
-
-    def test_unlimited_dsd_never_raises(self, tenant):
-        dsd = _make_dsd(capacity=None)
-        CapacityReservationService.assert_restore_fits(
-            delivery_station_day_id=dsd.id,
-            year=2026,
-            week=3,
-            share_option="HARVEST_SHARE",
-            quantity=99,
         )
 
     def test_non_harvest_option_is_noop(self, tenant):

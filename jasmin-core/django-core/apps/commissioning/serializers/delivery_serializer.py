@@ -27,7 +27,16 @@ from .serializers_mixin import (
 # Reverse relations excluded when deciding whether a DeliveryStation /
 # linked Reseller can be deleted. Kept in module scope so the bulk list
 # serializer and the per-row fallback use the SAME exclude sets.
-_STATION_DELETE_EXCLUDE = ["DeliveryStationDay", "Reseller"]
+#
+# ``DeliveryStationDay`` is deliberately NOT excluded: its FK to the station
+# is CASCADE, but the days themselves are PROTECTed downstream (import demand
+# rows, share content, a member's default station-day — see the FKs to
+# ``DeliveryStationDay``), so deleting a station that has days would raise
+# ProtectedError mid-cascade. A configured station is therefore effectively
+# undeletable, and the office must not be shown a delete button that 500s.
+# Only ``Reseller`` is excluded (its unlink is handled separately via
+# ``linked_reseller_can_be_deleted``).
+_STATION_DELETE_EXCLUDE = ["Reseller"]
 _RESELLER_DELETE_EXCLUDE = ["DeliveryStation"]
 
 

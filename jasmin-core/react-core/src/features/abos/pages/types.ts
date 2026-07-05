@@ -47,6 +47,12 @@ export interface AboRecord extends TableRecord {
   admin_confirmed?: boolean;
   admin_rejected_at?: string | null;
   admin_rejection_reason?: string | null;
+  // Waiting-list offer state (WaitingListAbos): PENDING queued row, or
+  // SPOT_AVAILABLE once the office has offered a freed spot and is awaiting the
+  // member's magic-link response (with ``notification_expires_at``).
+  waiting_list_status?: string | null;
+  waiting_list_reason?: string | null;
+  notification_expires_at?: string | null;
   isEditing?: boolean;
   automatically_renewed_at?: string | null;
   duration_in_weeks?: number;

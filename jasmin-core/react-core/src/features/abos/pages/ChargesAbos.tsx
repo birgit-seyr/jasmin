@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import {  Button, Card, Popconfirm, Space, Table, Tag } from "antd";
+import { Button, Card, Popconfirm, Space, Table, Tag } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,11 +12,7 @@ import type {
   ChargeSchedule,
   PaymentsChargeSchedulesListParams,
 } from "@shared/api/generated/models";
-import {
-  MemberSelector,
-  MonthSelector,
-  YearSelector,
-} from "@shared/selectors";
+import { MemberSelector, MonthSelector, YearSelector } from "@shared/selectors";
 import { ExplainerText } from "@shared/ui";
 import { useCurrency, useDateFormat } from "@hooks/index";
 import { notify } from "@shared/utils";

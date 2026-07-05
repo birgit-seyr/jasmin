@@ -82,6 +82,21 @@ class TestLoginEndpoint:
         assert cookie["httponly"]
         assert cookie["path"] == TENANT_REFRESH_COOKIE_PATH
 
+    def test_login_stamps_last_login(self, tenant):
+        # Regression: the custom login flow mints tokens directly instead of
+        # going through SimpleJWT's TokenObtainPairSerializer, so
+        # ``SIMPLE_JWT["UPDATE_LAST_LOGIN"]`` never fires. ``last_login`` must be
+        # stamped explicitly on success — otherwise the admin user list shows
+        # "never" for everyone.
+        u = JasminUserFactory(email="stamp@example.com")
+        _set_password(u, "Z3rgRushIsScary!42")
+        assert u.last_login is None
+        client = APIClient()
+        resp = _login(client, "stamp@example.com", "Z3rgRushIsScary!42")
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        u.refresh_from_db()
+        assert u.last_login is not None
+
     def test_missing_fields_returns_400(self, tenant):
         client = APIClient()
         resp = client.post("/api/auth/login/", data={}, format="json")

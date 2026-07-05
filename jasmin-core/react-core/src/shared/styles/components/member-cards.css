@@ -12,7 +12,7 @@
 }
 .member-card-top {
   margin-top: 24;
-  background-color: var(--color-payments);
+  background-color: var(--color-future-blue);
 }
 
 /* Members list header row: summary stats on the left, the CSV export button
@@ -36,9 +36,8 @@
 /* Accent variants — keep them aligned with the existing CSS variables in
    variables.css. Only the border color changes. */
 .blue-border {
-  border-color: var(--color-payments);
+  border-color: var(--color-future-blue);
 }
-
 
 .green-border {
   border-color: var(--color-card-green-border);

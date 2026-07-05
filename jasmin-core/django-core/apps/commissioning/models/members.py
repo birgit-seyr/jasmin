@@ -31,8 +31,12 @@ class Member(
     CreatedMixin,
     WaitingListMixin,
 ):
-    # a member of the cooperative
-    # can also be staff
+    # NOT "membership is active" — a member's lifecycle is pending →
+    # admin-confirmed → cancelled (see admin_confirmed / cancelled_at). This
+    # flag is the GDPR soft-disable: ``gdpr.anonymization`` sets it False, and
+    # the renewal sweep + office renew button skip is_active=False members
+    # (SKIP_MEMBER_INACTIVE) so an anonymised member is never renewed. Do not
+    # surface it as a user-facing "active members" count.
     is_active = models.BooleanField(default=True, db_index=True)
     entry_date = models.DateField(blank=True, null=True)
     is_trial = models.BooleanField(default=False)
@@ -615,6 +619,24 @@ class Subscription(
     # The cancellation rationale now lives directly on the subscription it
     # explains (formerly carried by SubscriptionGroup).
     cancellation_reason = models.TextField(blank=True, null=True)
+
+    # Why this subscription is on the waiting list — ``WaitingListMixin`` only
+    # records THAT it is. Set server-side at enqueue so the office can see which
+    # capacity gate was full. ``None`` when the sub isn't waiting_listed.
+    class WaitingListReason(models.TextChoices):
+        DELIVERY_STATION_FULL = (
+            "delivery_station_full",
+            "Delivery station full",
+        )
+        VARIATION_FULL = "variation_full", "Share type sold out"
+        MANUAL = "manual", "Manually queued"
+
+    waiting_list_reason = models.CharField(
+        max_length=32,
+        choices=WaitingListReason.choices,
+        blank=True,
+        null=True,
+    )
 
     is_trial = models.BooleanField(default=False)
 

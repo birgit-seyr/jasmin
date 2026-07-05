@@ -7,6 +7,8 @@
   padding: 8px 16px;
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
+    border-color: var(--color-primary);
+
   border-radius: var(--border-radius);
   display: flex;
   flex-wrap: wrap;
@@ -25,6 +27,16 @@
 
 .summary-stats-card__item {
   white-space: nowrap;
+}
+
+/* Equal-width variant (SummaryStatsCard `equalWidth`): the strip STAYS a single
+   horizontal flex row — every cell just grows to share the width equally
+   (flex-basis 0) instead of sizing to its own content. min-width:0 + wrapping
+   labels keep a long label from forcing the row to break onto a second line. */
+.summary-stats-card--equal .summary-stats-card__item {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: normal;
 }
 
 .summary-stats-card__label {

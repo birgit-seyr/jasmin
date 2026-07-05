@@ -79,14 +79,17 @@
 /* Light separator between share-type-variation groups */
 .custom-forecast-table .ant-table-thead > tr > th.column-variation-start,
 .custom-forecast-table .ant-table-tbody > tr > td.column-variation-start {
-  border-left: 1px solid var(--color-primary)  !important;
+  border-left: 1px solid var(--color-primary) !important;
 }
 
 /* Zebra striping */
 .custom-forecast-table .ant-table-tbody > tr.ant-table-row:nth-child(odd) > td {
   background-color: #ebf6e2 !important;
 }
-.custom-forecast-table .ant-table-tbody > tr.ant-table-row:nth-child(even) > td {
+.custom-forecast-table
+  .ant-table-tbody
+  > tr.ant-table-row:nth-child(even)
+  > td {
   background-color: var(--color-bg-base) !important;
 }
 .custom-forecast-table .ant-table-tbody > tr.ant-table-row:hover > td {
@@ -96,8 +99,8 @@
 /* First summary row in harvest planning table */
 .custom-forecast-table .ant-table-summary tr:first-child td {
   background-color: #f7e6ff !important;
-  border-top: 2px solid var(--color-payments) !important;
-  border-bottom: 2px solid var(--color-payments) !important;
+  border-top: 2px solid var(--color-future-blue) !important;
+  border-bottom: 2px solid var(--color-future-blue) !important;
 }
 
 /* --- Custom Staff Table (blue theme) ------------------------------------- */
@@ -126,7 +129,7 @@
   color: rgb(10, 9, 9) !important;
   font-weight: 600 !important;
   text-align: center !important;
-  border-bottom: 2px solid var(--color-payments) !important;
+  border-bottom: 2px solid var(--color-future-blue) !important;
 }
 
 .custom-staff-table .ant-table-thead > tr:first-child > th:first-child {
@@ -173,7 +176,7 @@
   color: rgb(10, 9, 9) !important;
   font-weight: 600 !important;
   text-align: center !important;
-  border-bottom: 2px solid var(--color-payments) !important;
+  border-bottom: 2px solid var(--color-future-blue) !important;
 }
 
 .account-values-table .ant-table-thead > tr:first-child > th:first-child {
@@ -209,7 +212,7 @@
 .account-values-table .ant-table-summary td {
   background-color: #d6e4ff !important;
   font-weight: 600;
-  border-top: 2px solid var(--color-payments) !important;
+  border-top: 2px solid var(--color-future-blue) !important;
 }
 
 .account-values-table .value-positive {

@@ -579,6 +579,17 @@ export default function PurchaseList() {
     [],
   );
 
+  // Purchases: add + edit while the week isn't past and the user is office;
+  // rows are never deleted here.
+  const permissions = useMemo(
+    () => ({
+      canAdd: !isPast && isOffice,
+      canEdit: !isPast && isOffice,
+      canDelete: false,
+    }),
+    [isPast, isOffice],
+  );
+
   return (
     <div>
       <h1>{t("commissioning.purchase_list")}</h1>
@@ -633,11 +644,7 @@ export default function PurchaseList() {
         onDeleteSuccess={onDeleteSuccess}
         customSave={customSave}
         customEdit={customEdit}
-        permissions={{
-          canAdd: !isPast && isOffice,
-          canEdit: !isPast && isOffice,
-          canDelete: false,
-        }}
+        permissions={permissions}
       />
       <AddShareArticleEntry
         disabled={isPast}

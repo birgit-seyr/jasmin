@@ -22,14 +22,28 @@ interface SummaryStatsCardProps {
   stats: SummaryStat[];
   /** Optional caption rendered above the stats row (already translated). */
   title?: ReactNode;
+  /**
+   * Lay the stats out as an even grid where every cell has the SAME width
+   * (default: each cell sizes to its own content). Use when the labels are of
+   * comparable importance and a tidy aligned grid reads better than a compact
+   * content-sized row.
+   */
+  equalWidth?: boolean;
 }
 
 export default function SummaryStatsCard({
   stats,
   title,
+  equalWidth = false,
 }: SummaryStatsCardProps) {
   return (
-    <div className="summary-stats-card">
+    <div
+      className={
+        equalWidth
+          ? "summary-stats-card summary-stats-card--equal"
+          : "summary-stats-card"
+      }
+    >
       {title != null && (
         <div className="summary-stats-card__title">{title}</div>
       )}

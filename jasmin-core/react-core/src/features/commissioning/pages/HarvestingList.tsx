@@ -173,6 +173,17 @@ export default function HarvestingList() {
     [],
   );
 
+  // Harvesting: add is hidden in the gardener/mobile views; edit + add both
+  // require a non-past week and edit permission; rows are never deleted here.
+  const permissions = useMemo(
+    () => ({
+      canAdd: !isPast && !isGardenerView && !isMobile && canEdit,
+      canEdit: !isPast && !isMobile && canEdit,
+      canDelete: false,
+    }),
+    [isPast, isGardenerView, isMobile, canEdit],
+  );
+
   return (
     <div>
       <h1>{t("commissioning.harvesting_list")}</h1>
@@ -246,11 +257,7 @@ export default function HarvestingList() {
         onDeleteSuccess={onDeleteSuccess}
         customSave={customSave}
         customEdit={customEdit}
-        permissions={{
-          canAdd: !isPast && !isGardenerView && !isMobile && canEdit,
-          canEdit: !isPast && !isMobile && canEdit,
-          canDelete: false,
-        }}
+        permissions={permissions}
         className={
           isGardenerView
             ? "w-max custom-forecast-table"

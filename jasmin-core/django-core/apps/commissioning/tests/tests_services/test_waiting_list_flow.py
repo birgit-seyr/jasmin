@@ -88,7 +88,7 @@ def _validated_data(dsd, *, on_waiting_list=False):
 
 @pytest.mark.django_db
 class TestWaitingListCreate:
-    def test_waitlisted_create_skips_reservation_and_assigns_position(self, tenant):
+    def test_waiting_listed_create_skips_reservation_and_assigns_position(self, tenant):
         dsd = _make_dsd(capacity=1)
         _occupy_slot(dsd)  # station now full
 
@@ -101,7 +101,7 @@ class TestWaitingListCreate:
             subscription.waiting_list_status == Subscription.WaitingListStatus.PENDING
         )
         assert subscription.waiting_list_position == 1
-        # Waitlist entries hold no capacity.
+        # WaitingList entries hold no capacity.
         assert not CapacityReservation.objects.filter(
             subscription=subscription
         ).exists()

@@ -17,7 +17,7 @@ const ToolTipIcon = ({
 }: ToolTipIconProps) => {
   const defaultIconStyle: CSSProperties = {
     marginLeft: 4,
-    color: "var(--color-payments)",
+    color: "var(--color-future-blue)",
     cursor: "pointer",
     verticalAlign: "super",
     fontSize: "0.8em",

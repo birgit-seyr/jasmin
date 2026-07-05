@@ -43,22 +43,25 @@ export const useActiveStatusColumn = (
 
   const activeStatusColumn = useMemo<EditableColumnConfig<TableRecord>>(() => {
     const baseSorter = createDateRangeStatusSorter(validFromField, validUntilField);
-    const sorter =
-      pinnedIds && pinnedIds.size > 0
-        ? (
-            a: TableRecord,
-            b: TableRecord,
-            sortOrder?: "ascend" | "descend",
-          ) => {
-            const aPinned = a.id != null && pinnedIds.has(String(a.id));
-            const bPinned = b.id != null && pinnedIds.has(String(b.id));
-            // Keep pinned rows on top whichever way the column is sorted (AntD
-            // reverses the comparator for "descend").
-            if (aPinned && !bPinned) return sortOrder === "descend" ? 1 : -1;
-            if (!aPinned && bPinned) return sortOrder === "descend" ? -1 : 1;
-            return baseSorter(a, b);
-          }
-        : baseSorter;
+    const sorter = (
+      a: TableRecord,
+      b: TableRecord,
+      sortOrder?: "ascend" | "descend",
+    ) => {
+      // The unsaved add-row placeholder (``key === -1``) ALWAYS stays on top,
+      // whichever way the column is sorted (AntD reverses the comparator for
+      // "descend") — otherwise this default-sorted status column yanks a
+      // freshly-added row down to the last page. This must run even when
+      // ``pinnedIds`` is empty (a brand-new row has no id yet).
+      if (a.key === -1) return sortOrder === "descend" ? 1 : -1;
+      if (b.key === -1) return sortOrder === "descend" ? -1 : 1;
+      // Then keep recently-saved rows pinned on top until the refetch catches up.
+      const aPinned = a.id != null && pinnedIds?.has(String(a.id));
+      const bPinned = b.id != null && pinnedIds?.has(String(b.id));
+      if (aPinned && !bPinned) return sortOrder === "descend" ? 1 : -1;
+      if (!aPinned && bPinned) return sortOrder === "descend" ? -1 : 1;
+      return baseSorter(a, b);
+    };
     return {
       title: (
         <>

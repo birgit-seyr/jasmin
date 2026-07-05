@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>A spot has opened up</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Hi {{ member.first_name }},</h1>
+    <p>
+      Good news — a spot has opened up
+      {% if tenant_name %}at <strong>{{ tenant_name }}</strong>{% endif %}
+      for the subscription you're on the waiting list for:
+    </p>
+    <ul>
+      {% if variation_name %}<li><strong>{{ variation_name }}</strong></li>{% endif %}
+      {% if delivery_station_name %}<li>Pick-up: {{ delivery_station_name }}</li>{% endif %}
+      {% if valid_from %}<li>Starting: {{ valid_from }}</li>{% endif %}
+    </ul>
+    <p>If you'd still like it, please confirm{% if expires_at %} by <strong>{{ expires_at }}</strong>{% endif %}:</p>
+    <p>
+      <a href="{{ accept_url }}" style="display: inline-block; background: #2e7d32; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 6px; font-weight: 600;">Review your offer</a>
+    </p>
+    <p style="color: #666; font-size: 13px;">
+      The link lets you accept or decline without logging in. If you don't
+      respond in time, the spot is offered to the next person in line.
+    </p>
+  </body>
+</html>

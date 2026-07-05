@@ -12,6 +12,7 @@ from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import update_last_login
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -126,6 +127,13 @@ def issue_post_two_factor_tokens(*, user: JasminUser, tenant) -> LoginResult:
 
 
 def _issue_login_tokens(*, user: JasminUser, tenant) -> LoginResult:
+    # Stamp ``last_login`` on every successful login (direct + post-2FA). The
+    # custom login flow doesn't run through SimpleJWT's
+    # ``TokenObtainPairSerializer``, so ``SIMPLE_JWT["UPDATE_LAST_LOGIN"]`` never
+    # fires — do it explicitly here, the single chokepoint both success paths
+    # share (this runs only after the 2FA-challenge branches have returned).
+    update_last_login(None, user)
+
     refresh = RefreshToken.for_user(user)
     access = refresh.access_token
     access["tenant_id"] = str(tenant.schema_name)

@@ -120,15 +120,3 @@ class StorageLoggingEntrySerializer(serializers.Serializer):
     note = serializers.CharField(allow_null=True, required=False)
     storage_name = serializers.CharField()
     running_balance = serializers.FloatField(allow_null=True, required=False)
-
-
-class MemberGrowthStatisticSerializer(serializers.Serializer):
-    """Serializer for member growth statistics."""
-
-    period = serializers.DateField(help_text="Period date (start of month/week/year)")
-    new_members = serializers.IntegerField(
-        help_text="Number of new members in this period"
-    )
-    total_members = serializers.IntegerField(
-        help_text="Cumulative total members up to this period"
-    )

@@ -37,8 +37,10 @@ import { useAbosColumns } from "@features/abos/hooks/columns/useAbosColumns";
 import { useAdminConfirmationModalAbos } from "@features/abos/hooks/modals/useAdminConfirmationModalAbos";
 import { useRejectAboModal } from "@features/abos/hooks/modals/useRejectAboModal";
 import { useAbosData } from "@features/abos/hooks/useAbosData";
+import SubscriptionStatsCards from "@features/abos/components/SubscriptionStatsCards";
 import { useDateFormat, useTableRowSelection } from "@hooks/index";
 import { notify } from "@shared/utils";
+import { getErrorCode } from "@shared/utils/apiError";
 import type { AboRecord } from "./types";
 import { validateCancelledDate as validateCancelledDatePure } from "./validation";
 
@@ -96,6 +98,7 @@ export default function Abos() {
     allShareTypeVariations,
     variationDeliveryCycleById,
     getDeliveryStationDaysForRow,
+    getShareTypeVariationsForRow,
   } = useAbosData();
 
   // Thin i18n wrapper over the pure validation in
@@ -220,6 +223,7 @@ export default function Abos() {
     allShareTypeVariations,
     variationDeliveryCycleById,
     getDeliveryStationDaysForRow,
+    getShareTypeVariationsForRow,
     getAdminStatus,
     onOpenAdminConfirmation: handleOpenAdminConfirmationModal,
     adminStatusSorter: getAdminStatusSorterPinned,
@@ -236,11 +240,39 @@ export default function Abos() {
   const apiFunctions = useMemo<ApiFunctions>(
     () =>
       wrapApiFunctions<Subscription & TableRecord>({
-        create: (data) => commissioningAbosCreate(data),
+        create: async (data) => {
+          try {
+            return await commissioningAbosCreate(data);
+          } catch (error) {
+            const code = getErrorCode(error);
+            // The variation is sold out or the station-day is full for the
+            // term. Don't dead-end the office — re-create the row as a
+            // waiting-list entry (same behaviour as the member subscribe
+            // modal). The backend then records WHY on the waiting-list page.
+            if (
+              code === "share_type_variation.over_capacity" ||
+              code === "delivery_station.over_capacity"
+            ) {
+              const created = await commissioningAbosCreate({
+                ...data,
+                on_waiting_list: true,
+              });
+              notify.info(
+                t(
+                  code === "share_type_variation.over_capacity"
+                    ? "abos.waiting_listed_variation_full"
+                    : "abos.waiting_listed_station_full",
+                ),
+              );
+              return created;
+            }
+            throw error;
+          }
+        },
         update: (id, data) => commissioningAbosPartialUpdate(id, data),
         delete: (id) => commissioningAbosDestroy(id),
       }),
-    [],
+    [t],
   );
 
   // "Needs attention" quick filter toggled by the page badge below: the
@@ -270,6 +302,11 @@ export default function Abos() {
   return (
     <div>
       <h1>{t("abos.abos")}</h1>
+
+      <SubscriptionStatsCards
+        subscriptions={data}
+        variations={allShareTypeVariations}
+      />
 
       {pendingConfirmationCount > 0 && (
         <Badge count={pendingConfirmationCount} size="small">

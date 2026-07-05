@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
-import { Modal, DatePicker, Button, Spin, Empty } from "antd";
+import { Modal, DatePicker, Button, Spin } from "antd";
+import { EmptyHint } from "@shared/ui";
 import { DownloadOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import dayjs, { Dayjs } from "dayjs";
@@ -133,7 +134,7 @@ export default function ExportCsvAtDateModal<T>({
       )}
 
       {!loading && data && data.length === 0 && (
-        <Empty description={t("common.no_data")} />
+        <EmptyHint>{t("common.no_data")}</EmptyHint>
       )}
 
       {!loading && data && data.length > 0 && (

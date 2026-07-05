@@ -43,7 +43,10 @@ from .shares_day_change_service import (
 )
 from .shares_delivery_day_service import SharesDeliveryDayService
 from .snapshot_service import SnapshotService
-from .statistics import calculate_historical_share_type_variation_averages
+from .statistics import (
+    calculate_historical_share_type_variation_averages,
+    calculate_member_dashboard_statistics,
+)
 from .stock_service import StockService
 from .subscription_service import SubscriptionService
 from .trial_conversion import convert_trial_member_on_first_coop_share

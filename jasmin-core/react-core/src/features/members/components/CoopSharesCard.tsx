@@ -42,13 +42,17 @@ export default function CoopSharesCard({
     query: { enabled: isMemberOnly },
   });
 
-  const { confirmedShares, pendingShares } = useMemo(() => {
+  const { confirmedShares, pendingShares, liveShares } = useMemo(() => {
     const live = (myData?.coop_shares ?? []).filter((s) => !s.cancelled_at);
     const sum = (admin: boolean) =>
       live
         .filter((s) => Boolean(s.admin_confirmed) === admin)
         .reduce((acc, s) => acc + Number(s.amount_of_coop_shares ?? 0), 0);
-    return { confirmedShares: sum(true), pendingShares: sum(false) };
+    return {
+      confirmedShares: sum(true),
+      pendingShares: sum(false),
+      liveShares: live,
+    };
   }, [myData]);
 
   // Coop shares still awaiting office confirmation for this member (annotated
@@ -111,6 +115,46 @@ export default function CoopSharesCard({
           {currencySymbol}
         </Text>
       </Text>
+
+      {/* Per-purchase payment status (member self-view): paid shares show their
+          paid-on date in grey; unpaid ones show the due date in amber. */}
+      {isMemberOnly && liveShares.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          {liveShares.map((s) => {
+            const amount = Number(s.amount_of_coop_shares ?? 0);
+            return (
+              <div
+                key={s.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  padding: "2px 0",
+                }}
+              >
+                <Text type="secondary" style={{ fontSize: "0.9em" }}>
+                  {t("members.coop_share_purchase", { n: amount })}
+                </Text>
+                {s.paid_at ? (
+                  <Text type="secondary" style={{ fontSize: "0.9em" }}>
+                    {t("members.coop_share_paid_on", {
+                      date: formatDate(s.paid_at),
+                    })}
+                  </Text>
+                ) : (
+                  <Text type="warning" style={{ fontSize: "0.9em" }}>
+                    {s.due_date
+                      ? t("members.coop_share_due_by", {
+                          date: formatDate(s.due_date),
+                        })
+                      : t("members.coop_share_not_paid")}
+                  </Text>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {cancelledEffectiveAt && (
         <Alert
