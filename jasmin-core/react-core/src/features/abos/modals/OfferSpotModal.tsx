@@ -1,7 +1,7 @@
 import { Descriptions, InputNumber, Modal } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useCurrency, useDateFormat } from "@hooks/index";
+import { useCurrency, useDateFormat, useVariationLabel } from "@hooks/index";
 import type { AboRecord } from "@features/abos/pages/types";
 
 interface OfferSpotModalProps {
@@ -33,6 +33,7 @@ export function OfferSpotModal({
   const { t } = useTranslation();
   const { currencySymbol } = useCurrency();
   const { formatDate } = useDateFormat();
+  const variationLabel = useVariationLabel();
   const [price, setPrice] = useState<number | null>(null);
 
   // Re-seed the price each time the modal opens for a row: prefer the current
@@ -69,7 +70,7 @@ export function OfferSpotModal({
           {record?.member_string}
         </Descriptions.Item>
         <Descriptions.Item label={t("members.share_type_variation")}>
-          {record?.share_type_variation_string}
+          {variationLabel(record?.share_type_variation_string)}
         </Descriptions.Item>
         <Descriptions.Item label={t("members.default_delivery_station")}>
           {record?.default_delivery_station_day_string}

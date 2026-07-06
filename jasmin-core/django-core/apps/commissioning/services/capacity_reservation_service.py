@@ -121,8 +121,6 @@ class CapacityReservationService:
         to_create: list[CapacityReservation] = []
         for (year, week), resolved in delivery_station_day_by_week.items():
             delivery_station_day = locked[resolved.id]
-            if delivery_station_day.capacity is None:
-                continue  # unlimited — nothing to reserve for this week
             occupied = occupied_by_week.get((delivery_station_day.id, year, week), 0)
             # ``occupied`` is everyone else (own holds deleted above) and is
             # quantity-weighted; add this subscription's ``quantity`` before
@@ -222,8 +220,6 @@ class CapacityReservationService:
         quantity = subscription.quantity or 1
         for (year, week), resolved in delivery_station_day_by_week.items():
             delivery_station_day = locked[resolved.id]
-            if delivery_station_day.capacity is None:
-                continue
             total = total_by_week.get((delivery_station_day.id, year, week), 0)
             # Subtract our own active hold(s) for this slot so we measure
             # everyone else against the cap, then the slots we need must fit.
@@ -253,15 +249,13 @@ class CapacityReservationService:
         blindly restoring the paused deliveries can overbook the week — raise
         :class:`DeliveryStationOverCapacity` instead of silently overfilling
         (BIZ-6). Locks the station-day for race-safety, mirroring the confirm /
-        move checks. No-op for non-harvest options or an unlimited station-day.
+        move checks. No-op for non-harvest options.
         """
         if share_option not in _CAPACITY_SHARE_OPTIONS:
             return
         delivery_station_day = DeliveryStationDay.objects.select_for_update().get(
             pk=delivery_station_day_id
         )
-        if delivery_station_day.capacity is None:
-            return
         occupied = delivery_station_day.get_occupied_capacity(year, week)
         if occupied + quantity > delivery_station_day.capacity:
             raise DeliveryStationOverCapacity(
@@ -287,18 +281,16 @@ class CapacityReservationService:
         for ``(year, week)`` — used when the office moves a delivery to another
         station-day. Locks the station-day for race-safety.
 
-        No-op for non-harvest deliveries or station-days with no capacity
-        limit. ``moving_delivery_id`` is the delivery being moved IN: if it
-        already sits at this station-day for this week (a non-move re-save), it
-        is discounted so we don't block on a delivery against itself.
+        No-op for non-harvest deliveries. ``moving_delivery_id`` is the delivery
+        being moved IN: if it already sits at this station-day for this week (a
+        non-move re-save), it is discounted so we don't block on a delivery
+        against itself.
         """
         if share_option not in _CAPACITY_SHARE_OPTIONS:
             return
         delivery_station_day = DeliveryStationDay.objects.select_for_update().get(
             pk=delivery_station_day_id
         )
-        if delivery_station_day.capacity is None:
-            return
 
         occupied = delivery_station_day.get_occupied_capacity(year, week)
 

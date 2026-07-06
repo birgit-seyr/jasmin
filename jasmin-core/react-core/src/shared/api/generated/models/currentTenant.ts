@@ -14,23 +14,44 @@ frontend ``TenantContext`` fetches this on app mount, before any user
 has logged in, to render the login / register / forgot-password pages
 with the correct branding (logo, name) and locale.
 
-Fields here are strictly the minimum the login / register pages need
-— anonymous callers MUST NOT receive IBAN, BIC, SEPA credentials,
-internal email, phone, VAT number, organic-control number, or the
-merged ``TenantSettings`` overlay:
+Fields here are strictly the minimum the login / register / public
+legal pages need — anonymous callers MUST NOT receive IBAN, BIC,
+SEPA credentials, the internal ``email_for_orders``, VAT number,
+organic-control number, or the full merged ``TenantSettings``
+overlay:
 
   * Identity: ``id``, ``name``, ``description`` (NOT ``schema_name``
     — anonymous callers must not be able to enumerate internal
     schema identifiers; the auth-gated ``TenantSerializer`` keeps it)
   * Branding: ``logo``, ``bio_logo``
-  * i18n bootstrap: ``tenant_language``
+  * i18n / locale bootstrap: ``tenant_language``, ``date_format``
   * Tenant-disabled UX: ``is_active``
+  * Public legal-notice / GDPR contact block: ``address``,
+    ``zip_code``, ``city``, ``country``, ``email``, ``phone_number``,
+    ``website``, ``privacy_policy_html``. GDPR Art. 13/14 and § 5 TMG
+    REQUIRE the operator's identity + contact details to be reachable
+    WITHOUT authentication (the public ``/privacy-policy`` and
+    ``/impressum`` pages render them). These are the tenant's PUBLIC
+    contact details — distinct from the internal ``email_for_orders``,
+    which stays office-only.
+  * Register-page UX — single scalars lifted out of the otherwise-withheld
+    settings overlay (the rest stays office-gated) so the public
+    registration wizard can compute its coop-share bounds, subscription
+    term and pricing pre-login:
+      - coop shares: ``allows_trial_subscriptions``,
+        ``min_number_coop_shares``, ``max_number_coop_shares``,
+        ``value_one_coop_share``, ``requires_paper_signature_for_membership``
+      - end-of-term rules: ``allowed_trial_subscription_duration``,
+        ``subscriptions_end_at_end_of_season``,
+        ``subscriptions_end_after_one_year``, ``season_start_week``,
+        ``min_weeks_from_creation_to_start_delivery``
+      - pricing: ``allows_solidarity_pricing``
 
-Everything else (IBAN/BIC for invoice PDFs, contact info for PDF
-headers, ``settings`` / ``current_settings`` overlays for
-``getSetting(...)``, etc.) lives on the full ``TenantSerializer``
-served by the auth-gated ``TenantViewSet`` — the React
-``TenantContext`` re-fetches that after login completes.
+Everything else (IBAN/BIC for invoice PDFs, the full ``settings`` /
+``current_settings`` overlays for ``getSetting(...)``, etc.) lives on
+the full ``TenantSerializer`` served by the auth-gated
+``TenantViewSet`` — the React ``TenantContext`` re-fetches that after
+login completes.
  */
 export interface CurrentTenant {
   /** @maxLength 12 */
@@ -45,7 +66,58 @@ export interface CurrentTenant {
   readonly bio_logo?: string | null;
   /** @maxLength 8 */
   tenant_language?: string;
+  /** @maxLength 32 */
+  date_format?: string;
+  /** @maxLength 8 */
+  currency?: string;
   is_active?: boolean;
+  /**
+   * @maxLength 200
+   * @nullable
+   */
+  address?: string | null;
+  /**
+   * @maxLength 10
+   * @nullable
+   */
+  zip_code?: string | null;
+  /**
+   * @maxLength 100
+   * @nullable
+   */
+  city?: string | null;
+  /**
+   * @maxLength 100
+   * @nullable
+   */
+  country?: string | null;
+  /**
+   * @maxLength 254
+   * @nullable
+   */
+  email?: string | null;
+  /**
+   * @maxLength 20
+   * @nullable
+   */
+  phone_number?: string | null;
+  /**
+   * @maxLength 200
+   * @nullable
+   */
+  website?: string | null;
   privacy_policy_html?: string;
   readonly friendly_captcha_sitekey?: string;
+  readonly allows_trial_subscriptions?: boolean;
+  readonly min_number_coop_shares?: number;
+  readonly max_number_coop_shares?: number;
+  readonly value_one_coop_share?: number;
+  readonly requires_paper_signature_for_membership?: boolean;
+  readonly allowed_trial_subscription_duration?: number;
+  readonly subscriptions_end_at_end_of_season?: boolean;
+  readonly subscriptions_end_after_one_year?: boolean;
+  /** @nullable */
+  readonly season_start_week?: number | null;
+  readonly min_weeks_from_creation_to_start_delivery?: number;
+  readonly allows_solidarity_pricing?: boolean;
 }

@@ -9,7 +9,6 @@ from __future__ import annotations
 import datetime
 
 import pytest
-from django.utils import timezone
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
@@ -62,16 +61,6 @@ def _confirmed(variation, dsd, quantity=1, **extra):
 
 @pytest.mark.django_db
 class TestVariationCapacity:
-    def test_occupied_capacity_sums_live_confirmed_quantity(self, tenant, dsd):
-        variation = ShareTypeVariationFactory(capacity=20)
-        _confirmed(variation, dsd, quantity=3)
-        _confirmed(variation, dsd, quantity=2)
-        # NOT counted: draft (unconfirmed), cancelled, waiting_listed.
-        _confirmed(variation, dsd, quantity=5, admin_confirmed=False)
-        _confirmed(variation, dsd, quantity=5, cancelled_at=timezone.now())
-        _confirmed(variation, dsd, quantity=5, on_waiting_list=True)
-        assert variation.get_occupied_capacity() == 5
-
     def test_assert_raises_when_new_sub_would_exceed(self, tenant, dsd):
         variation = ShareTypeVariationFactory(capacity=3)
         _confirmed(variation, dsd, quantity=3)
@@ -144,22 +133,43 @@ class TestVariationCapacity:
         with pytest.raises(ShareTypeVariationOverCapacity):
             VariationCapacityService.assert_capacity_available(new)
 
-    def test_serializer_exposes_free_and_occupied(self, tenant, dsd):
+    def test_capacity_cannot_drop_below_current_occupancy(self, tenant, dsd):
+        from apps.commissioning.errors import (
+            ShareTypeVariationCapacityBelowOccupancy,
+        )
+
         variation = ShareTypeVariationFactory(capacity=10)
-        _confirmed(variation, dsd, quantity=4)
-        data = ShareTypeVariationSerializer(variation).data
-        assert data["capacity_occupied"] == 4
-        assert data["capacity_free"] == 6
+        _confirmed(variation, dsd, quantity=6)  # 6 active for current+future weeks
+        # A JasminError (not a DRF ValidationError) → propagates out of is_valid;
+        # the viewset's exception handler turns it into a 400.
+        with pytest.raises(ShareTypeVariationCapacityBelowOccupancy):
+            ShareTypeVariationSerializer(
+                variation, data={"capacity": 3}, partial=True
+            ).is_valid()
+
+    def test_capacity_edit_at_or_above_occupancy_ok(self, tenant, dsd):
+        variation = ShareTypeVariationFactory(capacity=10)
+        _confirmed(variation, dsd, quantity=6)
+        ser = ShareTypeVariationSerializer(
+            variation, data={"capacity": 6}, partial=True
+        )
+        assert ser.is_valid(), ser.errors
 
     def _serialize_with_window(
-        self, variation, year=2026, delivery_week=1, num_weeks=104
+        self, variation, user=None, year=2026, delivery_week=1, num_weeks=104
     ):
         request = APIRequestFactory().get(
             "/",
             {"year": year, "delivery_week": delivery_week, "num_weeks": num_weeks},
         )
+        drf_request = Request(request)
+        # An authenticated (office/member) reader sees the exact occupancy;
+        # leaving ``user`` unset keeps the request anonymous, which triggers the
+        # public availability-only mask.
+        if user is not None:
+            drf_request.user = user
         return ShareTypeVariationSerializer(
-            variation, context={"request": Request(request)}
+            variation, context={"request": drf_request}
         ).data
 
     def test_capacity_by_week_is_none_without_window(self, tenant, dsd):
@@ -169,20 +179,41 @@ class TestVariationCapacity:
         data = ShareTypeVariationSerializer(variation).data
         assert data["capacity_by_week"] is None
 
-    def test_capacity_by_week_marks_full_weeks_within_the_term(self, tenant, dsd):
+    def test_capacity_by_week_marks_full_weeks_within_the_term(self, tenant, user, dsd):
         # A single confirmed sub filling the cap for the whole _SPAN
         # (2026-01-05 → 2027-01-03) makes every week IT covers full (free 0),
         # while weeks outside its term stay free. ISO week keys are unpadded
-        # ("2026-2"), matching the station-day serializer.
+        # ("2026-2"), matching the station-day serializer. Authenticated
+        # (office) reader → exact occupancy, no masking.
         variation = ShareTypeVariationFactory(capacity=5)
         _confirmed(variation, dsd, quantity=5)
-        by_week = self._serialize_with_window(variation)["capacity_by_week"]
+        data = self._serialize_with_window(variation, user=user)
+        by_week = data["capacity_by_week"]
         # 2026-01-05 (valid_from, Monday) is ISO week 2 of 2026 → full.
         assert by_week["2026-2"]["occupied"] == 5
         assert by_week["2026-2"]["free"] == 0
         # ISO week 1 (2025-12-29 → 2026-01-04) predates the term → empty.
         assert by_week["2026-1"]["occupied"] == 0
         assert by_week["2026-1"]["free"] == 5
+        # Office keeps the raw cap.
+        assert data["capacity"] == 5
+
+    def test_capacity_by_week_masked_for_anonymous(self, tenant, dsd):
+        # Public registration (anonymous) reads must not leak exact occupancy or
+        # the raw cap: a full week still reads full (free 0) and an open week
+        # still reads available (free 99), but the subscriber count is hidden.
+        variation = ShareTypeVariationFactory(capacity=5)
+        _confirmed(variation, dsd, quantity=5)
+        data = self._serialize_with_window(variation)  # no user → anonymous
+        by_week = data["capacity_by_week"]
+        # Full term week: occupancy hidden, still reads full.
+        assert by_week["2026-2"]["occupied"] == 0
+        assert by_week["2026-2"]["free"] == 0
+        # Empty week: occupancy hidden, still reads available.
+        assert by_week["2026-1"]["occupied"] == 0
+        assert by_week["2026-1"]["free"] == 99
+        # Raw cap is never exposed anonymously.
+        assert data["capacity"] is None
 
     def test_waiting_list_reason_variation_full(self, tenant, dsd):
         variation = ShareTypeVariationFactory(capacity=1)

@@ -593,9 +593,11 @@ paths:
   /api/auth/register/:
     post:
       operationId: auth_register_create
-      description: Creates a JasminUser in ``pending_approval`` and a Member row (``admin_confirmed=False``).
-        Office must confirm the member from the Members page before the applicant
-        can log in.
+      description: Final step of the public registration wizard. Requires the email
+        to have been verified first (``register/verify_code/``). Creates a JasminUser
+        WITHOUT a usable password plus a Member row (``admin_confirmed=False``) and
+        emails an ``accounts.invitation`` set-password link. Office confirms the member
+        separately.
       summary: Public self-registration with membership application
       tags:
       - auth
@@ -620,6 +622,114 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PublicRegisterResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/auth/register/send_code/:
+    post:
+      operationId: auth_register_send_code_create
+      description: 'Step ''confirm email'' of the public registration wizard: emails
+        a short numeric code to prove the applicant controls the address. Always returns
+        the same generic body (anti-enumeration); a code is only actually sent when
+        the address isn''t already an account.'
+      summary: Request a registration email-verification code
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterSendCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegisterSendCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RegisterSendCodeRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterSendCodeResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/auth/register/verify_code/:
+    post:
+      operationId: auth_register_verify_code_create
+      summary: Verify a registration email-verification code
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterVerifyCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegisterVerifyCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RegisterVerifyCodeRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterVerifyCodeResponse'
           description: ''
         '400':
           content:
@@ -6430,6 +6540,7 @@ paths:
       - commissioning
       security:
       - tenantBoundJwtAuth: []
+      - {}
       responses:
         '200':
           content:
@@ -8195,6 +8306,7 @@ paths:
       - commissioning
       security:
       - tenantBoundJwtAuth: []
+      - {}
       responses:
         '200':
           content:
@@ -14940,6 +15052,7 @@ paths:
       - commissioning
       security:
       - tenantBoundJwtAuth: []
+      - {}
       responses:
         '200':
           content:
@@ -19570,6 +19683,7 @@ paths:
       - commissioning
       security:
       - tenantBoundJwtAuth: []
+      - {}
       responses:
         '200':
           content:
@@ -20089,6 +20203,7 @@ paths:
       - commissioning
       security:
       - tenantBoundJwtAuth: []
+      - {}
       responses:
         '200':
           content:
@@ -27769,6 +27884,9 @@ components:
           format: date
           readOnly: true
           nullable: true
+        cancellation_reason:
+          type: string
+          nullable: true
         due_date:
           type: string
           format: date
@@ -28445,23 +28563,44 @@ components:
         has logged in, to render the login / register / forgot-password pages
         with the correct branding (logo, name) and locale.
 
-        Fields here are strictly the minimum the login / register pages need
-        — anonymous callers MUST NOT receive IBAN, BIC, SEPA credentials,
-        internal email, phone, VAT number, organic-control number, or the
-        merged ``TenantSettings`` overlay:
+        Fields here are strictly the minimum the login / register / public
+        legal pages need — anonymous callers MUST NOT receive IBAN, BIC,
+        SEPA credentials, the internal ``email_for_orders``, VAT number,
+        organic-control number, or the full merged ``TenantSettings``
+        overlay:
 
           * Identity: ``id``, ``name``, ``description`` (NOT ``schema_name``
             — anonymous callers must not be able to enumerate internal
             schema identifiers; the auth-gated ``TenantSerializer`` keeps it)
           * Branding: ``logo``, ``bio_logo``
-          * i18n bootstrap: ``tenant_language``
+          * i18n / locale bootstrap: ``tenant_language``, ``date_format``
           * Tenant-disabled UX: ``is_active``
+          * Public legal-notice / GDPR contact block: ``address``,
+            ``zip_code``, ``city``, ``country``, ``email``, ``phone_number``,
+            ``website``, ``privacy_policy_html``. GDPR Art. 13/14 and § 5 TMG
+            REQUIRE the operator's identity + contact details to be reachable
+            WITHOUT authentication (the public ``/privacy-policy`` and
+            ``/impressum`` pages render them). These are the tenant's PUBLIC
+            contact details — distinct from the internal ``email_for_orders``,
+            which stays office-only.
+          * Register-page UX — single scalars lifted out of the otherwise-withheld
+            settings overlay (the rest stays office-gated) so the public
+            registration wizard can compute its coop-share bounds, subscription
+            term and pricing pre-login:
+              - coop shares: ``allows_trial_subscriptions``,
+                ``min_number_coop_shares``, ``max_number_coop_shares``,
+                ``value_one_coop_share``, ``requires_paper_signature_for_membership``
+              - end-of-term rules: ``allowed_trial_subscription_duration``,
+                ``subscriptions_end_at_end_of_season``,
+                ``subscriptions_end_after_one_year``, ``season_start_week``,
+                ``min_weeks_from_creation_to_start_delivery``
+              - pricing: ``allows_solidarity_pricing``
 
-        Everything else (IBAN/BIC for invoice PDFs, contact info for PDF
-        headers, ``settings`` / ``current_settings`` overlays for
-        ``getSetting(...)``, etc.) lives on the full ``TenantSerializer``
-        served by the auth-gated ``TenantViewSet`` — the React
-        ``TenantContext`` re-fetches that after login completes.
+        Everything else (IBAN/BIC for invoice PDFs, the full ``settings`` /
+        ``current_settings`` overlays for ``getSetting(...)``, etc.) lives on
+        the full ``TenantSerializer`` served by the auth-gated
+        ``TenantViewSet`` — the React ``TenantContext`` re-fetches that after
+        login completes.
       properties:
         id:
           type: string
@@ -28483,12 +28622,82 @@ components:
         tenant_language:
           type: string
           maxLength: 8
+        date_format:
+          type: string
+          maxLength: 32
+        currency:
+          type: string
+          maxLength: 8
         is_active:
           type: boolean
+        address:
+          type: string
+          nullable: true
+          maxLength: 200
+        zip_code:
+          type: string
+          nullable: true
+          maxLength: 10
+        city:
+          type: string
+          nullable: true
+          maxLength: 100
+        country:
+          type: string
+          nullable: true
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
         privacy_policy_html:
           type: string
         friendly_captcha_sitekey:
           type: string
+          readOnly: true
+        allows_trial_subscriptions:
+          type: boolean
+          readOnly: true
+        min_number_coop_shares:
+          type: integer
+          readOnly: true
+        max_number_coop_shares:
+          type: integer
+          readOnly: true
+        value_one_coop_share:
+          type: integer
+          readOnly: true
+        requires_paper_signature_for_membership:
+          type: boolean
+          readOnly: true
+        allowed_trial_subscription_duration:
+          type: integer
+          readOnly: true
+        subscriptions_end_at_end_of_season:
+          type: boolean
+          readOnly: true
+        subscriptions_end_after_one_year:
+          type: boolean
+          readOnly: true
+        season_start_week:
+          type: integer
+          nullable: true
+          readOnly: true
+        min_weeks_from_creation_to_start_delivery:
+          type: integer
+          readOnly: true
+        allows_solidarity_pricing:
+          type: boolean
           readOnly: true
       required:
       - name
@@ -33474,9 +33683,6 @@ components:
         email:
           type: string
           format: email
-        password:
-          type: string
-          writeOnly: true
         first_name:
           type: string
         last_name:
@@ -33497,6 +33703,19 @@ components:
         quantity:
           type: integer
           minimum: 1
+        default_delivery_station_day:
+          type: string
+        price_per_delivery:
+          type: string
+        payment_cycle:
+          type: string
+        is_trial:
+          type: boolean
+          default: false
+        valid_from:
+          type: string
+        valid_until:
+          type: string
         accepted_consent_documents:
           type: object
           additionalProperties:
@@ -33513,7 +33732,6 @@ components:
           writeOnly: true
       required:
       - email
-      - password
     PublicRegisterResponse:
       type: object
       properties:
@@ -33660,6 +33878,50 @@ components:
       required:
       - details
       - regenerated_subscriptions
+    RegisterSendCodeRequest:
+      type: object
+      description: |-
+        Payload for ``POST /api/auth/register/send_code/`` — request an
+        email-ownership verification code (step "confirm email" of the wizard).
+      properties:
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        frc_captcha_solution:
+          type: string
+          writeOnly: true
+      required:
+      - email
+    RegisterSendCodeResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+      - message
+    RegisterVerifyCodeRequest:
+      type: object
+      description: |-
+        Payload for ``POST /api/auth/register/verify_code/`` — submit the code
+        that was emailed.
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+      required:
+      - code
+      - email
+    RegisterVerifyCodeResponse:
+      type: object
+      properties:
+        verified:
+          type: boolean
+      required:
+      - verified
     Reseller:
       type: object
       description: |-
@@ -36201,13 +36463,6 @@ components:
           pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
           readOnly: true
           nullable: true
-        capacity_occupied:
-          type: integer
-          readOnly: true
-        capacity_free:
-          type: integer
-          nullable: true
-          readOnly: true
         capacity_by_week:
           type: object
           additionalProperties:

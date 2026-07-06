@@ -19,7 +19,11 @@ from ..models import (
 from ..utils.dynamic_keys import AMOUNT_KEY_PREFIX, DAY_VARIATION_RE
 from .delivery_serializer import CapacityWeekEntrySerializer
 from .dynamic_keys import DynamicAmountKeysMixin
-from .serializers_mixin import DeletableMixin, NameFieldMixin
+from .serializers_mixin import (
+    DeletableMixin,
+    NameFieldMixin,
+    mask_capacity_for_anonymous,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -72,17 +76,10 @@ class ShareTypeVariationSerializer(
     active_solidarity_min_price_per_delivery = serializers.DecimalField(
         max_digits=8, decimal_places=2, read_only=True, allow_null=True
     )
-    # Farm-wide production cap occupancy (see ``ShareTypeVariation.capacity``):
-    # how much is subscribed today and how much is free. ``capacity_free`` is
-    # ``None`` when ``capacity`` is NULL (unlimited) — the frontend greys out /
-    # offers the waiting list when it hits 0.
-    capacity_occupied = serializers.SerializerMethodField()
-    capacity_free = serializers.SerializerMethodField()
-    # Per-ISO-week occupancy — THE term-aware source of truth (the flat
-    # ``capacity_occupied``/``capacity_free`` above are only a TODAY snapshot).
-    # Same ``{"<year>-<week>": {occupied, free}}`` shape as the station-day's
-    # ``capacity_by_week`` so the frontend's one ``termCapacity`` evaluator
-    # reads both. Populated only when the request carries ``year`` +
+    # Per-ISO-week production-cap occupancy — the term-aware source of truth the
+    # frontend's ``termCapacity`` evaluator reads (same
+    # ``{"<year>-<week>": {occupied, free}}`` shape as the station-day's
+    # ``capacity_by_week``). Populated only when the request carries ``year`` +
     # ``delivery_week`` (else ``None``); a term is full when its busiest ("peak")
     # week has ``free <= 0`` — exactly what ``VariationCapacityService`` blocks.
     capacity_by_week = serializers.SerializerMethodField()
@@ -90,22 +87,6 @@ class ShareTypeVariationSerializer(
     class Meta:
         model = ShareTypeVariation
         fields = "__all__"
-
-    def _occupied(self, obj: ShareTypeVariation) -> int:
-        # Cache on the instance so the two capacity fields share one query.
-        cached = getattr(obj, "_capacity_occupied_cache", None)
-        if cached is None:
-            cached = obj.get_occupied_capacity()
-            obj._capacity_occupied_cache = cached
-        return cached
-
-    def get_capacity_occupied(self, obj: ShareTypeVariation) -> int:
-        return self._occupied(obj)
-
-    def get_capacity_free(self, obj: ShareTypeVariation) -> int | None:
-        if obj.capacity is None:
-            return None
-        return max(0, obj.capacity - self._occupied(obj))
 
     def _get_year_and_weeks(self):
         """Return (year, start_week, num_weeks) from request params, mirroring
@@ -172,9 +153,39 @@ class ShareTypeVariationSerializer(
         result = {}
         for current_year, week in year_weeks:
             occupied = counts.get((obj.id, current_year, week), 0)
-            free = None if obj.capacity is None else max(0, obj.capacity - occupied)
+            free = max(0, obj.capacity - occupied)
             result[f"{current_year}-{week}"] = {"occupied": occupied, "free": free}
         return result
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Public registration (anonymous) reads: availability only — never the
+        # exact per-week subscriber counts or the raw cap.
+        mask_capacity_for_anonymous(ret, self.context.get("request"))
+        return ret
+
+    def validate_capacity(self, value):
+        """Floor a capacity edit at the busiest current-or-future week's
+        occupancy — the office can't drop the farm-wide cap below what's already
+        subscribed for any upcoming week (mirrors the station-day guard, and
+        prevents a silent mass-waitlist). On create (``self.instance is None``)
+        nothing is subscribed yet, so skip.
+        """
+        if self.instance is None:
+            return value
+
+        from django.utils import timezone
+
+        from ..errors import ShareTypeVariationCapacityBelowOccupancy
+        from ..services.variation_capacity_service import VariationCapacityService
+
+        peak = VariationCapacityService.peak_occupied_from_week(
+            variation_id=self.instance.pk,
+            from_date=timezone.now().date(),
+        )
+        if value < peak:
+            raise ShareTypeVariationCapacityBelowOccupancy(capacity=value, peak=peak)
+        return value
 
     def validate(self, attrs):
         attrs = super().validate(attrs)

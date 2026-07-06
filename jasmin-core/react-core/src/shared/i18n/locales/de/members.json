@@ -3,7 +3,7 @@
   "overview": "Übersicht",
   "debits": "Lastschriften",
   "waiting_list": "Warteliste",
-  "member_emails": "Email Verwaltung",
+  "member_emails": "Email Verteiler",
   "sent_emails": "Versendete Emails",
   "no_emails_sent": "Bisher keine Emails versendet.",
   "name": "Name",
@@ -264,5 +264,6 @@
   "cancel_membership_partial_warning": "{{count}} Abo(s) konnten nicht beendet werden – bitte prüfe deren Mandate.",
   "member_cancelled_title": "Gekündigt zum {{date}}",
   "membership_card_title": "Mitgliedschaft Genossenschaft",
-  "no_active_subscriptions": "Keine aktiven Abos."
+  "no_active_subscriptions": "Keine aktiven Abos.",
+  "trial_subscription_weeks": "{{weeks}}-Wochen Probe-Abo"
 }

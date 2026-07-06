@@ -1,0 +1,11 @@
+Hallo{% if first_name %} {{ first_name }}{% endif %},
+
+danke für dein Interesse an {{ tenant_name }}.
+
+Gib den folgenden Code ein, um deine E-Mail-Adresse zu bestätigen und mit
+deiner Registrierung fortzufahren:
+
+  {{ code }}
+
+Der Code ist 15 Minuten gültig.
+Wenn du diese E-Mail nicht erwartet hast, kannst du sie einfach ignorieren.

@@ -13,7 +13,7 @@ import dayjs from "dayjs";
 import { useDateFormat } from "@hooks/configuration/useDateFormat";
 import { useTimeFormat } from "@hooks/configuration/useTimeFormat";
 import { useCurrency } from "@hooks/configuration/useCurrency";
-import { useTenant } from "@hooks/index";
+import { useTenant, useVariationLabel } from "@hooks/index";
 import {
   getPaymentsBillingProfilesListQueryKey,
   usePaymentsBillingProfilesList,
@@ -48,6 +48,7 @@ export const AdminConfirmationModalAbos: FC<
 > = ({ isOpen, onClose, abo, onConfirm, onReject, loading = false }) => {
   const { t } = useTranslation();
   const { dateFormat, formatDate, formatDateWithFallback } = useDateFormat();
+  const variationLabel = useVariationLabel();
   const { formatDateTime } = useTimeFormat();
   const { currencySymbol } = useCurrency();
   const queryClient = useQueryClient();
@@ -253,7 +254,7 @@ export const AdminConfirmationModalAbos: FC<
             </Descriptions.Item>
           )}
           <Descriptions.Item label={t("members.share_type_variation")}>
-            {abo.share_type_variation_string}
+            {variationLabel(abo.share_type_variation_string)}
           </Descriptions.Item>
           <Descriptions.Item label={t("members.valid_from")}>
             {formatDateWithFallback(abo.valid_from, "-")}

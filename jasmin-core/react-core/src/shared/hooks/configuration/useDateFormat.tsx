@@ -3,8 +3,15 @@ import { useCallback } from "react";
 import { useTenant } from "./useTenant";
 
 export const useDateFormat = () => {
-  const { getSetting } = useTenant();
-  const dateFormat = (getSetting("date_format", "DD.MM.YYYY") as string | undefined) ?? "DD.MM.YYYY";
+  const { getSetting, tenant } = useTenant();
+  // Prefer the merged settings overlay (authenticated pages); fall back to
+  // the tenant's top-level ``date_format`` scalar, which the anonymous
+  // ``/tenants/current/`` payload carries (public privacy / impressum pages
+  // have no settings overlay). Finally the German default.
+  const dateFormat =
+    (getSetting("date_format") as string | undefined) ??
+    (tenant?.date_format as string | undefined) ??
+    "DD.MM.YYYY";
   // Compact form for tight/mobile day labels (e.g. the day-selector strips):
   // the tenant date format with the year dropped, so it still tracks the
   // tenant's field order + separators. Keeps a trailing dot ("DD.MM." — the

@@ -57,5 +57,6 @@
   "charges_overview": "Overview of the created and executed payments per member and billing run.",
   "configuration_consents": "Here the consent texts are configured that members must accept during registration.",
   "configuration_time_management": "Here delivery days, ordering days and other time-based processes are configured.",
-  "packing_list_bulk": "Bulk view of the commissioning list for several box types / delivery days."
+  "packing_list_bulk": "Bulk view of the commissioning list for several box types / delivery days.",
+  "abos_emails": "Send emails to subscription holders here — for example filtered by share variation, delivery station or period."
 }

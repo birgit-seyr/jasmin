@@ -291,23 +291,44 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
     has logged in, to render the login / register / forgot-password pages
     with the correct branding (logo, name) and locale.
 
-    Fields here are strictly the minimum the login / register pages need
-    — anonymous callers MUST NOT receive IBAN, BIC, SEPA credentials,
-    internal email, phone, VAT number, organic-control number, or the
-    merged ``TenantSettings`` overlay:
+    Fields here are strictly the minimum the login / register / public
+    legal pages need — anonymous callers MUST NOT receive IBAN, BIC,
+    SEPA credentials, the internal ``email_for_orders``, VAT number,
+    organic-control number, or the full merged ``TenantSettings``
+    overlay:
 
       * Identity: ``id``, ``name``, ``description`` (NOT ``schema_name``
         — anonymous callers must not be able to enumerate internal
         schema identifiers; the auth-gated ``TenantSerializer`` keeps it)
       * Branding: ``logo``, ``bio_logo``
-      * i18n bootstrap: ``tenant_language``
+      * i18n / locale bootstrap: ``tenant_language``, ``date_format``
       * Tenant-disabled UX: ``is_active``
+      * Public legal-notice / GDPR contact block: ``address``,
+        ``zip_code``, ``city``, ``country``, ``email``, ``phone_number``,
+        ``website``, ``privacy_policy_html``. GDPR Art. 13/14 and § 5 TMG
+        REQUIRE the operator's identity + contact details to be reachable
+        WITHOUT authentication (the public ``/privacy-policy`` and
+        ``/impressum`` pages render them). These are the tenant's PUBLIC
+        contact details — distinct from the internal ``email_for_orders``,
+        which stays office-only.
+      * Register-page UX — single scalars lifted out of the otherwise-withheld
+        settings overlay (the rest stays office-gated) so the public
+        registration wizard can compute its coop-share bounds, subscription
+        term and pricing pre-login:
+          - coop shares: ``allows_trial_subscriptions``,
+            ``min_number_coop_shares``, ``max_number_coop_shares``,
+            ``value_one_coop_share``, ``requires_paper_signature_for_membership``
+          - end-of-term rules: ``allowed_trial_subscription_duration``,
+            ``subscriptions_end_at_end_of_season``,
+            ``subscriptions_end_after_one_year``, ``season_start_week``,
+            ``min_weeks_from_creation_to_start_delivery``
+          - pricing: ``allows_solidarity_pricing``
 
-    Everything else (IBAN/BIC for invoice PDFs, contact info for PDF
-    headers, ``settings`` / ``current_settings`` overlays for
-    ``getSetting(...)``, etc.) lives on the full ``TenantSerializer``
-    served by the auth-gated ``TenantViewSet`` — the React
-    ``TenantContext`` re-fetches that after login completes.
+    Everything else (IBAN/BIC for invoice PDFs, the full ``settings`` /
+    ``current_settings`` overlays for ``getSetting(...)``, etc.) lives on
+    the full ``TenantSerializer`` served by the auth-gated
+    ``TenantViewSet`` — the React ``TenantContext`` re-fetches that after
+    login completes.
     """
 
     # File fields → absolute URL strings (rest of the serializer is
@@ -321,6 +342,25 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
     # widget. Never carries the FC secret.
     friendly_captcha_sitekey = serializers.SerializerMethodField()
 
+    # Register-page config lifted out of the (otherwise withheld)
+    # TenantSettings overlay. Each is a single scalar the anonymous
+    # registration wizard needs pre-login; the rest of the overlay stays
+    # office-gated. Resolved once via ``_overlay`` (one query per tenant).
+    allows_trial_subscriptions = serializers.SerializerMethodField()
+    min_number_coop_shares = serializers.SerializerMethodField()
+    max_number_coop_shares = serializers.SerializerMethodField()
+    value_one_coop_share = serializers.SerializerMethodField()
+    requires_paper_signature_for_membership = serializers.SerializerMethodField()
+    # End-of-term rules — the registration wizard computes a subscription's
+    # ``valid_until`` (trial end / season / one-year) client-side, so it needs
+    # these pre-login.
+    allowed_trial_subscription_duration = serializers.SerializerMethodField()
+    subscriptions_end_at_end_of_season = serializers.SerializerMethodField()
+    subscriptions_end_after_one_year = serializers.SerializerMethodField()
+    season_start_week = serializers.SerializerMethodField()
+    min_weeks_from_creation_to_start_delivery = serializers.SerializerMethodField()
+    allows_solidarity_pricing = serializers.SerializerMethodField()
+
     class Meta:
         model = Tenant
         fields = [
@@ -330,14 +370,46 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
             "logo",
             "bio_logo",
             "tenant_language",
+            "date_format",
+            "currency",
             "is_active",
+            # Public legal-notice ("Impressum") + privacy-policy controller
+            # block — GDPR Art. 13/14 / § 5 TMG require these to be reachable
+            # without authentication. Public contact details only.
+            "address",
+            "zip_code",
+            "city",
+            "country",
+            "email",
+            "phone_number",
+            "website",
             # Privacy policy is public-by-design (GDPR Art. 13/14 information
             # duties — the document must be accessible without authentication).
             # Empty string when no per-tenant override; frontend then falls
             # back to the static template in ``PrivacyPolicyPage.tsx``.
             "privacy_policy_html",
             "friendly_captcha_sitekey",
+            "allows_trial_subscriptions",
+            "min_number_coop_shares",
+            "max_number_coop_shares",
+            "value_one_coop_share",
+            "requires_paper_signature_for_membership",
+            "allowed_trial_subscription_duration",
+            "subscriptions_end_at_end_of_season",
+            "subscriptions_end_after_one_year",
+            "season_start_week",
+            "min_weeks_from_creation_to_start_delivery",
+            "allows_solidarity_pricing",
         ]
+
+    def _overlay(self, obj: Tenant) -> dict:
+        # Resolve the TenantSettings overlay once per object (this endpoint
+        # serializes a single tenant, but cache anyway to keep every
+        # overlay-backed getter off a repeat query).
+        cache = self.__dict__.setdefault("_overlay_cache", {})
+        if obj.pk not in cache:
+            cache[obj.pk] = _current_settings_dict(obj)
+        return cache[obj.pk]
 
     def _file_url(self, file_field) -> str | None:
         return file_field.url if file_field else None
@@ -354,3 +426,46 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
         if not getattr(settings, "FRIENDLY_CAPTCHA_ENABLED", False):
             return ""
         return settings.FRIENDLY_CAPTCHA_SITEKEY or ""
+
+    def get_allows_trial_subscriptions(self, obj: Tenant) -> bool:
+        # Default True mirrors the TenantSettings field default — a tenant
+        # with no settings row yet still shows the trial card.
+        return bool(self._overlay(obj).get("allows_trial_subscriptions", True))
+
+    def get_min_number_coop_shares(self, obj: Tenant) -> int:
+        return int(self._overlay(obj).get("min_number_coop_shares", 3))
+
+    def get_max_number_coop_shares(self, obj: Tenant) -> int:
+        return int(self._overlay(obj).get("max_number_coop_shares", 100))
+
+    def get_value_one_coop_share(self, obj: Tenant) -> int:
+        return int(self._overlay(obj).get("value_one_coop_share", 100))
+
+    def get_requires_paper_signature_for_membership(self, obj: Tenant) -> bool:
+        return bool(
+            self._overlay(obj).get("requires_paper_signature_for_membership", False)
+        )
+
+    def get_allowed_trial_subscription_duration(self, obj: Tenant) -> int:
+        # Default mirrors the TenantSettings model field default (4 deliveries)
+        # so a tenant with no settings row still yields a trial end.
+        value = self._overlay(obj).get("allowed_trial_subscription_duration")
+        return int(value) if value is not None else 4
+
+    def get_subscriptions_end_at_end_of_season(self, obj: Tenant) -> bool:
+        return bool(self._overlay(obj).get("subscriptions_end_at_end_of_season", False))
+
+    def get_subscriptions_end_after_one_year(self, obj: Tenant) -> bool:
+        return bool(self._overlay(obj).get("subscriptions_end_after_one_year", True))
+
+    def get_season_start_week(self, obj: Tenant) -> int | None:
+        value = self._overlay(obj).get("season_start_week")
+        return int(value) if value is not None else None
+
+    def get_min_weeks_from_creation_to_start_delivery(self, obj: Tenant) -> int:
+        return int(
+            self._overlay(obj).get("min_weeks_from_creation_to_start_delivery", 2)
+        )
+
+    def get_allows_solidarity_pricing(self, obj: Tenant) -> bool:
+        return bool(self._overlay(obj).get("allows_solidarity_pricing", False))

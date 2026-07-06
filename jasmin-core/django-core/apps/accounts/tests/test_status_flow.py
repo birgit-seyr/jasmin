@@ -158,19 +158,38 @@ class TestLoginService:
 class TestSelfRegistration:
     @pytest.fixture
     def payload(self):
+        # No password: the wizard never collects one — the account is created
+        # unusable-password and a set-password link is emailed on success.
         return {
             "first_name": "Selma",
             "last_name": "Selfreg",
             "email": "selma@example.com",
-            "password": "L0ngEnoughPwd!Solid",
             "user_language": "en",
         }
 
-    def test_creates_pending_approval_user_and_member(self, tenant, payload):
+    @pytest.fixture(autouse=True)
+    def _email_verified(self):
+        # register_public_applicant now requires the address to have passed
+        # the email-ownership code check first. That mechanism has its own
+        # tests (TestRegistrationEmailVerification); here we stub it True so
+        # these tests exercise the account/member/consent creation logic.
+        from unittest.mock import patch
+
+        with patch(
+            "apps.accounts.services.email_verification_service.is_email_verified",
+            return_value=True,
+        ):
+            yield
+
+    def test_creates_pending_invitation_user_and_member(self, tenant, payload):
         result = register_public_applicant(data=payload, tenant=tenant)
         user = JasminUser.objects.get(email="selma@example.com")
-        assert user.account_status == "pending_approval"
+        # No password set during the wizard — the user activates via the
+        # emailed set-password link (accept_invitation), so it starts in
+        # pending_invitation with an unusable password.
+        assert user.account_status == "pending_invitation"
         assert user.is_active is False
+        assert user.has_usable_password() is False
         # Member exists, linked, unconfirmed
         member = Member.objects.get(id=result["member_id"])
         assert member.user_id == user.id
@@ -178,24 +197,30 @@ class TestSelfRegistration:
         # Signal: linked Member ⇒ member role
         assert Role.MEMBER in user.roles
 
-    def test_login_blocked_until_office_confirms(self, tenant, payload, rf):
+    def test_login_blocked_until_password_set(self, tenant, payload, rf):
         register_public_applicant(data=payload, tenant=tenant)
-        with pytest.raises(AccountBlocked):
+        # The pending_invitation user has no usable password yet, so login
+        # fails at the credential check (before the status check — which
+        # avoids leaking that the address exists). Either way: blocked until
+        # they set a password via the emailed link.
+        with pytest.raises(InvalidCredentials):
             authenticate_for_tenant(
                 request=rf.post("/"),
                 email=payload["email"],
-                password=payload["password"],
+                password="whatever-they-have-none",
                 tenant=tenant,
             )
 
-    def test_member_confirm_flips_user_active(self, tenant, payload):
+    def test_member_confirm_does_not_activate_pending_invitation(self, tenant, payload):
+        # Office-confirming the membership assigns the member number but does
+        # NOT flip the user active — activation is via the set-password link
+        # (the confirm override only activates pending_approval users).
         register_public_applicant(data=payload, tenant=tenant)
         member = Member.objects.get(email="selma@example.com")
         admin = JasminUserFactory(roles=[Role.OFFICE])
         member.confirm(admin_user=admin, save=True)
         member.user.refresh_from_db()
-        assert member.user.account_status == "active"
-        assert member.user.is_active is True
+        assert member.user.account_status == "pending_invitation"
         assert member.member_number is not None  # auto-assigned
 
     def test_email_collision_returns_generic_message(self, tenant, payload):
@@ -259,6 +284,32 @@ class TestSelfRegistration:
         member = Member.objects.get(id=result["member_id"])
         assert CoopShare.objects.filter(member=member).count() == 0
         assert result["coop_shares_created"] == 0
+
+    def test_trial_registration_makes_trial_member_without_coop_shares(
+        self, tenant, payload
+    ):
+        # Probe-Abo signup: a trial member, no coop shares even if a count leaks
+        # through, and the intent note flags the trial + its term.
+        from apps.commissioning.models import CoopShare
+
+        result = register_public_applicant(
+            data={
+                **payload,
+                "is_trial": True,
+                "coop_shares_count": 3,  # ignored for trials
+                "share_type_variation_id": "stv_probe",
+                "quantity": 1,
+                "valid_from": "2026-08-03",
+                "valid_until": "2026-09-28",
+            },
+            tenant=tenant,
+        )
+        member = Member.objects.get(id=result["member_id"])
+        assert member.is_trial is True
+        assert CoopShare.objects.filter(member=member).count() == 0
+        assert result["coop_shares_created"] == 0
+        assert "[Trial subscription intent]" in (member.note or "")
+        assert "valid_until=2026-09-28" in member.note
 
     def test_creates_consent_records_for_accepted_documents(self, tenant, payload):
         import datetime

@@ -121,6 +121,10 @@ class ShareTypeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     # below is already ``IsStaffOrMember``; matching that here.
     read_permission = IsStaffOrMember
     write_permission = IsOffice
+    # The public registration wizard lists the share catalog to prospective
+    # (anonymous) members. LIST only — retrieve/write stay member/office-gated.
+    # The serializer exposes catalog fields only (no PII / banking).
+    public_read_actions = frozenset({"list"})
     serializer_class = ShareTypeSerializer
 
     @extend_schema(
@@ -246,6 +250,10 @@ class ShareTypeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaffOrMember
     write_permission = IsOffice
+    # Public registration wizard lists variations (with prices + advisory
+    # per-week capacity) to prospective anonymous members. LIST only —
+    # retrieve/write stay member/office-gated. Catalog fields only.
+    public_read_actions = frozenset({"list"})
     serializer_class = ShareTypeVariationSerializer
 
     @extend_schema(

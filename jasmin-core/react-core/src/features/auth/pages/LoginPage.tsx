@@ -1,5 +1,5 @@
 import { LockOutlined, SafetyOutlined, UserOutlined } from "@ant-design/icons";
-import { useTenant } from "@hooks/index";
+import { useSubscriptionTerm, useTenant } from "@hooks/index";
 import { FriendlyCaptcha } from "@shared/auth/FriendlyCaptcha";
 import { useAuth } from "@shared/contexts/AuthContext";
 import { AboutModal } from "@shared/modals";
@@ -50,6 +50,14 @@ const LoginPage = () => {
   const isSuperAdminDomain =
     tenant?.schema_name === "public" ||
     window.location.hostname === "admin.localhost";
+
+  // Whether to show the trial-subscription card. The flag rides on the
+  // anonymous /tenants/current/ payload (CurrentTenantSerializer); show by
+  // default, hide only when the tenant explicitly disabled trials.
+  const allowsTrial = tenant?.allows_trial_subscriptions !== false;
+  // Trial length (in deliveries/weeks) for the trial card subtitle — read from
+  // the anonymous tenant payload via the shared term hook.
+  const { trialDurationInDeliveries } = useSubscriptionTerm();
 
   const handleLogin = async (values: LoginFormValues) => {
     setLocalError("");
@@ -114,202 +122,296 @@ const LoginPage = () => {
 
   return (
     <div className="auth-page">
-      <Flex justify="center" align="start" wrap gap="large">
-        <Card className="auth-card auth-card--narrow auth-card--shadow">
-          <Space direction="vertical" size="large" className="w-full">
-            <div className="text-center">
-              <div className="logo">
-                {/* <img src={getLogo()} alt="Logo" style={{ border: '2px solid rgb(32, 95, 82)' }}/> */}
-                {displayLogoUrl && (
-                  <img
-                    src={displayLogoUrl}
-                    alt={tenant?.name ?? t("common.logo")}
-                    width={200}
-                    height={75}
-                    // React 18 doesn't recognise the camelCase
-                    // `fetchPriority` prop yet (added in React 19).
-                    // Lowercase passes through to the rendered <img>
-                    // as a normal HTML attribute without a warning.
-                    {...({ fetchpriority: "high" } as Record<string, string>)}
-                    style={{
-                      height: "75px",
-                      width: "auto",
-                      objectFit: "contain",
-                    }}
-                  />
+      <div
+        className={`auth-stack ${
+          isSuperAdminDomain
+            ? "auth-stack--single"
+            : allowsTrial
+              ? "auth-stack--triple"
+              : "auth-stack--double"
+        }`}
+      >
+        {/* Header banner: the tenant logo (or name), spanning the full
+            width of the card row below. */}
+        {(displayLogoUrl || tenant?.name) && (
+          <Card className="auth-card--shadow auth-banner">
+            {displayLogoUrl ? (
+              <img
+                src={displayLogoUrl}
+                alt={tenant?.name ?? t("common.logo")}
+                width={200}
+                height={75}
+                // React 18 doesn't recognise the camelCase `fetchPriority`
+                // prop yet (React 19); lowercase passes through as a plain
+                // HTML attribute.
+                {...({ fetchpriority: "high" } as Record<string, string>)}
+                style={{ height: "75px", width: "auto", objectFit: "contain" }}
+              />
+            ) : (
+              <Title level={3} style={{ margin: 0 }}>
+                {tenant?.name}
+              </Title>
+            )}
+          </Card>
+        )}
+
+        <Flex
+          className="auth-cards-row"
+          justify="center"
+          align="start"
+          wrap
+          gap="large"
+        >
+          {/* Login Card */}
+
+          <Card className="auth-card auth-card--narrow auth-card--shadow">
+            <Space direction="vertical" size="large" className="w-full">
+              <div className="text-center">
+                <Title level={2}>
+                  {isSuperAdminDomain
+                    ? t("auth.login_card.super_admin")
+                    : t("commissioning.welcome")}
+                </Title>
+                {tenant && (
+                  <Text type="secondary">
+                    {isSuperAdminDomain
+                      ? t("auth.login_card.global_admin_access")
+                      : `${t("auth.login_card.sign_in_to")} ${tenant.name}`}
+                  </Text>
                 )}
               </div>
-              <Title level={2}>
-                {isSuperAdminDomain
-                  ? t("auth.login_card.super_admin")
-                  : t("commissioning.welcome")}
-              </Title>
-              {tenant && (
-                <Text type="secondary">
-                  {isSuperAdminDomain
-                    ? t("auth.login_card.global_admin_access")
-                    : `${t("auth.login_card.sign_in_to")} ${tenant.name}`}
-                </Text>
+
+              {displayError && (
+                <Alert
+                  message={displayError}
+                  type="error"
+                  showIcon
+                  closable
+                  onClose={() => setLocalError("")}
+                />
               )}
-            </div>
 
-            {displayError && (
-              <Alert
-                message={displayError}
-                type="error"
-                showIcon
-                closable
-                onClose={() => setLocalError("")}
-              />
-            )}
-
-            {step === "credentials" && (
-              <Form
-                form={form}
-                name="login"
-                onFinish={handleLogin}
-                layout="vertical"
-                size="large"
-              >
-                <Form.Item
-                  name="username"
-                  label={t("auth.login_card.email")}
-                  rules={[
-                    {
-                      required: true,
-                      message: t("auth.login_card.please_enter_email"),
-                    },
-                    {
-                      type: "email",
-                      message: t("auth.login_card.please_enter_valid_email"),
-                    },
-                  ]}
+              {step === "credentials" && (
+                <Form
+                  form={form}
+                  name="login"
+                  onFinish={handleLogin}
+                  layout="vertical"
+                  size="large"
                 >
-                  <Input
-                    prefix={<UserOutlined />}
-                    placeholder={
-                      isSuperAdminDomain
-                        ? `${t("auth.login_card.super_admin")} ${t("auth.login_card.email")}`
-                        : t("auth.login_card.email")
-                    }
-                    autoComplete="username"
-                  />
-                </Form.Item>
+                  <Form.Item
+                    name="username"
+                    // label={t("auth.login_card.email")}
+                    rules={[
+                      {
+                        required: true,
+                        message: t("auth.login_card.please_enter_email"),
+                      },
+                      {
+                        type: "email",
+                        message: t("auth.login_card.please_enter_valid_email"),
+                      },
+                    ]}
+                  >
+                    <Input
+                      prefix={<UserOutlined />}
+                      placeholder={
+                        isSuperAdminDomain
+                          ? `${t("auth.login_card.super_admin")} ${t("auth.login_card.email")}`
+                          : t("auth.login_card.email")
+                      }
+                      autoComplete="username"
+                    />
+                  </Form.Item>
 
-                <Form.Item
-                  name="password"
-                  label={t("auth.login_card.password")}
-                  rules={[
-                    {
-                      required: true,
-                      message: t("auth.login_card.please_enter_password"),
-                    },
-                  ]}
-                >
-                  <Input.Password
-                    prefix={<LockOutlined />}
-                    placeholder={t("auth.login_card.password")}
-                    autoComplete="current-password"
-                  />
-                </Form.Item>
+                  <Form.Item
+                    name="password"
+                    // label={t("auth.login_card.password")}
+                    rules={[
+                      {
+                        required: true,
+                        message: t("auth.login_card.please_enter_password"),
+                      },
+                    ]}
+                  >
+                    <Input.Password
+                      prefix={<LockOutlined />}
+                      placeholder={t("auth.login_card.password")}
+                      autoComplete="current-password"
+                    />
+                  </Form.Item>
 
-                <div
-                  style={{
-                    textAlign: "right",
-                    marginTop: -12,
-                    marginBottom: 12,
-                  }}
+                  <div
+                    style={{
+                      textAlign: "right",
+                      marginTop: -12,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <Link to="/forgot-password" style={{ fontSize: 13 }}>
+                      {t("auth.login_card.forgot_password")}
+                    </Link>
+                  </div>
+
+                  <FriendlyCaptcha onSolution={setCaptchaSolution} />
+
+                  <Form.Item>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={loading}
+                      block
+                    >
+                      {isSuperAdminDomain
+                        ? t("auth.login_card.admin_sign_in")
+                        : t("auth.login_card.sign_in")}
+                    </Button>
+                  </Form.Item>
+                </Form>
+              )}
+
+              {step === "code" && (
+                <Form
+                  form={codeForm}
+                  name="two-factor-code"
+                  onFinish={handleVerify}
+                  layout="vertical"
+                  size="large"
                 >
-                  <Link to="/forgot-password" style={{ fontSize: 13 }}>
-                    {t("auth.login_card.forgot_password")}
-                  </Link>
+                  <Text strong>{t("auth.two_factor.prompt_title")}</Text>
+                  <Text type="secondary" style={{ display: "block" }}>
+                    {t("auth.two_factor.prompt_subtitle")}
+                  </Text>
+                  <Form.Item
+                    name="code"
+                    label={t("auth.two_factor.code_label")}
+                    style={{ marginTop: 16 }}
+                    rules={[
+                      {
+                        required: true,
+                        message: t("auth.two_factor.please_enter_code"),
+                      },
+                    ]}
+                  >
+                    <Input
+                      prefix={<SafetyOutlined />}
+                      placeholder="123456"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      autoFocus
+                      maxLength={20}
+                    />
+                  </Form.Item>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {t("auth.two_factor.recovery_hint")}
+                  </Text>
+                  <Form.Item style={{ marginTop: 16 }}>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={loading}
+                      block
+                    >
+                      {t("auth.two_factor.verify")}
+                    </Button>
+                  </Form.Item>
+                  <Button type="link" block onClick={handleBackToCredentials}>
+                    {t("auth.two_factor.back_to_password")}
+                  </Button>
+                </Form>
+              )}
+            </Space>
+          </Card>
+          {/* Registration Card */}
+          {!isSuperAdminDomain && (
+            <Card className="auth-card auth-card--narrow auth-card--shadow">
+              <Space direction="vertical" size="large" className="w-full">
+                <div className="text-center">
+                  <Title level={2}>{t("auth.registration.card_title")}</Title>
+                  <Title level={5}>
+                    {t("auth.registration.card_sub_title")}
+                  </Title>
+                </div>
+                <div style={{ marginTop: "-1.5em" }}>
+                  <ul style={{ paddingLeft: 20, color: "rgba(0,0,0,0.65)" }}>
+                    <li>{t("auth.registration.overview.tell_us")}</li>
+                    <li>{t("auth.registration.overview.verify_email")}</li>
+                    <li>{t("auth.registration.overview.choose_shares")}</li>
+                    <li>{t("auth.registration.overview.order_variation")}</li>
+                  </ul>
                 </div>
 
-                <FriendlyCaptcha onSolution={setCaptchaSolution} />
-
-                <Form.Item>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    loading={loading}
-                    block
-                  >
-                    {isSuperAdminDomain
-                      ? t("auth.login_card.admin_sign_in")
-                      : t("auth.login_card.sign_in")}
+                <Link to="/register">
+                  <Button type="primary" size="large" block>
+                    {t("auth.registration.start")}
                   </Button>
-                </Form.Item>
-              </Form>
-            )}
-
-            {step === "code" && (
-              <Form
-                form={codeForm}
-                name="two-factor-code"
-                onFinish={handleVerify}
-                layout="vertical"
-                size="large"
-              >
-                <Text strong>{t("auth.two_factor.prompt_title")}</Text>
-                <Text type="secondary" style={{ display: "block" }}>
-                  {t("auth.two_factor.prompt_subtitle")}
-                </Text>
-                <Form.Item
-                  name="code"
-                  label={t("auth.two_factor.code_label")}
-                  style={{ marginTop: 16 }}
-                  rules={[
-                    {
-                      required: true,
-                      message: t("auth.two_factor.please_enter_code"),
-                    },
-                  ]}
-                >
-                  <Input
-                    prefix={<SafetyOutlined />}
-                    placeholder="123456"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    autoFocus
-                    maxLength={20}
-                  />
-                </Form.Item>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  {t("auth.two_factor.recovery_hint")}
-                </Text>
-                <Form.Item style={{ marginTop: 16 }}>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    loading={loading}
-                    block
-                  >
-                    {t("auth.two_factor.verify")}
-                  </Button>
-                </Form.Item>
-                <Button type="link" block onClick={handleBackToCredentials}>
-                  {t("auth.two_factor.back_to_password")}
-                </Button>
-              </Form>
-            )}
-
-            {tenant && (
-              <div style={{ textAlign: "center", marginTop: "16px" }}>
-                <Text type="secondary" style={{ fontSize: "12px" }}>
-                  {isSuperAdminDomain
-                    ? t("auth.login_card.super_admin_portal")
-                    : `${tenant.name}`}
-                </Text>
-                <br />
-                <Link to="/privacy-policy" style={{ fontSize: "12px" }}>
-                  {t("privacy.title")}
                 </Link>
-              </div>
-            )}
+              </Space>
+            </Card>
+          )}
+          {/* Trial Subscription Card */}
+          {!isSuperAdminDomain && allowsTrial && (
+            <Card className="auth-card auth-card--narrow auth-card--shadow">
+              <Space direction="vertical" size="large" className="w-full">
+                <div className="text-center">
+                  <Title level={2}>
+                    {t("auth.registration.card_title_trial")}
+                  </Title>
+                  {trialDurationInDeliveries != null && (
+                    <Title level={5}>
+                      {t("auth.registration.card_sub_title_trial", {
+                        weeks: trialDurationInDeliveries,
+                      })}
+                    </Title>
+                  )}
+                </div>
+                <div style={{ marginTop: "-1.5em" }}>
+                  <ul
+                    style={{
+                      paddingLeft: 20,
+                      color: "rgba(0,0,0,0.65)",
+                    }}
+                  >
+                    <li>{t("auth.registration.overview.tell_us_trial")}</li>
+                    <li>{t("auth.registration.overview.verify_email")}</li>
+                    <li>
+                      {t("auth.registration.overview.order_trial_variation")}
+                    </li>
+                  </ul>
+                </div>
 
-            <div style={{ textAlign: "center" }}>
+                <Link to="/register?trial=1">
+                  <Button type="primary" size="large" block>
+                    {t("auth.registration.start_trial")}
+                  </Button>
+                </Link>
+              </Space>
+            </Card>
+          )}
+        </Flex>
+
+        {/* Footer banner: tenant name, privacy, impressum, about — spans
+            the same width as the header. */}
+        <Card
+          className="auth-card--shadow auth-banner"
+          styles={{ body: { padding: "12px 24px" } }}
+        >
+          {tenant && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {isSuperAdminDomain
+                ? t("auth.login_card.super_admin_portal")
+                : tenant.name}
+            </Text>
+          )}
+          <div style={{ marginTop: 4 }}>
+            <Space split={<Text type="secondary">·</Text>} wrap>
+              <Link to="/privacy-policy" style={{ fontSize: 12 }}>
+                {t("privacy.title")}
+              </Link>
+              <Link to="/impressum" style={{ fontSize: 12 }}>
+                {t("impressum.link")}
+              </Link>
               <Text
-                type="secondary"
                 role="button"
                 tabIndex={0}
                 aria-label={t("about.open")}
@@ -320,45 +422,19 @@ const LoginPage = () => {
                     setAboutOpen(true);
                   }
                 }}
-                style={{ fontSize: 11, cursor: "pointer" }}
+                style={{
+                  fontSize: 12,
+                  cursor: "pointer",
+                  color: "var(--color-primary)",
+                }}
               >
                 2026 created by Chance
               </Text>
-            </div>
-            <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
-          </Space>
-        </Card>
-
-        {!isSuperAdminDomain && (
-          <Card className="auth-card auth-card--narrow auth-card--shadow">
-            <Space direction="vertical" size="large" className="w-full">
-              <div className="text-center">
-                <Title level={2}>{t("auth.registration.card_title")}</Title>
-                <Text type="secondary">
-                  {tenant?.name
-                    ? t("auth.registration.card_description", {
-                        tenant: tenant.name,
-                      })
-                    : t("auth.registration.card_description_generic")}
-                </Text>
-              </div>
-
-              <ul style={{ paddingLeft: 20, color: "rgba(0,0,0,0.65)" }}>
-                <li>{t("auth.registration.overview.tell_us")}</li>
-                <li>{t("auth.registration.overview.verify_email")}</li>
-                <li>{t("auth.registration.overview.choose_shares")}</li>
-                <li>{t("auth.registration.overview.order_variation")}</li>
-              </ul>
-
-              <Link to="/register">
-                <Button type="primary" size="large" block>
-                  {t("auth.registration.start")}
-                </Button>
-              </Link>
             </Space>
-          </Card>
-        )}
-      </Flex>
+          </div>
+        </Card>
+      </div>
+      <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </div>
   );
 };

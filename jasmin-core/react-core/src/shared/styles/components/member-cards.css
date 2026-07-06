@@ -42,6 +42,9 @@
 .green-border {
   border-color: var(--color-card-green-border);
 }
+.dark-green-border {
+  border-color: var(--color-primary);
+}
 
 /* Bluish TITLE bar only — tints the AntD card header (``.ant-card-head``), not
    the body. Standalone: add ``member-card--blue-title`` to any Card's

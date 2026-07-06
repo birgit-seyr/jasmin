@@ -17,7 +17,6 @@ listed here are explicit so drf-spectacular / orval pick them up.
  */
 export interface PublicRegisterRequest {
   email: string;
-  password: string;
   first_name?: string;
   last_name?: string;
   address?: string;
@@ -29,6 +28,12 @@ export interface PublicRegisterRequest {
   share_type_variation_id?: string;
   /** @minimum 1 */
   quantity?: number;
+  default_delivery_station_day?: string;
+  price_per_delivery?: string;
+  payment_cycle?: string;
+  is_trial?: boolean;
+  valid_from?: string;
+  valid_until?: string;
   accepted_consent_documents?: PublicRegisterRequestAcceptedConsentDocuments;
   message?: string;
   user_language?: UserLanguageEnum;

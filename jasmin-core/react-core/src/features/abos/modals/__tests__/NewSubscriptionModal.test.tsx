@@ -44,7 +44,21 @@ vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
   commissioningMySubscriptionsSubscribeCreate: (...args: unknown[]) =>
     subscribeCreateMock(...args),
   commissioningAbosCreate: (...args: unknown[]) => abosCreateMock(...args),
+  useCommissioningDeliveryExceptionPeriodsList: () => ({ data: [] }),
 }));
+
+// SEPA gate: stub the setup modal + return a ready mandate so the save flow
+// isn't blocked (the mandate gate has its own coverage elsewhere).
+vi.mock("@features/members/modals/SepaSetupModal", () => ({ default: () => null }));
+vi.mock(
+  "@shared/api/generated/payments-—-billing-profiles/payments-—-billing-profiles",
+  () => ({
+    usePaymentsBillingProfilesList: () => ({
+      data: [{ is_sepa_ready: true }],
+      refetch: vi.fn(),
+    }),
+  }),
+);
 
 const notifySuccessMock = vi.fn();
 const notifyErrorMock = vi.fn();

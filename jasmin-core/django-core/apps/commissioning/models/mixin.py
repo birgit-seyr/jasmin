@@ -501,6 +501,7 @@ class CancellableMixin(models.Model):
         null=True,
         related_name="%(app_label)s_%(class)s_cancelled_by",
     )
+    cancellation_reason = models.TextField(blank=True, null=True)
 
     class Meta:
         abstract = True

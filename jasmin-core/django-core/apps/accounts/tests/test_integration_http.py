@@ -34,7 +34,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import JasminUser
 from apps.authz.roles import Role
-from apps.commissioning.models import Member, UserInvitation
+from apps.commissioning.models import UserInvitation
 from apps.commissioning.tests.factories import JasminUserFactory
 from apps.shared.auth_cookies import (
     TENANT_REFRESH_COOKIE,
@@ -210,15 +210,27 @@ class TestRegisterEndpoint:
         "first_name": "Reggie",
         "last_name": "Strant",
         "email": "reg@example.com",
-        "password": "Reggie!Pass42xyz",
         "user_language": "en",
     }
 
-    def test_self_register_creates_pending_user(self, tenant):
+    @pytest.fixture(autouse=True)
+    def _email_verified(self):
+        # The final register step requires the email to have passed the code
+        # check (register/verify_code/). That flow is tested separately; stub
+        # it verified here so these tests focus on the register endpoint.
+        with patch(
+            "apps.accounts.services.email_verification_service.is_email_verified",
+            return_value=True,
+        ):
+            yield
+
+    def test_self_register_creates_pending_invitation_user(self, tenant):
         resp = APIClient().post("/api/auth/register/", data=self.payload, format="json")
         assert resp.status_code == status.HTTP_201_CREATED, resp.data
         u = JasminUser.objects.get(email="reg@example.com")
-        assert u.account_status == "pending_approval"
+        # Created without a usable password; activates via the set-password link.
+        assert u.account_status == "pending_invitation"
+        assert u.has_usable_password() is False
 
     def test_register_returns_field_error_on_collision(self, tenant):
         JasminUserFactory(email="dupreg@example.com")
@@ -233,6 +245,86 @@ class TestRegisterEndpoint:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.data["code"] == "validation_error"
         assert "coop_shares_count" in resp.data["details"]
+
+
+class TestRegistrationEmailVerification:
+    """The pre-account email-ownership code flow: send_code / verify_code, and
+    the register step's requirement that the email was verified first."""
+
+    def test_send_code_emails_a_code_for_a_new_address(self, tenant):
+        with patch("apps.accounts.views.auth_views.schedule_deferred_email") as sched:
+            resp = APIClient().post(
+                "/api/auth/register/send_code/",
+                data={"email": "fresh@example.com", "first_name": "Fresh"},
+                format="json",
+            )
+        assert resp.status_code == status.HTTP_200_OK
+        assert sched.called  # a code was actually scheduled
+
+    def test_send_code_skips_existing_user_but_returns_same_body(self, tenant):
+        JasminUserFactory(email="taken@example.com")
+        with patch("apps.accounts.views.auth_views.schedule_deferred_email") as sched:
+            resp = APIClient().post(
+                "/api/auth/register/send_code/",
+                data={"email": "taken@example.com"},
+                format="json",
+            )
+        # Anti-enumeration: identical 200, but no code emailed to an address
+        # that already has an account.
+        assert resp.status_code == status.HTTP_200_OK
+        assert not sched.called
+
+    def test_verify_code_rejects_a_wrong_code(self, tenant):
+        from apps.accounts.services import email_verification_service
+
+        email_verification_service.generate_and_store_code("wrong@example.com")
+        resp = APIClient().post(
+            "/api/auth/register/verify_code/",
+            data={"email": "wrong@example.com", "code": "000000"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "registration.invalid_code"
+
+    def test_correct_code_verifies_and_unblocks_register(self, tenant):
+        from apps.accounts.services import email_verification_service
+
+        code = email_verification_service.generate_and_store_code("ok@example.com")
+        verify = APIClient().post(
+            "/api/auth/register/verify_code/",
+            data={"email": "ok@example.com", "code": code},
+            format="json",
+        )
+        assert verify.status_code == status.HTTP_200_OK
+        assert verify.data["verified"] is True
+
+        # With the email verified, register succeeds (no is_email_verified stub).
+        with patch("apps.shared.invitations._send_invitation_email"):
+            reg = APIClient().post(
+                "/api/auth/register/",
+                data={
+                    "first_name": "Ok",
+                    "last_name": "Person",
+                    "email": "ok@example.com",
+                    "user_language": "en",
+                },
+                format="json",
+            )
+        assert reg.status_code == status.HTTP_201_CREATED, reg.data
+
+    def test_register_without_a_verified_email_is_rejected(self, tenant):
+        resp = APIClient().post(
+            "/api/auth/register/",
+            data={
+                "first_name": "Unverified",
+                "last_name": "Person",
+                "email": "unverified@example.com",
+                "user_language": "en",
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "registration.email_not_verified"
 
 
 class TestInvitationVerify:
@@ -406,29 +498,47 @@ class TestAdminUsersGating:
 
 class TestEndToEndSelfRegistration:
     def test_full_flow(self, tenant):
+        from apps.commissioning.models import UserInvitation
+
         client = APIClient()
-        # 1. Self-register.
-        reg = client.post(
-            "/api/auth/register/",
-            data={
-                "first_name": "E2E",
-                "last_name": "Reg",
-                "email": "e2e_reg@example.com",
-                "password": "E2EReg!42xyzabc",
-                "user_language": "en",
-            },
+        # 1. Self-register (email already proven via the code step; the
+        #    account is created WITHOUT a password + a set-password link is
+        #    emailed). Patch the send so the test doesn't hit the mail stack.
+        with (
+            patch(
+                "apps.accounts.services.email_verification_service.is_email_verified",
+                return_value=True,
+            ),
+            patch("apps.shared.invitations._send_invitation_email"),
+        ):
+            reg = client.post(
+                "/api/auth/register/",
+                data={
+                    "first_name": "E2E",
+                    "last_name": "Reg",
+                    "email": "e2e_reg@example.com",
+                    "user_language": "en",
+                },
+                format="json",
+            )
+        assert reg.status_code == status.HTTP_201_CREATED, reg.data
+        user = JasminUser.objects.get(email="e2e_reg@example.com")
+        assert user.account_status == "pending_invitation"
+
+        # 2. Login is blocked until the applicant sets a password. With no
+        #    usable password yet the credential check fails first (400), which
+        #    also avoids leaking that the address exists.
+        blocked = _login(client, "e2e_reg@example.com", "not-set-yet-xyz")
+        assert blocked.status_code == status.HTTP_400_BAD_REQUEST
+
+        # 3. Applicant sets their password via the emailed invitation link.
+        invitation = UserInvitation.objects.get(user=user)
+        accept = client.post(
+            "/api/auth/invitations/accept/",
+            data={"token": str(invitation.token), "password": "E2EReg!42xyzabc"},
             format="json",
         )
-        assert reg.status_code == status.HTTP_201_CREATED, reg.data
-
-        # 2. Login should be blocked while pending_approval.
-        blocked = _login(client, "e2e_reg@example.com", "E2EReg!42xyzabc")
-        assert blocked.status_code == status.HTTP_403_FORBIDDEN
-
-        # 3. Office confirms the Member.
-        member = Member.objects.get(email="e2e_reg@example.com")
-        office = JasminUserFactory(roles=[Role.OFFICE])
-        member.confirm(admin_user=office, save=True)
+        assert accept.status_code == status.HTTP_200_OK, accept.data
 
         # 4. Login now succeeds.
         ok = _login(client, "e2e_reg@example.com", "E2EReg!42xyzabc")

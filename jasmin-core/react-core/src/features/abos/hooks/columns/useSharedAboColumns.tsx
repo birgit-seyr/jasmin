@@ -14,6 +14,7 @@ import type {
   SelectOption,
 } from "@shared/tables/BasicEditableTable/types";
 import type { AboRecord } from "@features/abos/pages/types";
+import { useVariationLabel } from "@hooks/index";
 
 type AboColumn = EditableColumnConfig<AboRecord>;
 
@@ -43,6 +44,9 @@ export function useSharedAboColumns({
   deliveryStationDayAlign,
 }: SharedAboColumnOptions) {
   const { t } = useTranslation();
+  // Localize the raw size baked into ``share_type_variation_string`` so the
+  // read cell matches the (localized) edit dropdown options.
+  const variationLabel = useVariationLabel();
 
   // Quick-text capacity hints in the dropdowns (the colour tag lives in the
   // member modal). A sold-out variation / full station stays SELECTABLE — saving
@@ -142,7 +146,9 @@ export function useSharedAboColumns({
       sortable: true,
       disabled,
       onFieldChange: onShareTypeVariationChange,
-      ...(shareTypeVariationRender ? { render: shareTypeVariationRender } : {}),
+      render:
+        shareTypeVariationRender ??
+        ((value: unknown) => variationLabel(value as string)),
     }),
     [
       t,
@@ -151,6 +157,7 @@ export function useSharedAboColumns({
       disabled,
       onShareTypeVariationChange,
       shareTypeVariationRender,
+      variationLabel,
     ],
   );
 

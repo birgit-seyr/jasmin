@@ -40,6 +40,7 @@ import tenant from './tenant.json';
 import validation from './validation.json';
 import about from './about.json';
 import statistics from './statistics.json';
+import impressum from './impressum.json';
 
 export default {
   about,
@@ -84,4 +85,5 @@ export default {
   months,
   tenant,
   validation,
+  impressum,
 };

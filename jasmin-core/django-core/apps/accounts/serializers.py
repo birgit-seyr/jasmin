@@ -213,8 +213,10 @@ class PublicRegisterRequestSerializer(serializers.Serializer):
     listed here are explicit so drf-spectacular / orval pick them up.
     """
 
+    # No password here: the applicant never sets one during the wizard. The
+    # account is created without a usable password and an ``accounts.invitation``
+    # (set-password) link is emailed on success — see ``registration_service``.
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
     first_name = serializers.CharField(required=False, allow_blank=True)
     last_name = serializers.CharField(required=False, allow_blank=True)
 
@@ -236,6 +238,20 @@ class PublicRegisterRequestSerializer(serializers.Serializer):
     # they show up on the admin detail page.
     share_type_variation_id = serializers.CharField(required=False, allow_blank=True)
     quantity = serializers.IntegerField(required=False, min_value=1)
+    # Intent extras from the public "new subscription" modal: the applicant's
+    # preferred delivery station-day + (solidarity) price. Recorded as intent
+    # on the Member note for the office to finalise — NOT used to create a real
+    # Subscription here (that needs office-set FKs).
+    default_delivery_station_day = serializers.CharField(
+        required=False, allow_blank=True
+    )
+    price_per_delivery = serializers.CharField(required=False, allow_blank=True)
+    payment_cycle = serializers.CharField(required=False, allow_blank=True)
+    # Trial (Probe-Abo) registration: creates a trial Member (no coop shares)
+    # and records a trial subscription intent bounded by valid_from/valid_until.
+    is_trial = serializers.BooleanField(required=False, default=False)
+    valid_from = serializers.CharField(required=False, allow_blank=True)
+    valid_until = serializers.CharField(required=False, allow_blank=True)
 
     # Map of consent kind -> ConsentDocument id the user agreed to.
     # Creates one ConsentRecord per entry in the same transaction.
@@ -278,6 +294,35 @@ class PublicRegisterResponseSerializer(serializers.Serializer):
     user_id = serializers.CharField(required=False, allow_null=True)
     coop_shares_created = serializers.IntegerField(required=False)
     consent_records_created = serializers.IntegerField(required=False)
+
+
+class RegisterSendCodeRequestSerializer(serializers.Serializer):
+    """Payload for ``POST /api/auth/register/send_code/`` — request an
+    email-ownership verification code (step "confirm email" of the wizard)."""
+
+    email = serializers.EmailField()
+    first_name = serializers.CharField(required=False, allow_blank=True)
+    frc_captcha_solution = serializers.CharField(
+        required=False, allow_blank=True, write_only=True
+    )
+
+
+class RegisterSendCodeResponseSerializer(serializers.Serializer):
+    # Deliberately generic — always the same body whether or not a code was
+    # actually sent (anti-enumeration).
+    message = serializers.CharField()
+
+
+class RegisterVerifyCodeRequestSerializer(serializers.Serializer):
+    """Payload for ``POST /api/auth/register/verify_code/`` — submit the code
+    that was emailed."""
+
+    email = serializers.EmailField()
+    code = serializers.CharField()
+
+
+class RegisterVerifyCodeResponseSerializer(serializers.Serializer):
+    verified = serializers.BooleanField()
 
 
 # --------------------------------------------------------------------------- #

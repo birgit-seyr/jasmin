@@ -118,6 +118,13 @@ class VariationCapacityService:
         window_start = min(b[2] for b in bounds)
         window_end = max(b[3] for b in bounds)
 
+        # Paused (Lieferpause) weeks deliver nothing, so they consume no
+        # production capacity — exclude them (mirrors the delivery-based DSD
+        # occupancy, which is naturally 0 on a paused week). Batched: ONE query.
+        from .delivery_exceptions import paused_weeks_by_variation
+
+        paused = paused_weeks_by_variation(ids, [(b[0], b[1]) for b in bounds])
+
         subs = (
             _occupying_qs(ids)
             .filter(valid_from__lte=window_end)
@@ -129,7 +136,10 @@ class VariationCapacityService:
         out: dict[tuple[str, int, int], int] = defaultdict(int)
         for var_id, vfrom, vuntil, qty in subs:
             qty = qty or 1
+            paused_for_var = paused.get(var_id, frozenset())
             for year, week, monday, sunday in bounds:
+                if (year, week) in paused_for_var:
+                    continue
                 # Sub active in this week iff its term intersects [Mon, Sun].
                 if vfrom > sunday:
                     continue
@@ -186,6 +196,20 @@ class VariationCapacityService:
             peak = max(peak, occupied)
         return peak
 
+    @classmethod
+    def peak_occupied_from_week(cls, *, variation_id, from_date) -> int:
+        """Busiest single ISO week's occupancy at/after ``from_date`` for the
+        variation — the floor a capacity edit can't drop below. Past weeks
+        (terms ending before ``from_date``) are immutable and don't count; an
+        open-ended term window lets every current-or-future week be considered.
+        """
+        return cls._peak_occupied_in_term(
+            variation_id=variation_id,
+            valid_from=previous_monday(from_date),
+            valid_until=None,
+            exclude_pk=None,
+        )
+
     # ---- enforcement ---------------------------------------------------
 
     @classmethod
@@ -193,12 +217,11 @@ class VariationCapacityService:
     def assert_capacity_available(cls, subscription) -> None:
         """Verify the subscription's variation has room in EVERY week of its
         term. Row-locks the ``ShareTypeVariation`` so concurrent orders
-        serialise. No-op when the variation has no cap (``capacity is None``)
-        or the subscription has no start date. Callers decide WHEN to call: not
-        for a waiting_listed DRAFT (it holds no slot), but always at confirm —
-        promoting a waiting_listed subscription must still fit. Raises
-        :class:`ShareTypeVariationOverCapacity` (409) when the peak week is
-        full.
+        serialise. No-op when the subscription has no start date. Callers decide
+        WHEN to call: not for a waiting-listed DRAFT (it holds no slot), but
+        always at confirm — promoting a waiting-listed subscription must still
+        fit. Raises :class:`ShareTypeVariationOverCapacity` (409) when the peak
+        week is full.
         """
         variation_id = subscription.share_type_variation_id
         if not variation_id or not subscription.valid_from:
@@ -209,8 +232,8 @@ class VariationCapacityService:
             .filter(pk=variation_id)
             .first()
         )
-        if variation is None or variation.capacity is None:
-            return  # unlimited — nothing to enforce
+        if variation is None:
+            return  # variation gone — nothing to enforce
 
         quantity = subscription.quantity or 1
         peak = cls._peak_occupied_in_term(
@@ -236,13 +259,13 @@ class VariationCapacityService:
     @classmethod
     def is_over_capacity(cls, subscription) -> bool:
         """Non-locking, non-raising twin of :meth:`assert_capacity_available` —
-        used to infer WHY a subscription is being waiting_listed. ``False`` for
-        unlimited / termless / variation-less subs."""
+        used to infer WHY a subscription is being waiting-listed. ``False`` for
+        termless / variation-less subs."""
         variation_id = subscription.share_type_variation_id
         if not variation_id or not subscription.valid_from:
             return False
         variation = ShareTypeVariation.objects.filter(pk=variation_id).first()
-        if variation is None or variation.capacity is None:
+        if variation is None:
             return False
         peak = cls._peak_occupied_in_term(
             variation_id=variation_id,

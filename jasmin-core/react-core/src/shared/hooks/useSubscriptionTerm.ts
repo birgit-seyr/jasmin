@@ -14,31 +14,41 @@ import { useTenant } from "./configuration/useTenant";
  * → ``valid_until`` mapping (or drift out of sync) themselves.
  */
 export const useSubscriptionTerm = () => {
-  const { getSetting } = useTenant();
+  const { getSetting, tenant } = useTenant();
 
-  const allowsTrial = getSetting(
-    "allows_trial_subscriptions",
-    true,
-  ) as boolean;
-  const endOfSeason = getSetting(
-    "subscriptions_end_at_end_of_season",
-    false,
-  ) as boolean;
-  const endAfterOneYear = getSetting(
-    "subscriptions_end_after_one_year",
-    false,
-  ) as boolean;
+  // The anonymous registration page has no settings overlay (getSetting →
+  // null), so fall back to the top-level scalars the anonymous
+  // ``/tenants/current/`` payload carries (CurrentTenantSerializer).
+  const read = (key: string): unknown => {
+    const v = getSetting(key);
+    if (v !== null && v !== undefined) return v;
+    return (tenant as Record<string, unknown> | null | undefined)?.[key];
+  };
+
+  const allowsTrial =
+    (read("allows_trial_subscriptions") as boolean | null | undefined) ?? true;
+  const endOfSeason =
+    (read("subscriptions_end_at_end_of_season") as
+      | boolean
+      | null
+      | undefined) ?? false;
+  // Mirrors the model default (``TenantSettings.subscriptions_end_after_one_year``
+  // is ``default=True``): when the flag is absent from the overlay we assume the
+  // one-year term applies, matching what the backend will compute on save.
+  const endAfterOneYear =
+    (read("subscriptions_end_after_one_year") as boolean | null | undefined) ??
+    true;
   const seasonStartWeek =
-    (getSetting("season_start_week") as number | null | undefined) ?? null;
+    (read("season_start_week") as number | null | undefined) ?? null;
   // Trial length in deliveries; ``null`` when unset → no trial auto-fill.
   const trialDurationInDeliveries =
-    (getSetting("allowed_trial_subscription_duration") as
+    (read("allowed_trial_subscription_duration") as
       | number
       | null
       | undefined) ?? null;
   // Lead time before a subscription may begin (weeks from "now").
   const minWeeksToStartDelivery =
-    (getSetting("min_weeks_from_creation_to_start_delivery") as
+    (read("min_weeks_from_creation_to_start_delivery") as
       | number
       | null
       | undefined) ?? 0;

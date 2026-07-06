@@ -42,3 +42,41 @@
 .auth-card--shadow {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
+
+/* ------------------------------------------------------------------
+ * Login page: a vertical stack of
+ *   header banner  →  row of (1 or 3) cards  →  footer banner
+ * The banners span the full width of the card row so the logo and
+ * the footer links line up across all three cards.
+ * ------------------------------------------------------------------ */
+.auth-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+}
+
+/* 3 narrow cards (400px) + 2 large gaps (24px) = 1248px. */
+.auth-stack--triple {
+  max-width: 1248px;
+}
+
+/* 2 narrow cards (400px) + 1 large gap (24px) = 824px — trials disabled. */
+.auth-stack--double {
+  max-width: 824px;
+}
+
+/* Super-admin domain shows a single login card. */
+.auth-stack--single {
+  max-width: 400px;
+}
+
+/* Header/footer banners and the card row all fill the stack width. */
+.auth-stack > * {
+  width: 100%;
+}
+
+.auth-banner {
+  text-align: center;
+}

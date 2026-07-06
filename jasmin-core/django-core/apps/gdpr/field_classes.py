@@ -115,6 +115,12 @@ FIELD_CLASSIFICATION: dict[str, dict[str, tuple[FieldClass, Replacement]]] = {
         # ``Member.cancellation_reason``; applied via ``_anonymize_member``.
         "cancellation_reason": (FieldClass.PII_IMMEDIATE, None),
     },
+    "commissioning.CoopShare": {
+        # Free-text cancellation reason (CancellableMixin) — same PII exposure
+        # as ``Subscription``; scrubbed via ``_anonymize_member``'s related-row
+        # pass.
+        "cancellation_reason": (FieldClass.PII_IMMEDIATE, None),
+    },
     "commissioning.MemberLoan": {
         # Free-text cancellation reason (also echoed into the SAR bundle).
         "cancelled_reason": (FieldClass.PII_IMMEDIATE, None),

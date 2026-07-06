@@ -87,6 +87,20 @@ class RegistrationError(BadRequestError):
     code = "registration.failed"
 
 
+class RegistrationCodeInvalid(BadRequestError):
+    """The email-verification code the applicant submitted is wrong or has
+    expired (or too many attempts burned it)."""
+
+    code = "registration.invalid_code"
+
+
+class RegistrationEmailNotVerified(BadRequestError):
+    """A register call arrived for an address that never completed the
+    email-ownership code check (or the verified window elapsed)."""
+
+    code = "registration.email_not_verified"
+
+
 # --------------------------------------------------------------------------- #
 # Admin user management                                                       #
 # --------------------------------------------------------------------------- #

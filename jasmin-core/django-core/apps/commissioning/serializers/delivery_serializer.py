@@ -18,6 +18,7 @@ from .serializers_mixin import (
     DeletableMixin,
     DynamicContactFieldsMixin,
     DynamicDeliveryDayFieldsMixin,
+    mask_capacity_for_anonymous,
 )
 
 # ========================================
@@ -348,6 +349,13 @@ class DeliveryStationDaySerializer(DeletableMixin, serializers.ModelSerializer):
                 if key.startswith("variation_") and key not in ret:
                     ret[key] = value
 
+        # Public registration (anonymous) reads: availability only — no exact
+        # occupancy/cap, and no internal route logistics.
+        mask_capacity_for_anonymous(
+            ret,
+            self.context.get("request"),
+            internal_fields=("special_instructions", "tour_number", "stop_order"),
+        )
         return ret
 
 

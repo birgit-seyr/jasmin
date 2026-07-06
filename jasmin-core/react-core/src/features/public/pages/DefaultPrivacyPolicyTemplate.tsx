@@ -2,8 +2,13 @@ import { Divider, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type { Tenant } from "@shared/api/generated/models";
+import { useDateFormat } from "@hooks/index";
 
 const { Title, Paragraph, Text } = Typography;
+
+// Last revision of this static policy template. Rendered in the tenant's
+// date format; bump when the template's wording materially changes.
+const LAST_UPDATED = "2026-04-09";
 
 type TenantInfo = Pick<
   Tenant,
@@ -27,11 +32,14 @@ interface Props {
  */
 export default function DefaultPrivacyPolicyTemplate({ tenant }: Props) {
   const { t } = useTranslation();
+  const { formatDate } = useDateFormat();
 
   return (
     <Typography>
       <Title level={2}>{t("privacy.title")}</Title>
-      <Text type="secondary">{t("privacy.last_updated")}: 2026-04-09</Text>
+      <Text type="secondary">
+        {t("privacy.last_updated")}: {formatDate(LAST_UPDATED)}
+      </Text>
 
       <Divider />
 

@@ -229,6 +229,36 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
             "expires_at": "31.12.2026, 23:59",
         },
     ),
+    "accounts.email_verification_code": EmailTemplateSpec(
+        slug="accounts.email_verification_code",
+        label="Registrierung: E-Mail-Code",
+        description=(
+            "Wird während der öffentlichen Registrierung gesendet, um die "
+            "E-Mail-Adresse der antragstellenden Person zu bestätigen."
+        ),
+        default_template="accounts/emails/email_verification_code",
+        default_subject="Dein Bestätigungscode — {{ tenant_name }}",
+        default_subject_en="Your verification code — {{ tenant_name }}",
+        category="members",
+        variables=[
+            _TENANT_NAME,
+            EmailVariable(
+                name="first_name",
+                label="Vorname",
+                description="Vorname aus dem Registrierungsformular (kann leer sein).",
+            ),
+            EmailVariable(
+                name="code",
+                label="Bestätigungscode",
+                description="Der sechsstellige Code, den die Person eingeben muss.",
+            ),
+        ],
+        sample={
+            "tenant_name": "Beispiel-Solawi",
+            "first_name": "Lukas",
+            "code": "428913",
+        },
+    ),
     "accounts.password_reset": EmailTemplateSpec(
         slug="accounts.password_reset",
         label="Passwort zurücksetzen",

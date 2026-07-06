@@ -14,6 +14,7 @@ from __future__ import annotations
 import datetime
 
 import pytest
+import time_machine
 
 from apps.commissioning.models import (
     DeliveryExceptionPeriod,
@@ -315,6 +316,9 @@ class TestActivePastPeriodsAreLocked:
             valid_until=_PAST_UNTIL,
         )
 
+    # Freeze "today" before _PAUSE_FROM (2026-07-06) so the has-started /
+    # locking checks stay date-relative regardless of wall-clock drift.
+    @time_machine.travel(datetime.date(2026, 7, 1), tick=False)
     def test_has_started_helper(self, tenant):
         variation = _variation()
         future = DeliveryExceptionPeriod(
@@ -365,6 +369,7 @@ class TestActivePastPeriodsAreLocked:
         with pytest.raises(DeliveryExceptionInvalidRange):
             serializer.is_valid(raise_exception=True)
 
+    @time_machine.travel(datetime.date(2026, 7, 1), tick=False)
     def test_future_period_stays_editable(self, tenant):
         variation = _variation()
         future = DeliveryExceptionPeriod.objects.create(

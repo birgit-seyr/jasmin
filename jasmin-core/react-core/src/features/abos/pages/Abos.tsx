@@ -237,43 +237,62 @@ export default function Abos() {
   // double-fetch the same endpoint (it auto-fetches when ``showSearchBar`` +
   // ``apiFunctions.list`` are both set). Search filters client-side; mutations
   // refresh through the ``onSaveSuccess``/``onDeleteSuccess`` invalidation.
-  const apiFunctions = useMemo<ApiFunctions>(
-    () =>
-      wrapApiFunctions<Subscription & TableRecord>({
-        create: async (data) => {
-          try {
-            return await commissioningAbosCreate(data);
-          } catch (error) {
-            const code = getErrorCode(error);
-            // The variation is sold out or the station-day is full for the
-            // term. Don't dead-end the office — re-create the row as a
-            // waiting-list entry (same behaviour as the member subscribe
-            // modal). The backend then records WHY on the waiting-list page.
-            if (
-              code === "share_type_variation.over_capacity" ||
-              code === "delivery_station.over_capacity"
-            ) {
-              const created = await commissioningAbosCreate({
-                ...data,
-                on_waiting_list: true,
-              });
-              notify.info(
-                t(
-                  code === "share_type_variation.over_capacity"
-                    ? "abos.waiting_listed_variation_full"
-                    : "abos.waiting_listed_station_full",
-                ),
-              );
-              return created;
-            }
-            throw error;
-          }
-        },
-        update: (id, data) => commissioningAbosPartialUpdate(id, data),
-        delete: (id) => commissioningAbosDestroy(id),
-      }),
-    [t],
-  );
+  const apiFunctions = useMemo<ApiFunctions>(() => {
+    // A sold-out variation / full station-day 409s a normal save. Don't
+    // dead-end the office — redo the save as a waiting-list entry (same as the
+    // member subscribe modal; the backend records WHY on the waiting-list
+    // page), then invalidate so the now-waiting-listed row LEAVES this
+    // (on_waiting_list=false) grid instead of lingering as a phantom draft that
+    // inflates the pending-confirmation count.
+    const overCapacityCode = (error: unknown): string | null => {
+      const code = getErrorCode(error);
+      return code === "share_type_variation.over_capacity" ||
+        code === "delivery_station.over_capacity"
+        ? code
+        : null;
+    };
+    const notifyWaitingListed = (code: string) =>
+      notify.info(
+        t(
+          code === "share_type_variation.over_capacity"
+            ? "abos.waiting_listed_variation_full"
+            : "abos.waiting_listed_station_full",
+        ),
+      );
+    return wrapApiFunctions<Subscription & TableRecord>({
+      create: async (data) => {
+        try {
+          return await commissioningAbosCreate(data);
+        } catch (error) {
+          const code = overCapacityCode(error);
+          if (!code) throw error;
+          const created = await commissioningAbosCreate({
+            ...data,
+            on_waiting_list: true,
+          });
+          notifyWaitingListed(code);
+          invalidateData();
+          return created;
+        }
+      },
+      update: async (id, data) => {
+        try {
+          return await commissioningAbosPartialUpdate(id, data);
+        } catch (error) {
+          const code = overCapacityCode(error);
+          if (!code) throw error;
+          const updated = await commissioningAbosPartialUpdate(id, {
+            ...data,
+            on_waiting_list: true,
+          });
+          notifyWaitingListed(code);
+          invalidateData();
+          return updated;
+        }
+      },
+      delete: (id) => commissioningAbosDestroy(id),
+    });
+  }, [t, invalidateData]);
 
   // "Needs attention" quick filter toggled by the page badge below: the
   // subscriptions still awaiting admin confirmation (unconfirmed, not rejected,

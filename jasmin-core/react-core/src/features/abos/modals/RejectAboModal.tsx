@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { AdminRejectionModal } from "@shared/modals/AdminRejectionModal";
 import type { AboRecord } from "@features/abos/pages/types";
+import { useVariationLabel } from "@hooks/index";
 
 interface RejectAboModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export const RejectAboModal: FC<RejectAboModalProps> = ({
   loading = false,
 }) => {
   const { t } = useTranslation();
+  const variationLabel = useVariationLabel();
 
   if (!abo) return null;
 
@@ -50,7 +52,7 @@ export const RejectAboModal: FC<RejectAboModalProps> = ({
         <>
           {abo.member_first_name} {abo.member_last_name}
           {abo.share_type_variation_string
-            ? ` — ${abo.share_type_variation_string}`
+            ? ` — ${variationLabel(abo.share_type_variation_string)}`
             : ""}
         </>
       }

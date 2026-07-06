@@ -275,6 +275,28 @@ class DeliveryStationCapacityBelowOccupancy(BadRequestError):
         )
 
 
+class ShareTypeVariationCapacityBelowOccupancy(BadRequestError):
+    """Refuse setting a variation's farm-wide ``capacity`` below what's already
+    subscribed for a current/future week.
+
+    The production-cap twin of ``DeliveryStationCapacityBelowOccupancy``: the
+    office may raise or lower a variation's cap at will, but not below the
+    busiest current-or-future week's concurrent occupancy — doing so would
+    instantly push existing subscribers over the cap (a silent mass-waitlist).
+    Past weeks are immutable and don't constrain the new value.
+    """
+
+    code = "share_type_variation.capacity_below_occupancy"
+
+    def __init__(self, *, capacity: int, peak: int) -> None:
+        super().__init__(
+            f"Cannot set capacity to {capacity}: {peak} share(s) are already "
+            f"subscribed for a current or upcoming week.",
+            field="capacity",
+            details={"capacity": capacity, "peak": peak},
+        )
+
+
 # --------------------------------------------------------------------------- #
 # Packing list                                                                 #
 # --------------------------------------------------------------------------- #

@@ -82,6 +82,10 @@ vi.mock("@hooks/index", async () => {
     }),
     useNoteColumn: () => ({ noteColumn }),
     useNumberFormat: () => ({ format: (value: unknown) => String(value ?? "") }),
+    useCurrency: () => ({
+      currencySymbol: "€",
+      formatCurrency: (v: unknown) => String(v ?? ""),
+    }),
     useTableRowSelection: () => rowSelection,
     useUserInfoModal: () => userInfoModal,
     useInvalidateAfterTableMutation: () => ({
@@ -111,6 +115,11 @@ vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
     refetch: vi.fn(),
   }),
   getCommissioningMembersListQueryKey: () => ["members", "list"],
+  // MemberStatsCards reads the dashboard stats.
+  useCommissioningMemberDashboardStatisticsRetrieve: () => ({
+    data: undefined,
+    isLoading: false,
+  }),
   commissioningMembersCreate: vi.fn().mockResolvedValue({}),
   commissioningMembersDestroy: vi.fn().mockResolvedValue({}),
   commissioningMembersPartialUpdate: vi.fn().mockResolvedValue({}),

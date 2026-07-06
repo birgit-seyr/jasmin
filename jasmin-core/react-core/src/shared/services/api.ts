@@ -100,7 +100,13 @@ axiosInstance.interceptors.request.use((config) => {
 // password. On these paths we clear the session but DON'T redirect; JasminApp's
 // unauthenticated routes then render the page in place. Protected pages are not
 // listed, so a mid-session expiry there still bounces to /login as intended.
-const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/privacy-policy"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/privacy-policy",
+  "/impressum",
+];
 const PUBLIC_PATH_PREFIXES = [
   "/set-password/",
   "/reset-password/",

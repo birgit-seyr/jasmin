@@ -328,6 +328,9 @@ class AnonymizationMixin:
         Subscription.objects.filter(member=member).exclude(
             cancellation_reason__isnull=True
         ).update(cancellation_reason=None)
+        CoopShare.objects.filter(member=member).exclude(
+            cancellation_reason__isnull=True
+        ).update(cancellation_reason=None)
         MemberLoan.objects.filter(member=member).exclude(
             cancelled_reason__isnull=True
         ).update(cancelled_reason=None)

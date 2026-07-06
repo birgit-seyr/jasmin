@@ -18,8 +18,7 @@ export default function CustomerDocumentsCard({ orderContents }: Props) {
 
   const deliveryNoteId =
     orderContents.find((i) => i.delivery_note_id)?.delivery_note_id ?? null;
-  const invoiceId =
-    orderContents.find((i) => i.invoice_id)?.invoice_id ?? null;
+  const invoiceId = orderContents.find((i) => i.invoice_id)?.invoice_id ?? null;
   const deliveryNoteIsFinalized = orderContents.some(
     (i) => i.delivery_note_is_finalized === true,
   );
@@ -51,7 +50,7 @@ export default function CustomerDocumentsCard({ orderContents }: Props) {
   return (
     <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
       <Col xs={24}>
-        <Card title={t("customer.documents")}>
+        <Card title={t("customer.documents")} className="dark-green-border">
           <Space size="middle">
             <Button
               icon={<FilePdfOutlined />}
@@ -117,7 +116,10 @@ export default function CustomerDocumentsCard({ orderContents }: Props) {
                 >
                   <DownloadOutlined /> {t("customer.storno")}
                   {storno?.invoice_number && (
-                    <Text type="secondary" style={{ marginLeft: 4, fontSize: 12 }}>
+                    <Text
+                      type="secondary"
+                      style={{ marginLeft: 4, fontSize: 12 }}
+                    >
                       #{String(storno.prefix ?? "")}
                       {String(storno.invoice_number ?? "")}
                     </Text>

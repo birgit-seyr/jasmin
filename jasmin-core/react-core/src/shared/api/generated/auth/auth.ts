@@ -39,6 +39,10 @@ import type {
   PublicRegisterRequest,
   PublicRegisterResponse,
   RefreshResponse,
+  RegisterSendCodeRequest,
+  RegisterSendCodeResponse,
+  RegisterVerifyCodeRequest,
+  RegisterVerifyCodeResponse,
   StepUpRequest,
   StepUpResponse,
   UserProfileResponse,
@@ -949,7 +953,7 @@ export const useAuthRefreshCreate = <TError = ErrorResponse,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Creates a JasminUser in ``pending_approval`` and a Member row (``admin_confirmed=False``). Office must confirm the member from the Members page before the applicant can log in.
+ * Final step of the public registration wizard. Requires the email to have been verified first (``register/verify_code/``). Creates a JasminUser WITHOUT a usable password plus a Member row (``admin_confirmed=False``) and emails an ``accounts.invitation`` set-password link. Office confirms the member separately.
  * @summary Public self-registration with membership application
  */
 export const authRegisterCreate = (
@@ -1010,6 +1014,135 @@ export const useAuthRegisterCreate = <TError = ErrorResponse,
       > => {
 
       const mutationOptions = getAuthRegisterCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Step 'confirm email' of the public registration wizard: emails a short numeric code to prove the applicant controls the address. Always returns the same generic body (anti-enumeration); a code is only actually sent when the address isn't already an account.
+ * @summary Request a registration email-verification code
+ */
+export const authRegisterSendCodeCreate = (
+    registerSendCodeRequest: RegisterSendCodeRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<RegisterSendCodeResponse>(
+      {url: `/api/auth/register/send_code/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: registerSendCodeRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getAuthRegisterSendCodeCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authRegisterSendCodeCreate>>, TError,{data: RegisterSendCodeRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof authRegisterSendCodeCreate>>, TError,{data: RegisterSendCodeRequest}, TContext> => {
+
+const mutationKey = ['authRegisterSendCodeCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authRegisterSendCodeCreate>>, {data: RegisterSendCodeRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  authRegisterSendCodeCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AuthRegisterSendCodeCreateMutationResult = NonNullable<Awaited<ReturnType<typeof authRegisterSendCodeCreate>>>
+    export type AuthRegisterSendCodeCreateMutationBody = RegisterSendCodeRequest
+    export type AuthRegisterSendCodeCreateMutationError = ErrorResponse
+
+    /**
+ * @summary Request a registration email-verification code
+ */
+export const useAuthRegisterSendCodeCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authRegisterSendCodeCreate>>, TError,{data: RegisterSendCodeRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof authRegisterSendCodeCreate>>,
+        TError,
+        {data: RegisterSendCodeRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getAuthRegisterSendCodeCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * @summary Verify a registration email-verification code
+ */
+export const authRegisterVerifyCodeCreate = (
+    registerVerifyCodeRequest: RegisterVerifyCodeRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<RegisterVerifyCodeResponse>(
+      {url: `/api/auth/register/verify_code/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: registerVerifyCodeRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getAuthRegisterVerifyCodeCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authRegisterVerifyCodeCreate>>, TError,{data: RegisterVerifyCodeRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof authRegisterVerifyCodeCreate>>, TError,{data: RegisterVerifyCodeRequest}, TContext> => {
+
+const mutationKey = ['authRegisterVerifyCodeCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authRegisterVerifyCodeCreate>>, {data: RegisterVerifyCodeRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  authRegisterVerifyCodeCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AuthRegisterVerifyCodeCreateMutationResult = NonNullable<Awaited<ReturnType<typeof authRegisterVerifyCodeCreate>>>
+    export type AuthRegisterVerifyCodeCreateMutationBody = RegisterVerifyCodeRequest
+    export type AuthRegisterVerifyCodeCreateMutationError = ErrorResponse
+
+    /**
+ * @summary Verify a registration email-verification code
+ */
+export const useAuthRegisterVerifyCodeCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authRegisterVerifyCodeCreate>>, TError,{data: RegisterVerifyCodeRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof authRegisterVerifyCodeCreate>>,
+        TError,
+        {data: RegisterVerifyCodeRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getAuthRegisterVerifyCodeCreateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

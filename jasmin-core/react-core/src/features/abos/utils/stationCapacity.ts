@@ -40,14 +40,18 @@ export interface StationDayTermCapacity {
   isFull: boolean;
 }
 
-/** Wide fixed capacity window: week 1 of this year, two years ahead — matches
- * every consumer so the same DSD always carries the same week keys. */
+/** Wide fixed capacity window: ISO week 1 of the current ISO week-year, two
+ * years ahead — matches every consumer so the same DSD always carries the same
+ * week keys. Anchored on ``isoWeekYear`` (NOT the calendar ``year``) because the
+ * week keys use isoWeekYear: around Jan 1 the current ISO week can belong to the
+ * previous ISO year (e.g. 2027-01-01 is 2026-W53), and a calendar-year anchor
+ * would start the window at 2027-W1 and drop that current week. */
 export function capacityWindowParams(): {
   year: number;
   delivery_week: number;
   num_weeks: number;
 } {
-  return { year: dayjs().year(), delivery_week: 1, num_weeks: 104 };
+  return { year: dayjs().isoWeekYear(), delivery_week: 1, num_weeks: 104 };
 }
 
 /** Share options that CONSUME station capacity (mirror of the backend
@@ -100,15 +104,17 @@ export type TermCapacity = StationDayTermCapacity;
 
 /** ISO week keys ("<iso-year>-<iso-week>") spanning ``[from, until]`` inclusive,
  * matching the keys in ``capacity_by_week``. Open-ended terms (invalid/absent
- * ``until``) fall back to a one-year window from ``from``. Shared by the
- * station-day and variation option builders so the term→weeks expansion can't
- * drift between the two axes. */
+ * ``until``) fall back to the fetched-window depth (104 weeks) from ``from`` —
+ * so a full week further than a year out is still seen (the backend's peak is
+ * unbounded; weeks past the fetched window simply have no key and read as free).
+ * Shared by the station-day and variation option builders so the term→weeks
+ * expansion can't drift between the two axes. */
 export function termWeekKeys(
   from: dayjs.Dayjs,
   until: dayjs.Dayjs | null | undefined,
 ): string[] {
   const keys: string[] = [];
-  const end = until && until.isValid() ? until : from.add(1, "year");
+  const end = until && until.isValid() ? until : from.add(104, "week");
   let cursor = from.startOf("isoWeek");
   while (cursor.isSameOrBefore(end, "day")) {
     keys.push(`${cursor.isoWeekYear()}-${cursor.isoWeek()}`);
@@ -117,11 +123,12 @@ export function termWeekKeys(
   return keys;
 }
 
-/** Forward-looking capacity-floor window: current ISO week, 78 weeks ahead.
+/** Forward-looking capacity-floor window: current ISO week, 156 weeks ahead.
  * Used when the question is "how low may the office set capacity?" — the
  * floor is the busiest CURRENT-OR-FUTURE week's occupancy (mirrors the
  * backend validate_capacity / peak_occupied_from_week contract; past weeks
- * must not inflate the floor). */
+ * must not inflate the floor). The horizon is wide (3 years) so the preview
+ * can't undershoot the backend's UNBOUNDED floor for a far-future booking. */
 export function capacityFloorParams(): {
   year: number;
   delivery_week: number;
@@ -131,7 +138,7 @@ export function capacityFloorParams(): {
   return {
     year: now.isoWeekYear(),
     delivery_week: now.isoWeek(),
-    num_weeks: 78,
+    num_weeks: 156,
   };
 }
 

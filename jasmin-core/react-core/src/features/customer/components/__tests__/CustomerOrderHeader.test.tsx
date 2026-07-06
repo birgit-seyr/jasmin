@@ -139,11 +139,25 @@ describe("contact line", () => {
     expect(screen.getByText("+49 555 1234")).toBeInTheDocument();
   });
 
-  it("falls back to the JasminUser email when reseller.email is empty", () => {
+  it("shows the reseller's linked-user email when reseller.email is empty", () => {
+    const props = makeProps({
+      reseller: makeReseller({
+        email: "",
+        linked_user_info: { email: "linked@example.test" },
+      } as Partial<Reseller>),
+    });
+    render(<CustomerOrderHeader {...props} />);
+    expect(screen.getByText("linked@example.test")).toBeInTheDocument();
+    // NEVER the logged-in (office) user's email — an office viewer must not see
+    // their own address on a customer's page.
+    expect(screen.queryByText("user@example.test")).not.toBeInTheDocument();
+  });
+
+  it("shows no email (and NOT the logged-in user's) when the customer has none", () => {
     const props = makeProps({ reseller: makeReseller({ email: "" }) });
     render(<CustomerOrderHeader {...props} />);
     expect(screen.queryByText("alice@acme.test")).not.toBeInTheDocument();
-    expect(screen.getByText("user@example.test")).toBeInTheDocument();
+    expect(screen.queryByText("user@example.test")).not.toBeInTheDocument();
   });
 
   it("hides the phone line when reseller.phone is empty", () => {

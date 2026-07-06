@@ -16,7 +16,11 @@ vi.mock("@hooks/index", async () => {
     tenant: { schema_name: "test", name: "Test Tenant" },
     logoUrl: "/logo.png",
   });
-  return { useTenant: () => tenant };
+  return {
+    useTenant: () => tenant,
+    // LoginPage reads the trial duration for the trial card subtitle.
+    useSubscriptionTerm: () => ({ trialDurationInDeliveries: 4 }),
+  };
 });
 
 // react-i18next without an initialised instance returns each key as-is.

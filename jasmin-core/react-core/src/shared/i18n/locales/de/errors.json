@@ -90,7 +90,9 @@
         "outside_share_type_range": "Die Gültigkeit der Variante muss innerhalb der Gültigkeit ihres Anteilstyps liegen – sie darf nicht vor dem Anteilstyp beginnen und nicht nach ihm enden bzw. offen bleiben, wenn der Anteilstyp endet.",
         "succession_has_active_subscriptions": "Eine neue Variante für diese Kombination aus Anteilstyp und Größe kann erst beginnen, nachdem das letzte Abo der aktuellen Variante geendet hat. Beende zuerst diese Abos oder wähle ein späteres Startdatum.",
         "shortening_strands_subscriptions": "Die Variante kann nicht zu diesem Datum beendet werden: Es gibt Abos, die offen sind oder danach enden und damit ihre Variante überdauern würden. Beende zuerst diese Abos oder wähle ein späteres Enddatum.",
-        "missing_bulk": "Mindestens eine der angegebenen Anteilsvarianten existiert nicht."
+        "missing_bulk": "Mindestens eine der angegebenen Anteilsvarianten existiert nicht.",
+        "over_capacity": "Diese Anteilsart ist für den gewählten Zeitraum ausverkauft.",
+        "capacity_below_occupancy": "Die Kapazität kann nicht unter die bereits gebuchte Auslastung einer aktuellen oder kommenden Woche gesenkt werden."
     },
     "tenant_settings": {
         "coop_shares_bounds_inverted": "Die Mindestanzahl an Geschäftsanteilen darf die Höchstanzahl nicht überschreiten."
@@ -205,7 +207,9 @@
     "registration": {
         "failed": "Registrierung fehlgeschlagen — bitte erneut versuchen.",
         "host_disabled": "Die Registrierung ist auf diesem Host nicht verfügbar.",
-        "weak_password": "Das Passwort ist zu schwach — bitte ein sichereres Passwort wählen."
+        "weak_password": "Das Passwort ist zu schwach — bitte ein sichereres Passwort wählen.",
+        "invalid_code": "Der Bestätigungscode ist ungültig oder abgelaufen.",
+        "email_not_verified": "Bitte bestätige zuerst deine E-Mail-Adresse."
     },
     "profile": {
         "permission_denied": "Keine Berechtigung, dieses Profil zu ändern."
@@ -368,5 +372,10 @@
     },
     "shares_day_change": {
         "missing_required": "Jahr und Lieferwoche sind erforderlich."
+    },
+    "waiting_list_offer": {
+        "expired": "Dieses Angebot ist abgelaufen. Bitte kontaktiere das Büro.",
+        "invalid": "Dieser Angebots-Link ist ungültig oder wurde bereits verwendet.",
+        "not_available": "Dieses Abo ist kein offener Wartelisten-Eintrag und kann nicht angeboten werden."
     }
 }

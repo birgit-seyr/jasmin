@@ -46,7 +46,13 @@ export default function CustomerOrderHeader({ reseller, logoUrl }: Props) {
     u?.email ||
     "";
 
-  const displayEmail = reseller?.email || u?.email;
+  // The CUSTOMER's email — the reseller's own contact email, else its linked
+  // user's. Never the logged-in user's (an office viewer must not see their own
+  // email on a customer's page); no email at all when the customer has none.
+  const linkedUserEmail = (
+    reseller?.linked_user_info as { email?: string | null } | null | undefined
+  )?.email;
+  const displayEmail = reseller?.email || linkedUserEmail || undefined;
   const displayPhone = reseller?.phone;
 
   return (

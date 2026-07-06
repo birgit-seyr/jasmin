@@ -59,6 +59,7 @@ TASK_REGISTRY: dict[str, list[str]] = {
         "cleanup_stale_import_batches",
         "cleanup_expired_capacity_reservations",
         "daily_subscription_renewals",
+        "expire_stale_waiting_list_offers",
     ],
     "apps.shared.tenants.tasks": [
         "weekly_tenant_health_report",

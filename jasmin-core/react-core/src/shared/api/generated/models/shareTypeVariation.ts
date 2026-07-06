@@ -29,9 +29,6 @@ export interface ShareTypeVariation {
    * @pattern ^-?\d{0,6}(?:\.\d{0,2})?$
    */
   readonly active_solidarity_min_price_per_delivery?: string | null;
-  readonly capacity_occupied?: number;
-  /** @nullable */
-  readonly capacity_free?: number | null;
   /** @nullable */
   readonly capacity_by_week?: ShareTypeVariationCapacityByWeek;
   valid_from: string;

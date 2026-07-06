@@ -261,5 +261,6 @@
   "cancel_membership_partial_warning": "{{count}} subscription(s) could not be ended — please check their mandates.",
   "member_cancelled_title": "Cancelled, effective {{date}}",
   "membership_card_title": "Membership",
-  "no_active_subscriptions": "No active subscriptions."
+  "no_active_subscriptions": "No active subscriptions.",
+  "trial_subscription_weeks": "{{weeks}}-week trial subscription"
 }

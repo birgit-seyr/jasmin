@@ -33,6 +33,7 @@ from apps.shared.auth_cookies import (
     get_tenant_refresh_token,
     set_tenant_refresh_cookie,
 )
+from apps.shared.deferred_email import schedule_deferred_email
 from apps.shared.request_utils import client_ip
 from core.serializers import ErrorResponseSerializer
 
@@ -42,9 +43,11 @@ from ..errors import (
     InvitationInvalid,
     ProfilePermissionDenied,
     RefreshTokenMissing,
+    RegistrationCodeInvalid,
     RegistrationError,
     TenantMissing,
 )
+from ..models import JasminUser
 from ..serializers import (
     InvitationAcceptRequestSerializer,
     InvitationVerifyResponseSerializer,
@@ -56,6 +59,10 @@ from ..serializers import (
     PublicRegisterRequestSerializer,
     PublicRegisterResponseSerializer,
     RefreshResponseSerializer,
+    RegisterSendCodeRequestSerializer,
+    RegisterSendCodeResponseSerializer,
+    RegisterVerifyCodeRequestSerializer,
+    RegisterVerifyCodeResponseSerializer,
     StepUpRequestSerializer,
     StepUpResponseSerializer,
     TwoFactorChallengeResponseSerializer,
@@ -66,6 +73,7 @@ from ..services import (
     TwoFactorChallenge,
     authenticate_for_tenant,
     blacklist_refresh,
+    email_verification_service,
     refresh_access_token,
     register_public_applicant,
     revoke_all_sessions,
@@ -553,12 +561,109 @@ step_up_view.cls.throttle_scope = "step_up"
 # --------------------------------------------------------------------------- #
 
 
+def _reject_public_schema(request) -> object:
+    """Guard shared by the registration endpoints: registration only makes
+    sense on a tenant host, never the public/platform schema."""
+    tenant = getattr(request, "tenant", None)
+    if tenant is None or getattr(tenant, "schema_name", None) == "public":
+        raise RegistrationError(
+            "Registration is not available on this host.",
+            code="registration.host_disabled",
+        )
+    return tenant
+
+
+@extend_schema(
+    summary="Request a registration email-verification code",
+    description=(
+        "Step 'confirm email' of the public registration wizard: emails a "
+        "short numeric code to prove the applicant controls the address. "
+        "Always returns the same generic body (anti-enumeration); a code is "
+        "only actually sent when the address isn't already an account."
+    ),
+    request=RegisterSendCodeRequestSerializer,
+    responses={
+        200: RegisterSendCodeResponseSerializer,
+        400: ErrorResponseSerializer,
+        429: ErrorResponseSerializer,
+    },
+)
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def register_send_code_view(request):
+    tenant = _reject_public_schema(request)
+    serializer = RegisterSendCodeRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    # Captcha gates the FIRST anonymous touch of the wizard; the later
+    # verify_code + register steps are gated by the code / verified marker.
+    verify_captcha(request.data.get("frc_captcha_solution"), scope="register")
+    email = serializer.validated_data["email"]
+    first_name = serializer.validated_data.get("first_name") or ""
+    # Anti-enumeration: identical response whether or not we send. Skip the
+    # send when the address already has an account (an existing user shouldn't
+    # get a "verify your new registration" code they never asked for).
+    if not JasminUser.objects.filter(email__iexact=email).exists():
+        code = email_verification_service.generate_and_store_code(email)
+        schedule_deferred_email(
+            slug="accounts.email_verification_code",
+            to_emails=[email],
+            context={
+                "tenant_name": tenant.name,
+                "first_name": first_name,
+                "code": code,
+            },
+            related_object_type="registration",
+            related_object_id=email,
+            logger=logger,
+            log_error_event="registration.code_email_failed",
+            log_not_sent_event="registration.code_email_not_sent",
+            log_ref=f"email={email}",
+        )
+    return Response(
+        {"message": "If the address is valid, a verification code has been sent."},
+        status=status.HTTP_200_OK,
+    )
+
+
+register_send_code_view.cls.throttle_scope = "register"
+
+
+@extend_schema(
+    summary="Verify a registration email-verification code",
+    request=RegisterVerifyCodeRequestSerializer,
+    responses={
+        200: RegisterVerifyCodeResponseSerializer,
+        400: ErrorResponseSerializer,
+        429: ErrorResponseSerializer,
+    },
+)
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def register_verify_code_view(request):
+    _reject_public_schema(request)
+    serializer = RegisterVerifyCodeRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    email = serializer.validated_data["email"]
+    if not email_verification_service.verify_code(
+        email, serializer.validated_data["code"]
+    ):
+        raise RegistrationCodeInvalid(
+            "The verification code is invalid or has expired."
+        )
+    return Response({"verified": True}, status=status.HTTP_200_OK)
+
+
+register_verify_code_view.cls.throttle_scope = "register"
+
+
 @extend_schema(
     summary="Public self-registration with membership application",
     description=(
-        "Creates a JasminUser in ``pending_approval`` and a Member row "
-        "(``admin_confirmed=False``). Office must confirm the member from "
-        "the Members page before the applicant can log in."
+        "Final step of the public registration wizard. Requires the email to "
+        "have been verified first (``register/verify_code/``). Creates a "
+        "JasminUser WITHOUT a usable password plus a Member row "
+        "(``admin_confirmed=False``) and emails an ``accounts.invitation`` "
+        "set-password link. Office confirms the member separately."
     ),
     request=PublicRegisterRequestSerializer,
     responses={
@@ -570,24 +675,20 @@ step_up_view.cls.throttle_scope = "step_up"
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def public_register_view(request):
-    tenant = getattr(request, "tenant", None)
     # See ``settings.REST_FRAMEWORK.DEFAULT_THROTTLE_RATES.register`` +
-    # the ``.cls.throttle_scope = ...`` assignment below the def. The
-    # scope must be on the ``WrappedAPIView`` class (via ``.cls``);
-    # setting on the function alone is silently ignored by DRF.
-    if tenant is None or getattr(tenant, "schema_name", None) == "public":
-        raise RegistrationError(
-            "Registration is not available on this host.",
-            code="registration.host_disabled",
-        )
-    # Friendly Captcha runs BEFORE the honeypot check inside
-    # ``register_public_applicant``. Honeypot catches naive scrapers;
-    # FC catches humans-with-scripts.
+    # the ``.cls.throttle_scope = ...`` assignment below the def.
+    tenant = _reject_public_schema(request)
+    # No captcha here: reaching this endpoint requires a verified-email
+    # marker, which is only minted after ``send_code`` (captcha-gated) +
+    # ``verify_code``. The email-verification requirement is enforced inside
+    # ``register_public_applicant``. The honeypot check runs there too.
     serializer = PublicRegisterRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    verify_captcha(request.data.get("frc_captcha_solution"), scope="register")
+    # Pass VALIDATED data (not raw request.data) so field types are coerced —
+    # e.g. a string ``is_trial: "false"`` becomes a real bool instead of the
+    # truthy string that would flip a full membership into a trial.
     result = register_public_applicant(
-        data=request.data,
+        data=serializer.validated_data,
         tenant=tenant,
         ip_address=client_ip(request),
         user_agent=request.META.get("HTTP_USER_AGENT", ""),

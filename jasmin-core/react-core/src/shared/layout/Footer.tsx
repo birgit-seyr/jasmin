@@ -28,7 +28,7 @@ export default function JasminFooter() {
         style={{
           marginLeft: "4px",
           cursor: "pointer",
-          color: "#030304ff",
+          color: "var(--color-primary)",
         }}
       >
         2026 created by Chance

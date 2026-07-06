@@ -41,6 +41,7 @@ import logging from './logging.json';
 import months from './months.json';
 import about from './about.json';
 import statistics from './statistics.json';
+import impressum from './impressum.json';
 
 export default {
   about,
@@ -86,4 +87,5 @@ export default {
   job_progress,
   logging,
   months,
+  impressum,
 };

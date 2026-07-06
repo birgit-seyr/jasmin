@@ -34,6 +34,7 @@ import {
   useNoteColumn,
   useTableRowSelection,
   useTenant,
+  useVariationLabel,
 } from "@hooks/index";
 import type { ShareDeliveryRecord } from "./types";
 
@@ -66,6 +67,7 @@ export default function ShareDeliveries() {
   const uses_jokers = getSetting("uses_jokers", true);
 
   const { formatDate } = useDateFormat();
+  const variationLabel = useVariationLabel();
   const { noteColumn } = useNoteColumn({ disabled: true });
 
   // row selection state and handler:
@@ -277,6 +279,7 @@ export default function ShareDeliveries() {
         align: "left",
         width: "16em",
         sortable: true,
+        render: (value: unknown) => variationLabel(value as string),
       },
       {
         title: <>{t("members.quantity")}</>,
@@ -292,7 +295,15 @@ export default function ShareDeliveries() {
 
       noteColumn,
     ],
-    [t, deliveryStationDays, uses_jokers, formatDate, selectedYear, noteColumn],
+    [
+      t,
+      deliveryStationDays,
+      uses_jokers,
+      formatDate,
+      selectedYear,
+      noteColumn,
+      variationLabel,
+    ],
   );
 
   const rowClassName = useCallback((record: ShareDeliveryRecord) => {

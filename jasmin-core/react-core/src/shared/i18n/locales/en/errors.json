@@ -90,7 +90,9 @@
         "outside_share_type_range": "A variation's validity must lie within its share type's validity — it can't start before the share type, nor end after it (or stay open once the share type has ended).",
         "succession_has_active_subscriptions": "A new variation for this share type and size can only start after the last subscription on the current one has ended. End those subscriptions first, or choose a later start date.",
         "shortening_strands_subscriptions": "Can't end this variation on the given date: some subscriptions are open or end after it and would outlive their variation. End those subscriptions first, or choose a later end date.",
-        "missing_bulk": "One or more of the given share type variations do not exist."
+        "missing_bulk": "One or more of the given share type variations do not exist.",
+        "over_capacity": "This share type is sold out for the selected period.",
+        "capacity_below_occupancy": "Capacity can't be lowered below what's already subscribed for a current or upcoming week."
     },
     "tenant_settings": {
         "coop_shares_bounds_inverted": "The minimum number of coop shares cannot exceed the maximum."
@@ -205,7 +207,9 @@
     "registration": {
         "failed": "Registration failed — please try again.",
         "host_disabled": "Registration is not available on this host.",
-        "weak_password": "The password is too weak — please choose a stronger one."
+        "weak_password": "The password is too weak — please choose a stronger one.",
+        "invalid_code": "The verification code is invalid or has expired.",
+        "email_not_verified": "Please verify your email address first."
     },
     "profile": {
         "permission_denied": "You don't have permission to modify this profile."
@@ -368,5 +372,10 @@
     },
     "shares_day_change": {
         "missing_required": "Year and delivery week are required."
+    },
+    "waiting_list_offer": {
+        "expired": "This offer has expired. Please contact the office.",
+        "invalid": "This offer link is invalid or has already been used.",
+        "not_available": "This subscription is not a pending waiting-list entry."
     }
 }

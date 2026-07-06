@@ -1,10 +1,8 @@
-import { ArrowLeftOutlined, CheckCircleFilled } from "@ant-design/icons";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 import DOMPurify from "dompurify";
 import {
   Alert,
-  Badge,
   Button,
-  Card,
   Checkbox,
   Col,
   DatePicker,
@@ -24,6 +22,7 @@ import { useTranslation } from "react-i18next";
 import {
   commissioningAbosCreate,
   commissioningMySubscriptionsSubscribeCreate,
+  useCommissioningDeliveryExceptionPeriodsList,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { Subscription } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
@@ -47,13 +46,16 @@ import {
   termCapacity,
   termWeekKeys,
 } from "@features/abos/utils/stationCapacity";
+import ShareTypeVariationPickerGrid from "../components/ShareTypeVariationPickerGrid";
 import { DeliveryStationMap } from "@shared/ui";
 import type { DeliveryStationMapMarker } from "@shared/ui";
 import ToolTipIcon from "@shared/ui/ToolTipIcon";
 import { notify } from "@shared/utils";
 import { getErrorCode, getErrorMessage } from "@shared/utils/apiError";
+import SepaSetupModal from "@features/members/modals/SepaSetupModal";
+import { usePaymentsBillingProfilesList } from "@shared/api/generated/payments-—-billing-profiles/payments-—-billing-profiles";
 
-const { Text, Title, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 // Office descriptions are rich text (HTML) and often glue words together with
 // non-breaking spaces (the &nbsp; entity OR the U+00A0 char). Sanitise, then
@@ -64,12 +66,33 @@ const cleanDescriptionHtml = (html: string): string =>
     .replace(/&nbsp;/gi, " ")
     .replace(/\u00a0/g, " ");
 
+export interface SubscriptionIntent {
+  share_type_variation_id: string;
+  quantity: number;
+  valid_from: string;
+  valid_until?: string;
+  default_delivery_station_day?: string;
+  price_per_delivery?: string;
+  payment_cycle?: string;
+  is_trial: boolean;
+}
+
 interface NewSubscriptionModalProps {
   visible: boolean;
-  memberId: string;
+  // Required in office/member mode (the write attaches to this member);
+  // omitted in "public" mode (registration captures intent, no write).
+  memberId?: string;
   subscriptions?: Subscription[];
   onCancel: () => void;
   onSuccess: () => void;
+  // "public" = anonymous registration wizard: the same picker + configurator,
+  // but NO write — ``onIntent`` is called with the chosen configuration and the
+  // office materialises the real subscription on confirm.
+  mode?: "office" | "public";
+  onIntent?: (intent: SubscriptionIntent) => void;
+  // Trial (Probe-Abo) registration: force is_trial=true so ``valid_until`` is
+  // the trial end. The toggle is already hidden in public mode.
+  forceTrial?: boolean;
 }
 
 const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
@@ -78,6 +101,9 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   subscriptions = [],
   onCancel,
   onSuccess,
+  mode = "office",
+  onIntent,
+  forceTrial = false,
 }) => {
   const { t } = useTranslation();
   const { currencySymbol } = useCurrency();
@@ -88,9 +114,17 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // solidarity pricing, in which case the member may choose it (>= the
   // variation's floor); there's no trial toggle for members either.
   const { isMemberOnly } = useRoles();
-  const { getSetting } = useTenant();
+  const publicMode = mode === "public";
+  // Public registration renders the simplified member view (no office-only
+  // fields: trial toggle, payment cycle, valid_until) but never writes.
+  const simplified = isMemberOnly || publicMode;
+  const { getSetting, tenant } = useTenant();
+  // Fall back to the top-level anon-payload scalar (public registration has no
+  // settings overlay) so solidarity pricing shows there too.
   const allowsSolidarity = Boolean(
-    getSetting("allows_solidarity_pricing", false),
+    getSetting("allows_solidarity_pricing") ??
+    (tenant as Record<string, unknown> | null)?.allows_solidarity_pricing ??
+    false,
   );
   const sentenceTrialAbo = getSetting(
     "info_sentence_about_trial_subscriptions",
@@ -104,9 +138,25 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     isValidUntilAuto,
     disabledValidFromDate,
     earliestValidFrom,
+    trialDurationInDeliveries,
   } = useSubscriptionTerm();
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [sepaModalOpen, setSepaModalOpen] = useState(false);
+
+  // SEPA mandate gate (office/member only — public registration sets it up
+  // later, post-activation). The subscription can't be saved until the member
+  // has a valid mandate; if not, we surface the SAME SepaSetupModal used on the
+  // member page. Office reads the member's profile (member filter); a member
+  // reads their own (no filter — the endpoint scopes to them).
+  const needsSepaMandate = !publicMode && !!memberId;
+  const { data: billingProfiles, refetch: refetchBillingProfiles } =
+    usePaymentsBillingProfilesList(
+      isMemberOnly ? {} : { member: memberId ?? "" },
+      { query: { enabled: needsSepaMandate } },
+    );
+  const sepaReady =
+    !needsSepaMandate || Boolean(billingProfiles?.[0]?.is_sepa_ready);
   // Set when the backend refused a NORMAL create with an over-capacity 409 —
   // renders an inline offer to retry as a waiting-list entry. The value records
   // WHICH axis was full (station vs variation) so the offer text matches.
@@ -130,10 +180,16 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     active_at_date: dayjs().format("YYYY-MM-DD"),
     include_future: true,
   });
+  // Public registration only offers MAIN share types — an "additional" share
+  // (egg/bread top-up etc.) can't be someone's first/only subscription; the
+  // office adds those later. Office/member mode still sees everything.
+  const offerableShareTypes = publicMode
+    ? shareTypes.filter((st) => !st.is_additional_share_type)
+    : shareTypes;
   // Literal-typed alias: the interface-based ``ShareTypeOption`` has no
   // implicit index signature, which the hook's index-signed ``ShareTypeRef``
   // parameter requires — this bridges the two without a cast.
-  const shareTypeRefs: { id?: string | null }[] = shareTypes;
+  const shareTypeRefs: { id?: string | null }[] = offerableShareTypes;
   const { shareTypeVariations } = useAllShareTypeVariations(shareTypeRefs, {
     active_at_date: pricingDate,
     include_future: true,
@@ -183,6 +239,31 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   const validFromMs = validFrom ? validFrom.valueOf() : null;
   const validUntilMs = validUntil ? validUntil.valueOf() : null;
 
+  // Lieferpausen (delivery pauses) for the chosen variation that fall inside
+  // the chosen [valid_from, valid_until] term. Anon/public reads are allowed
+  // for an explicit variation filter (see DeliveryExceptionPeriodViewSet).
+  const { data: exceptionPeriods } =
+    useCommissioningDeliveryExceptionPeriodsList(
+      {
+        share_type_variation: selectedVariation
+          ? String(selectedVariation.value)
+          : "",
+      },
+      { query: { enabled: !!selectedVariation } },
+    );
+  const pausesInTerm = useMemo(() => {
+    if (!validFrom || !exceptionPeriods) return [];
+    const rangeEnd = validUntil ?? validFrom.add(1, "year");
+    return exceptionPeriods.filter((p) => {
+      // Overlap: pause starts on/before range end AND ends on/after range start.
+      return (
+        !dayjs(p.valid_from).isAfter(rangeEnd, "day") &&
+        !dayjs(p.valid_until).isBefore(validFrom, "day")
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exceptionPeriods, validFromMs, validUntilMs]);
+
   // Every ``"<iso-year>-<iso-week>"`` key in the term — via the SHARED
   // ``termWeekKeys`` so the modal's fullness evaluation matches the Abos select,
   // the capacity overview, and the backend for the same term (no bespoke week
@@ -224,20 +305,25 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     return shareType?.delivery_cycle ?? null;
   }, [shareTypes, selectedVariation]);
 
+  // The effective trial flag. In public mode the is_trial checkbox is hidden,
+  // so the form field never reflects ``forceTrial`` — honour the prop directly
+  // there (otherwise the term math would fall through to the one-year branch).
+  const effectiveIsTrial = publicMode ? forceTrial === true : isTrial === true;
+
   // ``valid_until`` is read-only + auto-filled when the tenant config fully
   // determines it (trial duration, season end, or one-year term). Otherwise
   // it's a free Sunday the office types.
-  const lockValidUntil = isValidUntilAuto(isTrial === true);
+  const lockValidUntil = isValidUntilAuto(effectiveIsTrial);
 
   useEffect(() => {
     if (!lockValidUntil || !validFrom) return;
     const until = computeValidUntil(validFrom, {
-      isTrial: isTrial === true,
+      isTrial: effectiveIsTrial,
       cycle: variationCycle,
     });
     form.setFieldsValue({ valid_until: until ?? undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lockValidUntil, validFromMs, isTrial, variationCycle]);
+  }, [lockValidUntil, validFromMs, effectiveIsTrial, variationCycle]);
 
   // Trial end preview for the is_trial helper text.
   const trialEnd = useMemo(
@@ -258,29 +344,6 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   }, [lockValidUntil, isTrial, endOfSeason, endAfterOneYear, t]);
 
   // Group variations by share type for the visual picker (step 1).
-  const variationsByType = useMemo(() => {
-    const groups: Record<
-      string,
-      { typeName: string; variations: ShareTypeVariationOption[] }
-    > = {};
-    for (const variation of shareTypeVariations) {
-      const key = variation.share_type;
-      if (!groups[key]) {
-        groups[key] = {
-          typeName: variation.share_type_name ?? "",
-          variations: [],
-        };
-      }
-      groups[key].variations.push(variation);
-    }
-    for (const group of Object.values(groups)) {
-      group.variations.sort(
-        (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
-      );
-    }
-    return Object.values(groups);
-  }, [shareTypeVariations]);
-
   // Variation ID → total active quantity (drives the "already subscribed" badge).
   const activeQuantityByVariation = useMemo(() => {
     const today = dayjs().format("YYYY-MM-DD");
@@ -521,6 +584,40 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         return; // antd already surfaced the field errors
       }
 
+      // Public registration: no write — hand the chosen configuration back to
+      // the wizard as intent. The office materialises the real (capacity-
+      // checked) subscription on confirm.
+      if (publicMode) {
+        onIntent?.({
+          share_type_variation_id: String(selectedVariation.value),
+          quantity: values.quantity ?? 1,
+          valid_from: values.valid_from.format("YYYY-MM-DD"),
+          valid_until: values.valid_until
+            ? values.valid_until.format("YYYY-MM-DD")
+            : undefined,
+          default_delivery_station_day:
+            values.default_delivery_station_day || undefined,
+          price_per_delivery:
+            values.price_per_delivery != null
+              ? String(values.price_per_delivery)
+              : undefined,
+          payment_cycle: values.payment_cycle || undefined,
+          is_trial: forceTrial === true,
+        });
+        form.resetFields();
+        setSelectedVariation(null);
+        onSuccess();
+        return;
+      }
+
+      // No subscription without a valid SEPA mandate — surface the setup modal
+      // (the same one used on the member page) instead of writing.
+      if (!sepaReady) {
+        notify.error(t("abos.sepa_mandate_required"));
+        setSepaModalOpen(true);
+        return;
+      }
+
       const asWaitingList = forceWaitingList || isFullForTerm;
       setSaving(true);
       try {
@@ -603,6 +700,10 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       isMemberOnly,
       allowsSolidarity,
       isFullForTerm,
+      publicMode,
+      onIntent,
+      forceTrial,
+      sepaReady,
     ],
   );
 
@@ -632,6 +733,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   );
 
   return (
+    <>
     <Modal
       title={
         selectedVariation ? (
@@ -666,109 +768,17 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     >
       {!selectedVariation ? (
         /* ── Step 1: visual variation picker ── */
-        <div>
-          {variationsByType.map((group) => (
-            <div key={group.typeName} style={{ marginBottom: 24 }}>
-              <Title level={5} style={{ marginBottom: 12 }}>
-                {group.typeName}
-              </Title>
-              <Row gutter={[12, 12]}>
-                {group.variations.map((variation) => {
-                  const activeQty =
-                    activeQuantityByVariation[variation.value] ?? 0;
-                  return (
-                    <Col xs={24} sm={12} key={variation.value}>
-                      <Badge
-                        count={activeQty > 0 ? `${activeQty}×` : 0}
-                        color="#226c47"
-                        offset={[-8, 8]}
-                      >
-                        <Card
-                          hoverable
-                          onClick={() => handleSelectVariation(variation)}
-                          styles={{ body: { padding: 12 } }}
-                          style={{ height: "100%" }}
-                        >
-                          <Flex gap={12} align="flex-start">
-                            {variation.picture ? (
-                              <img
-                                src={variation.picture}
-                                alt={variation.label}
-                                className="new-subscription-card-image"
-                              />
-                            ) : (
-                              <div className="new-subscription-card-placeholder">
-                                {getShareTypeVariationSizeLabel(
-                                  variation.size ?? "",
-                                )}
-                              </div>
-                            )}
-                            <div className="flex-min">
-                              <Text strong style={{ fontSize: 14 }}>
-                                {getShareTypeVariationSizeLabel(
-                                  variation.size ?? "",
-                                )}
-                              </Text>
-                              {variation.active_price_per_delivery && (
-                                <div>
-                                  <Text
-                                    type="secondary"
-                                    style={{ fontSize: 13 }}
-                                  >
-                                    {variation.active_price_per_delivery}{" "}
-                                    {currencySymbol} / {t("abos.delivery")}
-                                  </Text>
-                                </div>
-                              )}
-                              {variation.description && (
-                                // Office-authored rich text (HTML) — render +
-                                // sanitise instead of printing raw tags. Clamp
-                                // to 2 lines for the card preview.
-                                <div
-                                  style={{
-                                    fontSize: 12,
-                                    marginTop: 4,
-                                    color: "rgba(0, 0, 0, 0.45)",
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                    overflow: "hidden",
-                                    overflowWrap: "break-word",
-                                  }}
-                                  dangerouslySetInnerHTML={{
-                                    // Office text often glues words with &nbsp;
-                                    // (non-breaking) — swap to normal spaces so
-                                    // it wraps at word boundaries, not mid-word.
-                                    __html: cleanDescriptionHtml(
-                                      variation.description,
-                                    ),
-                                  }}
-                                />
-                              )}
-                            </div>
-                            <CheckCircleFilled
-                              style={{
-                                color: "var(--color-primary)",
-                                fontSize: 20,
-                                opacity: activeQty > 0 ? 1 : 0.15,
-                              }}
-                            />
-                          </Flex>
-                        </Card>
-                      </Badge>
-                    </Col>
-                  );
-                })}
-              </Row>
-            </div>
-          ))}
-        </div>
+        <ShareTypeVariationPickerGrid
+          variations={shareTypeVariations}
+          onSelect={handleSelectVariation}
+          activeQuantityByVariation={activeQuantityByVariation}
+        />
       ) : (
         /* ── Step 2: subscription details form ── */
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ quantity: 1, is_trial: false }}
+          initialValues={{ quantity: 1, is_trial: forceTrial }}
           disabled={saving}
         >
           {selectedVariation.picture && (
@@ -792,6 +802,46 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                 }}
               />
             </Paragraph>
+          )}
+
+          {/* is_trial FIRST: it changes valid_from's earliest date + the
+              auto-filled valid_until (trial end), so the applicant/office
+              decides trial before the dates. */}
+          {allowsTrial && !simplified && (
+            <>
+              <Form.Item
+                name="is_trial"
+                valuePropName="checked"
+                style={{ marginBottom: sentenceTrialAbo ? 4 : undefined }}
+                extra={
+                  isTrial ? (
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {trialEnd
+                        ? t("abos.is_trial_hint", {
+                            date: formatDate(trialEnd),
+                          })
+                        : t("abos.is_trial_hint_nodate")}
+                    </Text>
+                  ) : undefined
+                }
+              >
+                {/* MUST be the Form.Item's ONLY child — with extra siblings
+                    AntD won't bind ``checked``, so the toggle wouldn't update
+                    is_trial (and valid_until wouldn't recompute). */}
+                <Checkbox>
+                  {trialDurationInDeliveries != null
+                    ? t("members.trial_subscription_weeks", {
+                        weeks: trialDurationInDeliveries,
+                      })
+                    : t("members.is_trial_subscription")}
+                </Checkbox>
+              </Form.Item>
+              {sentenceTrialAbo && (
+                <Paragraph type="secondary" style={{ fontSize: 12 }}>
+                  {sentenceTrialAbo}
+                </Paragraph>
+              )}
+            </>
           )}
 
           <Row gutter={12}>
@@ -823,12 +873,31 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                 <DatePicker
                   className="w-full"
                   format={dateFormat}
-                  disabled={lockValidUntil || isMemberOnly}
+                  disabled={lockValidUntil || simplified}
                   disabledDate={disableValidUntil}
                 />
               </Form.Item>
             </Col>
           </Row>
+
+          {pausesInTerm.length > 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message={t("abos.delivery_pauses_in_term")}
+              description={
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {pausesInTerm.map((p) => (
+                    <li key={`${p.share_type_variation}-${p.valid_from}`}>
+                      {formatDate(p.valid_from)} – {formatDate(p.valid_until)}
+                      {p.note ? ` — ${p.note}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              }
+            />
+          )}
 
           <Form.Item
             name="default_delivery_station_day"
@@ -910,26 +979,6 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
             </Form.Item>
           )}
 
-          {allowsTrial && !isMemberOnly && (
-            <Form.Item
-              name="is_trial"
-              valuePropName="checked"
-              extra={
-                isTrial ? (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {trialEnd
-                      ? t("abos.is_trial_hint", { date: formatDate(trialEnd) })
-                      : t("abos.is_trial_hint_nodate")}
-                  </Text>
-                ) : undefined
-              }
-            >
-              <Checkbox>{t("members.is_trial_subscription")}</Checkbox>
-              <br />
-              {sentenceTrialAbo}
-            </Form.Item>
-          )}
-
           <Row gutter={12}>
             <Col span={8}>
               <Form.Item
@@ -1000,7 +1049,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                   // Members can set their own price ONLY when solidarity pricing
                   // is enabled; otherwise it's pre-filled + derived server-side.
                   // Office can always override it.
-                  disabled={isMemberOnly && !allowsSolidarity}
+                  disabled={simplified && !allowsSolidarity}
                 />
               </Form.Item>
             </Col>
@@ -1018,9 +1067,46 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
               }))}
             />
           </Form.Item>
+          <Text type="secondary">{t("abos.payment_method_sepa")}</Text>
+          {publicMode && (
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginTop: 12 }}
+              message={t("abos.public_sepa_mandate_hint")}
+            />
+          )}
+          {needsSepaMandate && !sepaReady && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginTop: 12 }}
+              message={t("abos.sepa_mandate_missing")}
+              action={
+                <Button
+                  size="small"
+                  type="primary"
+                  onClick={() => setSepaModalOpen(true)}
+                >
+                  {t("abos.set_up_sepa_mandate")}
+                </Button>
+              }
+            />
+          )}
         </Form>
       )}
     </Modal>
+    {needsSepaMandate && memberId && (
+      <SepaSetupModal
+        open={sepaModalOpen}
+        memberId={memberId}
+        onClose={() => {
+          setSepaModalOpen(false);
+          refetchBillingProfiles();
+        }}
+      />
+    )}
+    </>
   );
 };
 

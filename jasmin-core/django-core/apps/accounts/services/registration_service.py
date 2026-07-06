@@ -11,20 +11,19 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 
 from apps.authz.roles import Role
-from apps.shared.deferred_email import schedule_deferred_email
 
-from ..errors import RegistrationError
+from ..errors import RegistrationEmailNotVerified, RegistrationError
 from ..models import JasminUser
+from . import email_verification_service
 
 logger = logging.getLogger("authentication")
 
 
-_REQUIRED = ("first_name", "last_name", "email", "password")
+_REQUIRED = ("first_name", "last_name", "email")
 
 
 @transaction.atomic
@@ -56,36 +55,36 @@ def register_public_applicant(
         raise RegistrationError(f"Missing required fields: {', '.join(missing)}")
 
     email = data["email"].strip().lower()
+    # The address MUST have completed the code check first (see
+    # ``register/verify_code/``). This is what makes it safe to email a
+    # set-password link below — the address is proven to be the applicant's.
+    if not email_verification_service.is_email_verified(email):
+        raise RegistrationEmailNotVerified(
+            "Please verify your email address before completing registration."
+        )
+
     # Generic message to avoid email enumeration on this public endpoint.
     if JasminUser.objects.filter(email__iexact=email).exists():
         raise RegistrationError("Could not register with the provided details.")
 
-    try:
-        password_validation.validate_password(data["password"])
-    except ValidationError as exc:
-        raise RegistrationError(
-            "; ".join(exc.messages),
-            field="password",
-            code="registration.weak_password",
-        ) from exc
+    # Create the account WITHOUT a usable password and email a set-password
+    # (``accounts.invitation``) link. The applicant sets their password from
+    # that link — never during the wizard. ``create_user_with_invitation``
+    # handles the unusable-password user, the one-time token and the email.
+    from apps.shared.invitations import create_user_with_invitation
 
     try:
-        user = JasminUser.objects.create_user(
+        user, _invitation = create_user_with_invitation(
+            email=email,
             first_name=data["first_name"].strip(),
             last_name=data["last_name"].strip(),
-            email=email,
-            password=data["password"],
-            user_language=data.get("user_language") or "en",
             roles=[Role.MEMBER],
-            account_status="pending_approval",
+            user_language=data.get("user_language") or "en",
         )
-    except IntegrityError as exc:
-        # Check-then-create race: a concurrent registration for the same
-        # email slipped past the friendly pre-check above; the unique
-        # constraint is the source of truth. Map to the same generic
-        # duplicate-email error so this path leaks nothing either. Don't log
-        # the address — no-recipient-PII logging policy; the event itself is
-        # the signal.
+    except (IntegrityError, ValidationError) as exc:
+        # Check-then-create race, or the address became an active account
+        # between verify_code and here. Same generic error either way — leak
+        # nothing about which.
         logger.info("registration.duplicate_email_race")
         raise RegistrationError(
             "Could not register with the provided details."
@@ -103,6 +102,11 @@ def register_public_applicant(
     if intent:
         note_parts.append(intent)
 
+    # Trial (Probe-Abo) registration: a trial member, no cooperative shares
+    # (they aren't a Genosse yet). The office converts the trial to a full
+    # membership later, which is when coop shares are subscribed.
+    is_trial = bool(data.get("is_trial"))
+
     member = Member.objects.create(
         first_name=data["first_name"].strip(),
         last_name=data["last_name"].strip(),
@@ -112,6 +116,7 @@ def register_public_applicant(
         city=(data.get("city") or "").strip() or None,
         country=(data.get("country") or "").strip() or None,
         note="\n\n".join(note_parts) or None,
+        is_trial=is_trial,
         user=user,
         created_by=user,
     )
@@ -121,7 +126,8 @@ def register_public_applicant(
     # confirms. ``value_one_coop_share`` is snapshotted from the
     # current TenantSettings so the equity record survives later
     # value changes (GenG §31 — 10-year retention of paid-in capital).
-    coop_shares_count = int(data.get("coop_shares_count") or 0)
+    # Trial members subscribe no coop shares.
+    coop_shares_count = 0 if is_trial else int(data.get("coop_shares_count") or 0)
     if coop_shares_count > 0:
         from apps.shared.tenants.models import TenantSettings
 
@@ -130,15 +136,26 @@ def register_public_applicant(
         # it as-is (no rounding needed) so the equity record survives later
         # value changes (GenG §31).
         share_value = int(settings.value_one_coop_share) if settings else 100
+        # Cap at the tenant maximum — a raw caller could post an absurd count
+        # past the UI's bound. (The GenG MINIMUM is enforced at office confirm
+        # via ``CoopShareService.assert_member_total_within_bounds``.)
+        max_shares = int(settings.max_number_coop_shares) if settings else 100
+        if coop_shares_count > max_shares:
+            raise RegistrationError(
+                "The number of cooperative shares exceeds the maximum.",
+                field="coop_shares_count",
+            )
         CoopShare.objects.create(
             member=member,
             amount_of_coop_shares=coop_shares_count,
             value_one_coop_share=share_value,
         )
 
-    # Consent records — one per accepted document. Resolves each
-    # document_id to a real ConsentDocument so a bad client can't
-    # forge an arbitrary id.
+    # Consent records — one per accepted document. Each posted id is resolved
+    # to a real ConsentDocument that is (a) of the claimed kind and (b) CURRENT
+    # (within its valid_from/valid_until window) — so a forged id, a
+    # kind-mismatched id, or a superseded (stale-tab) version is skipped rather
+    # than recorded as valid consent.
     accepted = data.get("accepted_consent_documents") or {}
     consent_records_created = 0
     if isinstance(accepted, dict) and accepted:
@@ -146,10 +163,22 @@ def register_public_applicant(
         # denormalized Member consent-cache columns are synced and the
         # forensic ip_address / user_agent are captured — the public web signup
         # is exactly where that provenance matters most (GDPR-CON-3).
+        from django.db.models import Q
+        from django.utils import timezone
+
         from apps.commissioning.services.consent_service import ConsentService
 
-        valid_docs = ConsentDocument.objects.filter(id__in=list(accepted.values()))
-        for doc in valid_docs:
+        today = timezone.now().date()
+        for kind, doc_id in accepted.items():
+            doc = (
+                ConsentDocument.objects.filter(
+                    id=doc_id, kind=kind, valid_from__lte=today
+                )
+                .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
+                .first()
+            )
+            if doc is None:
+                continue
             ConsentService.record(
                 member=member,
                 document=doc,
@@ -158,45 +187,12 @@ def register_public_applicant(
             )
             consent_records_created += 1
 
-    # Best-effort acknowledgement email — deferred to ``on_commit`` so
-    # that if anything later in this atomic block rolls back, the
-    # applicant doesn't get an "application received" mail for a row
-    # that never persisted (P1-3).
-    member_id = member.id
-    tenant_name = tenant.name
-    # EML-9: the self-registered applicant chose a language at signup — render
-    # the confirmation in it (captured before the on_commit closure).
-    applicant_lang = (
-        getattr(getattr(member, "user", None), "user_language", None) or None
-    )
-
-    schedule_deferred_email(
-        slug="accounts.application_received",
-        to_emails=[email],
-        # Flatten to plain scalars — never hand a live ORM instance to
-        # the tenant-editable email renderer (see
-        # template_renderer._resolve). The shipped template uses
-        # ``member.first_name``; ``applicant`` mirrors it for the
-        # registry-declared preview vars.
-        context={
-            "tenant_name": tenant_name,
-            "member": {
-                "first_name": member.first_name,
-                "email": member.email,
-            },
-            "applicant": {
-                "first_name": member.first_name,
-                "email": member.email,
-            },
-        },
-        related_object_type="member",
-        related_object_id=str(member_id),
-        language=applicant_lang,
-        logger=logger,
-        log_error_event="application.email_failed",
-        log_not_sent_event="application.email_not_sent",
-        log_ref=f"email={email}",
-    )
+    # The set-password (``accounts.invitation``) email already went out via
+    # ``create_user_with_invitation``. Consume the verified marker so this one
+    # email verification can't be replayed for a second registration — but only
+    # AFTER the transaction commits, so a rollback doesn't strand the applicant
+    # (marker gone yet no account created ⇒ retry would 400 "not verified").
+    transaction.on_commit(lambda: email_verification_service.clear_verified(email))
 
     logger.info(
         "register.public email=%s member=%s coop_shares=%s consents=%s",
@@ -206,8 +202,12 @@ def register_public_applicant(
         consent_records_created,
     )
     return {
-        "message": "Application received. Office must approve your account before you can sign in.",
+        "message": (
+            "Registration received. Check your email for a link to set your "
+            "password. The office will review your membership."
+        ),
         "member_id": member.id,
+        "user_id": user.id,
         "coop_shares_created": 1 if coop_shares_count > 0 else 0,
         "consent_records_created": consent_records_created,
     }
@@ -224,7 +224,29 @@ def _format_subscription_intent(data: dict[str, Any]) -> str:
     quantity = data.get("quantity")
     if not variation_id:
         return ""
-    return (
-        "[Subscription intent] "
-        f"share_type_variation_id={variation_id} quantity={quantity or 1}"
+    label = (
+        "[Trial subscription intent]"
+        if data.get("is_trial")
+        else "[Subscription intent]"
     )
+    parts = [
+        label,
+        f"share_type_variation_id={variation_id}",
+        f"quantity={quantity or 1}",
+    ]
+    station = str(data.get("default_delivery_station_day") or "").strip()
+    if station:
+        parts.append(f"default_delivery_station_day={station}")
+    price = data.get("price_per_delivery")
+    if price not in (None, ""):
+        parts.append(f"price_per_delivery={price}")
+    payment_cycle = str(data.get("payment_cycle") or "").strip()
+    if payment_cycle:
+        parts.append(f"payment_cycle={payment_cycle}")
+    valid_from = str(data.get("valid_from") or "").strip()
+    if valid_from:
+        parts.append(f"valid_from={valid_from}")
+    valid_until = str(data.get("valid_until") or "").strip()
+    if valid_until:
+        parts.append(f"valid_until={valid_until}")
+    return " ".join(parts)

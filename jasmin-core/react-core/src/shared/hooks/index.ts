@@ -29,6 +29,7 @@ export { useNumberFormat } from './useNumberFormat';
 export { useSettingsManager } from './configuration/useSettingsManager';
 export { useShareTypes } from './useShareTypes';
 export { useShareTypeVariationSizeOptions } from './useShareTypeVariationSizeOptions';
+export { useVariationLabel } from './useVariationLabel';
 export { useSubscriptionTerm } from './useSubscriptionTerm';
 export { useTableRowSelection } from './useTableRowSelection';
 export { useTenant } from './configuration/useTenant';

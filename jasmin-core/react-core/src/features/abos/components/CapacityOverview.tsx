@@ -46,7 +46,7 @@ interface CapacityRow extends TableRecord {
   peak_occupied: number;
   free: number | null;
   peak_week: string | null;
-  status: "full" | "tight" | "ok";
+  status: "full" | "tight" | "ok" | "unknown";
 }
 
 export function CapacityOverview({
@@ -65,6 +65,25 @@ export function CapacityOverview({
 
   const weekKeys = useMemo(() => termWeekKeys(range[0], range[1]), [range]);
 
+  // The fetched capacity window (the union of week keys every entity carries).
+  // A range with NO week in this set was never fetched — showing it as "free"
+  // would be a confident lie, so those rows render as "unknown" instead.
+  const windowKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const v of variations) {
+      for (const k in v.capacity_by_week ?? {}) keys.add(k);
+    }
+    for (const d of stationDays) {
+      for (const k in d.capacity_by_week ?? {}) keys.add(k);
+    }
+    return keys;
+  }, [variations, stationDays]);
+
+  const rangeInWindow = useMemo(
+    () => weekKeys.some((k) => windowKeys.has(k)),
+    [weekKeys, windowKeys],
+  );
+
   const buildRows = (
     keyPrefix: string,
     entities: {
@@ -75,6 +94,21 @@ export function CapacityOverview({
     }[],
   ): CapacityRow[] =>
     entities.map((e) => {
+      const base = {
+        key: `${keyPrefix}-${e.value}`,
+        id: `${keyPrefix}-${e.value}`,
+        name: e.label,
+        capacity: e.capacity ?? null,
+      };
+      if (!rangeInWindow) {
+        return {
+          ...base,
+          peak_occupied: 0,
+          free: null,
+          peak_week: null,
+          status: "unknown" as const,
+        };
+      }
       const cap = termCapacity(e.capacity, e.capacity_by_week, weekKeys);
       const free =
         cap.total == null ? null : Math.max(0, cap.total - cap.peakOccupied);
@@ -143,6 +177,8 @@ export function CapacityOverview({
         align: "center",
         width: "9em",
         sortable: true,
+        render: (value: unknown, record: CapacityRow) =>
+          record.status === "unknown" ? "—" : (value as number),
       },
       {
         title: <>{t("abos.capacity_col_free")}</>,
@@ -154,8 +190,12 @@ export function CapacityOverview({
         align: "center",
         width: "8em",
         sortable: true,
-        render: (value: unknown) =>
-          value == null ? t("abos.capacity_unlimited") : (value as number),
+        render: (value: unknown, record: CapacityRow) =>
+          record.status === "unknown"
+            ? "—"
+            : value == null
+              ? t("abos.capacity_unlimited")
+              : (value as number),
       },
       {
         title: <>{t("abos.capacity_col_peak_week")}</>,
@@ -182,12 +222,28 @@ export function CapacityOverview({
         render: (value: unknown) => {
           const status = value as CapacityRow["status"];
           const color =
-            status === "full" ? "red" : status === "tight" ? "orange" : "green";
+            status === "full"
+              ? "red"
+              : status === "tight"
+                ? "orange"
+                : status === "unknown"
+                  ? "default"
+                  : "green";
           return <Tag color={color}>{t(`abos.capacity_status_${status}`)}</Tag>;
         },
       },
     ],
     [t],
+  );
+
+  // Drop quick-range presets that fall entirely outside the fetched window
+  // (e.g. "last year") — picking one would just paint every row "unknown".
+  const inWindowPresets = useMemo(
+    () =>
+      presets.filter((p) =>
+        termWeekKeys(p.value[0], p.value[1]).some((k) => windowKeys.has(k)),
+      ),
+    [presets, windowKeys],
   );
 
   const rangeLabel = `${range[0].format(dateFormat)} – ${range[1].format(dateFormat)}`;
@@ -213,8 +269,14 @@ export function CapacityOverview({
                 }}
                 format={dateFormat}
                 allowClear={false}
-                presets={presets}
+                presets={inWindowPresets}
               />
+
+              {!rangeInWindow ? (
+                <div style={{ color: "var(--color-text-tertiary)" }}>
+                  {t("abos.capacity_out_of_window")}
+                </div>
+              ) : null}
 
               <div>
                 <h3>{t("abos.capacities_variations")}</h3>

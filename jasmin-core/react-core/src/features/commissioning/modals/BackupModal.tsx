@@ -176,7 +176,7 @@ export default function BackupModal({
       if (isNaN(numValue) || numValue === 0) return "";
       return data?.unit === "KG" ? format(numValue, 2) : format(numValue, 1);
     };
-    // Match the base table's size label (t("commissioning.<size>")).
+    // Match the base table's size label (the dynamic commissioning.<size> key).
     const variationTitle = (variation: ShareTypeVariationOption): ReactNode =>
       variation.size
         ? t(`commissioning.${variation.size}`)

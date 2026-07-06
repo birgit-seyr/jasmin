@@ -335,6 +335,10 @@ class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     # office-only (the schedule itself is configured by staff).
     read_permission = IsStaffOrMember
     write_permission = IsOffice
+    # Public registration wizard lists pickup stations + days (name, address,
+    # coords, advisory capacity) to prospective anonymous members. LIST only —
+    # retrieve/write stay member/office-gated. No PII beyond public pickup info.
+    public_read_actions = frozenset({"list"})
     serializer_class = DeliveryStationDaySerializer
 
     @transaction.atomic
@@ -649,6 +653,11 @@ class DeliveryExceptionPeriodViewSet(RolePermissionsMixin, viewsets.ModelViewSet
 
     read_permission = IsStaffOrMember
     write_permission = IsOffice
+    # The subscription modal (incl. public registration) lists a chosen
+    # variation's Lieferpausen. LIST is public but only returns rows for an
+    # explicit ``?share_type_variation=`` filter (see get_queryset); the
+    # unfiltered catalogue stays member/office-scoped.
+    public_read_actions = frozenset({"list"})
     serializer_class = DeliveryExceptionPeriodSerializer
 
     @extend_schema(
@@ -668,12 +677,16 @@ class DeliveryExceptionPeriodViewSet(RolePermissionsMixin, viewsets.ModelViewSet
         ).order_by("-valid_from")
         variation_id = params["share_type_variation"]
         if variation_id:
-            queryset = queryset.filter(share_type_variation_id=variation_id)
+            # An explicit single-variation query (the subscription modal showing
+            # the pauses for the variation being chosen, incl. the public
+            # registration flow) is not a catalogue leak — return it regardless
+            # of role/membership.
+            return queryset.filter(share_type_variation_id=variation_id)
 
-        # ``IsStaffOrMember`` lets a member read, but the row set must be scoped
-        # to their OWN subscriptions' variations — otherwise a member sees the
-        # entire cross-variation pause catalogue plus each pause's office note.
-        # Staff (office/admin/…) see everything.
+        # ``IsStaffOrMember`` lets a member read, but the UNFILTERED row set must
+        # be scoped to their OWN subscriptions' variations — otherwise a member
+        # sees the entire cross-variation pause catalogue plus each pause's
+        # office note. Staff (office/admin/…) see everything.
         if not has_any_role(self.request, *IsStaff.required_roles):
             member = getattr(self.request.user, "member_profile", None)
             subscribed_variation_ids = (

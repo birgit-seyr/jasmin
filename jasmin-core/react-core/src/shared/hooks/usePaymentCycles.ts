@@ -6,12 +6,13 @@ import { toOptions, type Option } from "./internal/toOptions";
 
 export type PaymentCycleOption = Option<PaymentCycle>;
 
-export const usePaymentCycles = () => {
+export const usePaymentCycles = (options?: { enabled?: boolean }) => {
   const { t } = useTranslation();
 
-  const { data, isLoading, error, refetch } = useCommissioningPaymentCyclesList({
-    is_active: true,
-  });
+  const { data, isLoading, error, refetch } = useCommissioningPaymentCyclesList(
+    { is_active: true },
+    { query: { enabled: options?.enabled ?? true } },
+  );
 
   const paymentCycles: PaymentCycleOption[] = useMemo(
     () =>

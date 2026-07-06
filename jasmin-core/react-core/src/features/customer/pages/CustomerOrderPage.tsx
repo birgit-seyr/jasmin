@@ -262,8 +262,7 @@ export default function CustomerOrderPage() {
     return {
       orderNumber: withOrder.order_number,
       orderNumberPrefix: withOrder.order_number_prefix,
-      isLocked:
-        withOrder.order_is_finalized || !!withOrder.delivery_note_id,
+      isLocked: withOrder.order_is_finalized || !!withOrder.delivery_note_id,
     };
   }, [orderContents]);
 
@@ -320,7 +319,9 @@ export default function CustomerOrderPage() {
               : "—"}
           </Text>
         </Text>
-        {orderInfo?.isLocked && <Tag color="blue">{t("customer.finalized")}</Tag>}
+        {orderInfo?.isLocked && (
+          <Tag color="blue">{t("customer.finalized")}</Tag>
+        )}
         <Text type="secondary" style={{ marginLeft: "auto" }}>
           {t("customer.total")}:{" "}
           <Text strong>
@@ -334,6 +335,7 @@ export default function CustomerOrderPage() {
       <Row gutter={[24, 24]}>
         <Col xs={24}>
           <Card
+            className="dark-green-border"
             title={
               <>
                 {t("customer.available_offers")}
@@ -385,7 +387,10 @@ export default function CustomerOrderPage() {
       {otherArticleRows.length > 0 && (
         <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
           <Col xs={24}>
-            <Card title={t("customer.other_articles")}>
+            <Card
+              title={t("customer.other_articles")}
+              className="dark-green-border"
+            >
               <Table
                 dataSource={otherArticleRows}
                 columns={otherArticleColumns}

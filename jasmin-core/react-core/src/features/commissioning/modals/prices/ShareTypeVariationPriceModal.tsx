@@ -1,5 +1,9 @@
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import {
+  useActiveStatusColumn,
+  useCurrency,
+  useTenant,
+  useTimeBoundColumns,
+} from "@hooks/index";
 import {
   commissioningShareTypeVariationPriceCreate,
   commissioningShareTypeVariationPriceDestroy,
@@ -8,15 +12,10 @@ import {
   useCommissioningShareTypeVariationPriceList,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { ShareTypeVariationGrossPrice } from "@shared/api/generated/models/shareTypeVariationGrossPrice";
-import {
-  useActiveStatusColumn,
-  useCurrency,
-  useTenant,
-  useTimeBoundColumns,
-} from "@hooks/index";
-import { isFieldDisabled } from "@shared/utils";
 import type { EditableColumnConfig } from "@shared/tables/BasicEditableTable/types";
 import { ToolTipIcon } from "@shared/ui";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import PriceEditorModal from "./PriceEditorModal";
 import { buildCurrencyPriceColumn, buildTaxRateColumn } from "./priceColumns";
 
@@ -89,16 +88,13 @@ export default function ShareTypeVariationPriceModal({
           title: (
             <>
               {t("commissioning.price_sum_articles")}
-              <ToolTipIcon
-                title={t("tooltip.price_sum_articles")}
-              />
+              <ToolTipIcon title={t("tooltip.price_sum_articles")} />
             </>
           ),
           dataIndex: "price_sum_articles",
           key: "price_sum_articles",
           inputType: "positive_decimal2",
           required: false,
-          disabled: isFieldDisabled,
           width: "9em",
           align: "center",
           render: buildCurrencyPriceColumn({
@@ -127,8 +123,7 @@ export default function ShareTypeVariationPriceModal({
       onClose={onClose}
       title={
         <div>
-          {t("commissioning.prices_for_size")}{" "}
-          {share_type_variation_name}
+          {t("commissioning.prices_for_size")} {share_type_variation_name}
         </div>
       }
       width={800}

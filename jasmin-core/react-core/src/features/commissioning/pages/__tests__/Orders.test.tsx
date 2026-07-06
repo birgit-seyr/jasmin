@@ -159,6 +159,7 @@ vi.mock("@shared/tables", () => ({
   EditableTable: () => <div data-testid="editable-table" />,
   gatedByPermission: (canModify: boolean) => ({ canModify }),
   gatedByPermissionOnlyEdit: (canModify: boolean) => ({ canModify }),
+  SUMMARY_ROW_STYLE: {},
 }));
 
 vi.mock("@features/commissioning/components/OrderInfoPanel", () => ({

@@ -25,6 +25,9 @@ vi.mock("@hooks/index", () => ({
 
 vi.mock("@shared/ui", () => ({
   StatusSquare: () => <span data-testid="status-square" />,
+  EmptyHint: ({ children }: { children?: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
 }));
 
 vi.mock("../../modals/PastSubscriptionsModal", () => ({ default: () => null }));

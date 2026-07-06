@@ -1,7 +1,5 @@
-import { lazy } from "react";
 import { RequireRole } from "@shared/auth";
-import { SendOffersModal } from "@features/commissioning/modals";
-import { LabeledSwitch } from "@shared/ui";
+import { lazy } from "react";
 import type { AppRoute } from "../types";
 
 // Lazy load all commissioning components - only loaded when the specific route is accessed

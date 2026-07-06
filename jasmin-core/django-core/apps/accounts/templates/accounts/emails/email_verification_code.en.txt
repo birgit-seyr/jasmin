@@ -1,0 +1,11 @@
+Hello{% if first_name %} {{ first_name }}{% endif %},
+
+thanks for your interest in {{ tenant_name }}.
+
+Enter the following code to confirm your email address and continue your
+registration:
+
+  {{ code }}
+
+The code is valid for 15 minutes.
+If you weren't expecting this email, you can simply ignore it.

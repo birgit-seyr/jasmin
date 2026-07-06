@@ -64,6 +64,7 @@ export default function AboutModal({ open, onClose }: AboutModalProps) {
           </List.Item>
         )}
       />
+      <a href="https://github.com/birgit-seyr/jasmin.git">GitHub</a>
     </Modal>
   );
 }

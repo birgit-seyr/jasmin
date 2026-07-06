@@ -13,6 +13,16 @@ urlpatterns = [
     path("logout-all/", views.user_logout_all_view, name="logout_all"),
     path("refresh/", views.user_token_refresh_view, name="refresh_token"),
     # Public self-registration (Scenario 2: user signs up + applies for member)
+    path(
+        "register/send_code/",
+        views.register_send_code_view,
+        name="register_send_code",
+    ),
+    path(
+        "register/verify_code/",
+        views.register_verify_code_view,
+        name="register_verify_code",
+    ),
     path("register/", views.public_register_view, name="register"),
     # Invitation flow (Scenario 1: staff/admin invites user)
     path(

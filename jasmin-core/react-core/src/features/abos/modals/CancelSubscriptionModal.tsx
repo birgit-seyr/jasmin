@@ -2,7 +2,7 @@ import { StopOutlined } from "@ant-design/icons";
 import { Alert, DatePicker, Form, Input, Modal, Space, Typography } from "antd";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
-import { useDateFormat } from "@hooks/index";
+import { useDateFormat, useVariationLabel } from "@hooks/index";
 import type { FC } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -51,6 +51,7 @@ export const CancelSubscriptionModal: FC<CancelSubscriptionModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { dateFormat, formatDate } = useDateFormat();
+  const variationLabel = useVariationLabel();
   const [effectiveAt, setEffectiveAt] = useState<Dayjs | null>(null);
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -153,7 +154,7 @@ export const CancelSubscriptionModal: FC<CancelSubscriptionModalProps> = ({
         <Title level={5} style={{ margin: 0 }}>
           {abo.member_first_name} {abo.member_last_name}
           {abo.share_type_variation_string
-            ? ` — ${abo.share_type_variation_string}`
+            ? ` — ${variationLabel(abo.share_type_variation_string)}`
             : ""}
         </Title>
 

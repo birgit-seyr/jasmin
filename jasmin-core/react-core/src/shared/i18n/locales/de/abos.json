@@ -24,8 +24,11 @@
     "invalid": "ungültig"
   },
   "shares": "Anteile",
+  "delivery_station_days_emails": "Verteiler nach Verteilstationen",
+  "share_type_emails": "Verteiler nach Anteilsart",
+  "active_subscriptions_date_range_emails": "aktive Anteile",
   "trial_shares": "Probe-Anteile",
-  "emails": "Email Verwaltung",
+  "emails": "Email Verteiler",
   "debits": "Lastschriften",
   "debits_create_run": "Neuen Lastschriftlauf erstellen",
   "debits_period_start": "Periode von",
@@ -170,5 +173,13 @@
     "FAILED": "zurückgewiesen",
     "WAIVED": "erlassen"
   },
-  "charges_status_totals": "Summe nach Status:"
+  "charges_status_totals": "Summe nach Status:",
+  "capacity_status_unknown": "Unbekannt",
+  "capacity_out_of_window": "Der gewählte Zeitraum liegt außerhalb des geladenen Kapazitätsfensters — die Kapazitäten dafür wurden nicht geladen.",
+  "payment_method_sepa": "Zahlungsmethode: SEPA-Lastschrift",
+  "public_sepa_mandate_hint": "Dein SEPA-Mandat richtest du aus Sicherheitsgründen später ein — nach Aktivierung deines Kontos in deinem Mitgliedsbereich.",
+  "delivery_pauses_in_term": "Lieferpausen in diesem Zeitraum",
+  "sepa_mandate_required": "Bitte richte zuerst ein gültiges SEPA-Mandat ein.",
+  "sepa_mandate_missing": "Für dieses Mitglied liegt noch kein gültiges SEPA-Mandat vor. Bitte richte es ein, bevor du das Abo speicherst.",
+  "set_up_sepa_mandate": "SEPA-Mandat einrichten"
 }

@@ -308,6 +308,9 @@ class PaymentCycleViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     # from the office UI.
     read_permission = IsStaffOrMember
     write_permission = IsOffice
+    # The public registration wizard's subscription modal lets the applicant
+    # pick a payment cycle. LIST only — retrieve/write stay member/office-gated.
+    public_read_actions = frozenset({"list"})
     serializer_class = PaymentCycleSerializer
 
     @extend_schema(

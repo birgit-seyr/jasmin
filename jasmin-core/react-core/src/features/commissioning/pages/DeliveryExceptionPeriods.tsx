@@ -22,7 +22,11 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText } from "@shared/ui";
-import { useInvalidateAfterTableMutation, useNoteColumn } from "@hooks/index";
+import {
+  useInvalidateAfterTableMutation,
+  useNoteColumn,
+  useVariationLabel,
+} from "@hooks/index";
 import { useActiveStatusColumn } from "@hooks/columns/useActiveStatusColumn";
 import { useTimeBoundColumns } from "@hooks/columns/useTimeBoundColumns";
 import { useShareTypeVariations } from "@features/commissioning/hooks";
@@ -39,6 +43,7 @@ import { useShareTypeVariations } from "@features/commissioning/hooks";
  */
 export default function DeliveryExceptionPeriods() {
   const { t } = useTranslation();
+  const variationLabel = useVariationLabel();
   const { isOffice } = useRoles();
   // A started (active/past) pause is frozen — the backend rejects edit/delete
   // (is_locked), so grey out the row's edit + delete affordances here too.
@@ -118,6 +123,7 @@ export default function DeliveryExceptionPeriods() {
           displayField: "share_type_variation_string",
         },
         sortable: true,
+        render: (value: unknown) => variationLabel(value as string),
       },
 
       noteColumn,
@@ -129,6 +135,7 @@ export default function DeliveryExceptionPeriods() {
       validUntilColumn,
       variationOptions,
       noteColumn,
+      variationLabel,
     ],
   );
 

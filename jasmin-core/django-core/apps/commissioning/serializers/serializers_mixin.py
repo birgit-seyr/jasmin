@@ -10,6 +10,32 @@ from ..utils import (
 from ..utils.deletion_utils import bulk_deletable_pks, can_delete_instance
 
 
+def mask_capacity_for_anonymous(
+    data: dict, request, *, internal_fields: tuple[str, ...] = ()
+) -> None:
+    """Anonymous (public registration) reads must not leak exact occupancy,
+    the raw capacity, or internal logistics fields — mutate ``data`` in place
+    to an availability-only view.
+
+    ``capacity_by_week`` collapses to ``{occupied: 0, free: 99|0}`` (a busy
+    week still reads full, an open one still reads available, but the exact
+    subscriber count is gone), ``capacity`` is dropped, and any
+    ``internal_fields`` are removed. No-op for authenticated requests —
+    office/member keep the exact numbers.
+    """
+    if request is None or getattr(request.user, "is_authenticated", False):
+        return
+    capacity_by_week = data.get("capacity_by_week")
+    if isinstance(capacity_by_week, dict):
+        data["capacity_by_week"] = {
+            key: {"occupied": 0, "free": 99 if (entry or {}).get("free", 0) > 0 else 0}
+            for key, entry in capacity_by_week.items()
+        }
+    data["capacity"] = None
+    for field in internal_fields:
+        data.pop(field, None)
+
+
 class DeletableListSerializer(serializers.ListSerializer):
     """ListSerializer that pre-computes ``can_be_deleted`` in bulk.
 

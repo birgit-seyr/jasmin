@@ -12,10 +12,17 @@ import { useTenant } from "./useTenant";
  * @returns {Object} Object containing currency utilities
  */
 export const useCurrency = () => {
-  const { getSetting } = useTenant();
+  const { getSetting, tenant } = useTenant();
   const { format } = useNumberFormat();
 
-  const currencyCode = getSetting("currency", "EUR") as string;
+  // Prefer the settings overlay (authenticated pages); fall back to the
+  // tenant's top-level ``currency`` scalar, which the anonymous
+  // ``/tenants/current/`` payload carries (the public registration page shows
+  // prices), then EUR.
+  const currencyCode =
+    ((getSetting("currency") as string | undefined) ||
+      (tenant?.currency as string | undefined)) ??
+    "EUR";
 
   const currencySymbol = useMemo(
     () => currencyCodeToSymbol(currencyCode),

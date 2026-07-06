@@ -213,7 +213,10 @@ class ShareTypeVariation(JasminModel, TimeBoundMixin):
     average_weight = models.DecimalField(
         max_digits=5, decimal_places=3, blank=True, null=True
     )  # what should be achieved, like 2.5kg vegetable for a small harvest share
-    # How many of this variation may be ordered at once. NULL = no limit.
+    # Farm-wide production cap: how many of this variation may be actively
+    # subscribed at once (per-week peak, enforced by VariationCapacityService).
+    # Always a concrete value — 0008 made it NOT NULL (default 100); there is no
+    # "unlimited" sentinel.
     capacity = models.IntegerField(default=100)
     sort_order = models.PositiveIntegerField(default=0)
 
@@ -382,34 +385,6 @@ class ShareTypeVariation(JasminModel, TimeBoundMixin):
                     new_valid_until=self.valid_until,
                     stranded_count=stranded_count,
                 )
-
-    def get_occupied_capacity(self, at_date=None) -> int:
-        """Farm-wide quantity of this variation actively subscribed on
-        ``at_date`` (default today) — the occupancy side of ``capacity``.
-
-        Quantity-weighted count of admin-confirmed, non-cancelled,
-        non-waiting_listed subscriptions whose term covers the date. The production
-        twin of ``DeliveryStationDay.get_occupied_capacity`` — farm-wide, with
-        no per-week / per-station dimension.
-        """
-        from django.db.models import Sum
-        from django.utils import timezone
-
-        from apps.commissioning.models.members import Subscription
-
-        on = at_date or timezone.localdate()
-        return int(
-            Subscription.objects.filter(
-                share_type_variation=self,
-                admin_confirmed=True,
-                cancelled_at__isnull=True,
-                on_waiting_list=False,
-                valid_from__lte=on,
-            )
-            .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=on))
-            .aggregate(q=Sum("quantity"))["q"]
-            or 0
-        )
 
     # NOTE: deliberately NO ``save()`` override — same reason as ShareType.
     # ``TimeBoundMixin.save()`` runs ``handle_succession()`` (closing the open

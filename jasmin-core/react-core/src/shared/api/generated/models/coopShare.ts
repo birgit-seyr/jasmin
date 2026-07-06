@@ -28,6 +28,8 @@ export interface CoopShare {
   /** @nullable */
   readonly cancelled_effective_at?: string | null;
   /** @nullable */
+  cancellation_reason?: string | null;
+  /** @nullable */
   due_date?: string | null;
   /** @nullable */
   readonly paid_at?: string | null;

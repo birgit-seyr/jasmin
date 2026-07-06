@@ -80,6 +80,38 @@ def paused_weeks_for_variation(
     return paused
 
 
+def paused_weeks_by_variation(
+    variation_ids: Iterable[str], candidate_weeks: Iterable[YearWeek]
+) -> dict[str, set[YearWeek]]:
+    """Batched :func:`paused_weeks_for_variation` over many variations in ONE
+    query. Returns ``{variation_id: {paused (year, week), …}}`` (only variations
+    with at least one paused candidate week appear). Used by the capacity
+    display so a variation isn't shown as "full" on a week nothing delivers."""
+    ids = list(variation_ids)
+    candidate = set(candidate_weeks)
+    if not ids or not candidate:
+        return {}
+    periods_by_var: dict[str, list] = {}
+    for var_id, valid_from, valid_until in DeliveryExceptionPeriod.objects.filter(
+        share_type_variation_id__in=ids
+    ).values_list("share_type_variation_id", "valid_from", "valid_until"):
+        # Open-ended pauses are rejected at the API boundary; guard a stray
+        # legacy row so ``<=`` against None can't raise (same as the per-variation
+        # helper above).
+        if valid_from and valid_until:
+            periods_by_var.setdefault(var_id, []).append((valid_from, valid_until))
+    out: dict[str, set[YearWeek]] = {}
+    for var_id, periods in periods_by_var.items():
+        paused: set[YearWeek] = set()
+        for year, week in candidate:
+            monday = Week(year, week).monday()
+            if any(vf <= monday <= vu for vf, vu in periods):
+                paused.add((year, week))
+        if paused:
+            out[var_id] = paused
+    return out
+
+
 def _is_future_week(year_week: YearWeek, today: datetime.date) -> bool:
     """A week is still editable when its Monday is on/after today — i.e. it
     hasn't started. Conservative: a week already in progress is left untouched
