@@ -735,12 +735,14 @@ export default function PlanningHarvestSharesBase({
             <Space.Compact>
               <Button
                 type={showDaysTogether ? "default" : "primary"}
+                aria-pressed={!showDaysTogether}
                 onClick={() => setShowDaysTogether(false)}
               >
                 {t("commissioning.separate_days")}
               </Button>
               <Button
                 type={showDaysTogether ? "primary" : "default"}
+                aria-pressed={showDaysTogether}
                 onClick={() => setShowDaysTogether(true)}
               >
                 {t("commissioning.combined_view")}

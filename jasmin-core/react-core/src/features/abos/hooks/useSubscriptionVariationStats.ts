@@ -10,10 +10,10 @@ import { useShareTypeVariationSizeOptions } from "@hooks/index";
  */
 export const VARIATION_PALETTE = [
   "#0072B2", // blue
+  "#CC79A7", // reddish purple
   "#E69F00", // orange
   "#009E73", // green
   "#D55E00", // vermillion
-  "#CC79A7", // reddish purple
   "#56B4E9", // sky blue
   "#999999", // grey
   "#000000", // black
@@ -23,6 +23,20 @@ export interface VariationInfo {
   id: string;
   label: string;
   color: string;
+}
+
+/**
+ * Deterministic, id-based order for palette assignment. Numeric-aware (so
+ * "2" sorts before "10"), lexicographic fallback for non-numeric ids. Keyed on
+ * the stable variation id — NOT the incoming array order — so a variation keeps
+ * its colour regardless of which query (and thus which ordering) a page fetched
+ * the catalogue through.
+ */
+function compareVariationId(a: string, b: string): number {
+  const na = Number(a);
+  const nb = Number(b);
+  if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 interface SubRow {
@@ -68,8 +82,14 @@ export function useSubscriptionVariationStats(
   // and can't be localized client-side, hence rebuilding the label here.
   const variationInfo = useMemo(() => {
     const map = new Map<string, VariationInfo>();
-    (variations ?? []).forEach((v, i) => {
-      if (!v.id) return;
+    // Assign palette colours by the stable id order (not the array order), so
+    // the abos stats strip and the dashboard graph agree on every variation's
+    // colour even though each page fetches the catalogue through a different
+    // query.
+    const ordered = [...(variations ?? [])]
+      .filter((v): v is VariationOption & { id: string } => !!v.id)
+      .sort((a, b) => compareVariationId(a.id, b.id));
+    ordered.forEach((v, i) => {
       const label =
         [v.share_type_name, getShareTypeVariationSizeLabel(v.size ?? "")]
           .filter(Boolean)

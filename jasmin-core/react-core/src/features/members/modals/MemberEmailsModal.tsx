@@ -117,7 +117,7 @@ const MemberEmailsModal: FC<MemberEmailsModalProps> = ({
         rowKey="id"
         loading={isLoading}
         pagination={{ pageSize: 20 }}
-        className="custom-forecast-table"
+        className="custom-jasmin-table"
         size="small"
         locale={{
           emptyText: t("members.no_emails_sent"),

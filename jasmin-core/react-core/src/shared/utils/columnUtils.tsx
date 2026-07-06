@@ -107,7 +107,12 @@ export const createDateRangeStatusRenderer = (
     const config = statusConfig[status];
 
     return (
+      // The status is otherwise colour-only — role="img" + aria-label give the
+      // dot an accessible name so screen readers announce active/future/inactive
+      // (no visual change).
       <div
+        role="img"
+        aria-label={config.tooltip}
         style={{
           width: `${size}px`,
           height: `${size}px`,

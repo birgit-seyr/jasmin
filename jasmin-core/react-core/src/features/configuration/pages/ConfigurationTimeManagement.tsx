@@ -404,7 +404,7 @@ export default function TimeManagement() {
         onSaveSuccess={onSharesSaveSuccess}
         onDeleteSuccess={onSharesDeleteSuccess}
         permissions={permissions}
-        className="custom-forecast-table mb-1em"
+        className="custom-jasmin-table mb-1em"
       />
       <DateRangeStatusLegend />
       <h4 style={{ marginTop: "3em" }}>

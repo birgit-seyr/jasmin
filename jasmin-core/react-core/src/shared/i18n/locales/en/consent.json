@@ -54,5 +54,7 @@
     "action": "Print",
     "paper_required_hint": "This document must be printed, signed, and mailed to the following address:",
     "signature_line": "Place, date, signature"
-  }
+  },
+  "accept_prefix": "I have read and accept:",
+  "document": "the document"
 }

@@ -797,6 +797,19 @@ class Subscription(
     # still calls ``super().save()`` (TimeBoundMixin → ``clean()``, incl. the
     # DSD validity-window check above).
     def save(self, *args, **kwargs) -> None:
+        # A subscription must have a finite, billable term. Open-ended subs
+        # materialise no ShareDeliveries and silently never bill (CHG-1). The
+        # serializer blocks this on the API; this is the model-level backstop
+        # for factories / imports / seed scripts / direct ORM writes — every
+        # save path lands here, so an open-ended subscription is not possible.
+        if self.valid_until is None:
+            from apps.commissioning.errors import OpenEndedSubscriptionNotAllowed
+
+            raise OpenEndedSubscriptionNotAllowed(
+                "A subscription must have an end date (valid_until); "
+                "open-ended subscriptions are not allowed.",
+                field="valid_until",
+            )
         if self.subscription_number is not None:
             super().save(*args, **kwargs)
             return

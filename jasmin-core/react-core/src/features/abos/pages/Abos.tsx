@@ -322,10 +322,7 @@ export default function Abos() {
     <div>
       <h1>{t("abos.abos")}</h1>
 
-      <SubscriptionStatsCards
-        subscriptions={data}
-        variations={allShareTypeVariations}
-      />
+      <SubscriptionStatsCards />
 
       {pendingConfirmationCount > 0 && (
         <Badge count={pendingConfirmationCount} size="small">

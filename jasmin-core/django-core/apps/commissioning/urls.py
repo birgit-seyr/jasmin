@@ -43,6 +43,7 @@ from .views import (
     member_growth_statistics,
     offer_sending_status,
     share_options_list,
+    subscription_member_emails,
 )
 from .views.waiting_list_offer_views import (
     WaitingListOfferAcceptView,
@@ -373,6 +374,11 @@ urlpatterns = [
         "member_growth_statistics/",
         member_growth_statistics,
         name="member_growth_statistics",
+    ),
+    path(
+        "subscription_member_emails/",
+        subscription_member_emails,
+        name="subscription_member_emails",
     ),
     path(
         "member_dashboard_statistics/",

@@ -2,8 +2,8 @@ import { Alert, Button, Flex, Space, Typography } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { StepProps } from "../types";
-import ConsentDocumentField from "../components/ConsentDocumentField";
-import { useCurrentConsentDoc } from "../components/useCurrentConsentDoc";
+import ConsentDocumentField from "@shared/consent/ConsentDocumentField";
+import { useCurrentConsentDoc } from "@shared/consent/useCurrentConsentDoc";
 
 const { Paragraph } = Typography;
 

@@ -31,15 +31,25 @@ export default function AutoSaveIndicator({
   }, [saving]);
 
   return (
-    <div style={{ minHeight: 22 }}>
+    // Polite live region so the saving/saved transition is announced without
+    // stealing focus; the spinner/check icons are decorative (the text carries
+    // the meaning), so hide them from assistive tech.
+    <div role="status" aria-live="polite" style={{ minHeight: 22 }}>
       {saving ? (
         <Space size="small">
-          <SyncOutlined spin style={{ color: "var(--color-future-blue)" }} />
+          <SyncOutlined
+            spin
+            aria-hidden
+            style={{ color: "var(--color-future-blue)" }}
+          />
           <Text type="secondary">{t("settings.saving")}</Text>
         </Space>
       ) : showSaved && !hasChanges ? (
         <Space size="small">
-          <CheckCircleOutlined style={{ color: "var(--color-success)" }} />
+          <CheckCircleOutlined
+            aria-hidden
+            style={{ color: "var(--color-success)" }}
+          />
           <Text type="secondary">{t("settings.saved")}</Text>
         </Space>
       ) : null}

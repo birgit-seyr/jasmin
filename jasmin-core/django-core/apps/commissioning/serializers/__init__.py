@@ -74,9 +74,11 @@ from .members_serializer import (
     CoopShareSerializer,
     MemberCreateRequestSerializer,
     MemberEmailLogSerializer,
+    MemberEmailSerializer,
     MemberLoanSerializer,
     MemberSelfReadSerializer,
     MemberSerializer,
+    SubscriptionMemberEmailsResponseSerializer,
     SubscriptionSerializer,
 )
 from .my_data_serializer import (

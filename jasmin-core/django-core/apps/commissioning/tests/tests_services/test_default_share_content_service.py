@@ -266,7 +266,7 @@ class TestGetDefaultShareContentListQueryCount:
             member=MemberFactory(),
             share_type_variation=variation,
             valid_from=datetime.date(2026, 1, 5),
-            valid_until=None,
+            valid_until=datetime.date(2027, 1, 3),  # Sunday, ~1 year later
             quantity=1,
         )
 

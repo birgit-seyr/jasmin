@@ -28,8 +28,20 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText } from "@shared/ui";
-import { useInvalidateAfterTableMutation, useIsMobile, useNoteColumn, useNumberFormat, useSizeOptions, useTenant, useUnitOptions } from '@hooks/index';
-import { useAmountUnitSizeColumns, useShareArticleColumn, variationColumnKey } from '@features/commissioning/hooks';
+import {
+  useInvalidateAfterTableMutation,
+  useIsMobile,
+  useNoteColumn,
+  useNumberFormat,
+  useSizeOptions,
+  useTenant,
+  useUnitOptions,
+} from "@hooks/index";
+import {
+  useAmountUnitSizeColumns,
+  useShareArticleColumn,
+  variationColumnKey,
+} from "@features/commissioning/hooks";
 import type { ShareTypeOption } from "@hooks/useShareTypes";
 import type { ShareTypeVariationOption } from "@features/commissioning/hooks/useShareTypeVariations";
 import dayjs from "dayjs";
@@ -62,7 +74,8 @@ const BACKUP_SUBLINE_STYLE: CSSProperties = {
 };
 
 function withBackupSubline(main: ReactNode, backup: ReactNode): ReactNode {
-  if (backup === null || backup === undefined || backup === "") return main ?? "";
+  if (backup === null || backup === undefined || backup === "")
+    return main ?? "";
   return (
     <>
       <div>{main}</div>
@@ -271,8 +284,8 @@ function BoxesBody({
   const allStationsData = useMemo(
     () =>
       shell.queryEnabled && shell.numberPackingStations > 1
-        ? ((rawAllStationsData as unknown as (PackingListRow & TableRecord)[]) ??
-          null)
+        ? ((rawAllStationsData as unknown as (PackingListRow &
+            TableRecord)[]) ?? null)
         : null,
     [rawAllStationsData, shell.queryEnabled, shell.numberPackingStations],
   );
@@ -390,45 +403,43 @@ function BoxesBody({
           title: t("commissioning.vegetables_and_fruits"),
         },
       },
-      ...amountUnitSizeColumns.map(
-        (col): EditableColumnConfig<TableRecord> => {
-          const isUnit = col.dataIndex === "unit";
-          const isSize = col.dataIndex === "size";
-          return {
-            ...col,
-            render: (value: unknown, record: TableRecord, index: number) => {
-              const original = col.render
-                ? col.render(value, record, index)
-                : ((value as ReactNode) ?? "");
-              let backup: ReactNode = null;
-              if (record?.backup_share_article_name) {
-                if (isUnit && record.backup_share_article_unit) {
-                  backup = getUnitLabel(
-                    record.backup_share_article_unit as string,
-                  );
-                } else if (isSize && record.backup_share_article_size) {
-                  backup = getSizeLabel(
-                    record.backup_share_article_size as string,
-                  );
-                }
+      ...amountUnitSizeColumns.map((col): EditableColumnConfig<TableRecord> => {
+        const isUnit = col.dataIndex === "unit";
+        const isSize = col.dataIndex === "size";
+        return {
+          ...col,
+          render: (value: unknown, record: TableRecord, index: number) => {
+            const original = col.render
+              ? col.render(value, record, index)
+              : ((value as ReactNode) ?? "");
+            let backup: ReactNode = null;
+            if (record?.backup_share_article_name) {
+              if (isUnit && record.backup_share_article_unit) {
+                backup = getUnitLabel(
+                  record.backup_share_article_unit as string,
+                );
+              } else if (isSize && record.backup_share_article_size) {
+                backup = getSizeLabel(
+                  record.backup_share_article_size as string,
+                );
               }
-              return withBackupSubline(original, backup);
-            },
-            pdf: {
-              include: true,
-              width: widthAmountUnitSize,
-              align: "center",
-              dataKey:
-                col.dataIndex === "unit"
-                  ? "unit_label"
-                  : col.dataIndex === "size"
-                    ? "size_label"
-                    : col.dataIndex,
-              title: col.title,
-            },
-          };
-        },
-      ),
+            }
+            return withBackupSubline(original, backup);
+          },
+          pdf: {
+            include: true,
+            width: widthAmountUnitSize,
+            align: "center",
+            dataKey:
+              col.dataIndex === "unit"
+                ? "unit_label"
+                : col.dataIndex === "size"
+                  ? "size_label"
+                  : col.dataIndex,
+            title: col.title,
+          },
+        };
+      }),
     ];
 
     const endColumns: EditableColumnConfig<TableRecord>[] = [
@@ -458,10 +469,7 @@ function BoxesBody({
     getSizeLabel,
   ]);
 
-  const apiFunctions = useMemo<ApiFunctions>(
-    () => wrapApiFunctions({}),
-    [],
-  );
+  const apiFunctions = useMemo<ApiFunctions>(() => wrapApiFunctions({}), []);
 
   const generateFilename = useMemo(
     () => shell.generateFilename(t("commissioning.packing_list")),
@@ -538,7 +546,7 @@ function BoxesBody({
         onSaveSuccess={onSaveSuccess}
         onDeleteSuccess={onDeleteSuccess}
         permissions={READ_ONLY_PERMISSION}
-        className="w-max custom-forecast-table"
+        className="w-max custom-jasmin-table"
         renderMobileCard={(record: TableRecord) => (
           <PackingListBoxesMobileCard
             key={String(record.key)}

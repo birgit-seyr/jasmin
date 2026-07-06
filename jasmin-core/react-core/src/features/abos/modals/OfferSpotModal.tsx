@@ -85,6 +85,9 @@ export function OfferSpotModal({
         </Descriptions.Item>
         <Descriptions.Item label={t("abos.price_per_delivery")}>
           <InputNumber
+            // Descriptions.Item's label isn't programmatically tied to the
+            // control — give the input its own accessible name.
+            aria-label={t("abos.price_per_delivery")}
             value={price}
             onChange={(v) => setPrice(v)}
             min={0}

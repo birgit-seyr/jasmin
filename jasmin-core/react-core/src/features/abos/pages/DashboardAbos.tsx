@@ -7,10 +7,13 @@ import {
   useCommissioningAbosList,
   useCommissioningShareTypeVariationsList,
 } from "@shared/api/generated/commissioning/commissioning";
+import { usePaymentsChargeSchedulesIncomeByMonthList } from "@shared/api/generated/payments-—-charge-schedule/payments-—-charge-schedule";
+import type { ChargeScheduleMonthlyIncome } from "@shared/api/generated/models";
 import {
   buildMonthlyActiveByVariation,
   useSubscriptionVariationStats,
 } from "@features/abos/hooks/useSubscriptionVariationStats";
+import { buildMonthlyIncomeSeries } from "@features/abos/utils/incomeSeries";
 import {
   useCurrency,
   useDateFormat,
@@ -23,6 +26,10 @@ import {
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
 
+// A finance-green, distinct from the categorical VARIATION_PALETTE (income is a
+// single, non-per-variation series).
+const INCOME_COLOR = "#3f8600";
+
 interface PriceRow {
   key: string;
   name: string;
@@ -34,7 +41,7 @@ interface PriceRow {
 export default function DashboardAbos() {
   const { t } = useTranslation();
   const { currencySymbol } = useCurrency();
-  const { dateFormat } = useDateFormat();
+  const { dateFormat, formatDateForAPI } = useDateFormat();
   const presets = useDateRangePresets();
   const { getSetting } = useTenant();
   const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
@@ -65,6 +72,32 @@ export default function DashboardAbos() {
     () => buildMonthlyActiveByVariation(subscriptions, variationInfo, range),
     [subscriptions, variationInfo, range],
   );
+
+  // Billed income (sum of due amounts) per month, over the same range — the
+  // backend aggregates it (exact Decimal SUM) so only the monthly points cross
+  // the wire. Gated on ``range`` so we never fire with empty date params.
+  const incomeParams = useMemo(
+    () => ({
+      date_from: range ? (formatDateForAPI(range[0]) ?? "") : "",
+      date_to: range ? (formatDateForAPI(range[1]) ?? "") : "",
+    }),
+    [range, formatDateForAPI],
+  );
+  const { data: incomeData } = usePaymentsChargeSchedulesIncomeByMonthList(
+    incomeParams,
+    { query: { enabled: !!range } },
+  );
+  // The endpoint returns a bare array at runtime (the action isn't paginated);
+  // the shared pagination-typed hook mislabels it, so cast — same pattern as
+  // ChargesAbos / DecidedDeletionsCard.
+  const income = useMemo(() => {
+    const points = (incomeData ?? []) as unknown as ChargeScheduleMonthlyIncome[];
+    return buildMonthlyIncomeSeries(points, range, {
+      id: "income",
+      label: t("statistics.income"),
+      color: INCOME_COLOR,
+    });
+  }, [incomeData, range, t]);
   // Solidarity: prices actually paid per variation for subs STARTED in range.
   const paidByVar = useMemo(() => {
     const rows = subscriptions ?? [];
@@ -132,19 +165,16 @@ export default function DashboardAbos() {
       <h1>{t("statistics.abos_title")}</h1>
 
       <Spin spinning={isLoading}>
+        <RangePicker
+          value={range}
+          onChange={(v) => setRange(v && v[0] && v[1] ? [v[0], v[1]] : null)}
+          presets={presets}
+          format={dateFormat}
+          allowClear={false}
+        />
         <Card
-          title={t("statistics.card_date_range")}
-          extra={
-            <RangePicker
-              value={range}
-              onChange={(v) =>
-                setRange(v && v[0] && v[1] ? [v[0], v[1]] : null)
-              }
-              presets={presets}
-              format={dateFormat}
-              allowClear={false}
-            />
-          }
+          className="dark-green-border"
+          title={t("statistics.chart_active_subscriptions_by_variation")}
           style={{ marginTop: "1em" }}
         >
           <Text type="secondary">
@@ -156,27 +186,44 @@ export default function DashboardAbos() {
             height={320}
             emptyText={t("statistics.no_subscription_data")}
           />
+        </Card>
 
-          {allowsSolidarity && (
-            <>
-              <Divider style={{ margin: "16px 0 8px" }} />
-              <Text type="secondary">{t("statistics.solidarity_title")}</Text>
-              <Table<PriceRow>
-                size="small"
-                pagination={false}
-                columns={priceColumns}
-                dataSource={priceRows}
-                style={{ marginTop: 8 }}
-                locale={{ emptyText: t("statistics.no_subscription_data") }}
-              />
-              <Typography.Paragraph
-                type="secondary"
-                style={{ marginTop: "0.75em", marginBottom: 0 }}
-              >
-                {t("statistics.solidarity_hint")}
-              </Typography.Paragraph>
-            </>
-          )}
+        {allowsSolidarity && (
+          <Card
+            className="dark-green-border"
+            title={t("statistics.solidarity_title")}
+            style={{ marginTop: "1em" }}
+          >
+            <Table<PriceRow>
+              size="small"
+              pagination={false}
+              columns={priceColumns}
+              dataSource={priceRows}
+              style={{ width: "40%" }}
+              className="custom-jasmin-table"
+              locale={{ emptyText: t("statistics.no_subscription_data") }}
+            />
+          </Card>
+        )}
+
+        <Card
+          className="dark-green-border"
+          title={t("statistics.chart_income_by_month")}
+          style={{ marginTop: "1em" }}
+        >
+          <Text type="secondary">{t("statistics.chart_income_by_month")}</Text>
+          <StatsAreaChart
+            data={income.data}
+            series={income.series}
+            height={320}
+            emptyText={t("statistics.no_income_data")}
+          />
+          <Typography.Paragraph
+            type="secondary"
+            style={{ marginTop: "0.75em", marginBottom: 0 }}
+          >
+            {t("statistics.income_hint")}
+          </Typography.Paragraph>
         </Card>
       </Spin>
     </div>

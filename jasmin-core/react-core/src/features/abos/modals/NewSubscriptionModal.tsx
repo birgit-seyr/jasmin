@@ -21,11 +21,14 @@ import { type FC, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   commissioningAbosCreate,
+  commissioningConsentsCreate,
   commissioningMySubscriptionsSubscribeCreate,
   useCommissioningDeliveryExceptionPeriodsList,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { Subscription } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
+import ConsentDocumentField from "@shared/consent/ConsentDocumentField";
+import { useCurrentConsentDoc } from "@shared/consent/useCurrentConsentDoc";
 import { ModalCancelSaveFooter } from "@shared/modals/shared";
 import {
   useAllShareTypeVariations,
@@ -75,6 +78,9 @@ export interface SubscriptionIntent {
   price_per_delivery?: string;
   payment_cycle?: string;
   is_trial: boolean;
+  /** Accepted subscription-contract ConsentDocument id, when the tenant
+   *  publishes one — the registration wizard records it with the member. */
+  accepted_subscription_contract?: string;
 }
 
 interface NewSubscriptionModalProps {
@@ -126,6 +132,16 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     (tenant as Record<string, unknown> | null)?.allows_solidarity_pricing ??
     false,
   );
+
+  // Subscription-contract consent: shown + required ONLY when the tenant has
+  // published a ``subscription_contract`` ConsentDocument (no doc → not
+  // required). Recorded on save — office records it on the member's behalf,
+  // member/public for the applicant.
+  const { doc: subscriptionContractDoc } = useCurrentConsentDoc(
+    "subscription_contract",
+  );
+  const [subscriptionContractAccepted, setSubscriptionContractAccepted] =
+    useState(false);
   const sentenceTrialAbo = getSetting(
     "info_sentence_about_trial_subscriptions",
   );
@@ -556,6 +572,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     form.resetFields();
     setSelectedVariation(null);
     setWaitingListOffer(null);
+    setSubscriptionContractAccepted(false);
     onCancel();
   }, [form, onCancel]);
 
@@ -584,6 +601,13 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         return; // antd already surfaced the field errors
       }
 
+      // Block until the subscription contract is accepted (only when the tenant
+      // publishes one). Applies to every mode — public intent, office, member.
+      if (subscriptionContractDoc && !subscriptionContractAccepted) {
+        notify.error(t("abos.subscription_contract_required"));
+        return;
+      }
+
       // Public registration: no write — hand the chosen configuration back to
       // the wizard as intent. The office materialises the real (capacity-
       // checked) subscription on confirm.
@@ -603,9 +627,11 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
               : undefined,
           payment_cycle: values.payment_cycle || undefined,
           is_trial: forceTrial === true,
+          accepted_subscription_contract: subscriptionContractDoc?.id,
         });
         form.resetFields();
         setSelectedVariation(null);
+        setSubscriptionContractAccepted(false);
         onSuccess();
         return;
       }
@@ -660,6 +686,25 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
           };
           await commissioningAbosCreate(payload as Subscription);
         }
+        // Record the subscription-contract consent once the subscription
+        // exists. Office records it on the member's behalf (``member``);
+        // a member self-subscribing is pinned to their own record server-side.
+        // Non-fatal: the subscription is already saved, so a failed consent
+        // write only warns rather than rolling back.
+        if (subscriptionContractDoc?.id && subscriptionContractAccepted) {
+          try {
+            await commissioningConsentsCreate({
+              document_id: subscriptionContractDoc.id,
+              ...(isMemberOnly ? {} : { member: memberId }),
+            });
+          } catch (consentError) {
+            console.error(
+              "Failed to record subscription-contract consent:",
+              consentError,
+            );
+            notify.warning(t("abos.subscription_contract_record_failed"));
+          }
+        }
         setWaitingListOffer(null);
         notify.success(
           asWaitingList
@@ -668,6 +713,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         );
         form.resetFields();
         setSelectedVariation(null);
+        setSubscriptionContractAccepted(false);
         onSuccess();
       } catch (error) {
         const code = getErrorCode(error);
@@ -704,6 +750,8 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       onIntent,
       forceTrial,
       sepaReady,
+      subscriptionContractDoc,
+      subscriptionContractAccepted,
     ],
   );
 
@@ -762,6 +810,12 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
             onCancel={handleCancel}
             onPrimary={handleSave}
             loading={saving}
+            // The Abo-Vertrag consent is mandatory: keep the primary button
+            // greyed out (not green) until it's ticked when the tenant
+            // publishes one.
+            primaryDisabled={Boolean(
+              subscriptionContractDoc && !subscriptionContractAccepted,
+            )}
           />
         ) : null
       }
@@ -862,6 +916,16 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
               <Form.Item
                 name="valid_until"
                 label={t("abos.valid_until")}
+                // A subscription must have an end date (the backend rejects
+                // open-ended ones). Only require it when the field is actually
+                // editable — when it's auto-filled + locked (a tenant term rule
+                // or the simplified public/member view) it's always populated,
+                // and a required rule on a disabled field would dead-end.
+                rules={
+                  lockValidUntil || simplified
+                    ? undefined
+                    : [{ required: true, message: t("common.required") }]
+                }
                 extra={
                   validUntilHint ? (
                     <Text type="secondary" style={{ fontSize: 12 }}>
@@ -1092,6 +1156,19 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                 </Button>
               }
             />
+          )}
+
+          {/* Subscription-contract consent — only when the tenant publishes
+              one; required before the subscription can be saved (all modes). */}
+          {subscriptionContractDoc && (
+            <div style={{ marginTop: 16 }}>
+              <ConsentDocumentField
+                doc={subscriptionContractDoc}
+                accepted={subscriptionContractAccepted}
+                onChange={setSubscriptionContractAccepted}
+                labelKey="abos.accept_subscription_contract"
+              />
+            </div>
           )}
         </Form>
       )}

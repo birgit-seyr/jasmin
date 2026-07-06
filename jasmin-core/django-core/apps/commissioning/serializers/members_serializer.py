@@ -705,3 +705,20 @@ class MemberLoanSerializer(MemberStringFieldMixin, serializers.ModelSerializer):
             "created_by",
             "created_at",
         )
+
+
+class MemberEmailSerializer(serializers.Serializer):
+    """One recipient in a subscription-based email distribution list."""
+
+    email = serializers.EmailField()
+    first_name = serializers.CharField(
+        allow_blank=True, allow_null=True, required=False
+    )
+    last_name = serializers.CharField(allow_blank=True, allow_null=True, required=False)
+
+
+class SubscriptionMemberEmailsResponseSerializer(serializers.Serializer):
+    """Distinct member e-mails for a subscription filter (AbosEmails page)."""
+
+    count = serializers.IntegerField()
+    members = MemberEmailSerializer(many=True)

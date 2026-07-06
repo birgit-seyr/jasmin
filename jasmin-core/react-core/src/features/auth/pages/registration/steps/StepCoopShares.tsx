@@ -3,8 +3,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useCurrency, useTenant } from "@hooks/index";
 import type { StepProps } from "../types";
-import ConsentDocumentField from "../components/ConsentDocumentField";
-import { useCurrentConsentDoc } from "../components/useCurrentConsentDoc";
+import ConsentDocumentField from "@shared/consent/ConsentDocumentField";
+import { useCurrentConsentDoc } from "@shared/consent/useCurrentConsentDoc";
 
 const { Paragraph, Text } = Typography;
 
@@ -66,8 +66,15 @@ export default function StepCoopShares({ data, update, next }: StepProps) {
       <Paragraph>{t("auth.registration.coop.intro", { min, max })}</Paragraph>
 
       <Form layout="vertical">
-        <Form.Item label={t("auth.registration.coop.shares_label")}>
+        {/* This step drives the input via local state (no Form ``name``), so
+            the label isn't auto-wired — associate it explicitly via htmlFor/id
+            so screen readers announce the field. */}
+        <Form.Item
+          label={t("auth.registration.coop.shares_label")}
+          htmlFor="coop-shares-count"
+        >
           <InputNumber
+            id="coop-shares-count"
             min={min}
             max={max}
             value={count}

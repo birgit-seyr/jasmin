@@ -3,7 +3,6 @@
   "card_active_today": "Active / today",
   "card_date_range": "Date range",
   "series_quantity": "Quantity",
-
   "members_title": "Development members",
   "members_subtitle": "Members, cooperative shares and loans at a glance",
   "section_members": "Members",
@@ -28,7 +27,6 @@
   "chart_members_over_time": "Members over time",
   "series_members": "Total members",
   "no_member_data": "No member data yet",
-
   "abos_title": "Development subscriptions",
   "abos_subtitle": "Subscription statistics at a glance",
   "kpi_active_subscriptions": "Active subscriptions",
@@ -49,7 +47,6 @@
   "stat_total": "Total",
   "chart_active_subscriptions_by_variation": "Active subscriptions over time",
   "abos_stats_subtitle": "Subscriptions per share type, at a glance",
-
   "commissioning_title": "Commissioning dashboard",
   "commissioning_subtitle": "What the farm harvested and bought this year",
   "kpi_total_harvest_kg": "Harvested this year",
@@ -59,5 +56,9 @@
   "chart_harvest_by_month": "Harvest by month (kg)",
   "chart_top_vegetables": "Top crops by kg",
   "series_kg": "Kilograms",
-  "no_harvest_data": "No harvest recorded for this year yet"
+  "no_harvest_data": "No harvest recorded for this year yet",
+  "chart_income_by_month": "Billed income over time",
+  "income": "Income",
+  "no_income_data": "No income data yet",
+  "income_hint": "Sum of amounts due per month (planned, issued, partial and paid charges; waived and failed excluded)."
 }

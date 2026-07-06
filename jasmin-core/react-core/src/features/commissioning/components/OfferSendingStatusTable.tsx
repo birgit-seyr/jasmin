@@ -67,7 +67,7 @@ export default function OfferSendingStatusTable({
         rowKey="id"
         pagination={false}
         loading={loading}
-        className="custom-forecast-table"
+        className="custom-jasmin-table"
         size="small"
         style={{ width: "46em" }}
       />

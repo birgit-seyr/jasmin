@@ -48,15 +48,14 @@ class TestAdminConfirmMaterializes:
         # Should now have at least one PLANNED row.
         assert ChargeSchedule.objects.filter(subscription=sub).count() >= 1
 
-    def test_confirm_without_valid_until_creates_no_charges(self, tenant):
-        """This is the bug the user hit."""
+    def test_open_ended_subscription_is_rejected(self, tenant):
+        """A subscription without valid_until is rejected outright — no silent
+        zero-charge sub."""
+        from apps.commissioning.errors import OpenEndedSubscriptionNotAllowed
+
         svc = SubscriptionService()
-        sub = svc.create_bare_subscription(self._validated(valid_until=None))
-
-        sub.confirm(admin_user=JasminUserFactory(), save=True)
-
-        # Today: silently zero. After the fix, this should raise instead.
-        assert ChargeSchedule.objects.filter(subscription=sub).count() == 0
+        with pytest.raises(OpenEndedSubscriptionNotAllowed):
+            svc.create_bare_subscription(self._validated(valid_until=None))
 
     def test_materialize_stamps_is_opted_in_for_on_by_default_optin(self, tenant):
         """Regression: bulk_create bypasses ShareDelivery.save(), which stamps

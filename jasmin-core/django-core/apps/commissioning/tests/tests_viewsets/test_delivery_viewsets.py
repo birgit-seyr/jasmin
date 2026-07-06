@@ -74,7 +74,6 @@ class TestDeliveryStationViewSet:
         sub = SubscriptionFactory(
             default_delivery_station_day=dsd,
             admin_confirmed=True,
-            valid_until=None,
         )
         # An unrelated station the member has no subscription to.
         station_b = DeliveryStationFactory()
@@ -93,7 +92,6 @@ class TestDeliveryStationViewSet:
         sub = SubscriptionFactory(
             default_delivery_station_day=dsd,
             admin_confirmed=False,
-            valid_until=None,
         )
         resp = api_client.get(self.URL, {"member": str(sub.member.id)})
         assert resp.status_code == status.HTTP_200_OK
@@ -154,7 +152,6 @@ class TestDeliveryStationDayViewSet:
         sub = SubscriptionFactory(
             default_delivery_station_day=dsd_a,
             admin_confirmed=True,
-            valid_until=None,
         )
         resp = api_client.get(self.URL, {"member": str(sub.member.id)})
         assert resp.status_code == status.HTTP_200_OK
@@ -170,7 +167,6 @@ class TestDeliveryStationDayViewSet:
         sub = SubscriptionFactory(
             default_delivery_station_day=dsd,
             admin_confirmed=False,
-            valid_until=None,
         )
         resp = api_client.get(self.URL, {"member": str(sub.member.id)})
         assert resp.status_code == status.HTTP_200_OK
@@ -182,7 +178,7 @@ class TestDeliveryStationDayViewSet:
     ):
         # A crafted ?member=<other id> from a non-staff member is rejected — the
         # member↔station-day association must not be readable cross-member.
-        other = SubscriptionFactory(admin_confirmed=True, valid_until=None)
+        other = SubscriptionFactory(admin_confirmed=True)
         anon_client.force_authenticate(user=member_user)
         resp = anon_client.get(self.URL, {"member": str(other.member.id)})
         assert resp.status_code == status.HTTP_403_FORBIDDEN
@@ -201,7 +197,6 @@ class TestDeliveryStationDayViewSet:
         sub = SubscriptionFactory(
             default_delivery_station_day=dsd_a,
             admin_confirmed=True,
-            valid_until=None,
         )
         future_share = ShareFactory(
             delivery_day=dsd_b.delivery_day,
@@ -232,7 +227,6 @@ class TestDeliveryStationDayViewSet:
         sub = SubscriptionFactory(
             default_delivery_station_day=dsd_a,
             admin_confirmed=True,
-            valid_until=None,
         )
         past_share = ShareFactory(
             delivery_day=dsd_b.delivery_day,

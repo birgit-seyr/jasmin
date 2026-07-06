@@ -272,7 +272,7 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
             dataSource={tableData}
             pagination={false}
             size="small"
-            className="custom-forecast-table w-max"
+            className="custom-jasmin-table w-max"
             rowKey="id"
             locale={{
               emptyText: (

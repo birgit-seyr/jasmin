@@ -2,26 +2,34 @@ import { SummaryStatsCard, type SummaryStat } from "@shared/ui";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  useCommissioningAbosList,
+  useCommissioningShareTypeVariationsList,
+} from "@shared/api/generated/commissioning/commissioning";
+import {
   useSubscriptionVariationStats,
   type StatusSummary,
 } from "@features/abos/hooks/useSubscriptionVariationStats";
 
-interface SubscriptionStatsCardsProps {
-  subscriptions: Parameters<typeof useSubscriptionVariationStats>[0];
-  variations: Parameters<typeof useSubscriptionVariationStats>[1];
-}
-
 /**
  * The "totals at a glance" strip above the subscriptions table: one compact row
  * of three tiles — Active / Future / Waiting-list — each showing its total with
- * the per-variation split as small colour-dotted rows beneath (same colours as
- * the dashboard graph). Renders nothing until the catalogue has variations.
+ * the per-variation split as small colour-dotted rows beneath. Renders nothing
+ * until the catalogue has variations.
+ *
+ * Self-contained on purpose:
+ * - Fetches the FULL subscription set (all statuses, ``{}``). The table's own
+ *   query is filtered to ``on_waiting_list=false``, so the waiting-list tile
+ *   can't be derived from the page's rows — it would always read 0.
+ * - Fetches the canonical variation catalogue through the SAME query the
+ *   dashboard graph uses, so a variation keeps the same colour across both views.
  */
-export default function SubscriptionStatsCards({
-  subscriptions,
-  variations,
-}: SubscriptionStatsCardsProps) {
+export default function SubscriptionStatsCards() {
   const { t } = useTranslation();
+  const { data: subscriptions } = useCommissioningAbosList({});
+  const { data: variations } = useCommissioningShareTypeVariationsList({
+    physical: true,
+    include_future: true,
+  });
   const { variationInfo, snapshot } = useSubscriptionVariationStats(
     subscriptions,
     variations,

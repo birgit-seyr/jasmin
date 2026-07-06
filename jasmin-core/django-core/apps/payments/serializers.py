@@ -135,6 +135,19 @@ class ChargeScheduleSerializer(serializers.ModelSerializer):
         return f"{share_type} – {size}".strip(" –")
 
 
+class ChargeScheduleMonthlyIncomeSerializer(serializers.Serializer):
+    """One (month, billed income) point for the DashboardAbos income chart.
+
+    ``amount`` is a 2dp money STRING (full precision survives the wire), not a
+    JSON number — mirrors the money-on-the-wire convention.
+    """
+
+    month = serializers.CharField(help_text="Due-date month, 'YYYY-MM'.")
+    amount = serializers.CharField(
+        help_text="Summed expected_amount for the month, 2dp string."
+    )
+
+
 class BillingRunSerializer(serializers.ModelSerializer):
     sepa_xml_export_url = serializers.SerializerMethodField()
 

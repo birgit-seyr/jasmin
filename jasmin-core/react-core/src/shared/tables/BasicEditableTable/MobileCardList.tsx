@@ -211,27 +211,30 @@ function MobileCardList<T extends TableRecord>({
           );
 
           return (
-            // role + tabIndex + onKeyDown are all set together when the row is
-            // editable (and all absent otherwise), so this stays accessible.
             <div
               key={String(record.key)}
               className={`mobile-card-item ${isFinalized ? "mobile-card-finalized" : ""}`}
-              role={canEditRecord ? "button" : undefined}
-              tabIndex={canEditRecord ? 0 : undefined}
-              onClick={() => canEditRecord && onEdit(record)}
-              onKeyDown={
-                canEditRecord
-                  ? (e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        onEdit(record);
-                      }
-                    }
-                  : undefined
-              }
             >
-              {/* Left: content */}
-              <div className="mobile-card-content">
+              {/* Left: content. The "edit" button role lives HERE (not on the
+                  outer card) so it has no interactive descendants — the action
+                  buttons are a sibling column, keeping the ARIA valid. role +
+                  tabIndex + onKeyDown are set together when editable. */}
+              <div
+                className="mobile-card-content"
+                role={canEditRecord ? "button" : undefined}
+                tabIndex={canEditRecord ? 0 : undefined}
+                onClick={() => canEditRecord && onEdit(record)}
+                onKeyDown={
+                  canEditRecord
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onEdit(record);
+                        }
+                      }
+                    : undefined
+                }
+              >
                 <div className="mobile-card-title">
                   {/* A11Y-10: finalized state is otherwise colour-only —
                       role=img + aria-label exposes it to screen readers with no

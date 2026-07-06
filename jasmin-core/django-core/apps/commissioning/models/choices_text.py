@@ -103,3 +103,4 @@ class ConsentKind(models.TextChoices):
     WITHDRAWAL = "withdrawal", "Withdrawal terms"
     TERMS = "terms", "Terms of service"
     COOP_CONTRACT = "coop_contract", "Cooperative-share subscription contract"
+    SUBSCRIPTION_CONTRACT = "subscription_contract", "Subscription contract"

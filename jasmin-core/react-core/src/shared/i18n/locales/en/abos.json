@@ -177,5 +177,16 @@
   "delivery_pauses_in_term": "Delivery pauses in this period",
   "sepa_mandate_required": "Please set up a valid SEPA mandate first.",
   "sepa_mandate_missing": "This member has no valid SEPA mandate yet. Please set one up before saving the subscription.",
-  "set_up_sepa_mandate": "Set up SEPA mandate"
+  "set_up_sepa_mandate": "Set up SEPA mandate",
+  "accept_subscription_contract": "I have read and accept the subscription contract:",
+  "subscription_contract_required": "Please accept the subscription contract before continuing.",
+  "subscription_contract_record_failed": "The subscription was created, but the subscription-contract consent could not be saved.",
+  "emails_select_filter_hint": "Pick a filter above to show the recipient list.",
+  "emails_no_recipients": "No recipients for this selection.",
+  "emails_recipients": "{{count}} recipients",
+  "emails_copy": "Copy",
+  "emails_copied": "Copied {{count}} email addresses",
+  "emails_by_station_hint": "All e-mail addresses of members with an active share at this delivery station.",
+  "emails_by_share_type_hint": "All e-mail addresses of members with an active share of this share type.",
+  "emails_by_date_range_hint": "All e-mail addresses of members with a share that is active within this period."
 }

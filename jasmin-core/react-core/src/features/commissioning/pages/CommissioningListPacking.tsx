@@ -148,7 +148,7 @@ function ShareOptionPackingTable({
         initialData={rows}
         permissions={READ_ONLY_PERMISSION}
         loading={isFetching}
-        className="w-max custom-forecast-table"
+        className="w-max custom-jasmin-table"
       />
     </section>
   );

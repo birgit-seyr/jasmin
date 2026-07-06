@@ -39,8 +39,18 @@ import {
   PastWarningMessage,
   ToolTipIcon,
 } from "@shared/ui";
-import { useIsMobile, useNoteColumn, useNumberFormat, useSizeOptions, useUnitOptions } from '@hooks/index';
-import { useAmountUnitSizeColumns, useDocumentationSummaryPage, useShareArticleColumn } from '@features/commissioning/hooks';
+import {
+  useIsMobile,
+  useNoteColumn,
+  useNumberFormat,
+  useSizeOptions,
+  useUnitOptions,
+} from "@hooks/index";
+import {
+  useAmountUnitSizeColumns,
+  useDocumentationSummaryPage,
+  useShareArticleColumn,
+} from "@features/commissioning/hooks";
 import {
   formatDayLabel,
   formatWeekLabel,
@@ -484,14 +494,18 @@ export default function AdditionalTheoreticalSummaryList(
         customEdit={customEdit}
         permissions={permissions}
         className={
-          isGardenerView ? "w-max custom-forecast-table" : "custom-forecast-table"
+          isGardenerView ? "w-max custom-jasmin-table" : "custom-jasmin-table"
         }
         uniqueCheck={["share_article", "size", "unit"]}
-        uniqueCheckMessage={t("validation.unique.share_article_unit_size_must_be_unique")}
+        uniqueCheckMessage={t(
+          "validation.unique.share_article_unit_size_must_be_unique",
+        )}
         renderMobileCard={renderMobileCard}
       />
       {!isMobile && (
-        <ExplainerText title={t("common.info")}>{t(explainerKey)}</ExplainerText>
+        <ExplainerText title={t("common.info")}>
+          {t(explainerKey)}
+        </ExplainerText>
       )}
     </div>
   );

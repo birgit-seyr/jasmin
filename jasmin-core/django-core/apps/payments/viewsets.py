@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+from decimal import ROUND_HALF_UP, Decimal
+
+from django.db.models import Sum
+from django.db.models.functions import TruncMonth
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiParameter,
     extend_schema,
@@ -29,7 +34,7 @@ from core.errors import InvalidQueryParam
 from core.pagination import OptionalLimitOffsetPagination
 from core.serializers import ErrorResponseSerializer
 
-from .constants import BillingRunStatus, ChargeStatus
+from .constants import OPEN_CHARGE_STATUSES, BillingRunStatus, ChargeStatus
 from .errors import BillingRunInvalidCollectionDate, BillingRunNotDraft
 from .models import BillingProfile, BillingRun, ChargeSchedule
 from .scoping import scope_to_member
@@ -37,6 +42,7 @@ from .serializers import (
     BillingProfileMemberSerializer,
     BillingProfileSerializer,
     BillingRunSerializer,
+    ChargeScheduleMonthlyIncomeSerializer,
     ChargeScheduleSerializer,
     CreateBillingRunSerializer,
 )
@@ -47,7 +53,16 @@ from .services import BillingRunService, ChargeScheduleService
 PARAM_CATALOGUE: dict[str, ParamSpec] = {
     "year": ParamSpec("int", min_value=1900, max_value=2100),
     "month": ParamSpec("int", min_value=1, max_value=12),
+    "date_from": ParamSpec("date"),
+    "date_to": ParamSpec("date"),
 }
+
+# "Billed" income = every charge that represents owed revenue not written off:
+# the open ones (PLANNED / ISSUED / PARTIAL) plus the collected ones (PAID).
+# WAIVED (forgiven) and FAILED (returned by the bank) are excluded.
+BILLED_INCOME_STATUSES = (*OPEN_CHARGE_STATUSES, ChargeStatus.PAID)
+
+_CENT = Decimal("0.01")
 
 
 @extend_schema_view(
@@ -307,6 +322,82 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
         """Regenerate PLANNED charges for all subscriptions (staff only)."""
         result = ChargeScheduleService.regenerate_all()
         return Response({"regenerated_subscriptions": len(result), "details": result})
+
+    @extend_schema(
+        tags=["Payments — Charge schedule"],
+        summary="Monthly billed income (Office only)",
+        description=(
+            "Sums the expected amount of every billed charge "
+            "(PLANNED / ISSUED / PARTIAL / PAID — excludes WAIVED and FAILED) "
+            "per due-date month within the inclusive [date_from, date_to] "
+            "window. Powers the DashboardAbos income chart."
+        ),
+        parameters=[
+            OpenApiParameter(
+                "date_from",
+                OpenApiTypes.DATE,
+                required=True,
+                description="Inclusive start (YYYY-MM-DD), matched on due_date.",
+            ),
+            OpenApiParameter(
+                "date_to",
+                OpenApiTypes.DATE,
+                required=True,
+                description="Inclusive end (YYYY-MM-DD), matched on due_date.",
+            ),
+        ],
+        responses={
+            200: ChargeScheduleMonthlyIncomeSerializer(many=True),
+            400: ErrorResponseSerializer,
+            401: ErrorResponseSerializer,
+            403: ErrorResponseSerializer,
+        },
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="income_by_month",
+        permission_classes=[IsOffice],
+    )
+    def income_by_month(self, request):
+        """Billed income per due-date month within [date_from, date_to]."""
+        params = validate_query_params(
+            request, PARAM_CATALOGUE, required=["date_from", "date_to"]
+        )
+        date_from = params["date_from"]
+        date_to = params["date_to"]
+        if date_from > date_to:
+            raise InvalidQueryParam(
+                "`date_from` must be on or before `date_to`.",
+                field="date_from",
+                details={"date_from": str(date_from), "date_to": str(date_to)},
+            )
+        # One GROUP BY over the ledger — no N+1. Money stays Decimal end to end
+        # (Sum of a DecimalField is Decimal); quantized to 2dp and sent as a
+        # STRING so full precision survives the wire.
+        rows = (
+            ChargeSchedule.objects.filter(
+                status__in=BILLED_INCOME_STATUSES,
+                due_date__gte=date_from,
+                due_date__lte=date_to,
+            )
+            .annotate(month=TruncMonth("due_date"))
+            .values("month")
+            .annotate(total=Sum("expected_amount"))
+            .order_by("month")
+        )
+        data = [
+            {
+                "month": row["month"].strftime("%Y-%m"),
+                "amount": str(
+                    (row["total"] or Decimal("0")).quantize(
+                        _CENT, rounding=ROUND_HALF_UP
+                    )
+                ),
+            }
+            for row in rows
+        ]
+        return Response(ChargeScheduleMonthlyIncomeSerializer(data, many=True).data)
 
 
 @extend_schema_view(

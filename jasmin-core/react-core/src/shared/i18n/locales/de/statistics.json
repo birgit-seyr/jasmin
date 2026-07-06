@@ -3,7 +3,6 @@
   "card_active_today": "Aktueller Stand",
   "card_date_range": "Zeitraum",
   "series_quantity": "Menge",
-
   "members_title": "Entwicklung Mitglieder",
   "members_subtitle": "Mitglieder, Genossenschaftsanteile und Darlehen auf einen Blick",
   "section_members": "Mitglieder",
@@ -28,7 +27,6 @@
   "chart_members_over_time": "Mitglieder im Zeitverlauf",
   "series_members": "Mitglieder gesamt",
   "no_member_data": "Noch keine Mitgliederdaten",
-
   "abos_title": "Entwicklung Anteile",
   "abos_subtitle": "Abo-Statistiken auf einen Blick",
   "kpi_active_subscriptions": "Aktive Abos",
@@ -49,7 +47,6 @@
   "stat_total": "Gesamt",
   "chart_active_subscriptions_by_variation": "Aktive Abos im Zeitverlauf",
   "abos_stats_subtitle": "Abos pro Anteilsart auf einen Blick",
-
   "commissioning_title": "Kommissionierungs-Dashboard",
   "commissioning_subtitle": "Was dieses Jahr geerntet und eingekauft wurde.",
   "kpi_total_harvest_kg": "Dieses Jahr geerntet",
@@ -59,5 +56,9 @@
   "chart_harvest_by_month": "Ernte pro Monat (kg)",
   "chart_top_vegetables": "Top-Kulturen nach kg",
   "series_kg": "Kilogramm",
-  "no_harvest_data": "Für dieses Jahr noch keine Ernte erfasst"
+  "no_harvest_data": "Für dieses Jahr noch keine Ernte erfasst",
+  "chart_income_by_month": "Fakturierte Einnahmen im Zeitverlauf",
+  "income": "Einnahmen",
+  "no_income_data": "Noch keine Einnahmedaten",
+  "income_hint": "Summe der fälligen Beträge pro Monat."
 }

@@ -21,8 +21,12 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import { gatedByPermissionOnlyEdit } from "@shared/tables/tablePermissions";
 import { ExplainerText } from "@shared/ui";
-import { useInvalidateAfterTableMutation, useUnitOptions } from '@hooks/index';
-import { useShareArticleColumn, useShareTypeVariationColumns, variationColumnKey } from '@features/commissioning/hooks';
+import { useInvalidateAfterTableMutation, useUnitOptions } from "@hooks/index";
+import {
+  useShareArticleColumn,
+  useShareTypeVariationColumns,
+  variationColumnKey,
+} from "@features/commissioning/hooks";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 
@@ -244,7 +248,7 @@ export default function DefaultShareArticlesInShare() {
         permissions={permissions}
         pagination={true}
         showSearchBar={true}
-        className="custom-forecast-table w-max"
+        className="custom-jasmin-table w-max"
         focusIndex="share_article_name"
       />
 

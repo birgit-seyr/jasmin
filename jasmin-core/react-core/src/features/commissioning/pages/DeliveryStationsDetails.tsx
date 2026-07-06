@@ -13,11 +13,15 @@ import type {
   ShareDeliveryDetailsRow,
 } from "@shared/api/generated/models";
 import { DeliveryStationDetailsPDFGenerator } from "@features/commissioning/pdfs";
-import { DaySelector, WeekSelector } from '@shared/selectors';
-import { DeliveryStationSelector } from '@features/commissioning/selectors';
+import { DaySelector, WeekSelector } from "@shared/selectors";
+import { DeliveryStationSelector } from "@features/commissioning/selectors";
 import { ExplainerText, ToolTipIcon } from "@shared/ui";
-import { useTenant } from '@hooks/index';
-import { useDeliveryStations, useShareDeliveryDays, useShareTypeVariationColumns } from '@features/commissioning/hooks';
+import { useTenant } from "@hooks/index";
+import {
+  useDeliveryStations,
+  useShareDeliveryDays,
+  useShareTypeVariationColumns,
+} from "@features/commissioning/hooks";
 import {
   formatDayLabel,
   formatWeekLabel,
@@ -200,7 +204,8 @@ export default function DeliveryStationDetails() {
       .map((station, idx) => ({
         stationName: station.label,
         members: (allStationsDayQueries[idx]?.data ??
-          []) as unknown as (ShareDeliveryDetailsRow & Record<string, unknown>)[],
+          []) as unknown as (ShareDeliveryDetailsRow &
+          Record<string, unknown>)[],
       }))
       .filter((p) => p.members.length > 0);
     return pages.length > 0 ? pages : null;
@@ -224,7 +229,8 @@ export default function DeliveryStationDetails() {
       const dayLabel = getDayName(dayNum, t);
       for (const station of deliveryStations) {
         const members = (allStationsWeekQueries[queryIdx]?.data ??
-          []) as unknown as (ShareDeliveryDetailsRow & Record<string, unknown>)[];
+          []) as unknown as (ShareDeliveryDetailsRow &
+          Record<string, unknown>)[];
         if (members.length > 0) {
           pages.push({
             stationName: `${station.label} — ${dayLabel}`,
@@ -408,7 +414,7 @@ export default function DeliveryStationDetails() {
         pagination={false}
         size="small"
         loading={loading}
-        className="custom-forecast-table w-max"
+        className="custom-jasmin-table w-max"
         rowKey={(record) => record.id || record.name}
         bordered
         style={{ width: "max-content", marginTop: "2em" }}

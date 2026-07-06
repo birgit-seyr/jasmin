@@ -298,7 +298,9 @@ class TestShareTypeVariationViewSet:
         SubscriptionFactory(
             share_type_variation=predecessor,
             valid_from=datetime.date(2026, 1, 5),
-            valid_until=None,  # open → runs past any successor start
+            valid_until=datetime.date(
+                2027, 1, 3
+            ),  # Sunday, runs past any successor start
             default_delivery_station_day=None,
         )
         resp = api_client.post(
@@ -369,7 +371,9 @@ class TestShareTypeVariationViewSet:
         SubscriptionFactory(
             share_type_variation=variation,
             valid_from=datetime.date(2026, 1, 5),
-            valid_until=None,  # open → outlives any earlier end date
+            valid_until=datetime.date(
+                2027, 1, 3
+            ),  # Sunday, outlives the earlier end date
             default_delivery_station_day=None,
         )
         resp = api_client.patch(

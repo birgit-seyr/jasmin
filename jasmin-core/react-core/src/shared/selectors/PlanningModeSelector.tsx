@@ -58,6 +58,9 @@ const PlanningModeSelector = ({
           <Button
             key={opt.value}
             size={size}
+            // Selection is otherwise conveyed only by the primary-vs-default
+            // styling; aria-pressed exposes it to assistive tech.
+            aria-pressed={value === opt.value}
             type={value === opt.value ? "primary" : "default"}
             disabled={disabled || opt.disabled}
             onClick={() => onChange?.(opt.value)}

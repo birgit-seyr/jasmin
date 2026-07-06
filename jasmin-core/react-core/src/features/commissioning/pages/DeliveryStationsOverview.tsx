@@ -9,7 +9,10 @@ import type { StationOverview } from "@shared/api/generated/models";
 import { DeliveryStationsOverviewPDFGenerator } from "@features/commissioning/pdfs";
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { ExplainerText } from "@shared/ui";
-import { useShareDeliveryDays, useShareTypeVariations } from '@features/commissioning/hooks';
+import {
+  useShareDeliveryDays,
+  useShareTypeVariations,
+} from "@features/commissioning/hooks";
 import type { ShareTypeVariationOption } from "@features/commissioning/hooks/useShareTypeVariations";
 import {
   formatDayLabel,
@@ -97,14 +100,11 @@ export default function DeliveryStationOverview() {
     );
 
   const { data: responseData, isLoading: loading } =
-    useCommissioningDeliveryStationToursOverviewRetrieve(
-      queryParams,
-      {
-        query: {
-          enabled: selectedDeliveryDay !== null,
-        },
+    useCommissioningDeliveryStationToursOverviewRetrieve(queryParams, {
+      query: {
+        enabled: selectedDeliveryDay !== null,
       },
-    );
+    });
 
   // Get number of tours
   const numberOfTours = responseData?.number_of_tours ?? 0;
@@ -253,7 +253,7 @@ export default function DeliveryStationOverview() {
               pagination={false}
               size="small"
               loading={loading}
-              className="custom-forecast-table w-max"
+              className="custom-jasmin-table w-max"
               rowKey={(record) => record.delivery_station_day_id}
               bordered
               locale={{

@@ -62,6 +62,16 @@ export default function StepShareTypeVariation({
       valid_from: intent.valid_from,
       valid_until: intent.valid_until,
       is_trial: intent.is_trial,
+      // The modal captured the subscription-contract consent; merge its doc id
+      // into the accepted set so the register payload records it with the member.
+      ...(intent.accepted_subscription_contract
+        ? {
+            accepted_consent_documents: {
+              ...data.accepted_consent_documents,
+              subscription_contract: intent.accepted_subscription_contract,
+            },
+          }
+        : {}),
     });
     setModalOpen(false);
   };

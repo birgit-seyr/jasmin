@@ -325,7 +325,7 @@ export default function CommissioningListResellers() {
                   </div>
                 ) : (
                   <Table
-                    className="custom-forecast-table"
+                    className="custom-jasmin-table"
                     columns={columns}
                     dataSource={reseller.order?.contents}
                     rowKey="share_article_id"

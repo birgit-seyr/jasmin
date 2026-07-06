@@ -40,11 +40,17 @@ vi.mock("@shared/auth", () => ({
 // ── Generated create fns (the boundary under assertion) ────────────────────
 const subscribeCreateMock = vi.fn();
 const abosCreateMock = vi.fn();
+const consentsCreateMock = vi.fn();
 vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
   commissioningMySubscriptionsSubscribeCreate: (...args: unknown[]) =>
     subscribeCreateMock(...args),
   commissioningAbosCreate: (...args: unknown[]) => abosCreateMock(...args),
+  commissioningConsentsCreate: (...args: unknown[]) =>
+    consentsCreateMock(...args),
   useCommissioningDeliveryExceptionPeriodsList: () => ({ data: [] }),
+  // No published subscription-contract document in these tests → the consent
+  // block is not shown and doesn't gate the save.
+  useCommissioningConsentDocumentsList: () => ({ data: [], isLoading: false }),
 }));
 
 // SEPA gate: stub the setup modal + return a ready mandate so the save flow
@@ -340,6 +346,16 @@ describe("NewSubscriptionModal — solidarity price gating", () => {
     expect(priceInput).toHaveAttribute("data-disabled", "false");
 
     fillRequiredFields("12");
+    // Office mode with no auto-fill term rule → valid_until is editable and now
+    // required (the backend rejects open-ended subs), so the office must set it.
+    fireEvent.change(field("valid_until"), {
+      target: {
+        value: dayjs(futureMonday)
+          .add(52, "week")
+          .subtract(1, "day")
+          .format("YYYY-MM-DD"),
+      },
+    });
     fireEvent.mouseDown(screen.getByText("delivery.select_station"));
     fireEvent.click(await screen.findByText("Station A"));
     fireEvent.mouseDown(screen.getByText("abos.select_payment_cycle"));

@@ -662,7 +662,7 @@ export default function Invoices() {
           }
         >
           {renderInvoiceTable(group.items, {
-            className: "w-max custom-forecast-table invoice-group-table",
+            className: "w-max custom-jasmin-table invoice-group-table",
           })}
         </Card>
       ))}

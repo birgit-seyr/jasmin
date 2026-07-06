@@ -147,6 +147,7 @@ import type {
   CommissioningSharesListParams,
   CommissioningStorageLoggingListParams,
   CommissioningStoragesListParams,
+  CommissioningSubscriptionMemberEmailsRetrieveParams,
   CommissioningTheoreticalCleanAmountsListParams,
   CommissioningTheoreticalHarvestsListParams,
   CommissioningTheoreticalPurchaseAmountsListParams,
@@ -281,6 +282,7 @@ import type {
   Storage,
   StorageLoggingEntry,
   Subscription,
+  SubscriptionMemberEmailsResponse,
   TheoreticalCleanAmount,
   TheoreticalHarvest,
   TheoreticalPurchase,
@@ -28814,6 +28816,102 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Distinct e-mail addresses of members holding a confirmed, non-waiting-list subscription that matches the filter — a copyable e-mail distribution list for the AbosEmails page.
+
+Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and not cancelled-effective before it. The active window is ``[date_from, date_to]`` when both are given, otherwise today. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Members without an e-mail are omitted.
+ * @summary Member e-mails for a subscription filter (distribution list)
+ */
+export const commissioningSubscriptionMemberEmailsRetrieve = (
+    params?: CommissioningSubscriptionMemberEmailsRetrieveParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<SubscriptionMemberEmailsResponse>(
+      {url: `/api/commissioning/subscription_member_emails/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningSubscriptionMemberEmailsRetrieveQueryKey = (params?: CommissioningSubscriptionMemberEmailsRetrieveParams,) => {
+    return [
+    `/api/commissioning/subscription_member_emails/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningSubscriptionMemberEmailsRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>, TError = ErrorResponse>(params?: CommissioningSubscriptionMemberEmailsRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningSubscriptionMemberEmailsRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>> = ({ signal }) => commissioningSubscriptionMemberEmailsRetrieve(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningSubscriptionMemberEmailsRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>>
+export type CommissioningSubscriptionMemberEmailsRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningSubscriptionMemberEmailsRetrieve<TData = Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>, TError = ErrorResponse>(
+ params: undefined |  CommissioningSubscriptionMemberEmailsRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningSubscriptionMemberEmailsRetrieve<TData = Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>, TError = ErrorResponse>(
+ params?: CommissioningSubscriptionMemberEmailsRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningSubscriptionMemberEmailsRetrieve<TData = Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>, TError = ErrorResponse>(
+ params?: CommissioningSubscriptionMemberEmailsRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Member e-mails for a subscription filter (distribution list)
+ */
+
+export function useCommissioningSubscriptionMemberEmailsRetrieve<TData = Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>, TError = ErrorResponse>(
+ params?: CommissioningSubscriptionMemberEmailsRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningSubscriptionMemberEmailsRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningSubscriptionMemberEmailsRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
  * ViewSet mixin that maps DRF actions to permission classes.
 
 Usage:

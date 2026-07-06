@@ -14,6 +14,7 @@ export const CommissioningConsentDocumentsListKind = {
   coop_contract: 'coop_contract',
   privacy: 'privacy',
   sepa: 'sepa',
+  subscription_contract: 'subscription_contract',
   terms: 'terms',
   withdrawal: 'withdrawal',
 } as const;

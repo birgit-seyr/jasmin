@@ -1,4 +1,3 @@
-import { isValidElement } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Typography } from "antd";
 import {
@@ -93,8 +92,8 @@ const ExplainerText = ({
           marginBottom: "0.5em",
         }}
       >
-        <span style={{ color: iconColor, fontSize: "1em" }}>
-          {isValidElement(finalIcon) ? finalIcon : finalIcon}
+        <span aria-hidden="true" style={{ color: iconColor, fontSize: "1em" }}>
+          {finalIcon}
         </span>
         {title && (
           <Text

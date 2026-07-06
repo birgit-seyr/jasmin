@@ -67,7 +67,7 @@ class ConsentDocument(JasminModel, TimeBoundMixin):
 
     overlap_unique_fields = ("kind", "locale")
 
-    kind = models.CharField(max_length=20, choices=ConsentKind.choices)
+    kind = models.CharField(max_length=40, choices=ConsentKind.choices)
     version = models.CharField(
         max_length=40,
         help_text="Stable identifier. ISO date like '2026-05-20' or "

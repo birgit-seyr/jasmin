@@ -233,12 +233,26 @@ export default function ChargesAbos() {
           r.charge?.status ? (
             <Tag
               color={STATUS_COLOR[r.charge.status] ?? "default"}
+              // AntD Tag is a plain span; these props make the status filter
+              // toggle operable by keyboard/SR. aria-pressed reflects the
+              // active filter (otherwise signalled only visually).
+              role="button"
+              tabIndex={0}
+              aria-pressed={selectedStatus === r.charge.status}
               style={{ cursor: "pointer" }}
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedStatus((s) =>
                   s === r.charge?.status ? null : (r.charge?.status ?? null),
                 );
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSelectedStatus((s) =>
+                    s === r.charge?.status ? null : (r.charge?.status ?? null),
+                  );
+                }
               }}
             >
               {t(`abos.charge_status.${r.charge.status}`)}
@@ -260,7 +274,8 @@ export default function ChargesAbos() {
         },
       },
     ],
-    [t, formatDate, formatCurrency],
+    // ``selectedStatus`` drives the row status-tag's aria-pressed state.
+    [t, formatDate, formatCurrency, selectedStatus],
   );
 
   return (
@@ -302,11 +317,22 @@ export default function ChargesAbos() {
               <Tag
                 key={st}
                 color={STATUS_COLOR[st] ?? "default"}
+                // Keyboard/SR-operable filter chip; aria-pressed conveys the
+                // active filter (otherwise only the bold font-weight does).
+                role="button"
+                tabIndex={0}
+                aria-pressed={selectedStatus === st}
                 style={{
                   cursor: "pointer",
                   fontWeight: selectedStatus === st ? 700 : 400,
                 }}
                 onClick={() => setSelectedStatus((s) => (s === st ? null : st))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedStatus((s) => (s === st ? null : st));
+                  }
+                }}
               >
                 {t(`abos.charge_status.${st}`)}: {formatCurrency(agg.total)} (
                 {agg.count})

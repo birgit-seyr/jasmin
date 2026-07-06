@@ -244,8 +244,18 @@ export const StatusButton = ({
     return null;
   }
 
+  // These are icon-only buttons — give them an accessible name so screen
+  // readers announce the action, not an empty button (the visible cue is the
+  // hover tooltip, which SR/keyboard users don't get).
+  const label = tooltip ?? config.tooltip;
   const button = (
-    <Button {...config} onClick={onClick} disabled={disabled} {...props} />
+    <Button
+      {...config}
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      {...props}
+    />
   );
 
   return showTooltip && (tooltip || config.tooltip) ? (
@@ -278,9 +288,11 @@ export const LinkButton = ({
     return null;
   }
 
+  // Icon-only button → give it an accessible name (see StatusButton).
+  const label = tooltip ?? config.tooltip;
   const button = (
     <Link to={to}>
-      <Button {...config} disabled={disabled} {...props} />
+      <Button {...config} disabled={disabled} aria-label={label} {...props} />
     </Link>
   );
 

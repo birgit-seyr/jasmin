@@ -377,18 +377,28 @@ class Command(BaseCommand):
         bucket = _weighted_choice(
             rng, [("active", 60), ("future", 20), ("expired", 20)]
         )
+        # Every subscription gets a finite term (the model forbids open-ended
+        # ones). valid_from is a Monday; valid_until is the Sunday ~1 year later
+        # (valid_from + 363 days lands on a Sunday), so the pair is a valid
+        # TimeBound range.
         if bucket == "active":
-            offset = rng.randint(7, 365)
+            # Keep the start recent enough that the 1-year term is still running.
+            offset = rng.randint(7, 300)
             valid_from = _previous_monday(today - timedelta(days=offset))
-            valid_until = None
+            valid_until = valid_from + timedelta(days=363)
         elif bucket == "future":
             offset = rng.randint(7, 90)
             valid_from = _previous_monday(today + timedelta(days=offset))
-            valid_until = None
+            valid_until = valid_from + timedelta(days=363)
         else:  # expired
             offset = rng.randint(180, 730)
             valid_from = _previous_monday(today - timedelta(days=offset))
-            valid_until = _previous_monday(today - timedelta(days=rng.randint(7, 90)))
+            # valid_until must land on a Sunday (TimeBoundMixin week-boundary
+            # rule). Snap the past end date to the Sunday of its ISO week
+            # (Monday + 6 days) rather than leaving it a Monday.
+            valid_until = _previous_monday(
+                today - timedelta(days=rng.randint(7, 90))
+            ) + timedelta(days=6)
 
         is_trial = rng.random() < 0.15
         is_confirmed = is_member_confirmed and rng.random() < 0.80

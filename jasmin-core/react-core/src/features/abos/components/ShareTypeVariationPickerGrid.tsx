@@ -93,6 +93,19 @@ export default function ShareTypeVariationPickerGrid({
                     <Card
                       hoverable
                       onClick={() => onSelect(variation)}
+                      // AntD Card is a plain div — give it button semantics so
+                      // keyboard/SR users can select a variation. aria-pressed
+                      // exposes the selection that's otherwise border-colour only.
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={selected}
+                      aria-label={variation.label}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onSelect(variation);
+                        }
+                      }}
                       styles={{ body: { padding: 12 } }}
                       style={{
                         height: "100%",

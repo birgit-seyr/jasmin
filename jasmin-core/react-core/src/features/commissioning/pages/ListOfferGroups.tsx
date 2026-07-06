@@ -21,8 +21,11 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, HideInactiveSwitch } from "@shared/ui";
-import { useInvalidateAfterTableMutation } from '@hooks/index';
-import { useIsActiveColumn, useOfferTiers } from '@features/commissioning/hooks';
+import { useInvalidateAfterTableMutation } from "@hooks/index";
+import {
+  useIsActiveColumn,
+  useOfferTiers,
+} from "@features/commissioning/hooks";
 
 export default function ListOfferGroups() {
   const { isOffice } = useRoles();
@@ -41,8 +44,11 @@ export default function ListOfferGroups() {
   // refetch (EditableTable's local state is authoritative — see
   // ``useInvalidateAfterTableMutation``); deletes do, so the row
   // disappears from any downstream cached view.
-  const { data: offerGroupsData, refetch, isLoading } =
-    useCommissioningOfferGroupsList();
+  const {
+    data: offerGroupsData,
+    refetch,
+    isLoading,
+  } = useCommissioningOfferGroupsList();
   const data = useMemo<TableRecord[]>(
     () => (offerGroupsData ?? []) as unknown as TableRecord[],
     [offerGroupsData],
@@ -118,7 +124,7 @@ export default function ListOfferGroups() {
               </Tooltip>
             </span>
           ) : (
-            (value as string) ?? ""
+            ((value as string) ?? "")
           ),
       },
       // One rabatt column per active tier beyond the first (the base price
@@ -166,7 +172,7 @@ export default function ListOfferGroups() {
         onDeleteSuccess={onDeleteSuccess}
         customSave={customSave}
         customEdit={customEdit}
-        className="w-max custom-forecast-table"
+        className="w-max custom-jasmin-table"
         deleteContext={"resellers"}
         uniqueCheck={["number"]}
         uniqueCheckMessage={t("validation.unique.number")}

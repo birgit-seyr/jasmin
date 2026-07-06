@@ -24,12 +24,23 @@ const ToolTipIcon = ({
     ...iconStyle,
   };
 
+  const label = title || fallbackText;
+
   return (
+    // ``trigger`` includes "focus" + the icon is focusable (tabIndex 0) so a
+    // keyboard-only user can open the tooltip; ``aria-label`` gives the icon a
+    // meaningful name instead of AntD's default "info-circle".
     <Tooltip
-      title={title || fallbackText}
+      title={label}
+      trigger={["hover", "focus"]}
       classNames={{ root: "custom-tooltip" }}
     >
-      <InfoCircleOutlined style={{ ...defaultIconStyle, ...style }} />
+      <InfoCircleOutlined
+        style={{ ...defaultIconStyle, ...style }}
+        tabIndex={0}
+        role="img"
+        aria-label={label}
+      />
     </Tooltip>
   );
 };

@@ -101,10 +101,10 @@ class TestCheckRetentionBlocks:
         assert reasons == []
 
     def test_active_subscription_blocks(self, tenant):
-        """An ongoing subscription (no end date) = open service contract."""
+        """An ongoing subscription (future end date) = open service contract."""
         user = JasminUserFactory()
         member = MemberFactory(user=user)
-        SubscriptionFactory(member=member, valid_until=None)
+        SubscriptionFactory(member=member)
 
         reasons = GDPRService.check_retention_blocks(user)
         assert any("active subscription" in r for r in reasons)
@@ -216,7 +216,7 @@ class TestCheckRetentionBlocks:
         user = JasminUserFactory()
         member = MemberFactory(user=user)
         CoopShareFactory(member=member)
-        SubscriptionFactory(member=member, valid_until=None)
+        SubscriptionFactory(member=member)
 
         reasons = GDPRService.check_retention_blocks(user)
         assert len(reasons) >= 2
@@ -338,7 +338,7 @@ class TestCheckRetentionBlocksBulk:
         user = JasminUserFactory()
         member = MemberFactory(user=user)
         CoopShareFactory(member=member)
-        SubscriptionFactory(member=member, valid_until=None)
+        SubscriptionFactory(member=member)
 
         single = GDPRService.check_retention_blocks(user)
         bulk = GDPRService.check_retention_blocks_bulk([user])[user.id]

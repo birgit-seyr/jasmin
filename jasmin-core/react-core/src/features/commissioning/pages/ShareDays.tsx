@@ -155,143 +155,143 @@ export default function ShareDays() {
 
   const columns = useMemo<EditableColumnConfig<TableRecord>[]>(
     () => [
-    {
-      title: t("configuration.delivery_day_shares"),
-      dataIndex: "delivery_day",
-      key: "delivery_day",
-      inputType: "select",
-      required: true,
-      align: "center",
-      width: "7em",
-      options: weekdayChoices,
-      render: (value: unknown) => {
-        if (typeof value !== "number") return "-";
-        const day = weekdayChoices.find((d) => d.value === value);
-        return day ? day.label : value;
+      {
+        title: t("configuration.delivery_day_shares"),
+        dataIndex: "delivery_day",
+        key: "delivery_day",
+        inputType: "select",
+        required: true,
+        align: "center",
+        width: "7em",
+        options: weekdayChoices,
+        render: (value: unknown) => {
+          if (typeof value !== "number") return "-";
+          const day = weekdayChoices.find((d) => d.value === value);
+          return day ? day.label : value;
+        },
+        disabled: true,
       },
-      disabled: true,
-    },
-    {
-      title: t("configuration.changed_delivery_day_shares"),
-      dataIndex: "changed_day_number",
-      key: "changed_day_number",
-      inputType: "select",
-      required: false,
-      align: "center",
-      width: "9em",
-      options: weekdayChoices,
-      render: (value: unknown) => {
-        if (typeof value !== "number") return "-";
-        const day = weekdayChoices.find((d) => d.value === value);
-        return <span className="changed-day">{day ? day.label : value}</span>;
+      {
+        title: t("configuration.changed_delivery_day_shares"),
+        dataIndex: "changed_day_number",
+        key: "changed_day_number",
+        inputType: "select",
+        required: false,
+        align: "center",
+        width: "9em",
+        options: weekdayChoices,
+        render: (value: unknown) => {
+          if (typeof value !== "number") return "-";
+          const day = weekdayChoices.find((d) => d.value === value);
+          return <span className="changed-day">{day ? day.label : value}</span>;
+        },
+        disabled: false,
       },
-      disabled: false,
-    },
-    // {
-    //   title: t("configuration.default_get_current_stock_day"),
-    //   dataIndex: "get_current_stock_day",
-    //   key: "get_current_stock_day",
-    //   inputType: "select",
-    //   required: false,
-    //   align: "center" as const,
-    //   width: "5em",
-    //   options: weekdayChoices,
-    //   render: (value: unknown, record: TableRecord) => {
-    //     if (typeof value !== "number") return "-";
-    //     const day = weekdayChoices.find((d) => d.value === value);
-    //     const displayValue = day ? day.label : value;
+      // {
+      //   title: t("configuration.default_get_current_stock_day"),
+      //   dataIndex: "get_current_stock_day",
+      //   key: "get_current_stock_day",
+      //   inputType: "select",
+      //   required: false,
+      //   align: "center" as const,
+      //   width: "5em",
+      //   options: weekdayChoices,
+      //   render: (value: unknown, record: TableRecord) => {
+      //     if (typeof value !== "number") return "-";
+      //     const day = weekdayChoices.find((d) => d.value === value);
+      //     const displayValue = day ? day.label : value;
 
-    //     if (record.get_current_stock_day_changed) {
-    //       return <span className="changed-day">{displayValue}</span>;
-    //     }
+      //     if (record.get_current_stock_day_changed) {
+      //       return <span className="changed-day">{displayValue}</span>;
+      //     }
 
-    //     return displayValue;
-    //   },
-    // },
-    {
-      title: t("configuration.default_washing_day"),
-      dataIndex: "washing_day",
-      key: "washing_day",
-      inputType: "select",
-      required: false,
-      width: "7em",
-      align: "center",
-      options: weekdayChoices,
-      render: (value: unknown, record: TableRecord) => {
-        if (typeof value !== "number") return "-";
-        const day = weekdayChoices.find((d) => d.value === value);
-        const displayValue = day ? day.label : value;
+      //     return displayValue;
+      //   },
+      // },
+      {
+        title: t("configuration.default_washing_day"),
+        dataIndex: "washing_day",
+        key: "washing_day",
+        inputType: "select",
+        required: false,
+        width: "7em",
+        align: "center",
+        options: weekdayChoices,
+        render: (value: unknown, record: TableRecord) => {
+          if (typeof value !== "number") return "-";
+          const day = weekdayChoices.find((d) => d.value === value);
+          const displayValue = day ? day.label : value;
 
-        if (record.washing_day_changed) {
-          return <span className="changed-day">{displayValue}</span>;
-        }
+          if (record.washing_day_changed) {
+            return <span className="changed-day">{displayValue}</span>;
+          }
 
-        return displayValue;
+          return displayValue;
+        },
       },
-    },
-    {
-      title: t("configuration.default_cleaning_day"),
-      dataIndex: "cleaning_day",
-      key: "cleaning_day",
-      inputType: "select",
-      required: false,
-      align: "center",
-      width: "7em",
-      options: weekdayChoices,
-      render: (value: unknown, record: TableRecord) => {
-        if (typeof value !== "number") return "-";
-        const day = weekdayChoices.find((d) => d.value === value);
-        const displayValue = day ? day.label : value;
+      {
+        title: t("configuration.default_cleaning_day"),
+        dataIndex: "cleaning_day",
+        key: "cleaning_day",
+        inputType: "select",
+        required: false,
+        align: "center",
+        width: "7em",
+        options: weekdayChoices,
+        render: (value: unknown, record: TableRecord) => {
+          if (typeof value !== "number") return "-";
+          const day = weekdayChoices.find((d) => d.value === value);
+          const displayValue = day ? day.label : value;
 
-        if (record.cleaning_day_changed) {
-          return <span className="changed-day">{displayValue}</span>;
-        }
+          if (record.cleaning_day_changed) {
+            return <span className="changed-day">{displayValue}</span>;
+          }
 
-        return displayValue;
+          return displayValue;
+        },
       },
-    },
-    {
-      title: t("configuration.default_harvesting_day"),
-      dataIndex: "harvesting_day",
-      key: "harvesting_day",
-      inputType: "select",
-      required: false,
-      width: "7em",
-      align: "center",
-      options: weekdayChoices,
-      render: (value: unknown, record: TableRecord) => {
-        if (typeof value !== "number") return "-";
-        const day = weekdayChoices.find((d) => d.value === value);
-        const displayValue = day ? day.label : value;
+      {
+        title: t("configuration.default_harvesting_day"),
+        dataIndex: "harvesting_day",
+        key: "harvesting_day",
+        inputType: "select",
+        required: false,
+        width: "7em",
+        align: "center",
+        options: weekdayChoices,
+        render: (value: unknown, record: TableRecord) => {
+          if (typeof value !== "number") return "-";
+          const day = weekdayChoices.find((d) => d.value === value);
+          const displayValue = day ? day.label : value;
 
-        if (record.harvesting_day_changed) {
-          return <span className="changed-day">{displayValue}</span>;
-        }
+          if (record.harvesting_day_changed) {
+            return <span className="changed-day">{displayValue}</span>;
+          }
 
-        return displayValue;
+          return displayValue;
+        },
       },
-    },
-    {
-      title: t("configuration.default_packing_day"),
-      dataIndex: "packing_day",
-      key: "packing_day",
-      inputType: "select",
-      required: false,
-      width: "7em",
-      align: "center",
-      options: weekdayChoices,
-      render: (value: unknown, record: TableRecord) => {
-        if (typeof value !== "number") return "-";
-        const day = weekdayChoices.find((d) => d.value === value);
-        const displayValue = day ? day.label : value;
+      {
+        title: t("configuration.default_packing_day"),
+        dataIndex: "packing_day",
+        key: "packing_day",
+        inputType: "select",
+        required: false,
+        width: "7em",
+        align: "center",
+        options: weekdayChoices,
+        render: (value: unknown, record: TableRecord) => {
+          if (typeof value !== "number") return "-";
+          const day = weekdayChoices.find((d) => d.value === value);
+          const displayValue = day ? day.label : value;
 
-        if (record.packing_day_changed) {
-          return <span className="changed-day">{displayValue}</span>;
-        }
+          if (record.packing_day_changed) {
+            return <span className="changed-day">{displayValue}</span>;
+          }
 
-        return displayValue;
+          return displayValue;
+        },
       },
-    },
     ],
     [t, weekdayChoices],
   );
@@ -325,7 +325,7 @@ export default function ShareDays() {
         customSave={customSave}
         customUpdate={customUpdate}
         permissions={permissions}
-        className="w-max custom-forecast-table"
+        className="w-max custom-jasmin-table"
       />
       <ExplainerText title={t("common.info")}>
         {t("explainers.share_days")}

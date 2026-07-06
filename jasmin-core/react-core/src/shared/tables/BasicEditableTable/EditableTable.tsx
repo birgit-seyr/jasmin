@@ -202,7 +202,7 @@ const EditableTable = <T extends TableRecord = TableRecord>({
   keyboardAddShortcut = false,
   autoScrollX = true,
   pinNewRowsToTop = true,
-  className = "custom-forecast-table",
+  className = "custom-jasmin-table",
   ...tableProps
 }: EditableTableProps<T>) => {
   // Dev-only contract guards. Catch the three EditableTable foot-guns that the
@@ -1057,9 +1057,7 @@ const EditableTable = <T extends TableRecord = TableRecord>({
               // would OR with the live one and pin the cell disabled. Only a
               // boolean `disabled` is genuinely static.
               const isDisabled =
-                typeof column.disabled === "function"
-                  ? false
-                  : column.disabled;
+                typeof column.disabled === "function" ? false : column.disabled;
 
               return {
                 record,

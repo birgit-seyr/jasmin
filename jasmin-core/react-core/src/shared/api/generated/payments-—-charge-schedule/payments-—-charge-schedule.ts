@@ -28,6 +28,8 @@ import type {
   ChargeSchedule,
   ErrorResponse,
   PaginatedChargeScheduleList,
+  PaginatedChargeScheduleMonthlyIncomeList,
+  PaymentsChargeSchedulesIncomeByMonthListParams,
   PaymentsChargeSchedulesListParams,
   RegenerateChargesResponse
 } from '.././models';
@@ -216,6 +218,100 @@ export function usePaymentsChargeSchedulesRetrieve<TData = Awaited<ReturnType<ty
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getPaymentsChargeSchedulesRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Sums the expected amount of every billed charge (PLANNED / ISSUED / PARTIAL / PAID — excludes WAIVED and FAILED) per due-date month within the inclusive [date_from, date_to] window. Powers the DashboardAbos income chart.
+ * @summary Monthly billed income (Office only)
+ */
+export const paymentsChargeSchedulesIncomeByMonthList = (
+    params: PaymentsChargeSchedulesIncomeByMonthListParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<PaginatedChargeScheduleMonthlyIncomeList>(
+      {url: `/api/payments/charge_schedules/income_by_month/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getPaymentsChargeSchedulesIncomeByMonthListQueryKey = (params?: PaymentsChargeSchedulesIncomeByMonthListParams,) => {
+    return [
+    `/api/payments/charge_schedules/income_by_month/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getPaymentsChargeSchedulesIncomeByMonthListQueryOptions = <TData = Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>, TError = ErrorResponse>(params: PaymentsChargeSchedulesIncomeByMonthListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPaymentsChargeSchedulesIncomeByMonthListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>> = ({ signal }) => paymentsChargeSchedulesIncomeByMonthList(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PaymentsChargeSchedulesIncomeByMonthListQueryResult = NonNullable<Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>>
+export type PaymentsChargeSchedulesIncomeByMonthListQueryError = ErrorResponse
+
+
+export function usePaymentsChargeSchedulesIncomeByMonthList<TData = Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>, TError = ErrorResponse>(
+ params: PaymentsChargeSchedulesIncomeByMonthListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>,
+          TError,
+          Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePaymentsChargeSchedulesIncomeByMonthList<TData = Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>, TError = ErrorResponse>(
+ params: PaymentsChargeSchedulesIncomeByMonthListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>,
+          TError,
+          Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePaymentsChargeSchedulesIncomeByMonthList<TData = Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>, TError = ErrorResponse>(
+ params: PaymentsChargeSchedulesIncomeByMonthListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Monthly billed income (Office only)
+ */
+
+export function usePaymentsChargeSchedulesIncomeByMonthList<TData = Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>, TError = ErrorResponse>(
+ params: PaymentsChargeSchedulesIncomeByMonthListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof paymentsChargeSchedulesIncomeByMonthList>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPaymentsChargeSchedulesIncomeByMonthListQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

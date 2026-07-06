@@ -374,7 +374,7 @@ export default function CustomerOrderPage() {
               rowKey="id"
               pagination={false}
               size="small"
-              className="custom-forecast-table compact-table"
+              className="custom-jasmin-table compact-table"
               locale={{ emptyText: t("customer.no_offers") }}
             />
           </Card>
@@ -397,7 +397,7 @@ export default function CustomerOrderPage() {
                 rowKey="id"
                 pagination={false}
                 size="small"
-                className="custom-forecast-table compact-table"
+                className="custom-jasmin-table compact-table"
               />
             </Card>
           </Col>

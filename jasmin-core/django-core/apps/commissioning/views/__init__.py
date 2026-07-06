@@ -4,6 +4,9 @@ from .delivery_views import (
     DeliveryStationsToursOverviewView,
 )
 from .documentation_views import DocumentationOverviewView
+from .email_distribution_views import (
+    subscription_member_emails,
+)
 from .finalize_views import (
     BulkFinalizeShareContentView,
     BulkFinalizeView,

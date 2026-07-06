@@ -214,6 +214,9 @@ const LoginPage = () => {
                     ]}
                   >
                     <Input
+                      // Visible label is commented out (placeholder-only design)
+                      // — give the field an accessible name for SR users.
+                      aria-label={t("auth.login_card.email")}
                       prefix={<UserOutlined />}
                       placeholder={
                         isSuperAdminDomain
@@ -235,6 +238,7 @@ const LoginPage = () => {
                     ]}
                   >
                     <Input.Password
+                      aria-label={t("auth.login_card.password")}
                       prefix={<LockOutlined />}
                       placeholder={t("auth.login_card.password")}
                       autoComplete="current-password"

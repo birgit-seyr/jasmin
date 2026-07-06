@@ -330,18 +330,10 @@ class TestSubscriptionProperties:
         sub = _make_subscription(tenant)
         assert sub.is_expired is True
 
-    def test_is_expired_false_for_open_ended(self, tenant):
-        sub = _make_subscription(tenant, valid_until=None)
-        assert sub.is_expired is False
-
     @time_machine.travel("2026-12-20T12:00:00+00:00")
     def test_days_until_expiry(self, tenant):
         sub = _make_subscription(tenant)
         assert sub.days_until_expiry == 7  # Dec 20 to Dec 27
-
-    def test_days_until_expiry_none_for_open_ended(self, tenant):
-        sub = _make_subscription(tenant, valid_until=None)
-        assert sub.days_until_expiry is None
 
 
 # ---------------------------------------------------------------------------

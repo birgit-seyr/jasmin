@@ -274,12 +274,17 @@ class TestContactUniqueness:
         assert created_second is False
         assert first.pk == second.pk
 
-    def test_multiple_null_contacts_allowed(self, tenant):
-        # The constraint is partial (``contact IS NOT NULL``) so contactless
-        # rows stay unconstrained.
-        ResellerFactory(contact=None)
-        ResellerFactory(contact=None)
+    def test_reseller_contact_is_required(self, tenant):
+        # ``Reseller.contact`` is a required FK — a contactless reseller is
+        # rejected at the DB level (its address / e-mail / name live there).
+        with pytest.raises(IntegrityError):
+            with transaction.atomic():
+                ResellerFactory(contact=None)
+
+    def test_multiple_null_contacts_allowed_for_delivery_station(self, tenant):
+        # DeliveryStation.contact stays nullable, and the unique constraint is
+        # partial (``contact IS NOT NULL``), so contactless stations are
+        # unconstrained (they can carry inline contact_name / contact_phone).
         DeliveryStationFactory(contact=None)
         DeliveryStationFactory(contact=None)
-        assert Reseller.objects.filter(contact__isnull=True).count() >= 2
         assert DeliveryStation.objects.filter(contact__isnull=True).count() >= 2

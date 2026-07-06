@@ -494,6 +494,7 @@ export default function LoggingStorage() {
           <span style={{ marginLeft: "1em" }}>
             <Switch
               size="small"
+              aria-label={t("commissioning.hide_inactive_rows")}
               checked={hideInactiveStorage}
               onChange={setHideInactiveStorage}
             />
@@ -513,7 +514,7 @@ export default function LoggingStorage() {
             size="small"
             loading={loading}
             rowKey="id"
-            className="w-max custom-forecast-table"
+            className="w-max custom-jasmin-table"
             locale={{
               emptyText: (
                 <div style={{ height: "4em" }}>{t("table.no_data")}</div>
@@ -547,6 +548,12 @@ export default function LoggingStorage() {
           <Tag
             key={option.value}
             color={selectedSource === option.value ? option.color : "default"}
+            // AntD Tag is a plain span; make the source filter keyboard/SR
+            // operable. aria-pressed conveys the active selection (otherwise
+            // colour-only).
+            role="button"
+            tabIndex={0}
+            aria-pressed={selectedSource === option.value}
             style={{
               cursor: "pointer",
               fontSize: "12px",
@@ -554,6 +561,12 @@ export default function LoggingStorage() {
               marginBottom: "8px",
             }}
             onClick={() => setSelectedSource(option.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setSelectedSource(option.value);
+              }
+            }}
           >
             {getWorkflowSourceLabel(option.value)}
           </Tag>
@@ -561,6 +574,7 @@ export default function LoggingStorage() {
         <span style={{ marginLeft: "1em" }}>
           <Switch
             size="small"
+            aria-label={t("commissioning.hide_inactive_rows")}
             checked={hideInactiveWorkflow}
             onChange={setHideInactiveWorkflow}
           />
@@ -578,7 +592,7 @@ export default function LoggingStorage() {
           size="small"
           loading={workflowLoading}
           rowKey="id"
-          className="w-max custom-forecast-table"
+          className="w-max custom-jasmin-table"
           locale={{
             emptyText: (
               <div style={{ height: "4em" }}>{t("table.no_data")}</div>

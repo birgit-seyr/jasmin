@@ -228,7 +228,7 @@ export default function ImportShares() {
       >
         <Table
           size="small"
-          className="custom-forecast-table"
+          className="custom-jasmin-table"
           rowKey={(r) => `${r.variation_id}|${r.delivery_station_day_id}`}
           columns={cols}
           dataSource={rows}
@@ -333,7 +333,7 @@ export default function ImportShares() {
             <Card size="small" title={t("import_shares.errors")}>
               <Table
                 size="small"
-                className="custom-forecast-table"
+                className="custom-jasmin-table"
                 rowKey="row"
                 columns={[
                   {
@@ -383,7 +383,7 @@ export default function ImportShares() {
         <Spin spinning={loading}>
           <Table
             size="small"
-            className="custom-forecast-table"
+            className="custom-jasmin-table"
             rowKey="id"
             dataSource={batches}
             onRow={(record) => ({

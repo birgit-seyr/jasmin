@@ -10,6 +10,10 @@ import type {
  * ``consent_documents`` endpoint (AllowAny). Returns ``undefined`` when the
  * tenant hasn't published a document for that kind — callers then don't
  * require that consent. Prefers the open-ended version, else the newest listed.
+ *
+ * Lives in ``shared/`` so both the public registration steps and the
+ * (commissioning-context) NewSubscriptionModal can use it — the abos feature
+ * must not import from the auth feature.
  */
 export function useCurrentConsentDoc(kind: CommissioningConsentDocumentsListKind) {
   const { data, isLoading } = useCommissioningConsentDocumentsList({ kind });

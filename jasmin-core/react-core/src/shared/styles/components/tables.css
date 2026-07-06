@@ -1,6 +1,6 @@
 /* ============================================================
    Custom Ant Design tables
-   - .custom-forecast-table  (commissioning / planning, green)
+   - .custom-jasmin-table  (commissioning / planning, green)
    - .custom-staff-table     (staff, blue)
    - .account-values-table   (finance, blue)
    - .compact-logging-table  (logs, compact)
@@ -13,8 +13,22 @@
   margin-top: -2em;
 }
 
+/* ``.w-max`` puts ``width: max-content`` on the .ant-table-wrapper so a table
+   hugs its content instead of stretching to full page width. AntD's own base
+   rule sets the inner <table> to ``width: 100%`` though — inside a max-content
+   wrapper that percentage resolves against the wrapper's *content-derived*
+   width, which AntD's ResizeObserver re-measures every frame, slowly creeping
+   the table out to 100%. It's most visible on a read-only grid that has no
+   fixed action column to pin the layout (e.g. a past-week ShareDays table).
+   Pin the inner table to its own content width to break the feedback loop; the
+   ``min-width`` AntD sets from ``scroll={{ x }}`` still keeps horizontal
+   scrolling for genuinely wide tables. */
+.w-max .ant-table table {
+  width: max-content;
+}
+
 /* --- Custom Forecast Table (green theme) ---------------------------------- */
-.custom-forecast-table {
+.custom-jasmin-table {
   border-radius: var(--border-radius);
   overflow: hidden;
   box-shadow:
@@ -26,24 +40,24 @@
   min-height: 0 !important;
 }
 
-.custom-forecast-table .ant-table {
+.custom-jasmin-table .ant-table {
   border-radius: var(--table-border-radius) !important;
   border: 1px solid var(--color-bg-hover);
 }
 
-.custom-forecast-table .ant-table-container {
+.custom-jasmin-table .ant-table-container {
   border-radius: var(--table-border-radius) !important;
 }
 
 /* The wrapper above is min-height:0, but the inner container/body still inherit
    the global ~200px/150px reservation (styles/globals/antd.css) — contradictory
    dead space. Drop it so custom-forecast (EditableTable) lists hug their rows. */
-.custom-forecast-table .ant-table-container,
-.custom-forecast-table .ant-table-body {
+.custom-jasmin-table .ant-table-container,
+.custom-jasmin-table .ant-table-body {
   min-height: 0 !important;
 }
 
-.custom-forecast-table .ant-table-thead > tr > th {
+.custom-jasmin-table .ant-table-thead > tr > th {
   background-color: var(--color-primary-light) !important;
   color: rgb(10, 9, 9) !important;
   font-weight: 600 !important;
@@ -51,53 +65,53 @@
   border-bottom: 2px solid var(--color-primary) !important;
 }
 
-.custom-forecast-table .ant-table-thead > tr:first-child > th:first-child {
+.custom-jasmin-table .ant-table-thead > tr:first-child > th:first-child {
   border-top-left-radius: var(--border-radius) !important;
 }
 
-.custom-forecast-table .ant-table-thead > tr:first-child > th:last-child {
+.custom-jasmin-table .ant-table-thead > tr:first-child > th:last-child {
   border-top-right-radius: var(--border-radius) !important;
 }
 
 /* Vertical grid lines on every column. The stronger `.column-group-start`
    rule below wins where present (more specific selector). */
-.custom-forecast-table .ant-table-thead > tr > th,
-.custom-forecast-table .ant-table-tbody > tr > td {
+.custom-jasmin-table .ant-table-thead > tr > th,
+.custom-jasmin-table .ant-table-tbody > tr > td {
   border-left: 1px solid var(--color-bg-hover);
 }
-.custom-forecast-table .ant-table-thead > tr > th:first-child,
-.custom-forecast-table .ant-table-tbody > tr > td:first-child {
+.custom-jasmin-table .ant-table-thead > tr > th:first-child,
+.custom-jasmin-table .ant-table-tbody > tr > td:first-child {
   border-left: none;
 }
 
 /* Column group separators */
-.custom-forecast-table .ant-table-thead > tr > th.column-group-start,
-.custom-forecast-table .ant-table-tbody > tr > td.column-group-start {
+.custom-jasmin-table .ant-table-thead > tr > th.column-group-start,
+.custom-jasmin-table .ant-table-tbody > tr > td.column-group-start {
   border-left: 2px solid var(--color-primary) !important;
 }
 
 /* Light separator between share-type-variation groups */
-.custom-forecast-table .ant-table-thead > tr > th.column-variation-start,
-.custom-forecast-table .ant-table-tbody > tr > td.column-variation-start {
+.custom-jasmin-table .ant-table-thead > tr > th.column-variation-start,
+.custom-jasmin-table .ant-table-tbody > tr > td.column-variation-start {
   border-left: 1px solid var(--color-primary) !important;
 }
 
 /* Zebra striping */
-.custom-forecast-table .ant-table-tbody > tr.ant-table-row:nth-child(odd) > td {
+.custom-jasmin-table .ant-table-tbody > tr.ant-table-row:nth-child(odd) > td {
   background-color: #ebf6e2 !important;
 }
-.custom-forecast-table
+.custom-jasmin-table
   .ant-table-tbody
   > tr.ant-table-row:nth-child(even)
   > td {
   background-color: var(--color-bg-base) !important;
 }
-.custom-forecast-table .ant-table-tbody > tr.ant-table-row:hover > td {
+.custom-jasmin-table .ant-table-tbody > tr.ant-table-row:hover > td {
   background-color: #dbf3f3 !important;
 }
 
 /* First summary row in harvest planning table */
-.custom-forecast-table .ant-table-summary tr:first-child td {
+.custom-jasmin-table .ant-table-summary tr:first-child td {
   background-color: #f7e6ff !important;
   border-top: 2px solid var(--color-future-blue) !important;
   border-bottom: 2px solid var(--color-future-blue) !important;

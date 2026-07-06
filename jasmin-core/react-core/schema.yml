@@ -2524,6 +2524,7 @@ paths:
           - coop_contract
           - privacy
           - sepa
+          - subscription_contract
           - terms
           - withdrawal
         description: Filter by ConsentKind
@@ -2893,6 +2894,7 @@ paths:
           - coop_contract
           - privacy
           - sepa
+          - subscription_contract
           - terms
           - withdrawal
         description: ConsentKind to look up (required)
@@ -21918,6 +21920,62 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/commissioning/subscription_member_emails/:
+    get:
+      operationId: commissioning_subscription_member_emails_retrieve
+      description: |-
+        Distinct e-mail addresses of members holding a confirmed, non-waiting-list subscription that matches the filter — a copyable e-mail distribution list for the AbosEmails page.
+
+        Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and not cancelled-effective before it. The active window is ``[date_from, date_to]`` when both are given, otherwise today. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Members without an e-mail are omitted.
+      summary: Member e-mails for a subscription filter (distribution list)
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: Active-window start (YYYY-MM-DD). With ``date_to``, matches subscriptions
+          whose term overlaps the range.
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: Active-window end (YYYY-MM-DD).
+      - in: query
+        name: delivery_station_day
+        schema:
+          type: string
+        description: Only subscriptions assigned to this DeliveryStationDay id.
+      - in: query
+        name: share_type
+        schema:
+          type: string
+        description: Only subscriptions whose variation belongs to this ShareType
+          id.
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionMemberEmailsResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/commissioning/theoretical_clean_amounts/:
     get:
       operationId: commissioning_theoretical_clean_amounts_list
@@ -25774,6 +25832,70 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/payments/charge_schedules/income_by_month/:
+    get:
+      operationId: payments_charge_schedules_income_by_month_list
+      description: Sums the expected amount of every billed charge (PLANNED / ISSUED
+        / PARTIAL / PAID — excludes WAIVED and FAILED) per due-date month within the
+        inclusive [date_from, date_to] window. Powers the DashboardAbos income chart.
+      summary: Monthly billed income (Office only)
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: Inclusive start (YYYY-MM-DD), matched on due_date.
+        required: true
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: Inclusive end (YYYY-MM-DD), matched on due_date.
+        required: true
+      - name: limit
+        required: false
+        in: query
+        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
+          sollen.
+        schema:
+          type: integer
+      tags:
+      - Payments — Charge schedule
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedChargeScheduleMonthlyIncomeList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/payments/charge_schedules/regenerate/:
     post:
       operationId: payments_charge_schedules_regenerate_create
@@ -27452,6 +27574,23 @@ components:
       - period_end
       - period_start
       - subscription
+    ChargeScheduleMonthlyIncome:
+      type: object
+      description: |-
+        One (month, billed income) point for the DashboardAbos income chart.
+
+        ``amount`` is a 2dp money STRING (full precision survives the wire), not a
+        JSON number — mirrors the money-on-the-wire convention.
+      properties:
+        month:
+          type: string
+          description: Due-date month, 'YYYY-MM'.
+        amount:
+          type: string
+          description: Summed expected_amount for the month, 2dp string.
+      required:
+      - amount
+      - month
     ChargeScheduleStatusEnum:
       enum:
       - PLANNED
@@ -27763,6 +27902,7 @@ components:
       - withdrawal
       - terms
       - coop_contract
+      - subscription_contract
       type: string
       description: |-
         * `privacy` - Privacy policy
@@ -27770,6 +27910,7 @@ components:
         * `withdrawal` - Withdrawal terms
         * `terms` - Terms of service
         * `coop_contract` - Cooperative-share subscription contract
+        * `subscription_contract` - Subscription contract
     ConsentRecord:
       type: object
       description: |-
@@ -31930,6 +32071,21 @@ components:
       - total_members
       - trial_members
       - unpaid_coop_shares
+    MemberEmail:
+      type: object
+      description: One recipient in a subscription-based email distribution list.
+      properties:
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+      required:
+      - email
     MemberEmailLog:
       type: object
       description: |-
@@ -33479,6 +33635,10 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/ChargeSchedule'
+    PaginatedChargeScheduleMonthlyIncomeList:
+      type: array
+      items:
+        $ref: '#/components/schemas/ChargeScheduleMonthlyIncome'
     PaginatedEmailLogList:
       type: array
       items:
@@ -34049,7 +34209,6 @@ components:
           maxLength: 500
         contact:
           type: string
-          nullable: true
         linked_user:
           type: string
           nullable: true
@@ -34140,6 +34299,7 @@ components:
       required:
       - address
       - city
+      - contact
       - zip_code
     SarAccount:
       type: object
@@ -37348,6 +37508,19 @@ components:
       - quantity
       - share_type_variation
       - valid_from
+    SubscriptionMemberEmailsResponse:
+      type: object
+      description: Distinct member e-mails for a subscription filter (AbosEmails page).
+      properties:
+        count:
+          type: integer
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberEmail'
+      required:
+      - count
+      - members
     Tenant:
       type: object
       description: |-

@@ -1,8 +1,4 @@
-import {
-  useCurrency,
-  useDateFormat,
-  useTimeFormat,
-} from "@hooks/index";
+import { useCurrency, useDateFormat, useTimeFormat } from "@hooks/index";
 import type { BillingRun } from "@shared/api/generated/models";
 import {
   getPaymentsBillingRunsListQueryKey,
@@ -36,7 +32,11 @@ export default function DebitsAbos() {
   const queryClient = useQueryClient();
 
   // Filtered server-side by the period's year (period_start year).
-  const { data: runsData, isFetching, error } = usePaymentsBillingRunsList({
+  const {
+    data: runsData,
+    isFetching,
+    error,
+  } = usePaymentsBillingRunsList({
     year: selectedYear,
   });
 
@@ -226,7 +226,7 @@ export default function DebitsAbos() {
         columns={columns}
         pagination={false}
         size="small"
-        className="custom-forecast-table"
+        className="custom-jasmin-table"
       />
 
       <CreateBillingRunModal

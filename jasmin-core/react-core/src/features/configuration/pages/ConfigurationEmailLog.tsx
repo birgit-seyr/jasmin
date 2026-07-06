@@ -156,7 +156,7 @@ export default function ConfigurationEmailLog() {
       <Table<EmailLog>
         columns={columns}
         dataSource={rows}
-        className="custom-forecast-table"
+        className="custom-jasmin-table"
         rowKey="id"
         loading={isFetching}
         pagination={{ pageSize: 50, showSizeChanger: true }}

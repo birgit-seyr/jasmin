@@ -52,6 +52,7 @@ export default function AboutModal({ open, onClose }: AboutModalProps) {
           <List.Item style={{ padding: "6px 0", alignItems: "flex-start" }}>
             <Space align="start" size={10}>
               <CheckCircleTwoTone
+                aria-hidden
                 twoToneColor="#52c41a"
                 style={{ marginTop: 4, fontSize: 16 }}
               />

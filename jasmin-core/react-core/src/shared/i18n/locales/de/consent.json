@@ -54,5 +54,7 @@
     "action": "Drucken",
     "paper_required_hint": "Dieses Dokument bitte ausdrucken, ausfüllen, unterschreiben und per Post an folgende Adresse senden:",
     "signature_line": "Ort, Datum, Unterschrift"
-  }
+  },
+  "accept_prefix": "Ich habe gelesen und akzeptiere:",
+  "document": "das Dokument"
 }

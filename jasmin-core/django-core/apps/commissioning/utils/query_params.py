@@ -86,6 +86,7 @@ _STR_PARAMS = (
     "share_type_variation",
     "share_type_variation_ids",
     "delivery_station",
+    "delivery_station_day",
     "delivery_day",
     "member",
     "share_article",

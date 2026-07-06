@@ -4,21 +4,21 @@
    ============================================= */
 
 /* --- Tables: zebra rows, headers, sticky cols --- */
-:root.dark .custom-forecast-table .ant-table {
+:root.dark .custom-jasmin-table .ant-table {
   border-color: var(--color-border) !important;
 }
-:root.dark .custom-forecast-table .ant-table-thead > tr > th {
+:root.dark .custom-jasmin-table .ant-table-thead > tr > th {
   background-color: #1a3a2a !important;
   color: var(--color-text-primary) !important;
   border-bottom-color: var(--color-primary) !important;
 }
-:root.dark .custom-forecast-table .ant-table-tbody > tr.ant-table-row:nth-child(odd) > td {
+:root.dark .custom-jasmin-table .ant-table-tbody > tr.ant-table-row:nth-child(odd) > td {
   background-color: #1a2e1f !important;
 }
-:root.dark .custom-forecast-table .ant-table-tbody > tr.ant-table-row:nth-child(even) > td {
+:root.dark .custom-jasmin-table .ant-table-tbody > tr.ant-table-row:nth-child(even) > td {
   background-color: var(--color-bg-base) !important;
 }
-:root.dark .custom-forecast-table .ant-table-tbody > tr.ant-table-row:hover > td {
+:root.dark .custom-jasmin-table .ant-table-tbody > tr.ant-table-row:hover > td {
   background-color: #1a3535 !important;
 }
 
@@ -74,7 +74,7 @@
 :root.dark .ant-table-summary td {
   background-color: #3a1a2a !important;
 }
-:root.dark .custom-forecast-table .ant-table-summary tr:first-child td {
+:root.dark .custom-jasmin-table .ant-table-summary tr:first-child td {
   background-color: #2a1a3a !important;
 }
 :root.dark .summary-row {
@@ -110,7 +110,7 @@
 }
 
 /* --- Borders on custom tables --- */
-:root.dark .custom-forecast-table,
+:root.dark .custom-jasmin-table,
 :root.dark .custom-staff-table,
 :root.dark .account-values-table {
   border-color: var(--color-shadow);

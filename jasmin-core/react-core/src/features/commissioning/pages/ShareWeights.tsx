@@ -13,9 +13,9 @@ import type {
   Share,
 } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
-import { ExportCsvShareWeights } from '@features/commissioning/modals';
-import { WeekSelector } from '@shared/selectors';
-import { SharesDeliveryDaySelector } from '@features/commissioning/selectors';
+import { ExportCsvShareWeights } from "@features/commissioning/modals";
+import { WeekSelector } from "@shared/selectors";
+import { SharesDeliveryDaySelector } from "@features/commissioning/selectors";
 import {
   EditableTable,
   gatedByPermissionOnlyEdit,
@@ -201,7 +201,7 @@ export default function ShareWeights() {
           onSaveSuccess={onSaveSuccess}
           onDeleteSuccess={onDeleteSuccess}
           loading={isFetching}
-          className="w-max custom-forecast-table"
+          className="w-max custom-jasmin-table"
           permissions={permissions}
         />
       )}

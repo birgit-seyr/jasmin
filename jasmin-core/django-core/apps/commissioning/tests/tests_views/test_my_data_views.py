@@ -1012,7 +1012,6 @@ class TestMyMembershipCancel:
         SubscriptionFactory(
             member=member,
             admin_confirmed=True,
-            valid_until=None,
         )
         resp = _client_for(member_user).post(
             URL_MEMBERSHIP_CANCEL, {"effective_at": "2026-12-31"}, format="json"

@@ -48,7 +48,8 @@ export default function ListStorages() {
     () =>
       wrapApiFunctions<Storage & TableRecord>({
         create: (payload) => commissioningStoragesCreate(payload),
-        update: (id, payload) => commissioningStoragesPartialUpdate(id, payload),
+        update: (id, payload) =>
+          commissioningStoragesPartialUpdate(id, payload),
         delete: (id) => commissioningStoragesDestroy(id),
       }),
     [],
@@ -114,7 +115,7 @@ export default function ListStorages() {
         onSaveSuccess={onSaveSuccess}
         onDeleteSuccess={onDeleteSuccess}
         customEdit={customEdit}
-        className="w-max custom-forecast-table"
+        className="w-max custom-jasmin-table"
         uniqueCheck={["name"]}
         uniqueCheckMessage={t("validation.unique.name")}
         permissions={permissions}

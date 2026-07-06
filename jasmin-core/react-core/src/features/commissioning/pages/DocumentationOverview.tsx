@@ -107,7 +107,7 @@ export default function DocumentationOverview() {
         pagination={false}
         loading={loading}
         size="small"
-        className="custom-forecast-table w-max"
+        className="custom-jasmin-table w-max"
         rowKey="id"
         locale={{
           emptyText: (

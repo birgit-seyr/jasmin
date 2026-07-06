@@ -36,11 +36,23 @@ import type {
   ApiFunctions,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { ExplainerText, MobileStack, PastWarningMessage } from '@shared/ui';
-import { RelatedDayInfo, VariationsTotalsCard } from '@features/commissioning/components';
-import { useIsMobile, useTenantSettingToggle } from '@hooks/index';
-import { useHarvestingListColumns, useHarvestingListData } from '@features/commissioning/hooks';
-import { formatDayLabel, formatWeekLabel, generatePdfFilename, getDayName, isWeekInPast } from "@shared/utils";
+import { ExplainerText, MobileStack, PastWarningMessage } from "@shared/ui";
+import {
+  RelatedDayInfo,
+  VariationsTotalsCard,
+} from "@features/commissioning/components";
+import { useIsMobile, useTenantSettingToggle } from "@hooks/index";
+import {
+  useHarvestingListColumns,
+  useHarvestingListData,
+} from "@features/commissioning/hooks";
+import {
+  formatDayLabel,
+  formatWeekLabel,
+  generatePdfFilename,
+  getDayName,
+  isWeekInPast,
+} from "@shared/utils";
 import HarvestingCrateSummary from "@features/commissioning/components/HarvestingCrateSummary";
 import HarvestingListControls from "@features/commissioning/components/HarvestingListControls";
 
@@ -259,12 +271,12 @@ export default function HarvestingList() {
         customEdit={customEdit}
         permissions={permissions}
         className={
-          isGardenerView
-            ? "w-max custom-forecast-table"
-            : "custom-forecast-table"
+          isGardenerView ? "w-max custom-jasmin-table" : "custom-jasmin-table"
         }
         uniqueCheck={["share_article", "size", "unit"]}
-        uniqueCheckMessage={t("validation.unique.share_article_unit_size_must_be_unique")}
+        uniqueCheckMessage={t(
+          "validation.unique.share_article_unit_size_must_be_unique",
+        )}
         renderMobileCard={(
           record: TableRecord,
           onEdit: (r: TableRecord) => void,

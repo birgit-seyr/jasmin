@@ -71,9 +71,11 @@ class OfferGroup(JasminModel):
 
 
 class Reseller(JasminModel):
-    contact = models.ForeignKey(
-        "ContactEntity", on_delete=models.SET_NULL, blank=True, null=True
-    )
+    # Every reseller must have a contact (its address / e-mail / name live on
+    # the linked ContactEntity). PROTECT — not SET_NULL — because the FK is
+    # required: a contact can't be deleted out from under its reseller; delete
+    # or reassign the reseller first.
+    contact = models.ForeignKey("ContactEntity", on_delete=models.PROTECT)
     linked_user = models.OneToOneField(
         "accounts.JasminUser",
         on_delete=models.SET_NULL,

@@ -181,5 +181,16 @@
   "delivery_pauses_in_term": "Lieferpausen in diesem Zeitraum",
   "sepa_mandate_required": "Bitte richte zuerst ein gültiges SEPA-Mandat ein.",
   "sepa_mandate_missing": "Für dieses Mitglied liegt noch kein gültiges SEPA-Mandat vor. Bitte richte es ein, bevor du das Abo speicherst.",
-  "set_up_sepa_mandate": "SEPA-Mandat einrichten"
+  "set_up_sepa_mandate": "SEPA-Mandat einrichten",
+  "accept_subscription_contract": "Ich habe den Abo-Vertrag gelesen und akzeptiere ihn:",
+  "subscription_contract_required": "Bitte akzeptiere den Abo-Vertrag, bevor du fortfährst.",
+  "subscription_contract_record_failed": "Das Abo wurde erstellt, aber die Einwilligung zum Abo-Vertrag konnte nicht gespeichert werden.",
+  "emails_select_filter_hint": "Wähle oben einen Filter, um die Empfängerliste anzuzeigen.",
+  "emails_no_recipients": "Keine Empfänger für diese Auswahl.",
+  "emails_recipients": "{{count}} Empfänger",
+  "emails_copy": "Kopieren",
+  "emails_copied": "{{count}} E-Mail-Adressen kopiert",
+  "emails_by_station_hint": "Alle E-Mail-Adressen der Mitglieder mit einem aktiven Anteil an dieser Verteilstation.",
+  "emails_by_share_type_hint": "Alle E-Mail-Adressen der Mitglieder mit einem aktiven Anteil dieser Anteilsart.",
+  "emails_by_date_range_hint": "Alle E-Mail-Adressen der Mitglieder mit einem Anteil, der in diesem Zeitraum aktiv ist."
 }

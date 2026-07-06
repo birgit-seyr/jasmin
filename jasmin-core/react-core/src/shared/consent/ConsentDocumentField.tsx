@@ -15,8 +15,10 @@ interface Props {
 /**
  * Presentational consent checkbox: the document's title links to its PDF
  * (streamed by the public ``consent_documents/<id>/download_pdf/`` endpoint)
- * and the box records acceptance. The parent step owns the ``doc`` (fetched
- * via ``useCurrentConsentDoc``) so it knows whether the consent is required.
+ * and the box records acceptance. The parent owns the ``doc`` (fetched via
+ * {@link useCurrentConsentDoc}) so it knows whether the consent is required.
+ *
+ * Shared so the registration steps and the NewSubscriptionModal both use it.
  */
 export default function ConsentDocumentField({
   doc,
@@ -29,9 +31,9 @@ export default function ConsentDocumentField({
 
   return (
     <Checkbox checked={accepted} onChange={(e) => onChange(e.target.checked)}>
-      {t(labelKey ?? "auth.registration.consents.accept_prefix")}{" "}
+      {t(labelKey ?? "consent.accept_prefix")}{" "}
       <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-        {doc.title || t("auth.registration.consents.document")}
+        {doc.title || t("consent.document")}
       </a>
     </Checkbox>
   );

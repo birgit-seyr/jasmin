@@ -73,25 +73,18 @@ export default function DashboardMembers() {
     <div>
       <Spin spinning={growthLoading}>
         <h1>{t("statistics.members_title")}</h1>
-
+        <RangePicker
+          value={range}
+          onChange={(v) => setRange(v && v[0] && v[1] ? [v[0], v[1]] : null)}
+          presets={presets}
+          format={dateFormat}
+          allowClear={false}
+        />
         <Card
-          title={t("statistics.card_date_range")}
-          extra={
-            <RangePicker
-              value={range}
-              onChange={(v) =>
-                setRange(v && v[0] && v[1] ? [v[0], v[1]] : null)
-              }
-              presets={presets}
-              format={dateFormat}
-              allowClear={false}
-            />
-          }
+          className="dark-green-border"
+          title={t("statistics.chart_members_over_time")}
           style={{ marginTop: "1em" }}
         >
-          <Text type="secondary">
-            {t("statistics.chart_members_over_time")}
-          </Text>
           <StatsAreaChart
             data={growthSeries}
             series={series}

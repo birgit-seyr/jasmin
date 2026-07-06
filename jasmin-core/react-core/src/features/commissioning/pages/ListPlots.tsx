@@ -110,7 +110,7 @@ export default function ListPlots() {
         onSaveSuccess={onSaveSuccess}
         onDeleteSuccess={onDeleteSuccess}
         customEdit={customEdit}
-        className="w-max custom-forecast-table"
+        className="w-max custom-jasmin-table"
         uniqueCheck={["name"]}
         uniqueCheckMessage={t("validation.unique.name")}
         permissions={permissions}
