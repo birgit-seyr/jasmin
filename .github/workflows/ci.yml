@@ -95,6 +95,14 @@ jobs:
     env:
       # Matches the test-fixture expectations + standard Django settings.
       DJANGO_SETTINGS_MODULE: config.settings
+      # CI is a test environment, not a deploy: mark it DEBUG so the prod-only
+      # boot guards (DJANGO_SECRET_KEY / FIELD_ENCRYPTION_KEY must not be the
+      # dev defaults) don't fire for the manage.py subprocesses the suite spawns
+      # (e.g. the ``spectacular`` schema contract test) or the schema-gen step
+      # below — both run manage.py, which no longer force-enables DEBUG. pytest
+      # itself already defaults DEBUG on; this covers the child processes. The
+      # real deploy sets DEBUG=False explicitly, so the fail-safe is intact.
+      DEBUG: "True"
       POSTGRES_DB: jasmin
       POSTGRES_USER: jasmin
       POSTGRES_PASSWORD: jasmin

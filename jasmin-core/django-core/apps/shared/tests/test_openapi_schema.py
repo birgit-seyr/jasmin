@@ -34,6 +34,11 @@ def test_openapi_schema_builds_without_warnings(tmp_path):
     # Inherit env so the same DJANGO_SETTINGS_MODULE / DB config is used.
     env = os.environ.copy()
     env.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+    # Schema generation is a dev/introspection command — run it in DEBUG so the
+    # subprocess (which has no pytest in sys.modules and isn't a manage.py dev
+    # command, so settings.py defaults DEBUG off) doesn't trip the production
+    # boot guard on CI's dev-default FIELD_ENCRYPTION_KEY.
+    env.setdefault("DEBUG", "True")
 
     proc = subprocess.run(
         [

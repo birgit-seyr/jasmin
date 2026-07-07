@@ -11,9 +11,10 @@
  * backend create/confirm capacity check stays the authority (it 409s with
  * ``delivery_station.over_capacity``).
  *
- * NOTE: capacity counts HARVEST boxes only (backend `_CAPACITY_SHARE_OPTIONS`)
- * — add-on shares (chicken, honey, bread, ...) ride along in the base box and
- * neither consume nor see capacity.
+ * NOTE: capacity counts STANDALONE (non-additional) boxes only — add-on shares
+ * (chicken, honey, bread, ...) ride along in the base box and neither consume
+ * nor see capacity. The gate is ``share_type.is_additional_share_type`` (see
+ * NewSubscriptionModal); this util only does the fullness math.
  */
 
 import dayjs from "dayjs";
@@ -53,15 +54,6 @@ export function capacityWindowParams(): {
 } {
   return { year: dayjs().isoWeekYear(), delivery_week: 1, num_weeks: 104 };
 }
-
-/** Share options that CONSUME station capacity (mirror of the backend
- * `_CAPACITY_SHARE_OPTIONS`; note HARVEST_SHARE_FRUIT is the stored value of
- * the fruits-only option). Add-on variations (chicken, honey, bread, ...)
- * neither consume nor display capacity — never offer them a waiting_list. */
-export const CAPACITY_SHARE_OPTIONS: readonly string[] = [
-  "HARVEST_SHARE",
-  "HARVEST_SHARE_FRUIT",
-];
 
 export function stationDayTermCapacity(
   capacity: number | null | undefined,

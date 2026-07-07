@@ -43,7 +43,6 @@ import {
 } from "@hooks/index";
 import type { ShareTypeVariationOption } from "@hooks/useAllShareTypeVariations";
 import {
-  CAPACITY_SHARE_OPTIONS,
   capacityWindowParams,
   stationDayTermCapacity,
   termCapacity,
@@ -392,7 +391,10 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       (candidate) =>
         String(candidate.value) === String(selectedVariation.share_type),
     );
-    return CAPACITY_SHARE_OPTIONS.includes(shareType?.share_option ?? "");
+    // Capacity applies to STANDALONE (non-additional) shares only — add-ons
+    // (chicken, honey, …) ride along in the base box and never consume a slot.
+    // Mirrors the backend is_additional_share_type capacity gate.
+    return shareType ? !shareType.is_additional_share_type : false;
   }, [shareTypes, selectedVariation]);
   const showCapacity = termKnown && capacityRelevant;
 

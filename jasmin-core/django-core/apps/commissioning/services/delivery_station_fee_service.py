@@ -1,15 +1,6 @@
 """Station-fee billing: what the solawi owes a pickup station for a period.
 
-A DeliveryStation carries at most ONE net fee (either/or): ``fee_per_box_net``,
-``fee_per_month_net`` or ``fee_per_year_net``. Over an office-chosen
-``[start, end]`` date range the owed amount is:
 
-* per_box   -> fee_per_box_net  * boxes actually delivered to the station
-               (shippable = joker not taken + opted-in) in the range, counting
-               ONLY HARVEST_SHARE / HARVEST_SHARE_FRUIT — the same share options
-               that consume station-day capacity,
-* per_month -> fee_per_month_net * calendar months the range overlaps,
-* per_year  -> fee_per_year_net  * calendar years the range overlaps.
 
 All amounts are NET (no VAT) and Decimal end-to-end; sent on the wire as
 2-decimal strings per the money hygiene rule.

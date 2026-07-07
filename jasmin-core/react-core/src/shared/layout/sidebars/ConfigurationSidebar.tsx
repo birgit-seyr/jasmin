@@ -50,26 +50,14 @@ export default function ConfigurationSidebar({
         <Link to="/configuration/members">{t("configuration.members")}</Link>
       ),
     },
-    {
-      key: "configuration-subscriptions",
 
-      requireRole: "isAdmin",
-      icon: <SettingOutlined />,
-      label: (
-        <Link to="/configuration/subscriptions">
-          {t("configuration.subscriptions")}
-        </Link>
-      ),
-    },
     {
       key: "configuration-payments",
 
       requireRole: "isAdmin",
       icon: <EuroCircleOutlined />,
       label: (
-        <Link to="/configuration/payments">
-          {t("configuration.payments")}
-        </Link>
+        <Link to="/configuration/payments">{t("configuration.payments")}</Link>
       ),
     },
     {
@@ -96,6 +84,17 @@ export default function ConfigurationSidebar({
       ),
     },
     {
+      key: "configuration-subscriptions",
+
+      requireRole: "isAdmin",
+      icon: <SettingOutlined />,
+      label: (
+        <Link to="/configuration/subscriptions">
+          {t("configuration.subscriptions")}
+        </Link>
+      ),
+    },
+    {
       key: "configuration-reseller-documents",
 
       requireRole: "isAdmin",
@@ -111,11 +110,7 @@ export default function ConfigurationSidebar({
 
       requireRole: "isAdmin",
       icon: <MailOutlined />,
-      label: (
-        <Link to="/configuration/email">
-          {t("configuration.email")}
-        </Link>
-      ),
+      label: <Link to="/configuration/email">{t("configuration.email")}</Link>,
     },
     {
       key: "configuration-email-templates",
@@ -156,9 +151,7 @@ export default function ConfigurationSidebar({
       requireRole: "isAdmin",
       icon: <FileTextOutlined />,
       label: (
-        <Link to="/configuration/consents">
-          {t("consent.admin.title")}
-        </Link>
+        <Link to="/configuration/consents">{t("consent.admin.title")}</Link>
       ),
     },
 

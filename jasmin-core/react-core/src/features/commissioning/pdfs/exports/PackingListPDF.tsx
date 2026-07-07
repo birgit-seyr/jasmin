@@ -1,10 +1,4 @@
-import {
-  Document,
-  Page,
-  StyleSheet,
-  Text,
-  View,
-} from "@react-pdf/renderer";
+import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { TFunction } from "i18next";
 import { variationColumnKey } from "@features/commissioning/hooks/columns/columnKeys";
 import { listStyles } from "./listPdfBase";
@@ -140,29 +134,57 @@ function PackingListPageContent({
 
       <View style={listStyles.table}>
         <View style={listStyles.tableHeader} fixed>
-          <View style={[listStyles.cell, localStyles.colArticle, listStyles.cellLeft]}>
+          <View
+            style={[
+              listStyles.cell,
+              localStyles.colArticle,
+              listStyles.cellLeft,
+            ]}
+          >
             <Text>{t("commissioning.vegetables_and_fruits")}</Text>
           </View>
-          <View style={[listStyles.cell, localStyles.colUnit, listStyles.cellCenter]}>
+          <View
+            style={[
+              listStyles.cell,
+              localStyles.colUnit,
+              listStyles.cellCenter,
+            ]}
+          >
             <Text>{t("commissioning.unit")}</Text>
           </View>
           {showSize && (
-            <View style={[listStyles.cell, localStyles.colSize, listStyles.cellCenter]}>
+            <View
+              style={[
+                listStyles.cell,
+                localStyles.colSize,
+                listStyles.cellCenter,
+              ]}
+            >
               <Text>{t("commissioning.size")}</Text>
             </View>
           )}
           {variations.map((variation, index) => (
             <View
               key={variation.id || index}
-              style={[listStyles.cell, localStyles.colVariation, listStyles.cellCenter]}
+              style={[
+                listStyles.cell,
+                localStyles.colVariation,
+                listStyles.cellCenter,
+              ]}
             >
               <Text>{t(`commissioning.${variation.size}`)}</Text>
             </View>
           ))}
-          <View style={[listStyles.cell, listStyles.colNote, listStyles.cellLeft]}>
-            <Text>{t("commissioning.note")}</Text>
-          </View>
-          <View style={[listStyles.cell, localStyles.colDone, listStyles.cellCenter]}>
+          <View
+            style={[listStyles.cell, listStyles.colNote, listStyles.cellLeft]}
+          ></View>
+          <View
+            style={[
+              listStyles.cell,
+              localStyles.colDone,
+              listStyles.cellCenter,
+            ]}
+          >
             <Text>{"✓"}</Text>
           </View>
         </View>
@@ -170,34 +192,67 @@ function PackingListPageContent({
         {data.map((item, index) => (
           <View
             key={item.id || index}
-            style={[listStyles.tableRow, index % 2 === 1 ? listStyles.tableRowAlt : {}]}
+            style={[
+              listStyles.tableRow,
+              index % 2 === 1 ? listStyles.tableRowAlt : {},
+            ]}
             wrap={false}
           >
-            <View style={[listStyles.cell, localStyles.colArticle, listStyles.cellLeft]}>
+            <View
+              style={[
+                listStyles.cell,
+                localStyles.colArticle,
+                listStyles.cellLeft,
+              ]}
+            >
               <Text>{item.share_article_name || ""}</Text>
             </View>
-            <View style={[listStyles.cell, localStyles.colUnit, listStyles.cellCenter]}>
+            <View
+              style={[
+                listStyles.cell,
+                localStyles.colUnit,
+                listStyles.cellCenter,
+              ]}
+            >
               <Text>{item.unit_label || ""}</Text>
             </View>
             {showSize && (
-              <View style={[listStyles.cell, localStyles.colSize, listStyles.cellCenter]}>
+              <View
+                style={[
+                  listStyles.cell,
+                  localStyles.colSize,
+                  listStyles.cellCenter,
+                ]}
+              >
                 <Text>{item.size_label || ""}</Text>
               </View>
             )}
             {variations.map((variation, idx) => (
               <View
                 key={variation.id || idx}
-                style={[listStyles.cell, localStyles.colVariation, listStyles.cellCenter]}
+                style={[
+                  listStyles.cell,
+                  localStyles.colVariation,
+                  listStyles.cellCenter,
+                ]}
               >
                 <Text>
                   {(item[variationColumnKey(variation.id!)] as string) || ""}
                 </Text>
               </View>
             ))}
-            <View style={[listStyles.cell, listStyles.colNote, listStyles.cellLeft]}>
+            <View
+              style={[listStyles.cell, listStyles.colNote, listStyles.cellLeft]}
+            >
               <Text>{item.note || ""}</Text>
             </View>
-            <View style={[listStyles.cell, localStyles.colDone, listStyles.cellCenter]}>
+            <View
+              style={[
+                listStyles.cell,
+                localStyles.colDone,
+                listStyles.cellCenter,
+              ]}
+            >
               <TickBox />
             </View>
           </View>
