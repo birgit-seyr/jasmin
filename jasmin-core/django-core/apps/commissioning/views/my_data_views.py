@@ -221,30 +221,31 @@ class MyCustomerDataView(APIView):
         perms.append(requires_step_up_for_fields("iban")())
         return perms
 
-    def _resolve(self, request: Request) -> Reseller:
+    def _resolve(self, request: Request, *, create_missing: bool = False) -> Reseller:
         reseller: Reseller | None = getattr(request.user, "linked_reseller", None)
         if reseller is None:
             raise CustomerProfileNotLinked("No customer profile linked to this user.")
-        if reseller.contact is None:
+        if reseller.contact is None and create_missing:
             # Office-onboarded resellers always have a contact, but the
-            # seed-fixture / future self-service flows may not. Provision
-            # a blank ContactEntity lazily so the self-edit surface is
-            # always usable — the user just sees empty fields and fills
-            # them in.
+            # seed-fixture / future self-service flows may not. Provision a blank
+            # ContactEntity lazily on the WRITE path only, so the self-edit
+            # surface is usable — GET stays side-effect-free (idempotent).
             reseller.contact = ContactEntity.objects.create()
             reseller.save(update_fields=["contact"])
         return reseller
 
     def get(self, request: Request) -> Response:
         reseller = self._resolve(request)
+        # Side-effect-free read: if no contact row exists yet, serialize a
+        # transient (unsaved) blank one so the response shape is consistent
+        # without a DB write.
+        contact = reseller.contact or ContactEntity()
         return Response(
-            MyCustomerDataReadSerializer(
-                reseller.contact, context={"reseller": reseller}
-            ).data
+            MyCustomerDataReadSerializer(contact, context={"reseller": reseller}).data
         )
 
     def patch(self, request: Request) -> Response:
-        reseller = self._resolve(request)
+        reseller = self._resolve(request, create_missing=True)
         contact = reseller.contact
         # Object-level step-up check against the ContactEntity that owns the
         # iban — raises StepUpRequired only when iban actually changes.
@@ -337,12 +338,39 @@ class MyCoopShareSubscribeView(APIView):
         # agreement before subscribing — enforced here, not only in the UI — and
         # we record a versioned, hash-verified ConsentRecord as proof (DSGVO
         # Art. 7), the same way privacy/SEPA/withdrawal consents are captured.
-        try:
-            contract_doc = ConsentService.get_current_document(
-                kind=ConsentKind.COOP_CONTRACT, locale="de"
+        #
+        # Resolve the contract at the MEMBER's own language (falling back to de,
+        # then to ANY locale) — the document is a per-(kind, locale) row, so a
+        # fixed locale="de" would both fail to find an en-only contract and
+        # record consent against the wrong-language body. FAIL CLOSED: if the
+        # tenant has ANY current COOP_CONTRACT document, agreement is mandatory —
+        # a locale gap must never silently drop the requirement.
+        member_locale = getattr(member.user, "user_language", None) or "de"
+        contract_doc = None
+        for loc in dict.fromkeys([member_locale, "de"]):
+            try:
+                contract_doc = ConsentService.get_current_document(
+                    kind=ConsentKind.COOP_CONTRACT, locale=loc
+                )
+                break
+            except ConsentDocumentNotFound:
+                continue
+        if contract_doc is None:
+            # Published only under some other locale — still binding.
+            from django.db.models import Q
+            from django.utils import timezone as _timezone
+
+            from ..models import ConsentDocument
+
+            _today = _timezone.now().date()
+            contract_doc = (
+                ConsentDocument.objects.filter(
+                    kind=ConsentKind.COOP_CONTRACT, valid_from__lte=_today
+                )
+                .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=_today))
+                .order_by("-valid_from")
+                .first()
             )
-        except ConsentDocumentNotFound:
-            contract_doc = None
         if contract_doc is not None and not agreed_to_contract:
             raise CoopShareContractAgreementRequired(
                 "You must agree to the cooperative-share contract before "

@@ -44,24 +44,21 @@ export const ProtectedRoute = ({
     return children; // Tenant superusers can access everything in their tenant
   }
 
-  // 4. Meta-based checks
-  if (meta) {
-    // If user has a role, check role-based access first
-    if (userRole && userRole !== "member" && meta.requiredRole) {
-      const roles = Array.isArray(meta.requiredRole)
-        ? meta.requiredRole
-        : [meta.requiredRole];
-      if (!roles.includes(userRole)) {
-        return <Navigate to="/unauthorized" replace />;
-      }
-    }
-    // If no role or role check passed, fall back to permission check
-    else if (
-      meta.requiredPermission &&
-      !hasPermission(meta.requiredPermission)
-    ) {
+  // 4. Meta-based checks (evaluated independently — a route may declare a
+  //    role gate, a permission gate, or both). Super-admins and tenant
+  //    superusers already returned above, so any role that reaches here —
+  //    including "member" — must be explicitly listed to pass the role gate.
+  if (meta?.requiredRole) {
+    const roles = Array.isArray(meta.requiredRole)
+      ? meta.requiredRole
+      : [meta.requiredRole];
+    if (!userRole || !roles.includes(userRole)) {
       return <Navigate to="/unauthorized" replace />;
     }
+  }
+
+  if (meta?.requiredPermission && !hasPermission(meta.requiredPermission)) {
+    return <Navigate to="/unauthorized" replace />;
   }
 
   if (meta?.requiredSetting) {

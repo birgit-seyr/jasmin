@@ -10,6 +10,7 @@ import type {
   BillingProfile,
   ConsentRecordCreate,
 } from "@shared/api/generated/models";
+import { PaymentMethodEnum } from "@shared/api/generated/models";
 import {
   getPaymentsBillingProfilesListQueryKey,
   usePaymentsBillingProfilesCreate,
@@ -111,6 +112,15 @@ export default function SepaSetupModal({
         await patchMutation.mutateAsync({
           id: existing.id,
           data: {
+            // Re-arm SEPA: a prior consent-revoke switches the profile to
+            // BANK_TRANSFER (keeping the mandate columns). Without resetting
+            // payment_method + is_active here, re-doing the setup would update
+            // the IBAN/signed date but leave the profile on BANK_TRANSFER, so
+            // is_sepa_ready stays false and the "new" mandate never activates.
+            // (payment_method into SEPA is step-up gated — the api.ts
+            // interceptor handles the challenge transparently.)
+            payment_method: PaymentMethodEnum.SEPA_DD,
+            is_active: true,
             iban: values.iban,
             account_holder: values.account_holder,
             sepa_mandate_signed_at: signedAt,

@@ -29,5 +29,10 @@
   "status_ready": "Ready",
   "status_incomplete": "Incomplete",
   "status_inactive": "Inactive",
-  "notes": "Notes"
+  "status_revoked": "Revoked",
+  "notes": "Notes",
+  "column_tooltip": "SEPA mandate active during the subscription term",
+  "mandate_active_for_term": "Active during this subscription",
+  "no_profile": "No SEPA profile for this member.",
+  "view_details": "View details"
 }

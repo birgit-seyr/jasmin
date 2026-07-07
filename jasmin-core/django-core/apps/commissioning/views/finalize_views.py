@@ -180,6 +180,9 @@ class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
         # finalizers raise domain errors for a bad item (e.g. an empty
         # invoice/delivery note → 400-class ``CommissioningError``); those
         # must be collected per item, not escape and abort the whole batch.
+        # ``AttributeError`` / ``TypeError`` are deliberately NOT caught — they
+        # signal a programming bug, not a per-item data problem, and must
+        # surface (a 500) rather than be silently recorded as an item "error".
         bulk_with_savepoints(
             objects,
             finalize_one,
@@ -187,8 +190,6 @@ class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
                 DatabaseError,
                 DjangoValidationError,
                 ValueError,
-                TypeError,
-                AttributeError,
                 JasminError,
             ),
             on_error=record_error,

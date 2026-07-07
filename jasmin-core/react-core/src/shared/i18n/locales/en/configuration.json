@@ -47,6 +47,7 @@
   "payment_cycle_quarterly": "Quarterly",
   "payment_cycle_semi_annually": "Semi-Annually",
   "payment_cycle_annually": "Annually",
+  "payment_cycle_toggle_error": "Could not update the payment cycle.",
   "email": "Email",
   "email_templates": "Email templates",
   "email_log": "Email log",

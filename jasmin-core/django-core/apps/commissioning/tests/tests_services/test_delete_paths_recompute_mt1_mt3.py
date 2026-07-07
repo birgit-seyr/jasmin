@@ -131,6 +131,37 @@ class TestDeletePathsRecompute:
             "movement (not just the SHARECONTENT half) and re-derive corrections"
         )
 
+    def test_delete_share_planning_defers_cascade_after_theoretical(self, tenant):
+        # Lock-order guard: the theoretical_sum pass
+        # (recalculate_actual_corrections) must run BEFORE the single
+        # current_balance cascade (cascade_for_movements), and the cascade must
+        # be DEFERRED (collect_movements passed) so it runs exactly once — else
+        # delete_share_planning inverts the global theoretical_sum ->
+        # current_balance order and can AB/BA-deadlock a concurrent count/recompute.
+        from unittest.mock import Mock
+
+        article, _forecast, _sc = _build_harvest_share_content()
+        assert _has_theoretical_harvest_movement()
+
+        manager = Mock()
+        with patch(_RECALC, manager.recalc), patch(_CASCADE, manager.cascade):
+            ShareContentService().delete_share_planning(
+                year=YEAR,
+                delivery_week=WEEK,
+                share_article_id=str(article.id),
+                unit="KG",
+                size="M",
+            )
+
+        called = [c[0] for c in manager.mock_calls]
+        assert "recalc" in called and "cascade" in called
+        assert called.index("recalc") < called.index(
+            "cascade"
+        ), "theoretical_sum pass must precede the current_balance cascade"
+        # Deferred into a single current_balance pass.
+        assert manager.recalc.call_args.kwargs.get("collect_movements") is not None
+        manager.cascade.assert_called_once()
+
     def test_forecast_delete_recalcs_with_theoretical_movement(
         self, api_client, tenant
     ):

@@ -108,6 +108,9 @@ interface RenderOptions {
    * so the input shows/accepts the tenant's separator (e.g. ``.`` → 40.00) and
    * rejects everything else. Defaults to ``.``. */
   decimalChar?: string;
+  /** Tenant date display format (from useDateFormat) for ``date`` settings —
+   * so the picker shows the tenant's format instead of the ISO default. */
+  dateFormat?: string;
   onConfigurePrice?: (shareType: string, label: string) => void;
   renderPriceButton?: ComponentType<{
     shareType: string;
@@ -269,6 +272,7 @@ export const SettingsRenderer = {
               onChange={(date) =>
                 onChange(date ? date.format("YYYY-MM-DD") : null)
               }
+              format={options.dateFormat}
               style={{ width: "100%", marginTop: 4 }}
               placeholder={setting.defaultValue as string}
               disabled={setting.disabled}

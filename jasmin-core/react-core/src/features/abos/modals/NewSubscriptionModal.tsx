@@ -112,8 +112,8 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   forceTrial = false,
 }) => {
   const { t } = useTranslation();
-  const { currencySymbol } = useCurrency();
-  const { dateFormat, formatDate } = useDateFormat();
+  const { currencySymbol, formatCurrency } = useCurrency();
+  const { dateFormat, formatDate, formatDateForAPI } = useDateFormat();
   const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
   // A member subscribing for THEMSELVES uses the member-scoped endpoint. The
   // price is read-only (derived server-side) UNLESS the tenant allows
@@ -615,10 +615,8 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         onIntent?.({
           share_type_variation_id: String(selectedVariation.value),
           quantity: values.quantity ?? 1,
-          valid_from: values.valid_from.format("YYYY-MM-DD"),
-          valid_until: values.valid_until
-            ? values.valid_until.format("YYYY-MM-DD")
-            : undefined,
+          valid_from: formatDateForAPI(values.valid_from) ?? "",
+          valid_until: formatDateForAPI(values.valid_until) ?? undefined,
           default_delivery_station_day:
             values.default_delivery_station_day || undefined,
           price_per_delivery:
@@ -647,10 +645,8 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       const asWaitingList = forceWaitingList || isFullForTerm;
       setSaving(true);
       try {
-        const validFromStr = values.valid_from.format("YYYY-MM-DD");
-        const validUntilStr = values.valid_until
-          ? values.valid_until.format("YYYY-MM-DD")
-          : null;
+        const validFromStr = formatDateForAPI(values.valid_from) ?? "";
+        const validUntilStr = formatDateForAPI(values.valid_until);
         if (isMemberOnly) {
           // Member self-service: the endpoint takes the member from the token,
           // forces is_trial=false, and (unless solidarity pricing is on) derives
@@ -752,6 +748,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       sepaReady,
       subscriptionContractDoc,
       subscriptionContractAccepted,
+      formatDateForAPI,
     ],
   );
 
@@ -917,12 +914,14 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                 name="valid_until"
                 label={t("abos.valid_until")}
                 // A subscription must have an end date (the backend rejects
-                // open-ended ones). Only require it when the field is actually
-                // editable — when it's auto-filled + locked (a tenant term rule
-                // or the simplified public/member view) it's always populated,
-                // and a required rule on a disabled field would dead-end.
+                // open-ended ones). Disable + skip the required rule ONLY when
+                // it's auto-filled + locked (a tenant term rule populates it).
+                // Without a term rule the auto-fill never runs, so even in the
+                // simplified member/public view the field must stay editable +
+                // required — otherwise it's disabled, empty and unvalidated and
+                // the member dead-ends on a raw 400.
                 rules={
-                  lockValidUntil || simplified
+                  lockValidUntil
                     ? undefined
                     : [{ required: true, message: t("common.required") }]
                 }
@@ -937,7 +936,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                 <DatePicker
                   className="w-full"
                   format={dateFormat}
-                  disabled={lockValidUntil || simplified}
+                  disabled={lockValidUntil}
                   disabledDate={disableValidUntil}
                 />
               </Form.Item>
@@ -1066,25 +1065,36 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                     )}
                   </>
                 }
-                rules={[{ required: true, message: t("common.required") }]}
+                // Only require when the field is editable. In the simplified
+                // member/public view without solidarity pricing the price is
+                // disabled + prefilled from the variation; attaching a required
+                // rule to that disabled field would show an unclearable inline
+                // error under a greyed input for an unpriced variation.
+                rules={
+                  simplified && !allowsSolidarity
+                    ? undefined
+                    : [{ required: true, message: t("common.required") }]
+                }
                 extra={
                   allowsSolidarity && liveVariation?.active_price_per_delivery
                     ? [
                         // Richtpreis (recommended reference price).
                         t("abos.reference_price_hint", {
-                          price: Number.parseFloat(
-                            liveVariation.active_price_per_delivery,
-                          ).toFixed(2),
-                          currency: currencySymbol,
+                          price: formatCurrency(
+                            Number.parseFloat(
+                              liveVariation.active_price_per_delivery,
+                            ),
+                          ),
                         }),
                         // Untere Grenze (solidarity floor the office/member may
                         // not go below — same value the InputNumber min enforces).
                         liveVariation?.active_solidarity_min_price_per_delivery
                           ? t("abos.solidarity_floor_hint", {
-                              price: Number.parseFloat(
-                                liveVariation.active_solidarity_min_price_per_delivery,
-                              ).toFixed(2),
-                              currency: currencySymbol,
+                              price: formatCurrency(
+                                Number.parseFloat(
+                                  liveVariation.active_solidarity_min_price_per_delivery,
+                                ),
+                              ),
                             })
                           : null,
                       ]

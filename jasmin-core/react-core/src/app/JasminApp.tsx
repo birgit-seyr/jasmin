@@ -8,6 +8,7 @@ import MainContent from "@shared/layout/MainContent";
 import SkipToMainLink from "@shared/layout/SkipToMainLink";
 import TopNavigation from "@shared/layout/TopNavigation";
 import UserMenu from "@shared/layout/UserMenu";
+import ErrorBoundary from "@shared/ui/ErrorBoundary";
 import { useAuth } from "@shared/contexts/AuthContext";
 import { useLocale } from "@shared/contexts/LocalContext";
 import { ModalProvider } from "@shared/contexts/ModalContext";
@@ -169,24 +170,26 @@ export default function JasminApp() {
                 minHeight: "100vh",
               }}
             >
-              <Suspense
-                fallback={
-                  <div role="status" aria-live="polite">
-                    Loading...
-                  </div>
-                }
-              >
-                <Routes>
-                  <Route
-                    path="/members/members/:id"
-                    element={<MemberDetail />}
-                  />
-                  <Route
-                    path="*"
-                    element={<Navigate to={memberPath} replace />}
-                  />
-                </Routes>
-              </Suspense>
+              <ErrorBoundary>
+                <Suspense
+                  fallback={
+                    <div role="status" aria-live="polite">
+                      Loading...
+                    </div>
+                  }
+                >
+                  <Routes>
+                    <Route
+                      path="/members/members/:id"
+                      element={<MemberDetail />}
+                    />
+                    <Route
+                      path="*"
+                      element={<Navigate to={memberPath} replace />}
+                    />
+                  </Routes>
+                </Suspense>
+              </ErrorBoundary>
             </Layout.Content>
           </Layout>
         </PermissionProvider>
@@ -220,21 +223,23 @@ export default function JasminApp() {
                 minHeight: "100vh",
               }}
             >
-              <Suspense
-                fallback={
-                  <div role="status" aria-live="polite">
-                    Loading...
-                  </div>
-                }
-              >
-                <Routes>
-                  <Route path="/customer" element={<CustomerOrderPage />} />
-                  <Route
-                    path="*"
-                    element={<Navigate to="/customer" replace />}
-                  />
-                </Routes>
-              </Suspense>
+              <ErrorBoundary>
+                <Suspense
+                  fallback={
+                    <div role="status" aria-live="polite">
+                      Loading...
+                    </div>
+                  }
+                >
+                  <Routes>
+                    <Route path="/customer" element={<CustomerOrderPage />} />
+                    <Route
+                      path="*"
+                      element={<Navigate to="/customer" replace />}
+                    />
+                  </Routes>
+                </Suspense>
+              </ErrorBoundary>
             </Layout.Content>
           </Layout>
         </PermissionProvider>

@@ -204,13 +204,8 @@ export default function DebitsAbos() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <Flex justify="space-between" align="center" gap="small">
-        <h1>{t("abos.debits")}</h1>
-        <Button type="primary" onClick={() => setCreateOpen(true)}>
-          {t("abos.debits_create_run")}
-        </Button>
-      </Flex>
+    <div>
+      <h1>{t("abos.debits")}</h1>
 
       <div style={{ margin: "16px 0" }}>
         <YearSelector
@@ -218,7 +213,11 @@ export default function DebitsAbos() {
           setSelectedYear={setSelectedYear}
         />
       </div>
-
+      <div style={{ marginBottom: "2em", marginTop: "2em" }}>
+        <Button type="primary" onClick={() => setCreateOpen(true)}>
+          {t("abos.debits_create_run")}
+        </Button>
+      </div>
       <Table
         rowKey="id"
         loading={isFetching}

@@ -247,6 +247,68 @@ class TestSelfRegistration:
         assert shares.count() == 1
         assert int(shares.first().amount_of_coop_shares) == 3
         assert shares.first().admin_confirmed is False
+
+    def test_coop_shares_require_contract_consent_when_published(self, tenant, payload):
+        # A published COOP_CONTRACT makes contract consent mandatory server-side:
+        # requesting equity without accepting it is rejected BEFORE any user /
+        # member row is created (mirrors the authenticated self-subscribe gate).
+        import datetime
+
+        from apps.commissioning.models import ConsentDocument
+        from apps.commissioning.models.choices_text import ConsentKind
+
+        ConsentDocument.objects.create(
+            kind=ConsentKind.COOP_CONTRACT,
+            locale="en",
+            version="v1",
+            valid_from=datetime.date(2026, 1, 1),
+            body="contract",
+        )
+        with pytest.raises(RegistrationError) as exc:
+            register_public_applicant(
+                data={**payload, "coop_shares_count": 3}, tenant=tenant
+            )
+        assert exc.value.field == "accepted_consent_documents"
+        # Nothing was created — the gate fires before user/member creation.
+        assert not JasminUser.objects.filter(email=payload["email"]).exists()
+        assert not Member.objects.filter(email=payload["email"]).exists()
+
+    def test_registration_with_required_consents_accepted_succeeds(
+        self, tenant, payload
+    ):
+        import datetime
+
+        from apps.commissioning.models import ConsentDocument, ConsentRecord
+        from apps.commissioning.models.choices_text import ConsentKind
+
+        contract = ConsentDocument.objects.create(
+            kind=ConsentKind.COOP_CONTRACT,
+            locale="en",
+            version="v1",
+            valid_from=datetime.date(2026, 1, 1),
+            body="contract",
+        )
+        privacy = ConsentDocument.objects.create(
+            kind=ConsentKind.PRIVACY,
+            locale="en",
+            version="v1",
+            valid_from=datetime.date(2026, 1, 1),
+            body="privacy",
+        )
+        result = register_public_applicant(
+            data={
+                **payload,
+                "coop_shares_count": 2,
+                "accepted_consent_documents": {
+                    ConsentKind.COOP_CONTRACT: contract.id,
+                    ConsentKind.PRIVACY: privacy.id,
+                },
+            },
+            tenant=tenant,
+        )
+        member = Member.objects.get(id=result["member_id"])
+        assert ConsentRecord.objects.filter(member=member, document=contract).exists()
+        assert ConsentRecord.objects.filter(member=member, document=privacy).exists()
         assert result["coop_shares_created"] == 1
 
     def test_coop_share_snapshots_configured_value(self, tenant, payload):

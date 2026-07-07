@@ -990,8 +990,12 @@ def get_env(var_name, default=None, required_in_production=False):
     """
     value = os.environ.get(var_name)
 
-    # Check if we're in production
-    is_production = os.environ.get("DEBUG", "True").lower() == "false"
+    # Reuse the module-level DEBUG (which already defaults to production-safe
+    # False when DEBUG is unset outside pytest). Recomputing here with a
+    # DIFFERENT default ("True") would make a deploy that forgets to set DEBUG
+    # boot in production (module DEBUG=False) yet silently skip the
+    # required-in-production variable checks.
+    is_production = not DEBUG
 
     if value is None:
         if required_in_production and is_production:
@@ -1213,10 +1217,10 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "CSA Management Platform API",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    # ✅ THE KEY SETTING - Don't split request/response into separate schemas
+    # THE KEY SETTING - Don't split request/response into separate schemas
     "COMPONENT_SPLIT_REQUEST": False,
     "COMPONENT_SPLIT_PATCH": False,
-    # ✅ Map your enum classes to prevent duplicates
+    # Map your enum classes to prevent duplicates
     "ENUM_NAME_OVERRIDES": {
         "MovementTypeEnum": "apps.commissioning.models.choices_text.MovementTypeOptions",
         "CultivationOriginEnum": "apps.commissioning.models.choices_text.CultivationOriginOptions",
@@ -1244,7 +1248,7 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX": "/api/",
     "ENUM_ADD_EXPLICIT_BLANK_NULL_CHOICE": False,
     "SCHEMA_COERCE_PATH_PK": True,
-    # ✅ Postprocessing to handle any remaining edge cases
+    # Postprocessing to handle any remaining edge cases
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",
         # Auto-inject canonical 4xx error responses (400/401/403/404)

@@ -434,3 +434,29 @@
 .abo-row--cancelled {
   opacity: 0.75;
 }
+
+/* SEPA-mandate overview square (Abos page). A clickable status dot mirroring
+   the active-status square: green when the member's mandate is active during
+   the subscription's term, dark red when not. Colour-only state is backed by
+   an aria-label on the button + a tooltip, so it's announced and keyboard
+   reachable. */
+.sepa-mandate-square {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  display: inline-block;
+  vertical-align: middle;
+}
+.sepa-mandate-square:focus-visible {
+  outline: 2px solid var(--color-future-blue);
+  outline-offset: 2px;
+}
+.sepa-mandate-square--active {
+  background-color: var(--color-primary);
+}
+.sepa-mandate-square--inactive {
+  background-color: var(--color-error);
+}

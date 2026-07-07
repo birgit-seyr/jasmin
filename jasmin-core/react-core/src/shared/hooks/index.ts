@@ -32,6 +32,7 @@ export { useShareTypeVariationSizeOptions } from './useShareTypeVariationSizeOpt
 export { useVariationLabel } from './useVariationLabel';
 export { useSubscriptionTerm } from './useSubscriptionTerm';
 export { useTableRowSelection } from './useTableRowSelection';
+export { useSepaMandateStatus } from './useSepaMandateStatus';
 export { useTenant } from './configuration/useTenant';
 export { useTenantSettingToggle } from './configuration/useTenantSettingToggle';
 export {

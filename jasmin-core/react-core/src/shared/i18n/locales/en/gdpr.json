@@ -34,6 +34,8 @@
   "consent_kind_sepa": "SEPA Consent",
   "consent_kind_withdrawal": "Right of Withdrawal",
   "consent_kind_terms": "Terms of Service",
+  "consent_kind_coop_contract": "Cooperative-share contract",
+  "consent_kind_subscription_contract": "Subscription contract",
   "sepa_consent": "SEPA Consent",
   "privacy_consent": "Privacy Consent",
   "deleted_at": "Deleted At",

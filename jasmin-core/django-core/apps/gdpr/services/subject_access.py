@@ -280,6 +280,9 @@ class SubjectAccessMixin:
             # CancellableMixin — Austrittsdatum per GenG §30
             "cancelled_at": member.cancelled_at,
             "cancelled_effective_at": member.cancelled_effective_at,
+            # Free-text "why" of the exit — PII_IMMEDIATE (may hold health
+            # reasons / complaints), so it belongs in the Art. 15 bundle.
+            "cancellation_reason": member.cancellation_reason,
             "note": member.note,
             # AdminConfirmableMixin
             "admin_confirmed": member.admin_confirmed,
@@ -423,6 +426,7 @@ class SubjectAccessMixin:
                 "amount_of_coop_shares": share.amount_of_coop_shares,
                 "is_increase": share.is_increase,
                 "note": share.note,
+                "cancellation_reason": share.cancellation_reason,
                 # PayableMixin
                 "due_date": share.due_date,
                 "paid_at": share.paid_at,
@@ -466,6 +470,7 @@ class SubjectAccessMixin:
                 # CancellableMixin
                 "cancelled_at": sub.cancelled_at,
                 "cancelled_effective_at": sub.cancelled_effective_at,
+                "cancellation_reason": sub.cancellation_reason,
                 # WaitingListMixin
                 "on_waiting_list": sub.on_waiting_list,
                 "waiting_list_status": sub.waiting_list_status,

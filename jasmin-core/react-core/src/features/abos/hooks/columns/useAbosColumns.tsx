@@ -28,7 +28,9 @@ import type { useAbosData } from "../useAbosData";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 import { useSubscriptionTerm } from "@hooks/useSubscriptionTerm";
 import { useActiveStatusColumn } from "@hooks/columns/useActiveStatusColumn";
+import { useSepaMandateColumn } from "@hooks/columns/useSepaMandateColumn";
 import { useTimeBoundColumns } from "@hooks/columns/useTimeBoundColumns";
+import type { SepaMandateStatus } from "@shared/api/generated/models";
 import { useSharedAboColumns } from "./useSharedAboColumns";
 
 type AbosData = ReturnType<typeof useAbosData>;
@@ -47,6 +49,8 @@ export function useAbosColumns({
   recentlyAddedIds,
   onCancel,
   onShowLog,
+  getMandateForMember,
+  onShowSepaDetails,
 }: {
   members: AbosData["members"];
   paymentCycles: AbosData["paymentCycles"];
@@ -68,6 +72,13 @@ export function useAbosColumns({
   recentlyAddedIds: ReadonlySet<string>;
   onCancel: (record: AboRecord) => void;
   onShowLog: (record: AboRecord) => void;
+  /** Resolve a member's SEPA mandate status (from ``useSepaMandateStatus``). */
+  getMandateForMember: (memberId?: string | null) => SepaMandateStatus | undefined;
+  /** Open the SEPA mandate-details modal for a clicked row. */
+  onShowSepaDetails: (
+    status: SepaMandateStatus | undefined,
+    record: AboRecord,
+  ) => void;
 }) {
   const { t } = useTranslation();
   const { getSetting } = useTenant();
@@ -97,6 +108,13 @@ export function useAbosColumns({
   const activeStatusColumn = useActiveStatusColumn({
     defaultSortOrder: "descend",
     pinnedIds: recentlyAddedIds,
+  });
+  // "Does this subscription's member have a SEPA mandate active during its
+  // term?" — green/red square, click-through to the mandate details.
+  const sepaMandateColumn = useSepaMandateColumn({
+    getMandateForMember,
+    onShowDetails: (status, record) =>
+      onShowSepaDetails(status, record as AboRecord),
   });
   const { validFromColumn, validUntilColumn } = useTimeBoundColumns({
     width: "9em",
@@ -450,6 +468,7 @@ export function useAbosColumns({
       },
 
       memberColumn,
+      sepaMandateColumn as unknown as EditableColumnConfig<AboRecord>,
       {
         ...validFromColumn,
         // Override the generic Monday-only rule with the subscription one:
@@ -686,6 +705,7 @@ export function useAbosColumns({
     ],
     [
       activeStatusColumn,
+      sepaMandateColumn,
       t,
       memberColumn,
       shareTypeVariationColumn,

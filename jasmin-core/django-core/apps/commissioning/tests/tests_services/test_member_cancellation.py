@@ -287,6 +287,72 @@ class TestMemberCancellationEndsSubscriptions:
         assert result.cancellation_result["subscriptions_not_ended"] == []
 
     @time_machine.travel(datetime.date(2026, 3, 30), tick=False)  # Monday
+    def test_force_end_business_error_is_recorded_not_aborts_exit(self, tenant):
+        """A JasminError raised while force-ending ONE subscription (e.g. DSD
+        coverage re-validation after the office edited the station-day chain)
+        must be caught by the inner handler and recorded in
+        subscriptions_not_ended — NOT escape and roll back the whole member
+        exit."""
+        from unittest.mock import patch
+
+        from apps.commissioning.errors import (
+            SubscriptionCancellationError,
+            SubscriptionDeliveryStationDayOutOfRange,
+        )
+        from apps.commissioning.services import member_cancellation as mc
+
+        member = MemberFactory()
+        share = CoopShareFactory(member=member)
+        variation = ShareTypeVariationFactory()
+        station_day = DeliveryStationDayFactory(
+            delivery_day=SharesDeliveryDayFactory(day_number=2)
+        )
+        svc = SubscriptionService()
+        sub = svc.create_bare_subscription(
+            {
+                "member": member.pk,
+                "share_type_variation": variation.pk,
+                "valid_from": datetime.date(2026, 4, 6),  # Monday
+                "valid_until": datetime.date(2026, 4, 26),  # Sunday
+                "quantity": 1,
+                "payment_cycle": PaymentCycleFactory(),
+                "default_delivery_station_day": station_day,
+            }
+        )
+        sub.confirm(admin_user=JasminUserFactory(), save=True)
+
+        # cancel_subscription can't truncate -> routes to _force_end_subscription,
+        # which raises a JasminError (the DSD re-validation this fix removes; here
+        # we force it to prove the inner handler no longer lets it escape).
+        with (
+            patch.object(
+                SubscriptionService,
+                "cancel_subscription",
+                side_effect=SubscriptionCancellationError("cannot truncate"),
+            ),
+            patch.object(
+                mc,
+                "_force_end_subscription",
+                side_effect=SubscriptionDeliveryStationDayOutOfRange(),
+            ),
+        ):
+            # Must NOT raise.
+            result = cancel_member_with_coop_shares(
+                member,
+                cancelled_effective_at=datetime.date(2026, 4, 12),  # Sunday in term
+                cancelled_by=JasminUserFactory(),
+                force=True,
+            )
+
+        # Whole exit committed despite the force-end failure...
+        member.refresh_from_db()
+        assert member.cancelled_at is not None
+        share.refresh_from_db()
+        assert share.cancelled_at is not None
+        # ...and the failed subscription is recorded for manual attention.
+        assert sub.id in result.cancellation_result["subscriptions_not_ended"]
+
+    @time_machine.travel(datetime.date(2026, 3, 30), tick=False)  # Monday
     def test_draft_subscription_is_wound_down(self, tenant):
         # MEM-1: an unconfirmed (draft) subscription has no deliveries/charges
         # but may hold a CapacityReservation. Member exit must stamp it
@@ -323,6 +389,50 @@ class TestMemberCancellationEndsSubscriptions:
         assert sub.cancelled_effective_at == datetime.date(2026, 4, 12)
         # Any capacity hold is released.
         assert not CapacityReservation.objects.filter(subscription=sub).exists()
+
+    def test_draft_wind_down_clamps_effective_to_term_end(self, tenant):
+        # A draft whose term ends BEFORE a future exit date must not trip the
+        # ``subscription_cancel_before_valid_until`` DB constraint and abort the
+        # whole member exit. The effective date is clamped to the draft's own
+        # valid_until (a draft has no deliveries/charges, so it's informational).
+        member = MemberFactory()
+        share = CoopShareFactory(member=member)
+        variation = ShareTypeVariationFactory()
+        station_day = DeliveryStationDayFactory(
+            delivery_day=SharesDeliveryDayFactory(day_number=2)
+        )
+        sub = SubscriptionService().create_bare_subscription(
+            {
+                "member": member.pk,
+                "share_type_variation": variation.pk,
+                "valid_from": datetime.date(2026, 4, 6),  # Monday
+                "valid_until": datetime.date(2026, 4, 26),  # Sunday, term end
+                "quantity": 1,
+                "payment_cycle": PaymentCycleFactory(),
+                "default_delivery_station_day": station_day,
+            }
+        )
+        assert not sub.admin_confirmed  # draft
+
+        # End-of-year exit notice: the effective date is AFTER the draft's term
+        # end. Pre-fix this raised IntegrityError and rolled back the whole exit.
+        cancel_member_with_coop_shares(
+            member,
+            cancelled_effective_at=datetime.date(2026, 12, 31),
+            cancelled_by=JasminUserFactory(),
+        )
+
+        # The whole exit committed: member + open coop share both stamped...
+        member.refresh_from_db()
+        assert member.cancelled_at is not None
+        assert member.cancelled_effective_at == datetime.date(2026, 12, 31)
+        share.refresh_from_db()
+        assert share.cancelled_at is not None
+        # ...and the draft's effective date was clamped down to its term end so
+        # the cancel-before-valid_until constraint holds.
+        sub.refresh_from_db()
+        assert sub.cancelled_at is not None
+        assert sub.cancelled_effective_at == datetime.date(2026, 4, 26)
 
     @pytest.mark.parametrize(
         "error",

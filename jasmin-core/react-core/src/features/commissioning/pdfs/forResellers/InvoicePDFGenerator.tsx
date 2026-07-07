@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useCommissioningInvoicesRetrieve } from "@shared/api/generated/commissioning/commissioning";
 import { useDateFormat } from "@hooks/index";
 import { useTenant } from "@hooks/configuration/useTenant";
+import { getErrorMessage } from "@shared/utils/apiError";
 import { generatePaymentQRCode } from "../qrcodeGenerator";
 import {
   downloadZugferd,
@@ -74,7 +75,7 @@ export default function InvoicePDFGenerator({
   });
 
   const error = queryError
-    ? queryError.message || "Failed to load invoice data"
+    ? getErrorMessage(queryError, t("commissioning.failed_to_load_invoice"))
     : null;
 
   const pdfData = useMemo<InvoicePDFData | null>(

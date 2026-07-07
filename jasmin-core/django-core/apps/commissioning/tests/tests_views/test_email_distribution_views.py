@@ -159,8 +159,13 @@ class TestSubscriptionMemberEmails:
 
         resp = api_client.get(URL, {"delivery_station_day": catalogue.dsd1.id})
         # 3 raw addresses, but the shared one collapses (case-insensitively).
+        # Which case-variant of the shared address survives ("shared@x.de" vs
+        # "Shared@x.de") is a first-seen tiebreak driven by member sort order,
+        # which depends on the randomly generated Faker names -- both are
+        # correct per the endpoint's case-insensitive contract, so compare
+        # case-insensitively.
         assert resp.data["count"] == 2
-        assert _emails(resp) == {"shared@x.de", "bea@x.de"}
+        assert {e.lower() for e in _emails(resp)} == {"shared@x.de", "bea@x.de"}
 
     def test_member_with_multiple_matching_subs_listed_once(
         self, api_client, catalogue

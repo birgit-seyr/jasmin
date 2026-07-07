@@ -39,7 +39,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.core.management.base import BaseCommand
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 
 from apps.accounts.models import JasminUser
 from apps.authz.roles import Role
@@ -103,6 +104,12 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args: Any, **opts: Any) -> None:
+        if not settings.DEBUG:
+            raise CommandError(
+                "seed_test_users is a development helper and refuses to run "
+                "with DEBUG=False. It mints fixed-password privileged logins "
+                "(incl. an ADMIN) that must never reach a production schema."
+            )
         for spec in SPECS:
             self._seed_one(spec)
 

@@ -56,10 +56,6 @@ import { useCurrency } from "@hooks/configuration/useCurrency";
 import { useTenant } from "@hooks/configuration/useTenant";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
-const currentDay = dayjs().isoWeekday();
-
 /**
  * A row in the OrderContent table.
  *
@@ -118,11 +114,15 @@ export interface OddDefaults {
 }
 
 export function useOrdersData() {
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState(currentWeek);
-  const [selectedDay, setSelectedDay] = useState(
-    currentDay - 1 === 6 ? 5 : currentDay - 1,
-  );
+  // Computed at hook-run time (lazy initialisers), not at module load, so a
+  // long-lived tab open across a day/week/year boundary still starts on the
+  // correct current period rather than a value frozen at bundle load.
+  const [selectedYear, setSelectedYear] = useState(() => dayjs().year());
+  const [selectedWeek, setSelectedWeek] = useState(() => dayjs().isoWeek());
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const currentIsoWeekday = dayjs().isoWeekday();
+    return currentIsoWeekday - 1 === 6 ? 5 : currentIsoWeekday - 1;
+  });
   const [selectedReseller, setSelectedReseller] = useState<string | null>(null);
 
   const [data, setData] = useState<OrderContentRow[]>([]);
@@ -853,6 +853,12 @@ export function useOrdersData() {
     [],
   );
 
+  // The latest un-persisted note edit, tagged with the order it belongs to.
+  // Tagging (rather than reading ``orderState.orderId`` at flush time) is what
+  // lets a flush on order-switch / unmount target the *outgoing* order even
+  // after the on-screen order (and ``lastServerNote``) has already moved on.
+  const pendingNote = useRef<{ orderId: string; note: string } | null>(null);
+
   // Auto-save the order note with debounce. Persist only genuine user
   // edits: a value just seeded from the server (``lastServerNote``)
   // matches ``orderNote`` and is skipped, so there's no write-back on
@@ -861,23 +867,50 @@ export function useOrdersData() {
   // original) behaves correctly.
   useEffect(() => {
     if (!orderState.orderId) return;
-    if (orderNote === lastServerNote.current) return;
+    if (orderNote === lastServerNote.current) {
+      pendingNote.current = null;
+      return;
+    }
+
+    const orderId = String(orderState.orderId);
+    pendingNote.current = { orderId, note: orderNote };
 
     const timer = setTimeout(async () => {
       const noteToSave = orderNote;
+      pendingNote.current = null;
       try {
-        await commissioningSetOrderNotePartialUpdate(
-          String(orderState.orderId),
-          { note: noteToSave },
-        );
+        await commissioningSetOrderNotePartialUpdate(orderId, {
+          note: noteToSave,
+        });
         lastServerNote.current = noteToSave;
       } catch (error) {
         console.error("Error saving order note:", error);
+        // Re-arm so the edit is retried on the next flush instead of lost.
+        pendingNote.current = { orderId, note: noteToSave };
       }
     }, 800);
 
     return () => clearTimeout(timer);
   }, [orderNote, orderState.orderId]);
+
+  // Flush a pending edit when the order changes or the hook unmounts, so a note
+  // typed within the debounce window isn't dropped when the user navigates away
+  // before the 800ms elapses. React runs all effect cleanups before any setup,
+  // so ``pendingNote`` still holds the outgoing order's edit here. Fire-and-
+  // forget: cleanup is synchronous, so we can't await the PATCH (a hard tab
+  // close can still race it — the in-app switch/unmount case is what's covered).
+  useEffect(() => {
+    return () => {
+      const pending = pendingNote.current;
+      if (!pending) return;
+      pendingNote.current = null;
+      commissioningSetOrderNotePartialUpdate(pending.orderId, {
+        note: pending.note,
+      }).catch((error) => {
+        console.error("Error saving order note:", error);
+      });
+    };
+  }, [orderState.orderId]);
 
   return {
     // Selection state

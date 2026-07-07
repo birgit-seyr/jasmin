@@ -466,6 +466,7 @@ const DeliveryStationDetailModal: FC<DeliveryStationDetailModalProps> = ({
                 type="link"
                 size="small"
                 icon={<EditOutlined />}
+                aria-label={t("table.edit")}
                 onClick={() => handleOpenDescriptionModal(record)}
               />
             </>

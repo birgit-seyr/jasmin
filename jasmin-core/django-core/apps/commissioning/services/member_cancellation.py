@@ -29,6 +29,8 @@ import logging
 from datetime import date, datetime
 
 from django.db import DatabaseError, connection, transaction
+from django.db.models import DateField, F, Value
+from django.db.models.functions import Least
 from django.utils import timezone
 
 from ..models import CoopShare, Member
@@ -242,7 +244,11 @@ def _cancel_active_subscriptions(
                         cancelled_by=cancelled_by,
                     )
                 subscriptions_ended.append(subscription.id)
-            except _NON_CANCELLATION_ERRORS as exc:
+            except (JasminError, *_NON_CANCELLATION_ERRORS) as exc:
+                # Mirror the outer handler: a per-subscription business/validation
+                # failure (JasminError) or infra error must be recorded, not
+                # allowed to escape and roll back the whole member exit. The
+                # savepoint above isolates the failed row.
                 subscriptions_not_ended.append(subscription.id)
                 logger.error(
                     "member_cancel.subscription_force_end_failed "
@@ -294,7 +300,18 @@ def _cancel_draft_subscriptions(
             pk__in=[draft.pk for draft in draft_subscriptions]
         ).update(
             cancelled_at=now,
-            cancelled_effective_at=effective,
+            # Clamp the effective date to each draft's own term end. The DB
+            # CheckConstraint ``subscription_cancel_before_valid_until`` requires
+            # cancelled_effective_at <= valid_until whenever both are set, so a
+            # future exit date (e.g. an end-of-year notice) or a stale draft
+            # whose valid_until is already past would otherwise raise an
+            # IntegrityError and abort the whole member exit. A draft has no
+            # deliveries or charges, so the exact effective date is only
+            # informational — pinning it to the term end is harmless. Least()
+            # ignores a NULL valid_until, leaving ``effective`` untouched there.
+            cancelled_effective_at=Least(
+                Value(effective, output_field=DateField()), F("valid_until")
+            ),
             cancelled_by=cancelled_by,
         )
         for draft in draft_subscriptions:
@@ -315,14 +332,27 @@ def _force_end_subscription(subscription, *, effective, now, cancelled_by) -> No
     date may not be one; the ``cancelled_at`` stamp is what marks the
     subscription ended (the "active" check keys on ``cancelled_at IS NULL``).
     """
+    from ..models import Subscription
     from .subscription_deliveries import truncate_future_deliveries
 
+    # Stamp the cancellation columns with a targeted UPDATE, NOT
+    # ``subscription.save()``: TimeBoundMixin.save() re-runs full_clean(), which
+    # re-validates DSD coverage against the (unchanged) term via
+    # SubscriptionService.assert_delivery_station_day_covers_subscription. If the
+    # office has since edited the station-day chain so coverage no longer holds,
+    # that re-validation raises SubscriptionDeliveryStationDayOutOfRange (a
+    # JasminError) which would otherwise escape and roll back the whole member
+    # exit. The cancellation stamp itself needs no term re-validation, and the
+    # caller's line-220 pre-check guarantees valid_until > effective so the
+    # cancel-before-valid_until constraint holds.
+    Subscription.objects.filter(pk=subscription.pk).update(
+        cancelled_at=now,
+        cancelled_effective_at=effective,
+        cancelled_by=cancelled_by,
+    )
     subscription.cancelled_at = now
     subscription.cancelled_effective_at = effective
     subscription.cancelled_by = cancelled_by
-    subscription.save(
-        update_fields=["cancelled_at", "cancelled_effective_at", "cancelled_by"]
-    )
 
     # Drop future deliveries past the exit date + re-plan charges (shared with
     # SubscriptionService.cancel_subscription).

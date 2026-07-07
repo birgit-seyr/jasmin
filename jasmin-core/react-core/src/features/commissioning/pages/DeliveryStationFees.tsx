@@ -79,10 +79,13 @@ export default function DeliveryStationFees() {
 
   const data = useMemo<FeeRow[]>(
     () =>
-      (rawFees ?? []).map((row, index) => ({
-        ...row,
-        key: `${row.delivery_station}-${row.fee_type}-${index}`,
-      })),
+      (rawFees ?? []).map((row, index) => {
+        // Report rows have no server ``id``; EditableTable overwrites each row's
+        // ``key`` with ``item.id`` on sync, so give every row a stable unique
+        // ``id`` (station + fee type + index) or all keys collapse to undefined.
+        const id = `${row.delivery_station}-${row.fee_type}-${index}`;
+        return { ...row, id, key: id };
+      }),
     [rawFees],
   );
 

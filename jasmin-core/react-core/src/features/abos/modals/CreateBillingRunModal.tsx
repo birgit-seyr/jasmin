@@ -5,7 +5,9 @@ import { useTranslation } from "react-i18next";
 import { paymentsBillingRunsCreate } from "@shared/api/generated/payments-—-billing-runs/payments-—-billing-runs";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
+import { ToolTipIcon } from "@shared/ui";
 import { useTenant } from "@hooks/index";
+import { useDateFormat } from "@hooks/index";
 
 interface FormValues {
   period_month: Dayjs;
@@ -29,6 +31,7 @@ export function CreateBillingRunModal({
   const [submitting, setSubmitting] = useState(false);
   const { getSetting } = useTenant();
   const collectionDay = getSetting("sepa_collection_day_of_month", 5) || 5;
+  const { dateFormat } = useDateFormat();
 
   const handleCreate = async () => {
     let values: FormValues;
@@ -69,7 +72,7 @@ export function CreateBillingRunModal({
       confirmLoading={submitting}
       okText={t("common.create")}
       cancelText={t("common.cancel")}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}
@@ -91,23 +94,32 @@ export function CreateBillingRunModal({
       >
         <Form.Item
           name="period_month"
-          label={t("abos.debits_period_month")}
+          label={
+            <>
+              {t("abos.debits_period_month")}
+              <ToolTipIcon title={t("abos.debits_period_month_help")} />
+            </>
+          }
           rules={[{ required: true }]}
-          tooltip={t("abos.debits_period_month_help")}
         >
           <DatePicker picker="month" format="MMMM YYYY" className="w-full" />
         </Form.Item>
         <Form.Item
           name="collection_date"
-          label={t("abos.debits_collection_date")}
+          label={
+            <>
+              {t("abos.debits_collection_date")}
+              <ToolTipIcon title={t("abos.debits_collection_date_help")} />
+            </>
+          }
           rules={[{ required: true }]}
-          tooltip={t("abos.debits_collection_date_help")}
         >
           {/* Disable past dates: a SEPA RequestedCollectionDate can't settle
               before today, so the backend rejects it (billing_run.invalid_
               collection_date). Keep the picker in sync with that guard. */}
           <DatePicker
             className="w-full"
+            format={dateFormat}
             disabledDate={(current) => current.isBefore(dayjs().startOf("day"))}
           />
         </Form.Item>

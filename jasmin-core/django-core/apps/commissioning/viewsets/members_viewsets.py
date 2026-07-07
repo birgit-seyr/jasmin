@@ -84,6 +84,16 @@ from ..utils.queryset_helpers import apply_optional_filters
 logger = logging.getLogger(__name__)
 
 
+class RefetchForResponseMixin:
+    """Reload a mutated instance through ``get_queryset()`` so the serialized
+    response carries the annotations / ``select_related`` the list-and-detail
+    queryset adds (the raw instance returned by ``serializer.save()`` lacks
+    them). Returns ``None`` if the row vanished (e.g. deleted concurrently)."""
+
+    def refetch_for_response(self, instance: Any) -> Any:
+        return self.get_queryset().filter(id=instance.id).first()
+
+
 def _build_member_queryset(request: Request) -> QuerySet[Member]:
     """Return the annotated/filtered Member queryset for list/retrieve.
 
@@ -131,6 +141,9 @@ def _build_member_queryset(request: Request) -> QuerySet[Member]:
             active_on_date_q(today),
             member=OuterRef("pk"),
             admin_confirmed=True,
+            # Exclude cancelled subs (canonical "active" = cancelled_at IS NULL),
+            # matching Member.active_subscriptions_count.
+            cancelled_at__isnull=True,
         )
         .order_by()
         .values("member")
@@ -261,7 +274,12 @@ def _parse_required_effective_at(request: Request):
     # member-role responses are that shape minus the dropped office-internal keys.
     retrieve=extend_schema(responses={200: MemberSerializer}),
 )
-class MemberViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelViewSet):
+class MemberViewSet(
+    RefetchForResponseMixin,
+    PIIReadLoggingMixin,
+    RolePermissionsMixin,
+    viewsets.ModelViewSet,
+):
     # Members may READ their own row (the scoped queryset confines them to it),
     # but all WRITES are office-only. Member self-edit goes through the narrow,
     # PK-less MyMemberDataView allowlist (MyMemberDataUpdateSerializer) — NOT
@@ -391,7 +409,7 @@ class MemberViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelVie
             )
 
         headers = self.get_success_headers(serializer.data)
-        out = self.get_queryset().filter(id=member.id).first()
+        out = self.refetch_for_response(member)
         return Response(
             self.get_serializer(out).data,
             status=status.HTTP_201_CREATED,
@@ -439,7 +457,7 @@ class MemberViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelVie
                 member, admin_user=request.user, request=request
             )
 
-        updated_member = self.get_queryset().filter(id=member.id).first()
+        updated_member = self.refetch_for_response(member)
         return Response(
             self.get_serializer(updated_member).data, status=status.HTTP_200_OK
         )
@@ -470,7 +488,7 @@ class MemberViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelVie
             request=request,
         )
 
-        updated_member = self.get_queryset().filter(id=member.id).first()
+        updated_member = self.refetch_for_response(member)
         return Response(
             self.get_serializer(updated_member).data, status=status.HTTP_200_OK
         )
@@ -541,7 +559,7 @@ class MemberViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelVie
         )
         cancellation_result = getattr(result_member, "cancellation_result", {})
 
-        updated_member = self.get_queryset().filter(id=member.id).first()
+        updated_member = self.refetch_for_response(member)
         return Response(
             {
                 "member": self.get_serializer(updated_member).data,
@@ -641,7 +659,7 @@ class MemberViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelVie
         # Raises MemberInvitationError (400) when not eligible.
         MemberService().send_invitation(member, admin_user=request.user)
 
-        updated_member = self.get_queryset().filter(id=member.id).first()
+        updated_member = self.refetch_for_response(member)
         return Response(
             self.get_serializer(updated_member).data, status=status.HTTP_200_OK
         )
@@ -765,7 +783,9 @@ def _build_subscription_queryset(request: Request) -> QuerySet[Subscription]:
     # ``SubscriptionSerializer`` row.
     retrieve=extend_schema(responses={200: SubscriptionSerializer}),
 )
-class SubscriptionViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+class SubscriptionViewSet(
+    RefetchForResponseMixin, RolePermissionsMixin, viewsets.ModelViewSet
+):
     read_permission = IsStaffOrMember
     write_permission = IsOffice
     serializer_class = SubscriptionSerializer
@@ -830,7 +850,7 @@ class SubscriptionViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         service = SubscriptionService()
         subscription = service.create_bare_subscription(serializer.validated_data)
 
-        created_subscription = self.get_queryset().filter(id=subscription.id).first()
+        created_subscription = self.refetch_for_response(subscription)
         response_serializer = self.get_serializer(created_subscription)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -893,7 +913,7 @@ class SubscriptionViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             instance, serializer.validated_data
         )
 
-        updated_subscription = self.get_queryset().filter(id=instance.id).first()
+        updated_subscription = self.refetch_for_response(instance)
         return Response(
             self.get_serializer(updated_subscription).data,
             status=status.HTTP_200_OK,
@@ -951,7 +971,7 @@ class SubscriptionViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
             subscription.confirm(admin_user=request.user, save=True)
 
-        updated = self.get_queryset().filter(id=subscription.id).first()
+        updated = self.refetch_for_response(subscription)
         return Response(self.get_serializer(updated).data, status=status.HTTP_200_OK)
 
     @extend_schema(
@@ -987,7 +1007,7 @@ class SubscriptionViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             subscription,
             price_per_delivery=request.data.get("price_per_delivery"),
         )
-        updated = self.get_queryset().filter(id=subscription.id).first()
+        updated = self.refetch_for_response(subscription)
         return Response(self.get_serializer(updated).data, status=status.HTTP_200_OK)
 
     @extend_schema(
@@ -1046,7 +1066,7 @@ class SubscriptionViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
         CapacityReservationService.release_for_subscription(subscription)
 
-        updated = self.get_queryset().filter(id=subscription.id).first()
+        updated = self.refetch_for_response(subscription)
         return Response(self.get_serializer(updated).data, status=status.HTTP_200_OK)
 
     @extend_schema(
@@ -1110,7 +1130,7 @@ class SubscriptionViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             reason=request.data.get("reason"),
         )
 
-        updated = self.get_queryset().filter(id=subscription.id).first()
+        updated = self.refetch_for_response(subscription)
         return Response(self.get_serializer(updated).data, status=status.HTTP_200_OK)
 
     @extend_schema(

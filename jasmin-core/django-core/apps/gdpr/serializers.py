@@ -140,6 +140,7 @@ class SarMemberSerializer(serializers.Serializer):
     # CancellableMixin — Austrittsdatum per GenG §30
     cancelled_at = serializers.DateTimeField(allow_null=True)
     cancelled_effective_at = serializers.DateField(allow_null=True)
+    cancellation_reason = serializers.CharField(allow_blank=True, allow_null=True)
 
     note = serializers.CharField(allow_blank=True, allow_null=True)
 
@@ -279,6 +280,7 @@ class SarCoopShareSerializer(serializers.Serializer):
     )
     is_increase = serializers.BooleanField()
     note = serializers.CharField(allow_blank=True, allow_null=True)
+    cancellation_reason = serializers.CharField(allow_blank=True, allow_null=True)
     # PayableMixin
     due_date = serializers.DateField(allow_null=True)
     paid_at = serializers.DateTimeField(allow_null=True)
@@ -319,6 +321,7 @@ class SarSubscriptionSerializer(serializers.Serializer):
     # CancellableMixin
     cancelled_at = serializers.DateTimeField(allow_null=True)
     cancelled_effective_at = serializers.DateField(allow_null=True)
+    cancellation_reason = serializers.CharField(allow_blank=True, allow_null=True)
 
     # WaitingListMixin
     on_waiting_list = serializers.BooleanField()
@@ -745,3 +748,55 @@ class ProcessingActivitiesSerializer(serializers.Serializer):
     processors = VvtProcessorSerializer(many=True)
     activities = VvtActivitySerializer(many=True)
     technical_organisational_measures = VvtMeasureSerializer(many=True)
+
+
+# ---------------------------------------------------------------------------
+# Deletion preview (dry-run) — Art. 17 roadmap Step 5.
+# ---------------------------------------------------------------------------
+
+
+class PreviewFieldSerializer(serializers.Serializer):
+    """One field a deletion would scrub, with its classification action
+    (``pii_immediate`` / ``tombstone``) and a human "what it becomes"."""
+
+    field = serializers.CharField()
+    action = serializers.CharField()
+    becomes = serializers.CharField()
+
+
+class PreviewModelSerializer(serializers.Serializer):
+    """One model a deletion would touch: its ``_meta.label``, how many rows
+    change, and the field-level scrub list. Named ``scrubbed_fields`` (not
+    ``fields``) to avoid shadowing DRF's internal ``Serializer.fields``."""
+
+    model = serializers.CharField()
+    row_count = serializers.IntegerField()
+    scrubbed_fields = PreviewFieldSerializer(many=True)
+
+
+class PreviewSideChannelSerializer(serializers.Serializer):
+    """A non-field-classified scrub the deletion also performs (auditlog diffs,
+    axes login records, on-disk SEPA / reseller-document exports)."""
+
+    target = serializers.CharField()
+    description = serializers.CharField()
+
+
+class DeletionPreviewSerializer(serializers.Serializer):
+    """Dry-run of what an Art-17 deletion would do to a user — persona,
+    retention blockers and the per-model field list — without writing.
+    Built by :meth:`apps.gdpr.services.GDPRService.preview_deletion`."""
+
+    user_id = serializers.CharField()
+    user_email = serializers.CharField()
+    persona = serializers.CharField()
+    has_member = serializers.BooleanField()
+    has_reseller = serializers.BooleanField()
+    can_anonymize_now = serializers.BooleanField()
+    retention_blocks = serializers.ListField(
+        child=serializers.CharField(), allow_empty=True
+    )
+    model_count = serializers.IntegerField()
+    field_count = serializers.IntegerField()
+    models = PreviewModelSerializer(many=True)
+    side_channels = PreviewSideChannelSerializer(many=True)

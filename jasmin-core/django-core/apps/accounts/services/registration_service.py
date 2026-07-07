@@ -26,6 +26,44 @@ logger = logging.getLogger("authentication")
 _REQUIRED = ("first_name", "last_name", "email")
 
 
+def _assert_required_consents(accepted: dict, *, coop_shares_count: int, as_of) -> None:
+    """Reject a public registration that omits a mandatory, currently-published
+    consent — the server-side counterpart to the authenticated self-service
+    gates (e.g. ``MyCoopShareSubscribeView``'s COOP_CONTRACT check). A kind is
+    required only when the tenant has a CURRENT document for it (nothing to
+    accept otherwise); the cooperative contract is required only when the
+    applicant requests equity. Each accepted id must resolve to a current
+    document of that kind — a forged / stale / kind-mismatched id doesn't count.
+    """
+    from django.db.models import Q
+
+    from apps.commissioning.models import ConsentDocument
+    from apps.commissioning.models.choices_text import ConsentKind
+
+    required = [ConsentKind.PRIVACY, ConsentKind.WITHDRAWAL]
+    if coop_shares_count > 0:
+        required.append(ConsentKind.COOP_CONTRACT)
+
+    def _current(**kw):
+        return ConsentDocument.objects.filter(valid_from__lte=as_of, **kw).filter(
+            Q(valid_until__isnull=True) | Q(valid_until__gte=as_of)
+        )
+
+    missing = []
+    for kind in required:
+        if not _current(kind=kind).exists():
+            continue  # tenant hasn't published this policy — nothing to accept
+        doc_id = accepted.get(kind)
+        if not doc_id or not _current(id=doc_id, kind=kind).exists():
+            missing.append(str(kind.label))
+    if missing:
+        raise RegistrationError(
+            "The following agreements must be accepted to register: "
+            + ", ".join(sorted(missing)),
+            field="accepted_consent_documents",
+        )
+
+
 @transaction.atomic
 def register_public_applicant(
     *, data: dict[str, Any], tenant, ip_address: str | None = None, user_agent: str = ""
@@ -67,6 +105,23 @@ def register_public_applicant(
     if JasminUser.objects.filter(email__iexact=email).exists():
         raise RegistrationError("Could not register with the provided details.")
 
+    # Server-side consent gate: a raw API caller must not be able to create a
+    # member — or request cooperative equity — without the mandatory versioned
+    # consents on record. The wizard enforces this in the UI, but the server
+    # must too (GDPR Art. 7 / GenG audit trail). Reject BEFORE creating the user
+    # / sending the set-password email. Compute the equity intent once so the
+    # same value gates consent AND the CoopShare row below.
+    from django.utils import timezone
+
+    as_of = timezone.now().date()
+    accepted = data.get("accepted_consent_documents")
+    accepted = accepted if isinstance(accepted, dict) else {}
+    is_trial = bool(data.get("is_trial"))
+    coop_shares_count = 0 if is_trial else int(data.get("coop_shares_count") or 0)
+    _assert_required_consents(
+        accepted, coop_shares_count=coop_shares_count, as_of=as_of
+    )
+
     # Create the account WITHOUT a usable password and email a set-password
     # (``accounts.invitation``) link. The applicant sets their password from
     # that link — never during the wizard. ``create_user_with_invitation``
@@ -102,11 +157,10 @@ def register_public_applicant(
     if intent:
         note_parts.append(intent)
 
-    # Trial (Probe-Abo) registration: a trial member, no cooperative shares
-    # (they aren't a Genosse yet). The office converts the trial to a full
-    # membership later, which is when coop shares are subscribed.
-    is_trial = bool(data.get("is_trial"))
-
+    # Trial (Probe-Abo) registration: a trial member subscribes no cooperative
+    # shares (they aren't a Genosse yet); the office converts the trial to a
+    # full membership later. ``is_trial`` / ``coop_shares_count`` were computed
+    # above for the consent gate — reuse them.
     member = Member.objects.create(
         first_name=data["first_name"].strip(),
         last_name=data["last_name"].strip(),
@@ -126,8 +180,8 @@ def register_public_applicant(
     # confirms. ``value_one_coop_share`` is snapshotted from the
     # current TenantSettings so the equity record survives later
     # value changes (GenG §31 — 10-year retention of paid-in capital).
-    # Trial members subscribe no coop shares.
-    coop_shares_count = 0 if is_trial else int(data.get("coop_shares_count") or 0)
+    # Trial members subscribe no coop shares (``coop_shares_count`` computed
+    # above already forces 0 for trials).
     if coop_shares_count > 0:
         from apps.shared.tenants.models import TenantSettings
 
@@ -156,9 +210,10 @@ def register_public_applicant(
     # (within its valid_from/valid_until window) — so a forged id, a
     # kind-mismatched id, or a superseded (stale-tab) version is skipped rather
     # than recorded as valid consent.
-    accepted = data.get("accepted_consent_documents") or {}
+    # ``accepted`` was normalised to a dict above (and the required subset
+    # already enforced by ``_assert_required_consents``).
     consent_records_created = 0
-    if isinstance(accepted, dict) and accepted:
+    if accepted:
         # Route through ConsentService.record (not a raw create) so the
         # denormalized Member consent-cache columns are synced and the
         # forensic ip_address / user_agent are captured — the public web signup

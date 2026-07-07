@@ -1167,8 +1167,17 @@ class ShareContentService:
         share_contents.delete()
 
         if affected_movements:
-            SnapshotService.cascade_for_movements(affected_movements)
-            recalculate_actual_corrections(affected_movements)
+            # Keep the global lock order theoretical_sum → current_balance: run
+            # the theoretical-correction pass FIRST (it takes theoretical_sum
+            # locks) but DEFER its current_balance cascade into ONE pass, instead
+            # of cascading current_balance up front and re-locking it after
+            # theoretical_sum — the AB/BA inversion every sibling path avoids.
+            # Mirrors replace_share_planning / process_share_planning_data.
+            deferred_movements = list(affected_movements)
+            recalculate_actual_corrections(
+                affected_movements, collect_movements=deferred_movements
+            )
+            SnapshotService.cascade_for_movements(deferred_movements)
 
         return deleted_count
 

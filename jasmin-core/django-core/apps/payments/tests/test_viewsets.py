@@ -176,6 +176,33 @@ class TestBillingProfileViewSet:
         )
         assert resp.status_code == status.HTTP_200_OK
 
+    def test_change_payment_method_requires_step_up(self, api_client, tenant, member):
+        # A profile moved OFF SEPA while KEEPING its mandate columns (e.g. an
+        # Art. 7(3) consent revoke that only flips payment_method). Flipping it
+        # BACK to SEPA_DD would re-arm a usable mandate (is_sepa_ready -> True),
+        # so it must require step-up — not a silent office PATCH.
+        profile = BillingProfile.objects.create(
+            member=member,
+            payment_method=PaymentMethodOptions.BANK_TRANSFER,
+            iban="DE89370400440532013000",
+            account_holder="Test Holder",
+            sepa_mandate_reference="MND-RETAINED-001",
+            sepa_mandate_signed_at=datetime.date(2026, 1, 1),
+            is_active=True,
+        )
+        assert profile.is_sepa_ready is False  # BANK_TRANSFER -> not sepa-ready
+
+        resp = api_client.patch(
+            f"{self.URL}{profile.pk}/",
+            {"payment_method": PaymentMethodOptions.SEPA_DIRECT_DEBIT},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        profile.refresh_from_db()
+        # Not resurrected: method unchanged, mandate still not usable.
+        assert profile.payment_method == PaymentMethodOptions.BANK_TRANSFER
+        assert profile.is_sepa_ready is False
+
     def test_office_can_set_paper_mandate_received(
         self, api_client, tenant, billing_profile
     ):
@@ -466,3 +493,54 @@ class TestBillingRunViewSet:
         run_id = run_resp.data["id"]
         resp = member_api_client.post(f"{self.URL}{run_id}/export/")
         assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# BillingProfileViewSet.mandate_status (SEPA overview column)
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestSepaMandateStatusAction:
+    URL = "/api/payments/billing_profiles/mandate_status/"
+
+    def test_office_lists_per_member_status(
+        self, api_client, tenant, member, billing_profile
+    ):
+        # A second member whose mandate is deactivated → not sepa-ready.
+        other = MemberFactory(last_name="Zzz")
+        BillingProfile.objects.create(
+            member=other,
+            payment_method=PaymentMethodOptions.SEPA_DIRECT_DEBIT,
+            is_active=False,
+        )
+
+        resp = api_client.get(self.URL)
+        assert resp.status_code == status.HTTP_200_OK
+        by_member = {row["member"]: row for row in resp.data}
+        assert by_member[str(member.pk)]["has_active_sepa_mandate"] is True
+        assert by_member[str(other.pk)]["has_active_sepa_mandate"] is False
+        # The ready mandate exposes its reference + signed date for the details view.
+        assert by_member[str(member.pk)]["sepa_mandate_reference"]
+        assert by_member[str(member.pk)]["sepa_mandate_signed_at"] == "2026-01-01"
+
+    def test_no_bank_identifiers_in_payload(self, api_client, tenant, billing_profile):
+        resp = api_client.get(self.URL)
+        assert resp.status_code == status.HTTP_200_OK
+        for row in resp.data:
+            # The whole point of this endpoint: never ship IBAN / account holder,
+            # not even masked — that's the SEC-1 bulk-read the profile list logs.
+            assert "iban" not in row
+            assert "iban_masked" not in row
+            assert "account_holder" not in row
+            assert "account_holder_masked" not in row
+
+    def test_member_is_forbidden(self, member_api_client, tenant, billing_profile):
+        # A member must NOT see every member's mandate status.
+        resp = member_api_client.get(self.URL)
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_anonymous_is_rejected(self, anon_client, tenant):
+        resp = anon_client.get(self.URL)
+        assert resp.status_code in (
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
+        )

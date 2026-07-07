@@ -21926,7 +21926,7 @@ paths:
       description: |-
         Distinct e-mail addresses of members holding a confirmed, non-waiting-list subscription that matches the filter — a copyable e-mail distribution list for the AbosEmails page.
 
-        Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and not cancelled-effective before it. The active window is ``[date_from, date_to]`` when both are given, otherwise today. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Members without an e-mail are omitted.
+        Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and not cancelled-effective before it. The active window is ``[date_from, date_to]`` when both are given, otherwise today. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Each member's primary and secondary addresses (``email`` / ``email_2`` / ``email_3``) are all included; blanks, non-address junk, and duplicates are dropped.
       summary: Member e-mails for a subscription filter (distribution list)
       parameters:
       - in: query
@@ -25496,6 +25496,36 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
         '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/payments/billing_profiles/mandate_status/:
+    get:
+      operationId: payments_billing_profiles_mandate_status_list
+      description: 'Lightweight mandate-status list for overview tables (e.g. the
+        Abos SEPA column): whether each member has an active, usable SEPA mandate
+        (``has_active_sepa_mandate`` mirrors ``is_sepa_ready``) plus the mandate reference
+        and the signed / paper-received dates. Excludes IBAN / account holder, so
+        a bulk read neither decrypts nor exposes bank PII and does NOT emit the SEC-1
+        bank-identifier audit line. Office-only (mapped to ``write_permission`` —
+        it is not one of the member-readable ``_READ_ACTIONS``).'
+      summary: Per-member SEPA mandate status (no bank identifiers)
+      tags:
+      - payments
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SepaMandateStatus'
+          description: ''
+        '401':
           content:
             application/json:
               schema:
@@ -34634,6 +34664,9 @@ components:
         note:
           type: string
           nullable: true
+        cancellation_reason:
+          type: string
+          nullable: true
         due_date:
           type: string
           format: date
@@ -34656,6 +34689,7 @@ components:
       - admin_confirmed_at
       - admin_rejection_reason
       - amount_of_coop_shares
+      - cancellation_reason
       - due_date
       - id
       - is_increase
@@ -35004,6 +35038,9 @@ components:
           type: string
           format: date
           nullable: true
+        cancellation_reason:
+          type: string
+          nullable: true
         note:
           type: string
           nullable: true
@@ -35046,6 +35083,7 @@ components:
       - admin_confirmed_at
       - admin_rejection_reason
       - birth_date
+      - cancellation_reason
       - cancelled_at
       - cancelled_effective_at
       - city
@@ -35363,6 +35401,9 @@ components:
           type: string
           format: date
           nullable: true
+        cancellation_reason:
+          type: string
+          nullable: true
         on_waiting_list:
           type: boolean
         waiting_list_status:
@@ -35374,6 +35415,7 @@ components:
       - admin_confirmed
       - admin_confirmed_at
       - admin_rejection_reason
+      - cancellation_reason
       - cancelled_at
       - cancelled_effective_at
       - created_at
@@ -35465,6 +35507,42 @@ components:
             minimum: 1
       required:
       - valid_from
+    SepaMandateStatus:
+      type: object
+      description: |-
+        Lightweight per-member SEPA mandate status for overview tables.
+
+        Deliberately excludes the bank identifiers (IBAN / account holder) so a
+        bulk read neither decrypts nor exposes bank PII, and — unlike the full
+        ``BillingProfileSerializer`` list — must NOT trip the SEC-1 bank-identifier
+        audit trail. ``has_active_sepa_mandate`` mirrors ``is_sepa_ready``; the
+        per-subscription "active during the term" refinement is applied by the
+        caller (it needs the subscription's dates).
+      properties:
+        member:
+          type: string
+        has_active_sepa_mandate:
+          type: boolean
+          readOnly: true
+        payment_method:
+          type: string
+        sepa_mandate_reference:
+          type: string
+          nullable: true
+        sepa_mandate_signed_at:
+          type: string
+          format: date
+          nullable: true
+        sepa_mandate_paper_received_at:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - member
+      - payment_method
+      - sepa_mandate_paper_received_at
+      - sepa_mandate_reference
+      - sepa_mandate_signed_at
     SetInvoiceNoteRequest:
       type: object
       properties:

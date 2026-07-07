@@ -40,7 +40,7 @@ interface PriceRow {
 
 export default function DashboardAbos() {
   const { t } = useTranslation();
-  const { currencySymbol } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const { dateFormat, formatDateForAPI } = useDateFormat();
   const presets = useDateRangePresets();
   const { getSetting } = useTenant();
@@ -141,24 +141,26 @@ export default function DashboardAbos() {
     });
   }, [allowsSolidarity, variations, paidByVar, getShareTypeVariationSizeLabel]);
 
-  const money = (v: number) => `${v.toFixed(2)} ${currencySymbol}`;
-  const priceColumns = [
-    { title: t("statistics.col_variation"), dataIndex: "name", key: "name" },
-    {
-      title: t("statistics.col_reference_price"),
-      dataIndex: "reference",
-      key: "reference",
-      align: "right" as const,
-      render: (v: number) => money(v),
-    },
-    {
-      title: t("statistics.col_avg_paid"),
-      dataIndex: "avg",
-      key: "avg",
-      align: "right" as const,
-      render: (v: number | null) => (v == null ? "—" : money(v)),
-    },
-  ];
+  const priceColumns = useMemo(
+    () => [
+      { title: t("statistics.col_variation"), dataIndex: "name", key: "name" },
+      {
+        title: t("statistics.col_reference_price"),
+        dataIndex: "reference",
+        key: "reference",
+        align: "right" as const,
+        render: (v: number) => formatCurrency(v),
+      },
+      {
+        title: t("statistics.col_avg_paid"),
+        dataIndex: "avg",
+        key: "avg",
+        align: "right" as const,
+        render: (v: number | null) => (v == null ? "—" : formatCurrency(v)),
+      },
+    ],
+    [t, formatCurrency],
+  );
 
   return (
     <div>

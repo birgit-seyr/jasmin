@@ -831,6 +831,27 @@ class ShareDeliveryViewSet(
                 .select_related("share", "share__delivery_day")
             )
 
+            # Hoist the per-delivery DeliveryStationDay lookup out of the loop:
+            # every future delivery shares ``current_share.delivery_day`` and the
+            # target station is constant, so they all resolve within ONE
+            # (station, delivery_day) succession chain. Fetch it once and resolve
+            # each delivery's week in Python — mirrors delivery_viewsets.
+            # _migrate_succession_children — instead of one query per delivery.
+            dsd_chain = list(
+                DeliveryStationDay.objects.filter(
+                    delivery_station=new_delivery_station_day.delivery_station,
+                    delivery_day=current_share.delivery_day,
+                ).order_by("-valid_from")
+            )
+
+            def _resolve_dsd(on_date):
+                for dsd in dsd_chain:
+                    if dsd.valid_from <= on_date and (
+                        dsd.valid_until is None or dsd.valid_until >= on_date
+                    ):
+                        return dsd
+                return None
+
             for delivery in future_deliveries:
                 delivery_date = week_day_to_date(
                     delivery.share.year,
@@ -838,14 +859,7 @@ class ShareDeliveryViewSet(
                     delivery.share.delivery_day.day_number,
                 )
 
-                matching_delivery_station_day = (
-                    DeliveryStationDay.current.active_at_date(delivery_date)
-                    .filter(
-                        delivery_station=new_delivery_station_day.delivery_station,
-                        delivery_day=delivery.share.delivery_day,
-                    )
-                    .first()
-                )
+                matching_delivery_station_day = _resolve_dsd(delivery_date)
                 if matching_delivery_station_day:
                     if (
                         matching_delivery_station_day.id
@@ -1002,15 +1016,27 @@ class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         if filter_day is not None:
             days_to_process = [int(filter_day)]
 
-        result = []
-        for day_num in days_to_process:
-            share = Share.objects.filter(
+        # One windowed query for every requested weekday (with delivery_day
+        # select_related so _build_day_data doesn't lazy-load it per row),
+        # instead of a query per day + a lazy FK load each. Index by day_number,
+        # keeping the first share per day (Share is one-per (year, week, day)).
+        shares_by_day: dict[int, Share] = {}
+        for share in (
+            Share.objects.filter(
                 year=year,
                 delivery_week=delivery_week,
-                delivery_day__day_number=day_num,
-            ).first()
+                delivery_day__day_number__in=days_to_process,
+            )
+            .select_related("delivery_day")
+            .order_by("id")
+        ):
+            if share.delivery_day is not None:
+                shares_by_day.setdefault(share.delivery_day.day_number, share)
 
-            if share and share.delivery_day is not None:
+        result = []
+        for day_num in days_to_process:
+            share = shares_by_day.get(day_num)
+            if share is not None:
                 result.append(_build_day_data(share, day_num))
 
         return Response(result)

@@ -34,6 +34,8 @@
   "consent_kind_sepa": "SEPA-Einwilligung",
   "consent_kind_withdrawal": "Widerrufsbelehrung",
   "consent_kind_terms": "AGB",
+  "consent_kind_coop_contract": "Zeichnungsvertrag",
+  "consent_kind_subscription_contract": "Abo-Vertrag",
   "sepa_consent": "SEPA-Einwilligung",
   "privacy_consent": "Datenschutz-Einwilligung",
   "deleted_at": "Gelöscht am",

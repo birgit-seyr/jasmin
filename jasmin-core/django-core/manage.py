@@ -1,18 +1,22 @@
 #!/usr/bin/env python
 """Django's command-line utility for administrative tasks."""
+
 import os
 import sys
 
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
     # Local CLI convenience: settings.py defaults DEBUG to False (fail-safe for
     # prod), so default it on here for a bare ``manage.py runserver`` / ``shell``
-    # run without exported env. The prod container always sets DEBUG explicitly
-    # (compose), so this never fires there; the serving path (gunicorn via
-    # config.wsgi) is unaffected.
-    os.environ.setdefault('DEBUG', 'True')
+    # run without exported env. Scoped to INTERACTIVE dev commands only — NOT
+    # arbitrary ones — so a DEBUG-guarded command (e.g. ``seed_test_users``) run
+    # out-of-container without DEBUG set still hits its prod guard instead of
+    # being silently green-lit. The prod container always sets DEBUG explicitly.
+    _DEV_CONVENIENCE_COMMANDS = {"runserver", "shell", "shell_plus", "dbshell"}
+    if len(sys.argv) > 1 and sys.argv[1] in _DEV_CONVENIENCE_COMMANDS:
+        os.environ.setdefault("DEBUG", "True")
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -24,5 +28,5 @@ def main():
     execute_from_command_line(sys.argv)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

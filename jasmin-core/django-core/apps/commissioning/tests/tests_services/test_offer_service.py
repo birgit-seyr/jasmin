@@ -352,6 +352,43 @@ class TestCreateOffers:
         "apps.commissioning.services.stock_service.StockService.get_theoretical_current_stock",
         side_effect=_mock_stock_empty,
     )
+    def test_pricing_is_batched_not_per_offer(self, _mock, tenant):
+        # Regression: pricing must be resolved in ONE bulk query, not one
+        # get_pricing_on_date lookup per created offer (which scaled O(offers)).
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        OfferGroupFactory()
+        OfferGroupFactory()
+        for _ in range(3):
+            article = self._make_article()
+            self._make_pricing(article)
+            ForecastFactory(
+                share_article=article,
+                for_all_resellers=True,
+                amount=100,
+                unit="KG",
+                size="M",
+            )
+
+        with CaptureQueriesContext(connection) as ctx:
+            result = OfferService.create_offers(2026, 15)
+
+        assert result["created_count"] == 6  # 3 articles × 2 groups
+        pricing_queries = [
+            q
+            for q in ctx.captured_queries
+            if "sharearticlenetprice" in q["sql"].lower()
+        ]
+        # One batched pricing query — NOT one per created offer (would be 6).
+        assert (
+            len(pricing_queries) <= 1
+        ), f"expected batched pricing, got {len(pricing_queries)} queries"
+
+    @mock.patch(
+        "apps.commissioning.services.stock_service.StockService.get_theoretical_current_stock",
+        side_effect=_mock_stock_empty,
+    )
     def test_missing_conversion_factor_falls_back_to_forecast_unit(self, _mock, tenant):
         """When the per-size unit-conversion factor is missing, the offer is
         created in the ORIGINAL forecast unit rather than being skipped."""

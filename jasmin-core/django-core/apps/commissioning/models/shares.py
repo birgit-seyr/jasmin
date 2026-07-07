@@ -693,6 +693,32 @@ class Share(JasminModel):
         return share, created
 
     @classmethod
+    def build_for_delivery(
+        cls,
+        *,
+        year: int,
+        delivery_week: int,
+        delivery_day: SharesDeliveryDay,
+        share_type_variation_id: str,
+    ) -> Share:
+        """Construct an UNSAVED Share for ``bulk_create``, day fields pre-filled.
+
+        ``bulk_create`` bypasses ``save()``, so the day-field defaulting that
+        ``save()`` performs must be applied up front — otherwise the row lands
+        with NULL day fields and vanishes from day-filtered queries. Use this
+        for the batch-materialization paths where a per-row
+        ``get_or_create_for_delivery`` would be an N+1.
+        """
+        share = cls(
+            year=year,
+            delivery_week=delivery_week,
+            delivery_day=delivery_day,
+            share_type_variation_id=share_type_variation_id,
+        )
+        share._apply_default_day_fields()
+        return share
+
+    @classmethod
     def heal_day_fields(cls, shares: Iterable[Share]) -> int:
         """Bulk-fill NULL day fields on already-loaded Shares in one UPDATE.
 

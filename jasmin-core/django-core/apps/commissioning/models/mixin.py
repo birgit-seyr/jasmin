@@ -5,7 +5,7 @@ import uuid
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator
 from django.db import models, transaction
 from django.utils import timezone
@@ -359,16 +359,18 @@ def _calc_line_netto(*, amount, price_per_unit, rabatt=None) -> Decimal:
     """
     if amount is None or price_per_unit is None:
         return _PRICE_ZERO
-    a = _to_decimal(amount)
-    p = _to_decimal(price_per_unit)
-    r = _to_decimal(rabatt)
-    return round_money(a * p * (_PRICE_ONE - r / _PRICE_HUNDRED))
+    amount_dec = _to_decimal(amount)
+    price_dec = _to_decimal(price_per_unit)
+    rabatt_dec = _to_decimal(rabatt)
+    return round_money(
+        amount_dec * price_dec * (_PRICE_ONE - rabatt_dec / _PRICE_HUNDRED)
+    )
 
 
 def _calc_line_brutto(netto: Decimal, *, tax_rate=None) -> Decimal:
     """Gross = ``netto * (1 + tax_rate/100)``."""
-    t = _to_decimal(tax_rate)
-    return round_money(netto * (_PRICE_ONE + t / _PRICE_HUNDRED))
+    tax_rate_dec = _to_decimal(tax_rate)
+    return round_money(netto * (_PRICE_ONE + tax_rate_dec / _PRICE_HUNDRED))
 
 
 # Public aliases — same names used on serializers/properties for consistency.
@@ -813,7 +815,17 @@ class FinalizedProtectedMixin:
                 return
 
             if update_fields:
-                disallowed = set(update_fields) - set(self.ALLOWED_FINALIZED_UPDATES)
+                # Accept both a FK's field name AND its attname in update_fields
+                # (Django allows either, e.g. ``cancelled_by_invoice`` /
+                # ``cancelled_by_invoice_id``) so a legitimate attname-based save
+                # isn't spuriously rejected while the Postgres trigger allows it.
+                allowed = set(self.ALLOWED_FINALIZED_UPDATES)
+                for field_name in self.ALLOWED_FINALIZED_UPDATES:
+                    try:
+                        allowed.add(self._meta.get_field(field_name).attname)
+                    except FieldDoesNotExist:
+                        pass
+                disallowed = set(update_fields) - allowed
                 if disallowed:
                     raise FinalizedError(
                         f"Cannot modify {self.__class__.__name__} — it has been finalized. "

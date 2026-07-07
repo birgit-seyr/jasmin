@@ -656,6 +656,20 @@ class OfferViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         offer_group = params["offer_group"]
         reseller_id = params["reseller"]
 
+        # Object scoping (IDOR): the ``amount_ordered`` annotation exposes a
+        # reseller's per-article order volume. A non-privileged caller (customer)
+        # may only see their OWN reseller's totals — reject a ?reseller= pointing
+        # at a peer in the same offer_group, and force their own reseller when the
+        # param is omitted (else the annotation sums the whole group's orders).
+        # Mirrors OrderContentViewSet.list; privileged staff bypass.
+        if not is_privileged(self.request):
+            own_id = own_reseller_id(self.request)
+            if own_id is None:
+                return Offer.objects.none()
+            if reseller_id and str(reseller_id) != own_id:
+                raise ForbiddenError("Cannot view offers for another reseller.")
+            reseller_id = own_id
+
         if year is not None:
             queryset = queryset.filter(year=year)
         if delivery_week is not None:

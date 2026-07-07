@@ -239,6 +239,17 @@ class OfferService:
                 "share_article_id", "unit", "size", "offer_group_id"
             )
         )
+        # Batch-resolve active pricing for every share article we might offer, so
+        # ``_persist_offer`` doesn't run one ``get_pricing_on_date`` query per
+        # created offer (uncached reverse relation → O(offers) queries).
+        pricing_by_article = OfferService._bulk_active_pricing(
+            {
+                item_data["share_article"].id
+                for group_items in forecasts_by_group.values()
+                for item_data in group_items.values()
+            },
+            current_date,
+        )
 
         # Phase 2 — walk each group's items, building offers where an amount is
         # available and not already offered. The counters, the ``skipped_offers``
@@ -305,6 +316,7 @@ class OfferService:
                     amount_pu=amount_pu,
                     offer_group=offer_group,
                     current_date=current_date,
+                    pricing=pricing_by_article.get(share_article.id),
                 )
                 if not created:
                     skipped_count += 1
@@ -481,6 +493,27 @@ class OfferService:
         return offer_unit, amount_pu, None
 
     @staticmethod
+    def _bulk_active_pricing(share_article_ids, on_date) -> dict:
+        """Resolve the active ``ShareArticleNetPrice`` for many share articles in
+        ONE query, keyed by ``share_article_id`` — the batch equivalent of
+        ``ShareArticle.get_pricing_on_date`` (which caches nothing, so calling it
+        per offer is O(offers) queries). Same newest-effective-wins tie-break
+        (order by ``-valid_from``, first row per article)."""
+        from ..models import ShareArticleNetPrice
+        from ..models.managers import active_on_date_q
+
+        by_article: dict = {}
+        for row in (
+            ShareArticleNetPrice.objects.filter(
+                share_article_id__in=list(share_article_ids)
+            )
+            .filter(active_on_date_q(on_date))
+            .order_by("-valid_from")
+        ):
+            by_article.setdefault(row.share_article_id, row)
+        return by_article
+
+    @staticmethod
     def _persist_offer(
         *,
         year: int,
@@ -491,8 +524,13 @@ class OfferService:
         amount_pu: Decimal,
         offer_group: OfferGroup,
         current_date,
+        pricing=None,
     ) -> bool:
         """Create one general offer, resolving its pricing on ``current_date``.
+
+        ``pricing`` is the active ``ShareArticleNetPrice`` pre-resolved in bulk by
+        ``create_offers``; a direct caller that omits it falls back to a per-row
+        lookup so the method stays usable standalone.
 
         Returns ``True`` when the row was created, ``False`` when a concurrent
         ``create_offers`` run inserted the same general-offer slot between the
@@ -501,7 +539,8 @@ class OfferService:
         ``IntegrityError`` from poisoning the surrounding transaction, and we
         treat it as already-created (idempotent) rather than crashing the batch.
         """
-        pricing = share_article.get_pricing_on_date(current_date)
+        if pricing is None:
+            pricing = share_article.get_pricing_on_date(current_date)
         price_1, price_2, price_3 = OfferService._get_prices_for_unit(
             pricing, offer_unit
         )
@@ -595,9 +634,11 @@ class OfferService:
         counted once even when both hold (the original ``Q | Q`` filter dedups).
         """
         forecasts = list(
-            Forecast.objects.filter(
-                year=year, delivery_week=delivery_week
-            ).select_related("share_article")
+            Forecast.objects.filter(year=year, delivery_week=delivery_week)
+            # Cache ``share_article.default_crate_reseller`` too — ``_persist_offer``
+            # reads it per offer, so without this it's an extra FK query per
+            # distinct article.
+            .select_related("share_article", "share_article__default_crate_reseller")
         )
 
         group_ids_by_forecast: dict[str, set] = {}

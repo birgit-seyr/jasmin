@@ -420,6 +420,7 @@ export * from './sarSubscription';
 export * from './sarSuccessfulLogin';
 export * from './sarUserInvitation';
 export * from './season';
+export * from './sepaMandateStatus';
 export * from './setInvoiceNoteRequest';
 export * from './setInvoiceNoteResponse';
 export * from './setOrderNoteRequest';

@@ -47,6 +47,7 @@
     "payment_cycle_quarterly": "vierteljährlich",
     "payment_cycle_semi_annually": "halbjährlich",
     "payment_cycle_annually": "jährlich",
+    "payment_cycle_toggle_error": "Zahlungszyklus konnte nicht geändert werden.",
     "email": "E-Mail",
     "email_templates": "E-Mail-Vorlagen",
     "email_log": "E-Mail-Verlauf",

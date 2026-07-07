@@ -41,7 +41,6 @@ import {
   useDateFormat,
   useInvalidateAfterTableMutation,
   useNoteColumn,
-  useNumberFormat,
   useTableRowSelection,
 } from "@hooks/index";
 
@@ -69,8 +68,7 @@ export default function PaymentsResellers() {
 
   const { t } = useTranslation();
 
-  const { currencySymbol } = useCurrency();
-  const { format } = useNumberFormat();
+  const { formatCurrency } = useCurrency();
 
   const listParams = useMemo<CommissioningOrdersOverviewListParams>(
     () => ({
@@ -154,7 +152,7 @@ export default function PaymentsResellers() {
           sortable: true,
 
           render: (value: unknown) =>
-            `${format(parseFloat((value as string) || "0"), 2)} ${currencySymbol}`,
+            formatCurrency(parseFloat((value as string) || "0")),
         },
         {
           title: (
@@ -231,7 +229,7 @@ export default function PaymentsResellers() {
           width: "25em",
         },
       ] as EditableColumnConfig<CombinedOrderOverviewRow>[],
-    [t, currencySymbol, formatDate, invalidateData, noteColumn, format],
+    [t, formatCurrency, formatDate, invalidateData, noteColumn],
   );
 
   const apiFunctions = useMemo<ApiFunctions>(

@@ -469,6 +469,10 @@ class Order(
 
 class OrderContent(FinalizableMixin, FinalizedProtectedMixin, OrderableItem):
     PARENT_FK_FIELDS = ["order"]
+    # One-way like its parent Order: a finalized line's amount / price / tax is
+    # sealed into the parent document's document_hash, so the line must never be
+    # unfinalized, edited and re-finalized while the parent stays immutable.
+    IS_FINALIZED_ONE_WAY = True
     order = models.ForeignKey("Order", on_delete=models.PROTECT)
 
     objects = FinalizedProtectedQuerySet.as_manager()
@@ -592,6 +596,8 @@ class CrateOrderContent(
     LinePricingMixin, FinalizableMixin, FinalizedProtectedMixin, JasminModel
 ):
     PARENT_FK_FIELDS = ["order", "order_content"]
+    # One-way like its parent document (see OrderContent).
+    IS_FINALIZED_ONE_WAY = True
     objects = FinalizedProtectedQuerySet.as_manager()
 
     order_content = models.ForeignKey(
@@ -659,6 +665,8 @@ class CrateDeliveryNoteContent(
     JasminModel,
 ):
     PARENT_FK_FIELDS = ["delivery_note"]
+    # One-way like its parent document (see OrderContent).
+    IS_FINALIZED_ONE_WAY = True
     objects = FinalizedProtectedQuerySet.as_manager()
 
     delivery_note = models.ForeignKey(
@@ -710,6 +718,8 @@ class CrateContentInvoiceReseller(
     JasminModel,
 ):
     PARENT_FK_FIELDS = ["invoice"]
+    # One-way like its parent document (see OrderContent).
+    IS_FINALIZED_ONE_WAY = True
     objects = FinalizedProtectedQuerySet.as_manager()
 
     invoice = models.ForeignKey(
@@ -764,6 +774,8 @@ class DeliveryNoteContent(
     OrderableItem,
 ):
     PARENT_FK_FIELDS = ["delivery_note"]
+    # One-way like its parent document (see OrderContent).
+    IS_FINALIZED_ONE_WAY = True
     objects = FinalizedProtectedQuerySet.as_manager()
 
     delivery_note = models.ForeignKey(
@@ -797,6 +809,8 @@ class InvoiceResellerContent(
 ):
     ALLOWED_FINALIZED_UPDATES: list[str] = []
     PARENT_FK_FIELDS = ["invoice"]
+    # One-way like its parent InvoiceReseller (see OrderContent).
+    IS_FINALIZED_ONE_WAY = True
 
     objects = FinalizedProtectedQuerySet.as_manager()
 

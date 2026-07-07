@@ -63,6 +63,8 @@ export interface SarMember {
   /** @nullable */
   cancelled_effective_at: string | null;
   /** @nullable */
+  cancellation_reason: string | null;
+  /** @nullable */
   note: string | null;
   admin_confirmed: boolean;
   /** @nullable */

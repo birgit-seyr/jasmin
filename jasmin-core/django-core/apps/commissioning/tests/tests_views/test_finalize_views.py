@@ -203,6 +203,21 @@ class TestBulkUnfinalizeView:
         )
         assert resp.status_code == status.HTTP_409_CONFLICT
 
+    def test_refuses_to_unfinalize_content_lines(self, api_client, tenant):
+        """Line-item content is one-way too: its amount/price/tax feeds the
+        parent document's sealed hash, so a finalized content row must not be
+        unfinalizable — otherwise it could be edited and re-finalized under a
+        still-"immutable" parent. ``FinalizedError`` -> HTTP 409."""
+        content = DeliveryNoteContentFactory()
+        type(content).objects.filter(pk=content.pk).update(is_finalized=True)
+
+        resp = api_client.post(
+            URL_UNFINALIZE,
+            {"model": "DeliveryNoteContent", "ids": [str(content.id)]},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_409_CONFLICT
+
     def test_404_if_none_are_finalized(self, api_client, tenant):
         o = OrderFactory()
 

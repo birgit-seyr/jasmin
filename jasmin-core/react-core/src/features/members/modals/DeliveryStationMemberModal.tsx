@@ -15,6 +15,7 @@ import {
   formatStationDayLabel,
   weekdayLabel,
 } from "@shared/utils/stationDayLabel";
+import { safeExternalHref } from "@shared/utils/safeUrl";
 import { Descriptions, Image, Modal, Space, Spin, Typography } from "antd";
 import DOMPurify from "dompurify";
 import { useTranslation } from "react-i18next";
@@ -180,7 +181,7 @@ export default function DeliveryStationMemberModal({
               {station?.contact_phone}
             </Descriptions.Item>
 
-            {station?.messenger_group_link && (
+            {safeExternalHref(station?.messenger_group_link) && (
               <Descriptions.Item
                 label={
                   <Space size={4}>
@@ -190,7 +191,7 @@ export default function DeliveryStationMemberModal({
                 }
               >
                 <Link
-                  href={station.messenger_group_link}
+                  href={safeExternalHref(station?.messenger_group_link)}
                   target="_blank"
                   rel="noreferrer"
                 >

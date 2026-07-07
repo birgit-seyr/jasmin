@@ -271,6 +271,7 @@ export default function ListDeliveryStations() {
                 type="text"
                 className="long-squared-button"
                 icon={<EditOutlined />}
+                aria-label={t("table.edit")}
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsDeliveryStationDetailModalOpen(true);

@@ -262,9 +262,7 @@ export default function ConfigurationUsers() {
         render: (s: unknown) => {
           const status = s as UserRow["account_status"];
           const color = STATUS_BADGE_COLOR[status] ?? "default";
-          const label = status
-            ? t(`users.status_${status}`, String(status))
-            : "";
+          const label = status ? t(`users.status_${status}`) : "";
           return <Badge status={color as never} text={label} />;
         },
       },

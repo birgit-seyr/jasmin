@@ -142,6 +142,59 @@ class TestResellerAnonymization:
         # never re-associated to this stale Reseller.
         assert reseller.linked_user_id is None
 
+    def test_reseller_documents_purged_on_anonymize(self, tenant):
+        # A sole-trader reseller's rendered invoice / delivery-note PDFs (+ the
+        # ZUGFeRD XML) embed their name + address in cleartext. Art. 17 erasure
+        # must delete those on-disk artifacts (keeping the rows for GoBD), even
+        # on a FINALIZED invoice — file/xml_file are in the finalized allowlist.
+        import datetime
+
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+
+        from apps.commissioning.models import DeliveryNoteReseller, InvoiceReseller
+        from apps.commissioning.tests.factories import (
+            DeliveryNoteResellerFactory,
+            InvoiceResellerFactory,
+            OrderFactory,
+        )
+
+        user = JasminUserFactory()
+        reseller = ResellerFactory(linked_user=user)
+
+        old = datetime.date(2000, 1, 1)  # well past the 10y retention cutoff
+        invoice = InvoiceResellerFactory(reseller=reseller, date=old)
+        invoice.file.save("inv.pdf", ContentFile(b"%PDF name+address"), save=True)
+        invoice.xml_file.save("inv.xml", ContentFile(b"<zugferd/>"), save=True)
+        note = DeliveryNoteResellerFactory(
+            order=OrderFactory(reseller=reseller), date=old
+        )
+        note.file.save("dn.pdf", ContentFile(b"%PDF name+address"), save=True)
+        # Finalize + mark paid: exercises the allowlisted-field update path AND
+        # keeps the invoice from blocking retention (open invoices block).
+        InvoiceReseller.objects.filter(pk=invoice.pk).update(
+            is_finalized=True, has_been_paid=True
+        )
+
+        inv_name, xml_name, dn_name = (
+            invoice.file.name,
+            invoice.xml_file.name,
+            note.file.name,
+        )
+        assert default_storage.exists(inv_name)
+        assert default_storage.exists(xml_name)
+        assert default_storage.exists(dn_name)
+
+        GDPRService.anonymize_user(user)
+
+        # Files gone from disk...
+        assert not default_storage.exists(inv_name)
+        assert not default_storage.exists(xml_name)
+        assert not default_storage.exists(dn_name)
+        # ...but the rows are kept (GoBD audit trail).
+        assert InvoiceReseller.objects.filter(pk=invoice.pk).exists()
+        assert DeliveryNoteReseller.objects.filter(pk=note.pk).exists()
+
     def test_no_reseller_link_is_fine(self, tenant):
         """Pure staff user with no Reseller doesn't crash."""
         user = JasminUserFactory()

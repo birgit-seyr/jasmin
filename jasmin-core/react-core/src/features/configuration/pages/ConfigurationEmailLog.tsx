@@ -124,6 +124,7 @@ export default function ConfigurationEmailLog() {
       <div className="filter-bar" style={{ marginBottom: "2em" }}>
         <Input
           placeholder={t("email_matrix.recipient")}
+          aria-label={t("email_matrix.recipient")}
           value={recipientFilter}
           onChange={(e) => setRecipientFilter(e.target.value)}
           allowClear
@@ -131,6 +132,7 @@ export default function ConfigurationEmailLog() {
         />
         <Select
           placeholder={t("email_matrix.purpose")}
+          aria-label={t("email_matrix.purpose")}
           value={purposeFilter}
           onChange={setPurposeFilter}
           allowClear
@@ -142,6 +144,7 @@ export default function ConfigurationEmailLog() {
         />
         <Select
           placeholder={t("email_matrix.status_col")}
+          aria-label={t("email_matrix.status_col")}
           value={statusFilter}
           onChange={setStatusFilter}
           allowClear

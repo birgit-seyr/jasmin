@@ -22,6 +22,7 @@ from .serializers import (
     AdminDecidedDeletionSerializer,
     AdminPendingDeletionListSerializer,
     DeletionLogListSerializer,
+    DeletionPreviewSerializer,
     MyDeletionStatusSerializer,
     ProcessingActivitiesSerializer,
     SubjectAccessBundleSerializer,
@@ -316,6 +317,55 @@ def _get_pending_request(request_id: str) -> DeletionRequest:
         return DeletionRequest.objects.get(pk=request_id)
     except DeletionRequest.DoesNotExist:
         raise NotFoundError("Deletion request not found.") from None
+
+
+@extend_schema(
+    tags=["gdpr"],
+    summary="Admin: preview what an Art-17 deletion would anonymize for a user",
+    parameters=[
+        OpenApiParameter(
+            name="user_id",
+            location=OpenApiParameter.PATH,
+            type=str,
+            description="Tenant JasminUser id to dry-run the deletion for.",
+        )
+    ],
+    responses={
+        200: DeletionPreviewSerializer,
+        401: ErrorResponseSerializer,
+        403: ErrorResponseSerializer,
+        404: ErrorResponseSerializer,
+    },
+)
+@api_view(["GET"])
+@permission_classes([IsAdmin])
+def gdpr_admin_preview_deletion_view(request: Request, user_id: str) -> Response:
+    """Dry-run the deletion for ``user_id``: return the subject's persona,
+    the retention obligations that would currently refuse it, and the exact
+    per-model field list that WOULD be scrubbed — writing nothing.
+
+    Read-only, so ``IsAdmin`` without step-up (unlike approve, which fires the
+    irreversible scrub). Lets the office answer "what happens if we delete this
+    person?" before committing. See
+    :meth:`apps.gdpr.services.GDPRService.preview_deletion`."""
+    from apps.accounts.models import JasminUser
+    from core.errors import NotFoundError
+
+    try:
+        target = JasminUser.objects.get(pk=user_id)
+    except JasminUser.DoesNotExist:
+        raise NotFoundError("User not found.") from None
+
+    preview = GDPRService.preview_deletion(target)
+    logger.info(
+        "gdpr.deletion_previewed actor=%s target=%s persona=%s tenant=%s ip=%s",
+        request.user.email,
+        user_id,
+        preview["persona"],
+        connection.schema_name,
+        client_ip(request),
+    )
+    return Response(DeletionPreviewSerializer(preview).data)
 
 
 @extend_schema(

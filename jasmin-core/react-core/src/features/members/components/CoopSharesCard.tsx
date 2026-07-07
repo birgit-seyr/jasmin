@@ -27,7 +27,7 @@ export default function CoopSharesCard({
 }: CoopSharesCardProps) {
   const { t } = useTranslation();
   const { getSetting } = useTenant();
-  const { currencySymbol } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const { isMemberOnly } = useRoles();
   const { formatDate } = useDateFormat();
 
@@ -110,10 +110,7 @@ export default function CoopSharesCard({
       </Text>
       <Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
         {t("members.value_of_coop_shares")}:{" "}
-        <Text strong>
-          {totalValue.toFixed(2)}
-          {currencySymbol}
-        </Text>
+        <Text strong>{formatCurrency(totalValue)}</Text>
       </Text>
 
       {/* Per-purchase payment status (member self-view): paid shares show their

@@ -19,6 +19,8 @@ export interface BaseEntitySelectorProps<V> {
   options: SelectorOption<V>[];
   loading?: boolean;
   placeholder?: string;
+  /** Accessible name forwarded as aria-label. Defaults to placeholder. */
+  ariaLabel?: string;
 
   /** antd Select inline style. */
   style?: CSSProperties;
@@ -63,6 +65,7 @@ export default function BaseEntitySelector<V extends string | number | null>({
   options,
   loading = false,
   placeholder,
+  ariaLabel,
   style,
   className = "bold-select week-selector-select",
   size = "small",
@@ -116,6 +119,7 @@ export default function BaseEntitySelector<V extends string | number | null>({
       onChange={handleChange}
       options={options as DefaultOptionType[]}
       placeholder={placeholder}
+      aria-label={ariaLabel ?? placeholder}
       loading={loading}
       disabled={disabled}
       showSearch={showSearch}

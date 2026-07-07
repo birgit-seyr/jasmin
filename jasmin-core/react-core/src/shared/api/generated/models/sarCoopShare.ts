@@ -21,6 +21,8 @@ export interface SarCoopShare {
   /** @nullable */
   note: string | null;
   /** @nullable */
+  cancellation_reason: string | null;
+  /** @nullable */
   due_date: string | null;
   /** @nullable */
   paid_at: string | null;

@@ -47,11 +47,18 @@ class MyCoopShareSubscribeSerializer(serializers.ModelSerializer):
         fields = ["amount_of_coop_shares", "note", "agreed_to_contract"]
 
     def validate_amount_of_coop_shares(self, value):
-        if value is None or value <= 0:
-            from core.errors import BadRequestError
+        from core.errors import BadRequestError
 
+        if value is None or value <= 0:
             raise BadRequestError(
                 "amount_of_coop_shares must be greater than 0",
+                code="coop_share.invalid_amount",
+            )
+        # A cooperative share is a whole Geschäftsanteil (GenG) — reject
+        # fractional amounts, matching the integer-only public registration path.
+        if value % 1 != 0:
+            raise BadRequestError(
+                "amount_of_coop_shares must be a whole number",
                 code="coop_share.invalid_amount",
             )
         return value

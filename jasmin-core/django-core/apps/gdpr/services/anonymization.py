@@ -362,6 +362,49 @@ class AnonymizationMixin:
         profile.save()
 
     @staticmethod
+    def _purge_reseller_documents(reseller: Reseller) -> None:
+        """Delete the plaintext rendered invoice / delivery-note PDFs (and the
+        ZUGFeRD XML) of ``reseller``. Their recipient block embeds the reseller's
+        name + postal address in cleartext, so they'd otherwise survive Art. 17
+        erasure on disk (recoverable from any media backup). Keeps the rows (GoBD
+        audit trail); only the on-disk artifacts are purged.
+
+        Same belt-and-braces retention gate as ``_purge_member_sepa_exports``: a
+        reseller anonymised 10y after their last activity can only have documents
+        older than the window, but never erase one still inside it. ``file`` /
+        ``xml_file`` are in InvoiceReseller's (and ``file`` in
+        DeliveryNoteReseller's) finalized-update allowlist, so clearing them is
+        permitted even on a finalized row. The immutable ``recipient_snapshot``
+        JSON is deliberately left — it is sealed into ``document_hash`` and can't
+        be scrubbed without breaking the GoBD document integrity the trigger
+        protects; the file purge is what removes the readable copy.
+        """
+        from apps.commissioning.models import DeliveryNoteReseller, InvoiceReseller
+
+        from ..tasks import _retention_cutoff
+
+        cutoff = _retention_cutoff()
+
+        for invoice in InvoiceReseller.objects.filter(reseller=reseller):
+            if invoice.date and invoice.date > cutoff:
+                continue
+            cleared = []
+            for field_name in ("file", "xml_file"):
+                field_file = getattr(invoice, field_name)
+                if field_file:
+                    field_file.delete(save=False)
+                    cleared.append(field_name)
+            if cleared:
+                invoice.save(update_fields=cleared)
+
+        for note in DeliveryNoteReseller.objects.filter(order__reseller=reseller):
+            if note.date and note.date > cutoff:
+                continue
+            if note.file:
+                note.file.delete(save=False)
+                note.save(update_fields=["file"])
+
+    @staticmethod
     def _anonymize_reseller_for_user(user: JasminUser) -> None:
         """Scrub the user's Reseller + its ContactEntity.
 
@@ -390,6 +433,11 @@ class AnonymizationMixin:
         # ``BackgroundJob.result`` payload and outlives Huey's TTL there, beyond
         # the classification walker's reach — scrub those copies (GDPR-DEL-3).
         GDPRService._scrub_reseller_name_in_background_jobs(reseller.id)
+
+        # Purge the plaintext rendered documents (invoice / delivery-note PDFs +
+        # ZUGFeRD XML) whose recipient block embeds the (sole-trader) reseller's
+        # name + postal address — else they survive Art. 17 erasure on disk.
+        GDPRService._purge_reseller_documents(reseller)
 
         contact = reseller.contact
         if contact is None:

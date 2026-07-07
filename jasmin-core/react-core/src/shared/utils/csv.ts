@@ -51,6 +51,11 @@ function formatCsvValue(raw: unknown, dialect: CsvDialect): string {
   return String(raw);
 }
 
+// CSV formula-injection trigger chars (OWASP): a spreadsheet treats a cell
+// starting with one of these as a formula. Mirrors the backend
+// apps/shared/csv_safety.py::_DANGEROUS_LEAD.
+const CSV_FORMULA_LEAD = /^[=+\-@\t\r]/;
+
 /**
  * Escape a single cell value for the given dialect.
  */
@@ -58,7 +63,14 @@ function escapeCsvValue(
   raw: unknown,
   dialect: CsvDialect = PRESETS.de,
 ): string {
-  const str = formatCsvValue(raw, dialect);
+  let str = formatCsvValue(raw, dialect);
+  // Formula-injection neutralization: prefix a genuine TEXT cell that starts
+  // with a formula trigger with a ``'`` so Excel/Sheets treat it as text.
+  // Only string inputs — a numeric -5 or a Date must not be prefixed
+  // (matches csv_safety.py, which guards on ``isinstance(value, str)``).
+  if (typeof raw === "string" && CSV_FORMULA_LEAD.test(str)) {
+    str = `'${str}`;
+  }
   if (str.includes(dialect.delimiter) || str.includes('"') || str.includes("\n")) {
     return `"${str.replace(/"/g, '""')}"`;
   }

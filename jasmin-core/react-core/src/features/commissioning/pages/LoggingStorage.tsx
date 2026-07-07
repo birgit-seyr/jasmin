@@ -25,7 +25,11 @@ import {
   StorageSelector,
 } from "@features/commissioning/selectors";
 import { ExplainerText } from "@shared/ui";
-import { useDateFormat, useNumberFormat } from "@hooks/index";
+import {
+  useDateFormat,
+  useDateRangePresets,
+  useNumberFormat,
+} from "@hooks/index";
 import { useAmountUnitSizeColumns } from "@features/commissioning/hooks";
 
 const { RangePicker } = DatePicker;
@@ -62,6 +66,7 @@ export default function LoggingStorage() {
   const { t } = useTranslation();
   const { dateFormat, formatDate } = useDateFormat();
   const { format } = useNumberFormat();
+  const presets = useDateRangePresets();
 
   const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
     showAmount: false,
@@ -483,13 +488,10 @@ export default function LoggingStorage() {
               }
             }}
             format={dateFormat}
+            presets={presets}
             size="small"
             placeholder={[t("common.start_date"), t("common.end_date")]}
-            style={{
-              border: "1px solid #070707ff",
-              borderRadius: "4px",
-              color: "#070707ff",
-            }}
+            className="logging-storage-range-picker"
           />
           <span style={{ marginLeft: "1em" }}>
             <Switch

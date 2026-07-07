@@ -43,6 +43,13 @@ urlpatterns = [
         views.gdpr_admin_reject_deletion_view,
         name="gdpr-admin-reject-deletion",
     ),
+    # Dry-run: what would a deletion anonymize for this user (persona +
+    # retention blockers + per-model field list), writing nothing. Admin-only.
+    path(
+        "admin/preview-deletion/<str:user_id>/",
+        views.gdpr_admin_preview_deletion_view,
+        name="gdpr-admin-preview-deletion",
+    ),
     path("deletion-log/", views.gdpr_deletion_log_view, name="gdpr-deletion-log"),
     # Art. 30 Record of Processing Activities (VVT) — structured
     # export. See ``apps/gdpr/vvt.py`` for the code-level facts

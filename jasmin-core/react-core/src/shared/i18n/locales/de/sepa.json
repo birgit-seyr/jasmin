@@ -29,5 +29,10 @@
   "status_ready": "Bereit",
   "status_incomplete": "Unvollständig",
   "status_inactive": "Inaktiv",
-  "notes": "Notizen"
+  "status_revoked": "Widerrufen",
+  "notes": "Notizen",
+  "column_tooltip": "SEPA-Mandat aktiv im Abo-Zeitraum",
+  "mandate_active_for_term": "Aktiv im Abo-Zeitraum",
+  "no_profile": "Kein SEPA-Profil für dieses Mitglied.",
+  "view_details": "Details anzeigen"
 }

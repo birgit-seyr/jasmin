@@ -241,6 +241,7 @@ const SharesDeliveryDaySelector = ({
             onChange={handleSharesDeliveryDayChange}
             className="bold-select week-selector-select"
             placeholder={t("placeholder.shares_delivery_day_selector")}
+            aria-label={t("placeholder.shares_delivery_day_selector")}
             loading={loading}
           >
             {include_null_option && (
@@ -277,6 +278,7 @@ const SharesDeliveryDaySelector = ({
       options={sharesDeliveryDayOptions}
       className="bold-select week-selector-select"
       placeholder={t("placeholder.shares_delivery_day_selector")}
+      aria-label={t("placeholder.shares_delivery_day_selector")}
       loading={loading}
     />
   );

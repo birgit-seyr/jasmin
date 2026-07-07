@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useGdprProcessingActivitiesRetrieve } from "@shared/api/generated/gdpr/gdpr";
 import { useTenant } from "@hooks/index";
 import { downloadBlob, notify } from "@shared/utils";
+import { getErrorMessage } from "@shared/utils/apiError";
 
 const { Paragraph, Text } = Typography;
 
@@ -124,7 +125,7 @@ export default function VVTExportCard() {
           type="error"
           style={{ marginTop: 16 }}
           message={t("gdpr.vvt.error")}
-          description={(error as { message?: string } | null)?.message}
+          description={getErrorMessage(error, t("gdpr.vvt.error"))}
         />
       )}
 

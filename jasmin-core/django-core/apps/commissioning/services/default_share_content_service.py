@@ -727,16 +727,62 @@ class DefaultShareContentService:
         if not active_weeks:
             return 0
 
+        # Resolve every Share for the active defaults in a bounded number of
+        # queries rather than one get_or_create per default (the same
+        # (year, week, variation) recurs across a variation's share_articles).
+        share_keys = {
+            (default.year, default.delivery_week, default.share_type_variation_id)
+            for default in defaults
+            if (default.year, default.delivery_week) in active_weeks
+        }
+        years = {key[0] for key in share_keys}
+        weeks = {key[1] for key in share_keys}
+        variation_ids = {key[2] for key in share_keys}
+
+        def _fetch_shares() -> dict[tuple[int, int, str], Share]:
+            return {
+                (share.year, share.delivery_week, share.share_type_variation_id): share
+                for share in Share.objects.filter(
+                    delivery_day=delivery_day,
+                    year__in=years,
+                    delivery_week__in=weeks,
+                    share_type_variation_id__in=variation_ids,
+                )
+            }
+
+        shares_by_key = _fetch_shares()
+        missing = [
+            Share.build_for_delivery(
+                year=year,
+                delivery_week=week,
+                delivery_day=delivery_day,
+                share_type_variation_id=variation_id,
+            )
+            for (year, week, variation_id) in share_keys
+            if (year, week, variation_id) not in shares_by_key
+        ]
+        if missing:
+            Share.objects.bulk_create(missing, ignore_conflicts=True)
+            # Re-fetch so the map holds PK-bearing rows for everything just
+            # created (and anything a concurrent writer inserted meanwhile).
+            shares_by_key = _fetch_shares()
+
+        # Heal any reused row whose day fields are NULL — a no-op (no write)
+        # for the common case where they're already populated.
+        for share in shares_by_key.values():
+            share.ensure_day_fields()
+
         contents: list[ShareContent] = []
         for default in defaults:
             if (default.year, default.delivery_week) not in active_weeks:
                 continue
-            share, _ = Share.get_or_create_for_delivery(
-                year=default.year,
-                delivery_week=default.delivery_week,
-                delivery_day=delivery_day,
-                share_type_variation=default.share_type_variation,
-            )
+            share = shares_by_key[
+                (
+                    default.year,
+                    default.delivery_week,
+                    default.share_type_variation_id,
+                )
+            ]
             contents.append(
                 ShareContent(
                     share=share,

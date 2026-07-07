@@ -36,14 +36,21 @@ export default function SepaMandates() {
   const { formatDate } = useDateFormat();
 
   // Office scope: the list returns every member's profile (IBAN + account
-  // holder masked in bulk reads). Narrow to actual SEPA mandates — a
-  // bank-transfer profile has no mandate to show.
+  // holder masked in bulk reads). Show every profile that HAS a SEPA mandate —
+  // either currently on SEPA, or one that was withdrawn (Art. 7(3) consent
+  // revoke switches the profile off SEPA to BANK_TRANSFER but keeps the mandate
+  // reference / signed date). Filtering on payment_method alone would make a
+  // revoked mandate silently disappear, as if it had been deleted.
   const { data: profiles, isLoading } = usePaymentsBillingProfilesList();
 
   const data = useMemo<SepaMandateRow[]>(
     () =>
       (profiles ?? [])
-        .filter((profile) => profile.payment_method === PaymentMethodEnum.SEPA_DD)
+        .filter(
+          (profile) =>
+            profile.payment_method === PaymentMethodEnum.SEPA_DD ||
+            !!profile.sepa_mandate_reference,
+        )
         .map((profile) => ({
           ...profile,
           key: profile.id ?? profile.member,
@@ -109,6 +116,12 @@ export default function SepaMandates() {
         key: "is_sepa_ready",
         align: "center",
         render: (_value, record) => {
+          // A mandate reference on a profile that is no longer SEPA means the
+          // mandate was withdrawn (consent revoke → BANK_TRANSFER). Show it as
+          // revoked rather than hiding it.
+          if (record.payment_method !== PaymentMethodEnum.SEPA_DD) {
+            return <Tag color="red">{t("sepa.status_revoked")}</Tag>;
+          }
           if (!record.is_active) {
             return <Tag color="default">{t("sepa.status_inactive")}</Tag>;
           }

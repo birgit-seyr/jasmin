@@ -41,7 +41,8 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
-from django.core.management.base import BaseCommand
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 from django_tenants.utils import schema_context
@@ -92,6 +93,12 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args: Any, **options: Any) -> None:
+        if not settings.DEBUG:
+            raise CommandError(
+                "seed_demo_members is a development helper and refuses to run "
+                "with DEBUG=False. It mints fixed-password member logins that "
+                "must never reach a production schema."
+            )
         schema = options["schema"]
         try:
             tenant = Tenant.objects.get(schema_name=schema)

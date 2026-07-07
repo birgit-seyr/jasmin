@@ -22,6 +22,7 @@ export default function ModalToggle() {
           toggleEditMode();
         }}
         loading={loading}
+        aria-label={t("tooltip.modal_toggle")}
         style={{
           color: token.colorPrimary,
         }}

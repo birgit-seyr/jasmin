@@ -310,10 +310,16 @@ class DeletionWorkflowMixin:
         member could have re-opened a subscription, etc. Better to
         refuse late than to violate Art. 17(3)(b).
         """
-        # The user FK is CASCADE, so a deleted user would have taken
-        # the request with it — re-fetch to make sure the user row
-        # we're about to anonymize is still around.
+        # DeletionRequest.user is SET_NULL (NOT cascade) — this row IS the
+        # Art. 17 erasure audit trail and must outlive its subject. Guard the
+        # NULL-user case (defensive; anonymisation is in-place today so no path
+        # produces it) so we fail loudly instead of crashing in anonymize_user
+        # or silently mis-answering retention against a NULL FK.
         user = deletion_request.user
+        if user is None:
+            raise DeletionRequestNotPending(
+                "This deletion request has no linked user and cannot be executed."
+            )
 
         # Late retention re-check — see docstring above.
         reasons = GDPRService.check_retention_blocks(user)

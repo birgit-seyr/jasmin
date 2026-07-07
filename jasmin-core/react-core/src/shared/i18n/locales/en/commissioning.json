@@ -721,7 +721,7 @@
   "please_select_delivery_day_and_share_type": "Please select a delivery day and crate type",
   "please_select_offer_group": "Please select an offer group",
   "price_sum_articles": "Sum of article prices",
-  "prices_loaded": "prices loaded",
+  "prices_loaded": "{{count}} prices loaded",
   "resellers_template": {
     "csv": "resellers_template.csv"
   },
@@ -745,5 +745,6 @@
   "weight": "Weight",
   "zugferd_not_available": "ZUGFeRD XML not available",
   "peak_occupancy": "Peak occupancy",
-  "capacity_below_peak": "Capacity cannot be set below the peak occupancy ({{peak}}, week {{week}})."
+  "capacity_below_peak": "Capacity cannot be set below the peak occupancy ({{peak}}, week {{week}}).",
+  "failed_to_load_invoice": "Failed to load invoice data."
 }

@@ -45,6 +45,7 @@ from .serializers import (
     ChargeScheduleMonthlyIncomeSerializer,
     ChargeScheduleSerializer,
     CreateBillingRunSerializer,
+    SepaMandateStatusSerializer,
 )
 from .services import BillingRunService, ChargeScheduleService
 
@@ -130,7 +131,21 @@ class BillingProfileViewSet(
         # (eligibility + collection), so it requires step-up like the mandate
         # fields — not a benign toggle.
         "is_active",
+        # Switching ``payment_method`` INTO SEPA_DIRECT_DEBIT re-arms direct-debit
+        # collection — and, on a profile that was moved OFF SEPA while keeping its
+        # mandate columns (e.g. an Art. 7(3) consent revoke that only flips the
+        # method), silently resurrects a usable mandate (``is_sepa_ready`` -> True,
+        # next run debits the member). That is exactly the payment-relevant toggle
+        # ``is_active`` is gated for, so gate it too. ``requires_step_up_for_fields``
+        # only fires on an actual value change, so unrelated PATCHes are untouched.
+        "payment_method",
     )
+
+    # Fields that are sensitive only when TOGGLED on an EXISTING mandate — on
+    # create there is no mandate to hijack and both are always present in the
+    # payload (model defaults), so gating every create on step-up would be
+    # friction without benefit. (A SEPA create still steps up via ``iban`` etc.)
+    _CREATE_EXEMPT_STEP_UP_FIELDS = ("is_active", "payment_method")
 
     def get_permissions(self):
         from apps.accounts.permissions import requires_step_up_for_fields
@@ -138,13 +153,10 @@ class BillingProfileViewSet(
         perms = super().get_permissions()
         if self.action in {"create", "update", "partial_update"}:
             fields = self._SEPA_SENSITIVE_FIELDS
-            # TXN-4: ``is_active`` is sensitive only when TOGGLING an existing
-            # mandate (deactivate / reactivate has payment consequences). On
-            # create there is no existing mandate to hijack and ``is_active`` is
-            # always in the payload (model default), so gating every create on
-            # step-up would be friction without benefit — drop it there.
             if self.action == "create":
-                fields = tuple(f for f in fields if f != "is_active")
+                fields = tuple(
+                    f for f in fields if f not in self._CREATE_EXEMPT_STEP_UP_FIELDS
+                )
             perms.append(requires_step_up_for_fields(*fields)())
         return perms
 
@@ -191,6 +203,32 @@ class BillingProfileViewSet(
         if member_id:
             qs = qs.filter(member_id=member_id)
         return qs
+
+    @extend_schema(
+        summary="Per-member SEPA mandate status (no bank identifiers)",
+        description=(
+            "Lightweight mandate-status list for overview tables (e.g. the Abos "
+            "SEPA column): whether each member has an active, usable SEPA "
+            "mandate (``has_active_sepa_mandate`` mirrors ``is_sepa_ready``) "
+            "plus the mandate reference and the signed / paper-received dates. "
+            "Excludes IBAN / account holder, so a bulk read neither decrypts "
+            "nor exposes bank PII and does NOT emit the SEC-1 bank-identifier "
+            "audit line. Office-only (mapped to ``write_permission`` — it is "
+            "not one of the member-readable ``_READ_ACTIONS``)."
+        ),
+        responses={200: SepaMandateStatusSerializer(many=True)},
+    )
+    @action(detail=False, methods=["get"], url_path="mandate_status")
+    def mandate_status(self, request, *args, **kwargs):
+        """Return each member's SEPA mandate status, without bank identifiers."""
+        # No ``?member`` scoping: office-only + no PII, so the whole-tenant list
+        # is the intended payload. ``member_id`` is a local column (no join), so
+        # only the name ordering touches the member table — no N+1.
+        profiles = BillingProfile.objects.order_by(
+            "member__last_name", "member__first_name"
+        )
+        data = SepaMandateStatusSerializer(profiles, many=True).data
+        return Response(data)
 
 
 @extend_schema_view(

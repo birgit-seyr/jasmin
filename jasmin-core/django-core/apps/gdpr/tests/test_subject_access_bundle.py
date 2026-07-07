@@ -273,6 +273,33 @@ class TestSubscriptionsSection:
         assert subs[0]["valid_from"] == datetime.date(2026, 1, 5)
         assert "share_type_variation" in subs[0]
 
+    def test_cancellation_reasons_are_surfaced(self, tenant):
+        # cancellation_reason is PII_IMMEDIATE (may hold health reasons /
+        # complaints), so the Art. 15 bundle must disclose it on member,
+        # subscription AND coop-share — like MemberLoan.cancelled_reason already
+        # is. Regression for the omission that hid it on right-of-access.
+        user = JasminUserFactory(roles=["member"])
+        member = MemberFactory(user=user, cancellation_reason="health reason")
+        SubscriptionFactory(member=member, cancellation_reason="moved away")
+        CoopShareFactory(
+            member=member, amount_of_coop_shares=3, cancellation_reason="downsized"
+        )
+
+        bundle = GDPRService.get_subject_access_bundle(user)
+        assert bundle["member"]["cancellation_reason"] == "health reason"
+        assert bundle["subscriptions"][0]["cancellation_reason"] == "moved away"
+        assert bundle["coop_shares"][0]["cancellation_reason"] == "downsized"
+
+        # And it must survive the API serializer (explicit-field serializers drop
+        # anything not declared) — the actual right-of-access response, not just
+        # the internal dict.
+        from apps.gdpr.serializers import SubjectAccessBundleSerializer
+
+        data = SubjectAccessBundleSerializer(bundle).data
+        assert data["member"]["cancellation_reason"] == "health reason"
+        assert data["subscriptions"][0]["cancellation_reason"] == "moved away"
+        assert data["coop_shares"][0]["cancellation_reason"] == "downsized"
+
 
 @pytest.mark.django_db
 class TestMemberLoansSection:

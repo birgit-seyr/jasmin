@@ -22,6 +22,7 @@ import RichTextEditorModal from "@shared/modals/RichTextEditorModal";
 import { AutoSaveIndicator } from "@shared/ui";
 import { blockNonNumericKeys } from "@shared/utils/numberFormat";
 import {
+  useDateFormat,
   useNumberFormat,
   useSettingsManager,
   useTenant,
@@ -116,6 +117,7 @@ export default function SettingsPage({
   const { t } = useTranslation();
   const { tenant, refreshTenant } = useTenant();
   const { separators } = useNumberFormat();
+  const { dateFormat } = useDateFormat();
 
   const {
     loading,
@@ -264,7 +266,7 @@ export default function SettingsPage({
             value,
             (newValue) =>
               handleSettingChange(setting.key, newValue, setting.type),
-            { decimalChar: separators.decimalChar },
+            { decimalChar: separators.decimalChar, dateFormat },
           )}
           {SettingsRenderer.renderDescription(setting)}
         </div>
@@ -276,6 +278,7 @@ export default function SettingsPage({
       openRichTextEditor,
       t,
       separators.decimalChar,
+      dateFormat,
     ],
   );
 

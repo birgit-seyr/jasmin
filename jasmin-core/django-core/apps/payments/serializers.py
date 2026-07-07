@@ -79,6 +79,27 @@ class BillingProfileMemberSerializer(BillingProfileSerializer):
         fields = [f for f in BillingProfileSerializer.Meta.fields if f != "notes"]
 
 
+class SepaMandateStatusSerializer(serializers.Serializer):
+    """Lightweight per-member SEPA mandate status for overview tables.
+
+    Deliberately excludes the bank identifiers (IBAN / account holder) so a
+    bulk read neither decrypts nor exposes bank PII, and — unlike the full
+    ``BillingProfileSerializer`` list — must NOT trip the SEC-1 bank-identifier
+    audit trail. ``has_active_sepa_mandate`` mirrors ``is_sepa_ready``; the
+    per-subscription "active during the term" refinement is applied by the
+    caller (it needs the subscription's dates).
+    """
+
+    member = serializers.CharField(source="member_id")
+    has_active_sepa_mandate = serializers.BooleanField(
+        source="is_sepa_ready", read_only=True
+    )
+    payment_method = serializers.CharField()
+    sepa_mandate_reference = serializers.CharField(allow_null=True)
+    sepa_mandate_signed_at = serializers.DateField(allow_null=True)
+    sepa_mandate_paper_received_at = serializers.DateField(allow_null=True)
+
+
 class ChargeScheduleSerializer(serializers.ModelSerializer):
     member_name = serializers.SerializerMethodField()
     member_number = serializers.IntegerField(

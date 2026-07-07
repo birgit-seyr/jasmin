@@ -217,14 +217,7 @@ export default function ConfigurationSubscriptions() {
   const { validFromColumn, validUntilColumn } = useTimeBoundColumns();
 
   const getShareOptionLabel = useCallback(
-    (value: string) =>
-      t(
-        `commissioning.share_option.${value}`,
-        value
-          .split("_")
-          .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
-          .join(" "),
-      ),
+    (value: string) => t(`commissioning.share_option.${value}`),
     [t],
   );
 

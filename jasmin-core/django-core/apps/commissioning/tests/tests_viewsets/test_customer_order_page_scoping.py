@@ -321,3 +321,46 @@ class TestCustomer_CannotAccessMemberEndpoints:
     def test_abos_list_forbidden(self, customer_caller_client, tenant):
         resp = customer_caller_client.get("/api/commissioning/abos/")
         assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+
+# --- OfferViewSet: amount_ordered annotation must not leak a peer's totals -----
+
+
+class TestCustomerOrderPage_OfferAnnotationScoping:
+    URL = "/api/commissioning/offers/"
+
+    def test_customer_cannot_request_peer_reseller_amounts(
+        self, customer_caller_client, customer_caller
+    ):
+        # A peer reseller in the SAME offer group. Passing ?reseller=<peer> would
+        # annotate the offers with the peer's per-article ordered volume — an
+        # IDOR the endpoint must reject for a non-privileged customer.
+        _u, _my_reseller, my_group = customer_caller
+        peer = ResellerFactory(offer_group=my_group)
+
+        resp = customer_caller_client.get(
+            self.URL, {"year": 2026, "delivery_week": 15, "reseller": peer.id}
+        )
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_customer_omitting_reseller_sees_only_own_amounts(
+        self, customer_caller_client, customer_caller
+    ):
+        # With ?reseller= omitted, amount_ordered must reflect ONLY the caller's
+        # own reseller — pre-fix it summed the whole group's orders (a peer's 42
+        # would leak); post-fix the caller's own reseller (0) is forced.
+        _u, _my_reseller, my_group = customer_caller
+        peer = ResellerFactory(offer_group=my_group)
+        offer = OfferFactory(offer_group=my_group, year=2026, delivery_week=15)
+        peer_order = OrderFactory(reseller=peer, year=2026, delivery_week=15)
+        # OrderContent references exactly one item type — the offer (not a free
+        # share_article), so it joins the annotation via its ``offer`` FK.
+        OrderContentFactory(
+            order=peer_order, offer=offer, share_article=None, amount=Decimal("42.000")
+        )
+
+        resp = customer_caller_client.get(self.URL, {"year": 2026, "delivery_week": 15})
+        assert resp.status_code == status.HTTP_200_OK
+        rows = [r for r in resp.data if r["id"] == offer.id]
+        assert rows, resp.data
+        assert Decimal(rows[0]["amount_ordered"]) == Decimal("0")

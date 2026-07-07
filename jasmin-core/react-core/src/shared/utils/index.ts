@@ -33,3 +33,4 @@ export { buildCsvString, downloadCsvBlob, resolveCsvDialect } from './csv';
 export { downloadBlob } from './downloadBlob';
 export { activeAtDateForWeek, isWeekInPast, isYearInPast } from './weekRange';
 export { pickTierPrice, pickTierPriceFromAmount } from './tierPrice';
+export { isSepaMandateActiveForTerm } from './sepaMandate';

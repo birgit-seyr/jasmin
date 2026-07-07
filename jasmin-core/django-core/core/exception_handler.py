@@ -82,6 +82,23 @@ def jasmin_exception_handler(
             exc,
             extra={"request_id": request_id},
         )
+        # The finalized-protection Postgres triggers raise check_violation with a
+        # specific message ("... row has been finalized" / "Cannot unfinalize
+        # ...") that a generic "Database integrity error" would hide. Give the
+        # client an actionable, keyable code + message instead.
+        message = str(exc)
+        if "has been finalized" in message or "Cannot unfinalize" in message:
+            return _respond(
+                ConflictError(
+                    "This record has been finalized and can no longer be changed.",
+                    code="finalize.protected",
+                ).to_dict(),
+                409,
+                request_id,
+                exc,
+                view_name,
+                log_level=None,  # already logged above
+            )
         return _respond(
             ConflictError("Database integrity error").to_dict(),
             409,

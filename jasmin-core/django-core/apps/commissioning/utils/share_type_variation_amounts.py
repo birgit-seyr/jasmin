@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterable
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from ..models import (
@@ -344,11 +344,17 @@ def batch_get_physical_variation_totals_for_weeks(
                     (day_id, physical_variation_id, station_id)
                 ] += weighted
 
+    # ROUND_HALF_UP (deterministic) rather than builtin round()'s banker's
+    # rounding, so a .5 aggregate always rounds up — matches the platform's
+    # rounding convention and keeps demand totals reproducible.
+    def _round_demand(value: Decimal) -> int:
+        return int(value.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
     return {
         week: {
-            "basic": {k: round(v) for k, v in per_week_basic[week].items()},
-            "tour": {k: round(v) for k, v in per_week_tour[week].items()},
-            "station": {k: round(v) for k, v in per_week_station[week].items()},
+            "basic": {k: _round_demand(v) for k, v in per_week_basic[week].items()},
+            "tour": {k: _round_demand(v) for k, v in per_week_tour[week].items()},
+            "station": {k: _round_demand(v) for k, v in per_week_station[week].items()},
         }
         for week in weeks
     }

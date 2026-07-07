@@ -3,6 +3,7 @@ import { Button, Card, Divider, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useTenant } from "@hooks/index";
+import { safeExternalHref } from "@shared/utils/safeUrl";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -21,6 +22,7 @@ export default function ImpressumPage() {
   const { tenant } = useTenant();
 
   const website = tenant?.website?.trim();
+  const websiteHref = safeExternalHref(website);
 
   return (
     <div
@@ -76,9 +78,17 @@ export default function ImpressumPage() {
             {website && (
               <>
                 {t("impressum.website_label")}:{" "}
-                <a href={website} target="_blank" rel="noopener noreferrer">
-                  {website}
-                </a>
+                {websiteHref ? (
+                  <a
+                    href={websiteHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {website}
+                  </a>
+                ) : (
+                  website
+                )}
               </>
             )}
           </Paragraph>

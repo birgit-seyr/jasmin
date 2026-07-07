@@ -28818,7 +28818,7 @@ const {mutation: mutationOptions} = options ?
     /**
  * Distinct e-mail addresses of members holding a confirmed, non-waiting-list subscription that matches the filter — a copyable e-mail distribution list for the AbosEmails page.
 
-Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and not cancelled-effective before it. The active window is ``[date_from, date_to]`` when both are given, otherwise today. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Members without an e-mail are omitted.
+Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and not cancelled-effective before it. The active window is ``[date_from, date_to]`` when both are given, otherwise today. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Each member's primary and secondary addresses (``email`` / ``email_2`` / ``email_3``) are all included; blanks, non-address junk, and duplicates are dropped.
  * @summary Member e-mails for a subscription filter (distribution list)
  */
 export const commissioningSubscriptionMemberEmailsRetrieve = (

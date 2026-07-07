@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 
 import { commissioningAbosCancelCreate } from "@shared/api/generated/commissioning/commissioning";
 import { notify } from "@shared/utils";
+import { getErrorMessage } from "@shared/utils/apiError";
 import { getNextSunday } from "@shared/utils/nextSunday";
 import { ModalCancelSaveFooter } from "@shared/modals/shared";
 import type { AboRecord } from "@features/abos/pages/types";
@@ -123,10 +124,9 @@ export const CancelSubscriptionModal: FC<CancelSubscriptionModalProps> = ({
       onCancelled();
       onClose();
     } catch (err) {
-      const message =
-        (err as { message?: string })?.message ||
-        t("members.cancel_abo_error");
-      notify.error(message);
+      // Surface the backend's specific reason (getErrorMessage reads the Jasmin
+      // {code, message} body); the i18n key is only the fallback.
+      notify.error(getErrorMessage(err, t("members.cancel_abo_error")));
     } finally {
       setLoading(false);
     }

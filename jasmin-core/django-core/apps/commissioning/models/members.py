@@ -307,6 +307,12 @@ class Member(
             .filter(
                 member=self,
                 admin_confirmed=True,
+                # A cancelled subscription (future effective date truncates
+                # valid_until, or force-end leaves it) still matches the date
+                # window — exclude it so this count uses the codebase's canonical
+                # "active" definition (cancelled_at IS NULL), matching
+                # _assert_no_active_subscription.
+                cancelled_at__isnull=True,
             )
             .count()
         )

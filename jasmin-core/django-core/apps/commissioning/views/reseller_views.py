@@ -263,19 +263,9 @@ class BulkCreateDocumentsFromOrdersView(APIViewRolePermissionsMixin, APIView):
 
         results, errors = _run_per_order_bulk(orders, handler)
 
-        response_data: dict[str, Any] = {
-            "model": model,
-            "total_processed": len(order_ids),
-            "successful": len(results),
-            "failed": len(errors),
-            "results": results,
-        }
-        if errors:
-            response_data["errors"] = errors
-        status_code = (
-            status.HTTP_207_MULTI_STATUS if errors else status.HTTP_201_CREATED
+        return _build_bulk_response(
+            model, order_ids, results, errors, success_status=status.HTTP_201_CREATED
         )
-        return Response(response_data, status=status_code)
 
     def _create_delivery_note(
         self, order: Order, date: str | None, user: Any = None

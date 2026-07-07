@@ -8,7 +8,10 @@
 
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
+import type {
+  EditableColumnConfig,
+  TableRecord,
+} from "@shared/tables/BasicEditableTable/types";
 import { ToolTipIcon } from "@shared/ui";
 import { useCurrency } from "@hooks/configuration/useCurrency";
 import type { useOffersData } from "../useOffersData";
@@ -93,7 +96,7 @@ export function useOffersColumns({
           </>
         ),
         children: finalTiers.map((tier, index) => {
-          const column: any = {
+          const column: EditableColumnConfig<TableRecord> = {
             title: t("commissioning.tier", { tier }) || `T${tier}`,
             dataIndex: `price_${index + 1}`,
             key: `price_${index + 1}`,
@@ -168,16 +171,16 @@ export function useOffersColumns({
 
           if (index === 0) {
             column.onFieldChange = (
-              value: string,
+              value: unknown,
               record: TableRecord,
               form: {
                 getFieldsValue: () => Record<string, unknown>;
                 setFieldValue: (name: string, value: unknown) => void;
               },
-            ) => {
+            ): Record<string, unknown> | undefined => {
               if (!selectedOfferGroup || !value) return;
 
-              const price1 = parseFloat(value);
+              const price1 = parseFloat(String(value));
               if (isNaN(price1)) return;
 
               const currentValues = form.getFieldsValue();
@@ -230,7 +233,7 @@ export function useOffersColumns({
     format,
   ]);
 
-  const columns: any[] = useMemo(() => {
+  const columns = useMemo<EditableColumnConfig<TableRecord>[]>(() => {
     const baseColumns = [
       finalColumn,
       ...washingCleaningColumns,
@@ -364,7 +367,7 @@ export function useOffersColumns({
       },
     ];
 
-    return [...baseColumns];
+    return [...baseColumns] as EditableColumnConfig<TableRecord>[];
   }, [
     t,
     amountUnitSizeColumns,

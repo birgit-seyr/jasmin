@@ -2,7 +2,7 @@
 
 **Owner:** Engineering
 **Started:** 2026-05-25
-**Status:** Steps 1 + 2 + 4 + 6 + 7 done; Step 3 deferred (needs design discussion); Step 5 next.
+**Status:** Steps 1 + 2 + 4 + 5 + 6 + 7 + 9 done; Step 3 effectively done (the command already delegates to `anonymize_user`; only the retention-skip-on-replay nuance is open). Remaining: Step 8 (retention cron), Step 10 (admin anonymize-other-user).
 
 This is the step-by-step plan to bring GDPR-conformant deletion +
 anonymization from the current half-wired state to a defensible,
@@ -316,21 +316,69 @@ classification choice at PR time — the guard test fails with the
 exact `model.field` name and a pointer to the two valid responses
 (classify, or add to `IGNORE_FIELDS` with a reason).
 
-### ☐ Step 5 — Persona-aware branching + `preview_deletion()` (MEDIUM, ~2h)
+### ☑ Step 5 — Persona-aware branching + `preview_deletion()` (DONE 2026-07-07)
 
-**What:** Split anonymization logic by persona (Member / Customer /
-Staff). Add a dry-run that returns the would-be diff so the admin
-sees what will happen before clicking go.
+**What:** Classify the data subject by persona (Member / Customer /
+Staff) and add a dry-run that returns the would-be diff so the admin
+sees exactly what will happen before clicking go.
 
-**Where:**
-- New: `apps/gdpr/services.py::GDPRService.preview_deletion(user) -> dict`.
-- Refactor: `anonymize_user` → `execute_deletion(user)` with
-  internal `_member_path`, `_customer_path`, `_staff_path` branches.
-- New endpoint: `GET /api/gdpr/preview-deletion/<user_id>/` (admin
-  only).
+**Shipped:**
+- New: `apps/gdpr/services/preview.py` — a `PreviewMixin` added to the
+  mixin-composed `GDPRService` (the `services.py` in the original plan
+  is now a package; the facade in `services/__init__.py` gained the
+  mixin + the runtime-binding-loop entry).
+- New: `GDPRService.detect_persona(user) -> Persona` + a `Persona`
+  StrEnum (`MEMBER` / `CUSTOMER` / `STAFF`), re-exported from the
+  package. Classification is the **structural** signal `anonymize_user`
+  already branches on — a `Member` row ⇒ MEMBER, a `Reseller` link with
+  no Member ⇒ CUSTOMER, neither ⇒ STAFF. A member-who-is-also-a-customer
+  is MEMBER (stricter registry obligation governs).
+- New: `GDPRService.preview_deletion(user) -> dict` — a pure **dry-run**
+  (writes nothing) that reports persona, `has_member` / `has_reseller`,
+  `can_anonymize_now`, the `retention_blocks` list, and per present
+  model the affected `row_count` + `scrubbed_fields` (field + action +
+  human "becomes"), plus the non-field-classified `side_channels`
+  (auditlog / axes / on-disk SEPA + reseller-document purges). It reads
+  the SAME sources of truth the executor does — `check_retention_blocks`
+  + `FIELD_CLASSIFICATION`, and mirrors the executor's per-model row
+  scoping (incl. the shared-ContactEntity skip) — so the preview can't
+  drift from what `anonymize_user` actually does.
+- New endpoint: `GET /api/gdpr/admin/preview-deletion/<user_id>/`
+  (`IsAdmin`, read-only so no step-up). Placed under `admin/` for
+  consistency with the other admin deletion endpoints (the plan wrote
+  `/preview-deletion/`). Serializer: `DeletionPreviewSerializer` (+ the
+  nested `PreviewModel` / `PreviewField` / `PreviewSideChannel`
+  serializers) in `apps/gdpr/serializers.py`.
 
-**Acceptance:** Admin can see "this will anonymize X fields on Y
-models, leave Z under retention until <date>".
+**Design note — no `execute_deletion` path rewrite.** The plan's
+`_member_path` / `_customer_path` / `_staff_path` refactor was written
+before Step 6, which already introduced `_execute_deletion(request)` as
+the confirmed-execution tail. The atomic `anonymize_user` pipeline is
+already persona-adaptive via presence checks (`if member is not None`,
+`Reseller.objects.filter(linked_user=user)`, the shared-contact skip),
+and the retention pre-flight (Step 1) enforces the persona-specific
+"refuse while obligations are open" rule. Rewriting that well-tested
+pipeline into three explicit path methods is pure churn with no
+behavior change, so persona-awareness was delivered as an explicit
+`Persona` classification + the faithful preview instead of a risky
+re-org of the executor.
+
+**Tests:** `apps/gdpr/tests/test_deletion_preview.py` — 13 tests across
+5 classes: persona detection (member / reseller-only / staff /
+member+reseller), preview shape per persona (staff JasminUser fields +
+`can_anonymize_now`, member Member fields with the tombstone/immediate
+actions, customer Reseller model, side-channels), retention surfacing
+(open CoopShare ⇒ `can_anonymize_now=False` + a surfaced block), the
+writes-nothing guarantee (user/member unchanged after a preview), and
+the endpoint (admin 200, non-admin 403, unknown id 404).
+
+**Acceptance:** ✅ Admin can GET the endpoint and see "this will
+anonymize X fields on Y models" (`field_count` / `model_count` + the
+per-model list) and "…and is currently blocked by Z" (`retention_blocks`
++ `can_anonymize_now`). The "under retention until `<date>`" wording is
+softened to the block reasons, because the system refuses on *open*
+obligations rather than computing per-field expiry dates (those land
+with Step 8's `PII_RETAINED` cron).
 
 ### ☑ Step 6 — Two-step (optionally three-step) confirmation flow (DONE 2026-05-25)
 

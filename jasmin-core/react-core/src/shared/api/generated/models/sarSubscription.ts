@@ -39,6 +39,8 @@ export interface SarSubscription {
   cancelled_at: string | null;
   /** @nullable */
   cancelled_effective_at: string | null;
+  /** @nullable */
+  cancellation_reason: string | null;
   on_waiting_list: boolean;
   waiting_list_status: string;
   /** @nullable */

@@ -15,7 +15,8 @@ import {
 } from "@shared/api/generated/commissioning/commissioning";
 import type { Subscription } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
-import { LoggingModal } from "@shared/modals";
+import { LoggingModal, SepaMandateDetailsModal } from "@shared/modals";
+import type { SepaMandateStatus } from "@shared/api/generated/models";
 import {
   EditableTable,
   gatedByPermission,
@@ -38,7 +39,11 @@ import { useAdminConfirmationModalAbos } from "@features/abos/hooks/modals/useAd
 import { useRejectAboModal } from "@features/abos/hooks/modals/useRejectAboModal";
 import { useAbosData } from "@features/abos/hooks/useAbosData";
 import SubscriptionStatsCards from "@features/abos/components/SubscriptionStatsCards";
-import { useDateFormat, useTableRowSelection } from "@hooks/index";
+import {
+  useDateFormat,
+  useSepaMandateStatus,
+  useTableRowSelection,
+} from "@hooks/index";
 import { notify } from "@shared/utils";
 import { getErrorCode } from "@shared/utils/apiError";
 import type { AboRecord } from "./types";
@@ -85,6 +90,29 @@ export default function Abos() {
   const [loggingRecord, setLoggingRecord] = useState<AboRecord | null>(null);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelRecord, setCancelRecord] = useState<AboRecord | null>(null);
+
+  // SEPA mandate overview: one office-only fetch mapped by member, plus the
+  // details modal opened from the status square.
+  const { getMandateForMember } = useSepaMandateStatus();
+  const [sepaModalOpen, setSepaModalOpen] = useState(false);
+  const [sepaModalState, setSepaModalState] = useState<{
+    status: SepaMandateStatus | undefined;
+    memberName: string;
+    validUntil: string | null;
+  }>({ status: undefined, memberName: "", validUntil: null });
+  const handleShowSepaDetails = useCallback(
+    (status: SepaMandateStatus | undefined, record: AboRecord) => {
+      setSepaModalState({
+        status,
+        memberName:
+          record.member_string ??
+          `${record.member_first_name ?? ""} ${record.member_last_name ?? ""}`.trim(),
+        validUntil: record.valid_until ?? null,
+      });
+      setSepaModalOpen(true);
+    },
+    [],
+  );
 
   const {
     data,
@@ -230,6 +258,8 @@ export default function Abos() {
     recentlyAddedIds,
     onCancel: handleCancelRow,
     onShowLog: handleShowLog,
+    getMandateForMember,
+    onShowSepaDetails: handleShowSepaDetails,
   });
 
   // No ``list``: this page owns the data via ``useCommissioningAbosList``
@@ -418,6 +448,14 @@ export default function Abos() {
         }}
         abo={cancelRecord}
         onCancelled={invalidateData}
+      />
+
+      <SepaMandateDetailsModal
+        isOpen={sepaModalOpen}
+        onClose={() => setSepaModalOpen(false)}
+        status={sepaModalState.status}
+        memberName={sepaModalState.memberName}
+        validUntil={sepaModalState.validUntil}
       />
     </div>
   );

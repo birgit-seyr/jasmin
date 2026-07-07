@@ -10,9 +10,11 @@ Each endpoint must:
 
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 
 import pytest
+import time_machine
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -505,6 +507,31 @@ class TestMyCoopShareSubscribe:
             member=member, document=doc, revoked_at__isnull=True
         ).exists()
 
+    def test_contract_required_when_published_only_in_other_locale(
+        self, member_user, tenant
+    ):
+        # Fail closed: a COOP_CONTRACT published ONLY under a non-de locale must
+        # STILL require agreement. Pre-fix the hardcoded locale="de" lookup found
+        # nothing and silently let the subscribe through with no consent recorded.
+        import datetime
+
+        self._settings(tenant)
+        ConsentDocument.objects.create(
+            kind=ConsentKind.COOP_CONTRACT,
+            locale="en",
+            version="v1",
+            valid_from=datetime.date(2026, 1, 1),
+            body="contract (en only)",
+        )
+        MemberFactory(user=member_user, is_trial=False)
+
+        resp = _client_for(member_user).post(
+            URL_COOP_SUBSCRIBE, {"amount_of_coop_shares": 5}, format="json"
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "coop_share.contract_agreement_required"
+        assert CoopShare.objects.count() == 0
+
     def test_below_min_is_rejected_for_confirmed_member(self, member_user, tenant):
         """A confirmed (non-trial) member is bound by the tenant min/max
         window — the model's clean() enforces it on create."""
@@ -640,6 +667,7 @@ class TestMySubscriptionSubscribe:
         sub = Subscription.objects.get(member=member)
         assert sub.price_per_delivery == Decimal("10.00")
 
+    @time_machine.travel(datetime.date(2026, 6, 29), tick=False)
     def test_solidarity_on_accepts_price_at_or_above_floor(self, member_user, tenant):
         member = MemberFactory(user=member_user)
         variation, payment_cycle, dsd = self._solidarity_setup()
@@ -661,6 +689,7 @@ class TestMySubscriptionSubscribe:
         sub = Subscription.objects.get(member=member)
         assert sub.price_per_delivery == Decimal("8.00")
 
+    @time_machine.travel(datetime.date(2026, 6, 29), tick=False)
     def test_solidarity_on_rejects_price_below_floor(self, member_user, tenant):
         MemberFactory(user=member_user)
         variation, payment_cycle, dsd = self._solidarity_setup()
@@ -713,6 +742,7 @@ class TestMySubscriptionSubscribe:
         )
         return variation, PaymentCycleFactory(), DeliveryStationDayFactory()
 
+    @time_machine.travel(datetime.date(2026, 6, 29), tick=False)
     def test_solidarity_future_window_floor_rejects_below_future_floor(
         self, member_user, tenant
     ):
@@ -738,6 +768,7 @@ class TestMySubscriptionSubscribe:
         assert resp.data["code"] == "subscription.solidarity_price_below_minimum"
         assert Subscription.objects.count() == 0
 
+    @time_machine.travel(datetime.date(2026, 6, 29), tick=False)
     def test_solidarity_future_window_floor_accepts_at_future_floor(
         self, member_user, tenant
     ):
@@ -785,6 +816,7 @@ class TestMySubscriptionSubscribe:
         sub = Subscription.objects.get(member=member)
         assert sub.price_per_delivery == Decimal("12.00")
 
+    @time_machine.travel(datetime.date(2026, 6, 29), tick=False)
     def test_solidarity_future_only_window_is_subscribable(self, member_user, tenant):
         # A variation whose ONLY priced window starts in the future (nothing
         # active today). A today-anchored lookup would raise
@@ -817,6 +849,7 @@ class TestMySubscriptionSubscribe:
         sub = Subscription.objects.get(member=member)
         assert sub.price_per_delivery == Decimal("8.50")
 
+    @time_machine.travel(datetime.date(2026, 6, 29), tick=False)
     def test_solidarity_on_null_floor_falls_back_to_reference(
         self, member_user, tenant
     ):
@@ -850,6 +883,7 @@ class TestMySubscriptionSubscribe:
     # ---- Office path: the shared SubscriptionSerializer floor guard applies to
     # the office abos-create too (it does NOT distinguish member vs office —
     # with solidarity ON, a below-floor office price is rejected just the same).
+    @time_machine.travel(datetime.date(2026, 6, 29), tick=False)
     def test_office_solidarity_on_rejects_below_floor(self, api_client, tenant):
         variation, payment_cycle, dsd = self._two_window_setup()
         self._enable_solidarity(tenant)
@@ -875,6 +909,7 @@ class TestMySubscriptionSubscribe:
         assert resp.data["code"] == "subscription.solidarity_price_below_minimum"
         assert Subscription.objects.count() == 0
 
+    @time_machine.travel(datetime.date(2026, 6, 29), tick=False)
     def test_office_solidarity_on_accepts_at_floor(self, api_client, tenant):
         variation, payment_cycle, dsd = self._two_window_setup()
         self._enable_solidarity(tenant)

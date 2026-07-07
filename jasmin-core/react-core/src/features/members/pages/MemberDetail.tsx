@@ -36,6 +36,7 @@ import {
   Result,
   Row,
   Space,
+  Spin,
   Typography,
 } from "antd";
 import dayjs from "dayjs";
@@ -71,9 +72,10 @@ const MemberDetail = () => {
   const currentWeek = dayjs().isoWeek();
   const currentYear = dayjs().year();
 
-  const { data: member } = useCommissioningMembersRetrieve(id!, {
-    query: { enabled: !!id },
-  });
+  const { data: member, isLoading: memberLoading } =
+    useCommissioningMembersRetrieve(id!, {
+      query: { enabled: !!id },
+    });
 
   const { data: shareDeliveriesData } = useCommissioningShareDeliveryList(
     { member: id, year: currentYear },
@@ -169,6 +171,17 @@ const MemberDetail = () => {
       }),
     });
   };
+
+  // With the app-wide staleTime:0 the first (uncached) navigation renders
+  // while the retrieve is in flight; show a spinner until it settles so the
+  // "not found" screen is reserved for a genuine 404 (not a loading flash).
+  if (memberLoading) {
+    return (
+      <div className="flex-center" style={{ minHeight: "60vh" }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   if (!member) {
     return (

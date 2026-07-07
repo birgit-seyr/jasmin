@@ -213,11 +213,11 @@ export default [
   // context — that direction is fine.
   {
     files: [
-      'src/features/commissioning/**/*.{ts,tsx}',
-      'src/features/members/**/*.{ts,tsx}',
-      'src/features/abos/**/*.{ts,tsx}',
-      'src/features/customer/**/*.{ts,tsx}',
-      'src/features/warehouse/**/*.{ts,tsx}',
+      'src/features/commissioning/**/*.{ts,tsx,js,jsx}',
+      'src/features/members/**/*.{ts,tsx,js,jsx}',
+      'src/features/abos/**/*.{ts,tsx,js,jsx}',
+      'src/features/customer/**/*.{ts,tsx,js,jsx}',
+      'src/features/warehouse/**/*.{ts,tsx,js,jsx}',
     ],
     ignores: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
     rules: {

@@ -187,6 +187,11 @@ describe("SepaSetupModal", () => {
     expect(patchMutateMock).toHaveBeenCalledWith({
       id: "bp-1",
       data: expect.objectContaining({
+        // Re-arm SEPA on re-setup: a prior consent-revoke switches the profile
+        // to BANK_TRANSFER, so the PATCH must reset payment_method + is_active
+        // or the "new" mandate never activates (is_sepa_ready stays false).
+        payment_method: "SEPA_DD",
+        is_active: true,
         iban: "DE89370400440532013000",
         account_holder: "Mara Beispiel",
         // Re-signing a mandate re-stamps the signature date — same

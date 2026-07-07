@@ -159,7 +159,7 @@
 }
 
 .sidebar-container.expanded {
-  width: 300px;
+  width: 285px;
   min-width: 250px;
   transition: width 0.3s ease;
 }

@@ -4,6 +4,7 @@ import {
   isDynamicImportError,
   reloadOnceForChunkError,
 } from "@shared/utils/chunkReload";
+import i18n from "@shared/i18n";
 
 const { Paragraph } = Typography;
 
@@ -11,10 +12,26 @@ interface Props {
   children: ReactNode;
   /** Optional label rendered in the fallback UI (e.g. "Super admin"). */
   context?: string;
+  /**
+   * Values watched while the fallback is showing: when any of them changes,
+   * the error state is cleared so the children re-render. Pass the current
+   * route (e.g. ``[location.pathname]``) so navigating away from a crashed
+   * page recovers in place, without a full reload.
+   */
+  resetKeys?: unknown[];
 }
 
 interface State {
   error: Error | null;
+}
+
+function resetKeysChanged(
+  prev: unknown[] | undefined,
+  next: unknown[] | undefined,
+): boolean {
+  if (prev === next) return false;
+  if (!prev || !next || prev.length !== next.length) return true;
+  return prev.some((value, index) => !Object.is(value, next[index]));
 }
 
 /**
@@ -43,6 +60,18 @@ export default class ErrorBoundary extends Component<Props, State> {
     console.error("[ErrorBoundary] Uncaught render error:", error, info);
   }
 
+  componentDidUpdate(prevProps: Props): void {
+    // Recover from the fallback when the caller's reset keys change — e.g. the
+    // route changed, so the crashed page is no longer mounted. Guarded on an
+    // active error so ordinary prop churn never clears a healthy tree.
+    if (
+      this.state.error &&
+      resetKeysChanged(prevProps.resetKeys, this.props.resetKeys)
+    ) {
+      this.setState({ error: null });
+    }
+  }
+
   private handleReload = () => {
     window.location.reload();
   };
@@ -68,18 +97,20 @@ export default class ErrorBoundary extends Component<Props, State> {
         <Card style={{ maxWidth: 560, width: "100%" }}>
           <Result
             status="warning"
-            title="Something went wrong"
+            title={i18n.t("errors.boundary.title")}
             subTitle={
               this.props.context
-                ? `An error occurred in the ${this.props.context} app.`
-                : "An unexpected error occurred."
+                ? i18n.t("errors.boundary.subtitle_context", {
+                    context: this.props.context,
+                  })
+                : i18n.t("errors.boundary.subtitle")
             }
             extra={[
               <Button type="primary" key="reload" onClick={this.handleReload}>
-                Reload page
+                {i18n.t("errors.boundary.reload")}
               </Button>,
               <Button key="login" onClick={this.handleSignIn}>
-                Sign in again
+                {i18n.t("errors.boundary.sign_in")}
               </Button>,
             ]}
           />
@@ -92,7 +123,8 @@ export default class ErrorBoundary extends Component<Props, State> {
               type="secondary"
               style={{ marginTop: 16, fontSize: 12, wordBreak: "break-word" }}
             >
-              <strong>Details:</strong> {this.state.error.message}
+              <strong>{i18n.t("errors.boundary.details")}</strong>{" "}
+              {this.state.error.message}
             </Paragraph>
           )}
         </Card>

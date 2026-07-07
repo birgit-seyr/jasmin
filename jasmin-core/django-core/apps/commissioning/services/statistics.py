@@ -1,5 +1,5 @@
 from collections import defaultdict
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.db.models import Q
 
@@ -172,7 +172,11 @@ def _compute_variation_averages(
     station_averages = {}
     for field_name, data in station_totals.items():
         if data["count"] > 0:
-            avg = round(data["sum"] / (data["count"]), 2)
+            # ROUND_HALF_UP (not builtin round()'s banker's rounding) to match
+            # the platform's money/quantity rounding standard.
+            avg = (data["sum"] / data["count"]).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
             station_averages[field_name] = avg
 
     # Now aggregate from station level to tour and day levels

@@ -15,7 +15,8 @@
     "sepa": "SEPA mandate",
     "withdrawal": "Withdrawal terms",
     "terms": "Terms of service",
-    "coop_contract": "Subscription contract"
+    "coop_contract": "Cooperative-share contract",
+    "subscription_contract": "Subscription contract"
   },
   "admin": {
     "title": "Consent documents",

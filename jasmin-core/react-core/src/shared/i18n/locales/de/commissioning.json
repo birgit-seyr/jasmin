@@ -80,7 +80,7 @@
   "weekly": "wöchentlich",
   "odd_weeks": "ungerade Wochen",
   "even_weeks": "gerade Wochen",
-  "all_three_weeks": "alle drei Wochen", 
+  "all_three_weeks": "alle drei Wochen",
   "all_four_weeks": "alle vier Wochen",
   "purchase": "Zukauf",
   "purchased_name_suffix": "Zukauf",
@@ -725,7 +725,7 @@
   "please_select_delivery_day_and_share_type": "Bitte Liefertag und Kistentyp auswählen",
   "please_select_offer_group": "Bitte eine Angebotsgruppe auswählen",
   "price_sum_articles": "Summe Artikelpreise",
-  "prices_loaded": "Preise geladen",
+  "prices_loaded": "{{count}} Preise geladen",
   "resellers_template": {
     "csv": "wiederverkäufer_vorlage.csv"
   },
@@ -749,5 +749,6 @@
   "weight": "Gewicht",
   "zugferd_not_available": "ZUGFeRD-XML nicht verfügbar",
   "peak_occupancy": "max. Belegung",
-  "capacity_below_peak": "Kapazität kann nicht unter die maximale Belegung ({{peak}}, KW {{week}}) gesetzt werden."
+  "capacity_below_peak": "Kapazität kann nicht unter die maximale Belegung ({{peak}}, KW {{week}}) gesetzt werden.",
+  "failed_to_load_invoice": "Rechnungsdaten konnten nicht geladen werden."
 }

@@ -171,6 +171,7 @@ class TestGenerationPathSkipsPausedWeeks:
 
 @pytest.mark.django_db
 class TestResyncConfirmedSubscriptions:
+    @time_machine.travel(datetime.date(2026, 7, 1), tick=False)
     def test_create_pause_deletes_future_deliveries_in_paused_weeks(self, tenant):
         variation = _variation()
         subscription = _materialised_subscription(variation)
@@ -193,6 +194,7 @@ class TestResyncConfirmedSubscriptions:
 
         assert _delivered_weeks(subscription) == term_weeks - paused
 
+    @time_machine.travel(datetime.date(2026, 7, 1), tick=False)
     def test_delete_pause_restores_freed_deliveries(self, tenant):
         variation = _variation()
         subscription = _materialised_subscription(variation)

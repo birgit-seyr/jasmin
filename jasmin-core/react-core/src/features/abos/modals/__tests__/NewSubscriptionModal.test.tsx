@@ -110,10 +110,16 @@ vi.mock("@hooks/index", () => ({
     ],
     loading: false,
   }),
-  useCurrency: () => ({ currencySymbol: "€" }),
+  useCurrency: () => ({
+    currencySymbol: "€",
+    formatCurrency: (v: number | null | undefined) =>
+      v == null ? "" : `${Number(v).toFixed(2)} €`,
+  }),
   useDateFormat: () => ({
     dateFormat: "DD.MM.YYYY",
     formatDate: (d: dayjs.Dayjs) => d.format("DD.MM.YYYY"),
+    formatDateForAPI: (d: dayjs.Dayjs | null) =>
+      d ? d.format("YYYY-MM-DD") : null,
   }),
   useShareTypeVariationSizeOptions: () => ({
     getShareTypeVariationSizeLabel: (s: string) => s,
@@ -239,6 +245,17 @@ function selectVariation() {
  *  Station + payment-cycle selects are driven separately in each test. */
 function fillRequiredFields(price?: string) {
   fireEvent.change(validFromField(), { target: { value: futureMonday } });
+  // No auto-fill term rule (isValidUntilAuto === false) → valid_until is
+  // editable and required (the backend rejects open-ended subs), so it must be
+  // set for validateFields to pass. A Sunday exactly one year out.
+  fireEvent.change(field("valid_until"), {
+    target: {
+      value: dayjs(futureMonday)
+        .add(52, "week")
+        .subtract(1, "day")
+        .format("YYYY-MM-DD"),
+    },
+  });
   if (price !== undefined) {
     fireEvent.change(priceField(), { target: { value: price } });
   }
@@ -346,16 +363,6 @@ describe("NewSubscriptionModal — solidarity price gating", () => {
     expect(priceInput).toHaveAttribute("data-disabled", "false");
 
     fillRequiredFields("12");
-    // Office mode with no auto-fill term rule → valid_until is editable and now
-    // required (the backend rejects open-ended subs), so the office must set it.
-    fireEvent.change(field("valid_until"), {
-      target: {
-        value: dayjs(futureMonday)
-          .add(52, "week")
-          .subtract(1, "day")
-          .format("YYYY-MM-DD"),
-      },
-    });
     fireEvent.mouseDown(screen.getByText("delivery.select_station"));
     fireEvent.click(await screen.findByText("Station A"));
     fireEvent.mouseDown(screen.getByText("abos.select_payment_cycle"));

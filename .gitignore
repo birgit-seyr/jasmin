@@ -25,7 +25,8 @@ var/
 *.egg
 venv/
 .env
-
+code_audit/
+skills/
 # Django
 *.log
 local_settings.py

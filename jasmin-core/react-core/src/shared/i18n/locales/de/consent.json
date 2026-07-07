@@ -15,7 +15,8 @@
     "sepa": "SEPA-Mandat",
     "withdrawal": "Widerrufsbelehrung",
     "terms": "Nutzungsbedingungen",
-    "coop_contract": "Zeichnungsvertrag"
+    "coop_contract": "Zeichnungsvertrag",
+    "subscription_contract": "Abo-Vertrag"
   },
   "admin": {
     "title": "Einwilligungsdokumente",

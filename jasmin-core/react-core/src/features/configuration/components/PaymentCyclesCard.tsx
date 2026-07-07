@@ -8,6 +8,8 @@ import {
   useCommissioningPaymentCyclesList,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { PaymentCycle as PaymentCycleType } from "@shared/api/generated/models";
+import { notify } from "@shared/utils";
+import { getErrorMessage } from "@shared/utils/apiError";
 
 const PAYMENT_CYCLE_OPTIONS = [
   "WEEKLY",
@@ -42,9 +44,12 @@ export default function PaymentCyclesCard() {
         });
       } catch (error) {
         console.error("Failed to update payment cycle:", error);
+        notify.error(
+          getErrorMessage(error, t("configuration.payment_cycle_toggle_error")),
+        );
       }
     },
-    [queryClient],
+    [queryClient, t],
   );
 
   const getCycleLabel = useCallback(
