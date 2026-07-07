@@ -278,7 +278,6 @@ class TestSubscriptionDemandBackend:
             delivery_station_day_id=sd.id,
             year=2026,
             delivery_week=15,
-            share_options=["HARVEST_SHARE", "HARVEST_SHARE_FRUITS_ONLY"],
         )
         assert n == 8
 
@@ -359,7 +358,6 @@ class TestExternalDemandBackend:
             delivery_station_day_id=sd.id,
             year=2026,
             delivery_week=15,
-            share_options=["HARVEST_SHARE", "HARVEST_SHARE_FRUITS_ONLY"],
         )
         # CSV stores quantity directly, so capacity == sum(quantity) (5),
         # not the row count.
@@ -551,7 +549,6 @@ class TestVirtualVariationShipPredicateAndCapacity:
             delivery_station_day_id=station_day.id,
             year=2026,
             delivery_week=15,
-            share_options=["HARVEST_SHARE", "HARVEST_SHARE_FRUITS_ONLY"],
         )
         # 4 slots (subscription quantity), not 4 × (2+3) = 20.
         assert n == 4

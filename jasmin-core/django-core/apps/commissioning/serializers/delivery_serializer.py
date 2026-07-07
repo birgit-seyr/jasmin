@@ -226,7 +226,6 @@ class DeliveryStationDaySerializer(DeletableMixin, serializers.ModelSerializer):
         from django.utils import timezone
 
         from ..errors import DeliveryStationCapacityBelowOccupancy
-        from ..models.choices_text import ShareOptions
         from ..services.share_demand_service import ShareDemandService
 
         iso = timezone.now().date().isocalendar()
@@ -234,10 +233,6 @@ class DeliveryStationDaySerializer(DeletableMixin, serializers.ModelSerializer):
             delivery_station_day_id=self.instance.id,
             from_year=iso[0],
             from_week=iso[1],
-            share_options=[
-                ShareOptions.HARVEST_SHARE,
-                ShareOptions.HARVEST_SHARE_FRUITS_ONLY,
-            ],
         )
         if value < peak:
             raise DeliveryStationCapacityBelowOccupancy(
@@ -296,7 +291,6 @@ class DeliveryStationDaySerializer(DeletableMixin, serializers.ModelSerializer):
         if cached is not None:
             return cached
 
-        from ..models.choices_text import ShareOptions
         from ..services.share_demand_service import ShareDemandService
 
         # ``self.parent.instance`` is the whole list/page under ``many=True``;
@@ -310,10 +304,6 @@ class DeliveryStationDaySerializer(DeletableMixin, serializers.ModelSerializer):
         counts = ShareDemandService.capacity_counts_by_week(
             station_day_ids=station_day_ids,
             year_weeks=year_weeks,
-            share_options=[
-                ShareOptions.HARVEST_SHARE,
-                ShareOptions.HARVEST_SHARE_FRUITS_ONLY,
-            ],
         )
         self._capacity_counts_cache = counts
         return counts

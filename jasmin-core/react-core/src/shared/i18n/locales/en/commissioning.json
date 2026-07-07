@@ -118,6 +118,7 @@
   "csv_export_resellers": "export resellers as CSV",
   "csv_export_extra_articles": "export other articles as CSV",
   "planning_longterm_harvest_shares": "long-term planning",
+  "long_term_planning_of": "Long-term: {{label}}",
   "planning_longterm_shares_fruits_only": "long-term planning fruits",
   "planning_longterm_shares_veg_only": "long-term planning vegetables",
   "share_articles_fruits_vegs": "list fruits & vegetables",

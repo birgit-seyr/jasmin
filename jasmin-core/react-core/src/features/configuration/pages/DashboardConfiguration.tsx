@@ -1,11 +1,18 @@
 import { HeartOutlined } from "@ant-design/icons";
 import type { FC } from "react";
-
+import { useTranslation } from "react-i18next";
 const DashboardConfiguration: FC = () => {
+  const { t } = useTranslation();
   return (
-    <div>
+    <>
       <HeartOutlined />
-    </div>
+      <h1>{t("configuration.dashboard_title")}</h1>
+      <div style={{ width: "50%" }}>
+        {t("configuration.dashboard_note")}
+        {t("configuration.dashboard_note2")}
+        <h3>{t("configuration.checkbox_note")}</h3>
+      </div>
+    </>
   );
 };
 

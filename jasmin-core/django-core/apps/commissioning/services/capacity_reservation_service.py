@@ -23,7 +23,6 @@ from django.utils import timezone
 
 from ..errors import DeliveryStationOverCapacity
 from ..models import CapacityReservation, DeliveryStationDay, ShareDelivery
-from ..models.choices_text import ShareOptions
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +32,12 @@ logger = logging.getLogger(__name__)
 # abandoned order frees the slot.
 RESERVATION_TTL_DAYS = 14
 
-# Only these share options consume station-day capacity (mirrors
-# ``DeliveryStationDay.get_occupied_capacity``); reservations are created only
-# for them, so counting all active reservations stays consistent.
-_CAPACITY_SHARE_OPTIONS = (
-    ShareOptions.HARVEST_SHARE,
-    ShareOptions.HARVEST_SHARE_FRUITS_ONLY,
-)
+# A share occupies station-day capacity iff it is a STANDALONE (non-additional)
+# share — i.e. ``share_type.is_additional_share_type is False``. Additional
+# shares are "packed into another share's box" (e.g. honey dropped into the
+# veg box), so they take no separate pickup slot and never consume or reserve
+# capacity. Mirrors ``DeliveryStationDay.get_occupied_capacity`` +
+# ``ShareDemandService`` occupancy so reservations stay in lock-step.
 
 
 class CapacityReservationService:
@@ -70,7 +68,7 @@ class CapacityReservationService:
             or not subscription.valid_until
         ):
             return
-        if cls._share_option(subscription) not in _CAPACITY_SHARE_OPTIONS:
+        if not cls._counts_toward_capacity(subscription):
             return
 
         # Drop any prior holds for this subscription first (re-reserve on edit)
@@ -113,7 +111,6 @@ class CapacityReservationService:
         occupied_by_week = ShareDemandService.capacity_counts_by_week(
             station_day_ids=distinct_ids,
             year_weeks=year_weeks,
-            share_options=_CAPACITY_SHARE_OPTIONS,
         )
 
         quantity = subscription.quantity or 1
@@ -168,7 +165,7 @@ class CapacityReservationService:
             or not subscription.valid_until
         ):
             return
-        if cls._share_option(subscription) not in _CAPACITY_SHARE_OPTIONS:
+        if not cls._counts_toward_capacity(subscription):
             return
 
         # Resolve the ACTUAL per-week station-day so the backstop verifies each
@@ -202,7 +199,6 @@ class CapacityReservationService:
         total_by_week = ShareDemandService.capacity_counts_by_week(
             station_day_ids=distinct_ids,
             year_weeks=year_weeks,
-            share_options=_CAPACITY_SHARE_OPTIONS,
         )
         # Our own still-active holds, quantity-weighted (Coalesce(quantity, 1))
         # to match ``total``, per (resolved DSD, year, week). A plain row count
@@ -240,7 +236,7 @@ class CapacityReservationService:
         delivery_station_day_id: str,
         year: int,
         week: int,
-        share_option: str | None,
+        is_additional_share_type: bool,
         quantity: int,
     ) -> None:
         """Un-pause restore: materialising ``quantity`` slots for a station-day
@@ -249,9 +245,10 @@ class CapacityReservationService:
         blindly restoring the paused deliveries can overbook the week — raise
         :class:`DeliveryStationOverCapacity` instead of silently overfilling
         (BIZ-6). Locks the station-day for race-safety, mirroring the confirm /
-        move checks. No-op for non-harvest options.
+        move checks. No-op for additional (packed-along) shares — they take no
+        pickup slot.
         """
-        if share_option not in _CAPACITY_SHARE_OPTIONS:
+        if is_additional_share_type:
             return
         delivery_station_day = DeliveryStationDay.objects.select_for_update().get(
             pk=delivery_station_day_id
@@ -274,19 +271,19 @@ class CapacityReservationService:
         delivery_station_day_id: str,
         year: int,
         week: int,
-        share_option: str | None,
+        is_additional_share_type: bool,
         moving_delivery_id: str | None = None,
     ) -> None:
-        """Assert a (harvest) ShareDelivery may occupy ``delivery_station_day_id``
+        """Assert a standalone ShareDelivery may occupy ``delivery_station_day_id``
         for ``(year, week)`` — used when the office moves a delivery to another
         station-day. Locks the station-day for race-safety.
 
-        No-op for non-harvest deliveries. ``moving_delivery_id`` is the delivery
-        being moved IN: if it already sits at this station-day for this week (a
-        non-move re-save), it is discounted so we don't block on a delivery
-        against itself.
+        No-op for additional (packed-along) deliveries — they take no slot.
+        ``moving_delivery_id`` is the delivery being moved IN: if it already sits
+        at this station-day for this week (a non-move re-save), it is discounted
+        so we don't block on a delivery against itself.
         """
-        if share_option not in _CAPACITY_SHARE_OPTIONS:
+        if is_additional_share_type:
             return
         delivery_station_day = DeliveryStationDay.objects.select_for_update().get(
             pk=delivery_station_day_id
@@ -343,7 +340,14 @@ class CapacityReservationService:
         CapacityReservation.objects.filter(subscription=subscription).delete()
 
     @staticmethod
-    def _share_option(subscription) -> str | None:
+    def _counts_toward_capacity(subscription) -> bool:
+        """A subscription occupies station-day capacity iff its share_type is a
+        standalone (non-additional) share. Add-ons (``is_additional_share_type``)
+        ride along in another share's box and take no slot. Unknown share_type
+        (defensive) → False, i.e. reserve nothing — matches the old ``None``
+        share_option skip."""
         variation = getattr(subscription, "share_type_variation", None)
         share_type = getattr(variation, "share_type", None)
-        return getattr(share_type, "share_option", None)
+        if share_type is None:
+            return False
+        return not share_type.is_additional_share_type

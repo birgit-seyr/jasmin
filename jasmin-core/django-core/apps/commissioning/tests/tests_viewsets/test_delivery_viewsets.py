@@ -319,8 +319,10 @@ class TestDeliveryStationDayViewSet:
         )
         ShareDeliveryFactory(share=share_h, delivery_station_day=dsd)
 
-        # CHICKEN_SHARE does NOT count
-        chicken_type = ShareTypeFactory(share_option="CHICKEN_SHARE")
+        # An ADDITIONAL (packed-along) share does NOT count — it takes no slot.
+        chicken_type = ShareTypeFactory(
+            share_option="CHICKEN_SHARE", is_additional_share_type=True
+        )
         chicken_var = ShareTypeVariationFactory(share_type=chicken_type)
         share_c = ShareFactory(
             delivery_day=dd,
@@ -336,6 +338,30 @@ class TestDeliveryStationDayViewSet:
         entry = next(e for e in resp.data if e["id"] == str(dsd.id))
         assert entry["capacity_by_week"]["2026-15"]["occupied"] == 1  # only harvest
         assert entry["capacity_by_week"]["2026-15"]["free"] == 9
+
+    def test_capacity_counts_standalone_non_harvest_share(self, api_client, tenant):
+        # Capacity keys on is_additional_share_type, NOT the share_option: a
+        # STANDALONE (non-additional) share occupies a slot even when it isn't a
+        # harvest share — a standalone chicken box takes a pickup slot.
+        dd = SharesDeliveryDayFactory(day_number=6)
+        dsd = DeliveryStationDayFactory(delivery_day=dd, capacity=10)
+        chicken_type = ShareTypeFactory(
+            share_option="CHICKEN_SHARE", is_additional_share_type=False
+        )
+        chicken_var = ShareTypeVariationFactory(share_type=chicken_type)
+        share_c = ShareFactory(
+            delivery_day=dd,
+            share_type_variation=chicken_var,
+            year=2026,
+            delivery_week=15,
+        )
+        ShareDeliveryFactory(share=share_c, delivery_station_day=dsd)
+
+        resp = api_client.get(
+            self.URL, {"year": 2026, "delivery_week": 15, "num_weeks": 1}
+        )
+        entry = next(e for e in resp.data if e["id"] == str(dsd.id))
+        assert entry["capacity_by_week"]["2026-15"]["occupied"] == 1
 
     def test_capacity_different_week_not_counted(self, api_client, tenant):
         dd = SharesDeliveryDayFactory(day_number=0)

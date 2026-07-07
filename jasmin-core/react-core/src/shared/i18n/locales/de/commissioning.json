@@ -121,6 +121,7 @@
   "csv_export_resellers": "Wiederverkäufer als CSV exportieren",
   "csv_export_extra_articles": "Sonstige Artikel als CSV exportieren",
   "planning_longterm_harvest_shares": "Langzeit-Planung",
+  "long_term_planning_of": "Langzeit: {{label}}",
   "planning_longterm_shares_fruits_only": "Langzeit-Planung Obst",
   "planning_longterm_shares_veg_only": "Langzeit-Planung Gemüse",
   "share_articles_fruits_vegs": "Liste Obst & Gemüse",
@@ -709,6 +710,7 @@
   "no_offer_groups_found": "Keine Angebotsgruppen gefunden — bitte mindestens eine anlegen, bevor Angebote erstellt werden.",
   "no_other_variations": "Keine weiteren Varianten",
   "no_variation_columns_title": "Keine Anteilsgrößen konfiguriert.",
+  "no_orders_title": "Keine Bestellungen vorhanden.",
   "no_variation_columns_message": "Für die ausgewählte Woche gibt es keine Anteilsgrößen. Bitte richte Anteilstypen und Liefertage (mit Verteilstationen) ein, damit diese Tabelle angezeigt werden kann.",
   "organic": {
     "conventional": "Konventionell",

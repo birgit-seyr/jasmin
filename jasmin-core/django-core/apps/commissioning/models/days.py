@@ -194,11 +194,14 @@ class DeliveryStationDay(JasminModel, TimeBoundMixin):
                 )
 
     def get_occupied_capacity(self, year: int, delivery_week: int) -> int:
-        """Count how many shares occupy this station-day for HARVEST_SHARE/FRUIT.
+        """Count how many shares occupy this station-day.
 
-        Routed through :class:`ShareDemandService` so the value is correct
-        for both subscription-driven tenants and tenants whose demand is
-        sourced from the weekly CSV import.
+        Only STANDALONE (non-additional) shares occupy a pickup slot — an
+        additional share (``is_additional_share_type``) is packed into another
+        share's box and takes no capacity. Routed through
+        :class:`ShareDemandService` so the value is correct for both
+        subscription-driven tenants and tenants whose demand is sourced from
+        the weekly CSV import.
 
         Feeds both the office UI's "X / Y full" indicator and hard
         enforcement: :class:`apps.commissioning.services.
@@ -209,16 +212,11 @@ class DeliveryStationDay(JasminModel, TimeBoundMixin):
         capacity edit at the busiest upcoming week's occupancy.
         """
         from ..services.share_demand_service import ShareDemandService
-        from .choices_text import ShareOptions
 
         return ShareDemandService.share_option_capacity_count(
             delivery_station_day_id=self.id,
             year=year,
             delivery_week=delivery_week,
-            share_options=[
-                ShareOptions.HARVEST_SHARE,
-                ShareOptions.HARVEST_SHARE_FRUITS_ONLY,
-            ],
         )
 
 

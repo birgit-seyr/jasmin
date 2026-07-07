@@ -474,7 +474,9 @@ class _ShareDeliveryWriteChoreographyMixin:
                 delivery_station_day_id=target_delivery_station_day.id,
                 year=share.year,
                 week=share.delivery_week,
-                share_option=share.share_type_variation.share_type.share_option,
+                is_additional_share_type=(
+                    share.share_type_variation.share_type.is_additional_share_type
+                ),
                 moving_delivery_id=None,
             )
 
@@ -498,8 +500,8 @@ class _ShareDeliveryWriteChoreographyMixin:
                 delivery_station_day_id=target_delivery_station_day.id,
                 year=instance.share.year,
                 week=instance.share.delivery_week,
-                share_option=(
-                    instance.share.share_type_variation.share_type.share_option
+                is_additional_share_type=(
+                    instance.share.share_type_variation.share_type.is_additional_share_type
                 ),
                 moving_delivery_id=instance.pk,
             )
@@ -786,12 +788,13 @@ class ShareDeliveryViewSet(
         target_delivery_station_day = serializer.validated_data.get(
             "delivery_station_day", instance.delivery_station_day
         )
-        # Same share type across the subscription → one share option drives the
-        # capacity check for the primary delivery and any future ones.
-        share_option = (
-            instance.share.share_type_variation.share_type.share_option
+        # Same share type across the subscription → one flag drives the capacity
+        # check for the primary delivery and any future ones. No share to place
+        # → treat as non-capacity-consuming so the check is skipped.
+        is_additional_share_type = (
+            instance.share.share_type_variation.share_type.is_additional_share_type
             if instance.share_id
-            else None
+            else True
         )
         apply_to_future = self.request.data.get("apply_to_future", False)
 
@@ -869,7 +872,7 @@ class ShareDeliveryViewSet(
                             delivery_station_day_id=matching_delivery_station_day.id,
                             year=delivery.share.year,
                             week=delivery.share.delivery_week,
-                            share_option=share_option,
+                            is_additional_share_type=is_additional_share_type,
                             moving_delivery_id=delivery.pk,
                         )
                     delivery.delivery_station_day = matching_delivery_station_day

@@ -38,7 +38,6 @@ from apps.commissioning.tests.factories import (
 )
 from apps.commissioning.tests.factories.members import PaymentCycleFactory
 
-HARVEST = ["HARVEST_SHARE", "HARVEST_SHARE_FRUIT"]
 DAY_NUMBER = 2  # Wednesday — matches SharesDeliveryDayFactory default
 
 
@@ -64,9 +63,15 @@ def _make_subscription(
     valid_from=datetime.date(2026, 1, 5),
     valid_until=datetime.date(2026, 1, 11),
     share_option="HARVEST_SHARE",
+    is_additional=False,
 ):
-    """A draft (unconfirmed) subscription whose default station-day is ``dsd``."""
-    share_type = ShareTypeFactory(share_option=share_option)
+    """A draft (unconfirmed) subscription whose default station-day is ``dsd``.
+
+    ``is_additional`` marks the share_type as a packed-along add-on, which
+    occupies NO station-day capacity (the standalone-only gate)."""
+    share_type = ShareTypeFactory(
+        share_option=share_option, is_additional_share_type=is_additional
+    )
     variation = ShareTypeVariationFactory(share_type=share_type)
     return SubscriptionFactory(
         share_type_variation=variation,
@@ -136,7 +141,6 @@ class TestOccupancyCountsReservations:
                 delivery_station_day_id=dsd.id,
                 year=2026,
                 delivery_week=2,
-                share_options=HARVEST,
             )
             == 1
         )
@@ -156,7 +160,6 @@ class TestOccupancyCountsReservations:
                 delivery_station_day_id=dsd.id,
                 year=2026,
                 delivery_week=2,
-                share_options=HARVEST,
             )
             == 0
         )
@@ -177,7 +180,6 @@ class TestOccupancyCountsReservations:
                 delivery_station_day_id=dsd.id,
                 year=2026,
                 delivery_week=2,
-                share_options=HARVEST,
             )
             == 2
         )
@@ -196,7 +198,6 @@ class TestOccupancyCountsReservations:
         counts = ShareDemandService.capacity_counts_by_week(
             station_day_ids=[dsd.id],
             year_weeks=[(2026, 2)],
-            share_options=HARVEST,
         )
         assert counts.get((dsd.id, 2026, 2)) == 2
 
@@ -285,9 +286,10 @@ class TestReserveForSubscription:
         assert default_dsd.id in dsd_ids
         assert successor_dsd.id in dsd_ids
 
-    def test_noop_for_non_harvest_share_option(self, tenant):
+    def test_noop_for_additional_share(self, tenant):
         dsd = _make_dsd(capacity=1)
-        sub = _make_subscription(dsd=dsd, share_option="CHICKEN_SHARE")
+        # Additional (packed-along) shares take no slot → no reservation.
+        sub = _make_subscription(dsd=dsd, is_additional=True)
         CapacityReservationService.reserve_for_subscription(sub)
         assert not CapacityReservation.objects.filter(subscription=sub).exists()
 
@@ -428,7 +430,7 @@ class TestAssertShareDeliveryFits:
                 delivery_station_day_id=dsd.id,
                 year=2026,
                 week=2,
-                share_option="HARVEST_SHARE",
+                is_additional_share_type=False,
             )
 
     def test_passes_with_room(self, tenant):
@@ -439,18 +441,18 @@ class TestAssertShareDeliveryFits:
             delivery_station_day_id=dsd.id,
             year=2026,
             week=2,
-            share_option="HARVEST_SHARE",
+            is_additional_share_type=False,
         )
 
-    def test_noop_for_non_harvest(self, tenant):
+    def test_noop_for_additional_share(self, tenant):
         dsd = _make_dsd(capacity=1)
         _fill_one_slot(dsd, 2026, 2)
-        # Non-harvest never blocks (capacity is harvest-only).
+        # Additional (packed-along) shares never block — they take no slot.
         CapacityReservationService.assert_share_delivery_fits(
             delivery_station_day_id=dsd.id,
             year=2026,
             week=2,
-            share_option="CHICKEN_SHARE",
+            is_additional_share_type=True,
         )
 
     def test_moving_delivery_already_here_is_discounted(self, tenant):
@@ -462,7 +464,7 @@ class TestAssertShareDeliveryFits:
             delivery_station_day_id=dsd.id,
             year=2026,
             week=2,
-            share_option="HARVEST_SHARE",
+            is_additional_share_type=False,
             moving_delivery_id=delivery.id,
         )
 
@@ -491,7 +493,7 @@ class TestAssertShareDeliveryFits:
                 delivery_station_day_id=target.id,
                 year=2026,
                 week=2,
-                share_option="HARVEST_SHARE",
+                is_additional_share_type=False,
                 moving_delivery_id=moving.id,
             )
 
@@ -532,7 +534,6 @@ class TestEndToEnd:
                 delivery_station_day_id=dsd.id,
                 year=year,
                 delivery_week=week,
-                share_options=HARVEST,
             )
             == 1
         )
@@ -548,7 +549,6 @@ class TestEndToEnd:
                 delivery_station_day_id=dsd.id,
                 year=year,
                 delivery_week=week,
-                share_options=HARVEST,
             )
             == 1
         )
@@ -664,7 +664,6 @@ class TestCapacityExcludesNonShippingDeliveries:
             delivery_station_day_id=dsd.id,
             year=2026,
             delivery_week=2,
-            share_options=HARVEST,
         )
 
     def test_normal_delivery_counts(self, tenant):
@@ -693,14 +692,12 @@ class TestCapacityExcludesNonShippingDeliveries:
         by_week = ShareDemandService.capacity_counts_by_week(
             station_day_ids=[dsd.id],
             year_weeks=[(2026, 2)],
-            share_options=HARVEST,
         )
         assert by_week.get((dsd.id, 2026, 2)) == 1
         peak, _y, _w = ShareDemandService.peak_occupied_from_week(
             delivery_station_day_id=dsd.id,
             from_year=2026,
             from_week=1,
-            share_options=HARVEST,
         )
         assert peak == 1
 
@@ -720,7 +717,7 @@ class TestAssertRestoreFits:
                 delivery_station_day_id=dsd.id,
                 year=2026,
                 week=3,
-                share_option="HARVEST_SHARE",
+                is_additional_share_type=False,
                 quantity=1,
             )
 
@@ -732,19 +729,19 @@ class TestAssertRestoreFits:
             delivery_station_day_id=dsd.id,
             year=2026,
             week=3,
-            share_option="HARVEST_SHARE",
+            is_additional_share_type=False,
             quantity=1,
         )
 
-    def test_non_harvest_option_is_noop(self, tenant):
+    def test_additional_share_is_noop(self, tenant):
         dsd = _make_dsd(capacity=1)
         _fill_one_slot(dsd, 2026, 3)
-        # A non-capacity-managed share option isn't station-day-limited.
+        # An additional (packed-along) share isn't station-day-limited.
         CapacityReservationService.assert_restore_fits(
             delivery_station_day_id=dsd.id,
             year=2026,
             week=3,
-            share_option="COOP_SHARE",
+            is_additional_share_type=True,
             quantity=5,
         )
 

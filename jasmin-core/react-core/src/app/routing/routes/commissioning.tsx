@@ -43,29 +43,8 @@ const Forecast = lazy(() => import("@features/commissioning/pages/Forecast"));
 const HarvestingList = lazy(
   () => import("@features/commissioning/pages/HarvestingList"),
 );
-const PlanningShareContentHARVESTSHARE = lazy(
-  () =>
-    import("@/features/commissioning/pages/PlanningShareContentHARVESTSHARE"),
-);
-const PlanningShareContentHARVESTSHAREFRUIT = lazy(
-  () =>
-    import("@/features/commissioning/pages/PlanningShareContentHARVESTSHAREFRUIT"),
-);
-const PlanningShareContentOILSHARE = lazy(
-  () => import("@/features/commissioning/pages/PlanningShareContentOILSHARE"),
-);
-const PlanningShareContentGRAINSHARE = lazy(
-  () => import("@/features/commissioning/pages/PlanningShareContentGRAINSHARE"),
-);
-const PlanningShareContentHONEYSHARE = lazy(
-  () => import("@/features/commissioning/pages/PlanningShareContentHONEYSHARE"),
-);
-const PlanningShareContentBREADSHARE = lazy(
-  () => import("@/features/commissioning/pages/PlanningShareContentBREADSHARE"),
-);
-const PlanningShareContentCHICKENSHARE = lazy(
-  () =>
-    import("@/features/commissioning/pages/PlanningShareContentCHICKENSHARE"),
+const PlanningShareContentPage = lazy(
+  () => import("@features/commissioning/pages/PlanningShareContentPage"),
 );
 const Invoices = lazy(() => import("@features/commissioning/pages/Invoices"));
 
@@ -129,14 +108,6 @@ const CleaningList = lazy(
 );
 const AmountShares = lazy(
   () => import("@features/commissioning/pages/AmountShares"),
-);
-const PlanningLongTermHarvestShares = lazy(
-  () =>
-    import("@/features/commissioning/pages/PlanningShareContentLongTermHARVESTSHARE"),
-);
-const PlanningLongTermHarvestSharesFruitsOnly = lazy(
-  () =>
-    import("@/features/commissioning/pages/PlanningShareContentLongTermHARVESTSHAREFRUIT"),
 );
 const ShareDays = lazy(() => import("@features/commissioning/pages/ShareDays"));
 const PurchaseList = lazy(
@@ -222,10 +193,21 @@ export const commissioningRoutes: AppRoute[] = [
     ),
   },
   {
-    path: "/commissioning/planning-harvest-shares",
+    // One data-driven planning route per view. ``:slug`` selects the share
+    // option (see @shared/planning/planningShareOptions); the page derives
+    // complex-vs-long-term from the option's active ShareType.
+    path: "/commissioning/planning/:slug",
     element: (
       <RequireRole flag="isOffice">
-        <PlanningShareContentHARVESTSHARE />
+        <PlanningShareContentPage mode="complex" />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/commissioning/planning/:slug/long-term",
+    element: (
+      <RequireRole flag="isOffice">
+        <PlanningShareContentPage mode="long-term" />
       </RequireRole>
     ),
   },
@@ -266,86 +248,6 @@ export const commissioningRoutes: AppRoute[] = [
     element: (
       <RequireRole flag="isStaff">
         <CleaningList />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/commissioning/planning-harvest-shares-fruits-only",
-    element: (
-      <RequireRole flag="isOffice">
-        <PlanningShareContentHARVESTSHAREFRUIT />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/commissioning/planning-harvest-shares-veg-only",
-    element: (
-      <RequireRole flag="isOffice">
-        <PlanningShareContentHARVESTSHARE />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/commissioning/planning-additional-oil-shares",
-    element: (
-      <RequireRole flag="isOffice">
-        <PlanningShareContentOILSHARE />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/commissioning/planning-additional-grain-shares",
-    element: (
-      <RequireRole flag="isOffice">
-        <PlanningShareContentGRAINSHARE />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/commissioning/planning-additional-honey-shares",
-    element: (
-      <RequireRole flag="isOffice">
-        <PlanningShareContentHONEYSHARE />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/commissioning/planning-longterm-harvest-shares",
-    element: (
-      <RequireRole flag="isOffice">
-        <PlanningLongTermHarvestShares />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/commissioning/planning-longterm-harvest-shares-fruits-only",
-    element: (
-      <RequireRole flag="isOffice">
-        <PlanningLongTermHarvestSharesFruitsOnly />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/commissioning/planning-longterm-harvest-shares-veg-only",
-    element: (
-      <RequireRole flag="isOffice">
-        <PlanningLongTermHarvestShares />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/commissioning/planning-additional-bread-shares",
-    element: (
-      <RequireRole flag="isOffice">
-        <PlanningShareContentBREADSHARE />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/commissioning/planning-additional-chicken-shares",
-    element: (
-      <RequireRole flag="isOffice">
-        <PlanningShareContentCHICKENSHARE />
       </RequireRole>
     ),
   },

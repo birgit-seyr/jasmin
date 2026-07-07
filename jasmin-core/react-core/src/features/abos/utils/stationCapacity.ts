@@ -138,7 +138,7 @@ export function capacityFloorParams(): {
   return {
     year: now.isoWeekYear(),
     delivery_week: now.isoWeek(),
-    num_weeks: 156,
+    num_weeks: 104,
   };
 }
 

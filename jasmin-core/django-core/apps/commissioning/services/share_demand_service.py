@@ -85,7 +85,6 @@ class _DemandBackend(Protocol):
         delivery_station_day_id: str,
         year: int,
         delivery_week: int,
-        share_options: Iterable[str],
     ) -> int: ...
 
     def capacity_counts_by_week(
@@ -93,7 +92,6 @@ class _DemandBackend(Protocol):
         *,
         station_day_ids: Iterable[str],
         year_weeks: Iterable[tuple[int, int]],
-        share_options: Iterable[str],
     ) -> dict[tuple[str, int, int], int]: ...
 
     def peak_occupied_from_week(
@@ -102,7 +100,6 @@ class _DemandBackend(Protocol):
         delivery_station_day_id: str,
         from_year: int,
         from_week: int,
-        share_options: Iterable[str],
     ) -> tuple[int, int | None, int | None]: ...
 
 
@@ -257,7 +254,6 @@ class SubscriptionDemandBackend:
         delivery_station_day_id: str,
         year: int,
         delivery_week: int,
-        share_options: Iterable[str],
     ) -> int:
         # Capacity is in SHARES, so weight by subscription quantity (a
         # quantity=3 subscription occupies 3 slots), matching this backend's
@@ -274,9 +270,7 @@ class SubscriptionDemandBackend:
                 delivery_station_day_id=delivery_station_day_id,
                 share__year=year,
                 share__delivery_week=delivery_week,
-                share__share_type_variation__share_type__share_option__in=list(
-                    share_options
-                ),
+                share__share_type_variation__share_type__is_additional_share_type=False,
             )
             .filter(ShareDelivery.delivery_counts_q())
             .aggregate(n=Sum(Coalesce("subscription__quantity", 1)))["n"]
@@ -300,7 +294,6 @@ class SubscriptionDemandBackend:
         *,
         station_day_ids: Iterable[str],
         year_weeks: Iterable[tuple[int, int]],
-        share_options: Iterable[str],
     ) -> dict[tuple[str, int, int], int]:
         # Batched form of ``share_option_capacity_count`` over many
         # station-days and weeks at once — ONE grouped query instead of a
@@ -317,9 +310,7 @@ class SubscriptionDemandBackend:
                 delivery_station_day_id__in=ids,
                 share__year__in=years,
                 share__delivery_week__in=weeks,
-                share__share_type_variation__share_type__share_option__in=list(
-                    share_options
-                ),
+                share__share_type_variation__share_type__is_additional_share_type=False,
             )
             # BL-5: jokered/opted-out don't ship — the ONE canonical predicate.
             .filter(ShareDelivery.delivery_counts_q())
@@ -362,13 +353,11 @@ class SubscriptionDemandBackend:
         delivery_station_day_id: str,
         from_year: int,
         from_week: int,
-        share_options: Iterable[str],
     ) -> tuple[int, int | None, int | None]:
         # Busiest single week at/after (from_year, from_week): confirmed
         # deliveries + active draft reservations, merged per week. ISO
         # (year, week) tuple comparison via the OR-Q (year>Y, or year==Y &&
         # week>=W) — past weeks are excluded (immutable, can't constrain a cap).
-        share_options = list(share_options)
         per_week: dict[tuple[int, int], int] = defaultdict(int)
 
         future_deliveries = Q(share__year__gt=from_year) | Q(
@@ -377,7 +366,7 @@ class SubscriptionDemandBackend:
         delivery_rows = (
             ShareDelivery.objects.filter(
                 delivery_station_day_id=delivery_station_day_id,
-                share__share_type_variation__share_type__share_option__in=share_options,
+                share__share_type_variation__share_type__is_additional_share_type=False,
             )
             .filter(future_deliveries)
             # BL-5: jokered/opted-out don't ship — the ONE canonical predicate.
@@ -545,7 +534,6 @@ class ExternalDemandBackend:
         delivery_station_day_id: str,
         year: int,
         delivery_week: int,
-        share_options: Iterable[str],
     ) -> int:
         # CSV demand carries quantities, so "capacity used" is the sum of
         # quantities of variations belonging to the requested share options.
@@ -554,7 +542,7 @@ class ExternalDemandBackend:
                 delivery_station_day_id=delivery_station_day_id,
                 year=year,
                 delivery_week=delivery_week,
-                share_type_variation__share_type__share_option__in=list(share_options),
+                share_type_variation__share_type__is_additional_share_type=False,
             )
             .aggregate(n=Sum("quantity"))
             .get("n")
@@ -566,7 +554,6 @@ class ExternalDemandBackend:
         *,
         station_day_ids: Iterable[str],
         year_weeks: Iterable[tuple[int, int]],
-        share_options: Iterable[str],
     ) -> dict[tuple[str, int, int], int]:
         # CSV demand carries quantities, so "used" is the summed quantity.
         # One grouped query for all station-days/weeks (mirrors the
@@ -582,7 +569,7 @@ class ExternalDemandBackend:
                 delivery_station_day_id__in=ids,
                 year__in=years,
                 delivery_week__in=weeks,
-                share_type_variation__share_type__share_option__in=list(share_options),
+                share_type_variation__share_type__is_additional_share_type=False,
             )
             .values("delivery_station_day_id", "year", "delivery_week")
             .annotate(n=Sum("quantity"))
@@ -600,7 +587,6 @@ class ExternalDemandBackend:
         delivery_station_day_id: str,
         from_year: int,
         from_week: int,
-        share_options: Iterable[str],
     ) -> tuple[int, int | None, int | None]:
         # CSV demand carries quantities, so the busiest week is the highest
         # summed quantity at/after (from_year, from_week).
@@ -608,7 +594,7 @@ class ExternalDemandBackend:
         rows = (
             ExternalShareDemand.objects.filter(
                 delivery_station_day_id=delivery_station_day_id,
-                share_type_variation__share_type__share_option__in=list(share_options),
+                share_type_variation__share_type__is_additional_share_type=False,
             )
             .filter(future)
             .values("year", "delivery_week")
@@ -718,13 +704,11 @@ class ShareDemandService:
         delivery_station_day_id: str,
         year: int,
         delivery_week: int,
-        share_options: Iterable[str],
     ) -> int:
         return _resolve_backend().share_option_capacity_count(
             delivery_station_day_id=delivery_station_day_id,
             year=year,
             delivery_week=delivery_week,
-            share_options=share_options,
         )
 
     @classmethod
@@ -733,7 +717,6 @@ class ShareDemandService:
         *,
         station_day_ids: Iterable[str],
         year_weeks: Iterable[tuple[int, int]],
-        share_options: Iterable[str],
     ) -> dict[tuple[str, int, int], int]:
         """Batched occupancy: ``{(station_day_id, year, week): used}``.
 
@@ -744,7 +727,6 @@ class ShareDemandService:
         return _resolve_backend().capacity_counts_by_week(
             station_day_ids=station_day_ids,
             year_weeks=year_weeks,
-            share_options=list(share_options),
         )
 
     @classmethod
@@ -754,7 +736,6 @@ class ShareDemandService:
         delivery_station_day_id: str,
         from_year: int,
         from_week: int,
-        share_options: Iterable[str],
     ) -> tuple[int, int | None, int | None]:
         """Busiest single week at/after ``(from_year, from_week)`` for one
         station-day: ``(peak_occupied, peak_year, peak_week)``.
@@ -766,5 +747,4 @@ class ShareDemandService:
             delivery_station_day_id=delivery_station_day_id,
             from_year=from_year,
             from_week=from_week,
-            share_options=list(share_options),
         )

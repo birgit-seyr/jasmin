@@ -12,6 +12,7 @@ import type {
   CommissioningDaysWithOrdersRetrieveParams,
   CommissioningListEntry,
 } from "@shared/api/generated/models";
+import { PastWarningMessage } from "@shared/ui";
 import { CommissioningListResellersPDFGenerator } from "@features/commissioning/pdfs";
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { ExplainerText, MobileStack } from "@shared/ui";
@@ -201,11 +202,11 @@ export default function CommissioningListResellers() {
       ></div>
       <div>
         {resellers.length === 0 && !loadingResellers ? (
-          <Card style={{ width: "60%" }}>
+          <PastWarningMessage>
             <div style={{ textAlign: "center", padding: "0em" }}>
-              {t("commissioning.no_orders_available")}
+              {t("commissioning.no_orders_title")}
             </div>
-          </Card>
+          </PastWarningMessage>
         ) : (
           resellers
             .filter((reseller) => reseller.order?.contents?.length ?? 0 > 0)

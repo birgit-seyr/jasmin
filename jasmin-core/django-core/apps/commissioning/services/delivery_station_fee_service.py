@@ -24,7 +24,6 @@ from django.db.models import Q, QuerySet
 
 from ..models import DeliveryStation, ShareDelivery
 from ..utils.iso_week_utils import delivery_date_from_fields
-from .capacity_reservation_service import _CAPACITY_SHARE_OPTIONS
 
 _CENT = Decimal("0.01")
 
@@ -79,15 +78,14 @@ class DeliveryStationFeeService:
                 delivery_station_day__delivery_station=station,
                 share__year__in=years,
                 share__delivery_week__in=weeks,
-                # Only HARVEST_SHARE / HARVEST_SHARE_FRUIT boxes drive the
-                # per-box station fee — the exact share options that consume
-                # station-day capacity (non-harvest shares like honey / chicken
-                # don't occupy capacity, so they must not be billed here either).
-                # Reuses the canonical ``_CAPACITY_SHARE_OPTIONS`` so the fee
+                # Only STANDALONE (non-additional) boxes drive the per-box
+                # station fee — the exact shares that consume station-day
+                # capacity. An additional share (is_additional_share_type) is
+                # packed into another share's box, so it occupies no slot and
+                # must not be billed here either. Same gate as
+                # ``get_occupied_capacity`` / the reservation service, so the fee
                 # count stays in lock-step with capacity/occupancy.
-                subscription__share_type_variation__share_type__share_option__in=(
-                    _CAPACITY_SHARE_OPTIONS
-                ),
+                subscription__share_type_variation__share_type__is_additional_share_type=False,
             )
             .values(
                 "share__year",

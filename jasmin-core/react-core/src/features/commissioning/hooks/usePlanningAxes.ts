@@ -90,9 +90,22 @@ export function usePlanningAxes({
   const { shareTypeVariations, loading: variationsLoading } =
     useShareTypeVariations(variationParams);
 
+  // Present the day × variation grid in the office-defined ``sort_order``
+  // (S/M/L given 1/2/3 → S, M, L), consistent with the delivery-station
+  // columns. Falls back to size only to break ties when sort_order is unset.
+  const orderedShareTypeVariations = useMemo(
+    () =>
+      [...shareTypeVariations].sort(
+        (a, b) =>
+          (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
+          (a.size ?? "").localeCompare(b.size ?? ""),
+      ),
+    [shareTypeVariations],
+  );
+
   return {
     shareDeliveryDays,
-    shareTypeVariations,
+    shareTypeVariations: orderedShareTypeVariations,
     toursExist,
     activeAtDate,
     daysLoading,

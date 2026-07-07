@@ -85,8 +85,16 @@ export const useShareTypeVariationColumns = (
       group.variations.push(v);
     }
     const out = Array.from(groups.values());
+    // Honour the per-variation ``sort_order`` the office sets (S/M/L as 1/2/3
+    // renders S, M, L) — NOT an alphabetical size sort (which would give
+    // L, M, S). Falls back to size only to break ties when sort_order is unset
+    // (all default 0). Mirrors ``useAllShareTypeVariations``.
     out.forEach((g) =>
-      g.variations.sort((a, b) => (a.size ?? "").localeCompare(b.size ?? "")),
+      g.variations.sort(
+        (a, b) =>
+          (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
+          (a.size ?? "").localeCompare(b.size ?? ""),
+      ),
     );
     out.sort((a, b) =>
       (a.share_type_name ?? "").localeCompare(b.share_type_name ?? ""),

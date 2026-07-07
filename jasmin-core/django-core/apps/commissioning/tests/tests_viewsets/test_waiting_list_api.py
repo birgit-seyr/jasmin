@@ -4,7 +4,7 @@ HTTP flows, through the real serializers and viewsets.
 Covers the reported bug ("a waiting_list create lands in the main Abos list and can
 be admin-confirmed"): flag survival through POST /abos/, the on_waiting_list
 list filter, the confirm-time capacity backstop, promotion after a slot frees,
-PATCH flag-flip coherence, and the by-design non-harvest capacity exemption.
+PATCH flag-flip coherence, and the by-design additional-share capacity exemption.
 """
 
 from __future__ import annotations
@@ -325,17 +325,18 @@ class TestWaitingListPatchFlipApi:
 
 
 @pytest.mark.django_db
-class TestNonHarvestCapacityExemption:
-    """Station capacity counts HARVEST boxes only — other share options bypass
-    the reservation AND the confirm backstop BY DESIGN (a bread share doesn't
-    occupy a harvest slot). Pin that semantic so a change is deliberate."""
+class TestAdditionalShareCapacityExemption:
+    """Station capacity counts STANDALONE boxes only — ADDITIONAL (packed-along)
+    shares bypass the reservation AND the confirm backstop BY DESIGN (an add-on
+    rides in another box and takes no slot). Pin that semantic so a change is
+    deliberate."""
 
-    def test_non_harvest_create_succeeds_on_harvest_full_station(
-        self, api_client, tenant
-    ):
+    def test_additional_share_create_succeeds_on_full_station(self, api_client, tenant):
         dsd = _make_dsd(capacity=1)
         _occupy_slot(dsd)
-        share_type = ShareTypeFactory(share_option="BREAD_SHARE")
+        share_type = ShareTypeFactory(
+            share_option="BREAD_SHARE", is_additional_share_type=True
+        )
         variation = ShareTypeVariationFactory(share_type=share_type)
 
         resp = api_client.post(

@@ -107,16 +107,19 @@ class TestComputeFeesBilling:
         full = DeliveryStationFeeService.compute_fees(station, _FROM, _UNTIL)
         assert full["quantity"] == 3
 
-    def test_per_box_excludes_non_harvest_shares(self, tenant):
-        # Only HARVEST_SHARE / HARVEST_SHARE_FRUIT boxes drive the per-box fee
-        # (the same options that consume station capacity). A honey share
-        # delivered to the SAME station-day must NOT be billed.
+    def test_per_box_excludes_additional_shares(self, tenant):
+        # Only STANDALONE (non-additional) boxes drive the per-box fee — the same
+        # shares that consume station capacity. An ADDITIONAL (packed-along)
+        # honey share delivered to the SAME station-day rides in another box, so
+        # it takes no slot and must NOT be billed.
         station, _ = _station_with_deliveries(fee_per_box_net=Decimal("2.00"))
         dsd = DeliveryStationDay.objects.get(delivery_station=station)
 
         honey_sub = SubscriptionFactory(
             share_type_variation=ShareTypeVariationFactory(
-                share_type=ShareTypeFactory(share_option="HONEY_SHARE")
+                share_type=ShareTypeFactory(
+                    share_option="HONEY_SHARE", is_additional_share_type=True
+                )
             ),
             default_delivery_station_day=dsd,
             valid_from=_FROM,

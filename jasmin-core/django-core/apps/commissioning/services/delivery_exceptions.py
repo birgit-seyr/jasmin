@@ -255,10 +255,15 @@ def _restore_weeks(subscription: Subscription, weeks: set[YearWeek]) -> set:
     # taken by new confirmed subscriptions, so restoring a paused delivery can
     # push the week over capacity. Capacity-check each restore (raises
     # DeliveryStationOverCapacity → the un-pause aborts) instead of silently
-    # overbooking. Harvest-share options only; no-op for unlimited station-days.
+    # overbooking. Standalone (non-additional) shares only; no-op for additional
+    # (packed-along) shares and for unlimited station-days.
     from .capacity_reservation_service import CapacityReservationService
 
-    share_option = getattr(getattr(variation, "share_type", None), "share_option", None)
+    # Unknown share_type (defensive) → treat as additional so the check is
+    # skipped, matching the old ``share_option is None`` skip.
+    is_additional_share_type = getattr(
+        getattr(variation, "share_type", None), "is_additional_share_type", True
+    )
     quantity = subscription.quantity or 1
 
     existing_weeks = {
@@ -279,7 +284,7 @@ def _restore_weeks(subscription: Subscription, weeks: set[YearWeek]) -> set:
             delivery_station_day_id=delivery_station_day.id,
             year=year,
             week=week,
-            share_option=share_option,
+            is_additional_share_type=is_additional_share_type,
             quantity=quantity,
         )
         share, _ = Share.get_or_create_for_delivery(

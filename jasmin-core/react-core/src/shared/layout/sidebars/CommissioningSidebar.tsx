@@ -1,8 +1,13 @@
+import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { filterByRole, useRoles, type RoleGatedItem } from "@shared/auth";
-import { useActiveShareOptions, useTenant } from "@hooks/index";
+import { useShareTypes, useTenant } from "@hooks/index";
 import { useCommissioningDeliveryStationsList } from "@shared/api/generated/commissioning/commissioning";
+import {
+  governingShareType,
+  PLANNING_SHARE_OPTIONS,
+} from "@shared/planning/planningShareOptions";
 import SidebarShell from "./SidebarShell";
 
 import AllInclusiveIcon from "@mui/icons-material/AllInclusive";
@@ -27,24 +32,89 @@ export default function CommissioningSidebar({
   const { getSetting } = useTenant();
   const { t } = useTranslation();
   const flags = useRoles();
-  const { activeShareOptions } = useActiveShareOptions();
 
-  const fruit_and_veg_shares_are_separate =
-    activeShareOptions.fruit_and_veg_shares_are_separate ?? false;
+  // Planning nav is derived from the currently-active ShareTypes: an option
+  // whose active share type is complex-planned gets a per-week (Base) link AND
+  // a long-term link; a simple option gets only a long-term link in the
+  // "additional" section. Order follows PLANNING_SHARE_OPTIONS.
+  const planningToday = dayjs().format("YYYY-MM-DD");
+  const { shareTypes: activePlanningShareTypes } = useShareTypes({
+    active_at_date: planningToday,
+    // Current + upcoming share types, so an option whose season hasn't started
+    // yet still gets its planning nav (the old harvest links were unconditional).
+    include_future: true,
+  });
+  // Group by option, then classify each by its GOVERNING share type (the one
+  // active today, else the upcoming one) — a future successor must not change
+  // today's section.
+  const shareTypesByOption = new Map<string, typeof activePlanningShareTypes>();
+  for (const st of activePlanningShareTypes) {
+    if (!st.share_option) continue;
+    const group = shareTypesByOption.get(st.share_option) ?? [];
+    group.push(st);
+    shareTypesByOption.set(st.share_option, group);
+  }
+  const complexByOption = new Map<string, boolean>();
+  for (const [option, group] of shareTypesByOption) {
+    const governing = governingShareType(group, planningToday);
+    complexByOption.set(
+      option,
+      governing ? (governing.needs_complex_planning ?? true) : true,
+    );
+  }
+  const activePlanningConfigs = PLANNING_SHARE_OPTIONS.filter((c) =>
+    complexByOption.has(c.shareOption),
+  );
+  const complexPlanningOptions = activePlanningConfigs.filter((c) =>
+    complexByOption.get(c.shareOption),
+  );
+  const simplePlanningOptions = activePlanningConfigs.filter(
+    (c) => !complexByOption.get(c.shareOption),
+  );
 
-  const has_chicken_shares = activeShareOptions.CHICKEN_SHARE ?? false;
-  const has_honey_shares = activeShareOptions.HONEY_SHARE ?? false;
-  const has_grain_shares = activeShareOptions.GRAIN_SHARE ?? false;
-  const has_oil_shares = activeShareOptions.OIL_SHARE ?? false;
-  const has_bread_shares = activeShareOptions.BREAD_SHARE ?? false;
+  const planningComplexItems: RoleGatedItem[] = complexPlanningOptions.map(
+    (c) => ({
+      key: `commissioning-planning-${c.slug}`,
+      requireRole: "isOffice",
+      label: (
+        <Link to={`/commissioning/planning/${c.slug}`}>
+          {t(c.complexSidebarKey)}
+        </Link>
+      ),
+    }),
+  );
+  const planningLongTermItems: RoleGatedItem[] = complexPlanningOptions.map(
+    (c) => ({
+      key: `commissioning-planning-${c.slug}-long-term`,
+      requireRole: "isOffice",
+      label: (
+        <Link to={`/commissioning/planning/${c.slug}/long-term`}>
+          {/* When the option has no distinct long-term label (additional
+              shares reuse one key for both modes), mark it "long-term" so a
+              complex option's two links don't read identically. */}
+          {c.complexSidebarKey === c.longTermSidebarKey
+            ? t("commissioning.long_term_planning_of", {
+                label: t(c.longTermSidebarKey),
+              })
+            : t(c.longTermSidebarKey)}
+        </Link>
+      ),
+    }),
+  );
+  const additionalLongTermItems: RoleGatedItem[] = simplePlanningOptions.map(
+    (c) => ({
+      key: `commissioning-planning-${c.slug}-long-term`,
+      requireRole: "isOffice",
+      label: (
+        <Link to={`/commissioning/planning/${c.slug}/long-term`}>
+          {t(c.longTermSidebarKey)}
+        </Link>
+      ),
+    }),
+  );
+
   const has_markets = getSetting("has_markets", true);
   const sells_to_resellers = getSetting("sells_to_resellers", true);
-  const has_additional_shares =
-    has_chicken_shares ||
-    has_honey_shares ||
-    has_grain_shares ||
-    has_oil_shares ||
-    has_bread_shares;
   const packing_mode = getSetting("packing_mode", "BOXES") as
     | "BOXES"
     | "BULK"
@@ -197,75 +267,10 @@ export default function CommissioningSidebar({
             </Link>
           ),
         },
-        ...(fruit_and_veg_shares_are_separate
-          ? [
-              {
-                key: "commissioning-planning-harvest-shares-only",
-
-                requireRole: "isOffice",
-                label: (
-                  <Link to="/commissioning/planning-harvest-shares">
-                    {t("commissioning.harvest_shares_veg")}
-                  </Link>
-                ),
-              },
-              {
-                key: "commissioning-planning-harvest-shares-fruits-only",
-
-                requireRole: "isOffice",
-                label: (
-                  <Link to="/commissioning/planning-harvest-shares-fruits-only">
-                    {t("commissioning.harvest_shares_fruits_only")}
-                  </Link>
-                ),
-              },
-              {
-                key: "commissioning-planning-longterm-harvest-shares-veg-only",
-
-                requireRole: "isOffice",
-                label: (
-                  <Link to="/commissioning/planning-longterm-harvest-shares-veg-only">
-                    {t(
-                      "commissioning.planning_longterm_harvest_shares_veg_only",
-                    )}
-                  </Link>
-                ),
-              },
-              {
-                key: "commissioning-planning-longterm-harvest-shares-fruits-only",
-
-                requireRole: "isOffice",
-                label: (
-                  <Link to="/commissioning/planning-longterm-harvest-shares-fruits-only">
-                    {t(
-                      "commissioning.planning_longterm_harvest_shares_fruits_only",
-                    )}
-                  </Link>
-                ),
-              },
-            ]
-          : [
-              {
-                key: "commissioning-planning-harvest-shares-details",
-
-                requireRole: "isOffice",
-                label: (
-                  <Link to="/commissioning/planning-harvest-shares">
-                    {t("commissioning.harvest_shares_veg")}
-                  </Link>
-                ),
-              },
-              {
-                key: "commissioning-planning-longterm-harvest-shares",
-
-                requireRole: "isOffice",
-                label: (
-                  <Link to="/commissioning/planning-longterm-harvest-shares">
-                    {t("commissioning.planning_longterm_harvest_shares")}
-                  </Link>
-                ),
-              },
-            ]),
+        // Complex (per-week) planning links first, then the long-term links —
+        // one pair per complex-planned share option.
+        ...planningComplexItems,
+        ...planningLongTermItems,
         {
           key: "commissioning-purchase-list",
 
@@ -278,7 +283,9 @@ export default function CommissioningSidebar({
         },
       ],
     },
-    ...(has_additional_shares
+    // "Additional" section: simple (non-complex) share options — long-term
+    // planning only.
+    ...(additionalLongTermItems.length > 0
       ? [
           {
             key: "commissioning-planning-additional-shares",
@@ -290,80 +297,7 @@ export default function CommissioningSidebar({
                 {t("commissioning.planning_additional_shares")}
               </div>
             ),
-            children: [
-              ...(has_chicken_shares
-                ? [
-                    {
-                      key: "commissioning-planning-additional-chicken-shares",
-
-                      requireRole: "isOffice",
-                      label: (
-                        <Link to="/commissioning/planning-additional-chicken-shares">
-                          {t(
-                            "commissioning.planning_additional_chicken_shares",
-                          )}
-                        </Link>
-                      ),
-                    },
-                  ]
-                : []),
-              ...(has_oil_shares
-                ? [
-                    {
-                      key: "commissioning-planning-additional-oil-shares",
-
-                      requireRole: "isOffice",
-                      label: (
-                        <Link to="/commissioning/planning-additional-oil-shares">
-                          {t("commissioning.planning_additional_oil_shares")}
-                        </Link>
-                      ),
-                    },
-                  ]
-                : []),
-              ...(has_grain_shares
-                ? [
-                    {
-                      key: "commissioning-planning-additional-grain-shares",
-
-                      requireRole: "isOffice",
-                      label: (
-                        <Link to="/commissioning/planning-additional-grain-shares">
-                          {t("commissioning.planning_additional_grain_shares")}
-                        </Link>
-                      ),
-                    },
-                  ]
-                : []),
-              ...(has_honey_shares
-                ? [
-                    {
-                      key: "commissioning-planning-additional-honey-shares",
-
-                      requireRole: "isOffice",
-                      label: (
-                        <Link to="/commissioning/planning-additional-honey-shares">
-                          {t("commissioning.planning_additional_honey_shares")}
-                        </Link>
-                      ),
-                    },
-                  ]
-                : []),
-              ...(has_bread_shares
-                ? [
-                    {
-                      key: "commissioning-planning-additional-bread-shares",
-
-                      requireRole: "isOffice",
-                      label: (
-                        <Link to="/commissioning/planning-additional-bread-shares">
-                          {t("commissioning.planning_additional_bread_shares")}
-                        </Link>
-                      ),
-                    },
-                  ]
-                : []),
-            ],
+            children: additionalLongTermItems,
           },
         ]
       : []),
