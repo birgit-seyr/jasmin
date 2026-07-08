@@ -1,16 +1,11 @@
 import type { TFunction } from "i18next";
-import type {
-  DeliveryStationDetailsPDFProps,
-  StationPageData,
-  TenantInfo,
-} from "./DeliveryStationDetailsPDF";
+import type { StationPageData, TenantInfo } from "./DeliveryStationDetailsPDF";
 import ListPDFGenerator from "./ListPDFGenerator";
 
 interface DeliveryStationDetailsPDFGeneratorProps {
   pages: StationPageData[] | null;
   week: number;
   dayName: string;
-  variations: DeliveryStationDetailsPDFProps["variations"] | null;
   tenant: TenantInfo;
   filename: string;
   buttonText: string;
@@ -21,7 +16,6 @@ export default function DeliveryStationDetailsPDFGenerator({
   pages,
   week,
   dayName,
-  variations,
   tenant,
   filename,
   buttonText,
@@ -30,7 +24,7 @@ export default function DeliveryStationDetailsPDFGenerator({
   return (
     <ListPDFGenerator
       data={pages}
-      isReady={!!variations && pages !== null && pages.length > 0}
+      isReady={pages !== null && pages.length > 0}
       filename={filename}
       buttonText={buttonText}
       documentLoader={() => import("./DeliveryStationDetailsPDF")}
@@ -38,7 +32,6 @@ export default function DeliveryStationDetailsPDFGenerator({
         pages: pages ?? [],
         week,
         dayName,
-        variations: variations ?? [],
         tenant,
         t,
       }}

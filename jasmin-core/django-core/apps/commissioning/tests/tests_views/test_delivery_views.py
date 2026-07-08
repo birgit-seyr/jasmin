@@ -11,10 +11,12 @@ from rest_framework import status
 from apps.commissioning.models import ShareDelivery
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
+    MemberFactory,
     ShareDeliveryFactory,
     ShareFactory,
     SharesDeliveryDayFactory,
     ShareTypeVariationFactory,
+    SubscriptionFactory,
 )
 
 URL = reverse("delivery_station_tours_overview")
@@ -80,6 +82,73 @@ class TestDeliveryStationsToursOverviewView:
             URL, {"year": "abc", "delivery_week": 15, "day_number": 1}
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_each_tour_carries_own_columns_empty_tours_omitted(
+        self, api_client, tenant
+    ):
+        """Each returned tour carries only the box combinations that occur on
+        it (they differ across tours); a tour with no deliveries is omitted."""
+        dd = SharesDeliveryDayFactory(day_number=1, number_of_tours=3)
+        year, week = dd.valid_from.isocalendar()[0], dd.valid_from.isocalendar()[1]
+
+        # Two base variations of one share type → two distinct combinations.
+        var_m = ShareTypeVariationFactory(size="M")
+        var_l = ShareTypeVariationFactory(size="L")
+
+        station_day_1 = DeliveryStationDayFactory(delivery_day=dd, tour_number=1)
+        station_day_2 = DeliveryStationDayFactory(delivery_day=dd, tour_number=2)
+        # Tour 3 has a station but NO deliveries → must be omitted.
+        DeliveryStationDayFactory(delivery_day=dd, tour_number=3)
+
+        share_m = ShareFactory(
+            year=year, delivery_week=week, delivery_day=dd, share_type_variation=var_m
+        )
+        share_l = ShareFactory(
+            year=year, delivery_week=week, delivery_day=dd, share_type_variation=var_l
+        )
+
+        member_a = MemberFactory()
+        sub_a = SubscriptionFactory(
+            member=member_a,
+            share_type_variation=var_m,
+            quantity=1,
+            default_delivery_station_day=station_day_1,
+        )
+        ShareDeliveryFactory(
+            share=share_m, delivery_station_day=station_day_1, subscription=sub_a
+        )
+
+        member_b = MemberFactory()
+        sub_b = SubscriptionFactory(
+            member=member_b,
+            share_type_variation=var_l,
+            quantity=1,
+            default_delivery_station_day=station_day_2,
+        )
+        ShareDeliveryFactory(
+            share=share_l, delivery_station_day=station_day_2, subscription=sub_b
+        )
+
+        resp = api_client.get(
+            URL, {"year": year, "delivery_week": week, "day_number": 1}
+        )
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+
+        tours = resp.data["tours"]
+        # Tour 3 (no deliveries) omitted; tours 1 and 2 remain.
+        assert {tour["tour_number"] for tour in tours} == {1, 2}
+
+        by_number = {tour["tour_number"]: tour for tour in tours}
+        assert len(by_number[1]["columns"]) == 1
+        assert len(by_number[2]["columns"]) == 1
+        # Columns differ across tours (base-M on tour 1, base-L on tour 2).
+        key_1 = by_number[1]["columns"][0]["key"]
+        key_2 = by_number[2]["columns"][0]["key"]
+        assert key_1 != key_2
+
+        # The tour-1 station carries its combination's box count.
+        station_1 = by_number[1]["stations"][0]
+        assert station_1[key_1] == 1
 
     def test_demand_grid_is_batched_not_per_cell(self, api_client, tenant):
         """MT-4: the (station_day, variation) demand grid must come from ONE

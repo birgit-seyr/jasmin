@@ -17,6 +17,7 @@ from ..models import (
     Subscription,
 )
 from ..utils.dynamic_keys import AMOUNT_KEY_PREFIX, DAY_VARIATION_RE
+from .box_matrix_columns_serializer import PackingBoxesMatrixColumnSerializer
 from .delivery_serializer import CapacityWeekEntrySerializer
 from .dynamic_keys import DynamicAmountKeysMixin
 from .serializers_mixin import (
@@ -243,13 +244,21 @@ class ShareContentNestedSerializer(serializers.ModelSerializer):
 
 
 class ShareDeliverySerializer(serializers.ModelSerializer):
-    member_first_name = serializers.CharField(source="subscription.member.first_name")
-    member_last_name = serializers.CharField(source="subscription.member.last_name")
-    member_number = serializers.CharField(source="subscription.member.member_number")
-    year = serializers.IntegerField(source="share.year")
-    delivery_week = serializers.IntegerField(source="share.delivery_week")
+    member_first_name = serializers.CharField(
+        source="subscription.member.first_name", read_only=True
+    )
+    member_last_name = serializers.CharField(
+        source="subscription.member.last_name", read_only=True
+    )
+    member_number = serializers.CharField(
+        source="subscription.member.member_number", read_only=True
+    )
+    year = serializers.IntegerField(source="share.year", read_only=True)
+    delivery_week = serializers.IntegerField(
+        source="share.delivery_week", read_only=True
+    )
     delivery_day_number = serializers.IntegerField(
-        source="share.delivery_day.day_number"
+        source="share.delivery_day.day_number", read_only=True
     )
     delivery_station_name = serializers.CharField(
         source="delivery_station_day.delivery_station.short_name", read_only=True
@@ -740,6 +749,46 @@ class PackingListRowSerializer(serializers.Serializer):
     backup_share_article_unit = serializers.CharField(allow_null=True)
     backup_share_article_size = serializers.CharField(allow_blank=True)
     packing_station = serializers.IntegerField()
+
+
+class PackingBoxesMatrixRowSerializer(serializers.Serializer):
+    """Stable fields of a packing boxes matrix row — one per
+    ``(share_article, unit, size)``. Dynamic ``combo_<signature>`` per-box
+    quantity keys are read by iteration on the frontend and are left OUT here
+    (mirrors the ``variation_<id>`` pattern in ``PackingListRowSerializer``).
+    """
+
+    id = serializers.CharField()
+    share_article_id = serializers.CharField()
+    share_article_name = serializers.CharField()
+    unit = serializers.CharField(allow_blank=True)
+    size = serializers.CharField(allow_blank=True)
+    note = serializers.CharField(allow_blank=True)
+
+
+class PackingBoxesMatrixSerializer(serializers.Serializer):
+    """Full packing boxes matrix payload: combination columns + article rows."""
+
+    columns = PackingBoxesMatrixColumnSerializer(many=True)
+    rows = PackingBoxesMatrixRowSerializer(many=True)
+
+
+class StationMemberMatrixRowSerializer(serializers.Serializer):
+    """One member of a delivery station. Dynamic ``combo_<signature>`` integer
+    keys carry the member's box count of that combination (read by iteration on
+    the frontend, left OUT of the typed schema like the ``variation_<id>``
+    pattern)."""
+
+    id = serializers.CharField()
+    name = serializers.CharField(allow_blank=True)
+
+
+class StationMemberMatrixSerializer(serializers.Serializer):
+    """Delivery-station member × combination matrix: the SAME combination
+    columns as the packing boxes matrix, one row per member."""
+
+    columns = PackingBoxesMatrixColumnSerializer(many=True)
+    rows = StationMemberMatrixRowSerializer(many=True)
 
 
 class VariationDeliveryCountRowSerializer(serializers.Serializer):

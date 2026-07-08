@@ -19,6 +19,8 @@ export { default as PackingListPDFGenerator } from "./exports/PackingListPDFGene
 export { PackingListAllStationsPDFGenerator } from "./exports/PackingListPDFGenerator";
 export { default as PackingListBulkPDF } from "./exports/PackingListBulkPDF";
 export { default as PackingListBulkPDFGenerator } from "./exports/PackingListBulkPDFGenerator";
+export { default as PackingBoxesMatrixPDF } from "./exports/PackingBoxesMatrixPDF";
+export { default as PackingBoxesMatrixPDFGenerator } from "./exports/PackingBoxesMatrixPDFGenerator";
 export { default as WashingListPDF } from "./exports/WashingListPDF";
 export { default as WashingListPDFGenerator } from "./exports/WashingListPDFGenerator";
 export { default as CleaningListPDF } from "./exports/CleaningListPDF";

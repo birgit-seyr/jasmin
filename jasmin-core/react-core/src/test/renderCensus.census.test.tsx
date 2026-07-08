@@ -112,13 +112,11 @@ const pageModules = import.meta.glob<{ default?: unknown }>(
 //   - /steps/     : wizard step children, mounted by their parent page,
 //                   they expect ``data``/``update``/``back``/``next`` props
 //                   and can't render in the permissive shell
-//   - PackingListShell: render-prop shell, expects a ``children: () => ReactNode``
 const candidatePaths = Object.keys(pageModules).filter(
   (p) =>
     !p.includes("__tests__") &&
     !p.includes("/components/") &&
-    !p.includes("/steps/") &&
-    !p.endsWith("PackingListShell.tsx"),
+    !p.includes("/steps/"),
 );
 
 describe("@census render budget across all pages", () => {

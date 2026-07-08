@@ -424,7 +424,7 @@ export default function PlanningHarvestSharesBase({
       delivery_week: selectedWeek ?? undefined,
       // Scope the granularity check to this page's share_option, so a simple
       // share (honey) isn't judged by a complex harvest share's per-station
-      // amounts (mirrors how PackingListShell scopes by share_type).
+      // amounts.
       share_option: shareOption,
     }),
     [selectedYear, selectedWeek, shareOption],

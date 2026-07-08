@@ -958,6 +958,44 @@ class NoSundayRemainsInTerm(SubscriptionCancellationError):
 
 
 # --------------------------------------------------------------------------- #
+# Additional-share (Zusatz) subscription rules                                #
+# --------------------------------------------------------------------------- #
+
+
+class AdditionalShareRequiresBase(BadRequestError):
+    """An additional share ("Zusatz") is packed INTO a base box, so it can't be
+    subscribed on its own: the member must already have a non-additional (base)
+    share active over the same period."""
+
+    code = "subscription.additional_requires_base"
+
+    def __init__(self, *, share_type_variation_id: str) -> None:
+        super().__init__(
+            "This is an additional share and can only be added when the member "
+            "already has a base share active for the same period.",
+            field="share_type_variation",
+            details={"share_type_variation_id": str(share_type_variation_id)},
+        )
+
+
+class AdditionalShareExceedsBase(BadRequestError):
+    """The additional share would run past the end of the member's base share.
+    Allowed, but only up to the base's effective end — that date is offered as
+    ``suggested_valid_until`` so the frontend can prefill it."""
+
+    code = "subscription.additional_exceeds_base"
+
+    def __init__(self, *, suggested_valid_until) -> None:
+        super().__init__(
+            "An additional share cannot run longer than the base share it is "
+            f"packed into. Set the end date to {suggested_valid_until} (the "
+            "base share's end) to continue.",
+            field="valid_until",
+            details={"suggested_valid_until": str(suggested_valid_until)},
+        )
+
+
+# --------------------------------------------------------------------------- #
 # On-off opt-in errors                                                        #
 # --------------------------------------------------------------------------- #
 
@@ -1328,6 +1366,8 @@ __all__ = [
     "SolidarityPriceBelowMinimum",
     "SubscriptionCancellationError",
     "SubscriptionNotConfirmed",
+    "AdditionalShareRequiresBase",
+    "AdditionalShareExceedsBase",
     "CancellationNotSunday",
     "CancellationInPast",
     "CancellationBeforeValidFrom",

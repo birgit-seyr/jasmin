@@ -98,8 +98,9 @@ const PackingListBulk = lazy(
   () => import("@features/commissioning/pages/PackingListBulk"),
 );
 const PackingListBoxes = lazy(
-  () => import("@features/commissioning/pages/PackingListBoxes"),
+  () => import("@/features/commissioning/pages/PackingListBoxes"),
 );
+
 const WashingList = lazy(
   () => import("@features/commissioning/pages/WashingList"),
 );
@@ -310,6 +311,7 @@ export const commissioningRoutes: AppRoute[] = [
       </RequireRole>
     ),
   },
+
   {
     path: "/commissioning/orders",
     element: (

@@ -13,6 +13,8 @@
   },
   "subscription": {
     "start_too_soon": "The subscription can't start before {{earliest}} ({{min_weeks}} week(s) lead time).",
+    "additional_requires_base": "This is an additional share and can only be added when the member already has a base share active for the same period.",
+    "additional_exceeds_base": "An additional share cannot run longer than the base share it is packed into. Set the end date to {{suggested_valid_until}} (the base share's end) to continue.",
     "already_confirmed": "This subscription is already confirmed.",
     "confirmed_immutable": "A confirmed subscription can no longer be edited or deleted — end it via cancellation instead.",
     "variation_locked": "A confirmed subscription's share-type variation can no longer be changed — create a new subscription instead.",

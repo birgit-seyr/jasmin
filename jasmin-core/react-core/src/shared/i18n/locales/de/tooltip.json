@@ -18,6 +18,7 @@
   "offer_creation_button": "Die Angebots-Erstellung erfolgt aus der Ernteprognose minus dem Bedarf, der für die Anteile schon verplant ist. Falls schon Angebote in dieser Woche vorliegen (die händisch eingetragen oder aus der Vorwoche kopiert wurden), werden nur zusätzliche Vorschläge dazu erstellt. Bei mehreren Angebots-Gruppen hat jede Gruppe die gesamte Menge als verfügbare Menge. Bitte gegebenfalls anpassen.",
   "modal_toggle": "Inline <-> Modal; nicht für alle Seiten möglich.",
   "sent_via_email": "an WVK",
+  "short_name_share_type": "Lesbare Kürzel wie z.B. Honig für Honiganteil, max. 6 Buchstaben.",
   "grouping_mode_date": "nach Lieferschein-Datum",
   "is_additional_share_type": "Wird nicht extra gepackt, sondern zu einem anderen - z.B. Ernteanteil dazugepackt.",
   "delivery_station_day": "Hier sieht man die belegte / gesamte Kapazität der Verteilstation an diesem Tag. Wenn hier schon 100% belegt sind, können keine weiteren Anteile mit diesem Liefertag gebucht werden, außer sie haben einen anderen Verteilstationstag.",

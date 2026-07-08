@@ -9,10 +9,11 @@
 /**
  * Stable fields of a single station in the tour overview (GET).
 
-In addition to the stable fields below, each station dict carries
-dynamic per-variation keys ``variation_<share_type_variation_id>``
-(the booked share count for that variation) — read by iteration on
-the frontend, not declared here.
+In addition to the stable fields below, each station dict carries dynamic
+keys read by iteration on the frontend (not declared here): per-variation
+``variation_<share_type_variation_id>`` counts AND per-box-combination
+``combo_<key>`` counts. A plain declared-field ``Serializer`` would DROP
+these undeclared keys, so ``to_representation`` re-attaches them.
  */
 export interface StationOverview {
   delivery_station_day_id: string;

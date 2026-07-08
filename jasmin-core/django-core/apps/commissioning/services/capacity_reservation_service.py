@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 # How long an unconfirmed draft holds its slot before the reservation lapses.
 # "Active" is purely ``expires_at > now``, so this is also the auto-release
 # window — long enough for the office to confirm, short enough that an
-# abandoned order frees the slot.
+# abandoned wish frees the slot.
 RESERVATION_TTL_DAYS = 14
 
-# A share occupies station-day capacity iff it is a STANDALONE (non-additional)
+# A share_type_variation occupies station-day capacity iff it is a STANDALONE (non-additional)
 # share — i.e. ``share_type.is_additional_share_type is False``. Additional
 # shares are "packed into another share's box" (e.g. honey dropped into the
 # veg box), so they take no separate pickup slot and never consume or reserve

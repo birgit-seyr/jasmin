@@ -51,6 +51,10 @@ class ShareType(JasminModel, TimeBoundMixin):
     overlap_unique_fields = ("share_option",)
 
     name = models.CharField(max_length=200, blank=True, null=True)
+    # Compact abbreviation used as the add-on badge in the packing boxes matrix
+    # (e.g. "HONIG" in an "M" box's superscript). Kept short by convention, but
+    # sized like the other short_name fields to avoid truncation.
+    short_name = models.CharField(max_length=50, blank=True, null=True)
     description = models.CharField(max_length=500, blank=True, null=True)
     share_option = models.CharField(
         max_length=200, choices=ShareOptions.choices, blank=True, null=True

@@ -74,16 +74,11 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
     ? `${delivery.year}-${delivery.delivery_week}`
     : undefined;
 
-  // Show every station-day for the same delivery weekday; full ones are
-  // greyed out (disabled) in the option list below rather than hidden, so the
-  // office still sees them.
-  const filteredOptions = useMemo(() => {
-    if (delivery?.delivery_day_number == null) return deliveryStationDays;
-    return deliveryStationDays.filter(
-      (dsd) =>
-        Number(dsd.delivery_day_number) === delivery?.delivery_day_number,
-    );
-  }, [deliveryStationDays, delivery?.delivery_day_number]);
+  // Show every active station-day for the week — across ALL weekdays, not just
+  // the delivery's current day — so a delivery can be moved to a different day
+  // (the backend re-points its Share to that day). Each label carries the
+  // weekday, and full ones are greyed out (disabled) below rather than hidden.
+  const filteredOptions = deliveryStationDays;
 
   // Build select options, with a fallback for the current value while loading
   const selectOptions = useMemo(() => {

@@ -93,10 +93,12 @@ from ..serializers import (
 )
 from ..serializers.shares_serializer import (
     ShareDeliveryDetailsRowSerializer,
+    StationMemberMatrixSerializer,
     VariationDeliveryCountRowSerializer,
 )
 from ..services import (
     DefaultShareContentService,
+    PackingListBoxesMatrixService,
     ShareDeliveryService,
     SharesDayChangeService,
 )
@@ -519,6 +521,23 @@ class _ShareDeliveryWriteChoreographyMixin:
         if instance.subscription_id:
             notify_subscription_changed(instance.subscription)
 
+    @staticmethod
+    def _share_for_delivery_day(share, target_delivery_day):
+        """The shared planning unit (``Share``) for the same (year, week,
+        variation) but a possibly different ``delivery_day``. Moving a delivery
+        to a station-day on another weekday means its Share must move too (a
+        Share is per year/week/day/variation) — get-or-create the target day's
+        Share, creating it the first time a delivery lands on that day."""
+        if share.delivery_day_id == target_delivery_day.id:
+            return share
+        new_share, _ = Share.objects.get_or_create(
+            year=share.year,
+            delivery_week=share.delivery_week,
+            delivery_day=target_delivery_day,
+            share_type_variation=share.share_type_variation,
+        )
+        return new_share
+
 
 class ShareDeliveryViewSet(
     _ShareDeliveryWriteChoreographyMixin, RolePermissionsMixin, viewsets.ModelViewSet
@@ -803,14 +822,40 @@ class ShareDeliveryViewSet(
                 instance, target_delivery_station_day
             )
 
+            # The delivery's ORIGINAL day/week — captured before we re-point the
+            # Share, so the apply-to-future scan still finds this member's other
+            # deliveries on their existing weekday.
+            original_share = instance.share if instance.share_id else None
+            affected_share_ids: set = set()
+
+            # Cross-day move: the target station-day is on another weekday, so
+            # re-point THIS delivery's Share to that day's planning unit BEFORE
+            # saving — otherwise ``ShareDelivery.clean`` refuses the mismatch.
+            if (
+                target_delivery_station_day
+                and original_share
+                and target_delivery_station_day.delivery_day_id
+                != original_share.delivery_day_id
+            ):
+                affected_share_ids.add(original_share.id)
+                repointed_share = self._share_for_delivery_day(
+                    original_share, target_delivery_station_day.delivery_day
+                )
+                instance.share = repointed_share
+                # The client round-trips the ORIGINAL ``share`` id back in the
+                # PATCH body, so ``serializer.save()`` would re-set instance.share
+                # to the old day's Share (via update()) and ShareDelivery.clean
+                # would then reject the day mismatch. Force the re-pointed Share
+                # into validated_data so the save persists the move, not the echo.
+                serializer.validated_data["share"] = repointed_share
+
             instance = serializer.save()
-            affected_share_ids: set = (
-                {instance.share_id} if instance.share_id else set()
-            )
+            if instance.share_id:
+                affected_share_ids.add(instance.share_id)
 
             self._notify_subscription_changed_for(instance)
 
-            if not apply_to_future or not instance.subscription:
+            if not apply_to_future or not instance.subscription or not original_share:
                 recompute_shares(affected_share_ids)
                 return
 
@@ -819,31 +864,31 @@ class ShareDeliveryViewSet(
                 recompute_shares(affected_share_ids)
                 return
 
-            current_share = instance.share
+            # The weekday we're moving TO (same as the original for a plain
+            # station change; a different weekday for a cross-day move).
+            target_delivery_day = new_delivery_station_day.delivery_day
             future_deliveries = (
                 ShareDelivery.objects.filter(
                     subscription=instance.subscription,
-                    share__delivery_day=current_share.delivery_day,
-                    share__year__gte=current_share.year,
+                    share__delivery_day=original_share.delivery_day,
+                    share__year__gte=original_share.year,
                 )
                 .exclude(pk=instance.pk)
                 .exclude(
-                    share__year=current_share.year,
-                    share__delivery_week__lt=current_share.delivery_week,
+                    share__year=original_share.year,
+                    share__delivery_week__lt=original_share.delivery_week,
                 )
                 .select_related("share", "share__delivery_day")
             )
 
             # Hoist the per-delivery DeliveryStationDay lookup out of the loop:
-            # every future delivery shares ``current_share.delivery_day`` and the
-            # target station is constant, so they all resolve within ONE
-            # (station, delivery_day) succession chain. Fetch it once and resolve
-            # each delivery's week in Python — mirrors delivery_viewsets.
-            # _migrate_succession_children — instead of one query per delivery.
+            # every future delivery resolves within ONE (station, target-day)
+            # succession chain. Fetch it once and resolve each delivery's week in
+            # Python — mirrors delivery_viewsets._migrate_succession_children.
             dsd_chain = list(
                 DeliveryStationDay.objects.filter(
                     delivery_station=new_delivery_station_day.delivery_station,
-                    delivery_day=current_share.delivery_day,
+                    delivery_day=target_delivery_day,
                 ).order_by("-valid_from")
             )
 
@@ -875,8 +920,14 @@ class ShareDeliveryViewSet(
                             is_additional_share_type=is_additional_share_type,
                             moving_delivery_id=delivery.pk,
                         )
+                    # Re-point the Share too when the move crosses weekdays.
+                    if delivery.share.delivery_day_id != target_delivery_day.id:
+                        affected_share_ids.add(delivery.share_id)
+                        delivery.share = self._share_for_delivery_day(
+                            delivery.share, target_delivery_day
+                        )
                     delivery.delivery_station_day = matching_delivery_station_day
-                    delivery.save(update_fields=["delivery_station_day"])
+                    delivery.save(update_fields=["delivery_station_day", "share"])
                     if delivery.share_id:
                         affected_share_ids.add(delivery.share_id)
 
@@ -1480,6 +1531,24 @@ class ShareDeliveryOverviewViewSet(
         target_delivery_station_day = serializer.validated_data.get(
             "delivery_station_day", instance.delivery_station_day
         )
+        # Effective share after save: an explicit ``share`` reassignment in the
+        # body wins, otherwise the row keeps its current Share. The grid
+        # round-trips the current ``share`` id back with a station-day edit, so
+        # moving a delivery to a station-day on ANOTHER weekday would leave the
+        # old-weekday Share on the row and trip ShareDelivery.clean
+        # ("Delivery day of Share and DeliveryStationDay must match"). Re-point
+        # the Share to the target station-day's weekday (get-or-create) so the
+        # move persists — the physical delivery slot drives the day.
+        effective_share = serializer.validated_data.get("share") or instance.share
+        if (
+            target_delivery_station_day
+            and effective_share
+            and target_delivery_station_day.delivery_day_id
+            != effective_share.delivery_day_id
+        ):
+            serializer.validated_data["share"] = self._share_for_delivery_day(
+                effective_share, target_delivery_station_day.delivery_day
+            )
         with transaction.atomic():
             self._assert_capacity_for_station_day_move(
                 instance, target_delivery_station_day
@@ -1570,6 +1639,36 @@ class ShareDeliveryDetailsViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             ] = delivery.quantity
 
         return Response(list(result.values()))
+
+    @extend_schema(
+        parameters=[
+            get_year_parameter(required=True),
+            get_delivery_week_parameter(required=True),
+            get_day_number_parameter(required=True),
+            get_delivery_station_parameter(required=True),
+        ],
+        responses={200: StationMemberMatrixSerializer},
+        description=(
+            "Member × box-combination matrix for one delivery station: one row "
+            "per member, one column per box combination (a base box plus its "
+            "packed-in add-ons), each cell the member's box count of that "
+            "combination. Uses the SAME combination columns as the packing "
+            "boxes matrix."
+        ),
+    )
+    @action(detail=False, methods=["get"], url_path="matrix")
+    def matrix(self, request: Request) -> Response:
+        params = validate_query_params(
+            request,
+            required=["year", "delivery_week", "day_number", "delivery_station"],
+        )
+        result = PackingListBoxesMatrixService.get_station_member_matrix(
+            year=params["year"],
+            delivery_week=params["delivery_week"],
+            day_number=params["day_number"],
+            delivery_station=params["delivery_station"],
+        )
+        return Response(result, status=status.HTTP_200_OK)
 
     def get_queryset(self) -> QuerySet[ShareDelivery]:
         # Only deliveries that actually ship belong on a station pickup sheet —

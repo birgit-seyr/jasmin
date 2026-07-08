@@ -15,6 +15,7 @@ from rest_framework.test import APIClient
 from apps.commissioning.errors import DeliveryStationOverCapacity
 from apps.commissioning.models import (
     DefaultShareContent,
+    Share,
     ShareContent,
     VirtualVariationComponent,
 )
@@ -1173,3 +1174,117 @@ class TestShareDeliveryCreateCapacity:
 
         ShareDeliveryViewSet().perform_create(serializer)
         serializer.save.assert_called_once()
+
+
+@pytest.mark.django_db
+class TestShareDeliveryCrossDayMove:
+    """Moving a delivery to a station-day on ANOTHER weekday re-points its Share
+    to that day's planning unit (creating it), instead of failing the
+    Share/DeliveryStationDay day-match validation."""
+
+    def test_moving_to_another_day_repoints_the_share(self, api_client, tenant):
+        day_a = SharesDeliveryDayFactory(day_number=4)  # Friday
+        day_b = SharesDeliveryDayFactory(day_number=0)  # Monday
+        variation = ShareTypeVariationFactory()
+        dsd_a = DeliveryStationDayFactory(delivery_day=day_a)
+        dsd_b = DeliveryStationDayFactory(delivery_day=day_b)
+        share_a = ShareFactory(
+            year=2026,
+            delivery_week=15,
+            delivery_day=day_a,
+            share_type_variation=variation,
+        )
+        sub = SubscriptionFactory(
+            share_type_variation=variation,
+            default_delivery_station_day=dsd_a,
+        )
+        delivery = ShareDeliveryFactory(
+            share=share_a, delivery_station_day=dsd_a, subscription=sub
+        )
+
+        url = reverse("share_delivery-detail", args=[delivery.pk])
+        resp = api_client.patch(url, {"delivery_station_day": dsd_b.id}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        delivery.refresh_from_db()
+        assert delivery.delivery_station_day_id == dsd_b.id
+        # The delivery's Share moved to the Monday planning unit (get-or-created).
+        assert delivery.share.delivery_day_id == day_b.id
+        assert Share.objects.filter(
+            year=2026,
+            delivery_week=15,
+            delivery_day=day_b,
+            share_type_variation=variation,
+        ).exists()
+
+    def test_same_day_station_move_keeps_the_share(self, api_client, tenant):
+        day = SharesDeliveryDayFactory(day_number=4)
+        variation = ShareTypeVariationFactory()
+        dsd_1 = DeliveryStationDayFactory(delivery_day=day)
+        dsd_2 = DeliveryStationDayFactory(delivery_day=day)
+        share = ShareFactory(
+            year=2026,
+            delivery_week=15,
+            delivery_day=day,
+            share_type_variation=variation,
+        )
+        sub = SubscriptionFactory(
+            share_type_variation=variation, default_delivery_station_day=dsd_1
+        )
+        delivery = ShareDeliveryFactory(
+            share=share, delivery_station_day=dsd_1, subscription=sub
+        )
+
+        url = reverse("share_delivery-detail", args=[delivery.pk])
+        resp = api_client.patch(url, {"delivery_station_day": dsd_2.id}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        delivery.refresh_from_db()
+        assert delivery.delivery_station_day_id == dsd_2.id
+        # Same weekday → the Share is untouched.
+        assert delivery.share_id == share.id
+
+    def test_overview_grid_cross_day_move_repoints_the_share(self, api_client, tenant):
+        """The Abos > ShareDeliveries office grid (ShareDeliveryOverviewViewSet)
+        round-trips the current ``share`` id back with a station-day edit; moving
+        to another weekday must re-point the Share, not fail the day-match
+        validation."""
+        day_a = SharesDeliveryDayFactory(day_number=4)  # Friday
+        day_b = SharesDeliveryDayFactory(day_number=0)  # Monday
+        variation = ShareTypeVariationFactory()
+        dsd_a = DeliveryStationDayFactory(delivery_day=day_a)
+        dsd_b = DeliveryStationDayFactory(delivery_day=day_b)
+        share_a = ShareFactory(
+            year=2026,
+            delivery_week=15,
+            delivery_day=day_a,
+            share_type_variation=variation,
+        )
+        sub = SubscriptionFactory(
+            share_type_variation=variation,
+            default_delivery_station_day=dsd_a,
+        )
+        delivery = ShareDeliveryFactory(
+            share=share_a, delivery_station_day=dsd_a, subscription=sub
+        )
+
+        url = reverse("share_delivery_overview-detail", args=[delivery.pk])
+        # Mirror the grid's round-trip: it echoes the current ``share`` id back
+        # alongside the new station-day. Without the re-point this trips
+        # "Delivery day of Share and DeliveryStationDay must match".
+        resp = api_client.patch(
+            url,
+            {"share": share_a.id, "delivery_station_day": dsd_b.id},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        delivery.refresh_from_db()
+        assert delivery.delivery_station_day_id == dsd_b.id
+        assert delivery.share.delivery_day_id == day_b.id
+        assert Share.objects.filter(
+            year=2026,
+            delivery_week=15,
+            delivery_day=day_b,
+            share_type_variation=variation,
+        ).exists()

@@ -140,7 +140,9 @@ class ChargeScheduleSerializer(serializers.ModelSerializer):
 
     def get_member_name(self, obj: ChargeSchedule) -> str:
         m = obj.member
-        return f"{m.first_name or ''} {m.last_name or ''}".strip() or str(m)
+        # Company members carry only ``company_name`` (no first/last); use the
+        # model's canonical display name so they aren't rendered blank.
+        return m.display_name or str(m)
 
     def get_subscription_label(self, obj: ChargeSchedule) -> str:
         """Clean label without the (physical/virtual) variation_type suffix."""

@@ -5,22 +5,25 @@ import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  getCommissioningShareDeliveryDetailsListQueryOptions,
-  useCommissioningShareDeliveryDetailsList,
+  getCommissioningShareDeliveryDetailsMatrixRetrieveQueryOptions,
+  useCommissioningShareDeliveryDetailsMatrixRetrieve,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
-  CommissioningShareDeliveryDetailsListParams,
-  ShareDeliveryDetailsRow,
+  CommissioningShareDeliveryDetailsMatrixRetrieveParams,
+  PackingBoxesMatrixColumn,
+  StationMemberMatrix,
 } from "@shared/api/generated/models";
 import { DeliveryStationDetailsPDFGenerator } from "@features/commissioning/pdfs";
+import type { StationPageData } from "@features/commissioning/pdfs/exports/DeliveryStationDetailsPDF";
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { DeliveryStationSelector } from "@features/commissioning/selectors";
-import { ExplainerText, ToolTipIcon } from "@shared/ui";
+import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
+import { ExplainerText, PastWarningMessage, ToolTipIcon } from "@shared/ui";
 import { useTenant } from "@hooks/index";
 import {
+  useBoxCombinationColumns,
   useDeliveryStations,
   useShareDeliveryDays,
-  useShareTypeVariationColumns,
 } from "@features/commissioning/hooks";
 import {
   formatDayLabel,
@@ -44,27 +47,6 @@ export default function DeliveryStationDetails() {
 
   const { t } = useTranslation();
   const { tenantName, logoUrl, tenant } = useTenant();
-
-  // Fetch active share type variations for the selected week
-  const shareTypeVariationFilters = useMemo(
-    () => ({
-      active_at_date: dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek!)
-        .isoWeekday(selectedDeliveryDay !== null ? selectedDeliveryDay + 1 : 6)
-        .format("YYYY-MM-DD"),
-    }),
-    [selectedYear, selectedWeek, selectedDeliveryDay],
-  );
-
-  // Shared hook builds the parent → child variation column tree AND fetches
-  // the active variations for the selected day. Also used by
-  // `DefaultShareArticlesInShare` so the visual rhythm is identical.
-  const { variations: shareTypeVariations, variationColumns } =
-    useShareTypeVariationColumns({
-      filters: shareTypeVariationFilters,
-      width: "8em",
-    });
 
   // delivery days — derived purely from the selected year/week (no effect).
   const shareDeliveryDaysFilters = useMemo(
@@ -95,34 +77,33 @@ export default function DeliveryStationDetails() {
   const isQueryEnabled =
     selectedDeliveryDay !== null && selectedDeliveryStation !== null;
 
-  // The list-params type marks year/delivery_week/day_number as required,
-  // but until the user picks a day/station we shouldn't fire. We still
-  // return a fully-typed object (with 0 placeholders when not ready) and
-  // gate the actual request with `enabled: isQueryEnabled` below.
-  const queryParams = useMemo<CommissioningShareDeliveryDetailsListParams>(
-    () => ({
-      year: selectedYear,
-      delivery_week: selectedWeek ?? 0,
-      day_number: selectedDeliveryDay ?? 0,
-      ...(selectedDeliveryStation
-        ? { delivery_station: selectedDeliveryStation }
-        : {}),
-    }),
-    [selectedYear, selectedWeek, selectedDeliveryDay, selectedDeliveryStation],
+  // --- Combination matrix (members × box combinations) for the table AND
+  // the pickup-list PDFs — both render the same box-combination columns. ---
+  const matrixParams =
+    useMemo<CommissioningShareDeliveryDetailsMatrixRetrieveParams>(
+      () => ({
+        year: selectedYear,
+        delivery_week: selectedWeek ?? 0,
+        day_number: selectedDeliveryDay ?? 0,
+        delivery_station: selectedDeliveryStation ?? "",
+      }),
+      [selectedYear, selectedWeek, selectedDeliveryDay, selectedDeliveryStation],
+    );
+  const { data: matrix, isFetching: matrixFetching } =
+    useCommissioningShareDeliveryDetailsMatrixRetrieve(matrixParams, {
+      query: { enabled: isQueryEnabled },
+    });
+  const matrixColumns = useMemo<PackingBoxesMatrixColumn[]>(
+    () => (isQueryEnabled ? (matrix?.columns ?? []) : []),
+    [isQueryEnabled, matrix],
   );
-
-  const { data, isFetching } = useCommissioningShareDeliveryDetailsList(
-    queryParams,
-    { query: { enabled: isQueryEnabled } },
+  const matrixRows = useMemo<TableRecord[]>(
+    () =>
+      isQueryEnabled ? ((matrix?.rows ?? []) as unknown as TableRecord[]) : [],
+    [isQueryEnabled, matrix],
   );
-
-  const loading = isQueryEnabled && isFetching;
-  // Memoize so the empty branch returns a stable reference and downstream
-  // memos depending on `tableData` don't reinvalidate on every render.
-  const tableData = useMemo(
-    () => (isQueryEnabled ? (data ?? []) : []),
-    [isQueryEnabled, data],
-  );
+  const comboColumns = useBoxCombinationColumns(matrixColumns);
+  const loading = isQueryEnabled && matrixFetching;
 
   // Compute selectedDeliveryDayId early (needed for station selector and bulk PDFs)
   const selectedDeliveryDayId = useMemo(() => {
@@ -140,14 +121,16 @@ export default function DeliveryStationDetails() {
     selectedDeliveryDayId ? { delivery_day: selectedDeliveryDayId } : {},
   );
 
-  // Bulk fetch: all stations for the selected day (only when table has data)
+  // Bulk fetch: the combination matrix for every station on the selected day
+  // (fired once the current view has data). Each result carries that station's
+  // own columns + member rows.
   const allStationsDayQueries = useQueries({
     queries:
-      tableData.length > 0 &&
+      matrixRows.length > 0 &&
       selectedDeliveryDay !== null &&
       deliveryStations.length > 0
         ? deliveryStations.map((station) =>
-            getCommissioningShareDeliveryDetailsListQueryOptions({
+            getCommissioningShareDeliveryDetailsMatrixRetrieveQueryOptions({
               year: selectedYear,
               delivery_week: selectedWeek!,
               day_number: selectedDeliveryDay,
@@ -157,17 +140,18 @@ export default function DeliveryStationDetails() {
         : [],
   });
 
-  // Bulk fetch: all stations for all days in the week (only when table has data)
+  // Bulk fetch: the combination matrix for every station across every day of
+  // the week.
   const allStationsWeekQueries = useQueries({
     queries:
-      tableData.length > 0 &&
+      matrixRows.length > 0 &&
       dayNumbers.length > 0 &&
       deliveryStations.length > 0
         ? dayNumbers
             .filter((d) => d !== null)
             .flatMap((dayNum) =>
               deliveryStations.map((station) =>
-                getCommissioningShareDeliveryDetailsListQueryOptions({
+                getCommissioningShareDeliveryDetailsMatrixRetrieveQueryOptions({
                   year: selectedYear,
                   delivery_week: selectedWeek!,
                   day_number: dayNum,
@@ -178,41 +162,46 @@ export default function DeliveryStationDetails() {
         : [],
   });
 
-  // Build PDF pages for current station
-  const currentStationPages = useMemo(() => {
-    if (!selectedDeliveryStation || tableData.length === 0) return null;
+  // Build PDF pages for the current station — reuses the already-fetched matrix.
+  const currentStationPages = useMemo<StationPageData[] | null>(() => {
+    if (!selectedDeliveryStation || matrixRows.length === 0) return null;
     const station = deliveryStations.find(
       (s) => s.value === selectedDeliveryStation,
     );
     return [
       {
         stationName: station?.label || "",
-        members: tableData as unknown as (ShareDeliveryDetailsRow &
-          Record<string, unknown>)[],
+        columns: matrixColumns,
+        rows: matrixRows as unknown as StationPageData["rows"],
       },
     ];
-  }, [selectedDeliveryStation, tableData, deliveryStations]);
+  }, [selectedDeliveryStation, matrixColumns, matrixRows, deliveryStations]);
 
-  // Build PDF pages for all stations on selected day
-  const allStationsDayPages = useMemo(() => {
+  // Build PDF pages for all stations on the selected day.
+  const allStationsDayPages = useMemo<StationPageData[] | null>(() => {
     if (
       allStationsDayQueries.some((q) => q.isLoading) ||
       deliveryStations.length === 0
     )
       return null;
     const pages = deliveryStations
-      .map((station, idx) => ({
-        stationName: station.label,
-        members: (allStationsDayQueries[idx]?.data ??
-          []) as unknown as (ShareDeliveryDetailsRow &
-          Record<string, unknown>)[],
-      }))
-      .filter((p) => p.members.length > 0);
+      .map((station, idx): StationPageData => {
+        const stationMatrix = allStationsDayQueries[idx]?.data as
+          | StationMemberMatrix
+          | undefined;
+        return {
+          stationName: station.label,
+          columns: stationMatrix?.columns ?? [],
+          rows: (stationMatrix?.rows ??
+            []) as unknown as StationPageData["rows"],
+        };
+      })
+      .filter((page) => page.rows.length > 0);
     return pages.length > 0 ? pages : null;
   }, [allStationsDayQueries, deliveryStations]);
 
-  // Build PDF pages for all stations across all days in the week
-  const allStationsWeekPages = useMemo(() => {
+  // Build PDF pages for all stations across all days in the week.
+  const allStationsWeekPages = useMemo<StationPageData[] | null>(() => {
     if (
       allStationsWeekQueries.some((q) => q.isLoading) ||
       deliveryStations.length === 0 ||
@@ -220,21 +209,21 @@ export default function DeliveryStationDetails() {
     )
       return null;
     const validDays = dayNumbers.filter((d) => d !== null);
-    const pages: {
-      stationName: string;
-      members: (ShareDeliveryDetailsRow & Record<string, unknown>)[];
-    }[] = [];
+    const pages: StationPageData[] = [];
     let queryIdx = 0;
     for (const dayNum of validDays) {
       const dayLabel = getDayName(dayNum, t);
       for (const station of deliveryStations) {
-        const members = (allStationsWeekQueries[queryIdx]?.data ??
-          []) as unknown as (ShareDeliveryDetailsRow &
-          Record<string, unknown>)[];
-        if (members.length > 0) {
+        const stationMatrix = allStationsWeekQueries[queryIdx]?.data as
+          | StationMemberMatrix
+          | undefined;
+        const rows = (stationMatrix?.rows ??
+          []) as unknown as StationPageData["rows"];
+        if (rows.length > 0) {
           pages.push({
             stationName: `${station.label} — ${dayLabel}`,
-            members,
+            columns: stationMatrix?.columns ?? [],
+            rows,
           });
         }
         queryIdx++;
@@ -254,20 +243,6 @@ export default function DeliveryStationDetails() {
     [tenantName, logoUrl, tenant],
   );
 
-  // Variation metadata for PDFs
-  const pdfVariations = useMemo(
-    () =>
-      shareTypeVariations
-        .filter((v) => v.id)
-        .map((v) => ({
-          id: v.id!,
-          size: v.size,
-          share_type: v.share_type,
-          share_type_name: v.share_type_name ?? "",
-        })),
-    [shareTypeVariations],
-  );
-
   const columns = useMemo<ColumnsType<any>>(() => {
     const baseColumns: ColumnsType<any> = [
       {
@@ -283,11 +258,11 @@ export default function DeliveryStationDetails() {
 
     return [
       ...baseColumns,
-      // EditableColumnConfig is a superset of Ant's column type — cast for
-      // the Ant `Table` typing.
-      ...(variationColumns as unknown as ColumnsType<unknown>),
+      // The SAME combination columns the packing boxes matrix uses. Cast:
+      // EditableColumnConfig is a superset of Ant's column type.
+      ...(comboColumns as unknown as ColumnsType<unknown>),
     ];
-  }, [variationColumns, t]);
+  }, [comboColumns, t]);
 
   // NOTE: no "reset station to null on day/week change" effect here. That
   // unconditionally wiped a still-valid station (and blanked the table,
@@ -342,7 +317,6 @@ export default function DeliveryStationDetails() {
               ? getDayName(selectedDeliveryDay, t)
               : ""
           }
-          variations={pdfVariations}
           tenant={tenantInfo}
           filename={generatePdfFilename([
             t("commissioning.pickup_list"),
@@ -370,7 +344,6 @@ export default function DeliveryStationDetails() {
               ? getDayName(selectedDeliveryDay, t)
               : ""
           }
-          variations={pdfVariations}
           tenant={tenantInfo}
           filename={generatePdfFilename([
             t("commissioning.pickup_lists"),
@@ -391,7 +364,6 @@ export default function DeliveryStationDetails() {
           pages={allStationsWeekPages}
           week={selectedWeek!}
           dayName={t("commissioning.whole_week")}
-          variations={pdfVariations}
           tenant={tenantInfo}
           filename={generatePdfFilename([
             t("commissioning.pickup_lists"),
@@ -408,26 +380,32 @@ export default function DeliveryStationDetails() {
         />
       </div>
 
-      <Table
-        columns={columns}
-        dataSource={tableData}
-        pagination={false}
-        size="small"
-        loading={loading}
-        className="custom-jasmin-table w-max"
-        rowKey={(record) => record.id || record.name}
-        bordered
-        style={{ width: "max-content", marginTop: "2em" }}
-        locale={{
-          emptyText: (
-            <div style={{ height: "4em" }}>
-              {selectedDeliveryStation
-                ? t("table.no_data")
-                : t("commissioning.select_delivery_station")}
-            </div>
-          ),
-        }}
-      />
+      {isQueryEnabled && !loading && matrixColumns.length === 0 ? (
+        <PastWarningMessage>
+          {t("commissioning.packing_list_no_columns")}
+        </PastWarningMessage>
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={matrixRows}
+          pagination={false}
+          size="small"
+          loading={loading}
+          className="custom-jasmin-table w-max"
+          rowKey={(record) => record.id || record.name}
+          bordered
+          style={{ width: "max-content", marginTop: "2em" }}
+          locale={{
+            emptyText: (
+              <div style={{ height: "4em" }}>
+                {selectedDeliveryStation
+                  ? t("table.no_data")
+                  : t("commissioning.select_delivery_station")}
+              </div>
+            ),
+          }}
+        />
+      )}
 
       <ExplainerText title={t("common.info")}>
         {t("explainers.delivery_stations_details")}

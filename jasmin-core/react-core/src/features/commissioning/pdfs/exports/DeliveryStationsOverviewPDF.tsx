@@ -1,22 +1,19 @@
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View } from "@react-pdf/renderer";
 import type { TFunction } from "i18next";
+
+import type { PackingBoxesMatrixColumn } from "@shared/api/generated/models";
+
+import { ComboHeader, boxComboStyles, groupComboColumns } from "./boxComboPdf";
 import { listStyles } from "./listPdfBase";
 import { ListPDFFooter, ListPDFHeader } from "./ListPDFSharedComponents";
 import { pdfTheme } from "./pdfTheme";
 
 const PRIMARY_COLOR = pdfTheme.colors.brand;
 
-interface VariationMeta {
-  id: string;
-  size: string;
-  share_type: string;
-  share_type_name: string;
-}
-
 // A minimal, strict subset of the generated ``StationOverview`` (the name
 // fields are ``allow_null`` on the backend serializer). No index signature —
 // keeping it a subset lets a ``StationOverview[]`` assign straight in; the
-// dynamic per-variation ``variation_<id>`` counts are read with a local cast.
+// dynamic per-combination ``combo_<key>`` counts are read with a local cast.
 interface StationRow {
   delivery_station_day_id?: string;
   delivery_station_short_name?: string | null;
@@ -25,6 +22,8 @@ interface StationRow {
 
 interface TourPageData {
   tour_number: number;
+  // Each tour carries its OWN box-combination columns (they differ per tour).
+  columns: PackingBoxesMatrixColumn[];
   stations: StationRow[];
 }
 
@@ -32,55 +31,46 @@ export interface DeliveryStationsOverviewPDFProps {
   tours: TourPageData[];
   week: number;
   dayName: string;
-  variations: VariationMeta[];
   t: TFunction;
+}
+
+function formatCount(value: unknown): string {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n === 0) return "";
+  return String(n);
 }
 
 function TourPageContent({
   tour_number,
   stations,
+  columns,
   week,
   dayName,
-  variations,
   t,
 }: {
   tour_number: number;
   stations: StationRow[];
+  columns: PackingBoxesMatrixColumn[];
   week: number;
   dayName: string;
-  variations: VariationMeta[];
   t: TFunction;
 }) {
-  // Group variations by share_type ID for header (matching the table's grouping)
-  const groups: { name: string; variations: VariationMeta[] }[] = [];
-  const seen: Record<string, number> = {};
-  variations.forEach((v) => {
-    if (!(v.share_type in seen)) {
-      seen[v.share_type] = groups.length;
-      groups.push({ name: v.share_type_name, variations: [] });
-    }
-    groups[seen[v.share_type]].variations.push(v);
-  });
+  // Group combination columns by base share_type for the parent header row.
+  const groups = groupComboColumns(columns, t);
+  // The first column of each group starts a new vertical group border.
+  const groupStartKeys = new Set(groups.map((group) => group.cols[0]?.key));
 
-  // Flatten groups into the correct order so sub-header & data columns
-  // line up with the parent group header columns
-  const orderedVariations = groups.flatMap((g) => g.variations);
-
-  // Track which variation IDs start a new share type group (for vertical lines)
-  const groupStartIds = new Set(groups.map((g) => g.variations[0].id));
-
-  // Match table proportions: station = 12 units, each variation = 6 units
-  const variationCount = orderedVariations.length;
+  // Match table proportions: station = 12 units, each combination = 6 units.
   const stationUnits = 12;
-  const variationUnits = 6;
-  const totalUnits = stationUnits + variationUnits * variationCount;
+  const comboUnits = 6;
+  const totalUnits = stationUnits + comboUnits * columns.length;
   const stationWidth = (stationUnits / totalUnits) * 100;
-  const colWidth = (variationUnits / totalUnits) * 100;
+  const colWidth = (comboUnits / totalUnits) * 100;
 
   const groupBorder = { borderLeftWidth: 1.5, borderLeftColor: PRIMARY_COLOR };
 
   return (
-    <Page size="A4" style={listStyles.page}>
+    <Page size="A4" orientation="landscape" style={listStyles.page}>
       <ListPDFHeader pill={t("commissioning.deliveries_overview")}>
         <Text style={listStyles.title}>
           {t("commissioning.KW")} {week} · {dayName} ·{" "}
@@ -89,47 +79,51 @@ function TourPageContent({
       </ListPDFHeader>
 
       <View style={listStyles.table}>
-        {/* Two-level header: share type group row */}
+        {/* Parent header: each base share_type short_name spans its combos */}
         <View style={[listStyles.tableHeader, { borderBottomWidth: 0.5 }]} fixed>
-          <View style={[listStyles.cell, { width: `${stationWidth}%` }, listStyles.cellLeft]}>
+          <View
+            style={[listStyles.cell, { width: `${stationWidth}%` }, listStyles.cellLeft]}
+          >
             <Text> </Text>
           </View>
           {groups.map((group) => (
             <View
-              key={group.name}
+              key={group.id}
               style={[
                 listStyles.cell,
-                { width: `${colWidth * group.variations.length}%` },
+                { width: `${colWidth * group.cols.length}%` },
                 listStyles.cellCenter,
                 groupBorder,
               ]}
             >
-              <Text style={{ fontWeight: 700 }}>{group.name}</Text>
+              <Text style={boxComboStyles.comboBase}>{group.name}</Text>
             </View>
           ))}
         </View>
 
-        {/* Sub-header: variation sizes */}
-        <View style={[listStyles.tableHeader]} fixed>
-          <View style={[listStyles.cell, { width: `${stationWidth}%` }, listStyles.cellLeft]}>
+        {/* Sub-header: combination labels (base size + add-on badges) */}
+        <View style={listStyles.tableHeader} fixed>
+          <View
+            style={[listStyles.cell, { width: `${stationWidth}%` }, listStyles.cellLeft]}
+          >
             <Text>{t("commissioning.delivery_station")}</Text>
           </View>
-          {orderedVariations.map((v) => (
+          {columns.map((column) => (
             <View
-              key={v.id}
+              key={column.key}
               style={[
                 listStyles.cell,
                 { width: `${colWidth}%` },
                 listStyles.cellCenter,
-                groupStartIds.has(v.id) ? groupBorder : {},
+                groupStartKeys.has(column.key) ? groupBorder : {},
               ]}
             >
-              <Text>{t(`commissioning.${v.size}`)}</Text>
+              <ComboHeader column={column} t={t} />
             </View>
           ))}
         </View>
 
-        {/* Data rows */}
+        {/* Data rows: one per station, cells = box count of that combination */}
         {stations.map((station, index) => (
           <View
             key={(station.delivery_station_day_id as string) || index}
@@ -139,27 +133,29 @@ function TourPageContent({
             ]}
             wrap={false}
           >
-            <View style={[listStyles.cell, { width: `${stationWidth}%` }, listStyles.cellLeft]}>
+            <View
+              style={[listStyles.cell, { width: `${stationWidth}%` }, listStyles.cellLeft]}
+            >
               <Text style={{ fontWeight: 500 }}>
                 {station.delivery_station_short_name ||
                   station.delivery_station_name ||
                   "-"}
               </Text>
             </View>
-            {orderedVariations.map((v) => (
+            {columns.map((column) => (
               <View
-                key={v.id}
+                key={column.key}
                 style={[
                   listStyles.cell,
                   { width: `${colWidth}%` },
                   listStyles.cellCenter,
-                  groupStartIds.has(v.id) ? groupBorder : {},
+                  groupStartKeys.has(column.key) ? groupBorder : {},
                 ]}
               >
                 <Text>
-                  {((station as Record<string, unknown>)[
-                    `variation_${v.id}`
-                  ] as number) || 0}
+                  {formatCount(
+                    (station as Record<string, unknown>)[column.key],
+                  )}
                 </Text>
               </View>
             ))}
@@ -176,7 +172,6 @@ export default function DeliveryStationsOverviewPDF({
   tours,
   week,
   dayName,
-  variations,
   t,
 }: DeliveryStationsOverviewPDFProps) {
   return (
@@ -186,9 +181,9 @@ export default function DeliveryStationsOverviewPDF({
           key={tour.tour_number}
           tour_number={tour.tour_number}
           stations={tour.stations}
+          columns={tour.columns}
           week={week}
           dayName={dayName}
-          variations={variations}
           t={t}
         />
       ))}

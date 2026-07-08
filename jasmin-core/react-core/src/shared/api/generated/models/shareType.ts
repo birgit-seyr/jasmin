@@ -29,6 +29,11 @@ export interface ShareType {
    */
   name?: string | null;
   /**
+   * @maxLength 50
+   * @nullable
+   */
+  short_name?: string | null;
+  /**
    * @maxLength 500
    * @nullable
    */

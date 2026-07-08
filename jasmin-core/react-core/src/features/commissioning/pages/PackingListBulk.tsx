@@ -1,23 +1,22 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import dayjs from "dayjs";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
   getCommissioningPackingListBulkListQueryKey,
   useCommissioningPackingListBulkList,
-  useCommissioningPackingListList,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningPackingListBulkListParams,
-  CommissioningPackingListListParams,
+  CommissioningSharesDeliveryDaysListParams,
   PackingListBulkRow,
-  PackingListRow,
 } from "@shared/api/generated/models";
 import { PackingListBulkMobileCard } from "@features/commissioning/components/mobileCards";
-import {
-  PackingListBulkPDFGenerator,
-  PackingListPDFGenerator,
-} from "@features/commissioning/pdfs";
+import { PackingListBulkPDFGenerator } from "@features/commissioning/pdfs";
+import { RelatedDayInfo } from "@features/commissioning/components";
+import { DaySelector, WeekSelector } from "@shared/selectors";
+import { DeliveryStationSelector } from "@features/commissioning/selectors";
 import {
   EditableTable,
   READ_ONLY_PERMISSION,
@@ -28,8 +27,9 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { ExplainerText } from "@shared/ui";
+import { ExplainerText, MobileStack, PastWarningMessage } from "@shared/ui";
 import {
+  useDateFormat,
   useInvalidateAfterTableMutation,
   useIsMobile,
   useNoteColumn,
@@ -39,15 +39,19 @@ import {
 } from "@hooks/index";
 import {
   useAmountUnitSizeColumns,
+  useCurrentDays,
+  useDeliveryStations,
   useShareArticleColumn,
+  useShareDeliveryDays,
 } from "@features/commissioning/hooks";
-import type { ShareTypeOption } from "@hooks/useShareTypes";
-import type { ShareTypeVariationOption } from "@features/commissioning/hooks/useShareTypeVariations";
-import { getDayName } from "@shared/utils";
-
-import PackingListShell, {
-  type PackingListShellState,
-} from "./PackingListShell";
+import type { ShareDeliveryDayOption } from "@features/commissioning/hooks/useShareDeliveryDays";
+import {
+  formatDayLabel,
+  formatWeekLabel,
+  generatePdfFilename,
+  getDayName,
+  isWeekInPast,
+} from "@shared/utils";
 
 const shareArticleFilters = {
   is_harvest_share_article: true,
@@ -58,18 +62,29 @@ const widthShareArticle = "30%";
 const widthAmountUnitSize = "10%";
 const widthTotalAmount = "10%";
 
-// Bulk endpoint accepts ``delivery_station`` as of the per-station rewrite,
-// and ``is_packed_bulk`` for the MIXED packing-mode split. Generated params
-// type lags until ``npm run generate-api`` is rerun.
+const currentYear = dayjs().year();
+const currentWeek = dayjs().isoWeek();
+const currentDay = dayjs().isoWeekday();
+
+// Bulk endpoint accepts ``delivery_station`` and ``is_packed_bulk`` (MIXED-mode
+// split); ``share_type`` is now optional — omitting it sums every share_type.
+// Generated params type lags until ``npm run generate-api`` is rerun.
 type BulkParams = CommissioningPackingListBulkListParams & {
   delivery_station?: string;
   is_packed_bulk?: boolean;
 };
 
+/**
+ * Per-delivery-station bulk packing list. Answers "how much of each article
+ * does this station need on this delivery day" — a warehouse total that sums
+ * across ALL share types (there is deliberately no share-type filter). The
+ * office picks year/week/delivery-day + a delivery station.
+ */
 export default function PackingListBulk() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+  const { dateFormat, mobileDateFormat } = useDateFormat();
   const { getUnitLabel } = useUnitOptions();
   const { getSizeLabel } = useSizeOptions();
   const { noteColumn } = useNoteColumn();
@@ -78,7 +93,158 @@ export default function PackingListBulk() {
     | "BOXES"
     | "BULK"
     | "MIXED";
+  const showSize = Boolean(getSetting("show_size_column"));
 
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const [selectedDeliveryDay, setSelectedDeliveryDay] = useState<number | null>(
+    currentDay - 1,
+  );
+  const [selectedDeliveryStation, setSelectedDeliveryStation] = useState<
+    string | null
+  >(null);
+
+  const isPast = useMemo(
+    () => isWeekInPast(selectedYear, selectedWeek),
+    [selectedYear, selectedWeek],
+  );
+
+  // ----- Delivery-day resolution -----------------------------------------
+  const shareDeliveryDaysParams =
+    useMemo<CommissioningSharesDeliveryDaysListParams>(
+      () => ({
+        active_at_date: dayjs()
+          .year(selectedYear)
+          .isoWeek(selectedWeek ?? currentWeek)
+          .isoWeekday(6)
+          .format("YYYY-MM-DD"),
+      }),
+      [selectedYear, selectedWeek],
+    );
+  const { shareDeliveryDays } = useShareDeliveryDays(shareDeliveryDaysParams);
+
+  const { getRelatedDays, isLoaded } = useCurrentDays(
+    selectedWeek ?? undefined,
+    selectedYear,
+  );
+
+  // The day selector lists only the tenant's ACTUAL delivery weekdays.
+  const deliveryDayOptions = useMemo<number[]>(
+    () =>
+      Array.from(
+        new Set(shareDeliveryDays.map((day) => Number(day.day_number))),
+      ).sort((a, b) => a - b),
+    [shareDeliveryDays],
+  );
+
+  // Keep the selection on a real delivery day.
+  useEffect(() => {
+    if (deliveryDayOptions.length === 0) return;
+    if (
+      selectedDeliveryDay !== null &&
+      deliveryDayOptions.includes(selectedDeliveryDay)
+    ) {
+      return;
+    }
+    setSelectedDeliveryDay(deliveryDayOptions[0]);
+  }, [deliveryDayOptions, selectedDeliveryDay]);
+
+  const getDeliveryDayId = useMemo<string | null>(() => {
+    if (selectedDeliveryDay === null || !shareDeliveryDays.length) return null;
+    const deliveryDay = shareDeliveryDays.find(
+      (day: ShareDeliveryDayOption) =>
+        Number(day.day_number) === Number(selectedDeliveryDay),
+    );
+    return deliveryDay?.id ?? null;
+  }, [selectedDeliveryDay, shareDeliveryDays]);
+
+  // The packing day(s) derived from the selected delivery day (informational).
+  const packingDaysForDelivery = useMemo<number[]>(() => {
+    if (
+      !isLoaded ||
+      selectedDeliveryDay === null ||
+      !getRelatedDays?.getPackingDaysForDelivery
+    ) {
+      return [];
+    }
+    return getRelatedDays.getPackingDaysForDelivery(selectedDeliveryDay);
+  }, [isLoaded, getRelatedDays, selectedDeliveryDay]);
+
+  const calculatePackingDate = useCallback(
+    (packingDayNum: number | null) => {
+      if (packingDayNum === null) return "";
+      const deliveryDays =
+        getRelatedDays?.getDeliveryDaysForPacking(packingDayNum) || [];
+      const deliveryDay = deliveryDays[0];
+      const dayIso = packingDayNum + 1;
+      let date = dayjs()
+        .year(selectedYear)
+        .isoWeek(selectedWeek ?? currentWeek)
+        .isoWeekday(dayIso);
+      if (deliveryDay !== undefined && packingDayNum > deliveryDay) {
+        date = date.subtract(1, "week");
+      }
+      return isMobile
+        ? date.format(`dd, ${mobileDateFormat}`)
+        : date.format(`dddd, ${dateFormat}`);
+    },
+    [
+      selectedYear,
+      selectedWeek,
+      getRelatedDays,
+      isMobile,
+      dateFormat,
+      mobileDateFormat,
+    ],
+  );
+
+  const calculateDeliveryDate = useCallback(
+    (deliveryDayNum: number | null) => {
+      if (deliveryDayNum === null) return "";
+      const date = dayjs()
+        .year(selectedYear)
+        .isoWeek(selectedWeek ?? currentWeek)
+        .isoWeekday(deliveryDayNum + 1);
+      return isMobile
+        ? date.format(`dd, ${mobileDateFormat}`)
+        : date.format(`dddd, ${dateFormat}`);
+    },
+    [selectedYear, selectedWeek, isMobile, dateFormat, mobileDateFormat],
+  );
+
+  // ----- Delivery-station auto-default -----------------------------------
+  const { deliveryStations } = useDeliveryStations({
+    delivery_day: getDeliveryDayId ?? undefined,
+  });
+
+  useEffect(() => {
+    if (selectedDeliveryStation !== null) return;
+    if (deliveryStations.length === 0) return;
+    setSelectedDeliveryStation(deliveryStations[0].value);
+  }, [selectedDeliveryStation, deliveryStations]);
+
+  // Drop a stale station when it's no longer scheduled (e.g. week change).
+  useEffect(() => {
+    if (selectedDeliveryStation === null) return;
+    if (deliveryStations.length === 0) return;
+    const stillValid = deliveryStations.some(
+      (s) => s.value === selectedDeliveryStation,
+    );
+    if (!stillValid) setSelectedDeliveryStation(null);
+  }, [selectedDeliveryStation, deliveryStations]);
+
+  const generateFilename = useCallback(
+    (prefix: string) =>
+      generatePdfFilename([
+        prefix,
+        selectedYear,
+        formatWeekLabel(selectedWeek, t),
+        formatDayLabel(selectedDeliveryDay, t),
+      ]),
+    [selectedYear, selectedWeek, selectedDeliveryDay, t],
+  );
+
+  // ----- Columns ---------------------------------------------------------
   const { shareArticleColumn } = useShareArticleColumn({
     filters: shareArticleFilters,
     showFruitsAndVegs: true,
@@ -169,135 +335,35 @@ export default function PackingListBulk() {
 
   const apiFunctions = useMemo<ApiFunctions>(() => wrapApiFunctions({}), []);
 
-  const renderBody = useCallback(
-    (shell: PackingListShellState) => {
-      const listParams: BulkParams = {
-        year: shell.selectedYear,
-        delivery_week: shell.selectedWeek ?? undefined,
-        day_number: shell.selectedDeliveryDay ?? undefined,
-        share_type: shell.effectiveShareType || undefined,
-        is_past: shell.isPast,
-        delivery_station: shell.selectedDeliveryStation ?? undefined,
-        // In MIXED mode the bulk list must only sum variations actually
-        // packed in bulk (is_packed_bulk=True); BULK mode already implies
-        // all variations are bulk, so the filter would be a no-op.
-        ...(packing_mode === "MIXED" ? { is_packed_bulk: true } : {}),
-      } as BulkParams;
-
-      return (
-        <BulkBody
-          shell={shell}
-          listParams={listParams}
-          columns={columns}
-          apiFunctions={apiFunctions}
-          getUnitLabel={getUnitLabel}
-          getSizeLabel={getSizeLabel}
-          queryClient={queryClient}
-          isMobile={isMobile}
-          packing_mode={packing_mode}
-          t={t}
-        />
-      );
-    },
-    [
-      apiFunctions,
-      columns,
-      getSizeLabel,
-      getUnitLabel,
-      isMobile,
-      packing_mode,
-      queryClient,
-      t,
-    ],
-  );
-
-  return (
-    <PackingListShell titleKey="commissioning.packing_list_bulk" mode="bulk">
-      {renderBody}
-    </PackingListShell>
-  );
-}
-
-// Split out so the hooks below (useQuery, useMemo on per-shell-state values)
-// re-evaluate when the shell hands new state to the render-prop.
-function BulkBody({
-  shell,
-  listParams,
-  columns,
-  apiFunctions,
-  getUnitLabel,
-  getSizeLabel,
-  queryClient,
-  isMobile,
-  packing_mode,
-  t,
-}: {
-  shell: PackingListShellState;
-  listParams: BulkParams;
-  columns: EditableColumnConfig<TableRecord>[];
-  apiFunctions: ApiFunctions;
-  getUnitLabel: (unit: string) => string;
-  getSizeLabel: (size: string) => string;
-  queryClient: ReturnType<typeof useQueryClient>;
-  isMobile: boolean;
-  packing_mode: "BOXES" | "BULK" | "MIXED";
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  const { data: rawData, isFetching } = useCommissioningPackingListBulkList(
-    listParams as unknown as CommissioningPackingListBulkListParams,
-    { query: { enabled: shell.queryEnabled } },
-  );
-
-  // Brand strip data for the member-facing PDF — see ``ListPDFHeader``.
-  // Wrapped in ``useMemo`` so the props identity is stable and the PDF
-  // generator doesn't see a fresh ``tenant`` object on every render.
-  const { tenantName, logoUrl, tenant, getSetting } = useTenant();
-  // Mirror the on-screen size column: hidden unless ``show_size_column`` is on.
-  const showSize = Boolean(getSetting("show_size_column"));
-  const memberPdfTenant = useMemo(
-    () => ({
-      name: tenantName,
-      logoUrl,
-      email: (tenant?.email as string) || "",
-      phone: (tenant?.phone_number as string) || "",
-    }),
-    [tenantName, logoUrl, tenant],
-  );
-
-  // Member-facing per-variation PDF needs the boxes-shape data
-  // (rows keyed by (article × variation)) — the bulk endpoint only
-  // returns per-station sums. In MIXED mode we also restrict to bulk
-  // variations so the PDF columns line up with what members pack.
-  // ``is_packed_bulk`` is sent until the generated params type catches up.
-  const perVariationParams = useMemo(
+  // ----- Data ------------------------------------------------------------
+  const listParams: BulkParams = useMemo(
     () =>
       ({
-        year: shell.selectedYear,
-        delivery_week: shell.selectedWeek ?? undefined,
-        day_number: shell.selectedDeliveryDay ?? undefined,
-        share_type: shell.effectiveShareType || undefined,
-        is_past: shell.isPast,
-        delivery_station: shell.selectedDeliveryStation ?? undefined,
+        year: selectedYear,
+        delivery_week: selectedWeek ?? undefined,
+        day_number: selectedDeliveryDay ?? undefined,
+        is_past: isPast,
+        delivery_station: selectedDeliveryStation ?? undefined,
+        // In MIXED mode only sum variations actually packed in bulk; BULK mode
+        // already implies every variation is bulk, so the filter is a no-op.
         ...(packing_mode === "MIXED" ? { is_packed_bulk: true } : {}),
-      }) as unknown as CommissioningPackingListListParams,
+      }) as BulkParams,
     [
-      shell.selectedYear,
-      shell.selectedWeek,
-      shell.selectedDeliveryDay,
-      shell.effectiveShareType,
-      shell.isPast,
-      shell.selectedDeliveryStation,
+      selectedYear,
+      selectedWeek,
+      selectedDeliveryDay,
+      isPast,
+      selectedDeliveryStation,
       packing_mode,
     ],
   );
 
-  const { data: rawPerVariationData } = useCommissioningPackingListList(
-    perVariationParams,
-    {
-      query: {
-        enabled: shell.queryEnabled && !!shell.selectedDeliveryStation,
-      },
-    },
+  const queryEnabled =
+    selectedDeliveryDay !== null && selectedDeliveryStation !== null;
+
+  const { data: rawData, isFetching } = useCommissioningPackingListBulkList(
+    listParams as unknown as CommissioningPackingListBulkListParams,
+    { query: { enabled: queryEnabled } },
   );
 
   const data = useMemo(
@@ -305,33 +371,24 @@ function BulkBody({
     [rawData],
   );
 
-  // PDF needs ``unit_label`` / ``size_label`` for the centred cells —
-  // raw rows only carry the raw enum codes.
-  const perVariationProcessed = useMemo(
+  const processedData = useMemo(
     () =>
-      (
-        (rawPerVariationData as unknown as (PackingListRow & TableRecord)[]) ??
-        []
-      ).map((item) => ({
+      data.map((item) => ({
         ...item,
         unit_label: item.unit ? getUnitLabel(item.unit as string) : "",
         size_label: item.size ? getSizeLabel(item.size as string) : "",
       })),
-    [rawPerVariationData, getUnitLabel, getSizeLabel],
+    [data, getUnitLabel, getSizeLabel],
   );
 
-  // In MIXED mode the member-facing PDF must only show bulk-packed
-  // variation columns (matches the restricted per-variation rows).
-  const memberFacingVariations = useMemo(
-    () =>
-      packing_mode === "MIXED"
-        ? shell.shareTypeVariations.filter(
-            (v: ShareTypeVariationOption) =>
-              (v as ShareTypeVariationOption & { is_packed_bulk?: boolean })
-                .is_packed_bulk === true,
-          )
-        : shell.shareTypeVariations,
-    [shell.shareTypeVariations, packing_mode],
+  const stationName = useMemo(
+    () => (data[0]?.delivery_station_name as string | undefined) ?? undefined,
+    [data],
+  );
+
+  const filename = useMemo(
+    () => generateFilename(t("commissioning.packing_list_bulk")),
+    [generateFilename, t],
   );
 
   const invalidateData = useCallback(() => {
@@ -344,41 +401,51 @@ function BulkBody({
   const { onSaveSuccess, onDeleteSuccess } =
     useInvalidateAfterTableMutation(invalidateData);
 
-  const processedData = useMemo(
-    () =>
-      data.map((item) => ({
-        ...item,
-        unit_label: item.unit ? getUnitLabel(item.unit as string) : "",
-        size_label: item.size ? getSizeLabel(item.size as string) : "",
-      })),
-    [data, getUnitLabel, getSizeLabel],
-  );
-
-  const stationName = useMemo(() => {
-    const firstRow = data[0];
-    return (firstRow?.delivery_station_name as string | undefined) ?? undefined;
-  }, [data]);
-
-  const filename = useMemo(
-    () => shell.generateFilename(t("commissioning.packing_list_bulk")),
-    [shell, t],
-  );
-
-  const memberFilename = useMemo(
-    () => shell.generateFilename(t("commissioning.packing_list_bulk_member")),
-    [shell, t],
-  );
-
-  const shareTypeName = useMemo(
-    () =>
-      shell.shareTypes.find(
-        (st: ShareTypeOption) => st.id === shell.selectedShareType,
-      )?.name ?? "",
-    [shell.shareTypes, shell.selectedShareType],
-  );
-
   return (
-    <>
+    <div>
+      <h1>{t("commissioning.packing_list_bulk")}</h1>
+
+      <MobileStack>
+        <WeekSelector
+          selectedYear={selectedYear}
+          setSelectedYear={setSelectedYear}
+          selectedWeek={selectedWeek}
+          setSelectedWeek={setSelectedWeek}
+        />
+
+        <DaySelector
+          selectedDay={selectedDeliveryDay}
+          setSelectedDay={setSelectedDeliveryDay}
+          selectedWeek={selectedWeek ?? currentWeek}
+          selectedYear={selectedYear}
+          days={deliveryDayOptions}
+          suffix={t("commissioning.delivery_day")}
+          customDateCalculator={calculateDeliveryDate}
+        />
+      </MobileStack>
+
+      {!isMobile && (
+        <div>
+          <RelatedDayInfo
+            label={t("commissioning.packing_day")}
+            relatedDayNumbers={packingDaysForDelivery}
+            selectedWeek={selectedWeek ?? currentWeek}
+            selectedYear={selectedYear}
+            formatDate={calculatePackingDate}
+          />
+        </div>
+      )}
+
+      <div
+        style={{ marginTop: "1em", marginLeft: "-2em", marginBottom: "1em" }}
+      >
+        <DeliveryStationSelector
+          selectedDeliveryStation={selectedDeliveryStation}
+          setSelectedDeliveryStation={setSelectedDeliveryStation}
+          delivery_day={getDeliveryDayId}
+        />
+      </div>
+
       {!isMobile && (
         <div
           className="section-divider"
@@ -386,45 +453,25 @@ function BulkBody({
         >
           <PackingListBulkPDFGenerator
             data={processedData}
-            year={shell.selectedYear}
-            week={shell.selectedWeek}
+            year={selectedYear}
+            week={selectedWeek}
             dayName={
-              shell.selectedDeliveryDay !== null
-                ? getDayName(shell.selectedDeliveryDay, t)
+              selectedDeliveryDay !== null
+                ? getDayName(selectedDeliveryDay, t)
                 : ""
             }
-            shareType={shareTypeName}
             deliveryStationName={stationName}
             showSize={showSize}
             filename={filename}
             buttonText={t("download.packing_list_bulk")}
             t={t}
           />
-
-          <PackingListPDFGenerator
-            data={perVariationProcessed}
-            year={shell.selectedYear}
-            week={shell.selectedWeek}
-            dayName={
-              shell.selectedDeliveryDay !== null
-                ? getDayName(shell.selectedDeliveryDay, t)
-                : ""
-            }
-            shareType={shareTypeName}
-            variations={memberFacingVariations}
-            titleKey="commissioning.packing_list_bulk_member"
-            tenant={memberPdfTenant}
-            showSize={showSize}
-            filename={memberFilename}
-            buttonText={t("download.packing_list_bulk_member")}
-            t={t}
-          />
         </div>
       )}
 
-      {shell.queryEnabled ? (
+      {queryEnabled ? (
         <EditableTable
-          key={`${shell.selectedYear}-${shell.selectedWeek}-${shell.selectedDeliveryDay}-${shell.selectedDeliveryStation}`}
+          key={`${selectedYear}-${selectedWeek}-${selectedDeliveryDay}-${selectedDeliveryStation}`}
           columns={columns as EditableColumnConfig[]}
           apiFunctions={apiFunctions}
           initialData={data}
@@ -432,6 +479,7 @@ function BulkBody({
           onSaveSuccess={onSaveSuccess}
           onDeleteSuccess={onDeleteSuccess}
           permissions={READ_ONLY_PERMISSION}
+          className={"w-max custom-jasmin-table"}
           renderMobileCard={(record: TableRecord) => (
             <PackingListBulkMobileCard
               key={String(record.key)}
@@ -440,15 +488,11 @@ function BulkBody({
           )}
         />
       ) : (
-        <div className="empty-state-block">
-          {!shell.selectedDeliveryDay && !shell.selectedShareType
-            ? t("commissioning.please_select_delivery_day_and_share_type")
-            : !shell.selectedDeliveryDay
-              ? t("commissioning.please_select_delivery_day")
-              : !shell.selectedShareType
-                ? t("commissioning.please_select_share_type")
-                : t("commissioning.please_select_delivery_station")}
-        </div>
+        <PastWarningMessage>
+          {selectedDeliveryDay === null
+            ? t("commissioning.please_select_delivery_day")
+            : t("commissioning.please_select_delivery_station")}
+        </PastWarningMessage>
       )}
 
       {!isMobile && (
@@ -456,6 +500,6 @@ function BulkBody({
           {t("explainers.packing_list_bulk")}
         </ExplainerText>
       )}
-    </>
+    </div>
   );
 }

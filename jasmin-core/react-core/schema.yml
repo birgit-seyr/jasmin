@@ -1057,30 +1057,10 @@ paths:
     get:
       operationId: commissioning_abos_list
       description: |-
-        ViewSet mixin that maps DRF actions to permission classes.
-
-        Usage:
-            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-                read_permission = IsStaff
-                write_permission = IsOffice
-
-        Read actions (`list`, `retrieve`) require `read_permission`; everything
-        else (create / update / partial_update / destroy / custom @action) requires
-        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
-        the parent (via `permission_classes`) are layered on top.
-
-        Public actions:
-            Set ``public_read_actions`` to a set of action names that should be
-            accessible to *anyone* (anonymous + authenticated, no role check).
-            Use for endpoints that serve content the public needs before login —
-            the registration wizard fetching ``ConsentDocument`` text is the
-            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-            custom ``@action`` names alike; entries here override
-            ``read_permission`` / ``write_permission`` for that action only.
-
-            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-                write_permission = IsOffice          # publishing a new version
-                public_read_actions = {"list", "retrieve", "current"}
+        Reload a mutated instance through ``get_queryset()`` so the serialized
+        response carries the annotations / ``select_related`` the list-and-detail
+        queryset adds (the raw instance returned by ``serializer.save()`` lacks
+        them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
       parameters:
       - in: query
         name: active_at_date
@@ -1199,30 +1179,10 @@ paths:
     get:
       operationId: commissioning_abos_retrieve
       description: |-
-        ViewSet mixin that maps DRF actions to permission classes.
-
-        Usage:
-            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-                read_permission = IsStaff
-                write_permission = IsOffice
-
-        Read actions (`list`, `retrieve`) require `read_permission`; everything
-        else (create / update / partial_update / destroy / custom @action) requires
-        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
-        the parent (via `permission_classes`) are layered on top.
-
-        Public actions:
-            Set ``public_read_actions`` to a set of action names that should be
-            accessible to *anyone* (anonymous + authenticated, no role check).
-            Use for endpoints that serve content the public needs before login —
-            the registration wizard fetching ``ConsentDocument`` text is the
-            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-            custom ``@action`` names alike; entries here override
-            ``read_permission`` / ``write_permission`` for that action only.
-
-            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-                write_permission = IsOffice          # publishing a new version
-                public_read_actions = {"list", "retrieve", "current"}
+        Reload a mutated instance through ``get_queryset()`` so the serialized
+        response carries the annotations / ``select_related`` the list-and-detail
+        queryset adds (the raw instance returned by ``serializer.save()`` lacks
+        them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
       parameters:
       - in: path
         name: id
@@ -1385,30 +1345,10 @@ paths:
     delete:
       operationId: commissioning_abos_destroy
       description: |-
-        ViewSet mixin that maps DRF actions to permission classes.
-
-        Usage:
-            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-                read_permission = IsStaff
-                write_permission = IsOffice
-
-        Read actions (`list`, `retrieve`) require `read_permission`; everything
-        else (create / update / partial_update / destroy / custom @action) requires
-        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
-        the parent (via `permission_classes`) are layered on top.
-
-        Public actions:
-            Set ``public_read_actions`` to a set of action names that should be
-            accessible to *anyone* (anonymous + authenticated, no role check).
-            Use for endpoints that serve content the public needs before login —
-            the registration wizard fetching ``ConsentDocument`` text is the
-            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-            custom ``@action`` names alike; entries here override
-            ``read_permission`` / ``write_permission`` for that action only.
-
-            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-                write_permission = IsOffice          # publishing a new version
-                public_read_actions = {"list", "retrieve", "current"}
+        Reload a mutated instance through ``get_queryset()`` so the serialized
+        response carries the annotations / ``select_related`` the list-and-detail
+        queryset adds (the raw instance returned by ``serializer.save()`` lacks
+        them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
       parameters:
       - in: path
         name: id
@@ -12103,18 +12043,10 @@ paths:
     get:
       operationId: commissioning_members_list
       description: |-
-        Mount in front of ``RolePermissionsMixin`` on viewsets serving
-        PII-bearing models (Member, BillingProfile, Reseller, …).
-
-        The ``super().retrieve(...)`` call dispatches through the rest of
-        the MRO (permission check + ModelViewSet.retrieve) — we only
-        write the log line if that returned successfully. Failures
-        (403 / 404 / 500) propagate unchanged with no ``pii.read`` row
-        written, because the actor didn't actually see anything.
-
-        The subject identifier is taken from the URL kwarg (``pk`` by
-        default), and the model name from the viewset's ``queryset``.
-        Neither requires a custom override per viewset.
+        Reload a mutated instance through ``get_queryset()`` so the serialized
+        response carries the annotations / ``select_related`` the list-and-detail
+        queryset adds (the raw instance returned by ``serializer.save()`` lacks
+        them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
       parameters:
       - in: query
         name: exclude_trial_members
@@ -12224,18 +12156,10 @@ paths:
     get:
       operationId: commissioning_members_retrieve
       description: |-
-        Mount in front of ``RolePermissionsMixin`` on viewsets serving
-        PII-bearing models (Member, BillingProfile, Reseller, …).
-
-        The ``super().retrieve(...)`` call dispatches through the rest of
-        the MRO (permission check + ModelViewSet.retrieve) — we only
-        write the log line if that returned successfully. Failures
-        (403 / 404 / 500) propagate unchanged with no ``pii.read`` row
-        written, because the actor didn't actually see anything.
-
-        The subject identifier is taken from the URL kwarg (``pk`` by
-        default), and the model name from the viewset's ``queryset``.
-        Neither requires a custom override per viewset.
+        Reload a mutated instance through ``get_queryset()`` so the serialized
+        response carries the annotations / ``select_related`` the list-and-detail
+        queryset adds (the raw instance returned by ``serializer.save()`` lacks
+        them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
       parameters:
       - in: path
         name: id
@@ -12269,18 +12193,10 @@ paths:
     put:
       operationId: commissioning_members_update
       description: |-
-        Mount in front of ``RolePermissionsMixin`` on viewsets serving
-        PII-bearing models (Member, BillingProfile, Reseller, …).
-
-        The ``super().retrieve(...)`` call dispatches through the rest of
-        the MRO (permission check + ModelViewSet.retrieve) — we only
-        write the log line if that returned successfully. Failures
-        (403 / 404 / 500) propagate unchanged with no ``pii.read`` row
-        written, because the actor didn't actually see anything.
-
-        The subject identifier is taken from the URL kwarg (``pk`` by
-        default), and the model name from the viewset's ``queryset``.
-        Neither requires a custom override per viewset.
+        Reload a mutated instance through ``get_queryset()`` so the serialized
+        response carries the annotations / ``select_related`` the list-and-detail
+        queryset adds (the raw instance returned by ``serializer.save()`` lacks
+        them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
       parameters:
       - in: path
         name: id
@@ -12337,18 +12253,10 @@ paths:
     patch:
       operationId: commissioning_members_partial_update
       description: |-
-        Mount in front of ``RolePermissionsMixin`` on viewsets serving
-        PII-bearing models (Member, BillingProfile, Reseller, …).
-
-        The ``super().retrieve(...)`` call dispatches through the rest of
-        the MRO (permission check + ModelViewSet.retrieve) — we only
-        write the log line if that returned successfully. Failures
-        (403 / 404 / 500) propagate unchanged with no ``pii.read`` row
-        written, because the actor didn't actually see anything.
-
-        The subject identifier is taken from the URL kwarg (``pk`` by
-        default), and the model name from the viewset's ``queryset``.
-        Neither requires a custom override per viewset.
+        Reload a mutated instance through ``get_queryset()`` so the serialized
+        response carries the annotations / ``select_related`` the list-and-detail
+        queryset adds (the raw instance returned by ``serializer.save()`` lacks
+        them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
       parameters:
       - in: path
         name: id
@@ -12405,18 +12313,10 @@ paths:
     delete:
       operationId: commissioning_members_destroy
       description: |-
-        Mount in front of ``RolePermissionsMixin`` on viewsets serving
-        PII-bearing models (Member, BillingProfile, Reseller, …).
-
-        The ``super().retrieve(...)`` call dispatches through the rest of
-        the MRO (permission check + ModelViewSet.retrieve) — we only
-        write the log line if that returned successfully. Failures
-        (403 / 404 / 500) propagate unchanged with no ``pii.read`` row
-        written, because the actor didn't actually see anything.
-
-        The subject identifier is taken from the URL kwarg (``pk`` by
-        default), and the model name from the viewset's ``queryset``.
-        Neither requires a custom override per viewset.
+        Reload a mutated instance through ``get_queryset()`` so the serialized
+        response carries the annotations / ``select_related`` the list-and-detail
+        queryset adds (the raw instance returned by ``serializer.save()`` lacks
+        them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
       parameters:
       - in: path
         name: id
@@ -14922,15 +14822,107 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/commissioning/packing_list/boxes_matrix/:
+    get:
+      operationId: commissioning_packing_list_boxes_matrix_retrieve
+      description: 'Packing boxes MATRIX for a week + delivery day: one column per
+        box combination (a base box plus the additional shares packed into it, derived
+        from actual subscriptions), one row per share_article, and each cell the per-box
+        quantity. Unlike the per-variation packing list there is no share_type filter
+        — every share type is included.'
+      parameters:
+      - in: query
+        name: day_number
+        schema:
+          type: integer
+        description: Day of the week (0=Monday, 6=Sunday)
+        required: true
+        examples:
+          Monday:
+            value: 0
+          Wednesday:
+            value: 2
+          Sunday:
+            value: 6
+      - in: query
+        name: delivery_station
+        schema:
+          type: string
+        description: Delivery station ID (Jasmin ID format)
+      - in: query
+        name: delivery_week
+        schema:
+          type: integer
+        description: ISO week number (1-53)
+        required: true
+        examples:
+          Week1:
+            value: 1
+            summary: Week 1
+          Week26:
+            value: 26
+            summary: Week 26
+          Week52:
+            value: 52
+            summary: Week 52
+      - in: query
+        name: is_packed_bulk
+        schema:
+          type: boolean
+        description: Restrict to variations with this is_packed_bulk value. Used in
+          MIXED packing mode to split the matrix into boxes (False) and bulk (True).
+          Omit to include all.
+      - in: query
+        name: is_past
+        schema:
+          type: boolean
+          default: false
+        description: When true, includes archived/historical data. When false (default),
+          only recent data is returned.
+      - in: query
+        name: tour
+        schema:
+          type: integer
+        description: Tour number
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Year (YYYY format)
+        required: true
+        examples:
+          '2024':
+            value: 2024
+          '2025':
+            value: 2025
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackingBoxesMatrix'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/commissioning/packing_list_bulk/:
     get:
       operationId: commissioning_packing_list_bulk_list
       description: Per-delivery-station bulk packing list. For each (delivery_station,
         share_article) returns the total physical amount needed (amount_per_share
         × physical_share_type_variation_count summed across every variation, with
-        virtual share_type_variations resolved into their physical components). Pass
-        delivery_station to scope the result to a single station; omit it to get rows
-        for every station.
+        virtual share_type_variations resolved into their physical components). Rows
+        are summed across ALL share_types by default — the bulk list is a per-article
+        warehouse total that ignores share_type; pass share_type to scope to one.
+        Pass delivery_station to scope the result to a single station; omit it to
+        get rows for every station.
       parameters:
       - in: query
         name: day_number
@@ -14985,7 +14977,6 @@ paths:
         schema:
           type: string
         description: Share type ID (Jasmin ID format)
-        required: true
       - in: query
         name: year
         schema:
@@ -18522,6 +18513,77 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
         '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/share_delivery_details/matrix/:
+    get:
+      operationId: commissioning_share_delivery_details_matrix_retrieve
+      description: 'Member × box-combination matrix for one delivery station: one
+        row per member, one column per box combination (a base box plus its packed-in
+        add-ons), each cell the member''s box count of that combination. Uses the
+        SAME combination columns as the packing boxes matrix.'
+      parameters:
+      - in: query
+        name: day_number
+        schema:
+          type: integer
+        description: Day of the week (0=Monday, 6=Sunday)
+        required: true
+        examples:
+          Monday:
+            value: 0
+          Wednesday:
+            value: 2
+          Sunday:
+            value: 6
+      - in: query
+        name: delivery_station
+        schema:
+          type: string
+        description: Delivery station ID (Jasmin ID format)
+        required: true
+      - in: query
+        name: delivery_week
+        schema:
+          type: integer
+        description: ISO week number (1-53)
+        required: true
+        examples:
+          Week1:
+            value: 1
+            summary: Week 1
+          Week26:
+            value: 26
+            summary: Week 26
+          Week52:
+            value: 52
+            summary: Week 52
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Year (YYYY format)
+        required: true
+        examples:
+          '2024':
+            value: 2024
+          '2025':
+            value: 2025
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StationMemberMatrix'
+          description: ''
+        '401':
           content:
             application/json:
               schema:
@@ -24531,6 +24593,55 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/gdpr/admin/preview-deletion/{user_id}/:
+    get:
+      operationId: gdpr_admin_preview_deletion_retrieve
+      description: |-
+        Dry-run the deletion for ``user_id``: return the subject's persona,
+        the retention obligations that would currently refuse it, and the exact
+        per-model field list that WOULD be scrubbed — writing nothing.
+
+        Read-only, so ``IsAdmin`` without step-up (unlike approve, which fires the
+        irreversible scrub). Lets the office answer "what happens if we delete this
+        person?" before committing. See
+        :meth:`apps.gdpr.services.GDPRService.preview_deletion`.
+      summary: 'Admin: preview what an Art-17 deletion would anonymize for a user'
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        description: Tenant JasminUser id to dry-run the deletion for.
+        required: true
+      tags:
+      - gdpr
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletionPreview'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/gdpr/admin/reject-deletion/{request_id}/:
     post:
       operationId: gdpr_admin_reject_deletion_create
@@ -29199,6 +29310,53 @@ components:
             $ref: '#/components/schemas/DeletionLogEntry'
       required:
       - deletions
+    DeletionPreview:
+      type: object
+      description: |-
+        Dry-run of what an Art-17 deletion would do to a user — persona,
+        retention blockers and the per-model field list — without writing.
+        Built by :meth:`apps.gdpr.services.GDPRService.preview_deletion`.
+      properties:
+        user_id:
+          type: string
+        user_email:
+          type: string
+        persona:
+          type: string
+        has_member:
+          type: boolean
+        has_reseller:
+          type: boolean
+        can_anonymize_now:
+          type: boolean
+        retention_blocks:
+          type: array
+          items:
+            type: string
+        model_count:
+          type: integer
+        field_count:
+          type: integer
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/PreviewModel'
+        side_channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/PreviewSideChannel'
+      required:
+      - can_anonymize_now
+      - field_count
+      - has_member
+      - has_reseller
+      - model_count
+      - models
+      - persona
+      - retention_blocks
+      - side_channels
+      - user_email
+      - user_id
     DeletionRejectBody:
       type: object
       properties:
@@ -33573,6 +33731,113 @@ components:
         * `organic` - Bio
         * `in_conversion` - Umstellung
         * `conventional` - Konventionell
+    PackingBoxesMatrix:
+      type: object
+      description: 'Full packing boxes matrix payload: combination columns + article
+        rows.'
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackingBoxesMatrixColumn'
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackingBoxesMatrixRow'
+      required:
+      - columns
+      - rows
+    PackingBoxesMatrixAddOn:
+      type: object
+      description: One add-on ("Zusatz") packed into a box combination.
+      properties:
+        variation_id:
+          type: string
+        size:
+          type: string
+        sort_order:
+          type: integer
+        share_type_id:
+          type: string
+        share_type_short_name:
+          type: string
+        share_type_sort_index:
+          type: integer
+      required:
+      - share_type_id
+      - share_type_short_name
+      - share_type_sort_index
+      - size
+      - sort_order
+      - variation_id
+    PackingBoxesMatrixColumn:
+      type: object
+      description: |-
+        One box combination — a base box plus its packed-in add-ons — with the
+        number of such boxes in the current scope.
+      properties:
+        key:
+          type: string
+        base_variation_id:
+          type: string
+          nullable: true
+        base_size:
+          type: string
+        base_sort_order:
+          type: integer
+        base_share_type_id:
+          type: string
+          nullable: true
+        base_share_type_name:
+          type: string
+        base_share_type_short_name:
+          type: string
+        base_share_type_sort_index:
+          type: integer
+        add_ons:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackingBoxesMatrixAddOn'
+        count:
+          type: integer
+      required:
+      - add_ons
+      - base_share_type_id
+      - base_share_type_name
+      - base_share_type_short_name
+      - base_share_type_sort_index
+      - base_size
+      - base_sort_order
+      - base_variation_id
+      - count
+      - key
+    PackingBoxesMatrixRow:
+      type: object
+      description: |-
+        Stable fields of a packing boxes matrix row — one per
+        ``(share_article, unit, size)``. Dynamic ``combo_<signature>`` per-box
+        quantity keys are read by iteration on the frontend and are left OUT here
+        (mirrors the ``variation_<id>`` pattern in ``PackingListRowSerializer``).
+      properties:
+        id:
+          type: string
+        share_article_id:
+          type: string
+        share_article_name:
+          type: string
+        unit:
+          type: string
+        size:
+          type: string
+        note:
+          type: string
+      required:
+      - id
+      - note
+      - share_article_id
+      - share_article_name
+      - size
+      - unit
     PackingListBulkRow:
       type: object
       properties:
@@ -33825,6 +34090,54 @@ components:
           readOnly: true
       required:
       - name
+    PreviewField:
+      type: object
+      description: |-
+        One field a deletion would scrub, with its classification action
+        (``pii_immediate`` / ``tombstone``) and a human "what it becomes".
+      properties:
+        field:
+          type: string
+        action:
+          type: string
+        becomes:
+          type: string
+      required:
+      - action
+      - becomes
+      - field
+    PreviewModel:
+      type: object
+      description: |-
+        One model a deletion would touch: its ``_meta.label``, how many rows
+        change, and the field-level scrub list. Named ``scrubbed_fields`` (not
+        ``fields``) to avoid shadowing DRF's internal ``Serializer.fields``.
+      properties:
+        model:
+          type: string
+        row_count:
+          type: integer
+        scrubbed_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/PreviewField'
+      required:
+      - model
+      - row_count
+      - scrubbed_fields
+    PreviewSideChannel:
+      type: object
+      description: |-
+        A non-field-classified scrub the deletion also performs (auditlog diffs,
+        axes login records, on-disk SEPA / reseller-document exports).
+      properties:
+        target:
+          type: string
+        description:
+          type: string
+      required:
+      - description
+      - target
     ProcessingActivities:
       type: object
       description: |-
@@ -36334,16 +36647,22 @@ components:
           nullable: true
         member_first_name:
           type: string
+          readOnly: true
         member_last_name:
           type: string
+          readOnly: true
         member_number:
           type: string
+          readOnly: true
         year:
           type: integer
+          readOnly: true
         delivery_week:
           type: integer
+          readOnly: true
         delivery_day_number:
           type: integer
+          readOnly: true
         delivery_station_name:
           type: string
           readOnly: true
@@ -36402,13 +36721,7 @@ components:
           type: boolean
           writeOnly: true
       required:
-      - delivery_day_number
-      - delivery_week
-      - member_first_name
-      - member_last_name
-      - member_number
       - share
-      - year
     ShareDeliveryDetailsRow:
       type: object
       description: |-
@@ -36624,6 +36937,10 @@ components:
           type: string
           nullable: true
           maxLength: 200
+        short_name:
+          type: string
+          nullable: true
+          maxLength: 50
         description:
           type: string
           nullable: true
@@ -37010,15 +37327,48 @@ components:
         * `S` - S
         * `M` - M
         * `L` - L
+    StationMemberMatrix:
+      type: object
+      description: |-
+        Delivery-station member × combination matrix: the SAME combination
+        columns as the packing boxes matrix, one row per member.
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackingBoxesMatrixColumn'
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/StationMemberMatrixRow'
+      required:
+      - columns
+      - rows
+    StationMemberMatrixRow:
+      type: object
+      description: |-
+        One member of a delivery station. Dynamic ``combo_<signature>`` integer
+        keys carry the member's box count of that combination (read by iteration on
+        the frontend, left OUT of the typed schema like the ``variation_<id>``
+        pattern).
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required:
+      - id
+      - name
     StationOverview:
       type: object
       description: |-
         Stable fields of a single station in the tour overview (GET).
 
-        In addition to the stable fields below, each station dict carries
-        dynamic per-variation keys ``variation_<share_type_variation_id>``
-        (the booked share count for that variation) — read by iteration on
-        the frontend, not declared here.
+        In addition to the stable fields below, each station dict carries dynamic
+        keys read by iteration on the frontend (not declared here): per-variation
+        ``variation_<share_type_variation_id>`` counts AND per-box-combination
+        ``combo_<key>`` counts. A plain declared-field ``Serializer`` would DROP
+        these undeclared keys, so ``to_representation`` re-attaches them.
       properties:
         delivery_station_day_id:
           type: string
@@ -38819,12 +39169,17 @@ components:
       properties:
         tour_number:
           type: integer
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackingBoxesMatrixColumn'
         stations:
           type: array
           items:
             $ref: '#/components/schemas/StationOverview'
-          description: List of stations with dynamic variation_* fields
+          description: List of stations with dynamic variation_* + combo_* fields
       required:
+      - columns
       - stations
       - tour_number
     TwoFactorChallengeResponse:

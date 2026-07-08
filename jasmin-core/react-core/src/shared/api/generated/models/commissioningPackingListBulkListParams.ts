@@ -30,7 +30,7 @@ is_past?: boolean;
 /**
  * Share type ID (Jasmin ID format)
  */
-share_type: string;
+share_type?: string;
 /**
  * Year (YYYY format)
  */

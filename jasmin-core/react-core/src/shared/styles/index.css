@@ -34,6 +34,7 @@
 @import './components/new-subscription-modal.css';
 @import './components/step-up-modal.css';
 @import './components/packing-list.css';
+@import './components/packing-list-boxes-matrix.css';
 @import './components/popconfirm.css';
 @import './components/selectors.css';
 @import './components/summary-stats-card.css';

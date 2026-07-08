@@ -206,3 +206,19 @@ def next_sunday(d: _dt.date) -> _dt.date:
 def previous_monday(d: _dt.date) -> _dt.date:
     """Snap back to the Monday of ``d``'s ISO week (unchanged if already Monday)."""
     return d - _dt.timedelta(days=d.weekday())
+
+
+def weeks_in_range(
+    valid_from: _dt.date | None, valid_until: _dt.date | None
+) -> set[tuple[int, int]]:
+    """The ISO ``(year, week)`` tuples covered by a whole-week
+    ``[valid_from (Monday) … valid_until (Sunday)]`` range."""
+    if not valid_from or not valid_until:
+        return set()
+    weeks: set[tuple[int, int]] = set()
+    day = valid_from
+    while day <= valid_until:
+        iso_year, iso_week, _ = day.isocalendar()
+        weeks.add((iso_year, iso_week))
+        day += _dt.timedelta(days=7)
+    return weeks

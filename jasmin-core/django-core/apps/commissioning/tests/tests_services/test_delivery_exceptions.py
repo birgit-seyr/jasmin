@@ -25,7 +25,6 @@ from apps.commissioning.serializers import DeliveryExceptionPeriodSerializer
 from apps.commissioning.services.delivery_exceptions import (
     paused_weeks_for_variation,
     resync_delivery_exception,
-    weeks_in_range,
 )
 from apps.commissioning.services.subscription_service import SubscriptionService
 from apps.commissioning.tests.factories import (
@@ -36,6 +35,7 @@ from apps.commissioning.tests.factories import (
     SubscriptionFactory,
 )
 from apps.commissioning.tests.factories.members import PaymentCycleFactory
+from apps.commissioning.utils.iso_week_utils import weeks_in_range
 
 # A subscription term spanning four future delivery weeks (all Mondays/Sundays
 # after today = 2026-07-01 so the "future weeks only" resync touches them all).

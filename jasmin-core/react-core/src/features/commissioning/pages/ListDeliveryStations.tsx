@@ -240,7 +240,7 @@ export default function ListDeliveryStations() {
         dataIndex: "short_name",
         key: "short_name",
         inputType: "text",
-        required: false,
+        required: true,
         width: "9em",
         align: "center",
         sortable: true,

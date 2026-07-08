@@ -234,6 +234,8 @@ class TenantSettings(JasminModel):
     allows_trial_subscriptions_for_trial_members = models.BooleanField(default=True)
     info_sentence_about_trial_subscriptions = models.TextField(blank=True, null=True)
 
+    # allow_waiting_list_for_subscriptions = models.BooleanField(default=True)
+
     # Jokers system
     uses_jokers = models.BooleanField(default=True)  # done
     default_amount_of_jokers = models.PositiveIntegerField(default=4)

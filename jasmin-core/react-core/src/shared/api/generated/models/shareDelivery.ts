@@ -14,12 +14,12 @@ export interface ShareDelivery {
   subscription?: string | null;
   /** @nullable */
   delivery_station_day?: string | null;
-  member_first_name: string;
-  member_last_name: string;
-  member_number: string;
-  year: number;
-  delivery_week: number;
-  delivery_day_number: number;
+  readonly member_first_name?: string;
+  readonly member_last_name?: string;
+  readonly member_number?: string;
+  readonly year?: number;
+  readonly delivery_week?: number;
+  readonly delivery_day_number?: number;
   readonly delivery_station_name?: string;
   readonly share_type_name?: string;
   readonly share_type_variation_size?: string;

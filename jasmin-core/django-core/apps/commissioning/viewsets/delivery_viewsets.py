@@ -69,9 +69,9 @@ from ..services import (
 )
 from ..services.delivery_exceptions import (
     resync_delivery_exception,
-    weeks_in_range,
 )
 from ..utils import get_contact_annotations
+from ..utils.iso_week_utils import weeks_in_range
 from ..utils.query_params import validate_query_params
 
 logger = logging.getLogger(__name__)

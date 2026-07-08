@@ -466,6 +466,7 @@ export default function CommissioningSidebar({
                   </Link>
                 ),
               },
+
               {
                 key: "commissioning-share-weights",
 
@@ -531,16 +532,7 @@ export default function CommissioningSidebar({
             </Link>
           ),
         },
-        {
-          key: "commissioning-list-delivery-stations",
 
-          requireRole: "isStaff",
-          label: (
-            <Link to="/commissioning/list-delivery-stations">
-              {t("commissioning.list_delivery_stations")}
-            </Link>
-          ),
-        },
         {
           key: "commissioning-delivery-tours",
 
@@ -638,19 +630,19 @@ export default function CommissioningSidebar({
             </Link>
           ),
         },
+        {
+          key: "commissioning-list-delivery-stations",
+
+          requireRole: "isStaff",
+          label: (
+            <Link to="/commissioning/list-delivery-stations">
+              {t("commissioning.list_delivery_stations")}
+            </Link>
+          ),
+        },
 
         ...(sells_to_resellers
           ? [
-              {
-                key: "commissioning-list-offer-groups",
-
-                requireRole: "isOffice",
-                label: (
-                  <Link to="/commissioning/list-offer-groups">
-                    {t("commissioning.list_offer_groups")}
-                  </Link>
-                ),
-              },
               {
                 key: "commissioning-list-resellers",
 
@@ -658,6 +650,16 @@ export default function CommissioningSidebar({
                 label: (
                   <Link to="/commissioning/list-resellers">
                     {t("commissioning.list_resellers")}
+                  </Link>
+                ),
+              },
+              {
+                key: "commissioning-list-offer-groups",
+
+                requireRole: "isOffice",
+                label: (
+                  <Link to="/commissioning/list-offer-groups">
+                    {t("commissioning.list_offer_groups")}
                   </Link>
                 ),
               },

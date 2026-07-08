@@ -70,8 +70,10 @@ const UpcomingDeliveriesCard = ({
     const seen = new Set<string>();
     const sorted = [...shareDeliveries]
       .sort((a, b) => {
-        if (a.year !== b.year) return a.year - b.year;
-        return a.delivery_week - b.delivery_week;
+        const yearA = a.year ?? 0;
+        const yearB = b.year ?? 0;
+        if (yearA !== yearB) return yearA - yearB;
+        return (a.delivery_week ?? 0) - (b.delivery_week ?? 0);
       })
       .filter((delivery) => {
         const shareTypeName =
@@ -90,9 +92,11 @@ const UpcomingDeliveriesCard = ({
     const future: ShareDelivery[] = [];
 
     for (const delivery of sorted) {
+      const year = delivery.year ?? 0;
+      const week = delivery.delivery_week ?? 0;
       const isPast =
-        delivery.year < currentYear ||
-        (delivery.year === currentYear && delivery.delivery_week < currentWeek);
+        year < currentYear ||
+        (year === currentYear && week < currentWeek);
       if (isPast) past.push(delivery);
       else future.push(delivery);
     }
@@ -122,13 +126,15 @@ const UpcomingDeliveriesCard = ({
         nextDelivery !== undefined &&
         (nextDelivery.year !== delivery.year ||
           nextDelivery.delivery_week !== delivery.delivery_week);
-      const isCurrentWeek =
-        delivery.year === currentYear && delivery.delivery_week === currentWeek;
+      const year = delivery.year ?? 0;
+      const week = delivery.delivery_week ?? 0;
+      const isCurrentWeek = year === currentYear && week === currentWeek;
       const isPast =
-        delivery.year < currentYear ||
-        (delivery.year === currentYear && delivery.delivery_week < currentWeek);
+        year < currentYear || (year === currentYear && week < currentWeek);
       const deliveryDate =
-        delivery.delivery_day_number !== undefined
+        delivery.delivery_day_number !== undefined &&
+        delivery.year !== undefined &&
+        delivery.delivery_week !== undefined
           ? getDeliveryDate(
               delivery.year,
               delivery.delivery_week,

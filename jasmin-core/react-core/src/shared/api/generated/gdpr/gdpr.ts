@@ -30,6 +30,7 @@ import type {
   DeletionApproved,
   DeletionConfirmed,
   DeletionLogList,
+  DeletionPreview,
   DeletionRejectBody,
   DeletionRejected,
   DeletionRequestAccepted,
@@ -310,6 +311,106 @@ export function useGdprAdminPendingDeletionsRetrieve<TData = Awaited<ReturnType<
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGdprAdminPendingDeletionsRetrieveQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Dry-run the deletion for ``user_id``: return the subject's persona,
+the retention obligations that would currently refuse it, and the exact
+per-model field list that WOULD be scrubbed — writing nothing.
+
+Read-only, so ``IsAdmin`` without step-up (unlike approve, which fires the
+irreversible scrub). Lets the office answer "what happens if we delete this
+person?" before committing. See
+:meth:`apps.gdpr.services.GDPRService.preview_deletion`.
+ * @summary Admin: preview what an Art-17 deletion would anonymize for a user
+ */
+export const gdprAdminPreviewDeletionRetrieve = (
+    userId: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<DeletionPreview>(
+      {url: `/api/gdpr/admin/preview-deletion/${userId}/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getGdprAdminPreviewDeletionRetrieveQueryKey = (userId?: string,) => {
+    return [
+    `/api/gdpr/admin/preview-deletion/${userId}/`
+    ] as const;
+    }
+
+    
+export const getGdprAdminPreviewDeletionRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>, TError = ErrorResponse>(userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGdprAdminPreviewDeletionRetrieveQueryKey(userId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>> = ({ signal }) => gdprAdminPreviewDeletionRetrieve(userId, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(userId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GdprAdminPreviewDeletionRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>>
+export type GdprAdminPreviewDeletionRetrieveQueryError = ErrorResponse
+
+
+export function useGdprAdminPreviewDeletionRetrieve<TData = Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>, TError = ErrorResponse>(
+ userId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGdprAdminPreviewDeletionRetrieve<TData = Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>, TError = ErrorResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGdprAdminPreviewDeletionRetrieve<TData = Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>, TError = ErrorResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Admin: preview what an Art-17 deletion would anonymize for a user
+ */
+
+export function useGdprAdminPreviewDeletionRetrieve<TData = Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>, TError = ErrorResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof gdprAdminPreviewDeletionRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGdprAdminPreviewDeletionRetrieveQueryOptions(userId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

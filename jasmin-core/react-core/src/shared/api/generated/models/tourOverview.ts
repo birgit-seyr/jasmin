@@ -5,6 +5,7 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { PackingBoxesMatrixColumn } from './packingBoxesMatrixColumn';
 import type { StationOverview } from './stationOverview';
 
 /**
@@ -12,6 +13,7 @@ import type { StationOverview } from './stationOverview';
  */
 export interface TourOverview {
   tour_number: number;
-  /** List of stations with dynamic variation_* fields */
+  columns: PackingBoxesMatrixColumn[];
+  /** List of stations with dynamic variation_* + combo_* fields */
   stations: StationOverview[];
 }

@@ -1,0 +1,33 @@
+/* Box-combination header labels for the packing boxes matrix
+   (PackingListBoxes2) and the delivery-station member matrix. A combination is
+   the base box size with one raised badge per add-on ("Zusatz"), e.g. M with
+   superscripts HONIG·M BROT·L. */
+
+.box-combo {
+  white-space: nowrap;
+}
+
+.box-combo__base {
+  font-weight: 600;
+}
+
+.box-combo__addon {
+  font-size: 0.7em;
+  vertical-align: super;
+  line-height: 0;
+  margin-left: 0.3em;
+  padding: 0 0.25em;
+  border-radius: 3px;
+  background-color: var(--color-primary);
+  color: var(--color-bg-base);
+  white-space: nowrap;
+}
+
+.box-combo__addon:first-of-type {
+  margin-left: 0.4em;
+}
+
+.box-combo__addon-sep {
+  opacity: 0.55;
+  margin: 0 0.08em;
+}

@@ -13,6 +13,8 @@
   },
   "subscription": {
     "start_too_soon": "Das Abo kann frühestens am {{earliest}} starten ({{min_weeks}} Woche(n) Vorlauf).",
+    "additional_requires_base": "Dies ist ein Zusatz-Anteil und kann nur hinzugefügt werden, wenn das Mitglied im selben Zeitraum bereits einen Basis-Anteil hat.",
+    "additional_exceeds_base": "Ein Zusatz-Anteil kann nicht länger laufen als der Basis-Anteil, in den er gepackt wird. Bitte das Enddatum auf {{suggested_valid_until}} (Ende des Basis-Anteils) setzen.",
     "already_confirmed": "Dieses Abo ist bereits bestätigt.",
     "confirmed_immutable": "Ein bestätigtes Abo kann nicht mehr geändert oder gelöscht werden — stattdessen über die Kündigung beenden.",
     "variation_locked": "Die Anteilsvariante eines bestätigten Abos kann nicht mehr geändert werden — bitte ein neues Abo anlegen.",

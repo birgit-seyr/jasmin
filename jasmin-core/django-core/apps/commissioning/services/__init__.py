@@ -23,6 +23,7 @@ from .movements import (
 from .offer_service import OfferService
 from .order_content_service import OrderContentService
 from .order_service import OrderService
+from .packing_list_boxes_matrix_service import PackingListBoxesMatrixService
 from .packing_list_service import PackingListService
 from .reseller_and_delivery_station_service import ResellerAndDeliveryStationService
 from .share_content_service import ShareContentService

@@ -36,22 +36,6 @@ from .recompute import recompute_shares
 YearWeek = tuple[int, int]
 
 
-def weeks_in_range(
-    valid_from: datetime.date | None, valid_until: datetime.date | None
-) -> set[YearWeek]:
-    """The ISO ``(year, week)`` tuples covered by a whole-week
-    ``[valid_from (Monday) … valid_until (Sunday)]`` range."""
-    if not valid_from or not valid_until:
-        return set()
-    weeks: set[YearWeek] = set()
-    day = valid_from
-    while day <= valid_until:
-        iso_year, iso_week, _ = day.isocalendar()
-        weeks.add((iso_year, iso_week))
-        day += datetime.timedelta(days=7)
-    return weeks
-
-
 def paused_weeks_for_variation(
     share_type_variation_id, candidate_weeks: Iterable[YearWeek]
 ) -> set[YearWeek]:

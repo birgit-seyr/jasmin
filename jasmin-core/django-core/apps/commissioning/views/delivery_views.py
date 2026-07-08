@@ -29,6 +29,7 @@ from ..serializers import (
     DeliveryStationsToursOverviewResponseSerializer,
 )
 from ..services.delivery_station_fee_service import DeliveryStationFeeService
+from ..services.packing_list_boxes_matrix_service import PackingListBoxesMatrixService
 from ..utils import (
     get_active_share_type_variations,
     get_delivery_station_days_from_shares_delivery_day,
@@ -89,9 +90,26 @@ class DeliveryStationsToursOverviewView(APIViewRolePermissionsMixin, APIView):
             year, delivery_week, shares_delivery_day, delivery_station_days
         )
 
+        # Day-wide box-combination columns + per-station box counts, shared with
+        # the packing list / DeliveryStationDetails so all three render the same
+        # combination columns. Each station dict gains dynamic ``combo_<key>``
+        # keys alongside the per-variation ``variation_<id>`` ones. The day-wide
+        # columns get filtered PER TOUR below (each tour carries only the
+        # combinations that actually occur on it).
+        combination_columns, combo_counts_by_station = (
+            PackingListBoxesMatrixService.get_station_combination_counts(
+                year, delivery_week, day_number
+            )
+        )
+
         # Build response
         tours_list = self._build_tours_data(
-            delivery_station_days, share_type_variations, year, delivery_week
+            delivery_station_days,
+            share_type_variations,
+            year,
+            delivery_week,
+            combo_counts_by_station,
+            combination_columns,
         )
         variations_metadata = self._build_variations_metadata(share_type_variations)
 
@@ -113,6 +131,7 @@ class DeliveryStationsToursOverviewView(APIViewRolePermissionsMixin, APIView):
         station_day: DeliveryStationDay,
         share_type_variations: QuerySet[ShareTypeVariation],
         demand_by_cell: dict[tuple[str, str], int],
+        combo_counts_by_station: dict[str, dict[str, int]],
     ) -> dict[str, Any]:
         """Build data dictionary for a single station including variation counts."""
         station_data = {
@@ -137,6 +156,13 @@ class DeliveryStationsToursOverviewView(APIViewRolePermissionsMixin, APIView):
                 (station_day.id, variation.id), 0
             )
 
+        # Per-station box-combination counts (dynamic ``combo_<key>`` keys) —
+        # keyed by delivery_station id (not station_day). Stations with no
+        # deliveries simply contribute no combo keys (cells render as 0).
+        station_data.update(
+            combo_counts_by_station.get(station_day.delivery_station_id, {})
+        )
+
         return station_data
 
     def _build_tours_data(
@@ -145,8 +171,16 @@ class DeliveryStationsToursOverviewView(APIViewRolePermissionsMixin, APIView):
         share_type_variations: QuerySet[ShareTypeVariation],
         year: int,
         delivery_week: int,
+        combo_counts_by_station: dict[str, dict[str, int]],
+        combination_columns: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        """Build the tours data structure with stations grouped by tour number."""
+        """Build the tours data structure with stations grouped by tour number.
+
+        Each tour carries its OWN box-combination ``columns`` — the day-wide
+        columns filtered to the combinations that actually occur on that tour
+        (they differ across tours). A tour with no combinations at all (no
+        deliveries) is omitted entirely.
+        """
         # One batched query for the whole (station_day, variation) grid instead
         # of a per-cell aggregate (the old S×V N+1).
         demand_by_cell = get_variation_quantities_by_station_day(
@@ -163,14 +197,40 @@ class DeliveryStationsToursOverviewView(APIViewRolePermissionsMixin, APIView):
                 tours_dict[tour_number] = []
 
             station_data = self._build_station_data(
-                station_day, share_type_variations, demand_by_cell
+                station_day,
+                share_type_variations,
+                demand_by_cell,
+                combo_counts_by_station,
             )
             tours_dict[tour_number].append(station_data)
 
-        return [
-            {"tour_number": tour_num, "stations": stations}
-            for tour_num, stations in sorted(tours_dict.items())
-        ]
+        tours_list: list[dict[str, Any]] = []
+        for tour_num, stations in sorted(tours_dict.items()):
+            # The combinations that occur on THIS tour = the union of the
+            # ``combo_<key>`` counts across its stations.
+            present_keys = {
+                key
+                for station in stations
+                for key in station
+                if key.startswith("combo_")
+            }
+            tour_columns = [
+                column
+                for column in combination_columns
+                if column["key"] in present_keys
+            ]
+            # Omit tours with no box combinations (no deliveries) entirely.
+            if not tour_columns:
+                continue
+            tours_list.append(
+                {
+                    "tour_number": tour_num,
+                    "columns": tour_columns,
+                    "stations": stations,
+                }
+            )
+
+        return tours_list
 
     def _build_variations_metadata(
         self, share_type_variations: QuerySet[ShareTypeVariation]

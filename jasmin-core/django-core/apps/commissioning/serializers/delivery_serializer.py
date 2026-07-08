@@ -14,6 +14,7 @@ from ..errors import (
 from ..models import DeliveryExceptionPeriod, DeliveryStation, DeliveryStationDay
 from ..utils.deletion_utils import bulk_deletable_pks, can_delete_instance
 from ..utils.query_params import validate_query_params
+from .box_matrix_columns_serializer import PackingBoxesMatrixColumnSerializer
 from .serializers_mixin import (
     DeletableMixin,
     DynamicContactFieldsMixin,
@@ -461,10 +462,11 @@ class ShareTypeVariationMetadataSerializer(serializers.Serializer):
 class StationOverviewSerializer(serializers.Serializer):
     """Stable fields of a single station in the tour overview (GET).
 
-    In addition to the stable fields below, each station dict carries
-    dynamic per-variation keys ``variation_<share_type_variation_id>``
-    (the booked share count for that variation) — read by iteration on
-    the frontend, not declared here.
+    In addition to the stable fields below, each station dict carries dynamic
+    keys read by iteration on the frontend (not declared here): per-variation
+    ``variation_<share_type_variation_id>`` counts AND per-box-combination
+    ``combo_<key>`` counts. A plain declared-field ``Serializer`` would DROP
+    these undeclared keys, so ``to_representation`` re-attaches them.
     """
 
     delivery_station_day_id = serializers.CharField()
@@ -478,14 +480,27 @@ class StationOverviewSerializer(serializers.Serializer):
     pickup_time_begin = serializers.TimeField(allow_null=True)
     pickup_time_end = serializers.TimeField(allow_null=True)
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Re-attach the dynamic per-variation / per-combination count keys the
+        # declared fields above would otherwise strip.
+        if isinstance(instance, dict):
+            for key, value in instance.items():
+                if key.startswith(("variation_", "combo_")) and key not in ret:
+                    ret[key] = value
+        return ret
+
 
 class TourOverviewSerializer(serializers.Serializer):
     """Serializer for a tour in the overview (GET)."""
 
     tour_number = serializers.IntegerField()
+    # Box-combination columns for THIS tour (they differ across tours). The
+    # station rows carry matching dynamic ``combo_<key>`` counts.
+    columns = PackingBoxesMatrixColumnSerializer(many=True)
     stations = StationOverviewSerializer(
         many=True,
-        help_text="List of stations with dynamic variation_* fields",
+        help_text="List of stations with dynamic variation_* + combo_* fields",
     )
 
 
@@ -497,6 +512,8 @@ class DeliveryStationsToursOverviewResponseSerializer(serializers.Serializer):
     day_number = serializers.IntegerField(help_text="Day of week (0=Monday, 6=Sunday)")
     delivery_day_id = serializers.CharField()
     number_of_tours = serializers.IntegerField()
+    # Only tours with box combinations (deliveries) are returned; each carries
+    # its own ``columns``. Iterate ``tours`` directly rather than 1..number_of_tours.
     tours = TourOverviewSerializer(many=True)
     variations = ShareTypeVariationMetadataSerializer(many=True)
 

@@ -1,11 +1,9 @@
-import {
-  Document,
-  Page,
-  StyleSheet,
-  Text,
-  View,
-} from "@react-pdf/renderer";
+import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { TFunction } from "i18next";
+
+import type { PackingBoxesMatrixColumn } from "@shared/api/generated/models";
+
+import { ComboHeader, boxComboStyles, groupComboColumns } from "./boxComboPdf";
 import { listStyles } from "./listPdfBase";
 import {
   ListPDFFooter,
@@ -23,13 +21,6 @@ const localStyles = StyleSheet.create({
   },
 });
 
-interface VariationMeta {
-  id: string;
-  size: string;
-  share_type: string;
-  share_type_name: string;
-}
-
 interface MemberRow {
   id?: string;
   name?: string;
@@ -45,71 +36,56 @@ export interface TenantInfo {
 
 export interface StationPageData {
   stationName: string;
-  members: MemberRow[];
+  // Each station has its OWN box-combination columns (different members ⇒
+  // different combinations), so the columns travel with the page, not shared.
+  columns: PackingBoxesMatrixColumn[];
+  rows: MemberRow[];
 }
 
 export interface DeliveryStationDetailsPDFProps {
   pages: StationPageData[];
   week: number;
   dayName: string;
-  variations: VariationMeta[];
   tenant: TenantInfo;
   t: TFunction;
 }
 
+function formatCount(value: unknown): string {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n === 0) return "";
+  return String(n);
+}
+
 function StationPageContent({
   stationName,
-  members,
+  columns,
+  rows,
   week,
   dayName,
-  variations,
   tenant,
   t,
 }: {
   stationName: string;
-  members: MemberRow[];
+  columns: PackingBoxesMatrixColumn[];
+  rows: MemberRow[];
   week: number;
   dayName: string;
-  variations: VariationMeta[];
   tenant: TenantInfo;
   t: TFunction;
 }) {
-  // Group variations by share_type for two-level header
-  const groups: { name: string; variations: VariationMeta[] }[] = [];
-  const seen: Record<string, number> = {};
-  variations.forEach((v) => {
-    if (!(v.share_type in seen)) {
-      seen[v.share_type] = groups.length;
-      groups.push({ name: v.share_type_name, variations: [] });
-    }
-    groups[seen[v.share_type]].variations.push(v);
-  });
-  const orderedVariations = groups.flatMap((g) => g.variations);
-  const groupStartIds = new Set(groups.map((g) => g.variations[0].id));
+  // Group combination columns by base share_type for the parent header row.
+  const groups = groupComboColumns(columns, t);
+  const groupStartKeys = new Set(groups.map((group) => group.cols[0]?.key));
 
   const nameWidth = 30;
   const tickWidth = 8;
-  const variationsWidth = 100 - nameWidth - tickWidth;
-  const colWidth =
-    orderedVariations.length > 0
-      ? variationsWidth / orderedVariations.length
-      : 8;
+  const combosWidth = 100 - nameWidth - tickWidth;
+  const colWidth = columns.length > 0 ? combosWidth / columns.length : 8;
 
   const groupBorder = { borderLeftWidth: 1.5, borderLeftColor: PRIMARY_COLOR };
 
   return (
     <Page size="A4" style={listStyles.page}>
-      {/*
-        Branded header — same shared ``ListPDFHeader`` the packing list
-        member-facing variant uses, so the pickup list and the
-        packing list look like they came from the same office. Title
-        + sub-info go through as children; the brand strip (logo + name
-        + contact) is rendered above by the shared component when
-        ``tenant`` is provided. Previous layout was a 3-column row
-        (logo / identity / title-right-aligned) with a heavier 2pt
-        border; the new layout stacks the brand strip above a
-        left-aligned title block.
-      */}
       <ListPDFHeader
         tenant={tenant as SharedTenantInfo}
         pill={t("commissioning.delivery_notes_delivery_stations_details")}
@@ -121,66 +97,49 @@ function StationPageContent({
       </ListPDFHeader>
 
       <View style={listStyles.table}>
-        {/* Group header row (share type names) */}
-        <View
-          style={[listStyles.tableHeader, { borderBottomWidth: 0.5 }]}
-          fixed
-        >
+        {/* Group header row: each base share_type short_name spans its combos */}
+        <View style={[listStyles.tableHeader, { borderBottomWidth: 0.5 }]} fixed>
           <View
-            style={[
-              listStyles.cell,
-              { width: `${nameWidth}%` },
-              listStyles.cellLeft,
-            ]}
+            style={[listStyles.cell, { width: `${nameWidth}%` }, listStyles.cellLeft]}
           >
             <Text> </Text>
           </View>
           {groups.map((group) => (
             <View
-              key={group.name}
+              key={group.id}
               style={[
                 listStyles.cell,
-                { width: `${colWidth * group.variations.length}%` },
+                { width: `${colWidth * group.cols.length}%` },
                 listStyles.cellCenter,
                 groupBorder,
               ]}
             >
-              <Text style={{ fontWeight: 700 }}>{group.name}</Text>
+              <Text style={boxComboStyles.comboBase}>{group.name}</Text>
             </View>
           ))}
-          <View
-            style={[
-              listStyles.cell,
-              localStyles.tickCol,
-              listStyles.cellCenter,
-            ]}
-          >
+          <View style={[listStyles.cell, localStyles.tickCol, listStyles.cellCenter]}>
             <Text> </Text>
           </View>
         </View>
 
-        {/* Sub-header row (variation sizes + tick column) */}
+        {/* Sub-header row: combination labels + tick column */}
         <View style={[listStyles.tableHeader]} fixed>
           <View
-            style={[
-              listStyles.cell,
-              { width: `${nameWidth}%` },
-              listStyles.cellLeft,
-            ]}
+            style={[listStyles.cell, { width: `${nameWidth}%` }, listStyles.cellLeft]}
           >
             <Text>{t("commissioning.pickup_name")}</Text>
           </View>
-          {orderedVariations.map((v) => (
+          {columns.map((column) => (
             <View
-              key={v.id}
+              key={column.key}
               style={[
                 listStyles.cell,
                 { width: `${colWidth}%` },
                 listStyles.cellCenter,
-                groupStartIds.has(v.id) ? groupBorder : {},
+                groupStartKeys.has(column.key) ? groupBorder : {},
               ]}
             >
-              <Text>{t(`commissioning.${v.size}`)}</Text>
+              <ComboHeader column={column} t={t} />
             </View>
           ))}
           <View
@@ -195,8 +154,8 @@ function StationPageContent({
           </View>
         </View>
 
-        {/* Data rows */}
-        {members.map((member, index) => (
+        {/* Data rows: one per member, cells = box count of that combination */}
+        {rows.map((member, index) => (
           <View
             key={member.id || index}
             style={[
@@ -206,25 +165,21 @@ function StationPageContent({
             wrap={false}
           >
             <View
-              style={[
-                listStyles.cell,
-                { width: `${nameWidth}%` },
-                listStyles.cellLeft,
-              ]}
+              style={[listStyles.cell, { width: `${nameWidth}%` }, listStyles.cellLeft]}
             >
               <Text style={{ fontWeight: 500 }}>{member.name || "-"}</Text>
             </View>
-            {orderedVariations.map((v) => (
+            {columns.map((column) => (
               <View
-                key={v.id}
+                key={column.key}
                 style={[
                   listStyles.cell,
                   { width: `${colWidth}%` },
                   listStyles.cellCenter,
-                  groupStartIds.has(v.id) ? groupBorder : {},
+                  groupStartKeys.has(column.key) ? groupBorder : {},
                 ]}
               >
-                <Text>{(member[`variation_${v.id}`] as number) || ""}</Text>
+                <Text>{formatCount(member[column.key])}</Text>
               </View>
             ))}
             <View
@@ -250,7 +205,6 @@ export default function DeliveryStationDetailsPDF({
   pages,
   week,
   dayName,
-  variations,
   tenant,
   t,
 }: DeliveryStationDetailsPDFProps) {
@@ -260,10 +214,10 @@ export default function DeliveryStationDetailsPDF({
         <StationPageContent
           key={idx}
           stationName={page.stationName}
-          members={page.members}
+          columns={page.columns}
+          rows={page.rows}
           week={week}
           dayName={dayName}
-          variations={variations}
           tenant={tenant}
           t={t}
         />

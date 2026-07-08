@@ -188,6 +188,18 @@ class Member(
             )
         return name or self.get_display_id()
 
+    @property
+    def display_name(self) -> str:
+        """Canonical display name — the company name when set, otherwise the
+        natural ``first last`` (mirrors ``ContactEntity.name``). Carries no
+        member-number suffix; that's ``__str__``'s job. The member register
+        export deliberately renders surname-first instead (a formal-list
+        convention matching its ``last_name`` sort), so it keeps its own
+        formatter rather than reusing this."""
+        if self.company_name:
+            return self.company_name
+        return " ".join(p for p in (self.first_name, self.last_name) if p)
+
     def clean(self) -> None:
         super().clean()
         # Cross-field date-order guards. NULL-tolerant: each pair is only

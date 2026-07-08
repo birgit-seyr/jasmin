@@ -38,9 +38,14 @@ from ..serializers import (
 )
 from ..serializers.shares_serializer import (
     HarvestSharePlanningRowSerializer,
+    PackingBoxesMatrixSerializer,
     PackingListRowSerializer,
 )
-from ..services import PackingListService, ShareContentService
+from ..services import (
+    PackingListBoxesMatrixService,
+    PackingListService,
+    ShareContentService,
+)
 from ..utils.composite_id_utils import parse_composite_pk
 from ..utils.query_params import validate_query_params
 
@@ -327,6 +332,59 @@ class PackingListViewSet(RolePermissionsMixin, viewsets.ViewSet):
 
         return Response(packing_list, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        parameters=[
+            get_year_parameter(required=True),
+            get_delivery_week_parameter(required=True),
+            get_day_number_parameter(required=True),
+            get_is_past_parameter(),
+            get_delivery_station_parameter(),
+            get_tour_parameter(),
+            OpenApiParameter(
+                name="is_packed_bulk",
+                type=OpenApiTypes.BOOL,
+                required=False,
+                description=(
+                    "Restrict to variations with this is_packed_bulk value. "
+                    "Used in MIXED packing mode to split the matrix into boxes "
+                    "(False) and bulk (True). Omit to include all."
+                ),
+            ),
+        ],
+        responses={200: PackingBoxesMatrixSerializer},
+        description=(
+            "Packing boxes MATRIX for a week + delivery day: one column per box "
+            "combination (a base box plus the additional shares packed into it, "
+            "derived from actual subscriptions), one row per share_article, and "
+            "each cell the per-box quantity. Unlike the per-variation packing "
+            "list there is no share_type filter — every share type is included."
+        ),
+    )
+    @action(detail=False, methods=["get"], url_path="boxes_matrix")
+    def boxes_matrix(self, request: Request) -> Response:
+        params = validate_query_params(
+            request,
+            required=["year", "delivery_week", "day_number"],
+            optional=[
+                "is_past",
+                "delivery_station",
+                "tour",
+                "is_packed_bulk",
+            ],
+        )
+
+        matrix = PackingListBoxesMatrixService.get_boxes_matrix(
+            year=params["year"],
+            delivery_week=params["delivery_week"],
+            day_number=params["day_number"],
+            is_past=params["is_past"],
+            delivery_station=params["delivery_station"],
+            tour=params["tour"],
+            is_packed_bulk=params["is_packed_bulk"],
+        )
+
+        return Response(matrix, status=status.HTTP_200_OK)
+
 
 class PackingListBulkViewSet(RolePermissionsMixin, viewsets.ViewSet):
     read_permission = IsStaff
@@ -339,7 +397,7 @@ class PackingListBulkViewSet(RolePermissionsMixin, viewsets.ViewSet):
             get_year_parameter(required=True),
             get_delivery_week_parameter(required=True),
             get_day_number_parameter(required=True),
-            get_share_type_parameter(required=True),
+            get_share_type_parameter(required=False),
             get_is_past_parameter(),
             get_delivery_station_parameter(),
             OpenApiParameter(
@@ -376,15 +434,17 @@ class PackingListBulkViewSet(RolePermissionsMixin, viewsets.ViewSet):
             "amount needed (amount_per_share × physical_share_type_variation"
             "_count summed across every variation, with virtual "
             "share_type_variations resolved into their physical components). "
-            "Pass delivery_station to scope the result to a single station; "
-            "omit it to get rows for every station."
+            "Rows are summed across ALL share_types by default — the bulk list "
+            "is a per-article warehouse total that ignores share_type; pass "
+            "share_type to scope to one. Pass delivery_station to scope the "
+            "result to a single station; omit it to get rows for every station."
         ),
     )
     def list(self, request: Request) -> Response:
         params = validate_query_params(
             request,
-            required=["year", "delivery_week", "day_number", "share_type"],
-            optional=["is_past", "delivery_station", "is_packed_bulk"],
+            required=["year", "delivery_week", "day_number"],
+            optional=["share_type", "is_past", "delivery_station", "is_packed_bulk"],
         )
 
         packing_list_bulk = PackingListService.get_packing_list_bulk(

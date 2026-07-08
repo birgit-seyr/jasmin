@@ -1,3 +1,5 @@
+import type { TFunction } from "i18next";
+
 import { createEnumOptionsHook } from "./internal/createEnumOptionsHook";
 
 const SHARE_TYPE_VARIATION_SIZE_OPTIONS = {
@@ -24,7 +26,7 @@ const labels: Record<keyof typeof SHARE_TYPE_VARIATION_SIZE_OPTIONS, string> = {
   ONE_SIZE: "commissioning.ONE_SIZE",
 };
 
-const { useEnumOptions } = createEnumOptionsHook(
+const { useEnumOptions, getLabelPure } = createEnumOptionsHook(
   SHARE_TYPE_VARIATION_SIZE_OPTIONS,
   (value, t) => t(labels[value]),
   // Multi-value lookup: split on comma, translate each, rejoin.
@@ -47,4 +49,11 @@ export const useShareTypeVariationSizeOptions = () => {
     getShareTypeVariationSizeLabel: getLabel,
   };
 };
+
+/** Pure (non-hook) label getter — safe inside ``pdf()`` rendering, where
+ * hooks can't run. Same label + multi-value handling as the hook version. */
+export const getShareTypeVariationSizeLabelPure = (
+  value: string,
+  t: TFunction,
+): string => getLabelPure(value, t);
 

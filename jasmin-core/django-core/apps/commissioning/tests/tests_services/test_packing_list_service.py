@@ -23,6 +23,7 @@ from apps.commissioning.tests.factories import (
     ShareContentFactory,
     ShareFactory,
     SharesDeliveryDayFactory,
+    ShareTypeFactory,
     ShareTypeVariationFactory,
 )
 
@@ -578,6 +579,73 @@ class TestGetPackingListBulk:
             station_day_b.delivery_station.id,
         }
         assert all(row["total_amount"] == 10.0 for row in result)
+
+    @patch(
+        "apps.commissioning.services.packing_list_service.batch_get_physical_variation_totals_for_week"
+    )
+    def test_sums_across_share_types_when_share_type_omitted(
+        self, mock_variation_totals, tenant
+    ):
+        """Omitting share_type sums every share_type's demand for the same
+        (station, article) — the bulk list is a per-article warehouse total
+        that ignores which share_type an article belongs to."""
+        delivery_day = SharesDeliveryDayFactory(day_number=2, default_packing_day=2)
+        station_day = DeliveryStationDayFactory(delivery_day=delivery_day)
+        station = station_day.delivery_station
+
+        variation_a = ShareTypeVariationFactory(
+            share_type=ShareTypeFactory(share_option="HARVEST_SHARE")
+        )
+        variation_b = ShareTypeVariationFactory(
+            share_type=ShareTypeFactory(share_option="HONEY_SHARE")
+        )
+        assert variation_a.share_type_id != variation_b.share_type_id
+
+        article = ShareArticleFactory()
+        for variation, amount in (
+            (variation_a, Decimal("3")),
+            (variation_b, Decimal("2")),
+        ):
+            share = ShareFactory(
+                year=2026,
+                delivery_week=15,
+                delivery_day=delivery_day,
+                share_type_variation=variation,
+            )
+            share.packing_day = 2
+            share.save()
+            ShareContentFactory(
+                share=share,
+                share_article=article,
+                delivery_station=station,
+                amount=amount,
+                unit="KG",
+                size="M",
+            )
+
+        mock_variation_totals.return_value = _bulk_station_totals(
+            delivery_day, {station.id: {variation_a.pk: 10, variation_b.pk: 5}}
+        )
+
+        result = PackingListService.get_packing_list_bulk(
+            year=2026, delivery_week=15, day_number=2, is_past=False
+        )
+
+        # One merged row: 3 × 10 (share_type A) + 2 × 5 (share_type B) = 40.
+        assert len(result) == 1
+        assert result[0]["total_amount"] == 40.0
+        assert result[0]["share_article"] == article.id
+
+        # Scoping to a single share_type returns only that share_type's slice.
+        scoped = PackingListService.get_packing_list_bulk(
+            year=2026,
+            delivery_week=15,
+            day_number=2,
+            is_past=False,
+            share_type=str(variation_a.share_type_id),
+        )
+        assert len(scoped) == 1
+        assert scoped[0]["total_amount"] == 30.0
 
     @patch(
         "apps.commissioning.services.packing_list_service.batch_get_physical_variation_totals_for_week"

@@ -35,6 +35,9 @@ dev-up:
 dev-down:
 	$(COMPOSE_DEV) down
 
+dev-restart-frontend:
+	$(COMPOSE_DEV) restart frontend
+
 dev-stop:
 	$(COMPOSE_DEV) stop
 

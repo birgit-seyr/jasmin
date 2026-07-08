@@ -117,6 +117,7 @@ import type {
   CommissioningOffersListParams,
   CommissioningOrderContentsListParams,
   CommissioningOrdersOverviewListParams,
+  CommissioningPackingListBoxesMatrixRetrieveParams,
   CommissioningPackingListBulkListParams,
   CommissioningPackingListListParams,
   CommissioningPaymentCyclesListParams,
@@ -129,6 +130,7 @@ import type {
   CommissioningShareArticlesListParams,
   CommissioningShareContentsListParams,
   CommissioningShareDeliveryDetailsListParams,
+  CommissioningShareDeliveryDetailsMatrixRetrieveParams,
   CommissioningShareDeliveryListParams,
   CommissioningShareDeliveryOverviewListParams,
   CommissioningShareDeliveryPendingOptinListParams,
@@ -232,6 +234,7 @@ import type {
   OrderContentItem,
   OrderContentListResponse,
   OrdersDeliveryDay,
+  PackingBoxesMatrix,
   PackingListBulkRow,
   PackingListRow,
   PaginatedForecastRowList,
@@ -278,6 +281,7 @@ import type {
   ShareTypeVariationGrossPrice,
   ShareTypeVariationsTotalsResponse,
   SharesDeliveryDay,
+  StationMemberMatrix,
   StockComparison,
   Storage,
   StorageLoggingEntry,
@@ -331,30 +335,10 @@ type NonReadonly<T> = [T] extends [UnionToIntersection<T>] ? {
 
 
 /**
- * ViewSet mixin that maps DRF actions to permission classes.
-
-Usage:
-    class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-        read_permission = IsStaff
-        write_permission = IsOffice
-
-Read actions (`list`, `retrieve`) require `read_permission`; everything
-else (create / update / partial_update / destroy / custom @action) requires
-`write_permission`. Both default to `IsAuthenticated`. Any classes set on
-the parent (via `permission_classes`) are layered on top.
-
-Public actions:
-    Set ``public_read_actions`` to a set of action names that should be
-    accessible to *anyone* (anonymous + authenticated, no role check).
-    Use for endpoints that serve content the public needs before login —
-    the registration wizard fetching ``ConsentDocument`` text is the
-    canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-    custom ``@action`` names alike; entries here override
-    ``read_permission`` / ``write_permission`` for that action only.
-
-    class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-        write_permission = IsOffice          # publishing a new version
-        public_read_actions = {"list", "retrieve", "current"}
+ * Reload a mutated instance through ``get_queryset()`` so the serialized
+response carries the annotations / ``select_related`` the list-and-detail
+queryset adds (the raw instance returned by ``serializer.save()`` lacks
+them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
  */
 export const commissioningAbosList = (
     params?: CommissioningAbosListParams,
@@ -505,30 +489,10 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * ViewSet mixin that maps DRF actions to permission classes.
-
-Usage:
-    class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-        read_permission = IsStaff
-        write_permission = IsOffice
-
-Read actions (`list`, `retrieve`) require `read_permission`; everything
-else (create / update / partial_update / destroy / custom @action) requires
-`write_permission`. Both default to `IsAuthenticated`. Any classes set on
-the parent (via `permission_classes`) are layered on top.
-
-Public actions:
-    Set ``public_read_actions`` to a set of action names that should be
-    accessible to *anyone* (anonymous + authenticated, no role check).
-    Use for endpoints that serve content the public needs before login —
-    the registration wizard fetching ``ConsentDocument`` text is the
-    canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-    custom ``@action`` names alike; entries here override
-    ``read_permission`` / ``write_permission`` for that action only.
-
-    class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-        write_permission = IsOffice          # publishing a new version
-        public_read_actions = {"list", "retrieve", "current"}
+ * Reload a mutated instance through ``get_queryset()`` so the serialized
+response carries the annotations / ``select_related`` the list-and-detail
+queryset adds (the raw instance returned by ``serializer.save()`` lacks
+them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
  */
 export const commissioningAbosRetrieve = (
     id: string,
@@ -739,30 +703,10 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * ViewSet mixin that maps DRF actions to permission classes.
-
-Usage:
-    class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-        read_permission = IsStaff
-        write_permission = IsOffice
-
-Read actions (`list`, `retrieve`) require `read_permission`; everything
-else (create / update / partial_update / destroy / custom @action) requires
-`write_permission`. Both default to `IsAuthenticated`. Any classes set on
-the parent (via `permission_classes`) are layered on top.
-
-Public actions:
-    Set ``public_read_actions`` to a set of action names that should be
-    accessible to *anyone* (anonymous + authenticated, no role check).
-    Use for endpoints that serve content the public needs before login —
-    the registration wizard fetching ``ConsentDocument`` text is the
-    canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-    custom ``@action`` names alike; entries here override
-    ``read_permission`` / ``write_permission`` for that action only.
-
-    class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-        write_permission = IsOffice          # publishing a new version
-        public_read_actions = {"list", "retrieve", "current"}
+ * Reload a mutated instance through ``get_queryset()`` so the serialized
+response carries the annotations / ``select_related`` the list-and-detail
+queryset adds (the raw instance returned by ``serializer.save()`` lacks
+them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
  */
 export const commissioningAbosDestroy = (
     id: string,
@@ -15231,18 +15175,10 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Mount in front of ``RolePermissionsMixin`` on viewsets serving
-PII-bearing models (Member, BillingProfile, Reseller, …).
-
-The ``super().retrieve(...)`` call dispatches through the rest of
-the MRO (permission check + ModelViewSet.retrieve) — we only
-write the log line if that returned successfully. Failures
-(403 / 404 / 500) propagate unchanged with no ``pii.read`` row
-written, because the actor didn't actually see anything.
-
-The subject identifier is taken from the URL kwarg (``pk`` by
-default), and the model name from the viewset's ``queryset``.
-Neither requires a custom override per viewset.
+ * Reload a mutated instance through ``get_queryset()`` so the serialized
+response carries the annotations / ``select_related`` the list-and-detail
+queryset adds (the raw instance returned by ``serializer.save()`` lacks
+them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
  */
 export const commissioningMembersList = (
     params?: CommissioningMembersListParams,
@@ -15398,18 +15334,10 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Mount in front of ``RolePermissionsMixin`` on viewsets serving
-PII-bearing models (Member, BillingProfile, Reseller, …).
-
-The ``super().retrieve(...)`` call dispatches through the rest of
-the MRO (permission check + ModelViewSet.retrieve) — we only
-write the log line if that returned successfully. Failures
-(403 / 404 / 500) propagate unchanged with no ``pii.read`` row
-written, because the actor didn't actually see anything.
-
-The subject identifier is taken from the URL kwarg (``pk`` by
-default), and the model name from the viewset's ``queryset``.
-Neither requires a custom override per viewset.
+ * Reload a mutated instance through ``get_queryset()`` so the serialized
+response carries the annotations / ``select_related`` the list-and-detail
+queryset adds (the raw instance returned by ``serializer.save()`` lacks
+them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
  */
 export const commissioningMembersRetrieve = (
     id: string,
@@ -15498,18 +15426,10 @@ export function useCommissioningMembersRetrieve<TData = Awaited<ReturnType<typeo
 
 
 /**
- * Mount in front of ``RolePermissionsMixin`` on viewsets serving
-PII-bearing models (Member, BillingProfile, Reseller, …).
-
-The ``super().retrieve(...)`` call dispatches through the rest of
-the MRO (permission check + ModelViewSet.retrieve) — we only
-write the log line if that returned successfully. Failures
-(403 / 404 / 500) propagate unchanged with no ``pii.read`` row
-written, because the actor didn't actually see anything.
-
-The subject identifier is taken from the URL kwarg (``pk`` by
-default), and the model name from the viewset's ``queryset``.
-Neither requires a custom override per viewset.
+ * Reload a mutated instance through ``get_queryset()`` so the serialized
+response carries the annotations / ``select_related`` the list-and-detail
+queryset adds (the raw instance returned by ``serializer.save()`` lacks
+them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
  */
 export const commissioningMembersUpdate = (
     id: string,
@@ -15570,18 +15490,10 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Mount in front of ``RolePermissionsMixin`` on viewsets serving
-PII-bearing models (Member, BillingProfile, Reseller, …).
-
-The ``super().retrieve(...)`` call dispatches through the rest of
-the MRO (permission check + ModelViewSet.retrieve) — we only
-write the log line if that returned successfully. Failures
-(403 / 404 / 500) propagate unchanged with no ``pii.read`` row
-written, because the actor didn't actually see anything.
-
-The subject identifier is taken from the URL kwarg (``pk`` by
-default), and the model name from the viewset's ``queryset``.
-Neither requires a custom override per viewset.
+ * Reload a mutated instance through ``get_queryset()`` so the serialized
+response carries the annotations / ``select_related`` the list-and-detail
+queryset adds (the raw instance returned by ``serializer.save()`` lacks
+them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
  */
 export const commissioningMembersPartialUpdate = (
     id: string,
@@ -15642,18 +15554,10 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Mount in front of ``RolePermissionsMixin`` on viewsets serving
-PII-bearing models (Member, BillingProfile, Reseller, …).
-
-The ``super().retrieve(...)`` call dispatches through the rest of
-the MRO (permission check + ModelViewSet.retrieve) — we only
-write the log line if that returned successfully. Failures
-(403 / 404 / 500) propagate unchanged with no ``pii.read`` row
-written, because the actor didn't actually see anything.
-
-The subject identifier is taken from the URL kwarg (``pk`` by
-default), and the model name from the viewset's ``queryset``.
-Neither requires a custom override per viewset.
+ * Reload a mutated instance through ``get_queryset()`` so the serialized
+response carries the annotations / ``select_related`` the list-and-detail
+queryset adds (the raw instance returned by ``serializer.save()`` lacks
+them). Returns ``None`` if the row vanished (e.g. deleted concurrently).
  */
 export const commissioningMembersDestroy = (
     id: string,
@@ -19070,7 +18974,97 @@ export function useCommissioningPackingListList<TData = Awaited<ReturnType<typeo
 
 
 /**
- * Per-delivery-station bulk packing list. For each (delivery_station, share_article) returns the total physical amount needed (amount_per_share × physical_share_type_variation_count summed across every variation, with virtual share_type_variations resolved into their physical components). Pass delivery_station to scope the result to a single station; omit it to get rows for every station.
+ * Packing boxes MATRIX for a week + delivery day: one column per box combination (a base box plus the additional shares packed into it, derived from actual subscriptions), one row per share_article, and each cell the per-box quantity. Unlike the per-variation packing list there is no share_type filter — every share type is included.
+ */
+export const commissioningPackingListBoxesMatrixRetrieve = (
+    params: CommissioningPackingListBoxesMatrixRetrieveParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<PackingBoxesMatrix>(
+      {url: `/api/commissioning/packing_list/boxes_matrix/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningPackingListBoxesMatrixRetrieveQueryKey = (params?: CommissioningPackingListBoxesMatrixRetrieveParams,) => {
+    return [
+    `/api/commissioning/packing_list/boxes_matrix/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningPackingListBoxesMatrixRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>, TError = ErrorResponse>(params: CommissioningPackingListBoxesMatrixRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningPackingListBoxesMatrixRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>> = ({ signal }) => commissioningPackingListBoxesMatrixRetrieve(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningPackingListBoxesMatrixRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>>
+export type CommissioningPackingListBoxesMatrixRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningPackingListBoxesMatrixRetrieve<TData = Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningPackingListBoxesMatrixRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningPackingListBoxesMatrixRetrieve<TData = Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningPackingListBoxesMatrixRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningPackingListBoxesMatrixRetrieve<TData = Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningPackingListBoxesMatrixRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningPackingListBoxesMatrixRetrieve<TData = Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningPackingListBoxesMatrixRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningPackingListBoxesMatrixRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningPackingListBoxesMatrixRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Per-delivery-station bulk packing list. For each (delivery_station, share_article) returns the total physical amount needed (amount_per_share × physical_share_type_variation_count summed across every variation, with virtual share_type_variations resolved into their physical components). Rows are summed across ALL share_types by default — the bulk list is a per-article warehouse total that ignores share_type; pass share_type to scope to one. Pass delivery_station to scope the result to a single station; omit it to get rows for every station.
  */
 export const commissioningPackingListBulkList = (
     params: CommissioningPackingListBulkListParams,
@@ -24069,6 +24063,96 @@ export function useCommissioningShareDeliveryDetailsRetrieve<TData = Awaited<Ret
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getCommissioningShareDeliveryDetailsRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Member × box-combination matrix for one delivery station: one row per member, one column per box combination (a base box plus its packed-in add-ons), each cell the member's box count of that combination. Uses the SAME combination columns as the packing boxes matrix.
+ */
+export const commissioningShareDeliveryDetailsMatrixRetrieve = (
+    params: CommissioningShareDeliveryDetailsMatrixRetrieveParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<StationMemberMatrix>(
+      {url: `/api/commissioning/share_delivery_details/matrix/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningShareDeliveryDetailsMatrixRetrieveQueryKey = (params?: CommissioningShareDeliveryDetailsMatrixRetrieveParams,) => {
+    return [
+    `/api/commissioning/share_delivery_details/matrix/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningShareDeliveryDetailsMatrixRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>, TError = ErrorResponse>(params: CommissioningShareDeliveryDetailsMatrixRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningShareDeliveryDetailsMatrixRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>> = ({ signal }) => commissioningShareDeliveryDetailsMatrixRetrieve(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningShareDeliveryDetailsMatrixRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>>
+export type CommissioningShareDeliveryDetailsMatrixRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningShareDeliveryDetailsMatrixRetrieve<TData = Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningShareDeliveryDetailsMatrixRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningShareDeliveryDetailsMatrixRetrieve<TData = Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningShareDeliveryDetailsMatrixRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningShareDeliveryDetailsMatrixRetrieve<TData = Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningShareDeliveryDetailsMatrixRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningShareDeliveryDetailsMatrixRetrieve<TData = Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningShareDeliveryDetailsMatrixRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryDetailsMatrixRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningShareDeliveryDetailsMatrixRetrieveQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

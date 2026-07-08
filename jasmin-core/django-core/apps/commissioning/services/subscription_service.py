@@ -31,6 +31,7 @@ from ..models import (
     ShareTypeVariation,
     Subscription,
 )
+from .additional_share_policy import assert_additional_share_has_base
 from .capacity_reservation_service import CapacityReservationService
 from .delivery_cycle import filter_weeks_by_delivery_cycle
 from .variation_capacity_service import VariationCapacityService
@@ -128,6 +129,14 @@ class SubscriptionService:
         office promotes them through the normal confirm flow (which re-checks
         capacity). They only get a PENDING status and a FIFO queue position.
         """
+        # A "Zusatz" (additional share) may only be added when the member
+        # already holds a base share covering its period.
+        assert_additional_share_has_base(
+            member_id=validated_data.get("member"),
+            share_type_variation_id=validated_data.get("share_type_variation"),
+            valid_from=validated_data.get("valid_from"),
+            valid_until=validated_data.get("valid_until"),
+        )
         subscription = self._create_subscription(validated_data)
         if subscription.on_waiting_list:
             self._enqueue_on_waiting_list(subscription)
@@ -196,6 +205,17 @@ class SubscriptionService:
         don't yet have shares / deliveries / charges. Caller must ensure
         ``subscription.admin_confirmed is False``.
         """
+        # Re-check the additional-share rule against the RESULTING term/variation
+        # (a draft edit could switch to a Zusatz or extend it past its base).
+        assert_additional_share_has_base(
+            member_id=validated_data.get("member") or subscription.member_id,
+            share_type_variation_id=(
+                validated_data.get("share_type_variation")
+                or subscription.share_type_variation_id
+            ),
+            valid_from=validated_data.get("valid_from", subscription.valid_from),
+            valid_until=validated_data.get("valid_until", subscription.valid_until),
+        )
         previous_station_day_id = subscription.default_delivery_station_day_id
         was_waiting_listed = subscription.on_waiting_list
         for field, value in validated_data.items():

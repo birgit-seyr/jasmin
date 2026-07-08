@@ -229,7 +229,7 @@ class PackingListService:
         return result
 
     @staticmethod
-    def get_packing_list_bulk(
+    def _bulk_rows_for_share_type(
         year: int,
         delivery_week: int,
         day_number: int,
@@ -239,23 +239,20 @@ class PackingListService:
         is_packed_bulk: bool | None = None,
     ) -> list[dict[str, Any]]:
         """
-        Per-delivery-station bulk packing list.
+        Bulk packing rows for a SINGLE ``share_type`` — the per-share_type
+        building block ``get_packing_list_bulk`` sums over.
 
         For each ``(delivery_station, share_article)`` combination, returns
         the total physical amount needed by summing
         ``amount_per_share × physical_share_type_variation_count`` across
         every variation. Virtual share_type_variations are resolved into
-        their physical components by
-        ``get_physical_share_type_variation_totals(..., delivery_station=
-        <station>)`` — ``ShareContent`` rows reference only physical
-        variations, so the multiplier must come from the resolved physical
-        variation count.
+        their physical components by ``batch_get_physical_variation_totals_
+        for_week`` — ``ShareContent`` rows reference only physical variations,
+        so the multiplier must come from the resolved physical variation count.
 
-        The per-(article × variation) amount map is computed per station
-        (inside the loop) because ``ShareContent.amount`` can differ across
-        stations for the same (article, variation); a global lookup would
-        let one station's amount overwrite another's via the shared
-        ``(article, unit, size)`` composite key.
+        ``total_amount`` is returned as a **Decimal** (not float): the caller
+        merges rows across share_types by summing, and staying in Decimal
+        avoids binary-fp drift before the single float-cast at the boundary.
         """
         manager = ShareContent.active.for_period(is_past=is_past)
         share_contents = manager.filter(
@@ -374,16 +371,90 @@ class PackingListService:
                         "share_article_name": item["share_article_name"],
                         "unit": item["unit"],
                         "size": item["size"],
-                        # Float at the boundary (the existing contract), but
-                        # computed from the quantized Decimal above — so the
-                        # value is clean (no 10.780000000000001 drift).
-                        "total_amount": float(total_amount),
+                        # Decimal (3dp) — merged across share_types by the
+                        # caller, which casts to float once at the boundary.
+                        "total_amount": total_amount,
                         "note": item.get("note", ""),
                     }
                 )
 
+        return rows
+
+    @staticmethod
+    def get_packing_list_bulk(
+        year: int,
+        delivery_week: int,
+        day_number: int,
+        is_past: bool,
+        share_type: str | None = None,
+        delivery_station: str | None = None,
+        is_packed_bulk: bool | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        Per-delivery-station bulk packing list, summed across share_types.
+
+        The bulk list answers "how much of each article does this station
+        need on this delivery day" — a warehouse question that does not care
+        which share_type an article belongs to. So ``share_type`` is optional:
+        omit it to sum every share_type delivered that day, or pass one to
+        scope the list to a single share_type.
+
+        Rows for the same ``(delivery_station, share_article, unit, size)``
+        coming from different share_types are merged by summing their
+        ``total_amount``. Per-share_type totals are computed by
+        ``_bulk_rows_for_share_type`` (see there for the physical-variation
+        resolution and per-station amount handling).
+        """
+        if share_type is not None:
+            share_type_ids: list[str] = [share_type]
+        else:
+            base_contents = ShareContent.active.for_period(is_past=is_past).filter(
+                share__year=year,
+                share__delivery_week=delivery_week,
+                share__delivery_day__day_number=day_number,
+            )
+            if delivery_station is not None:
+                base_contents = base_contents.filter(delivery_station=delivery_station)
+            if is_packed_bulk is not None:
+                base_contents = base_contents.filter(
+                    share__share_type_variation__is_packed_bulk=is_packed_bulk
+                )
+            share_type_ids = list(
+                base_contents.values_list(
+                    "share__share_type_variation__share_type_id", flat=True
+                )
+                .distinct()
+                .order_by("share__share_type_variation__share_type_id")
+            )
+
+        # Merge rows of equal (station, article, unit, size) — same ``id`` —
+        # across share_types by summing the Decimal total_amount. The first
+        # non-empty note wins (a per-article warehouse note is share_type-
+        # independent; if two share_types disagree, one is kept).
+        merged: dict[str, dict[str, Any]] = {}
+        for share_type_id in share_type_ids:
+            for row in PackingListService._bulk_rows_for_share_type(
+                year=year,
+                delivery_week=delivery_week,
+                day_number=day_number,
+                share_type=share_type_id,
+                is_past=is_past,
+                delivery_station=delivery_station,
+                is_packed_bulk=is_packed_bulk,
+            ):
+                existing = merged.get(row["id"])
+                if existing is None:
+                    merged[row["id"]] = row
+                else:
+                    existing["total_amount"] += row["total_amount"]
+                    if not existing["note"] and row["note"]:
+                        existing["note"] = row["note"]
+
         grouped: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
-        for row in rows:
+        for row in merged.values():
+            # Float at the boundary (the existing contract), computed from the
+            # quantized Decimal sum — so the value is clean (no fp drift).
+            row["total_amount"] = float(row["total_amount"])
             grouped[row["delivery_station_name"]].append(row)
 
         sorted_rows: list[dict[str, Any]] = []

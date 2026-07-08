@@ -1,568 +1,345 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import dayjs from "dayjs";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  getCommissioningPackingListListQueryKey,
-  useCommissioningPackingListList,
-} from "@shared/api/generated/commissioning/commissioning";
+import { useCommissioningPackingListBoxesMatrixRetrieve } from "@shared/api/generated/commissioning/commissioning";
 import type {
-  CommissioningPackingListListParams,
-  PackingListRow,
+  CommissioningPackingListBoxesMatrixRetrieveParams,
+  CommissioningSharesDeliveryDaysListParams,
+  PackingBoxesMatrixColumn,
+  PackingBoxesMatrixRow,
 } from "@shared/api/generated/models";
-import { PackingListBoxesMobileCard } from "@features/commissioning/components/mobileCards";
+import { DaySelector, WeekSelector } from "@shared/selectors";
 import {
-  PackingListAllStationsPDFGenerator,
-  PackingListPDFGenerator,
-} from "@features/commissioning/pdfs";
-import type { PackingStationPage } from "@features/commissioning/pdfs/exports/PackingListPDF";
+  DeliveryStationSelector,
+  TourSelector,
+} from "@features/commissioning/selectors";
+import { ExplainerText } from "@shared/ui";
+import { MobileStack } from "@shared/ui";
 import {
   EditableTable,
   READ_ONLY_PERMISSION,
+  SUMMARY_ROW_STYLE,
   wrapApiFunctions,
 } from "@shared/tables";
 import type {
   ApiFunctions,
   EditableColumnConfig,
+  SummaryRow,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { ExplainerText } from "@shared/ui";
+import { PastWarningMessage } from "@shared/ui";
 import {
-  useInvalidateAfterTableMutation,
-  useIsMobile,
-  useNoteColumn,
-  useNumberFormat,
-  useSizeOptions,
-  useTenant,
-  useUnitOptions,
-} from "@hooks/index";
-import {
-  useAmountUnitSizeColumns,
-  useShareArticleColumn,
-  variationColumnKey,
+  useBoxCombinationColumns,
+  usePackingBaseColumns,
+  useShareContentGranularity,
+  useShareDeliveryDays,
 } from "@features/commissioning/hooks";
-import type { ShareTypeOption } from "@hooks/useShareTypes";
-import type { ShareTypeVariationOption } from "@features/commissioning/hooks/useShareTypeVariations";
-import dayjs from "dayjs";
+import type { ShareDeliveryDayOption } from "@features/commissioning/hooks/useShareDeliveryDays";
+import { PackingBoxesMatrixPDFGenerator } from "@features/commissioning/pdfs";
+import { useIsMobile, useTenant } from "@hooks/index";
+import {
+  activeAtDateForWeek,
+  formatDayLabel,
+  formatWeekLabel,
+  generatePdfFilename,
+  getDayName,
+  isWeekInPast,
+} from "@shared/utils";
 
-import { generatePdfFilename, getDayName } from "@shared/utils";
+const currentYear = dayjs().year();
+const currentWeek = dayjs().isoWeek();
+const currentDay = dayjs().isoWeekday();
 
-const fallbackWeek = dayjs().isoWeek();
-
-import PackingListShell, {
-  type PackingListShellState,
-} from "./PackingListShell";
-
-const shareArticleFilters = {
-  is_harvest_share_article: true,
-  is_active: true,
-};
-
-const widthShareArticle = "30%";
-const widthAmountUnitSize = "10%";
-const widthVariation = "10%";
-
-// A packing-list row can carry a BACKUP article (the substitute veg planned in
-// the BackupModal). When present we render its name / unit / size / per-variation
-// amount as a second, GREY line inside the SAME cell — so the backup reads as a
-// sub-line of the vegetable it backs up, in the right columns.
-const BACKUP_SUBLINE_STYLE: CSSProperties = {
-  color: "var(--color-text-secondary)",
-  fontSize: "0.85em",
-  lineHeight: 1.2,
-};
-
-function withBackupSubline(main: ReactNode, backup: ReactNode): ReactNode {
-  if (backup === null || backup === undefined || backup === "")
-    return main ?? "";
-  return (
-    <>
-      <div>{main}</div>
-      <div style={BACKUP_SUBLINE_STYLE}>{backup}</div>
-    </>
-  );
-}
-
-// The boxes endpoint accepts ``is_packed_bulk`` for the MIXED packing-mode
-// split. Generated params type lags until ``npm run generate-api`` is rerun.
-type BoxesParams = CommissioningPackingListListParams & {
-  is_packed_bulk?: boolean;
-};
-
+/**
+ * Packing boxes MATRIX (v2 of PackingListBoxes).
+ *
+ * Columns are the distinct box COMBINATIONS that actually occur — a base box
+ * (non-additional share) plus the add-ons ("Zusatz") packed into it — derived
+ * server-side from the week's subscriptions. Each combination header shows the
+ * base size with a superscript badge per add-on (short_name·size). Rows are
+ * share_articles; each cell is the per-box quantity of that article in that
+ * combination. The pinned first row is the box count per combination.
+ *
+ * Scope + granularity mirror PackingListBoxes: the tenant's ShareContent
+ * granularity decides which scope selector is needed — nothing when every day
+ * has the same amounts (days_ok), a tour selector when amounts are tour- but
+ * not day-consistent, and a required delivery-station selector otherwise. The
+ * count row follows whichever scope is active.
+ */
 export default function PackingListBoxes() {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const isMobile = useIsMobile();
-  const { getUnitLabel } = useUnitOptions();
-  const { getSizeLabel } = useSizeOptions();
-  const { noteColumn } = useNoteColumn();
-  const { format } = useNumberFormat();
   const { getSetting } = useTenant();
-  const packing_mode = getSetting("packing_mode", "BOXES") as
+  const isMobile = useIsMobile();
+
+  // Shared identity columns (article / unit / size + note) — the SAME left
+  // columns PackingListBoxes uses.
+  const { baseColumns, noteColumn, withUnitSizeLabels } =
+    usePackingBaseColumns();
+
+  const showSize = Boolean(getSetting("show_size_column"));
+  const packingMode = getSetting("packing_mode", "BOXES") as
     | "BOXES"
     | "BULK"
     | "MIXED";
-  // Mirror the on-screen size column: hidden unless ``show_size_column`` is on.
-  const showSize = Boolean(getSetting("show_size_column"));
 
-  const { shareArticleColumn } = useShareArticleColumn({
-    filters: shareArticleFilters,
-    showFruitsAndVegs: true,
-  });
+  // --- Filters (scope). No ShareType selector — all share types at once. ---
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const [selectedDeliveryDay, setSelectedDeliveryDay] = useState<number | null>(
+    currentDay - 1,
+  );
+  const [selectedDeliveryStation, setSelectedDeliveryStation] = useState<
+    string | null
+  >(null);
+  const [selectedTour, setSelectedTour] = useState<number | "all">("all");
 
-  const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
-    overrides: {
-      unit: { disabled: (record: TableRecord) => record.key != -1 },
-      size: { disabled: (record: TableRecord) => record.key != -1 },
-    },
-    showAmount: false,
-  });
-
-  const renderBody = useCallback(
-    (shell: PackingListShellState) => (
-      <BoxesBody
-        shell={shell}
-        shareArticleColumn={shareArticleColumn}
-        amountUnitSizeColumns={amountUnitSizeColumns}
-        noteColumn={noteColumn}
-        getUnitLabel={getUnitLabel}
-        getSizeLabel={getSizeLabel}
-        format={format}
-        queryClient={queryClient}
-        isMobile={isMobile}
-        packing_mode={packing_mode}
-        showSize={showSize}
-        t={t}
-      />
-    ),
-    [
-      shareArticleColumn,
-      amountUnitSizeColumns,
-      noteColumn,
-      getUnitLabel,
-      getSizeLabel,
-      format,
-      queryClient,
-      isMobile,
-      packing_mode,
-      showSize,
-      t,
-    ],
+  const isPast = useMemo(
+    () => isWeekInPast(selectedYear, selectedWeek),
+    [selectedYear, selectedWeek],
   );
 
-  return (
-    <PackingListShell
-      titleKey="commissioning.packing_list_boxes"
-      mode="boxes"
-      variationsTotalsTooltipKey="tooltip.variations_totals_packing_list_boxes"
-    >
-      {renderBody}
-    </PackingListShell>
+  const shareDeliveryDaysParams =
+    useMemo<CommissioningSharesDeliveryDaysListParams>(
+      () => ({
+        active_at_date: activeAtDateForWeek(selectedYear, selectedWeek),
+      }),
+      [selectedYear, selectedWeek],
+    );
+  const { shareDeliveryDays } = useShareDeliveryDays(shareDeliveryDaysParams);
+
+  const deliveryDayOptions = useMemo<number[]>(
+    () =>
+      Array.from(
+        new Set(shareDeliveryDays.map((day) => Number(day.day_number))),
+      ).sort((a, b) => a - b),
+    [shareDeliveryDays],
   );
-}
 
-function BoxesBody({
-  shell,
-  shareArticleColumn,
-  amountUnitSizeColumns,
-  noteColumn,
-  getUnitLabel,
-  getSizeLabel,
-  format,
-  queryClient,
-  isMobile,
-  packing_mode,
-  showSize,
-  t,
-}: {
-  shell: PackingListShellState;
-  shareArticleColumn: EditableColumnConfig<TableRecord>;
-  amountUnitSizeColumns: EditableColumnConfig<TableRecord>[];
-  noteColumn: EditableColumnConfig<TableRecord>;
-  getUnitLabel: (unit: string) => string;
-  getSizeLabel: (size: string) => string;
-  format: (n: number, decimals: number) => string;
-  queryClient: ReturnType<typeof useQueryClient>;
-  isMobile: boolean;
-  packing_mode: "BOXES" | "BULK" | "MIXED";
-  showSize: boolean;
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  const widthNote = useMemo(() => {
-    const shareArticleWidth = parseFloat(widthShareArticle.replace("%", ""));
-    const unitSizeWidth = parseFloat(widthAmountUnitSize.replace("%", ""));
-    const variationWidth = parseFloat(widthVariation.replace("%", ""));
-    const usedWidth =
-      shareArticleWidth +
-      unitSizeWidth * 2 +
-      shell.shareTypeVariations.length * variationWidth;
-    return `${Math.max(100 - usedWidth, 5)}%`;
-  }, [shell.shareTypeVariations.length]);
+  // Keep the pick on a real delivery day, snapping to the first available.
+  useEffect(() => {
+    if (deliveryDayOptions.length === 0) return;
+    if (
+      selectedDeliveryDay !== null &&
+      deliveryDayOptions.includes(selectedDeliveryDay)
+    ) {
+      return;
+    }
+    setSelectedDeliveryDay(deliveryDayOptions[0]);
+  }, [deliveryDayOptions, selectedDeliveryDay]);
 
-  const listParams = useMemo<BoxesParams>(
-    () => ({
-      year: shell.selectedYear,
-      delivery_week: shell.selectedWeek ?? fallbackWeek,
-      day_number: shell.selectedDeliveryDay!,
-      share_type: shell.effectiveShareType,
-      delivery_station: shell.selectedDeliveryStation ?? undefined,
-      // Filter by tour only when tour is an active granularity (the
-      // selector is live); otherwise show all tours so deliveries on a
-      // non-default tour aren't silently hidden. Kept in lock-step with
-      // the totals card via the shared shell.effectiveTour.
-      tour: shell.effectiveTour,
-      is_past: shell.isPast,
-      packing_station:
-        shell.numberPackingStations > 1
-          ? shell.selectedPackingStation
+  const selectedDayRecord = useMemo<ShareDeliveryDayOption | undefined>(
+    () =>
+      selectedDeliveryDay === null
+        ? undefined
+        : shareDeliveryDays.find(
+            (day) => Number(day.day_number) === Number(selectedDeliveryDay),
+          ),
+    [selectedDeliveryDay, shareDeliveryDays],
+  );
+
+  const getDeliveryDayId = selectedDayRecord?.id ?? null;
+
+  const hasMultipleToursForSelectedDay = useMemo(() => {
+    if (!selectedDayRecord) return false;
+    const tours =
+      ((selectedDayRecord as unknown as Record<string, unknown>)
+        .number_of_tours as number) || 1;
+    return tours > 1;
+  }, [selectedDayRecord]);
+
+  // --- Granularity (inherited from PackingListBoxes) ---
+  // Not scoped to a share_type: the matrix spans every share type, so it needs
+  // the strictest (per-day, all-share-types) granularity.
+  const { daysOk, toursOk } = useShareContentGranularity({
+    year: selectedYear,
+    delivery_week: selectedWeek ?? undefined,
+    day_number: selectedDeliveryDay ?? undefined,
+  });
+
+  // Tour selector is live only when amounts are tour- but not day-consistent
+  // AND the day actually has multiple tours. Station selector (and a required
+  // station) appears when amounts are neither day- nor tour-consistent. While
+  // granularity is still loading (null) we conservatively require a station,
+  // exactly like PackingListBoxes.
+  const tourSelectorActive =
+    !daysOk && Boolean(toursOk) && hasMultipleToursForSelectedDay;
+  const needsStation = !daysOk && !toursOk;
+
+  const effectiveTour = useMemo<number | undefined>(() => {
+    if (!tourSelectorActive || selectedTour === "all") return undefined;
+    return selectedTour;
+  }, [tourSelectorActive, selectedTour]);
+
+  const queryEnabled =
+    selectedDeliveryDay !== null &&
+    (!needsStation || selectedDeliveryStation !== null);
+
+  const matrixParams =
+    useMemo<CommissioningPackingListBoxesMatrixRetrieveParams>(
+      () => ({
+        year: selectedYear,
+        delivery_week: selectedWeek ?? currentWeek,
+        day_number: selectedDeliveryDay ?? 0,
+        delivery_station: needsStation
+          ? (selectedDeliveryStation ?? undefined)
           : undefined,
-      // In MIXED mode the boxes list excludes variations that are packed
-      // in bulk (is_packed_bulk=True); BOXES mode already implies all
-      // variations are boxed, so the filter would be a no-op.
-      ...(packing_mode === "MIXED" ? { is_packed_bulk: false } : {}),
-    }),
-    [
-      shell.selectedYear,
-      shell.selectedWeek,
-      shell.selectedDeliveryDay,
-      shell.effectiveShareType,
-      shell.selectedDeliveryStation,
-      shell.effectiveTour,
-      shell.isPast,
-      shell.numberPackingStations,
-      shell.selectedPackingStation,
-      packing_mode,
-    ],
-  );
-
-  const { data: rawData, isFetching } = useCommissioningPackingListList(
-    listParams,
-    {
-      query: { enabled: shell.queryEnabled },
-    },
-  );
-
-  const data = useMemo(
-    () => (rawData as unknown as (PackingListRow & TableRecord)[]) ?? [],
-    [rawData],
-  );
-
-  const invalidateData = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: getCommissioningPackingListListQueryKey(listParams),
-    });
-  }, [queryClient, listParams]);
-  const { onSaveSuccess, onDeleteSuccess } =
-    useInvalidateAfterTableMutation(invalidateData);
-
-  const processedData = useMemo(
-    () =>
-      data.map((item) => ({
-        ...item,
-        unit_label: item.unit ? getUnitLabel(item.unit as string) : "",
-        size_label: item.size ? getSizeLabel(item.size as string) : "",
-      })),
-    [data, getUnitLabel, getSizeLabel],
-  );
-
-  // --- All-stations PDF data ---
-  const allStationsParams = useMemo<CommissioningPackingListListParams>(
-    () => ({ ...listParams, packing_station: undefined }),
-    [listParams],
-  );
-
-  const { data: rawAllStationsData } = useCommissioningPackingListList(
-    allStationsParams,
-    {
-      query: {
-        enabled: shell.queryEnabled && shell.numberPackingStations > 1,
-      },
-    },
-  );
-
-  const allStationsData = useMemo(
-    () =>
-      shell.queryEnabled && shell.numberPackingStations > 1
-        ? ((rawAllStationsData as unknown as (PackingListRow &
-            TableRecord)[]) ?? null)
-        : null,
-    [rawAllStationsData, shell.queryEnabled, shell.numberPackingStations],
-  );
-
-  const allStationsPages = useMemo<PackingStationPage[] | null>(() => {
-    if (!allStationsData || !shell.shareTypeVariations.length) return null;
-
-    const variationKeys = shell.shareTypeVariations.map(
-      (v: ShareTypeVariationOption) => variationColumnKey(v.id!),
+        tour: effectiveTour,
+        is_past: isPast,
+        // In MIXED mode the boxes matrix excludes bulk-packed variations.
+        ...(packingMode === "MIXED" ? { is_packed_bulk: false } : {}),
+      }),
+      [
+        selectedYear,
+        selectedWeek,
+        selectedDeliveryDay,
+        needsStation,
+        selectedDeliveryStation,
+        effectiveTour,
+        isPast,
+        packingMode,
+      ],
     );
 
-    const grouped = new Map<number, TableRecord[]>();
-    for (const item of allStationsData) {
-      const station = (item.packing_station as number) ?? 1;
-      if (!grouped.has(station)) grouped.set(station, []);
-      grouped.get(station)!.push({
-        ...item,
-        unit_label: item.unit ? getUnitLabel(item.unit as string) : "",
-        size_label: item.size ? getSizeLabel(item.size as string) : "",
-      });
-    }
-
-    const sortedStations = [...grouped.keys()].sort((a, b) => a - b);
-    if (sortedStations.length === 0) return null;
-
-    return sortedStations.map((station) => {
-      const items = grouped.get(station)!;
-      const totalsMap = new Map<string, number>();
-      for (const vk of variationKeys) {
-        let sum = 0;
-        for (const item of items) sum += Number(item[vk] ?? 0);
-        totalsMap.set(vk, sum);
-      }
-
-      const variationsTotals = shell.shareTypeVariations
-        .map((v: ShareTypeVariationOption) => ({
-          id: v.id,
-          size: v.size,
-          totalQuantity: totalsMap.get(variationColumnKey(v.id!)) ?? 0,
-        }))
-        .filter((vt: { totalQuantity: number }) => vt.totalQuantity > 0);
-
-      return {
-        stationNumber: station,
-        data: items,
-        variationsTotals,
-      };
-    });
-  }, [allStationsData, shell.shareTypeVariations, getUnitLabel, getSizeLabel]);
-
-  const shareTypeVariationColumns = useMemo<
-    EditableColumnConfig<TableRecord>[]
-  >(
-    () =>
-      shell.shareTypeVariations.map(
-        (
-          variation: ShareTypeVariationOption,
-        ): EditableColumnConfig<TableRecord> => ({
-          title: t(`commissioning.${variation.size}`),
-          dataIndex: variationColumnKey(variation.id!),
-          key: variationColumnKey(variation.id!),
-          inputType: "positive_integer",
-          align: "center",
-          width: "5em",
-          render: (value: unknown, record: TableRecord) => {
-            const fmtAmount = (v: unknown): string => {
-              if (v === null || v === undefined || v === "") return "";
-              const n = Number(v);
-              // Hide zeros — matches the mobile card's filter
-              // ``v.value !== 0`` so empty buckets look the same on
-              // desktop and PDF.
-              if (!Number.isFinite(n) || n === 0) return "";
-              return format(n, 0);
-            };
-            // Row's own backup amount for THIS variation (backend emits
-            // backup_variation_<id> beside variation_<id>).
-            const backupAmount = record?.backup_share_article_name
-              ? fmtAmount(record[variationColumnKey(variation.id!, "backup_")])
-              : "";
-            return withBackupSubline(fmtAmount(value), backupAmount);
-          },
-          pdf: {
-            include: true,
-            width: widthVariation,
-            align: "center",
-            dataKey: variationColumnKey(variation.id!),
-            title: t(`commissioning.${variation.size}`),
-          },
-        }),
-      ),
-    [shell.shareTypeVariations, t, format],
+  const { data, isFetching } = useCommissioningPackingListBoxesMatrixRetrieve(
+    matrixParams,
+    { query: { enabled: queryEnabled } },
   );
 
-  const columns = useMemo<EditableColumnConfig<TableRecord>[]>(() => {
-    const baseColumns: EditableColumnConfig<TableRecord>[] = [
-      {
-        ...shareArticleColumn,
-        disabled: (record: TableRecord) => record.key != -1,
-        render: (value: unknown, record: TableRecord, index: number) => {
-          const original = shareArticleColumn.render
-            ? shareArticleColumn.render(value, record, index)
-            : ((record.share_article_name as ReactNode) ??
-              (value as ReactNode) ??
-              "");
-          const backup = record?.backup_share_article_name
-            ? `${t("commissioning.backup")}: ${record.backup_share_article_name}`
-            : null;
-          return withBackupSubline(original, backup);
-        },
-        pdf: {
-          include: true,
-          width: widthShareArticle,
-          dataKey: "share_article_name",
-          align: "left",
-          title: t("commissioning.vegetables_and_fruits"),
-        },
-      },
-      ...amountUnitSizeColumns.map((col): EditableColumnConfig<TableRecord> => {
-        const isUnit = col.dataIndex === "unit";
-        const isSize = col.dataIndex === "size";
-        return {
-          ...col,
-          render: (value: unknown, record: TableRecord, index: number) => {
-            const original = col.render
-              ? col.render(value, record, index)
-              : ((value as ReactNode) ?? "");
-            let backup: ReactNode = null;
-            if (record?.backup_share_article_name) {
-              if (isUnit && record.backup_share_article_unit) {
-                backup = getUnitLabel(
-                  record.backup_share_article_unit as string,
-                );
-              } else if (isSize && record.backup_share_article_size) {
-                backup = getSizeLabel(
-                  record.backup_share_article_size as string,
-                );
-              }
-            }
-            return withBackupSubline(original, backup);
-          },
-          pdf: {
-            include: true,
-            width: widthAmountUnitSize,
-            align: "center",
-            dataKey:
-              col.dataIndex === "unit"
-                ? "unit_label"
-                : col.dataIndex === "size"
-                  ? "size_label"
-                  : col.dataIndex,
-            title: col.title,
-          },
-        };
-      }),
-    ];
+  const matrixColumns = useMemo<PackingBoxesMatrixColumn[]>(
+    () => data?.columns ?? [],
+    [data],
+  );
 
-    const endColumns: EditableColumnConfig<TableRecord>[] = [
-      {
-        ...noteColumn,
-        inputType: "optional",
-        disabled: true,
-        pdf: {
-          include: true,
-          width: widthNote,
-          dataKey: "note",
-          align: "left",
-          title: t("commissioning.note"),
-        },
-      },
-    ];
+  const rows = useMemo<TableRecord[]>(
+    () =>
+      withUnitSizeLabels(
+        (data?.rows ?? []).map(
+          (row: PackingBoxesMatrixRow) =>
+            ({ ...row, key: row.id }) as TableRecord,
+        ),
+      ),
+    [data, withUnitSizeLabels],
+  );
 
-    return [...baseColumns, ...shareTypeVariationColumns, ...endColumns];
-  }, [
-    t,
-    shareTypeVariationColumns,
-    widthNote,
-    shareArticleColumn,
-    amountUnitSizeColumns,
-    noteColumn,
-    getUnitLabel,
-    getSizeLabel,
-  ]);
+  // --- Combination columns (grouped by base share_type) — the SAME columns
+  // the delivery-station member matrix uses. ---
+  const comboColumns = useBoxCombinationColumns(matrixColumns);
+
+  const columns = useMemo<EditableColumnConfig<TableRecord>[]>(
+    () => [...baseColumns, ...comboColumns, noteColumn],
+    [baseColumns, comboColumns, noteColumn],
+  );
+
+  // --- Pinned count row (boxes per combination in the current scope) ---
+  const summaryRows = useMemo<SummaryRow[]>(
+    () => [
+      {
+        label: t("commissioning.box_count"),
+        columns: matrixColumns.map((col) => col.key),
+        // Strings so the summary renders "12", not the numeric "12.00" path.
+        data: Object.fromEntries(
+          matrixColumns.map((col) => [col.key, String(col.count)]),
+        ),
+        style: SUMMARY_ROW_STYLE,
+      },
+    ],
+    [matrixColumns, t],
+  );
 
   const apiFunctions = useMemo<ApiFunctions>(() => wrapApiFunctions({}), []);
 
-  const generateFilename = useMemo(
-    () => shell.generateFilename(t("commissioning.packing_list")),
-    [shell, t],
-  );
+  const dayName =
+    selectedDeliveryDay !== null ? getDayName(selectedDeliveryDay, t) : "";
+  const pdfFilename = generatePdfFilename([
+    t("commissioning.packing_list_boxes"),
+    selectedYear,
+    formatWeekLabel(selectedWeek, t),
+    formatDayLabel(selectedDeliveryDay, t),
+  ]);
 
-  const shareTypeName = useMemo(
-    () =>
-      shell.shareTypes.find(
-        (st: ShareTypeOption) => st.id === shell.selectedShareType,
-      )?.name ?? "",
-    [shell.shareTypes, shell.selectedShareType],
-  );
+  // The matrix ran but produced no combination columns (no share type
+  // variations for this scope) → show the warning instead of an empty grid.
+  const noColumns = queryEnabled && !isFetching && matrixColumns.length === 0;
 
   return (
-    <>
+    <div>
+      <h1>{t("commissioning.packing_list_boxes")}</h1>
+
+      <MobileStack>
+        <WeekSelector
+          selectedYear={selectedYear}
+          setSelectedYear={setSelectedYear}
+          selectedWeek={selectedWeek}
+          setSelectedWeek={setSelectedWeek}
+        />
+        <DaySelector
+          selectedDay={selectedDeliveryDay}
+          setSelectedDay={setSelectedDeliveryDay}
+          selectedWeek={selectedWeek ?? currentWeek}
+          selectedYear={selectedYear}
+          days={deliveryDayOptions}
+          suffix={t("commissioning.delivery_day")}
+        />
+        {tourSelectorActive && (
+          <TourSelector
+            selectedTour={selectedTour}
+            setSelectedTour={setSelectedTour}
+            delivery_day={getDeliveryDayId}
+            selectedYear={selectedYear}
+            selectedWeek={selectedWeek}
+          />
+        )}
+        {needsStation && (
+          <DeliveryStationSelector
+            selectedDeliveryStation={selectedDeliveryStation}
+            setSelectedDeliveryStation={setSelectedDeliveryStation}
+            delivery_day={getDeliveryDayId}
+          />
+        )}
+      </MobileStack>
+
       {!isMobile && (
         <div
           className="section-divider"
           style={{ display: "flex", gap: "1em" }}
         >
-          <PackingListPDFGenerator
-            data={processedData.length > 0 ? processedData : null}
-            year={shell.selectedYear}
-            week={shell.selectedWeek}
-            dayName={
-              shell.selectedDeliveryDay !== null
-                ? getDayName(shell.selectedDeliveryDay, t)
-                : ""
-            }
-            shareType={shareTypeName}
-            variations={shell.shareTypeVariations}
-            variationsTotals={shell.variationsTotals}
-            packingStation={
-              shell.numberPackingStations > 1
-                ? shell.selectedPackingStation
-                : null
-            }
+          <PackingBoxesMatrixPDFGenerator
+            columns={matrixColumns.length ? matrixColumns : null}
+            data={rows.length ? rows : null}
+            week={selectedWeek}
+            dayName={dayName}
             showSize={showSize}
-            filename={generateFilename}
+            filename={pdfFilename}
             buttonText={t("download.packing_list")}
             t={t}
           />
-          {shell.numberPackingStations > 1 && (
-            <PackingListAllStationsPDFGenerator
-              pages={allStationsPages}
-              year={shell.selectedYear}
-              week={shell.selectedWeek}
-              dayName={
-                shell.selectedDeliveryDay !== null
-                  ? getDayName(shell.selectedDeliveryDay, t)
-                  : ""
-              }
-              shareType={shareTypeName}
-              variations={shell.shareTypeVariations}
-              showSize={showSize}
-              filename={generatePdfFilename([
-                generateFilename,
-                t("commissioning.all_packing_stations"),
-              ])}
-              buttonText={t("download.packing_list_all_stations")}
-              t={t}
-            />
-          )}
         </div>
       )}
 
-      <EditableTable
-        key={`${shell.selectedYear}-${shell.selectedWeek}-${shell.selectedDeliveryDay}`}
-        columns={columns as EditableColumnConfig[]}
-        apiFunctions={apiFunctions}
-        initialData={data}
-        loading={isFetching}
-        onSaveSuccess={onSaveSuccess}
-        onDeleteSuccess={onDeleteSuccess}
-        permissions={READ_ONLY_PERMISSION}
-        className="w-max custom-jasmin-table"
-        renderMobileCard={(record: TableRecord) => (
-          <PackingListBoxesMobileCard
-            key={String(record.key)}
-            record={record}
-            shareTypeVariations={
-              shell.shareTypeVariations as ShareTypeVariationOption[]
-            }
-          />
-        )}
-      />
-
+      {noColumns ? (
+        <PastWarningMessage>
+          {t("commissioning.packing_list_no_columns")}
+        </PastWarningMessage>
+      ) : (
+        <EditableTable
+          key={`${selectedYear}-${selectedWeek}-${selectedDeliveryDay}-${selectedDeliveryStation}-${effectiveTour}`}
+          columns={columns as EditableColumnConfig[]}
+          apiFunctions={apiFunctions}
+          initialData={rows}
+          loading={isFetching}
+          permissions={READ_ONLY_PERMISSION}
+          summaryRows={summaryRows}
+          summaryPosition="bottom"
+          summaryLabelColumnIndex={0}
+          className="w-max custom-jasmin-table"
+        />
+      )}
       {!isMobile && (
         <ExplainerText title={t("common.info")}>
           {t("explainers.packing_list_boxes")}
         </ExplainerText>
       )}
-    </>
+    </div>
   );
 }

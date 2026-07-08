@@ -271,6 +271,20 @@ export default function ConfigurationSubscriptions() {
         {
           title: (
             <>
+              {t("commissioning.short_name")}
+              <ToolTipIcon title={t("tooltip.short_name_share_type")} />
+            </>
+          ),
+          dataIndex: "short_name",
+          key: "short_name",
+          inputType: "text",
+          required: true,
+          align: "left",
+          width: "6em",
+        },
+        {
+          title: (
+            <>
               {t("commissioning.name")}
               <ToolTipIcon title={t("tooltip.name_share_type")} />
             </>
