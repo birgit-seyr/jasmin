@@ -7,38 +7,59 @@ import {
   commissioningCratesCreate,
   commissioningCratesDestroy,
   commissioningCratesPartialUpdate,
+  getCommissioningCratesListQueryKey,
   useCommissioningCratesList,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { Crate } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
-import { CratePriceModal, ExportCsv, ExportCsvPricesCrate } from '@features/commissioning/modals';
+import {
+  CratePriceModal,
+  ExportCsv,
+  ExportCsvPricesCrate,
+} from "@features/commissioning/modals";
 import {
   EditableTable,
+  type CrudResource,
   permissionsWithDeletable,
-  wrapApiFunctions,
+  useCrudListPage,
 } from "@shared/tables";
-import type {
-  ApiFunctions,
-  TableRecord,
-} from "@shared/tables/BasicEditableTable/types";
+import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, HideInactiveSwitch } from "@shared/ui";
-import { useInvalidateAfterTableMutation, useNoteColumn } from '@hooks/index';
-import { useIsActiveColumn, useShareArticlePriceColumn } from '@features/commissioning/hooks';
+import { useDateFormat, useNoteColumn } from "@hooks/index";
+import {
+  useIsActiveColumn,
+  useShareArticlePriceColumn,
+} from "@features/commissioning/hooks";
+
+type CrateRow = Crate & TableRecord;
+
+const cratesResource: CrudResource<CrateRow> = {
+  useList: useCommissioningCratesList,
+  create: commissioningCratesCreate,
+  update: commissioningCratesPartialUpdate,
+  delete: commissioningCratesDestroy,
+  getListQueryKey: getCommissioningCratesListQueryKey,
+};
+
 export default function ListCrates() {
+  const { t } = useTranslation();
   const { canEdit } = useRoles();
+  const { formatDateForAPI } = useDateFormat();
+  const { noteColumn } = useNoteColumn();
+  const isActiveColumn = useIsActiveColumn();
   const permissions = useMemo(
     () => permissionsWithDeletable(canEdit),
     [canEdit],
   );
-  const [hideInactive, setHideInactive] = useState(true);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCrateId, setSelectedCrateId] = useState<string | null>(null);
   const [selectedCrateName, setSelectedCrateName] = useState("");
   const [csvModalVisible, setCsvModalVisible] = useState(false);
   const [priceExportVisible, setPriceExportVisible] = useState(false);
-  const { t } = useTranslation();
-  const { noteColumn } = useNoteColumn();
-  const isActiveColumn = useIsActiveColumn();
+
+  // Everything below the columns/modals is the shared CRUD boilerplate.
+  const list = useCrudListPage<CrateRow>({ resource: cratesResource, permissions });
 
   const handleOpenModal = useCallback((record: Record<string, unknown>) => {
     setSelectedCrateId(record.id as string);
@@ -54,110 +75,53 @@ export default function ListCrates() {
 
   const priceModalColumn = useShareArticlePriceColumn(handleOpenModal);
 
-  const apiFunctions = useMemo<ApiFunctions>(
-    () =>
-      wrapApiFunctions<Crate & TableRecord>({
-        create: (payload) => commissioningCratesCreate(payload),
-        update: (id, payload) => commissioningCratesPartialUpdate(id, payload),
-        delete: (id) => commissioningCratesDestroy(id),
-      }),
-    [],
-  );
-
-  // React Query handles the initial load + caching. Saves do NOT
-  // refetch (EditableTable's local state is authoritative — see
-  // ``useInvalidateAfterTableMutation``); deletes do, so the row
-  // disappears from any downstream cached view.
-  const { data: cratesData, refetch, isLoading } = useCommissioningCratesList();
-  const data = useMemo<TableRecord[]>(
-    () => (cratesData ?? []) as unknown as TableRecord[],
-    [cratesData],
-  );
-
-  // Memoize the (optionally inactive-filtered) rows so ``initialData`` keeps a
-  // STABLE reference across renders. With a fresh array each render (an inline
-  // ``data.filter(...)``), EditableTable's initialData-sync effect refires on
-  // every unrelated re-render — e.g. opening the price modal — and re-applies
-  // the cached list (which an update deliberately does NOT refetch), reverting
-  // a just-saved row edit until a hard refresh.
-  const visibleData = useMemo<TableRecord[]>(
-    () => (hideInactive ? data.filter((r) => r.is_active) : data),
-    [data, hideInactive],
-  );
-
-  const invalidateData = useCallback(() => {
-    void refetch();
-  }, [refetch]);
-  const { onSaveSuccess, onDeleteSuccess } =
-    useInvalidateAfterTableMutation(invalidateData);
-
-  const customEdit = useCallback(
-    (
-      record: TableRecord,
-      form: { setFieldsValue: (values: Record<string, unknown>) => void },
-    ) => {
-      if (record.key === -1) {
-        const defaultValues = { is_active: true };
-        form.setFieldsValue(defaultValues);
-        return { ...record, ...defaultValues };
-      }
-      return record;
-    },
-    [],
-  );
-
-  const customSave = useCallback((transformedData: Record<string, unknown>) => {
-    return {
+  const customSave = useCallback(
+    (transformedData: Record<string, unknown>) => ({
       ...transformedData,
-      valid_from: dayjs().format("YYYY-MM-DD"),
-    };
-  }, []);
+      valid_from: formatDateForAPI(dayjs()),
+    }),
+    [formatDateForAPI],
+  );
 
-  // Memoize so ``columns`` keeps a STABLE reference across renders. A fresh
-  // array each render cascades through EditableTable's transformDataFROMapi →
-  // setDataWithTransform → the initialData-sync effect, which then refires on
-  // every parent re-render (e.g. opening the price modal) and re-applies the
-  // not-refetched cache — reverting a just-saved row edit. (ListShareArticles
-  // avoids this via the memoized useShareArticleListColumns hook.)
   const columns = useMemo<any[]>(
     () => [
       isActiveColumn,
-    {
-      title: "#",
-      dataIndex: "number",
-      key: "number",
-      inputType: "positive_integer",
-      required: false,
-      width: "4em",
-      align: "center",
-    },
-    {
-      title: <>{t("resellers.name")}</>,
-      dataIndex: "name",
-      key: "name",
-      inputType: "text",
-      required: false,
-      width: "12em",
-      align: "left",
-      sortable: true,
-    },
-    {
-      title: <>{t("resellers.short_name")}</>,
-      dataIndex: "short_name",
-      key: "short_name",
-      inputType: "text",
-      required: true,
-      width: "10em",
-      align: "left",
-    },
-    priceModalColumn,
-    {
-      ...noteColumn,
-      title: <>{t("resellers.note")}</>,
-      inputType: "text",
-      width: undefined,
-      align: "left",
-    },
+      {
+        title: "#",
+        dataIndex: "number",
+        key: "number",
+        inputType: "positive_integer",
+        required: false,
+        width: "4em",
+        align: "center",
+      },
+      {
+        title: <>{t("resellers.name")}</>,
+        dataIndex: "name",
+        key: "name",
+        inputType: "text",
+        required: false,
+        width: "12em",
+        align: "left",
+        sortable: true,
+      },
+      {
+        title: <>{t("resellers.short_name")}</>,
+        dataIndex: "short_name",
+        key: "short_name",
+        inputType: "text",
+        required: true,
+        width: "10em",
+        align: "left",
+      },
+      priceModalColumn,
+      {
+        ...noteColumn,
+        title: <>{t("resellers.note")}</>,
+        inputType: "text",
+        width: undefined,
+        align: "left",
+      },
     ],
     [isActiveColumn, t, priceModalColumn, noteColumn],
   );
@@ -184,21 +148,24 @@ export default function ListCrates() {
         </Flex>
       </div>
 
-      <HideInactiveSwitch value={hideInactive} onChange={setHideInactive} />
+      <HideInactiveSwitch
+        value={list.hideInactive}
+        onChange={list.setHideInactive}
+      />
 
       <EditableTable
         columns={columns}
-        apiFunctions={apiFunctions}
+        apiFunctions={list.apiFunctions}
         focusIndex="number"
-        initialData={visibleData}
-        loading={isLoading}
-        onSaveSuccess={onSaveSuccess}
-        onDeleteSuccess={onDeleteSuccess}
+        initialData={list.filteredData}
+        loading={list.isLoading}
+        onSaveSuccess={list.onSaveSuccess}
+        onDeleteSuccess={list.onDeleteSuccess}
         customSave={customSave}
-        customEdit={customEdit}
+        customEdit={list.customEdit}
         uniqueCheck={["name"]}
         uniqueCheckMessage={t("validation.unique.name")}
-        permissions={permissions}
+        permissions={list.permissions}
       />
       <ExplainerText title={t("common.info")}>
         {t("explainers.list_crates")}
@@ -208,7 +175,7 @@ export default function ListCrates() {
         open={csvModalVisible}
         onClose={() => setCsvModalVisible(false)}
         columns={columns}
-        data={data}
+        data={list.data}
         filename={t("commissioning.list_crates")}
       />
 
@@ -222,9 +189,7 @@ export default function ListCrates() {
         onClose={handleCloseModal}
         crate={selectedCrateId}
         crate_name={selectedCrateName}
-        onSave={() => {
-          void refetch();
-        }}
+        onSave={list.invalidate}
       />
     </div>
   );

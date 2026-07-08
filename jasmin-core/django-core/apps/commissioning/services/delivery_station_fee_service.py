@@ -13,8 +13,9 @@ from decimal import Decimal
 
 from django.db.models import Q, QuerySet
 
-from ..models import DeliveryStation, ShareDelivery
+from ..models import DeliveryStation, ExternalShareDemand, ShareDelivery
 from ..utils.iso_week_utils import delivery_date_from_fields
+from .share_demand_service import ExternalDemandBackend, _resolve_backend
 
 _CENT = Decimal("0.01")
 
@@ -46,7 +47,17 @@ class DeliveryStationFeeService:
         station: DeliveryStation, start: datetime.date, end: datetime.date
     ) -> list[dict]:
         """Per-(year, week) count of boxes actually delivered to ``station`` in
-        [start, end]. Coarse week filter in SQL, exact-date refine in Python."""
+        [start, end]. Coarse week filter in SQL, exact-date refine in Python.
+
+        External-CSV (import) tenants have NO ``ShareDelivery`` rows — box
+        demand lives in ``ExternalShareDemand`` — so route to the aggregated
+        counterpart there. Without this the per-box fee always counts 0 for a
+        fee-charging import tenant (the box-matrix bug class, but for money)."""
+        if isinstance(_resolve_backend(), ExternalDemandBackend):
+            return DeliveryStationFeeService._delivered_box_lines_external(
+                station, start, end
+            )
+
         years: set[int] = set()
         weeks: set[int] = set()
         day = start
@@ -101,6 +112,60 @@ class DeliveryStationFeeService:
             quantity = row["subscription__quantity"] or 1
             key = (row["share__year"], row["share__delivery_week"])
             counts[key] = counts.get(key, 0) + quantity
+
+        return [
+            {"year": year, "delivery_week": week, "boxes": boxes}
+            for (year, week), boxes in sorted(counts.items())
+        ]
+
+    @staticmethod
+    def _delivered_box_lines_external(
+        station: DeliveryStation, start: datetime.date, end: datetime.date
+    ) -> list[dict]:
+        """Import-mode counterpart of :meth:`_delivered_box_lines`: box counts
+        come from ``ExternalShareDemand`` (aggregated, member-less) since import
+        tenants have zero ``ShareDelivery`` rows. Same standalone-only gate,
+        exact-date refine, and quantity weighting — so a fee tenant on the CSV
+        import bills its per-box fee instead of always 0. External demand has no
+        per-share ``changed_day_number``, so the day comes from the station-day's
+        delivery day. Locked by ``test_delivery_station_fee_service.py``."""
+        years: set[int] = set()
+        weeks: set[int] = set()
+        day = start
+        while day <= end:
+            iso_year, iso_week, _ = day.isocalendar()
+            years.add(iso_year)
+            weeks.add(iso_week)
+            day += datetime.timedelta(days=7)
+        iso_year, iso_week, _ = end.isocalendar()
+        years.add(iso_year)
+        weeks.add(iso_week)
+
+        counts: dict[tuple[int, int], int] = {}
+        for row in ExternalShareDemand.objects.filter(
+            delivery_station_day__delivery_station=station,
+            year__in=years,
+            delivery_week__in=weeks,
+            # Same standalone-only gate as the subscription path: an
+            # additional (packed-along) share rides in another box, takes no
+            # station slot, and must not be billed per-box.
+            share_type_variation__share_type__is_additional_share_type=False,
+        ).values(
+            "year",
+            "delivery_week",
+            "delivery_station_day__delivery_day__day_number",
+            "quantity",
+        ):
+            date = delivery_date_from_fields(
+                row["year"],
+                row["delivery_week"],
+                None,
+                row["delivery_station_day__delivery_day__day_number"],
+            )
+            if date is None or not (start <= date <= end):
+                continue
+            key = (row["year"], row["delivery_week"])
+            counts[key] = counts.get(key, 0) + (row["quantity"] or 0)
 
         return [
             {"year": year, "delivery_week": week, "boxes": boxes}

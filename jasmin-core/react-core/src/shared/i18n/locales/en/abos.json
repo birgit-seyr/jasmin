@@ -4,6 +4,8 @@
   "subscription_number": "Sub. no.",
   "active_subscriptions_per_variation": "Active subscriptions per variation",
   "bulk_renew": "Renew selected",
+  "bulk_renew_modal_title": "Renew {{count}} subscriptions",
+  "bulk_renew_new_end_date": "New end date (Sunday)",
   "bulk_renew_confirm": "Renew {{count}} selected subscriptions? Unconfirmed renewal drafts will be created.",
   "bulk_renew_result": "Renewal: {{created}} created, {{skipped}} skipped, {{failed}} failed.",
   "bulk_renew_failed": "Renewal failed.",

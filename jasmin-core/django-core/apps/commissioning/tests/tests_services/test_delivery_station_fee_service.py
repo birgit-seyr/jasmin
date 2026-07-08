@@ -9,7 +9,12 @@ from decimal import Decimal
 import pytest
 from django.urls import reverse
 
-from apps.commissioning.models import DeliveryStationDay, ShareDelivery
+from apps.commissioning.models import (
+    DeliveryStationDay,
+    ExternalShareDemand,
+    ShareDelivery,
+    ShareImportBatch,
+)
 from apps.commissioning.services.delivery_station_fee_service import (
     DeliveryStationFeeService,
 )
@@ -32,6 +37,27 @@ def _variation():
     return ShareTypeVariationFactory(
         share_type=ShareTypeFactory(share_option="HARVEST_SHARE")
     )
+
+
+def _enable_import_mode():
+    """Flip the current tenant to external-CSV (import) demand so
+    ``_resolve_backend`` picks the ExternalDemandBackend."""
+    from django.db import connection
+    from django.utils import timezone
+
+    from apps.shared.tenants.models import Tenant, TenantSettings
+
+    real = Tenant.objects.get(schema_name=connection.schema_name)
+    current = TenantSettings.get_current_settings(real)
+    if current:
+        current.uploads_weekly_share_amount = True
+        current.save(update_fields=["uploads_weekly_share_amount"])
+    else:
+        TenantSettings.objects.create(
+            tenant=real,
+            valid_from=timezone.now() - datetime.timedelta(days=1),
+            uploads_weekly_share_amount=True,
+        )
 
 
 def _station_with_deliveries(*, quantity=1, **fees):
@@ -161,6 +187,79 @@ class TestComputeFeesBilling:
 
         rows = DeliveryStationFeeService.compute_all(_FROM, _UNTIL)
         assert [r["delivery_station"] for r in rows] == [with_fee.id]
+
+
+@pytest.mark.django_db
+class TestComputeFeesImportMode:
+    """Import-safety lock: a fee station on the external-CSV import has ZERO
+    ShareDelivery rows — the per-box fee must count boxes from
+    ExternalShareDemand instead of silently billing 0."""
+
+    def test_per_box_uses_external_demand(self, tenant):
+        _enable_import_mode()
+        station = DeliveryStationFactory(fee_per_box_net=Decimal("2.50"))
+        variation = _variation()
+        delivery_day = SharesDeliveryDayFactory(day_number=2)  # Wednesday
+        dsd = DeliveryStationDayFactory(
+            delivery_station=station, delivery_day=delivery_day
+        )
+        batch = ShareImportBatch.objects.create(
+            year=2026,
+            delivery_week=28,
+            file_checksum="0" * 64,
+            original_filename="seed.csv",
+            status=ShareImportBatch.STATUS_APPLIED,
+        )
+        # One imported box per Wednesday of weeks 28-31 — and NO ShareDelivery.
+        for week in (28, 29, 30, 31):
+            ExternalShareDemand.objects.create(
+                batch=batch,
+                year=2026,
+                delivery_week=week,
+                delivery_station_day=dsd,
+                share_type_variation=variation,
+                quantity=1,
+            )
+        assert not ShareDelivery.objects.exists()
+
+        result = DeliveryStationFeeService.compute_fees(station, _FROM, _UNTIL)
+
+        assert result["fee_type"] == "per_box"
+        # 4 Wednesdays, sourced from ExternalShareDemand — NOT 0 (which a direct
+        # ShareDelivery read would yield here).
+        assert result["quantity"] == 4
+        assert result["total_net"] == "10.00"
+        assert sum(line["boxes"] for line in result["lines"]) == 4
+
+    def test_per_box_weights_by_imported_quantity(self, tenant):
+        _enable_import_mode()
+        station = DeliveryStationFactory(fee_per_box_net=Decimal("2.50"))
+        variation = _variation()
+        delivery_day = SharesDeliveryDayFactory(day_number=2)
+        dsd = DeliveryStationDayFactory(
+            delivery_station=station, delivery_day=delivery_day
+        )
+        batch = ShareImportBatch.objects.create(
+            year=2026,
+            delivery_week=28,
+            file_checksum="0" * 64,
+            original_filename="seed.csv",
+            status=ShareImportBatch.STATUS_APPLIED,
+        )
+        for week in (28, 29, 30, 31):
+            ExternalShareDemand.objects.create(
+                batch=batch,
+                year=2026,
+                delivery_week=week,
+                delivery_station_day=dsd,
+                share_type_variation=variation,
+                quantity=2,  # 2 boxes per week
+            )
+
+        result = DeliveryStationFeeService.compute_fees(station, _FROM, _UNTIL)
+
+        assert result["quantity"] == 8  # 4 weeks × 2
+        assert result["total_net"] == "20.00"
 
 
 @pytest.mark.django_db

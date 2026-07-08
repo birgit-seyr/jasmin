@@ -121,17 +121,27 @@ def _most_recent_reference_price(
 
 
 @transaction.atomic
-def create_renewal_draft(subscription: Subscription) -> Subscription:
+def create_renewal_draft(
+    subscription: Subscription,
+    new_valid_until: datetime.date | None = None,
+) -> Subscription:
     """Create the unconfirmed renewal draft following ``subscription``'s term.
+
+    The new term starts the day after the predecessor ends. Its end defaults to
+    keeping the predecessor's term length (the daily sweep's behaviour); pass
+    ``new_valid_until`` to override it — the office bulk-renew modal does this to
+    set one common end date for the whole batch. Must be a Sunday on or after
+    ``new_valid_from`` (the model's ``clean`` enforces both).
 
     Raises ``RenewalVariationUnavailable`` if no variation covers the new term;
     the model's ``clean()`` may also raise (e.g. the carried-over delivery
     station-day doesn't reach into the new term) — both bubble up to
-    ``run_renewals``, which records the failure for the office.
+    ``run_renewals`` / ``bulk_renew``, which record the failure for the office.
     """
-    term_length = subscription.valid_until - subscription.valid_from
     new_valid_from = subscription.valid_until + datetime.timedelta(days=1)
-    new_valid_until = new_valid_from + term_length
+    if new_valid_until is None:
+        term_length = subscription.valid_until - subscription.valid_from
+        new_valid_until = new_valid_from + term_length
 
     variation = resolve_variation_for_term(
         subscription.share_type_variation, new_valid_from, new_valid_until
@@ -341,9 +351,17 @@ def manual_renewal_skip_reason(subscription: Subscription) -> str | None:
     return None
 
 
-def bulk_renew(subscription_ids: list[str]) -> dict:
+def bulk_renew(
+    subscription_ids: list[str],
+    new_valid_until: datetime.date | None = None,
+) -> dict:
     """Renew the given subscriptions on demand (office bulk-renew button) with the
     same per-subscription logic + unconfirmed-draft output as the daily sweep.
+
+    ``new_valid_until`` (from the modal) sets one common end date for every
+    renewal in the batch; when omitted each renewal keeps its predecessor's term
+    length. A row whose predecessor ends on/after that date can't renew to it
+    (``valid_until`` must exceed ``valid_from``) and is reported as failed.
 
     Returns ``{"created": int, "skipped": [...], "failed": [...]}`` where each
     skipped / failed item is ``{"id", "label", "reason", ...}`` — so the office
@@ -372,7 +390,7 @@ def bulk_renew(subscription_ids: list[str]) -> dict:
             skipped.append(_outcome_item(subscription, reason))
             continue
         try:
-            create_renewal_draft(subscription)
+            create_renewal_draft(subscription, new_valid_until=new_valid_until)
             created += 1
         except _renewal_business_errors() as exc:
             reason = _classify_renewal_failure(exc)

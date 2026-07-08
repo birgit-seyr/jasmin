@@ -4,6 +4,8 @@
   "subscription_number": "#",
   "active_subscriptions_per_variation": "Aktive Abos je Variante",
   "bulk_renew": "verlängern",
+  "bulk_renew_modal_title": "{{count}} Abos verlängern",
+  "bulk_renew_new_end_date": "Neues Enddatum (Sonntag)",
   "bulk_renew_confirm": "{{count}} ausgewählte Abos verlängern? Es werden unbestätigte Verlängerungs-Entwürfe erstellt.",
   "bulk_renew_result": "Verlängerung: {{created}} erstellt, {{skipped}} übersprungen, {{failed}} fehlgeschlagen.",
   "bulk_renew_failed": "Verlängerung fehlgeschlagen.",

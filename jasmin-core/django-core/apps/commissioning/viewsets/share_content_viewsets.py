@@ -385,6 +385,60 @@ class PackingListViewSet(RolePermissionsMixin, viewsets.ViewSet):
 
         return Response(matrix, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        parameters=[
+            get_year_parameter(required=True),
+            get_delivery_week_parameter(required=True),
+            get_day_number_parameter(required=True),
+            get_is_past_parameter(),
+            get_delivery_station_parameter(),
+            get_tour_parameter(),
+            OpenApiParameter(
+                name="is_packed_bulk",
+                type=OpenApiTypes.BOOL,
+                required=False,
+                description=(
+                    "Restrict to variations with this is_packed_bulk value. "
+                    "Omit to include all."
+                ),
+            ),
+        ],
+        responses={200: PackingBoxesMatrixSerializer},
+        description=(
+            '"Was ihr nehmen könnt" — the per-SHARE amount matrix for a week + '
+            "delivery day: one column per active share_type_variation (grouped "
+            "by share type), one row per share_article, each cell the amount a "
+            "member of that variation may take (ShareContent.amount, NOT summed "
+            "by demand). ShareContent-based, so it also works for external-CSV "
+            "tenants. Reuses the packing-boxes matrix response shape — add_ons "
+            "are always empty and count is 0."
+        ),
+    )
+    @action(detail=False, methods=["get"], url_path="member_amounts")
+    def member_amounts(self, request: Request) -> Response:
+        params = validate_query_params(
+            request,
+            required=["year", "delivery_week", "day_number"],
+            optional=[
+                "is_past",
+                "delivery_station",
+                "tour",
+                "is_packed_bulk",
+            ],
+        )
+
+        matrix = PackingListService.get_member_amounts_matrix(
+            year=params["year"],
+            delivery_week=params["delivery_week"],
+            day_number=params["day_number"],
+            is_past=params["is_past"],
+            delivery_station=params["delivery_station"],
+            tour=params["tour"],
+            is_packed_bulk=params["is_packed_bulk"],
+        )
+
+        return Response(matrix, status=status.HTTP_200_OK)
+
 
 class PackingListBulkViewSet(RolePermissionsMixin, viewsets.ViewSet):
     read_permission = IsStaff

@@ -624,3 +624,37 @@ class TestGrossPriceOverlapExclusion:
             ).count()
             == 2
         )
+
+
+@pytest.mark.django_db
+class TestRenewalValidUntilOverride:
+    """The office bulk-renew modal can set ONE common end date for the batch;
+    omitting it keeps each predecessor's term length."""
+
+    def test_create_renewal_draft_honours_override(self, tenant):
+        from isoweek import Week
+
+        sub = _renewable_sub()
+        override = Week(2028, 26).sunday()  # a Sunday past the default term end
+        renewal = create_renewal_draft(sub, new_valid_until=override)
+        assert renewal.valid_from == sub.valid_until + datetime.timedelta(days=1)
+        assert renewal.valid_until == override
+
+    def test_create_renewal_draft_default_keeps_term_length(self, tenant):
+        sub = _renewable_sub()
+        renewal = create_renewal_draft(sub)
+        assert renewal.valid_until == renewal.valid_from + (
+            sub.valid_until - sub.valid_from
+        )
+
+    def test_bulk_renew_applies_override_to_all(self, tenant):
+        from isoweek import Week
+
+        from apps.commissioning.services.renewal import bulk_renew
+
+        sub = _renewable_sub()
+        override = Week(2028, 26).sunday()
+        result = bulk_renew([str(sub.pk)], new_valid_until=override)
+        assert result["created"] == 1
+        renewal = Subscription.objects.get(previous_subscription=sub)
+        assert renewal.valid_until == override

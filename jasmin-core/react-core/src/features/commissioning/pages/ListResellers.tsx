@@ -20,57 +20,75 @@ import type {
 } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { ROLES } from "@shared/auth/roles";
-import { InviteUserModal, UserInfoModal } from '@shared/modals';
-import { ExportCsv } from '@features/commissioning/modals';
+import { InviteUserModal, UserInfoModal } from "@shared/modals";
+import { ExportCsv } from "@features/commissioning/modals";
 import { ResellerInvoiceSettingsModal } from "@features/commissioning/modals/ResellerInvoiceSettingsModal";
-
 import {
   EditableTable,
+  type CrudResource,
   permissionsWithDeletable,
-  wrapApiFunctions,
+  useCrudListPage,
 } from "@shared/tables";
 import type {
-  ApiFunctions,
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import {
+  DownloadCsvTemplateButton,
   ExplainerText,
   HideInactiveSwitch,
   LinkButton,
   StatusButton,
-  DownloadCsvTemplateButton,
 } from "@shared/ui";
-import { useContactColumns, useInvalidateAfterTableMutation, useNoteColumn, useUserInfoModal, useTenant } from '@hooks/index';
-import { useOfferGroups } from '@features/commissioning/hooks';
-import { isFieldDisabled } from "@shared/utils";
+import {
+  useContactColumns,
+  useNoteColumn,
+  useTenant,
+  useUserInfoModal,
+} from "@hooks/index";
+import { useOfferGroups } from "@features/commissioning/hooks";
+import { isFieldDisabled, notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
-import { notify } from "@shared/utils";
 
-/** A table row: the generated Reseller shape + the EditableTable key. */
-type ResellerRow = Reseller & TableRecord;
+const RESELLER_LIST_PARAMS: CommissioningResellersListParams = {
+  is_reseller: true,
+};
+
+// Typed on TableRecord (not Reseller & TableRecord): this page's columns +
+// customEdit are TableRecord-typed. The create/update/delete casts sit here.
+const resellersResource: CrudResource<TableRecord> = {
+  useList: useCommissioningResellersList,
+  create: (payload) =>
+    commissioningResellersCreate(payload as unknown as Reseller),
+  update: (id, payload) =>
+    commissioningResellersPartialUpdate(id, payload as unknown as Reseller),
+  delete: (id) =>
+    commissioningResellersDestroy(id, { delete_context: "resellers" }),
+  getListQueryKey: getCommissioningResellersListQueryKey,
+};
 
 export default function ListResellers() {
+  const { t } = useTranslation();
   const { isOffice } = useRoles();
+  const { getSetting } = useTenant();
+  const { noteColumn } = useNoteColumn();
+  const queryClient = useQueryClient();
   const permissions = useMemo(
     () => permissionsWithDeletable(isOffice),
     [isOffice],
   );
-  const [hideInactive, setHideInactive] = useState(true);
+
   const [csvModalVisible, setCsvModalVisible] = useState(false);
-  const queryClient = useQueryClient();
   const [invoiceDrawerReseller, setInvoiceDrawerReseller] =
     useState<Reseller | null>(null);
-  const { t } = useTranslation();
-  const { noteColumn } = useNoteColumn();
-  const { getSetting } = useTenant();
+  const [inviteForReseller, setInviteForReseller] =
+    useState<TableRecord | null>(null);
 
   const uploadAllowed =
     (getSetting("allow_upload_for_data_lists", false) as boolean) === true;
 
-  // Tenant-level defaults for the per-reseller payment-condition columns.
-  // ``customEdit`` pre-fills these on new rows so the office only has to
-  // touch them for resellers that need overrides.
+  // Tenant-level defaults for the per-reseller payment-condition columns —
+  // customEdit pre-fills these on new rows.
   const defaultPaymentTermsDays =
     (getSetting("payment_terms_reseller_in_days") as number | undefined) ?? 14;
   const defaultEarlyPaymentDiscountPercent = getSetting(
@@ -80,52 +98,24 @@ export default function ListResellers() {
     "early_payment_discount_days",
   ) as number | null | undefined;
 
+  const list = useCrudListPage<TableRecord>({
+    resource: resellersResource,
+    permissions,
+    activeField: "is_active_reseller",
+    listParams: RESELLER_LIST_PARAMS,
+  });
+
   const contactColumns = useContactColumns({
     translationPrefix: "resellers",
     overrides: {
       companyName: { disabled: isFieldDisabled },
       firstName: { disabled: isFieldDisabled },
       lastName: { disabled: isFieldDisabled },
-      address: {
-        inputType: "text",
-        required: true,
-        disabled: isFieldDisabled,
-      },
-      zipCode: {
-        inputType: "text",
-        required: true,
-        disabled: isFieldDisabled,
-      },
+      address: { inputType: "text", required: true, disabled: isFieldDisabled },
+      zipCode: { inputType: "text", required: true, disabled: isFieldDisabled },
       city: { inputType: "text", required: true, disabled: isFieldDisabled },
     },
   });
-
-  const listParams = useMemo<CommissioningResellersListParams>(
-    () => ({ is_reseller: true }),
-    [],
-  );
-
-  // Page owns the data via ``useCommissioningResellersList`` (passed as
-  // ``initialData``); no ``list`` in ``apiFunctions`` so the table never
-  // double-fetches. Table mutations refresh through the invalidation below;
-  // the side-channel user-status / invoice-settings updates patch the query
-  // cache in place (see ``patchRowById``) to keep scroll + search intact.
-  const { data: rawData, isLoading } = useCommissioningResellersList(listParams);
-  const data = useMemo<ResellerRow[]>(
-    () => (rawData ?? []).map((item) => ({ ...item, key: item.id ?? "" })),
-    [rawData],
-  );
-  const filteredData = useMemo(
-    () => (hideInactive ? data.filter((r) => r.is_active_reseller) : data),
-    [data, hideInactive],
-  );
-  const invalidateData = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: getCommissioningResellersListQueryKey(listParams),
-    });
-  }, [queryClient, listParams]);
-  const { onSaveSuccess, onDeleteSuccess } =
-    useInvalidateAfterTableMutation(invalidateData);
 
   const { offerGroups, offerGroupsCount, defaultOfferGroupId } =
     useOfferGroups();
@@ -140,17 +130,13 @@ export default function ListResellers() {
     getUserStatusSorter,
   } = useUserInfoModal();
 
-  // Reseller record we're inviting a customer-user for. When set, the
-  // InviteUserModal opens pre-filled.
-  const [inviteForReseller, setInviteForReseller] =
-    useState<TableRecord | null>(null);
-
   // Patch a single reseller row directly in the query cache. Avoids a full
-  // re-fetch (which would re-sort/re-filter the table and lose scroll).
+  // re-fetch (which would re-sort/re-filter the table and lose scroll). Targets
+  // the params-scoped key the list hook populated.
   const patchRowById = useCallback(
     (id: unknown, patch: Record<string, unknown>) => {
       queryClient.setQueryData(
-        getCommissioningResellersListQueryKey(listParams),
+        getCommissioningResellersListQueryKey(RESELLER_LIST_PARAMS),
         (old: unknown) =>
           Array.isArray(old)
             ? old.map((row) =>
@@ -159,7 +145,7 @@ export default function ListResellers() {
             : old,
       );
     },
-    [queryClient, listParams],
+    [queryClient],
   );
 
   const handleSendInvitation = useCallback(
@@ -205,21 +191,14 @@ export default function ListResellers() {
           account_status: next,
         });
         notify.success(
-          next === "inactive"
-            ? t("users.deactivated")
-            : t("users.activated"),
+          next === "inactive" ? t("users.deactivated") : t("users.activated"),
         );
         handleCloseUserInfoModal();
         patchRowById((record as TableRecord).id, {
           linked_user_info: updatedUser,
         });
       } catch (err: unknown) {
-        notify.error(
-          getErrorMessage(
-            err,
-            t("users.toggle_active_failed"),
-          ),
-        );
+        notify.error(getErrorMessage(err, t("users.toggle_active_failed")));
       }
     },
     [t, handleCloseUserInfoModal, patchRowById],
@@ -234,25 +213,14 @@ export default function ListResellers() {
     [setActive],
   );
 
-  const apiFunctions = useMemo<ApiFunctions>(
-    () =>
-      wrapApiFunctions<Reseller & TableRecord>({
-        create: (payload) => commissioningResellersCreate(payload),
-        update: (id, payload) =>
-          commissioningResellersPartialUpdate(id, payload),
-        delete: (id) =>
-          commissioningResellersDestroy(id, { delete_context: "resellers" }),
-      }),
-    [],
-  );
-
-  const customSave = useCallback((transformedData: Record<string, unknown>) => {
-    return {
+  const customSave = useCallback(
+    (transformedData: Record<string, unknown>) => ({
       ...transformedData,
       is_reseller: true,
       comes_from_reseller_page: true,
-    };
-  }, []);
+    }),
+    [],
+  );
 
   const customEdit = useCallback(
     (
@@ -262,19 +230,13 @@ export default function ListResellers() {
       if (record.key === -1) {
         const defaultValues: Record<string, unknown> = {
           is_active_reseller: true,
-          // Pre-fill payment conditions from the tenant defaults so the
-          // office only edits these for resellers with custom terms. A
-          // blank cell means "use tenant default at invoice time" (the
-          // backend helper falls back automatically), but pre-filling
-          // makes the row self-explanatory in the office UI.
+          // Pre-fill payment conditions from the tenant defaults so the office
+          // only edits these for resellers with custom terms.
           payment_terms_in_days: defaultPaymentTermsDays,
           early_payment_discount_percent: defaultEarlyPaymentDiscountPercent,
           early_payment_discount_days: defaultEarlyPaymentDiscountDays,
         };
-        // Pre-select the protected default offer group for new resellers. The
-        // column is a foreignKey select keyed by its dataIndex
-        // ("offer_group_name") whose form value is the option id — set that so
-        // the select shows it; offer_group (the FK) is set for the saved row.
+        // Pre-select the protected default offer group for new resellers.
         if (defaultOfferGroupId) {
           defaultValues.offer_group_name = defaultOfferGroupId;
           defaultValues.offer_group = defaultOfferGroupId;
@@ -292,166 +254,160 @@ export default function ListResellers() {
     ],
   );
 
-  const columns = useMemo<EditableColumnConfig<TableRecord>[]>(() => [
-    {
-      title: <div className="checkbox-column-title">Link</div>,
-      dataIndex: "link",
-      key: "link",
-      align: "center",
-      disabled: true,
-      width: "4em",
-      render: (_: unknown, record: TableRecord) => (
-        <LinkButton
-          variant="view"
-          to={`/commissioning/customer-orders/${record.id}`}
-          tooltip={t("resellers.go_to_orders")}
-        />
-      ),
-    },
-    {
-      // Per-row entry-point to ``ResellerInvoiceSettingsModal``.
-      // Small green button labelled "Rechnung" — sits next to the
-      // orders link, both are "deep-dive into one reseller" actions.
-      title: "",
-      dataIndex: "invoice_settings",
-      key: "invoice_settings",
-      align: "center",
-      disabled: true,
-      width: "10em",
-      render: (_: unknown, record: TableRecord) => {
-        const isUnsavedNewRow = record.key === -1 || !record.id;
-        if (isUnsavedNewRow) return null;
-        return (
-          <Button
-            size="small"
-            type="primary"
-            style={{
-              backgroundColor: "var(--color-primary-hover)",
-              borderColor: "var(--color-primary-hover)",
-            }}
-            onClick={() =>
-              setInvoiceDrawerReseller(record as unknown as Reseller)
-            }
-          >
-            {t("resellers.invoice_settings_title")}
-          </Button>
-        );
-      },
-    },
-    {
-      title: <>{t("resellers.is_active")}</>,
-      dataIndex: "is_active_reseller",
-      key: "is_active_reseller",
-      inputType: "checkbox",
-      required: false,
-      sortable: true,
-    },
-    {
-      title: (
-        <div className="checkbox-column-title">{t("members.user_status")}</div>
-      ),
-      dataIndex: "user_status",
-      key: "user_status",
-      align: "center",
-      width: "4em",
-      disabled: true,
-      render: (_: unknown, record: TableRecord) => {
-        const status = getUserStatus(record);
-        return (
-          <StatusButton
-            variant={status.variant}
-            onClick={() => handleOpenUserInfoModal(record)}
-            tooltip={t(`users.${status.key}`)}
+  const columns = useMemo<EditableColumnConfig<TableRecord>[]>(
+    () => [
+      {
+        title: <div className="checkbox-column-title">Link</div>,
+        dataIndex: "link",
+        key: "link",
+        align: "center",
+        disabled: true,
+        width: "4em",
+        render: (_: unknown, record: TableRecord) => (
+          <LinkButton
+            variant="view"
+            to={`/commissioning/customer-orders/${record.id}`}
+            tooltip={t("resellers.go_to_orders")}
           />
-        );
+        ),
       },
-      sorter: getUserStatusSorter,
-    },
-    {
-      title: <>{t("resellers.is_also_delivery_station")}</>,
-      dataIndex: "is_also_delivery_station",
-      key: "is_also_delivery_station",
-      inputType: "checkbox",
-      required: false,
-      sortable: true,
-
-      // Disable unticking when the linked DS has dependants and can't be deleted.
-      disabled: (record: TableRecord) =>
-        !!record.is_also_delivery_station &&
-        record.linked_delivery_station_can_be_deleted === false,
-    },
-    {
-      title: <>{t("resellers.is_seller")}</>,
-      dataIndex: "is_seller",
-      key: "is_seller",
-      inputType: "checkbox",
-      required: false,
-      sortable: true,
-    },
-    contactColumns.companyName,
-    contactColumns.firstName,
-    contactColumns.lastName,
-    contactColumns.address,
-    contactColumns.zipCode,
-    contactColumns.city,
-    contactColumns.email,
-    contactColumns.phone,
-    contactColumns.phone2,
-    ...(hasDifferentOfferGroups
-      ? ([
-          {
-            title: <>{t("resellers.offer_group")}</>,
-            dataIndex: "offer_group_name",
-            key: "offer_group",
-            inputType: "select",
-            required: false,
-            width: "12em",
-            options: offerGroups,
-            sortable: true,
-
-            foreignKey: {
-              valueField: "offer_group",
-              displayField: "offer_group_name",
+      {
+        // Per-row entry-point to ResellerInvoiceSettingsModal.
+        title: "",
+        dataIndex: "invoice_settings",
+        key: "invoice_settings",
+        align: "center",
+        disabled: true,
+        width: "10em",
+        render: (_: unknown, record: TableRecord) => {
+          const isUnsavedNewRow = record.key === -1 || !record.id;
+          if (isUnsavedNewRow) return null;
+          return (
+            <Button
+              size="small"
+              type="primary"
+              style={{
+                backgroundColor: "var(--color-primary-hover)",
+                borderColor: "var(--color-primary-hover)",
+              }}
+              onClick={() =>
+                setInvoiceDrawerReseller(record as unknown as Reseller)
+              }
+            >
+              {t("resellers.invoice_settings_title")}
+            </Button>
+          );
+        },
+      },
+      {
+        title: <>{t("resellers.is_active")}</>,
+        dataIndex: "is_active_reseller",
+        key: "is_active_reseller",
+        inputType: "checkbox",
+        required: false,
+        sortable: true,
+      },
+      {
+        title: (
+          <div className="checkbox-column-title">
+            {t("members.user_status")}
+          </div>
+        ),
+        dataIndex: "user_status",
+        key: "user_status",
+        align: "center",
+        width: "4em",
+        disabled: true,
+        render: (_: unknown, record: TableRecord) => {
+          const status = getUserStatus(record);
+          return (
+            <StatusButton
+              variant={status.variant}
+              onClick={() => handleOpenUserInfoModal(record)}
+              tooltip={t(`users.${status.key}`)}
+            />
+          );
+        },
+        sorter: getUserStatusSorter,
+      },
+      {
+        title: <>{t("resellers.is_also_delivery_station")}</>,
+        dataIndex: "is_also_delivery_station",
+        key: "is_also_delivery_station",
+        inputType: "checkbox",
+        required: false,
+        sortable: true,
+        // Disable unticking when the linked DS has dependants and can't be deleted.
+        disabled: (record: TableRecord) =>
+          !!record.is_also_delivery_station &&
+          record.linked_delivery_station_can_be_deleted === false,
+      },
+      {
+        title: <>{t("resellers.is_seller")}</>,
+        dataIndex: "is_seller",
+        key: "is_seller",
+        inputType: "checkbox",
+        required: false,
+        sortable: true,
+      },
+      contactColumns.companyName,
+      contactColumns.firstName,
+      contactColumns.lastName,
+      contactColumns.address,
+      contactColumns.zipCode,
+      contactColumns.city,
+      contactColumns.email,
+      contactColumns.phone,
+      contactColumns.phone2,
+      ...(hasDifferentOfferGroups
+        ? ([
+            {
+              title: <>{t("resellers.offer_group")}</>,
+              dataIndex: "offer_group_name",
+              key: "offer_group",
+              inputType: "select",
+              required: false,
+              width: "12em",
+              options: offerGroups,
+              sortable: true,
+              foreignKey: {
+                valueField: "offer_group",
+                displayField: "offer_group_name",
+              },
             },
-          },
-        ] as EditableColumnConfig<TableRecord>[])
-      : []),
-    {
-      title: <>{t("resellers.offer_via_email")}</>,
-      dataIndex: "offer_via_email",
-      key: "offer_via_email",
-      inputType: "checkbox",
-      required: false,
-    },
-    {
-      title: <>{t("resellers.delivery_note_via_email")}</>,
-      dataIndex: "delivery_note_via_email",
-      key: "delivery_note_via_email",
-      inputType: "checkbox",
-      required: false,
-    },
-    // ``invoice_via_email`` + ``payment_terms_in_days`` + the two
-    // ``early_payment_discount_*`` columns + ``uid`` all moved into
-    // ``ResellerInvoiceSettingsModal`` — opened via the green
-    // "Rechnungseinstellungen" button at the start of the row. The
-    // ``customEdit`` callback above still pre-fills the payment-
-    // condition defaults on new rows; the values just don't appear
-    // as inline cells anymore.
-    {
-      ...noteColumn,
-      inputType: "optional",
-      width: "25em",
-    },
-  ], [
-    contactColumns,
-    getUserStatus,
-    getUserStatusSorter,
-    handleOpenUserInfoModal,
-    hasDifferentOfferGroups,
-    noteColumn,
-    offerGroups,
-    t,
-  ]);
+          ] as EditableColumnConfig<TableRecord>[])
+        : []),
+      {
+        title: <>{t("resellers.offer_via_email")}</>,
+        dataIndex: "offer_via_email",
+        key: "offer_via_email",
+        inputType: "checkbox",
+        required: false,
+      },
+      {
+        title: <>{t("resellers.delivery_note_via_email")}</>,
+        dataIndex: "delivery_note_via_email",
+        key: "delivery_note_via_email",
+        inputType: "checkbox",
+        required: false,
+      },
+      {
+        ...noteColumn,
+        inputType: "optional",
+        width: "25em",
+      },
+    ],
+    [
+      contactColumns,
+      getUserStatus,
+      getUserStatusSorter,
+      handleOpenUserInfoModal,
+      hasDifferentOfferGroups,
+      noteColumn,
+      offerGroups,
+      t,
+    ],
+  );
 
   return (
     <div>
@@ -466,19 +422,22 @@ export default function ListResellers() {
         </Button>
       </div>
 
-      <HideInactiveSwitch value={hideInactive} onChange={setHideInactive} />
+      <HideInactiveSwitch
+        value={list.hideInactive}
+        onChange={list.setHideInactive}
+      />
 
       <EditableTable
         columns={columns}
-        apiFunctions={apiFunctions}
-        initialData={filteredData}
-        loading={isLoading}
-        onSaveSuccess={onSaveSuccess}
-        onDeleteSuccess={onDeleteSuccess}
+        apiFunctions={list.apiFunctions}
+        initialData={list.filteredData}
+        loading={list.isLoading}
+        onSaveSuccess={list.onSaveSuccess}
+        onDeleteSuccess={list.onDeleteSuccess}
         customSave={customSave}
         customEdit={customEdit}
         deleteContext={"resellers"}
-        permissions={permissions}
+        permissions={list.permissions}
         pagination={true}
         showSearchBar={true}
       />
@@ -498,7 +457,7 @@ export default function ListResellers() {
         onClose={() => setInviteForReseller(null)}
         onCreated={() => {
           setInviteForReseller(null);
-          invalidateData();
+          list.invalidate();
         }}
         title={t("users.invite_title")}
         defaultRoles={[ROLES.CUSTOMER]}
@@ -524,7 +483,7 @@ export default function ListResellers() {
         columns={
           columns as unknown as Parameters<typeof ExportCsv>[0]["columns"]
         }
-        data={data}
+        data={list.data}
         filename={t("resellers.list_resellers")}
       />
       <ExplainerText title={t("common.info")}>
@@ -536,7 +495,7 @@ export default function ListResellers() {
           columns={columns}
           filename={t("commissioning.resellers_template.csv")}
           modelName="reseller"
-          onUploadSuccess={invalidateData}
+          onUploadSuccess={list.invalidate}
         />
       )}
 
@@ -545,8 +504,8 @@ export default function ListResellers() {
         reseller={invoiceDrawerReseller}
         onClose={() => setInvoiceDrawerReseller(null)}
         onSaved={(updated: Reseller) => {
-          // Patch the matching row in the query cache so the table doesn't
-          // need a full refetch — keeps scroll position + search intact.
+          // Patch the matching row in the cache so the table doesn't need a
+          // full refetch — keeps scroll position + search intact.
           patchRowById(
             updated.id,
             updated as unknown as Record<string, unknown>,

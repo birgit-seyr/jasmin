@@ -270,7 +270,6 @@ export default function CommissioningSidebar({
         // Complex (per-week) planning links first, then the long-term links —
         // one pair per complex-planned share option.
         ...planningComplexItems,
-        ...planningLongTermItems,
         {
           key: "commissioning-purchase-list",
 
@@ -281,6 +280,7 @@ export default function CommissioningSidebar({
             </Link>
           ),
         },
+        ...planningLongTermItems,
       ],
     },
     // "Additional" section: simple (non-complex) share options — long-term

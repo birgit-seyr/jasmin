@@ -4,7 +4,6 @@ import {
   EuroCircleOutlined,
   InfoCircleOutlined,
 } from "@ant-design/icons";
-import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
@@ -25,24 +24,18 @@ import {
 } from "@features/commissioning/modals";
 import {
   EditableTable,
+  type CrudResource,
   permissionsWithDeletable,
-  wrapApiFunctions,
+  useCrudListPage,
 } from "@shared/tables";
-import type {
-  ApiFunctions,
-  TableRecord,
-} from "@shared/tables/BasicEditableTable/types";
+import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import {
+  DownloadCsvTemplateButton,
   ExplainerText,
   HideInactiveSwitch,
-  DownloadCsvTemplateButton,
 } from "@shared/ui";
 import { useRoles } from "@shared/auth";
-import {
-  useContactColumns,
-  useInvalidateAfterTableMutation,
-  useTenant,
-} from "@hooks/index";
+import { useContactColumns, useTenant } from "@hooks/index";
 import {
   useIsActiveColumn,
   useShareDeliveryDays,
@@ -56,37 +49,29 @@ interface ShareDeliveryDay {
   valid_until?: string | null;
 }
 
+type DeliveryStationRow = DeliveryStation & TableRecord;
+
+const deliveryStationsResource: CrudResource<DeliveryStationRow> = {
+  useList: useCommissioningDeliveryStationsList,
+  create: commissioningDeliveryStationsCreate,
+  update: commissioningDeliveryStationsPartialUpdate,
+  delete: commissioningDeliveryStationsDestroy,
+  getListQueryKey: getCommissioningDeliveryStationsListQueryKey,
+};
+
 export default function ListDeliveryStations() {
+  const { t } = useTranslation();
   const { isOffice } = useRoles();
+  const { getSetting } = useTenant();
+  const isActiveColumn = useIsActiveColumn();
   const permissions = useMemo(
     () => permissionsWithDeletable(isOffice),
     [isOffice],
   );
-  const [hideInactive, setHideInactive] = useState(true);
-  const [csvModalVisible, setCsvModalVisible] = useState(false);
-  const queryClient = useQueryClient();
-  const { t } = useTranslation();
-  const { getSetting } = useTenant();
   const uploadAllowed =
     (getSetting("allow_upload_for_data_lists", false) as boolean) === true;
 
-  const contactColumns = useContactColumns({
-    translationPrefix: "delivery_stations",
-    overrides: {
-      address: {
-        inputType: "text",
-        required: true,
-        disabled: isFieldDisabled,
-      },
-      zipCode: {
-        inputType: "text",
-        required: true,
-        disabled: isFieldDisabled,
-      },
-      city: { inputType: "text", required: true, disabled: isFieldDisabled },
-    },
-  });
-
+  const [csvModalVisible, setCsvModalVisible] = useState(false);
   const [
     isDeliveryStationDetailModalOpen,
     setIsDeliveryStationDetailModalOpen,
@@ -104,6 +89,20 @@ export default function ListDeliveryStations() {
     unknown
   > | null>(null);
 
+  const list = useCrudListPage<DeliveryStationRow>({
+    resource: deliveryStationsResource,
+    permissions,
+  });
+
+  const contactColumns = useContactColumns({
+    translationPrefix: "delivery_stations",
+    overrides: {
+      address: { inputType: "text", required: true, disabled: isFieldDisabled },
+      zipCode: { inputType: "text", required: true, disabled: isFieldDisabled },
+      city: { inputType: "text", required: true, disabled: isFieldDisabled },
+    },
+  });
+
   const shareDeliveryDaysParams = useMemo(
     () => ({ active_at_date: dayjs().format("YYYY-MM-DD") }),
     [],
@@ -115,74 +114,34 @@ export default function ListDeliveryStations() {
 
   const { shareDeliveryDays: currentlyActiveDeliveryDays } =
     useShareDeliveryDays(shareDeliveryDaysParams);
-
   const { shareDeliveryDays: futureDeliveryDays } = useShareDeliveryDays(
     futureShareDeliveryDaysParams,
   );
 
-  const shareDeliveryDays = useMemo(() => {
-    return [
-      ...(currentlyActiveDeliveryDays || []),
-      ...(futureDeliveryDays || []),
-    ];
-  }, [currentlyActiveDeliveryDays, futureDeliveryDays]);
+  const shareDeliveryDays = useMemo(
+    () => [...(currentlyActiveDeliveryDays || []), ...(futureDeliveryDays || [])],
+    [currentlyActiveDeliveryDays, futureDeliveryDays],
+  );
 
   const distinctShareDeliveryDays = useMemo(() => {
     const dayNumberMap = new Map<number, ShareDeliveryDay>();
-
     (shareDeliveryDays as ShareDeliveryDay[]).forEach((day) => {
       const existing = dayNumberMap.get(day.day_number);
-
       if (!existing) {
         dayNumberMap.set(day.day_number, day);
       } else {
-        const currentHasNoValidUntil =
-          !day.valid_until || day.valid_until === null;
-        const existingHasNoValidUntil =
-          !existing.valid_until || existing.valid_until === null;
-
+        const currentHasNoValidUntil = !day.valid_until;
+        const existingHasNoValidUntil = !existing.valid_until;
         if (currentHasNoValidUntil && !existingHasNoValidUntil) {
           dayNumberMap.set(day.day_number, day);
         }
       }
     });
-
     return Array.from(dayNumberMap.values());
   }, [shareDeliveryDays]);
 
-  const isActiveColumn = useIsActiveColumn();
-
-  // Page owns the data via ``useCommissioningDeliveryStationsList`` (passed
-  // as ``initialData``); no ``list`` in ``apiFunctions`` so the table never
-  // double-fetches. Mutations refresh through the invalidation below.
-  const { data: rawData, isLoading } = useCommissioningDeliveryStationsList();
-  const data = useMemo(
-    () => (rawData ?? []) as unknown as TableRecord[],
-    [rawData],
-  );
-  const filteredData = useMemo(
-    () => (hideInactive ? data.filter((r) => r.is_active) : data),
-    [data, hideInactive],
-  );
-  const invalidateData = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: getCommissioningDeliveryStationsListQueryKey(),
-    });
-  }, [queryClient]);
-  const { onSaveSuccess, onDeleteSuccess } =
-    useInvalidateAfterTableMutation(invalidateData);
-
-  const apiFunctions = useMemo<ApiFunctions>(
-    () =>
-      wrapApiFunctions<DeliveryStation & TableRecord>({
-        create: (payload) => commissioningDeliveryStationsCreate(payload),
-        update: (id, payload) =>
-          commissioningDeliveryStationsPartialUpdate(id, payload),
-        delete: (id) => commissioningDeliveryStationsDestroy(id),
-      }),
-    [],
-  );
-
+  // Strip the per-delivery-day helper columns from the save payload — they're
+  // display-only and not fields on the DeliveryStation model.
   const customSave = useCallback(
     (transformedData: Record<string, unknown>) => {
       const cleanedData = { ...transformedData };
@@ -194,23 +153,8 @@ export default function ListDeliveryStations() {
     [distinctShareDeliveryDays],
   );
 
-  const customEdit = useCallback(
-    (
-      record: TableRecord,
-      form: { setFieldsValue: (values: Record<string, unknown>) => void },
-    ) => {
-      if (record.key === -1) {
-        const defaultValues = { is_active: true };
-        form.setFieldsValue(defaultValues);
-        return { ...record, ...defaultValues };
-      }
-      return record;
-    },
-    [],
-  );
-
-  const columns: any[] = useMemo(() => {
-    const staticColumns = [
+  const columns: any[] = useMemo(
+    () => [
       isActiveColumn,
       {
         title: <>{t("delivery_stations.is_also_reseller")}</>,
@@ -219,8 +163,8 @@ export default function ListDeliveryStations() {
         inputType: "checkbox",
         required: false,
         sortable: true,
-
-        // Disable unticking when the linked reseller has dependants and can't be deleted.
+        // Disable unticking when the linked reseller has dependants and can't
+        // be deleted.
         disabled: (record: TableRecord) =>
           !!(record.is_also_reseller || record.is_also_seller) &&
           record.linked_reseller_can_be_deleted === false,
@@ -244,7 +188,6 @@ export default function ListDeliveryStations() {
         width: "9em",
         align: "center",
         sortable: true,
-
         disabled: isFieldDisabled,
       },
       {
@@ -255,36 +198,31 @@ export default function ListDeliveryStations() {
         required: false,
         disabled: true,
         width: "8em",
-        render: (_: unknown, record: TableRecord) => {
-          return (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "4px",
-                width: "100%",
+        render: (_: unknown, record: TableRecord) => (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "4px",
+              width: "100%",
+            }}
+          >
+            <Button
+              size="small"
+              type="text"
+              className="long-squared-button"
+              icon={<EditOutlined />}
+              aria-label={t("table.edit")}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDeliveryStationDetailModalOpen(true);
+                setSelectedDeliveryStationDetailData(record);
               }}
-            >
-              <Button
-                size="small"
-                type="text"
-                className="long-squared-button"
-                icon={<EditOutlined />}
-                aria-label={t("table.edit")}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsDeliveryStationDetailModalOpen(true);
-                  setSelectedDeliveryStationDetailData(record);
-                }}
-                style={{
-                  minWidth: "auto",
-                  padding: "0 4px",
-                }}
-              />
-            </div>
-          );
-        },
+              style={{ minWidth: "auto", padding: "0 4px" }}
+            />
+          </div>
+        ),
       },
       {
         title: <>{t("delivery_stations.infos")}</>,
@@ -295,8 +233,8 @@ export default function ListDeliveryStations() {
         disabled: true,
         width: "7em",
         render: (_: unknown, record: TableRecord) => {
-          // Office-only, and only for persisted rows (the "add new" draft
-          // row has key === -1 and no id yet).
+          // Office-only, and only for persisted rows (the "add new" draft row
+          // has key === -1 and no id yet).
           if (!isOffice || record.key === -1 || !record.id) return null;
           return (
             <div
@@ -342,10 +280,9 @@ export default function ListDeliveryStations() {
       contactColumns.city,
       contactColumns.email,
       contactColumns.phone,
-    ];
-
-    return staticColumns;
-  }, [t, isActiveColumn, contactColumns, isOffice]);
+    ],
+    [t, isActiveColumn, contactColumns, isOffice],
+  );
 
   return (
     <div>
@@ -360,18 +297,21 @@ export default function ListDeliveryStations() {
         </Button>
       </div>
 
-      <HideInactiveSwitch value={hideInactive} onChange={setHideInactive} />
+      <HideInactiveSwitch
+        value={list.hideInactive}
+        onChange={list.setHideInactive}
+      />
 
       <EditableTable
         columns={columns}
-        apiFunctions={apiFunctions}
-        initialData={filteredData}
-        loading={isLoading}
-        onSaveSuccess={onSaveSuccess}
-        onDeleteSuccess={onDeleteSuccess}
+        apiFunctions={list.apiFunctions}
+        initialData={list.filteredData}
+        loading={list.isLoading}
+        onSaveSuccess={list.onSaveSuccess}
+        onDeleteSuccess={list.onDeleteSuccess}
         customSave={customSave}
-        customEdit={customEdit}
-        permissions={permissions}
+        customEdit={list.customEdit}
+        permissions={list.permissions}
         uniqueCheck={["number"]}
         uniqueCheckMessage={t("validation.unique.number")}
         pagination={true}
@@ -386,7 +326,7 @@ export default function ListDeliveryStations() {
         }}
         deliveryStation={selectedDeliveryStationDetailData as never}
         onSave={() => {
-          invalidateData();
+          list.invalidate();
           setIsDeliveryStationDetailModalOpen(false);
           setSelectedDeliveryStationDetailData(null);
         }}
@@ -407,7 +347,7 @@ export default function ListDeliveryStations() {
         open={csvModalVisible}
         onClose={() => setCsvModalVisible(false)}
         columns={columns}
-        data={data}
+        data={list.data}
         filename={t("delivery_stations.list_delivery_stations")}
       />
 
@@ -419,7 +359,7 @@ export default function ListDeliveryStations() {
           columns={columns}
           filename={t("commissioning.delivery_stations_template.csv")}
           modelName="delivery_station"
-          onUploadSuccess={invalidateData}
+          onUploadSuccess={list.invalidate}
         />
       )}
     </div>

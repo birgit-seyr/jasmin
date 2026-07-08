@@ -1,5 +1,4 @@
 import { DownloadOutlined } from "@ant-design/icons";
-import { useQueryClient } from "@tanstack/react-query";
 import { Button, Flex, Radio } from "antd";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,49 +14,90 @@ import type {
   ShareArticle,
 } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
-import { ExportCsv, ExportCsvAllArticles, ExportCsvPricesShareArticle, ShareArticlePriceModal } from '@features/commissioning/modals';
+import {
+  ExportCsv,
+  ExportCsvAllArticles,
+  ExportCsvPricesShareArticle,
+  ShareArticlePriceModal,
+} from "@features/commissioning/modals";
 import {
   EditableTable,
+  type CrudResource,
   gatedByPermission,
-  wrapApiFunctions,
+  useCrudListPage,
 } from "@shared/tables";
-import type {
-  ApiFunctions,
-  TableRecord,
-} from "@shared/tables/BasicEditableTable/types";
+import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import {
+  DownloadCsvTemplateButton,
   ExplainerText,
   HideInactiveSwitch,
-  DownloadCsvTemplateButton,
 } from "@shared/ui";
-import { useActiveShareOptions, useInvalidateAfterTableMutation, useNumberFormat, useOrganicGate, useTenant, useUnitOptions } from '@hooks/index';
-import { useCrates, useIsActiveColumn, useShareArticleListColumns, useShareArticlePriceColumn, useShareOptions } from '@features/commissioning/hooks';
+import {
+  useActiveShareOptions,
+  useNumberFormat,
+  useOrganicGate,
+  useTenant,
+  useUnitOptions,
+} from "@hooks/index";
+import {
+  useCrates,
+  useIsActiveColumn,
+  useShareArticleListColumns,
+  useShareArticlePriceColumn,
+  useShareOptions,
+} from "@features/commissioning/hooks";
 import { syncPurchasedName } from "@shared/utils";
 
 // Pure row predicates — a row is harvest-only or purchase-only based on
-// ``is_purchased``. Module-level so they're stable references the column
-// ``useMemo`` can depend on indirectly without being invalidated each render.
-const isHarvestDisabled = (record: TableRecord) =>
-  record.is_purchased === true;
+// ``is_purchased``. Module-level so they're stable references.
+const isHarvestDisabled = (record: TableRecord) => record.is_purchased === true;
 const isPurchaseDisabled = (record: TableRecord) =>
   record.is_purchased === false;
 
+const DATA_LIST_PARAMS: CommissioningShareArticlesListParams = {
+  is_data_list: true,
+};
+
+// Typed on TableRecord (not ShareArticle & TableRecord): this page's columns +
+// customEdit are TableRecord-typed, so keeping the whole page on TableRecord
+// avoids a generic clash. The create/update casts sit here (one place).
+const shareArticlesResource: CrudResource<TableRecord> = {
+  useList: useCommissioningShareArticlesList,
+  create: (payload) =>
+    commissioningShareArticlesCreate(payload as unknown as ShareArticle),
+  update: (id, payload) =>
+    commissioningShareArticlesPartialUpdate(
+      id,
+      payload as unknown as ShareArticle,
+    ),
+  delete: commissioningShareArticlesDestroy,
+  getListQueryKey: getCommissioningShareArticlesListQueryKey,
+};
+
 export default function ListShareArticles() {
+  const { t } = useTranslation();
+  const { getSetting } = useTenant();
+  const { canEdit, isOffice: canManagePrices } = useRoles();
+  const { enabled: organicGateEnabled } = useOrganicGate();
+  const { format } = useNumberFormat();
+  const { unitOptions } = useUnitOptions();
+  const { crates } = useCrates();
+  const { shareOptions } = useShareOptions();
+  const { activeShareOptions } = useActiveShareOptions();
+
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedShareArticleId, setSelectedShareArticleId] = useState<
     string | null
   >(null);
   const [selectedShareArticleName, setSelectedShareArticleName] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
-  const [hideInactive, setHideInactive] = useState(true);
   const [csvModalVisible, setCsvModalVisible] = useState(false);
   const [priceExportVisible, setPriceExportVisible] = useState(false);
   const [allArticlesExportVisible, setAllArticlesExportVisible] =
     useState(false);
-  const queryClient = useQueryClient();
 
-  // Permissions — derived from current user's roles.
-  const { canEdit, isOffice: canManagePrices } = useRoles();
+  // Custom delete guard (identical to `permissionsWithDeletable` but spelled
+  // out because delete gating here also needs `canEdit`).
   const permissions = useMemo(
     () => ({
       ...gatedByPermission(canEdit),
@@ -69,6 +109,29 @@ export default function ListShareArticles() {
     }),
     [canEdit],
   );
+
+  const list = useCrudListPage<TableRecord>({
+    resource: shareArticlesResource,
+    permissions,
+    listParams: DATA_LIST_PARAMS,
+  });
+
+  const has_markets = getSetting("has_markets", true) as boolean;
+  const sells_to_resellers = getSetting("sells_to_resellers", true) as boolean;
+  const number_packing_stations = getSetting(
+    "number_packing_stations",
+    1,
+  ) as number;
+  const uploadAllowed =
+    (getSetting("allow_upload_for_data_lists", false) as boolean) === true;
+  const packing_mode = getSetting("packing_mode", "BOXES") as
+    | "BOXES"
+    | "BULK"
+    | "MIXED";
+  const packingBulk = packing_mode === "BULK" || packing_mode === "MIXED";
+  const defaultPercentageBulk = getSetting(
+    "percentage_added_to_bulk_packing_list",
+  ) as number;
 
   const handleOpenModal = useCallback(
     (record: Record<string, unknown>) => {
@@ -88,44 +151,9 @@ export default function ListShareArticles() {
 
   const priceModalColumn = useShareArticlePriceColumn(handleOpenModal);
 
-  const { t } = useTranslation();
-  const { getSetting } = useTenant();
-  const { enabled: organicGateEnabled } = useOrganicGate();
-  const { format } = useNumberFormat();
-
-  const has_markets = getSetting("has_markets", true) as boolean;
-  const sells_to_resellers = getSetting("sells_to_resellers", true) as boolean;
-  const number_packing_stations = getSetting(
-    "number_packing_stations",
-    1,
-  ) as number;
-  const uploadAllowed =
-    (getSetting("allow_upload_for_data_lists", false) as boolean) === true;
-  const packing_mode = getSetting("packing_mode", "BOXES") as
-    | "BOXES"
-    | "BULK"
-    | "MIXED";
-  // The bulk-percentage column only applies when a bulk packing list
-  // actually exists — i.e. BULK or MIXED modes.
-  const packingBulk = packing_mode === "BULK" || packing_mode === "MIXED";
-  const defaultPercentageBulk = getSetting(
-    "percentage_added_to_bulk_packing_list",
-  ) as number;
-
-  const { unitOptions } = useUnitOptions();
-  const { crates } = useCrates();
-  const { shareOptions } = useShareOptions();
-  const { activeShareOptions } = useActiveShareOptions();
-
-  // Predicates + render wrappers for the harvest/purchase column split.
-  // A row's ``is_purchased`` flag drives which side of the article's
-  // logistics applies: purchased articles don't have a harvest path
-  // (no kg/piece/bunch/crate from the farm), and farmed articles don't
-  // have a purchase path. The cells on the irrelevant side are disabled
-  // for editing AND show an empty cell — the grey background painted
-  // by EditableCell for disabled cells is the only visual cue, no "—"
-  // or other placeholder string (which used to leak into the save
-  // payload as a FK value).
+  // The irrelevant side of the harvest/purchase split renders an empty cell
+  // (disabled → grey background is the only cue; no "—" placeholder leaks into
+  // the save payload).
   const renderHarvestNumber = useCallback(
     (decimals: number) => (value: number, record: TableRecord) =>
       isHarvestDisabled(record)
@@ -156,43 +184,6 @@ export default function ListShareArticles() {
     [shareOptions, activeShareOptions],
   );
 
-  // No ``list``: this page owns the data via ``useCommissioningShareArticlesList``
-  // with ``listParams = { is_data_list: true }`` (passed as ``initialData``).
-  // Supplying ``list`` would make EditableTable double-fetch the same endpoint
-  // (it auto-fetches when ``showSearchBar`` + ``apiFunctions.list`` are both
-  // set). Mutations refresh via the ``onSaveSuccess``/``onDeleteSuccess``
-  // invalidation.
-  const apiFunctions = useMemo<ApiFunctions>(
-    () =>
-      wrapApiFunctions<ShareArticle & TableRecord>({
-        create: (payload) => commissioningShareArticlesCreate(payload),
-        update: (id, payload) =>
-          commissioningShareArticlesPartialUpdate(id, payload),
-        delete: (id) => commissioningShareArticlesDestroy(id),
-      }),
-    [],
-  );
-
-  const listParams = useMemo<CommissioningShareArticlesListParams>(
-    () => ({ is_data_list: true }),
-    [],
-  );
-
-  const { data: rawData, isLoading } =
-    useCommissioningShareArticlesList(listParams);
-  const data = useMemo(
-    () => (rawData ?? []) as unknown as TableRecord[],
-    [rawData],
-  );
-
-  const invalidateData = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: getCommissioningShareArticlesListQueryKey(),
-    });
-  }, [queryClient]);
-  const { onSaveSuccess, onDeleteSuccess } =
-    useInvalidateAfterTableMutation(invalidateData);
-
   const customSave = useCallback(
     (transformedData: Record<string, unknown>) => {
       const share_option_list = shareOptions
@@ -200,18 +191,17 @@ export default function ListShareArticles() {
         .filter((key: string) => transformedData[key])
         .map((key: string) => key.toUpperCase());
 
-      let modifiedName = (transformedData.name as string) || "";
-      let modifiedIsPurchased = transformedData.is_purchased;
-
-      const synced = syncPurchasedName(modifiedName, !!modifiedIsPurchased, t);
-      modifiedName = synced.name;
-      modifiedIsPurchased = synced.is_purchased;
+      const synced = syncPurchasedName(
+        (transformedData.name as string) || "",
+        !!transformedData.is_purchased,
+        t,
+      );
 
       return {
         ...transformedData,
-        name: modifiedName,
-        is_purchased: modifiedIsPurchased,
-        share_option_list: share_option_list,
+        name: synced.name,
+        is_purchased: synced.is_purchased,
+        share_option_list,
       };
     },
     [shareOptions, t],
@@ -225,18 +215,14 @@ export default function ListShareArticles() {
       if (record.key === -1) {
         const defaultValues: Record<string, unknown> = {
           is_active: true,
-          // New articles default to the harvest-share option — the common
-          // case. ``customSave`` maps these per-option booleans into
-          // ``share_option_list``. Office can untick / add other options.
+          // New articles default to the harvest-share option (the common
+          // case); customSave maps these per-option booleans into
+          // share_option_list. Office can untick / add other options.
           harvest_share: true,
           percentage_added_to_bulk_packing_list: defaultPercentageBulk,
           is_sold_to_resellers: true,
-          // For a certified-organic tenant, new articles are
-          // overwhelmingly Bio — preselect that. Office can flip the
-          // dropdown to Umstellung / Konventionell on the rare bought-
-          // in items. When the tenant isn't certified, the column is
-          // hidden anyway, but we keep the default off so a future
-          // certification doesn't auto-claim Bio on legacy rows.
+          // For a certified-organic tenant, new articles are overwhelmingly
+          // Bio — preselect that.
           ...(organicGateEnabled && { organic_status: "organic" }),
           ...(activeFilter !== "all" && { [activeFilter]: true }),
         };
@@ -248,22 +234,19 @@ export default function ListShareArticles() {
     [activeFilter, defaultPercentageBulk, organicGateEnabled],
   );
 
-  const filteredData = useMemo(() => {
-    let result = data;
-    if (hideInactive) {
-      result = result.filter((record) => record.is_active);
-    }
-    if (activeFilter !== "all") {
-      result = result.filter(
-        (record) => record[activeFilter as keyof typeof record],
-      );
-    }
-    return result;
-  }, [data, activeFilter, hideInactive]);
+  // Layer the share-option radio filter on top of the hook's hide-inactive
+  // filter (`list.filteredData` already dropped inactive rows).
+  const filteredData = useMemo(
+    () =>
+      activeFilter !== "all"
+        ? list.filteredData.filter(
+            (record) => record[activeFilter as keyof typeof record],
+          )
+        : list.filteredData,
+    [list.filteredData, activeFilter],
+  );
 
-  // Stable options object so ``useIsActiveColumn``'s internal memo (keyed on
-  // its options arg) holds — a fresh ``{ fixed: true }`` literal each render
-  // would return a new column ref and bust the columns useMemo below.
+  // Stable options object so `useIsActiveColumn`'s internal memo holds.
   const isActiveColumnOptions = useMemo(() => ({ fixed: true }), []);
   const isActiveColumn = useIsActiveColumn(isActiveColumnOptions);
 
@@ -348,22 +331,25 @@ export default function ListShareArticles() {
         </Radio.Group>
       </div>
       <Flex align="center" gap={8}>
-        <HideInactiveSwitch value={hideInactive} onChange={setHideInactive} />
+        <HideInactiveSwitch
+          value={list.hideInactive}
+          onChange={list.setHideInactive}
+        />
       </Flex>
 
       <EditableTable
         columns={columns}
-        apiFunctions={apiFunctions}
+        apiFunctions={list.apiFunctions}
         uniqueCheck={["name", "default_movement_unit", "is_purchased"]}
         uniqueCheckMessage={t("validation.unique.list_share_articles")}
         focusIndex="name"
         initialData={filteredData}
-        loading={isLoading}
-        onSaveSuccess={onSaveSuccess}
-        onDeleteSuccess={onDeleteSuccess}
+        loading={list.isLoading}
+        onSaveSuccess={list.onSaveSuccess}
+        onDeleteSuccess={list.onDeleteSuccess}
         customSave={customSave}
         customEdit={customEdit}
-        permissions={permissions}
+        permissions={list.permissions}
         pagination={true}
         showSearchBar={true}
       />
@@ -376,7 +362,7 @@ export default function ListShareArticles() {
           columns={columns}
           filename={t("commissioning.share_articles_template.csv")}
           modelName="share_article"
-          onUploadSuccess={invalidateData}
+          onUploadSuccess={list.invalidate}
         />
       )}
       <ExportCsv
@@ -404,7 +390,7 @@ export default function ListShareArticles() {
         onClose={handleCloseModal}
         share_article={selectedShareArticleId}
         share_article_name={selectedShareArticleName}
-        onSave={invalidateData}
+        onSave={list.invalidate}
       />
     </div>
   );

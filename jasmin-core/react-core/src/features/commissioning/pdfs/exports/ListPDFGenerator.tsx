@@ -19,7 +19,7 @@ import { downloadBlob } from "@shared/utils";
  * payload at boot. The ~484 KB gzip ``@react-pdf/renderer`` chunk
  * only downloads when the user actually clicks Download.
  *
- * The wrappers (CleaningListPDFGenerator, PackingListPDFGenerator,
+ * The wrappers (CleaningListPDFGenerator,
  * ...) pass a ``documentLoader`` that does a dynamic ``import()``,
  * so the document template itself ALSO stays out of the eager
  * bundle until clicked.

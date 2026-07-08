@@ -1149,6 +1149,12 @@ class SubscriptionViewSet(
                 "subscription_ids": drf_serializers.ListField(
                     child=drf_serializers.CharField(), allow_empty=False
                 ),
+                # Optional common end date for every renewal in the batch (the
+                # modal sends the office's chosen Sunday). Omit to keep each
+                # predecessor's term length (the daily sweep's default).
+                "valid_until": drf_serializers.DateField(
+                    required=False, allow_null=True
+                ),
             },
         ),
         responses={
@@ -1185,6 +1191,8 @@ class SubscriptionViewSet(
     )
     @action(detail=False, methods=["post"], url_path="bulk_renew")
     def bulk_renew(self, request: Request) -> Response:
+        import datetime
+
         from ..errors import CommissioningError
         from ..services.renewal import bulk_renew as bulk_renew_service
 
@@ -1195,6 +1203,20 @@ class SubscriptionViewSet(
                 field="subscription_ids",
                 code="subscription.bulk_renew.ids_required",
             )
+
+        # Optional common end date for the whole batch (the modal's chosen date);
+        # omit for the per-subscription term-length default.
+        new_valid_until = None
+        valid_until_raw = request.data.get("valid_until")
+        if valid_until_raw:
+            try:
+                new_valid_until = datetime.date.fromisoformat(str(valid_until_raw))
+            except (ValueError, TypeError) as exc:
+                raise CommissioningError(
+                    "valid_until must be an ISO date (YYYY-MM-DD).",
+                    field="valid_until",
+                    code="subscription.bulk_renew.invalid_valid_until",
+                ) from exc
         # Each renewal runs variation/price resolution + an INSERT with
         # full_clean (station-day coverage query included) synchronously in this
         # request — an unbounded list is a gateway-timeout / mild-DoS vector.
@@ -1205,7 +1227,9 @@ class SubscriptionViewSet(
                 code="subscription.bulk_renew.too_many_ids",
             )
 
-        result = bulk_renew_service([str(i) for i in ids])
+        result = bulk_renew_service(
+            [str(i) for i in ids], new_valid_until=new_valid_until
+        )
         return Response(result, status=status.HTTP_200_OK)
 
 

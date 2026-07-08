@@ -11,7 +11,7 @@ import time_machine
 from isoweek import Week
 
 from apps.commissioning.errors import PackingAmountsDivergeAcrossStations
-from apps.commissioning.models import Share
+from apps.commissioning.models import Share, ShareDelivery
 from apps.commissioning.services.default_share_content_service import (
     DefaultShareContentService,
 )
@@ -1437,3 +1437,100 @@ class TestDefaultContentMaterializationVisibility:
             is_past=False,
         )
         assert any(row["share_article"] == article.id for row in result)
+
+
+# ---------------------------------------------------------------------------
+# get_member_amounts_matrix ("Was ihr nehmen könnt")
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestGetMemberAmountsMatrix:
+    def _content(self, variation, station, article, amount, day):
+        share = ShareFactory(
+            year=2026,
+            delivery_week=15,
+            delivery_day=day,
+            share_type_variation=variation,
+        )
+        share.packing_day = 2
+        share.save()
+        ShareContentFactory(
+            share=share,
+            share_article=article,
+            delivery_station=station,
+            amount=amount,
+            unit="KG",
+            size="M",
+        )
+
+    def test_column_per_variation_grouped_base_before_additional(self, tenant):
+        """One column per variation (empty add_ons, zero count); the base share
+        type's group ranks before the additional ("Zusatz") one, and each cell
+        is the per-SHARE amount — NOT summed across variations."""
+        day = SharesDeliveryDayFactory(day_number=2, default_packing_day=2)
+        station = DeliveryStationDayFactory(delivery_day=day).delivery_station
+
+        base_type = ShareTypeFactory(share_option="HARVEST_SHARE", name="Gemüse")
+        addon_type = ShareTypeFactory(
+            share_option="CHICKEN_SHARE",
+            name="Zusatz",
+            is_additional_share_type=True,
+        )
+        base_var = ShareTypeVariationFactory(
+            share_type=base_type, size="M", sort_order=1
+        )
+        addon_var = ShareTypeVariationFactory(
+            share_type=addon_type, size="M", sort_order=1
+        )
+        article = ShareArticleFactory()
+
+        self._content(base_var, station, article, Decimal("2"), day)
+        self._content(addon_var, station, article, Decimal("6"), day)
+
+        matrix = PackingListService.get_member_amounts_matrix(
+            year=2026,
+            delivery_week=15,
+            day_number=2,
+            is_past=False,
+            delivery_station=str(station.pk),
+        )
+
+        columns = {col["key"]: col for col in matrix["columns"]}
+        assert set(columns) == {
+            f"variation_{base_var.pk}",
+            f"variation_{addon_var.pk}",
+        }
+        for col in matrix["columns"]:
+            assert col["add_ons"] == []
+            assert col["count"] == 0
+        # Base share type group sorts before the additional one.
+        assert (
+            columns[f"variation_{base_var.pk}"]["base_share_type_sort_index"]
+            < columns[f"variation_{addon_var.pk}"]["base_share_type_sort_index"]
+        )
+
+        # A single (article, unit, size) row carrying both per-share amounts.
+        assert len(matrix["rows"]) == 1
+        row = matrix["rows"][0]
+        assert row[f"variation_{base_var.pk}"] == Decimal("2")
+        assert row[f"variation_{addon_var.pk}"] == Decimal("6")
+
+    def test_reads_share_content_only_no_share_delivery(self, tenant):
+        """The matrix is ShareContent-based, so it must produce results with
+        ZERO ShareDelivery rows — the state of an external-CSV (import) tenant."""
+        day = SharesDeliveryDayFactory(day_number=2, default_packing_day=2)
+        station = DeliveryStationDayFactory(delivery_day=day).delivery_station
+        variation = ShareTypeVariationFactory(size="M", sort_order=1)
+        article = ShareArticleFactory()
+        self._content(variation, station, article, Decimal("3"), day)
+
+        assert not ShareDelivery.objects.exists()
+
+        matrix = PackingListService.get_member_amounts_matrix(
+            year=2026,
+            delivery_week=15,
+            day_number=2,
+            is_past=False,
+            delivery_station=str(station.pk),
+        )
+        assert len(matrix["columns"]) == 1
+        assert matrix["rows"][0][f"variation_{variation.pk}"] == Decimal("3")

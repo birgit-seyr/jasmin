@@ -17,6 +17,7 @@ import {
   TickBox,
   type TenantInfo,
 } from "./ListPDFSharedComponents";
+import { pdfTheme } from "./pdfTheme";
 
 // Fixed pt column widths; the NOTE column flexes to absorb slack, and the
 // combination columns take a dynamic pt width (see comboColumnWidth).
@@ -34,6 +35,17 @@ const localStyles = StyleSheet.create({
   colNote: { flex: 1, minWidth: NOTE_MIN_WIDTH },
   countRow: { backgroundColor: "#eef2f7", fontWeight: 700 },
   countLabel: { fontWeight: 700 },
+  // Green verticals framing each base share_type's combination block — applied
+  // to the first (left) and last (right) column of each group in every row so
+  // fixed column widths line them up into continuous lines down the table.
+  groupBorderLeft: {
+    borderLeftWidth: 1.5,
+    borderLeftColor: pdfTheme.colors.brand,
+  },
+  groupBorderRight: {
+    borderRightWidth: 1.5,
+    borderRightColor: pdfTheme.colors.brand,
+  },
 });
 
 interface PackingBoxesMatrixItem {
@@ -54,6 +66,12 @@ export interface PackingBoxesMatrixPDFProps {
   showSize?: boolean;
   /** Optional brand strip (logo + tenant name) above the title. */
   tenant?: TenantInfo;
+  /** Header pill/category label. Defaults to the packing-boxes label; the
+   *  member "Was ihr nehmen könnt" variant passes its own. */
+  pillKey?: string;
+  /** Render the trailing per-combination count row. On for the packing boxes
+   *  matrix (box count); off for the member per-share list (no box count). */
+  showCountRow?: boolean;
   t: TFunction;
 }
 
@@ -71,9 +89,22 @@ const PackingBoxesMatrixPDF = ({
   dayName,
   showSize = true,
   tenant,
+  pillKey = "commissioning.packing_list_boxes",
+  showCountRow = true,
   t,
 }: PackingBoxesMatrixPDFProps) => {
   const groups = groupComboColumns(columns, t);
+  // Per-column-key: is it the FIRST (green left line) and/or LAST (green right
+  // line) column of its base share_type group?
+  const groupEdge = new Map<string, { left: boolean; right: boolean }>();
+  groups.forEach((group) => {
+    group.cols.forEach((col, index) => {
+      groupEdge.set(col.key, {
+        left: index === 0,
+        right: index === group.cols.length - 1,
+      });
+    });
+  });
   const fixedWidth =
     ARTICLE_WIDTH + UNIT_WIDTH + (showSize ? SIZE_WIDTH : 0) + DONE_WIDTH;
   const orientation = pickComboOrientation({
@@ -90,10 +121,7 @@ const PackingBoxesMatrixPDF = ({
   return (
     <Document>
       <Page size="A4" orientation={orientation} style={listStyles.page}>
-        <ListPDFHeader
-          tenant={tenant}
-          pill={t("commissioning.packing_list_boxes_2")}
-        >
+        <ListPDFHeader tenant={tenant} pill={t(pillKey)}>
           <Text style={listStyles.title}>
             {t("commissioning.KW")} {week} · {dayName}
           </Text>
@@ -120,6 +148,8 @@ const PackingBoxesMatrixPDF = ({
                   listStyles.cell,
                   listStyles.cellCenter,
                   { width: comboWidth * group.cols.length },
+                  localStyles.groupBorderLeft,
+                  localStyles.groupBorderRight,
                 ]}
               >
                 <Text style={boxComboStyles.comboBase}>{group.name}</Text>
@@ -150,9 +180,7 @@ const PackingBoxesMatrixPDF = ({
                 localStyles.colUnit,
                 listStyles.cellCenter,
               ]}
-            >
-              <Text>{t("commissioning.unit")}</Text>
-            </View>
+            ></View>
             {showSize && (
               <View
                 style={[
@@ -160,9 +188,7 @@ const PackingBoxesMatrixPDF = ({
                   localStyles.colSize,
                   listStyles.cellCenter,
                 ]}
-              >
-                <Text>{t("commissioning.size")}</Text>
-              </View>
+              ></View>
             )}
             {columns.map((column) => (
               <View
@@ -171,13 +197,23 @@ const PackingBoxesMatrixPDF = ({
                   listStyles.cell,
                   { width: comboWidth },
                   listStyles.cellCenter,
+                  groupEdge.get(column.key)?.left
+                    ? localStyles.groupBorderLeft
+                    : {},
+                  groupEdge.get(column.key)?.right
+                    ? localStyles.groupBorderRight
+                    : {},
                 ]}
               >
                 <ComboHeader column={column} t={t} />
               </View>
             ))}
             <View
-              style={[listStyles.cell, localStyles.colNote, listStyles.cellLeft]}
+              style={[
+                listStyles.cell,
+                localStyles.colNote,
+                listStyles.cellLeft,
+              ]}
             >
               <Text></Text>
             </View>
@@ -238,6 +274,12 @@ const PackingBoxesMatrixPDF = ({
                     listStyles.cell,
                     { width: comboWidth },
                     listStyles.cellCenter,
+                    groupEdge.get(column.key)?.left
+                      ? localStyles.groupBorderLeft
+                      : {},
+                    groupEdge.get(column.key)?.right
+                      ? localStyles.groupBorderRight
+                      : {},
                   ]}
                 >
                   <Text>{formatAmount(item[column.key])}</Text>
@@ -264,7 +306,9 @@ const PackingBoxesMatrixPDF = ({
             </View>
           ))}
 
-          {/* Box-count row (per combination in the current scope) — last row */}
+          {/* Box-count row (per combination in the current scope) — last row.
+              Hidden on the member per-share list, which has no box count. */}
+          {showCountRow && (
           <View
             style={[listStyles.tableRow, localStyles.countRow]}
             wrap={false}
@@ -307,13 +351,23 @@ const PackingBoxesMatrixPDF = ({
                   listStyles.cell,
                   { width: comboWidth },
                   listStyles.cellCenter,
+                  groupEdge.get(column.key)?.left
+                    ? localStyles.groupBorderLeft
+                    : {},
+                  groupEdge.get(column.key)?.right
+                    ? localStyles.groupBorderRight
+                    : {},
                 ]}
               >
                 <Text>{column.count || ""}</Text>
               </View>
             ))}
             <View
-              style={[listStyles.cell, localStyles.colNote, listStyles.cellLeft]}
+              style={[
+                listStyles.cell,
+                localStyles.colNote,
+                listStyles.cellLeft,
+              ]}
             >
               <Text></Text>
             </View>
@@ -327,6 +381,7 @@ const PackingBoxesMatrixPDF = ({
               <Text></Text>
             </View>
           </View>
+          )}
         </View>
 
         <ListPDFFooter t={t} />

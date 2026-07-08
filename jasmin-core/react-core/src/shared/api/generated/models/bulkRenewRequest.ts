@@ -8,4 +8,6 @@
 
 export interface BulkRenewRequest {
   subscription_ids: string[];
+  /** @nullable */
+  valid_until?: string | null;
 }

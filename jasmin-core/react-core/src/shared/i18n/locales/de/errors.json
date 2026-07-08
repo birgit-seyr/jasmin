@@ -37,7 +37,8 @@
     "delivery_station_day_out_of_range": "Der gewählte Lieferstationstag deckt nicht den gesamten Abozeitraum ab — er beginnt nach dem Abostart oder endet (ohne Nachfolge-Tag) vor dem Aboende. Bitte einen Lieferstationstag wählen, der den gesamten Zeitraum abdeckt.",
     "bulk_renew": {
       "ids_required": "Bitte mindestens ein Abo auswählen.",
-      "too_many_ids": "Es können höchstens 500 Abos pro Anfrage verlängert werden."
+      "too_many_ids": "Es können höchstens 500 Abos pro Anfrage verlängert werden.",
+      "invalid_valid_until": "Ungültiges Enddatum. Bitte ein gültiges Datum wählen."
     },
     "cancel_draft": "Abo-Entwürfe können nicht gekündigt werden — bitte stattdessen löschen.",
     "renewal_chain_number_missing": "Das Vorgänger-Abo hat keine Abo-Nummer, die vererbt werden kann — bitte zuerst die Nummerierung des Vorgängers korrigieren und dann erneut verlängern."
@@ -374,6 +375,9 @@
   },
   "shares_day_change": {
     "missing_required": "Jahr und Lieferwoche sind erforderlich."
+  },
+  "waiting_list": {
+    "disabled": "Die Warteliste ist für diese Organisation deaktiviert. Ausgebuchte Anteile können nicht auf die Warteliste gesetzt werden."
   },
   "waiting_list_offer": {
     "expired": "Dieses Angebot ist abgelaufen. Bitte kontaktiere das Büro.",

@@ -1,5 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   commissioningResellersCreate,
@@ -14,39 +13,41 @@ import type {
 } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import {
-  EditableTable,
+  CrudListPage,
+  type CrudResource,
   permissionsWithDeletable,
-  wrapApiFunctions,
 } from "@shared/tables";
-import type {
-  ApiFunctions,
-  TableRecord,
-} from "@shared/tables/BasicEditableTable/types";
-import {
-  ExplainerText,
-  HideInactiveSwitch,
-  ToolTipIcon,
-  DownloadCsvTemplateButton,
-} from "@shared/ui";
-import {
-  useContactColumns,
-  useInvalidateAfterTableMutation,
-  useTenant,
-} from "@hooks/index";
+import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
+import { DownloadCsvTemplateButton, ToolTipIcon } from "@shared/ui";
+import { useContactColumns, useTenant } from "@hooks/index";
 import { isFieldDisabled } from "@shared/utils";
 
+type ResellerRow = Reseller & TableRecord;
+
+// Sellers are Resellers scoped to ``is_seller`` — the list hook AND the query
+// key take this so invalidation targets the same cached query.
+const SELLER_LIST_PARAMS: CommissioningResellersListParams = { is_seller: true };
+const NEW_SELLER_DEFAULTS = { is_active_seller: true };
+
+const sellersResource: CrudResource<ResellerRow> = {
+  useList: useCommissioningResellersList,
+  create: commissioningResellersCreate,
+  update: commissioningResellersPartialUpdate,
+  // A Reseller can be seller AND reseller, so a seller-page delete is a scoped
+  // unset-of-role (soft), not a hard delete — hence the fixed delete_context.
+  delete: (id) =>
+    commissioningResellersDestroy(id, { delete_context: "sellers" }),
+  getListQueryKey: getCommissioningResellersListQueryKey,
+};
+
 export default function ListSellers() {
+  const { t } = useTranslation();
   const { isOffice } = useRoles();
+  const { getSetting } = useTenant();
   const permissions = useMemo(
     () => permissionsWithDeletable(isOffice),
     [isOffice],
   );
-  const [hideInactive, setHideInactive] = useState(true);
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-
-  const { getSetting } = useTenant();
-
   const uploadAllowed =
     (getSetting("allow_upload_for_data_lists", false) as boolean) === true;
 
@@ -62,63 +63,12 @@ export default function ListSellers() {
     },
   });
 
-  const listParams = useMemo<CommissioningResellersListParams>(
-    () => ({ is_seller: true }),
-    [],
-  );
-
-  // Page owns the data via ``useCommissioningResellersList`` (passed as
-  // ``initialData``); no ``list`` in ``apiFunctions`` so the table never
-  // double-fetches. Mutations refresh through the invalidation below.
-  const { data: rawData, isLoading } = useCommissioningResellersList(listParams);
-  const data = useMemo(
-    () => (rawData ?? []) as unknown as TableRecord[],
-    [rawData],
-  );
-  const filteredData = useMemo(
-    () => (hideInactive ? data.filter((r) => r.is_active_seller) : data),
-    [data, hideInactive],
-  );
-  const invalidateData = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: getCommissioningResellersListQueryKey(listParams),
-    });
-  }, [queryClient, listParams]);
-  const { onSaveSuccess, onDeleteSuccess } =
-    useInvalidateAfterTableMutation(invalidateData);
-
-  const apiFunctions = useMemo<ApiFunctions>(
-    () =>
-      wrapApiFunctions<Reseller & TableRecord>({
-        create: (payload) => commissioningResellersCreate(payload),
-        update: (id, payload) =>
-          commissioningResellersPartialUpdate(id, payload),
-        delete: (id) =>
-          commissioningResellersDestroy(id, { delete_context: "sellers" }),
-      }),
-    [],
-  );
-
-  const customSave = useCallback((transformedData: Record<string, unknown>) => {
-    return {
+  const customSave = useCallback(
+    (transformedData: Record<string, unknown>) => ({
       ...transformedData,
       is_seller: true,
       comes_from_seller_page: true,
-    };
-  }, []);
-
-  const customEdit = useCallback(
-    (
-      record: TableRecord,
-      form: { setFieldsValue: (values: Record<string, unknown>) => void },
-    ) => {
-      if (record.key === -1) {
-        const defaultValues = { is_active_seller: true };
-        form.setFieldsValue(defaultValues);
-        return { ...record, ...defaultValues };
-      }
-      return record;
-    },
+    }),
     [],
   );
 
@@ -175,37 +125,30 @@ export default function ListSellers() {
   );
 
   return (
-    <div>
-      <h1>{t("resellers.list_sellers")}</h1>
-
-      <HideInactiveSwitch value={hideInactive} onChange={setHideInactive} />
-
-      <EditableTable
-        columns={columns}
-        apiFunctions={apiFunctions}
-        initialData={filteredData}
-        loading={isLoading}
-        onSaveSuccess={onSaveSuccess}
-        onDeleteSuccess={onDeleteSuccess}
-        customSave={customSave}
-        customEdit={customEdit}
-        deleteContext={"sellers"}
-        permissions={permissions}
-        pagination={true}
-        showSearchBar={true}
-      />
-      <ExplainerText title={t("common.info")}>
-        {t("explainers.list_sellers")}
-      </ExplainerText>
-
-      {uploadAllowed && (
-        <DownloadCsvTemplateButton
-          columns={columns}
-          filename={t("commissioning.sellers_template.csv")}
-          modelName="reseller"
-          onUploadSuccess={invalidateData}
-        />
-      )}
-    </div>
+    <CrudListPage<ResellerRow>
+      titleKey="resellers.list_sellers"
+      explainerKey="explainers.list_sellers"
+      resource={sellersResource}
+      permissions={permissions}
+      listParams={SELLER_LIST_PARAMS}
+      activeField="is_active_seller"
+      newRowDefaults={NEW_SELLER_DEFAULTS}
+      columns={columns}
+      customSave={customSave}
+      deleteContext="sellers"
+      pagination
+      showSearchBar
+    >
+      {(list) =>
+        uploadAllowed ? (
+          <DownloadCsvTemplateButton
+            columns={columns}
+            filename={t("commissioning.sellers_template.csv")}
+            modelName="reseller"
+            onUploadSuccess={list.invalidate}
+          />
+        ) : null
+      }
+    </CrudListPage>
   );
 }

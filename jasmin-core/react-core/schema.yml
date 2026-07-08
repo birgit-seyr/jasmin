@@ -14912,6 +14912,96 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/commissioning/packing_list/member_amounts/:
+    get:
+      operationId: commissioning_packing_list_member_amounts_retrieve
+      description: '"Was ihr nehmen könnt" — the per-SHARE amount matrix for a week
+        + delivery day: one column per active share_type_variation (grouped by share
+        type), one row per share_article, each cell the amount a member of that variation
+        may take (ShareContent.amount, NOT summed by demand). ShareContent-based,
+        so it also works for external-CSV tenants. Reuses the packing-boxes matrix
+        response shape — add_ons are always empty and count is 0.'
+      parameters:
+      - in: query
+        name: day_number
+        schema:
+          type: integer
+        description: Day of the week (0=Monday, 6=Sunday)
+        required: true
+        examples:
+          Monday:
+            value: 0
+          Wednesday:
+            value: 2
+          Sunday:
+            value: 6
+      - in: query
+        name: delivery_station
+        schema:
+          type: string
+        description: Delivery station ID (Jasmin ID format)
+      - in: query
+        name: delivery_week
+        schema:
+          type: integer
+        description: ISO week number (1-53)
+        required: true
+        examples:
+          Week1:
+            value: 1
+            summary: Week 1
+          Week26:
+            value: 26
+            summary: Week 26
+          Week52:
+            value: 52
+            summary: Week 52
+      - in: query
+        name: is_packed_bulk
+        schema:
+          type: boolean
+        description: Restrict to variations with this is_packed_bulk value. Omit to
+          include all.
+      - in: query
+        name: is_past
+        schema:
+          type: boolean
+          default: false
+        description: When true, includes archived/historical data. When false (default),
+          only recent data is returned.
+      - in: query
+        name: tour
+        schema:
+          type: integer
+        description: Tour number
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Year (YYYY format)
+        required: true
+        examples:
+          '2024':
+            value: 2024
+          '2025':
+            value: 2025
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackingBoxesMatrix'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/commissioning/packing_list_bulk/:
     get:
       operationId: commissioning_packing_list_bulk_list
@@ -27564,6 +27654,10 @@ components:
           type: array
           items:
             type: string
+        valid_until:
+          type: string
+          format: date
+          nullable: true
       required:
       - subscription_ids
     BulkRenewResult:

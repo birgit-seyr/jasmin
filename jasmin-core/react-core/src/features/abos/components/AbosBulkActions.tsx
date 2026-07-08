@@ -6,16 +6,30 @@
  * server-side; an eligible row whose draft can't be built (no covering variation,
  * station-day out of range) fails — both are reported back PER ROW with a reason
  * so the office sees exactly what did NOT renew and why. Selection stays in page.
+ *
+ * The renew button opens a small modal to set ONE common end date for the batch
+ * (pre-set to ~one year out, on a Sunday), adjustable before confirming. Omitting
+ * a date keeps each predecessor's term length (the sweep's default).
  */
 
-import { Button, Modal, Popconfirm } from "antd";
+import { Button, DatePicker, Modal } from "antd";
+import dayjs, { type Dayjs } from "dayjs";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useCommissioningAbosBulkRenewCreate } from "@shared/api/generated/commissioning/commissioning";
+import { useDateFormat } from "@hooks/index";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { ToolTipIcon } from "@shared/ui";
 
 type Outcome = { id: string; label: string; reason: string };
+
+// The Sunday on or after one year from today — the default new end date.
+const nextYearSunday = (): Dayjs => {
+  const base = dayjs().add(1, "year");
+  const dayOfWeek = base.day(); // 0 = Sunday
+  return dayOfWeek === 0 ? base : base.add(7 - dayOfWeek, "day");
+};
 
 export default function AbosBulkActions({
   selectedRowKeys,
@@ -27,7 +41,10 @@ export default function AbosBulkActions({
   onInvalidate: () => void;
 }) {
   const { t } = useTranslation();
+  const { dateFormat, formatDateForAPI } = useDateFormat();
   const nothingSelected = selectedRowKeys.length === 0;
+  const [modalOpen, setModalOpen] = useState(false);
+  const [validUntil, setValidUntil] = useState<Dayjs | null>(nextYearSunday);
 
   const renderReasons = (items: Outcome[]) => (
     <ul style={{ margin: "4px 0 10px", paddingLeft: "1.2em" }}>
@@ -42,6 +59,7 @@ export default function AbosBulkActions({
   const { mutate, isPending } = useCommissioningAbosBulkRenewCreate({
     mutation: {
       onSuccess: (result) => {
+        setModalOpen(false);
         const skipped = result.skipped ?? [];
         const failed = result.failed ?? [];
         if (skipped.length === 0 && failed.length === 0) {
@@ -83,32 +101,61 @@ export default function AbosBulkActions({
     },
   });
 
+  const openModal = () => {
+    setValidUntil(nextYearSunday()); // fresh pre-set each time it opens
+    setModalOpen(true);
+  };
+
+  const handleConfirm = () => {
+    mutate({
+      data: {
+        subscription_ids: selectedRowKeys.map(String),
+        valid_until: validUntil ? formatDateForAPI(validUntil) : undefined,
+      },
+    });
+  };
+
   return (
     <div className="button-row-spaced">
-      <Popconfirm
-        title={t("abos.bulk_renew_confirm", { count: selectedRowKeys.length })}
-        icon={null}
-        onConfirm={() =>
-          mutate({ data: { subscription_ids: selectedRowKeys.map(String) } })
-        }
-        okText={t("common.yes")}
-        cancelText={t("common.cancel")}
+      <Button
+        type="primary"
         disabled={nothingSelected}
+        loading={isPending}
+        size="small"
+        style={{ marginTop: "2.5em", height: "1.8em" }}
+        onClick={openModal}
       >
-        <Button
-          type="primary"
-          disabled={nothingSelected}
-          loading={isPending}
-          size="small"
-          style={{
-            marginTop: "2.5em",
-            height: "1.8em",
-          }}
-        >
-          {t("abos.bulk_renew")}
-        </Button>
-        <ToolTipIcon title={t("tooltip.bulk_renew_abos")} />
-      </Popconfirm>
+        {t("abos.bulk_renew")}
+      </Button>
+      <ToolTipIcon title={t("tooltip.bulk_renew_abos")} />
+
+      <Modal
+        open={modalOpen}
+        title={t("abos.bulk_renew_modal_title", {
+          count: selectedRowKeys.length,
+        })}
+        okText={t("abos.bulk_renew")}
+        cancelText={t("common.cancel")}
+        confirmLoading={isPending}
+        okButtonProps={{ disabled: !validUntil }}
+        onOk={handleConfirm}
+        onCancel={() => setModalOpen(false)}
+        destroyOnHidden
+      >
+        <p>{t("abos.bulk_renew_confirm", { count: selectedRowKeys.length })}</p>
+        <label>
+          {t("abos.bulk_renew_new_end_date")}{" "}
+          <ToolTipIcon title={t("configuration.valid_until_must_be_sunday")} />
+        </label>
+        <DatePicker
+          value={validUntil}
+          onChange={setValidUntil}
+          format={dateFormat}
+          allowClear={false}
+          disabledDate={(current) => current.day() !== 0}
+          style={{ width: "100%", marginTop: 6 }}
+        />
+      </Modal>
     </div>
   );
 }

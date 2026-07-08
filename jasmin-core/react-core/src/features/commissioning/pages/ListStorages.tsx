@@ -1,5 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   commissioningStoragesCreate,
@@ -11,68 +10,35 @@ import {
 import type { Storage } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import {
-  EditableTable,
+  CrudListPage,
+  type CrudResource,
   gatedByPermissionOnlyEdit,
-  wrapApiFunctions,
 } from "@shared/tables";
 import type {
-  ApiFunctions,
+  EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { ExplainerText } from "@shared/ui";
-import { useInvalidateAfterTableMutation } from "@hooks/index";
+
+type StorageRow = Storage & TableRecord;
+
+const storagesResource: CrudResource<StorageRow> = {
+  useList: useCommissioningStoragesList,
+  create: commissioningStoragesCreate,
+  update: commissioningStoragesPartialUpdate,
+  delete: commissioningStoragesDestroy,
+  getListQueryKey: getCommissioningStoragesListQueryKey,
+};
 
 export default function ListStorages() {
+  const { t } = useTranslation();
   const { isOffice } = useRoles();
   const permissions = useMemo(
     () => gatedByPermissionOnlyEdit(isOffice),
     [isOffice],
   );
-  const { data: rawData, isLoading } = useCommissioningStoragesList();
-  const data = useMemo(
-    () => (rawData ?? []) as unknown as TableRecord[],
-    [rawData],
-  );
-  const queryClient = useQueryClient();
-  const { t } = useTranslation();
 
-  const invalidateData = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: getCommissioningStoragesListQueryKey(),
-    });
-  }, [queryClient]);
-  const { onSaveSuccess, onDeleteSuccess } =
-    useInvalidateAfterTableMutation(invalidateData);
-
-  const apiFunctions = useMemo<ApiFunctions>(
-    () =>
-      wrapApiFunctions<Storage & TableRecord>({
-        create: (payload) => commissioningStoragesCreate(payload),
-        update: (id, payload) =>
-          commissioningStoragesPartialUpdate(id, payload),
-        delete: (id) => commissioningStoragesDestroy(id),
-      }),
-    [],
-  );
-
-  const customEdit = useCallback(
-    (
-      record: TableRecord,
-      form: { setFieldsValue: (values: Record<string, unknown>) => void },
-    ) => {
-      if (record.key === -1) {
-        const defaultValues = { is_active: true };
-        form.setFieldsValue(defaultValues);
-        return { ...record, ...defaultValues };
-      }
-      return record;
-    },
-    [],
-  );
-
-  const columns = useMemo<any[]>(
+  const columns = useMemo<EditableColumnConfig<StorageRow>[]>(
     () => [
-      // isActiveColumn,
       {
         title: <>{t("commissioning.name")}</>,
         dataIndex: "name",
@@ -103,26 +69,17 @@ export default function ListStorages() {
   );
 
   return (
-    <div>
-      <h1>{t("commissioning.list_storages")}</h1>
-
-      <EditableTable
-        columns={columns}
-        apiFunctions={apiFunctions}
-        focusIndex="name"
-        initialData={data}
-        loading={isLoading}
-        onSaveSuccess={onSaveSuccess}
-        onDeleteSuccess={onDeleteSuccess}
-        customEdit={customEdit}
-        className="w-max custom-jasmin-table"
-        uniqueCheck={["name"]}
-        uniqueCheckMessage={t("validation.unique.name")}
-        permissions={permissions}
-      />
-      <ExplainerText title={t("common.info")}>
-        {t("explainers.list_storages")}
-      </ExplainerText>
-    </div>
+    <CrudListPage<StorageRow>
+      titleKey="commissioning.list_storages"
+      explainerKey="explainers.list_storages"
+      resource={storagesResource}
+      permissions={permissions}
+      withHideInactive={false}
+      columns={columns}
+      uniqueCheck={["name"]}
+      uniqueCheckMessage={t("validation.unique.name")}
+      focusIndex="name"
+      className="w-max custom-jasmin-table"
+    />
   );
 }

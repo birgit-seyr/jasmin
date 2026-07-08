@@ -1,22 +1,39 @@
-import { useQueryClient } from "@tanstack/react-query";
-import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
-
+import { RelatedDayInfo } from "@features/commissioning/components";
+import { PackingListBulkMobileCard } from "@features/commissioning/components/mobileCards";
+import {
+  useAmountUnitSizeColumns,
+  useCurrentDays,
+  useDeliveryStations,
+  useShareArticleColumn,
+  useShareDeliveryDays,
+} from "@features/commissioning/hooks";
+import type { ShareDeliveryDayOption } from "@features/commissioning/hooks/useShareDeliveryDays";
+import {
+  PackingBoxesMatrixPDFGenerator,
+  PackingListBulkPDFGenerator,
+} from "@features/commissioning/pdfs";
+import { DeliveryStationSelector } from "@features/commissioning/selectors";
+import {
+  useDateFormat,
+  useInvalidateAfterTableMutation,
+  useIsMobile,
+  useNoteColumn,
+  useSizeOptions,
+  useTenant,
+  useUnitOptions,
+} from "@hooks/index";
 import {
   getCommissioningPackingListBulkListQueryKey,
   useCommissioningPackingListBulkList,
+  useCommissioningPackingListMemberAmountsRetrieve,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningPackingListBulkListParams,
+  CommissioningPackingListMemberAmountsRetrieveParams,
   CommissioningSharesDeliveryDaysListParams,
   PackingListBulkRow,
 } from "@shared/api/generated/models";
-import { PackingListBulkMobileCard } from "@features/commissioning/components/mobileCards";
-import { PackingListBulkPDFGenerator } from "@features/commissioning/pdfs";
-import { RelatedDayInfo } from "@features/commissioning/components";
 import { DaySelector, WeekSelector } from "@shared/selectors";
-import { DeliveryStationSelector } from "@features/commissioning/selectors";
 import {
   EditableTable,
   READ_ONLY_PERMISSION,
@@ -29,29 +46,16 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, MobileStack, PastWarningMessage } from "@shared/ui";
 import {
-  useDateFormat,
-  useInvalidateAfterTableMutation,
-  useIsMobile,
-  useNoteColumn,
-  useSizeOptions,
-  useTenant,
-  useUnitOptions,
-} from "@hooks/index";
-import {
-  useAmountUnitSizeColumns,
-  useCurrentDays,
-  useDeliveryStations,
-  useShareArticleColumn,
-  useShareDeliveryDays,
-} from "@features/commissioning/hooks";
-import type { ShareDeliveryDayOption } from "@features/commissioning/hooks/useShareDeliveryDays";
-import {
   formatDayLabel,
   formatWeekLabel,
   generatePdfFilename,
   getDayName,
   isWeekInPast,
 } from "@shared/utils";
+import { useQueryClient } from "@tanstack/react-query";
+import dayjs from "dayjs";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const shareArticleFilters = {
   is_harvest_share_article: true,
@@ -88,7 +92,7 @@ export default function PackingListBulk() {
   const { getUnitLabel } = useUnitOptions();
   const { getSizeLabel } = useSizeOptions();
   const { noteColumn } = useNoteColumn();
-  const { getSetting } = useTenant();
+  const { getSetting, tenantName, logoUrl, tenant } = useTenant();
   const packing_mode = getSetting("packing_mode", "BOXES") as
     | "BOXES"
     | "BULK"
@@ -391,6 +395,46 @@ export default function PackingListBulk() {
     [generateFilename, t],
   );
 
+  // ----- "Was ihr nehmen könnt" (member per-share amounts) ---------------
+  // Same scope as the bulk list, but the matrix keeps amounts PER share size
+  // (share_type_variation) instead of summing them — the sheet a member reads
+  // at the distribution. ShareContent-based, so it works for import tenants too.
+  const { data: memberMatrix } = useCommissioningPackingListMemberAmountsRetrieve(
+    listParams as unknown as CommissioningPackingListMemberAmountsRetrieveParams,
+    { query: { enabled: queryEnabled } },
+  );
+
+  const memberColumns = useMemo(
+    () => memberMatrix?.columns ?? [],
+    [memberMatrix],
+  );
+
+  const memberRows = useMemo(
+    () =>
+      (memberMatrix?.rows ?? []).map((row) => ({
+        ...row,
+        unit_label: row.unit ? getUnitLabel(row.unit) : "",
+        size_label: row.size ? getSizeLabel(row.size) : "",
+      })),
+    [memberMatrix, getUnitLabel, getSizeLabel],
+  );
+
+  // Branded strip for the member-facing PDF (logo + tenant name).
+  const tenantInfo = useMemo(
+    () => ({
+      name: tenantName,
+      logoUrl,
+      email: (tenant?.email as string) || "",
+      phone: (tenant?.phone_number as string) || "",
+    }),
+    [tenantName, logoUrl, tenant],
+  );
+
+  const memberFilename = useMemo(
+    () => generateFilename(t("commissioning.packing_list_bulk_member")),
+    [generateFilename, t],
+  );
+
   const invalidateData = useCallback(() => {
     queryClient.invalidateQueries({
       queryKey: getCommissioningPackingListBulkListQueryKey(
@@ -464,6 +508,27 @@ export default function PackingListBulk() {
             showSize={showSize}
             filename={filename}
             buttonText={t("download.packing_list_bulk")}
+            t={t}
+          />
+
+          {/* "Was ihr nehmen könnt" — the member per-share sheet. Reuses the
+              packing-boxes matrix PDF (grouped columns + green group lines),
+              with the box-count row off and a member-facing branded header. */}
+          <PackingBoxesMatrixPDFGenerator
+            columns={memberColumns.length ? memberColumns : null}
+            data={memberRows.length ? memberRows : null}
+            week={selectedWeek}
+            dayName={
+              selectedDeliveryDay !== null
+                ? getDayName(selectedDeliveryDay, t)
+                : ""
+            }
+            showSize={showSize}
+            tenant={tenantInfo}
+            pillKey="commissioning.packing_list_bulk_member"
+            showCountRow={false}
+            filename={memberFilename}
+            buttonText={t("download.packing_list_bulk_member")}
             t={t}
           />
         </div>

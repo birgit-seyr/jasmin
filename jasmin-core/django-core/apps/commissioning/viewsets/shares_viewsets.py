@@ -833,6 +833,11 @@ class ShareDeliveryViewSet(
     # ``pagination_class=None``: the action returns a bare list (``Response(result)``,
     # never paginated), but the ViewSet's ``OptionalLimitOffsetPagination`` would
     # otherwise make spectacular wrap the response in a (false) ``Paginated…`` schema.
+    #
+    # Backend-agnostic despite living on ShareDeliveryViewSet: the counts come
+    # from ShareDemandService (via ShareDeliveryService.get_variation_delivery_counts),
+    # so this stays correct for external-CSV/import tenants that have no
+    # ShareDelivery rows. Do NOT reroute it to a direct ShareDelivery query.
     @action(detail=False, methods=["get"], pagination_class=None)
     def variation_delivery_counts(self, request: Request) -> Response:
         enforce_privileged(request, "Staff only.")

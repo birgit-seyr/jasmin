@@ -32,6 +32,18 @@ class ShareDeliveryService:
         Each result row contains identifying fields plus dynamic
         ``amount_day_<day_id>[_tour_<n>|_station_<id>]`` keys.
 
+        Import-safety (load-bearing): the counts come from
+        ``ShareDemandService.aggregated_rows`` — the demand PORT — NEVER from a
+        direct ``ShareDelivery`` query. For external-CSV (import) tenants
+        (``uploads_weekly_share_amount=True``) there are ZERO ``ShareDelivery``
+        rows and demand lives in ``ExternalShareDemand``, so a "simplification"
+        that reads ``ShareDelivery`` directly here would silently return
+        all-zero counts and blank the AmountShares grid for those tenants. This
+        service/viewset are named ``ShareDelivery*`` because they mostly serve
+        ShareDeliveries — but THIS method is deliberately backend-agnostic; keep
+        it routed through ``ShareDemandService``. (Locked by
+        ``test_share_delivery_service.py::…::test_import_mode_reads_external_demand``.)
+
         ``joker``: ``False``/omitted = shipping-only (the AmountShares grid's
         default view), ``True`` = jokered-only. The underlying
         ``ShareDemandService.aggregated_rows`` is tri-state (``None`` = both),

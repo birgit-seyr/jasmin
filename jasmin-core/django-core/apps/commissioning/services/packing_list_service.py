@@ -462,3 +462,191 @@ class PackingListService:
             sorted_rows.extend(sort_share_articles(grouped[station_name]))
 
         return sorted_rows
+
+    @staticmethod
+    def get_member_amounts_matrix(
+        year: int,
+        delivery_week: int,
+        day_number: int,
+        is_past: bool,
+        delivery_station: str | None = None,
+        tour: str | None = None,
+        is_packed_bulk: bool | None = None,
+    ) -> dict[str, Any]:
+        """ "Was ihr nehmen könnt" — the per-SHARE amount matrix a member reads
+        at a self-serve distribution.
+
+        One column per active ``share_type_variation`` (grouped by share type,
+        base types before additional "Zusatz" ones), one row per
+        ``(share_article, unit, size)``, and each cell the amount a member of
+        that variation may take (``ShareContent.amount`` — NOT multiplied by
+        demand). The response mirrors the packing-boxes matrix
+        (``{"columns", "rows"}`` with ``variation_<id>`` cell keys and empty
+        ``add_ons``), so it reuses the same grouped-column matrix PDF.
+
+        Reads ``ShareContent`` only — never ``ShareDelivery`` — so it works for
+        subscription AND external-CSV (import) tenants.
+        """
+        active_at_date = Week(year, delivery_week).saturday()
+
+        share_contents = ShareContent.active.for_period(is_past=is_past).filter(
+            share__year=year,
+            share__delivery_week=delivery_week,
+            share__delivery_day__day_number=day_number,
+        )
+        if is_packed_bulk is not None:
+            share_contents = share_contents.filter(
+                share__share_type_variation__is_packed_bulk=is_packed_bulk
+            )
+        if delivery_station is not None:
+            share_contents = share_contents.filter(delivery_station=delivery_station)
+
+        if tour is not None:
+            first = share_contents.first()
+            delivery_day = first.share.delivery_day if first is not None else None
+            tour_station_ids = (
+                DeliveryStationDay.current.active_at_date(active_at_date)
+                .filter(delivery_day=delivery_day, tour_number=tour)
+                .values_list("delivery_station_id", flat=True)
+            )
+            share_contents = share_contents.filter(
+                delivery_station_id__in=tour_station_ids
+            )
+
+        content_rows = share_contents.values(
+            "share_article__id",
+            "share_article__name",
+            "unit",
+            "size",
+            "amount",
+            "note",
+            "share__delivery_day_id",
+            "share__share_type_variation__id",
+        ).order_by("share_article__name", "unit", "size")
+
+        articles_dict: dict[str, dict[str, Any]] = {}
+        present_variation_ids: set[str] = set()
+        # All-stations safety net (no station scope): the same cell must not
+        # carry two divergent per-share amounts within one delivery day —
+        # mirrors ``get_packing_list``. The page always scopes to a station, so
+        # this only trips on an explicit all-stations call with real divergence.
+        seen_amounts: dict[tuple[str, str, int | None], Any] = {}
+        for content in content_rows:
+            variation_id = content["share__share_type_variation__id"]
+            present_variation_ids.add(variation_id)
+            composite_key = (
+                f"{content['share_article__id']}_{content['unit']}_{content['size']}"
+            )
+            if composite_key not in articles_dict:
+                articles_dict[composite_key] = {
+                    "id": composite_key,
+                    "share_article_id": content["share_article__id"],
+                    "share_article_name": content["share_article__name"],
+                    "unit": content["unit"] or "",
+                    "size": content["size"] or "",
+                    "note": content["note"] or "",
+                }
+            variation_key = f"variation_{variation_id}"
+            amount = content["amount"] or 0
+            if delivery_station is None:
+                cell = (
+                    composite_key,
+                    variation_key,
+                    content["share__delivery_day_id"],
+                )
+                if cell in seen_amounts and seen_amounts[cell] != amount:
+                    raise PackingAmountsDivergeAcrossStations(
+                        share_article_id=content["share_article__id"],
+                        unit=content["unit"],
+                        size=content["size"],
+                        variation_id=variation_id,
+                        amounts=[seen_amounts[cell], amount],
+                    )
+                seen_amounts[cell] = amount
+            articles_dict[composite_key][variation_key] = amount
+
+        # Drop rows where every variation cell is 0 (mirrors get_packing_list).
+        filtered_rows = [
+            row
+            for row in articles_dict.values()
+            if any(
+                row.get(f"variation_{variation_id}", 0)
+                for variation_id in present_variation_ids
+            )
+        ]
+
+        columns = PackingListService._member_amount_columns(
+            present_variation_ids, active_at_date
+        )
+        return {"columns": columns, "rows": sort_share_articles(filtered_rows)}
+
+    @staticmethod
+    def _member_amount_columns(
+        variation_ids: set[str], active_at_date: Any
+    ) -> list[dict[str, Any]]:
+        """One column per variation (empty ``add_ons``), grouped by share type.
+        Share types rank base-first (non-additional), then by their lightest
+        variation's ``sort_order`` and name — so columns read
+        "Gemüseanteil … | Zusatz …" like the packing-boxes matrix. Column dicts
+        match ``PackingBoxesMatrixColumnSerializer``; ``count`` is always 0 (a
+        member sheet has no box count)."""
+        if not variation_ids:
+            return []
+
+        variations = list(
+            ShareTypeVariation.current.active_at_date(active_at_date)
+            .filter(id__in=variation_ids)
+            .select_related("share_type")
+            .annotate(size_order=size_order_annotation())
+            .order_by("sort_order", "size_order")
+        )
+
+        # Rank share types: base (non-additional) groups first, then additional,
+        # each by its lightest variation, name, id — a stable group order.
+        share_type_rank_key: dict[str, tuple[Any, ...]] = {}
+        for variation in variations:
+            share_type = variation.share_type
+            candidate = (
+                share_type.is_additional_share_type,
+                variation.sort_order,
+                variation.size_order,
+                share_type.name or "",
+                str(share_type.id),
+            )
+            existing = share_type_rank_key.get(share_type.id)
+            if existing is None or candidate < existing:
+                share_type_rank_key[share_type.id] = candidate
+        ranked_share_type_ids = sorted(
+            share_type_rank_key, key=lambda st_id: share_type_rank_key[st_id]
+        )
+        share_type_rank = {
+            st_id: index for index, st_id in enumerate(ranked_share_type_ids)
+        }
+
+        indexed_columns: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+        for variation in variations:
+            share_type = variation.share_type
+            column = {
+                "key": f"variation_{variation.id}",
+                "base_variation_id": variation.id,
+                "base_size": variation.size or "",
+                "base_sort_order": variation.sort_order,
+                "base_share_type_id": share_type.id,
+                "base_share_type_name": share_type.name or "",
+                "base_share_type_short_name": (
+                    share_type.short_name or share_type.name or ""
+                ),
+                "base_share_type_sort_index": share_type_rank[share_type.id],
+                "add_ons": [],
+                "count": 0,
+            }
+            sort_key = (
+                share_type_rank[share_type.id],
+                variation.sort_order,
+                variation.size_order,
+                column["key"],
+            )
+            indexed_columns.append((sort_key, column))
+
+        indexed_columns.sort(key=lambda item: item[0])
+        return [column for _sort_key, column in indexed_columns]

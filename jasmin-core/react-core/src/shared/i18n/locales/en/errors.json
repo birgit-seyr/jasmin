@@ -37,7 +37,8 @@
     "delivery_station_day_out_of_range": "The selected delivery-station day doesn't cover the whole subscription term — it starts after the subscription begins or ends (with no successor day) before the subscription ends. Please choose a delivery-station day that covers the term.",
     "bulk_renew": {
       "ids_required": "Provide a non-empty list of subscription ids.",
-      "too_many_ids": "At most 500 subscriptions can be renewed per request."
+      "too_many_ids": "At most 500 subscriptions can be renewed per request.",
+      "invalid_valid_until": "Invalid end date. Please choose a valid date."
     },
     "cancel_draft": "Draft subscriptions cannot be cancelled — delete them instead.",
     "renewal_chain_number_missing": "The predecessor subscription has no subscription number to inherit — fix the predecessor's numbering first, then renew again."
@@ -374,6 +375,9 @@
   },
   "shares_day_change": {
     "missing_required": "Year and delivery week are required."
+  },
+  "waiting_list": {
+    "disabled": "The waiting list is turned off for this organization. At-capacity shares can't be added to a waiting list."
   },
   "waiting_list_offer": {
     "expired": "This offer has expired. Please contact the office.",

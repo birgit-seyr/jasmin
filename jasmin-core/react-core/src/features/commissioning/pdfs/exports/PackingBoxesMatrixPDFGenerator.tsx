@@ -4,6 +4,7 @@ import type { PackingBoxesMatrixColumn } from "@shared/api/generated/models";
 
 import ListPDFGenerator from "./ListPDFGenerator";
 import type { PackingBoxesMatrixPDFProps } from "./PackingBoxesMatrixPDF";
+import type { TenantInfo } from "./ListPDFSharedComponents";
 
 interface PackingBoxesMatrixPDFGeneratorProps {
   columns: PackingBoxesMatrixColumn[] | null;
@@ -11,6 +12,13 @@ interface PackingBoxesMatrixPDFGeneratorProps {
   week: number | null;
   dayName: string;
   showSize?: boolean;
+  /** Optional brand strip — used by the member "Was ihr nehmen könnt" list. */
+  tenant?: TenantInfo;
+  /** Header pill key (defaults to the packing-boxes label in the PDF). */
+  pillKey?: string;
+  /** Render the per-combination count row (default true; off for the member
+   *  per-share list). */
+  showCountRow?: boolean;
   filename: string;
   buttonText: string;
   t: TFunction;
@@ -22,6 +30,9 @@ export default function PackingBoxesMatrixPDFGenerator({
   week,
   dayName,
   showSize,
+  tenant,
+  pillKey,
+  showCountRow,
   filename,
   buttonText,
   t,
@@ -39,6 +50,9 @@ export default function PackingBoxesMatrixPDFGenerator({
         week,
         dayName,
         showSize,
+        tenant,
+        pillKey,
+        showCountRow,
         t,
       }}
     />

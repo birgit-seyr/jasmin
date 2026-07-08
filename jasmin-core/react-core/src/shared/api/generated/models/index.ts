@@ -152,6 +152,7 @@ export * from './commissioningOrdersOverviewListParams';
 export * from './commissioningPackingListBoxesMatrixRetrieveParams';
 export * from './commissioningPackingListBulkListParams';
 export * from './commissioningPackingListListParams';
+export * from './commissioningPackingListMemberAmountsRetrieveParams';
 export * from './commissioningPaymentCyclesListParams';
 export * from './commissioningPlotsListParams';
 export * from './commissioningPurchaseExportCsvRetrieveParams';
