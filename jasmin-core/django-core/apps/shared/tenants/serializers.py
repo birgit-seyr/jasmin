@@ -360,6 +360,7 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
     season_start_week = serializers.SerializerMethodField()
     min_weeks_from_creation_to_start_delivery = serializers.SerializerMethodField()
     allows_solidarity_pricing = serializers.SerializerMethodField()
+    allows_waiting_list_for_subscriptions = serializers.SerializerMethodField()
 
     class Meta:
         model = Tenant
@@ -400,6 +401,10 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
             "season_start_week",
             "min_weeks_from_creation_to_start_delivery",
             "allows_solidarity_pricing",
+            # Public registration must know whether a full share type is
+            # waiting-list-able or simply unavailable (the anon payload has no
+            # settings overlay, so the modal can't read it from getSetting).
+            "allows_waiting_list_for_subscriptions",
         ]
 
     def _overlay(self, obj: Tenant) -> dict:
@@ -469,3 +474,10 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
 
     def get_allows_solidarity_pricing(self, obj: Tenant) -> bool:
         return bool(self._overlay(obj).get("allows_solidarity_pricing", False))
+
+    def get_allows_waiting_list_for_subscriptions(self, obj: Tenant) -> bool:
+        # Default True mirrors the model field default (waiting list on unless
+        # the tenant opted out).
+        return bool(
+            self._overlay(obj).get("allows_waiting_list_for_subscriptions", True)
+        )

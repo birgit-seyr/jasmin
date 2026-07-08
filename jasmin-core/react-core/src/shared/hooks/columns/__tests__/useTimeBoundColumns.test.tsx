@@ -80,3 +80,46 @@ describe("useTimeBoundColumns disabledDate — plugin-independent weekday gating
     expect(validUntil(asDay(4))).toBe(true); // Thursday disabled
   });
 });
+
+describe("useTimeBoundColumns validUntilFloor — per-row lower bound", () => {
+  const getValidUntil = (
+    floor: (record: Record<string, unknown>) => {
+      minDate?: Dayjs | null;
+      blockAll?: boolean;
+    },
+  ) => {
+    const { result } = renderHook(() =>
+      useTimeBoundColumns({
+        validUntilFloor: floor as never,
+      }),
+    );
+    return result.current.validUntilColumn.disabledDate! as (
+      current: Dayjs,
+      record?: Record<string, unknown>,
+    ) => boolean;
+  };
+
+  it("disables Sundays before the row's minDate, allows minDate and later", () => {
+    const minDate = dayjs("2026-09-13"); // Sunday
+    const disabledDate = getValidUntil(() => ({ minDate }));
+    const record = {};
+    expect(disabledDate(dayjs("2026-09-06"), record)).toBe(true); // earlier Sunday
+    expect(disabledDate(dayjs("2026-09-13"), record)).toBe(false); // the floor
+    expect(disabledDate(dayjs("2026-09-20"), record)).toBe(false); // later Sunday
+    expect(disabledDate(dayjs("2026-09-14"), record)).toBe(true); // Monday (not Sunday)
+  });
+
+  it("blockAll disables every date (open-ended child)", () => {
+    const disabledDate = getValidUntil(() => ({ blockAll: true }));
+    const record = {};
+    expect(disabledDate(dayjs("2026-09-13"), record)).toBe(true); // even a Sunday
+    expect(disabledDate(dayjs("2099-12-27"), record)).toBe(true); // far-future Sunday
+  });
+
+  it("no floor (null minDate) → only the Sunday rule applies", () => {
+    const disabledDate = getValidUntil(() => ({ minDate: null }));
+    const record = {};
+    expect(disabledDate(dayjs("2026-09-13"), record)).toBe(false); // any Sunday ok
+    expect(disabledDate(dayjs("2026-09-14"), record)).toBe(true); // Monday
+  });
+});

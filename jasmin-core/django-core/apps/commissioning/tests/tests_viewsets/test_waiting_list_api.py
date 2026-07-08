@@ -35,6 +35,7 @@ from apps.commissioning.tests.factories.members import PaymentCycleFactory
 from apps.commissioning.tests.factories.shares import (
     ShareTypeVariationGrossPriceFactory,
 )
+from apps.shared.tenants.models import TenantSettings
 
 DAY_NUMBER = 2  # Wednesday — matches SharesDeliveryDayFactory default
 # Far-future Monday..Sunday one-week term: clears any tenant lead-time floor.
@@ -334,6 +335,18 @@ class TestAdditionalShareCapacityExemption:
     def test_additional_share_create_succeeds_on_full_station(self, api_client, tenant):
         dsd = _make_dsd(capacity=1)
         _occupy_slot(dsd)
+        member = MemberFactory()
+        # An add-on ("Zusatz") may only be created when the member already holds
+        # a base share for the same period (base-coverage guard). The factory
+        # base bypasses the capacity gate, so the full station below still only
+        # tests the ADD-ON's exemption.
+        SubscriptionFactory(
+            member=member,
+            share_type_variation=_harvest_variation(),
+            default_delivery_station_day=dsd,
+            valid_from=VALID_FROM,
+            valid_until=VALID_UNTIL,
+        )
         share_type = ShareTypeFactory(
             share_option="BREAD_SHARE", is_additional_share_type=True
         )
@@ -341,9 +354,80 @@ class TestAdditionalShareCapacityExemption:
 
         resp = api_client.post(
             ABOS_URL,
-            _payload(MemberFactory(), variation, dsd),
+            _payload(member, variation, dsd),
             format="json",
         )
         assert resp.status_code == status.HTTP_201_CREATED, resp.data
         subscription = Subscription.objects.get(id=resp.data["id"])
         assert subscription.on_waiting_list is False
+
+
+@pytest.mark.django_db
+class TestWaitingListStatusReadOnly:
+    """``waiting_list_status`` is stamped only by the service / mixin — a client
+    must not be able to forge it via the generic serializer (that would bypass
+    the ``allows_waiting_list_for_subscriptions`` gate, which only fires on the
+    ``on_waiting_list`` flip, and could even skew variation capacity)."""
+
+    def test_client_waiting_list_status_is_ignored_on_create(self, api_client, tenant):
+        dsd = _make_dsd(capacity=5)  # not full → a normal create
+        resp = api_client.post(
+            ABOS_URL,
+            _payload(
+                MemberFactory(),
+                _harvest_variation(),
+                dsd,
+                waiting_list_status="confirmed",
+            ),
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        subscription = Subscription.objects.get(id=resp.data["id"])
+        # The forged status is ignored — the row is a normal, not-queued draft.
+        assert (
+            subscription.waiting_list_status
+            == Subscription.WaitingListStatus.NOT_ON_LIST
+        )
+        assert subscription.on_waiting_list is False
+
+
+def _disable_waiting_list(tenant):
+    TenantSettings.objects.create(
+        tenant=tenant,
+        valid_from=timezone.now() - datetime.timedelta(seconds=1),
+        allows_waiting_list_for_subscriptions=False,
+    )
+
+
+@pytest.mark.django_db
+class TestWaitingListDisabled:
+    """With ``allows_waiting_list_for_subscriptions=False`` the tenant has no
+    waiting list: an ``on_waiting_list=True`` create is refused, and a full
+    station still 409s (no waiting-list fallback)."""
+
+    def test_create_with_flag_rejected(self, api_client, tenant):
+        _disable_waiting_list(tenant)
+        dsd = _make_dsd(capacity=1)
+        _occupy_slot(dsd)
+
+        resp = api_client.post(
+            ABOS_URL,
+            _payload(MemberFactory(), _harvest_variation(), dsd, on_waiting_list=True),
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST, resp.data
+        assert resp.data["code"] == "waiting_list.disabled"
+        assert not Subscription.objects.filter(on_waiting_list=True).exists()
+
+    def test_full_station_still_409_without_flag(self, api_client, tenant):
+        _disable_waiting_list(tenant)
+        dsd = _make_dsd(capacity=1)
+        _occupy_slot(dsd)
+
+        resp = api_client.post(
+            ABOS_URL,
+            _payload(MemberFactory(), _harvest_variation(), dsd),
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_409_CONFLICT, resp.data
+        assert resp.data["code"] == "delivery_station.over_capacity"

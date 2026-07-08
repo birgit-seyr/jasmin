@@ -13,7 +13,7 @@ import type {
 } from "@shared/api/generated/models";
 import { DeliveryStationsOverviewPDFGenerator } from "@features/commissioning/pdfs";
 import { DaySelector, WeekSelector } from "@shared/selectors";
-import { ExplainerText } from "@shared/ui";
+import { ExplainerText, PastWarningMessage } from "@shared/ui";
 import {
   useBoxCombinationColumns,
   useShareDeliveryDays,
@@ -211,9 +211,9 @@ export default function DeliveryStationOverview() {
 
       {/* Show message when no tours have deliveries */}
       {tours.length === 0 && !loading && (
-        <div style={{ marginTop: "2em", textAlign: "center" }}>
-          {t("commissioning.no_tours_available")}
-        </div>
+        <PastWarningMessage>
+          {t("commissioning.packing_list_no_columns")}
+        </PastWarningMessage>
       )}
 
       <ExplainerText title={t("common.info")}>

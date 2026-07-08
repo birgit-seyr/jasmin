@@ -14,7 +14,7 @@ import type {
   SelectOption,
 } from "@shared/tables/BasicEditableTable/types";
 import type { AboRecord } from "@features/abos/pages/types";
-import { useVariationLabel } from "@hooks/index";
+import { useTenant, useVariationLabel } from "@hooks/index";
 
 type AboColumn = EditableColumnConfig<AboRecord>;
 
@@ -44,6 +44,12 @@ export function useSharedAboColumns({
   deliveryStationDayAlign,
 }: SharedAboColumnOptions) {
   const { t } = useTranslation();
+  const { getSetting } = useTenant();
+  // Waiting list off → a full/sold-out option must NOT be re-enabled or
+  // relabeled "waiting list"; it stays greyed and unselectable.
+  const allowsWaitingList = Boolean(
+    getSetting("allows_waiting_list_for_subscriptions", true),
+  );
   // Localize the raw size baked into ``share_type_variation_string`` so the
   // read cell matches the (localized) edit dropdown options.
   const variationLabel = useVariationLabel();
@@ -58,7 +64,7 @@ export function useSharedAboColumns({
   const variationOptions = useMemo(() => {
     const decorate = (opts: SelectOption[]): SelectOption[] =>
       opts.map((opt) =>
-        opt.disabled
+        opt.disabled && allowsWaitingList
           ? { ...opt, disabled: false, label: `${opt.label} — ${soldOutLabel}` }
           : opt,
       );
@@ -67,7 +73,7 @@ export function useSharedAboColumns({
       return (record: AboRecord) => decorate(fn(record));
     }
     return decorate(shareTypeVariationOptions ?? []);
-  }, [shareTypeVariationOptions, soldOutLabel]);
+  }, [shareTypeVariationOptions, soldOutLabel, allowsWaitingList]);
 
   // Full station-days are already flagged ``disabled`` (term-aware, per row) by
   // ``getDeliveryStationDaysForRow``. Instead of greying them out, keep them
@@ -77,7 +83,7 @@ export function useSharedAboColumns({
   const stationOptions = useMemo(() => {
     const decorate = (opts: SelectOption[]): SelectOption[] =>
       opts.map((opt) =>
-        opt.disabled
+        opt.disabled && allowsWaitingList
           ? { ...opt, disabled: false, label: `${opt.label} — ${fullLabel}` }
           : opt,
       );
@@ -86,7 +92,7 @@ export function useSharedAboColumns({
       return (record: AboRecord) => decorate(fn(record));
     }
     return decorate(deliveryStationDayOptions ?? []);
-  }, [deliveryStationDayOptions, fullLabel]);
+  }, [deliveryStationDayOptions, fullLabel, allowsWaitingList]);
 
   const displayIdColumn = useMemo<AboColumn>(
     () => ({

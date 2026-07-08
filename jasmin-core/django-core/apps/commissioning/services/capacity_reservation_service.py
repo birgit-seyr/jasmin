@@ -29,8 +29,23 @@ logger = logging.getLogger(__name__)
 # How long an unconfirmed draft holds its slot before the reservation lapses.
 # "Active" is purely ``expires_at > now``, so this is also the auto-release
 # window — long enough for the office to confirm, short enough that an
-# abandoned wish frees the slot.
+# abandoned wish frees the slot. This is the DEFAULT — the effective value comes
+# from ``TenantSettings.reservation_ttl_days`` (see ``_reservation_ttl_days``).
 RESERVATION_TTL_DAYS = 14
+
+
+def _reservation_ttl_days() -> int:
+    """The tenant's configured reservation TTL (days), defaulting to
+    ``RESERVATION_TTL_DAYS`` when there is no settings overlay yet."""
+    from django.db import connection
+
+    from apps.shared.tenants.models import TenantSettings
+
+    settings = TenantSettings.get_current_settings(connection.tenant)
+    if settings is None or settings.reservation_ttl_days is None:
+        return RESERVATION_TTL_DAYS
+    return settings.reservation_ttl_days
+
 
 # A share_type_variation occupies station-day capacity iff it is a STANDALONE (non-additional)
 # share — i.e. ``share_type.is_additional_share_type is False``. Additional
@@ -114,7 +129,7 @@ class CapacityReservationService:
         )
 
         quantity = subscription.quantity or 1
-        expires_at = timezone.now() + datetime.timedelta(days=RESERVATION_TTL_DAYS)
+        expires_at = timezone.now() + datetime.timedelta(days=_reservation_ttl_days())
         to_create: list[CapacityReservation] = []
         for (year, week), resolved in delivery_station_day_by_week.items():
             delivery_station_day = locked[resolved.id]

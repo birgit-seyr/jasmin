@@ -131,6 +131,7 @@
   "sold_out": "voll",
   "waiting_list_notice": "Die gewählte Verteilstation ist im gewählten Zeitraum voll. Das Abo kommt auf die Warteliste und wird erst aktiv, wenn das Büro einen frei gewordenen Platz bestätigt.",
   "waiting_list_notice_variation": "Diese Anteilsart ist voll. Das Abo kommt auf die Warteliste und wird erst aktiv, wenn das Büro einen frei gewordenen Platz bestätigt.",
+  "full_unavailable_notice": "Die gewählte Option ist im gewählten Zeitraum ausgebucht und derzeit nicht verfügbar.",
   "subscription_waiting_listed": "Abo auf die Warteliste gesetzt",
   "waiting_listed_variation_full": "Anteilsart voll — das Abo wurde auf die Warteliste gesetzt.",
   "waiting_listed_station_full": "Verteilstation voll — das Abo wurde auf die Warteliste gesetzt.",

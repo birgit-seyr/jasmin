@@ -94,15 +94,15 @@ Pass-through cases:
   /** @nullable */
   readonly cancelled_effective_at?: string | null;
   on_waiting_list?: boolean;
-  waiting_list_status?: WaitingListStatusEnum;
+  readonly waiting_list_status?: WaitingListStatusEnum;
   /** @nullable */
   readonly waiting_list_position?: number | null;
   /** @nullable */
-  notification_sent_at?: string | null;
+  readonly notification_sent_at?: string | null;
   /** @nullable */
-  notification_expires_at?: string | null;
+  readonly notification_expires_at?: string | null;
   /** @nullable */
-  response_received_at?: string | null;
+  readonly response_received_at?: string | null;
   /** @nullable */
   readonly notification_token?: string | null;
   /** @nullable */

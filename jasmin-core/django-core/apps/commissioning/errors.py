@@ -220,6 +220,15 @@ class ShareTypeVariationOverCapacity(ConflictError):
         )
 
 
+class WaitingListDisabled(BadRequestError):
+    """The tenant has turned off the waiting list
+    (``allows_waiting_list_for_subscriptions=False``), so no subscription may be
+    queued and no spot offers exist. At-capacity share types are simply
+    unavailable."""
+
+    code = "waiting_list.disabled"
+
+
 class WaitingListOfferNotAvailable(BadRequestError):
     """Cannot offer a freed spot for this subscription — it isn't a PENDING
     waiting-list entry (already offered, already promoted, or never queued)."""

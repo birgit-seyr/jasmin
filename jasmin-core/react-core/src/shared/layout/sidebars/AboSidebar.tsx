@@ -27,6 +27,10 @@ export default function AboSidebar({
 
   const uses_jokers = getSetting("uses_jokers", true);
   const uses_pledge_round = getSetting("abos.uses_pledge_round", false);
+  const allows_waiting_list = getSetting(
+    "allows_waiting_list_for_subscriptions",
+    true,
+  );
 
   const items = [
     {
@@ -37,13 +41,19 @@ export default function AboSidebar({
       label: <Link to="/abos/abos">{t("abos.shares")}</Link>,
     },
 
-    {
-      key: "abos-waiting-list",
+    ...(allows_waiting_list
+      ? [
+          {
+            key: "abos-waiting-list",
 
-      requireRole: "isOffice",
-      icon: <UnfoldMoreDoubleIcon />,
-      label: <Link to="/abos/waiting-list-abos">{t("abos.waiting_list")}</Link>,
-    },
+            requireRole: "isOffice",
+            icon: <UnfoldMoreDoubleIcon />,
+            label: (
+              <Link to="/abos/waiting-list-abos">{t("abos.waiting_list")}</Link>
+            ),
+          },
+        ]
+      : []),
     {
       key: "abo-emails",
 

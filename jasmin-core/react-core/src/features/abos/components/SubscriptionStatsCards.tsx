@@ -9,6 +9,7 @@ import {
   useSubscriptionVariationStats,
   type StatusSummary,
 } from "@features/abos/hooks/useSubscriptionVariationStats";
+import { useTenant } from "@hooks/index";
 
 /**
  * The "totals at a glance" strip above the subscriptions table: one compact row
@@ -25,6 +26,10 @@ import {
  */
 export default function SubscriptionStatsCards() {
   const { t } = useTranslation();
+  const { getSetting } = useTenant();
+  const allowsWaitingList = Boolean(
+    getSetting("allows_waiting_list_for_subscriptions", true),
+  );
   const { data: subscriptions } = useCommissioningAbosList({});
   const { data: variations } = useCommissioningShareTypeVariationsList({
     physical: true,
@@ -104,12 +109,17 @@ export default function SubscriptionStatsCards() {
         label: t("statistics.kpi_future_subscriptions"),
         value: cell(snapshot.future),
       },
-      {
-        label: t("statistics.kpi_waiting_list"),
-        value: cell(snapshot.waiting),
-      },
+      // Waiting-list tile only when the tenant has the waiting list on.
+      ...(allowsWaitingList
+        ? [
+            {
+              label: t("statistics.kpi_waiting_list"),
+              value: cell(snapshot.waiting),
+            },
+          ]
+        : []),
     ];
-  }, [snapshot, variationInfo, t]);
+  }, [snapshot, variationInfo, t, allowsWaitingList]);
 
   if (variationInfo.size === 0) return null;
 

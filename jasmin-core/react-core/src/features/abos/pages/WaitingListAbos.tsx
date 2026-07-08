@@ -40,6 +40,7 @@ import {
   usePaymentCycles,
   useShareTypes,
   useTableRowSelection,
+  useTenant,
 } from "@hooks/index";
 import { useAdminConfirmationModalAbos } from "@features/abos/hooks/modals/useAdminConfirmationModalAbos";
 import { useSharedAboColumns } from "@features/abos/hooks/columns/useSharedAboColumns";
@@ -50,6 +51,12 @@ import type { AboRecord } from "./types";
 export default function WaitingListAbos() {
   const { t } = useTranslation();
   const { isOffice } = useRoles();
+  const { getSetting } = useTenant();
+  // Reachable by direct URL even when the sidebar entry is hidden — gate the
+  // offer affordance so legacy queued rows can't be offered a spot when off.
+  const allowsWaitingList = Boolean(
+    getSetting("allows_waiting_list_for_subscriptions", true),
+  );
   // Waiting-list entries are created by the subscribe flow (a full variation /
   // station routes the order here), never added by hand — so no add + no
   // inline edit. The office can only remove an entry (delete).
@@ -520,7 +527,7 @@ export default function WaitingListAbos() {
           return (
             <Space>
               <Tag color="green">{t("abos.available_now")}</Tag>
-              {isOffice && (
+              {isOffice && allowsWaitingList && (
                 <Button
                   size="small"
                   type="primary"
@@ -559,6 +566,7 @@ export default function WaitingListAbos() {
       deliveryStationDayColumn,
       rowAvailability,
       isOffice,
+      allowsWaitingList,
     ],
   );
 

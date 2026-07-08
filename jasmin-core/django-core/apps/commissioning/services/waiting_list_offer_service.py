@@ -41,6 +41,7 @@ from ..errors import (
 from ..models import Subscription
 from .capacity_reservation_service import CapacityReservationService
 from .variation_capacity_service import VariationCapacityService
+from .waiting_list_policy import assert_waiting_list_enabled, waiting_list_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,7 @@ class WaitingListOfferService:
         (409) if a slot isn't actually free right now — the office's "available"
         view can go stale between render and click.
         """
+        assert_waiting_list_enabled()
         if (
             not subscription.on_waiting_list
             or subscription.waiting_list_status
@@ -113,8 +115,10 @@ class WaitingListOfferService:
     @classmethod
     def get_open_offer(cls, token) -> Subscription | None:
         """The subscription behind an open (spot-available) offer token, or
-        ``None``. Read-only — used to render the member's accept page."""
-        if not token:
+        ``None``. Read-only — used to render the member's accept page. Returns
+        ``None`` when the tenant has the waiting list off, so stale magic links
+        render as an invalid offer."""
+        if not token or not waiting_list_enabled():
             return None
         return (
             Subscription.objects.select_related(
@@ -137,6 +141,7 @@ class WaitingListOfferService:
         Raises :class:`WaitingListOfferInvalid` for an unknown/consumed token and
         :class:`WaitingListOfferExpired` (freeing the slot) when the window lapsed.
         """
+        assert_waiting_list_enabled()
         # Commit the outcome (expiry OR accept) inside the transaction, then
         # raise the "expired" error OUTSIDE it — raising inside would roll the
         # expiry + reservation release back, leaving a stale spot-available row.
@@ -161,6 +166,7 @@ class WaitingListOfferService:
         """The member declines: leave the waiting list as DECLINED and free the
         held slot (drop the station-day reservation; the variation hold drops
         automatically once the status is no longer SPOT_AVAILABLE)."""
+        assert_waiting_list_enabled()
         subscription = cls._lock_open_offer(token)
         subscription.decline_spot()
         CapacityReservationService.release_for_subscription(subscription)

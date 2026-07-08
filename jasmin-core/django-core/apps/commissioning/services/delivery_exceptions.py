@@ -96,6 +96,85 @@ def paused_weeks_by_variation(
     return out
 
 
+def member_exception_gaps(member_id: str, years: set[int]) -> list[dict]:
+    """The weeks a member's confirmed subscriptions WOULD deliver but don't,
+    because a DeliveryExceptionPeriod ("Lieferpause") suppresses the
+    ShareDelivery — which is exactly why no ShareDelivery row exists for the
+    member/office views to show. Reconstructs them from each subscription's
+    delivery cadence intersected with its variation's pauses, restricted to
+    ``years``.
+
+    Returns pseudo-delivery dicts ordered by (year, week). Note the cadence
+    comes from ``_get_delivery_weeks`` (the FULL cadence) — NOT
+    ``resolve_station_days_by_week``, which already drops the paused weeks.
+    """
+    from .subscription_service import SubscriptionService, _delivery_cycle_of
+
+    today = timezone.localdate()
+    subscriptions = (
+        Subscription.objects.filter(
+            member_id=member_id,
+            admin_confirmed=True,
+            cancelled_at__isnull=True,
+        )
+        .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
+        .select_related(
+            "share_type_variation__share_type",
+            "default_delivery_station_day__delivery_day",
+        )
+    )
+
+    gaps: list[dict] = []
+    for subscription in subscriptions:
+        variation = subscription.share_type_variation
+        default_dsd = subscription.default_delivery_station_day
+        if (
+            not default_dsd
+            or not subscription.valid_from
+            or not subscription.valid_until
+        ):
+            continue
+        periods = [
+            (valid_from, valid_until, note)
+            for valid_from, valid_until, note in (
+                DeliveryExceptionPeriod.objects.filter(
+                    share_type_variation=variation
+                ).values_list("valid_from", "valid_until", "note")
+            )
+            if valid_from and valid_until
+        ]
+        if not periods:
+            continue
+
+        day_number = default_dsd.delivery_day.day_number
+        candidate_weeks = SubscriptionService._get_delivery_weeks(
+            subscription.valid_from,
+            subscription.valid_until,
+            day_number,
+            _delivery_cycle_of(subscription),
+        )
+        for year, week in candidate_weeks:
+            if year not in years:
+                continue
+            monday = Week(year, week).monday()
+            for valid_from, valid_until, note in periods:
+                if valid_from <= monday <= valid_until:
+                    gaps.append(
+                        {
+                            "year": year,
+                            "delivery_week": week,
+                            "delivery_day_number": day_number,
+                            "share_type_name": variation.share_type.name,
+                            "share_type_variation_size": variation.size,
+                            "note": note or "",
+                        }
+                    )
+                    break
+
+    gaps.sort(key=lambda gap: (gap["year"], gap["delivery_week"]))
+    return gaps
+
+
 def _is_future_week(year_week: YearWeek, today: datetime.date) -> bool:
     """A week is still editable when its Monday is on/after today — i.e. it
     hasn't started. Conservative: a week already in progress is left untouched

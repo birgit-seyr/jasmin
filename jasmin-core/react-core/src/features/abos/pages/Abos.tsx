@@ -43,6 +43,7 @@ import {
   useDateFormat,
   useSepaMandateStatus,
   useTableRowSelection,
+  useTenant,
 } from "@hooks/index";
 import { notify } from "@shared/utils";
 import { getErrorCode } from "@shared/utils/apiError";
@@ -53,6 +54,10 @@ export default function Abos() {
   const { t } = useTranslation();
   const { dateFormat } = useDateFormat();
   const { isOffice } = useRoles();
+  const { getSetting } = useTenant();
+  const allowsWaitingList = Boolean(
+    getSetting("allows_waiting_list_for_subscriptions", true),
+  );
   const permissions = useMemo(
     () => ({
       ...gatedByPermission(isOffice),
@@ -295,7 +300,8 @@ export default function Abos() {
           return await commissioningAbosCreate(data);
         } catch (error) {
           const code = overCapacityCode(error);
-          if (!code) throw error;
+          // Waiting list off → no retry: surface the 409 as a plain error.
+          if (!code || !allowsWaitingList) throw error;
           const created = await commissioningAbosCreate({
             ...data,
             on_waiting_list: true,
@@ -310,7 +316,8 @@ export default function Abos() {
           return await commissioningAbosPartialUpdate(id, data);
         } catch (error) {
           const code = overCapacityCode(error);
-          if (!code) throw error;
+          // Waiting list off → no retry: surface the 409 as a plain error.
+          if (!code || !allowsWaitingList) throw error;
           const updated = await commissioningAbosPartialUpdate(id, {
             ...data,
             on_waiting_list: true,
@@ -322,7 +329,7 @@ export default function Abos() {
       },
       delete: (id) => commissioningAbosDestroy(id),
     });
-  }, [t, invalidateData]);
+  }, [t, invalidateData, allowsWaitingList]);
 
   // "Needs attention" quick filter toggled by the page badge below: the
   // subscriptions still awaiting admin confirmation (unconfirmed, not rejected,

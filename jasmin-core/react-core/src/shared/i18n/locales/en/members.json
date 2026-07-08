@@ -148,6 +148,7 @@
   "upcoming_deliveries": "Upcoming deliveries",
   "created_at": "created on",
   "current_week": "Current week",
+  "delivery_paused": "No delivery (paused)",
   "this_weeks_delivery": "Current delivery: ",
   "welcome": "Welcome",
   "total": "Total",

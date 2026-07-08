@@ -35,6 +35,7 @@ from .additional_share_policy import assert_additional_share_has_base
 from .capacity_reservation_service import CapacityReservationService
 from .delivery_cycle import filter_weeks_by_delivery_cycle
 from .variation_capacity_service import VariationCapacityService
+from .waiting_list_policy import assert_waiting_list_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +153,12 @@ class SubscriptionService:
     def _enqueue_on_waiting_list(subscription: Subscription) -> None:
         """Mark the draft as a PENDING waiting-list entry with the next FIFO
         position for its station-day. The position is informational — the
-        office may promote out of order."""
+        office may promote out of order.
+
+        Refuses when the tenant has the waiting list turned off — this is the
+        single central choke point for both create and update flip-onto-list.
+        """
+        assert_waiting_list_enabled()
         highest = (
             Subscription.objects.filter(
                 on_waiting_list=True,

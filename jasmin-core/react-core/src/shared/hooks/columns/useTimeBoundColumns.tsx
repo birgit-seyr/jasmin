@@ -14,6 +14,17 @@ interface TimeBoundColumnOptions {
   validFromRequired?: boolean;
   validUntilRequired?: boolean;
   width?: string;
+  /**
+   * Per-row lower bound for ``valid_until``: dates before ``minDate`` are
+   * disabled, and ``blockAll`` disables EVERY date (a still-active child — e.g.
+   * an open-ended subscription/variation — makes any end date invalid). Stops
+   * the office picking an end date the backend would reject for stranding
+   * children.
+   */
+  validUntilFloor?: (record: TableRecord) => {
+    minDate?: Dayjs | null;
+    blockAll?: boolean;
+  };
 }
 
 export const useTimeBoundColumns = (options: TimeBoundColumnOptions = {}) => {
@@ -21,6 +32,7 @@ export const useTimeBoundColumns = (options: TimeBoundColumnOptions = {}) => {
     validFromRequired = true,
     validUntilRequired = false,
     width = "10em",
+    validUntilFloor,
   } = options;
 
   const { t } = useTranslation();
@@ -36,9 +48,22 @@ export const useTimeBoundColumns = (options: TimeBoundColumnOptions = {}) => {
     [],
   );
 
-  const disabledDateNotSunday = useMemo(
-    () => (current: unknown) => !!current && (current as Dayjs).day() !== 0,
-    [],
+  // valid_until: Sundays only, AND (when a floor resolver is supplied) not
+  // before the row's floor — every date is blocked while a still-active child
+  // forces the row open-ended.
+  const disabledDateValidUntil = useMemo(
+    () => (current: unknown, record?: TableRecord) => {
+      const day = current as Dayjs | undefined;
+      if (!day) return false;
+      if (day.day() !== 0) return true;
+      if (validUntilFloor && record) {
+        const { minDate, blockAll } = validUntilFloor(record);
+        if (blockAll) return true;
+        if (minDate && day.isBefore(minDate, "day")) return true;
+      }
+      return false;
+    },
+    [validUntilFloor],
   );
 
   const validFromColumn = useMemo<EditableColumnConfig<TableRecord>>(
@@ -76,10 +101,10 @@ export const useTimeBoundColumns = (options: TimeBoundColumnOptions = {}) => {
       required: validUntilRequired,
       width,
       align: "center",
-      disabledDate: disabledDateNotSunday,
+      disabledDate: disabledDateValidUntil,
       render: (value: unknown) => (value ? dayjs(value as string).format(dateFormat) : ""),
     }),
-    [t, dateFormat, validUntilRequired, width, disabledDateNotSunday],
+    [t, dateFormat, validUntilRequired, width, disabledDateValidUntil],
   );
 
   return { validFromColumn, validUntilColumn };

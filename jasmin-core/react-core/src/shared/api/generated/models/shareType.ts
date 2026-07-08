@@ -20,6 +20,9 @@ queries (one per reverse relation) instead of N*R — see
 export interface ShareType {
   readonly id?: string;
   readonly share_type_variation_sizes_in_use?: string;
+  /** @nullable */
+  readonly variations_valid_until_max?: string | null;
+  readonly has_open_ended_variation?: boolean;
   valid_from: string;
   /** @nullable */
   valid_until?: string | null;

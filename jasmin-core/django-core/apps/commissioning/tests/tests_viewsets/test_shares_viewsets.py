@@ -15,6 +15,7 @@ from rest_framework.test import APIClient
 from apps.commissioning.errors import DeliveryStationOverCapacity
 from apps.commissioning.models import (
     DefaultShareContent,
+    DeliveryExceptionPeriod,
     Share,
     ShareContent,
     VirtualVariationComponent,
@@ -22,6 +23,7 @@ from apps.commissioning.models import (
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
     DeliveryStationFactory,
+    MemberFactory,
     ShareArticleFactory,
     ShareDeliveryFactory,
     ShareFactory,
@@ -87,6 +89,18 @@ class TestShareTypeViewSet:
         resp = api_client.get(self.URL)
         item = next(d for d in resp.data if d["id"] == str(st.id))
         assert "share_type_variation_sizes_in_use" in item
+
+    def test_list_exposes_variation_valid_until_bounds(self, api_client, tenant):
+        # The datepicker floor: a share type can't end before its latest
+        # variation, and can't be closed at all while a variation is open-ended.
+        st = ShareTypeFactory()
+        ShareTypeVariationFactory(
+            share_type=st, size="S", valid_until=datetime.date(2026, 9, 13)
+        )
+        ShareTypeVariationFactory(share_type=st, size="M", valid_until=None)
+        item = next(d for d in api_client.get(self.URL).data if d["id"] == str(st.id))
+        assert item["variations_valid_until_max"] == "2026-09-13"
+        assert item["has_open_ended_variation"] is True
 
     def test_not_deletable_with_variations(self, api_client, tenant):
         # The frontend hides the delete icon on can_be_deleted; a ShareType with
@@ -221,6 +235,31 @@ class TestShareTypeVariationViewSet:
         ShareTypeVariationFactory()
         resp = api_client.get(self.URL)
         assert len(resp.data) >= 1
+
+    def test_list_exposes_subscription_valid_until_bounds(self, api_client, tenant):
+        # The datepicker floor: a variation can't end before its LATEST
+        # subscription. (Subscriptions are never open-ended — the model forbids
+        # it — so ``has_open_ended_subscription`` is a defensive False here.)
+        variation = ShareTypeVariationFactory()
+        # One shared (open-ended) station-day so the two subscriptions don't
+        # each spin up a clashing SharesDeliveryDay.
+        dsd = DeliveryStationDayFactory()
+        SubscriptionFactory(
+            share_type_variation=variation,
+            default_delivery_station_day=dsd,
+            valid_from=datetime.date(2026, 1, 5),
+            valid_until=datetime.date(2026, 9, 6),
+        )
+        SubscriptionFactory(
+            share_type_variation=variation,
+            default_delivery_station_day=dsd,
+            valid_from=datetime.date(2026, 1, 5),
+            valid_until=datetime.date(2026, 9, 13),
+        )
+        resp = api_client.get(self.URL)
+        item = next(d for d in resp.data if d["id"] == str(variation.id))
+        assert item["subscriptions_valid_until_max"] == "2026-09-13"
+        assert item["has_open_ended_subscription"] is False
 
     def test_include_future_returns_current_and_upcoming_not_past(
         self, api_client, tenant
@@ -1288,3 +1327,58 @@ class TestShareDeliveryCrossDayMove:
             delivery_day=day_b,
             share_type_variation=variation,
         ).exists()
+
+
+@pytest.mark.django_db
+class TestShareDeliveryExceptionGaps:
+    """The ``exception_gaps`` action reconstructs the weeks a member's
+    subscriptions WOULD deliver but don't, because a delivery exception
+    (Lieferpause) removed the ShareDelivery — there's no ShareDelivery row for
+    the deliveries card to show, so it needs these."""
+
+    URL = reverse("share_delivery-exception-gaps")
+
+    def _confirmed_subscription(self, member, variation):
+        from isoweek import Week
+
+        return SubscriptionFactory(
+            member=member,
+            share_type_variation=variation,
+            default_delivery_station_day=DeliveryStationDayFactory(),  # Wed (2)
+            valid_from=datetime.date(2026, 1, 5),  # Monday
+            valid_until=Week(2026, 52).sunday(),
+            admin_confirmed=True,
+        )
+
+    def test_returns_paused_weeks_as_gaps(self, api_client, tenant):
+        from isoweek import Week
+
+        member = MemberFactory()
+        variation = ShareTypeVariationFactory()
+        self._confirmed_subscription(member, variation)
+        pause = Week(2026, 40)
+        DeliveryExceptionPeriod.objects.create(
+            share_type_variation=variation,
+            valid_from=pause.monday(),
+            valid_until=pause.sunday(),
+            note="Herbstpause",
+        )
+
+        resp = api_client.get(self.URL, {"member": str(member.id), "year": 2026})
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert len(resp.data) == 1
+        gap = resp.data[0]
+        assert gap["year"] == 2026
+        assert gap["delivery_week"] == 40
+        assert gap["note"] == "Herbstpause"
+        assert gap["share_type_name"] == variation.share_type.name
+        assert gap["delivery_day_number"] == 2
+
+    def test_no_exceptions_returns_empty(self, api_client, tenant):
+        member = MemberFactory()
+        variation = ShareTypeVariationFactory()
+        self._confirmed_subscription(member, variation)
+
+        resp = api_client.get(self.URL, {"member": str(member.id), "year": 2026})
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data == []

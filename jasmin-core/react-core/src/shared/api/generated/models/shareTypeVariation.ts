@@ -31,6 +31,9 @@ export interface ShareTypeVariation {
   readonly active_solidarity_min_price_per_delivery?: string | null;
   /** @nullable */
   readonly capacity_by_week?: ShareTypeVariationCapacityByWeek;
+  /** @nullable */
+  readonly subscriptions_valid_until_max?: string | null;
+  readonly has_open_ended_subscription?: boolean;
   valid_from: string;
   /** @nullable */
   valid_until?: string | null;

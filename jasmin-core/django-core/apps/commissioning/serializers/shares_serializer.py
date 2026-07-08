@@ -31,6 +31,13 @@ logger = logging.getLogger(__name__)
 
 class ShareTypeSerializer(DeletableMixin, serializers.ModelSerializer):
     share_type_variation_sizes_in_use = serializers.SerializerMethodField()
+    # The lower bound for this share type's ``valid_until``: it may not end
+    # before its latest variation, and cannot be closed at all while a variation
+    # is open-ended (mirrors ``ShareType.clean``'s stranding guard). The
+    # frontend datepicker disables Sundays before the max (and all dates when
+    # open-ended) so the office can't submit an end date the backend rejects.
+    variations_valid_until_max = serializers.SerializerMethodField()
+    has_open_ended_variation = serializers.SerializerMethodField()
 
     class Meta:
         model = ShareType
@@ -60,6 +67,20 @@ class ShareTypeSerializer(DeletableMixin, serializers.ModelSerializer):
         sizes_in_use_by_share_type = self.context.get("sizes_in_use_by_share_type", {})
         return sizes_in_use_by_share_type.get(obj.id, "")
 
+    def _variation_bounds(self, obj: ShareType) -> dict:
+        # Precomputed once per request by ``ShareTypeViewSet.list`` (single
+        # aggregate over all variations) to avoid an N+1 per row.
+        return self.context.get("variation_bounds_by_share_type", {}).get(obj.id, {})
+
+    @extend_schema_field(serializers.DateField(allow_null=True))
+    def get_variations_valid_until_max(self, obj: ShareType):
+        value = self._variation_bounds(obj).get("max_valid_until")
+        return value.isoformat() if value else None
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_has_open_ended_variation(self, obj: ShareType) -> bool:
+        return bool(self._variation_bounds(obj).get("has_open_ended"))
+
 
 class ShareTypeVariationSerializer(
     DeletableMixin, NameFieldMixin, serializers.ModelSerializer
@@ -84,6 +105,14 @@ class ShareTypeVariationSerializer(
     # ``delivery_week`` (else ``None``); a term is full when its busiest ("peak")
     # week has ``free <= 0`` — exactly what ``VariationCapacityService`` blocks.
     capacity_by_week = serializers.SerializerMethodField()
+    # The lower bound for this variation's ``valid_until``: it may not end before
+    # its latest subscription, and cannot be closed at all while a subscription
+    # is open-ended (mirrors ``ShareTypeVariation.clean``'s stranding guard).
+    # Cancelled subscriptions have their ``valid_until`` truncated to the exit,
+    # so the max is naturally the latest STILL-active end. The frontend
+    # datepicker disables Sundays before the max (and all dates when open-ended).
+    subscriptions_valid_until_max = serializers.SerializerMethodField()
+    has_open_ended_subscription = serializers.SerializerMethodField()
 
     class Meta:
         model = ShareTypeVariation
@@ -133,6 +162,54 @@ class ShareTypeVariationSerializer(
         )
         self._variation_counts_cache = counts
         return counts
+
+    def _batched_subscription_bounds(self):
+        """``{variation_id: {"max_valid_until", "has_open_ended"}}`` for every
+        variation in THIS serialization run, in ONE aggregate (kills the per-row
+        N+1). Mirrors ``_batched_variation_counts``' parent-instance trick."""
+        cached = getattr(self, "_subscription_bounds_cache", None)
+        if cached is not None:
+            return cached
+
+        from django.db.models import Count, Max, Q
+
+        from ..models.members import Subscription
+
+        if self.parent is not None and self.parent.instance is not None:
+            instances = list(self.parent.instance)
+        else:
+            instances = [self.instance]
+        variation_ids = [obj.id for obj in instances if getattr(obj, "id", None)]
+
+        bounds = {
+            row["share_type_variation_id"]: {
+                "max_valid_until": row["max_valid_until"],
+                "has_open_ended": row["open_count"] > 0,
+            }
+            for row in (
+                Subscription.objects.filter(share_type_variation_id__in=variation_ids)
+                .values("share_type_variation_id")
+                .annotate(
+                    max_valid_until=Max("valid_until"),
+                    open_count=Count("pk", filter=Q(valid_until__isnull=True)),
+                )
+            )
+        }
+        self._subscription_bounds_cache = bounds
+        return bounds
+
+    @extend_schema_field(serializers.DateField(allow_null=True))
+    def get_subscriptions_valid_until_max(self, obj: ShareTypeVariation):
+        value = (
+            self._batched_subscription_bounds().get(obj.id, {}).get("max_valid_until")
+        )
+        return value.isoformat() if value else None
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_has_open_ended_subscription(self, obj: ShareTypeVariation) -> bool:
+        return bool(
+            self._batched_subscription_bounds().get(obj.id, {}).get("has_open_ended")
+        )
 
     @extend_schema_field(
         serializers.DictField(child=CapacityWeekEntrySerializer(), allow_null=True)
@@ -437,6 +514,20 @@ class ShareDeliveryOverviewSerializer(serializers.ModelSerializer):
                 exc,
             )
         return None
+
+
+class DeliveryExceptionGapSerializer(serializers.Serializer):
+    """A week a subscription WOULD deliver but doesn't, because a delivery
+    exception ("Lieferpause") suppressed the ShareDelivery. There is no
+    ShareDelivery row for these — they are reconstructed by
+    ``services.delivery_exceptions.member_exception_gaps``."""
+
+    year = serializers.IntegerField()
+    delivery_week = serializers.IntegerField()
+    delivery_day_number = serializers.IntegerField(allow_null=True)
+    share_type_name = serializers.CharField(allow_blank=True)
+    share_type_variation_size = serializers.CharField(allow_blank=True)
+    note = serializers.CharField(allow_blank=True)
 
 
 class ShareContentSerializer(serializers.ModelSerializer):

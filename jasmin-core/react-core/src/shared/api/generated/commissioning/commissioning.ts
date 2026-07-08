@@ -131,6 +131,7 @@ import type {
   CommissioningShareContentsListParams,
   CommissioningShareDeliveryDetailsListParams,
   CommissioningShareDeliveryDetailsMatrixRetrieveParams,
+  CommissioningShareDeliveryExceptionGapsListParams,
   CommissioningShareDeliveryListParams,
   CommissioningShareDeliveryOverviewListParams,
   CommissioningShareDeliveryPendingOptinListParams,
@@ -182,6 +183,7 @@ import type {
   DefaultShareContentBulkDeleteResponse,
   DefaultShareContentRequest,
   DefaultShareContentResponse,
+  DeliveryExceptionGap,
   DeliveryExceptionPeriod,
   DeliveryNoteReseller,
   DeliveryNoteResellerContent,
@@ -23670,6 +23672,96 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Weeks this member's confirmed subscriptions WOULD deliver but don't, because a delivery exception (Lieferpause) removed the ShareDelivery. Returns pseudo-deliveries for ``year`` and ``year+1`` so the deliveries card can surface the paused weeks — there is no ShareDelivery row for them.
+ */
+export const commissioningShareDeliveryExceptionGapsList = (
+    params: CommissioningShareDeliveryExceptionGapsListParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<DeliveryExceptionGap[]>(
+      {url: `/api/commissioning/share_delivery/exception_gaps/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningShareDeliveryExceptionGapsListQueryKey = (params?: CommissioningShareDeliveryExceptionGapsListParams,) => {
+    return [
+    `/api/commissioning/share_delivery/exception_gaps/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningShareDeliveryExceptionGapsListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>, TError = ErrorResponse>(params: CommissioningShareDeliveryExceptionGapsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningShareDeliveryExceptionGapsListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>> = ({ signal }) => commissioningShareDeliveryExceptionGapsList(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningShareDeliveryExceptionGapsListQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>>
+export type CommissioningShareDeliveryExceptionGapsListQueryError = ErrorResponse
+
+
+export function useCommissioningShareDeliveryExceptionGapsList<TData = Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>, TError = ErrorResponse>(
+ params: CommissioningShareDeliveryExceptionGapsListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningShareDeliveryExceptionGapsList<TData = Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>, TError = ErrorResponse>(
+ params: CommissioningShareDeliveryExceptionGapsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningShareDeliveryExceptionGapsList<TData = Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>, TError = ErrorResponse>(
+ params: CommissioningShareDeliveryExceptionGapsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningShareDeliveryExceptionGapsList<TData = Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>, TError = ErrorResponse>(
+ params: CommissioningShareDeliveryExceptionGapsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryExceptionGapsList>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningShareDeliveryExceptionGapsListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
  * Upcoming on-off deliveries this member can still toggle (variation has ``requires_optin=True`` AND deadline is today or later). Office may pass ``?member=`` for any member; non-office callers MUST ask for themselves only — a cross-member request returns 403.
  */
 export const commissioningShareDeliveryPendingOptinList = (

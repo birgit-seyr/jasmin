@@ -223,7 +223,11 @@
     "min_weeks_cancel_description": "Minimum number of weeks before its end by which a subscription must be cancelled.",
     "share_type_changes": "Allow Share Size Changes During Active Subscription",
     "allows_share_type_variation_optin": "Allow on-off shares (opt-in per delivery)",
-    "allows_share_type_variation_optin_desc": "Individual share variations can be released so that they can be added spontaneously on a week-by-week basis."
+    "allows_share_type_variation_optin_desc": "Individual share variations can be released so that they can be added spontaneously on a week-by-week basis.",
+    "allows_waiting_list_for_subscriptions": "Allow waiting list for subscriptions",
+    "allows_waiting_list_for_subscriptions_desc": "When on, at-capacity share variations and full delivery stations can be put on a waiting list. When off, full options are simply not selectable (no waiting list, no offers).",
+    "reservation_ttl_days": "Reservation hold (days)",
+    "reservation_ttl_days_desc": "How long a draft subscription holds its delivery-station slot before the reservation lapses."
   },
   "configure_prices": "Configure Prices & Sizes",
   "reseller": {

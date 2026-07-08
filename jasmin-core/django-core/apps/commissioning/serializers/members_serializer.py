@@ -385,6 +385,19 @@ class SubscriptionSerializer(
             # Server-inferred at enqueue (which capacity gate was full) — never
             # client-set. See ``SubscriptionService._infer_waiting_list_reason``.
             "waiting_list_reason",
+            # The rest of the waiting-list state is stamped exclusively by the
+            # service / ``WaitingListMixin`` methods (enqueue, notify_spot_
+            # available, confirm_spot, decline_spot, mark_as_expired). Only
+            # ``on_waiting_list`` stays writable — it is the intended flip flag
+            # routed through ``_enqueue_on_waiting_list`` (and thus the
+            # ``allows_waiting_list_for_subscriptions`` gate). Left writable,
+            # these let a crafted API call stamp a waiting-list status — even
+            # deflating variation capacity via the SPOT_AVAILABLE/CONFIRMED
+            # occupancy clause — WITHOUT ever hitting the gate.
+            "waiting_list_status",
+            "notification_sent_at",
+            "notification_expires_at",
+            "response_received_at",
             # Admin-confirm triplet — stamped exclusively by the
             # ``POST /subscriptions/{id}/confirm/`` action (which runs the
             # capacity backstop, materialises shares/deliveries/charges and

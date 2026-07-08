@@ -151,6 +151,7 @@
   "upcoming_deliveries": "Kommende Lieferungen",
   "created_at": "angelegt am",
   "current_week": "Aktuelle Woche",
+  "delivery_paused": "Keine Lieferungen (Lieferpause)",
   "this_weeks_delivery": "Aktuelle Lieferung: ",
   "welcome": "Willkommen",
   "total": "Summe",

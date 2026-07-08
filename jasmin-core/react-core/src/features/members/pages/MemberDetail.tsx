@@ -19,6 +19,7 @@ import {
   getCommissioningShareDeliveryListQueryKey,
   useCommissioningAbosList,
   useCommissioningMembersRetrieve,
+  useCommissioningShareDeliveryExceptionGapsList,
   useCommissioningShareDeliveryList,
   useCommissioningShareDeliveryToggleOptinCreate,
 } from "@shared/api/generated/commissioning/commissioning";
@@ -118,6 +119,20 @@ const MemberDetail = () => {
   const { data: subscriptions } = useCommissioningAbosList(
     { member: id, is_trial: false },
     { query: { enabled: !!id } },
+  );
+
+  // Weeks the member's subscriptions WOULD deliver but don't, because a
+  // delivery exception (Lieferpause) removed the ShareDelivery — there is no
+  // ShareDelivery row for these, so the card can't derive them. One call covers
+  // ``year`` + ``year+1`` (same window as the two delivery fetches above).
+  const { data: exceptionGapsData } =
+    useCommissioningShareDeliveryExceptionGapsList(
+      { member: id ?? "", year: currentYear },
+      { query: { enabled: !!id } },
+    );
+  const exceptionGaps = useMemo(
+    () => exceptionGapsData ?? [],
+    [exceptionGapsData],
   );
 
   // Memoize the empty-fallback so downstream memos depending on
@@ -416,6 +431,7 @@ const MemberDetail = () => {
           />
           <UpcomingDeliveriesCard
             shareDeliveries={confirmedDeliveries}
+            exceptionGaps={exceptionGaps}
             currentWeek={currentWeek}
             currentYear={currentYear}
             weekdayChoices={weekdayChoices}

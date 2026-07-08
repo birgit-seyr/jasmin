@@ -3,7 +3,14 @@ import type { TFunction } from "i18next";
 
 import type { PackingBoxesMatrixColumn } from "@shared/api/generated/models";
 
-import { ComboHeader, boxComboStyles, groupComboColumns } from "./boxComboPdf";
+import {
+  ComboHeader,
+  boxComboStyles,
+  comboColumnWidth,
+  groupComboColumns,
+  pickComboOrientation,
+  type PdfOrientation,
+} from "./boxComboPdf";
 import { listStyles } from "./listPdfBase";
 import {
   ListPDFFooter,
@@ -15,9 +22,13 @@ import { pdfTheme } from "./pdfTheme";
 
 const PRIMARY_COLOR = pdfTheme.colors.brand;
 
+// Fixed pt widths; the member-name column flexes to absorb slack.
+const TICK_WIDTH = 34;
+const NAME_MIN_WIDTH = 110;
+
 const localStyles = StyleSheet.create({
   tickCol: {
-    width: "8%",
+    width: TICK_WIDTH,
   },
 });
 
@@ -60,6 +71,7 @@ function StationPageContent({
   stationName,
   columns,
   rows,
+  orientation,
   week,
   dayName,
   tenant,
@@ -68,6 +80,7 @@ function StationPageContent({
   stationName: string;
   columns: PackingBoxesMatrixColumn[];
   rows: MemberRow[];
+  orientation: PdfOrientation;
   week: number;
   dayName: string;
   tenant: TenantInfo;
@@ -77,15 +90,18 @@ function StationPageContent({
   const groups = groupComboColumns(columns, t);
   const groupStartKeys = new Set(groups.map((group) => group.cols[0]?.key));
 
-  const nameWidth = 30;
-  const tickWidth = 8;
-  const combosWidth = 100 - nameWidth - tickWidth;
-  const colWidth = columns.length > 0 ? combosWidth / columns.length : 8;
+  const comboWidth = comboColumnWidth({
+    orientation,
+    comboCount: columns.length,
+    fixedWidth: TICK_WIDTH,
+    flexMinWidth: NAME_MIN_WIDTH,
+  });
+  const nameCell = { flex: 1, minWidth: NAME_MIN_WIDTH };
 
   const groupBorder = { borderLeftWidth: 1.5, borderLeftColor: PRIMARY_COLOR };
 
   return (
-    <Page size="A4" style={listStyles.page}>
+    <Page size="A4" orientation={orientation} style={listStyles.page}>
       <ListPDFHeader
         tenant={tenant as SharedTenantInfo}
         pill={t("commissioning.delivery_notes_delivery_stations_details")}
@@ -100,7 +116,7 @@ function StationPageContent({
         {/* Group header row: each base share_type short_name spans its combos */}
         <View style={[listStyles.tableHeader, { borderBottomWidth: 0.5 }]} fixed>
           <View
-            style={[listStyles.cell, { width: `${nameWidth}%` }, listStyles.cellLeft]}
+            style={[listStyles.cell, nameCell, listStyles.cellLeft]}
           >
             <Text> </Text>
           </View>
@@ -109,7 +125,7 @@ function StationPageContent({
               key={group.id}
               style={[
                 listStyles.cell,
-                { width: `${colWidth * group.cols.length}%` },
+                { width: comboWidth * group.cols.length },
                 listStyles.cellCenter,
                 groupBorder,
               ]}
@@ -117,7 +133,14 @@ function StationPageContent({
               <Text style={boxComboStyles.comboBase}>{group.name}</Text>
             </View>
           ))}
-          <View style={[listStyles.cell, localStyles.tickCol, listStyles.cellCenter]}>
+          <View
+            style={[
+              listStyles.cell,
+              localStyles.tickCol,
+              listStyles.cellCenter,
+              groupBorder,
+            ]}
+          >
             <Text> </Text>
           </View>
         </View>
@@ -125,7 +148,7 @@ function StationPageContent({
         {/* Sub-header row: combination labels + tick column */}
         <View style={[listStyles.tableHeader]} fixed>
           <View
-            style={[listStyles.cell, { width: `${nameWidth}%` }, listStyles.cellLeft]}
+            style={[listStyles.cell, nameCell, listStyles.cellLeft]}
           >
             <Text>{t("commissioning.pickup_name")}</Text>
           </View>
@@ -134,7 +157,7 @@ function StationPageContent({
               key={column.key}
               style={[
                 listStyles.cell,
-                { width: `${colWidth}%` },
+                { width: comboWidth },
                 listStyles.cellCenter,
                 groupStartKeys.has(column.key) ? groupBorder : {},
               ]}
@@ -165,7 +188,7 @@ function StationPageContent({
             wrap={false}
           >
             <View
-              style={[listStyles.cell, { width: `${nameWidth}%` }, listStyles.cellLeft]}
+              style={[listStyles.cell, nameCell, listStyles.cellLeft]}
             >
               <Text style={{ fontWeight: 500 }}>{member.name || "-"}</Text>
             </View>
@@ -174,7 +197,7 @@ function StationPageContent({
                 key={column.key}
                 style={[
                   listStyles.cell,
-                  { width: `${colWidth}%` },
+                  { width: comboWidth },
                   listStyles.cellCenter,
                   groupStartKeys.has(column.key) ? groupBorder : {},
                 ]}
@@ -208,6 +231,17 @@ export default function DeliveryStationDetailsPDF({
   tenant,
   t,
 }: DeliveryStationDetailsPDFProps) {
+  // One orientation for the whole document, chosen from the widest station page.
+  const maxComboCount = pages.reduce(
+    (max, page) => Math.max(max, page.columns.length),
+    0,
+  );
+  const orientation = pickComboOrientation({
+    maxComboCount,
+    fixedWidth: TICK_WIDTH,
+    flexMinWidth: NAME_MIN_WIDTH,
+  });
+
   return (
     <Document>
       {pages.map((page, idx) => (
@@ -216,6 +250,7 @@ export default function DeliveryStationDetailsPDF({
           stationName={page.stationName}
           columns={page.columns}
           rows={page.rows}
+          orientation={orientation}
           week={week}
           dayName={dayName}
           tenant={tenant}

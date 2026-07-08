@@ -234,7 +234,12 @@ class TenantSettings(JasminModel):
     allows_trial_subscriptions_for_trial_members = models.BooleanField(default=True)
     info_sentence_about_trial_subscriptions = models.TextField(blank=True, null=True)
 
-    # allow_waiting_list_for_subscriptions = models.BooleanField(default=True)
+    # Waiting list — gates the whole waiting-list flow (offers, putting members/
+    # subscriptions on a waiting list, waiting-list UI). When False the tenant
+    # has no waiting list: at-capacity share types simply can't be subscribed to.
+    allows_waiting_list_for_subscriptions = models.BooleanField(default=True)
+    # How long a capacity reservation is held before it expires (days).
+    reservation_ttl_days = models.PositiveIntegerField(default=14)
 
     # Jokers system
     uses_jokers = models.BooleanField(default=True)  # done

@@ -8,7 +8,9 @@ from django.db import transaction
 from django.db.models import (
     Case,
     CharField,
+    Count,
     F,
+    Max,
     OuterRef,
     Q,
     QuerySet,
@@ -92,6 +94,7 @@ from ..serializers import (
     VirtualVariationComponentsResponseSerializer,
 )
 from ..serializers.shares_serializer import (
+    DeliveryExceptionGapSerializer,
     ShareDeliveryDetailsRowSerializer,
     StationMemberMatrixSerializer,
     VariationDeliveryCountRowSerializer,
@@ -166,12 +169,33 @@ class ShareTypeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             for share_type_id, sizes in sizes_by_share_type.items()
         }
 
+        # Per-share-type valid_until lower bound: the latest variation end + a
+        # flag for any open-ended (never-ending) variation. One aggregate over
+        # ALL variations (matching ``ShareType.clean``'s stranding query) so the
+        # datepicker can disable end dates the backend would reject. Max ignores
+        # NULLs; the open-ended count catches them.
+        variation_bounds_by_share_type = {
+            row["share_type_id"]: {
+                "max_valid_until": row["max_valid_until"],
+                "has_open_ended": row["open_count"] > 0,
+            }
+            for row in (
+                ShareTypeVariation.objects.filter(share_type__in=queryset)
+                .values("share_type_id")
+                .annotate(
+                    max_valid_until=Max("valid_until"),
+                    open_count=Count("pk", filter=Q(valid_until__isnull=True)),
+                )
+            )
+        }
+
         serializer = self.get_serializer(
             queryset,
             many=True,
             context={
                 **self.get_serializer_context(),
                 "sizes_in_use_by_share_type": sizes_in_use_by_share_type,
+                "variation_bounds_by_share_type": variation_bounds_by_share_type,
             },
         )
         return Response(serializer.data)
@@ -736,6 +760,54 @@ class ShareDeliveryViewSet(
         rows = OptinService.list_pending_for_member(member)
         return Response(
             self.get_serializer(rows, many=True).data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        parameters=[
+            get_member_parameter(required=True),
+            get_year_parameter(required=True),
+        ],
+        responses={
+            200: DeliveryExceptionGapSerializer(many=True),
+            400: ErrorResponseSerializer,
+        },
+        description=(
+            "Weeks this member's confirmed subscriptions WOULD deliver but "
+            "don't, because a delivery exception (Lieferpause) removed the "
+            "ShareDelivery. Returns pseudo-deliveries for ``year`` and "
+            "``year+1`` so the deliveries card can surface the paused weeks — "
+            "there is no ShareDelivery row for them."
+        ),
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="exception_gaps",
+        pagination_class=None,
+    )
+    def exception_gaps(self, request: Request) -> Response:
+        from apps.authz.roles import Role
+        from apps.commissioning.models import Member
+        from apps.commissioning.services.delivery_exceptions import (
+            member_exception_gaps,
+        )
+
+        params = validate_query_params(request, required=["member", "year"])
+        member_id = params["member"]
+        year = params["year"]
+
+        # Same self-vs-office scoping as ``pending_optin``: a member may only
+        # ask for their own gaps; office asks for anyone.
+        privileged = is_privileged(request, privileged_roles=(Role.OFFICE, Role.ADMIN))
+        if not privileged:
+            self_member = Member.objects.filter(user=request.user).first()
+            if self_member is None or str(self_member.pk) != str(member_id):
+                raise ForbiddenError("You may only request your own delivery gaps.")
+
+        gaps = member_exception_gaps(member_id, years={year, year + 1})
+        return Response(
+            DeliveryExceptionGapSerializer(gaps, many=True).data,
             status=status.HTTP_200_OK,
         )
 

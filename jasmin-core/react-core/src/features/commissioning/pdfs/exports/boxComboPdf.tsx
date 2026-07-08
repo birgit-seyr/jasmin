@@ -45,6 +45,68 @@ export function ComboHeader({
   );
 }
 
+// A4 content width = page width − 2×40pt horizontal padding (see
+// ``listPdfBase.page.paddingHorizontal = spacing.page = 40``).
+const A4_PORTRAIT_CONTENT = 595.28 - 80; // ≈ 515pt
+const A4_LANDSCAPE_CONTENT = 841.89 - 80; // ≈ 762pt
+
+export type PdfOrientation = "portrait" | "landscape";
+
+/**
+ * Per-combination column width (pt) for a page, given the DOCUMENT's chosen
+ * orientation. Combos are never stretched past ``comboIdeal`` — when a page has
+ * few combos the flex name/note column absorbs the slack instead — and shrink
+ * to fill exactly when there are many (the flex column holds at
+ * ``flexMinWidth``), so the table always fits the page at any combo count.
+ */
+export function comboColumnWidth({
+  orientation,
+  comboCount,
+  fixedWidth,
+  flexMinWidth,
+  comboIdeal = 52,
+}: {
+  orientation: PdfOrientation;
+  comboCount: number;
+  /** Total pt of the fixed (non-combo, non-flex) columns. */
+  fixedWidth: number;
+  /** Min pt reserved for the flex name/note column. */
+  flexMinWidth: number;
+  comboIdeal?: number;
+}): number {
+  const content =
+    orientation === "portrait" ? A4_PORTRAIT_CONTENT : A4_LANDSCAPE_CONTENT;
+  const perCombo =
+    (content - fixedWidth - flexMinWidth) / Math.max(comboCount, 1);
+  // Cap at the ideal so few combos don't stretch (the flex name/note column
+  // absorbs the slack instead); otherwise fill exactly so the table always fits
+  // the page and the flex column keeps its ``flexMinWidth`` (combos shrink, at
+  // extreme counts, rather than overflowing or collapsing the flex column).
+  return perCombo >= comboIdeal ? comboIdeal : perCombo;
+}
+
+/**
+ * Choose the page orientation from the WIDEST page (``maxComboCount``) so every
+ * page of the document shares one orientation: portrait while its combos still
+ * fit at a readable ``comboMin``, else landscape.
+ */
+export function pickComboOrientation({
+  maxComboCount,
+  fixedWidth,
+  flexMinWidth,
+  comboMin = 42,
+}: {
+  maxComboCount: number;
+  fixedWidth: number;
+  flexMinWidth: number;
+  comboMin?: number;
+}): PdfOrientation {
+  const perComboPortrait =
+    (A4_PORTRAIT_CONTENT - fixedWidth - flexMinWidth) /
+    Math.max(maxComboCount, 1);
+  return perComboPortrait >= comboMin ? "portrait" : "landscape";
+}
+
 export interface ComboGroup {
   id: string;
   name: string;

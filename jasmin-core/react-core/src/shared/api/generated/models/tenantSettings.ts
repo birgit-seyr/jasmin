@@ -65,6 +65,12 @@ export interface TenantSettings {
   allows_trial_subscriptions_for_trial_members?: boolean;
   /** @nullable */
   info_sentence_about_trial_subscriptions?: string | null;
+  allows_waiting_list_for_subscriptions?: boolean;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   */
+  reservation_ttl_days?: number;
   uses_jokers?: boolean;
   /**
    * @minimum 0

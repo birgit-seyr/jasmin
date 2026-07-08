@@ -1,6 +1,7 @@
 import { CaretRightOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Card, Col, Collapse, Flex, Row, Tag } from "antd";
+import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -214,7 +215,16 @@ export default function ConfigurationSubscriptions() {
     [],
   );
 
-  const { validFromColumn, validUntilColumn } = useTimeBoundColumns();
+  const { validFromColumn, validUntilColumn } = useTimeBoundColumns({
+    // A share type can't end before its latest variation, and can't be closed
+    // at all while a variation is open-ended (backend stranding guard).
+    validUntilFloor: (record) => ({
+      minDate: record.variations_valid_until_max
+        ? dayjs(record.variations_valid_until_max as string)
+        : null,
+      blockAll: Boolean(record.has_open_ended_variation),
+    }),
+  });
 
   const getShareOptionLabel = useCallback(
     (value: string) => t(`commissioning.share_option.${value}`),
@@ -562,6 +572,34 @@ export default function ConfigurationSubscriptions() {
             ),
             type: "checkbox",
             defaultValue: false,
+          },
+          {
+            // Gates the whole waiting-list flow. When off, at-capacity share
+            // types can't be subscribed to (no offers, no queue) and the
+            // waiting-list UI is hidden throughout the app.
+            key: "allows_waiting_list_for_subscriptions",
+            label: t(
+              "settings.commissioning.allows_waiting_list_for_subscriptions",
+            ),
+            description: t(
+              "settings.commissioning.allows_waiting_list_for_subscriptions_desc",
+            ),
+            type: "checkbox",
+            defaultValue: true,
+          },
+          {
+            // How long ANY draft subscription holds its station-day slot
+            // before the reservation lapses — governs every capacity
+            // reservation, independent of the waiting list, so it's always
+            // shown.
+            key: "reservation_ttl_days",
+            label: t("settings.commissioning.reservation_ttl_days"),
+            description: t(
+              "settings.commissioning.reservation_ttl_days_desc",
+            ),
+            type: "number",
+            defaultValue: 14,
+            min: 0,
           },
         ],
       },

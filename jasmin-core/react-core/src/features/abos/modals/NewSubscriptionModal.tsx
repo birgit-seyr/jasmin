@@ -398,12 +398,23 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   }, [shareTypes, selectedVariation]);
   const showCapacity = termKnown && capacityRelevant;
 
-  // Station options: full station-days stay SELECTABLE — picking one turns
-  // the subscription into a waiting-list entry (the office promotes it later
-  // via the normal confirm flow). The smaller secondary line shows the
-  // tightest term week's free slots as "freie Plätze (free/total)".
+  // Waiting list off → no queuing, so full options are never offered. Members
+  // and public registration don't see full stations at all; the office sees
+  // them greyed (disabled). A full station is otherwise selectable (it turns
+  // the draft into a waiting-list entry).
+  // Fall back to the top-level anon-payload scalar (public registration has no
+  // settings overlay) so the gate applies there too — default true.
+  const allowsWaitingList = Boolean(
+    getSetting("allows_waiting_list_for_subscriptions") ??
+      (tenant as Record<string, unknown> | null)
+        ?.allows_waiting_list_for_subscriptions ??
+      true,
+  );
+
+  // Station options: the smaller secondary line shows the tightest term week's
+  // free slots as "freie Plätze (free/total)".
   const stationOptions = useMemo(() => {
-    return deliveryStationDays.map((dsd) => {
+    const options = deliveryStationDays.map((dsd) => {
       const { total, minFree, isFull } = showCapacity
         ? stationDayTermCapacity(
             dsd.capacity,
@@ -418,9 +429,23 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         total,
         free: minFree,
         isFull,
+        // Office sees a full station greyed when the waiting list is off.
+        disabled: !allowsWaitingList && isFull,
       };
     });
-  }, [deliveryStationDays, periodWeekKeys, showCapacity, quantity]);
+    // Members / public don't see full stations at all when the list is off.
+    if (simplified && !allowsWaitingList) {
+      return options.filter((option) => !option.isFull);
+    }
+    return options;
+  }, [
+    deliveryStationDays,
+    periodWeekKeys,
+    showCapacity,
+    quantity,
+    allowsWaitingList,
+    simplified,
+  ]);
 
   // Currently-picked station-day (shared with the Select via the same form
   // field), used to highlight the matching map marker.
@@ -434,8 +459,21 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // as buttons that set the same ``default_delivery_station_day`` field the
   // Select drives. A station is greyed only when EVERY one of its days is full.
   const stationMarkers = useMemo<DeliveryStationMapMarker[]>(() => {
+    // Compute fullness from the RAW station-days (not the member-filtered
+    // ``stationOptions``) so a full day the Select hides can't reappear on the
+    // map reading as available.
     const capacityByDay = new Map(
-      stationOptions.map((opt) => [opt.value, opt]),
+      deliveryStationDays.map((dsd) => {
+        const { total, minFree, isFull } = showCapacity
+          ? stationDayTermCapacity(
+              dsd.capacity,
+              dsd.capacity_by_week,
+              periodWeekKeys,
+              quantity,
+            )
+          : { total: null, minFree: null, isFull: false };
+        return [dsd.value, { total, free: minFree, isFull }];
+      }),
     );
     const byStation = new Map<
       string,
@@ -462,6 +500,8 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       const stationId = String(dsd.delivery_station ?? "");
       if (!stationId) continue;
       const capacity = capacityByDay.get(dsd.value);
+      // Members / public don't see full stations at all when the list is off.
+      if (simplified && !allowsWaitingList && capacity?.isFull) continue;
       const entry = byStation.get(stationId) ?? {
         stationId,
         lat,
@@ -480,7 +520,9 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       byStation.set(stationId, entry);
     }
 
-    return Array.from(byStation.values()).map((station) => ({
+    return Array.from(byStation.values())
+      .filter((station) => station.days.length > 0)
+      .map((station) => ({
       id: station.stationId,
       lat: station.lat,
       lon: station.lon,
@@ -495,6 +537,8 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
               <Button
                 key={day.value}
                 size="small"
+                // Office sees a full day greyed when the waiting list is off.
+                disabled={!allowsWaitingList && day.isFull}
                 type={day.value === selectedStationDay ? "primary" : "default"}
                 onClick={() =>
                   form.setFieldsValue({
@@ -517,7 +561,17 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         </div>
       ),
     }));
-  }, [deliveryStationDays, stationOptions, selectedStationDay, form, t]);
+  }, [
+    deliveryStationDays,
+    showCapacity,
+    periodWeekKeys,
+    quantity,
+    allowsWaitingList,
+    simplified,
+    selectedStationDay,
+    form,
+    t,
+  ]);
 
   // Whether the currently-picked station-day is full for the term — the
   // subscription then goes to the waiting list instead of holding capacity.
@@ -644,7 +698,9 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         return;
       }
 
-      const asWaitingList = forceWaitingList || isFullForTerm;
+      // No waiting list → never queue a full term (the backend also refuses it).
+      const asWaitingList =
+        allowsWaitingList && (forceWaitingList || isFullForTerm);
       setSaving(true);
       try {
         const validFromStr = formatDateForAPI(values.valid_from) ?? "";
@@ -716,12 +772,14 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       } catch (error) {
         const code = getErrorCode(error);
         if (
+          allowsWaitingList &&
           !asWaitingList &&
           (code === "delivery_station.over_capacity" ||
             code === "share_type_variation.over_capacity")
         ) {
           // Station-day OR variation full for the chosen term — offer the
-          // waiting list inline instead of a dead-end error toast.
+          // waiting list inline instead of a dead-end error toast. Skipped when
+          // the tenant has the waiting list off (the 409 surfaces as-is).
           setWaitingListOffer(
             code === "share_type_variation.over_capacity"
               ? "variation"
@@ -743,6 +801,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       t,
       isMemberOnly,
       allowsSolidarity,
+      allowsWaitingList,
       isFullForTerm,
       publicMode,
       onIntent,
@@ -811,9 +870,11 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
             loading={saving}
             // The Abo-Vertrag consent is mandatory: keep the primary button
             // greyed out (not green) until it's ticked when the tenant
-            // publishes one.
+            // publishes one. Also blocked when a full term can't be queued
+            // (waiting list off) — there's no way to complete the subscribe.
             primaryDisabled={Boolean(
-              subscriptionContractDoc && !subscriptionContractAccepted,
+              (subscriptionContractDoc && !subscriptionContractAccepted) ||
+                (!allowsWaitingList && isFullForTerm),
             )}
           />
         ) : null
@@ -1006,9 +1067,11 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
               showIcon
               style={{ marginBottom: 16 }}
               message={
-                selectedVariationIsFull
-                  ? t("abos.waiting_list_notice_variation")
-                  : t("abos.waiting_list_notice")
+                !allowsWaitingList
+                  ? t("abos.full_unavailable_notice")
+                  : selectedVariationIsFull
+                    ? t("abos.waiting_list_notice_variation")
+                    : t("abos.waiting_list_notice")
               }
             />
           )}

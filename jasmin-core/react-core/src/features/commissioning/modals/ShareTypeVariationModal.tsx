@@ -6,6 +6,7 @@ import {
 import BubbleChartIcon from "@mui/icons-material/BubbleChart";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Image, Modal, Space, Spin, Upload } from "antd";
+import dayjs from "dayjs";
 import ModalCloseFooter from "@shared/modals/ModalCloseFooter";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -125,6 +126,14 @@ export default function ShareTypeVariationModal({
   });
   const { validFromColumn, validUntilColumn } = useTimeBoundColumns({
     width: "8em",
+    // A variation can't end before its latest subscription, and can't be closed
+    // at all while a subscription is open-ended (backend stranding guard).
+    validUntilFloor: (record) => ({
+      minDate: record.subscriptions_valid_until_max
+        ? dayjs(record.subscriptions_valid_until_max as string)
+        : null,
+      blockAll: Boolean(record.has_open_ended_subscription),
+    }),
   });
 
   const listParams = useMemo<CommissioningShareTypeVariationsListParams>(

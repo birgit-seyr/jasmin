@@ -3,12 +3,22 @@ import type { TFunction } from "i18next";
 
 import type { PackingBoxesMatrixColumn } from "@shared/api/generated/models";
 
-import { ComboHeader, boxComboStyles, groupComboColumns } from "./boxComboPdf";
+import {
+  ComboHeader,
+  boxComboStyles,
+  comboColumnWidth,
+  groupComboColumns,
+  pickComboOrientation,
+  type PdfOrientation,
+} from "./boxComboPdf";
 import { listStyles } from "./listPdfBase";
 import { ListPDFFooter, ListPDFHeader } from "./ListPDFSharedComponents";
 import { pdfTheme } from "./pdfTheme";
 
 const PRIMARY_COLOR = pdfTheme.colors.brand;
+
+// The station-name column flexes to absorb slack; combos take a fixed pt width.
+const NAME_MIN_WIDTH = 90;
 
 // A minimal, strict subset of the generated ``StationOverview`` (the name
 // fields are ``allow_null`` on the backend serializer). No index signature —
@@ -44,6 +54,7 @@ function TourPageContent({
   tour_number,
   stations,
   columns,
+  orientation,
   week,
   dayName,
   t,
@@ -51,6 +62,7 @@ function TourPageContent({
   tour_number: number;
   stations: StationRow[];
   columns: PackingBoxesMatrixColumn[];
+  orientation: PdfOrientation;
   week: number;
   dayName: string;
   t: TFunction;
@@ -60,17 +72,17 @@ function TourPageContent({
   // The first column of each group starts a new vertical group border.
   const groupStartKeys = new Set(groups.map((group) => group.cols[0]?.key));
 
-  // Match table proportions: station = 12 units, each combination = 6 units.
-  const stationUnits = 12;
-  const comboUnits = 6;
-  const totalUnits = stationUnits + comboUnits * columns.length;
-  const stationWidth = (stationUnits / totalUnits) * 100;
-  const colWidth = (comboUnits / totalUnits) * 100;
-
+  const comboWidth = comboColumnWidth({
+    orientation,
+    comboCount: columns.length,
+    fixedWidth: 0,
+    flexMinWidth: NAME_MIN_WIDTH,
+  });
+  const nameCell = { flex: 1, minWidth: NAME_MIN_WIDTH };
   const groupBorder = { borderLeftWidth: 1.5, borderLeftColor: PRIMARY_COLOR };
 
   return (
-    <Page size="A4" orientation="landscape" style={listStyles.page}>
+    <Page size="A4" orientation={orientation} style={listStyles.page}>
       <ListPDFHeader pill={t("commissioning.deliveries_overview")}>
         <Text style={listStyles.title}>
           {t("commissioning.KW")} {week} · {dayName} ·{" "}
@@ -81,9 +93,7 @@ function TourPageContent({
       <View style={listStyles.table}>
         {/* Parent header: each base share_type short_name spans its combos */}
         <View style={[listStyles.tableHeader, { borderBottomWidth: 0.5 }]} fixed>
-          <View
-            style={[listStyles.cell, { width: `${stationWidth}%` }, listStyles.cellLeft]}
-          >
+          <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
             <Text> </Text>
           </View>
           {groups.map((group) => (
@@ -91,7 +101,7 @@ function TourPageContent({
               key={group.id}
               style={[
                 listStyles.cell,
-                { width: `${colWidth * group.cols.length}%` },
+                { width: comboWidth * group.cols.length },
                 listStyles.cellCenter,
                 groupBorder,
               ]}
@@ -103,9 +113,7 @@ function TourPageContent({
 
         {/* Sub-header: combination labels (base size + add-on badges) */}
         <View style={listStyles.tableHeader} fixed>
-          <View
-            style={[listStyles.cell, { width: `${stationWidth}%` }, listStyles.cellLeft]}
-          >
+          <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
             <Text>{t("commissioning.delivery_station")}</Text>
           </View>
           {columns.map((column) => (
@@ -113,7 +121,7 @@ function TourPageContent({
               key={column.key}
               style={[
                 listStyles.cell,
-                { width: `${colWidth}%` },
+                { width: comboWidth },
                 listStyles.cellCenter,
                 groupStartKeys.has(column.key) ? groupBorder : {},
               ]}
@@ -133,9 +141,7 @@ function TourPageContent({
             ]}
             wrap={false}
           >
-            <View
-              style={[listStyles.cell, { width: `${stationWidth}%` }, listStyles.cellLeft]}
-            >
+            <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
               <Text style={{ fontWeight: 500 }}>
                 {station.delivery_station_short_name ||
                   station.delivery_station_name ||
@@ -147,7 +153,7 @@ function TourPageContent({
                 key={column.key}
                 style={[
                   listStyles.cell,
-                  { width: `${colWidth}%` },
+                  { width: comboWidth },
                   listStyles.cellCenter,
                   groupStartKeys.has(column.key) ? groupBorder : {},
                 ]}
@@ -174,6 +180,17 @@ export default function DeliveryStationsOverviewPDF({
   dayName,
   t,
 }: DeliveryStationsOverviewPDFProps) {
+  // One orientation for the whole document, chosen from the widest tour.
+  const maxComboCount = tours.reduce(
+    (max, tour) => Math.max(max, tour.columns.length),
+    0,
+  );
+  const orientation = pickComboOrientation({
+    maxComboCount,
+    fixedWidth: 0,
+    flexMinWidth: NAME_MIN_WIDTH,
+  });
+
   return (
     <Document>
       {tours.map((tour) => (
@@ -182,6 +199,7 @@ export default function DeliveryStationsOverviewPDF({
           tour_number={tour.tour_number}
           stations={tour.stations}
           columns={tour.columns}
+          orientation={orientation}
           week={week}
           dayName={dayName}
           t={t}

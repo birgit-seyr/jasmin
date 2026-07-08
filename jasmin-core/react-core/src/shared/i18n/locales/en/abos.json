@@ -127,6 +127,7 @@
   "sold_out": "sold out",
   "waiting_list_notice": "The chosen delivery station is full for the selected period. The subscription joins the waiting list and only becomes active once the office confirms a freed-up spot.",
   "waiting_list_notice_variation": "This share type is sold out. The subscription joins the waiting list and only becomes active once the office confirms a freed-up spot.",
+  "full_unavailable_notice": "The chosen option is full for the selected period and currently unavailable.",
   "subscription_waiting_listed": "Subscription added to the waiting list",
   "waiting_listed_variation_full": "Share type sold out — the subscription was added to the waiting list.",
   "waiting_listed_station_full": "Delivery station full — the subscription was added to the waiting list.",
