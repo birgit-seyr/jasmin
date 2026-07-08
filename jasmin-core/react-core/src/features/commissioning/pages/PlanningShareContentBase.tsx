@@ -126,7 +126,7 @@ export default function PlanningHarvestSharesBase({
     useState(true);
   const [showSummaryRows, setShowSummaryRows] = useState(true);
   const queryClient = useQueryClient();
-  const { currencySymbol } = useCurrency();
+  const { currencySymbol, formatCurrency } = useCurrency();
   const { getUnitLabel } = useUnitOptions();
   const { isOffice } = useRoles();
   const permissions = useMemo(
@@ -496,6 +496,17 @@ export default function PlanningHarvestSharesBase({
     [rawData],
   );
 
+  // The purchase-cost total below tracks the grid's LIVE rows, not the list
+  // query. The query is intentionally NOT invalidated on create/update (see
+  // handleSaveSuccess), so the grid holds saved rows in its own state. Seed
+  // from the query data — which re-syncs on week changes / delete-refetch —
+  // and let the table's ``onDataChange`` keep it current through in-place
+  // edits and saves, so the figure recalculates the moment a row is saved.
+  const [liveData, setLiveData] = useState<TableRecord[]>([]);
+  useEffect(() => {
+    setLiveData(data);
+  }, [data]);
+
   const invalidateData = useCallback(() => {
     queryClient.invalidateQueries({
       queryKey: getCommissioningHarvestSharePlanningListQueryKey(listParams),
@@ -602,6 +613,61 @@ export default function PlanningHarvestSharesBase({
       planningMode,
     ],
   );
+
+  // Total money spent buying in purchased ("Zukauf") articles this week.
+  // For every purchased share article, its weekly physical amount — Σ over
+  // days of the per-day planned amount, which already multiplies each
+  // variation's per-share cell by that variation's share count (see
+  // `computePlannedAmountForDay`) — times the share content's own
+  // `price_per_unit`. Non-purchased articles and rows without a price
+  // contribute nothing. Computed from the already-loaded grid; no extra fetch.
+  const totalPurchaseMoney = useMemo(() => {
+    const articlesById = new Map(
+      (vegetables_and_fruits ?? []).map((article: ShareArticleOption) => [
+        article.id,
+        article,
+      ]),
+    );
+
+    return liveData.reduce((total, record) => {
+      const article = articlesById.get(record.share_article as string);
+      const isPurchased =
+        Boolean(article?.is_purchased) ||
+        hasPurchasedSuffix(
+          (article?.name as string) ??
+            (record.share_article_name as string) ??
+            "",
+          t,
+        );
+      if (!isPurchased) return total;
+
+      const pricePerUnit = parseFloat(String(record.price_per_unit)) || 0;
+      if (pricePerUnit <= 0) return total;
+
+      const weeklyAmount = shareDeliveryDays.reduce(
+        (sum, deliveryDay) =>
+          sum +
+          computePlannedAmountForDay(
+            record as Record<string, unknown>,
+            deliveryDay,
+            shareTypeVariations,
+            shareTypeVariationAmountsSummary,
+            planningMode,
+          ),
+        0,
+      );
+
+      return total + pricePerUnit * weeklyAmount;
+    }, 0);
+  }, [
+    liveData,
+    vegetables_and_fruits,
+    shareDeliveryDays,
+    shareTypeVariations,
+    shareTypeVariationAmountsSummary,
+    planningMode,
+    t,
+  ]);
 
   const { deliveryDayColumns } = useDeliveryDayColumns({
     shareDeliveryDays,
@@ -749,6 +815,14 @@ export default function PlanningHarvestSharesBase({
               </Button>
             </Space.Compact>
           </div>
+
+          {/* Weekly buy-in ("Zukauf") cost, computed from the loaded grid. */}
+          <div className="flex-col" style={{ gap: "0.25em" }}>
+            <span className="text-secondary">
+              {t("commissioning.total_purchase_cost_week")}
+            </span>
+            <strong>{formatCurrency(totalPurchaseMoney)}</strong>
+          </div>
         </div>
       )}
 
@@ -797,6 +871,7 @@ export default function PlanningHarvestSharesBase({
           focusIndex="share_article_name"
           initialData={filteredData}
           loading={isFetching}
+          onDataChange={setLiveData}
           onSaveSuccess={handleSaveSuccess}
           onDeleteSuccess={handleDeleteSuccess}
           customSave={customSave}

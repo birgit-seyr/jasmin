@@ -88,7 +88,7 @@ export default function ShareArticleExtraPriceModal({
             ),
             dataIndex: `net_price_for_orders_pieces_${i + 1}`,
             currencySymbol,
-            width: "8em",
+            width: "9em",
             locale,
           }),
         ),
@@ -115,7 +115,6 @@ export default function ShareArticleExtraPriceModal({
           {share_article_name}
         </div>
       }
-      width="60%"
       fkField="share_article"
       fkValue={share_article}
       defaultTaxRate={defaultTaxRateArticles}

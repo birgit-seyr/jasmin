@@ -73,7 +73,7 @@ export default function PriceEditorModal<T, TCreate, TUpdate = TCreate>({
   visible,
   onClose,
   title,
-  width = 700,
+  width = "max-content",
   style,
   zIndex = 1100,
   fkField,
@@ -191,6 +191,11 @@ export default function PriceEditorModal<T, TCreate, TUpdate = TCreate>({
         <>
           {t("commissioning.prices_are_netto")}
           <EditableTable
+            // ``w-max`` pins the inner table to its content width so it hugs
+            // the columns instead of AntD stretching it to 100% — which, inside
+            // the ``width: max-content`` Modal above, would otherwise creep the
+            // whole modal out to the viewport cap.
+            className="custom-jasmin-table w-max"
             columns={columns}
             apiFunctions={apiFunctions}
             initialData={data}

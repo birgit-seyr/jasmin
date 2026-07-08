@@ -126,7 +126,6 @@ export default function ShareTypeVariationPriceModal({
           {t("commissioning.prices_for_size")} {share_type_variation_name}
         </div>
       }
-      width={800}
       fkField="share_type_variation"
       fkValue={share_type_variation}
       defaultTaxRate={defaultTaxRateShares}

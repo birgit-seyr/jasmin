@@ -8,12 +8,14 @@ import { useCommissioningDeliveryStationToursOverviewRetrieve } from "@shared/ap
 import type {
   CommissioningDeliveryStationToursOverviewRetrieveParams,
   PackingBoxesMatrixColumn,
+  ShareTypeVariationMetadata,
   StationOverview,
   TourOverview,
 } from "@shared/api/generated/models";
 import { DeliveryStationsOverviewPDFGenerator } from "@features/commissioning/pdfs";
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { ExplainerText, PastWarningMessage } from "@shared/ui";
+import { useTenant } from "@hooks/index";
 import {
   useBoxCombinationColumns,
   useShareDeliveryDays,
@@ -28,6 +30,42 @@ import {
 const currentYear = dayjs().year();
 const currentWeek = dayjs().isoWeek();
 
+// Flat per-variation columns (grouped by share type) for import-shares tenants:
+// they have no box combinations, so the tour table shows one column per active
+// share_type_variation. Each cell is that variation's box count at the station
+// (the demand-service-backed ``variation_<id>`` value, which works in both modes).
+function buildVariationColumns(
+  variations: ShareTypeVariationMetadata[],
+): ColumnsType<StationOverview> {
+  const groups = new Map<
+    string,
+    { name: string; vars: ShareTypeVariationMetadata[] }
+  >();
+  for (const variation of variations) {
+    const group = groups.get(variation.share_type_id) ?? {
+      name: variation.share_type_name,
+      vars: [],
+    };
+    group.vars.push(variation);
+    groups.set(variation.share_type_id, group);
+  }
+  return [...groups.values()].map((group) => ({
+    title: group.name,
+    align: "center" as const,
+    children: group.vars.map((variation) => ({
+      title: variation.size || variation.display_name,
+      dataIndex: variation.key,
+      key: variation.key,
+      align: "center" as const,
+      width: "5em",
+      render: (value: unknown) => {
+        const n = Number(value);
+        return Number.isFinite(n) && n !== 0 ? n : "";
+      },
+    })),
+  }));
+}
+
 // One tour's table: rows = stations, columns = THAT tour's box combinations.
 // Each tour carries its own columns (they differ across tours), so the
 // combination-column hook runs per tour, inside this child component.
@@ -35,12 +73,16 @@ function TourTable({
   tourNumber,
   columns: matrixColumns,
   stations,
+  variations,
+  usesExternalDemand,
   loading,
   t,
 }: {
   tourNumber: number;
   columns: PackingBoxesMatrixColumn[];
   stations: StationOverview[];
+  variations: ShareTypeVariationMetadata[];
+  usesExternalDemand: boolean;
   loading: boolean;
   t: TFunction;
 }) {
@@ -59,9 +101,12 @@ function TourTable({
           <strong>{text || record.delivery_station_name || "-"}</strong>
         ),
       },
-      ...(comboColumns as unknown as ColumnsType<StationOverview>),
+      // Import tenants have no combinations → show flat per-variation columns.
+      ...(usesExternalDemand
+        ? buildVariationColumns(variations)
+        : (comboColumns as unknown as ColumnsType<StationOverview>)),
     ],
-    [comboColumns, t],
+    [comboColumns, usesExternalDemand, variations, t],
   );
 
   return (
@@ -92,6 +137,11 @@ export default function DeliveryStationOverview() {
   );
 
   const { t } = useTranslation();
+  const { getSetting } = useTenant();
+  const usesExternalDemand = getSetting(
+    "uploads_weekly_share_amount",
+    false,
+  ) as boolean;
 
   // delivery days
   const [shareDeliveryDaysFilters, setShareDeliveryDaysFilters] = useState({
@@ -151,6 +201,12 @@ export default function DeliveryStationOverview() {
     [responseData?.tours],
   );
 
+  // Day-wide variation metadata (import tenants render these as flat columns).
+  const variations = useMemo<ShareTypeVariationMetadata[]>(
+    () => responseData?.variations ?? [],
+    [responseData?.variations],
+  );
+
   return (
     <div>
       <h1>{t("commissioning.tour_lists")}</h1>
@@ -171,8 +227,9 @@ export default function DeliveryStationOverview() {
         suffix={t("commissioning.delivery_day")}
       />
 
-      {/* PDF Download */}
-      {tours.length > 0 && !loading && (
+      {/* PDF Download — combination-based, so only for subscription tenants
+          (import tenants have no combos; the on-page flat view covers them). */}
+      {tours.length > 0 && !loading && !usesExternalDemand && (
         <div style={{ marginTop: "3em" }}>
           <DeliveryStationsOverviewPDFGenerator
             tours={tours.map((tour) => ({
@@ -204,6 +261,8 @@ export default function DeliveryStationOverview() {
           tourNumber={tour.tour_number}
           columns={tour.columns}
           stations={tour.stations}
+          variations={variations}
+          usesExternalDemand={usesExternalDemand}
           loading={loading}
           t={t}
         />

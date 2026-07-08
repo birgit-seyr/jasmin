@@ -122,7 +122,11 @@ jobs:
           python-version: "3.14"
 
       - name: Install Poetry
-        run: pipx install poetry==1.8.3
+        # Match the version that maintains poetry.lock (lock-version 2.1). An
+        # older Poetry (1.8.x) re-reads/rewrites the 2.1 lock in the 2.0 format
+        # and re-resolves the whole graph — keep CI, the Dockerfile, and the
+        # lock all on the same Poetry so lock ops stay minimal + reproducible.
+        run: pipx install poetry==2.4.1
 
       - name: Verify lock is in sync with pyproject
         # Catches a dependency added/bumped in pyproject.toml without

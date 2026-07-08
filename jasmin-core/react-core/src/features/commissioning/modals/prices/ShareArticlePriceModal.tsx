@@ -8,7 +8,13 @@ import {
   useCommissioningShareArticleNetPricesList,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { ShareArticleNetPrice } from "@shared/api/generated/models/shareArticleNetPrice";
-import { useActiveStatusColumn, useCurrency, useNumberFormat, useTenant, useTimeBoundColumns } from "@hooks/index";
+import {
+  useActiveStatusColumn,
+  useCurrency,
+  useNumberFormat,
+  useTenant,
+  useTimeBoundColumns,
+} from "@hooks/index";
 import type { EditableColumnConfig } from "@shared/tables/BasicEditableTable/types";
 import PriceEditorModal from "./PriceEditorModal";
 import { buildCurrencyPriceColumn, buildTaxRateColumn } from "./priceColumns";
@@ -139,8 +145,6 @@ export default function ShareArticlePriceModal({
           {share_article_name}
         </div>
       }
-      width="95%"
-      style={{ maxWidth: "1600px" }}
       fkField="share_article"
       fkValue={share_article}
       defaultTaxRate={defaultTaxRateArticles}

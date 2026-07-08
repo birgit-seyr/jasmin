@@ -47,7 +47,7 @@ WORKDIR /app
 # -----------------------------------------------------------------------------
 FROM base AS builder
 
-ENV POETRY_VERSION=1.8.3 \
+ENV POETRY_VERSION=2.4.1 \
     POETRY_HOME=/opt/poetry \
     POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=true \
@@ -83,7 +83,7 @@ FROM base AS dev
 # Re-run the builder stage with dev deps. We just copy a venv built with
 # INSTALL_DEV=true. To keep this Dockerfile self-contained we install poetry
 # here too and re-resolve.
-ENV POETRY_VERSION=1.8.3 \
+ENV POETRY_VERSION=2.4.1 \
     POETRY_HOME=/opt/poetry \
     POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=true

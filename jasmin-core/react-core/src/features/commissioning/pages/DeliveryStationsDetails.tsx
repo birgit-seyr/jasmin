@@ -13,6 +13,7 @@ import type {
   PackingBoxesMatrixColumn,
   StationMemberMatrix,
 } from "@shared/api/generated/models";
+import { ImportSharesModeBanner } from "@features/commissioning/components";
 import { DeliveryStationDetailsPDFGenerator } from "@features/commissioning/pdfs";
 import type { StationPageData } from "@features/commissioning/pdfs/exports/DeliveryStationDetailsPDF";
 import { DaySelector, WeekSelector } from "@shared/selectors";
@@ -46,7 +47,11 @@ export default function DeliveryStationDetails() {
   >(null);
 
   const { t } = useTranslation();
-  const { tenantName, logoUrl, tenant } = useTenant();
+  const { tenantName, logoUrl, tenant, getSetting } = useTenant();
+  const usesExternalDemand = getSetting(
+    "uploads_weekly_share_amount",
+    false,
+  ) as boolean;
 
   // delivery days — derived purely from the selected year/week (no effect).
   const shareDeliveryDaysFilters = useMemo(
@@ -270,6 +275,20 @@ export default function DeliveryStationDetails() {
   // selector now reconciles itself via preserveSelection — it keeps the pick
   // when it's still scheduled for the new day, and only falls back to the
   // first station when it's gone.
+
+  // Pickup lists are inherently per-member (rows are members); import-shares
+  // tenants have no members / ShareDeliveries, so the list can't be built. Show
+  // the "not available" notice instead of an empty grid + dead PDF buttons.
+  if (usesExternalDemand) {
+    return (
+      <div>
+        <h1>
+          {t("commissioning.delivery_notes_delivery_stations_details_title")}
+        </h1>
+        <ImportSharesModeBanner messageKey="commissioning.pickup_lists_import_unavailable" />
+      </div>
+    );
+  }
 
   return (
     <div>

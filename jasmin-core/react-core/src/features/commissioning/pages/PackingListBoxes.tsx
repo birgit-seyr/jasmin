@@ -2,9 +2,13 @@ import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useCommissioningPackingListBoxesMatrixRetrieve } from "@shared/api/generated/commissioning/commissioning";
+import {
+  useCommissioningPackingListBoxesMatrixRetrieve,
+  useCommissioningPackingListMemberAmountsRetrieve,
+} from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningPackingListBoxesMatrixRetrieveParams,
+  CommissioningPackingListMemberAmountsRetrieveParams,
   CommissioningSharesDeliveryDaysListParams,
   PackingBoxesMatrixColumn,
   PackingBoxesMatrixRow,
@@ -82,6 +86,13 @@ export default function PackingListBoxes() {
     | "BOXES"
     | "BULK"
     | "MIXED";
+  // Import-shares tenants have no ShareDelivery rows, so the box-combination
+  // matrix is empty. Fall back to the flat per-variation matrix (member amounts,
+  // ShareContent-based) — same {columns, rows} shape, just add_ons-empty columns.
+  const usesExternalDemand = getSetting(
+    "uploads_weekly_share_amount",
+    false,
+  ) as boolean;
 
   // --- Filters (scope). No ShareType selector — all share types at once. ---
   const [selectedYear, setSelectedYear] = useState(currentYear);
@@ -201,10 +212,17 @@ export default function PackingListBoxes() {
       ],
     );
 
-  const { data, isFetching } = useCommissioningPackingListBoxesMatrixRetrieve(
-    matrixParams,
-    { query: { enabled: queryEnabled } },
+  const boxesQuery = useCommissioningPackingListBoxesMatrixRetrieve(matrixParams, {
+    query: { enabled: queryEnabled && !usesExternalDemand },
+  });
+  const memberQuery = useCommissioningPackingListMemberAmountsRetrieve(
+    matrixParams as CommissioningPackingListMemberAmountsRetrieveParams,
+    { query: { enabled: queryEnabled && usesExternalDemand } },
   );
+  const data = usesExternalDemand ? memberQuery.data : boxesQuery.data;
+  const isFetching = usesExternalDemand
+    ? memberQuery.isFetching
+    : boxesQuery.isFetching;
 
   const matrixColumns = useMemo<PackingBoxesMatrixColumn[]>(
     () => data?.columns ?? [],
@@ -232,19 +250,24 @@ export default function PackingListBoxes() {
   );
 
   // --- Pinned count row (boxes per combination in the current scope) ---
+  // The flat per-variation (import) matrix carries per-share amounts, not box
+  // counts, so it has no count row.
   const summaryRows = useMemo<SummaryRow[]>(
-    () => [
-      {
-        label: t("commissioning.box_count"),
-        columns: matrixColumns.map((col) => col.key),
-        // Strings so the summary renders "12", not the numeric "12.00" path.
-        data: Object.fromEntries(
-          matrixColumns.map((col) => [col.key, String(col.count)]),
-        ),
-        style: SUMMARY_ROW_STYLE,
-      },
-    ],
-    [matrixColumns, t],
+    () =>
+      usesExternalDemand
+        ? []
+        : [
+            {
+              label: t("commissioning.box_count"),
+              columns: matrixColumns.map((col) => col.key),
+              // Strings so the summary renders "12", not the "12.00" path.
+              data: Object.fromEntries(
+                matrixColumns.map((col) => [col.key, String(col.count)]),
+              ),
+              style: SUMMARY_ROW_STYLE,
+            },
+          ],
+    [matrixColumns, t, usesExternalDemand],
   );
 
   const apiFunctions = useMemo<ApiFunctions>(() => wrapApiFunctions({}), []);
@@ -310,6 +333,8 @@ export default function PackingListBoxes() {
             week={selectedWeek}
             dayName={dayName}
             showSize={showSize}
+            // Flat per-variation (import) matrix has no box counts.
+            showCountRow={!usesExternalDemand}
             filename={pdfFilename}
             buttonText={t("download.packing_list")}
             t={t}

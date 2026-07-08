@@ -30,6 +30,7 @@ from ..serializers import (
 )
 from ..services.delivery_station_fee_service import DeliveryStationFeeService
 from ..services.packing_list_boxes_matrix_service import PackingListBoxesMatrixService
+from ..services.share_demand_service import ExternalDemandBackend, _resolve_backend
 from ..utils import (
     get_active_share_type_variations,
     get_delivery_station_days_from_shares_delivery_day,
@@ -96,11 +97,20 @@ class DeliveryStationsToursOverviewView(APIViewRolePermissionsMixin, APIView):
         # keys alongside the per-variation ``variation_<id>`` ones. The day-wide
         # columns get filtered PER TOUR below (each tour carries only the
         # combinations that actually occur on it).
-        combination_columns, combo_counts_by_station = (
-            PackingListBoxesMatrixService.get_station_combination_counts(
-                year, delivery_week, day_number
+        # Box combinations come from ShareDelivery, which import-shares tenants
+        # don't have — combos are always empty for them. Skip the query and fall
+        # back to the flat per-variation view (the per-variation counts below are
+        # demand-service-backed, so they work in both modes). Subscription
+        # tenants are unaffected: they keep the combination columns.
+        uses_external_demand = isinstance(_resolve_backend(), ExternalDemandBackend)
+        if uses_external_demand:
+            combination_columns, combo_counts_by_station = [], {}
+        else:
+            combination_columns, combo_counts_by_station = (
+                PackingListBoxesMatrixService.get_station_combination_counts(
+                    year, delivery_week, day_number
+                )
             )
-        )
 
         # Build response
         tours_list = self._build_tours_data(
@@ -110,6 +120,7 @@ class DeliveryStationsToursOverviewView(APIViewRolePermissionsMixin, APIView):
             delivery_week,
             combo_counts_by_station,
             combination_columns,
+            uses_external_demand,
         )
         variations_metadata = self._build_variations_metadata(share_type_variations)
 
@@ -173,6 +184,7 @@ class DeliveryStationsToursOverviewView(APIViewRolePermissionsMixin, APIView):
         delivery_week: int,
         combo_counts_by_station: dict[str, dict[str, int]],
         combination_columns: list[dict[str, Any]],
+        uses_external_demand: bool,
     ) -> list[dict[str, Any]]:
         """Build the tours data structure with stations grouped by tour number.
 
@@ -219,9 +231,20 @@ class DeliveryStationsToursOverviewView(APIViewRolePermissionsMixin, APIView):
                 for column in combination_columns
                 if column["key"] in present_keys
             ]
-            # Omit tours with no box combinations (no deliveries) entirely.
+            # Omit tours with no box combinations (no deliveries) — but for
+            # import-shares tenants (who have no combinations at all) keep a tour
+            # that carries any per-variation demand, so the flat view renders it.
+            # Strict no-op for subscription tenants: ``uses_external_demand`` is
+            # False for them, so ``has_variation_demand`` short-circuits to False
+            # and this reduces exactly to the original ``if not tour_columns``.
             if not tour_columns:
-                continue
+                has_variation_demand = uses_external_demand and any(
+                    station.get(f"variation_{variation.id}")
+                    for station in stations
+                    for variation in share_type_variations
+                )
+                if not has_variation_demand:
+                    continue
             tours_list.append(
                 {
                     "tour_number": tour_num,

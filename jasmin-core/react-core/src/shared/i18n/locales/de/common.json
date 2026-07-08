@@ -1,5 +1,5 @@
 {
-  "import_shares_mode_banner": "Die Anteilsmengen dieser Organisation stammen aus dem wöchentlichen CSV-Import – Abos hier steuern weder die Planungsmenge noch die Kapazität der Verteilstationen.",
+  "import_shares_mode_banner": "Die Anteilsmengen dieser Solawi stammen aus dem wöchentlichen CSV-Import – Abos hier steuern weder die Planungsmenge noch die Kapazität der Verteilstationen.",
   "import_shares_mode_banner_link": "Zum CSV-Import",
   "back": "Zurück",
   "cancel": "Abbrechen",

@@ -28,7 +28,7 @@ export function buildCurrencyPriceColumn({
   title,
   dataIndex,
   currencySymbol,
-  width = "5.5em",
+  width = "6em",
   required = false,
   className,
   wrapInText = true,
