@@ -31,6 +31,6 @@ export { default as notify } from './notify';
 export { logger } from './logger';
 export { buildCsvString, downloadCsvBlob, resolveCsvDialect } from './csv';
 export { downloadBlob } from './downloadBlob';
-export { activeAtDateForWeek, isWeekInPast, isYearInPast } from './weekRange';
+export { activeAtDateForWeek, isoWeekRangeLabel, isWeekInPast, isYearInPast } from './weekRange';
 export { pickTierPrice, pickTierPriceFromAmount } from './tierPrice';
 export { isSepaMandateActiveForTerm } from './sepaMandate';

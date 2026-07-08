@@ -30,6 +30,7 @@ import {
 import { useActiveStatusColumn } from "@hooks/columns/useActiveStatusColumn";
 import { useTimeBoundColumns } from "@hooks/columns/useTimeBoundColumns";
 import { useShareTypeVariations } from "@features/commissioning/hooks";
+import { isoWeekRangeLabel } from "@shared/utils";
 
 /**
  * "Lieferpausen" — per-ShareTypeVariation delivery-exception periods. During a
@@ -110,12 +111,29 @@ export default function DeliveryExceptionPeriods() {
       validFromColumn,
       validUntilColumn,
       {
+        // Read-only summary of which ISO weeks the valid_from/valid_until range
+        // covers (bounds are whole weeks — Monday → Sunday).
+        title: <>{t("commissioning.KW")}</>,
+        dataIndex: "iso_weeks_covered",
+        key: "iso_weeks_covered",
+        width: "9em",
+        align: "center",
+        readOnly: true,
+        hideInModal: true,
+        render: (_: unknown, record: TableRecord) =>
+          isoWeekRangeLabel(
+            record.valid_from as string,
+            record.valid_until as string,
+            t("commissioning.KW"),
+          ),
+      },
+      {
         title: <>{t("commissioning.share_type_variation")}</>,
         dataIndex: "share_type_variation_string",
         key: "share_type_variation_string",
         inputType: "select",
         required: true,
-        width: "18em",
+        width: "14em",
         align: "left",
         options: variationOptions,
         foreignKey: {

@@ -123,6 +123,7 @@ import type {
   CommissioningPackingListMemberAmountsRetrieveParams,
   CommissioningPaymentCyclesListParams,
   CommissioningPlotsListParams,
+  CommissioningPurchaseCostByWeekListParams,
   CommissioningPurchaseExportCsvRetrieveParams,
   CommissioningPurchaseListParams,
   CommissioningResellersDestroyParams,
@@ -260,6 +261,7 @@ import type {
   Plot,
   Purchase,
   PurchaseBulkSetAsExpectedRequest,
+  PurchaseCostByWeek,
   Reseller,
   Season,
   SetInvoiceNoteRequest,
@@ -20951,6 +20953,105 @@ export function useCommissioningPurchaseExportCsvRetrieve<TData = Awaited<Return
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getCommissioningPurchaseExportCsvRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * 
+    Total money spent buying in purchased ("Zukauf") share articles, per ISO
+    week over a date range. Mirrors the harvest-share-planning page's per-week
+    purchase figure (price_per_unit × amount × variation demand), aggregated
+    server-side so only the per-week points cross the wire. Office only.
+    
+ * @summary Get purchase cost per week
+ */
+export const commissioningPurchaseCostByWeekList = (
+    params: CommissioningPurchaseCostByWeekListParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<PurchaseCostByWeek[]>(
+      {url: `/api/commissioning/purchase_cost_by_week/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningPurchaseCostByWeekListQueryKey = (params?: CommissioningPurchaseCostByWeekListParams,) => {
+    return [
+    `/api/commissioning/purchase_cost_by_week/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningPurchaseCostByWeekListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>, TError = ErrorResponse>(params: CommissioningPurchaseCostByWeekListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningPurchaseCostByWeekListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>> = ({ signal }) => commissioningPurchaseCostByWeekList(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningPurchaseCostByWeekListQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>>
+export type CommissioningPurchaseCostByWeekListQueryError = ErrorResponse
+
+
+export function useCommissioningPurchaseCostByWeekList<TData = Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>, TError = ErrorResponse>(
+ params: CommissioningPurchaseCostByWeekListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningPurchaseCostByWeekList<TData = Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>, TError = ErrorResponse>(
+ params: CommissioningPurchaseCostByWeekListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningPurchaseCostByWeekList<TData = Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>, TError = ErrorResponse>(
+ params: CommissioningPurchaseCostByWeekListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get purchase cost per week
+ */
+
+export function useCommissioningPurchaseCostByWeekList<TData = Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>, TError = ErrorResponse>(
+ params: CommissioningPurchaseCostByWeekListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningPurchaseCostByWeekList>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningPurchaseCostByWeekListQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

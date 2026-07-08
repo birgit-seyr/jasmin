@@ -42,6 +42,7 @@ from .views import (
     member_dashboard_statistics,
     member_growth_statistics,
     offer_sending_status,
+    purchase_cost_by_week,
     share_options_list,
     subscription_member_emails,
 )
@@ -374,6 +375,11 @@ urlpatterns = [
         "member_growth_statistics/",
         member_growth_statistics,
         name="member_growth_statistics",
+    ),
+    path(
+        "purchase_cost_by_week/",
+        purchase_cost_by_week,
+        name="purchase_cost_by_week",
     ),
     path(
         "subscription_member_emails/",

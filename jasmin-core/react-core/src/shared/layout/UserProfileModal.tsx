@@ -11,7 +11,6 @@ import {
   Modal,
   Space,
   Tabs,
-  Tag,
   Typography,
 } from "antd";
 import { useState } from "react";
@@ -19,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { authPartialUpdate } from "@shared/api/generated/auth/auth";
 import { gdprRequestDeletionCreate } from "@shared/api/generated/gdpr/gdpr";
 import { useAuth } from "@shared/contexts/AuthContext";
+import { RoleTags, useRoles } from "@shared/auth";
 import { notify } from "@shared/utils";
 import TwoFactorPanel from "@shared/profile/TwoFactorPanel";
 import MyDataTab from "./MyDataTab";
@@ -45,6 +45,7 @@ export default function UserProfileModal({
 }: UserProfileModalProps) {
   const { t } = useTranslation();
   const { user, logout, updateUser } = useAuth();
+  const { roles } = useRoles();
 
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -109,12 +110,7 @@ export default function UserProfileModal({
             {(user as Record<string, unknown> | null)?.last_name as string}
           </Descriptions.Item>
           <Descriptions.Item label={t("profile.role")}>
-            <Tag color="green">
-              {((user as Record<string, unknown> | null)?.role as string) ||
-                ((user as Record<string, unknown> | null)
-                  ?.userRole as string) ||
-                "member"}
-            </Tag>
+            <RoleTags roles={roles} />
           </Descriptions.Item>
         </Descriptions>
       ) : (

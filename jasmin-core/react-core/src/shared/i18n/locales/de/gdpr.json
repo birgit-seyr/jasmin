@@ -8,6 +8,7 @@
   "right_to_erasure": "Meine Daten löschen (Art. 17)",
   "right_to_erasure_description": "Sie können die dauerhafte Löschung (Anonymisierung) aller Ihrer personenbezogenen Daten beantragen. Diese Aktion kann nicht rückgängig gemacht werden.",
   "request_deletion": "Datenlöschung beantragen",
+  "deletion_staff_hint": "Als Team-Mitglied kannst du deinen Account nicht selbst zur Löschung freigeben – das müsste direkt über die Verwaltung angefragt werden, damit du dich nicht versehentlich aussperrst.",
   "deletion_log": "Löschprotokoll",
   "deletion_log_description": "Admin-Ansicht: Alle bearbeiteten DSGVO-Löschanträge für diese Organisation.",
   "load_deletion_log": "Löschprotokoll laden",

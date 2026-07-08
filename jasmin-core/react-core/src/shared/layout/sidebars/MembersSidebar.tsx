@@ -1,7 +1,8 @@
 import { useTenant } from "@hooks/index";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import BarChartIcon from "@mui/icons-material/BarChart";
 import Diversity3Icon from "@mui/icons-material/Diversity3";
+import MailOutlineIcon from "@mui/icons-material/MailOutline";
+import PrivacyTipIcon from "@mui/icons-material/PrivacyTip";
 import TollIcon from "@mui/icons-material/Toll";
 import { filterByRole, useRoles, type RoleGatedItem } from "@shared/auth";
 import { useTranslation } from "react-i18next";
@@ -51,6 +52,24 @@ export default function MembersSidebar({
       icon: <AccountBalanceIcon />,
       label: (
         <Link to="/members/sepa-mandates">{t("members.sepa_mandates")}</Link>
+      ),
+    },
+    {
+      key: "members-email-log",
+
+      requireRole: "isOffice",
+      icon: <MailOutlineIcon />,
+      label: (
+        <Link to="/members/email-log">{t("configuration.email_log")}</Link>
+      ),
+    },
+    {
+      key: "members-data-protection",
+
+      requireRole: "isAdmin",
+      icon: <PrivacyTipIcon />,
+      label: (
+        <Link to="/members/data-protection">{t("members.dsgvo_deletion")}</Link>
       ),
     },
   ];

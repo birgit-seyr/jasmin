@@ -8,6 +8,7 @@
   "right_to_erasure": "Delete My Data (Art. 17)",
   "right_to_erasure_description": "You can request the permanent deletion (anonymization) of all your personal data. This action cannot be undone.",
   "request_deletion": "Request Data Deletion",
+  "deletion_staff_hint": "As a staff member you can't self-request account deletion here — it must be requested directly from the administration, so you can't accidentally lock yourself out.",
   "deletion_log": "Deletion Log",
   "deletion_log_description": "Admin view: All processed GDPR deletion requests for this organization.",
   "load_deletion_log": "Load Deletion Log",

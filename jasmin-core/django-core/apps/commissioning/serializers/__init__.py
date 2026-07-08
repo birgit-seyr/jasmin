@@ -131,4 +131,5 @@ from .shares_serializer import (
 from .statistics_serializer import (
     MemberDashboardStatisticsSerializer,
     MemberGrowthStatisticSerializer,
+    PurchaseCostByWeekSerializer,
 )

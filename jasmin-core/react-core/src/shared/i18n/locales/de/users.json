@@ -1,5 +1,5 @@
 {
-  "title": "Benutzer",
+  "title": "BenutzerInnen",
   "name": "Name",
   "email": "E-Mail",
   "first_name": "Vorname",
@@ -18,8 +18,8 @@
   "section_customers": "Kunden",
   "section_members_only": "Nur Mitglieder",
 
-  "invite_user": "Benutzer einladen",
-  "invite_title": "Neuen Benutzer einladen",
+  "invite_user": "BenutzerInnen einladen",
+  "invite_title": "Neue Benutzerin einladen",
   "send_invitation": "Einladung senden",
   "edit_roles": "Rollen bearbeiten",
   "resend_invitation": "Einladung erneut senden",
@@ -53,14 +53,14 @@
   "invitation_resent": "Einladung erneut gesendet.",
   "roles_updated": "Rollen aktualisiert.",
 
-  "load_failed": "Benutzer konnten nicht geladen werden.",
-  "create_failed": "Benutzer konnte nicht erstellt werden.",
+  "load_failed": "BenutzerIn konnten nicht geladen werden.",
+  "create_failed": "BenutzerIn konnte nicht erstellt werden.",
   "resend_failed": "Einladung konnte nicht erneut gesendet werden.",
   "roles_update_failed": "Rollen konnten nicht aktualisiert werden.",
   "actions": "Aktionen",
   "activate": "Aktivieren",
   "deactivate": "User deaktivieren",
-  "activated": "Benutzer aktiviert.",
-  "deactivated": "Benutzer deaktiviert.",
+  "activated": "BenutzerIn aktiviert.",
+  "deactivated": "BenutzerIn deaktiviert.",
   "toggle_active_failed": "Status konnte nicht geändert werden."
 }

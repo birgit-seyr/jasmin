@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from collections.abc import Iterable
-from decimal import Decimal
+from datetime import date
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from django.db import transaction
@@ -36,10 +37,18 @@ from ..utils import (
     sort_share_articles,
 )
 from ..utils.dynamic_keys import DAY_VARIATION_RE, parse_amount_cell
-from ..utils.iso_week_utils import previous_day_stock_coordinates
+from ..utils.iso_week_utils import (
+    previous_day_stock_coordinates,
+    previous_monday,
+    weeks_in_range,
+)
 from .stock_service import StockService
 
 logger = logging.getLogger(__name__)
+
+# Money quantum for purchase-cost aggregation (2dp, ROUND_HALF_UP) — mirrors the
+# line-pricing convention so figures match the planning page cent-for-cent.
+_CENT = Decimal("0.01")
 
 
 class ShareContentService:
@@ -821,6 +830,90 @@ class ShareContentService:
             )
 
         return rows
+
+    def purchase_cost_by_week(
+        self,
+        start_date: date,
+        end_date: date,
+        *,
+        is_past: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Total money spent buying in purchased ("Zukauf") share articles, per
+        ISO week over ``[start_date, end_date]``.
+
+        Reproduces the harvest-share-planning page's per-week purchase figure —
+        ``Σ over purchased ShareContent of price_per_unit × amount ×
+        variation_demand`` — but aggregated server-side so only the per-week
+        points cross the wire. Money stays Decimal end to end and is quantized
+        to 2dp; a week with no purchases yields ``0``. ``is_past=True`` (the
+        default — this report inherently spans past weeks) bypasses the archive
+        cutoff so historical weeks are included.
+
+        Import-mode tenants are handled transparently: the demand lookup routes
+        through ``variation_totals_by_week`` → ``ShareDemandService``, which
+        resolves ``ExternalShareDemand`` instead of ``ShareDelivery``.
+        """
+        # Snap the start back to its Monday so ``weeks_in_range``'s 7-day walk
+        # lands on every week's Monday — an arbitrary (non-Monday) start could
+        # otherwise skip the range's final partial week.
+        weeks = weeks_in_range(previous_monday(start_date), end_date)
+        if not weeks:
+            return []
+
+        years = {year for year, _ in weeks}
+        week_numbers = {week for _, week in weeks}
+
+        share_contents = [
+            share_content
+            for share_content in ShareContent.active.for_period(is_past=is_past)
+            .filter(
+                share__year__in=years,
+                share__delivery_week__in=week_numbers,
+                share_article__is_purchased=True,
+            )
+            .select_related(
+                "share__share_type_variation",
+                "share__delivery_day",
+                "share_article",
+            )
+            # A plain (years × weeks) cross-product over-selects at year
+            # boundaries — keep only the weeks actually in the range.
+            if (share_content.share.year, share_content.share.delivery_week) in weeks
+        ]
+
+        # One batched demand scan for the whole span (backend-agnostic:
+        # subscription or external demand), plus the missing-price fallback.
+        variation_totals_by_week = self.variation_totals_by_week(share_contents)
+        pricing_cache = self._prefetch_pricing_cache(share_contents)
+
+        cost_by_week: dict[tuple[int, int], Decimal] = defaultdict(lambda: Decimal("0"))
+        for share_content in share_contents:
+            if not share_content.amount:
+                continue
+            quantity = self._total_quantity_for(share_content, variation_totals_by_week)
+            if not quantity:
+                continue
+            year = share_content.share.year
+            week = share_content.share.delivery_week
+            price = self._get_price_per_unit_with_fallback(
+                share_content, year, week, pricing_cache
+            )
+            if price is None:
+                continue
+            cost_by_week[(year, week)] += price * share_content.amount * quantity
+
+        # Emit EVERY week in the range (0 where nothing was purchased) so the
+        # bar chart has a continuous week axis, ordered chronologically.
+        return [
+            {
+                "year": year,
+                "week": week,
+                "amount": str(
+                    cost_by_week[(year, week)].quantize(_CENT, rounding=ROUND_HALF_UP)
+                ),
+            }
+            for year, week in sorted(weeks)
+        ]
 
     @staticmethod
     def _build_stock_only_rows(

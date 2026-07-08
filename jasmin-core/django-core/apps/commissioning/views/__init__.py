@@ -47,6 +47,7 @@ from .statistic_views import (
     historical_share_type_variation_averages,
     member_dashboard_statistics,
     member_growth_statistics,
+    purchase_cost_by_week,
 )
 from .stock_views import (
     CurrentStockComparisonView,

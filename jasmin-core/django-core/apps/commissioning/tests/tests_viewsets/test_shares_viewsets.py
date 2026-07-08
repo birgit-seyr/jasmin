@@ -1382,3 +1382,28 @@ class TestShareDeliveryExceptionGaps:
         resp = api_client.get(self.URL, {"member": str(member.id), "year": 2026})
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data == []
+
+    def test_member_may_fetch_own_gaps(self, member_user, tenant):
+        """A plain member reaches the action for their OWN gaps — the whole
+        point of the self-scoping. Regression: exception_gaps must be in the
+        viewset's member-reachable allowlist, else the member is 403'd by
+        write_permission=IsOffice before the self-check runs."""
+        member = MemberFactory(user=member_user)
+        variation = ShareTypeVariationFactory()
+        self._confirmed_subscription(member, variation)
+
+        client = APIClient()
+        client.force_authenticate(user=member_user)
+        resp = client.get(self.URL, {"member": str(member.id), "year": 2026})
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+
+    def test_member_may_not_fetch_another_members_gaps(self, member_user, tenant):
+        """Self-scoping still bites: a member asking for someone else's gaps
+        is forbidden."""
+        MemberFactory(user=member_user)
+        other = MemberFactory()
+
+        client = APIClient()
+        client.force_authenticate(user=member_user)
+        resp = client.get(self.URL, {"member": str(other.id), "year": 2026})
+        assert resp.status_code == status.HTTP_403_FORBIDDEN

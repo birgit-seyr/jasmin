@@ -32,9 +32,6 @@ const ConfigurationEmail = lazy(
 const ConfigurationEmailTemplates = lazy(
   () => import("@features/configuration/pages/ConfigurationEmailTemplates"),
 );
-const ConfigurationEmailLog = lazy(
-  () => import("@features/configuration/pages/ConfigurationEmailLog"),
-);
 const ConfigurationGDPR = lazy(
   () => import("@features/configuration/pages/ConfigurationGDPR"),
 );
@@ -126,14 +123,6 @@ export const configurationRoutes: AppRoute[] = [
     element: (
       <RequireRole flag="isAdmin">
         <ConfigurationEmailTemplates />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/configuration/email-log",
-    element: (
-      <RequireRole flag="isOffice">
-        <ConfigurationEmailLog />
       </RequireRole>
     ),
   },

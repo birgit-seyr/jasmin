@@ -68,6 +68,7 @@
   "delivery_exceptions": "Delivery exceptions",
   "exception_weeks": "{{count}} exception week(s)",
   "sepa_mandates": "SEPA mandates",
+  "dsgvo_deletion": "GDPR deletion requests",
   "subscribe_coop_shares": "Subscribe cooperative shares",
   "coop_shares_total_value": "Total value",
   "coop_subscribe_amount_label": "How many shares would you like to subscribe?",

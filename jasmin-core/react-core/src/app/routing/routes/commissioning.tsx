@@ -114,6 +114,9 @@ const ShareDays = lazy(() => import("@features/commissioning/pages/ShareDays"));
 const PurchaseList = lazy(
   () => import("@features/commissioning/pages/PurchaseList"),
 );
+const StatisticsPurchase = lazy(
+  () => import("@features/commissioning/pages/StatisticsPurchase"),
+);
 const DocumentationOverview = lazy(
   () => import("@features/commissioning/pages/DocumentationOverview"),
 );
@@ -141,6 +144,14 @@ export const commissioningRoutes: AppRoute[] = [
     element: (
       <RequireRole flag="isOffice">
         <PurchaseList />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/commissioning/statistics-purchase",
+    element: (
+      <RequireRole flag="isOffice">
+        <StatisticsPurchase />
       </RequireRole>
     ),
   },

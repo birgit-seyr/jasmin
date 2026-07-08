@@ -32,3 +32,18 @@ class MemberDashboardStatisticsSerializer(serializers.Serializer):
     payback_due_coop_shares = serializers.FloatField(
         help_text="Shares owed back to cancelled members, not yet paid back"
     )
+
+
+class PurchaseCostByWeekSerializer(serializers.Serializer):
+    """One (ISO week, purchase cost) point for the purchase-statistics bar chart.
+
+    ``amount`` is the total money spent buying in purchased ("Zukauf") share
+    articles that week — a 2dp money STRING (full precision survives the wire),
+    not a JSON number, mirroring the money-on-the-wire convention.
+    """
+
+    year = serializers.IntegerField(help_text="ISO year of the delivery week.")
+    week = serializers.IntegerField(help_text="ISO delivery week (1–53).")
+    amount = serializers.CharField(
+        help_text="Total purchase cost for the week, 2dp string."
+    )

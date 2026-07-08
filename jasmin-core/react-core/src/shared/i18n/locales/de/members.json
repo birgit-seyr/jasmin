@@ -17,6 +17,7 @@
   "status": "Status",
   "status_active": "aktiv",
   "status_trial": "Probe",
+  "dsgvo_deletion": "DSGVO Löschanträge",
   "status_cancelled": "Gekündigt",
   "status_rejected": "Abgelehnt",
   "status_pending": "Ausstehend",

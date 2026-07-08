@@ -55,7 +55,7 @@ export default function ConfigurationSidebar({
       key: "configuration-payments",
 
       requireRole: "isAdmin",
-      icon: <EuroCircleOutlined />,
+      icon: <SettingOutlined />,
       label: (
         <Link to="/configuration/payments">{t("configuration.payments")}</Link>
       ),
@@ -109,14 +109,14 @@ export default function ConfigurationSidebar({
       key: "configuration-email",
 
       requireRole: "isAdmin",
-      icon: <MailOutlined />,
+      icon: <SettingOutlined />,
       label: <Link to="/configuration/email">{t("configuration.email")}</Link>,
     },
     {
       key: "configuration-email-templates",
 
       requireRole: "isAdmin",
-      icon: <MailOutlined />,
+      icon: <SettingOutlined />,
       label: (
         <Link to="/configuration/email-templates">
           {t("configuration.email_templates")}
@@ -124,21 +124,10 @@ export default function ConfigurationSidebar({
       ),
     },
     {
-      key: "configuration-email-log",
-
-      requireRole: "isOffice",
-      icon: <MailOutlined />,
-      label: (
-        <Link to="/configuration/email-log">
-          {t("configuration.email_log")}
-        </Link>
-      ),
-    },
-    {
       key: "configuration-gdpr",
 
       requireRole: "isAdmin",
-      icon: <SafetyOutlined />,
+      icon: <SettingOutlined />,
       label: (
         <Link to="/configuration/gdpr">
           {t("configuration.data_protection")}
@@ -149,7 +138,7 @@ export default function ConfigurationSidebar({
       key: "configuration-consents",
 
       requireRole: "isAdmin",
-      icon: <FileTextOutlined />,
+      icon: <SettingOutlined />,
       label: (
         <Link to="/configuration/consents">{t("consent.admin.title")}</Link>
       ),
@@ -158,7 +147,7 @@ export default function ConfigurationSidebar({
     {
       key: "configuration-users",
       requireRole: "isAdmin",
-      icon: <TeamOutlined />,
+      icon: <SettingOutlined />,
       label: <Link to="/configuration/users">{t("users.title")}</Link>,
     },
   ];

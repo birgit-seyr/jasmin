@@ -581,9 +581,13 @@ class ShareDeliveryViewSet(
     serializer_class = ShareDeliverySerializer
     pagination_class = OptionalLimitOffsetPagination
 
-    # Opt-in actions stay member-facing (was the only intended member write
-    # path); everything else falls through to write_permission = IsOffice.
-    _MEMBER_ACTIONS = frozenset({"toggle_optin", "pending_optin"})
+    # Member-reachable actions: the opt-in writes (toggle_optin / pending_optin)
+    # plus the read-only exception_gaps lookup (a member views their own
+    # delivery gaps on their member detail). Each self-scopes the member to
+    # their OWN data in its body — without being listed here the member is
+    # rejected by write_permission = IsOffice before that self-check can run.
+    # Everything else falls through to write_permission = IsOffice.
+    _MEMBER_ACTIONS = frozenset({"toggle_optin", "pending_optin", "exception_gaps"})
 
     def get_permissions(self):
         if getattr(self, "action", None) in self._MEMBER_ACTIONS:

@@ -1,10 +1,10 @@
 import { EditOutlined, MailOutlined, PlusOutlined } from "@ant-design/icons";
-import {  Badge, Button, Space, Tag, Typography } from "antd";
+import {  Badge, Button, Space, Typography } from "antd";
 import { useQueryClient } from "@tanstack/react-query";
 import { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ROLES, type Role } from "@shared/auth/roles";
-import { useRoleOptions } from "@shared/auth/useRoleOptions";
+import { RoleTags } from "@shared/auth";
 import { InviteUserModal } from '@shared/modals';
 import { EditUserRolesModal } from '@features/configuration/modals';
 import { EditableTable, READ_ONLY_PERMISSION } from "@shared/tables";
@@ -59,24 +59,6 @@ const STATUS_SORT_ORDER: Record<UserRow["account_status"], number> = {
   inactive: 3,
 };
 
-// Pastel colour per role for the role tags. Keep contrast readable on white.
-const ROLE_TAG_COLORS: Record<
-  string,
-  { bg: string; border: string; text: string }
-> = {
-  [ROLES.ADMIN]: { bg: "#ffe0e0", border: "#ffb3b3", text: "#a8071a" },
-  [ROLES.MANAGEMENT]: { bg: "#ffe7d1", border: "#ffc999", text: "#ad4e00" },
-  [ROLES.OFFICE]: { bg: "#fff5cc", border: "#ffe680", text: "#876800" },
-  [ROLES.STAFF]: { bg: "#dff5d4", border: "#b3e3a0", text: "#1f6313" },
-  [ROLES.GARDENER]: { bg: "#d4f0e0", border: "#9bd9b8", text: "#0f5132" },
-  [ROLES.MEMBER]: { bg: "#dceeff", border: "#a9d1ff", text: "#003a8c" },
-  [ROLES.CUSTOMER]: { bg: "#ecdcff", border: "#c9a9ff", text: "#391085" },
-};
-const DEFAULT_ROLE_COLOR = {
-  bg: "var(--color-bg-hover)",
-  border: "var(--color-border)",
-  text: "#595959",
-};
 
 interface UsersSectionProps {
   titleKey: string;
@@ -118,12 +100,6 @@ const UsersSection = memo(function UsersSection({
 export default function ConfigurationUsers() {
   const { t } = useTranslation();
   const { formatDate } = useDateFormat();
-  const roleOptions = useRoleOptions();
-  const roleLabelMap = useMemo(
-    () =>
-      Object.fromEntries(roleOptions.map(({ value, label }) => [value, label])),
-    [roleOptions],
-  );
 
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -283,21 +259,7 @@ export default function ConfigurationUsers() {
                 aria-label={t("users.edit_roles")}
                 onClick={() => openRoleEditor(u)}
               />
-              {(u.roles || []).map((r) => {
-                const c = ROLE_TAG_COLORS[r] ?? DEFAULT_ROLE_COLOR;
-                return (
-                  <Tag
-                    key={r}
-                    style={{
-                      backgroundColor: c.bg,
-                      borderColor: c.border,
-                      color: c.text,
-                    }}
-                  >
-                    {roleLabelMap[r] ?? r}
-                  </Tag>
-                );
-              })}
+              <RoleTags roles={u.roles} />
             </Space>
           );
         },

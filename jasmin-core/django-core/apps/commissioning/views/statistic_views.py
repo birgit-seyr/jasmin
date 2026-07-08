@@ -22,12 +22,19 @@ from core.serializers import ErrorResponseSerializer
 
 from ..errors import InvalidQueryParam
 from ..models import Member
-from ..schemas import get_delivery_week_parameter, get_year_parameter
+from ..schemas import (
+    get_delivery_week_parameter,
+    get_end_date_parameter,
+    get_start_date_parameter,
+    get_year_parameter,
+)
 from ..serializers import (
     MemberDashboardStatisticsSerializer,
     MemberGrowthStatisticSerializer,
+    PurchaseCostByWeekSerializer,
 )
 from ..services import (
+    ShareContentService,
     calculate_historical_share_type_variation_averages,
     calculate_member_dashboard_statistics,
 )
@@ -115,6 +122,41 @@ def member_growth_statistics(request: Request) -> Response:
 
     # Serialize and return
     serializer = MemberGrowthStatisticSerializer(result, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    summary="Get purchase cost per week",
+    description="""
+    Total money spent buying in purchased ("Zukauf") share articles, per ISO
+    week over a date range. Mirrors the harvest-share-planning page's per-week
+    purchase figure (price_per_unit × amount × variation demand), aggregated
+    server-side so only the per-week points cross the wire. Office only.
+    """,
+    parameters=[
+        get_start_date_parameter(required=True),
+        get_end_date_parameter(required=True),
+    ],
+    responses={
+        200: PurchaseCostByWeekSerializer(many=True),
+        400: ErrorResponseSerializer,
+    },
+)
+@api_view(["GET"])
+@permission_classes([IsOffice])
+def purchase_cost_by_week(request: Request) -> Response:
+    """Total purchase ("Zukauf") cost per ISO week within [start_date, end_date]."""
+    params = validate_query_params(request, required=["start_date", "end_date"])
+    start_date: date = params["start_date"]
+    end_date: date = params["end_date"]
+    if start_date > end_date:
+        raise InvalidQueryParam(
+            "`start_date` must be on or before `end_date`.",
+            field="start_date",
+        )
+
+    data = ShareContentService().purchase_cost_by_week(start_date, end_date)
+    serializer = PurchaseCostByWeekSerializer(data, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 

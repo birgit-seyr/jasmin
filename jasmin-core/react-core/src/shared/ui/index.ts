@@ -17,6 +17,8 @@ export type { SummaryStat } from './SummaryStatsCard';
 export { default as EmptyHint } from './EmptyHint';
 export { default as StatsAreaChart } from './StatsAreaChart';
 export type { StatsAreaSeries } from './StatsAreaChart';
+export { default as StatsBarChart } from './StatsBarChart';
+export type { StatsBarSeries } from './StatsBarChart';
 export {
   StatusButton,
   LinkButton,

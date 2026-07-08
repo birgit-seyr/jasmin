@@ -110,6 +110,10 @@ function AdvancedRightsFooter({
   onRequestDeletion: () => void;
 }) {
   const { t } = useTranslation();
+  // Staff (office / admin / any internal role) must NOT self-request account
+  // deletion: an accidental click would lock them out of their own tenant
+  // mid-shift. They ask the administration directly instead.
+  const { isStaff } = useRoles();
   const { data: sar } = useGdprMyDataRetrieve();
   // Latest deletion-request status for THIS user. Surfaces above the
   // Request-Deletion button so a previously rejected request — and
@@ -200,10 +204,16 @@ function AdvancedRightsFooter({
           danger
           icon={<DeleteOutlined />}
           onClick={onRequestDeletion}
+          disabled={isStaff}
         >
           {t("gdpr.request_deletion")}
         </Button>
       </Space>
+      {isStaff && (
+        <Typography.Text type="secondary">
+          {t("gdpr.deletion_staff_hint")}
+        </Typography.Text>
+      )}
     </Space>
   );
 }

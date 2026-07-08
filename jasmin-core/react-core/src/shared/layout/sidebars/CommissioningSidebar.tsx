@@ -280,6 +280,16 @@ export default function CommissioningSidebar({
             </Link>
           ),
         },
+        {
+          key: "commissioning-statistics-purchase",
+
+          requireRole: "isOffice",
+          label: (
+            <Link to="/commissioning/statistics-purchase">
+              {t("commissioning.statistics_purchase")}
+            </Link>
+          ),
+        },
         ...planningLongTermItems,
       ],
     },
