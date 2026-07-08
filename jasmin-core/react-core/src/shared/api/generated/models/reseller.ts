@@ -114,7 +114,7 @@ checkbox when the link cannot safely be undone. */
    * @nullable
    */
   note?: string | null;
-  contact: string;
+  readonly contact?: string;
   /** @nullable */
   linked_user?: string | null;
   /** @nullable */

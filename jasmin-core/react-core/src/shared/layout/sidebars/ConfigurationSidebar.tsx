@@ -71,6 +71,17 @@ export default function ConfigurationSidebar({
         </Link>
       ),
     },
+    {
+      key: "configuration-delivery-exceptions",
+
+      requireRole: "isAdmin",
+      icon: <SettingOutlined />,
+      label: (
+        <Link to="/configuration/delivery-exceptions">
+          {t("commissioning.delivery_exceptions")}
+        </Link>
+      ),
+    },
 
     {
       key: "configuration-commissioning",

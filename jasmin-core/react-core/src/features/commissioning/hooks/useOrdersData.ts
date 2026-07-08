@@ -105,12 +105,14 @@ export interface OrderDays {
   harvesting_day: number | null;
   packing_day: number | null;
   washing_day: number | null;
+  cleaning_day: number | null;
 }
 
 export interface OddDefaults {
   default_harvesting_day: number | null;
   default_packing_day: number | null;
   default_washing_day: number | null;
+  default_cleaning_day: number | null;
 }
 
 export function useOrdersData() {
@@ -158,12 +160,14 @@ export function useOrdersData() {
     harvesting_day: null,
     packing_day: null,
     washing_day: null,
+    cleaning_day: null,
   });
 
   const [oddDefaults, setOddDefaults] = useState<OddDefaults>({
     default_harvesting_day: null,
     default_packing_day: null,
     default_washing_day: null,
+    default_cleaning_day: null,
   });
 
   const { getSetting, tenant, logoUrl, bioLogoUrl } = useTenant();
@@ -441,6 +445,7 @@ export function useOrdersData() {
       default_harvesting_day: defaults.default_harvesting_day ?? null,
       default_packing_day: defaults.default_packing_day ?? null,
       default_washing_day: defaults.default_washing_day ?? null,
+      default_cleaning_day: defaults.default_cleaning_day ?? null,
     });
 
     // Seed from the top-level ``order`` block (present for crates-only orders
@@ -472,6 +477,7 @@ export function useOrdersData() {
         harvesting_day: order.harvesting_day ?? null,
         packing_day: order.packing_day ?? null,
         washing_day: order.washing_day ?? null,
+        cleaning_day: order.cleaning_day ?? null,
       });
     } else {
       setDataCrates([]);
@@ -496,6 +502,7 @@ export function useOrdersData() {
         harvesting_day: defaults.default_harvesting_day ?? null,
         packing_day: defaults.default_packing_day ?? null,
         washing_day: defaults.default_washing_day ?? null,
+        cleaning_day: defaults.default_cleaning_day ?? null,
       });
     }
   }, [rawOrderData]);

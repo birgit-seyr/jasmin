@@ -1,6 +1,6 @@
 /**
  * Shared email-status color logic for the office email log
- * (ConfigurationEmailLog) and the per-member emails modal (MemberEmailsModal),
+ * (EmailLog) and the per-member emails modal (MemberEmailsModal),
  * so a new provider status renders the same tag color in both views.
  */
 

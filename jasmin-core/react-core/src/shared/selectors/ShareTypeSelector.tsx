@@ -1,7 +1,8 @@
+import { useShareTypes } from "@hooks/index";
 import dayjs from "dayjs";
+import type { CSSProperties } from "react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useIsMobile, useShareTypes } from "@hooks/index";
 import BaseEntitySelector, { type SelectorOption } from "./BaseEntitySelector";
 
 interface ShareTypeSelectorProps {
@@ -24,6 +25,7 @@ interface ShareTypeSelectorProps {
   /** When provided, only these share type ids appear as options. Used by the
    *  packing pages to restrict the list to bulk- vs. box-packed share types. */
   allowedShareTypeIds?: Set<string> | null;
+  style?: CSSProperties;
 }
 
 const ShareTypeSelector = ({
@@ -36,9 +38,9 @@ const ShareTypeSelector = ({
   year = null,
   delivery_week = null,
   allowedShareTypeIds = null,
+  style,
 }: ShareTypeSelectorProps) => {
   const { t } = useTranslation();
-  const isMobile = useIsMobile();
 
   const activeAtDate = useMemo(() => {
     if (!year || !delivery_week) return undefined;
@@ -58,9 +60,7 @@ const ShareTypeSelector = ({
     if (include_null_option) opts.push({ value: "none", label: "-" });
     shareTypes
       .filter((st) => !allowedShareTypeIds || allowedShareTypeIds.has(st.value))
-      .forEach((st) =>
-        opts.push({ value: st.value, label: st.label ?? "" }),
-      );
+      .forEach((st) => opts.push({ value: st.value, label: st.label ?? "" }));
     return opts;
   }, [shareTypes, include_null_option, allowedShareTypeIds]);
 
@@ -72,9 +72,7 @@ const ShareTypeSelector = ({
       options={options}
       loading={loading}
       placeholder={t("placeholder.share_type_selector")}
-      style={
-        isMobile ? { width: "100%" } : { width: "18em", marginLeft: "2em" }
-      }
+      style={style}
       autoSelectFirst={autoSelectFirst}
       preserveSelection={preserveSelection}
     />

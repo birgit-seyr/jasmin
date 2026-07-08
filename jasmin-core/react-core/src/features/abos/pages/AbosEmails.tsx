@@ -82,6 +82,7 @@ export default function AbosEmails() {
             <ShareTypeSelector
               selectedShareType={selectedShareType}
               setSelectedShareType={(v) => setSelectedShareType(v)}
+              style={{ marginLeft: "-1em" }}
             />
             <CopyableEmailList
               data={byShareType.data}

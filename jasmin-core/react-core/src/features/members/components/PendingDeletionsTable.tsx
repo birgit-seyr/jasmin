@@ -4,15 +4,7 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  Card,
-  Space,
-  Table,
-  Tag,
-  Tooltip,
-  Typography,
-} from "antd";
+import { Button, Space, Table, Tag, Tooltip, Typography } from "antd";
 import { EmptyHint } from "@shared/ui";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,7 +21,7 @@ import { getErrorMessage } from "@shared/utils/apiError";
 
 const { Paragraph } = Typography;
 
-interface PendingDeletionsCardProps {
+interface PendingDeletionsTableProps {
   /** Opens the parent's reject-with-reason modal for the given row. */
   onRejectRequested: (row: AdminPendingDeletion) => void;
 }
@@ -39,17 +31,17 @@ interface PendingDeletionsCardProps {
  *
  * Owns its own query + approve mutation. The reject flow is parent-
  * driven because the reject reason modal is shared with potentially
- * other entry points later — the card just bubbles "user clicked
+ * other entry points later — this table just bubbles "user clicked
  * Ablehnen on this row" upward.
  */
-export default function PendingDeletionsCard({
+export default function PendingDeletionsTable({
   onRejectRequested,
-}: PendingDeletionsCardProps) {
+}: PendingDeletionsTableProps) {
   const { t } = useTranslation();
   const { formatDateTime } = useTimeFormat();
   const queryClient = useQueryClient();
 
-  const { data, isFetching, refetch } = useGdprAdminPendingDeletionsRetrieve();
+  const { data, isFetching } = useGdprAdminPendingDeletionsRetrieve();
   const pending: AdminPendingDeletion[] = data?.pending ?? [];
 
   const { mutate: approveMutate, variables: approvingVars } =
@@ -134,13 +126,7 @@ export default function PendingDeletionsCard({
           const acting = approvingId === row.id;
           return (
             <Space>
-              <Tooltip
-                title={
-                  blocked
-                    ? t("gdpr.approve_blocked_tooltip")
-                    : ""
-                }
-              >
+              <Tooltip title={blocked ? t("gdpr.approve_blocked_tooltip") : ""}>
                 <Button
                   type="primary"
                   icon={<CheckOutlined />}
@@ -168,41 +154,29 @@ export default function PendingDeletionsCard({
   );
 
   return (
-    <Card
-      className="settings-card-header"
-      title={
-        <Space>
-          {t("gdpr.pending_deletions")}
-          {pending.length > 0 && <Tag color="orange">{pending.length}</Tag>}
-        </Space>
-      }
-      extra={
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => refetch()}
-          loading={isFetching}
-          size="small"
-        >
-          {t("common.refresh")}
-        </Button>
-      }
-      style={{ width: "100%" }}
-    >
+    <div>
+      <div className="flex-between" style={{ marginBottom: "0.5em" }}>
+        <h3>
+          <Space>
+            {t("gdpr.pending_deletions")}
+            {pending.length > 0 && <Tag color="orange">{pending.length}</Tag>}
+          </Space>
+        </h3>
+      </div>
       <Paragraph type="secondary">
         {t("gdpr.pending_deletions_description")}
       </Paragraph>
-      {pending.length === 0 && !isFetching ? (
-        <EmptyHint>{t("gdpr.no_pending")}</EmptyHint>
-      ) : (
-        <Table
-          columns={columns}
-          dataSource={pending}
-          rowKey="id"
-          pagination={false}
-          size="small"
-          loading={isFetching}
-        />
-      )}
-    </Card>
+
+      <Table
+        className="custom-jasmin-table"
+        columns={columns}
+        dataSource={pending}
+        rowKey="id"
+        pagination={false}
+        size="small"
+        loading={isFetching}
+        locale={{ emptyText: <EmptyHint>{t("gdpr.no_pending")}</EmptyHint> }}
+      />
+    </div>
   );
 }

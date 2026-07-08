@@ -2,14 +2,18 @@ import { useQueries } from "@tanstack/react-query";
 import { Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  getCommissioningPackingListMemberAmountsRetrieveQueryOptions,
   getCommissioningShareDeliveryDetailsMatrixRetrieveQueryOptions,
+  useCommissioningPackingListMemberAmountsRetrieve,
   useCommissioningShareDeliveryDetailsMatrixRetrieve,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
+  CommissioningPackingListMemberAmountsRetrieveParams,
   CommissioningShareDeliveryDetailsMatrixRetrieveParams,
+  PackingBoxesMatrix,
   PackingBoxesMatrixColumn,
   StationMemberMatrix,
 } from "@shared/api/generated/models";
@@ -20,12 +24,14 @@ import { DaySelector, WeekSelector } from "@shared/selectors";
 import { DeliveryStationSelector } from "@features/commissioning/selectors";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, PastWarningMessage, ToolTipIcon } from "@shared/ui";
-import { useTenant } from "@hooks/index";
+import { useSizeOptions, useTenant, useUnitOptions } from "@hooks/index";
 import {
   useBoxCombinationColumns,
   useDeliveryStations,
   useShareDeliveryDays,
+  useShareTypeVariations,
 } from "@features/commissioning/hooks";
+import { filterBulkComboColumns } from "@features/commissioning/utils/filterBulkComboColumns";
 import {
   formatDayLabel,
   formatWeekLabel,
@@ -48,10 +54,43 @@ export default function DeliveryStationDetails() {
 
   const { t } = useTranslation();
   const { tenantName, logoUrl, tenant, getSetting } = useTenant();
+  const { getUnitLabel } = useUnitOptions();
+  const { getSizeLabel } = useSizeOptions();
   const usesExternalDemand = getSetting(
     "uploads_weekly_share_amount",
     false,
   ) as boolean;
+  const showSize = Boolean(getSetting("show_size_column"));
+
+  // Bulk-packed variations belong on the separate bulk list, not the pickup /
+  // tour box lists — drop the box combinations whose base is a bulk variation
+  // from the table and the pickup-list PDFs (frontend-only filter). The bulk
+  // "Was ihr nehmen könnt" member sheet below is a distinct dataset and is
+  // intentionally left untouched.
+  const { shareTypeVariations: bulkVariations } = useShareTypeVariations({
+    is_packed_bulk: true,
+  });
+  const bulkVariationIds = useMemo(
+    () => new Set(bulkVariations.map((variation) => String(variation.id))),
+    [bulkVariations],
+  );
+
+  // Turn a per-station member-amounts matrix into the ``StationPageData``
+  // member-matrix fields: the "Was ihr nehmen könnt" columns + rows (with
+  // unit/size resolved to labels for the PDF). Attached to each station's page
+  // so it prints right after that station's pickup list.
+  const buildMemberMatrix = useCallback(
+    (m: PackingBoxesMatrix | undefined) => ({
+      memberColumns: m?.columns ?? [],
+      memberRows: (m?.rows ?? []).map((row) => ({
+        ...row,
+        unit_label: row.unit ? getUnitLabel(row.unit) : "",
+        size_label: row.size ? getSizeLabel(row.size) : "",
+      })),
+      showSize,
+    }),
+    [getUnitLabel, getSizeLabel, showSize],
+  );
 
   // delivery days — derived purely from the selected year/week (no effect).
   const shareDeliveryDaysFilters = useMemo(
@@ -99,8 +138,11 @@ export default function DeliveryStationDetails() {
       query: { enabled: isQueryEnabled },
     });
   const matrixColumns = useMemo<PackingBoxesMatrixColumn[]>(
-    () => (isQueryEnabled ? (matrix?.columns ?? []) : []),
-    [isQueryEnabled, matrix],
+    () =>
+      isQueryEnabled
+        ? filterBulkComboColumns(matrix?.columns ?? [], bulkVariationIds)
+        : [],
+    [isQueryEnabled, matrix, bulkVariationIds],
   );
   const matrixRows = useMemo<TableRecord[]>(
     () =>
@@ -109,6 +151,25 @@ export default function DeliveryStationDetails() {
   );
   const comboColumns = useBoxCombinationColumns(matrixColumns);
   const loading = isQueryEnabled && matrixFetching;
+
+  // "Was ihr nehmen könnt" (member per-share amounts, is_packed_bulk portion —
+  // same as PackingListBulk) for the CURRENT station. Appended after the
+  // station's pickup page in the PDF.
+  const currentMemberParams =
+    useMemo<CommissioningPackingListMemberAmountsRetrieveParams>(
+      () => ({
+        year: selectedYear,
+        delivery_week: selectedWeek ?? 0,
+        day_number: selectedDeliveryDay ?? 0,
+        delivery_station: selectedDeliveryStation ?? "",
+        is_packed_bulk: true,
+      }),
+      [selectedYear, selectedWeek, selectedDeliveryDay, selectedDeliveryStation],
+    );
+  const { data: currentMemberMatrix } =
+    useCommissioningPackingListMemberAmountsRetrieve(currentMemberParams, {
+      query: { enabled: isQueryEnabled },
+    });
 
   // Compute selectedDeliveryDayId early (needed for station selector and bulk PDFs)
   const selectedDeliveryDayId = useMemo(() => {
@@ -145,6 +206,25 @@ export default function DeliveryStationDetails() {
         : [],
   });
 
+  // Parallel member-amounts ("Was ihr nehmen könnt") per station on the day —
+  // mirrors allStationsDayQueries so each pickup page can carry its member page.
+  const allStationsDayMemberQueries = useQueries({
+    queries:
+      matrixRows.length > 0 &&
+      selectedDeliveryDay !== null &&
+      deliveryStations.length > 0
+        ? deliveryStations.map((station) =>
+            getCommissioningPackingListMemberAmountsRetrieveQueryOptions({
+              year: selectedYear,
+              delivery_week: selectedWeek!,
+              day_number: selectedDeliveryDay,
+              delivery_station: station.value,
+              is_packed_bulk: true,
+            }),
+          )
+        : [],
+  });
+
   // Bulk fetch: the combination matrix for every station across every day of
   // the week.
   const allStationsWeekQueries = useQueries({
@@ -167,6 +247,28 @@ export default function DeliveryStationDetails() {
         : [],
   });
 
+  // Parallel member-amounts per station × day — mirrors allStationsWeekQueries.
+  const allStationsWeekMemberQueries = useQueries({
+    queries:
+      matrixRows.length > 0 &&
+      dayNumbers.length > 0 &&
+      deliveryStations.length > 0
+        ? dayNumbers
+            .filter((d) => d !== null)
+            .flatMap((dayNum) =>
+              deliveryStations.map((station) =>
+                getCommissioningPackingListMemberAmountsRetrieveQueryOptions({
+                  year: selectedYear,
+                  delivery_week: selectedWeek!,
+                  day_number: dayNum,
+                  delivery_station: station.value,
+                  is_packed_bulk: true,
+                }),
+              ),
+            )
+        : [],
+  });
+
   // Build PDF pages for the current station — reuses the already-fetched matrix.
   const currentStationPages = useMemo<StationPageData[] | null>(() => {
     if (!selectedDeliveryStation || matrixRows.length === 0) return null;
@@ -178,14 +280,23 @@ export default function DeliveryStationDetails() {
         stationName: station?.label || "",
         columns: matrixColumns,
         rows: matrixRows as unknown as StationPageData["rows"],
+        ...buildMemberMatrix(currentMemberMatrix),
       },
     ];
-  }, [selectedDeliveryStation, matrixColumns, matrixRows, deliveryStations]);
+  }, [
+    selectedDeliveryStation,
+    matrixColumns,
+    matrixRows,
+    deliveryStations,
+    currentMemberMatrix,
+    buildMemberMatrix,
+  ]);
 
   // Build PDF pages for all stations on the selected day.
   const allStationsDayPages = useMemo<StationPageData[] | null>(() => {
     if (
       allStationsDayQueries.some((q) => q.isLoading) ||
+      allStationsDayMemberQueries.some((q) => q.isLoading) ||
       deliveryStations.length === 0
     )
       return null;
@@ -196,19 +307,34 @@ export default function DeliveryStationDetails() {
           | undefined;
         return {
           stationName: station.label,
-          columns: stationMatrix?.columns ?? [],
+          columns: filterBulkComboColumns(
+            stationMatrix?.columns ?? [],
+            bulkVariationIds,
+          ),
           rows: (stationMatrix?.rows ??
             []) as unknown as StationPageData["rows"],
+          ...buildMemberMatrix(
+            allStationsDayMemberQueries[idx]?.data as
+              | PackingBoxesMatrix
+              | undefined,
+          ),
         };
       })
       .filter((page) => page.rows.length > 0);
     return pages.length > 0 ? pages : null;
-  }, [allStationsDayQueries, deliveryStations]);
+  }, [
+    allStationsDayQueries,
+    allStationsDayMemberQueries,
+    deliveryStations,
+    buildMemberMatrix,
+    bulkVariationIds,
+  ]);
 
   // Build PDF pages for all stations across all days in the week.
   const allStationsWeekPages = useMemo<StationPageData[] | null>(() => {
     if (
       allStationsWeekQueries.some((q) => q.isLoading) ||
+      allStationsWeekMemberQueries.some((q) => q.isLoading) ||
       deliveryStations.length === 0 ||
       dayNumbers.length === 0
     )
@@ -227,15 +353,31 @@ export default function DeliveryStationDetails() {
         if (rows.length > 0) {
           pages.push({
             stationName: `${station.label} — ${dayLabel}`,
-            columns: stationMatrix?.columns ?? [],
+            columns: filterBulkComboColumns(
+              stationMatrix?.columns ?? [],
+              bulkVariationIds,
+            ),
             rows,
+            ...buildMemberMatrix(
+              allStationsWeekMemberQueries[queryIdx]?.data as
+                | PackingBoxesMatrix
+                | undefined,
+            ),
           });
         }
         queryIdx++;
       }
     }
     return pages.length > 0 ? pages : null;
-  }, [allStationsWeekQueries, deliveryStations, dayNumbers, t]);
+  }, [
+    allStationsWeekQueries,
+    allStationsWeekMemberQueries,
+    deliveryStations,
+    dayNumbers,
+    t,
+    buildMemberMatrix,
+    bulkVariationIds,
+  ]);
 
   // Tenant info for PDF header
   const tenantInfo = useMemo(

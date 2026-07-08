@@ -10,8 +10,8 @@ import {
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import type { AdminPendingDeletion } from "@shared/api/generated/models";
-import DecidedDeletionsCard from "@features/configuration/components/DecidedDeletionsCard";
-import PendingDeletionsCard from "@features/configuration/components/PendingDeletionsCard";
+import DecidedDeletionsTable from "@features/members/components/DecidedDeletionsTable";
+import PendingDeletionsTable from "@features/members/components/PendingDeletionsTable";
 
 const { Paragraph } = Typography;
 
@@ -68,8 +68,8 @@ export default function GdprDeletionRequests() {
     <>
       <h1>{t("members.dsgvo_deletion")}</h1>
       <Space direction="vertical" size="middle" className="w-full">
-        <PendingDeletionsCard onRejectRequested={setRejectTarget} />
-        <DecidedDeletionsCard />
+        <PendingDeletionsTable onRejectRequested={setRejectTarget} />
+        <DecidedDeletionsTable />
       </Space>
 
       <Modal

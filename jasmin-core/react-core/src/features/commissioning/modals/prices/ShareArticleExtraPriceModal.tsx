@@ -115,6 +115,7 @@ export default function ShareArticleExtraPriceModal({
           {share_article_name}
         </div>
       }
+      width="50%"
       fkField="share_article"
       fkValue={share_article}
       defaultTaxRate={defaultTaxRateArticles}

@@ -19,6 +19,10 @@ import {
   type TenantInfo as SharedTenantInfo,
 } from "./ListPDFSharedComponents";
 import { pdfTheme } from "./pdfTheme";
+import {
+  PackingBoxesMatrixPage,
+  type PackingBoxesMatrixItem,
+} from "./PackingBoxesMatrixPDF";
 
 const PRIMARY_COLOR = pdfTheme.colors.brand;
 
@@ -51,6 +55,13 @@ export interface StationPageData {
   // different combinations), so the columns travel with the page, not shared.
   columns: PackingBoxesMatrixColumn[];
   rows: MemberRow[];
+  // Optional "Was ihr nehmen könnt" member per-share matrix for THIS station,
+  // rendered as a follow-up page right after the station's pickup list so the
+  // office prints both together. Omitted (or empty) ⇒ no extra page.
+  memberColumns?: PackingBoxesMatrixColumn[];
+  memberRows?: PackingBoxesMatrixItem[];
+  // Whether the member matrix shows the size column (tenant setting).
+  showSize?: boolean;
 }
 
 export interface DeliveryStationDetailsPDFProps {
@@ -244,19 +255,41 @@ export default function DeliveryStationDetailsPDF({
 
   return (
     <Document>
-      {pages.map((page, idx) => (
-        <StationPageContent
-          key={idx}
-          stationName={page.stationName}
-          columns={page.columns}
-          rows={page.rows}
-          orientation={orientation}
-          week={week}
-          dayName={dayName}
-          tenant={tenant}
-          t={t}
-        />
-      ))}
+      {/* Flat array of <Page>s (Document children must be Pages — no Fragment
+          wrapper). Each station contributes its pickup page and, when present,
+          its "Was ihr nehmen könnt" member page right after it. */}
+      {pages.flatMap((page, idx) => {
+        const stationPages = [
+          <StationPageContent
+            key={`${idx}-pickup`}
+            stationName={page.stationName}
+            columns={page.columns}
+            rows={page.rows}
+            orientation={orientation}
+            week={week}
+            dayName={dayName}
+            tenant={tenant}
+            t={t}
+          />,
+        ];
+        if (page.memberColumns?.length && page.memberRows?.length) {
+          stationPages.push(
+            <PackingBoxesMatrixPage
+              key={`${idx}-member`}
+              columns={page.memberColumns}
+              data={page.memberRows}
+              week={week}
+              dayName={`${page.stationName} · ${dayName}`}
+              showSize={page.showSize}
+              tenant={tenant}
+              pillKey="commissioning.packing_list_bulk_member"
+              showCountRow={false}
+              t={t}
+            />,
+          );
+        }
+        return stationPages;
+      })}
     </Document>
   );
 }

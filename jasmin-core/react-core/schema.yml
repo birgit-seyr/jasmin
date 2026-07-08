@@ -30035,7 +30035,7 @@ components:
           nullable: true
         contact:
           type: string
-          nullable: true
+          readOnly: true
         linked_reseller:
           type: string
           nullable: true
@@ -31209,7 +31209,7 @@ components:
         kg_per_piece:
           type: string
           format: decimal
-          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
           nullable: true
         price_per_unit:
           type: string
@@ -31403,7 +31403,7 @@ components:
         kg_per_piece:
           type: string
           format: decimal
-          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
           nullable: true
         price_per_unit:
           type: string
@@ -33294,6 +33294,9 @@ components:
         washing_day:
           type: integer
           writeOnly: true
+        cleaning_day:
+          type: integer
+          writeOnly: true
         last_possible_ordering_day:
           type: integer
           writeOnly: true
@@ -33464,6 +33467,9 @@ components:
         washing_day:
           type: integer
           nullable: true
+        cleaning_day:
+          type: integer
+          nullable: true
         last_possible_ordering_day:
           type: integer
           nullable: true
@@ -33551,6 +33557,7 @@ components:
       required:
       - amount
       - amount_per_pu
+      - cleaning_day
       - harvesting_day
       - id
       - is_placeholder
@@ -33610,6 +33617,9 @@ components:
           type: integer
           nullable: true
         washing_day:
+          type: integer
+          nullable: true
+        cleaning_day:
           type: integer
           nullable: true
         last_possible_ordering_day:
@@ -33723,6 +33733,7 @@ components:
       required:
       - amount
       - amount_per_pu
+      - cleaning_day
       - delivery_note_id
       - delivery_note_is_finalized
       - delivery_note_number
@@ -33806,6 +33817,9 @@ components:
         washing_day:
           type: integer
           nullable: true
+        cleaning_day:
+          type: integer
+          nullable: true
         delivery_note_id:
           type: string
           nullable: true
@@ -33831,6 +33845,7 @@ components:
         has_finalized_invoice:
           type: boolean
       required:
+      - cleaning_day
       - delivery_note_id
       - delivery_note_is_finalized
       - delivery_note_number
@@ -34798,6 +34813,7 @@ components:
           maxLength: 500
         contact:
           type: string
+          readOnly: true
         linked_user:
           type: string
           nullable: true
@@ -34888,7 +34904,6 @@ components:
       required:
       - address
       - city
-      - contact
       - zip_code
     SarAccount:
       type: object

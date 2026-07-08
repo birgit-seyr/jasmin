@@ -29,6 +29,7 @@ export interface OrderContent {
   harvesting_day?: number;
   packing_day?: number;
   washing_day?: number;
+  cleaning_day?: number;
   /** @nullable */
   last_possible_ordering_day?: number | null;
   readonly order_id?: string;

@@ -36,7 +36,7 @@ const ALL_PURPOSES = [
   "gdpr.deletion_rejected",
 ] as const;
 
-export default function ConfigurationEmailLog() {
+export default function EmailLog() {
   const { t } = useTranslation();
   const { formatDateTime } = useTimeFormat();
 
@@ -121,6 +121,7 @@ export default function ConfigurationEmailLog() {
 
   return (
     <div>
+      <h1>{t("members.title_email_log")}</h1>
       <div className="filter-bar" style={{ marginBottom: "2em" }}>
         <Input
           placeholder={t("email_matrix.recipient")}

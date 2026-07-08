@@ -18,6 +18,7 @@
   "status_active": "aktiv",
   "status_trial": "Probe",
   "dsgvo_deletion": "DSGVO Löschanträge",
+  "title_email_log": "Emailverlauf",
   "status_cancelled": "Gekündigt",
   "status_rejected": "Abgelehnt",
   "status_pending": "Ausstehend",

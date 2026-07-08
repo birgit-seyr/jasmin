@@ -227,17 +227,22 @@ export default function Orders() {
   const dayConfigs = useMemo(
     () => [
       {
-        label: t("commissioning.harvest"),
+        label: t("commissioning.harvest_day_label"),
         field: "harvesting_day" as const,
         defaultField: "default_harvesting_day" as const,
       },
       {
-        label: t("commissioning.washing"),
+        label: t("commissioning.washing_day_label"),
         field: "washing_day" as const,
         defaultField: "default_washing_day" as const,
       },
       {
-        label: t("commissioning.commissioning"),
+        label: t("commissioning.cleaning_day_label"),
+        field: "cleaning_day" as const,
+        defaultField: "default_cleaning_day" as const,
+      },
+      {
+        label: t("commissioning.commissioning_day_label"),
         field: "packing_day" as const,
         defaultField: "default_packing_day" as const,
       },
@@ -251,7 +256,10 @@ export default function Orders() {
         key: "offers",
         label: (
           <span>
-            {t("commissioning.orders_from_offers")} ({filteredDataOffersCount})
+            <h3>
+              {t("commissioning.orders_from_offers")} ({filteredDataOffersCount}
+              )
+            </h3>
           </span>
         ),
         children:
@@ -305,8 +313,10 @@ export default function Orders() {
         key: "articles",
         label: (
           <span>
-            {t("commissioning.orders_from_articles")} (
-            {filteredDataArticlesCount})
+            <h3>
+              {t("commissioning.orders_from_articles")} (
+              {filteredDataArticlesCount})
+            </h3>
           </span>
         ),
         children: (
@@ -352,8 +362,10 @@ export default function Orders() {
               gap: "0.5em",
             }}
           >
-            {t("commissioning.crates_in_orders")} ({dataCratesCount})
-            <ToolTipIcon title={t("tooltip.crates_in_orders")} />
+            <h3>
+              {t("commissioning.crates_in_orders")} ({dataCratesCount})
+              <ToolTipIcon title={t("tooltip.crates_in_orders")} />
+            </h3>
           </span>
         ),
         children: (

@@ -44,7 +44,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from apps.accounts.models import JasminUser
 from apps.authz.roles import Role
-from apps.commissioning.models import Member, Reseller
+from apps.commissioning.models import ContactEntity, Member, Reseller
 
 # ``link``: which domain row to attach to the user. ``None`` skips the
 # link (pure staff / office logins have no member / reseller side).
@@ -145,9 +145,24 @@ class Command(BaseCommand):
             )
             link_label = f"member_id={row.id} ({'new' if row_created else 'existing'})"
         elif link_kind == "reseller":
+            # Reseller.contact is a required FK to ContactEntity (PROTECT), and
+            # ContactEntity needs address / zip_code / city — seed a minimal
+            # placeholder so the office Offers / OrderContent pages render.
+            contact, _ = ContactEntity.objects.get_or_create(
+                user=user,
+                defaults={
+                    "first_name": spec["first_name"],
+                    "last_name": spec["last_name"],
+                    "email": spec["email"],
+                    "address": "Teststraße 1",
+                    "zip_code": "12345",
+                    "city": "Teststadt",
+                },
+            )
             row, row_created = Reseller.objects.get_or_create(
                 linked_user=user,
                 defaults={
+                    "contact": contact,
                     "name_for_member_pages": (
                         f"{spec['first_name']} {spec['last_name']}"
                     ),

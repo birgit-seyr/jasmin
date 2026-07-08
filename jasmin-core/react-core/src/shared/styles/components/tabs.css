@@ -83,9 +83,11 @@
   margin-bottom: 0;
 }
 
-/* Tab cards: rounded tops. */
+/* Tab cards: rounded tops + a shorter card than the AntD `large` default. */
 .orders-view-switcher .ant-tabs-tab {
   border-radius: 8px 8px 0 0 !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
 }
 
 /* Active card: pale primary tint + primary border + bold primary label.

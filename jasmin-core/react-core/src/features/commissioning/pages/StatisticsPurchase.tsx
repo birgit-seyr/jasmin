@@ -78,6 +78,7 @@ export default function StatisticsPurchase() {
           presets={presets}
           format={dateFormat}
           allowClear={false}
+          aria-label={t("commissioning.statistics_purchase_date_range")}
         />
 
         {/* The totals are only as good as the prices entered in the planning /
@@ -106,8 +107,12 @@ export default function StatisticsPurchase() {
             height={320}
             emptyText={t("commissioning.statistics_purchase_no_data")}
             valueFormatter={formatCurrency}
+            // Accessible name for the chart SVG + caption/header for its
+            // visually-hidden data table (per-week figures for screen readers).
+            ariaLabel={t("commissioning.statistics_purchase_chart_title")}
+            xHeader={t("commissioning.KW")}
             // Weeks with no buy-in (e.g. delivery-exception weeks): a dark-grey
-            // baseline stub bar, with their x-axis week number in lighter grey.
+            // baseline stub bar, with their x-axis week number one step greyer.
             // Show every week number, not just recharts' auto-thinned subset.
             showEmptyBars
             muteEmptyLabels

@@ -31,6 +31,8 @@ export interface OrderContentItem {
   /** @nullable */
   washing_day: number | null;
   /** @nullable */
+  cleaning_day: number | null;
+  /** @nullable */
   last_possible_ordering_day: number | null;
   /** @nullable */
   offer: string | null;

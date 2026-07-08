@@ -48,7 +48,7 @@ const localStyles = StyleSheet.create({
   },
 });
 
-interface PackingBoxesMatrixItem {
+export interface PackingBoxesMatrixItem {
   id?: string | number;
   share_article_name?: string;
   unit_label?: string;
@@ -82,7 +82,13 @@ function formatAmount(value: unknown): string {
   return String(n);
 }
 
-const PackingBoxesMatrixPDF = ({
+/**
+ * The matrix as a single ``<Page>`` (no ``<Document>`` wrapper) so it can be
+ * embedded into another document — e.g. appended after each station's pickup
+ * page in the delivery-station-details PDF. Computes its own orientation from
+ * its column count, so it can sit next to differently-oriented pages.
+ */
+export const PackingBoxesMatrixPage = ({
   columns,
   data,
   week,
@@ -119,9 +125,8 @@ const PackingBoxesMatrixPDF = ({
     flexMinWidth: NOTE_MIN_WIDTH,
   });
   return (
-    <Document>
-      <Page size="A4" orientation={orientation} style={listStyles.page}>
-        <ListPDFHeader tenant={tenant} pill={t(pillKey)}>
+    <Page size="A4" orientation={orientation} style={listStyles.page}>
+      <ListPDFHeader tenant={tenant} pill={t(pillKey)}>
           <Text style={listStyles.title}>
             {t("commissioning.KW")} {week} · {dayName}
           </Text>
@@ -386,8 +391,13 @@ const PackingBoxesMatrixPDF = ({
 
         <ListPDFFooter t={t} />
       </Page>
-    </Document>
   );
 };
+
+const PackingBoxesMatrixPDF = (props: PackingBoxesMatrixPDFProps) => (
+  <Document>
+    <PackingBoxesMatrixPage {...props} />
+  </Document>
+);
 
 export default PackingBoxesMatrixPDF;

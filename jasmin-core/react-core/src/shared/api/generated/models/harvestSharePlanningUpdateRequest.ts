@@ -21,7 +21,7 @@ export interface HarvestSharePlanningUpdateRequest {
   washing?: boolean;
   /**
    * @nullable
-   * @pattern ^-?\d{0,8}(?:\.\d{0,2})?$
+   * @pattern ^-?\d{0,7}(?:\.\d{0,3})?$
    */
   kg_per_piece?: string | null;
   /**

@@ -43,6 +43,20 @@ interface ShareArticleColumnConfig {
    */
   articleDefaults?: ArticleDefaults;
   /**
+   * Side-effect run AFTER the built-in article/unit autofill patches are
+   * written. Lets a page layer on context-specific autofill (e.g. the planning
+   * grid's per-variation default amounts from ``DefaultShareArticleInShare``)
+   * WITHOUT discarding the pricing / PU / crate patch that ``articleDefaults``
+   * produces. Invoked on article change (with the freshly-seeded default unit)
+   * and on unit change (with the new unit), each with the resolved article id +
+   * unit + form. No-op if omitted.
+   */
+  onDefaultsApplied?: (
+    articleId: string,
+    unit: string,
+    form: FormInstance,
+  ) => void;
+  /**
    * Tier thresholds used by ``handleAmountChange`` (reseller context
    * only). The array is interpreted as [tier1, tier2, tier3]; a typed
    * amount picks ``price_3`` if ``finalTiers[2]`` is set and
@@ -81,6 +95,7 @@ export const useShareArticleColumn = (config: ShareArticleColumnConfig = {}) => 
     showVegsOnly = false,
     showFruitsAndVegs = false,
     articleDefaults,
+    onDefaultsApplied,
     finalTiers,
     disableCondition = null,
     tooltip = null,
@@ -118,9 +133,10 @@ export const useShareArticleColumn = (config: ShareArticleColumnConfig = {}) => 
       form.setFieldsValue(
         computeShareArticlePatch(articleDefaults, article, defaultUnit),
       );
+      onDefaultsApplied?.(shareArticleValue, defaultUnit, form);
       return {};
     },
-    [articleDefaults, shareArticles, unitOptions],
+    [articleDefaults, shareArticles, unitOptions, onDefaultsApplied],
   );
 
   /**
@@ -144,9 +160,10 @@ export const useShareArticleColumn = (config: ShareArticleColumnConfig = {}) => 
       if (!selected) return {};
       const article = asShareArticle(selected);
       form.setFieldsValue(computeUnitChangePatch(articleDefaults, article, newUnit));
+      onDefaultsApplied?.(articleId, newUnit, form);
       return {};
     },
-    [articleDefaults, shareArticles],
+    [articleDefaults, shareArticles, onDefaultsApplied],
   );
 
   /**

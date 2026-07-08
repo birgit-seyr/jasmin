@@ -71,6 +71,13 @@ interface StatsBarChartProps {
   /** Force every category tick to render (recharts thins them by default). Use
    *  when each label matters (e.g. every ISO week). */
   showAllXLabels?: boolean;
+  /** Accessible name for the chart. recharts marks the SVG as a focusable
+   *  ``role="application"`` widget; without this it has no name. Also used as
+   *  the caption of the visually-hidden data table. */
+  ariaLabel?: string;
+  /** Header for the category column of the visually-hidden data table
+   *  (e.g. "Week"). Defaults to ``xKey``. */
+  xHeader?: string;
 }
 
 /**
@@ -91,6 +98,8 @@ export default function StatsBarChart({
   showEmptyBars = false,
   muteEmptyLabels = false,
   showAllXLabels = false,
+  ariaLabel,
+  xHeader,
 }: StatsBarChartProps) {
   const { token } = theme.useToken();
 
@@ -102,7 +111,7 @@ export default function StatsBarChart({
     return <EmptyHint style={{ padding: "2em 0" }}>{emptyText}</EmptyHint>;
   }
 
-  const axisTick = { fill: token.colorTextSecondary, fontSize: 12 };
+  const axisTick = { fill: token.colorText, fontSize: 12 };
   const gridStroke = token.colorBorderSecondary;
   const tooltipStyle = {
     background: token.colorBgElevated,
@@ -118,9 +127,11 @@ export default function StatsBarChart({
     ? makeBarShape(token.colorTextTertiary)
     : undefined;
 
-  // x-values whose every series value is 0 — their axis labels render in a
-  // lighter grey so an empty period (e.g. a delivery-exception week) reads as
-  // de-emphasised. Null when the feature is off (default tick object).
+  // x-values whose every series value is 0 — their axis labels render one step
+  // greyer (colorTextSecondary vs the normal colorText) so an empty period
+  // (e.g. a delivery-exception week) reads as de-emphasised while STILL meeting
+  // the 4.5:1 text-contrast minimum. Null when the feature is off (default tick
+  // object).
   const emptyXValues = muteEmptyLabels
     ? new Set(
         data
@@ -143,7 +154,7 @@ export default function StatsBarChart({
         dy={12}
         textAnchor="middle"
         fontSize={12}
-        fill={muted ? token.colorTextQuaternary : token.colorTextSecondary}
+        fill={muted ? token.colorTextSecondary : token.colorText}
       >
         {value}
       </text>
@@ -151,9 +162,44 @@ export default function StatsBarChart({
   };
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-        <CartesianGrid
+    <>
+      {/* Visually-hidden text equivalent so the per-bucket figures are
+          available to screen readers, not only as visual bars / hover. */}
+      <table className="sr-only">
+        {ariaLabel ? <caption>{ariaLabel}</caption> : null}
+        <thead>
+          <tr>
+            <th scope="col">{xHeader ?? xKey}</th>
+            {series.map((s) => (
+              <th key={s.id} scope="col">
+                {s.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, index) => (
+            <tr key={String(row[xKey] ?? index)}>
+              <th scope="row">{String(row[xKey] ?? "")}</th>
+              {series.map((s) => {
+                const value = Number(row[s.id] ?? 0);
+                return (
+                  <td key={s.id}>
+                    {valueFormatter ? valueFormatter(value) : String(value)}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ResponsiveContainer width="100%" height={height}>
+        <BarChart
+          data={data}
+          margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
+          aria-label={ariaLabel}
+        >
+          <CartesianGrid
           strokeDasharray="3 3"
           stroke={gridStroke}
           vertical={false}
@@ -188,7 +234,8 @@ export default function StatsBarChart({
             shape={emptyBarShape}
           />
         ))}
-      </BarChart>
-    </ResponsiveContainer>
+        </BarChart>
+      </ResponsiveContainer>
+    </>
   );
 }

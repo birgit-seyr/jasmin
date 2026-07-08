@@ -28,6 +28,8 @@ export interface OrderMetadata {
   /** @nullable */
   washing_day: number | null;
   /** @nullable */
+  cleaning_day: number | null;
+  /** @nullable */
   delivery_note_id: string | null;
   /** @nullable */
   delivery_note_number: string | null;

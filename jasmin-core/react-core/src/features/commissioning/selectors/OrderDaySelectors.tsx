@@ -1,5 +1,9 @@
 import { Select } from "antd";
-import type { OddDefaults, OrderDays } from "@features/commissioning/hooks/useOrdersData";
+import { ToolTipIcon } from "@shared/ui";
+import type {
+  OddDefaults,
+  OrderDays,
+} from "@features/commissioning/hooks/useOrdersData";
 
 const DAY_OPTIONS = [
   { value: 0, label: "MO" },
@@ -23,6 +27,8 @@ interface OrderDaySelectorsProps {
   oddDefaults: OddDefaults;
   orderId: string | number | null;
   onDayChange: (field: keyof OrderDays, value: number | null) => void;
+  /** One tooltip explaining the whole harvest / washing / commissioning-day group. */
+  tooltip?: string;
 }
 
 export function OrderDaySelectors({
@@ -31,6 +37,7 @@ export function OrderDaySelectors({
   oddDefaults,
   orderId,
   onDayChange,
+  tooltip,
 }: OrderDaySelectorsProps) {
   return (
     <div
@@ -43,6 +50,7 @@ export function OrderDaySelectors({
         flexWrap: "wrap",
       }}
     >
+      {tooltip && <ToolTipIcon title={tooltip} />}
       {days.map(({ label, field, defaultField }) => {
         const differs =
           orderId != null &&
@@ -50,14 +58,9 @@ export function OrderDaySelectors({
           orderDays[field] !== oddDefaults[defaultField];
 
         return (
-          <div
-            key={field}
-            className="flex-center-y"
-            style={{ gap: "0.25em" }}
-          >
+          <div key={field} className="flex-center-y" style={{ gap: "0.25em" }}>
             <span
               style={{
-                fontSize: "0.85em",
                 color: differs ? "red" : undefined,
                 fontWeight: differs ? "bold" : undefined,
               }}
@@ -65,14 +68,14 @@ export function OrderDaySelectors({
               {label}:
             </span>
             <Select
-              size="small"
-              style={{ width: 65 }}
+              style={{ width: 80 }}
               className={differs ? "day-select-differs" : "day-select-violet"}
               value={orderDays[field]}
               onChange={(val) => onDayChange(field, val)}
               options={DAY_OPTIONS}
               disabled={orderId != null}
               allowClear
+              size="small"
             />
           </div>
         );

@@ -73,7 +73,10 @@ export default function PriceEditorModal<T, TCreate, TUpdate = TCreate>({
   visible,
   onClose,
   title,
-  width = "max-content",
+  // Fixed default (NOT ``max-content``): an AntD Modal sized to content
+  // feedback-loops with the inner table's ResizeObserver and creeps ever
+  // wider. Callers pass their own fixed width; this is the fallback.
+  width = 700,
   style,
   zIndex = 1100,
   fkField,
@@ -186,16 +189,16 @@ export default function PriceEditorModal<T, TCreate, TUpdate = TCreate>({
       {loading ? (
         <div className="loading-placeholder">
           <Spin size="large" />
+          {/* AntD wires aria-live on the Spin, but with no text child it
+              announces nothing — give the live region readable status text. */}
+          <span className="sr-only" role="status">
+            {t("common.loading")}
+          </span>
         </div>
       ) : (
         <>
           {t("commissioning.prices_are_netto")}
           <EditableTable
-            // ``w-max`` pins the inner table to its content width so it hugs
-            // the columns instead of AntD stretching it to 100% — which, inside
-            // the ``width: max-content`` Modal above, would otherwise creep the
-            // whole modal out to the viewport cap.
-            className="custom-jasmin-table w-max"
             columns={columns}
             apiFunctions={apiFunctions}
             initialData={data}

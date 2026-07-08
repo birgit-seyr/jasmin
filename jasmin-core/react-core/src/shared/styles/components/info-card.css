@@ -1,12 +1,11 @@
 /* Read-only "order info" summary — the order / delivery-note / invoice panel on
-   the Orders page and inside the invoice / delivery-note modals. A neutral
-   elevated surface with a brand-green accent, all from design tokens (replaces
+   the Orders page and inside the invoice / delivery-note modals. An elevated
+   card framed by the brand dark-green border, all from design tokens (replaces
    a hardcoded light-blue / pink that clashed with the green theme). Dark mode
    falls out of the tokens automatically — no separate override needed. */
 .order-info {
   background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-soft);
-  border-left: 3px solid var(--color-primary);
+  border: 1.5px solid var(--color-primary);
   border-radius: 8px;
   padding: 14px 20px;
   margin: 1em 0;

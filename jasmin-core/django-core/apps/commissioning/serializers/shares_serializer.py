@@ -696,7 +696,7 @@ class HarvestSharePlanningCreateRequestSerializer(_DayVariationAmountSerializer)
     cleaning = serializers.BooleanField(required=False, default=False)
     washing = serializers.BooleanField(required=False, default=False)
     kg_per_piece = serializers.DecimalField(
-        max_digits=10, decimal_places=2, required=False, allow_null=True
+        max_digits=10, decimal_places=3, required=False, allow_null=True
     )
     price_per_unit = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, allow_null=True
@@ -712,7 +712,7 @@ class HarvestSharePlanningUpdateRequestSerializer(_DayVariationAmountSerializer)
     cleaning = serializers.BooleanField(required=False, default=False)
     washing = serializers.BooleanField(required=False, default=False)
     kg_per_piece = serializers.DecimalField(
-        max_digits=10, decimal_places=2, required=False, allow_null=True
+        max_digits=10, decimal_places=3, required=False, allow_null=True
     )
     price_per_unit = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, allow_null=True

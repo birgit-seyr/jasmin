@@ -9,11 +9,10 @@ create/update/delete path goes through.
 Queryset bulk operations (``Member.objects.filter(...).delete()`` /
 ``.update(user=...)``) bypass model methods entirely — unlike the old
 ``pre_delete`` signal, which also fired on queryset deletes. The only
-such call sites are the two demo-seed ``_clean`` commands
-(``seed_demo_members`` / ``seed_user_status_demo``), where the skipped
-role retraction is moot because they delete the linked JasminUser rows
-immediately afterwards. Any new queryset bulk call site must call
-these functions itself.
+such call site is the demo-seed ``_clean`` command
+(``seed_user_status_demo``), where the skipped role retraction is moot
+because it deletes the linked JasminUser rows immediately afterwards.
+Any new queryset bulk call site must call these functions itself.
 """
 
 from __future__ import annotations

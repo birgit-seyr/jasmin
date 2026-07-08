@@ -55,9 +55,6 @@ const ListCrates = lazy(
 const ListDeliveryStations = lazy(
   () => import("@features/commissioning/pages/ListDeliveryStations"),
 );
-const DeliveryExceptionPeriods = lazy(
-  () => import("@features/commissioning/pages/DeliveryExceptionPeriods"),
-);
 const DeliveryStationFees = lazy(
   () => import("@/features/commissioning/pages/DeliveryStationFees"),
 );
@@ -402,14 +399,6 @@ export const commissioningRoutes: AppRoute[] = [
     element: (
       <RequireRole flag="isStaff">
         <ListDeliveryStations />
-      </RequireRole>
-    ),
-  },
-  {
-    path: "/commissioning/delivery-exceptions",
-    element: (
-      <RequireRole flag="isStaff">
-        <DeliveryExceptionPeriods />
       </RequireRole>
     ),
   },

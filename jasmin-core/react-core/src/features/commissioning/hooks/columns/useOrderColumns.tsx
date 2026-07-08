@@ -75,7 +75,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
       unit: { onFieldChange: handleUnitChange },
       amount: {
         title: t("commissioning.ordered_amount"),
-        width: "11em",
+        width: "7em",
         inputType: "positive_decimal3",
         onFieldChange: handleAmountChange,
         render: (value: unknown, record: Record<string, unknown>) => {
@@ -105,9 +105,9 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
       orderedAmountPu: unknown,
       form: { setFieldValue: (name: string, value: unknown) => void },
     ) => {
-      const offer = offers.find((o) => String(o.value) === String(offerValue)) as
-        | Record<string, unknown>
-        | undefined;
+      const offer = offers.find(
+        (o) => String(o.value) === String(offerValue),
+      ) as Record<string, unknown> | undefined;
       if (!offer) return {};
       const price = pickTierPrice(
         Number(orderedAmountPu) || 0,
@@ -334,6 +334,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
         harvesting_day: number | null;
         packing_day: number | null;
         washing_day: number | null;
+        cleaning_day: number | null;
       },
       dataItems: Record<string, unknown>[],
       calculatePricePerUnit: (
@@ -379,6 +380,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
           harvesting_day: orderDaysVal.harvesting_day,
           packing_day: orderDaysVal.packing_day,
           washing_day: orderDaysVal.washing_day,
+          cleaning_day: orderDaysVal.cleaning_day,
         };
 
         if (transformedData.offer && transformedData.amount) {
@@ -419,6 +421,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
         harvesting_day: number | null;
         packing_day: number | null;
         washing_day: number | null;
+        cleaning_day: number | null;
       },
     ) => {
       return (
@@ -454,6 +457,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
           harvesting_day: orderDaysVal.harvesting_day,
           packing_day: orderDaysVal.packing_day,
           washing_day: orderDaysVal.washing_day,
+          cleaning_day: orderDaysVal.cleaning_day,
         };
 
         // For an unused-offer row the user typically only edits `amount` —

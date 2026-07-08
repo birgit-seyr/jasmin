@@ -46,6 +46,7 @@
   "member_number": "The member number is assigned automatically when the member is approved.",
   "locked_setting_tooltip": "This setting is locked because it affects the numbering of documents. It can only be changed at the turn of the year, when the numbering is reset.",
   "order_number": "If the order has not been committed, it has a provisional order number with the suffix v.",
+  "order_days": "Harvest, washing, cleaning and commissioning day for this order. When they differ from the reseller's defaults they are highlighted in red. They can no longer be changed once the order has been created.",
   "delivery_note_number": "If the delivery note is not finalized, it has a provisional number with the suffix v.",
   "invoice_number": "If the invoice is not finalized, it has a provisional number with the suffix v.",
   "order_note": "This note reappears in the commissioning list.",

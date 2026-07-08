@@ -39,12 +39,14 @@ import {
   commissioningHarvestSharePlanningDestroy,
   commissioningHarvestSharePlanningUpdate,
   getCommissioningHarvestSharePlanningListQueryKey,
+  useCommissioningDefaultShareArticlesInShareList,
   useCommissioningHarvestSharePlanningList,
   useCommissioningShareTypeVariationAmountsForPlanningRetrieve,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningGranularityRetrieveParams,
   CommissioningHarvestSharePlanningListParams,
+  DefaultShareArticleInShare,
   HarvestSharePlanningCreateRequest,
   HarvestSharePlanningRow,
   HarvestSharePlanningUpdateRequest,
@@ -69,11 +71,33 @@ import type { FormInstance } from "antd";
 import { Button, Space } from "antd";
 import dayjs from "dayjs";
 import type { Key } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const currentYear = dayjs().year();
 const nextWeek = dayjs().isoWeek();
+
+// The article's net box price field for each unit — the source of a planning
+// row's ``price_per_unit`` default (mirrors the backend's per-unit fallback in
+// ShareContentService).
+const PRICE_PER_UNIT_ARTICLE_FIELD: Record<string, string> = {
+  KG: "net_price_for_boxes_kg",
+  PCS: "net_price_for_boxes_pieces",
+  PIECES: "net_price_for_boxes_pieces",
+  BUNCH: "net_price_for_boxes_bunch",
+};
+
+// The article's per-item weight base for each unit — the source of a planning
+// row's ``kg_per_piece``. PCS uses the per-piece weight, BUNCH the per-bunch
+// weight (a distinct field); KG carries no per-item weight (the amount is
+// already in kg). Combined with the row's size, e.g. ``kg_per_piece_M`` /
+// ``kg_per_bunch_M``.
+const KG_WEIGHT_ARTICLE_BASE: Record<string, string | null> = {
+  KG: null,
+  PCS: "kg_per_piece",
+  PIECES: "kg_per_piece",
+  BUNCH: "kg_per_bunch",
+};
 
 interface PlanningHarvestSharesBaseProps {
   shareOption: ShareTypeEnum;
@@ -204,6 +228,28 @@ export default function PlanningHarvestSharesBase({
   const { refetch: refetchShareArticles } =
     useShareArticles(shareArticleFilters);
 
+  // Article list used ONLY to source the kg/price autofill defaults. Pinned to
+  // the PLANNING WEEK's price (``price_date`` = that week's Tuesday, matching
+  // the backend's ``Week(...).tuesday()`` fallback) and scoped to this page's
+  // share_option so the picked article is always present — otherwise the
+  // net-box-price annotation defaults to TODAY's price and freezes the wrong
+  // value on the row for any week at/after a scheduled price change.
+  const pricingArticleFilters = useMemo(
+    () => ({
+      ...shareArticleFilters,
+      share_option: shareOption,
+      get_price_info: true,
+      price_date: dayjs()
+        .year(selectedYear)
+        .isoWeek(selectedWeek ?? nextWeek)
+        .isoWeekday(2)
+        .format("YYYY-MM-DD"),
+    }),
+    [shareArticleFilters, shareOption, selectedYear, selectedWeek],
+  );
+  const { shareArticles: pricingArticles } =
+    useShareArticles(pricingArticleFilters);
+
   // Cast to extended type that correctly types delivery_stations as array
   const shareDeliveryDays = useMemo(
     () => rawShareDeliveryDays as unknown as DeliveryDay[],
@@ -219,6 +265,196 @@ export default function PlanningHarvestSharesBase({
   const hasVariationColumns =
     shareTypeVariations.length > 0 && shareDeliveryDays.length > 0;
   const showGrid = columnsLoading || hasVariationColumns;
+
+  // Per-share default amounts (``DefaultShareArticleInShare``): the configured
+  // quantity of a share article inside each share-type variation. Prefetched
+  // for the whole tenant and indexed by article so the (day × variation) cell
+  // prefill below can run synchronously inside the in-edit field handlers.
+  const { data: defaultShareArticlesRaw } =
+    useCommissioningDefaultShareArticlesInShareList(
+      {},
+      { query: { enabled: hasVariationColumns } },
+    );
+  const defaultsByArticle = useMemo(() => {
+    const map = new Map<string, DefaultShareArticleInShare[]>();
+    (defaultShareArticlesRaw ?? []).forEach((entry) => {
+      const key = String(entry.share_article);
+      const list = map.get(key);
+      if (list) list.push(entry);
+      else map.set(key, [entry]);
+    });
+    return map;
+  }, [defaultShareArticlesRaw]);
+
+  // The editable day×variation cell keys for one (day, variation) in the
+  // currently-active tier — mirrors ``customEdit``'s tier fan-out exactly.
+  const activeTierCellKeys = useCallback(
+    (deliveryDay: DeliveryDay, variationId: string): string[] => {
+      const dayId = deliveryDay.id!;
+      if (planningMode === "tours" && deliveryDay.used_tours) {
+        return deliveryDay.used_tours.map((tour: number) =>
+          dayVariationKey({ dayId, variationId, tour }),
+        );
+      }
+      if (planningMode === "stations" && deliveryDay.delivery_stations) {
+        return deliveryDay.delivery_stations.map((station) =>
+          dayVariationKey({ dayId, variationId, station: station.id }),
+        );
+      }
+      return [dayVariationKey({ dayId, variationId })];
+    },
+    [planningMode],
+  );
+
+  // Prefill each variation's day cells with its configured default amount for
+  // the chosen article + unit.
+  //   * ``replace`` (the article itself changed): the prior article's amounts
+  //     are stale, so REPLACE — set each variation's cells to the new article's
+  //     default and clear (0) any cell the new article has no default for.
+  //   * otherwise (unit/size changed on the same article): only fill when the
+  //     row carries NO amount yet, so a planner's typed values are never
+  //     clobbered.
+  const applyDefaultAmounts = useCallback(
+    (
+      articleId: string,
+      unit: string,
+      form: {
+        getFieldValue: (field: string) => unknown;
+        setFieldsValue: (values: Record<string, unknown>) => void;
+      },
+      replace: boolean,
+    ) => {
+      const rowDefaults = defaultsByArticle.get(String(articleId)) ?? [];
+
+      if (!replace) {
+        // Same article: nothing to fill if it has no defaults, and never
+        // overwrite amounts already present on the row.
+        if (rowDefaults.length === 0) return;
+        const hasAmount = shareDeliveryDays.some((deliveryDay) =>
+          shareTypeVariations.some((variation) =>
+            activeTierCellKeys(deliveryDay, String(variation.id)).some(
+              (key) => (parseFloat(String(form.getFieldValue(key))) || 0) > 0,
+            ),
+          ),
+        );
+        if (hasAmount) return;
+      }
+
+      const patch: Record<string, unknown> = {};
+      shareTypeVariations.forEach((variation) => {
+        const variationId = String(variation.id);
+        const candidates = rowDefaults.filter(
+          (entry) => String(entry.share_type_variation) === variationId,
+        );
+        // Prefer the default matching the row's unit; fall back to a
+        // unit-agnostic default, then to whatever is configured.
+        const match =
+          candidates.find((entry) => (entry.unit ?? "") === (unit ?? "")) ??
+          candidates.find((entry) => !entry.unit) ??
+          candidates[0];
+        const quantity = match ? parseFloat(String(match.quantity)) : NaN;
+        const value =
+          Number.isFinite(quantity) && quantity > 0 ? String(quantity) : null;
+        shareDeliveryDays.forEach((deliveryDay) => {
+          activeTierCellKeys(deliveryDay, variationId).forEach((key) => {
+            if (value !== null) patch[key] = value;
+            else if (replace) patch[key] = "0";
+          });
+        });
+      });
+
+      if (Object.keys(patch).length > 0) {
+        form.setFieldsValue(patch);
+      }
+    },
+    [defaultsByArticle, shareDeliveryDays, shareTypeVariations, activeTierCellKeys],
+  );
+
+  // Article-derived row defaults. kg/piece is SIZE-specific
+  // (``kg_per_piece_<size>``); price_per_unit is UNIT-specific (the article's
+  // net box price). Both are pure functions of the chosen article + unit +
+  // size, so they refresh whenever any of those change.
+  const pricingArticlesById = useMemo(
+    () =>
+      new Map(
+        (pricingArticles ?? []).map((article) => [String(article.id), article]),
+      ),
+    [pricingArticles],
+  );
+
+  const applyArticlePricingDefaults = useCallback(
+    (
+      articleId: string,
+      unit: string,
+      form: {
+        getFieldValue: (field: string) => unknown;
+        setFieldsValue: (values: Record<string, unknown>) => void;
+      },
+      articleChanged: boolean,
+    ) => {
+      const article = pricingArticlesById.get(String(articleId)) as
+        | Record<string, unknown>
+        | undefined;
+      if (!article) return;
+
+      const patch: Record<string, unknown> = {};
+      const unitKey = String(unit).toUpperCase();
+      const size = String(form.getFieldValue("size") ?? "");
+
+      // kg/item weight is fully derived from (article, unit, size), so always
+      // reflect the current state: the per-PIECE weight for PCS, the per-BUNCH
+      // weight for BUNCH, and none for KG. Clearing when this unit/size has no
+      // source weight (KG, or a bunch article lacking a per-bunch weight) stops
+      // a stale piece-weight from lingering after a unit switch.
+      const weightBase = KG_WEIGHT_ARTICLE_BASE[unitKey];
+      const kgWeight =
+        weightBase && size ? article[`${weightBase}_${size}`] : undefined;
+      patch.kg_per_piece =
+        kgWeight != null && kgWeight !== "" ? kgWeight : null;
+
+      const priceField = PRICE_PER_UNIT_ARTICLE_FIELD[unitKey];
+      const price = priceField ? article[priceField] : undefined;
+      if (price != null && price !== "") {
+        patch.price_per_unit = price;
+      } else if (articleChanged) {
+        patch.price_per_unit = null;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        form.setFieldsValue(patch);
+      }
+    },
+    [pricingArticlesById],
+  );
+
+  // Tracks the article the in-edit row currently carries, so applyRowDefaults
+  // can tell an ARTICLE change (→ replace kg/price/amounts) from a unit/size
+  // change on the same article (→ refresh kg/price, guard amounts). Seeded by
+  // customEdit when a row enters edit mode.
+  const previousArticleIdRef = useRef<string | null>(null);
+
+  // Single entry point wired into the article / unit / size field handlers:
+  // refresh the article-derived kg/price, then prefill the per-variation
+  // default amounts. On an ARTICLE change both replace the prior article's
+  // values; on a unit/size change kg/price refresh in place and amounts are
+  // only prefilled when the row is still empty.
+  const applyRowDefaults = useCallback(
+    (
+      articleId: string,
+      unit: string,
+      form: {
+        getFieldValue: (field: string) => unknown;
+        setFieldsValue: (values: Record<string, unknown>) => void;
+      },
+    ) => {
+      const articleChanged =
+        previousArticleIdRef.current !== String(articleId);
+      previousArticleIdRef.current = String(articleId);
+      applyArticlePricingDefaults(articleId, unit, form, articleChanged);
+      applyDefaultAmounts(articleId, unit, form, articleChanged);
+    },
+    [applyArticlePricingDefaults, applyDefaultAmounts],
+  );
 
   const { noteColumn } = useNoteColumn();
 
@@ -236,6 +472,9 @@ export default function PlanningHarvestSharesBase({
     showFruitsAndVegs: !genericArticleColumn,
     tooltip: true,
     articleDefaults: "harvest",
+    // After the built-in article/unit autofill, set the article-derived
+    // kg/piece + price_per_unit and prefill the per-variation default amounts.
+    onDefaultsApplied: applyRowDefaults,
   });
 
   const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
@@ -247,6 +486,22 @@ export default function PlanningHarvestSharesBase({
         },
       },
       size: {
+        onFieldChange: (
+          _size: unknown,
+          _record: TableRecord,
+          form: {
+            getFieldValue: (field: string) => unknown;
+            setFieldsValue: (values: Record<string, unknown>) => void;
+          },
+        ) => {
+          // On an unsaved row the article id lives under ``share_article_name``
+          // (the foreignKey display field) until it is persisted — mirror
+          // handleUnitChange's fallback so a size change actually re-derives.
+          const articleId = (form.getFieldValue("share_article") ??
+            form.getFieldValue("share_article_name")) as string | undefined;
+          const unit = form.getFieldValue("unit") as string | undefined;
+          if (articleId) applyRowDefaults(articleId, unit ?? "", form);
+        },
         disabled: (record: TableRecord) => {
           if (record.key != -1) return true;
         },
@@ -257,6 +512,12 @@ export default function PlanningHarvestSharesBase({
 
   const customEdit = useCallback(
     (record: TableRecord, form: FormInstance) => {
+      // Seed the article baseline so a later unit/size change on this row is
+      // NOT mistaken for an article change (which would replace amounts). A new
+      // row (key === -1) carries no article yet → null.
+      previousArticleIdRef.current = record.share_article
+        ? String(record.share_article)
+        : null;
       if (record.key === -1) {
         const defaultValues = {
           packing_station: 1,

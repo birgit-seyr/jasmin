@@ -92,6 +92,7 @@ class OrderContentService:
             "harvesting_day": order_content.order.harvesting_day,
             "packing_day": order_content.order.packing_day,
             "washing_day": order_content.order.washing_day,
+            "cleaning_day": order_content.order.cleaning_day,
             "last_possible_ordering_day": order_content.order.last_possible_ordering_day,
             "offer": offer.id if offer else None,
             "offer_name": OrderContentService._get_offer_name(offer),
@@ -154,6 +155,7 @@ class OrderContentService:
             "harvesting_day": None,
             "packing_day": None,
             "washing_day": None,
+            "cleaning_day": None,
             "last_possible_ordering_day": None,
             "delivery_note_id": None,
             "delivery_note_number": None,
@@ -217,6 +219,7 @@ class OrderContentService:
             "harvesting_day": order.harvesting_day,
             "packing_day": order.packing_day,
             "washing_day": order.washing_day,
+            "cleaning_day": order.cleaning_day,
             "delivery_note_id": delivery_note.id if delivery_note else None,
             "delivery_note_number": (
                 delivery_note.display_number if delivery_note else None

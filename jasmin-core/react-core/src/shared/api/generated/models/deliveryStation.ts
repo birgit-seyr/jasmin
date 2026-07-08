@@ -71,8 +71,7 @@ export interface DeliveryStation {
   fee_per_year_net?: string;
   /** @nullable */
   fees_billing_period?: DeliveryStationFeesBillingPeriod;
-  /** @nullable */
-  contact?: string | null;
+  readonly contact?: string;
   /** @nullable */
   linked_reseller?: string | null;
   /**

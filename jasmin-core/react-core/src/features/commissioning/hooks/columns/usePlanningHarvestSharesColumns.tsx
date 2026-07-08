@@ -101,7 +101,7 @@ export function usePlanningHarvestSharesColumns(
         dataIndex: "kg_per_piece",
         key: "kg_per_piece",
         width: "6em",
-        inputType: "positive_decimal2",
+        inputType: "positive_decimal3",
         required: false,
         hidden: !showDetailedColumns,
 

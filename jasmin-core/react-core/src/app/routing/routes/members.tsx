@@ -14,17 +14,14 @@ const DebitsMembers = lazy(
 const MemberLoans = lazy(() => import("@features/members/pages/MemberLoans"));
 const StaffDetail = lazy(() => import("@features/members/pages/StaffDetail"));
 const SepaMandates = lazy(() => import("@features/members/pages/SepaMandates"));
-// Member-lifecycle / communication views relocated out of Configuration: the
+// Member-lifecycle / communication views that live in the Members feature: the
 // GDPR deletion-request queue and the email history are per-member operational
 // tools, not tenant settings. (The GDPR *settings* — privacy policy + Art. 30
-// VVT — stay on the Configuration GDPR page.) Components still live in the
-// configuration feature; only their route + nav home moved.
+// VVT — stay on the Configuration GDPR page.)
 const GdprDeletionRequests = lazy(
-  () => import("@features/configuration/pages/GdprDeletionRequests"),
+  () => import("@features/members/pages/GdprDeletionRequests"),
 );
-const ConfigurationEmailLog = lazy(
-  () => import("@features/configuration/pages/ConfigurationEmailLog"),
-);
+const EmailLog = lazy(() => import("@/features/members/pages/EmailLog"));
 
 export const membersRoutes: AppRoute[] = [
   {
@@ -90,7 +87,7 @@ export const membersRoutes: AppRoute[] = [
     path: "/members/email-log",
     element: (
       <RequireRole flag="isOffice">
-        <ConfigurationEmailLog />
+        <EmailLog />
       </RequireRole>
     ),
   },

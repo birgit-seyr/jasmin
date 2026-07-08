@@ -13,12 +13,14 @@ import type {
   TourOverview,
 } from "@shared/api/generated/models";
 import { DeliveryStationsOverviewPDFGenerator } from "@features/commissioning/pdfs";
+import { filterBulkComboColumns } from "@features/commissioning/utils/filterBulkComboColumns";
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { ExplainerText, PastWarningMessage } from "@shared/ui";
 import { useTenant } from "@hooks/index";
 import {
   useBoxCombinationColumns,
   useShareDeliveryDays,
+  useShareTypeVariations,
 } from "@features/commissioning/hooks";
 import {
   formatDayLabel,
@@ -202,9 +204,38 @@ export default function DeliveryStationOverview() {
   );
 
   // Day-wide variation metadata (import tenants render these as flat columns).
-  const variations = useMemo<ShareTypeVariationMetadata[]>(
+  const rawVariations = useMemo<ShareTypeVariationMetadata[]>(
     () => responseData?.variations ?? [],
     [responseData?.variations],
+  );
+
+  // Bulk-packed variations belong on the bulk packing list, not the tour /
+  // delivery box lists — hide them here. The tour metadata carries no
+  // ``is_packed_bulk`` flag, so we look it up from the variations list
+  // (frontend-only filter) and drop those ids from the flat columns.
+  const { shareTypeVariations: bulkVariations } = useShareTypeVariations({
+    is_packed_bulk: true,
+  });
+  const bulkVariationIds = useMemo(
+    () => new Set(bulkVariations.map((variation) => String(variation.id))),
+    [bulkVariations],
+  );
+  const variations = useMemo<ShareTypeVariationMetadata[]>(
+    () => rawVariations.filter((v) => !bulkVariationIds.has(String(v.id))),
+    [rawVariations, bulkVariationIds],
+  );
+
+  // Subscription tenants render each tour's box combinations. A bulk-packed
+  // variation surfaces as a standalone combo column there too, so drop those
+  // combos (by bulk base variation) once here — the filtered tours feed both
+  // the on-screen tables and the PDF.
+  const filteredTours = useMemo<TourOverview[]>(
+    () =>
+      tours.map((tour) => ({
+        ...tour,
+        columns: filterBulkComboColumns(tour.columns, bulkVariationIds),
+      })),
+    [tours, bulkVariationIds],
   );
 
   return (
@@ -232,7 +263,7 @@ export default function DeliveryStationOverview() {
       {tours.length > 0 && !loading && !usesExternalDemand && (
         <div style={{ marginTop: "3em" }}>
           <DeliveryStationsOverviewPDFGenerator
-            tours={tours.map((tour) => ({
+            tours={filteredTours.map((tour) => ({
               tour_number: tour.tour_number,
               columns: tour.columns,
               stations: tour.stations,
@@ -255,7 +286,7 @@ export default function DeliveryStationOverview() {
         </div>
       )}
 
-      {tours.map((tour) => (
+      {filteredTours.map((tour) => (
         <TourTable
           key={tour.tour_number}
           tourNumber={tour.tour_number}

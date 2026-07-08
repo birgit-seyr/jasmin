@@ -261,6 +261,7 @@ class OrderContentSerializer(
     harvesting_day = serializers.IntegerField(write_only=True, required=False)
     packing_day = serializers.IntegerField(write_only=True, required=False)
     washing_day = serializers.IntegerField(write_only=True, required=False)
+    cleaning_day = serializers.IntegerField(write_only=True, required=False)
     # ``last_possible_ordering_day`` may genuinely be ``null`` on the wire
     # (resellers without a hard deadline). The other three day fields
     # must always carry an integer if present — the model's
@@ -415,6 +416,7 @@ class OrderContentItemSerializer(serializers.Serializer):
     harvesting_day = serializers.IntegerField(allow_null=True)
     packing_day = serializers.IntegerField(allow_null=True)
     washing_day = serializers.IntegerField(allow_null=True)
+    cleaning_day = serializers.IntegerField(allow_null=True)
     last_possible_ordering_day = serializers.IntegerField(allow_null=True)
     offer = serializers.CharField(allow_null=True)
     offer_name = serializers.CharField(allow_null=True)
@@ -491,6 +493,7 @@ class OrderMetadataSerializer(serializers.Serializer):
     harvesting_day = serializers.IntegerField(allow_null=True)
     packing_day = serializers.IntegerField(allow_null=True)
     washing_day = serializers.IntegerField(allow_null=True)
+    cleaning_day = serializers.IntegerField(allow_null=True)
     delivery_note_id = serializers.CharField(allow_null=True)
     delivery_note_number = serializers.CharField(allow_null=True)
     delivery_note_prefix = serializers.CharField(allow_null=True)

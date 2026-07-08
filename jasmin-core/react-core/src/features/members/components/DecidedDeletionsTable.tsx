@@ -1,14 +1,11 @@
-import { ReloadOutlined } from "@ant-design/icons";
-import { Button, Card, Space, Table, Tag, Typography } from "antd";
+import { useTimeFormat } from "@hooks/index";
+import { useGdprAdminDecidedDeletionsList } from "@shared/api/generated/gdpr/gdpr";
+import type { AdminDecidedDeletion } from "@shared/api/generated/models";
 import { EmptyHint } from "@shared/ui";
+import { Space, Table, Tag, Typography } from "antd";
 import type { TFunction } from "i18next";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useGdprAdminDecidedDeletionsList } from "@shared/api/generated/gdpr/gdpr";
-import type { AdminDecidedDeletion } from "@shared/api/generated/models";
-import { useTimeFormat } from "@hooks/index";
-
-const { Paragraph } = Typography;
 
 const HISTORY_PAGE_SIZE = 20;
 
@@ -38,12 +35,12 @@ const stateTagLabel = (state: DecidedState, t: TFunction) =>
  * REJECTED, EXECUTED, CANCELLED, EXPIRED. Paginated server-side via
  * the project-standard ``OptionalLimitOffsetPagination``.
  */
-export default function DecidedDeletionsCard() {
+export default function DecidedDeletionsTable() {
   const { t } = useTranslation();
   const { formatDateTime } = useTimeFormat();
   const [page, setPage] = useState(1);
 
-  const { data, isFetching, refetch } = useGdprAdminDecidedDeletionsList({
+  const { data, isFetching } = useGdprAdminDecidedDeletionsList({
     limit: HISTORY_PAGE_SIZE,
     offset: (page - 1) * HISTORY_PAGE_SIZE,
   });
@@ -118,44 +115,32 @@ export default function DecidedDeletionsCard() {
   );
 
   return (
-    <Card
-      className="settings-card-header"
-      title={
-        <Space>
-          {t("gdpr.decided_deletions")}
-          {total > 0 && <Tag>{total}</Tag>}
-        </Space>
-      }
-      extra={
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => refetch()}
-          loading={isFetching}
-          size="small"
-        >
-          {t("common.refresh")}
-        </Button>
-      }
-      style={{ width: "100%" }}
-    >
-      {rows.length === 0 && !isFetching ? (
-        <EmptyHint>{t("gdpr.no_decided")}</EmptyHint>
-      ) : (
-        <Table
-          columns={columns}
-          dataSource={rows}
-          rowKey="id"
-          size="small"
-          loading={isFetching}
-          pagination={{
-            current: page,
-            pageSize: HISTORY_PAGE_SIZE,
-            total,
-            onChange: (next) => setPage(next),
-            showSizeChanger: false,
-          }}
-        />
-      )}
-    </Card>
+    <div>
+      <div className="flex-between" style={{ marginBottom: "0.5em" }}>
+        <h3>
+          <Space>
+            {t("gdpr.decided_deletions")}
+            {total > 0 && <Tag>{total}</Tag>}
+          </Space>
+        </h3>
+      </div>
+
+      <Table
+        className="custom-jasmin-table"
+        columns={columns}
+        dataSource={rows}
+        rowKey="id"
+        size="small"
+        loading={isFetching}
+        locale={{ emptyText: <EmptyHint>{t("gdpr.no_decided")}</EmptyHint> }}
+        pagination={{
+          current: page,
+          pageSize: HISTORY_PAGE_SIZE,
+          total,
+          onChange: (next) => setPage(next),
+          showSizeChanger: false,
+        }}
+      />
+    </div>
   );
 }

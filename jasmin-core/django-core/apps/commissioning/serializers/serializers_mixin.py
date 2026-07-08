@@ -620,6 +620,15 @@ class DynamicContactFieldsMixin:
             # Add the field based on its type
             self.fields[field_name] = self._create_contact_field(field, is_required)
 
+        # The model's ``contact`` FK is never written directly by the client —
+        # it's built from the flattened fields above by the create/update
+        # service, which assigns ``validated_data["contact"]`` itself. Mark it
+        # read-only so a NON-NULL FK (e.g. ``Reseller.contact`` = PROTECT) does
+        # not become a required write field that rejects the flattened-field
+        # payload with "contact: this field is required".
+        if "contact" in self.fields:
+            self.fields["contact"] = serializers.PrimaryKeyRelatedField(read_only=True)
+
     def _create_contact_field(self, field, is_required: bool):
         """Create appropriate serializer field for a Django model field."""
         allow_null = getattr(field, "null", False)

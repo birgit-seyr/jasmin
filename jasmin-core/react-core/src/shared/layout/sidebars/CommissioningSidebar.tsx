@@ -543,26 +543,6 @@ export default function CommissioningSidebar({
           ),
         },
 
-        {
-          key: "commissioning-delivery-tours",
-
-          requireRole: "isStaff",
-          label: (
-            <Link to="/commissioning/delivery-tours">
-              {t("commissioning.delivery_tours")}
-            </Link>
-          ),
-        },
-        {
-          key: "commissioning-delivery-exceptions",
-
-          requireRole: "isStaff",
-          label: (
-            <Link to="/commissioning/delivery-exceptions">
-              {t("commissioning.delivery_exceptions")}
-            </Link>
-          ),
-        },
         // Only when at least one station actually charges a fee — most solawis
         // don't, so hide the billing entirely for them.
         ...(has_station_fees
@@ -647,6 +627,16 @@ export default function CommissioningSidebar({
           label: (
             <Link to="/commissioning/list-delivery-stations">
               {t("commissioning.list_delivery_stations")}
+            </Link>
+          ),
+        },
+        {
+          key: "commissioning-delivery-tours",
+
+          requireRole: "isStaff",
+          label: (
+            <Link to="/commissioning/delivery-tours">
+              {t("commissioning.delivery_tours")}
             </Link>
           ),
         },
