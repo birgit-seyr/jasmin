@@ -20,6 +20,20 @@ const { colors, fontSizes, spacing } = pdfTheme;
  * brand green (header rule + category pill). This prints cleanly on
  * B/W laser printers and keeps toner use low.
  */
+// Header-row primitives shared by ``tableHeader`` (plain hairline) and
+// ``tableHeaderShaded`` (the box-combination matrices' slight-grey fill) — one
+// definition so the two never drift.
+const headerRow = {
+  flexDirection: "row",
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border.default,
+  color: colors.text.muted,
+  textTransform: "uppercase",
+  letterSpacing: 0.6,
+  fontWeight: 700,
+  fontSize: fontSizes.smaller,
+} as const;
+
 export const listStyles = StyleSheet.create({
   page: {
     fontFamily: "Roboto",
@@ -55,16 +69,11 @@ export const listStyles = StyleSheet.create({
   // the header. Labels inherit the uppercase/letter-spaced/muted text
   // styling from this row (react-pdf cascades text props through the
   // cell Views to their <Text>).
-  tableHeader: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.default,
-    color: colors.text.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    fontWeight: 700,
-    fontSize: fontSizes.smaller,
-  },
+  tableHeader: { ...headerRow },
+  // Slight-grey header fill for the box-combination matrices (packing boxes,
+  // delivery overview / details); the plain hairline header stays the default
+  // elsewhere.
+  tableHeaderShaded: { ...headerRow, backgroundColor: colors.tableHeader },
   tableRow: {
     flexDirection: "row",
     borderBottomWidth: 0.5,

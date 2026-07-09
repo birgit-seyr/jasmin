@@ -37,8 +37,12 @@ export default function ConfigurationCommissioning() {
 
           {
             key: "percentage_added_to_bulk_packing_list",
-            label: t("settings.commissioning.percentage_added_to_bulk_packing_list"),
-            description: t("settings.commissioning.percentage_added_to_bulk_packing_list_description"),
+            label: t(
+              "settings.commissioning.percentage_added_to_bulk_packing_list",
+            ),
+            description: t(
+              "settings.commissioning.percentage_added_to_bulk_packing_list_description",
+            ),
             type: "number",
             defaultValue: 0,
             min: 0,
@@ -69,7 +73,9 @@ export default function ConfigurationCommissioning() {
 
           {
             key: "show_summary_in_harvest_share_planning_on_top",
-            label: t("settings.commissioning.show_summary_in_harvest_share_planning_on_top"),
+            label: t(
+              "settings.commissioning.show_summary_in_harvest_share_planning_on_top",
+            ),
             type: "checkbox",
             defaultValue: true,
           },
@@ -80,7 +86,9 @@ export default function ConfigurationCommissioning() {
             // matching the description copy below.
             key: "default_planning_granularity",
             label: t("settings.commissioning.default_planning_mode"),
-            description: t("settings.commissioning.default_planning_mode_description"),
+            description: t(
+              "settings.commissioning.default_planning_mode_description",
+            ),
             type: "select",
             options: [
               {
@@ -93,7 +101,9 @@ export default function ConfigurationCommissioning() {
               },
               {
                 value: "stations",
-                label: t("settings.commissioning.default_planning_mode_stations"),
+                label: t(
+                  "settings.commissioning.default_planning_mode_stations",
+                ),
               },
             ],
             defaultValue: "basic",
@@ -114,7 +124,8 @@ export default function ConfigurationCommissioning() {
             key: "has_markets",
             label: t("settings.commissioning.has_markets"),
             type: "checkbox",
-            defaultValue: true,
+            defaultValue: false,
+            disabled: true,
           },
         ],
       },

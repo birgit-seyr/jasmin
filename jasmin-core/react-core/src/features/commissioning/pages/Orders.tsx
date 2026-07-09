@@ -206,8 +206,12 @@ export default function Orders() {
     ],
   );
 
-  const canModify =
-    isOffice && !orderState.deliveryNoteNumber && !orderState.invoiceNumber;
+  // Editing must follow the ORDER's finalized flag (what the backend actually
+  // gates on — see FinalizedProtectedMixin), NOT the presence of a delivery
+  // note / invoice number. Keying off the DN number let deleting a not-yet-
+  // finalized delivery note re-enable cells whose saves then fail server-side,
+  // and also (mis)treated a directly-finalized order with no DN as editable.
+  const canModify = isOffice && !orderState.isOrderFinalized;
   const canModifyPermissions = useMemo(
     () => gatedByPermission(canModify),
     [canModify],

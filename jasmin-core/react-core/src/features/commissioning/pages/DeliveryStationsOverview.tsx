@@ -1,9 +1,11 @@
-import { Table } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
-import type { TFunction } from "i18next";
-import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import {
+  useBoxCombinationColumns,
+  useShareDeliveryDays,
+  useShareTypeVariations,
+} from "@features/commissioning/hooks";
+import { DeliveryStationsOverviewPDFGenerator } from "@features/commissioning/pdfs";
+import { filterBulkComboColumns } from "@features/commissioning/utils/filterBulkComboColumns";
+import { useTenant } from "@hooks/index";
 import { useCommissioningDeliveryStationToursOverviewRetrieve } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningDeliveryStationToursOverviewRetrieveParams,
@@ -12,22 +14,20 @@ import type {
   StationOverview,
   TourOverview,
 } from "@shared/api/generated/models";
-import { DeliveryStationsOverviewPDFGenerator } from "@features/commissioning/pdfs";
-import { filterBulkComboColumns } from "@features/commissioning/utils/filterBulkComboColumns";
 import { DaySelector, WeekSelector } from "@shared/selectors";
-import { ExplainerText, PastWarningMessage } from "@shared/ui";
-import { useTenant } from "@hooks/index";
-import {
-  useBoxCombinationColumns,
-  useShareDeliveryDays,
-  useShareTypeVariations,
-} from "@features/commissioning/hooks";
+import { EmptyHint, ExplainerText, PastWarningMessage } from "@shared/ui";
 import {
   formatDayLabel,
   formatWeekLabel,
   generatePdfFilename,
   getDayName,
 } from "@shared/utils";
+import { Table } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
+import type { TFunction } from "i18next";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const currentYear = dayjs().year();
 const currentWeek = dayjs().isoWeek();
@@ -123,9 +123,7 @@ function TourTable({
         className="custom-jasmin-table w-max"
         rowKey={(record) => record.delivery_station_day_id}
         bordered
-        locale={{
-          emptyText: <div style={{ height: "4em" }}>{t("table.no_data")}</div>,
-        }}
+        locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
       />
     </div>
   );

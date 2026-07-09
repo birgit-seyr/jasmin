@@ -15,6 +15,24 @@
   color: var(--color-bg-base) !important;
 }
 
+/* Header background of the per-group cards in the week / month grouping views.
+   One place to tint the group headers — change the background-color here.
+   ``!important`` beats AntD's own ``.ant-card-head { background: <headerBg> }``
+   rule (headerBg defaults to transparent): it has the same specificity but is
+   injected at runtime AFTER this stylesheet, so without it the header stays
+   transparent — same reason ``.invoice-grouping-active`` above needs it. */
+.invoice-group-card-header {
+  background-color: var(--color-info-bg) !important;
+}
+
+/* Dark-green (brand) border framing each per-group card — matches the
+   OrderInfoPanel dark-green card. ``!important`` beats AntD's own ``.ant-card``
+   border (same specificity, injected at runtime after this stylesheet). */
+.invoice-group-card {
+  border: 1.5px solid var(--color-primary) !important;
+}
+
+
 /* Delivery-note number cell in the invoices table: inline green check + number
    + a small subtle PDF-download button (reuses DeliveryNotePDFButtons). */
 .dn-number-cell {

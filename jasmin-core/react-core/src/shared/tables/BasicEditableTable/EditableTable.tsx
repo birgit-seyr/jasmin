@@ -1,3 +1,4 @@
+import { EmptyHint } from "@/shared/ui";
 import {
   DeleteOutlined,
   EditOutlined,
@@ -6,6 +7,16 @@ import {
   SearchOutlined,
   UndoOutlined,
 } from "@ant-design/icons";
+import { useIsMobile, useNumberFormat } from "@hooks/index";
+import { useModal } from "@shared/contexts/ModalContext";
+import axiosService from "@shared/services/api";
+import {
+  calculateTableScrollWidth,
+  createBooleanSorter,
+  createDateSorter,
+  createNumberSorter,
+  createStringSorter,
+} from "@shared/utils";
 import {
   Alert,
   Button,
@@ -17,11 +28,10 @@ import {
   Table,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import axiosService from "@shared/services/api";
 import type {
   ChangeEvent,
-  CSSProperties,
   ComponentProps,
+  CSSProperties,
   FC,
   Key,
   ReactElement,
@@ -29,15 +39,6 @@ import type {
 } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useModal } from "@shared/contexts/ModalContext";
-import { useIsMobile, useNumberFormat } from "@hooks/index";
-import {
-  calculateTableScrollWidth,
-  createBooleanSorter,
-  createDateSorter,
-  createNumberSorter,
-  createStringSorter,
-} from "@shared/utils";
 import EditableCell from "./EditableCell";
 import EditableModal from "./EditableModal";
 import MobileCardList from "./MobileCardList";
@@ -1248,9 +1249,7 @@ const EditableTable = <T extends TableRecord = TableRecord>({
               rowSelection={tableRowSelection}
               summary={tableSummary}
               locale={{
-                emptyText: (
-                  <div style={{ height: "1.8em" }}>{t("table.no_data")}</div>
-                ),
+                emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint>,
               }}
               scroll={{ x: computedScrollX }}
               className={className}

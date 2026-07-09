@@ -26,9 +26,40 @@ export function invoicePdfFilename(
   return `${label}-${prefix}-${number}.pdf`;
 }
 
+/** Canonical reseller delivery-note PDF filename: ``<Label>-<prefix>-<number>.pdf``.
+ * Mirrors ``invoicePdfFilename`` (delivery notes have no storno variant). Kept
+ * next to it so both reseller-document filenames live in one place. */
+export function deliveryNotePdfFilename(
+  t: TFunction,
+  prefix: string | number | null | undefined,
+  number: string | number | null | undefined,
+): string {
+  return `${t("commissioning.delivery_note")}-${prefix}-${number}.pdf`;
+}
+
 /** Open an already-stored PDF in a new browser tab. */
 export function openStoredPdf(url: string): void {
   window.open(url, "_blank", "noopener,noreferrer");
+}
+
+/**
+ * Fetch the stored invoice PDF + XML and embed the XML to produce a ZUGFeRD
+ * e-invoice PDF Blob (the "e-PDF"). Callers null-check the URLs and surface
+ * failures themselves; this throws on fetch/embed errors. Split out from
+ * ``downloadZugferd`` so the bulk-ZIP flow can collect the blob without
+ * triggering a per-file browser download.
+ */
+export async function buildZugferdBlob(
+  storedFileUrl: string,
+  storedXmlUrl: string,
+): Promise<Blob> {
+  const [pdfResponse, xmlResponse] = await Promise.all([
+    fetch(storedFileUrl),
+    fetch(storedXmlUrl),
+  ]);
+  const pdfBlob = await pdfResponse.blob();
+  const xmlString = await xmlResponse.text();
+  return embedZUGFeRDXML(pdfBlob, xmlString);
 }
 
 /**
@@ -41,12 +72,6 @@ export async function downloadZugferd(
   storedXmlUrl: string,
   filename: string,
 ): Promise<void> {
-  const [pdfResponse, xmlResponse] = await Promise.all([
-    fetch(storedFileUrl),
-    fetch(storedXmlUrl),
-  ]);
-  const pdfBlob = await pdfResponse.blob();
-  const xmlString = await xmlResponse.text();
-  const zugferdBlob = await embedZUGFeRDXML(pdfBlob, xmlString);
+  const zugferdBlob = await buildZugferdBlob(storedFileUrl, storedXmlUrl);
   downloadBlob(zugferdBlob, filename);
 }

@@ -7,6 +7,7 @@ import {
   ComboHeader,
   boxComboStyles,
   comboColumnWidth,
+  computeGroupEdges,
   groupComboColumns,
   pickComboOrientation,
 } from "./boxComboPdf";
@@ -17,7 +18,6 @@ import {
   TickBox,
   type TenantInfo,
 } from "./ListPDFSharedComponents";
-import { pdfTheme } from "./pdfTheme";
 
 // Fixed pt column widths; the NOTE column flexes to absorb slack, and the
 // combination columns take a dynamic pt width (see comboColumnWidth).
@@ -35,17 +35,6 @@ const localStyles = StyleSheet.create({
   colNote: { flex: 1, minWidth: NOTE_MIN_WIDTH },
   countRow: { backgroundColor: "#eef2f7", fontWeight: 700 },
   countLabel: { fontWeight: 700 },
-  // Green verticals framing each base share_type's combination block — applied
-  // to the first (left) and last (right) column of each group in every row so
-  // fixed column widths line them up into continuous lines down the table.
-  groupBorderLeft: {
-    borderLeftWidth: 1.5,
-    borderLeftColor: pdfTheme.colors.brand,
-  },
-  groupBorderRight: {
-    borderRightWidth: 1.5,
-    borderRightColor: pdfTheme.colors.brand,
-  },
 });
 
 export interface PackingBoxesMatrixItem {
@@ -102,15 +91,7 @@ export const PackingBoxesMatrixPage = ({
   const groups = groupComboColumns(columns, t);
   // Per-column-key: is it the FIRST (green left line) and/or LAST (green right
   // line) column of its base share_type group?
-  const groupEdge = new Map<string, { left: boolean; right: boolean }>();
-  groups.forEach((group) => {
-    group.cols.forEach((col, index) => {
-      groupEdge.set(col.key, {
-        left: index === 0,
-        right: index === group.cols.length - 1,
-      });
-    });
-  });
+  const groupEdge = computeGroupEdges(groups);
   const fixedWidth =
     ARTICLE_WIDTH + UNIT_WIDTH + (showSize ? SIZE_WIDTH : 0) + DONE_WIDTH;
   const orientation = pickComboOrientation({
@@ -134,7 +115,7 @@ export const PackingBoxesMatrixPage = ({
 
         <View style={listStyles.table}>
           {/* Parent header: each base share_type name spans its combinations */}
-          <View style={listStyles.tableHeader} fixed>
+          <View style={listStyles.tableHeaderShaded} fixed>
             <View style={[listStyles.cell, localStyles.colArticle]}>
               <Text></Text>
             </View>
@@ -153,8 +134,8 @@ export const PackingBoxesMatrixPage = ({
                   listStyles.cell,
                   listStyles.cellCenter,
                   { width: comboWidth * group.cols.length },
-                  localStyles.groupBorderLeft,
-                  localStyles.groupBorderRight,
+                  boxComboStyles.groupBorderLeft,
+                  boxComboStyles.groupBorderRight,
                 ]}
               >
                 <Text style={boxComboStyles.comboBase}>{group.name}</Text>
@@ -169,7 +150,7 @@ export const PackingBoxesMatrixPage = ({
           </View>
 
           {/* Column headers */}
-          <View style={listStyles.tableHeader} fixed>
+          <View style={listStyles.tableHeaderShaded} fixed>
             <View
               style={[
                 listStyles.cell,
@@ -203,10 +184,10 @@ export const PackingBoxesMatrixPage = ({
                   { width: comboWidth },
                   listStyles.cellCenter,
                   groupEdge.get(column.key)?.left
-                    ? localStyles.groupBorderLeft
+                    ? boxComboStyles.groupBorderLeft
                     : {},
                   groupEdge.get(column.key)?.right
-                    ? localStyles.groupBorderRight
+                    ? boxComboStyles.groupBorderRight
                     : {},
                 ]}
               >
@@ -280,10 +261,10 @@ export const PackingBoxesMatrixPage = ({
                     { width: comboWidth },
                     listStyles.cellCenter,
                     groupEdge.get(column.key)?.left
-                      ? localStyles.groupBorderLeft
+                      ? boxComboStyles.groupBorderLeft
                       : {},
                     groupEdge.get(column.key)?.right
-                      ? localStyles.groupBorderRight
+                      ? boxComboStyles.groupBorderRight
                       : {},
                   ]}
                 >
@@ -357,10 +338,10 @@ export const PackingBoxesMatrixPage = ({
                   { width: comboWidth },
                   listStyles.cellCenter,
                   groupEdge.get(column.key)?.left
-                    ? localStyles.groupBorderLeft
+                    ? boxComboStyles.groupBorderLeft
                     : {},
                   groupEdge.get(column.key)?.right
-                    ? localStyles.groupBorderRight
+                    ? boxComboStyles.groupBorderRight
                     : {},
                 ]}
               >

@@ -36,7 +36,7 @@ import { InvoicePDFButtons } from "@features/commissioning/pdfs";
 import { generateAndUploadInvoicePDF } from "@features/commissioning/pdfs/forResellers/generateInvoicePDF";
 import DeliveryNotePDFButtons from "@features/commissioning/pdfs/forResellers/DeliveryNotePDFButtons";
 import { ResellerSelector, YearSelector } from "@shared/selectors";
-import { notify } from "@shared/utils";
+import { generatePdfFilename, notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { EditableTable, READ_ONLY_PERMISSION } from "@shared/tables";
 import type {
@@ -198,6 +198,34 @@ export default function Invoices() {
         item.delivery_note_id !== null && item.delivery_note_id !== undefined,
     );
   }, [data]);
+
+  // Invoice ids of the selected rows that carry a finalized invoice — the
+  // only ones that can have an e-PDF to bundle into the bulk ZIP.
+  const selectedFinalizedInvoiceIds = useMemo(
+    () =>
+      data
+        .filter(
+          (item) =>
+            selectedRowKeys.includes(item.id) &&
+            item.has_finalized_invoice &&
+            item.invoice_id,
+        )
+        .map((item) => item.invoice_id as string),
+    [data, selectedRowKeys],
+  );
+
+  const handleDownloadBulkZip = useCallback(async () => {
+    // Lazy-load the bulk-ZIP flow (and its pdf-lib / fflate dependencies) only
+    // on click, keeping them out of the page's eager bundle.
+    const { downloadSelectedInvoiceEpdfsZip } = await import(
+      "@features/commissioning/pdfs/forResellers/bulkInvoiceZip"
+    );
+    await downloadSelectedInvoiceEpdfsZip(
+      selectedFinalizedInvoiceIds,
+      t,
+      `${generatePdfFilename([t("commissioning.invoices"), selectedYear])}.zip`,
+    );
+  }, [selectedFinalizedInvoiceIds, t, selectedYear]);
 
   const groupedData = useMemo<Record<string, GroupData>>(() => {
     if (groupingMode === GROUPING_MODES.NONE) {
@@ -648,7 +676,9 @@ export default function Invoices() {
       {Object.entries(groupedData).map(([groupKey, group]) => (
         <Card
           key={groupKey}
+          className="invoice-group-card"
           style={{ marginBottom: 16 }}
+          classNames={{ header: "invoice-group-card-header" }}
           title={
             <div className="flex-center-y" style={{ gap: "4em" }}>
               <span>{group.name}</span>
@@ -844,21 +874,26 @@ export default function Invoices() {
           marginTop: "-20px",
         }}
       >
-        {/* Bulk send-email / download-ZIP (and download-PDF) are disabled
-              placeholders: the backend routes don't exist yet (a click used to
-              404). Re-enable with the real endpoint + per-row disabled logic
-              once they land. */}
+        {/* Bulk send-email is still a disabled placeholder: its backend route
+              doesn't exist yet (a click used to 404). Re-enable with the real
+              endpoint once it lands. */}
         <BulkActionButton
           selectedIds={selectedRowKeys}
           buttonText={t("resellers.send_via_email_resellers")}
           buttonProps={{ type: "primary" }}
           disabled
         />
+        {/* Download the selected invoices' finalized e-PDFs (ZUGFeRD) as a
+              single ZIP, built client-side. Enabled whenever at least one
+              selected row carries a finalized invoice; non-finalized rows are
+              skipped and an empty result surfaces a subtle notice. */}
         <BulkActionButton
           selectedIds={selectedRowKeys}
+          apiFunction={handleDownloadBulkZip}
           buttonText={t("download.selected_invoices_bulk_zip")}
           buttonProps={{ type: "primary" }}
-          disabled
+          errorMessage={t("download.bulk_zip_failed")}
+          disabled={selectedFinalizedInvoiceIds.length === 0}
         />
       </div>
 

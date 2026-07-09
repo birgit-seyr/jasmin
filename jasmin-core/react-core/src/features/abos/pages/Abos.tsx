@@ -14,6 +14,7 @@ import {
   commissioningAbosPartialUpdate,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { Subscription } from "@shared/api/generated/models";
+import { PaymentCycleEnum } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { LoggingModal, SepaMandateDetailsModal } from "@shared/modals";
 import type { SepaMandateStatus } from "@shared/api/generated/models";
@@ -161,11 +162,22 @@ export default function Abos() {
     ) => {
       // If it's a new row (key === -1), set default values
       if (record.key === -1) {
-        const defaultValues = {
+        const defaultValues: Record<string, unknown> = {
           is_trial: false,
           quantity: 1,
-          payment_cycle: paymentCycles[0]?.value || null,
         };
+
+        // Default the payment cycle to MONTHLY when that cycle exists. The FK
+        // select is bound to the display field (``payment_cycle_name``) and
+        // matches options by their value (the cycle id), so both keys carry the
+        // monthly cycle's id — the same shape a manual pick would produce.
+        const monthlyCycle = paymentCycles.find(
+          (cycle) => cycle.choice === PaymentCycleEnum.MONTHLY,
+        );
+        if (monthlyCycle) {
+          defaultValues.payment_cycle = monthlyCycle.value;
+          defaultValues.payment_cycle_name = monthlyCycle.value;
+        }
 
         // Set the form values with defaults
         form.setFieldsValue(defaultValues);

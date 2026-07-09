@@ -13,6 +13,7 @@ import {
   commissioningDeliveryNotesSendToResellerCreate,
   useCommissioningOrdersOverviewList,
 } from "@shared/api/generated/commissioning/commissioning";
+import { generatePdfFilename } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import type {
   BulkDocumentRequest,
@@ -147,6 +148,34 @@ export default function DeliveryNotes() {
     },
     [t, tenant, getSetting, logoUrl, bioLogoUrl, refetchOrders],
   );
+
+  // Delivery-note ids of the selected rows that carry a finalized delivery
+  // note — the only ones with a stored PDF to bundle into the bulk ZIP.
+  const selectedFinalizedDeliveryNoteIds = useMemo(
+    () =>
+      data
+        .filter(
+          (item) =>
+            selectedRowKeys.includes(item.id) &&
+            item.delivery_note_is_finalized &&
+            item.delivery_note_id,
+        )
+        .map((item) => item.delivery_note_id as string),
+    [data, selectedRowKeys],
+  );
+
+  const handleDownloadBulkZip = useCallback(async () => {
+    // Lazy-load the bulk-ZIP flow (and its fflate dependency) only on click,
+    // keeping it out of the page's eager bundle.
+    const { downloadSelectedDeliveryNotePdfsZip } = await import(
+      "@features/commissioning/pdfs/forResellers/bulkDeliveryNoteZip"
+    );
+    await downloadSelectedDeliveryNotePdfsZip(
+      selectedFinalizedDeliveryNoteIds,
+      t,
+      `${generatePdfFilename([t("commissioning.delivery_notes"), selectedYear])}.zip`,
+    );
+  }, [selectedFinalizedDeliveryNoteIds, t, selectedYear]);
 
   const bulkCreateDocuments = useCallback(
     (payload: Record<string, unknown>) =>
@@ -499,27 +528,28 @@ export default function DeliveryNotes() {
           marginTop: "-20px",
         }}
       >
-        {/* Bulk send-email / download-PDF / download-ZIP are disabled
-            placeholders: the backend routes don't exist yet (a click used to
-            404). Re-enable with the real apiFunction + per-row disabled logic
-            once the endpoints land. */}
+        {/* Bulk send-email is still a disabled placeholder: its backend route
+            doesn't exist yet (a click used to 404). Re-enable with the real
+            endpoint once it lands. */}
         <BulkActionButton
           selectedIds={selectedRowKeys}
           buttonText={t("commissioning.send_delivery_notes_bulk_via_email")}
           buttonProps={{ type: "primary" }}
           disabled
         />
+
+        {/* Download the selected delivery notes' finalized PDFs as a single
+            ZIP, built client-side from the stored PDFs. Enabled whenever at
+            least one selected row carries a finalized delivery note;
+            non-finalized rows are skipped and an empty result surfaces a
+            subtle notice. */}
         <BulkActionButton
           selectedIds={selectedRowKeys}
-          buttonText={t("download.selected_delivery_notes_bulk_pdf")}
-          buttonProps={{ type: "primary" }}
-          disabled
-        />
-        <BulkActionButton
-          selectedIds={selectedRowKeys}
+          apiFunction={handleDownloadBulkZip}
           buttonText={t("download.selected_delivery_notes_bulk_zip")}
           buttonProps={{ type: "primary" }}
-          disabled
+          errorMessage={t("download.bulk_zip_failed_delivery_notes")}
+          disabled={selectedFinalizedDeliveryNoteIds.length === 0}
         />
       </div>
       <EditableTable

@@ -7,6 +7,7 @@ import {
   ComboHeader,
   boxComboStyles,
   comboColumnWidth,
+  computeGroupEdges,
   groupComboColumns,
   pickComboOrientation,
   type PdfOrientation,
@@ -18,17 +19,15 @@ import {
   TickBox,
   type TenantInfo as SharedTenantInfo,
 } from "./ListPDFSharedComponents";
-import { pdfTheme } from "./pdfTheme";
 import {
   PackingBoxesMatrixPage,
   type PackingBoxesMatrixItem,
 } from "./PackingBoxesMatrixPDF";
 
-const PRIMARY_COLOR = pdfTheme.colors.brand;
-
-// Fixed pt widths; the member-name column flexes to absorb slack.
+// Fixed pt widths; the leading member-name column is fixed so the combos
+// follow right after it.
 const TICK_WIDTH = 34;
-const NAME_MIN_WIDTH = 110;
+const NAME_MIN_WIDTH = 140;
 
 const localStyles = StyleSheet.create({
   tickCol: {
@@ -99,7 +98,13 @@ function StationPageContent({
 }) {
   // Group combination columns by base share_type for the parent header row.
   const groups = groupComboColumns(columns, t);
-  const groupStartKeys = new Set(groups.map((group) => group.cols[0]?.key));
+  const groupEdges = computeGroupEdges(groups);
+  // Green rules framing each base-share_type group: left on its first column,
+  // right on its last.
+  const edgeBorders = (key: string) => [
+    groupEdges.get(key)?.left ? boxComboStyles.groupBorderLeft : {},
+    groupEdges.get(key)?.right ? boxComboStyles.groupBorderRight : {},
+  ];
 
   const comboWidth = comboColumnWidth({
     orientation,
@@ -107,9 +112,9 @@ function StationPageContent({
     fixedWidth: TICK_WIDTH,
     flexMinWidth: NAME_MIN_WIDTH,
   });
-  const nameCell = { flex: 1, minWidth: NAME_MIN_WIDTH };
-
-  const groupBorder = { borderLeftWidth: 1.5, borderLeftColor: PRIMARY_COLOR };
+  // Fixed (not flex) so the combination columns follow immediately instead of
+  // being pushed to the right edge; any slack stays on the right.
+  const nameCell = { width: NAME_MIN_WIDTH };
 
   return (
     <Page size="A4" orientation={orientation} style={listStyles.page}>
@@ -124,11 +129,13 @@ function StationPageContent({
       </ListPDFHeader>
 
       <View style={listStyles.table}>
-        {/* Group header row: each base share_type short_name spans its combos */}
-        <View style={[listStyles.tableHeader, { borderBottomWidth: 0.5 }]} fixed>
-          <View
-            style={[listStyles.cell, nameCell, listStyles.cellLeft]}
-          >
+        {/* Group header row: each base share_type short_name spans its combos,
+            framed by the green group rules on both sides. */}
+        <View
+          style={[listStyles.tableHeaderShaded, { borderBottomWidth: 0.5 }]}
+          fixed
+        >
+          <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
             <Text> </Text>
           </View>
           {groups.map((group) => (
@@ -138,29 +145,23 @@ function StationPageContent({
                 listStyles.cell,
                 { width: comboWidth * group.cols.length },
                 listStyles.cellCenter,
-                groupBorder,
+                boxComboStyles.groupBorderLeft,
+                boxComboStyles.groupBorderRight,
               ]}
             >
               <Text style={boxComboStyles.comboBase}>{group.name}</Text>
             </View>
           ))}
           <View
-            style={[
-              listStyles.cell,
-              localStyles.tickCol,
-              listStyles.cellCenter,
-              groupBorder,
-            ]}
+            style={[listStyles.cell, localStyles.tickCol, listStyles.cellCenter]}
           >
             <Text> </Text>
           </View>
         </View>
 
         {/* Sub-header row: combination labels + tick column */}
-        <View style={[listStyles.tableHeader]} fixed>
-          <View
-            style={[listStyles.cell, nameCell, listStyles.cellLeft]}
-          >
+        <View style={listStyles.tableHeaderShaded} fixed>
+          <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
             <Text>{t("commissioning.pickup_name")}</Text>
           </View>
           {columns.map((column) => (
@@ -170,19 +171,14 @@ function StationPageContent({
                 listStyles.cell,
                 { width: comboWidth },
                 listStyles.cellCenter,
-                groupStartKeys.has(column.key) ? groupBorder : {},
+                ...edgeBorders(column.key),
               ]}
             >
               <ComboHeader column={column} t={t} />
             </View>
           ))}
           <View
-            style={[
-              listStyles.cell,
-              localStyles.tickCol,
-              listStyles.cellCenter,
-              groupBorder,
-            ]}
+            style={[listStyles.cell, localStyles.tickCol, listStyles.cellCenter]}
           >
             <Text>{"✓"}</Text>
           </View>
@@ -198,9 +194,7 @@ function StationPageContent({
             ]}
             wrap={false}
           >
-            <View
-              style={[listStyles.cell, nameCell, listStyles.cellLeft]}
-            >
+            <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
               <Text style={{ fontWeight: 500 }}>{member.name || "-"}</Text>
             </View>
             {columns.map((column) => (
@@ -210,19 +204,14 @@ function StationPageContent({
                   listStyles.cell,
                   { width: comboWidth },
                   listStyles.cellCenter,
-                  groupStartKeys.has(column.key) ? groupBorder : {},
+                  ...edgeBorders(column.key),
                 ]}
               >
                 <Text>{formatCount(member[column.key])}</Text>
               </View>
             ))}
             <View
-              style={[
-                listStyles.cell,
-                localStyles.tickCol,
-                listStyles.cellCenter,
-                groupBorder,
-              ]}
+              style={[listStyles.cell, localStyles.tickCol, listStyles.cellCenter]}
             >
               <TickBox />
             </View>

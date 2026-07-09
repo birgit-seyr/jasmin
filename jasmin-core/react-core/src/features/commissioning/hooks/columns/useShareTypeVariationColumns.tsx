@@ -138,25 +138,9 @@ export const useShareTypeVariationColumns = (
             : defaultRender,
         }));
 
-      // Single-variation share types render as a flat column with a combined
-      // title so the header isn't an awkward 1-child group.
-      if (children.length === 1) {
-        const onlyChild = children[0]!;
-        const onlyVariation = group.variations[0];
-        return {
-          ...onlyChild,
-          title: (
-            <>
-              {group.share_type_name}
-              {onlyVariation?.size
-                ? ` - ${getShareTypeVariationSizeLabel(onlyVariation.size)}`
-                : ""}
-            </>
-          ),
-          className: "column-group-start",
-        };
-      }
-
+      // Always render the parent-share-type → child-variation group, even when
+      // a share type has a single variation, so the header layout is consistent
+      // across share types (no share type collapses to a flat one-off column).
       return {
         title: <>{group.share_type_name}</>,
         dataIndex: `share_type_${group.share_type_id}`,

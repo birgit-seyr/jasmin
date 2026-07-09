@@ -7,18 +7,17 @@ import {
   ComboHeader,
   boxComboStyles,
   comboColumnWidth,
+  computeGroupEdges,
   groupComboColumns,
   pickComboOrientation,
   type PdfOrientation,
 } from "./boxComboPdf";
 import { listStyles } from "./listPdfBase";
 import { ListPDFFooter, ListPDFHeader } from "./ListPDFSharedComponents";
-import { pdfTheme } from "./pdfTheme";
 
-const PRIMARY_COLOR = pdfTheme.colors.brand;
-
-// The station-name column flexes to absorb slack; combos take a fixed pt width.
-const NAME_MIN_WIDTH = 90;
+// Fixed width for the leading station-name column; the combos follow right
+// after it at a fixed pt width.
+const NAME_MIN_WIDTH = 120;
 
 // A minimal, strict subset of the generated ``StationOverview`` (the name
 // fields are ``allow_null`` on the backend serializer). No index signature —
@@ -69,8 +68,13 @@ function TourPageContent({
 }) {
   // Group combination columns by base share_type for the parent header row.
   const groups = groupComboColumns(columns, t);
-  // The first column of each group starts a new vertical group border.
-  const groupStartKeys = new Set(groups.map((group) => group.cols[0]?.key));
+  const groupEdges = computeGroupEdges(groups);
+  // Green rules framing each base-share_type group: left on its first column,
+  // right on its last.
+  const edgeBorders = (key: string) => [
+    groupEdges.get(key)?.left ? boxComboStyles.groupBorderLeft : {},
+    groupEdges.get(key)?.right ? boxComboStyles.groupBorderRight : {},
+  ];
 
   const comboWidth = comboColumnWidth({
     orientation,
@@ -78,8 +82,9 @@ function TourPageContent({
     fixedWidth: 0,
     flexMinWidth: NAME_MIN_WIDTH,
   });
-  const nameCell = { flex: 1, minWidth: NAME_MIN_WIDTH };
-  const groupBorder = { borderLeftWidth: 1.5, borderLeftColor: PRIMARY_COLOR };
+  // Fixed (not flex) so the combination columns sit right after it instead of
+  // being pushed to the right edge; any slack stays on the right.
+  const nameCell = { width: NAME_MIN_WIDTH };
 
   return (
     <Page size="A4" orientation={orientation} style={listStyles.page}>
@@ -91,8 +96,12 @@ function TourPageContent({
       </ListPDFHeader>
 
       <View style={listStyles.table}>
-        {/* Parent header: each base share_type short_name spans its combos */}
-        <View style={[listStyles.tableHeader, { borderBottomWidth: 0.5 }]} fixed>
+        {/* Parent header: each base share_type short_name spans its combos,
+            framed by the green group rules on both sides. */}
+        <View
+          style={[listStyles.tableHeaderShaded, { borderBottomWidth: 0.5 }]}
+          fixed
+        >
           <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
             <Text> </Text>
           </View>
@@ -103,7 +112,8 @@ function TourPageContent({
                 listStyles.cell,
                 { width: comboWidth * group.cols.length },
                 listStyles.cellCenter,
-                groupBorder,
+                boxComboStyles.groupBorderLeft,
+                boxComboStyles.groupBorderRight,
               ]}
             >
               <Text style={boxComboStyles.comboBase}>{group.name}</Text>
@@ -112,7 +122,7 @@ function TourPageContent({
         </View>
 
         {/* Sub-header: combination labels (base size + add-on badges) */}
-        <View style={listStyles.tableHeader} fixed>
+        <View style={listStyles.tableHeaderShaded} fixed>
           <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
             <Text>{t("commissioning.delivery_station")}</Text>
           </View>
@@ -123,7 +133,7 @@ function TourPageContent({
                 listStyles.cell,
                 { width: comboWidth },
                 listStyles.cellCenter,
-                groupStartKeys.has(column.key) ? groupBorder : {},
+                ...edgeBorders(column.key),
               ]}
             >
               <ComboHeader column={column} t={t} />
@@ -155,7 +165,7 @@ function TourPageContent({
                   listStyles.cell,
                   { width: comboWidth },
                   listStyles.cellCenter,
-                  groupStartKeys.has(column.key) ? groupBorder : {},
+                  ...edgeBorders(column.key),
                 ]}
               >
                 <Text>

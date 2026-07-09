@@ -4,6 +4,7 @@
   padding: 12px 16px;
   background-color: var(--color-bg-elevated);
   border: 1px solid var(--color-border-light);
+  border-color: var(--color-primary);
   border-radius: var(--border-radius);
   box-shadow: 0 1px 2px var(--color-shadow);
   /* Reserve space so layout doesn't shift when empty */
@@ -32,6 +33,13 @@
 
 .variations-totals-card-list li {
   line-height: 1.6;
+}
+
+/* Small muted share-type label — the list isn't grouped by share type, so
+   each row names its own. */
+.variations-totals-card-share-type {
+  color: var(--color-text-secondary);
+  font-size: 0.8em;
 }
 
 .variations-totals-card-empty {

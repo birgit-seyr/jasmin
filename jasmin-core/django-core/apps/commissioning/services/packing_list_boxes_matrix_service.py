@@ -265,6 +265,150 @@ class PackingListBoxesMatrixService:
         }
         return columns, counts_by_station
 
+    @classmethod
+    def get_weekly_combination_matrix(
+        cls,
+        year: int,
+        delivery_week: int,
+        mode: str = "day",
+        is_packed_bulk: bool | None = None,
+    ) -> dict[str, Any]:
+        """Whole-week box-combination matrix for the AmountShares view.
+
+        ROWS are the week's delivery days (optionally split per tour or per
+        delivery station via ``mode``); COLUMNS are the box combinations that
+        occur across the week (the SAME columns PackingListBoxes / the tour
+        overview render); each cell is the box count of that combination in the
+        row's scope. Reuses the packing-list box derivation, so the columns and
+        cell counts line up with the rest of the app.
+
+        ``mode``: ``"day"`` (one row per day, all stations summed), ``"tours"``
+        (one row per (day, tour)), or ``"stations"`` (one row per (day,
+        station)). Returns ``{"columns": [...], "rows": [...]}`` where each row
+        carries ``id``, ``day_number``, ``tour`` / ``delivery_station_*`` and
+        dynamic ``combo_<key>`` counts.
+        """
+        deliveries = (
+            ShareDelivery.objects.shippable()
+            .filter(
+                share__year=year,
+                share__delivery_week=delivery_week,
+                subscription__isnull=False,
+                delivery_station_day__isnull=False,
+            )
+            .select_related(
+                "subscription",
+                "share__share_type_variation__share_type",
+                "share__delivery_day",
+                "delivery_station_day__delivery_station",
+            )
+        )
+        if is_packed_bulk is not None:
+            deliveries = deliveries.filter(
+                share__share_type_variation__is_packed_bulk=is_packed_bulk
+            )
+
+        variation_by_id: dict[str, Any] = {}
+        # ONE pass over the week's deliveries: group a member's boxes per
+        # (day, station) so base + add-ons combine, and remember each row's day/
+        # tour/station metadata — no per-day/per-station re-query (avoids N+1).
+        member_groups: defaultdict[tuple[str, str, str], list[_BoxLine]] = defaultdict(
+            list
+        )
+        day_number_by_id: dict[str, int] = {}
+        station_meta: dict[
+            tuple[str, str], tuple[int | None, str | None, int | None]
+        ] = {}
+        for delivery in deliveries:
+            variation = delivery.share.share_type_variation
+            variation_by_id[variation.id] = variation
+            station_day = delivery.delivery_station_day
+            day = delivery.share.delivery_day
+            day_id = day.id
+            station_id = station_day.delivery_station_id
+            member_groups[(day_id, station_id, delivery.subscription.member_id)].append(
+                _BoxLine(
+                    variation, variation.share_type, delivery.subscription.quantity or 1
+                )
+            )
+            day_number_by_id[day_id] = day.day_number
+            station_meta[(day_id, station_id)] = (
+                station_day.tour_number,
+                station_day.delivery_station.short_name,
+                station_day.stop_order,
+            )
+
+        # Box signatures per (day, station); ``total`` (week-wide) defines the
+        # union of columns.
+        scope_counts: defaultdict[tuple[str, str], Counter] = defaultdict(Counter)
+        total: Counter = Counter()
+        for (day_id, station_id, _member_id), lines in member_groups.items():
+            for signature, boxes in cls._boxes_for_group(lines):
+                scope_counts[(day_id, station_id)][signature] += boxes
+                total[signature] += boxes
+
+        columns = cls._build_columns(total, variation_by_id)
+
+        def counts_to_keys(counter: Counter) -> dict[str, int]:
+            return {
+                cls._column_key(signature[0], signature[1]): count
+                for signature, count in counter.items()
+            }
+
+        rows: list[dict[str, Any]] = []
+        for day_id in sorted(day_number_by_id, key=lambda did: day_number_by_id[did]):
+            day_number = day_number_by_id[day_id]
+            day_station_keys = [key for key in scope_counts if key[0] == day_id]
+
+            if mode == "stations":
+                for key in sorted(
+                    day_station_keys,
+                    key=lambda k: (station_meta[k][2] or 0, station_meta[k][1] or ""),
+                ):
+                    _tour, station_name, _order = station_meta[key]
+                    rows.append(
+                        {
+                            "id": f"{day_id}_station_{key[1]}",
+                            "day_number": day_number,
+                            "tour": None,
+                            "delivery_station_id": key[1],
+                            "delivery_station_name": station_name,
+                            **counts_to_keys(scope_counts[key]),
+                        }
+                    )
+            elif mode == "tours":
+                tour_counters: defaultdict[int, Counter] = defaultdict(Counter)
+                for key in day_station_keys:
+                    tour_number = station_meta[key][0] or 1
+                    tour_counters[tour_number].update(scope_counts[key])
+                for tour_number in sorted(tour_counters):
+                    rows.append(
+                        {
+                            "id": f"{day_id}_tour_{tour_number}",
+                            "day_number": day_number,
+                            "tour": tour_number,
+                            "delivery_station_id": None,
+                            "delivery_station_name": None,
+                            **counts_to_keys(tour_counters[tour_number]),
+                        }
+                    )
+            else:  # "day"
+                day_counter: Counter = Counter()
+                for key in day_station_keys:
+                    day_counter.update(scope_counts[key])
+                rows.append(
+                    {
+                        "id": str(day_id),
+                        "day_number": day_number,
+                        "tour": None,
+                        "delivery_station_id": None,
+                        "delivery_station_name": None,
+                        **counts_to_keys(day_counter),
+                    }
+                )
+
+        return {"columns": columns, "rows": rows}
+
     # ── Step A/B: derive the box combinations + their counts ──────────────
     @classmethod
     def _derive_combinations(

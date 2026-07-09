@@ -751,3 +751,93 @@ class TestGetStationCombinationCounts:
         assert counts_by_station[station_b][base_only_key] == 1
         # Station B has no combined box.
         assert combo_key not in counts_by_station[station_b]
+
+
+@pytest.mark.django_db
+class TestGetWeeklyCombinationMatrix:
+    """The whole-week AmountShares matrix: one ROW per delivery day (or day ×
+    tour / day × station), COLUMNS = the box combinations, cell = box count."""
+
+    def test_days_as_rows_with_combination_counts(self, tenant):
+        day1 = SharesDeliveryDayFactory(day_number=0)
+        day2 = SharesDeliveryDayFactory(day_number=3)
+        station1 = DeliveryStationDayFactory(delivery_day=day1)
+        station2 = DeliveryStationDayFactory(delivery_day=day2)
+
+        base_var = _base_variation("M")
+        share1 = _share(base_var, day1)
+        share2 = _share(base_var, day2)
+
+        # Day 0: two members each take one base box → count 2.
+        for _ in range(2):
+            member = MemberFactory()
+            sub = SubscriptionFactory(
+                member=member,
+                share_type_variation=base_var,
+                quantity=1,
+                default_delivery_station_day=station1,
+            )
+            ShareDeliveryFactory(
+                share=share1, delivery_station_day=station1, subscription=sub
+            )
+        # Day 3: one member takes one base box → count 1.
+        member = MemberFactory()
+        sub = SubscriptionFactory(
+            member=member,
+            share_type_variation=base_var,
+            quantity=1,
+            default_delivery_station_day=station2,
+        )
+        ShareDeliveryFactory(
+            share=share2, delivery_station_day=station2, subscription=sub
+        )
+
+        result = PackingListBoxesMatrixService.get_weekly_combination_matrix(
+            year=_YEAR, delivery_week=_WEEK, mode="day"
+        )
+
+        # One combination column (the plain base box), shared across the week.
+        assert len(result["columns"]) == 1
+        column_key = result["columns"][0]["key"]
+
+        # Rows are the two delivery days, ordered by day_number, each carrying
+        # that day's box count in the shared column.
+        rows_by_day = {row["day_number"]: row for row in result["rows"]}
+        assert sorted(rows_by_day) == [0, 3]
+        assert rows_by_day[0][column_key] == 2
+        assert rows_by_day[3][column_key] == 1
+        # Day rows are not tour/station scoped.
+        assert rows_by_day[0]["tour"] is None
+        assert rows_by_day[0]["delivery_station_id"] is None
+
+    def test_stations_mode_splits_rows_per_station(self, tenant):
+        day = SharesDeliveryDayFactory(day_number=0)
+        station_a = DeliveryStationDayFactory(delivery_day=day)
+        station_b = DeliveryStationDayFactory(delivery_day=day)
+
+        base_var = _base_variation("M")
+        share = _share(base_var, day)
+
+        for station_day, member_count in ((station_a, 2), (station_b, 1)):
+            for _ in range(member_count):
+                member = MemberFactory()
+                sub = SubscriptionFactory(
+                    member=member,
+                    share_type_variation=base_var,
+                    quantity=1,
+                    default_delivery_station_day=station_day,
+                )
+                ShareDeliveryFactory(
+                    share=share,
+                    delivery_station_day=station_day,
+                    subscription=sub,
+                )
+
+        result = PackingListBoxesMatrixService.get_weekly_combination_matrix(
+            year=_YEAR, delivery_week=_WEEK, mode="stations"
+        )
+
+        column_key = result["columns"][0]["key"]
+        rows_by_station = {row["delivery_station_id"]: row for row in result["rows"]}
+        assert rows_by_station[station_a.delivery_station_id][column_key] == 2
+        assert rows_by_station[station_b.delivery_station_id][column_key] == 1

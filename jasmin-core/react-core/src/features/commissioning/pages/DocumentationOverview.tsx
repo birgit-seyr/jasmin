@@ -1,19 +1,19 @@
-import { Select, Table } from "antd";
-import dayjs from "dayjs";
-import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import {
+  useAmountUnitSizeColumns,
+  useShareArticleColumn,
+} from "@features/commissioning/hooks";
+import { ShareArticleSelector } from "@features/commissioning/selectors";
 import { useCommissioningDocumentationOverviewList } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningDocumentationOverviewListParams,
   CommissioningDocumentationOverviewListSource,
 } from "@shared/api/generated/models";
 import { DaySelector, WeekSelector } from "@shared/selectors";
-import { ShareArticleSelector } from "@features/commissioning/selectors";
-import { ExplainerText } from "@shared/ui";
-import {
-  useAmountUnitSizeColumns,
-  useShareArticleColumn,
-} from "@features/commissioning/hooks";
+import { EmptyHint, ExplainerText } from "@shared/ui";
+import { Select, Table } from "antd";
+import dayjs from "dayjs";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const currentYear = dayjs().year();
 const currentWeek = dayjs().isoWeek();
@@ -109,11 +109,7 @@ export default function DocumentationOverview() {
         size="small"
         className="custom-jasmin-table w-max"
         rowKey="id"
-        locale={{
-          emptyText: (
-            <div style={{ height: "1.8em" }}>{t("table.no_data")}</div>
-          ),
-        }}
+        locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
       />
 
       <ExplainerText title={t("common.info")}>

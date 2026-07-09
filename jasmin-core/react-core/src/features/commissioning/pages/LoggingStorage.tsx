@@ -1,9 +1,13 @@
-import type { TablePaginationConfig } from "antd";
-import { DatePicker, Divider, Switch, Table, Tag } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
-import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useAmountUnitSizeColumns } from "@features/commissioning/hooks";
+import {
+  ShareArticleSelector,
+  StorageSelector,
+} from "@features/commissioning/selectors";
+import {
+  useDateFormat,
+  useDateRangePresets,
+  useNumberFormat,
+} from "@hooks/index";
 import {
   useCommissioningStorageLoggingList,
   useCommissioningTheoreticalCleanAmountsList,
@@ -20,17 +24,13 @@ import type {
   TheoreticalWashAmount,
 } from "@shared/api/generated/models";
 import { YearSelector } from "@shared/selectors";
-import {
-  ShareArticleSelector,
-  StorageSelector,
-} from "@features/commissioning/selectors";
-import { ExplainerText } from "@shared/ui";
-import {
-  useDateFormat,
-  useDateRangePresets,
-  useNumberFormat,
-} from "@hooks/index";
-import { useAmountUnitSizeColumns } from "@features/commissioning/hooks";
+import { EmptyHint, ExplainerText } from "@shared/ui";
+import type { TablePaginationConfig } from "antd";
+import { DatePicker, Divider, Switch, Table, Tag } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const { RangePicker } = DatePicker;
 const currentYear = dayjs().year();
@@ -517,11 +517,7 @@ export default function LoggingStorage() {
             loading={loading}
             rowKey="id"
             className="w-max custom-jasmin-table"
-            locale={{
-              emptyText: (
-                <div style={{ height: "4em" }}>{t("table.no_data")}</div>
-              ),
-            }}
+            locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
           />
         </div>
       )}
@@ -595,11 +591,7 @@ export default function LoggingStorage() {
           loading={workflowLoading}
           rowKey="id"
           className="w-max custom-jasmin-table"
-          locale={{
-            emptyText: (
-              <div style={{ height: "4em" }}>{t("table.no_data")}</div>
-            ),
-          }}
+          locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
         />
       </div>
 

@@ -1,17 +1,31 @@
 import { NoVariationColumnsBanner } from "@features/commissioning/components";
-import { dayAmountKey, usePlanningAxes } from "@features/commissioning/hooks";
+import {
+  dayAmountKey,
+  useBoxCombinationColumns,
+  usePlanningAxes,
+} from "@features/commissioning/hooks";
 import { useShareTypes } from "@hooks/index";
 import { useShareTypeVariationSizeOptions } from "@hooks/useShareTypeVariationSizeOptions";
-import { useCommissioningShareDeliveryVariationDeliveryCountsList } from "@shared/api/generated/commissioning/commissioning";
-import type { CommissioningShareDeliveryVariationDeliveryCountsListParams } from "@shared/api/generated/models";
+import {
+  useCommissioningShareDeliveryBoxCombinationMatrixRetrieve,
+  useCommissioningShareDeliveryVariationDeliveryCountsList,
+} from "@shared/api/generated/commissioning/commissioning";
+import type {
+  CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams,
+  CommissioningShareDeliveryVariationDeliveryCountsListParams,
+  PackingBoxesMatrixColumn,
+  WeeklyComboMatrixRow,
+} from "@shared/api/generated/models";
 import { ShareTypeSelector, WeekSelector } from "@shared/selectors";
 import { ExplainerText, LabeledSwitch } from "@shared/ui";
 import { Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
+import type { TFunction } from "i18next";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { activeAtDateForWeek } from "@shared/utils";
+import { EmptyHint } from "@shared/ui";
 
 const currentYear = dayjs().year();
 const currentWeek = dayjs().isoWeek();
@@ -21,6 +35,10 @@ type VariationRow = Record<string, unknown> & {
   share_type_variation_size?: string;
 };
 
+// Box-matrix rows carry dynamic ``combo_<key>`` counts on top of the declared
+// fields; the combination columns read those by dataIndex.
+type BoxMatrixRow = WeeklyComboMatrixRow & Record<string, unknown>;
+
 interface DeliveryStation {
   id: string;
   short_name?: string;
@@ -29,6 +47,15 @@ interface DeliveryStation {
 
 interface AmountSharesProps {
   jokerMode?: boolean;
+}
+
+// The left "which delivery" label for a box-matrix row: the weekday, plus the
+// tour or the delivery station when the row is split that way.
+function boxRowLabel(row: WeeklyComboMatrixRow, t: TFunction): string {
+  const day = t(`commissioning.weekdays.${row.day_number}`);
+  if (row.tour != null) return `${day} · T${row.tour}`;
+  if (row.delivery_station_name) return `${day} · ${row.delivery_station_name}`;
+  return day;
 }
 
 export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
@@ -43,6 +70,12 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
 
   const { t } = useTranslation();
   const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
+
+  // The normal AmountShares view uses the days × columns box matrix (the
+  // ``box_combination_matrix`` endpoint branches server-side: box combinations
+  // for subscription tenants, flat per-variation columns for import tenants, so
+  // one frontend path covers both). The JOKER view stays on the per-variation
+  // size × day layout — jokers are per-variation extras, not box combinations.
 
   // Day axis via the shared planning-axes hook (single source of truth — see
   // docs/day-variation-columns-audit.md). No shareOption is passed, so the
@@ -64,17 +97,20 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
   const { shareTypes } = useShareTypes(shareTypeParams);
   const hasShareTypes = shareTypes.length > 0;
 
+  // ── Joker view: per-variation (size × day) counts ────────────────────────
   const queryParams = useMemo<
     CommissioningShareDeliveryVariationDeliveryCountsListParams | undefined
   >(() => {
-    if (!selectedShareType || selectedWeek == null) return undefined;
+    if (!jokerMode || !selectedShareType || selectedWeek == null) {
+      return undefined;
+    }
 
     const params: CommissioningShareDeliveryVariationDeliveryCountsListParams =
       {
         year: selectedYear,
         delivery_week: selectedWeek,
         share_type: selectedShareType,
-        ...(jokerMode && { joker: true }),
+        joker: true,
       };
 
     if (showDeliveryStations) {
@@ -85,12 +121,12 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
 
     return params;
   }, [
+    jokerMode,
     selectedYear,
     selectedWeek,
     selectedShareType,
     showTours,
     showDeliveryStations,
-    jokerMode,
   ]);
 
   const { data } = useCommissioningShareDeliveryVariationDeliveryCountsList(
@@ -207,6 +243,61 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
     getShareTypeVariationSizeLabel,
   ]);
 
+  // ── Normal view: whole-week matrix (days as rows). The endpoint returns box
+  // combinations for subscription tenants and flat per-variation columns for
+  // import tenants — both rendered by ``useBoxCombinationColumns``. ──────────
+  const boxMatrixParams = useMemo<
+    CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams | undefined
+  >(() => {
+    if (jokerMode || selectedWeek == null) return undefined;
+    const params: CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams =
+      {
+        year: selectedYear,
+        delivery_week: selectedWeek,
+      };
+    if (showDeliveryStations) {
+      params.for_stations = true;
+    } else if (showTours) {
+      params.for_tours = true;
+    }
+    // Shows EVERYTHING, including bulk-packed variations (no is_packed_bulk
+    // filter) — it's the full weekly overview.
+    return params;
+  }, [jokerMode, selectedYear, selectedWeek, showTours, showDeliveryStations]);
+
+  const { data: boxMatrix, isFetching: boxFetching } =
+    useCommissioningShareDeliveryBoxCombinationMatrixRetrieve(
+      boxMatrixParams as CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams,
+      { query: { enabled: !!boxMatrixParams } },
+    );
+
+  const matrixColumns = useMemo<PackingBoxesMatrixColumn[]>(
+    () => boxMatrix?.columns ?? [],
+    [boxMatrix],
+  );
+  const boxRows = useMemo<BoxMatrixRow[]>(
+    () => (boxMatrix?.rows ?? []) as BoxMatrixRow[],
+    [boxMatrix],
+  );
+  const comboColumns = useBoxCombinationColumns(matrixColumns);
+
+  const boxColumns = useMemo<ColumnsType<BoxMatrixRow>>(
+    () => [
+      {
+        title: t("commissioning.delivery_day"),
+        key: "__day_label",
+        align: "left" as const,
+        width: "14em",
+        fixed: "left" as const,
+        render: (_: unknown, row: BoxMatrixRow) => (
+          <strong>{boxRowLabel(row, t)}</strong>
+        ),
+      },
+      ...(comboColumns as unknown as ColumnsType<BoxMatrixRow>),
+    ],
+    [comboColumns, t],
+  );
+
   return (
     <div>
       <h1>
@@ -221,12 +312,14 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
         selectedWeek={selectedWeek}
         setSelectedWeek={setSelectedWeek}
       />
-      <ShareTypeSelector
-        selectedShareType={selectedShareType}
-        setSelectedShareType={setSelectedShareType}
-        year={selectedYear}
-        delivery_week={selectedWeek}
-      />
+      {jokerMode && (
+        <ShareTypeSelector
+          selectedShareType={selectedShareType}
+          setSelectedShareType={setSelectedShareType}
+          year={selectedYear}
+          delivery_week={selectedWeek}
+        />
+      )}
 
       <>
         {toursExist && (
@@ -244,44 +337,54 @@ export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
             />
           </div>
         )}
-        {hasShareTypes && (
-          <div
-            style={{
-              marginTop: toursExist ? "0.5em" : "2em",
-              marginBottom: "1em",
+        <div
+          style={{
+            marginTop: toursExist ? "0.5em" : "2em",
+            marginBottom: "1em",
+          }}
+        >
+          <LabeledSwitch
+            value={showDeliveryStations}
+            onChange={(checked: boolean) => {
+              setShowDeliveryStations(checked);
+              if (checked) {
+                setShowTours(false);
+              }
             }}
-          >
-            <LabeledSwitch
-              value={showDeliveryStations}
-              onChange={(checked: boolean) => {
-                setShowDeliveryStations(checked);
-                if (checked) {
-                  setShowTours(false);
-                }
-              }}
-              label={t("commissioning.show_delivery_stations")}
-              withEyeIcons
-            />
-          </div>
-        )}
+            label={t("commissioning.show_delivery_stations")}
+            withEyeIcons
+          />
+        </div>
 
         <div style={{ height: "2em" }}></div>
-        {hasShareTypes ? (
+        {jokerMode ? (
+          hasShareTypes ? (
+            <Table
+              columns={columns}
+              dataSource={tableData}
+              pagination={false}
+              size="small"
+              className="custom-jasmin-table w-max"
+              rowKey="id"
+              locale={{
+                emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint>,
+              }}
+            />
+          ) : (
+            <NoVariationColumnsBanner />
+          )
+        ) : (
           <Table
-            columns={columns}
-            dataSource={tableData}
+            columns={boxColumns}
+            dataSource={boxRows}
             pagination={false}
             size="small"
+            loading={boxFetching}
             className="custom-jasmin-table w-max"
             rowKey="id"
-            locale={{
-              emptyText: (
-                <div style={{ height: "4em" }}>{t("table.no_data")}</div>
-              ),
-            }}
+            bordered
+            locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
           />
-        ) : (
-          <NoVariationColumnsBanner />
         )}
       </>
 

@@ -131,6 +131,7 @@ import type {
   CommissioningShareArticleNetPricesListParams,
   CommissioningShareArticlesListParams,
   CommissioningShareContentsListParams,
+  CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams,
   CommissioningShareDeliveryDetailsListParams,
   CommissioningShareDeliveryDetailsMatrixRetrieveParams,
   CommissioningShareDeliveryExceptionGapsListParams,
@@ -304,7 +305,8 @@ import type {
   VirtualVariationComponentsRequest,
   VirtualVariationComponentsResponse,
   WaitingListOfferDetail,
-  Waste
+  Waste,
+  WeeklyComboMatrixResponse
 } from '.././models';
 
 import { axiosService } from '../../../services/api';
@@ -23864,6 +23866,96 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Whole-week matrix for AmountShares: one row per delivery day (or day×tour / day×station). Subscription tenants get box-combination columns (combo_<key>, each cell the box count); import (external-demand) tenants get flat per-variation columns (variation_<id>) sourced from weekly demand. Both render through the same frontend hook.
+ */
+export const commissioningShareDeliveryBoxCombinationMatrixRetrieve = (
+    params: CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<WeeklyComboMatrixResponse>(
+      {url: `/api/commissioning/share_delivery/box_combination_matrix/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningShareDeliveryBoxCombinationMatrixRetrieveQueryKey = (params?: CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams,) => {
+    return [
+    `/api/commissioning/share_delivery/box_combination_matrix/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningShareDeliveryBoxCombinationMatrixRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>, TError = ErrorResponse>(params: CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningShareDeliveryBoxCombinationMatrixRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>> = ({ signal }) => commissioningShareDeliveryBoxCombinationMatrixRetrieve(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningShareDeliveryBoxCombinationMatrixRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>>
+export type CommissioningShareDeliveryBoxCombinationMatrixRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningShareDeliveryBoxCombinationMatrixRetrieve<TData = Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningShareDeliveryBoxCombinationMatrixRetrieve<TData = Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningShareDeliveryBoxCombinationMatrixRetrieve<TData = Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningShareDeliveryBoxCombinationMatrixRetrieve<TData = Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryBoxCombinationMatrixRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningShareDeliveryBoxCombinationMatrixRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
  * Weeks this member's confirmed subscriptions WOULD deliver but don't, because a delivery exception (Lieferpause) removed the ShareDelivery. Returns pseudo-deliveries for ``year`` and ``year+1`` so the deliveries card can surface the paused weeks — there is no ShareDelivery row for them.
  */
 export const commissioningShareDeliveryExceptionGapsList = (

@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -21,7 +22,7 @@ import type {
   TablePermissions,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { ExplainerText } from "@shared/ui";
+import { DateRangeStatusLegend, ExplainerText } from "@shared/ui";
 import {
   useInvalidateAfterTableMutation,
   useNoteColumn,
@@ -42,7 +43,7 @@ import { isoWeekRangeLabel } from "@shared/utils";
  * Sunday-only) + the active-status indicator, so the whole-week bounds and the
  * active/upcoming/expired badge behave exactly like every other TimeBound table.
  */
-export default function DeliveryExceptionPeriods() {
+export default function ConfigurationDeliveryExceptions() {
   const { t } = useTranslation();
   const variationLabel = useVariationLabel();
   const { isOffice } = useRoles();
@@ -62,6 +63,16 @@ export default function DeliveryExceptionPeriods() {
   const { validFromColumn, validUntilColumn } = useTimeBoundColumns({
     validFromRequired: true,
     validUntilRequired: true,
+    // Once valid_from is picked, valid_until may only be a Sunday in the future
+    // relative to it — the earliest being that week's Sunday (a one-week pause).
+    // Evaluated live against the in-edit valid_from; the backend enforces the
+    // same "valid_until on or after valid_from" rule.
+    validUntilFloor: (record) => {
+      const validFrom = record.valid_from
+        ? dayjs(record.valid_from as string)
+        : null;
+      return validFrom ? { minDate: validFrom.add(6, "day") } : {};
+    },
   });
   const { noteColumn } = useNoteColumn();
 
@@ -172,6 +183,8 @@ export default function DeliveryExceptionPeriods() {
         permissions={permissions}
         style={{ width: "70%" }}
       />
+      <DateRangeStatusLegend />
+
       <ExplainerText title={t("common.info")}>
         {t("explainers.delivery_exceptions")}
       </ExplainerText>

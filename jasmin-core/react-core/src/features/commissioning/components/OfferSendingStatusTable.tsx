@@ -7,6 +7,7 @@
 import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import { Table } from "antd";
 import { useTranslation } from "react-i18next";
+import { EmptyHint } from "@shared/ui";
 import { useDateFormat } from "@hooks/index";
 
 export default function OfferSendingStatusTable({
@@ -70,6 +71,7 @@ export default function OfferSendingStatusTable({
         className="custom-jasmin-table"
         size="small"
         style={{ width: "46em" }}
+        locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
       />
     </div>
   );

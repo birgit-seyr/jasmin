@@ -40,6 +40,7 @@ from .delivery_serializer import (
     DeliveryTourResponseSerializer,
     DeliveryToursUpdateSerializer,
     DeliveryTourUpdateSerializer,
+    WeeklyComboMatrixResponseSerializer,
 )
 from .documentation_serializer import (
     DocumentationAggregationItemSerializer,

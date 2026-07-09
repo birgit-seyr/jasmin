@@ -3,6 +3,7 @@ import type { TFunction } from "i18next";
 
 import type { PackingBoxesMatrixColumn } from "@shared/api/generated/models";
 import { getShareTypeVariationSizeLabelPure } from "@hooks/index";
+import { pdfTheme } from "./pdfTheme";
 
 /**
  * Shared PDF building blocks for the box-combination matrices (packing boxes,
@@ -15,7 +16,37 @@ import { getShareTypeVariationSizeLabelPure } from "@hooks/index";
 export const boxComboStyles = StyleSheet.create({
   comboBase: { fontWeight: 700 },
   comboAddons: { fontSize: 6, color: "#555" },
+  // The brand-green vertical rules that frame each base-share_type group —
+  // the SINGLE source for every box-combination matrix (packing boxes,
+  // delivery overview / details). Left rule on a group's first column, right
+  // rule on its last, so a group is boxed on both sides.
+  groupBorderLeft: {
+    borderLeftWidth: 1.5,
+    borderLeftColor: pdfTheme.colors.brand,
+  },
+  groupBorderRight: {
+    borderRightWidth: 1.5,
+    borderRightColor: pdfTheme.colors.brand,
+  },
 });
+
+/** For each column key, whether it is the LEFT (first) and/or RIGHT (last)
+ *  column of its base-share_type group — drives the green group rules so a
+ *  group is framed on both sides. Columns arrive already grouped. */
+export function computeGroupEdges(
+  groups: ComboGroup[],
+): Map<string, { left: boolean; right: boolean }> {
+  const edges = new Map<string, { left: boolean; right: boolean }>();
+  for (const group of groups) {
+    group.cols.forEach((col, index) => {
+      edges.set(col.key, {
+        left: index === 0,
+        right: index === group.cols.length - 1,
+      });
+    });
+  }
+  return edges;
+}
 
 /** Header label for one combination: base size + one "SHORT·size" per add-on. */
 export function ComboHeader({
@@ -64,7 +95,9 @@ export function comboColumnWidth({
   comboCount,
   fixedWidth,
   flexMinWidth,
-  comboIdeal = 52,
+  // A bit wider than the old 52pt: few-combo pages read better and the first
+  // column stays fixed (the slack sits on the right instead of stretching it).
+  comboIdeal = 64,
 }: {
   orientation: PdfOrientation;
   comboCount: number;

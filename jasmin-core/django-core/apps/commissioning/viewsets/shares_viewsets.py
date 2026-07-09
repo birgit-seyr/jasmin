@@ -92,6 +92,7 @@ from ..serializers import (
     VirtualVariationComponentListItemSerializer,
     VirtualVariationComponentsRequestSerializer,
     VirtualVariationComponentsResponseSerializer,
+    WeeklyComboMatrixResponseSerializer,
 )
 from ..serializers.shares_serializer import (
     DeliveryExceptionGapSerializer,
@@ -868,6 +869,70 @@ class ShareDeliveryViewSet(
             for_stations=for_stations,
         )
         return Response(result)
+
+    @extend_schema(
+        parameters=[
+            get_year_parameter(),
+            get_delivery_week_parameter(),
+            OpenApiParameter(name="for_tours", type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(
+                name="for_stations", type=OpenApiTypes.BOOL, required=False
+            ),
+            OpenApiParameter(
+                name="is_packed_bulk", type=OpenApiTypes.BOOL, required=False
+            ),
+        ],
+        responses={
+            200: WeeklyComboMatrixResponseSerializer,
+            400: ErrorResponseSerializer,
+        },
+        description=(
+            "Whole-week matrix for AmountShares: one row per delivery day (or "
+            "day×tour / day×station). Subscription tenants get box-combination "
+            "columns (combo_<key>, each cell the box count); import "
+            "(external-demand) tenants get flat per-variation columns "
+            "(variation_<id>) sourced from weekly demand. Both render through "
+            "the same frontend hook."
+        ),
+    )
+    @action(detail=False, methods=["get"], pagination_class=None)
+    def box_combination_matrix(self, request: Request) -> Response:
+        enforce_privileged(request, "Staff only.")
+        params = validate_query_params(
+            request,
+            required=["year", "delivery_week"],
+            optional=["for_tours", "for_stations", "is_packed_bulk"],
+        )
+        mode = "day"
+        if params["for_stations"]:
+            mode = "stations"
+        elif params["for_tours"]:
+            mode = "tours"
+
+        # Import (external-demand) tenants have no ShareDelivery rows, so their
+        # matrix is FLAT per-variation columns (from the demand port); everyone
+        # else gets the real box combinations. Both render through the same
+        # frontend hook, so AmountShares stays one code path.
+        from ..services.share_demand_service import (
+            ExternalDemandBackend,
+            _resolve_backend,
+        )
+
+        if isinstance(_resolve_backend(), ExternalDemandBackend):
+            result = ShareDeliveryService.get_weekly_variation_count_matrix(
+                year=params["year"],
+                delivery_week=params["delivery_week"],
+                mode=mode,
+            )
+        else:
+            result = PackingListBoxesMatrixService.get_weekly_combination_matrix(
+                year=params["year"],
+                delivery_week=params["delivery_week"],
+                mode=mode,
+                is_packed_bulk=params["is_packed_bulk"],
+            )
+        serializer = WeeklyComboMatrixResponseSerializer(result)
+        return Response(serializer.data)
 
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # ShareDelivery rows are system-managed; only staff may create them.

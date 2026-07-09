@@ -272,7 +272,7 @@ class TenantSettings(JasminModel):
     round_up_to_full_pu_harvesting = models.BooleanField(default=False)
 
     # Sales channels
-    has_markets = models.BooleanField(default=True)
+    has_markets = models.BooleanField(default=False)
     sells_to_resellers = models.BooleanField(default=True)  # done
 
     # reseller invoice & deliver note settings

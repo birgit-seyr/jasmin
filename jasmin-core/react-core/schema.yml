@@ -18373,6 +18373,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/commissioning/share_delivery/box_combination_matrix/:
+    get:
+      operationId: commissioning_share_delivery_box_combination_matrix_retrieve
+      description: 'Whole-week matrix for AmountShares: one row per delivery day (or
+        day×tour / day×station). Subscription tenants get box-combination columns
+        (combo_<key>, each cell the box count); import (external-demand) tenants get
+        flat per-variation columns (variation_<id>) sourced from weekly demand. Both
+        render through the same frontend hook.'
+      parameters:
+      - in: query
+        name: delivery_week
+        schema:
+          type: integer
+        description: ISO week number (1-53)
+        required: true
+        examples:
+          Week1:
+            value: 1
+            summary: Week 1
+          Week26:
+            value: 26
+            summary: Week 26
+          Week52:
+            value: 52
+            summary: Week 52
+      - in: query
+        name: for_stations
+        schema:
+          type: boolean
+      - in: query
+        name: for_tours
+        schema:
+          type: boolean
+      - in: query
+        name: is_packed_bulk
+        schema:
+          type: boolean
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Year (YYYY format)
+        required: true
+        examples:
+          '2024':
+            value: 2024
+          '2025':
+            value: 2025
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyComboMatrixResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/commissioning/share_delivery/exception_gaps/:
     get:
       operationId: commissioning_share_delivery_exception_gaps_list
@@ -39950,6 +40021,54 @@ components:
       - storage
       - unit
       - year
+    WeeklyComboMatrixResponse:
+      type: object
+      description: |-
+        Whole-week box-combination matrix for AmountShares — the SAME box
+        combination ``columns`` as PackingListBoxes, with one ROW per delivery day
+        (or day × tour / day × station).
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackingBoxesMatrixColumn'
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyComboMatrixRow'
+      required:
+      - columns
+      - rows
+    WeeklyComboMatrixRow:
+      type: object
+      description: |-
+        One AmountShares row: a delivery day, optionally split per tour or per
+        delivery station. Besides the stable fields below it carries dynamic count
+        keys matching the ``columns`` — ``combo_<key>`` for subscription box
+        combinations, ``variation_<id>`` for the flat per-variation (import) columns;
+        a plain declared-field ``Serializer`` would drop them, so ``to_representation``
+        re-attaches them.
+      properties:
+        id:
+          type: string
+        day_number:
+          type: integer
+          description: Day of week (0=Monday, 6=Sunday)
+        tour:
+          type: integer
+          nullable: true
+        delivery_station_id:
+          type: string
+          nullable: true
+        delivery_station_name:
+          type: string
+          nullable: true
+      required:
+      - day_number
+      - delivery_station_id
+      - delivery_station_name
+      - id
+      - tour
     _DeliveryStationEntry:
       type: object
       description: |-

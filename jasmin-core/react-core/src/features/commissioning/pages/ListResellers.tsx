@@ -366,7 +366,7 @@ export default function ListResellers() {
               dataIndex: "offer_group_name",
               key: "offer_group",
               inputType: "select",
-              required: false,
+              required: true,
               width: "12em",
               options: offerGroups,
               sortable: true,

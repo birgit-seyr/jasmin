@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useAggregatedVariationsTotals,
   type VariationsTotalEntry,
   type VariationsTotalsFilters,
 } from "@features/commissioning/hooks/useAggregatedVariationsTotals";
+import { useShareTypeVariations } from "@features/commissioning/hooks/useShareTypeVariations";
 import ToolTipIcon from "@shared/ui/ToolTipIcon";
 
 export type { VariationsTotalEntry, VariationsTotalsFilters };
@@ -40,6 +42,21 @@ export default function VariationsTotalsCard({
   const { t } = useTranslation();
   const { entries: aggregated } = useAggregatedVariationsTotals(filters);
 
+  // The entries are ordered by size, NOT grouped by share type, so a row's
+  // size alone ("M") doesn't say which share type it belongs to. Look the
+  // share-type name up by variation id and show it as a small label per row.
+  const { shareTypeVariations } = useShareTypeVariations({});
+  const shareTypeByVariation = useMemo(
+    () =>
+      new Map(
+        shareTypeVariations.map((variation) => [
+          String(variation.id),
+          variation.share_type_name,
+        ]),
+      ),
+    [shareTypeVariations],
+  );
+
   const entries = hideZero
     ? aggregated.filter((v) => v.totalQuantity > 0)
     : aggregated;
@@ -60,11 +77,22 @@ export default function VariationsTotalsCard({
         </div>
       ) : (
         <ul className="variations-totals-card-list">
-          {entries.map((variation) => (
-            <li key={String(variation.id)}>
-              {t(`commissioning.${variation.size}`)}: {variation.totalQuantity}
-            </li>
-          ))}
+          {entries.map((variation) => {
+            const shareTypeName = shareTypeByVariation.get(
+              String(variation.id),
+            );
+            return (
+              <li key={String(variation.id)}>
+                {shareTypeName && (
+                  <span className="variations-totals-card-share-type">
+                    {shareTypeName}{" "}
+                  </span>
+                )}
+                {t(`commissioning.${variation.size}`)}:{" "}
+                {variation.totalQuantity}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

@@ -29,9 +29,7 @@ import {
   useBoxCombinationColumns,
   useDeliveryStations,
   useShareDeliveryDays,
-  useShareTypeVariations,
 } from "@features/commissioning/hooks";
-import { filterBulkComboColumns } from "@features/commissioning/utils/filterBulkComboColumns";
 import {
   formatDayLabel,
   formatWeekLabel,
@@ -61,19 +59,6 @@ export default function DeliveryStationDetails() {
     false,
   ) as boolean;
   const showSize = Boolean(getSetting("show_size_column"));
-
-  // Bulk-packed variations belong on the separate bulk list, not the pickup /
-  // tour box lists — drop the box combinations whose base is a bulk variation
-  // from the table and the pickup-list PDFs (frontend-only filter). The bulk
-  // "Was ihr nehmen könnt" member sheet below is a distinct dataset and is
-  // intentionally left untouched.
-  const { shareTypeVariations: bulkVariations } = useShareTypeVariations({
-    is_packed_bulk: true,
-  });
-  const bulkVariationIds = useMemo(
-    () => new Set(bulkVariations.map((variation) => String(variation.id))),
-    [bulkVariations],
-  );
 
   // Turn a per-station member-amounts matrix into the ``StationPageData``
   // member-matrix fields: the "Was ihr nehmen könnt" columns + rows (with
@@ -138,11 +123,8 @@ export default function DeliveryStationDetails() {
       query: { enabled: isQueryEnabled },
     });
   const matrixColumns = useMemo<PackingBoxesMatrixColumn[]>(
-    () =>
-      isQueryEnabled
-        ? filterBulkComboColumns(matrix?.columns ?? [], bulkVariationIds)
-        : [],
-    [isQueryEnabled, matrix, bulkVariationIds],
+    () => (isQueryEnabled ? (matrix?.columns ?? []) : []),
+    [isQueryEnabled, matrix],
   );
   const matrixRows = useMemo<TableRecord[]>(
     () =>
@@ -307,10 +289,7 @@ export default function DeliveryStationDetails() {
           | undefined;
         return {
           stationName: station.label,
-          columns: filterBulkComboColumns(
-            stationMatrix?.columns ?? [],
-            bulkVariationIds,
-          ),
+          columns: stationMatrix?.columns ?? [],
           rows: (stationMatrix?.rows ??
             []) as unknown as StationPageData["rows"],
           ...buildMemberMatrix(
@@ -327,7 +306,6 @@ export default function DeliveryStationDetails() {
     allStationsDayMemberQueries,
     deliveryStations,
     buildMemberMatrix,
-    bulkVariationIds,
   ]);
 
   // Build PDF pages for all stations across all days in the week.
@@ -353,10 +331,7 @@ export default function DeliveryStationDetails() {
         if (rows.length > 0) {
           pages.push({
             stationName: `${station.label} — ${dayLabel}`,
-            columns: filterBulkComboColumns(
-              stationMatrix?.columns ?? [],
-              bulkVariationIds,
-            ),
+            columns: stationMatrix?.columns ?? [],
             rows,
             ...buildMemberMatrix(
               allStationsWeekMemberQueries[queryIdx]?.data as
@@ -376,7 +351,6 @@ export default function DeliveryStationDetails() {
     dayNumbers,
     t,
     buildMemberMatrix,
-    bulkVariationIds,
   ]);
 
   // Tenant info for PDF header

@@ -4,10 +4,10 @@
  * presentation; the aggregation lives in ``useHarvestingListData``.
  */
 
+import type { CrateSummaryEntry } from "@features/commissioning/hooks/useHarvestingListData";
+import { EmptyHint, ToolTipIcon } from "@shared/ui";
 import { Card, Table } from "antd";
 import { useTranslation } from "react-i18next";
-import { ToolTipIcon } from "@shared/ui";
-import type { CrateSummaryEntry } from "@features/commissioning/hooks/useHarvestingListData";
 
 export default function HarvestingCrateSummary({
   crateSummary,
@@ -92,9 +92,7 @@ export default function HarvestingCrateSummary({
         size="small"
         className="compact-table custom-jasmin-table"
         style={{ width: "22em", marginTop: "1em" }}
-        locale={{
-          emptyText: <div style={{ height: "2em" }}>{t("table.no_data")}</div>,
-        }}
+        locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
       />
     </div>
   );

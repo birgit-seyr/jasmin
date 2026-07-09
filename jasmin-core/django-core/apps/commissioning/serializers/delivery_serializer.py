@@ -518,6 +518,38 @@ class DeliveryStationsToursOverviewResponseSerializer(serializers.Serializer):
     variations = ShareTypeVariationMetadataSerializer(many=True)
 
 
+class WeeklyComboMatrixRowSerializer(serializers.Serializer):
+    """One AmountShares row: a delivery day, optionally split per tour or per
+    delivery station. Besides the stable fields below it carries dynamic count
+    keys matching the ``columns`` — ``combo_<key>`` for subscription box
+    combinations, ``variation_<id>`` for the flat per-variation (import) columns;
+    a plain declared-field ``Serializer`` would drop them, so ``to_representation``
+    re-attaches them."""
+
+    id = serializers.CharField()
+    day_number = serializers.IntegerField(help_text="Day of week (0=Monday, 6=Sunday)")
+    tour = serializers.IntegerField(allow_null=True)
+    delivery_station_id = serializers.CharField(allow_null=True)
+    delivery_station_name = serializers.CharField(allow_null=True, allow_blank=True)
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if isinstance(instance, dict):
+            for key, value in instance.items():
+                if key.startswith(("combo_", "variation_")) and key not in ret:
+                    ret[key] = value
+        return ret
+
+
+class WeeklyComboMatrixResponseSerializer(serializers.Serializer):
+    """Whole-week box-combination matrix for AmountShares — the SAME box
+    combination ``columns`` as PackingListBoxes, with one ROW per delivery day
+    (or day × tour / day × station)."""
+
+    columns = PackingBoxesMatrixColumnSerializer(many=True)
+    rows = WeeklyComboMatrixRowSerializer(many=True)
+
+
 # ========================================
 # DELIVERY EXCEPTION ("Lieferpause") SERIALIZER
 # ========================================

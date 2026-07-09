@@ -44,8 +44,9 @@ const ConfigurationPayments = lazy(
 const ConfigurationUsers = lazy(
   () => import("@features/configuration/pages/ConfigurationUsers"),
 );
-const DeliveryExceptionPeriods = lazy(
-  () => import("@features/configuration/pages/DeliveryExceptionPeriods"),
+const ConfigurationDeliveryExceptions = lazy(
+  () =>
+    import("@/features/configuration/pages/ConfigurationDeliveryExceptions"),
 );
 
 export const configurationRoutes: AppRoute[] = [
@@ -77,7 +78,7 @@ export const configurationRoutes: AppRoute[] = [
     path: "/configuration/delivery-exceptions",
     element: (
       <RequireRole flag="isAdmin">
-        <DeliveryExceptionPeriods />
+        <ConfigurationDeliveryExceptions />
       </RequireRole>
     ),
   },
