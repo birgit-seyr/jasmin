@@ -97,6 +97,10 @@ backups/*.sql.gz
 backups/*.gpg
 backups/*.dump
 !backups/*.sh
+# Off-host push credentials — rclone config + the dedicated Storage Box key.
+backups/rclone.conf
+backups/storagebox_key
+backups/storagebox_key.pub
 
 *.pdf
 # Local AI assistant instructions (kept out of version control)

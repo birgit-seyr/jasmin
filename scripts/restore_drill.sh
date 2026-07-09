@@ -15,7 +15,7 @@
 #       (sourced from .env on prod, kept in your password manager)
 #
 # Output:
-#     docs/security/restore-drills/YYYY-MM-DD.md  (markdown table; sign-off
+#     docs/code_audit/security/restore-drills/YYYY-MM-DD.md  (markdown table; sign-off
 #                                         block appended by the operator)
 #
 # Safety:
@@ -23,7 +23,7 @@
 #     bridge network only) and torn down at the end. Prod is read-only
 #     for the row-count query — no writes anywhere near it.
 #
-# See docs/security/restore-drill.md for the runbook this script implements.
+# See docs/code_audit/security/restore-drill.md for the runbook this script implements.
 
 set -euo pipefail
 
@@ -35,7 +35,7 @@ SANDBOX_USER="jasmin_sandbox"
 # accepts a connection from outside docker exec.
 SANDBOX_PASSWORD="sandbox_$(date +%s)_$RANDOM"
 PROD_POSTGRES_CONTAINER="${PROD_POSTGRES_CONTAINER:-$(docker compose ps -q postgres 2>/dev/null || true)}"
-OUTPUT_DIR="docs/security/restore-drills"
+OUTPUT_DIR="docs/code_audit/security/restore-drills"
 OUTPUT_FILE="${OUTPUT_DIR}/$(date +%Y-%m-%d).md"
 
 # ── Argument: backup file ──────────────────────────────────────────────────
