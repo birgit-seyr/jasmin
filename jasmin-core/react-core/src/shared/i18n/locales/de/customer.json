@@ -21,6 +21,7 @@
     "no_items": "Noch keine Artikel bestellt.",
     "order_success": "Artikel erfolgreich bestellt.",
     "order_error": "Fehler beim Bestellen. Bitte versuchen Sie es erneut.",
+    "insufficient_stock_tag": "Nur {{count}} VPE verfügbar",
     "item_removed": "Artikel entfernt.",
     "remove_error": "Fehler beim Entfernen.",
     "no_reseller_linked": "Kein Kundenkonto verknüpft",

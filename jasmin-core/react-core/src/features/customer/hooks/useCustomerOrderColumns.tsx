@@ -1,3 +1,5 @@
+import { EditOutlined } from "@ant-design/icons";
+import { Button, Space } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,7 +8,10 @@ import { useNumberFormat } from "@hooks/useNumberFormat";
 import { useSizeOptions } from "@hooks/useSizeOptions";
 import { useUnitOptions } from "@hooks/useUnitOptions";
 import OrderAmountCell from "@features/customer/components/OrderAmountCell";
-import type { CustomerOrderTableRow } from "@features/customer/types";
+import type {
+  CustomerOrderTableRow,
+  StockError,
+} from "@features/customer/types";
 
 type TierPriceKey = "price_1" | "price_2" | "price_3";
 
@@ -14,22 +19,32 @@ interface Params {
   tableData: CustomerOrderTableRow[];
   finalTiers: number[];
   orderAmounts: Record<string, number>;
-  submitting: Record<string, boolean>;
+  editMode: boolean;
+  saving: boolean;
   isReadOnly: boolean;
+  /** Whole order is finalized / already has a delivery note → no edit toggle. */
+  orderLocked: boolean;
+  /** Per-offer insufficient-stock errors from the last save, keyed by offer id. */
+  stockErrors: Record<string, StockError>;
   onAmountChange: (offerId: string, value: number | null) => void;
-  onOrder: (record: CustomerOrderTableRow) => void;
-  onUpdate: (record: CustomerOrderTableRow) => void;
+  onEnterEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveAll: (rows: CustomerOrderTableRow[]) => void;
 }
 
 export function useCustomerOrderColumns({
   tableData,
   finalTiers,
   orderAmounts,
-  submitting,
+  editMode,
+  saving,
   isReadOnly,
+  orderLocked,
+  stockErrors,
   onAmountChange,
-  onOrder,
-  onUpdate,
+  onEnterEdit,
+  onCancelEdit,
+  onSaveAll,
 }: Params) {
   const { t } = useTranslation();
   const { currencySymbol } = useCurrency();
@@ -107,8 +122,45 @@ export function useCustomerOrderColumns({
       });
     }
 
+    // The order-amount column is a single edit surface: one header toggle drives
+    // the whole column. View mode shows an "Aktualisieren" button; edit mode
+    // swaps it for a bulk Save + Cancel. Hidden entirely once the order is
+    // frozen (past/closed week or finalized order).
+    const canEdit = !isReadOnly && !orderLocked;
     cols.push({
-      title: t("customer.order_amount"),
+      title: (
+        <div className="order-col-header">
+          <span>{t("customer.order_amount")}</span>
+          {canEdit && (
+            <Space size={4} className="order-col-header-actions">
+              {editMode ? (
+                <>
+                  <Button
+                    type="primary"
+                    size="small"
+                    className="dark-green-button"
+                    loading={saving}
+                    onClick={() => onSaveAll(tableData)}
+                  >
+                    {t("common.save")}
+                  </Button>
+                  <Button size="small" onClick={onCancelEdit} disabled={saving}>
+                    {t("common.cancel")}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={onEnterEdit}
+                >
+                  {t("customer.update")}
+                </Button>
+              )}
+            </Space>
+          )}
+        </div>
+      ),
       key: "order_col",
       align: "center" as const,
       width: 260,
@@ -130,11 +182,12 @@ export function useCustomerOrderColumns({
         <OrderAmountCell
           record={record}
           orderAmounts={orderAmounts}
-          submitting={submitting}
+          editMode={editMode}
+          saving={saving}
           isReadOnly={isReadOnly}
+          stockError={stockErrors[record.id as string]}
           onAmountChange={onAmountChange}
-          onOrder={onOrder}
-          onUpdate={onUpdate}
+          onSubmit={() => onSaveAll(tableData)}
         />
       ),
     });
@@ -146,12 +199,17 @@ export function useCustomerOrderColumns({
     getUnitLabel,
     getSizeLabel,
     activePriceTiers,
+    tableData,
     orderAmounts,
-    submitting,
+    editMode,
+    saving,
     isReadOnly,
+    orderLocked,
+    stockErrors,
     onAmountChange,
-    onOrder,
-    onUpdate,
+    onEnterEdit,
+    onCancelEdit,
+    onSaveAll,
     format,
   ]);
 }

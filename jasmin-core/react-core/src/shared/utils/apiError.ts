@@ -121,8 +121,15 @@ export function getErrorCode(err: unknown): string | undefined {
   return typeof data?.code === "string" ? data.code : undefined;
 }
 
-// Internal helper for ``getErrorMessage``.
-function getErrorDetails(err: unknown): Record<string, unknown> | undefined {
+/**
+ * Return the structured ``details`` object a JasminError carries (e.g.
+ * `{ available, requested }` on an insufficient-stock error), for callers
+ * that render the specifics inline rather than as a generic message.
+ * Returns ``undefined`` for legacy/detail-less errors.
+ */
+export function getErrorDetails(
+  err: unknown,
+): Record<string, unknown> | undefined {
   const data = asAxiosError(err)?.response?.data;
   if (data?.details && typeof data.details === "object") {
     return data.details as Record<string, unknown>;

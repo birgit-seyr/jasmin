@@ -460,14 +460,18 @@ class OrderContentService:
             offer = Offer.objects.select_for_update().get(pk=offer.pk)
 
         if offer and not offer.check_availability(amount / pu_divisor):
+            # ``offer.amount`` is the live remaining stock in VPE (already
+            # net of every reseller's orders). Report both figures in VPE so
+            # the ceiling and the request are comparable on the client.
+            requested_pu = amount / pu_divisor
             raise NotEnoughStock(
                 f"Not enough stock available. Available: {offer.amount}, "
-                f"Requested: {amount}",
+                f"Requested: {requested_pu}",
                 code="order_content.insufficient_stock",
                 details={
                     "offer_id": str(offer.id),
                     "available": float(offer.amount or 0),
-                    "requested": float(amount),
+                    "requested": float(requested_pu),
                 },
             )
 
@@ -623,14 +627,23 @@ class OrderContentService:
             if amount_difference > 0 and not offer.check_availability(
                 amount_difference / pu_divisor
             ):
+                # ``available`` is the ceiling this row can be set to: the live
+                # remaining stock (offer.amount, already net of all orders) PLUS
+                # this order's own already-committed amount — those units are
+                # this reseller's to keep, so only the *increase* needs new
+                # stock. Both figures reported in VPE, like ``requested``.
+                max_orderable_pu = (
+                    offer.amount or Decimal("0")
+                ) + old_amount / pu_divisor
+                requested_pu = new_amount / pu_divisor
                 raise NotEnoughStock(
-                    f"Not enough additional stock available. Available: {offer.amount}, "
-                    f"Additional needed: {amount_difference}",
+                    f"Not enough stock available. Available: {max_orderable_pu}, "
+                    f"Requested: {requested_pu}",
                     code="order_content.insufficient_stock",
                     details={
                         "offer_id": str(offer.id),
-                        "available": float(offer.amount or 0),
-                        "additional_needed": float(amount_difference),
+                        "available": float(max_orderable_pu),
+                        "requested": float(requested_pu),
                     },
                 )
 

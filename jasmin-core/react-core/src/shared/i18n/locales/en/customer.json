@@ -21,6 +21,7 @@
   "no_items": "No articles ordered yet.",
   "order_success": "Articles ordered successfully.",
   "order_error": "Error placing the order. Please try again.",
+  "insufficient_stock_tag": "Only {{count}} available",
   "item_removed": "Article removed.",
   "remove_error": "Error removing the article.",
   "no_reseller_linked": "No customer account linked",

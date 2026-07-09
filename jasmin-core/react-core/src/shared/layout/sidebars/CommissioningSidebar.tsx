@@ -1,22 +1,22 @@
-import dayjs from "dayjs";
-import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
-import { filterByRole, useRoles, type RoleGatedItem } from "@shared/auth";
 import { useShareTypes, useTenant } from "@hooks/index";
 import { useCommissioningDeliveryStationsList } from "@shared/api/generated/commissioning/commissioning";
+import { filterByRole, useRoles, type RoleGatedItem } from "@shared/auth";
 import {
   governingShareType,
   PLANNING_SHARE_OPTIONS,
 } from "@shared/planning/planningShareOptions";
+import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import SidebarShell from "./SidebarShell";
 
 import AllInclusiveIcon from "@mui/icons-material/AllInclusive";
-import ApiIcon from "@mui/icons-material/Api";
 import BubbleChartIcon from "@mui/icons-material/BubbleChart";
+import DirectionsBikeIcon from "@mui/icons-material/DirectionsBike";
 import EggIcon from "@mui/icons-material/Egg";
 import FavoriteIcon from "@mui/icons-material/Favorite";
-import HubIcon from "@mui/icons-material/Hub";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import GrainIcon from "@mui/icons-material/Grain";
+import HdrWeakIcon from "@mui/icons-material/HdrWeak";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 interface CommissioningSidebarProps {
   collapsed?: boolean;
@@ -143,7 +143,7 @@ export default function CommissioningSidebar({
     {
       key: "commissioning-amounts",
       requireRole: "isStaff",
-      icon: <HubIcon />,
+      icon: <GrainIcon />,
       label: (
         <div className="sidebar-section-header">
           {t("commissioning.amounts")}
@@ -317,7 +317,7 @@ export default function CommissioningSidebar({
             key: "commissioning-resellers",
 
             requireRole: "isOffice",
-            icon: <ApiIcon />,
+            icon: <AllInclusiveIcon />,
             label: (
               <div className="sidebar-section-header">
                 {t("commissioning.resellers")}
@@ -409,7 +409,8 @@ export default function CommissioningSidebar({
       key: "commissioning-harvesting-packing",
 
       requireRole: "isStaff",
-      icon: <AllInclusiveIcon />,
+      icon: <HdrWeakIcon />,
+
       label: (
         <div className="sidebar-section-header">
           {t("commissioning.harvesting_packing")}
@@ -515,7 +516,7 @@ export default function CommissioningSidebar({
       key: "commissioning-delivery-stations",
 
       requireRole: "isStaff",
-      icon: <LocalShippingIcon />,
+      icon: <DirectionsBikeIcon />,
       label: (
         <div className="sidebar-section-header">
           {t("commissioning.delivery_stations")}

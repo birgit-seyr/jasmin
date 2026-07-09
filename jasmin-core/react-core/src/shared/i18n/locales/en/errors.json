@@ -152,7 +152,7 @@
   "order_content": {
     "not_found": "Order line not found.",
     "finalized": "Cannot update a finalized order content.",
-    "insufficient_stock": "Not enough stock available."
+    "insufficient_stock": "Not enough stock available — available: {{available}}."
   },
   "packing_list": {
     "amounts_diverge_across_stations": "Packing amounts differ between delivery stations. Select a delivery station (or tour) to view the packing list."

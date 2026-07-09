@@ -293,7 +293,7 @@
   "statistics_purchase_total": "Gesamt im Zeitraum: {{total}}",
   "statistics_purchase_no_data": "Keine Zukaufdaten im gewählten Zeitraum",
   "statistics_purchase_date_range": "Zeitraum für die Zukauf-Statistik",
-  "statistics_purchase_data_quality_warning": "Diese Auswertung ist nur so genau wie die Preise, die in der Anteilsplanung bzw. unter den Artikelpreisen hinterlegt sind.",
+  "statistics_purchase_data_quality_warning": "Diese Auswertung ist nur so genau wie die Preise, die in der Anteilsplanung bzw. bei den Artikelpreisen hinterlegt sind.",
   "purchase_list_pdf": "Bestellliste {{resellerLabel}}",
   "for_all_shares": "für alle Anteile",
   "for_all_resellers": "für alle WVK",

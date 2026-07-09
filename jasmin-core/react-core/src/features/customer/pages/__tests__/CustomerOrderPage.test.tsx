@@ -214,10 +214,13 @@ beforeEach(() => {
   useCustomerOrderColumnsMock.mockReset().mockReturnValue([]);
   useCustomerOrderMutationsMock.mockReset().mockReturnValue({
     orderAmounts: {},
-    submitting: {},
+    editMode: false,
+    saving: false,
+    stockErrors: {},
     handleAmountChange: vi.fn(),
-    handleOrder: vi.fn(),
-    handleUpdateOrder: vi.fn(),
+    enterEditMode: vi.fn(),
+    cancelEditMode: vi.fn(),
+    handleSaveAll: vi.fn(),
   });
   useOrderingDeadlineMock.mockReset().mockReturnValue({
     orderingDeadline: null,

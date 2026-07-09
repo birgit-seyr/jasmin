@@ -18,7 +18,8 @@
  * implementation so we can predict the rendered strings exactly.
  */
 
-import { render, renderHook } from "@testing-library/react";
+import { render, renderHook, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -92,11 +93,15 @@ function makeParams(
     tableData: [] as CustomerOrderTableRow[],
     finalTiers: [1, 3, 5],
     orderAmounts: {} as Record<string, number>,
-    submitting: {} as Record<string, boolean>,
+    editMode: false,
+    saving: false,
     isReadOnly: false,
+    orderLocked: false,
+    stockErrors: {},
     onAmountChange: vi.fn(),
-    onOrder: vi.fn(),
-    onUpdate: vi.fn(),
+    onEnterEdit: vi.fn(),
+    onCancelEdit: vi.fn(),
+    onSaveAll: vi.fn(),
     ...overrides,
   };
 }
@@ -341,5 +346,59 @@ describe("order column", () => {
     const orderCol = findCol(result.current as unknown[], "order_col");
     expect(orderCol.width).toBe(260);
     expect(orderCol.align).toBe("center");
+  });
+
+  it("header shows the Aktualisieren toggle in view mode and enters edit on click", async () => {
+    const onEnterEdit = vi.fn();
+    const { result } = renderHook(() =>
+      useCustomerOrderColumns(makeParams({ editMode: false, onEnterEdit })),
+    );
+    const orderCol = findCol(result.current as unknown[], "order_col");
+    render(<>{orderCol.title as React.ReactNode}</>);
+
+    // The icon (EditOutlined, aria-label "edit") joins the button's accessible
+    // name, so match the label text as a substring.
+    const btn = screen.getByRole("button", { name: /customer\.update/ });
+    expect(
+      screen.queryByRole("button", { name: "common.save" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(btn);
+    expect(onEnterEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it("header shows Save + Cancel in edit mode and wires them to the bulk handlers", async () => {
+    const onSaveAll = vi.fn();
+    const onCancelEdit = vi.fn();
+    const tableData = rows([{ id: "offer-1" }, { id: "offer-2" }]);
+    const { result } = renderHook(() =>
+      useCustomerOrderColumns(
+        makeParams({ editMode: true, tableData, onSaveAll, onCancelEdit }),
+      ),
+    );
+    const orderCol = findCol(result.current as unknown[], "order_col");
+    render(<>{orderCol.title as React.ReactNode}</>);
+
+    await userEvent.click(screen.getByRole("button", { name: "common.save" }));
+    expect(onSaveAll).toHaveBeenCalledWith(tableData);
+    await userEvent.click(screen.getByRole("button", { name: "common.cancel" }));
+    expect(onCancelEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides the edit toggle entirely when the order is locked", () => {
+    const { result } = renderHook(() =>
+      useCustomerOrderColumns(makeParams({ orderLocked: true })),
+    );
+    const orderCol = findCol(result.current as unknown[], "order_col");
+    render(<>{orderCol.title as React.ReactNode}</>);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("hides the edit toggle when the week is read-only", () => {
+    const { result } = renderHook(() =>
+      useCustomerOrderColumns(makeParams({ isReadOnly: true })),
+    );
+    const orderCol = findCol(result.current as unknown[], "order_col");
+    render(<>{orderCol.title as React.ReactNode}</>);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

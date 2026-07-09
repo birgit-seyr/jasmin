@@ -36,6 +36,17 @@ export type OfferRow = Offer & {
 export type CustomerOrderTableRow = CustomerOrderRow | OfferRow;
 
 /**
+ * Backend `order_content.insufficient_stock` detail, surfaced inline on the
+ * over-ordered row. Both in VPE: `available` is the ceiling this row can be set
+ * to (live remaining stock, already net of all orders, PLUS this reseller's own
+ * already-committed amount); `requested` is what they asked for.
+ */
+export interface StockError {
+  available: number;
+  requested: number;
+}
+
+/**
  * Offer-less order line (office-added directly) shown in the separate
  * "other articles" table; `id` is narrowed because these are always real
  * persisted order-content rows.

@@ -1,18 +1,20 @@
 /**
  * Tier-4 seam test for ``useCustomerOrderMutations``.
  *
- * Covers the two branches called out in the frontend test plan:
- *   - create-vs-update routing via ``orderByOfferId``
- *   - on update, ``unit`` is NOT sent client-side (backend falls back to
- *     ``offer.share_article.unit``)
- *
- * Also covers the small surface around it: tier-based pricing, the
- * ``submitting`` flag, the success / error notify hooks, and the
- * ``invalidateOrders`` callback firing on success.
+ * The order-amount column is a single edit surface: one ``editMode`` flag
+ * and one bulk ``handleSaveAll`` that persists every touched row at once.
+ * Covered here:
+ *   - tier-based pricing (real ``pickTierPrice``)
+ *   - edit-mode enter / cancel (cancel discards pending edits)
+ *   - bulk save routing: POST for a new offer, PATCH (no ``unit``) for an
+ *     existing order, both in one batch
+ *   - finalized / untouched rows are skipped
+ *   - success clears state + leaves edit mode; a failure keeps edit mode
+ *     and the typed amounts so the reseller can retry
  *
  * Boundary mocked: the generated commissioning API client (vi.mock).
- * We don't use MSW here — the hook is pure logic + two HTTP calls; a
- * boundary mock keeps assertions sharp and the test fast.
+ * We don't use MSW here — the hook is pure logic + HTTP calls; a boundary
+ * mock keeps assertions sharp and the test fast.
  */
 
 import { act, renderHook } from "@testing-library/react";
@@ -57,7 +59,10 @@ vi.mock("@shared/utils", async (importOriginal) => {
 });
 
 import { useCustomerOrderMutations } from "../useCustomerOrderMutations";
-import type { CustomerOrderRow } from "@features/customer/types";
+import type {
+  CustomerOrderRow,
+  CustomerOrderTableRow,
+} from "@features/customer/types";
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -66,13 +71,24 @@ const RESELLER_ID = "reseller-7";
 const ORDER_CONTENT_ID = "oc-9";
 
 /** Fixture helper: the hook only reads a handful of row fields. */
-const makeRow = (row: Partial<CustomerOrderRow>) => row as CustomerOrderRow;
+const makeRow = (row: Partial<CustomerOrderRow>) =>
+  row as CustomerOrderTableRow;
 
-/** A typical offer row coming from the customer-order grid. */
+/** A typical not-yet-ordered offer row coming from the customer-order grid. */
 const offer = makeRow({
   id: OFFER_ID,
   amount_per_pu: "2",
   unit: "kg",
+  price_1: "1.50",
+  price_2: "1.20",
+  price_3: "1.00",
+});
+
+/** The same offer, but already ordered (carries an OrderContent id). */
+const orderedRow = makeRow({
+  id: OFFER_ID,
+  order_content_id: ORDER_CONTENT_ID,
+  amount_per_pu: "2",
   price_1: "1.50",
   price_2: "1.20",
   price_3: "1.00",
@@ -88,7 +104,6 @@ function makeParams(
     selectedDay: 3,
     finalTiers: [1, 3, 5],
     invalidateOrders: vi.fn(),
-    orderByOfferId: new Map<string, CustomerOrderRow>(),
     ...overrides,
   };
 }
@@ -147,18 +162,39 @@ describe("handleAmountChange", () => {
   });
 });
 
-// ── handleOrder — create branch ─────────────────────────────────────────────
+// ── edit mode enter / cancel ────────────────────────────────────────────────
 
-describe("handleOrder — create branch (no existing order)", () => {
-  it("POSTs the full create payload including unit + reseller + week", async () => {
+describe("edit mode", () => {
+  it("enterEditMode flips editMode on", () => {
+    const { result } = renderHook(() => useCustomerOrderMutations(makeParams()));
+    act(() => result.current.enterEditMode());
+    expect(result.current.editMode).toBe(true);
+  });
+
+  it("cancelEditMode exits edit mode AND discards pending amounts", () => {
+    const { result } = renderHook(() => useCustomerOrderMutations(makeParams()));
+    act(() => {
+      result.current.enterEditMode();
+      result.current.handleAmountChange(OFFER_ID, 5);
+    });
+    expect(result.current.orderAmounts[OFFER_ID]).toBe(5);
+
+    act(() => result.current.cancelEditMode());
+    expect(result.current.editMode).toBe(false);
+    expect(result.current.orderAmounts).toEqual({});
+  });
+});
+
+// ── handleSaveAll — routing ─────────────────────────────────────────────────
+
+describe("handleSaveAll — create + update routing", () => {
+  it("POSTs the full create payload for a not-yet-ordered offer", async () => {
     const params = makeParams();
     const { result } = renderHook(() => useCustomerOrderMutations(params));
 
-    act(() => {
-      result.current.handleAmountChange(OFFER_ID, 3);
-    });
+    act(() => result.current.handleAmountChange(OFFER_ID, 3));
     await act(async () => {
-      await result.current.handleOrder(offer);
+      await result.current.handleSaveAll([offer]);
     });
 
     expect(createMock).toHaveBeenCalledTimes(1);
@@ -177,131 +213,152 @@ describe("handleOrder — create branch (no existing order)", () => {
     });
   });
 
-  it("clears the pending amount and calls invalidateOrders on success", async () => {
+  it("PATCHes an existing order WITHOUT a 'unit' field (server falls back to share_article.unit)", async () => {
     const params = makeParams();
     const { result } = renderHook(() => useCustomerOrderMutations(params));
 
-    act(() => {
-      result.current.handleAmountChange(OFFER_ID, 2);
-    });
+    act(() => result.current.handleAmountChange(OFFER_ID, 6));
     await act(async () => {
-      await result.current.handleOrder(offer);
-    });
-
-    expect(result.current.orderAmounts[OFFER_ID]).toBeUndefined();
-    expect(params.invalidateOrders).toHaveBeenCalledTimes(1);
-    expect(notifySuccessMock).toHaveBeenCalledTimes(1);
-    expect(notifyErrorMock).not.toHaveBeenCalled();
-  });
-});
-
-// ── handleOrder — update branch ─────────────────────────────────────────────
-
-describe("handleOrder — update branch (existing order)", () => {
-  it("PATCHes the existing order WITHOUT a 'unit' field (server falls back to share_article.unit)", async () => {
-    const orderByOfferId = new Map<string, CustomerOrderRow>([
-      [OFFER_ID, makeRow({ id: ORDER_CONTENT_ID })],
-    ]);
-    const params = makeParams({ orderByOfferId });
-    const { result } = renderHook(() => useCustomerOrderMutations(params));
-
-    act(() => {
-      result.current.handleAmountChange(OFFER_ID, 6);
-    });
-    await act(async () => {
-      await result.current.handleOrder(offer);
+      await result.current.handleSaveAll([orderedRow]);
     });
 
     expect(updateMock).toHaveBeenCalledTimes(1);
     expect(createMock).not.toHaveBeenCalled();
-
     const [orderId, payload] = updateMock.mock.calls[0];
     expect(orderId).toBe(ORDER_CONTENT_ID);
-    // The plan's "unit not sent client-side" assertion — backend will
-    // fall back to offer.share_article.unit when reading this row.
     expect(payload).not.toHaveProperty("unit");
     expect(payload).toEqual({
       amount: "12.000", // 6 * amount_per_pu(2)
       price_per_unit: "1", // tier-3 hit at amount=6
     });
   });
+
+  it("saves a mix of new + existing rows in one batch", async () => {
+    const otherNew = makeRow({
+      id: "offer-999",
+      amount_per_pu: "1",
+      unit: "kg",
+      price_1: "2.00",
+    });
+    const params = makeParams();
+    const { result } = renderHook(() => useCustomerOrderMutations(params));
+
+    act(() => {
+      result.current.handleAmountChange(OFFER_ID, 6); // existing → PATCH
+      result.current.handleAmountChange("offer-999", 1); // new → POST
+    });
+    await act(async () => {
+      await result.current.handleSaveAll([orderedRow, otherNew]);
+    });
+
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    expect(createMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips untouched rows and finalized rows", async () => {
+    const finalized = makeRow({
+      id: "offer-fin",
+      order_content_id: "oc-fin",
+      order_is_finalized: true,
+      amount_per_pu: "1",
+      price_1: "1.00",
+    });
+    const params = makeParams();
+    const { result } = renderHook(() => useCustomerOrderMutations(params));
+
+    // touch only the finalized row; the plain offer stays untouched
+    act(() => result.current.handleAmountChange("offer-fin", 4));
+    await act(async () => {
+      await result.current.handleSaveAll([offer, finalized]);
+    });
+
+    expect(createMock).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
+  });
 });
 
-// ── handleOrder — error path ────────────────────────────────────────────────
+// ── handleSaveAll — success / failure state ─────────────────────────────────
 
-describe("handleOrder — error path", () => {
-  it("notifies error on API failure and resets the submitting flag", async () => {
+describe("handleSaveAll — success + failure", () => {
+  it("on success: clears amounts, leaves edit mode, notifies + invalidates", async () => {
+    const params = makeParams();
+    const { result } = renderHook(() => useCustomerOrderMutations(params));
+
+    act(() => {
+      result.current.enterEditMode();
+      result.current.handleAmountChange(OFFER_ID, 2);
+    });
+    await act(async () => {
+      await result.current.handleSaveAll([offer]);
+    });
+
+    expect(result.current.orderAmounts).toEqual({});
+    expect(result.current.editMode).toBe(false);
+    expect(result.current.saving).toBe(false);
+    expect(notifySuccessMock).toHaveBeenCalledTimes(1);
+    expect(params.invalidateOrders).toHaveBeenCalledTimes(1);
+  });
+
+  it("on a non-stock failure: toasts the error, keeps edit mode + typed amounts", async () => {
     createMock.mockRejectedValueOnce(new Error("boom"));
     const params = makeParams();
     const { result } = renderHook(() => useCustomerOrderMutations(params));
 
     act(() => {
+      result.current.enterEditMode();
       result.current.handleAmountChange(OFFER_ID, 1);
     });
     await act(async () => {
-      await result.current.handleOrder(offer);
+      await result.current.handleSaveAll([offer]);
     });
 
     expect(notifyErrorMock).toHaveBeenCalledTimes(1);
     expect(notifySuccessMock).not.toHaveBeenCalled();
-    expect(params.invalidateOrders).not.toHaveBeenCalled();
-    // amount is left in place so the user can retry without re-typing
+    // amount + edit mode preserved so the reseller can retry
     expect(result.current.orderAmounts[OFFER_ID]).toBe(1);
-    expect(result.current.submitting[OFFER_ID]).toBe(false);
+    expect(result.current.editMode).toBe(true);
+    expect(result.current.saving).toBe(false);
+    expect(result.current.stockErrors).toEqual({});
+    expect(params.invalidateOrders).toHaveBeenCalledTimes(1);
   });
-});
 
-// ── handleUpdateOrder ───────────────────────────────────────────────────────
-
-describe("handleUpdateOrder", () => {
-  it("PATCHes via order_content_id, omits unit", async () => {
+  it("on an insufficient-stock failure: records the error INLINE (no toast)", async () => {
+    // Canonical Jasmin error body on an axios-shaped rejection.
+    createMock.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        data: {
+          code: "order_content.insufficient_stock",
+          message: "Not enough stock available. Available: 2.000, Requested: 16.000",
+          details: { offer_id: OFFER_ID, available: 2.0, requested: 16.0 },
+        },
+      },
+    });
     const params = makeParams();
     const { result } = renderHook(() => useCustomerOrderMutations(params));
 
     act(() => {
-      result.current.handleAmountChange(OFFER_ID, 4);
+      result.current.enterEditMode();
+      result.current.handleAmountChange(OFFER_ID, 8);
     });
     await act(async () => {
-      await result.current.handleUpdateOrder(
-        makeRow({
-          id: OFFER_ID,
-          order_content_id: ORDER_CONTENT_ID,
-          amount_per_pu: "2",
-          price_1: "1.50",
-          price_2: "1.20",
-          price_3: "1.00",
-        }),
-      );
+      await result.current.handleSaveAll([offer]);
     });
 
-    expect(updateMock).toHaveBeenCalledTimes(1);
-    const [orderId, payload] = updateMock.mock.calls[0];
-    expect(orderId).toBe(ORDER_CONTENT_ID);
-    expect(payload).not.toHaveProperty("unit");
-    expect(payload).toEqual({
-      amount: "8.000", // 4 * 2
-      price_per_unit: "1.2", // tier-2 at amount=4
+    // Inline, not a toast
+    expect(notifyErrorMock).not.toHaveBeenCalled();
+    expect(notifySuccessMock).not.toHaveBeenCalled();
+    expect(result.current.stockErrors[OFFER_ID]).toEqual({
+      available: 2,
+      requested: 16,
     });
-  });
+    // Stays editable with the over-order still typed in
+    expect(result.current.editMode).toBe(true);
+    expect(result.current.orderAmounts[OFFER_ID]).toBe(8);
+    expect(params.invalidateOrders).toHaveBeenCalledTimes(1);
 
-  it("no-ops when amount is missing OR order_content_id is missing", async () => {
-    const { result } = renderHook(() => useCustomerOrderMutations(makeParams()));
-
-    // No pending amount set for this offer
-    await act(async () => {
-      await result.current.handleUpdateOrder(
-        makeRow({ id: OFFER_ID, order_content_id: ORDER_CONTENT_ID }),
-      );
-    });
-    expect(updateMock).not.toHaveBeenCalled();
-
-    // Amount set but order_content_id missing
-    act(() => {
-      result.current.handleAmountChange(OFFER_ID, 3);
-    });
-    await act(async () => {
-      await result.current.handleUpdateOrder(makeRow({ id: OFFER_ID }));
-    });
-    expect(updateMock).not.toHaveBeenCalled();
+    // Editing the amount clears the inline error (red state goes away)
+    act(() => result.current.handleAmountChange(OFFER_ID, 1));
+    expect(result.current.stockErrors[OFFER_ID]).toBeUndefined();
   });
 });

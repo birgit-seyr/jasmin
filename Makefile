@@ -214,8 +214,3 @@ test-frontend:
 # --- Run the whole CI gate in one shot ---------------------------------------
 .PHONY: check
 check: black ruff pytest type-check lint test-frontend
-
-.PHONY: migrate-docker
-migrate-docker:
-	$(COMPOSE_DEV) exec backend python manage.py migrate_schemas --shared
-	$(COMPOSE_DEV) exec backend python manage.py migrate_schemas --tenant

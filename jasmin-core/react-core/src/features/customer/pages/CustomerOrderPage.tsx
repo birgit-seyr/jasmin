@@ -147,15 +147,6 @@ export default function CustomerOrderPage() {
 
   const isReadOnly = isPastWeek || isOrderingClosed;
 
-  // Map offer ID → order content item (only actual order contents, not unused-offer stubs)
-  const orderByOfferId = useMemo(() => {
-    const map = new Map<string, CustomerOrderRow>();
-    for (const item of orderContents) {
-      if (item.offer && item.order_id) map.set(item.offer, item);
-    }
-    return map;
-  }, [orderContents]);
-
   // Offer-based rows feed the offers table; offer-less order lines (office-added
   // directly, no offer) go to the separate "other articles" table below.
   const offerRows = useMemo(
@@ -215,43 +206,6 @@ export default function CustomerOrderPage() {
   // ``price_1`` is ever picked, no quantity-based escalation.
   const finalTiers = usedTiers && usedTiers.length > 0 ? usedTiers : [1];
 
-  const {
-    orderAmounts,
-    submitting,
-    handleAmountChange,
-    handleOrder,
-    handleUpdateOrder,
-  } = useCustomerOrderMutations({
-    resellerId,
-    selectedYear,
-    selectedWeek: selectedWeek ?? currentWeek,
-    selectedDay,
-    finalTiers,
-    invalidateOrders,
-    orderByOfferId,
-  });
-
-  const columns = useCustomerOrderColumns({
-    tableData,
-    finalTiers,
-    orderAmounts,
-    submitting,
-    isReadOnly,
-    onAmountChange: handleAmountChange,
-    onOrder: handleOrder,
-    onUpdate: handleUpdateOrder,
-  });
-
-  const otherArticleColumns = useOtherArticleColumns();
-
-  const totalOrderSum = useMemo(() => {
-    return orderContents.reduce((sum, item) => {
-      const amount = Number(item.amount) || 0;
-      const price = Number(item.price_per_unit) || 0;
-      return sum + amount * price;
-    }, 0);
-  }, [orderContents]);
-
   // Order-level info for the summary header (outside the cards): once anything
   // is ordered every row for this reseller/week/day shares one Order, so the
   // first row with an ``order_id`` carries the order number + locked state.
@@ -264,6 +218,49 @@ export default function CustomerOrderPage() {
       orderNumberPrefix: withOrder.order_number_prefix,
       isLocked: withOrder.order_is_finalized || !!withOrder.delivery_note_id,
     };
+  }, [orderContents]);
+
+  const {
+    orderAmounts,
+    editMode,
+    saving,
+    stockErrors,
+    handleAmountChange,
+    enterEditMode,
+    cancelEditMode,
+    handleSaveAll,
+  } = useCustomerOrderMutations({
+    resellerId,
+    selectedYear,
+    selectedWeek: selectedWeek ?? currentWeek,
+    selectedDay,
+    finalTiers,
+    invalidateOrders,
+  });
+
+  const columns = useCustomerOrderColumns({
+    tableData,
+    finalTiers,
+    orderAmounts,
+    editMode,
+    saving,
+    isReadOnly,
+    orderLocked: Boolean(orderInfo?.isLocked),
+    stockErrors,
+    onAmountChange: handleAmountChange,
+    onEnterEdit: enterEditMode,
+    onCancelEdit: cancelEditMode,
+    onSaveAll: handleSaveAll,
+  });
+
+  const otherArticleColumns = useOtherArticleColumns();
+
+  const totalOrderSum = useMemo(() => {
+    return orderContents.reduce((sum, item) => {
+      const amount = Number(item.amount) || 0;
+      const price = Number(item.price_per_unit) || 0;
+      return sum + amount * price;
+    }, 0);
   }, [orderContents]);
 
   if (!resellerId) {

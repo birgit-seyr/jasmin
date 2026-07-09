@@ -402,6 +402,28 @@
   line-height: 1.6;
 }
 
+/* Customer order-amount column header: the column title stacked above its
+   single edit toggle (Aktualisieren, or Speichern + Abbrechen while editing),
+   so the whole column reads as one edit surface without crowding the title. */
+.order-col-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.order-col-header-actions {
+  margin-top: 2px;
+}
+
+/* Tiny inline "only N available" tag under an over-ordered amount input —
+   small and marginless so it tucks right beneath the red input. */
+.order-stock-error-tag.ant-tag {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  padding: 0 6px;
+}
+
 /* Cancelled (exited) members in the members table: strike through the row's
    text and mute it, so an exited member reads as intentionally crossed out.
    ``line-through`` only affects text, so the action-icon cells (link, status)
