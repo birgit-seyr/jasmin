@@ -40,7 +40,7 @@ import {
   useIsActiveColumn,
   useShareDeliveryDays,
 } from "@features/commissioning/hooks";
-import { isFieldDisabled } from "@shared/utils";
+import { isFieldDisabled, toApiDate } from "@shared/utils";
 
 interface ShareDeliveryDay {
   id: string;
@@ -104,11 +104,11 @@ export default function ListDeliveryStations() {
   });
 
   const shareDeliveryDaysParams = useMemo(
-    () => ({ active_at_date: dayjs().format("YYYY-MM-DD") }),
+    () => ({ active_at_date: toApiDate(dayjs())! }),
     [],
   );
   const futureShareDeliveryDaysParams = useMemo(
-    () => ({ active_at_date: dayjs().format("YYYY-MM-DD"), future: true }),
+    () => ({ active_at_date: toApiDate(dayjs())!, future: true }),
     [],
   );
 

@@ -8,10 +8,8 @@ import { getErrorMessage } from "@shared/utils/apiError";
 import { SUPER_ADMIN_ENDPOINTS } from "@features/platform/services/superAdmin";
 import CreateAdminModal from "@features/platform/modals/CreateAdminModal";
 import CreateUserModal from "@features/platform/modals/CreateUserModal";
-import {
-  AVAILABLE_ROLES,
-  STATUS_COLORS,
-} from "@features/platform/userManagement";
+import RoleChipSelector from "@features/platform/components/RoleChipSelector";
+import { STATUS_COLORS } from "@features/platform/userManagement";
 
 interface Domain {
   domain: string;
@@ -352,28 +350,10 @@ function UserTable({
                 <td>
                   {editingUserId === user.id ? (
                     <div className="sa-roles-edit">
-                      {AVAILABLE_ROLES.map((role) => (
-                        <span
-                          key={role}
-                          onClick={() => toggleRole(role)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              toggleRole(role);
-                            }
-                          }}
-                          role="checkbox"
-                          aria-checked={editedRoles.includes(role)}
-                          tabIndex={0}
-                          className={`sa-role-chip sa-role-chip--selectable ${
-                            editedRoles.includes(role)
-                              ? "sa-role-chip--selected"
-                              : ""
-                          }`}
-                        >
-                          {role}
-                        </span>
-                      ))}
+                      <RoleChipSelector
+                        selectedRoles={editedRoles}
+                        onToggle={toggleRole}
+                      />
                       <button
                         onClick={() => saveRoles(user.id)}
                         disabled={savingRoles}

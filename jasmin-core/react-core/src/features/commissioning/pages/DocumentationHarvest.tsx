@@ -463,7 +463,7 @@ export default function DocumentationHarvest() {
             onClick={() => setCsvExportVisible(true)}
             className="download-button"
           >
-            {t("commissioning.export_harvest_csv") || "CSV Export"}
+            {t("commissioning.export_harvest_csv")}
           </Button>
           <ToolTipIcon title={t("tooltip.csv_export_harvest")} />
         </div>

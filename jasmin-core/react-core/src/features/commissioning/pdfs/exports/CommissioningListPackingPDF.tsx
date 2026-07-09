@@ -6,28 +6,12 @@ import {
   ListPDFHeader,
   TickBox,
 } from "./ListPDFSharedComponents";
-import { pdfTheme } from "./pdfTheme";
 
 // ─── Packing-commissioning-list specific styles ─────────────────────────────
 
 const localStyles = StyleSheet.create({
   section: {
     marginBottom: 16,
-  },
-  // Green left-accent section label per share option (only shown when the
-  // tenant runs more than one harvest share option). Mirrors the section
-  // heading style used by ``CommissioningListPDF``.
-  sectionHeader: {
-    borderLeftWidth: 2.5,
-    borderLeftColor: pdfTheme.colors.brand,
-    paddingLeft: 7,
-    paddingVertical: 2,
-    fontSize: 12,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    color: pdfTheme.colors.brand,
-    marginBottom: 4,
   },
   colArticle: {
     width: "45%",
@@ -129,7 +113,7 @@ const CommissioningListPackingPDF = ({
         {groupsWithRows.map((group) => (
           <View key={group.label} style={localStyles.section}>
             {groupsWithRows.length > 1 && (
-              <View style={localStyles.sectionHeader}>
+              <View style={listStyles.sectionHeading}>
                 <Text>{group.label}</Text>
               </View>
             )}

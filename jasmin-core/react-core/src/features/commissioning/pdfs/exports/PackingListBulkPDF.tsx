@@ -98,7 +98,7 @@ const PackingListBulkPDF = ({
           {data.map((item, index) => (
             <View
               key={item.id || index}
-              style={[listStyles.tableRow, index % 2 === 1 ? listStyles.tableRowAlt : {}]}
+              style={listStyles.tableRow}
               wrap={false}
             >
               <View style={[listStyles.cell, localStyles.colArticle, listStyles.cellLeft]}>

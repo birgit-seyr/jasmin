@@ -17,7 +17,7 @@ import type { OtherArticleRow } from "@features/customer/types";
  */
 export function useOtherArticleColumns() {
   const { t } = useTranslation();
-  const { currencySymbol } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const { format } = useNumberFormat();
   const { getUnitLabel } = useUnitOptions();
   const { getSizeLabel } = useSizeOptions();
@@ -59,7 +59,7 @@ export function useOtherArticleColumns() {
         render: (val: string | null, record) => {
           const unit = record.unit;
           return val != null
-            ? `${format(Number(val), 2)} ${currencySymbol}/${getUnitLabel(unit ?? "")}`
+            ? `${formatCurrency(Number(val))}/${getUnitLabel(unit ?? "")}`
             : "-";
         },
       },
@@ -76,15 +76,14 @@ export function useOtherArticleColumns() {
         key: "total",
         align: "right" as const,
         render: (_: unknown, record) =>
-          `${format(
+          formatCurrency(
             computeLineNetto({
               amount: record.amount,
               price_per_unit: record.price_per_unit,
               rabatt: record.rabatt,
             }),
-            2,
-          )} ${currencySymbol}`,
+          ),
       },
     ];
-  }, [t, currencySymbol, format, getUnitLabel, getSizeLabel]);
+  }, [t, formatCurrency, format, getUnitLabel, getSizeLabel]);
 }

@@ -46,7 +46,7 @@ import {
   useShareArticlePriceColumn,
   useShareOptions,
 } from "@features/commissioning/hooks";
-import { syncPurchasedName } from "@shared/utils";
+import { getShareOptionLabel, syncPurchasedName } from "@shared/utils";
 
 // Pure row predicates — a row is harvest-only or purchase-only based on
 // ``is_purchased``. Module-level so they're stable references.
@@ -325,7 +325,7 @@ export default function ListShareArticles() {
           <Radio.Button value="all">{t("common.all")}</Radio.Button>
           {visibleShareOptions.map((opt: { value: string; label: string }) => (
             <Radio.Button key={opt.value} value={opt.value.toLowerCase()}>
-              {t(`commissioning.share_option.${opt.value}`, opt.label)}
+              {getShareOptionLabel(opt.value, t)}
             </Radio.Button>
           ))}
         </Radio.Group>

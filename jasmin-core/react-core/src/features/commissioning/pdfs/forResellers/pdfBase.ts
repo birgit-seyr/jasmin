@@ -1,7 +1,21 @@
 import { StyleSheet } from "@react-pdf/renderer";
 import "../registerRoboto";
+import { DocumentTypeEnum } from "@shared/api/generated/models";
 import { formatNumber } from "@shared/utils/numberFormat";
 import { itemLineNetto, roundHalfUp } from "@shared/utils/lineNetto";
+
+/**
+ * A storno or correction is a credit note (ZUGFeRD TypeCode 381, positive
+ * amounts, and a reference back to the original invoice). The single predicate
+ * for the reseller-document credit-note rule so the visible PDF, the stored
+ * filename, and the embedded XML never disagree.
+ */
+export function isCreditNote(documentType?: string | null): boolean {
+  return (
+    documentType === DocumentTypeEnum.storno ||
+    documentType === DocumentTypeEnum.correction
+  );
+}
 
 // ─── Shared types ───────────────────────────────────────────────────────────
 
@@ -242,6 +256,12 @@ export const baseStyles = StyleSheet.create({
     fontSize: 8,
     color: "#666",
     marginBottom: 5,
+  },
+  // Muted grey for secondary/placeholder labels (sort line, LOGO / QR preview
+  // placeholders). @react-pdf resolves no CSS custom properties, so these must
+  // be a literal — the hex ``--color-text-tertiary`` maps to.
+  text_muted: {
+    color: "#767676",
   },
   divider: {
     borderTopWidth: 1,

@@ -61,7 +61,7 @@ export default function DynamicSidebar() {
 
 
   // Desktop sidebar logic
-  const desktopSidebarMap: Record<string, LazyExoticComponent<ComponentType<{ collapsed?: boolean; openKeys?: string[]; onOpenChange?: (keys: string[]) => void }>>> = {
+  const desktopSidebarMap: Record<string, LazyExoticComponent<ComponentType<{ openKeys?: string[]; onOpenChange?: (keys: string[]) => void }>>> = {
     [NAVIGATION_SECTIONS.MEMBERS]: MembersSidebar,
     [NAVIGATION_SECTIONS.ABOS]: AboSidebar,
     [NAVIGATION_SECTIONS.COMMISSIONING]: CommissioningSidebar,
@@ -94,7 +94,6 @@ export default function DynamicSidebar() {
         }
       >
         <SidebarComponent
-          collapsed={shouldShowCollapsed}
           openKeys={openKeys}
           onOpenChange={handleOpenChange}
         />

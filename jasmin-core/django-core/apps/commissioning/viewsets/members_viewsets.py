@@ -80,6 +80,8 @@ from ..serializers import (
 from ..services import MemberService, SubscriptionService
 from ..utils.query_params import validate_query_params
 from ..utils.queryset_helpers import apply_optional_filters
+from ..utils.validation_utils import parse_body_date
+from .badge_viewsets import pending_admin_confirmation_q
 
 logger = logging.getLogger(__name__)
 
@@ -180,15 +182,17 @@ def _build_member_queryset(request: Request) -> QuerySet[Member]:
         .values("latest")
     )
     # Count of the member's coop shares still awaiting office confirmation
-    # (unconfirmed, not rejected, not cancelled — mirrors the badge_viewsets
-    # "pending" filter). Drives the gold "needs confirmation" badge on the
-    # Members table's coop-shares button + the member-detail card. Subquery so
-    # it doesn't fan out / clash with the other coop-share aggregates.
+    # (unconfirmed, not rejected, not cancelled). Reuses the badge_viewsets
+    # ``pending_admin_confirmation_q()`` predicate so it can't drift from the
+    # counters (the previous hand-rolled ``admin_confirmed=False`` dropped the
+    # ``admin_confirmed__isnull=True`` branch). Drives the gold "needs
+    # confirmation" badge on the Members table's coop-shares button + the
+    # member-detail card. Subquery so it doesn't fan out / clash with the other
+    # coop-share aggregates.
     coop_shares_pending_count_sq = (
         CoopShare.objects.filter(
+            pending_admin_confirmation_q(),
             member=OuterRef("pk"),
-            admin_confirmed=False,
-            admin_rejected_at__isnull=True,
             cancelled_at__isnull=True,
         )
         .order_by()
@@ -242,25 +246,7 @@ def _parse_required_effective_at(request: Request):
     """Parse + validate a required ``effective_at`` (YYYY-MM-DD) from the body,
     raising the project's ``CommissioningError`` envelope on missing/bad input.
     Shared by the office + member cancellation flows."""
-    from datetime import date as _date
-
-    from ..errors import CommissioningError
-
-    raw = request.data.get("effective_at")
-    if not raw:
-        raise CommissioningError(
-            "This field is required.",
-            field="effective_at",
-            code="member.cancel.effective_at_required",
-        )
-    try:
-        return _date.fromisoformat(str(raw))
-    except ValueError as exc:
-        raise CommissioningError(
-            "Expected YYYY-MM-DD.",
-            field="effective_at",
-            code="member.cancel.effective_at_format",
-        ) from exc
+    return parse_body_date(request, "effective_at", code_prefix="member.cancel")
 
 
 @extend_schema_view(
@@ -1096,9 +1082,7 @@ class SubscriptionViewSet(
     )
     @action(detail=True, methods=["post"])
     def cancel(self, request: Request, pk: str | None = None) -> Response:
-        from datetime import date as _date
-
-        from ..errors import CommissioningError, FinalizedError
+        from ..errors import FinalizedError
 
         subscription: Subscription = self.get_object()
         if not subscription.admin_confirmed:
@@ -1107,21 +1091,9 @@ class SubscriptionViewSet(
                 code="subscription.cancel_draft",
             )
 
-        effective_at_raw = request.data.get("effective_at")
-        if not effective_at_raw:
-            raise CommissioningError(
-                "This field is required.",
-                field="effective_at",
-                code="subscription.cancel.effective_at_required",
-            )
-        try:
-            effective_at = _date.fromisoformat(str(effective_at_raw))
-        except ValueError as exc:
-            raise CommissioningError(
-                "Expected YYYY-MM-DD.",
-                field="effective_at",
-                code="subscription.cancel.effective_at_format",
-            ) from exc
+        effective_at = parse_body_date(
+            request, "effective_at", code_prefix="subscription.cancel"
+        )
 
         SubscriptionService().cancel_subscription(
             subscription,
@@ -1191,8 +1163,6 @@ class SubscriptionViewSet(
     )
     @action(detail=False, methods=["post"], url_path="bulk_renew")
     def bulk_renew(self, request: Request) -> Response:
-        import datetime
-
         from ..errors import CommissioningError
         from ..services.renewal import bulk_renew as bulk_renew_service
 
@@ -1206,17 +1176,13 @@ class SubscriptionViewSet(
 
         # Optional common end date for the whole batch (the modal's chosen date);
         # omit for the per-subscription term-length default.
-        new_valid_until = None
-        valid_until_raw = request.data.get("valid_until")
-        if valid_until_raw:
-            try:
-                new_valid_until = datetime.date.fromisoformat(str(valid_until_raw))
-            except (ValueError, TypeError) as exc:
-                raise CommissioningError(
-                    "valid_until must be an ISO date (YYYY-MM-DD).",
-                    field="valid_until",
-                    code="subscription.bulk_renew.invalid_valid_until",
-                ) from exc
+        new_valid_until = parse_body_date(
+            request,
+            "valid_until",
+            required=False,
+            code_prefix="subscription.bulk_renew",
+            format_code="subscription.bulk_renew.invalid_valid_until",
+        )
         # Each renewal runs variation/price resolution + an INSERT with
         # full_clean (station-day coverage query included) synchronously in this
         # request — an unbounded list is a gateway-timeout / mild-DoS vector.

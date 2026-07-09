@@ -4,11 +4,13 @@ import type { TFunction } from "i18next";
 import type { PackingBoxesMatrixColumn } from "@shared/api/generated/models";
 
 import {
-  ComboHeader,
-  boxComboStyles,
+  ComboColumnHeaderRow,
+  ComboGroupHeaderRow,
   comboColumnWidth,
   computeGroupEdges,
+  formatComboCount,
   groupComboColumns,
+  groupEdgeStyles,
   pickComboOrientation,
 } from "./boxComboPdf";
 import { listStyles } from "./listPdfBase";
@@ -64,13 +66,6 @@ export interface PackingBoxesMatrixPDFProps {
   t: TFunction;
 }
 
-function formatAmount(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "";
-  const n = Number(value);
-  if (!Number.isFinite(n) || n === 0) return "";
-  return String(n);
-}
-
 /**
  * The matrix as a single ``<Page>`` (no ``<Document>`` wrapper) so it can be
  * embedded into another document — e.g. appended after each station's pickup
@@ -115,113 +110,100 @@ export const PackingBoxesMatrixPage = ({
 
         <View style={listStyles.table}>
           {/* Parent header: each base share_type name spans its combinations */}
-          <View style={listStyles.tableHeaderShaded} fixed>
-            <View style={[listStyles.cell, localStyles.colArticle]}>
-              <Text></Text>
-            </View>
-            <View style={[listStyles.cell, localStyles.colUnit]}>
-              <Text></Text>
-            </View>
-            {showSize && (
-              <View style={[listStyles.cell, localStyles.colSize]}>
-                <Text></Text>
-              </View>
-            )}
-            {groups.map((group) => (
-              <View
-                key={group.id}
-                style={[
-                  listStyles.cell,
-                  listStyles.cellCenter,
-                  { width: comboWidth * group.cols.length },
-                  boxComboStyles.groupBorderLeft,
-                  boxComboStyles.groupBorderRight,
-                ]}
-              >
-                <Text style={boxComboStyles.comboBase}>{group.name}</Text>
-              </View>
-            ))}
-            <View style={[listStyles.cell, localStyles.colNote]}>
-              <Text></Text>
-            </View>
-            <View style={[listStyles.cell, localStyles.colDone]}>
-              <Text></Text>
-            </View>
-          </View>
+          <ComboGroupHeaderRow
+            groups={groups}
+            comboWidth={comboWidth}
+            leading={
+              <>
+                <View style={[listStyles.cell, localStyles.colArticle]}>
+                  <Text></Text>
+                </View>
+                <View style={[listStyles.cell, localStyles.colUnit]}>
+                  <Text></Text>
+                </View>
+                {showSize && (
+                  <View style={[listStyles.cell, localStyles.colSize]}>
+                    <Text></Text>
+                  </View>
+                )}
+              </>
+            }
+            trailing={
+              <>
+                <View style={[listStyles.cell, localStyles.colNote]}>
+                  <Text></Text>
+                </View>
+                <View style={[listStyles.cell, localStyles.colDone]}>
+                  <Text></Text>
+                </View>
+              </>
+            }
+          />
 
           {/* Column headers */}
-          <View style={listStyles.tableHeaderShaded} fixed>
-            <View
-              style={[
-                listStyles.cell,
-                localStyles.colArticle,
-                listStyles.cellLeft,
-              ]}
-            >
-              <Text>{t("commissioning.vegetables_and_fruits")}</Text>
-            </View>
-            <View
-              style={[
-                listStyles.cell,
-                localStyles.colUnit,
-                listStyles.cellCenter,
-              ]}
-            ></View>
-            {showSize && (
-              <View
-                style={[
-                  listStyles.cell,
-                  localStyles.colSize,
-                  listStyles.cellCenter,
-                ]}
-              ></View>
-            )}
-            {columns.map((column) => (
-              <View
-                key={column.key}
-                style={[
-                  listStyles.cell,
-                  { width: comboWidth },
-                  listStyles.cellCenter,
-                  groupEdge.get(column.key)?.left
-                    ? boxComboStyles.groupBorderLeft
-                    : {},
-                  groupEdge.get(column.key)?.right
-                    ? boxComboStyles.groupBorderRight
-                    : {},
-                ]}
-              >
-                <ComboHeader column={column} t={t} />
-              </View>
-            ))}
-            <View
-              style={[
-                listStyles.cell,
-                localStyles.colNote,
-                listStyles.cellLeft,
-              ]}
-            >
-              <Text></Text>
-            </View>
-            <View
-              style={[
-                listStyles.cell,
-                localStyles.colDone,
-                listStyles.cellCenter,
-              ]}
-            >
-              <Text>{"✓"}</Text>
-            </View>
-          </View>
+          <ComboColumnHeaderRow
+            columns={columns}
+            comboWidth={comboWidth}
+            groupEdges={groupEdge}
+            t={t}
+            leading={
+              <>
+                <View
+                  style={[
+                    listStyles.cell,
+                    localStyles.colArticle,
+                    listStyles.cellLeft,
+                  ]}
+                >
+                  <Text>{t("commissioning.vegetables_and_fruits")}</Text>
+                </View>
+                <View
+                  style={[
+                    listStyles.cell,
+                    localStyles.colUnit,
+                    listStyles.cellCenter,
+                  ]}
+                ></View>
+                {showSize && (
+                  <View
+                    style={[
+                      listStyles.cell,
+                      localStyles.colSize,
+                      listStyles.cellCenter,
+                    ]}
+                  ></View>
+                )}
+              </>
+            }
+            trailing={
+              <>
+                <View
+                  style={[
+                    listStyles.cell,
+                    localStyles.colNote,
+                    listStyles.cellLeft,
+                  ]}
+                >
+                  <Text></Text>
+                </View>
+                <View
+                  style={[
+                    listStyles.cell,
+                    localStyles.colDone,
+                    listStyles.cellCenter,
+                  ]}
+                >
+                  <Text>{"✓"}</Text>
+                </View>
+              </>
+            }
+          />
 
           {/* Article rows */}
           {data.map((item, index) => (
             <View
               key={item.id || index}
-              style={[
-                listStyles.tableRow,
-                index % 2 === 1 ? listStyles.tableRowAlt : {},
-              ]}
+              style={listStyles.tableRow}
               wrap={false}
             >
               <View
@@ -260,15 +242,10 @@ export const PackingBoxesMatrixPage = ({
                     listStyles.cell,
                     { width: comboWidth },
                     listStyles.cellCenter,
-                    groupEdge.get(column.key)?.left
-                      ? boxComboStyles.groupBorderLeft
-                      : {},
-                    groupEdge.get(column.key)?.right
-                      ? boxComboStyles.groupBorderRight
-                      : {},
+                    ...groupEdgeStyles(groupEdge, column.key),
                   ]}
                 >
-                  <Text>{formatAmount(item[column.key])}</Text>
+                  <Text>{formatComboCount(item[column.key])}</Text>
                 </View>
               ))}
               <View
@@ -337,12 +314,7 @@ export const PackingBoxesMatrixPage = ({
                   listStyles.cell,
                   { width: comboWidth },
                   listStyles.cellCenter,
-                  groupEdge.get(column.key)?.left
-                    ? boxComboStyles.groupBorderLeft
-                    : {},
-                  groupEdge.get(column.key)?.right
-                    ? boxComboStyles.groupBorderRight
-                    : {},
+                  ...groupEdgeStyles(groupEdge, column.key),
                 ]}
               >
                 <Text>{column.count || ""}</Text>

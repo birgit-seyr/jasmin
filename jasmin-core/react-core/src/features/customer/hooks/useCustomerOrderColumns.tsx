@@ -47,7 +47,7 @@ export function useCustomerOrderColumns({
   onSaveAll,
 }: Params) {
   const { t } = useTranslation();
-  const { currencySymbol } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const { format } = useNumberFormat();
   const { getUnitLabel } = useUnitOptions();
   const { getSizeLabel } = useSizeOptions();
@@ -116,7 +116,7 @@ export function useCustomerOrderColumns({
         render: (price: string | null | undefined, record) => {
           const unit = record.unit;
           return price && Number(price)
-            ? `${format(Number(price), 2)} ${currencySymbol}/${getUnitLabel(unit ?? "")}`
+            ? `${formatCurrency(Number(price))}/${getUnitLabel(unit ?? "")}`
             : "-";
         },
       });
@@ -195,7 +195,7 @@ export function useCustomerOrderColumns({
     return cols;
   }, [
     t,
-    currencySymbol,
+    formatCurrency,
     getUnitLabel,
     getSizeLabel,
     activePriceTiers,

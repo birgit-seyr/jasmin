@@ -7,7 +7,29 @@ from .serializers_mixin import (
     DeletableMixin,
     LinkedUserInfoMixin,
     MemberStringFieldMixin,
+    ShareTypeVariationStringMixin,
     UserNameFieldMixin,
+)
+
+# The confirm/reject + cancellation timestamp columns live on the
+# ``AdminConfirmableMixin`` shared across the member-domain models. They are
+# owned exclusively by dedicated services / actions (the admin-confirm and
+# admin-reject viewset actions, and the cancellation flow) — never by a generic
+# create/PATCH, which would forge ``admin_confirmed`` or erase the office
+# audit trail of when / why an application was refused or a membership exited.
+# Kept as module constants so a field added to the mixin can't silently stay
+# writable on one of the four serializers that must lock them.
+ADMIN_CONFIRMATION_READONLY_FIELDS = (
+    "admin_confirmed",
+    "admin_confirmed_at",
+    "admin_confirmed_by",
+    "admin_rejected_at",
+    "admin_rejection_reason",
+)
+CANCELLATION_READONLY_FIELDS = (
+    "cancelled_at",
+    "cancelled_effective_at",
+    "cancelled_by",
 )
 
 
@@ -113,17 +135,8 @@ class MemberSerializer(
             "sepa_consent",
             "privacy_consent",
             "withdrawal_consent",
-            "cancelled_at",
-            "cancelled_effective_at",
-            "cancelled_by",
-            "admin_confirmed",
-            "admin_confirmed_at",
-            "admin_confirmed_by",
-            # Set by the admin-reject action on the viewset — must
-            # never be cleared via PATCH, that would erase the office
-            # audit trail of WHEN and WHY an application was refused.
-            "admin_rejected_at",
-            "admin_rejection_reason",
+            *CANCELLATION_READONLY_FIELDS,
+            *ADMIN_CONFIRMATION_READONLY_FIELDS,
             "trial_converted_at",
             # MEM-7: the member↔user link is role-bearing — a generic PATCH must
             # not relink/unlink it (that would strand Role.MEMBER on the old
@@ -180,7 +193,7 @@ class MemberSerializer(
         return super().validate(attrs)
 
 
-class MemberSelfReadSerializer(serializers.ModelSerializer):
+class MemberSelfReadSerializer(MaskedIBANFieldMixin, serializers.ModelSerializer):
     """Member-role read of their OWN Member row on ``MemberViewSet``
     (list/retrieve).
 
@@ -198,8 +211,13 @@ class MemberSelfReadSerializer(serializers.ModelSerializer):
     # transparently on access, so a plain ModelSerializer would echo them as
     # PLAINTEXT on self-read. Mirror MyMemberDataReadSerializer: expose only
     # boolean "stored" indicators and exclude the plaintext (+ sepa_consent).
+    # Getters come from ``MaskedIBANFieldMixin``; Member stores the holder name
+    # in ``account_owner``, hence the source override + explicit ``method_name``.
+    MASKED_ACCOUNT_HOLDER_SOURCE = "account_owner"
     iban_stored = serializers.SerializerMethodField()
-    account_owner_stored = serializers.SerializerMethodField()
+    account_owner_stored = serializers.SerializerMethodField(
+        method_name="get_account_holder_stored"
+    )
 
     class Meta:
         model = Member
@@ -219,12 +237,6 @@ class MemberSelfReadSerializer(serializers.ModelSerializer):
             "sepa_consent",
         )
 
-    def get_iban_stored(self, obj: Member) -> bool:
-        return bool(obj.iban)
-
-    def get_account_owner_stored(self, obj: Member) -> bool:
-        return bool(obj.account_owner)
-
 
 class MemberCreateRequestSerializer(MemberSerializer):
     """Schema-only request body of ``MemberViewSet.create``: the Member
@@ -235,7 +247,10 @@ class MemberCreateRequestSerializer(MemberSerializer):
 
 
 class SubscriptionSerializer(
-    UserNameFieldMixin, MemberStringFieldMixin, serializers.ModelSerializer
+    UserNameFieldMixin,
+    MemberStringFieldMixin,
+    ShareTypeVariationStringMixin,
+    serializers.ModelSerializer,
 ):
     """Read/write serializer for `Subscription`.
 
@@ -398,17 +413,14 @@ class SubscriptionSerializer(
             "notification_sent_at",
             "notification_expires_at",
             "response_received_at",
-            # Admin-confirm triplet — stamped exclusively by the
-            # ``POST /subscriptions/{id}/confirm/`` action (which runs the
-            # capacity backstop, materialises shares/deliveries/charges and
-            # the GenG admission cascade). Left writable, a plain create/PATCH
-            # could forge ``admin_confirmed=True`` on a draft and skip that
-            # whole machinery (validate() only locks ALREADY-confirmed rows).
-            "admin_confirmed",
-            "admin_confirmed_at",
-            "admin_confirmed_by",
-            "admin_rejected_at",
-            "admin_rejection_reason",
+            # Admin-confirm/reject 5-tuple — stamped exclusively by the
+            # ``POST /subscriptions/{id}/confirm/`` + ``/reject/`` actions (the
+            # confirm action runs the capacity backstop, materialises
+            # shares/deliveries/charges and the GenG admission cascade). Left
+            # writable, a plain create/PATCH could forge ``admin_confirmed=True``
+            # on a draft and skip that whole machinery (validate() only locks
+            # ALREADY-confirmed rows).
+            *ADMIN_CONFIRMATION_READONLY_FIELDS,
             # Cancellation triplet — stamped exclusively by
             # ``SubscriptionService.cancel_subscription`` via the
             # ``POST /api/commissioning/subscriptions/{id}/cancel/``
@@ -421,9 +433,7 @@ class SubscriptionSerializer(
             # The frontend Abos cancel button MUST hit the action
             # endpoint; the lockdown here is the belt-and-braces
             # guard against direct API calls.
-            "cancelled_at",
-            "cancelled_effective_at",
-            "cancelled_by",
+            *CANCELLATION_READONLY_FIELDS,
         )
 
     def validate(self, attrs):
@@ -649,12 +659,6 @@ class SubscriptionSerializer(
         """Get human-readable display ID"""
         return obj.get_display_id() if hasattr(obj, "get_display_id") else obj.id
 
-    def get_share_type_variation_string(self, obj) -> str:
-        share_type_variation = obj.share_type_variation
-        if share_type_variation is None:
-            return ""
-        return f"{share_type_variation.share_type.name} - {share_type_variation.size}"
-
 
 class CoopShareSerializer(
     UserNameFieldMixin, MemberStringFieldMixin, serializers.ModelSerializer
@@ -676,14 +680,8 @@ class CoopShareSerializer(
         # office PATCH must never set them (would falsify cancelled_by/audit and
         # let admin_confirmed be forged). Mirrors MemberSerializer.read_only_fields.
         read_only_fields = (
-            "cancelled_at",
-            "cancelled_effective_at",
-            "cancelled_by",
-            "admin_confirmed",
-            "admin_confirmed_at",
-            "admin_confirmed_by",
-            "admin_rejected_at",
-            "admin_rejection_reason",
+            *CANCELLATION_READONLY_FIELDS,
+            *ADMIN_CONFIRMATION_READONLY_FIELDS,
             "paid_at",
             # Snapshotted server-side at member cancellation. ``paid_back_date``
             # is intentionally NOT here — the office stamps it when the share is
@@ -710,11 +708,7 @@ class MemberLoanSerializer(MemberStringFieldMixin, serializers.ModelSerializer):
         # stamped server-side in the viewset's ``perform_create``. Mirrors
         # ``CoopShareSerializer.read_only_fields``.
         read_only_fields = (
-            "admin_confirmed",
-            "admin_confirmed_at",
-            "admin_confirmed_by",
-            "admin_rejected_at",
-            "admin_rejection_reason",
+            *ADMIN_CONFIRMATION_READONLY_FIELDS,
             "created_by",
             "created_at",
         )

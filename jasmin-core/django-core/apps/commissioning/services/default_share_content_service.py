@@ -11,6 +11,8 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from isoweek import Week
 
+from apps.shared.money import round_money
+
 from ..errors import (
     CommissioningError,
     RequiredFieldMissing,
@@ -337,7 +339,7 @@ class DefaultShareContentService:
                 )
                 total += amount * current_subscribers * num_weeks
 
-        return str(total.quantize(Decimal("0.01")))
+        return str(round_money(total))
 
     # ──────────────────────────────────────────────
     # Public API

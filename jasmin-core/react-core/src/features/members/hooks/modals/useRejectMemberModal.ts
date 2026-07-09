@@ -1,82 +1,37 @@
-import { useCallback, useState } from "react";
-import { useTranslation } from "react-i18next";
-
 import { commissioningMembersRejectCreate } from "@shared/api/generated/commissioning/commissioning";
 import type { Member } from "@shared/api/generated/models";
-import { notify } from "@shared/utils";
+import { useRejectModal } from "@hooks/useRejectModal";
 import type { MemberRecord } from "@features/members/pages/types";
 
 /**
- * State + actions for the Reject Member modal. Mirrors the shape of
- * ``useAdminConfirmationModalMembers`` so callers can wire both modals
- * the same way.
+ * Members reject modal — a thin domain wrapper over the shared
+ * ``useRejectModal`` hook. Injects the Members reject call + i18n keys and
+ * re-exports the generic surface under the Member-specific names the page/tests
+ * already consume.
  *
- * The reject action is irreversible from the office UI (a rejected
- * application can't be re-opened through this modal), so we always
- * require an explicit ``reason`` before allowing submit. The reason
- * propagates to the applicant via the ``accounts.application_rejected``
- * email template.
+ * Backend (``MembersViewSet.reject``) forwards the ``reason`` to
+ * ``MemberService.reject_and_notify`` which puts it into the
+ * ``accounts.application_rejected`` email context. Empty string is allowed by
+ * the serializer — the email still goes out, just without a stated reason. The
+ * resolved payload (incl. any stamped fields) flows back so the caller can patch
+ * the table row.
  */
 export const useRejectMemberModal = () => {
-  const { t } = useTranslation();
-  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-  const [selectedMemberForRejection, setSelectedMemberForRejection] =
-    useState<MemberRecord | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [reason, setReason] = useState("");
-
-  const handleOpenRejectModal = useCallback((member: MemberRecord) => {
-    setSelectedMemberForRejection(member);
-    setReason("");
-    setIsRejectModalOpen(true);
-  }, []);
-
-  const handleCloseRejectModal = useCallback(() => {
-    setIsRejectModalOpen(false);
-    setSelectedMemberForRejection(null);
-    setReason("");
-  }, []);
-
-  const rejectMember = useCallback(async () => {
-    if (!selectedMemberForRejection) return;
-    const memberId = String(selectedMemberForRejection.id ?? "");
-    if (!memberId) return;
-
-    setLoading(true);
-    try {
-      // Backend (``MembersViewSet.reject``) reads ``request.data.get
-      // ("reason")`` and forwards it to
-      // ``MemberService.reject_and_notify`` which puts it into the
-      // ``accounts.application_rejected`` email context. Empty string
-      // is allowed by the serializer — the email still goes out, just
-      // without a stated reason.
-      const data = await commissioningMembersRejectCreate(memberId, {
-        reason: reason.trim(),
-      });
-      notify.success(
-        t("members.reject_success"),
-      );
-      handleCloseRejectModal();
-      return data;
-    } catch (error) {
-      console.error("Failed to reject member:", error);
-      notify.error(
-        t("members.reject_error"),
-      );
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedMemberForRejection, reason, t, handleCloseRejectModal]);
+  const modal = useRejectModal<MemberRecord, Member>({
+    rejectFn: (id, reason) =>
+      commissioningMembersRejectCreate(id, { reason }),
+    successKey: "members.reject_success",
+    errorKey: "members.reject_error",
+  });
 
   return {
-    isRejectModalOpen,
-    selectedMemberForRejection,
-    loading,
-    reason,
-    setReason,
-    handleOpenRejectModal,
-    handleCloseRejectModal,
-    rejectMember,
+    isRejectModalOpen: modal.isOpen,
+    selectedMemberForRejection: modal.selectedItem,
+    loading: modal.loading,
+    reason: modal.reason,
+    setReason: modal.setReason,
+    handleOpenRejectModal: modal.handleOpen,
+    handleCloseRejectModal: modal.handleClose,
+    rejectMember: modal.reject,
   };
 };

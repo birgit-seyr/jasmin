@@ -60,7 +60,7 @@ const MemberEmailsModal: FC<MemberEmailsModalProps> = ({
         sorter: (a, b) => a.purpose.localeCompare(b.purpose),
         render: (value: string) => (
           <Tooltip title={value}>
-            <span>{t(`email_matrix.${value}`, value)}</span>
+            <span>{t(`email_matrix.${value}`)}</span>
           </Tooltip>
         ),
       },
@@ -77,7 +77,7 @@ const MemberEmailsModal: FC<MemberEmailsModalProps> = ({
         width: "8em",
         render: (value: string) => (
           <Tag color={getEmailStatusColor(value)}>
-            {t(`email_matrix.status.${value}`, value)}
+            {t(`email_matrix.status.${value}`)}
           </Tag>
         ),
       },

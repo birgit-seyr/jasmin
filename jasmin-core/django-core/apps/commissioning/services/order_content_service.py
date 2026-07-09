@@ -53,8 +53,6 @@ class OrderContentService:
             return f"{offer.share_article.name} - {offer.sort}"
         return offer.share_article.name
 
-    _get_tax_rate = staticmethod(resolve_article_tax_rate)
-
     @staticmethod
     def _amount_per_pu_or_one(offer: Offer | None) -> Decimal | int:
         if offer and offer.amount_per_pu:
@@ -75,6 +73,49 @@ class OrderContentService:
         return math.ceil(Decimal(amount) / Decimal(pu_divisor))
 
     @staticmethod
+    def _order_identity_dict(order) -> dict[str, Any]:
+        """Order identity + day-schedule block shared by the order-content row,
+        the unused-offer placeholder, and the order-metadata serializer.
+        ``None`` → the placeholder defaults (null identity, unfinalized). Callers
+        that also expose ``last_possible_ordering_day`` add it themselves."""
+        return {
+            "order_id": order.id if order else None,
+            "order_number": order.display_number if order else None,
+            "order_number_prefix": order.prefix if order else None,
+            "order_is_finalized": order.is_finalized if order else False,
+            "order_note": (order.note or "") if order else "",
+            "harvesting_day": order.harvesting_day if order else None,
+            "packing_day": order.packing_day if order else None,
+            "washing_day": order.washing_day if order else None,
+            "cleaning_day": order.cleaning_day if order else None,
+        }
+
+    @staticmethod
+    def _delivery_note_identity_dict(delivery_note) -> dict[str, Any]:
+        """Delivery-note identity/state block; ``None`` → null identity."""
+        return {
+            "delivery_note_id": delivery_note.id if delivery_note else None,
+            "delivery_note_number": (
+                delivery_note.display_number if delivery_note else None
+            ),
+            "delivery_note_prefix": delivery_note.prefix if delivery_note else None,
+            "delivery_note_is_finalized": (
+                delivery_note.is_finalized if delivery_note else False
+            ),
+        }
+
+    @staticmethod
+    def _invoice_identity_dict(invoice) -> dict[str, Any]:
+        """Invoice identity/state block; ``None`` → null identity, no invoice."""
+        return {
+            "invoice_id": invoice.id if invoice else None,
+            "invoice_number": invoice.display_number if invoice else None,
+            "invoice_prefix": invoice.prefix if invoice else None,
+            "has_invoice": invoice is not None,
+            "has_finalized_invoice": invoice.is_finalized if invoice else False,
+        }
+
+    @staticmethod
     def _serialize_order_content(order_content: OrderContent) -> dict[str, Any]:
         """Serialize an OrderContent into a flat dict for API responses."""
         offer = order_content.offer
@@ -84,15 +125,7 @@ class OrderContentService:
             # real row or a placeholder?" from the shape of other fields.
             # See _serialize_unused_offer for the placeholder counterpart.
             "is_placeholder": False,
-            "order_id": order_content.order_id,
-            "order_number": order_content.order.display_number,
-            "order_number_prefix": order_content.order.prefix,
-            "order_is_finalized": order_content.order.is_finalized,
-            "order_note": order_content.order.note or "",
-            "harvesting_day": order_content.order.harvesting_day,
-            "packing_day": order_content.order.packing_day,
-            "washing_day": order_content.order.washing_day,
-            "cleaning_day": order_content.order.cleaning_day,
+            **OrderContentService._order_identity_dict(order_content.order),
             "last_possible_ordering_day": order_content.order.last_possible_ordering_day,
             "offer": offer.id if offer else None,
             "offer_name": OrderContentService._get_offer_name(offer),
@@ -148,24 +181,10 @@ class OrderContentService:
         return {
             "id": offer.id,
             "is_placeholder": True,
-            "order_id": None,
-            "order_number": None,
-            "order_number_prefix": None,
-            "order_is_finalized": False,
-            "harvesting_day": None,
-            "packing_day": None,
-            "washing_day": None,
-            "cleaning_day": None,
+            **OrderContentService._order_identity_dict(None),
             "last_possible_ordering_day": None,
-            "delivery_note_id": None,
-            "delivery_note_number": None,
-            "delivery_note_prefix": None,
-            "delivery_note_is_finalized": False,
-            "invoice_id": None,
-            "invoice_number": None,
-            "invoice_prefix": None,
-            "has_invoice": False,
-            "has_finalized_invoice": False,
+            **OrderContentService._delivery_note_identity_dict(None),
+            **OrderContentService._invoice_identity_dict(None),
             "offer": offer.id,
             "offer_name": OrderContentService._get_offer_name(offer),
             "offer_available_amount": offer.amount,
@@ -210,35 +229,11 @@ class OrderContentService:
         reads it identically.
         """
         delivery_note = getattr(order, "delivery_note", None)
+        invoice = invoice_content.invoice if invoice_content else None
         return {
-            "order_id": order.id,
-            "order_number": order.display_number,
-            "order_number_prefix": order.prefix,
-            "order_is_finalized": order.is_finalized,
-            "order_note": order.note or "",
-            "harvesting_day": order.harvesting_day,
-            "packing_day": order.packing_day,
-            "washing_day": order.washing_day,
-            "cleaning_day": order.cleaning_day,
-            "delivery_note_id": delivery_note.id if delivery_note else None,
-            "delivery_note_number": (
-                delivery_note.display_number if delivery_note else None
-            ),
-            "delivery_note_prefix": delivery_note.prefix if delivery_note else None,
-            "delivery_note_is_finalized": (
-                delivery_note.is_finalized if delivery_note else False
-            ),
-            "invoice_id": invoice_content.invoice.id if invoice_content else None,
-            "invoice_number": (
-                invoice_content.invoice.display_number if invoice_content else None
-            ),
-            "invoice_prefix": (
-                invoice_content.invoice.prefix if invoice_content else None
-            ),
-            "has_invoice": invoice_content is not None,
-            "has_finalized_invoice": (
-                invoice_content.invoice.is_finalized if invoice_content else False
-            ),
+            **OrderContentService._order_identity_dict(order),
+            **OrderContentService._delivery_note_identity_dict(delivery_note),
+            **OrderContentService._invoice_identity_dict(invoice),
         }
 
     @staticmethod
@@ -713,18 +708,10 @@ class OrderContentService:
         # theoretical rows + their movements, so a dimension whose theoreticals
         # vanish would otherwise keep a stale actual correction (entity total ≠
         # counted) — mirror recompute_for_order_contents and re-derive below.
-        from django.db.models import Q
-
         from .theoretical_objects import recalculate_actual_corrections
 
         affected_movements = list(
-            MovementShareArticle.objects.filter(
-                Q(order_content=order_content)
-                | Q(theoretical_harvest__order_content=order_content)
-                | Q(theoretical_purchase__order_content=order_content)
-                | Q(theoretical_wash_amount__order_content=order_content)
-                | Q(theoretical_clean_amount__order_content=order_content)
-            )
+            MovementShareArticle.objects.for_order_contents(order_content)
         )
 
         offer = order_content.offer
@@ -808,18 +795,10 @@ class OrderContentService:
         # latter carry order_content=NULL (their source FK is ``theoretical_*``),
         # so they are reached via their Theoretical* parent's order_content link.
         # The rebuild's own cascades only cover the NEW storages.
-        from django.db.models import Q
-
         from .theoretical_objects import recalculate_actual_corrections
 
         old_movements = list(
-            MovementShareArticle.objects.filter(
-                Q(order_content__in=loaded_order_contents)
-                | Q(theoretical_harvest__order_content__in=loaded_order_contents)
-                | Q(theoretical_purchase__order_content__in=loaded_order_contents)
-                | Q(theoretical_wash_amount__order_content__in=loaded_order_contents)
-                | Q(theoretical_clean_amount__order_content__in=loaded_order_contents)
-            )
+            MovementShareArticle.objects.for_order_contents(loaded_order_contents)
         )
 
         TheoreticalHarvest.objects.filter(

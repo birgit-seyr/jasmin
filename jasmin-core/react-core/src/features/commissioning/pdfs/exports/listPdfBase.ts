@@ -80,13 +80,22 @@ export const listStyles = StyleSheet.create({
     borderBottomColor: colors.border.light,
     minHeight: 30,
   },
-  // Zebra striping was intentionally dropped for the Clean Hairline
-  // design. Kept as a no-op so the per-list ``index % 2 ? tableRowAlt
-  // : {}`` call sites stay valid; the ternaries can be removed when a
-  // file is next touched.
-  tableRowAlt: {},
   tableRowLast: {
     borderBottomWidth: 0,
+  },
+  // Green left-accent section heading (per share option / per reseller). One
+  // token so the list PDFs that print grouped sections share the same rule.
+  sectionHeading: {
+    borderLeftWidth: 2.5,
+    borderLeftColor: colors.brand,
+    paddingLeft: 7,
+    paddingVertical: 2,
+    fontSize: 12,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    color: colors.brand,
+    marginBottom: 4,
   },
   cell: {
     paddingVertical: spacing.sm,

@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { toApiDate } from "@shared/utils";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
@@ -306,11 +307,11 @@ export default function DeliveryTours() {
   );
 
   const shareDeliveryDaysParams = useMemo<CommissioningSharesDeliveryDaysListParams>(
-    () => ({ active_at_date: dayjs().format("YYYY-MM-DD") }),
+    () => ({ active_at_date: toApiDate(dayjs())! }),
     [],
   );
   const futureShareDeliveryDaysParams = useMemo<CommissioningSharesDeliveryDaysListParams>(
-    () => ({ active_at_date: dayjs().format("YYYY-MM-DD"), future: true }),
+    () => ({ active_at_date: toApiDate(dayjs())!, future: true }),
     [],
   );
 

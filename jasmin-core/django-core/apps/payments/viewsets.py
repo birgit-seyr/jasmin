@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
 from django.db.models import Sum
 from django.db.models.functions import TruncMonth
@@ -24,6 +24,7 @@ from apps.authz.permissions import (
     RolePermissionsMixin,
 )
 from apps.authz.scoping import enforce_owner
+from apps.shared.money import round_money
 from apps.shared.pii_logging import PIIReadLoggingMixin
 from apps.shared.query_params import (
     ParamSpec,
@@ -62,8 +63,6 @@ PARAM_CATALOGUE: dict[str, ParamSpec] = {
 # the open ones (PLANNED / ISSUED / PARTIAL) plus the collected ones (PAID).
 # WAIVED (forgiven) and FAILED (returned by the bank) are excluded.
 BILLED_INCOME_STATUSES = (*OPEN_CHARGE_STATUSES, ChargeStatus.PAID)
-
-_CENT = Decimal("0.01")
 
 
 @extend_schema_view(
@@ -427,11 +426,7 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
         data = [
             {
                 "month": row["month"].strftime("%Y-%m"),
-                "amount": str(
-                    (row["total"] or Decimal("0")).quantize(
-                        _CENT, rounding=ROUND_HALF_UP
-                    )
-                ),
+                "amount": str(round_money(row["total"] or Decimal("0"))),
             }
             for row in rows
         ]

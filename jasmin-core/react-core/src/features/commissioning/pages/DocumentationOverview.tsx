@@ -53,12 +53,12 @@ export default function DocumentationOverview() {
   const columns: any[] = [shareArticleColumn, ...amountUnitSizeColumns];
 
   const sourceOptions = [
-    { value: "HARVEST", label: t("commissioning.harvest_select") || "HARVEST" },
+    { value: "HARVEST", label: t("commissioning.harvest_select") },
     {
       value: "PURCHASE",
-      label: t("commissioning.purchase_select") || "PURCHASE",
+      label: t("commissioning.purchase_select"),
     },
-    { value: "WASTE", label: t("commissioning.waste_select") || "WASTE" },
+    { value: "WASTE", label: t("commissioning.waste_select") },
   ];
 
   return (

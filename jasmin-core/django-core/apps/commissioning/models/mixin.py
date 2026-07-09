@@ -132,6 +132,16 @@ class TimeBoundMixin(models.Model):
         # via ``time_bound_valid_range_constraint(<name>)`` in its own
         # ``Meta.constraints`` — see the helper just below this class.
 
+    def is_active_at(self, on_date: datetime.date) -> bool:
+        """Python mirror of ``active_on_date_q``: is this row's validity window
+        open on ``on_date``? ``valid_from <= on_date`` AND (``valid_until`` is
+        NULL OR ``>= on_date``). Keep the truth table in lockstep with
+        ``active_on_date_q`` (the ORM-side SSOT for the window) so a future
+        inclusive/exclusive change lands in exactly these two places."""
+        return self.valid_from <= on_date and (
+            self.valid_until is None or self.valid_until >= on_date
+        )
+
     def clean(self) -> None:
         super().clean()
         self.validate_week_boundaries(self.valid_from, self.valid_until)

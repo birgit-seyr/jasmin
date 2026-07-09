@@ -5,7 +5,7 @@ import { Flex } from "antd";
 import axiosService from "@shared/services/api";
 import { SUPER_ADMIN_ENDPOINTS } from "@features/platform/services/superAdmin";
 import { getErrorMessage } from "@shared/utils/apiError";
-import { AVAILABLE_ROLES } from "@features/platform/userManagement";
+import RoleChipSelector from "@features/platform/components/RoleChipSelector";
 
 interface CreateUserModalProps {
   tenantId: string;
@@ -131,24 +131,10 @@ export default function CreateUserModal({
           <div className="sa-form-group">
             <label className="sa-form-label">Roles</label>
             <Flex gap="6px" wrap="wrap">
-              {AVAILABLE_ROLES.map((role) => (
-                <span
-                  key={role}
-                  onClick={() => toggleRole(role)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      toggleRole(role);
-                    }
-                  }}
-                  role="checkbox"
-                  aria-checked={selectedRoles.includes(role)}
-                  tabIndex={0}
-                  className={`sa-role-pill ${selectedRoles.includes(role) ? "sa-role-pill--selected" : ""}`}
-                >
-                  {role}
-                </span>
-              ))}
+              <RoleChipSelector
+                selectedRoles={selectedRoles}
+                onToggle={toggleRole}
+              />
             </Flex>
           </div>
 

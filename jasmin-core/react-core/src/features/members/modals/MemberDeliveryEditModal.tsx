@@ -1,5 +1,6 @@
 import { Button, Checkbox, Form, Modal, Select, Space } from "antd";
 import dayjs from "dayjs";
+import { toApiDate } from "@shared/utils";
 import { FC, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -38,7 +39,7 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
       .isoWeek(delivery.delivery_week)
       .startOf("isoWeek")
       .add(delivery.delivery_day_number ?? 0, "day");
-    return d.format("YYYY-MM-DD");
+    return toApiDate(d)!;
   }, [delivery?.year, delivery?.delivery_week, delivery?.delivery_day_number]);
 
   // Pass the delivery's own year/week so ``capacity_by_week`` is keyed for

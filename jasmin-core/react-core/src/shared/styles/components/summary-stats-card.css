@@ -49,3 +49,13 @@
   font-size: 1.2em;
   font-weight: bold;
 }
+
+/* Muted sub-line rendered beneath a stat value (e.g. a coop-share count's €
+   worth, or a subscription tile's per-variation breakdown row). The token
+   color keeps it reactive in dark mode; callers add any single-site layout
+   (block span vs. flex row) themselves. */
+.summary-stats-card__subvalue {
+  font-size: 0.7em;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}

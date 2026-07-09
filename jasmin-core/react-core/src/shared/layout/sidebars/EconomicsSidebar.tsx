@@ -4,7 +4,6 @@ import { filterByRole, useRoles, type RoleGatedItem } from "@shared/auth";
 import SidebarShell from "./SidebarShell";
 
 interface EconomicsSidebarProps {
-  collapsed?: boolean;
   openKeys?: string[];
   onOpenChange?: (keys: string[]) => void;
 }

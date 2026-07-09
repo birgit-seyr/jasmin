@@ -1,5 +1,6 @@
 import { Form } from "antd";
 import dayjs from "dayjs";
+import { toApiDate } from "@shared/utils/apiDate";
 import type { Key } from "react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -83,7 +84,7 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
       if (!dateValue || !dateFormat) return dateValue;
 
       if (dayjs.isDayjs(dateValue)) {
-        return dateValue.format("YYYY-MM-DD");
+        return toApiDate(dateValue);
       }
 
       if (typeof dateValue === "string") {
@@ -102,7 +103,7 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
           }
         }
 
-        return parsed.isValid() ? parsed.format("YYYY-MM-DD") : dateValue;
+        return parsed.isValid() ? toApiDate(parsed) : dateValue;
       }
 
       return dateValue;

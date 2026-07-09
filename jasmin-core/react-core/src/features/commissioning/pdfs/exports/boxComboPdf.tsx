@@ -1,8 +1,10 @@
 import { StyleSheet, Text, View } from "@react-pdf/renderer";
+import type { ReactNode } from "react";
 import type { TFunction } from "i18next";
 
 import type { PackingBoxesMatrixColumn } from "@shared/api/generated/models";
 import { getShareTypeVariationSizeLabelPure } from "@hooks/index";
+import { listStyles } from "./listPdfBase";
 import { pdfTheme } from "./pdfTheme";
 
 /**
@@ -46,6 +48,31 @@ export function computeGroupEdges(
     });
   }
   return edges;
+}
+
+/** The green group rules for one column ``key`` (from the precomputed group
+ *  edges): left rule on a group's first column, right rule on its last. Spread
+ *  the result into a cell's ``style`` array — the single application of the
+ *  green group rules across all three box-combination matrices. */
+export function groupEdgeStyles(
+  groupEdges: Map<string, { left: boolean; right: boolean }>,
+  key: string,
+) {
+  const edge = groupEdges.get(key);
+  return [
+    edge?.left ? boxComboStyles.groupBorderLeft : {},
+    edge?.right ? boxComboStyles.groupBorderRight : {},
+  ];
+}
+
+/** A box/share count for a matrix cell: blank when the value is empty, null,
+ *  or zero; otherwise the integer as a string. The superset of the per-matrix
+ *  ``formatCount``/``formatAmount`` copies (integer box counts, no currency). */
+export function formatComboCount(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "";
+  const n = Number(value);
+  if (!Number.isFinite(n) || n === 0) return "";
+  return String(n);
 }
 
 /** Header label for one combination: base size + one "SHORT·size" per add-on. */
@@ -164,4 +191,98 @@ export function groupComboColumns(
     else groups.push({ id, name, cols: [column] });
   }
   return groups;
+}
+
+/**
+ * The box-combination matrices' PARENT header row: each base share_type name
+ * spans its combination columns, framed by the green group rules on both sides.
+ * The leading/trailing fixed cells (article/unit/size on the left, note/tick on
+ * the right) differ per matrix, so callers pass them as ``leading``/``trailing``
+ * slots. ``thinBorderBottom`` adds the slim 0.5pt divider the overview/details
+ * matrices use to separate this row from the sub-header (the packing-boxes
+ * matrix leaves it off). Kept ``fixed`` so it repeats on every printed page.
+ */
+export function ComboGroupHeaderRow({
+  groups,
+  comboWidth,
+  leading,
+  trailing,
+  thinBorderBottom = false,
+}: {
+  groups: ComboGroup[];
+  comboWidth: number;
+  leading?: ReactNode;
+  trailing?: ReactNode;
+  thinBorderBottom?: boolean;
+}) {
+  return (
+    <View
+      style={
+        thinBorderBottom
+          ? [listStyles.tableHeaderShaded, { borderBottomWidth: 0.5 }]
+          : listStyles.tableHeaderShaded
+      }
+      fixed
+    >
+      {leading}
+      {groups.map((group) => (
+        <View
+          key={group.id}
+          style={[
+            listStyles.cell,
+            listStyles.cellCenter,
+            { width: comboWidth * group.cols.length },
+            boxComboStyles.groupBorderLeft,
+            boxComboStyles.groupBorderRight,
+          ]}
+        >
+          <Text style={boxComboStyles.comboBase}>{group.name}</Text>
+        </View>
+      ))}
+      {trailing}
+    </View>
+  );
+}
+
+/**
+ * The box-combination matrices' COLUMN sub-header row: one ``ComboHeader``
+ * (base size + add-on badges) per combination column, each carrying the green
+ * group rules for its base-share_type group. The leading/trailing fixed cells
+ * differ per matrix, so callers pass them as ``leading``/``trailing`` slots.
+ * Kept ``fixed`` so it repeats on every printed page.
+ */
+export function ComboColumnHeaderRow({
+  columns,
+  comboWidth,
+  groupEdges,
+  t,
+  leading,
+  trailing,
+}: {
+  columns: PackingBoxesMatrixColumn[];
+  comboWidth: number;
+  groupEdges: Map<string, { left: boolean; right: boolean }>;
+  t: TFunction;
+  leading?: ReactNode;
+  trailing?: ReactNode;
+}) {
+  return (
+    <View style={listStyles.tableHeaderShaded} fixed>
+      {leading}
+      {columns.map((column) => (
+        <View
+          key={column.key}
+          style={[
+            listStyles.cell,
+            { width: comboWidth },
+            listStyles.cellCenter,
+            ...groupEdgeStyles(groupEdges, column.key),
+          ]}
+        >
+          <ComboHeader column={column} t={t} />
+        </View>
+      ))}
+      {trailing}
+    </View>
+  );
 }

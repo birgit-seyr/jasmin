@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { toApiDate } from "@shared/utils";
 import { useMemo } from "react";
 import { useAllShareTypeVariations } from "@hooks/useAllShareTypeVariations";
 import { useShareTypes } from "@hooks/useShareTypes";
@@ -32,7 +33,7 @@ export interface PackingModeShareGroups {
 export const usePackingModeShareGroups = (
   activeAtDate: string | undefined = undefined,
 ): PackingModeShareGroups => {
-  const date = activeAtDate ?? dayjs().format("YYYY-MM-DD");
+  const date = activeAtDate ?? toApiDate(dayjs())!;
   const { shareTypes, loading: shareTypesLoading } = useShareTypes({
     active_at_date: date,
   });

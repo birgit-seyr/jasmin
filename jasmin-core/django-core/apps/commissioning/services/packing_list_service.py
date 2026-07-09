@@ -6,16 +6,17 @@ from typing import Any
 
 from isoweek import Week
 
-from ..errors import PackingAmountsDivergeAcrossStations
 from ..models import (
     DeliveryStation,
-    DeliveryStationDay,
     ShareArticle,
     ShareContent,
     ShareTypeVariation,
 )
 from ..utils import sort_share_articles
 from ..utils.basic_utils import size_order_annotation
+from ..utils.delivery_utils import tour_station_ids
+from ..utils.iso_week_utils import saturday_of_iso_week
+from ..utils.packing_divergence import record_amount
 from ..utils.share_type_variation_amounts import (
     batch_get_physical_variation_totals_for_week,
 )
@@ -35,7 +36,7 @@ class PackingListService:
         """Active variations of ``share_type`` for the delivery week, in
         display order. Loop-invariant across delivery stations, so the bulk
         path resolves it once and hands it to ``get_packing_list``."""
-        active_at_date = Week(year, delivery_week).saturday()
+        active_at_date = saturday_of_iso_week(year, delivery_week)
         qs = (
             ShareTypeVariation.current.active_at_date(active_at_date)
             .filter(share_type=share_type)
@@ -98,17 +99,10 @@ class PackingListService:
             share_contents = share_contents.filter(delivery_station=delivery_station)
 
         if tour is not None:
-            tour_station_ids = (
-                DeliveryStationDay.current.active_at_date(active_at_date)
-                .filter(
-                    delivery_day=delivery_day,
-                    tour_number=tour,
-                )
-                .values_list("delivery_station_id", flat=True)
+            station_ids = tour_station_ids(
+                active_at_date, delivery_day=delivery_day, tour=tour
             )
-            share_contents = share_contents.filter(
-                delivery_station_id__in=tour_station_ids
-            )
+            share_contents = share_contents.filter(delivery_station_id__in=station_ids)
 
         if packing_station is not None:
             share_contents = share_contents.filter(packing_station=packing_station)
@@ -186,15 +180,15 @@ class PackingListService:
                     variation_key,
                     content["share__delivery_day_id"],
                 )
-                if cell in seen_amounts and seen_amounts[cell] != amount:
-                    raise PackingAmountsDivergeAcrossStations(
-                        share_article_id=content["share_article__id"],
-                        unit=content["unit"],
-                        size=content["size"],
-                        variation_id=content["share__share_type_variation__id"],
-                        amounts=[seen_amounts[cell], amount],
-                    )
-                seen_amounts[cell] = amount
+                record_amount(
+                    seen_amounts,
+                    cell,
+                    amount,
+                    article_id=content["share_article__id"],
+                    unit=content["unit"],
+                    size=content["size"],
+                    variation_id=content["share__share_type_variation__id"],
+                )
             articles_dict[composite_key][variation_key] = amount
             backup_variation_key = (
                 f'backup_variation_{content["share__share_type_variation__id"]}'
@@ -487,7 +481,7 @@ class PackingListService:
         Reads ``ShareContent`` only — never ``ShareDelivery`` — so it works for
         subscription AND external-CSV (import) tenants.
         """
-        active_at_date = Week(year, delivery_week).saturday()
+        active_at_date = saturday_of_iso_week(year, delivery_week)
 
         share_contents = ShareContent.active.for_period(is_past=is_past).filter(
             share__year=year,
@@ -504,14 +498,10 @@ class PackingListService:
         if tour is not None:
             first = share_contents.first()
             delivery_day = first.share.delivery_day if first is not None else None
-            tour_station_ids = (
-                DeliveryStationDay.current.active_at_date(active_at_date)
-                .filter(delivery_day=delivery_day, tour_number=tour)
-                .values_list("delivery_station_id", flat=True)
+            station_ids = tour_station_ids(
+                active_at_date, delivery_day=delivery_day, tour=tour
             )
-            share_contents = share_contents.filter(
-                delivery_station_id__in=tour_station_ids
-            )
+            share_contents = share_contents.filter(delivery_station_id__in=station_ids)
 
         content_rows = share_contents.values(
             "share_article__id",
@@ -554,15 +544,15 @@ class PackingListService:
                     variation_key,
                     content["share__delivery_day_id"],
                 )
-                if cell in seen_amounts and seen_amounts[cell] != amount:
-                    raise PackingAmountsDivergeAcrossStations(
-                        share_article_id=content["share_article__id"],
-                        unit=content["unit"],
-                        size=content["size"],
-                        variation_id=variation_id,
-                        amounts=[seen_amounts[cell], amount],
-                    )
-                seen_amounts[cell] = amount
+                record_amount(
+                    seen_amounts,
+                    cell,
+                    amount,
+                    article_id=content["share_article__id"],
+                    unit=content["unit"],
+                    size=content["size"],
+                    variation_id=variation_id,
+                )
             articles_dict[composite_key][variation_key] = amount
 
         # Drop rows where every variation cell is 0 (mirrors get_packing_list).

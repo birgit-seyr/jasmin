@@ -37,6 +37,14 @@ export const getDateRangeStatus = (
   return "inactive";
 };
 
+// Single colour map for the three date-range buckets — the SSOT for both the
+// status-dot renderer and `getStatusColor` so the two can never drift.
+export const DATE_RANGE_STATUS_COLOR: Record<DateRangeStatus, string> = {
+  active: "var(--color-success)", // Green
+  future: "var(--color-future-blue)", // Blue
+  inactive: "var(--color-border)", // Gray
+};
+
 export const createDateRangeStatusSorter = (
   validFromField = "valid_from",
   validUntilField = "valid_until",
@@ -85,15 +93,15 @@ export const createDateRangeStatusRenderer = (
     size = 12,
     statusConfig = {
       active: {
-        color: "var(--color-success)", // Green
+        color: DATE_RANGE_STATUS_COLOR.active,
         tooltip: t("members.currently_active"),
       },
       future: {
-        color: "var(--color-future-blue)", // Blue
+        color: DATE_RANGE_STATUS_COLOR.future,
         tooltip: t("members.future_active"),
       },
       inactive: {
-        color: "var(--color-border)", // Gray
+        color: DATE_RANGE_STATUS_COLOR.inactive,
         tooltip: t("members.currently_inactive"),
       },
     },
@@ -149,24 +157,18 @@ export const isFieldDisabled = (
   return !record.can_be_deleted;
 };
 
+/**
+ * "Editable only on a new row" predicate. New rows carry the sentinel key
+ * `-1`; every persisted row has a real key, so its cell stays locked. This is
+ * a DIFFERENT rule from {@link isFieldDisabled} (which keys off
+ * `can_be_deleted`) — it's purely new-vs-existing, so a column using it locks
+ * the cell on every saved row.
+ */
+export const editableOnlyOnCreate = (
+  record: Record<string, unknown>,
+): boolean => record.key !== -1;
+
 export const getStatusColor = (
   validFrom: unknown,
   validUntil: unknown,
-): string => {
-  const now = dayjs();
-  const from = validFrom ? dayjs(validFrom as DateInput) : null;
-  const until = validUntil ? dayjs(validUntil as DateInput) : null;
-
-  // Future (blue) - valid_from is in the future
-  if (from && from.isAfter(now, "day")) {
-    return "var(--color-future-blue)"; // blue
-  }
-
-  // Past (grey) - valid_until is in the past
-  if (until && until.isBefore(now, "day")) {
-    return "var(--color-border)"; // grey
-  }
-
-  // Active (green) - currently valid or no end date
-  return "var(--color-success)"; // green
-};
+): string => DATE_RANGE_STATUS_COLOR[getDateRangeStatus(validFrom, validUntil)];

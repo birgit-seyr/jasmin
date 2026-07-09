@@ -53,7 +53,6 @@ import {
   useCurrency,
   useDateFormat,
   useInvalidateAfterTableMutation,
-  useNumberFormat,
   useTableRowSelection,
   useTenant,
 } from "@hooks/index";
@@ -95,8 +94,7 @@ export default function Invoices() {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const { t } = useTranslation();
   const { getSetting, tenant, logoUrl, bioLogoUrl } = useTenant();
-  const { currencySymbol } = useCurrency();
-  const { format } = useNumberFormat();
+  const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -515,7 +513,7 @@ export default function Invoices() {
         align: "right",
         sortable: true,
         render: (value: unknown) =>
-          `${format(parseFloat((value as string) || "0"), 2)} ${currencySymbol}`,
+          formatCurrency(parseFloat((value as string) || "0")),
       },
       {
         title: "",
@@ -629,9 +627,8 @@ export default function Invoices() {
     ],
     [
       t,
-      format,
+      formatCurrency,
       formatDate,
-      currencySymbol,
       handleOpenModal,
       handleOpenStornoModal,
       handleFinalizeInvoicesSuccess,
@@ -685,7 +682,7 @@ export default function Invoices() {
               <Flex align="center" gap={16}>
                 <Text>{t("commissioning.sum")}</Text>
                 <Text strong className="text-success">
-                  {format(group.totalAmount, 2)} {currencySymbol}
+                  {formatCurrency(group.totalAmount)}
                 </Text>
               </Flex>
             </div>

@@ -12,7 +12,6 @@ import { useTenant } from "@hooks/index";
 import SidebarShell from "./SidebarShell";
 
 interface AboSidebarProps {
-  collapsed?: boolean;
   openKeys?: string[];
   onOpenChange?: (keys: string[]) => void;
 }

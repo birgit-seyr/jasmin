@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import { dateForWeekDayNumber } from "@shared/utils";
 
 import { useDateFormat } from "@hooks/index";
 
@@ -22,10 +22,7 @@ export default function RelatedDayInfo({
 }: RelatedDayInfoProps) {
   const { dateFormat } = useDateFormat();
   const defaultFormatDate = (dayNumber: number) => {
-    const date = dayjs()
-      .year(selectedYear)
-      .isoWeek(selectedWeek)
-      .isoWeekday(dayNumber + 1);
+    const date = dateForWeekDayNumber(selectedYear, selectedWeek, dayNumber);
     return date.format(`dddd, ${dateFormat}`);
   };
   const format = formatDate ?? defaultFormatDate;

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import type { FC, ReactNode } from "react";
+import type { FC } from "react";
 import { Checkbox, Descriptions, Modal, Tag } from "antd";
 import { usePaperReceivedToggle } from "@hooks/usePaperReceivedToggle";
 import {
@@ -9,7 +9,8 @@ import {
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import dayjs from "dayjs";
+import { unwrapList } from "@shared/utils";
+import { parseDateLoose } from "@shared/utils/endOfTerm";
 import { useDateFormat } from "@hooks/configuration/useDateFormat";
 import { useTimeFormat } from "@hooks/configuration/useTimeFormat";
 import { useCurrency } from "@hooks/configuration/useCurrency";
@@ -50,7 +51,7 @@ export const AdminConfirmationModalAbos: FC<
   const { dateFormat, formatDate, formatDateWithFallback } = useDateFormat();
   const variationLabel = useVariationLabel();
   const { formatDateTime } = useTimeFormat();
-  const { currencySymbol } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const { getSetting } = useTenant();
   const requiresSepaPaper = Boolean(
@@ -64,12 +65,8 @@ export const AdminConfirmationModalAbos: FC<
     { query: { enabled: isOpen && !!abo?.member } },
   );
   const billingProfile = useMemo<BillingProfile | undefined>(() => {
-    if (!profiles) return undefined;
     // Server filters to this member (one profile per member), so take the first.
-    const all: BillingProfile[] = Array.isArray(profiles)
-      ? profiles
-      : ((profiles as { results?: BillingProfile[] }).results ?? []);
-    return all[0];
+    return unwrapList<BillingProfile>(profiles)[0];
   }, [profiles]);
   const hasActiveMandate = Boolean(billingProfile?.is_sepa_ready);
 
@@ -100,28 +97,10 @@ export const AdminConfirmationModalAbos: FC<
       }
 
       try {
-        let startDate: dayjs.Dayjs;
-        let endDate: dayjs.Dayjs;
+        const startDate = parseDateLoose(record.valid_from, dateFormat);
+        const endDate = parseDateLoose(record.valid_until, dateFormat);
 
-        if (typeof record.valid_from === "string") {
-          startDate = dayjs(record.valid_from, dateFormat, true);
-          if (!startDate.isValid()) {
-            startDate = dayjs(record.valid_from, "YYYY-MM-DD", true);
-          }
-        } else {
-          startDate = dayjs(record.valid_from);
-        }
-
-        if (typeof record.valid_until === "string") {
-          endDate = dayjs(record.valid_until, dateFormat, true);
-          if (!endDate.isValid()) {
-            endDate = dayjs(record.valid_until, "YYYY-MM-DD", true);
-          }
-        } else {
-          endDate = dayjs(record.valid_until);
-        }
-
-        if (!startDate.isValid() || !endDate.isValid()) {
+        if (!startDate || !endDate) {
           return null;
         }
 
@@ -263,7 +242,7 @@ export const AdminConfirmationModalAbos: FC<
             {deliveries != null ? deliveries : "-"}x
           </Descriptions.Item>
           <Descriptions.Item label={t("members.price_per_delivery")}>
-            {abo.price_per_delivery as ReactNode} {currencySymbol}
+            {formatCurrency(Number(abo.price_per_delivery))}
           </Descriptions.Item>
           <Descriptions.Item label={t("members.valid_until")}>
             {formatDateWithFallback(abo.valid_until, "-")}

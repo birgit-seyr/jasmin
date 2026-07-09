@@ -1,5 +1,6 @@
 import dayjs, { type ConfigType } from "dayjs";
 import { useCallback } from "react";
+import { toApiDate } from "@shared/utils/apiDate";
 import { useTenant } from "./useTenant";
 
 export const useDateFormat = () => {
@@ -39,10 +40,10 @@ export const useDateFormat = () => {
     [dateFormat]
   );
 
-  const formatDateForAPI = useCallback((value: ConfigType) => {
-    if (!value) return null;
-    return dayjs(value).format("YYYY-MM-DD");
-  }, []);
+  const formatDateForAPI = useCallback(
+    (value: ConfigType) => toApiDate(value),
+    []
+  );
 
   const formatDateWithColor = useCallback(
     (value: ConfigType, customFormat: string | null = null) => {

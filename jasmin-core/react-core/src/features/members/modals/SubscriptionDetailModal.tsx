@@ -26,7 +26,7 @@ export default function SubscriptionDetailModal({
 }: SubscriptionDetailModalProps) {
   const { t } = useTranslation();
   const { formatDate } = useDateFormat();
-  const { currencySymbol } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
   const [stationDayId, setStationDayId] = useState<string | null>(null);
 
@@ -78,7 +78,7 @@ export default function SubscriptionDetailModal({
               {subscription.quantity}×
             </Descriptions.Item>
             <Descriptions.Item label={t("members.price_per_delivery")}>
-              {subscription.price_per_delivery} {currencySymbol}
+              {formatCurrency(Number(subscription.price_per_delivery))}
             </Descriptions.Item>
             <Descriptions.Item label={t("commissioning.delivery_cycle")}>
               {deliveryCycleLabel(t, subscription.delivery_cycle)}

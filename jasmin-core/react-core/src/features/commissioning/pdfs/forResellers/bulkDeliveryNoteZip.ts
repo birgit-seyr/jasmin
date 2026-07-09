@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import { commissioningDeliveryNotesRetrieve } from "@shared/api/generated/commissioning/commissioning";
-import { downloadBlob, notify, zipFilesToBlob, type ZipEntry } from "@shared/utils";
+import type { ZipEntry } from "@shared/utils";
+import { downloadRecordsZip } from "./bulkZip";
 import { deliveryNotePdfFilename } from "./pdfDownload";
 
 /**
@@ -24,64 +25,27 @@ export async function downloadSelectedDeliveryNotePdfsZip(
   t: TFunction,
   zipFilename: string,
 ): Promise<void> {
-  if (deliveryNoteIds.length === 0) {
-    notify.info(t("download.bulk_zip_no_finalized_delivery_notes"));
-    return;
-  }
-
-  // Fetch the delivery-note records in parallel; a single failed lookup
-  // shouldn't sink the whole batch, so null-out failures and count them as
-  // skipped.
-  const deliveryNotes = await Promise.all(
-    deliveryNoteIds.map(async (id) => {
-      try {
-        return await commissioningDeliveryNotesRetrieve(id);
-      } catch (err) {
-        console.error(`Failed to load delivery note ${id} for bulk ZIP:`, err);
-        return null;
-      }
-    }),
-  );
-
-  const entries: ZipEntry[] = [];
-  let skipped = 0;
-
-  for (const deliveryNote of deliveryNotes) {
-    if (!deliveryNote || !deliveryNote.file) {
-      skipped += 1;
-      continue;
-    }
-    try {
+  await downloadRecordsZip({
+    ids: deliveryNoteIds,
+    retrieve: commissioningDeliveryNotesRetrieve,
+    buildEntry: async (deliveryNote): Promise<ZipEntry | null> => {
+      // Only delivery notes with a stored PDF qualify; the stored file is used
+      // as-is (no client-side rebuild).
+      if (!deliveryNote.file) return null;
       const response = await fetch(deliveryNote.file);
       const blob = await response.blob();
-      entries.push({
+      return {
         name: deliveryNotePdfFilename(
           t,
           deliveryNote.prefix,
           deliveryNote.number,
         ),
         blob,
-      });
-    } catch (err) {
-      console.error(
-        `Failed to fetch PDF for delivery note ${deliveryNote.id}:`,
-        err,
-      );
-      skipped += 1;
-    }
-  }
-
-  if (entries.length === 0) {
-    notify.info(t("download.bulk_zip_no_finalized_delivery_notes"));
-    return;
-  }
-
-  const zipBlob = await zipFilesToBlob(entries);
-  downloadBlob(zipBlob, zipFilename);
-
-  if (skipped > 0) {
-    notify.warning(
-      t("download.bulk_zip_some_skipped_delivery_notes", { count: skipped }),
-    );
-  }
+      };
+    },
+    emptyKey: "download.bulk_zip_no_finalized_delivery_notes",
+    skippedKey: "download.bulk_zip_some_skipped_delivery_notes",
+    zipFilename,
+    t,
+  });
 }

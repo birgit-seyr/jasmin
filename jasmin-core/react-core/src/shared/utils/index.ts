@@ -11,8 +11,13 @@ export {
     createDateRangeStatusSorter,
     createDateRangeStatusRenderer,
     isFieldDisabled,
-    getStatusColor
+    editableOnlyOnCreate,
+    getStatusColor,
+    DATE_RANGE_STATUS_COLOR
 } from './columnUtils';
+
+export { decimalsForUnit, formatAmountForUnit, renderNumber } from './amountFormat';
+export { getShareOptionLabel } from './shareOptionLabel';
 
 export { getDayName } from './dayNamesUtil';
 export { generatePdfFilename, formatWeekLabel, formatDayLabel } from './filenameUtils';
@@ -33,6 +38,8 @@ export { buildCsvString, downloadCsvBlob, resolveCsvDialect } from './csv';
 export { downloadBlob } from './downloadBlob';
 export { zipFilesToBlob } from './zip';
 export type { ZipEntry } from './zip';
-export { activeAtDateForWeek, isoWeekRangeLabel, isWeekInPast, isYearInPast } from './weekRange';
+export { activeAtDateForWeek, dateForWeekDayNumber, isoWeekRangeLabel, isWeekInPast, isYearInPast } from './weekRange';
 export { pickTierPrice, pickTierPriceFromAmount } from './tierPrice';
 export { isSepaMandateActiveForTerm } from './sepaMandate';
+export { toApiDate } from './apiDate';
+export { unwrapList } from './unwrapList';

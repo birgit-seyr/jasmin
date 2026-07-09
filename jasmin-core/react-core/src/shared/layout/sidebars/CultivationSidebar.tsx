@@ -13,13 +13,11 @@ import LineWeightIcon from "@mui/icons-material/LineWeight";
 import LocalFloristIcon from "@mui/icons-material/LocalFlorist";
 
 interface CultivationSidebarProps {
-  collapsed?: boolean;
   openKeys?: string[];
   onOpenChange?: (keys: string[]) => void;
 }
 
 export default function CultivationSidebar({
-  collapsed: _collapsed = false,
   openKeys = [],
   onOpenChange,
 }: CultivationSidebarProps) {

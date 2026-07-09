@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from decimal import Decimal
-from typing import Any
+from typing import Any, NamedTuple
 
 from django.db import transaction
 
@@ -249,23 +249,68 @@ def _processing_storage(
     return src.storage
 
 
-def _build_theoretical_wash(
-    src: TheoreticalSourceData, short_term_storage: Storage | None = None
-) -> TheoreticalWashAmount | None:
-    if src.washing_day is None:
+class _ProcessingSpec(NamedTuple):
+    """Wash-vs-Clean parametrization for the theoretical processing paths.
+
+    The two paths were byte-identical bar the models, the day/needs field and the
+    movement's ``movement_type`` + FK. Capturing that here lets the build,
+    placeholder, create-branch and movement loops each exist exactly once, so a
+    fix to one can never silently drift from the other.
+    """
+
+    created_key: str  # key under ``created_objects`` ("washes" / "cleans")
+    theoretical_model: type  # Theoretical{Wash,Clean}Amount
+    placeholder_model: type  # {Wash,Clean}Amount (actual placeholder)
+    day_field: str  # attr on the source ("washing_day" / "cleaning_day")
+    needs_field: str  # attr on the source ("needs_wash" / "needs_clean")
+    movement_type: str  # MovementShareArticle.movement_type
+    movement_fk_field: str  # FK on the movement pointing back to the theoretical
+
+
+_PROCESSING: list[_ProcessingSpec] = [
+    _ProcessingSpec(
+        created_key="washes",
+        theoretical_model=TheoreticalWashAmount,
+        placeholder_model=WashAmount,
+        day_field="washing_day",
+        needs_field="needs_wash",
+        movement_type="WASH",
+        movement_fk_field="theoretical_wash_amount",
+    ),
+    _ProcessingSpec(
+        created_key="cleans",
+        theoretical_model=TheoreticalCleanAmount,
+        placeholder_model=CleanAmount,
+        day_field="cleaning_day",
+        needs_field="needs_clean",
+        movement_type="CLEAN",
+        movement_fk_field="theoretical_clean_amount",
+    ),
+]
+
+
+def _build_theoretical_processing(
+    spec: _ProcessingSpec,
+    src: TheoreticalSourceData,
+    short_term_storage: Storage | None = None,
+):
+    """Build the theoretical Wash/Clean object for *src* (or ``None`` when the
+    source has no processing day for *spec*)."""
+    day_number = getattr(src, spec.day_field)
+    if day_number is None:
         return None
 
-    wash_year, wash_week = compute_rolled_back_week(
+    processing_year, processing_week = compute_rolled_back_week(
         src.year,
         src.delivery_week,
-        src.washing_day,
+        day_number,
         src.delivery_day,
     )
 
-    return TheoreticalWashAmount(
-        year=wash_year,
-        delivery_week=wash_week,
-        day_number=src.washing_day,
+    return spec.theoretical_model(
+        year=processing_year,
+        delivery_week=processing_week,
+        day_number=day_number,
         share_article=src.share_article,
         amount=src.total_amount_for_shares,
         unit=src.unit,
@@ -276,10 +321,11 @@ def _build_theoretical_wash(
     )
 
 
-def _ensure_wash_placeholder(
+def _ensure_processing_placeholder(
+    spec: _ProcessingSpec,
     src: TheoreticalSourceData,
-    wash_year: int,
-    wash_week: int,
+    processing_year: int,
+    processing_week: int,
     short_term_storage: Storage | None = None,
 ) -> None:
     # The actual placeholder must share its theoretical's storage — the SHORT-term
@@ -287,58 +333,10 @@ def _ensure_wash_placeholder(
     # for a comes_from_long_term line. Otherwise actual + theoretical land in
     # different storage groups (summary mis-group) and the storage-less unique
     # constraint makes add_additional_theoretical_amount collide (MOV-2).
-    WashAmount.objects.get_or_create(
-        year=wash_year,
-        delivery_week=wash_week,
-        day_number=src.washing_day,
-        share_article=src.share_article,
-        unit=src.unit,
-        size=src.size,
-        defaults={
-            "amount": None,
-            "storage": _processing_storage(src, short_term_storage),
-        },
-    )
-
-
-def _build_theoretical_clean(
-    src: TheoreticalSourceData, short_term_storage: Storage | None = None
-) -> TheoreticalCleanAmount | None:
-    if src.cleaning_day is None:
-        return None
-
-    clean_year, clean_week = compute_rolled_back_week(
-        src.year,
-        src.delivery_week,
-        src.cleaning_day,
-        src.delivery_day,
-    )
-
-    return TheoreticalCleanAmount(
-        year=clean_year,
-        delivery_week=clean_week,
-        day_number=src.cleaning_day,
-        share_article=src.share_article,
-        amount=src.total_amount_for_shares,
-        unit=src.unit,
-        size=src.size,
-        storage=_processing_storage(src, short_term_storage),
-        note=src.note,
-        **src.content_kwargs,
-    )
-
-
-def _ensure_clean_placeholder(
-    src: TheoreticalSourceData,
-    clean_year: int,
-    clean_week: int,
-    short_term_storage: Storage | None = None,
-) -> None:
-    # Same short-term-storage invariant as _ensure_wash_placeholder (MOV-2).
-    CleanAmount.objects.get_or_create(
-        year=clean_year,
-        delivery_week=clean_week,
-        day_number=src.cleaning_day,
+    spec.placeholder_model.objects.get_or_create(
+        year=processing_year,
+        delivery_week=processing_week,
+        day_number=getattr(src, spec.day_field),
         share_article=src.share_article,
         unit=src.unit,
         size=src.size,
@@ -381,10 +379,14 @@ def create_theoretical_objects(
     """
     theoretical_harvests: list[TheoreticalHarvest] = []
     theoretical_purchases: list[TheoreticalPurchase] = []
-    theoretical_washes: list[TheoreticalWashAmount] = []
-    theoretical_cleans: list[TheoreticalCleanAmount] = []
-    wash_long_term_flags: list[bool] = []
-    clean_long_term_flags: list[bool] = []
+    # Wash/Clean theoreticals + their comes_from_long_term flags, keyed by
+    # ``_ProcessingSpec.created_key`` so the two paths share one accumulator.
+    processing_theoreticals: dict[str, list] = {
+        spec.created_key: [] for spec in _PROCESSING
+    }
+    processing_long_term_flags: dict[str, list[bool]] = {
+        spec.created_key: [] for spec in _PROCESSING
+    }
 
     # Placeholder dedup. Placeholders are keyed WITHOUT the station, so a
     # season-wide batch (one source per station × week) would otherwise
@@ -396,8 +398,9 @@ def create_theoretical_objects(
     # winner among conflicting sources, so no canonical result exists.
     ensured_harvests: set[tuple] = set()
     ensured_purchases: set[tuple] = set()
-    ensured_washes: set[tuple] = set()
-    ensured_cleans: set[tuple] = set()
+    processing_ensured: dict[str, set[tuple]] = {
+        spec.created_key: set() for spec in _PROCESSING
+    }
 
     # Resolved once for the whole batch (avoids an N+1 across sources): wash/
     # clean theoreticals must land in the short-term harvest storage.
@@ -449,53 +452,36 @@ def create_theoretical_objects(
                     ensured_purchases.add(purchase_key)
                     _ensure_purchase_placeholder(src)
 
-        # ── Wash ──
-        if src.needs_wash:
-            theoretical_wash = _build_theoretical_wash(src, short_term_storage)
-            if theoretical_wash is not None:
-                theoretical_washes.append(theoretical_wash)
-                wash_long_term_flags.append(src.comes_from_long_term_storage)
-                if create_placeholders:
-                    wash_key = (
-                        theoretical_wash.year,
-                        theoretical_wash.delivery_week,
-                        src.washing_day,
-                        src.share_article.id,
-                        src.unit,
-                        src.size,
+        # ── Wash / Clean (spec-driven; identical shape bar model + day field) ──
+        for spec in _PROCESSING:
+            if not getattr(src, spec.needs_field):
+                continue
+            theoretical = _build_theoretical_processing(spec, src, short_term_storage)
+            if theoretical is None:
+                continue
+            processing_theoreticals[spec.created_key].append(theoretical)
+            processing_long_term_flags[spec.created_key].append(
+                src.comes_from_long_term_storage
+            )
+            if create_placeholders:
+                processing_key = (
+                    theoretical.year,
+                    theoretical.delivery_week,
+                    getattr(src, spec.day_field),
+                    src.share_article.id,
+                    src.unit,
+                    src.size,
+                )
+                ensured = processing_ensured[spec.created_key]
+                if processing_key not in ensured:
+                    ensured.add(processing_key)
+                    _ensure_processing_placeholder(
+                        spec,
+                        src,
+                        theoretical.year,
+                        theoretical.delivery_week,
+                        short_term_storage,
                     )
-                    if wash_key not in ensured_washes:
-                        ensured_washes.add(wash_key)
-                        _ensure_wash_placeholder(
-                            src,
-                            theoretical_wash.year,
-                            theoretical_wash.delivery_week,
-                            short_term_storage,
-                        )
-
-        # ── Clean ──
-        if src.needs_clean:
-            theoretical_clean = _build_theoretical_clean(src, short_term_storage)
-            if theoretical_clean is not None:
-                theoretical_cleans.append(theoretical_clean)
-                clean_long_term_flags.append(src.comes_from_long_term_storage)
-                if create_placeholders:
-                    clean_key = (
-                        theoretical_clean.year,
-                        theoretical_clean.delivery_week,
-                        src.cleaning_day,
-                        src.share_article.id,
-                        src.unit,
-                        src.size,
-                    )
-                    if clean_key not in ensured_cleans:
-                        ensured_cleans.add(clean_key)
-                        _ensure_clean_placeholder(
-                            src,
-                            theoretical_clean.year,
-                            theoretical_clean.delivery_week,
-                            short_term_storage,
-                        )
 
     created_objects: dict[str, list] = {}
     if theoretical_harvests:
@@ -506,18 +492,18 @@ def create_theoretical_objects(
         created_objects["purchases"] = TheoreticalPurchase.objects.bulk_create(
             theoretical_purchases
         )
-    if theoretical_washes:
-        created_objects["washes"] = TheoreticalWashAmount.objects.bulk_create(
-            theoretical_washes
-        )
-    if theoretical_cleans:
-        created_objects["cleans"] = TheoreticalCleanAmount.objects.bulk_create(
-            theoretical_cleans
-        )
+    for spec in _PROCESSING:
+        items = processing_theoreticals[spec.created_key]
+        if items:
+            created_objects[spec.created_key] = (
+                spec.theoretical_model.objects.bulk_create(items)
+            )
 
     # ── Create theoretical movements for the new objects ──
     movements = _create_theoretical_movements(
-        created_objects, wash_long_term_flags, clean_long_term_flags
+        created_objects,
+        processing_long_term_flags["washes"],
+        processing_long_term_flags["cleans"],
     )
 
     # ── Recalculate actual correction movements if any exist ──
@@ -575,10 +561,15 @@ def _create_theoretical_movements(
     """
     movements_to_create: list[MovementShareArticle] = []
 
-    if wash_long_term_flags is None:
-        wash_long_term_flags = [False] * len(created_objects.get("washes", []))
-    if clean_long_term_flags is None:
-        clean_long_term_flags = [False] * len(created_objects.get("cleans", []))
+    # Normalise the per-spec long-term flag lists (a missing list defaults to
+    # all-False, sized to that spec's created objects).
+    provided_flags = {"washes": wash_long_term_flags, "cleans": clean_long_term_flags}
+    long_term_flags_by_key: dict[str, list[bool]] = {}
+    for spec in _PROCESSING:
+        flags = provided_flags.get(spec.created_key)
+        if flags is None:
+            flags = [False] * len(created_objects.get(spec.created_key, []))
+        long_term_flags_by_key[spec.created_key] = flags
 
     for theoretical_harvest in created_objects.get("harvests", []):
         if theoretical_harvest.amount and theoretical_harvest.amount > 0:
@@ -630,134 +621,74 @@ def _create_theoretical_movements(
                 )
             )
 
-    # ── WASH movements (conditional on comes_from_long_term_storage) ──
+    # ── WASH / CLEAN movements (conditional on comes_from_long_term_storage) ──
+    # A long-term line transfers stock: a negative movement leaving long-term
+    # storage and a positive one arriving in short-term storage; a non-long-term
+    # line creates no processing movement. The storage lookups are cached across
+    # BOTH specs (BL-8: the membership guard honours a legitimately cached None so
+    # an unconfigured storage isn't re-queried per row).
     storage_cache: dict[str, Storage | None] = {}
 
-    for theoretical_wash, from_long_term in zip(
-        created_objects.get("washes", []), wash_long_term_flags, strict=True
-    ):
-        if not (theoretical_wash.amount and theoretical_wash.amount > 0):
-            continue
-        if not from_long_term:
-            # Not from long-term storage → no WASH movements
-            continue
+    def _cached_storage(cache_key: str, fetch) -> Storage | None:
+        if cache_key not in storage_cache:
+            storage_cache[cache_key] = fetch()
+        return storage_cache[cache_key]
 
-        dt = make_noon_datetime(
-            theoretical_wash.year,
-            theoretical_wash.delivery_week,
-            theoretical_wash.day_number,
-        )
-        amt = Decimal(str(theoretical_wash.amount))
+    for spec in _PROCESSING:
+        for theoretical, from_long_term in zip(
+            created_objects.get(spec.created_key, []),
+            long_term_flags_by_key[spec.created_key],
+            strict=True,
+        ):
+            if not (theoretical.amount and theoretical.amount > 0):
+                continue
+            if not from_long_term:
+                # Not from long-term storage → no WASH/CLEAN movements
+                continue
 
-        long_term_storage = (
-            Storage.long_term_harvest()
-            if "long_term" not in storage_cache
-            else storage_cache["long_term"]
-        )
-        short_term_storage = (
-            Storage.short_term_harvest()
-            if "short_term" not in storage_cache
-            else storage_cache["short_term"]
-        )
-        storage_cache["long_term"] = long_term_storage
-        storage_cache["short_term"] = short_term_storage
+            dt = make_noon_datetime(
+                theoretical.year,
+                theoretical.delivery_week,
+                theoretical.day_number,
+            )
+            amt = Decimal(str(theoretical.amount))
 
-        # Negative movement for the long-term storage (stock leaves)
-        if long_term_storage:
-            movements_to_create.append(
-                MovementShareArticle(
-                    date=dt,
-                    movement_type="WASH",
-                    theoretical_wash_amount=theoretical_wash,
-                    share_article=theoretical_wash.share_article,
-                    unit=theoretical_wash.unit,
-                    size=theoretical_wash.size,
-                    amount=-amt,
-                    storage=long_term_storage,
-                    is_theoretical=True,
-                )
+            long_term_storage = _cached_storage("long_term", Storage.long_term_harvest)
+            short_term_storage = _cached_storage(
+                "short_term", Storage.short_term_harvest
             )
 
-        # Positive movement for the short-term storage (stock arrives)
-        if short_term_storage:
-            movements_to_create.append(
-                MovementShareArticle(
-                    date=dt,
-                    movement_type="WASH",
-                    theoretical_wash_amount=theoretical_wash,
-                    share_article=theoretical_wash.share_article,
-                    unit=theoretical_wash.unit,
-                    size=theoretical_wash.size,
-                    amount=amt,
-                    storage=short_term_storage,
-                    is_theoretical=True,
+            # Negative movement for the long-term storage (stock leaves)
+            if long_term_storage:
+                movements_to_create.append(
+                    MovementShareArticle(
+                        date=dt,
+                        movement_type=spec.movement_type,
+                        share_article=theoretical.share_article,
+                        unit=theoretical.unit,
+                        size=theoretical.size,
+                        amount=-amt,
+                        storage=long_term_storage,
+                        is_theoretical=True,
+                        **{spec.movement_fk_field: theoretical},
+                    )
                 )
-            )
 
-    # ── CLEAN movements (conditional on comes_from_long_term_storage) ──
-    for theoretical_clean, from_long_term in zip(
-        created_objects.get("cleans", []), clean_long_term_flags, strict=True
-    ):
-        if not (theoretical_clean.amount and theoretical_clean.amount > 0):
-            continue
-        if not from_long_term:
-            # Not from long-term storage → no CLEAN movements
-            continue
-
-        dt = make_noon_datetime(
-            theoretical_clean.year,
-            theoretical_clean.delivery_week,
-            theoretical_clean.day_number,
-        )
-        amt = Decimal(str(theoretical_clean.amount))
-
-        # BL-8: membership-guard caching (mirror the WASH loop) so a legitimately
-        # cached None is honoured — `.get(...) or Storage.x()` re-ran the query
-        # every iteration when no long-term storage is configured (per-row N+1).
-        long_term_storage = (
-            Storage.long_term_harvest()
-            if "long_term" not in storage_cache
-            else storage_cache["long_term"]
-        )
-        short_term_storage = (
-            Storage.short_term_harvest()
-            if "short_term" not in storage_cache
-            else storage_cache["short_term"]
-        )
-        storage_cache["long_term"] = long_term_storage
-        storage_cache["short_term"] = short_term_storage
-
-        # Negative movement for the long-term storage (stock leaves)
-        if long_term_storage:
-            movements_to_create.append(
-                MovementShareArticle(
-                    date=dt,
-                    movement_type="CLEAN",
-                    theoretical_clean_amount=theoretical_clean,
-                    share_article=theoretical_clean.share_article,
-                    unit=theoretical_clean.unit,
-                    size=theoretical_clean.size,
-                    amount=-amt,
-                    storage=long_term_storage,
-                    is_theoretical=True,
+            # Positive movement for the short-term storage (stock arrives)
+            if short_term_storage:
+                movements_to_create.append(
+                    MovementShareArticle(
+                        date=dt,
+                        movement_type=spec.movement_type,
+                        share_article=theoretical.share_article,
+                        unit=theoretical.unit,
+                        size=theoretical.size,
+                        amount=amt,
+                        storage=short_term_storage,
+                        is_theoretical=True,
+                        **{spec.movement_fk_field: theoretical},
+                    )
                 )
-            )
-
-        # Positive movement for the short-term storage (stock arrives)
-        if short_term_storage:
-            movements_to_create.append(
-                MovementShareArticle(
-                    date=dt,
-                    movement_type="CLEAN",
-                    theoretical_clean_amount=theoretical_clean,
-                    share_article=theoretical_clean.share_article,
-                    unit=theoretical_clean.unit,
-                    size=theoretical_clean.size,
-                    amount=amt,
-                    storage=short_term_storage,
-                    is_theoretical=True,
-                )
-            )
 
     if not movements_to_create:
         return []

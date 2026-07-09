@@ -7,16 +7,27 @@
  */
 
 /**
- * Adds ``line_netto`` and ``line_brutto`` (string decimals) to a line-item
-serializer. Values come straight from the model's ``LinePricingMixin``
-properties so the formula lives in one place (``models.mixin``).
+ * Expose ``<api>_differs`` and ``original_<model_field>`` SerializerMethodFields.
 
-The fields are injected via ``get_fields()`` (same pattern as
-``DeletableMixin``): this mixin is a plain ``object``, and DRF's
-metaclass only collects declared Field class attributes from
-serializer bases — declared on a non-Serializer mixin they are
-silently dropped, leaving the fields neither at runtime nor in the
-schema.
+Reads the snapshot of the upstream value from the model's local
+``source_<model_field>`` column. Pure local field comparison — no FK
+traversal, no N+1 queries.
+
+Subclasses declare which fields participate via ``DIFF_FIELDS``. Each
+entry is either a plain string (api name == model field name) or a
+``(api_name, model_field)`` tuple to alias::
+
+    class FooSerializer(DifferenceTrackingMixin, ...):
+        # ``price_differs`` / ``original_price_per_unit``
+        DIFF_FIELDS = ["amount", ("price", "price_per_unit"), "rabatt"]
+
+For pseudo-fields that don't have a single ``source_<name>`` column
+(e.g. ``article`` which compares two FKs), override
+:meth:`_get_pseudo_diff` and add the field name to ``DIFF_PSEUDO``.
+
+Diff is auto-skipped when :meth:`_diff_disabled` returns True. Default
+impl returns ``True`` for stornos and corrections (negated/adjusted
+amounts make the comparison meaningless).
  */
 export interface CrateDeliveryNoteContent {
   readonly id?: string;
@@ -82,4 +93,10 @@ export interface CrateDeliveryNoteContent {
   /** @pattern ^-?\d{0,10}(?:\.\d{0,2})?$ */
   readonly line_brutto?: string;
   readonly crate_type_name?: string;
+  readonly amount_differs?: boolean;
+  readonly original_amount?: string;
+  readonly price_per_unit_differs?: boolean;
+  readonly original_price_per_unit?: string;
+  readonly rabatt_differs?: boolean;
+  readonly original_rabatt?: string;
 }

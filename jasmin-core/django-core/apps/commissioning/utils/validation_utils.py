@@ -9,6 +9,7 @@ parsed values directly — callers don't need any error handling.
 
 from __future__ import annotations
 
+import datetime
 from typing import Any
 
 from rest_framework.request import Request
@@ -109,6 +110,64 @@ def validate_and_parse_int_params(
     return parsed_values
 
 
+def parse_body_date(
+    request: Request,
+    field: str,
+    *,
+    required: bool = True,
+    code_prefix: str,
+    required_code: str | None = None,
+    format_code: str | None = None,
+) -> datetime.date | None:
+    """Parse an ISO ``YYYY-MM-DD`` date from the request BODY.
+
+    Returns the parsed :class:`datetime.date`; ``None`` when the field is
+    absent/empty and ``required=False`` (e.g. an optional ``valid_until``).
+
+    Raises :class:`apps.commissioning.errors.CommissioningError` (HTTP 400) with
+    a stable per-case ``code`` on missing/malformed input. The codes default to
+    ``<code_prefix>.<field>_required`` / ``<code_prefix>.<field>_format``; pass
+    ``required_code`` / ``format_code`` to preserve a pre-existing non-standard
+    code (so consolidating the call site doesn't change the wire contract).
+    """
+    raw = request.data.get(field)
+    if not raw:
+        if not required:
+            return None
+        raise CommissioningError(
+            "This field is required.",
+            field=field,
+            code=required_code or f"{code_prefix}.{field}_required",
+        )
+    try:
+        return datetime.date.fromisoformat(str(raw))
+    except (ValueError, TypeError) as exc:
+        raise CommissioningError(
+            "Expected YYYY-MM-DD.",
+            field=field,
+            code=format_code or f"{code_prefix}.{field}_format",
+        ) from exc
+
+
+def parse_bulk_ids(request: Request, *, field: str = "ids") -> list[str]:
+    """Extract and validate the ``{field: [...]}`` array from a bulk request body.
+
+    The single canonical parser for every bulk-by-IDs endpoint (finalize,
+    inventory, forecast-copy, offer/reminder-send, set-to-paid, …). Returns the
+    list of IDs and raises one canonical error —
+    :class:`apps.commissioning.errors.RequiredFieldMissing`
+    (HTTP 400, ``field=<field>``) — when the value is missing, empty, or not a
+    list, replacing the divergent per-endpoint checks.
+    """
+    ids = request.data.get(field)
+    if not ids or not isinstance(ids, list):
+        raise RequiredFieldMissing(
+            "A non-empty list of IDs is required.",
+            field=field,
+        )
+    return ids
+
+
 def validate_bulk_document_request(request: Request) -> dict[str, Any]:
     """
     Validate request for bulk document operations (create/finalize/delete).
@@ -125,15 +184,9 @@ def validate_bulk_document_request(request: Request) -> dict[str, Any]:
         >>> order_ids = params["order_ids"]
         >>> model = params["model"]
     """
-    order_ids = request.data.get("ids", [])
+    order_ids = parse_bulk_ids(request)
     model = request.data.get("model")
     date = request.data.get("date", None)
-
-    if not order_ids or not isinstance(order_ids, list):
-        raise RequiredFieldMissing(
-            "order_ids must be a non-empty list",
-            field="ids",
-        )
 
     if model not in ["delivery_note", "invoice"]:
         raise CommissioningError(

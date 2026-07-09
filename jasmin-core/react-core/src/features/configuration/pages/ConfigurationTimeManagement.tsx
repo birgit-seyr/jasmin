@@ -42,7 +42,7 @@ import {
   useInvalidateAfterTableMutation,
   useTimeBoundColumns,
 } from "@hooks/index";
-import { isFieldDisabled } from "@shared/utils";
+import { isFieldDisabled, toApiDate } from "@shared/utils";
 
 type SharesDeliveryDayRecord = SharesDeliveryDay & TableRecord;
 type OrdersDeliveryDayRecord = OrdersDeliveryDay & TableRecord;
@@ -64,7 +64,7 @@ export default function TimeManagement() {
   const { validFromColumn, validUntilColumn } = useTimeBoundColumns();
 
   const shareParams = useMemo<CommissioningSharesDeliveryDaysListParams>(
-    () => (showAll ? {} : { active_at_date: dayjs().format("YYYY-MM-DD") }),
+    () => (showAll ? {} : { active_at_date: toApiDate(dayjs())! }),
     [showAll],
   );
 

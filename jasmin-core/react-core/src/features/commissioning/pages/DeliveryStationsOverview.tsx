@@ -17,6 +17,7 @@ import type {
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { EmptyHint, ExplainerText, PastWarningMessage } from "@shared/ui";
 import {
+  activeAtDateForWeek,
   formatDayLabel,
   formatWeekLabel,
   generatePdfFilename,
@@ -145,20 +146,12 @@ export default function DeliveryStationOverview() {
 
   // delivery days
   const [shareDeliveryDaysFilters, setShareDeliveryDaysFilters] = useState({
-    active_at_date: dayjs()
-      .year(selectedYear)
-      .isoWeek(selectedWeek!)
-      .isoWeekday(6)
-      .format("YYYY-MM-DD"),
+    active_at_date: activeAtDateForWeek(selectedYear, selectedWeek),
   });
 
   useEffect(() => {
     setShareDeliveryDaysFilters({
-      active_at_date: dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek!)
-        .isoWeekday(6)
-        .format("YYYY-MM-DD"),
+      active_at_date: activeAtDateForWeek(selectedYear, selectedWeek),
     });
   }, [selectedYear, selectedWeek]);
 

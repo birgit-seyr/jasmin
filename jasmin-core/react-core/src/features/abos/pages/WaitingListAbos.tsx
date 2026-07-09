@@ -44,7 +44,8 @@ import {
 } from "@hooks/index";
 import { useAdminConfirmationModalAbos } from "@features/abos/hooks/modals/useAdminConfirmationModalAbos";
 import { useSharedAboColumns } from "@features/abos/hooks/columns/useSharedAboColumns";
-import { notify } from "@shared/utils";
+import { notify, toApiDate } from "@shared/utils";
+import { parseDateLoose } from "@shared/utils/endOfTerm";
 import { getErrorCode } from "@shared/utils/apiError";
 import type { AboRecord } from "./types";
 
@@ -72,7 +73,7 @@ export default function WaitingListAbos() {
   const { paymentCycles } = usePaymentCycles();
 
   const shareTypeParams = useMemo(
-    () => ({ active_at_date: dayjs().format("YYYY-MM-DD") }),
+    () => ({ active_at_date: toApiDate(dayjs())! }),
     [],
   );
   // Share types + their variations include current AND upcoming ones so the
@@ -94,7 +95,7 @@ export default function WaitingListAbos() {
   const { deliveryStationDays } = useDeliveryStationDays(
     useMemo(
       () => ({
-        active_at_date_or_future: dayjs().format("YYYY-MM-DD"),
+        active_at_date_or_future: toApiDate(dayjs())!,
         ...capacityWindow,
       }),
       [capacityWindow],
@@ -133,50 +134,14 @@ export default function WaitingListAbos() {
       }
 
       try {
-        let cancelledDate: dayjs.Dayjs;
-        let validFromDate: dayjs.Dayjs;
-        let validUntilDate: dayjs.Dayjs;
+        const cancelledDate = parseDateLoose(
+          record.cancelled_effective_at,
+          dateFormat,
+        );
+        const validFromDate = parseDateLoose(record.valid_from, dateFormat);
+        const validUntilDate = parseDateLoose(record.valid_until, dateFormat);
 
-        if (typeof record.cancelled_effective_at === "string") {
-          cancelledDate = dayjs(
-            record.cancelled_effective_at,
-            dateFormat,
-            true,
-          );
-          if (!cancelledDate.isValid()) {
-            cancelledDate = dayjs(
-              record.cancelled_effective_at,
-              "YYYY-MM-DD",
-              true,
-            );
-          }
-        } else {
-          cancelledDate = dayjs(record.cancelled_effective_at);
-        }
-
-        if (typeof record.valid_from === "string") {
-          validFromDate = dayjs(record.valid_from, dateFormat, true);
-          if (!validFromDate.isValid()) {
-            validFromDate = dayjs(record.valid_from, "YYYY-MM-DD", true);
-          }
-        } else {
-          validFromDate = dayjs(record.valid_from);
-        }
-
-        if (typeof record.valid_until === "string") {
-          validUntilDate = dayjs(record.valid_until, dateFormat, true);
-          if (!validUntilDate.isValid()) {
-            validUntilDate = dayjs(record.valid_until, "YYYY-MM-DD", true);
-          }
-        } else {
-          validUntilDate = dayjs(record.valid_until);
-        }
-
-        if (
-          !cancelledDate.isValid() ||
-          !validFromDate.isValid() ||
-          !validUntilDate.isValid()
-        ) {
+        if (!cancelledDate || !validFromDate || !validUntilDate) {
           return {
             isValid: false,
             message: t("validation.invalid_date_format"),
@@ -342,19 +307,12 @@ export default function WaitingListAbos() {
 
   const rowAvailability = useCallback(
     (record: AboRecord) => {
-      const parse = (v: string) =>
-        dayjs(v, dateFormat, true).isValid()
-          ? dayjs(v, dateFormat, true)
-          : dayjs(v, "YYYY-MM-DD", true);
-      const from = record.valid_from ? parse(record.valid_from) : null;
-      if (!from || !from.isValid()) {
+      const from = parseDateLoose(record.valid_from, dateFormat);
+      if (!from) {
         return { variationFull: false, stationFull: false, claimable: false };
       }
-      const until = record.valid_until ? parse(record.valid_until) : null;
-      const weekKeys = termWeekKeys(
-        from,
-        until && until.isValid() ? until : null,
-      );
+      const until = parseDateLoose(record.valid_until, dateFormat);
+      const weekKeys = termWeekKeys(from, until);
       const qty = Number(record.quantity) || 1;
       const variation = variationById.get(String(record.share_type_variation));
       const station = stationDayById.get(

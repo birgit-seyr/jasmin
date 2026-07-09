@@ -1,5 +1,6 @@
 import { Alert, Button, Card, Flex, Space, Typography } from "antd";
 import dayjs from "dayjs";
+import { toApiDate } from "@shared/utils";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import NewSubscriptionModal, {
@@ -35,7 +36,7 @@ export default function StepShareTypeVariation({
 
   // Look up the chosen variation for the summary line (deduped — the modal
   // fetches the same catalog under the same query keys).
-  const today = dayjs().format("YYYY-MM-DD");
+  const today = toApiDate(dayjs())!;
   const { shareTypes } = useShareTypes({
     active_at_date: today,
     include_future: true,

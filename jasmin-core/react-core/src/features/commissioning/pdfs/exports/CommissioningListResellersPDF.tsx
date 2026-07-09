@@ -15,20 +15,6 @@ const localStyles = StyleSheet.create({
   resellerSection: {
     marginBottom: 16,
   },
-  // Green left-accent section label (was a filled lavender band). Reads as
-  // a heading without the heavy fill, consistent with the hairline tables.
-  resellerHeader: {
-    borderLeftWidth: 2.5,
-    borderLeftColor: pdfTheme.colors.brand,
-    paddingLeft: 7,
-    paddingVertical: 2,
-    fontSize: 12,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    marginBottom: 4,
-    letterSpacing: 0.5,
-    color: pdfTheme.colors.brand,
-  },
   table: {
     width: "100%",
   },
@@ -130,7 +116,7 @@ const CommissioningListResellersPDF = ({
 
         {resellersWithOrders.map((reseller) => (
           <View key={reseller.id} style={localStyles.resellerSection}>
-            <View style={localStyles.resellerHeader}>
+            <View style={listStyles.sectionHeading}>
               <Text>{reseller.name}</Text>
             </View>
 
@@ -154,7 +140,6 @@ const CommissioningListResellersPDF = ({
                     key={item.share_article_id ?? index}
                     style={[
                       listStyles.tableRow,
-                      index % 2 === 1 ? listStyles.tableRowAlt : {},
                       isLast ? listStyles.tableRowLast : {},
                     ]}
                     wrap={false}

@@ -19,6 +19,8 @@ from .serializers_mixin import (
     DeletableMixin,
     DynamicContactFieldsMixin,
     DynamicDeliveryDayFieldsMixin,
+    DynamicPrefixPassthroughMixin,
+    ShareTypeVariationStringMixin,
     mask_capacity_for_anonymous,
 )
 
@@ -176,12 +178,18 @@ class DeliveryStationSerializer(
 # ========================================
 
 
-class DeliveryStationDaySerializer(DeletableMixin, serializers.ModelSerializer):
+class DeliveryStationDaySerializer(
+    DynamicPrefixPassthroughMixin, DeletableMixin, serializers.ModelSerializer
+):
     """
     Serializer for DeliveryStationDay CRUD operations.
 
     Supports dynamic variation fields for tour overview.
     """
+
+    # Tour-overview dicts carry per-variation ``variation_<id>`` count keys the
+    # declared fields would otherwise strip — re-attached by the mixin.
+    DYNAMIC_KEY_PREFIXES = ("variation_",)
 
     delivery_station_short_name = serializers.CharField(read_only=True)
     delivery_day_number = serializers.CharField(read_only=True)
@@ -331,14 +339,10 @@ class DeliveryStationDaySerializer(DeletableMixin, serializers.ModelSerializer):
         return result
 
     def to_representation(self, instance):
-        """Allow dynamic variation_* fields for tour overview."""
+        """Re-attach the dynamic variation_* keys (via the mixin), then mask."""
+        # ``DynamicPrefixPassthroughMixin.to_representation`` merges the
+        # ``variation_*`` keys back onto the tour-overview dicts.
         ret = super().to_representation(instance)
-
-        # If dict data (from tour overview), preserve variation fields
-        if isinstance(instance, dict):
-            for key, value in instance.items():
-                if key.startswith("variation_") and key not in ret:
-                    ret[key] = value
 
         # Public registration (anonymous) reads: availability only — no exact
         # occupancy/cap, and no internal route logistics.
@@ -459,15 +463,17 @@ class ShareTypeVariationMetadataSerializer(serializers.Serializer):
     )
 
 
-class StationOverviewSerializer(serializers.Serializer):
+class StationOverviewSerializer(DynamicPrefixPassthroughMixin, serializers.Serializer):
     """Stable fields of a single station in the tour overview (GET).
 
     In addition to the stable fields below, each station dict carries dynamic
     keys read by iteration on the frontend (not declared here): per-variation
     ``variation_<share_type_variation_id>`` counts AND per-box-combination
     ``combo_<key>`` counts. A plain declared-field ``Serializer`` would DROP
-    these undeclared keys, so ``to_representation`` re-attaches them.
+    these undeclared keys, so ``DynamicPrefixPassthroughMixin`` re-attaches them.
     """
+
+    DYNAMIC_KEY_PREFIXES = ("variation_", "combo_")
 
     delivery_station_day_id = serializers.CharField()
     delivery_station_id = serializers.CharField()
@@ -479,16 +485,6 @@ class StationOverviewSerializer(serializers.Serializer):
     capacity = serializers.IntegerField(allow_null=True)
     pickup_time_begin = serializers.TimeField(allow_null=True)
     pickup_time_end = serializers.TimeField(allow_null=True)
-
-    def to_representation(self, instance):
-        ret = super().to_representation(instance)
-        # Re-attach the dynamic per-variation / per-combination count keys the
-        # declared fields above would otherwise strip.
-        if isinstance(instance, dict):
-            for key, value in instance.items():
-                if key.startswith(("variation_", "combo_")) and key not in ret:
-                    ret[key] = value
-        return ret
 
 
 class TourOverviewSerializer(serializers.Serializer):
@@ -518,27 +514,23 @@ class DeliveryStationsToursOverviewResponseSerializer(serializers.Serializer):
     variations = ShareTypeVariationMetadataSerializer(many=True)
 
 
-class WeeklyComboMatrixRowSerializer(serializers.Serializer):
+class WeeklyComboMatrixRowSerializer(
+    DynamicPrefixPassthroughMixin, serializers.Serializer
+):
     """One AmountShares row: a delivery day, optionally split per tour or per
     delivery station. Besides the stable fields below it carries dynamic count
     keys matching the ``columns`` — ``combo_<key>`` for subscription box
     combinations, ``variation_<id>`` for the flat per-variation (import) columns;
-    a plain declared-field ``Serializer`` would drop them, so ``to_representation``
-    re-attaches them."""
+    a plain declared-field ``Serializer`` would drop them, so
+    ``DynamicPrefixPassthroughMixin`` re-attaches them."""
+
+    DYNAMIC_KEY_PREFIXES = ("combo_", "variation_")
 
     id = serializers.CharField()
     day_number = serializers.IntegerField(help_text="Day of week (0=Monday, 6=Sunday)")
     tour = serializers.IntegerField(allow_null=True)
     delivery_station_id = serializers.CharField(allow_null=True)
     delivery_station_name = serializers.CharField(allow_null=True, allow_blank=True)
-
-    def to_representation(self, instance):
-        ret = super().to_representation(instance)
-        if isinstance(instance, dict):
-            for key, value in instance.items():
-                if key.startswith(("combo_", "variation_")) and key not in ret:
-                    ret[key] = value
-        return ret
 
 
 class WeeklyComboMatrixResponseSerializer(serializers.Serializer):
@@ -555,7 +547,9 @@ class WeeklyComboMatrixResponseSerializer(serializers.Serializer):
 # ========================================
 
 
-class DeliveryExceptionPeriodSerializer(serializers.ModelSerializer):
+class DeliveryExceptionPeriodSerializer(
+    ShareTypeVariationStringMixin, serializers.ModelSerializer
+):
     """A whole-week ``[valid_from (Monday) … valid_until (Sunday)]`` range during
     which a ShareTypeVariation is not delivered. Bounds must align to whole
     weeks and must not overlap another pause for the same variation."""
@@ -583,14 +577,10 @@ class DeliveryExceptionPeriodSerializer(serializers.ModelSerializer):
             "is_locked",
         ]
 
-    def get_share_type_variation_string(self, obj: DeliveryExceptionPeriod) -> str:
-        # Combined "ShareType - Size" label — matches the abos tables' variation
-        # column (``SubscriptionSerializer.share_type_variation_string``) so a
-        # pause reads the same way as the subscription it affects.
-        variation = obj.share_type_variation
-        if variation is None:
-            return ""
-        return f"{variation.share_type.name} - {variation.size}"
+    # ``get_share_type_variation_string`` comes from
+    # ``ShareTypeVariationStringMixin`` — the combined "ShareType - Size" label,
+    # shared with ``SubscriptionSerializer`` so a pause reads the same way as
+    # the subscription it affects.
 
     def get_is_locked(self, obj: DeliveryExceptionPeriod) -> bool:
         return obj.has_started() if obj.valid_from else False

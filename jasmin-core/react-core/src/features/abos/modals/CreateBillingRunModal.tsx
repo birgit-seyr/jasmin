@@ -3,7 +3,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { paymentsBillingRunsCreate } from "@shared/api/generated/payments-—-billing-runs/payments-—-billing-runs";
-import { notify } from "@shared/utils";
+import { notify, toApiDate } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { ToolTipIcon } from "@shared/ui";
 import { useTenant } from "@hooks/index";
@@ -45,9 +45,9 @@ export function CreateBillingRunModal({
       const start = values.period_month.startOf("month");
       const end = values.period_month.endOf("month");
       await paymentsBillingRunsCreate({
-        period_start: start.format("YYYY-MM-DD"),
-        period_end: end.format("YYYY-MM-DD"),
-        collection_date: values.collection_date.format("YYYY-MM-DD"),
+        period_start: toApiDate(start)!,
+        period_end: toApiDate(end)!,
+        collection_date: toApiDate(values.collection_date)!,
       });
       notify.success(t("abos.debits_run_created"));
       form.resetFields();

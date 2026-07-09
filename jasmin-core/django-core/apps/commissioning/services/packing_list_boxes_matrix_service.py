@@ -42,11 +42,11 @@ from collections import Counter, defaultdict
 from decimal import Decimal
 from typing import Any
 
-from isoweek import Week
-
-from ..errors import PackingAmountsDivergeAcrossStations
-from ..models import DeliveryStationDay, ShareContent, ShareDelivery
+from ..models import ShareContent, ShareDelivery
 from ..models.choices_text import SizeOptions
+from ..utils.delivery_utils import tour_station_ids
+from ..utils.iso_week_utils import saturday_of_iso_week
+from ..utils.packing_divergence import record_amount
 
 # (article_id, unit, size, variation_id) -> per-box amount
 _AmountByCell = dict[tuple[str, str, str, str], Decimal]
@@ -91,14 +91,12 @@ class PackingListBoxesMatrixService:
         tour: str | None = None,
         is_packed_bulk: bool | None = None,
     ) -> dict[str, Any]:
-        active_at_date = Week(year, delivery_week).saturday()
+        active_at_date = saturday_of_iso_week(year, delivery_week)
 
-        tour_station_ids: list[str] | None = None
+        tour_stations: list[str] | None = None
         if tour is not None:
-            tour_station_ids = list(
-                DeliveryStationDay.current.active_at_date(active_at_date)
-                .filter(delivery_day__day_number=day_number, tour_number=tour)
-                .values_list("delivery_station_id", flat=True)
+            tour_stations = tour_station_ids(
+                active_at_date, day_number=day_number, tour=tour
             )
 
         combinations, variation_by_id = cls._derive_combinations(
@@ -106,7 +104,7 @@ class PackingListBoxesMatrixService:
             delivery_week=delivery_week,
             day_number=day_number,
             delivery_station=delivery_station,
-            tour_station_ids=tour_station_ids,
+            tour_station_ids=tour_stations,
             is_packed_bulk=is_packed_bulk,
         )
 
@@ -116,7 +114,7 @@ class PackingListBoxesMatrixService:
             day_number=day_number,
             is_past=is_past,
             delivery_station=delivery_station,
-            tour_station_ids=tour_station_ids,
+            tour_station_ids=tour_stations,
             is_packed_bulk=is_packed_bulk,
             variation_ids=list(variation_by_id.keys()),
         )
@@ -651,15 +649,15 @@ class PackingListBoxesMatrixService:
             amount = row["amount"] or Decimal("0")
             if delivery_station is None:
                 guard_key = (*article_key, variation_id, row["share__delivery_day_id"])
-                if guard_key in seen and seen[guard_key] != amount:
-                    raise PackingAmountsDivergeAcrossStations(
-                        share_article_id=row["share_article__id"],
-                        unit=row["unit"],
-                        size=row["size"],
-                        variation_id=variation_id,
-                        amounts=[seen[guard_key], amount],
-                    )
-                seen[guard_key] = amount
+                record_amount(
+                    seen,
+                    guard_key,
+                    amount,
+                    article_id=row["share_article__id"],
+                    unit=row["unit"],
+                    size=row["size"],
+                    variation_id=variation_id,
+                )
             amount_by_cell[(*article_key, variation_id)] = amount
         return amount_by_cell, article_meta
 

@@ -27,7 +27,6 @@ import { DaySelector, WeekSelector } from "@shared/selectors";
 import { useAuth } from "@shared/contexts/AuthContext";
 import {
   useCurrency,
-  useNumberFormat,
   useTenant,
   useTimeFormat,
 } from "@hooks/index";
@@ -47,9 +46,8 @@ export default function CustomerOrderPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { displayLogoUrl, getSetting } = useTenant();
-  const { currencySymbol } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const { formatDateTime, dateFormat } = useTimeFormat();
-  const { format } = useNumberFormat();
   const queryClient = useQueryClient();
 
   const { resellerId: resellerIdParam } = useParams<{ resellerId: string }>();
@@ -322,9 +320,7 @@ export default function CustomerOrderPage() {
         <Text type="secondary" style={{ marginLeft: "auto" }}>
           {t("customer.total")}:{" "}
           <Text strong>
-            {totalOrderSum > 0
-              ? `${format(totalOrderSum, 2)} ${currencySymbol}`
-              : "—"}
+            {totalOrderSum > 0 ? formatCurrency(totalOrderSum) : "—"}
           </Text>
         </Text>
       </div>

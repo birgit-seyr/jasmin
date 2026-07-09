@@ -14,6 +14,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
+import { activeAtDateForWeek } from "@shared/utils";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -102,11 +103,7 @@ export function useHarvestingListData({
   const shareDeliveryDaysParams =
     useMemo<CommissioningSharesDeliveryDaysListParams>(
       () => ({
-        active_at_date: dayjs()
-          .year(selectedYear)
-          .isoWeek(selectedWeek ?? currentWeekFallback)
-          .isoWeekday(6)
-          .format("YYYY-MM-DD"),
+        active_at_date: activeAtDateForWeek(selectedYear, selectedWeek),
       }),
       [selectedYear, selectedWeek],
     );

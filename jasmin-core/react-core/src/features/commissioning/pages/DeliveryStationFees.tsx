@@ -17,7 +17,7 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText } from "@shared/ui";
-import { buildCsvString } from "@shared/utils";
+import { buildCsvString, toApiDate } from "@shared/utils";
 import { useCurrency } from "@hooks/index";
 
 type FeeRow = DeliveryStationFees & TableRecord;
@@ -53,8 +53,8 @@ export default function DeliveryStationFees() {
     if (selectedWeek === null) {
       const base = dayjs().year(selectedYear);
       return {
-        start_date: base.startOf("year").format("YYYY-MM-DD"),
-        end_date: base.endOf("year").format("YYYY-MM-DD"),
+        start_date: toApiDate(base.startOf("year"))!,
+        end_date: toApiDate(base.endOf("year"))!,
       };
     }
     const monday = dayjs()
@@ -62,8 +62,8 @@ export default function DeliveryStationFees() {
       .isoWeek(selectedWeek)
       .startOf("isoWeek");
     return {
-      start_date: monday.format("YYYY-MM-DD"),
-      end_date: monday.endOf("isoWeek").format("YYYY-MM-DD"),
+      start_date: toApiDate(monday)!,
+      end_date: toApiDate(monday.endOf("isoWeek"))!,
     };
   }, [selectedYear, selectedWeek]);
 

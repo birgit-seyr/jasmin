@@ -309,7 +309,7 @@ class ShareTypeVariation(JasminModel, TimeBoundMixin):
 
         # The components M2M check requires a saved row. Skip only that part
         # on first insert; date checks above always run.
-        if self.variation_type == "physical" and self.pk:
+        if self.variation_type == self.VariationType.PHYSICAL and self.pk:
             if self.physical_components.exists():
                 raise ValidationError("Physical variations cannot have components")
 
@@ -476,9 +476,15 @@ class VirtualVariationComponent(JasminModel):
 
     def clean(self) -> None:
         super().clean()
-        if self.virtual_variation.variation_type != "virtual":
+        if (
+            self.virtual_variation.variation_type
+            != ShareTypeVariation.VariationType.VIRTUAL
+        ):
             raise ValidationError("Only virtual variations can have components")
-        if self.physical_variation.variation_type != "physical":
+        if (
+            self.physical_variation.variation_type
+            != ShareTypeVariation.VariationType.PHYSICAL
+        ):
             raise ValidationError("Components must be physical variations")
 
     def save(self, *args, **kwargs) -> None:

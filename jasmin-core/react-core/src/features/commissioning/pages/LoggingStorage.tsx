@@ -29,6 +29,7 @@ import type { TablePaginationConfig } from "antd";
 import { DatePicker, Divider, Switch, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
+import { dateForWeekDayNumber, toApiDate } from "@shared/utils";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -83,8 +84,8 @@ export default function LoggingStorage() {
       ...(dateRange &&
         dateRange[0] &&
         dateRange[1] && {
-          start_date: dateRange[0].format("YYYY-MM-DD"),
-          end_date: dateRange[1].format("YYYY-MM-DD"),
+          start_date: toApiDate(dateRange[0])!,
+          end_date: toApiDate(dateRange[1])!,
         }),
       ...(selectedShareArticle && {
         share_article: selectedShareArticle,
@@ -255,10 +256,11 @@ export default function LoggingStorage() {
           record.delivery_week != null &&
           record.day_number != null
         ) {
-          const date = dayjs()
-            .year(record.year)
-            .isoWeek(record.delivery_week)
-            .isoWeekday(record.day_number + 1);
+          const date = dateForWeekDayNumber(
+            record.year,
+            record.delivery_week,
+            record.day_number,
+          );
           return formatDate(date);
         }
         return record.date ? formatDate(record.date) : "-";
@@ -266,17 +268,11 @@ export default function LoggingStorage() {
       sorter: (a: StorageLoggingEntry, b: StorageLoggingEntry) => {
         const dateA =
           a.year != null && a.delivery_week != null && a.day_number != null
-            ? dayjs()
-                .year(a.year)
-                .isoWeek(a.delivery_week)
-                .isoWeekday(a.day_number + 1)
+            ? dateForWeekDayNumber(a.year, a.delivery_week, a.day_number)
             : dayjs(a.date);
         const dateB =
           b.year != null && b.delivery_week != null && b.day_number != null
-            ? dayjs()
-                .year(b.year)
-                .isoWeek(b.delivery_week)
-                .isoWeekday(b.day_number + 1)
+            ? dateForWeekDayNumber(b.year, b.delivery_week, b.day_number)
             : dayjs(b.date);
         return dateA.unix() - dateB.unix();
       },
@@ -363,24 +359,15 @@ export default function LoggingStorage() {
       render: (_: unknown, record: WorkflowEntry) => {
         const day = record.day_number != null ? record.day_number : 1;
 
-        const date = dayjs()
-          .year(record.year)
-          .isoWeek(record.delivery_week)
-          .isoWeekday(day + 1);
+        const date = dateForWeekDayNumber(record.year, record.delivery_week, day);
 
         return formatDate(date);
       },
       sorter: (a: WorkflowEntry, b: WorkflowEntry) => {
         const dayA = a.day_number != null ? a.day_number : 1;
         const dayB = b.day_number != null ? b.day_number : 1;
-        const dateA = dayjs()
-          .year(a.year)
-          .isoWeek(a.delivery_week)
-          .isoWeekday(dayA + 1);
-        const dateB = dayjs()
-          .year(b.year)
-          .isoWeek(b.delivery_week)
-          .isoWeekday(dayB + 1);
+        const dateA = dateForWeekDayNumber(a.year, a.delivery_week, dayA);
+        const dateB = dateForWeekDayNumber(b.year, b.delivery_week, dayB);
         return dateA.unix() - dateB.unix();
       },
       defaultSortOrder: "descend",

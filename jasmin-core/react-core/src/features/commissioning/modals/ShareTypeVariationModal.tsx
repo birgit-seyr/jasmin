@@ -30,6 +30,7 @@ import {
 import { useCrates } from "@features/commissioning/hooks";
 import axiosInstance from "@shared/services/api";
 import { isFieldDisabled, notify } from "@shared/utils";
+import { getErrorMessage } from "@shared/utils/apiError";
 import {
   EditableTable,
   gatedByPermission,
@@ -223,8 +224,7 @@ export default function ShareTypeVariationModal({
         notify.success(t("common.saved_successfully"));
         invalidateData();
       } catch (error) {
-        console.error("Failed to save description:", error);
-        notify.error(t("common.error_saving"));
+        notify.error(getErrorMessage(error, t("common.error_saving")));
       }
     },
     [selectedDescriptionRecord, t, invalidateData],
@@ -279,8 +279,7 @@ export default function ShareTypeVariationModal({
         invalidateData();
         handleClosePictureModal();
       } catch (error) {
-        console.error("Failed to upload picture:", error);
-        notify.error(t("common.error_saving"));
+        notify.error(getErrorMessage(error, t("common.error_saving")));
       } finally {
         setUploadingPicture(false);
       }
@@ -300,8 +299,7 @@ export default function ShareTypeVariationModal({
       invalidateData();
       handleClosePictureModal();
     } catch (error) {
-      console.error("Failed to delete picture:", error);
-      notify.error(t("common.error_saving"));
+      notify.error(getErrorMessage(error, t("common.error_saving")));
     } finally {
       setUploadingPicture(false);
     }

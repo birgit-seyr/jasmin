@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date
 from typing import Any
 
 from django.db.models import QuerySet
@@ -80,33 +79,34 @@ class ShareDeliveryService:
             row = _variation_header(share_type_obj, variation)
 
             if for_tours:
-                _add_tour_counts(
+                _add_scope_counts(
                     row,
                     variation,
                     active_delivery_days,
-                    active_at_date,
                     year,
                     delivery_week,
                     joker,
+                    group="tour",
                 )
             elif for_stations:
-                _add_station_counts(
+                _add_scope_counts(
                     row,
                     variation,
                     active_delivery_days,
-                    active_at_date,
                     year,
                     delivery_week,
                     joker,
+                    group="station",
                 )
             else:
-                _add_day_counts(
+                _add_scope_counts(
                     row,
                     variation,
                     active_delivery_days,
                     year,
                     delivery_week,
                     joker,
+                    group="day",
                 )
 
             result.append(row)
@@ -242,15 +242,24 @@ def _variation_header(
     }
 
 
-def _add_tour_counts(
+def _add_scope_counts(
     row: dict[str, Any],
     variation: ShareTypeVariation,
     delivery_days: QuerySet,
-    active_at_date: date,
     year: int,
     delivery_week: int,
     joker: bool | None,
+    *,
+    group: str,
 ) -> None:
+    """Add dynamic ``amount_day_<...>`` counts to ``row``, collapsed to the
+    requested ``group`` scope (``'day'``, ``'tour'`` or ``'station'``).
+
+    ``aggregated_rows`` is grouped by station_day; entries are bucketed by the
+    final dynamic key and summed uniformly — never assigned — so every scope
+    that maps two source rows onto the same key (e.g. two station-days sharing
+    a ``(day, tour)``) accumulates instead of the last write winning.
+    """
     rows = ShareDemandService.aggregated_rows(
         year=year,
         delivery_week=delivery_week,
@@ -258,59 +267,17 @@ def _add_tour_counts(
         variation_id=variation.id,
         joker=joker,
     )
+    bucket: dict[str, int] = {}
     for entry in rows:
-        if entry["tour_number"] is None:
-            continue
-        row[f"amount_day_{entry['day_id']}_tour_{entry['tour_number']}"] = entry[
-            "count"
-        ]
-
-
-def _add_station_counts(
-    row: dict[str, Any],
-    variation: ShareTypeVariation,
-    delivery_days: QuerySet,
-    active_at_date: date,
-    year: int,
-    delivery_week: int,
-    joker: bool | None,
-) -> None:
-    rows = ShareDemandService.aggregated_rows(
-        year=year,
-        delivery_week=delivery_week,
-        delivery_day_ids=list(delivery_days.values_list("id", flat=True)),
-        variation_id=variation.id,
-        joker=joker,
-    )
-    # ``aggregated_rows`` is grouped by station_day; collapse to station.
-    bucket: dict[tuple, int] = {}
-    for entry in rows:
-        if entry["station_id"] is None:
-            continue
-        key = (entry["day_id"], entry["station_id"])
+        if group == "tour":
+            if entry["tour_number"] is None:
+                continue
+            key = f"amount_day_{entry['day_id']}_tour_{entry['tour_number']}"
+        elif group == "station":
+            if entry["station_id"] is None:
+                continue
+            key = f"amount_day_{entry['day_id']}_station_{entry['station_id']}"
+        else:
+            key = f"amount_day_{entry['day_id']}"
         bucket[key] = bucket.get(key, 0) + entry["count"]
-    for (day_id, station_id), total in bucket.items():
-        row[f"amount_day_{day_id}_station_{station_id}"] = total
-
-
-def _add_day_counts(
-    row: dict[str, Any],
-    variation: ShareTypeVariation,
-    delivery_days: QuerySet,
-    year: int,
-    delivery_week: int,
-    joker: bool | None,
-) -> None:
-    rows = ShareDemandService.aggregated_rows(
-        year=year,
-        delivery_week=delivery_week,
-        delivery_day_ids=list(delivery_days.values_list("id", flat=True)),
-        variation_id=variation.id,
-        joker=joker,
-    )
-    # Collapse rows (which are per station_day) to per day.
-    per_day: dict[object, int] = {}
-    for entry in rows:
-        per_day[entry["day_id"]] = per_day.get(entry["day_id"], 0) + entry["count"]
-    for day_id, total in per_day.items():
-        row[f"amount_day_{day_id}"] = total
+    row.update(bucket)

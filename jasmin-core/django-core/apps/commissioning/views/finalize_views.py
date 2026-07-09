@@ -19,40 +19,27 @@ from ..models import DeliveryNoteReseller, InvoiceReseller, Order, ShareContent
 from ..serializers import (
     BulkFinalizeRequestSerializer,
     BulkFinalizeResponseSerializer,
-    BulkFinalizeShareContentRequestSerializer,
     BulkFinalizeShareContentResponseSerializer,
+    BulkIdsRequestSerializer,
     BulkUnfinalizeResponseSerializer,
 )
 from ..services.bulk_operations import bulk_with_savepoints
 from ..utils import get_finalizable_objects
 from ..utils.composite_id_utils import parse_composite_pk
+from ..utils.validation_utils import parse_bulk_ids
 
-_SENTINEL = object()
 
+def _require_model_name(model_name: Any) -> None:
+    """Reject a bulk-finalize request whose ``model`` param is missing.
 
-def _validate_bulk_payload(*, ids: Any, model_name: Any = _SENTINEL) -> None:
-    """Common payload validation for bulk-finalize endpoints.
-
-    Omit ``model_name`` for endpoints that don't accept it (the ShareContent
-    variants use composite IDs and don't need a model param).
+    The ShareContent variants use composite IDs and don't accept a model, so
+    only the model-keyed finalize/unfinalize endpoints call this.
     """
-    if model_name is not _SENTINEL and not model_name:
+    if not model_name:
         raise CommissioningError(
             "model parameter is required",
             field="model",
             code="finalize.model_required",
-        )
-    if not ids:
-        raise CommissioningError(
-            "ids parameter is required",
-            field="ids",
-            code="finalize.ids_required",
-        )
-    if not isinstance(ids, list):
-        raise CommissioningError(
-            "ids must be a list",
-            field="ids",
-            code="finalize.ids_not_list",
         )
 
 
@@ -93,11 +80,10 @@ class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
         Returns:
             Response with finalization results
         """
+        ids = parse_bulk_ids(request)
         model_name = request.data.get("model")
         app_label = request.data.get("app_label", "commissioning")
-        ids = request.data.get("ids", [])
-
-        _validate_bulk_payload(model_name=model_name, ids=ids)
+        _require_model_name(model_name)
 
         try:
             _, objects = get_finalizable_objects(model_name, app_label, ids)
@@ -236,11 +222,10 @@ class BulkUnfinalizeView(APIViewRolePermissionsMixin, APIView):
         Returns:
             Response with unfinalization results
         """
+        ids = parse_bulk_ids(request)
         model_name = request.data.get("model")
         app_label = request.data.get("app_label", "commissioning")
-        ids = request.data.get("ids", [])
-
-        _validate_bulk_payload(model_name=model_name, ids=ids)
+        _require_model_name(model_name)
 
         try:
             model, objects = get_finalizable_objects(
@@ -403,7 +388,7 @@ class BulkFinalizeShareContentView(APIViewRolePermissionsMixin, APIView):
         
         Returns finalization counts and a per-ID finalization status map.
         """,
-        request=BulkFinalizeShareContentRequestSerializer,
+        request=BulkIdsRequestSerializer,
         responses={
             200: BulkFinalizeShareContentResponseSerializer,
             207: BulkFinalizeShareContentResponseSerializer,
@@ -411,8 +396,7 @@ class BulkFinalizeShareContentView(APIViewRolePermissionsMixin, APIView):
     )
     @transaction.atomic
     def post(self, request: Request) -> Response:
-        ids = request.data.get("ids", [])
-        _validate_bulk_payload(ids=ids)
+        ids = parse_bulk_ids(request)
 
         objects, errors = _get_share_contents_for_composite_ids(ids)
 
@@ -477,7 +461,7 @@ class BulkUnfinalizeShareContentView(APIViewRolePermissionsMixin, APIView):
         
         Returns unfinalization count and a per-ID finalization status map.
         """,
-        request=BulkFinalizeShareContentRequestSerializer,
+        request=BulkIdsRequestSerializer,
         responses={
             200: BulkFinalizeShareContentResponseSerializer,
             207: BulkFinalizeShareContentResponseSerializer,
@@ -485,8 +469,7 @@ class BulkUnfinalizeShareContentView(APIViewRolePermissionsMixin, APIView):
     )
     @transaction.atomic
     def post(self, request: Request) -> Response:
-        ids = request.data.get("ids", [])
-        _validate_bulk_payload(ids=ids)
+        ids = parse_bulk_ids(request)
 
         objects, errors = _get_share_contents_for_composite_ids(ids)
 

@@ -51,13 +51,11 @@ export default function SubscriptionStatsCards() {
           {rows.map(({ info, qty }) => (
             <div
               key={info.id}
+              className="summary-stats-card__subvalue"
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 gap: 8,
-                fontSize: "0.7em",
-                fontWeight: 400,
-                color: "var(--color-text-muted)",
                 padding: "1px 0",
               }}
             >

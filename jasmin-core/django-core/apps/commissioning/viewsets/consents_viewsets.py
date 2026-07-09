@@ -53,6 +53,7 @@ from ..serializers import (
     CurrentConsentDocumentQuerySerializer,
 )
 from ..services import ConsentService
+from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 
 logger = logging.getLogger(__name__)
@@ -255,14 +256,12 @@ class ConsentRecordViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         payload = ConsentRecordCreateSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
-        try:
-            document = ConsentDocument.objects.get(
-                pk=payload.validated_data["document_id"]
-            )
-        except ConsentDocument.DoesNotExist as exc:
-            raise ConsentDocumentNotFound(
-                f"ConsentDocument {payload.validated_data['document_id']!r} not found."
-            ) from exc
+        document = get_or_404(
+            ConsentDocument,
+            payload.validated_data["document_id"],
+            "Consent document",
+            error_cls=ConsentDocumentNotFound,
+        )
 
         # Determine which Member this consent is for: either the
         # caller (member-role) or an explicit ``member`` override
@@ -285,10 +284,9 @@ class ConsentRecordViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 "Only office staff may record consent on behalf of others."
             )
 
-        try:
-            member = Member.objects.get(pk=target_member_id)
-        except Member.DoesNotExist as exc:
-            raise MemberNotFound(f"Member {target_member_id!r} not found.") from exc
+        member = get_or_404(
+            Member, target_member_id, "Member", error_cls=MemberNotFound
+        )
 
         record = ConsentService.record(
             member=member,

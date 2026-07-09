@@ -33,7 +33,7 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import { BulkActionButton, ExplainerText, PastWarningMessage } from '@shared/ui';
 import { AddShareArticleEntry } from '@features/commissioning/components';
-import { isWeekInPast, notify } from "@shared/utils";
+import { activeAtDateForWeek, isWeekInPast, notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { useActiveShareOptions, useInvalidateAfterTableMutation, useIsMobile, useNoteColumn, useShareTypeVariationSizeOptions, useTableRowSelection, useTenant } from '@hooks/index';
 import { useAmountUnitSizeColumns, useFinalColumn, useForecastColumns, useOfferGroups, usePlots, useShareArticleColumn, useShareArticles, useShareTypeVariations, variationColumnKey } from '@features/commissioning/hooks';
@@ -80,11 +80,7 @@ export default function Forecast() {
   const shareTypeVariationFilters = useMemo(() => {
     return {
       physical: true,
-      active_at_date: dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek ?? currentWeek)
-        .isoWeekday(6)
-        .format("YYYY-MM-DD"),
+      active_at_date: activeAtDateForWeek(selectedYear, selectedWeek),
       // Forecast is a HARVEST forecast — ALWAYS scope to harvest-share
       // variations. The fruit-share variations are fetched separately
       // (``shareTypeVariationFiltersFruits``) only when the tenant runs fruit
@@ -102,11 +98,7 @@ export default function Forecast() {
 
     return {
       physical: true,
-      active_at_date: dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek ?? currentWeek)
-        .isoWeekday(6)
-        .format("YYYY-MM-DD"),
+      active_at_date: activeAtDateForWeek(selectedYear, selectedWeek),
       share_option: ShareTypeEnum.HARVEST_SHARE_FRUIT,
     };
   }, [selectedYear, selectedWeek, fruit_and_veg_shares_are_separate]);

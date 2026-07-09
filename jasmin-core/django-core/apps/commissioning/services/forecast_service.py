@@ -24,6 +24,7 @@ from ..models import (
     TheoreticalHarvest,
 )
 from ..utils import sort_share_articles
+from ..utils.iso_week_utils import saturday_of_iso_week
 from .recompute import recompute_shares
 
 logger = logging.getLogger(__name__)
@@ -383,7 +384,7 @@ class ForecastService:
         """
         year: int = validated_data["year"]
         delivery_week: int = validated_data["delivery_week"]
-        active_at_date = Week(year, delivery_week).saturday()
+        active_at_date = saturday_of_iso_week(year, delivery_week)
 
         collected: dict[str, ShareTypeVariation] = {}
 
@@ -495,7 +496,7 @@ class ForecastService:
         Returns ``(days, default_in_shares, default_share_contents,
         station_days_by_day, existing_shares, existing_contents_by_key)``.
         """
-        active_at_date = Week(year, delivery_week).saturday()
+        active_at_date = saturday_of_iso_week(year, delivery_week)
 
         days = list(SharesDeliveryDay.current.active_at_date(active_at_date))
 

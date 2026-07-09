@@ -21,7 +21,7 @@ import ConsentBlock, {
   ConsentDocumentKind,
 } from "@shared/consent/ConsentBlock";
 import { ModalCancelSaveFooter } from "@shared/modals/shared";
-import { notify } from "@shared/utils";
+import { notify, unwrapList } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 
 const { Paragraph, Text } = Typography;
@@ -72,12 +72,8 @@ export default function SepaSetupModal({
     { query: { enabled: open } },
   );
   const existing = useMemo<BillingProfile | undefined>(() => {
-    if (!profiles) return undefined;
     // Server filters to this member (one profile per member), so take the first.
-    const all: BillingProfile[] = Array.isArray(profiles)
-      ? profiles
-      : ((profiles as { results?: BillingProfile[] }).results ?? []);
-    return all[0];
+    return unwrapList<BillingProfile>(profiles)[0];
   }, [profiles]);
 
   useEffect(() => {

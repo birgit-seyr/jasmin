@@ -104,3 +104,14 @@ class ConsentKind(models.TextChoices):
     TERMS = "terms", "Terms of service"
     COOP_CONTRACT = "coop_contract", "Cooperative-share subscription contract"
     SUBSCRIPTION_CONTRACT = "subscription_contract", "Subscription contract"
+
+
+class DocumentType(models.TextChoices):
+    """Kind of reseller financial document. ``STORNO`` and ``CORRECTION`` are
+    both credit-note variants (an issued invoice can't be edited — GoBD/UStG —
+    so it's cancelled or corrected). Values/labels mirror the former inline
+    ``InvoiceReseller.document_type`` choices exactly (no data migration)."""
+
+    INVOICE = "invoice", "Invoice"
+    STORNO = "storno", "Storno/Cancellation"
+    CORRECTION = "correction", "Correction"

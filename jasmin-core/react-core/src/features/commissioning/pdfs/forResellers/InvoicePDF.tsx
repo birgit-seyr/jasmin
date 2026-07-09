@@ -11,11 +11,13 @@ import type { TFunction } from "i18next";
 import { getSizeLabelPure } from "@hooks/useSizeOptions";
 import { getUnitLabelPure } from "@hooks/useUnitOptions";
 import { formatNumber } from "@shared/utils/numberFormat";
+import { itemLineNetto } from "@shared/utils/lineNetto";
 import PDFRichText from "./PDFRichText";
 import {
   baseStyles,
   formatAmount,
   type FooterSettings,
+  isCreditNote,
   type LineItemBase,
   organicMarker,
   type TaxBreakdownItem,
@@ -232,8 +234,8 @@ export default function InvoicePDF({
   const getUnitLabel = (value: string) => getUnitLabelPure(value, t);
   const getSizeLabel = (value: string) => getSizeLabelPure(value, t);
 
-  const isStorno = invoice.document_type === "storno";
-  const documentTitle = isStorno
+  const creditNote = isCreditNote(invoice.document_type);
+  const documentTitle = creditNote
     ? t("commissioning.storno_invoice_title")
     : t("commissioning.invoice");
 
@@ -255,19 +257,19 @@ export default function InvoicePDF({
             {t("commissioning.invoice_date")}
             {dayjs(invoice.invoice_date).format(dateFormat)}
           </Text>
-          {isStorno && invoice.cancels_invoice_number && (
+          {creditNote && invoice.cancels_invoice_number && (
             <Text style={styles.label}>
               {t("commissioning.storno_reference")}
               {invoice.cancels_invoice_number}
             </Text>
           )}
-          {!isStorno && (
+          {!creditNote && (
             <Text style={styles.label}>
               {t("commissioning.corresponding_delivery_notes")}
               {invoice.corresponding_delivery_notes}
             </Text>
           )}
-          {isStorno && invoice.correction_reason && (
+          {creditNote && invoice.correction_reason && (
             <Text style={styles.label}>
               {t("commissioning.correction_reason")}:{" "}
               {invoice.correction_reason}
@@ -310,13 +312,10 @@ export default function InvoicePDF({
           {lineItems.map((item, index) => {
             // Authoritative cent-rounded net from the backend
             // (models/mixin.py line_netto), not a client float recompute, so
-            // the printed line totals sum to the printed document total.
-            const finalPrice =
-              item.line_netto != null
-                ? Number(item.line_netto)
-                : item.amount *
-                  item.price_per_unit *
-                  (1 - (item.rabatt || 0) / 100);
+            // the printed line totals sum to the printed document total. The
+            // shared helper prefers the backend value and rounds the
+            // recompute fallback the same way the backend does.
+            const finalPrice = itemLineNetto(item);
 
             return (
               <View key={index} style={styles.tableRow} wrap={false}>
@@ -331,7 +330,7 @@ export default function InvoicePDF({
                       : ""}
                   </Text>
                   {item.sort ? (
-                    <Text style={{ fontSize: 7, color: "var(--color-text-tertiary)" }}>
+                    <Text style={[styles.text_muted, { fontSize: 7 }]}>
                       {item.sort}
                     </Text>
                   ) : null}
@@ -361,13 +360,10 @@ export default function InvoicePDF({
           {crateItems.map((item, index) => {
             // Authoritative cent-rounded net from the backend
             // (models/mixin.py line_netto), not a client float recompute, so
-            // the printed line totals sum to the printed document total.
-            const finalPrice =
-              item.line_netto != null
-                ? Number(item.line_netto)
-                : item.amount *
-                  item.price_per_unit *
-                  (1 - (item.rabatt || 0) / 100);
+            // the printed line totals sum to the printed document total. The
+            // shared helper prefers the backend value and rounds the
+            // recompute fallback the same way the backend does.
+            const finalPrice = itemLineNetto(item);
 
             return (
               <View key={index} style={styles.tableRow} wrap={false}>
@@ -478,7 +474,7 @@ export default function InvoicePDF({
         />
 
         {/* QR Code (left) + Greeting/Payment terms (right) — 50/50 */}
-        {!isStorno && (
+        {!creditNote && (
           <View style={styles.bottomSection} wrap={false}>
             {qrCodeDataUrl && bankDetails ? (
               <View style={styles.taxColumn}>
@@ -518,7 +514,7 @@ export default function InvoicePDF({
                       },
                     ]}
                   >
-                    <Text style={{ fontSize: 8, color: "var(--color-text-tertiary)" }}>QR</Text>
+                    <Text style={[styles.text_muted, { fontSize: 8 }]}>QR</Text>
                   </View>
                   <View style={styles.qrCodeText}>
                     <Text style={{ fontWeight: "bold", marginBottom: 2 }}>

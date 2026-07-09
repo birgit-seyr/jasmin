@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { commissioningAbosCancelCreate } from "@shared/api/generated/commissioning/commissioning";
-import { notify } from "@shared/utils";
+import { notify, toApiDate } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { getNextSunday } from "@shared/utils/nextSunday";
 import { ModalCancelSaveFooter } from "@shared/modals/shared";
@@ -115,7 +115,7 @@ export const CancelSubscriptionModal: FC<CancelSubscriptionModalProps> = ({
     setLoading(true);
     try {
       await commissioningAbosCancelCreate(String(abo.id), {
-        effective_at: effectiveAt.format("YYYY-MM-DD"),
+        effective_at: toApiDate(effectiveAt)!,
         reason: reason.trim() || undefined,
       });
       notify.success(

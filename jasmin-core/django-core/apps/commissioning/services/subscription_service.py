@@ -505,6 +505,84 @@ class SubscriptionService:
         return filter_weeks_by_delivery_cycle(delivery_weeks, delivery_cycle)
 
     @staticmethod
+    def _delivery_weeks_excluding_paused(
+        subscription: Subscription,
+    ) -> list[tuple[int, int]]:
+        """The subscription's ``(year, isoweek)`` delivery weeks with
+        DeliveryExceptionPeriod ("Lieferpause") weeks removed — the single week
+        list that Share / ShareDelivery materialisation AND the capacity paths
+        iterate.
+
+        A paused week materialises no Share/ShareDelivery, so it consumes no
+        station-day slot; excluding it here keeps capacity reserve/count and the
+        materialisation write on the SAME week set — else the capacity paths
+        would reserve/count phantom occupancy for weeks that are never delivered,
+        and resync's restore would re-create a still-paused week. Returns ``[]``
+        when the subscription has no delivery weeks (or every week is paused).
+        """
+        day_number = subscription.default_delivery_station_day.delivery_day.day_number
+        year_weeks = SubscriptionService._get_delivery_weeks(
+            subscription.valid_from,
+            subscription.valid_until,
+            day_number,
+            _delivery_cycle_of(subscription),
+        )
+        if not year_weeks:
+            return []
+
+        from .delivery_exceptions import paused_weeks_for_variation
+
+        paused = paused_weeks_for_variation(
+            subscription.share_type_variation_id, year_weeks
+        )
+        if paused:
+            year_weeks = [
+                year_week for year_week in year_weeks if year_week not in paused
+            ]
+        return year_weeks
+
+    @staticmethod
+    def _active_chain_by_week(
+        model: type,
+        filters: dict[str, Any],
+        weeks: list[tuple[int, int]],
+        *,
+        select_related: tuple[str, ...] = (),
+    ) -> dict[tuple[int, int], Any]:
+        """Resolve, for each ``(year, isoweek)`` in *weeks*, the time-bounded
+        *model* row active on that week's Monday — or ``None`` when the chain has
+        a gap that week.
+
+        *filters* pin the chain (delivery_station + day_number for a
+        DeliveryStationDay; day_number for a SharesDeliveryDay). This helper adds
+        the shared date-window narrowing, the ``-valid_from`` tie-break (latest
+        start wins on overlap) and the per-week ``is_active_at`` scan — built on
+        ``TimeBoundMixin.is_active_at`` so materialisation and capacity resolve
+        the SAME row per week. ``.objects`` (not ``.current``) matches the sibling
+        resolvers so historical rows for PAST weeks aren't pre-filtered out; the
+        date range + ``is_active_at`` do the validity scoping.
+        """
+        mondays = {
+            year_week: Week(year_week[0], year_week[1]).monday() for year_week in weeks
+        }
+        queryset = model.objects.filter(**filters)
+        if select_related:
+            queryset = queryset.select_related(*select_related)
+        candidates = list(
+            queryset.filter(valid_from__lte=max(mondays.values()) + timedelta(days=6))
+            .exclude(valid_until__lt=min(mondays.values()))
+            .order_by("-valid_from")
+        )
+
+        def _active(active_at: datetime.date):
+            for candidate in candidates:
+                if candidate.is_active_at(active_at):
+                    return candidate
+            return None
+
+        return {year_week: _active(mondays[year_week]) for year_week in weeks}
+
+    @staticmethod
     def resolve_station_days_by_week(
         subscription: Subscription,
     ) -> dict[tuple[int, int], DeliveryStationDay]:
@@ -526,69 +604,30 @@ class SubscriptionService:
         ):
             return {}
 
-        day_number = default_delivery_station_day.delivery_day.day_number
-        year_weeks = SubscriptionService._get_delivery_weeks(
-            subscription.valid_from,
-            subscription.valid_until,
-            day_number,
-            _delivery_cycle_of(subscription),
-        )
+        year_weeks = SubscriptionService._delivery_weeks_excluding_paused(subscription)
         if not year_weeks:
             return {}
-
-        # A DeliveryExceptionPeriod ("Lieferpause") suppresses ShareDelivery
-        # materialisation in its weeks (mirrors the filter in _create_shares), so
-        # those weeks consume NO station-day slot. Exclude them here too — else the
-        # capacity paths (reserve_for_subscription / assert_capacity_available_for_
-        # confirm) would reserve/count phantom occupancy for weeks that are never
-        # delivered, and resync's restore would re-create a still-paused week.
-        from .delivery_exceptions import paused_weeks_for_variation
-
-        paused = paused_weeks_for_variation(
-            subscription.share_type_variation_id, year_weeks
-        )
-        if paused:
-            year_weeks = [
-                year_week for year_week in year_weeks if year_week not in paused
-            ]
-            if not year_weeks:
-                return {}
 
         # Open-ended default DSD covers every week — the common fast path.
         if default_delivery_station_day.valid_until is None:
             return {year_week: default_delivery_station_day for year_week in year_weeks}
 
-        mondays = {
-            year_week: Week(year_week[0], year_week[1]).monday()
-            for year_week in year_weeks
-        }
-        candidates = list(
-            DeliveryStationDay.objects.filter(
-                delivery_station=default_delivery_station_day.delivery_station,
-                delivery_day__day_number=day_number,
-                valid_from__lte=max(mondays.values()) + timedelta(days=6),
-            )
-            .exclude(valid_until__lt=min(mondays.values()))
-            .select_related("delivery_day")
-            # Deterministic tie-break: if two rows ever overlap a week, the
-            # _active() loop picks the latest valid_from rather than an
-            # arbitrary DB order.
-            .order_by("-valid_from")
+        # Time-bounded default: resolve the per-week successor from the station's
+        # chain, falling back to the default DSD when no successor covers a week
+        # (mirrors _create_share_deliveries, which warns + materializes onto it).
+        active_by_week = SubscriptionService._active_chain_by_week(
+            DeliveryStationDay,
+            {
+                "delivery_station": default_delivery_station_day.delivery_station,
+                "delivery_day__day_number": (
+                    default_delivery_station_day.delivery_day.day_number
+                ),
+            },
+            year_weeks,
+            select_related=("delivery_day",),
         )
-
-        def _active(active_at: datetime.date) -> DeliveryStationDay | None:
-            for delivery_station_day in candidates:
-                if delivery_station_day.valid_from <= active_at and (
-                    delivery_station_day.valid_until is None
-                    or delivery_station_day.valid_until >= active_at
-                ):
-                    return delivery_station_day
-            return None
-
-        # Fall back to the default DSD when no successor covers a week (mirrors
-        # _create_share_deliveries, which warns + materializes onto it).
         return {
-            year_week: (_active(mondays[year_week]) or default_delivery_station_day)
+            year_week: (active_by_week[year_week] or default_delivery_station_day)
             for year_week in year_weeks
         }
 
@@ -597,28 +636,13 @@ class SubscriptionService:
         delivery_day_obj = subscription.default_delivery_station_day.delivery_day
         share_type_variation = subscription.share_type_variation
 
-        delivery_weeks = self._get_delivery_weeks(
-            subscription.valid_from,
-            subscription.valid_until,
-            delivery_day_obj.day_number,
-            _delivery_cycle_of(subscription),
-        )
-
+        # Same week set the capacity paths + resolve_station_days_by_week use —
+        # DeliveryExceptionPeriod ("Lieferpause") weeks excluded, so no Share /
+        # ShareDelivery (and, billing being delivery-driven, no charge) is
+        # materialised for a paused week.
+        delivery_weeks = self._delivery_weeks_excluding_paused(subscription)
         if not delivery_weeks:
             return []
-
-        # Skip weeks paused by a DeliveryExceptionPeriod ("Lieferpause") for this
-        # variation: no Share / ShareDelivery is materialised there, so the week
-        # produces no demand and — billing being delivery-driven — no charge.
-        from .delivery_exceptions import paused_weeks_for_variation
-
-        paused = paused_weeks_for_variation(share_type_variation.id, delivery_weeks)
-        if paused:
-            delivery_weeks = [
-                year_week for year_week in delivery_weeks if year_week not in paused
-            ]
-            if not delivery_weeks:
-                return []
 
         # Pre-fetch existing shares to avoid N+1 get_or_create calls
         existing_shares = {
@@ -676,36 +700,21 @@ class SubscriptionService:
     ) -> list[Share]:
         day_number = delivery_day_obj.day_number
 
-        # Batch-fetch active delivery days for all weeks to avoid N+1
-        monday_dates = [Week(y, w).monday() for y, w in delivery_weeks]
-        min_date = min(monday_dates)
-        max_date = max(monday_dates) + timedelta(days=6)
-        candidate_days = list(
-            # ``.objects`` (not ``.current``) to match the sibling DSD resolvers
-            # and so historical rows for PAST weeks aren't pre-filtered out — the
-            # date-range filter below + _find_active_day do the validity scoping.
-            SharesDeliveryDay.objects.filter(day_number=day_number)
-            .filter(valid_from__lte=max_date)
-            .exclude(valid_until__lt=min_date)
-            .order_by("-valid_from")
+        # Resolve the active SharesDeliveryDay per week (shared batch-fetch +
+        # is_active_at scan). No select_related — SharesDeliveryDay has no chained
+        # FK to preload here.
+        active_day_by_week = self._active_chain_by_week(
+            SharesDeliveryDay, {"day_number": day_number}, delivery_weeks
         )
 
-        def _find_active_day(
-            active_at: datetime.date,
-        ) -> SharesDeliveryDay | None:
-            for day in candidate_days:
-                if day.valid_from <= active_at and (
-                    day.valid_until is None or day.valid_until >= active_at
-                ):
-                    return day
-            return None
-
         shares: list[Share] = []
-        for (year, week), monday in zip(delivery_weeks, monday_dates, strict=True):
-            current_delivery_day = _find_active_day(monday)
+        for year, week in delivery_weeks:
+            current_delivery_day = active_day_by_week[(year, week)]
             if current_delivery_day is None:
                 logger.error(
-                    "No active delivery day for day_number=%s at %s", day_number, monday
+                    "No active delivery day for day_number=%s at %s",
+                    day_number,
+                    Week(year, week).monday(),
                 )
                 continue
 
@@ -728,7 +737,6 @@ class SubscriptionService:
         subscription: Subscription, shares: list[Share]
     ) -> list[ShareDelivery]:
         default_delivery_station_day = subscription.default_delivery_station_day
-        delivery_day_obj = default_delivery_station_day.delivery_day
 
         # bulk_create() below bypasses ShareDelivery.save(), which is the only
         # place is_opted_in gets stamped from the variation's default_optin_state.
@@ -739,81 +747,28 @@ class SubscriptionService:
             variation and variation.requires_optin and variation.default_optin_state
         )
 
-        # If the default DSD itself is open-ended it covers every week — use it
-        # for all shares. This must check the DeliveryStationDay's OWN
-        # valid_until, NOT delivery_day (the SharesDeliveryDay / day-of-week,
-        # which is normally open): a default DSD that expires mid-subscription
-        # must fall through to the per-week dynamic resolution below, otherwise
-        # every week gets pinned to the expired station day.
-        if default_delivery_station_day.valid_until is None:
-            share_deliveries = [
-                ShareDelivery(
-                    subscription=subscription,
-                    share=share,
-                    delivery_station_day=default_delivery_station_day,
-                    joker_taken=False,
-                    is_opted_in=is_opted_in,
-                )
-                for share in shares
-            ]
-            ShareDelivery.objects.bulk_create(share_deliveries)
-            from .recompute import recompute_shares
-
-            try:
-                recompute_shares(s.id for s in shares)
-            except Exception:
-                # Re-raise so the outer @transaction.atomic still rolls the
-                # just-created deliveries back; add the subscription identifier
-                # the bare recompute exception lacks.
-                logger.exception(
-                    "recompute failed for subscription=%s after creating share deliveries",
-                    subscription.pk,
-                )
-                raise
-            return share_deliveries
-
-        # Dynamic: resolve the correct DSD for each share's week
-        station = default_delivery_station_day.delivery_station
-        day_number = delivery_day_obj.day_number
-
-        monday_dates = [Week(s.year, s.delivery_week).monday() for s in shares]
-        min_date = min(monday_dates) if monday_dates else timezone.localdate()
-        max_date = max(monday_dates) + timedelta(days=6) if monday_dates else min_date
-
-        # Batch-fetch all candidate DSDs for this station + day_number
-        candidate_delivery_station_days = list(
-            DeliveryStationDay.objects.filter(
-                delivery_station=station,
-                delivery_day__day_number=day_number,
-                valid_from__lte=max_date,
-            )
-            .exclude(valid_until__lt=min_date)
-            .select_related("delivery_day")
-            # Deterministic tie-break for _find_active_delivery_station_day
-            # (latest valid_from).
-            .order_by("-valid_from")
+        # Single source of truth for the (year, week) -> DSD mapping: the same
+        # resolver the capacity paths reserve/check against, so materialisation
+        # writes to the SAME station-day capacity reserved. It handles the
+        # open-ended default (every week on the default) and the time-bounded
+        # default (per-week successor, falling back to the default) itself. Any
+        # share whose week the resolver doesn't cover (defensive; e.g. a paused
+        # week) lands on the default DSD with a logged warning.
+        delivery_station_day_by_week = SubscriptionService.resolve_station_days_by_week(
+            subscription
         )
 
-        def _find_active_delivery_station_day(
-            active_at: datetime.date,
-        ) -> DeliveryStationDay | None:
-            for delivery_station_day in candidate_delivery_station_days:
-                if delivery_station_day.valid_from <= active_at and (
-                    delivery_station_day.valid_until is None
-                    or delivery_station_day.valid_until >= active_at
-                ):
-                    return delivery_station_day
-            return None
-
         share_deliveries: list[ShareDelivery] = []
-        for share, monday in zip(shares, monday_dates, strict=True):
-            resolved_delivery_station_day = _find_active_delivery_station_day(monday)
+        for share in shares:
+            resolved_delivery_station_day = delivery_station_day_by_week.get(
+                (share.year, share.delivery_week)
+            )
             if resolved_delivery_station_day is None:
                 logger.error(
                     "No active DSD for station=%s day_number=%s at %s",
-                    station,
-                    day_number,
-                    monday,
+                    default_delivery_station_day.delivery_station,
+                    default_delivery_station_day.delivery_day.day_number,
+                    Week(share.year, share.delivery_week).monday(),
                 )
                 resolved_delivery_station_day = default_delivery_station_day  # fallback
             share_deliveries.append(
@@ -826,6 +781,22 @@ class SubscriptionService:
                 )
             )
 
+        return SubscriptionService._bulk_create_deliveries_and_recompute(
+            share_deliveries, shares, subscription
+        )
+
+    @staticmethod
+    def _bulk_create_deliveries_and_recompute(
+        share_deliveries: list[ShareDelivery],
+        shares: list[Share],
+        subscription: Subscription,
+    ) -> list[ShareDelivery]:
+        """bulk_create the ShareDeliveries, then recompute the affected shares.
+
+        The recompute is capacity/billing-sensitive and runs inside the caller's
+        @transaction.atomic: a failure re-raises so the just-created deliveries
+        roll back, with the subscription id the bare recompute exception lacks.
+        """
         ShareDelivery.objects.bulk_create(share_deliveries)
         from .recompute import recompute_shares
 

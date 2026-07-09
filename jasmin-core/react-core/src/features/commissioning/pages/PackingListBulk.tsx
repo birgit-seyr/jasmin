@@ -15,6 +15,7 @@ import {
 import { DeliveryStationSelector } from "@features/commissioning/selectors";
 import {
   useDateFormat,
+  useDeliveryDayLabel,
   useInvalidateAfterTableMutation,
   useIsMobile,
   useNoteColumn,
@@ -46,6 +47,8 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, MobileStack, PastWarningMessage } from "@shared/ui";
 import {
+  activeAtDateForWeek,
+  dateForWeekDayNumber,
   formatDayLabel,
   formatWeekLabel,
   generatePdfFilename,
@@ -89,6 +92,7 @@ export default function PackingListBulk() {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const { dateFormat, mobileDateFormat } = useDateFormat();
+  const deliveryDayLabel = useDeliveryDayLabel();
   const { getUnitLabel } = useUnitOptions();
   const { getSizeLabel } = useSizeOptions();
   const { noteColumn } = useNoteColumn();
@@ -117,11 +121,7 @@ export default function PackingListBulk() {
   const shareDeliveryDaysParams =
     useMemo<CommissioningSharesDeliveryDaysListParams>(
       () => ({
-        active_at_date: dayjs()
-          .year(selectedYear)
-          .isoWeek(selectedWeek ?? currentWeek)
-          .isoWeekday(6)
-          .format("YYYY-MM-DD"),
+        active_at_date: activeAtDateForWeek(selectedYear, selectedWeek),
       }),
       [selectedYear, selectedWeek],
     );
@@ -180,11 +180,11 @@ export default function PackingListBulk() {
       const deliveryDays =
         getRelatedDays?.getDeliveryDaysForPacking(packingDayNum) || [];
       const deliveryDay = deliveryDays[0];
-      const dayIso = packingDayNum + 1;
-      let date = dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek ?? currentWeek)
-        .isoWeekday(dayIso);
+      let date = dateForWeekDayNumber(
+        selectedYear,
+        selectedWeek ?? currentWeek,
+        packingDayNum,
+      );
       if (deliveryDay !== undefined && packingDayNum > deliveryDay) {
         date = date.subtract(1, "week");
       }
@@ -203,17 +203,9 @@ export default function PackingListBulk() {
   );
 
   const calculateDeliveryDate = useCallback(
-    (deliveryDayNum: number | null) => {
-      if (deliveryDayNum === null) return "";
-      const date = dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek ?? currentWeek)
-        .isoWeekday(deliveryDayNum + 1);
-      return isMobile
-        ? date.format(`dd, ${mobileDateFormat}`)
-        : date.format(`dddd, ${dateFormat}`);
-    },
-    [selectedYear, selectedWeek, isMobile, dateFormat, mobileDateFormat],
+    (deliveryDayNum: number | null) =>
+      deliveryDayLabel(selectedYear, selectedWeek ?? currentWeek, deliveryDayNum),
+    [deliveryDayLabel, selectedYear, selectedWeek],
   );
 
   // ----- Delivery-station auto-default -----------------------------------

@@ -29,6 +29,8 @@ from __future__ import annotations
 from datetime import date as _date
 from decimal import Decimal
 
+from ..constants import get_default_tax_rate_articles, get_default_tax_rate_crates
+
 
 def resolve_article_tax_rate(
     content,
@@ -75,3 +77,47 @@ def resolve_crate_tax_rate(
         if pricing and getattr(pricing, "tax_rate", None) is not None:
             return pricing.tax_rate
     return default
+
+
+def effective_article_tax_rate(
+    content,
+    date: _date,
+) -> Decimal | int:
+    """Canonical stored → resolved → tenant-default article tax rate.
+
+    Folds the three-step resolution that every article line-write site
+    otherwise re-spells inline:
+
+        1. the row's own stored ``content.tax_rate`` snapshot, if set;
+        2. else the dated pricing chain (``resolve_article_tax_rate``);
+        3. else the tenant default (``get_default_tax_rate_articles``).
+
+    Use this at write sites that need a guaranteed non-null rate. For
+    the display-only path that must return ``None`` when nothing is
+    stored/resolved, call ``resolve_article_tax_rate`` directly (no
+    default).
+    """
+    stored = getattr(content, "tax_rate", None)
+    if stored is not None:
+        return stored
+    return resolve_article_tax_rate(
+        content, date, default=get_default_tax_rate_articles()
+    )
+
+
+def effective_crate_tax_rate(
+    crate_type,
+    date: _date,
+) -> Decimal | int:
+    """Canonical resolved → tenant-default crate tax rate.
+
+    The crate's dated pricing ``tax_rate`` if present, else the tenant
+    default (``get_default_tax_rate_crates``). Unlike the article helper
+    there is no stored snapshot to fold in here — a crate's stored rate
+    lives on the CONTENT row, not on ``crate_type`` — so callers that
+    have a content row keep the ``content.tax_rate if ... is not None
+    else effective_crate_tax_rate(...)`` guard at the call site.
+    """
+    return resolve_crate_tax_rate(
+        crate_type, date, default=get_default_tax_rate_crates()
+    )

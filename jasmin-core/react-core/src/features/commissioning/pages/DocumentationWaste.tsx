@@ -130,10 +130,7 @@ export default function DocumentationWaste() {
       );
 
       if (!hasAtLeastOneStorage) {
-        throw new Error(
-          t("validation.at_least_one_storage_required") ||
-            "At least one storage must be selected",
-        );
+        throw new Error(t("validation.at_least_one_storage_required"));
       }
       return {
         ...transformedData,

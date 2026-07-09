@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { toApiDate } from "./apiDate";
 
 /**
  * Is the selected ISO week more than one week in the past (i.e. read-only)?
@@ -70,9 +71,28 @@ export function isoWeekRangeLabel(
  * ISO week.
  */
 export function activeAtDateForWeek(year: number, week: number | null): string {
+  return toApiDate(
+    dayjs()
+      .year(year)
+      .isoWeek(week ?? dayjs().isoWeek())
+      .isoWeekday(6),
+  )!;
+}
+
+/**
+ * The calendar date of a delivery day within a given ISO week. ``dayNumber`` is
+ * the backend ``day_number`` (0 = Monday … 6 = Sunday); ``isoWeekday`` is
+ * 1-based, hence the ``+ 1`` offset (this offset tracks the backend contract and
+ * must not diverge). Returns a Dayjs so callers can either format it (labels) or
+ * compare ``.valueOf()`` (sort comparators).
+ */
+export function dateForWeekDayNumber(
+  year: number,
+  week: number,
+  dayNumber: number,
+): dayjs.Dayjs {
   return dayjs()
     .year(year)
-    .isoWeek(week ?? dayjs().isoWeek())
-    .isoWeekday(6)
-    .format("YYYY-MM-DD");
+    .isoWeek(week)
+    .isoWeekday(Number(dayNumber) + 1);
 }

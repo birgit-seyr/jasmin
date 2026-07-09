@@ -7,6 +7,7 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
+import { editableOnlyOnCreate } from "@shared/utils";
 
 import { useAmountUnitSizeColumns } from "./useAmountUnitSizeColumns";
 import { useShareArticleColumn } from "./useShareArticleColumn";
@@ -64,8 +65,8 @@ export function usePackingBaseColumns(
 
   const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
     overrides: {
-      unit: { disabled: (record: TableRecord) => record.key != -1 },
-      size: { disabled: (record: TableRecord) => record.key != -1 },
+      unit: { disabled: editableOnlyOnCreate },
+      size: { disabled: editableOnlyOnCreate },
     },
     showAmount: false,
   });
@@ -74,7 +75,7 @@ export function usePackingBaseColumns(
     () => [
       {
         ...shareArticleColumn,
-        disabled: (record: TableRecord) => record.key != -1,
+        disabled: editableOnlyOnCreate,
         render: (value: unknown, record: TableRecord, index: number) => {
           const original = shareArticleColumn.render
             ? shareArticleColumn.render(value, record, index)

@@ -3,6 +3,8 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.db.models import Q
 
+from apps.shared.money import CENT
+
 from ..models import ShareContent
 
 
@@ -174,9 +176,7 @@ def _compute_variation_averages(
         if data["count"] > 0:
             # ROUND_HALF_UP (not builtin round()'s banker's rounding) to match
             # the platform's money/quantity rounding standard.
-            avg = (data["sum"] / data["count"]).quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
-            )
+            avg = (data["sum"] / data["count"]).quantize(CENT, rounding=ROUND_HALF_UP)
             station_averages[field_name] = avg
 
     # Now aggregate from station level to tour and day levels

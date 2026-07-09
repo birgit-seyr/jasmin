@@ -4,6 +4,7 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
+import { renderNumber } from "@shared/utils";
 import { useTenant } from "@hooks/configuration/useTenant";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 import { useSizeOptions } from "@hooks/useSizeOptions";
@@ -92,12 +93,7 @@ export const useAmountUnitSizeColumns = (config: AmountUnitSizeConfig = {}) => {
             : it.includes("decimal1")
               ? 1
               : 0;
-        merged.render = (value: unknown) => {
-          if (value === null || value === undefined || value === "") return "";
-          const n = Number(value);
-          if (!Number.isFinite(n)) return "";
-          return format(n, defaultDecimals);
-        };
+        merged.render = renderNumber(format, defaultDecimals);
       }
       defaultColumns.push(merged);
     }

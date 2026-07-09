@@ -16,6 +16,7 @@ from ..models import (
     OrderContent,
     Reseller,
 )
+from ..utils.iso_week_utils import date_from_order
 from .serializers_mixin import (
     ARTICLE_DIFF_FIELDS,
     CRATE_DIFF_FIELDS,
@@ -329,6 +330,7 @@ class CrateContentInvoiceResellerSerializer(
     class Meta:
         model = CrateContentInvoiceReseller
         fields = "__all__"
+        read_only_fields = ["is_finalized", "finalized_at", "finalized_by"]
 
 
 # for the Invoice Modal:
@@ -760,6 +762,7 @@ class CrateDeliveryNoteContentSerializer(
     class Meta:
         model = CrateDeliveryNoteContent
         fields = "__all__"
+        read_only_fields = ["is_finalized", "finalized_at", "finalized_by"]
 
 
 class DeliveryNoteResellerSerializer(
@@ -852,22 +855,10 @@ class DeliveryNoteResellerSerializer(
         ]
 
     def get_order_date(self, obj) -> date | None:
-        """Calculate order date from year, delivery_week, and delivery_day"""
+        """Order date via the shared ISO-week resolver (year/week/day_number)."""
         if not obj.order:
             return None
-
-        try:
-            from isoweek import Week
-
-            # Create Week object from ISO year and week number
-            week = Week(obj.order.year, obj.order.delivery_week)
-
-            # Get the specific day (0=Monday, 6=Sunday)
-            date = week.day(obj.order.day_number)
-
-            return date
-        except (ValueError, AttributeError, ImportError):
-            return None
+        return date_from_order(obj.order)
 
     @extend_schema_field(CrateItemSummarySerializer(many=True))
     def get_crate_items(self, obj):
@@ -906,18 +897,6 @@ class BulkDocumentRequestSerializer(serializers.Serializer):
 
 class BulkDocumentWithDateRequestSerializer(BulkDocumentRequestSerializer):
     """Extends BulkDocumentRequestSerializer with an optional date."""
-
-    date = serializers.DateField(required=False, allow_null=True)
-
-
-class BulkIdsRequestSerializer(serializers.Serializer):
-    """Request with only a list of IDs."""
-
-    ids = serializers.ListField(child=serializers.CharField(), min_length=1)
-
-
-class BulkIdsWithDateRequestSerializer(BulkIdsRequestSerializer):
-    """Request with IDs and an optional date."""
 
     date = serializers.DateField(required=False, allow_null=True)
 

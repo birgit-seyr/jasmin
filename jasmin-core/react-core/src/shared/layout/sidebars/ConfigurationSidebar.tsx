@@ -12,7 +12,6 @@ import { filterByRole, useRoles, type RoleGatedItem } from "@shared/auth";
 import SidebarShell from "./SidebarShell";
 
 interface ConfigurationSidebarProps {
-  collapsed?: boolean;
   openKeys?: string[];
   onOpenChange?: (keys: string[]) => void;
 }

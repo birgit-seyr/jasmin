@@ -65,7 +65,7 @@ import {
   LabeledSwitch,
   PastWarningMessage,
 } from "@shared/ui";
-import { hasPurchasedSuffix, isWeekInPast } from "@shared/utils";
+import { hasPurchasedSuffix, isWeekInPast, toApiDate } from "@shared/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import type { FormInstance } from "antd";
 import { Button, Space } from "antd";
@@ -239,11 +239,12 @@ export default function PlanningHarvestSharesBase({
       ...shareArticleFilters,
       share_option: shareOption,
       get_price_info: true,
-      price_date: dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek ?? nextWeek)
-        .isoWeekday(2)
-        .format("YYYY-MM-DD"),
+      price_date: toApiDate(
+        dayjs()
+          .year(selectedYear)
+          .isoWeek(selectedWeek ?? nextWeek)
+          .isoWeekday(2),
+      )!,
     }),
     [shareArticleFilters, shareOption, selectedYear, selectedWeek],
   );
@@ -951,7 +952,7 @@ export default function PlanningHarvestSharesBase({
     dataHasNotes,
     calculateStillFree,
     number_packing_stations,
-    currencySymbol,
+    formatCurrency,
     getUnitLabel,
     setIsBackupModalOpen,
     setSelectedBackupData,

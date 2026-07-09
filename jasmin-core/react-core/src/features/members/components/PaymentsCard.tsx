@@ -11,8 +11,9 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePaymentsChargeSchedulesList } from "@shared/api/generated/payments-—-charge-schedule/payments-—-charge-schedule";
 import type { ChargeSchedule } from "@shared/api/generated/models";
-import { useCurrency, useDateFormat, useNumberFormat } from "@hooks/index";
+import { useCurrency, useDateFormat } from "@hooks/index";
 import { CHARGE_STATUS_COLOR as STATUS_COLOR } from "@shared/utils/chargeStatusColors";
+import { unwrapList } from "@shared/utils";
 import SepaSetupModal from "@features/members/modals/SepaSetupModal";
 
 const { Text } = Typography;
@@ -44,8 +45,7 @@ interface PaymentsCardProps {
 
 const PaymentsCard = ({ memberId }: PaymentsCardProps) => {
   const { t } = useTranslation();
-  const { format } = useNumberFormat();
-  const { currencySymbol } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const { formatDate } = useDateFormat();
   const [futureCount, setFutureCount] = useState(PAGE_SIZE);
   const [pastCount, setPastCount] = useState(0);
@@ -62,10 +62,7 @@ const PaymentsCard = ({ memberId }: PaymentsCardProps) => {
   );
 
   const { pastGroups, futureGroups } = useMemo(() => {
-    const rows: ChargeSchedule[] = Array.isArray(chargesData)
-      ? chargesData
-      : ((chargesData as { results?: ChargeSchedule[] } | undefined)?.results ??
-        []);
+    const rows = unwrapList<ChargeSchedule>(chargesData);
     if (!rows.length) return { pastGroups: [], futureGroups: [] };
 
     const today = dayjs();
@@ -165,7 +162,7 @@ const PaymentsCard = ({ memberId }: PaymentsCardProps) => {
                   delete={item.status === "WAIVED"}
                   style={{ whiteSpace: "nowrap", marginLeft: "8px" }}
                 >
-                  {format(item.amount, 2)} {currencySymbol}
+                  {formatCurrency(item.amount)}
                 </Text>
               </div>
             ))}
@@ -180,7 +177,7 @@ const PaymentsCard = ({ memberId }: PaymentsCardProps) => {
                     strong
                     style={{ whiteSpace: "nowrap", marginLeft: "8px" }}
                   >
-                    {format(total, 2)} {currencySymbol}
+                    {formatCurrency(total)}
                   </Text>
                 </div>
               </>
@@ -189,7 +186,7 @@ const PaymentsCard = ({ memberId }: PaymentsCardProps) => {
         ),
       };
     });
-  }, [visibleGroups, t, format, currencySymbol, formatDate]);
+  }, [visibleGroups, t, formatCurrency, formatDate]);
 
   return (
     <Card

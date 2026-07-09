@@ -1,5 +1,6 @@
 import { Spin } from "antd";
 import dayjs from "dayjs";
+import { toApiDate } from "@shared/utils";
 import { useTranslation } from "react-i18next";
 import { Navigate, useParams } from "react-router-dom";
 import { useShareTypes } from "@hooks/index";
@@ -42,7 +43,7 @@ export default function PlanningShareContentPage({
     config
       ? {
           share_option: config.shareOption,
-          active_at_date: dayjs().format("YYYY-MM-DD"),
+          active_at_date: toApiDate(dayjs())!,
           // Include a not-yet-started (future valid_from) share type so a
           // complex option in the gap before its season starts still resolves
           // as complex instead of silently degrading to the long-term view.

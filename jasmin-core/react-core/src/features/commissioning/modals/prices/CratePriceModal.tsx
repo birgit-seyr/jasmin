@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useActiveStatusColumn, useCurrency, useNumberFormat, useTenant, useTimeBoundColumns } from "@hooks/index";
+import { useActiveStatusColumn, useCurrency, useDefaultTaxRates, useNumberFormat, useTimeBoundColumns } from "@hooks/index";
 import {
   useCommissioningCrateNetPricesList,
   getCommissioningCrateNetPricesListQueryKey,
@@ -37,9 +37,7 @@ export default function CratePriceModal({
     width: "9em",
   });
 
-  const { getSetting } = useTenant();
-  const defaultTaxRateCrates =
-    (getSetting("default_tax_rate_crates") as number) ?? 19;
+  const { crates: defaultTaxRateCrates } = useDefaultTaxRates();
 
   const columns = useMemo<EditableColumnConfig[]>(
     () =>

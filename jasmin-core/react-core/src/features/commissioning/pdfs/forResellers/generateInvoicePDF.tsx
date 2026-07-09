@@ -3,6 +3,7 @@ import { commissioningInvoicesRetrieve } from "@shared/api/generated/commissioni
 import axiosService from "@shared/services/api";
 import { generatePaymentQRCode } from "../qrcodeGenerator";
 import { generateZUGFeRDXML } from "../zugferd";
+import { isCreditNote } from "./pdfBase";
 import { buildResellerPdfContext } from "./resellerPdfContext";
 import {
   buildBankDetails,
@@ -97,10 +98,7 @@ export async function generateAndUploadInvoicePDF(
   // A storno / correction is stored (and emailed) as "Storno-Rechnung-…",
   // not "Rechnung-…", so the reseller's cancellation attachment isn't named
   // like a regular invoice.
-  const isStorno =
-    pdfDataObj.invoice.document_type === "storno" ||
-    pdfDataObj.invoice.document_type === "correction";
-  const docLabel = isStorno
+  const docLabel = isCreditNote(pdfDataObj.invoice.document_type)
     ? t("commissioning.storno_invoice_title")
     : t("commissioning.invoice");
   const fileName = `${docLabel}-${pdfDataObj.invoice.prefix}-${pdfDataObj.invoice.invoice_number}.pdf`;

@@ -190,6 +190,52 @@ class MemberStringFieldMixin:
         return self._format_member_string(self._resolve_member(obj))
 
 
+class ShareTypeVariationStringMixin:
+    """Provides ``get_share_type_variation_string`` for a
+    ``share_type_variation_string = SerializerMethodField()`` — the combined
+    ``<ShareType name> - <size>`` label the abos tables show for a variation,
+    mirrored on the delivery-pause rows so a pause reads the same way as the
+    subscription it affects. Subclasses override ``_resolve_variation(obj)``
+    (default ``obj.share_type_variation``); the formatter is shared so the
+    label can't drift between the two serializers."""
+
+    def _resolve_variation(self, obj):
+        return obj.share_type_variation
+
+    @staticmethod
+    def _format_variation_string(variation) -> str:
+        if variation is None:
+            return ""
+        return f"{variation.share_type.name} - {variation.size}"
+
+    def get_share_type_variation_string(self, obj) -> str:
+        return self._format_variation_string(self._resolve_variation(obj))
+
+
+class DynamicPrefixPassthroughMixin:
+    """Re-attach undeclared dynamic dict keys onto a ``Serializer``'s output.
+
+    A plain declared-field ``Serializer`` drops any source key it doesn't
+    declare. Several tour / matrix serializers are fed dicts carrying
+    per-variation and per-box-combination count keys (``variation_<id>`` /
+    ``combo_<key>``) built at the service layer, which the frontend reads by
+    iteration. Subclasses list the prefixes in ``DYNAMIC_KEY_PREFIXES``; the
+    mixin's ``to_representation`` merges the matching source keys back in (only
+    when serializing a dict, and only keys not already declared). Subclasses
+    that need to layer further post-processing (e.g. anonymous masking) call
+    ``super().to_representation(instance)`` first."""
+
+    DYNAMIC_KEY_PREFIXES: tuple[str, ...] = ()
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if isinstance(instance, dict) and self.DYNAMIC_KEY_PREFIXES:
+            for key, value in instance.items():
+                if key.startswith(self.DYNAMIC_KEY_PREFIXES) and key not in ret:
+                    ret[key] = value
+        return ret
+
+
 class LinkedUserInfoMixin:
     """Provides ``get_linked_user_info`` for a ``linked_user_info =
     SerializerMethodField()`` — a snapshot of the related JasminUser for the

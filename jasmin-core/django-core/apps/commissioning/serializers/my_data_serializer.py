@@ -3,6 +3,8 @@ from __future__ import annotations
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.shared.pii_masking import MaskedIBANFieldMixin
+
 from ..models import ContactEntity, CoopShare, Member
 
 
@@ -92,7 +94,7 @@ class MySubscriptionSubscribeSerializer(serializers.Serializer):
     on_waiting_list = serializers.BooleanField(required=False, default=False)
 
 
-class MyMemberDataReadSerializer(serializers.ModelSerializer):
+class MyMemberDataReadSerializer(MaskedIBANFieldMixin, serializers.ModelSerializer):
     """Outgoing shape for ``GET /commissioning/my_member_data/``.
 
     Editable fields appear here so the form can pre-fill them.
@@ -101,8 +103,13 @@ class MyMemberDataReadSerializer(serializers.ModelSerializer):
     the GDPR SAR UX. A user who wants to change them types the new
     value; we don't echo the old one back over the wire."""
 
+    # Stored-flag getters come from ``MaskedIBANFieldMixin``; Member stores the
+    # holder name in ``account_owner``, hence the source override + method_name.
+    MASKED_ACCOUNT_HOLDER_SOURCE = "account_owner"
     iban_stored = serializers.SerializerMethodField()
-    account_owner_stored = serializers.SerializerMethodField()
+    account_owner_stored = serializers.SerializerMethodField(
+        method_name="get_account_holder_stored"
+    )
     coop_shares = serializers.SerializerMethodField()
 
     class Meta:
@@ -129,12 +136,6 @@ class MyMemberDataReadSerializer(serializers.ModelSerializer):
             "coop_shares",
         ]
         read_only_fields = fields
-
-    def get_iban_stored(self, obj: Member) -> bool:
-        return bool(obj.iban)
-
-    def get_account_owner_stored(self, obj: Member) -> bool:
-        return bool(obj.account_owner)
 
     @extend_schema_field(MyDataCoopShareSerializer(many=True))
     def get_coop_shares(self, obj: Member) -> list[dict]:
@@ -202,13 +203,15 @@ class MyMemberDataUpdateSerializer(serializers.ModelSerializer):
         return super().validate(attrs)
 
 
-class MyCustomerDataReadSerializer(serializers.ModelSerializer):
+class MyCustomerDataReadSerializer(MaskedIBANFieldMixin, serializers.ModelSerializer):
     """Outgoing shape for ``GET /commissioning/my_customer_data/``.
 
     The view passes the owning ``Reseller`` row via context so the
     read-only ``customer_number`` can come along for the ride
     without forcing the client to make a second call."""
 
+    # ``iban_stored`` getter comes from ``MaskedIBANFieldMixin`` (default
+    # ``MASKED_IBAN_SOURCE = "iban"`` matches ``ContactEntity.iban``).
     iban_stored = serializers.SerializerMethodField()
     customer_number = serializers.SerializerMethodField()
 
@@ -236,9 +239,6 @@ class MyCustomerDataReadSerializer(serializers.ModelSerializer):
             "customer_number",
         ]
         read_only_fields = fields
-
-    def get_iban_stored(self, obj: ContactEntity) -> bool:
-        return bool(obj.iban)
 
     def get_customer_number(self, obj: ContactEntity) -> int | None:
         reseller = self.context.get("reseller")

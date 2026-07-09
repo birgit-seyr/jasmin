@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "antd";
 import dayjs from "dayjs";
+import { toApiDate } from "@shared/utils";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -55,11 +56,9 @@ export default function ShareWeights() {
 
   const activeAtDate = useMemo(() => {
     if (!selectedYear || !selectedWeek) return undefined;
-    return dayjs()
-      .year(selectedYear)
-      .isoWeek(selectedWeek)
-      .startOf("isoWeek")
-      .format("YYYY-MM-DD");
+    return toApiDate(
+      dayjs().year(selectedYear).isoWeek(selectedWeek).startOf("isoWeek"),
+    )!;
   }, [selectedYear, selectedWeek]);
 
   const listParams = useMemo<CommissioningSharesListParams>(
@@ -213,7 +212,7 @@ export default function ShareWeights() {
           onClick={() => setCsvExportVisible(true)}
           className="download-button"
         >
-          {t("commissioning.csv_export_average_weight") || "CSV Export"}
+          {t("commissioning.csv_export_average_weight")}
         </Button>
       </div>
       <ExportCsvShareWeights

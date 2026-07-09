@@ -8,6 +8,7 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import ToolTipIcon from "@shared/ui/ToolTipIcon";
+import { editableOnlyOnCreate } from "@shared/utils";
 import {
   planningColors,
   planningRowEmphasis,
@@ -31,7 +32,7 @@ interface UsePlanningHarvestSharesColumnsArgs {
   dataHasNotes: DataHasNotes;
   calculateStillFree: (record: TableRecord) => number;
   number_packing_stations: number;
-  currencySymbol: string;
+  formatCurrency: (amount: number | null | undefined) => string;
   getUnitLabel: (unit: string) => string;
   setIsBackupModalOpen: Dispatch<SetStateAction<boolean>>;
   setSelectedBackupData: Dispatch<SetStateAction<TableRecord | null>>;
@@ -51,7 +52,7 @@ export function usePlanningHarvestSharesColumns(
     dataHasNotes,
     calculateStillFree,
     number_packing_stations,
-    currencySymbol,
+    formatCurrency,
     getUnitLabel,
     setIsBackupModalOpen,
     setSelectedBackupData,
@@ -67,7 +68,7 @@ export function usePlanningHarvestSharesColumns(
       finalColumn,
       {
         ...shareArticleColumn,
-        disabled: (record: TableRecord) => record.key != -1,
+        disabled: editableOnlyOnCreate,
         // Forecast rows pop in green + bold so they read as "system
         // told us to plant this". Stock-only rows pick up the colour
         // but stay at normal weight — they're a hint, not a directive.
@@ -129,8 +130,7 @@ export function usePlanningHarvestSharesColumns(
         render: (value: unknown, record: TableRecord) =>
           value !== null && value !== undefined ? (
             <div className="small-title">
-              {format(Number(value), 2)} {currencySymbol}/
-              {getUnitLabel(record.unit as string)}
+              {formatCurrency(Number(value))}/{getUnitLabel(record.unit as string)}
             </div>
           ) : (
             ""
@@ -358,7 +358,7 @@ export function usePlanningHarvestSharesColumns(
     calculateStillFree,
     number_packing_stations,
     sellerColumn,
-    currencySymbol,
+    formatCurrency,
     getUnitLabel,
     setIsBackupModalOpen,
     setSelectedBackupData,

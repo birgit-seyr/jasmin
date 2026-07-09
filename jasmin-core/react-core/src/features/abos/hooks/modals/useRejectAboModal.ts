@@ -1,67 +1,28 @@
-import { useCallback, useState } from "react";
-import { useTranslation } from "react-i18next";
-
 import { commissioningAbosRejectCreate } from "@shared/api/generated/commissioning/commissioning";
-import { notify } from "@shared/utils";
+import { useRejectModal } from "@hooks/useRejectModal";
 import type { AboRecord } from "@features/abos/pages/types";
 
 /**
- * Reject-modal state + actions for Subscriptions ("Abos"). Mirrors
- * ``useRejectMemberModal`` so the surface stays predictable. Posts via the
- * generated ``commissioningAbosRejectCreate`` (``SubscriptionViewSet.reject``).
+ * Abos reject modal — a thin domain wrapper over the shared ``useRejectModal``
+ * hook. Injects the Abos reject call (``SubscriptionViewSet.reject``) + i18n
+ * keys and re-exports the generic surface under the Abo-specific names the page
+ * already consumes.
  */
 export const useRejectAboModal = () => {
-  const { t } = useTranslation();
-  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-  const [selectedAboForRejection, setSelectedAboForRejection] =
-    useState<AboRecord | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [reason, setReason] = useState("");
-
-  const handleOpenRejectModal = useCallback((abo: AboRecord) => {
-    setSelectedAboForRejection(abo);
-    setReason("");
-    setIsRejectModalOpen(true);
-  }, []);
-
-  const handleCloseRejectModal = useCallback(() => {
-    setIsRejectModalOpen(false);
-    setSelectedAboForRejection(null);
-    setReason("");
-  }, []);
-
-  const rejectAbo = useCallback(async () => {
-    if (!selectedAboForRejection) return;
-    const aboId = String(selectedAboForRejection.id ?? "");
-    if (!aboId) return;
-
-    setLoading(true);
-    try {
-      const data = await commissioningAbosRejectCreate(aboId, {
-        reason: reason.trim(),
-      });
-      notify.success(t("members.reject_success"));
-      handleCloseRejectModal();
-      return data;
-    } catch (error) {
-      console.error("Failed to reject subscription:", error);
-      notify.error(
-        t("members.reject_error"),
-      );
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedAboForRejection, reason, t, handleCloseRejectModal]);
+  const modal = useRejectModal<AboRecord>({
+    rejectFn: (id, reason) => commissioningAbosRejectCreate(id, { reason }),
+    successKey: "members.reject_success",
+    errorKey: "members.reject_error",
+  });
 
   return {
-    isRejectModalOpen,
-    selectedAboForRejection,
-    loading,
-    reason,
-    setReason,
-    handleOpenRejectModal,
-    handleCloseRejectModal,
-    rejectAbo,
+    isRejectModalOpen: modal.isOpen,
+    selectedAboForRejection: modal.selectedItem,
+    loading: modal.loading,
+    reason: modal.reason,
+    setReason: modal.setReason,
+    handleOpenRejectModal: modal.handleOpen,
+    handleCloseRejectModal: modal.handleClose,
+    rejectAbo: modal.reject,
   };
 };

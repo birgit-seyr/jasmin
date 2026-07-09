@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { commissioningDeliveryNotesRetrieve } from "@shared/api/generated/commissioning/commissioning";
 import { notify } from "@shared/utils";
+import { openStoredPdf } from "./pdfDownload";
 
 /**
  * Lightweight delivery-note download button.
@@ -50,7 +51,7 @@ export default function DeliveryNotePDFButtons({
         notify.error(t("commissioning.pdf_not_available"));
         return;
       }
-      window.open(dn.file, "_blank", "noopener,noreferrer");
+      openStoredPdf(dn.file);
     } catch (err) {
       console.error("Failed to load delivery note for PDF download:", err);
       notify.error(t("common.error_loading_data"));

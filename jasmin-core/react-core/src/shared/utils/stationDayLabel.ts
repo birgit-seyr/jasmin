@@ -1,17 +1,5 @@
 import type { TFunction } from "i18next";
-
-// day_number: 0 = Monday … 6 = Sunday (matches the backend
-// SharesDeliveryDay.day_number / DayNumberOptions). NOTE Monday is 0 — a falsy
-// `!dayNumber` guard would silently drop Mondays; always compare against null.
-const WEEKDAY_KEYS = [
-  "common.weekday_monday",
-  "common.weekday_tuesday",
-  "common.weekday_wednesday",
-  "common.weekday_thursday",
-  "common.weekday_friday",
-  "common.weekday_saturday",
-  "common.weekday_sunday",
-] as const;
+import { WEEKDAY_KEYS } from "./dayNamesUtil";
 
 /** Localized full weekday name for a 0=Monday..6=Sunday day_number. */
 export function weekdayLabel(

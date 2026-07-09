@@ -22,8 +22,9 @@ import {
   itemLineNetto,
   type LineNettoInput,
 } from "@shared/utils/lineNetto";
-import { useCurrency, useDateFormat, useNumberFormat, useTenant, useTimeFormat, useUnitOptions } from '@hooks/index';
+import { useCurrency, useDateFormat, useDefaultTaxRates, useNumberFormat, useTenant, useTimeFormat, useUnitOptions } from '@hooks/index';
 import { useAmountUnitSizeColumns, useCratesColumns, useShareArticleColumn } from '@features/commissioning/hooks';
+import { FinalizedNotice } from '@features/commissioning/components';
 // InvoicePDFGenerator statically imports @react-pdf/renderer (it
 // renders ``<PDFViewer>`` for inline preview). Lazy-loading it here
 // means the modal-bearing pages (Invoices.tsx, Orders.tsx via
@@ -70,8 +71,7 @@ export default function InvoiceModal({
   const { getSetting } = useTenant();
   const { formatDateTime } = useTimeFormat();
   const { formatDate } = useDateFormat();
-  const defaultTaxRateArticles =
-    (getSetting("default_tax_rate_articles") as number) ?? 7;
+  const { articles: defaultTaxRateArticles } = useDefaultTaxRates();
 
   // ``isFetching`` (not ``isLoading``): drives the EditableTable grid spinner.
   // With staleTime:0 a reopened (cached) invoice has ``isLoading === false``,
@@ -151,7 +151,7 @@ export default function InvoiceModal({
       articleDefaults: "reseller",
       finalTiers,
     });
-  const { currencySymbol } = useCurrency();
+  const { currencySymbol, formatCurrency } = useCurrency();
   const { format } = useNumberFormat();
 
   const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
@@ -251,9 +251,7 @@ export default function InvoiceModal({
         render: (_, record) => {
           const finalPrice = itemLineNetto(record as unknown as LineNettoInput);
           return (
-            <span>
-              {format(finalPrice, 2)} {currencySymbol}
-            </span>
+            <span>{formatCurrency(finalPrice)}</span>
           );
         },
       },
@@ -272,7 +270,7 @@ export default function InvoiceModal({
         ),
       },
     ],
-    [t, currencySymbol, format],
+    [t, formatCurrency, format],
   );
 
   const customSave = useCallback(
@@ -402,14 +400,14 @@ export default function InvoiceModal({
           <DiffCell
             value={
               record.price_per_unit
-                ? `${format(Number(record.price_per_unit), 2)} ${currencySymbol}/${getUnitLabel(
+                ? `${formatCurrency(Number(record.price_per_unit))}/${getUnitLabel(
                     record.unit,
                   )}`
                 : ""
             }
             differs={record.price_per_unit_differs}
             original={record.original_price_per_unit}
-            formatOriginal={(o) => `${String(o)} ${currencySymbol}`}
+            formatOriginal={(o) => formatCurrency(Number(o))}
           />
         ),
       },
@@ -422,7 +420,7 @@ export default function InvoiceModal({
       getUnitLabel,
       t,
       currencySymbol,
-      format,
+      formatCurrency,
     ],
   );
 
@@ -515,21 +513,10 @@ export default function InvoiceModal({
             </p>
           </div>
           {isFinalized && (
-            <div
-              style={{
-                marginBottom: "1em",
-                padding: "0.5em",
-                backgroundColor: "var(--color-success-bg)",
-                border: "1px solid #8fc566ff",
-                borderRadius: "4px",
-                color: "#389e0d",
-                fontWeight: "bold",
-                textAlign: "center",
-              }}
-            >
-              {t("commissioning.invoice_finalized_notice")}
-              {formatDateTime(invoiceData.finalized_at)}
-            </div>
+            <FinalizedNotice
+              label={t("commissioning.invoice_finalized_notice")}
+              at={invoiceData.finalized_at}
+            />
           )}
 
           <EditableTable
@@ -590,11 +577,11 @@ export default function InvoiceModal({
               <div key={item.rate} style={{ marginBottom: "0.3em" }}>
                 <span style={{ fontWeight: "normal" }}>
                   {t("commissioning.netto")} ({item.rate}%):{" "}
-                  {format(item.netto, 2)} {currencySymbol}
+                  {formatCurrency(item.netto)}
                 </span>
                 <span style={{ marginLeft: "1.5em", fontWeight: "normal" }}>
-                  {t("commissioning.ust")} ({item.rate}%): {format(item.tax, 2)}{" "}
-                  {currencySymbol}
+                  {t("commissioning.ust")} ({item.rate}%):{" "}
+                  {formatCurrency(item.tax)}
                 </span>
               </div>
             ))}
@@ -611,7 +598,7 @@ export default function InvoiceModal({
             }}
           >
             {t("commissioning.total_sum_netto_invoice_details")}{" "}
-            {format(totalNetto, 2)} {currencySymbol}
+            {formatCurrency(totalNetto)}
           </div>
           <div
             style={{
@@ -621,7 +608,7 @@ export default function InvoiceModal({
             }}
           >
             {t("commissioning.total_sum_ust_invoice_details")}{" "}
-            {format(totalBrutto - totalNetto, 2)} {currencySymbol}
+            {formatCurrency(totalBrutto - totalNetto)}
           </div>
 
           <div
@@ -633,7 +620,7 @@ export default function InvoiceModal({
             }}
           >
             {t("commissioning.total_sum_brutto_invoice_details")}{" "}
-            {format(totalBrutto, 2)} {currencySymbol}
+            {formatCurrency(totalBrutto)}
           </div>
         </div>
       )}

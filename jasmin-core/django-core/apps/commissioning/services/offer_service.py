@@ -84,51 +84,37 @@ class OfferService:
         )
 
     @staticmethod
-    @transaction.atomic
-    def copy_offers_to_next_week(offer_ids: list[str]) -> dict:
-        """Copy offers to the next week."""
+    def _copy_offers(offer_ids, *, key_fn, exists_filter, mutate_fn) -> dict:
+        """Clone the given offers, skipping any whose target slot already exists
+        (persisted) OR was already queued in this batch.
+
+        ``key_fn(offer)`` -> the per-batch dedup key (the exists() check only
+        dedups against PERSISTED rows, so two source offers collapsing to the
+        same target key would both pass it — dedup the in-memory batch too).
+        ``exists_filter(offer)`` -> the ``Offer.objects.filter(**…)`` kwargs
+        identifying an already-persisted target. ``mutate_fn(offer)`` reassigns
+        the clone's target fields (week / group / …). Each clone is detached
+        (pk/id -> None) and un-finalized before the bulk insert."""
         offers_to_copy = Offer.objects.filter(id__in=offer_ids)
         new_offers: list[Offer] = []
         skipped_count = 0
-        # Target slots already queued in THIS batch. The exists() check only
-        # dedups against PERSISTED rows, so two source offers collapsing to the
-        # same target key (duplicates in the source week) would both pass it
-        # and both get created. Dedup the in-memory batch the same way.
         queued_keys: set[tuple] = set()
 
         for offer in offers_to_copy:
-            current_week = Week(offer.year, offer.delivery_week)
-            next_week = current_week + 1
-
-            key = (
-                next_week.year,
-                next_week.week,
-                offer.share_article_id,
-                offer.unit,
-                offer.size,
-            )
+            key = key_fn(offer)
             if key in queued_keys:
                 skipped_count += 1
                 continue
 
-            exists = Offer.objects.filter(
-                year=next_week.year,
-                delivery_week=next_week.week,
-                share_article_id=offer.share_article_id,
-                unit=offer.unit,
-                size=offer.size,
-            ).exists()
-
-            if exists:
+            if Offer.objects.filter(**exists_filter(offer)).exists():
                 skipped_count += 1
                 continue
 
             queued_keys.add(key)
             offer.pk = None
             offer.id = None
-            offer.delivery_week = next_week.week
-            offer.year = next_week.year
             offer.is_finalized = False
+            mutate_fn(offer)
             new_offers.append(offer)
 
         created_offers = Offer.objects.bulk_create(new_offers)
@@ -141,6 +127,40 @@ class OfferService:
 
     @staticmethod
     @transaction.atomic
+    def copy_offers_to_next_week(offer_ids: list[str]) -> dict:
+        """Copy offers to the next week."""
+
+        def _next_week(offer):
+            return Week(offer.year, offer.delivery_week) + 1
+
+        def key_fn(offer):
+            nw = _next_week(offer)
+            return (nw.year, nw.week, offer.share_article_id, offer.unit, offer.size)
+
+        def exists_filter(offer):
+            nw = _next_week(offer)
+            return {
+                "year": nw.year,
+                "delivery_week": nw.week,
+                "share_article_id": offer.share_article_id,
+                "unit": offer.unit,
+                "size": offer.size,
+            }
+
+        def mutate_fn(offer):
+            nw = _next_week(offer)
+            offer.year = nw.year
+            offer.delivery_week = nw.week
+
+        return OfferService._copy_offers(
+            offer_ids,
+            key_fn=key_fn,
+            exists_filter=exists_filter,
+            mutate_fn=mutate_fn,
+        )
+
+    @staticmethod
+    @transaction.atomic
     def copy_offers_to_offer_group(
         offer_ids: list[str],
         year: int,
@@ -148,51 +168,29 @@ class OfferService:
         offer_group: str,
     ) -> dict:
         """Copy selected offers to a different offer group in the same week."""
-        offers_to_copy = Offer.objects.filter(id__in=offer_ids)
-        new_offers: list[Offer] = []
-        skipped_count = 0
-        # See copy_offers_to_next_week: also dedup against slots already queued
-        # in this batch, not just persisted rows.
-        queued_keys: set[tuple] = set()
 
-        for offer in offers_to_copy:
-            key = (
-                offer.share_article_id,
-                offer.unit,
-                offer.size,
-                offer_group,
-            )
-            if key in queued_keys:
-                skipped_count += 1
-                continue
+        def key_fn(offer):
+            return (offer.share_article_id, offer.unit, offer.size, offer_group)
 
-            exists = Offer.objects.filter(
-                year=year,
-                delivery_week=delivery_week,
-                share_article_id=offer.share_article_id,
-                unit=offer.unit,
-                size=offer.size,
-                offer_group=offer_group,
-            ).exists()
+        def exists_filter(offer):
+            return {
+                "year": year,
+                "delivery_week": delivery_week,
+                "share_article_id": offer.share_article_id,
+                "unit": offer.unit,
+                "size": offer.size,
+                "offer_group": offer_group,
+            }
 
-            if exists:
-                skipped_count += 1
-                continue
-
-            queued_keys.add(key)
-            offer.pk = None
-            offer.id = None
+        def mutate_fn(offer):
             offer.offer_group_id = offer_group
-            offer.is_finalized = False
-            new_offers.append(offer)
 
-        created_offers = Offer.objects.bulk_create(new_offers)
-
-        return {
-            "created_ids": [str(o.id) for o in created_offers],
-            "created_count": len(created_offers),
-            "skipped_count": skipped_count,
-        }
+        return OfferService._copy_offers(
+            offer_ids,
+            key_fn=key_fn,
+            exists_filter=exists_filter,
+            mutate_fn=mutate_fn,
+        )
 
     @staticmethod
     @transaction.atomic

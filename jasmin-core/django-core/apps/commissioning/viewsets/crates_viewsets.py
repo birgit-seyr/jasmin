@@ -16,7 +16,6 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.authz.permissions import IsOffice, IsStaff, RolePermissionsMixin
-from core.errors import BadRequestError, NotFoundError
 from core.serializers import ErrorResponseSerializer
 
 from ..constants import get_default_tax_rate_crates
@@ -49,6 +48,7 @@ from ..serializers import (
 from ..services import CrateContentService
 from ..services.crate_summary import build_crate_summary_row, summarize_crate_items
 from ..utils.iso_week_utils import date_from_order
+from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 from ..utils.tax_rate_utils import resolve_crate_tax_rate
 
@@ -60,30 +60,6 @@ def _get_tax_rate(crate: Crate | None, date: datetime.date) -> float:
         if crate is not None
         else get_default_tax_rate_crates()
     )
-
-
-def _get_or_404(model: type, obj_id: Any, label: str) -> Any:
-    """Return ``model.objects.get(id=obj_id)`` or raise a domain error.
-
-    Raises ``BadRequestError`` if ``obj_id`` is falsy and ``NotFoundError``
-    if the row does not exist. The exception handler converts both into the
-    canonical Jasmin error response, so callers must NOT wrap this in
-    ``try``/``except``.
-    """
-    if not obj_id:
-        raise BadRequestError(
-            f"{label} id is required",
-            code=f"{label.lower().replace(' ', '_')}.id_required",
-            field=label.lower().replace(" ", "_"),
-        )
-    try:
-        return model.objects.get(id=obj_id)
-    except model.DoesNotExist as exc:
-        raise NotFoundError(
-            f"{label} not found",
-            code=f"{label.lower().replace(' ', '_')}.not_found",
-            details={"id": str(obj_id)},
-        ) from exc
 
 
 def _reject_finalized(obj: Any, kind: str, action: str) -> None:
@@ -187,7 +163,7 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
     )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         params = validate_query_params(request, required=["delivery_note_id"])
-        delivery_note = _get_or_404(
+        delivery_note = get_or_404(
             DeliveryNoteReseller,
             params["delivery_note_id"],
             "Delivery note",
@@ -220,14 +196,14 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         },
     )
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        delivery_note = _get_or_404(
+        delivery_note = get_or_404(
             DeliveryNoteReseller,
             request.data.get("delivery_note_id"),
             "Delivery note",
         )
         _reject_finalized(delivery_note, "delivery note", "add crates to finalized")
 
-        crate_type = _get_or_404(Crate, request.data.get("crate_type"), "Crate type")
+        crate_type = get_or_404(Crate, request.data.get("crate_type"), "Crate type")
 
         # tax_rate is NOT NULL on the model; resolve it the same way the invoice
         # crate paths do (caller-supplied → live CrateNetPrice → tenant setting →
@@ -279,12 +255,12 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
                 "delivery_note_id, crate_type and amount are required"
             )
 
-        delivery_note = _get_or_404(
+        delivery_note = get_or_404(
             DeliveryNoteReseller, delivery_note_id, "Delivery note"
         )
         _reject_finalized(delivery_note, "delivery note", "modify crates in finalized")
 
-        crate_type = _get_or_404(Crate, crate_type_id, "Crate type")
+        crate_type = get_or_404(Crate, crate_type_id, "Crate type")
 
         scope_qs = CrateDeliveryNoteContent.objects.filter(
             delivery_note=delivery_note,
@@ -351,14 +327,14 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
                 "delivery_note_id and crate_type query parameters are required"
             )
 
-        delivery_note = _get_or_404(
+        delivery_note = get_or_404(
             DeliveryNoteReseller, delivery_note_id, "Delivery note"
         )
         _reject_finalized(
             delivery_note, "delivery note", "delete crates from finalized"
         )
 
-        crate_type = _get_or_404(Crate, crate_type_id, "Crate type")
+        crate_type = get_or_404(Crate, crate_type_id, "Crate type")
 
         CrateDeliveryNoteContent.objects.filter(
             delivery_note=delivery_note,
@@ -427,7 +403,7 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
     )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         params = validate_query_params(request, required=["invoice_id"])
-        invoice = _get_or_404(
+        invoice = get_or_404(
             InvoiceReseller,
             params["invoice_id"],
             "Invoice",
@@ -459,12 +435,10 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
         },
     )
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        invoice = _get_or_404(
-            InvoiceReseller, request.data.get("invoice_id"), "Invoice"
-        )
+        invoice = get_or_404(InvoiceReseller, request.data.get("invoice_id"), "Invoice")
         _reject_finalized(invoice, "invoice", "add crates to finalized")
 
-        crate_type = _get_or_404(Crate, request.data.get("crate_type"), "Crate type")
+        crate_type = get_or_404(Crate, request.data.get("crate_type"), "Crate type")
 
         # Fall through the canonical resolution chain when the caller
         # didn't pin a tax_rate: live CrateNetPrice → tenant setting →
@@ -514,10 +488,10 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
                 "invoice_id, crate_type and amount are required"
             )
 
-        invoice = _get_or_404(InvoiceReseller, invoice_id, "Invoice")
+        invoice = get_or_404(InvoiceReseller, invoice_id, "Invoice")
         _reject_finalized(invoice, "invoice", "modify crates in finalized")
 
-        crate_type = _get_or_404(Crate, crate_type_id, "Crate type")
+        crate_type = get_or_404(Crate, crate_type_id, "Crate type")
 
         # Same canonical resolution as create() above.
         requested_tax_rate = request.data.get("tax_rate")
@@ -580,10 +554,10 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
                 "invoice_id and crate_type query parameters are required"
             )
 
-        invoice = _get_or_404(InvoiceReseller, invoice_id, "Invoice")
+        invoice = get_or_404(InvoiceReseller, invoice_id, "Invoice")
         _reject_finalized(invoice, "invoice", "delete crates from finalized")
 
-        crate_type = _get_or_404(Crate, crate_type_id, "Crate type")
+        crate_type = get_or_404(Crate, crate_type_id, "Crate type")
 
         CrateContentInvoiceReseller.objects.filter(
             invoice=invoice,

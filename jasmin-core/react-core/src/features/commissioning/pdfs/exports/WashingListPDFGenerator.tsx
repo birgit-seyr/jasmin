@@ -1,6 +1,10 @@
 import type { TFunction } from "i18next";
 import type { WashingListPDFProps } from "./WashingListPDF";
-import ListPDFGenerator from "./ListPDFGenerator";
+import ArticleAmountTickListPDFGenerator from "./ArticleAmountTickListPDFGenerator";
+import {
+  WASHING_LIST_PILL_KEY,
+  washAmountAccessor,
+} from "./ArticleAmountTickListPDF";
 
 interface WashingListPDFGeneratorProps {
   data: WashingListPDFProps["data"] | null;
@@ -12,22 +16,14 @@ interface WashingListPDFGeneratorProps {
   t: TFunction;
 }
 
-export default function WashingListPDFGenerator({
-  data,
-  year,
-  week,
-  dayName,
-  filename,
-  buttonText,
-  t,
-}: WashingListPDFGeneratorProps) {
+export default function WashingListPDFGenerator(
+  props: WashingListPDFGeneratorProps,
+) {
   return (
-    <ListPDFGenerator
-      data={data}
-      filename={filename}
-      buttonText={buttonText}
-      documentLoader={() => import("./WashingListPDF")}
-      documentProps={{ data: data ?? [], year, week, dayName, t }}
+    <ArticleAmountTickListPDFGenerator
+      {...props}
+      pillKey={WASHING_LIST_PILL_KEY}
+      amountAccessor={washAmountAccessor}
     />
   );
 }

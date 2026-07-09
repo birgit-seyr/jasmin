@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import SidebarShell from "./SidebarShell";
 
 interface StaffSidebarProps {
-  collapsed?: boolean;
   openKeys?: string[];
   onOpenChange?: (keys: string[]) => void;
 }

@@ -45,6 +45,10 @@ from ..schemas import (
     get_reseller_parameter,
     get_year_parameter,
 )
+from ..serializers.bulk_serializer import (
+    BulkIdsRequestSerializer,
+    BulkIdsWithDateRequestSerializer,
+)
 from ..serializers.resellers_serializer import (
     BackgroundJobEnqueueResponseSerializer,
     BulkCopyOffersResponseSerializer,
@@ -53,8 +57,6 @@ from ..serializers.resellers_serializer import (
     BulkDeleteResponseSerializer,
     BulkDocumentRequestSerializer,
     BulkDocumentWithDateRequestSerializer,
-    BulkIdsRequestSerializer,
-    BulkIdsWithDateRequestSerializer,
     BulkOperationResponseSerializer,
     BulkSendOffersRequestSerializer,
     BulkSetToPaidResponseSerializer,
@@ -70,8 +72,10 @@ from ..services.bulk_results import (
     get_delivery_note_or_error,
 )
 from ..utils.iso_week_utils import week_day_to_date
+from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 from ..utils.validation_utils import (
+    parse_bulk_ids,
     validate_and_parse_int_params,
     validate_bulk_document_request,
 )
@@ -508,16 +512,9 @@ class BulkSetToPaidDocumentsView(APIViewRolePermissionsMixin, APIView):
     )
     @transaction.atomic
     def post(self, request: Request) -> Response:
-        order_ids = request.data.get("ids", [])
+        order_ids = parse_bulk_ids(request)
         model = request.data.get("model")  # Should be "invoice"
         undo = validate_query_params(request, optional=["undo"])["undo"]
-
-        if not order_ids or not isinstance(order_ids, list):
-            raise CommissioningError(
-                "order_ids must be a non-empty list",
-                field="ids",
-                code="bulk_set_paid.ids_required",
-            )
 
         if model != "invoice":
             raise CommissioningError(
@@ -961,14 +958,7 @@ class BulkCopyOffersToNextWeekView(APIViewRolePermissionsMixin, APIView):
     )
     @transaction.atomic
     def post(self, request: Request) -> Response:
-        offer_ids = request.data.get("ids", [])
-
-        if not offer_ids or not isinstance(offer_ids, list):
-            raise CommissioningError(
-                "offer_ids must be a non-empty list",
-                field="ids",
-                code="bulk_copy_offers.ids_required",
-            )
+        offer_ids = parse_bulk_ids(request)
 
         result = OfferService.copy_offers_to_next_week(offer_ids)
 
@@ -1045,15 +1035,8 @@ class BulkCreateSummaryInvoiceFromOrdersView(APIViewRolePermissionsMixin, APIVie
     )
     @transaction.atomic
     def post(self, request: Request) -> Response:
-        order_ids = request.data.get("ids", [])
+        order_ids = parse_bulk_ids(request)
         date = request.data.get("date", None)
-
-        if not order_ids or not isinstance(order_ids, list):
-            raise CommissioningError(
-                "order_ids must be a non-empty list",
-                field="ids",
-                code="summary_invoice.ids_required",
-            )
 
         # Fetch all orders at once
         orders = list(
@@ -1259,10 +1242,13 @@ class SetInvoiceNoteView(APIViewRolePermissionsMixin, APIView):
         },
     )
     def patch(self, request: Request, pk: str) -> Response:
-        try:
-            order = Order.objects.select_related("delivery_note").get(id=pk)
-        except Order.DoesNotExist as exc:
-            raise OrderNotFound("Order not found") from exc
+        order = get_or_404(
+            Order,
+            pk,
+            "Order",
+            error_cls=OrderNotFound,
+            queryset=Order.objects.select_related("delivery_note"),
+        )
 
         delivery_note = getattr(order, "delivery_note", None)
         invoice = _get_invoice_for_delivery_note(delivery_note)
@@ -1304,10 +1290,7 @@ class SetOrderNoteView(APIViewRolePermissionsMixin, APIView):
         },
     )
     def patch(self, request: Request, pk: str) -> Response:
-        try:
-            order = Order.objects.get(id=pk)
-        except Order.DoesNotExist as exc:
-            raise OrderNotFound("Order not found") from exc
+        order = get_or_404(Order, pk, "Order", error_cls=OrderNotFound)
 
         order.note = request.data.get("note", "")
         order.save(update_fields=["note"])
@@ -1344,15 +1327,8 @@ class BulkSendInvoiceRemindersViaEmailView(APIViewRolePermissionsMixin, APIView)
         from apps.notifications.jobs import enqueue_job
         from apps.shared.tenants.email_service import capture_tenant_email_context
 
-        order_ids = request.data.get("ids", [])
+        order_ids = parse_bulk_ids(request)
         model = request.data.get("model")
-
-        if not order_ids or not isinstance(order_ids, list):
-            raise CommissioningError(
-                "ids must be a non-empty list",
-                field="ids",
-                code="bulk_invoice_reminder.ids_required",
-            )
 
         if model != "invoice":
             raise CommissioningError(
@@ -1406,10 +1382,9 @@ def offer_sending_status(request: Request) -> Response:
     delivery_week = params["delivery_week"]
     offer_group_id = params["offer_group"]
 
-    try:
-        offer_group = OfferGroup.objects.get(id=offer_group_id)
-    except OfferGroup.DoesNotExist as exc:
-        raise OfferGroupNotFound("Offer group not found") from exc
+    offer_group = get_or_404(
+        OfferGroup, offer_group_id, "Offer group", error_cls=OfferGroupNotFound
+    )
 
     resellers = offer_group.reseller_set.select_related("contact").all()
 
@@ -1477,10 +1452,9 @@ class BulkSendOffersViaEmailView(APIViewRolePermissionsMixin, APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        try:
-            offer_group = OfferGroup.objects.get(id=data["offer_group"])
-        except OfferGroup.DoesNotExist as exc:
-            raise OfferGroupNotFound("Offer group not found") from exc
+        offer_group = get_or_404(
+            OfferGroup, data["offer_group"], "Offer group", error_cls=OfferGroupNotFound
+        )
 
         # Capture tenant name / language / frontend URL HERE, where
         # connection.tenant is the real Tenant — the Huey worker runs under

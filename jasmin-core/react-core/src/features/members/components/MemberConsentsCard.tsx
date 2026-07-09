@@ -17,7 +17,7 @@ import type {
   ConsentRecordRevoke,
 } from "@shared/api/generated/models";
 import { downloadConsentPdf } from "@shared/consent/downloadConsentPdf";
-import { notify } from "@shared/utils";
+import { notify, unwrapList } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -70,14 +70,9 @@ const MemberConsentsCard = ({
   const { data, isLoading, error } = useCommissioningConsentsList();
 
   const records = useMemo<ConsentRecord[]>(() => {
-    if (!data) return [];
-    // ``data`` is ``ConsentRecord[]`` from the unpaginated default
-    // shape, but defensive against orval surfacing a paginated
-    // wrapper in the future.
-    const all: ConsentRecord[] = Array.isArray(data)
-      ? data
-      : ((data as { results?: ConsentRecord[] }).results ?? []);
-    return all.filter((r) => r.member === memberId);
+    // ``data`` is ``ConsentRecord[]`` from the unpaginated default shape, but
+    // ``unwrapList`` also handles orval surfacing a paginated wrapper.
+    return unwrapList<ConsentRecord>(data).filter((r) => r.member === memberId);
   }, [data, memberId]);
 
   const revokeMutation = useCommissioningConsentsRevokeCreate({

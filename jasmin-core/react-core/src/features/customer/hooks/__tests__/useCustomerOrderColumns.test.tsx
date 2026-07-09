@@ -35,7 +35,12 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("@hooks/configuration/useCurrency", () => ({
-  useCurrency: () => ({ currencySymbol: "€" }),
+  useCurrency: () => ({
+    currencySymbol: "€",
+    // Mirror the real formatCurrency for the suffix-currency (€) case so the
+    // tier-price cell assertions ("1.50 €/KG") hold.
+    formatCurrency: (n: number) => `${n.toFixed(2)} €`,
+  }),
 }));
 
 vi.mock("@hooks/useNumberFormat", () => ({

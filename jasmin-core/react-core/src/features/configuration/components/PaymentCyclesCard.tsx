@@ -10,6 +10,7 @@ import {
 import type { PaymentCycle as PaymentCycleType } from "@shared/api/generated/models";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
+import { paymentCycleLabel } from "@shared/utils/cycleLabels";
 
 const PAYMENT_CYCLE_OPTIONS = [
   "WEEKLY",
@@ -52,12 +53,6 @@ export default function PaymentCyclesCard() {
     [queryClient, t],
   );
 
-  const getCycleLabel = useCallback(
-    (choice: string) =>
-      t(`configuration.payment_cycle_${choice.toLowerCase()}`, choice),
-    [t],
-  );
-
   return (
     <Card
       title={t("configuration.payment_cycles")}
@@ -77,7 +72,7 @@ export default function PaymentCyclesCard() {
                   checked={cycle.is_active}
                   onChange={() => handleToggle(cycle)}
                 >
-                  {getCycleLabel(option)}
+                  {paymentCycleLabel(t, option)}
                 </Checkbox>
               </Col>
             );

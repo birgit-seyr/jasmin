@@ -1,8 +1,6 @@
-import logging
 from datetime import date
 
 from drf_spectacular.utils import extend_schema_field
-from isoweek import Week
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
@@ -17,6 +15,7 @@ from ..models import (
     Subscription,
 )
 from ..utils.dynamic_keys import AMOUNT_KEY_PREFIX, DAY_VARIATION_RE
+from ..utils.iso_week_utils import share_delivery_date
 from .box_matrix_columns_serializer import PackingBoxesMatrixColumnSerializer
 from .delivery_serializer import CapacityWeekEntrySerializer
 from .dynamic_keys import DynamicAmountKeysMixin
@@ -25,8 +24,6 @@ from .serializers_mixin import (
     NameFieldMixin,
     mask_capacity_for_anonymous,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class ShareTypeSerializer(DeletableMixin, serializers.ModelSerializer):
@@ -488,32 +485,15 @@ class ShareDeliveryOverviewSerializer(serializers.ModelSerializer):
         read_only_fields = ("is_opted_in", "optin_decided_at", "optin_decided_by")
 
     def get_delivery_date(self, obj) -> str | None:
-        """Calculate delivery date from year, week, and day number.
+        """ISO-8601 (``YYYY-MM-DD``) delivery date via the shared resolver.
 
-        Returns ISO-8601 date string (``YYYY-MM-DD``) or None if the
-        underlying year/week/day_number tuple is incomplete or invalid.
+        Uses ``share_delivery_date`` — which honours the Share's
+        ``changed_day_number`` override before falling back to the delivery
+        day's ``day_number`` — so the overview matches every other delivery-
+        date surface. ``None`` for a malformed year/week/day tuple.
         """
-        try:
-            year = obj.share.year
-            week = obj.share.delivery_week
-            day_number = (
-                obj.share.delivery_day.day_number if obj.share.delivery_day else None
-            )
-
-            if year and week and day_number is not None:
-                # isoweek: day 0 = Monday, day 6 = Sunday
-                iso_week = Week(year, week)
-                delivery_date = iso_week.day(day_number)
-                return delivery_date.isoformat()
-        except (AttributeError, ValueError, TypeError) as exc:
-            # Previously silently swallowed → null delivery_date in the API
-            # response. Log a breadcrumb so real regressions are visible.
-            logger.warning(
-                "shares.delivery_date.compute_failed share_delivery_id=%s error=%s",
-                getattr(obj, "id", None),
-                exc,
-            )
-        return None
+        delivery_date = share_delivery_date(obj)
+        return delivery_date.isoformat() if delivery_date else None
 
 
 class DeliveryExceptionGapSerializer(serializers.Serializer):

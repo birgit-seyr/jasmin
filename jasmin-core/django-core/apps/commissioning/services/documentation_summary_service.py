@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from collections import defaultdict
 from collections.abc import Callable
 from typing import Any, Literal, TypedDict
@@ -29,6 +28,7 @@ from ..models import (
     TheoreticalWashAmount,
     WashAmount,
 )
+from ..models.choices_text import MovementTypeOptions
 from ..services.documentation_service import GenericDocumentationService
 from ..services.stock_service import StockService
 from ..utils import (
@@ -92,11 +92,25 @@ class DocumentationSummaryService:
         "cleanamount": "additional_theoretical_clean_amount",
     }
     _MOVEMENT_TYPE: dict[str, str] = {
-        "harvest": "HARVEST",
-        "purchase": "PURCHASE",
-        "washamount": "WASH",
-        "cleanamount": "CLEAN",
+        "harvest": MovementTypeOptions.HARVEST,
+        "purchase": MovementTypeOptions.PURCHASE,
+        "washamount": MovementTypeOptions.WASH,
+        "cleanamount": MovementTypeOptions.CLEAN,
     }
+
+    # HARVEST additional entries split per content source (share vs order):
+    # (payload amount key, for_*_content flags). Drives both the add and update
+    # upsert paths so the two never drift.
+    _CONTENT_TYPE_FLAGS: list[tuple[str, dict[str, bool]]] = [
+        (
+            "amount_share_content",
+            {"for_share_content": True, "for_order_content": False},
+        ),
+        (
+            "amount_order_content",
+            {"for_share_content": False, "for_order_content": True},
+        ),
+    ]
 
     @staticmethod
     def _get_managers(model: ModelType, is_past: bool = False) -> ModelManagers:
@@ -796,23 +810,6 @@ class DocumentationSummaryService:
         )
 
     @staticmethod
-    def _add_crate_to_summary(
-        harvest: Harvest, total_amount: float, crate_summary: dict[str, int]
-    ) -> None:
-        """Add crate calculation to summary."""
-        harvesting_crate = harvest.harvesting_crate
-        amount_per_pu = harvest.amount_per_pu
-
-        if harvesting_crate and amount_per_pu and amount_per_pu > 0:
-            crates_needed = math.ceil(total_amount / amount_per_pu)
-            crate_name = (
-                harvesting_crate.name
-                if hasattr(harvesting_crate, "name")
-                else str(harvesting_crate)
-            )
-            crate_summary[crate_name] += crates_needed
-
-    @staticmethod
     @transaction.atomic
     def add_additional_theoretical_amount(
         data: dict[str, Any], model: ModelType
@@ -848,63 +845,23 @@ class DocumentationSummaryService:
         fk_field = DocumentationSummaryService._ADDITIONAL_FK_FIELD[model_key]
         mtype = DocumentationSummaryService._MOVEMENT_TYPE[model_key]
 
-        if model_key == "harvest":
-            # Create two separate entries: one for share, one for order
-            content_types = [
-                (
-                    "amount_share_content",
-                    {"for_share_content": True, "for_order_content": False},
-                ),
-                (
-                    "amount_order_content",
-                    {"for_share_content": False, "for_order_content": True},
-                ),
-            ]
-            for amount_key, flags in content_types:
-                amount = data.get(amount_key) or 0
-                additional_obj, _ = models["additional"].objects.update_or_create(
-                    **common_fields,
-                    **flags,
-                    defaults={"amount": amount},
-                )
-                DocumentationSummaryService._sync_additional_movement(
-                    additional_obj,
-                    amount,
-                    common_fields,
-                    share_article_obj,
-                    short_term_storage,
-                    fk_field,
-                    mtype,
-                )
-        else:
-            amount = data.get("amount")
-            additional_obj, _ = models["additional"].objects.update_or_create(
-                **common_fields,
-                defaults={"amount": amount},
-            )
-            DocumentationSummaryService._sync_additional_movement(
-                additional_obj,
-                amount,
-                common_fields,
-                share_article_obj,
-                short_term_storage,
-                fk_field,
-                mtype,
-            )
+        DocumentationSummaryService._upsert_additional_and_movement(
+            models=models,
+            common_fields=common_fields,
+            data=data,
+            model_key=model_key,
+            share_article=share_article_obj,
+            storage=short_term_storage,
+            fk_field=fk_field,
+            mtype=mtype,
+            partial=False,
+        )
 
-        # Save note on all theoretical entries for this grouping
-        note = data.get("note")
-        if note is not None:
-            theoretical_filter = {
-                "year": common_fields["year"],
-                "delivery_week": common_fields["delivery_week"],
-                "day_number": common_fields["day_number"],
-                "share_article": share_article_obj,
-                "unit": common_fields["unit"],
-                "size": common_fields["size"],
-            }
-            models["theoretical"].objects.filter(**theoretical_filter).update(note=note)
-            models["additional"].objects.filter(**theoretical_filter).update(note=note)
+        # Save note on all theoretical entries for this grouping (after the
+        # upsert so freshly created additional rows also receive it).
+        DocumentationSummaryService._propagate_note(
+            models, common_fields, data.get("note")
+        )
 
         # Get or create actual entry
         instance = DocumentationSummaryService._get_or_create_actual_instance(
@@ -968,6 +925,85 @@ class DocumentationSummaryService:
             recalculate_actual_corrections(affected, {mtype})
 
     @staticmethod
+    def _upsert_additional_and_movement(
+        *,
+        models: dict[str, Any],
+        common_fields: dict[str, Any],
+        data: dict[str, Any],
+        model_key: str,
+        share_article: Any,
+        storage: Any,
+        fk_field: str,
+        mtype: str,
+        partial: bool,
+    ) -> None:
+        """Upsert the additional-theoretical row(s) for this grouping and resync
+        their movement(s).
+
+        HARVEST splits into a share-content and an order-content entry (see
+        ``_CONTENT_TYPE_FLAGS``); every other model carries a single ``amount``
+        entry. ``share_article``/``storage`` are the movement dimensions — the
+        caller passes them from the request payload (add) or the existing
+        instance (update).
+
+        ``partial=True`` (update) touches only the keys present in ``data`` (a
+        harvest edit may send just one content amount); ``partial=False`` (add)
+        always writes both harvest entries. A harvest payload carrying a plain
+        ``amount`` instead of the content keys falls through to the single entry,
+        preserving the update path's ``elif "amount" in data`` behaviour.
+        """
+
+        def _upsert(amount: Any, flags: dict[str, bool] | None = None) -> None:
+            additional_obj, _ = models["additional"].objects.update_or_create(
+                **common_fields, **(flags or {}), defaults={"amount": amount}
+            )
+            DocumentationSummaryService._sync_additional_movement(
+                additional_obj,
+                amount,
+                common_fields,
+                share_article,
+                storage,
+                fk_field,
+                mtype,
+            )
+
+        if model_key == "harvest":
+            handled = False
+            for amount_key, flags in DocumentationSummaryService._CONTENT_TYPE_FLAGS:
+                if partial and amount_key not in data:
+                    continue
+                _upsert(data.get(amount_key) or 0, flags)
+                handled = True
+            if handled:
+                return
+
+        # Non-harvest model, or a harvest payload with no content keys present.
+        if partial and "amount" not in data:
+            return
+        _upsert(data.get("amount"))
+
+    @staticmethod
+    def _propagate_note(
+        models: dict[str, Any], common_fields: dict[str, Any], note: Any
+    ) -> None:
+        """Write ``note`` onto every theoretical + additional row of this
+        (year, week, day, article, unit, size) grouping. Storage/seller-blind so
+        the whole grouping shares the office's note; no-op when ``note is None``.
+        """
+        if note is None:
+            return
+        theoretical_filter = {
+            "year": common_fields["year"],
+            "delivery_week": common_fields["delivery_week"],
+            "day_number": common_fields["day_number"],
+            "share_article": common_fields["share_article"],
+            "unit": common_fields["unit"],
+            "size": common_fields["size"],
+        }
+        models["theoretical"].objects.filter(**theoretical_filter).update(note=note)
+        models["additional"].objects.filter(**theoretical_filter).update(note=note)
+
+    @staticmethod
     def _get_or_create_actual_instance(
         actual_model: Any, common_fields: dict[str, Any]
     ) -> Any:
@@ -1022,68 +1058,25 @@ class DocumentationSummaryService:
         DocumentationSummaryService._update_model_specific_fields(instance, data, model)
         instance.save()
 
-        # Save note on all theoretical entries for this grouping
-        note = data.get("note")
-        if note is not None:
-            theoretical_filter = {
-                "year": instance.year,
-                "delivery_week": instance.delivery_week,
-                "day_number": instance.day_number,
-                "share_article": instance.share_article,
-                "unit": instance.unit,
-                "size": instance.size,
-            }
-            models["theoretical"].objects.filter(**theoretical_filter).update(note=note)
-            models["additional"].objects.filter(**theoretical_filter).update(note=note)
+        # Save note on all theoretical entries for this grouping (before the
+        # upsert, preserving the update path's ordering).
+        DocumentationSummaryService._propagate_note(
+            models, common_fields, data.get("note")
+        )
 
         fk_field = DocumentationSummaryService._ADDITIONAL_FK_FIELD[model_key]
         mtype = DocumentationSummaryService._MOVEMENT_TYPE[model_key]
 
-        if model_key == "harvest" and (
-            "amount_share_content" in data or "amount_order_content" in data
-        ):
-            content_types = [
-                (
-                    "amount_share_content",
-                    {"for_share_content": True, "for_order_content": False},
-                ),
-                (
-                    "amount_order_content",
-                    {"for_share_content": False, "for_order_content": True},
-                ),
-            ]
-            for amount_key, flags in content_types:
-                if amount_key not in data:
-                    continue
-                amount = data.get(amount_key) or 0
-                additional_obj, _ = models["additional"].objects.update_or_create(
-                    **common_fields,
-                    **flags,
-                    defaults={"amount": amount},
-                )
-                DocumentationSummaryService._sync_additional_movement(
-                    additional_obj,
-                    amount,
-                    common_fields,
-                    instance.share_article,
-                    instance.storage,
-                    fk_field,
-                    mtype,
-                )
-        elif "amount" in data:
-            amount = data.get("amount")
-            additional_obj, _ = models["additional"].objects.update_or_create(
-                **common_fields,
-                defaults={"amount": amount},
-            )
-            DocumentationSummaryService._sync_additional_movement(
-                additional_obj,
-                amount,
-                common_fields,
-                instance.share_article,
-                instance.storage,
-                fk_field,
-                mtype,
-            )
+        DocumentationSummaryService._upsert_additional_and_movement(
+            models=models,
+            common_fields=common_fields,
+            data=data,
+            model_key=model_key,
+            share_article=instance.share_article,
+            storage=instance.storage,
+            fk_field=fk_field,
+            mtype=mtype,
+            partial=True,
+        )
 
         return instance

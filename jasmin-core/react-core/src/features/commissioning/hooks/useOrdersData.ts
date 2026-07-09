@@ -53,6 +53,7 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import { pickTierPriceFromAmount } from "@shared/utils/tierPrice";
 import { useCurrency } from "@hooks/configuration/useCurrency";
+import { useDefaultTaxRates } from "@hooks/configuration/useDefaultTaxRates";
 import { useTenant } from "@hooks/configuration/useTenant";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 
@@ -171,13 +172,13 @@ export function useOrdersData() {
   });
 
   const { getSetting, tenant, logoUrl, bioLogoUrl } = useTenant();
-  const { currencySymbol } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const { format } = useNumberFormat();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
-  const defaultTaxRateArticles = (getSetting("default_tax_rate_articles") as number) ?? 7;
-  const defaultTaxRateCrates = (getSetting("default_tax_rate_crates") as number) ?? 19;
+  const { articles: defaultTaxRateArticles, crates: defaultTaxRateCrates } =
+    useDefaultTaxRates();
   const used_tiers_for_offers = getSetting("used_tiers_for_offers") as number[] | undefined;
   // **Single-tier mode** when the tenant hasn't configured tiers: pass
   // ``[1]`` so ``pickTierPrice`` never escalates beyond ``price_1``.
@@ -815,8 +816,8 @@ export function useOrdersData() {
       dataCrates as unknown as LineItemBase[],
     );
     const { brutto } = totalsFromBreakdown(breakdown);
-    return brutto > 0 ? `${format(brutto, 2)} ${currencySymbol}` : "---";
-  }, [filteredDataOffers, filteredDataArticles, dataCrates, currencySymbol, format]);
+    return brutto > 0 ? formatCurrency(brutto) : "---";
+  }, [filteredDataOffers, filteredDataArticles, dataCrates, formatCurrency]);
 
   // --- Summary ---
 
@@ -837,10 +838,10 @@ export function useOrdersData() {
       });
       return {
         amount: isCrates ? `${format(totalAmount, 0)}` : `${format(totalAmount, 1)} ${t("commissioning.pu")}`,
-        line_netto: `${format(totalLineNetto, 2)} ${currencySymbol}`,
+        line_netto: formatCurrency(totalLineNetto),
       };
     },
-    [t, currencySymbol, format],
+    [t, format, formatCurrency],
   );
 
   const summaryDataOffers = useMemo(() => calculateSummaryData(filteredDataOffers, false), [filteredDataOffers, calculateSummaryData]);

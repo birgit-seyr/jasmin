@@ -4,12 +4,14 @@ import logging
 from collections import defaultdict
 from collections.abc import Iterable
 from datetime import date
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Any
 
 from django.db import transaction
 from django.db.models import QuerySet
 from isoweek import Week
+
+from apps.shared.money import round_money
 
 from ..errors import (
     CommissioningError,
@@ -40,15 +42,12 @@ from ..utils.dynamic_keys import DAY_VARIATION_RE, parse_amount_cell
 from ..utils.iso_week_utils import (
     previous_day_stock_coordinates,
     previous_monday,
+    saturday_of_iso_week,
     weeks_in_range,
 )
 from .stock_service import StockService
 
 logger = logging.getLogger(__name__)
-
-# Money quantum for purchase-cost aggregation (2dp, ROUND_HALF_UP) — mirrors the
-# line-pricing convention so figures match the planning page cent-for-cent.
-_CENT = Decimal("0.01")
 
 
 class ShareContentService:
@@ -93,7 +92,7 @@ class ShareContentService:
                 code="share_content.missing_required",
             )
 
-        active_at_date = Week(year, delivery_week).saturday()
+        active_at_date = saturday_of_iso_week(year, delivery_week)
 
         forecast = Forecast.objects.filter(
             year=year,
@@ -908,9 +907,7 @@ class ShareContentService:
             {
                 "year": year,
                 "week": week,
-                "amount": str(
-                    cost_by_week[(year, week)].quantize(_CENT, rounding=ROUND_HALF_UP)
-                ),
+                "amount": str(round_money(cost_by_week[(year, week)])),
             }
             for year, week in sorted(weeks)
         ]

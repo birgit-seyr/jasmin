@@ -30,6 +30,7 @@ import type { CapacityWeekEntry } from "@features/abos/utils/stationCapacity";
 import { useShareDeliveryDays } from "@features/commissioning/hooks";
 import type { ShareDeliveryDayOption } from "@features/commissioning/hooks/useShareDeliveryDays";
 import { getStatusColor, notify } from "@shared/utils";
+import { getErrorMessage } from "@shared/utils/apiError";
 import { getWeekdayChoices } from "@shared/utils/weekdayChoices";
 import {
   EditableTable,
@@ -328,7 +329,7 @@ const DeliveryStationDetailModal: FC<DeliveryStationDetailModalProps> = ({
         invalidateData();
       } catch (error) {
         console.error("Failed to save description:", error);
-        notify.error(t("common.error_saving"));
+        notify.error(getErrorMessage(error, t("common.error_saving")));
       }
     },
     [selectedDescriptionRecord, t, invalidateData],

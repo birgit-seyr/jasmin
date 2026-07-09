@@ -1,10 +1,6 @@
 from rest_framework import serializers
 
-from ..models import (
-    CrateContentInvoiceReseller,
-    CrateDeliveryNoteContent,
-    CrateOrderContent,
-)
+from ..models import CrateOrderContent
 from .serializers_mixin import LinePricingFieldsMixin, NameFieldMixin
 
 
@@ -73,23 +69,9 @@ class CrateOrderContentUpdateRequestSerializer(serializers.Serializer):
     )
 
 
-class CrateDeliveryNoteContentSerializer(
-    LinePricingFieldsMixin, NameFieldMixin, serializers.ModelSerializer
-):
-    NAME_FIELDS = ["crate_type_name"]
-
-    class Meta:
-        model = CrateDeliveryNoteContent
-        fields = "__all__"
-        read_only_fields = ["is_finalized", "finalized_at", "finalized_by"]
-
-
-class CrateContentInvoiceResellerSerializer(
-    LinePricingFieldsMixin, NameFieldMixin, serializers.ModelSerializer
-):
-    NAME_FIELDS = ["crate_type_name"]
-
-    class Meta:
-        model = CrateContentInvoiceReseller
-        fields = "__all__"
-        read_only_fields = ["is_finalized", "finalized_at", "finalized_by"]
+# NOTE: ``CrateDeliveryNoteContentSerializer`` and
+# ``CrateContentInvoiceResellerSerializer`` live in ``resellers_serializer.py``
+# — the diff-tracking variants (``DifferenceTrackingMixin``), matching their
+# article-content siblings. They are the ones wired into the viewsets and
+# re-exported from this package; a diff-less copy used to live here and silently
+# shadowed them.

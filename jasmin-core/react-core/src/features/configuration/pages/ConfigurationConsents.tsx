@@ -24,6 +24,7 @@ import { consentKindTagColor } from "@shared/consent/consentKindColors";
 import { downloadConsentPdf } from "@shared/consent/downloadConsentPdf";
 import { DateRangeStatusLegend, ExplainerText, ToolTipIcon } from "@shared/ui";
 import { useActiveStatusColumn, useDateFormat, useTenant } from "@hooks/index";
+import { unwrapList } from "@shared/utils";
 import {
   ConsentDocumentModal,
   type ConsentDocumentModalMode,
@@ -49,13 +50,10 @@ export default function ConfigurationConsents() {
   const { data: rawData, isLoading } = useCommissioningConsentDocumentsList({
     locale: tenantLanguage as never,
   });
-  const data = useMemo<TableRecord[]>(() => {
-    if (!rawData) return [];
-    const all = Array.isArray(rawData)
-      ? rawData
-      : ((rawData as { results?: ConsentDocument[] }).results ?? []);
-    return all as unknown as TableRecord[];
-  }, [rawData]);
+  const data = useMemo<TableRecord[]>(
+    () => unwrapList<ConsentDocument>(rawData) as unknown as TableRecord[],
+    [rawData],
+  );
 
   // EditableTable is wired up read-only for create/update — those
   // go through ``ConsentDocumentModal``. Delete IS wired here, but

@@ -80,17 +80,34 @@ _SHARE_CONTENT_THEORETICAL_FKS = (
 )
 
 
+def _content_movement_q(contents, *, field_name: str) -> models.Q:
+    """``Q`` matching every ``MovementShareArticle`` reachable from one or more
+    content rows: the direct ``<field_name>`` half plus each ``theoretical_*``
+    parent's ``<field_name>`` half. ``field_name`` is ``"share_content"`` or
+    ``"order_content"``. Pass a single model instance OR an iterable / queryset.
+    """
+    suffix = "" if isinstance(contents, models.Model) else "__in"
+    q = models.Q(**{f"{field_name}{suffix}": contents})
+    for fk in _SHARE_CONTENT_THEORETICAL_FKS:
+        q |= models.Q(**{f"{fk}__{field_name}{suffix}": contents})
+    return q
+
+
 def share_content_movement_q(share_contents) -> models.Q:
     """``Q`` matching every ``MovementShareArticle`` reachable from one or more
     ``ShareContent`` rows: the direct ``share_content`` half plus each
     ``theoretical_*`` half. Pass a single ``ShareContent`` instance OR an
     iterable / queryset of them (an extra term — e.g. ForecastViewSet's
     ``theoretical_harvest__forecast`` — can be OR-ed onto the result)."""
-    suffix = "" if isinstance(share_contents, models.Model) else "__in"
-    q = models.Q(**{f"share_content{suffix}": share_contents})
-    for fk in _SHARE_CONTENT_THEORETICAL_FKS:
-        q |= models.Q(**{f"{fk}__share_content{suffix}": share_contents})
-    return q
+    return _content_movement_q(share_contents, field_name="share_content")
+
+
+def order_content_movement_q(order_contents) -> models.Q:
+    """``Q`` matching every ``MovementShareArticle`` reachable from one or more
+    ``OrderContent`` rows: the direct ``order_content`` half plus each
+    ``theoretical_*`` half. Pass a single ``OrderContent`` instance OR an
+    iterable / queryset of them."""
+    return _content_movement_q(order_contents, field_name="order_content")
 
 
 class MovementShareArticleManager(models.Manager):
@@ -98,6 +115,11 @@ class MovementShareArticleManager(models.Manager):
         """All movements reachable from these ``ShareContent`` rows — see
         ``share_content_movement_q``."""
         return self.filter(share_content_movement_q(share_contents))
+
+    def for_order_contents(self, order_contents):
+        """All movements reachable from these ``OrderContent`` rows — see
+        ``order_content_movement_q``."""
+        return self.filter(order_content_movement_q(order_contents))
 
 
 class MovementShareArticle(JasminModel):

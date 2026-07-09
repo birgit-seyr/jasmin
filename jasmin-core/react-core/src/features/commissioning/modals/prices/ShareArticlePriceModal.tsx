@@ -11,6 +11,7 @@ import type { ShareArticleNetPrice } from "@shared/api/generated/models/shareArt
 import {
   useActiveStatusColumn,
   useCurrency,
+  useDefaultTaxRates,
   useNumberFormat,
   useTenant,
   useTimeBoundColumns,
@@ -47,8 +48,7 @@ export default function ShareArticlePriceModal({
   });
 
   const { getSetting } = useTenant();
-  const defaultTaxRateArticles =
-    (getSetting("default_tax_rate_articles") as number) ?? 7;
+  const { articles: defaultTaxRateArticles } = useDefaultTaxRates();
 
   const used_tiers_for_offers = getSetting("used_tiers_for_offers") as
     | number[]

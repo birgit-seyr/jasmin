@@ -3,7 +3,7 @@ import type { FormInstance } from "antd";
 import dayjs from "dayjs";
 import type { Key } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { isWeekInPast } from "@shared/utils";
+import { dateForWeekDayNumber, isWeekInPast, toApiDate } from "@shared/utils";
 import { useTranslation } from "react-i18next";
 import {
   commissioningCurrentStockBulkFinalizeCreate,
@@ -154,10 +154,11 @@ export default function DocumentationCurrentStock() {
     useInvalidateAfterTableMutation(invalidateData);
 
   const currentDate = useMemo(() => {
-    return dayjs()
-      .year(selectedYear)
-      .isoWeek(selectedWeek ?? currentWeek)
-      .isoWeekday((selectedDay ?? 0) + 1);
+    return dateForWeekDayNumber(
+      selectedYear,
+      selectedWeek ?? currentWeek,
+      selectedDay ?? 0,
+    );
   }, [selectedYear, selectedWeek, selectedDay]);
 
   const customSave = useCallback(
@@ -180,7 +181,7 @@ export default function DocumentationCurrentStock() {
         for_markets: bool(transformedData.for_markets),
         washed: bool(transformedData.washed),
         cleaned: bool(transformedData.cleaned),
-        date: currentDate.format("YYYY-MM-DD"),
+        date: toApiDate(currentDate)!,
         year: selectedYear,
         delivery_week: selectedWeek ?? currentWeek,
         day_number: selectedDay ?? 0,

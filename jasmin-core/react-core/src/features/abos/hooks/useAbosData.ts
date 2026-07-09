@@ -11,6 +11,8 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
+import { toApiDate } from "@shared/utils";
+import { parseDateLoose } from "@shared/utils/endOfTerm";
 import { useCallback, useMemo } from "react";
 import {
   getCommissioningAbosListQueryKey,
@@ -41,7 +43,7 @@ export function useAbosData() {
 
   const shareTypeParams = useMemo(
     () => ({
-      active_at_date: dayjs().format("YYYY-MM-DD"),
+      active_at_date: toApiDate(dayjs())!,
       include_future: true,
     }),
     [],
@@ -154,11 +156,8 @@ export function useAbosData() {
     (record: AboRecord) => {
       if (!record.valid_from) return allDeliveryStationDays;
 
-      const rowDate = dayjs(record.valid_from, dateFormat, true).isValid()
-        ? dayjs(record.valid_from, dateFormat, true)
-        : dayjs(record.valid_from, "YYYY-MM-DD", true);
-
-      if (!rowDate.isValid()) return allDeliveryStationDays;
+      const rowDate = parseDateLoose(record.valid_from, dateFormat);
+      if (!rowDate) return allDeliveryStationDays;
 
       // Single numeric comparison per DSD against the pre-parsed
       // window. ~1 µs per row vs ~50 µs with the previous
@@ -176,11 +175,7 @@ export function useAbosData() {
       // currently-assigned one stays selectable so an edit isn't blocked.
       // ``termWeekKeys`` is the SHARED term→weeks expansion (variation options
       // use it too) — open-ended terms fall back to a one-year window.
-      const endDate = record.valid_until
-        ? dayjs(record.valid_until, dateFormat, true).isValid()
-          ? dayjs(record.valid_until, dateFormat, true)
-          : dayjs(record.valid_until, "YYYY-MM-DD", true)
-        : null;
+      const endDate = parseDateLoose(record.valid_until, dateFormat);
       const periodWeekKeys = termWeekKeys(rowDate, endDate);
 
       return result.map((dsd) => {
@@ -221,20 +216,12 @@ export function useAbosData() {
   // ``disabled``; the shared column un-greys + tags them "sold out".
   const getShareTypeVariationsForRow = useCallback(
     (record: AboRecord) => {
-      const parse = (v: string) =>
-        dayjs(v, dateFormat, true).isValid()
-          ? dayjs(v, dateFormat, true)
-          : dayjs(v, "YYYY-MM-DD", true);
       // Default to a "subscribe now, run a year" window when the row has no
       // term yet (a fresh add-row) so fullness shows BEFORE valid_from is set.
-      const parsedFrom = record.valid_from ? parse(record.valid_from) : null;
-      const rowStart =
-        parsedFrom && parsedFrom.isValid() ? parsedFrom : dayjs().startOf("day");
-      const parsedUntil = record.valid_until ? parse(record.valid_until) : null;
-      const weekKeys = termWeekKeys(
-        rowStart,
-        parsedUntil && parsedUntil.isValid() ? parsedUntil : null,
-      );
+      const parsedFrom = parseDateLoose(record.valid_from, dateFormat);
+      const rowStart = parsedFrom ?? dayjs().startOf("day");
+      const parsedUntil = parseDateLoose(record.valid_until, dateFormat);
+      const weekKeys = termWeekKeys(rowStart, parsedUntil);
 
       return allShareTypeVariations.map((v) => {
         const isAssigned = v.value === record.share_type_variation;

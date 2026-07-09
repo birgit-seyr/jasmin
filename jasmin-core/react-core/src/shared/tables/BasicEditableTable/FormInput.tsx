@@ -12,6 +12,7 @@ import type {
 import { Input, Select, Checkbox, DatePicker, TimePicker, Switch } from "antd";
 import type { GetRef, InputProps, InputRef, SelectProps } from "antd";
 import dayjs from "dayjs";
+import { toApiDate } from "@shared/utils/apiDate";
 import { useDateFormat, useTimeFormat } from "@hooks/index";
 import { toValidDayjs } from "@shared/utils/dayjsParse";
 import { withClearOption } from "./selectOptions";
@@ -408,7 +409,7 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
             value={toValidDayjs(value, [dateFormat, "YYYY-MM-DD"])}
             disabledDate={disabledDate}
             onChange={(date: dayjs.Dayjs | null) => {
-              const formatted = date ? date.format("YYYY-MM-DD") : null;
+              const formatted = toApiDate(date);
               if (onChange) {
                 onChange(formatted);
               }

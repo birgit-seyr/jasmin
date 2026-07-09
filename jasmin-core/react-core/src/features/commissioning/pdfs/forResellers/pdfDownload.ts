@@ -8,6 +8,7 @@
 import type { TFunction } from "i18next";
 import { downloadBlob } from "@shared/utils";
 import { embedZUGFeRDXML } from "../zugferd";
+import { isCreditNote } from "./pdfBase";
 
 /** Canonical reseller-document PDF filename: ``<Label>-<prefix>-<number>.pdf``.
  * A storno / correction is labeled "Storno-Rechnung", not "Rechnung", so a
@@ -18,9 +19,7 @@ export function invoicePdfFilename(
   number: string | number | null | undefined,
   documentType?: string | null,
 ): string {
-  const isStorno =
-    documentType === "storno" || documentType === "correction";
-  const label = isStorno
+  const label = isCreditNote(documentType)
     ? t("commissioning.storno_invoice_title")
     : t("commissioning.invoice");
   return `${label}-${prefix}-${number}.pdf`;

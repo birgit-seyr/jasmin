@@ -20,7 +20,7 @@ import {
   useCommissioningConsentDocumentsCreate,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { ConsentDocument } from "@shared/api/generated/models";
-import { notify } from "@shared/utils";
+import { notify, toApiDate } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 
 const { Text } = Typography;
@@ -134,7 +134,7 @@ export default function ConsentDocumentModal({
         version: values.version,
         locale: tenantLanguage,
         title: values.title || "",
-        valid_from: values.valid_from.format("YYYY-MM-DD"),
+        valid_from: toApiDate(values.valid_from)!,
         body: values.body,
       } as ConsentDocument,
     });

@@ -34,16 +34,6 @@ class BulkUnfinalizeResponseSerializer(serializers.Serializer):
     unfinalized_count = serializers.IntegerField()
 
 
-class BulkFinalizeShareContentRequestSerializer(serializers.Serializer):
-    """Request body for bulk finalize/unfinalize share content by composite IDs."""
-
-    ids = serializers.ListField(
-        child=serializers.CharField(),
-        required=True,
-        help_text="List of composite IDs (format: year_week_shareArticleId_unit_size)",
-    )
-
-
 class BulkFinalizeShareContentResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
     finalized_count = serializers.IntegerField()

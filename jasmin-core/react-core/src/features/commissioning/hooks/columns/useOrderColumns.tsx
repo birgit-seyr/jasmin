@@ -21,7 +21,12 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { activeAtDateForWeek } from "@shared/utils";
+import {
+  activeAtDateForWeek,
+  decimalsForUnit,
+  editableOnlyOnCreate,
+  formatAmountForUnit,
+} from "@shared/utils";
 import { pickTierPrice } from "@shared/utils/tierPrice";
 import { useAmountUnitSizeColumns } from "./useAmountUnitSizeColumns";
 
@@ -32,7 +37,7 @@ interface UseOrderColumnsParams {
 
 export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
   const { t } = useTranslation();
-  const { currencySymbol } = useCurrency();
+  const { currencySymbol, formatCurrency } = useCurrency();
   const { format } = useNumberFormat();
   const { getUnitLabel } = useUnitOptions();
   const offersParams = useMemo<CommissioningOffersListParams>(
@@ -81,10 +86,11 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
         render: (value: unknown, record: Record<string, unknown>) => {
           const numValue = Number(value);
           if (isNaN(numValue) || numValue === 0) return "";
-          if (!record.unit) return format(numValue, 2);
-          return record.unit === "KG"
-            ? format(numValue, 2)
-            : format(numValue, 1);
+          return formatAmountForUnit(
+            numValue,
+            record.unit as string | undefined,
+            format,
+          );
         },
       },
     },
@@ -149,7 +155,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
       render: (_: unknown, record: Record<string, unknown>) => (
         <span>
           {record.price_per_unit
-            ? `${format(Number(record.price_per_unit), 2)} ${currencySymbol}/${getUnitLabel(record.unit as string)}`
+            ? `${formatCurrency(Number(record.price_per_unit))}/${getUnitLabel(record.unit as string)}`
             : ""}
         </span>
       ),
@@ -179,7 +185,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
       render: (_: unknown, record: Record<string, unknown>) => (
         <span>
           {record.line_netto
-            ? `${format(Number(record.line_netto), 2)} ${currencySymbol}`
+            ? formatCurrency(Number(record.line_netto))
             : ""}
         </span>
       ),
@@ -214,7 +220,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
       width: "26em",
       align: "left",
       options: offers,
-      disabled: (record: TableRecord) => record.key != -1,
+      disabled: editableOnlyOnCreate,
       foreignKey: { valueField: "offer", displayField: "offer_name" },
       sortable: true,
       // Seed the per-unit price from the picked offer (tier by the current
@@ -307,7 +313,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
     ...washingCleaningColumns,
     {
       ...shareArticleColumn,
-      disabled: (record: TableRecord) => record.key != -1,
+      disabled: editableOnlyOnCreate,
     },
     {
       title: <>{t("commissioning.sort")}</>,
@@ -511,7 +517,9 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
           if (!isNaN(orderedAmount) && !isNaN(amountPerPu) && amountPerPu > 0) {
             const calculatedAmount = orderedAmount * amountPerPu;
             baseData.amount = Number(
-              calculatedAmount.toFixed(transformedData.unit === "KG" ? 2 : 1),
+              calculatedAmount.toFixed(
+                decimalsForUnit(transformedData.unit as string | undefined),
+              ),
             );
           }
         }

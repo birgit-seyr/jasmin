@@ -17,6 +17,7 @@ import {
   buildCsvString,
   downloadCsvBlob,
   resolveCsvDialect,
+  toApiDate,
 } from "@shared/utils";
 import type { PriceColumn } from "./ExportCsvAtDateModal";
 import { useSharePriceCsvColumns } from "./useSharePriceCsvColumns";
@@ -226,7 +227,7 @@ export default function ExportCsvAllArticles({
 
   const fetchAll = useCallback(() => {
     if (!selectedDate) return;
-    setLoadedDate(selectedDate.format("YYYY-MM-DD"));
+    setLoadedDate(toApiDate(selectedDate));
   }, [selectedDate]);
 
   const handleExport = useCallback(() => {

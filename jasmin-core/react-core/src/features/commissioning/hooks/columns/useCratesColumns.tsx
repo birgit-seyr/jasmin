@@ -6,6 +6,7 @@ import type {
   SelectOption,
 } from "@shared/tables/BasicEditableTable/types";
 import { itemLineNetto, type LineNettoInput } from "@shared/utils/lineNetto";
+import { editableOnlyOnCreate } from "@shared/utils";
 import { useCurrency } from "@hooks/configuration/useCurrency";
 import type { CrateOption } from "../useCrates";
 import { useCrates } from "../useCrates";
@@ -27,12 +28,12 @@ interface CratesColumnOptions {
 export const useCratesColumns = (options: CratesColumnOptions = { without_price: false }) => {
   const { t } = useTranslation();
   const { crates } = useCrates({ includeNullOption: false, get_price_info: true });
-  const { currencySymbol } = useCurrency();
+  const { currencySymbol, formatCurrency } = useCurrency();
   const { format } = useNumberFormat();
   const { noteColumn } = useNoteColumn({ inputType: "optional" });
 
   const {
-    disableCrateType = (record: Record<string, unknown>) => record.key !== -1,
+    disableCrateType = editableOnlyOnCreate,
     showNote = true,
     without_price = false,
     ...columnOverrides
@@ -119,12 +120,12 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
             <DiffCell
               value={
                 record.price_per_unit
-                  ? `${format(Number(record.price_per_unit), 2)} ${currencySymbol}`
+                  ? formatCurrency(Number(record.price_per_unit))
                   : ""
               }
               differs={record.price_per_unit_differs as boolean | undefined}
               original={record.original_price_per_unit}
-              formatOriginal={(o) => `${format(Number(o), 2)} ${currencySymbol}`}
+              formatOriginal={(o) => formatCurrency(Number(o))}
             />
           ),
         },
@@ -164,11 +165,7 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
             const finalPrice = itemLineNetto(
               record as unknown as LineNettoInput,
             );
-            return (
-              <span>
-                {format(finalPrice, 2)} {currencySymbol}
-              </span>
-            );
+            return <span>{formatCurrency(finalPrice)}</span>;
           },
         },
         {
@@ -218,6 +215,7 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
     noteColumn,
     columnOverrides,
     currencySymbol,
+    formatCurrency,
     format,
     handleCrateChange,
     without_price,

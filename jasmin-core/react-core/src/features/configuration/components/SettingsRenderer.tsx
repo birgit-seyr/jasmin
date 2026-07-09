@@ -7,6 +7,7 @@ import {
   Typography,
 } from "antd";
 import dayjs from "dayjs";
+import { toApiDate } from "@shared/utils";
 import type { ComponentType } from "react";
 import { ReactNode } from "react";
 import { blockNonNumericKeys } from "@shared/utils/numberFormat";
@@ -270,7 +271,7 @@ export const SettingsRenderer = {
             <DatePicker
               value={value ? dayjs(value as string) : null}
               onChange={(date) =>
-                onChange(date ? date.format("YYYY-MM-DD") : null)
+                onChange(toApiDate(date))
               }
               format={options.dateFormat}
               style={{ width: "100%", marginTop: 4 }}

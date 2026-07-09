@@ -82,3 +82,14 @@ class MaskedIBANFieldMixin:
 
     def get_account_holder_masked(self, obj) -> str:
         return mask_account_holder(getattr(obj, self.MASKED_ACCOUNT_HOLDER_SOURCE))
+
+    # Boolean "is a value stored" companions for the self-service / GDPR read
+    # surfaces that never echo the secret at all (not even masked) but still
+    # need to tell the form whether a value exists to type-over. Driven by the
+    # same source class attrs, so the "stored" signal can't drift from the
+    # masked one.
+    def get_iban_stored(self, obj) -> bool:
+        return bool(getattr(obj, self.MASKED_IBAN_SOURCE))
+
+    def get_account_holder_stored(self, obj) -> bool:
+        return bool(getattr(obj, self.MASKED_ACCOUNT_HOLDER_SOURCE))

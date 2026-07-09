@@ -28,7 +28,10 @@ vi.mock(
 );
 
 vi.mock("@hooks/index", () => ({
-  useCurrency: () => ({ currencySymbol: "€" }),
+  useCurrency: () => ({
+    currencySymbol: "€",
+    formatCurrency: (n: number) => `${n.toFixed(2)} €`,
+  }),
   useNumberFormat: () => ({ format: (n: number) => n.toFixed(2) }),
   useDateFormat: () => ({
     dateFormat: "DD.MM.YYYY",

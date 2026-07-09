@@ -16,7 +16,7 @@ import { ToolTipIcon } from "@shared/ui";
 import { organicStatusOptions } from "@hooks/index";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 import type { CrateOption } from "../useCrates";
-import { isFieldDisabled } from "@shared/utils";
+import { getShareOptionLabel, isFieldDisabled, renderNumber } from "@shared/utils";
 
 // Pure row predicates — a row is harvest-only or purchase-only based on
 // ``is_purchased``. Module-level so they're stable references.
@@ -174,7 +174,7 @@ export function useShareArticleListColumns({
         ).map((opt: { value: string; label: string }, idx: number) => ({
           title: (
             <span style={{ fontSize: "0.85em" }}>
-              {t(`commissioning.share_option.${opt.value}`, opt.label)}
+              {getShareOptionLabel(opt.value, t)}
             </span>
           ),
           dataIndex: opt.value.toLowerCase(),
@@ -216,7 +216,7 @@ export function useShareArticleListColumns({
           width: "6em",
           className: "column-group-start",
 
-          render: (value: number) => (value ? format(Number(value), 3) : null),
+          render: renderNumber(format, 3),
         },
         {
           title: (
@@ -229,7 +229,7 @@ export function useShareArticleListColumns({
           align: "center",
           width: "6em",
 
-          render: (value: number) => (value ? format(Number(value), 3) : null),
+          render: renderNumber(format, 3),
         },
         {
           title: (
@@ -242,7 +242,7 @@ export function useShareArticleListColumns({
           align: "center",
           width: "6em",
 
-          render: (value: number) => (value ? format(Number(value), 3) : null),
+          render: renderNumber(format, 3),
         },
         {
           title: (
@@ -256,7 +256,7 @@ export function useShareArticleListColumns({
           width: "6em",
           className: "column-group-start",
 
-          render: (value: number) => (value ? format(Number(value), 0) : null),
+          render: renderNumber(format, 0),
         },
         {
           title: (
@@ -269,7 +269,7 @@ export function useShareArticleListColumns({
           align: "center",
           width: "6em",
 
-          render: (value: number) => (value ? format(Number(value), 0) : null),
+          render: renderNumber(format, 0),
         },
         {
           title: (
@@ -282,7 +282,7 @@ export function useShareArticleListColumns({
           align: "center",
           width: "6em",
 
-          render: (value: number) => (value ? format(Number(value), 0) : null),
+          render: renderNumber(format, 0),
         },
         {
           title: (
@@ -429,7 +429,7 @@ export function useShareArticleListColumns({
           align: "center",
           width: "6em",
 
-          render: (value: number) => (value ? format(Number(value), 3) : null),
+          render: renderNumber(format, 3),
         },
         {
           title: (
@@ -444,7 +444,7 @@ export function useShareArticleListColumns({
           align: "center",
           width: "6.5em",
 
-          render: (value: number) => (value ? format(Number(value), 0) : null),
+          render: renderNumber(format, 0),
         },
         {
           title: (
@@ -459,7 +459,7 @@ export function useShareArticleListColumns({
           align: "center",
           width: "7em",
 
-          render: (value: number) => (value ? format(Number(value), 0) : null),
+          render: renderNumber(format, 0),
         },
         {
           title: (

@@ -1,5 +1,5 @@
 import { useShareTypes } from "@hooks/index";
-import dayjs from "dayjs";
+import { activeAtDateForWeek } from "@shared/utils/weekRange";
 import type { CSSProperties } from "react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -44,11 +44,7 @@ const ShareTypeSelector = ({
 
   const activeAtDate = useMemo(() => {
     if (!year || !delivery_week) return undefined;
-    return dayjs()
-      .year(year)
-      .isoWeek(delivery_week)
-      .isoWeekday(6)
-      .format("YYYY-MM-DD");
+    return activeAtDateForWeek(year, delivery_week);
   }, [year, delivery_week]);
 
   const { shareTypes, loading } = useShareTypes(

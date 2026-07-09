@@ -192,15 +192,6 @@
     "5": "sat",
     "6": "sun"
   },
-  "weekdaysBIG": {
-    "0": "monday",
-    "1": "tuesday",
-    "2": "wednesday",
-    "3": "thursday",
-    "4": "friday",
-    "5": "saturday",
-    "6": "sunday"
-  },
   "documentation_amounts": "record inventory",
   "expected_stock": "expected stock",
   "actual_stock": "actual stock",

@@ -72,6 +72,7 @@ from ..services.delivery_exceptions import (
 )
 from ..utils import get_contact_annotations
 from ..utils.iso_week_utils import weeks_in_range
+from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 
 logger = logging.getLogger(__name__)
@@ -282,10 +283,12 @@ class DeliveryToursViewSet(RolePermissionsMixin, viewsets.ViewSet):
         delivery_day_id: str = data["delivery_day"]
         tours: list[dict[str, Any]] = data["tours"]
 
-        try:
-            shares_delivery_day = SharesDeliveryDay.objects.get(id=delivery_day_id)
-        except SharesDeliveryDay.DoesNotExist as exc:
-            raise DeliveryDayNotFound("Delivery day not found") from exc
+        shares_delivery_day = get_or_404(
+            SharesDeliveryDay,
+            delivery_day_id,
+            "Delivery day",
+            error_cls=DeliveryDayNotFound,
+        )
 
         with transaction.atomic():
             all_delivery_station_days = DeliveryStationDay.objects.filter(

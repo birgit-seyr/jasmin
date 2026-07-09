@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import SidebarShell from "./SidebarShell";
 
 interface WarehouseSidebarProps {
-  collapsed?: boolean;
   openKeys?: string[];
   onOpenChange?: (keys: string[]) => void;
 }

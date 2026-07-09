@@ -583,9 +583,6 @@ class MyMembershipCancelView(APIView):
         },
     )
     def post(self, request: Request) -> Response:
-        from datetime import date as _date
-
-        from django.db.models import Q
         from django.utils import timezone
 
         from core.errors import BadRequestError
@@ -593,6 +590,7 @@ class MyMembershipCancelView(APIView):
         from ..errors import MemberAlreadyCancelled, MemberHasActiveSubscriptions
         from ..models import Subscription
         from ..services.member_cancellation import cancel_member_with_coop_shares
+        from ..utils.validation_utils import parse_body_date
 
         member: Member | None = getattr(request.user, "member_profile", None)
         if member is None:
@@ -603,34 +601,16 @@ class MyMembershipCancelView(APIView):
         # Restraint: a member may only self-cancel once they hold no active
         # subscriptions (admin-confirmed, not cancelled, not past their term).
         today = timezone.now().date()
-        has_active_subscription = (
-            Subscription.objects.filter(
-                member=member,
-                admin_confirmed=True,
-                cancelled_at__isnull=True,
-            )
-            .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
-            .exists()
-        )
+        has_active_subscription = Subscription.active_for_member(member, today).exists()
         if has_active_subscription:
             raise MemberHasActiveSubscriptions(
                 "Cancel (or let expire) your active subscriptions before "
                 "cancelling your membership."
             )
 
-        effective_raw = request.data.get("effective_at")
-        if not effective_raw:
-            raise BadRequestError(
-                "effective_at is required",
-                code="member.cancel.effective_at_required",
-            )
-        try:
-            effective = _date.fromisoformat(str(effective_raw))
-        except ValueError as exc:
-            raise BadRequestError(
-                "effective_at must be YYYY-MM-DD",
-                code="member.cancel.effective_at_format",
-            ) from exc
+        effective = parse_body_date(
+            request, "effective_at", code_prefix="member.cancel"
+        )
 
         # A member may NOT backdate their own exit — a past effective_at would
         # rewrite the GenG Austrittsdatum and shrink the coop-share payback

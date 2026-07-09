@@ -5,9 +5,15 @@ export { useNoteColumn } from './columns/useNoteColumn';
 export { useContactColumns } from './columns/useContactColumns';
 export { useTimeBoundColumns } from './columns/useTimeBoundColumns';
 export { useCurrency } from './configuration/useCurrency';
+export {
+  useDefaultTaxRates,
+  type DefaultTaxRates,
+} from './configuration/useDefaultTaxRates';
 export { useAutoSave } from './configuration/useAutoSave';
 export { useDateFormat } from './configuration/useDateFormat';
 export { useDateRangePresets } from './configuration/useDateRangePresets';
+export { useDeliveryDayLabel } from './useDeliveryDayLabel';
+export { useTenantYearOptions } from './configuration/useTenantYearOptions';
 export {
   useFiscalYearRangeState,
   currentFiscalYearRange,

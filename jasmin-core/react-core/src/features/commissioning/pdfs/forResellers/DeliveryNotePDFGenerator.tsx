@@ -6,6 +6,7 @@ import { useCommissioningDeliveryNotesRetrieve } from "@shared/api/generated/com
 import { useDateFormat } from "@hooks/index";
 import { useTenant } from "@hooks/configuration/useTenant";
 import DeliveryNotePDF from "./DeliveryNotePDF";
+import { openStoredPdf } from "./pdfDownload";
 import { useResellerPdfContext } from "./resellerPdfContext";
 import { buildDeliveryNotePdfData } from "./resellerPdfData";
 
@@ -97,7 +98,7 @@ export default function DeliveryNotePDFGenerator({
 
   const handlePDFDownload = () => {
     if (!storedFileUrl) return;
-    window.open(storedFileUrl, "_blank", "noopener,noreferrer");
+    openStoredPdf(storedFileUrl);
   };
 
   if (viewMode) {

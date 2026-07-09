@@ -12,6 +12,7 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
+import { editableOnlyOnCreate } from "@shared/utils";
 import type { PlotOption } from "../usePlots";
 
 interface UseForecastColumnsArgs {
@@ -71,7 +72,7 @@ export function useForecastColumns({
       finalColumn,
       {
         ...shareArticleColumn,
-        disabled: (record: TableRecord) => record.key != -1,
+        disabled: editableOnlyOnCreate,
       },
       ...amountUnitSizeColumns,
       ...(fruit_and_veg_shares_are_separate

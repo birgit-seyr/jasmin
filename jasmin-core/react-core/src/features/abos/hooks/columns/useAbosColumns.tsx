@@ -18,6 +18,7 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import { LinkButton, StatusButton, ToolTipIcon } from "@shared/ui";
 import type { AboRecord } from "@features/abos/pages/types";
+import { paymentCycleLabel } from "@shared/utils/cycleLabels";
 import { parseDateLoose } from "@shared/utils/endOfTerm";
 import { getNextSunday } from "@shared/utils/nextSunday";
 import { useCurrency } from "@hooks/configuration/useCurrency";
@@ -550,12 +551,7 @@ export function useAbosColumns({
         },
         disabled: aboIsConfirmed,
         render: (value: unknown) =>
-          value
-            ? t(
-                `configuration.payment_cycle_${(value as string).toLowerCase()}`,
-                value as string,
-              )
-            : "",
+          value ? paymentCycleLabel(t, value as string) : "",
       },
       {
         title: <>{t("members.deliveries")}</>,

@@ -8,7 +8,6 @@ from decimal import Decimal, InvalidOperation
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models import QuerySet  # noqa: F401  used in type hints
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -20,13 +19,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authz.permissions import APIViewRolePermissionsMixin, IsStaff
-from core.errors import NotFoundError
 from core.serializers import ErrorResponseSerializer
 
 from ..errors import (
     CompositeIdInvalid,
     InventoryEntryNotFound,
-    RequiredFieldMissing,
+    ShareArticleNotFound,
+    StorageNotFound,
 )
 from ..models import MovementShareArticle, ShareArticle, Storage
 from ..models.choices_text import MovementTypeOptions
@@ -38,6 +37,7 @@ from ..schemas import (
     get_year_parameter,
 )
 from ..serializers import (
+    BulkIdsRequestSerializer,
     InventoryEntrySerializer,
     StockComparisonSerializer,
     StorageLoggingEntrySerializer,
@@ -48,7 +48,9 @@ from ..utils import (
     parse_composite_id,
 )
 from ..utils.iso_week_utils import week_day_to_date
+from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
+from ..utils.validation_utils import parse_bulk_ids
 
 
 def _ywd_to_datetime(year: int, delivery_week: int, day_number: int | None) -> datetime:
@@ -225,11 +227,18 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
                     code="stock.amount_negative",
                 )
 
-        share_article = get_object_or_404(ShareArticle, id=parsed["share_article_id"])
+        share_article = get_or_404(
+            ShareArticle,
+            parsed["share_article_id"],
+            "Share article",
+            error_cls=ShareArticleNotFound,
+        )
 
         storage = None
         if parsed["storage_id"]:
-            storage = get_object_or_404(Storage, id=parsed["storage_id"])
+            storage = get_or_404(
+                Storage, parsed["storage_id"], "Storage", error_cls=StorageNotFound
+            )
 
         # Find existing INVENTORY movement for this entity on this day_number
         inventory_date = _ywd_to_datetime(
@@ -797,22 +806,9 @@ def _build_bulk_inventory_response(
 
 
 # Shared @extend_schema fragments for the three bulk-inventory endpoints
-# (finalize / set-as-expected / set-to-zero): identical request body + 200
-# response shape — only the per-endpoint summary/description differ.
-BULK_INVENTORY_REQUEST = {
-    "application/json": {
-        "type": "object",
-        "required": ["ids"],
-        "properties": {
-            "ids": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Array of composite IDs",
-            },
-        },
-    }
-}
-
+# (finalize / set-as-expected / set-to-zero): identical request body
+# (``BulkIdsRequestSerializer``) + 200 response shape — only the per-endpoint
+# summary/description differ.
 _BULK_INVENTORY_RESPONSE_BODY = {
     "type": "object",
     "properties": {
@@ -842,15 +838,6 @@ BULK_INVENTORY_RESPONSE = {
     ),
     400: ErrorResponseSerializer,
 }
-
-
-def _extract_ids(request: Request) -> list[str]:
-    """Pull the required ``ids`` array from a bulk-action request body, raising
-    ``RequiredFieldMissing`` when it is absent or empty."""
-    composite_ids: list[str] = request.data.get("ids", [])
-    if not composite_ids:
-        raise RequiredFieldMissing("No IDs provided", field="ids")
-    return composite_ids
 
 
 def _pre_acquire_entity_locks(composite_ids: list[str]) -> None:
@@ -889,7 +876,7 @@ def _pre_acquire_entity_locks(composite_ids: list[str]) -> None:
     Finalize multiple INVENTORY entries by setting is_finalized=True.
     Sets amount to theoretical_current_stock ONLY if amount is null/None.
     """,
-    request=BULK_INVENTORY_REQUEST,
+    request=BulkIdsRequestSerializer,
     responses=BULK_INVENTORY_RESPONSE,
 )
 @api_view(["POST"])
@@ -897,7 +884,7 @@ def _pre_acquire_entity_locks(composite_ids: list[str]) -> None:
 @transaction.atomic
 def bulk_finalize_current_stock(request: Request) -> Response:
     """Finalize multiple INVENTORY entries by setting is_finalized=True."""
-    composite_ids = _extract_ids(request)
+    composite_ids = parse_bulk_ids(request)
     _pre_acquire_entity_locks(composite_ids)
 
     grouped, errors = _group_composite_ids(composite_ids)
@@ -928,7 +915,7 @@ def bulk_finalize_current_stock(request: Request) -> Response:
     Set amount to theoretical_current_stock for multiple INVENTORY entries.
     ONLY updates entries where amount is null/None.
     """,
-    request=BULK_INVENTORY_REQUEST,
+    request=BulkIdsRequestSerializer,
     responses=BULK_INVENTORY_RESPONSE,
 )
 @api_view(["POST"])
@@ -936,7 +923,7 @@ def bulk_finalize_current_stock(request: Request) -> Response:
 @transaction.atomic
 def bulk_set_as_expected_current_stock(request: Request) -> Response:
     """Set amount to theoretical_current_stock where amount is null/None."""
-    composite_ids = _extract_ids(request)
+    composite_ids = parse_bulk_ids(request)
     _pre_acquire_entity_locks(composite_ids)
 
     grouped, errors = _group_composite_ids(composite_ids)
@@ -968,7 +955,7 @@ def bulk_set_as_expected_current_stock(request: Request) -> Response:
     ONLY creates entries where none exist yet.
     Useful for marking items as counted but found to be zero.
     """,
-    request=BULK_INVENTORY_REQUEST,
+    request=BulkIdsRequestSerializer,
     responses=BULK_INVENTORY_RESPONSE,
 )
 @api_view(["POST"])
@@ -976,7 +963,7 @@ def bulk_set_as_expected_current_stock(request: Request) -> Response:
 @transaction.atomic
 def bulk_set_to_zero_current_stock(request: Request) -> Response:
     """Set amount to 0 for entries where amount is null/None."""
-    composite_ids = _extract_ids(request)
+    composite_ids = parse_bulk_ids(request)
     _pre_acquire_entity_locks(composite_ids)
 
     updated_count = 0
@@ -1117,13 +1104,7 @@ class StorageLoggingView(APIViewRolePermissionsMixin, APIView):
 
     @staticmethod
     def _get_storage_or_error(storage_id: str) -> Storage:
-        try:
-            return Storage.objects.get(id=storage_id)
-        except Storage.DoesNotExist as exc:
-            raise NotFoundError(
-                f"Storage with id '{storage_id}' not found",
-                code="storage.not_found",
-            ) from exc
+        return get_or_404(Storage, storage_id, "Storage", error_cls=StorageNotFound)
 
     @staticmethod
     def _parse_date_filters(

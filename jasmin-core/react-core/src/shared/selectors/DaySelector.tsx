@@ -3,7 +3,8 @@ import { Button, Divider, Select, Space } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useIsMobile, useDateFormat } from "@hooks/index";
+import { useIsMobile, useDeliveryDayLabel } from "@hooks/index";
+import { dateForWeekDayNumber } from "@shared/utils";
 
 const { Option } = Select;
 
@@ -42,19 +43,14 @@ export default function DaySelector({
 
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  const { dateFormat, mobileDateFormat } = useDateFormat();
+  const deliveryDayLabel = useDeliveryDayLabel();
 
   const calculateDate = (day: number | null, week = selectedWeek) => {
     if (customDateCalculator) {
       return customDateCalculator(day);
     }
     if (day === null) return "";
-
-    const dayNumber = Number(day) + 1;
-    const date = dayjs().year(selectedYear).isoWeek(week).isoWeekday(dayNumber);
-    return isMobile
-      ? date.format(`dd, ${mobileDateFormat}`)
-      : date.format(`dddd, ${dateFormat}`);
+    return deliveryDayLabel(selectedYear, week, day);
   };
 
   const nextDay = useCallback(() => {
@@ -96,16 +92,8 @@ export default function DaySelector({
         return dayjs(dateA).valueOf() - dayjs(dateB).valueOf();
       }
 
-      const dayNumberA = Number(a) + 1;
-      const dayNumberB = Number(b) + 1;
-      const dateA = dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek)
-        .isoWeekday(dayNumberA);
-      const dateB = dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek)
-        .isoWeekday(dayNumberB);
+      const dateA = dateForWeekDayNumber(selectedYear, selectedWeek, a);
+      const dateB = dateForWeekDayNumber(selectedYear, selectedWeek, b);
 
       return dateA.valueOf() - dateB.valueOf();
     });

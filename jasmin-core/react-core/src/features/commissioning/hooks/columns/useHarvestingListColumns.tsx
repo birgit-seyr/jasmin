@@ -16,6 +16,7 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ToolTipIcon } from "@shared/ui";
+import { editableOnlyOnCreate } from "@shared/utils";
 import { useCrates } from "../useCrates";
 import { useSizeOptions } from "@hooks/useSizeOptions";
 import { useAmountUnitSizeColumns } from "./useAmountUnitSizeColumns";
@@ -81,15 +82,11 @@ export function useHarvestingListColumns({
     overrides: {
       unit: {
         onFieldChange: handleUnitChange,
-        disabled: (record: Record<string, unknown>) => {
-          if (record.key != -1) return true;
-        },
+        disabled: editableOnlyOnCreate,
         hidden: isMobile || isGardenerView,
       },
       size: {
-        disabled: (record: Record<string, unknown>) => {
-          if (record.key != -1) return true;
-        },
+        disabled: editableOnlyOnCreate,
         hidden: isMobile || isGardenerView,
       },
     },
@@ -393,7 +390,7 @@ export function useHarvestingListColumns({
     () => [
       {
         ...shareArticleColumn,
-        disabled: (record: TableRecord) => record.key != -1,
+        disabled: editableOnlyOnCreate,
         pdf: {
           include: true,
           width: widthShareArticle,

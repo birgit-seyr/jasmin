@@ -28,7 +28,7 @@ import {
   useTenant,
   useUnitOptions,
 } from "@hooks/index";
-import { formatWeekLabel, generatePdfFilename } from "@shared/utils";
+import { formatWeekLabel, generatePdfFilename, getShareOptionLabel } from "@shared/utils";
 import { CommissioningListPackingPDFGenerator } from "@features/commissioning/pdfs";
 
 const currentYear = dayjs().year();
@@ -252,7 +252,7 @@ export default function CommissioningListPacking() {
     () =>
       shareOptionValues
         .map((value) => ({
-          label: t(`commissioning.share_option.${value}`),
+          label: getShareOptionLabel(value, t),
           rows: (rowsByOption[value] ?? []).map((row) => ({
             id: row.id,
             share_article_name: row.share_article_name,
@@ -313,7 +313,7 @@ export default function CommissioningListPacking() {
         <ShareOptionPackingTable
           key={value}
           shareOption={value}
-          label={t(`commissioning.share_option.${value}`)}
+          label={getShareOptionLabel(value, t)}
           showHeading={shareOptionValues.length > 1}
           columns={columns}
           year={selectedYear}

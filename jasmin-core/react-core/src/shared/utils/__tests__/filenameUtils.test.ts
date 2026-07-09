@@ -11,13 +11,13 @@ const t = (key: string) => {
   if (key === "commissioning.KW") return "KW";
   // Mirror the de translation for weekday names so day-label tests are stable.
   const days: Record<string, string> = {
-    "commissioning.weekdaysBIG.0": "Montag",
-    "commissioning.weekdaysBIG.1": "Dienstag",
-    "commissioning.weekdaysBIG.2": "Mittwoch",
-    "commissioning.weekdaysBIG.3": "Donnerstag",
-    "commissioning.weekdaysBIG.4": "Freitag",
-    "commissioning.weekdaysBIG.5": "Samstag",
-    "commissioning.weekdaysBIG.6": "Sonntag",
+    "common.weekday_monday": "Montag",
+    "common.weekday_tuesday": "Dienstag",
+    "common.weekday_wednesday": "Mittwoch",
+    "common.weekday_thursday": "Donnerstag",
+    "common.weekday_friday": "Freitag",
+    "common.weekday_saturday": "Samstag",
+    "common.weekday_sunday": "Sonntag",
   };
   return days[key] ?? key;
 };
@@ -66,15 +66,15 @@ describe("formatWeekLabel", () => {
 });
 
 describe("formatDayLabel", () => {
-  it("returns the sanitised translated day name", () => {
-    expect(formatDayLabel(0, t)).toBe("Montag");
-    expect(formatDayLabel(6, t)).toBe("Sonntag");
+  it("returns the sanitised uppercase translated day name", () => {
+    expect(formatDayLabel(0, t)).toBe("MONTAG");
+    expect(formatDayLabel(6, t)).toBe("SONNTAG");
   });
 
   it("strips non-alphanumeric characters from the translation", () => {
     const tWithSpaces = (key: string) =>
-      key === "commissioning.weekdaysBIG.0" ? "Mon-tag 1" : "x";
-    expect(formatDayLabel(0, tWithSpaces)).toBe("Montag1");
+      key === "common.weekday_monday" ? "Mon-tag 1" : "x";
+    expect(formatDayLabel(0, tWithSpaces)).toBe("MONTAG1");
   });
 
   it("returns empty string for null / undefined", () => {

@@ -8,6 +8,7 @@ import {
   buildCsvString,
   downloadCsvBlob,
   resolveCsvDialect,
+  toApiDate,
 } from "@shared/utils";
 import { useTenant, useDateFormat } from "@hooks/index";
 
@@ -70,7 +71,7 @@ export default function ExportCsvAtDateModal<T>({
 
   const fetchPrices = useCallback(() => {
     if (!selectedDate) return;
-    setLoadedDate(selectedDate.format("YYYY-MM-DD"));
+    setLoadedDate(toApiDate(selectedDate));
   }, [selectedDate]);
 
   const handleExport = useCallback(() => {

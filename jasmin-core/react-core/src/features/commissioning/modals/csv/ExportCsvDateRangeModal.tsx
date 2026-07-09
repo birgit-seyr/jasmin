@@ -4,7 +4,7 @@ import type { Dayjs } from "dayjs";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDateFormat, useDateRangePresets } from "@hooks/index";
-import { downloadCsvBlob } from "@shared/utils";
+import { downloadCsvBlob, toApiDate } from "@shared/utils";
 
 const { RangePicker } = DatePicker;
 
@@ -65,8 +65,8 @@ export default function ExportCsvDateRangeModal({
     if (!dateRange) return;
     const [from, to] = dateRange;
     const params = {
-      date_from: from.format("YYYY-MM-DD"),
-      date_to: to.format("YYYY-MM-DD"),
+      date_from: toApiDate(from)!,
+      date_to: toApiDate(to)!,
       ...optionState,
     };
     try {

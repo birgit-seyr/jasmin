@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useCommissioningPaymentCyclesList } from "@shared/api/generated/commissioning/commissioning";
 import type { PaymentCycle } from "@shared/api/generated/models";
+import { paymentCycleLabel } from "@shared/utils/cycleLabels";
 import { toOptions, type Option } from "./internal/toOptions";
 
 export type PaymentCycleOption = Option<PaymentCycle>;
@@ -16,9 +17,7 @@ export const usePaymentCycles = (options?: { enabled?: boolean }) => {
 
   const paymentCycles: PaymentCycleOption[] = useMemo(
     () =>
-      toOptions(data, (p) =>
-        t(`configuration.payment_cycle_${p.choice?.toLowerCase()}`, p.choice ?? ""),
-      ),
+      toOptions(data, (p) => paymentCycleLabel(t, p.choice)),
     [data, t],
   );
 

@@ -128,19 +128,9 @@ def _assert_no_active_subscription(member: Member, *, today: date) -> None:
     self-cancel rule: admin-confirmed, not yet cancelled, and not past its
     term. Force-cancel (e.g. a deceased member) bypasses this and ends the
     subscriptions later in the cascade."""
-    from django.db.models import Q
-
     from ..models import Subscription
 
-    has_active_subscription = (
-        Subscription.objects.filter(
-            member=member,
-            admin_confirmed=True,
-            cancelled_at__isnull=True,
-        )
-        .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
-        .exists()
-    )
+    has_active_subscription = Subscription.active_for_member(member, today).exists()
     if has_active_subscription:
         from ..errors import MemberHasActiveSubscriptions
 

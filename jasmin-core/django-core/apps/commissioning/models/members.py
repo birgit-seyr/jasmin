@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any
 
 from django.core.exceptions import ValidationError
@@ -314,16 +314,15 @@ class Member(
         if cached is not None:
             return cached
         today = timezone.now().date()
+        # The badge counts subscriptions active RIGHT NOW (``active_at_date``
+        # adds ``valid_from <= today``), which is deliberately NARROWER than the
+        # cancellation restraint ``Subscription.active_for_member`` (that guards
+        # any un-ended commitment, including a future-dated confirmed one).
         return (
             Subscription.current.active_at_date(today)
             .filter(
                 member=self,
                 admin_confirmed=True,
-                # A cancelled subscription (future effective date truncates
-                # valid_until, or force-end leaves it) still matches the date
-                # window — exclude it so this count uses the codebase's canonical
-                # "active" definition (cancelled_at IS NULL), matching
-                # _assert_no_active_subscription.
                 cancelled_at__isnull=True,
             )
             .count()
@@ -934,6 +933,28 @@ class Subscription(
         if self.valid_until is None:
             return None
         return max(0, (self.valid_until - timezone.now().date()).days)
+
+    @classmethod
+    def active_for_member(
+        cls, member: Member, on_date: date
+    ) -> models.QuerySet[Subscription]:
+        """Subscriptions that BLOCK a membership / subscription cancellation on
+        ``on_date``: admin-confirmed, not cancelled, and not yet ended
+        (``valid_until`` IS NULL OR ``>= on_date``).
+
+        The single definition shared by the two cancellation restraints (they
+        were byte-identical). A future-dated confirmed subscription IS included
+        — it is a live commitment the member can't walk away from — so this is
+        deliberately BROADER than ``active_subscriptions_count``'s "active
+        today" badge (which additionally requires ``valid_from <= today``).
+        Callers add ``.exists()``.
+        """
+        return cls.objects.filter(
+            models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=on_date),
+            member=member,
+            admin_confirmed=True,
+            cancelled_at__isnull=True,
+        )
 
 
 class MemberLoan(JasminModel, AdminConfirmableMixin, CreatedMixin):

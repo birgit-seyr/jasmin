@@ -196,15 +196,6 @@
     "5": "SA",
     "6": "SO"
   },
-  "weekdaysBIG": {
-    "0": "MONTAG",
-    "1": "DIENSTAG",
-    "2": "MITTWOCH",
-    "3": "DONNERSTAG",
-    "4": "FREITAG",
-    "5": "SAMSTAG",
-    "6": "SONNTAG"
-  },
   "documentation_amounts": "Erfassung Bestand",
   "expected_stock": "erwarteter Bestand",
   "actual_stock": "tatsächlicher Bestand",

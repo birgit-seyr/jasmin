@@ -244,49 +244,6 @@ class TestGetSummary:
 
 
 # ---------------------------------------------------------------------------
-# _add_crate_to_summary
-# ---------------------------------------------------------------------------
-class TestAddCrateToSummary:
-    def test_calculates_crates_needed(self):
-        from collections import defaultdict
-        from unittest.mock import MagicMock
-
-        harvest = MagicMock()
-        harvest.harvesting_crate = MagicMock()
-        harvest.harvesting_crate.name = "Big Crate"
-        harvest.amount_per_pu = 10
-        crate_summary = defaultdict(int)
-
-        DocumentationSummaryService._add_crate_to_summary(harvest, 25, crate_summary)
-        assert crate_summary["Big Crate"] == 3  # ceil(25 / 10)
-
-    def test_skips_when_no_crate(self):
-        from collections import defaultdict
-        from unittest.mock import MagicMock
-
-        harvest = MagicMock()
-        harvest.harvesting_crate = None
-        harvest.amount_per_pu = 10
-        crate_summary = defaultdict(int)
-
-        DocumentationSummaryService._add_crate_to_summary(harvest, 25, crate_summary)
-        assert len(crate_summary) == 0
-
-    def test_skips_when_zero_amount_per_pu(self):
-        from collections import defaultdict
-        from unittest.mock import MagicMock
-
-        harvest = MagicMock()
-        harvest.harvesting_crate = MagicMock()
-        harvest.harvesting_crate.name = "Crate"
-        harvest.amount_per_pu = 0
-        crate_summary = defaultdict(int)
-
-        DocumentationSummaryService._add_crate_to_summary(harvest, 25, crate_summary)
-        assert len(crate_summary) == 0
-
-
-# ---------------------------------------------------------------------------
 # _get_grouping_key — pure helper, deterministic
 # ---------------------------------------------------------------------------
 class TestGetGroupingKey:

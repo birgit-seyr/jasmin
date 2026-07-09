@@ -79,6 +79,35 @@ def get_delivery_station_days_from_shares_delivery_day(
     )
 
 
+def tour_station_ids(
+    active_at_date: date,
+    *,
+    delivery_day: SharesDeliveryDay | None = None,
+    day_number: int | None = None,
+    tour: str,
+) -> list[str]:
+    """Delivery-station ids on ``tour`` for a delivery day, at ``active_at_date``.
+
+    Resolves the active :class:`DeliveryStationDay` rows on the given tour and
+    returns their ``delivery_station_id`` values — the set a packing / amount
+    view narrows ShareContent down to when scoped to a single tour.
+
+    Identify the delivery day EITHER by object
+    (``delivery_day=<SharesDeliveryDay>``, which may be ``None`` to match rows
+    with a NULL delivery day) OR by its ``day_number`` (``day_number=<0..6>``).
+    When ``day_number`` is given it wins.
+    """
+    if day_number is not None:
+        day_filter = {"delivery_day__day_number": day_number}
+    else:
+        day_filter = {"delivery_day": delivery_day}
+    return list(
+        DeliveryStationDay.current.active_at_date(active_at_date)
+        .filter(tour_number=tour, **day_filter)
+        .values_list("delivery_station_id", flat=True)
+    )
+
+
 def get_active_share_type_variations(
     year: int,
     delivery_week: int,

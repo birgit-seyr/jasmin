@@ -18,7 +18,7 @@ import {
   commissioningMembersCancelCreate,
   commissioningMyMembershipCancelCreate,
 } from "@shared/api/generated/commissioning/commissioning";
-import { notify } from "@shared/utils";
+import { notify, toApiDate } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { ModalCancelSaveFooter } from "@shared/modals/shared";
 import { useDateFormat } from "@hooks/index";
@@ -95,12 +95,12 @@ export const CancelMembershipModal: FC<CancelMembershipModalProps> = ({
     try {
       if (self) {
         await commissioningMyMembershipCancelCreate({
-          effective_at: effectiveAt.format("YYYY-MM-DD"),
+          effective_at: toApiDate(effectiveAt)!,
           reason: reason.trim() || undefined,
         });
       } else {
         const result = await commissioningMembersCancelCreate(String(memberId), {
-          effective_at: effectiveAt.format("YYYY-MM-DD"),
+          effective_at: toApiDate(effectiveAt)!,
           reason: reason.trim() || undefined,
           force,
         });

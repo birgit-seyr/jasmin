@@ -4,11 +4,13 @@ import type { TFunction } from "i18next";
 import type { PackingBoxesMatrixColumn } from "@shared/api/generated/models";
 
 import {
-  ComboHeader,
-  boxComboStyles,
+  ComboColumnHeaderRow,
+  ComboGroupHeaderRow,
   comboColumnWidth,
   computeGroupEdges,
+  formatComboCount,
   groupComboColumns,
+  groupEdgeStyles,
   pickComboOrientation,
   type PdfOrientation,
 } from "./boxComboPdf";
@@ -17,12 +19,16 @@ import {
   ListPDFFooter,
   ListPDFHeader,
   TickBox,
-  type TenantInfo as SharedTenantInfo,
+  type TenantInfo,
 } from "./ListPDFSharedComponents";
 import {
   PackingBoxesMatrixPage,
   type PackingBoxesMatrixItem,
 } from "./PackingBoxesMatrixPDF";
+
+// Re-exported so ``DeliveryStationDetailsPDFGenerator`` keeps importing the
+// tenant-info shape from here; it's the shared ``ListPDFSharedComponents`` type.
+export type { TenantInfo };
 
 // Fixed pt widths; the leading member-name column is fixed so the combos
 // follow right after it.
@@ -39,13 +45,6 @@ interface MemberRow {
   id?: string;
   name?: string;
   [key: string]: unknown;
-}
-
-export interface TenantInfo {
-  name?: string;
-  logoUrl?: string | null;
-  email?: string;
-  phone?: string;
 }
 
 export interface StationPageData {
@@ -71,12 +70,6 @@ export interface DeliveryStationDetailsPDFProps {
   t: TFunction;
 }
 
-function formatCount(value: unknown): string {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n === 0) return "";
-  return String(n);
-}
-
 function StationPageContent({
   stationName,
   columns,
@@ -99,12 +92,6 @@ function StationPageContent({
   // Group combination columns by base share_type for the parent header row.
   const groups = groupComboColumns(columns, t);
   const groupEdges = computeGroupEdges(groups);
-  // Green rules framing each base-share_type group: left on its first column,
-  // right on its last.
-  const edgeBorders = (key: string) => [
-    groupEdges.get(key)?.left ? boxComboStyles.groupBorderLeft : {},
-    groupEdges.get(key)?.right ? boxComboStyles.groupBorderRight : {},
-  ];
 
   const comboWidth = comboColumnWidth({
     orientation,
@@ -119,7 +106,7 @@ function StationPageContent({
   return (
     <Page size="A4" orientation={orientation} style={listStyles.page}>
       <ListPDFHeader
-        tenant={tenant as SharedTenantInfo}
+        tenant={tenant}
         pill={t("commissioning.delivery_notes_delivery_stations_details")}
       >
         <Text style={listStyles.title}>{stationName}</Text>
@@ -131,67 +118,57 @@ function StationPageContent({
       <View style={listStyles.table}>
         {/* Group header row: each base share_type short_name spans its combos,
             framed by the green group rules on both sides. */}
-        <View
-          style={[listStyles.tableHeaderShaded, { borderBottomWidth: 0.5 }]}
-          fixed
-        >
-          <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
-            <Text> </Text>
-          </View>
-          {groups.map((group) => (
+        <ComboGroupHeaderRow
+          groups={groups}
+          comboWidth={comboWidth}
+          thinBorderBottom
+          leading={
+            <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
+              <Text> </Text>
+            </View>
+          }
+          trailing={
             <View
-              key={group.id}
               style={[
                 listStyles.cell,
-                { width: comboWidth * group.cols.length },
+                localStyles.tickCol,
                 listStyles.cellCenter,
-                boxComboStyles.groupBorderLeft,
-                boxComboStyles.groupBorderRight,
               ]}
             >
-              <Text style={boxComboStyles.comboBase}>{group.name}</Text>
+              <Text> </Text>
             </View>
-          ))}
-          <View
-            style={[listStyles.cell, localStyles.tickCol, listStyles.cellCenter]}
-          >
-            <Text> </Text>
-          </View>
-        </View>
+          }
+        />
 
         {/* Sub-header row: combination labels + tick column */}
-        <View style={listStyles.tableHeaderShaded} fixed>
-          <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
-            <Text>{t("commissioning.pickup_name")}</Text>
-          </View>
-          {columns.map((column) => (
+        <ComboColumnHeaderRow
+          columns={columns}
+          comboWidth={comboWidth}
+          groupEdges={groupEdges}
+          t={t}
+          leading={
+            <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
+              <Text>{t("commissioning.pickup_name")}</Text>
+            </View>
+          }
+          trailing={
             <View
-              key={column.key}
               style={[
                 listStyles.cell,
-                { width: comboWidth },
+                localStyles.tickCol,
                 listStyles.cellCenter,
-                ...edgeBorders(column.key),
               ]}
             >
-              <ComboHeader column={column} t={t} />
+              <Text>{"✓"}</Text>
             </View>
-          ))}
-          <View
-            style={[listStyles.cell, localStyles.tickCol, listStyles.cellCenter]}
-          >
-            <Text>{"✓"}</Text>
-          </View>
-        </View>
+          }
+        />
 
         {/* Data rows: one per member, cells = box count of that combination */}
         {rows.map((member, index) => (
           <View
             key={member.id || index}
-            style={[
-              listStyles.tableRow,
-              index % 2 === 1 ? listStyles.tableRowAlt : {},
-            ]}
+            style={listStyles.tableRow}
             wrap={false}
           >
             <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
@@ -204,10 +181,10 @@ function StationPageContent({
                   listStyles.cell,
                   { width: comboWidth },
                   listStyles.cellCenter,
-                  ...edgeBorders(column.key),
+                  ...groupEdgeStyles(groupEdges, column.key),
                 ]}
               >
-                <Text>{formatCount(member[column.key])}</Text>
+                <Text>{formatComboCount(member[column.key])}</Text>
               </View>
             ))}
             <View

@@ -43,3 +43,17 @@
 .dn-number-download.ant-btn {
   color: var(--color-primary);
 }
+
+/* Finalized (locked) notice banner shown at the top of the DeliveryNote and
+   Invoice modals when the document has been finalized. Extracted from an
+   identical inline style that was duplicated across both modals. */
+.finalized-notice {
+  margin-bottom: 1em;
+  padding: 0.5em;
+  background-color: var(--color-success-bg);
+  border: 1px solid #8fc566ff;
+  border-radius: 4px;
+  color: #389e0d;
+  font-weight: bold;
+  text-align: center;
+}

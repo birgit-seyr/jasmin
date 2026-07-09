@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import { activeAtDateForWeek } from "@shared/utils";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useShareDeliveryDays } from '@features/commissioning/hooks';
@@ -31,11 +31,7 @@ const TourSelector = ({
 
   const activeAtDate = useMemo(() => {
     if (!selectedYear || !selectedWeek) return null;
-    return dayjs()
-      .year(selectedYear)
-      .isoWeek(selectedWeek)
-      .isoWeekday(6)
-      .format("YYYY-MM-DD");
+    return activeAtDateForWeek(selectedYear, selectedWeek);
   }, [selectedYear, selectedWeek]);
 
   const tourFilters = useMemo(() => {

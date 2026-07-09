@@ -18,7 +18,10 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 vi.mock("@hooks/configuration/useCurrency", () => ({
-  useCurrency: () => ({ currencySymbol: "€" }),
+  useCurrency: () => ({
+    currencySymbol: "€",
+    formatCurrency: (n: number) => `${n.toFixed(2)} €`,
+  }),
 }));
 vi.mock("@hooks/useNumberFormat", () => ({
   useNumberFormat: () => ({ format: (n: number, d: number) => n.toFixed(d) }),

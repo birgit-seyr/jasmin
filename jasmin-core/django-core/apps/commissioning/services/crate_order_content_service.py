@@ -8,11 +8,10 @@ from typing import Any
 from django.db import transaction
 from django.db.models import Q, QuerySet
 
-from ..constants import get_default_tax_rate_crates
 from ..errors import CrateNotFound
 from ..models import Crate, CrateOrderContent, Order
 from ..utils.iso_week_utils import date_from_order, week_day_to_date
-from ..utils.tax_rate_utils import resolve_crate_tax_rate
+from ..utils.tax_rate_utils import effective_crate_tax_rate
 from .crate_summary import build_crate_summary_row, summarize_crate_items
 
 
@@ -55,7 +54,12 @@ class CrateOrderContentService:
         tax_rate = (
             crate_order_content.tax_rate
             if crate_order_content.tax_rate is not None
-            else CrateOrderContentService._get_tax_rate(crate_order_content)
+            else effective_crate_tax_rate(
+                crate_order_content.crate_type,
+                CrateOrderContentService._date_from_crate_order_content(
+                    crate_order_content
+                ),
+            )
         )
         return build_crate_summary_row(
             crate_type_id=crate_order_content.crate_type_id,
@@ -65,16 +69,6 @@ class CrateOrderContentService:
             rabatt=crate_order_content.rabatt,
             tax_rate=tax_rate,
             extras={"note": crate_order_content.note},
-        )
-
-    @staticmethod
-    def _get_tax_rate(crate_order_content: CrateOrderContent) -> Decimal:
-        return resolve_crate_tax_rate(
-            crate_order_content.crate_type,
-            CrateOrderContentService._date_from_crate_order_content(
-                crate_order_content
-            ),
-            default=get_default_tax_rate_crates(),
         )
 
     @staticmethod
@@ -119,9 +113,7 @@ class CrateOrderContentService:
         pricing_date = week_day_to_date(year, delivery_week, day_number)
 
         def _resolve_tax_rate(crate_type):
-            return resolve_crate_tax_rate(
-                crate_type, pricing_date, default=get_default_tax_rate_crates()
-            )
+            return effective_crate_tax_rate(crate_type, pricing_date)
 
         summary = summarize_crate_items(rows, resolve_tax_rate=_resolve_tax_rate)
         # Hide fully-returned / net-zero crate groups (mirrors the prior
@@ -172,9 +164,7 @@ class CrateOrderContentService:
         # tax_rate is NOT NULL — resolve from crate pricing or tenant default
         # when the caller didn't pass an explicit value.
         if "tax_rate" not in kwargs or kwargs.get("tax_rate") is None:
-            kwargs["tax_rate"] = resolve_crate_tax_rate(
-                crate, pricing_date, default=get_default_tax_rate_crates()
-            )
+            kwargs["tax_rate"] = effective_crate_tax_rate(crate, pricing_date)
 
         crate_order_content = CrateOrderContent.objects.create(
             order=order,

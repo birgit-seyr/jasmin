@@ -189,10 +189,10 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // NOT today. The first sellable delivery is weeks out, so its price window is
   // the one to show on the cards and prefill; today's price may not even apply.
   const validFrom = Form.useWatch("valid_from", form) as Dayjs | undefined;
-  const pricingDate = (validFrom ?? earliestValidFrom).format("YYYY-MM-DD");
+  const pricingDate = formatDateForAPI(validFrom ?? earliestValidFrom)!;
 
   const { shareTypes } = useShareTypes({
-    active_at_date: dayjs().format("YYYY-MM-DD"),
+    active_at_date: formatDateForAPI(dayjs())!,
     include_future: true,
   });
   // Public registration only offers MAIN share types — an "additional" share
@@ -299,7 +299,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   const dsdParams = useMemo(() => {
     const start = (validFrom ?? dayjs()).startOf("isoWeek");
     return {
-      active_at_date: start.format("YYYY-MM-DD"),
+      active_at_date: formatDateForAPI(start)!,
       ...capacityWindowParams(),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

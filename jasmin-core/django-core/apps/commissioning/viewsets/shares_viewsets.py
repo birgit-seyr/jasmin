@@ -109,6 +109,7 @@ from ..services import (
 from ..utils.basic_utils import size_order_annotation
 from ..utils.composite_id_utils import parse_composite_pk
 from ..utils.iso_week_utils import week_day_to_date
+from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 from ..utils.weight import quantize_weight
 from .base_viewsets import BaseArchivableViewSet
@@ -387,9 +388,13 @@ class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             )
 
         if physical is not None:
-            queryset = queryset.filter(variation_type="physical")
+            queryset = queryset.filter(
+                variation_type=ShareTypeVariation.VariationType.PHYSICAL
+            )
         if virtual is not None:
-            queryset = queryset.filter(variation_type="virtual")
+            queryset = queryset.filter(
+                variation_type=ShareTypeVariation.VariationType.VIRTUAL
+            )
         if is_packed_bulk is not None:
             queryset = queryset.filter(is_packed_bulk=is_packed_bulk)
 
@@ -1625,12 +1630,12 @@ class DefaultShareContentViewSet(RolePermissionsMixin, viewsets.ViewSet):
         share_article_id = parsed["share_article"]
         unit = parsed["unit"]
         size = parsed["size"]
-        try:
-            share_article = ShareArticle.objects.get(id=share_article_id)
-        except ShareArticle.DoesNotExist as exc:
-            raise ShareArticleNotFound(
-                f"ShareArticle with id {share_article_id} does not exist",
-            ) from exc
+        share_article = get_or_404(
+            ShareArticle,
+            share_article_id,
+            "Share article",
+            error_cls=ShareArticleNotFound,
+        )
 
         deleted_count = DefaultShareContentService.delete_default_share_content_bulk(
             year, share_article, unit, size
@@ -1986,12 +1991,12 @@ class VirtualComponentsViewSet(RolePermissionsMixin, viewsets.ViewSet):
         virtual_variation_id = serializer.validated_data["virtual_variation"]
         components = serializer.validated_data["components"]
 
-        try:
-            virtual_variation = ShareTypeVariation.objects.get(id=virtual_variation_id)
-        except ShareTypeVariation.DoesNotExist as exc:
-            raise ShareTypeVariationNotFound(
-                f"ShareTypeVariation with id {virtual_variation_id} does not exist"
-            ) from exc
+        virtual_variation = get_or_404(
+            ShareTypeVariation,
+            virtual_variation_id,
+            "Share type variation",
+            error_cls=ShareTypeVariationNotFound,
+        )
 
         # Capture the OLD components' physical variations BEFORE the rewrite —
         # changing this virtual variation's component config re-weights how its
@@ -2009,19 +2014,19 @@ class VirtualComponentsViewSet(RolePermissionsMixin, viewsets.ViewSet):
         ).delete()
 
         if not components:
-            virtual_variation.variation_type = "physical"
+            virtual_variation.variation_type = ShareTypeVariation.VariationType.PHYSICAL
             virtual_variation.save()
             self._recompute_for_physical_variations(affected_physical_ids)
             return Response(
                 {
                     "virtual_variation": virtual_variation_id,
-                    "variation_type": "physical",
+                    "variation_type": ShareTypeVariation.VariationType.PHYSICAL,
                     "components": [],
                 },
                 status=status.HTTP_200_OK,
             )
 
-        virtual_variation.variation_type = "virtual"
+        virtual_variation.variation_type = ShareTypeVariation.VariationType.VIRTUAL
         virtual_variation.save()
 
         created_components = []
@@ -2042,7 +2047,10 @@ class VirtualComponentsViewSet(RolePermissionsMixin, viewsets.ViewSet):
                     code="virtual_component.physical_variation_not_found",
                 ) from exc
 
-            if physical_variation.variation_type != "physical":
+            if (
+                physical_variation.variation_type
+                != ShareTypeVariation.VariationType.PHYSICAL
+            ):
                 raise VirtualComponentNotPhysical(
                     f"Variation {physical_variation_id} is not a physical variation"
                 )
@@ -2066,7 +2074,7 @@ class VirtualComponentsViewSet(RolePermissionsMixin, viewsets.ViewSet):
         return Response(
             {
                 "virtual_variation": virtual_variation_id,
-                "variation_type": "virtual",
+                "variation_type": ShareTypeVariation.VariationType.VIRTUAL,
                 "components": created_components,
             },
             status=status.HTTP_201_CREATED,

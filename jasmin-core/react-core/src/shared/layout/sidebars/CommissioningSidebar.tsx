@@ -6,6 +6,7 @@ import {
   PLANNING_SHARE_OPTIONS,
 } from "@shared/planning/planningShareOptions";
 import dayjs from "dayjs";
+import { toApiDate } from "@shared/utils/apiDate";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import SidebarShell from "./SidebarShell";
@@ -19,13 +20,11 @@ import GrainIcon from "@mui/icons-material/Grain";
 import HdrWeakIcon from "@mui/icons-material/HdrWeak";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 interface CommissioningSidebarProps {
-  collapsed?: boolean;
   openKeys?: string[];
   onOpenChange?: (keys: string[]) => void;
 }
 
 export default function CommissioningSidebar({
-  collapsed: _collapsed = false,
   openKeys = [],
   onOpenChange,
 }: CommissioningSidebarProps) {
@@ -37,7 +36,7 @@ export default function CommissioningSidebar({
   // whose active share type is complex-planned gets a per-week (Base) link AND
   // a long-term link; a simple option gets only a long-term link in the
   // "additional" section. Order follows PLANNING_SHARE_OPTIONS.
-  const planningToday = dayjs().format("YYYY-MM-DD");
+  const planningToday = toApiDate(dayjs())!;
   const { shareTypes: activePlanningShareTypes } = useShareTypes({
     active_at_date: planningToday,
     // Current + upcoming share types, so an option whose season hasn't started

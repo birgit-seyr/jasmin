@@ -3,10 +3,9 @@ import type { ReactNode } from "react";
 import { Button, Divider, Flex, Select, Space } from "antd";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
-import { useDateFormat, useIsMobile } from '@hooks/index';
+import { useDateFormat, useDeliveryDayLabel, useIsMobile } from '@hooks/index';
 import { activeAtDateForWeek, getStatusColor } from "@shared/utils";
 import { useShareDeliveryDays } from '@features/commissioning/hooks';
-import dayjs from "dayjs";
 
 const { Option } = Select;
 
@@ -36,8 +35,9 @@ const SharesDeliveryDaySelector = ({
   suffix = null,
 }: SharesDeliveryDaySelectorProps) => {
   const { t } = useTranslation();
-  const { formatDate, dateFormat, mobileDateFormat } = useDateFormat();
+  const { formatDate } = useDateFormat();
   const isMobile = useIsMobile();
+  const deliveryDayLabel = useDeliveryDayLabel();
 
   const useDayFormat = !!selectedYear && !!selectedWeek;
 
@@ -106,16 +106,9 @@ const SharesDeliveryDaySelector = ({
   const calculateDate = useCallback(
     (dayNumber: number | null | undefined) => {
       if (!selectedYear || !selectedWeek || dayNumber == null) return "";
-      const dayNum = Number(dayNumber) + 1; // day_number is 0-based, isoWeekday is 1-based
-      const date = dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek)
-        .isoWeekday(dayNum);
-      return isMobile
-        ? date.format(`dd, ${mobileDateFormat}`)
-        : date.format(`dddd, ${dateFormat}`);
+      return deliveryDayLabel(selectedYear, selectedWeek, dayNumber);
     },
-    [selectedYear, selectedWeek, isMobile, dateFormat, mobileDateFormat],
+    [selectedYear, selectedWeek, deliveryDayLabel],
   );
 
   // Sort enriched days by day_number for navigation

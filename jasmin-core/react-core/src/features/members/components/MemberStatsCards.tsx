@@ -90,12 +90,8 @@ export default function MemberStatsCards({
         {format(count, 0)}
         {valueOneCoopShare != null && (
           <span
-            style={{
-              display: "block",
-              fontSize: "0.7em",
-              fontWeight: 400,
-              color: "var(--color-text-muted)",
-            }}
+            className="summary-stats-card__subvalue"
+            style={{ display: "block" }}
           >
             {formatCurrency(count * valueOneCoopShare)}
           </span>

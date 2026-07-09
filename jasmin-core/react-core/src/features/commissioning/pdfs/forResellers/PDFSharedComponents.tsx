@@ -48,7 +48,7 @@ export function PDFLogo({
         },
       ]}
     >
-      <Text style={{ fontSize: 10, color: "var(--color-text-tertiary)", letterSpacing: 2 }}>
+      <Text style={[styles.text_muted, { fontSize: 10, letterSpacing: 2 }]}>
         LOGO
       </Text>
     </View>

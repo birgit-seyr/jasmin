@@ -34,7 +34,7 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable";
 import { ExplainerText } from "@shared/ui";
-import { isYearInPast } from "@shared/utils";
+import { activeAtDateForWeek, isYearInPast } from "@shared/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import type { FormInstance } from "antd";
 import dayjs from "dayjs";
@@ -179,11 +179,7 @@ export default function PlanningLongTermHarvestSharesBase({
   const shareTypeVariationFilters = useMemo(() => {
     return {
       physical: true,
-      active_at_date: dayjs()
-        .year(selectedYear)
-        .isoWeek(50)
-        .isoWeekday(6)
-        .format("YYYY-MM-DD"),
+      active_at_date: activeAtDateForWeek(selectedYear, 50),
       share_option: shareOption,
     };
   }, [selectedYear, shareOption]);

@@ -67,6 +67,7 @@ from ..schemas import (
 )
 from ..scoping import (
     enforce_own_reseller,
+    enforce_privileged,
     is_privileged,
     own_reseller_id,
     scope_to_offer_group,
@@ -98,6 +99,7 @@ from ..services import (
     ResellerAndDeliveryStationService,
 )
 from ..utils import get_contact_annotations
+from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 from ..utils.queryset_helpers import apply_optional_filters
 
@@ -385,8 +387,7 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
     @extend_schema(description="Create a reseller with a linked contact entity.")
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Customers may not create new resellers; only office/admin/management.
-        if not is_privileged(request):
-            raise ForbiddenError("Only office staff may create resellers.")
+        enforce_privileged(request, "Only office staff may create resellers.")
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -442,8 +443,7 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
     )
     def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Resellers may never be deleted by a customer — office-only operation.
-        if not is_privileged(request):
-            raise ForbiddenError("Only office staff may delete resellers.")
+        enforce_privileged(request, "Only office staff may delete resellers.")
         instance = self.get_object()
         params = validate_query_params(request, optional=["delete_context"])
         delete_context = params["delete_context"]
@@ -677,12 +677,9 @@ class OfferViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
         if reseller_id is not None:
 
-            try:
-                reseller_obj = Reseller.objects.get(pk=reseller_id)
-            except Reseller.DoesNotExist as exc:
-                raise ResellerNotFound(
-                    f"Reseller with pk={reseller_id!r} does not exist",
-                ) from exc
+            reseller_obj = get_or_404(
+                Reseller, reseller_id, "Reseller", error_cls=ResellerNotFound
+            )
             offer_group = reseller_obj.offer_group
             if offer_group is not None:
                 queryset = queryset.filter(offer_group=offer_group)

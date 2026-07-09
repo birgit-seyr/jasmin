@@ -3,7 +3,7 @@ import { Button, Select, Space } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useTenant } from "@hooks/index";
+import { useTenantYearOptions } from "@hooks/index";
 
 interface YearSelectorProps {
   selectedYear: number | null;
@@ -16,12 +16,8 @@ const YearSelector = ({
   setSelectedYear,
   include_null_option = false,
 }: YearSelectorProps) => {
-  const { tenant } = useTenant();
   const { t } = useTranslation();
-
-  const tenantCreationYear = tenant?.created_at
-    ? dayjs(tenant.created_at as string).year()
-    : 2025;
+  const { tenantCreationYear, yearOptions } = useTenantYearOptions();
 
   const currentYear = dayjs().year();
 
@@ -46,12 +42,6 @@ const YearSelector = ({
     if (prev < tenantCreationYear) return;
     setSelectedYear(prev);
   }, [selectedYear, setSelectedYear, tenantCreationYear]);
-
-  const yearRange = 3;
-  const yearOptions = Array.from({ length: yearRange }, (_, index) => ({
-    value: index + tenantCreationYear,
-    label: index + tenantCreationYear,
-  }));
 
   const allYearOptions = useMemo(() => {
     const options: { label: string | number; value: number | null }[] = [];

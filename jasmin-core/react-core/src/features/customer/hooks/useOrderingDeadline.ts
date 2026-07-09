@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { useMemo } from "react";
+import { dateForWeekDayNumber } from "@shared/utils";
 
 type OddDefaults = {
   default_last_possible_ordering_day: number | null;
@@ -18,11 +19,7 @@ export function useOrderingDeadline(
       return { orderingDeadline: null, isOrderingClosed: false };
     }
 
-    // lastDay is 0-indexed (Mon=0), isoWeekday is 1-indexed (Mon=1)
-    const deadlineDate = dayjs()
-      .year(selectedYear)
-      .isoWeek(selectedWeek)
-      .isoWeekday(lastDay + 1);
+    const deadlineDate = dateForWeekDayNumber(selectedYear, selectedWeek, lastDay);
     let deadline: dayjs.Dayjs;
     if (lastTime) {
       const [h, m] = lastTime.split(":").map(Number);

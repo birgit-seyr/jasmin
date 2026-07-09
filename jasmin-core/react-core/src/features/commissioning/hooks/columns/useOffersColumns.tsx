@@ -13,6 +13,7 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ToolTipIcon } from "@shared/ui";
+import { editableOnlyOnCreate, renderNumber } from "@shared/utils";
 import { useCurrency } from "@hooks/configuration/useCurrency";
 import type { useOffersData } from "../useOffersData";
 import { useCrates } from "../useCrates";
@@ -39,7 +40,7 @@ export function useOffersColumns({
 }) {
   const { t } = useTranslation();
   const { crates } = useCrates();
-  const { currencySymbol } = useCurrency();
+  const { currencySymbol, formatCurrency } = useCurrency();
   const { format } = useNumberFormat();
   const { washingCleaningColumns } = useWashingCleaningColumns();
   const { noteColumn } = useNoteColumn();
@@ -69,15 +70,11 @@ export function useOffersColumns({
     showAmount: false,
     overrides: {
       unit: {
-        disabled: (record: TableRecord) => {
-          if (record.key != -1) return true;
-        },
+        disabled: editableOnlyOnCreate,
         onFieldChange: handleUnitChange,
       },
       size: {
-        disabled: (record: TableRecord) => {
-          if (record.key != -1) return true;
-        },
+        disabled: editableOnlyOnCreate,
       },
     },
   });
@@ -112,9 +109,9 @@ export function useOffersColumns({
               const currentPrice = record[
                 `price_${index + 1}`
               ] as unknown as number;
-              const displayPrice = currentPrice
-                ? format(Number(currentPrice), 2)
-                : format(0, 2);
+              const displayPrice = formatCurrency(
+                currentPrice ? Number(currentPrice) : 0,
+              );
 
               const shareArticle = shareArticles?.find(
                 (sa) => sa.value === record.share_article,
@@ -163,7 +160,7 @@ export function useOffersColumns({
                     fontWeight: isModified ? "bold" : "normal",
                   }}
                 >
-                  {displayPrice} {currencySymbol}
+                  {displayPrice}
                 </span>
               );
             },
@@ -228,9 +225,9 @@ export function useOffersColumns({
     t,
     selectedOfferGroup,
     currencySymbol,
+    formatCurrency,
     shareArticles,
     currentOfferGroup,
-    format,
   ]);
 
   const columns = useMemo<EditableColumnConfig<TableRecord>[]>(() => {
@@ -239,7 +236,7 @@ export function useOffersColumns({
       ...washingCleaningColumns,
       {
         ...shareArticleColumn,
-        disabled: (record: TableRecord) => record.key != -1,
+        disabled: editableOnlyOnCreate,
       },
       ...amountUnitSizeColumns,
       {
@@ -272,16 +269,7 @@ export function useOffersColumns({
         width: "6em",
         disabled: (record: TableRecord) =>
           (record.amount_ordered as number) > 0 || record.is_finalized === true,
-        render: (_: unknown, record: TableRecord) => {
-          if (
-            record.amount_per_pu === null ||
-            record.amount_per_pu === undefined ||
-            record.amount_per_pu === ""
-          )
-            return "";
-          const n = Number(record.amount_per_pu);
-          return Number.isFinite(n) ? format(n, 2) : "";
-        },
+        render: renderNumber(format, 2),
       },
       {
         title: <>{t("commissioning.used_crate")}</>,

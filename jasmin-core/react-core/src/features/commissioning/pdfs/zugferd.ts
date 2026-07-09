@@ -4,6 +4,7 @@ import {
   type OrganicStatus,
 } from "@hooks/configuration/useOrganicGate";
 import {
+  isCreditNote,
   organicMarksPresent,
   type LineItemBase,
   type TaxBreakdownItem,
@@ -409,12 +410,10 @@ export function generateZUGFeRDXML(
   // A storno / correction is a credit note: TypeCode 381, positive amounts
   // (the record carries negatives), and a BG-3 reference back to the
   // original invoice. A plain invoice stays 380 with its values as-is.
-  const isCreditNote =
-    invoice.document_type === "storno" ||
-    invoice.document_type === "correction";
-  const documentTypeCode = isCreditNote ? "381" : "380";
+  const creditNote = isCreditNote(invoice.document_type);
+  const documentTypeCode = creditNote ? "381" : "380";
   const mag = (value: number): number =>
-    isCreditNote ? Math.abs(value) : value;
+    creditNote ? Math.abs(value) : value;
 
   const resolvedTerms: PaymentTerms = paymentTerms ?? {
     days: tenantSettings.payment_terms_reseller_in_days || 14,
@@ -481,7 +480,7 @@ export function generateZUGFeRDXML(
   </rsm:ExchangedDocument>
   
   <rsm:SupplyChainTradeTransaction>
-    ${generateLineItemsXML(lineItems, crateItems, t, isCreditNote)}
+    ${generateLineItemsXML(lineItems, crateItems, t, creditNote)}
     
     <ram:ApplicableHeaderTradeAgreement>
       <ram:BuyerReference>${escapeXml(`${invoice.prefix}-${invoice.invoice_number}`)}</ram:BuyerReference>
@@ -592,7 +591,7 @@ export function generateZUGFeRDXML(
       </ram:SpecifiedTradeSettlementPaymentMeans>`
         : ""
     }
-      ${generateTaxBreakdownXML(taxBreakdown, isCreditNote)}
+      ${generateTaxBreakdownXML(taxBreakdown, creditNote)}
 
       <ram:SpecifiedTradePaymentTerms>
         <ram:Description>${escapeXml(paymentTermsDescription)}</ram:Description>
@@ -620,7 +619,7 @@ export function generateZUGFeRDXML(
       </ram:SpecifiedTradeSettlementHeaderMonetarySummation>${
       // BG-3 preceding-invoice reference (BT-25): a credit note must point
       // back at the invoice it reverses so the receiver can net them.
-      isCreditNote && invoice.cancels_invoice_number
+      creditNote && invoice.cancels_invoice_number
         ? `
       <ram:InvoiceReferencedDocument>
         <ram:IssuerAssignedID>${escapeXml(String(invoice.cancels_invoice_number))}</ram:IssuerAssignedID>

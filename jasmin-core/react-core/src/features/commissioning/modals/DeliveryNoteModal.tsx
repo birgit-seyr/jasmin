@@ -19,8 +19,9 @@ import type { CrateDeliveryNoteContent } from "@shared/api/generated/models/crat
 import type { CrateDeliveryNoteContentWriteRequest } from "@shared/api/generated/models/crateDeliveryNoteContentWriteRequest";
 import type { DeliveryNoteResellerContent } from "@shared/api/generated/models/deliveryNoteResellerContent";
 import { useRoles } from "@shared/auth";
-import { useDateFormat, useNoteColumn, useNumberFormat, useTenant, useTimeFormat } from '@hooks/index';
+import { useDateFormat, useDefaultTaxRates, useNoteColumn, useNumberFormat } from '@hooks/index';
 import { useAmountUnitSizeColumns, useCratesColumns, useShareArticleColumn } from '@features/commissioning/hooks';
+import { FinalizedNotice } from '@features/commissioning/components';
 import { EditableTable, gatedByPermission, wrapApiFunctions } from "@shared/tables";
 import type {
   ApiFunctions,
@@ -47,14 +48,10 @@ export default function DeliveryNoteModal({
   const queryClient = useQueryClient();
   const { isOffice } = useRoles();
   const { format } = useNumberFormat();
-  const { formatDateTime } = useTimeFormat();
   const { formatDate, formatDateWithFallback } = useDateFormat();
-  const { getSetting } = useTenant();
   // Fallback tax rate for new lines when the picked ShareArticle
-  // doesn't carry an annotated current rate. Matches the
-  // InvoiceModal pattern (see InvoiceModal.tsx:92).
-  const defaultTaxRateArticles =
-    (getSetting("default_tax_rate_articles") as number) ?? 7;
+  // doesn't carry an annotated current rate. Matches the InvoiceModal.
+  const { articles: defaultTaxRateArticles } = useDefaultTaxRates();
 
   // ``isFetching`` (not ``isLoading``): drives the EditableTable grid spinner.
   // With the global staleTime:0, reopening a previously-viewed note has
@@ -376,21 +373,10 @@ export default function DeliveryNoteModal({
             </p>
           </div>
           {isFinalized && (
-            <div
-              style={{
-                marginBottom: "1em",
-                padding: "0.5em",
-                backgroundColor: "var(--color-success-bg)",
-                border: "1px solid #8fc566ff",
-                borderRadius: "4px",
-                color: "#389e0d",
-                fontWeight: "bold",
-                textAlign: "center",
-              }}
-            >
-              {t("commissioning.delivery_note_finalized_notice")}
-              {formatDateTime(deliveryNoteData.finalized_at)}
-            </div>
+            <FinalizedNotice
+              label={t("commissioning.delivery_note_finalized_notice")}
+              at={deliveryNoteData.finalized_at}
+            />
           )}
 
           <EditableTable

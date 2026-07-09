@@ -19,6 +19,7 @@ import {
 } from "@shared/api/generated/commissioning/commissioning";
 import type { VirtualVariationComponentsRequest } from "@shared/api/generated/models";
 import { notify } from '@shared/utils';
+import { getErrorMessage } from "@shared/utils/apiError";
 
 const { Text } = Typography;
 
@@ -158,8 +159,7 @@ export default function VirtualComponentModal({
       });
       onClose();
     } catch (error) {
-      console.error("Failed to save virtual components:", error);
-      notify.error(t("common.error_saving"));
+      notify.error(getErrorMessage(error, t("common.error_saving")));
     } finally {
       setSaving(false);
     }

@@ -21,7 +21,7 @@ from rest_framework.response import Response
 from apps.authz.permissions import IsOffice, IsStaff, RolePermissionsMixin
 from core.serializers import ErrorResponseSerializer
 
-from ..errors import CommissioningError, ForecastNotFound, RequiredFieldMissing
+from ..errors import CommissioningError, ForecastNotFound
 from ..models import (
     Forecast,
     Plot,
@@ -39,6 +39,7 @@ from ..schemas import (
     get_year_parameter,
 )
 from ..serializers import (
+    BulkIdsRequestSerializer,
     DocumentationSummaryRowSerializer,
     ForecastSerializer,
     HarvestBulkSetAsExpectedRequestSerializer,
@@ -56,6 +57,7 @@ from ..services import (
     GenericDocumentationService,
 )
 from ..utils.query_params import DOCUMENTATION_MODELS, validate_query_params
+from ..utils.validation_utils import parse_bulk_ids
 from .base_viewsets import BaseArchivableViewSet
 
 # Single source: the query-param catalogue owns the documentation model keys.
@@ -325,12 +327,7 @@ class ForecastViewSet(BaseArchivableViewSet):
 
     @extend_schema(
         description="Copy selected forecasts to the next delivery week.",
-        request={
-            "application/json": {
-                "type": "object",
-                "properties": {"ids": {"type": "array", "items": {"type": "string"}}},
-            }
-        },
+        request=BulkIdsRequestSerializer,
         responses={
             201: inline_serializer(
                 name="ForecastBulkCopyResponse",
@@ -347,10 +344,7 @@ class ForecastViewSet(BaseArchivableViewSet):
     def bulk_copy_to_next_week(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response:
-        selected_ids: list[str] = request.data.get("ids", [])
-
-        if not selected_ids:
-            raise RequiredFieldMissing("No forecast IDs provided", field="ids")
+        selected_ids = parse_bulk_ids(request)
 
         # Prefetch the variation / offer-group relations the per-forecast copy
         # walks (bulk_copy_forecast_to_next_week reads

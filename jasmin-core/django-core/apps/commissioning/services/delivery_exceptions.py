@@ -22,7 +22,7 @@ Two entry points:
 from __future__ import annotations
 
 import datetime
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 
 from django.db import transaction
 from django.db.models import Q
@@ -36,6 +36,47 @@ from .recompute import recompute_shares
 YearWeek = tuple[int, int]
 
 
+def _weeks_matching_periods(
+    candidate_weeks: Iterable[YearWeek], periods: list[tuple]
+) -> Iterator[tuple[YearWeek, tuple]]:
+    """Yield ``(year_week, first_matching_period)`` for each candidate week whose
+    ISO Monday falls inside a period. Owns the Monday calc and the None-safe
+    range test shared by the paused-week resolvers: an open-ended pause (either
+    bound NULL) is rejected at the API boundary, but a stray legacy row is
+    guarded here so ``<=`` against None can't raise a TypeError."""
+    for year, week in candidate_weeks:
+        monday = Week(year, week).monday()
+        for period in periods:
+            valid_from, valid_until = period[0], period[1]
+            if valid_from and valid_until and valid_from <= monday <= valid_until:
+                yield (year, week), period
+                break
+
+
+def weeks_in_periods(
+    candidate_weeks: Iterable[YearWeek], periods: Iterable[tuple]
+) -> set[YearWeek]:
+    """Of ``candidate_weeks``, the subset whose ISO Monday falls inside ANY of
+    ``periods`` (each a ``(valid_from, valid_until, …)`` tuple; extra elements
+    are ignored)."""
+    return {
+        year_week
+        for year_week, _ in _weeks_matching_periods(candidate_weeks, list(periods))
+    }
+
+
+def notes_by_week_in_periods(
+    candidate_weeks: Iterable[YearWeek], periods: Iterable[tuple]
+) -> dict[YearWeek, str]:
+    """Like :func:`weeks_in_periods`, but returns ``{year_week: note}`` using the
+    note of the FIRST period containing the week (each period a
+    ``(valid_from, valid_until, note)`` tuple; a NULL note falls back to ``""``)."""
+    return {
+        year_week: (period[2] or "")
+        for year_week, period in _weeks_matching_periods(candidate_weeks, list(periods))
+    }
+
+
 def paused_weeks_for_variation(
     share_type_variation_id, candidate_weeks: Iterable[YearWeek]
 ) -> set[YearWeek]:
@@ -44,24 +85,10 @@ def paused_weeks_for_variation(
     candidate = set(candidate_weeks)
     if not candidate:
         return set()
-    periods = list(
-        DeliveryExceptionPeriod.objects.filter(
-            share_type_variation_id=share_type_variation_id
-        ).values_list("valid_from", "valid_until")
-    )
-    if not periods:
-        return set()
-    paused: set[YearWeek] = set()
-    for year, week in candidate:
-        monday = Week(year, week).monday()
-        for valid_from, valid_until in periods:
-            # An open-ended (valid_until is None) pause is rejected at the API
-            # boundary; guard here so a stray legacy row can't raise a TypeError
-            # ("<=" against None) on the subscription-generation hot path.
-            if valid_from and valid_until and valid_from <= monday <= valid_until:
-                paused.add((year, week))
-                break
-    return paused
+    periods = DeliveryExceptionPeriod.objects.filter(
+        share_type_variation_id=share_type_variation_id
+    ).values_list("valid_from", "valid_until")
+    return weeks_in_periods(candidate, periods)
 
 
 def paused_weeks_by_variation(
@@ -79,18 +106,10 @@ def paused_weeks_by_variation(
     for var_id, valid_from, valid_until in DeliveryExceptionPeriod.objects.filter(
         share_type_variation_id__in=ids
     ).values_list("share_type_variation_id", "valid_from", "valid_until"):
-        # Open-ended pauses are rejected at the API boundary; guard a stray
-        # legacy row so ``<=`` against None can't raise (same as the per-variation
-        # helper above).
-        if valid_from and valid_until:
-            periods_by_var.setdefault(var_id, []).append((valid_from, valid_until))
+        periods_by_var.setdefault(var_id, []).append((valid_from, valid_until))
     out: dict[str, set[YearWeek]] = {}
     for var_id, periods in periods_by_var.items():
-        paused: set[YearWeek] = set()
-        for year, week in candidate:
-            monday = Week(year, week).monday()
-            if any(vf <= monday <= vu for vf, vu in periods):
-                paused.add((year, week))
+        paused = weeks_in_periods(candidate, periods)
         if paused:
             out[var_id] = paused
     return out
@@ -134,15 +153,11 @@ def member_exception_gaps(member_id: str, years: set[int]) -> list[dict]:
             or not subscription.valid_until
         ):
             continue
-        periods = [
-            (valid_from, valid_until, note)
-            for valid_from, valid_until, note in (
-                DeliveryExceptionPeriod.objects.filter(
-                    share_type_variation=variation
-                ).values_list("valid_from", "valid_until", "note")
-            )
-            if valid_from and valid_until
-        ]
+        periods = list(
+            DeliveryExceptionPeriod.objects.filter(
+                share_type_variation=variation
+            ).values_list("valid_from", "valid_until", "note")
+        )
         if not periods:
             continue
 
@@ -153,23 +168,22 @@ def member_exception_gaps(member_id: str, years: set[int]) -> list[dict]:
             day_number,
             _delivery_cycle_of(subscription),
         )
-        for year, week in candidate_weeks:
-            if year not in years:
-                continue
-            monday = Week(year, week).monday()
-            for valid_from, valid_until, note in periods:
-                if valid_from <= monday <= valid_until:
-                    gaps.append(
-                        {
-                            "year": year,
-                            "delivery_week": week,
-                            "delivery_day_number": day_number,
-                            "share_type_name": variation.share_type.name,
-                            "share_type_variation_size": variation.size,
-                            "note": note or "",
-                        }
-                    )
-                    break
+        weeks_in_years = [
+            (year, week) for (year, week) in candidate_weeks if year in years
+        ]
+        for (year, week), note in notes_by_week_in_periods(
+            weeks_in_years, periods
+        ).items():
+            gaps.append(
+                {
+                    "year": year,
+                    "delivery_week": week,
+                    "delivery_day_number": day_number,
+                    "share_type_name": variation.share_type.name,
+                    "share_type_variation_size": variation.size,
+                    "note": note,
+                }
+            )
 
     gaps.sort(key=lambda gap: (gap["year"], gap["delivery_week"]))
     return gaps

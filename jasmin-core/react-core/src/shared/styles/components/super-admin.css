@@ -308,22 +308,6 @@
   margin: 0;
 }
 
-/* ---------- Roles selector pill ---------- */
-.sa-role-pill {
-  padding: 4px 12px;
-  background: var(--color-bg-hover);
-  color: var(--color-text-secondary);
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.sa-role-pill--selected {
-  background: #667eea;
-  color: var(--color-bg-base);
-}
-
 /* ---------- Tenant detail page ---------- */
 .sa-detail-header {
   display: flex;

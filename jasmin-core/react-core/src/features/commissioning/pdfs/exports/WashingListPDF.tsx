@@ -1,102 +1,28 @@
-import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { TFunction } from "i18next";
-import { listStyles } from "./listPdfBase";
-import {
-  ListPDFFooter,
-  ListPDFHeader,
-  TickBox,
-} from "./ListPDFSharedComponents";
+import ArticleAmountTickListPDF, {
+  WASHING_LIST_PILL_KEY,
+  washAmountAccessor,
+  type ArticleAmountTickItem,
+} from "./ArticleAmountTickListPDF";
 
-// ─── Washing-list specific styles ───────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  colArticle: {
-    width: "38%",
-  },
-  colAmount: {
-    width: "22%",
-  },
-  colDone: {
-    width: "8%",
-  },
-});
-
-// ─── Types ──────────────────────────────────────────────────────────────────
-
-interface WashingItem {
-  id?: number | string;
-  computed_article_with_size?: string;
-  computed_total_wash_amount_text?: string;
-  note?: string;
-}
+// The washing worksheet is the shared ``ArticleAmountTickListPDF`` pinned to the
+// washing variant (pill + ``computed_total_wash_amount_text``). Kept as a public
+// entry point so callers importing the document directly stay stable.
 
 export interface WashingListPDFProps {
-  data: WashingItem[];
+  data: ArticleAmountTickItem[];
   year: number;
   week: number;
   dayName: string;
   t: TFunction;
 }
 
-// ─── Component ──────────────────────────────────────────────────────────────
-
-const WashingListPDF = ({ data, year: _year, week, dayName, t }: WashingListPDFProps) => {
-  return (
-    <Document>
-      <Page size="A4" style={listStyles.page}>
-        <ListPDFHeader pill={t("commissioning.washing_list")}>
-          <Text style={listStyles.title}>
-            {t("commissioning.KW")} {week} · {dayName}
-          </Text>
-        </ListPDFHeader>
-
-        <View style={listStyles.table}>
-          {/* Table Header */}
-          <View style={listStyles.tableHeader} fixed>
-            <View style={[listStyles.cell, styles.colArticle, listStyles.cellLeft]}>
-              <Text>{t("commissioning.vegetables_and_fruits")}</Text>
-            </View>
-            <View style={[listStyles.cell, styles.colAmount, listStyles.cellCenter]}>
-              <Text>{t("commissioning.amount")}</Text>
-            </View>
-            <View style={[listStyles.cell, listStyles.colNote, listStyles.cellLeft]}>
-              <Text>{t("commissioning.note")}</Text>
-            </View>
-            <View style={[listStyles.cell, styles.colDone, listStyles.cellCenter]}>
-              <Text>{"✓"}</Text>
-            </View>
-          </View>
-
-          {/* Table Rows */}
-          {data.map((item, index) => (
-            <View
-              key={item.id ?? index}
-              style={[
-                listStyles.tableRow,
-                index % 2 === 1 ? listStyles.tableRowAlt : {},
-              ]}
-              wrap={false}
-            >
-              <View style={[listStyles.cell, styles.colArticle, listStyles.cellLeft]}>
-                <Text style={{ fontWeight: 500 }}>{item.computed_article_with_size || ""}</Text>
-              </View>
-              <View style={[listStyles.cell, styles.colAmount, listStyles.cellCenter]}>
-                <Text style={{ fontWeight: 700 }}>{item.computed_total_wash_amount_text || ""}</Text>
-              </View>
-              <View style={[listStyles.cell, listStyles.colNote, listStyles.cellLeft]}>
-                <Text>{item.note || ""}</Text>
-              </View>
-              <View style={[listStyles.cell, styles.colDone, listStyles.cellCenter]}>
-                <TickBox />
-              </View>
-            </View>
-          ))}
-        </View>
-
-        <ListPDFFooter t={t} />
-      </Page>
-    </Document>
-  );
-};
+const WashingListPDF = (props: WashingListPDFProps) => (
+  <ArticleAmountTickListPDF
+    {...props}
+    pillKey={WASHING_LIST_PILL_KEY}
+    amountAccessor={washAmountAccessor}
+  />
+);
 
 export default WashingListPDF;

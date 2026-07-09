@@ -31,6 +31,7 @@ import {
   useShareDeliveryDays,
 } from "@features/commissioning/hooks";
 import {
+  activeAtDateForWeek,
   formatDayLabel,
   formatWeekLabel,
   generatePdfFilename,
@@ -80,11 +81,7 @@ export default function DeliveryStationDetails() {
   // delivery days — derived purely from the selected year/week (no effect).
   const shareDeliveryDaysFilters = useMemo(
     () => ({
-      active_at_date: dayjs()
-        .year(selectedYear)
-        .isoWeek(selectedWeek!)
-        .isoWeekday(6)
-        .format("YYYY-MM-DD"),
+      active_at_date: activeAtDateForWeek(selectedYear, selectedWeek),
     }),
     [selectedYear, selectedWeek],
   );

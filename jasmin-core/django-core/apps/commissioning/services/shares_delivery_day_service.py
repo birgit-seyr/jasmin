@@ -278,9 +278,7 @@ class SharesDeliveryDayService:
             station_id: str, active_at: datetime.date
         ) -> DeliveryStationDay | None:
             for candidate in new_day_dsds_by_station.get(station_id, ()):
-                if candidate.valid_from <= active_at and (
-                    candidate.valid_until is None or candidate.valid_until >= active_at
-                ):
+                if candidate.is_active_at(active_at):
                     return candidate
             return None
 

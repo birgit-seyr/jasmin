@@ -3,7 +3,7 @@ import { Button, Divider, Select, Space } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useTenant } from "@hooks/index";
+import { useTenantYearOptions } from "@hooks/index";
 
 interface WeekSelectorProps {
   selectedYear: number;
@@ -20,12 +20,8 @@ const WeekSelector = ({
   setSelectedWeek,
   include_null_option = false,
 }: WeekSelectorProps) => {
-  const { tenant } = useTenant();
   const { t } = useTranslation();
-
-  const tenantCreationYear = tenant?.created_at
-    ? dayjs(tenant.created_at as string).year()
-    : 2025;
+  const { tenantCreationYear, yearOptions } = useTenantYearOptions();
 
   const handleYearChange = useCallback(
     (value: number) => {
@@ -92,11 +88,6 @@ const WeekSelector = ({
     setSelectedWeek,
     tenantCreationYear,
   ]);
-
-  const yearOptions = Array.from({ length: 3 }, (_, index) => ({
-    value: index + tenantCreationYear,
-    label: index + tenantCreationYear,
-  }));
 
   const weeksInYear = getWeeksInYear(selectedYear);
 

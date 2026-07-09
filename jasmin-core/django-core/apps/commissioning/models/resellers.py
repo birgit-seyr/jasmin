@@ -11,7 +11,12 @@ from django.utils import timezone
 
 from ..errors import CommissioningError, DocumentDateRequired, FinalizedError
 from .base import JasminModel
-from .choices_text import DayNumberOptions, SizeVegetableOptions, UnitOptions
+from .choices_text import (
+    DayNumberOptions,
+    DocumentType,
+    SizeVegetableOptions,
+    UnitOptions,
+)
 from .mixin import (
     CreatedMixin,
     DateDocumentMixin,
@@ -351,7 +356,43 @@ class Offer(FinalizableMixin, FinalizedProtectedMixin, JasminModel):
         return self.amount >= Decimal(str(requested_amount))
 
 
+class ResellerDocumentTotalsMixin:
+    """Netto / brutto / per-tax-rate breakdown totals for a reseller document,
+    built from its article-line and crate-line collections through the canonical
+    Decimal money helpers.
+
+    ``DeliveryNoteReseller`` and ``InvoiceReseller`` share the identical
+    ``items`` / ``crate_items`` reverse accessors and use the defaults below;
+    ``Order`` overrides ``_total_line_items`` / ``_total_crate_items`` (its
+    accessors are ``ordercontent_set`` + the merged crate contents). Keeping the
+    trio here means a ``tax_breakdown`` change can never land on one document
+    type and silently skip another."""
+
+    def _total_line_items(self):
+        return self.items.all()
+
+    def _total_crate_items(self):
+        return self.crate_items.all()
+
+    @property
+    def sum_netto(self) -> Decimal:
+        return sum_netto(self._total_line_items()) + sum_netto(
+            self._total_crate_items()
+        )
+
+    @property
+    def tax_breakdown(self) -> list[dict]:
+        return tax_breakdown(self._total_line_items(), self._total_crate_items())
+
+    @property
+    def sum_brutto(self) -> Decimal:
+        return sum_brutto(
+            list(self._total_line_items()) + list(self._total_crate_items())
+        )
+
+
 class Order(
+    ResellerDocumentTotalsMixin,
     NumberedDocumentMixin,
     FinalizableMixin,
     FinalizedProtectedMixin,
@@ -450,21 +491,11 @@ class Order(
             contents.extend(order_content.crateordercontent_set.all())
         return contents
 
-    @property
-    def sum_netto(self) -> Decimal:
-        return sum_netto(self.ordercontent_set.all()) + sum_netto(
-            self._all_crate_contents()
-        )
+    def _total_line_items(self):
+        return self.ordercontent_set.all()
 
-    @property
-    def tax_breakdown(self) -> list[dict]:
-        return tax_breakdown(self.ordercontent_set.all(), self._all_crate_contents())
-
-    @property
-    def sum_brutto(self) -> Decimal:
-        return sum_brutto(
-            list(self.ordercontent_set.all()) + list(self._all_crate_contents())
-        )
+    def _total_crate_items(self):
+        return self._all_crate_contents()
 
 
 class OrderContent(FinalizableMixin, FinalizedProtectedMixin, OrderableItem):
@@ -842,6 +873,7 @@ class InvoiceResellerContent(
 
 
 class DeliveryNoteReseller(
+    ResellerDocumentTotalsMixin,
     DateDocumentMixin,
     NumberedDocumentMixin,
     CreatedMixin,
@@ -947,20 +979,9 @@ class DeliveryNoteReseller(
             " a new delivery note."
         )
 
-    @property
-    def sum_netto(self) -> Decimal:
-        return sum_netto(self.items.all()) + sum_netto(self.crate_items.all())
-
-    @property
-    def tax_breakdown(self) -> list[dict]:
-        return tax_breakdown(self.items.all(), self.crate_items.all())
-
-    @property
-    def sum_brutto(self) -> Decimal:
-        return sum_brutto(list(self.items.all()) + list(self.crate_items.all()))
-
 
 class InvoiceReseller(
+    ResellerDocumentTotalsMixin,
     DateDocumentMixin,
     NumberedDocumentMixin,
     CreatedMixin,
@@ -1035,12 +1056,8 @@ class InvoiceReseller(
     # Document type and relationships
     document_type = models.CharField(
         max_length=20,
-        choices=[
-            ("invoice", "Invoice"),
-            ("storno", "Storno/Cancellation"),
-            ("correction", "Correction"),
-        ],
-        default="invoice",
+        choices=DocumentType.choices,
+        default=DocumentType.INVOICE,
     )
 
     # References to related documents
@@ -1139,19 +1156,19 @@ class InvoiceReseller(
                 code="invoice.circular_cancellation",
             )
 
-        if self.document_type == "storno":
+        if self.document_type == DocumentType.STORNO:
             if not self.cancels_invoice:
                 raise CommissioningError(
                     "Storno must reference an invoice being cancelled",
                     code="invoice.storno_missing_target",
                 )
-            if self.cancels_invoice.document_type == "storno":
+            if self.cancels_invoice.document_type == DocumentType.STORNO:
                 raise CommissioningError(
                     "Cannot storno a storno",
                     code="invoice.cannot_storno_storno",
                 )
 
-        if self.document_type == "invoice" and self.cancels_invoice:
+        if self.document_type == DocumentType.INVOICE and self.cancels_invoice:
             raise ValidationError(
                 "Regular invoice cannot have cancellation/replacement references"
             )
@@ -1202,7 +1219,7 @@ class InvoiceReseller(
         # Defence in depth: storno / correction documents stay locked even
         # if they were ever unfinalized through some back-door path — the
         # audit link (``cancelled_by_invoice``) must be preserved.
-        if self.document_type in ("storno", "correction"):
+        if self.document_type in (DocumentType.STORNO, DocumentType.CORRECTION):
             raise FinalizedError(
                 f"Cannot delete {self.document_type} document — it is"
                 " legally immutable."
@@ -1220,7 +1237,7 @@ class InvoiceReseller(
         * it has not already been cancelled (no double storno).
         """
         return (
-            self.document_type == "invoice"
+            self.document_type == DocumentType.INVOICE
             and self.is_finalized
             and self.cancelled_by_invoice_id is None
         )
@@ -1265,7 +1282,7 @@ class InvoiceReseller(
         }
 
     def _get_tenant_settings_fields(self) -> tuple[str, str]:
-        if self.document_type in ("storno", "correction"):
+        if self.document_type in (DocumentType.STORNO, DocumentType.CORRECTION):
             return (
                 "invoice_numbers_start_new_at_year_change",
                 "correction_invoice_number_prefix",
@@ -1274,12 +1291,12 @@ class InvoiceReseller(
 
     def _base_number_queryset(self) -> models.QuerySet:
         """Filter by ``document_type`` so invoices and stornos have separate sequences."""
-        is_storno = self.document_type in ("storno", "correction")
+        is_storno = self.document_type in (DocumentType.STORNO, DocumentType.CORRECTION)
         if is_storno:
             return self.__class__.objects.filter(
-                document_type__in=["storno", "correction"]
+                document_type__in=[DocumentType.STORNO, DocumentType.CORRECTION]
             )
-        return self.__class__.objects.filter(document_type="invoice")
+        return self.__class__.objects.filter(document_type=DocumentType.INVOICE)
 
     def _advisory_lock_key(self) -> str:
         """Two independent sequences live in this table — invoice and
@@ -1289,7 +1306,9 @@ class InvoiceReseller(
         for no reason.
         """
         sequence = (
-            "storno" if self.document_type in ("storno", "correction") else "invoice"
+            "storno"
+            if self.document_type in (DocumentType.STORNO, DocumentType.CORRECTION)
+            else "invoice"
         )
         return f"numbered_doc:{self.__class__.__name__}:{sequence}"
 
@@ -1302,18 +1321,6 @@ class InvoiceReseller(
         self.has_been_paid = False
         self.paid_at = None
         self.save(update_fields=["has_been_paid", "paid_at"])
-
-    @property
-    def sum_netto(self) -> Decimal:
-        return sum_netto(self.items.all()) + sum_netto(self.crate_items.all())
-
-    @property
-    def tax_breakdown(self) -> list[dict]:
-        return tax_breakdown(self.items.all(), self.crate_items.all())
-
-    @property
-    def sum_brutto(self) -> Decimal:
-        return sum_brutto(list(self.items.all()) + list(self.crate_items.all()))
 
 
 class LabelTemplate(JasminModel):

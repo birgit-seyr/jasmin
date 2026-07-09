@@ -13,11 +13,11 @@ from decimal import Decimal
 
 from django.db.models import Q, QuerySet
 
+from apps.shared.money import round_money
+
 from ..models import DeliveryStation, ExternalShareDemand, ShareDelivery
 from ..utils.iso_week_utils import delivery_date_from_fields
 from .share_demand_service import ExternalDemandBackend, _resolve_backend
-
-_CENT = Decimal("0.01")
 
 
 def _calendar_months(start: datetime.date, end: datetime.date) -> int:
@@ -195,7 +195,7 @@ class DeliveryStationFeeService:
         else:
             quantity, rate, fee_type, unit = 0, Decimal("0"), "none", ""
 
-        total = (rate * quantity).quantize(_CENT)
+        total = round_money(rate * quantity)
         return {
             "delivery_station": station.id,
             "delivery_station_name": station.short_name,
@@ -204,7 +204,7 @@ class DeliveryStationFeeService:
             "fee_type": fee_type,
             "quantity": quantity,
             "quantity_unit": unit,
-            "rate_net": str(rate.quantize(_CENT)),
+            "rate_net": str(round_money(rate)),
             "total_net": str(total),
             "lines": lines,
         }

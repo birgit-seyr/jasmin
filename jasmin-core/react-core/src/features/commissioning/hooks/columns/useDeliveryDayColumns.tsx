@@ -5,6 +5,7 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import ToolTipIcon from "@shared/ui/ToolTipIcon";
+import { formatAmountForUnit } from "@shared/utils";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 import type { ShareDeliveryDayOption } from "../useShareDeliveryDays";
 import type { ShareTypeVariationOption } from "../useShareTypeVariations";
@@ -77,11 +78,11 @@ export function useDeliveryDayColumns({
 
       if (isEmpty && !shouldHighlight) return "";
 
-      const displayValue = !record.unit
-        ? format(numValue, 2)
-        : record.unit === "KG"
-          ? format(numValue, 2)
-          : format(numValue, 1);
+      const displayValue = formatAmountForUnit(
+        numValue,
+        record.unit as string | undefined,
+        format,
+      );
 
       return (
         <div

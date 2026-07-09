@@ -10,7 +10,6 @@ from django.utils import timezone
 
 from core.errors import ConflictError
 
-from ..constants import get_default_tax_rate_articles, get_default_tax_rate_crates
 from ..errors import CommissioningError
 from ..models import (
     CrateContentInvoiceReseller,
@@ -19,7 +18,10 @@ from ..models import (
     InvoiceResellerContent,
 )
 from ..utils.iso_week_utils import coerce_document_date
-from ..utils.tax_rate_utils import resolve_article_tax_rate, resolve_crate_tax_rate
+from ..utils.tax_rate_utils import (
+    effective_article_tax_rate,
+    effective_crate_tax_rate,
+)
 from .email_dispatch import load_pdf_attachments, send_document_email
 from .finalize_utils import finalize_children
 
@@ -115,10 +117,101 @@ class InvoiceService:
         }
 
     @staticmethod
-    def _get_tax_rate(content, date: date) -> int:
-        return resolve_article_tax_rate(
-            content, date, default=get_default_tax_rate_articles()
+    def _create_invoice_article_content(
+        invoice: InvoiceReseller,
+        source_row,
+        *,
+        amount,
+        tax_rate,
+        rabatt,
+        source_rabatt,
+        order_content=None,
+        delivery_note_contents=(),
+    ) -> InvoiceResellerContent:
+        """Create one ``InvoiceResellerContent`` article line from an upstream
+        row, owning the identity kwargs, the FULL ``source_*`` snapshot block,
+        and the provenance M2M so every write path (create-from-DN / storno /
+        summary) produces a byte-identical audit surface.
+
+        These are legally-immutable (GoBD/UStG) documents: a missed ``source_*``
+        field silently breaks the serializer's ``*_differs`` audit, so the five
+        snapshot fields are laid out in one place here. ``amount`` / sign /
+        ``tax_rate`` / ``rabatt`` (and the raw ``source_rabatt`` snapshot, which
+        legitimately diverges from the coerced ``rabatt or 0`` on the create
+        path) stay at the CALL SITE:
+
+          * create-from-DN passes the positive amount + stored-else-resolved tax
+            + the single source DN content on the M2M;
+          * storno passes the negated amount + the copied tax and wires NO M2M;
+          * summary passes the merged total + the merged tax, omits
+            ``order_content``, and wires all grouped DN contents on the M2M.
+
+        ``source_row`` supplies the shared identity fields (offer /
+        share_article / description / note / unit / size / sort /
+        price_per_unit). ``source_amount`` mirrors the written ``amount``
+        (equal at every call site) so the snapshot reads "unedited".
+        """
+        content = InvoiceResellerContent.objects.create(
+            invoice=invoice,
+            order_content=order_content,
+            offer=source_row.offer,
+            share_article=source_row.share_article,
+            description=source_row.description,
+            note=source_row.note,
+            unit=source_row.unit,
+            size=source_row.size,
+            sort=source_row.sort,
+            amount=amount,
+            price_per_unit=source_row.price_per_unit,
+            rabatt=rabatt,
+            tax_rate=tax_rate,
+            # Snapshot of the upstream row so the serializer's *_differs
+            # fields are pure local comparisons on this immutable document.
+            source_amount=amount,
+            source_price_per_unit=source_row.price_per_unit,
+            source_rabatt=source_rabatt,
+            source_unit=source_row.unit,
+            source_size=source_row.size,
         )
+        if delivery_note_contents:
+            content.delivery_note_contents.add(*delivery_note_contents)
+        return content
+
+    @staticmethod
+    def _create_invoice_crate_content(
+        invoice: InvoiceReseller,
+        source_row,
+        *,
+        amount,
+        tax_rate,
+        rabatt,
+        source_rabatt,
+        crate_delivery_note_contents=(),
+    ) -> CrateContentInvoiceReseller:
+        """Create one ``CrateContentInvoiceReseller`` line from an upstream crate
+        row — the crate counterpart to ``_create_invoice_article_content``.
+
+        Owns the three ``source_*`` snapshot fields (crates carry no unit/size)
+        + the crate provenance M2M. As with the article helper, ``amount`` /
+        sign / ``tax_rate`` / ``rabatt`` / the raw ``source_rabatt`` stay at the
+        call site; storno wires no M2M.
+        """
+        content = CrateContentInvoiceReseller.objects.create(
+            invoice=invoice,
+            crate_type=source_row.crate_type,
+            amount=amount,
+            price_per_unit=source_row.price_per_unit,
+            rabatt=rabatt,
+            tax_rate=tax_rate,
+            note=source_row.note,
+            # Snapshot of the upstream crate row — same rationale as above.
+            source_amount=amount,
+            source_price_per_unit=source_row.price_per_unit,
+            source_rabatt=source_rabatt,
+        )
+        if crate_delivery_note_contents:
+            content.crate_delivery_note_contents.add(*crate_delivery_note_contents)
+        return content
 
     @staticmethod
     def build_hash_payload(invoice: InvoiceReseller) -> dict:
@@ -222,12 +315,6 @@ class InvoiceService:
         return drift
 
     @staticmethod
-    def _get_crate_tax_rate(crate_type, date: date) -> int:
-        return resolve_crate_tax_rate(
-            crate_type, date, default=get_default_tax_rate_crates()
-        )
-
-    @staticmethod
     @transaction.atomic
     def create_from_delivery_note(
         delivery_note: DeliveryNoteReseller,
@@ -276,60 +363,36 @@ class InvoiceService:
         for delivery_note_content in delivery_note.items.select_related(
             "offer", "offer__share_article", "share_article"
         ):
-            invoice_content = InvoiceResellerContent.objects.create(
-                invoice=invoice,
-                order_content=delivery_note_content.order_content,
-                offer=delivery_note_content.offer,
-                share_article=delivery_note_content.share_article,
-                description=delivery_note_content.description,
-                note=delivery_note_content.note,
-                unit=delivery_note_content.unit,
-                size=delivery_note_content.size,
-                sort=delivery_note_content.sort,
+            InvoiceService._create_invoice_article_content(
+                invoice,
+                delivery_note_content,
                 amount=delivery_note_content.amount,
-                price_per_unit=delivery_note_content.price_per_unit,
-                rabatt=delivery_note_content.rabatt or 0,
-                tax_rate=(
-                    delivery_note_content.tax_rate
-                    if delivery_note_content.tax_rate is not None
-                    else InvoiceService._get_tax_rate(
-                        delivery_note_content, invoice.date
-                    )
+                tax_rate=effective_article_tax_rate(
+                    delivery_note_content, invoice.date
                 ),
-                # Snapshot of upstream DeliveryNoteContent so the serializer's
-                # *_differs fields are pure local comparisons.
-                source_amount=delivery_note_content.amount,
-                source_price_per_unit=delivery_note_content.price_per_unit,
+                rabatt=delivery_note_content.rabatt or 0,
                 source_rabatt=delivery_note_content.rabatt,
-                source_unit=delivery_note_content.unit,
-                source_size=delivery_note_content.size,
+                order_content=delivery_note_content.order_content,
+                delivery_note_contents=(delivery_note_content,),
             )
-            invoice_content.delivery_note_contents.add(delivery_note_content)
 
         for crate_delivery_note_content in delivery_note.crate_items.select_related(
             "crate_type"
         ):
-            crate_invoice_content = CrateContentInvoiceReseller.objects.create(
-                invoice=invoice,
-                crate_type=crate_delivery_note_content.crate_type,
+            InvoiceService._create_invoice_crate_content(
+                invoice,
+                crate_delivery_note_content,
                 amount=crate_delivery_note_content.amount,
-                price_per_unit=crate_delivery_note_content.price_per_unit,
-                rabatt=crate_delivery_note_content.rabatt or 0,
                 tax_rate=(
                     crate_delivery_note_content.tax_rate
                     if crate_delivery_note_content.tax_rate is not None
-                    else InvoiceService._get_crate_tax_rate(
+                    else effective_crate_tax_rate(
                         crate_delivery_note_content.crate_type, invoice.date
                     )
                 ),
-                note=crate_delivery_note_content.note,
-                # Snapshot of upstream CrateDeliveryNoteContent.
-                source_amount=crate_delivery_note_content.amount,
-                source_price_per_unit=crate_delivery_note_content.price_per_unit,
+                rabatt=crate_delivery_note_content.rabatt or 0,
                 source_rabatt=crate_delivery_note_content.rabatt,
-            )
-            crate_invoice_content.crate_delivery_note_contents.add(
-                crate_delivery_note_content
+                crate_delivery_note_contents=(crate_delivery_note_content,),
             )
 
         # Cascade-up finalize: creating an invoice locks in the upstream DN
@@ -500,45 +563,30 @@ class InvoiceService:
         storno.document_hash_version = 2
         storno.save(update_fields=["recipient_snapshot", "document_hash_version"])
 
+        # A storno negates each line, copies the tax verbatim, and wires NO
+        # provenance M2M; the snapshot mirrors the (negated) storno line so the
+        # serializer's *_differs audit fields read "unedited" — a storno is
+        # auto-generated and never hand-edited, so a diff would be noise.
         for item in invoice.items.select_related(
             "offer", "share_article", "order_content"
         ):
-            InvoiceResellerContent.objects.create(
-                invoice=storno,
-                order_content=item.order_content,
-                offer=item.offer,
-                share_article=item.share_article,
-                description=item.description,
-                unit=item.unit,
-                size=item.size,
-                price_per_unit=item.price_per_unit,
-                sort=item.sort,
-                note=item.note,
-                rabatt=item.rabatt,
-                tax_rate=item.tax_rate,
+            InvoiceService._create_invoice_article_content(
+                storno,
+                item,
                 amount=-item.amount,
-                # Snapshot the storno line's own (negated) values, so the
-                # serializer's *_differs audit fields read "unedited" — a storno
-                # is auto-generated and never hand-edited, so a diff would be noise.
-                source_amount=-item.amount,
-                source_price_per_unit=item.price_per_unit,
+                tax_rate=item.tax_rate,
+                rabatt=item.rabatt,
                 source_rabatt=item.rabatt,
-                source_unit=item.unit,
-                source_size=item.size,
+                order_content=item.order_content,
             )
 
         for crate_item in invoice.crate_items.select_related("crate_type"):
-            CrateContentInvoiceReseller.objects.create(
-                invoice=storno,
-                crate_type=crate_item.crate_type,
-                price_per_unit=crate_item.price_per_unit,
-                rabatt=crate_item.rabatt,
-                tax_rate=crate_item.tax_rate,
-                note=crate_item.note,
+            InvoiceService._create_invoice_crate_content(
+                storno,
+                crate_item,
                 amount=-crate_item.amount,
-                # Snapshot the storno line's own (negated) values — see above.
-                source_amount=-crate_item.amount,
-                source_price_per_unit=crate_item.price_per_unit,
+                tax_rate=crate_item.tax_rate,
+                rabatt=crate_item.rabatt,
                 source_rabatt=crate_item.rabatt,
             )
 
@@ -642,12 +690,8 @@ class InvoiceService:
             for delivery_note_content in delivery_note.items.select_related(
                 "offer", "offer__share_article", "share_article"
             ):
-                resolved_tax_rate = (
-                    delivery_note_content.tax_rate
-                    if delivery_note_content.tax_rate is not None
-                    else InvoiceService._get_tax_rate(
-                        delivery_note_content, invoice.date
-                    )
+                resolved_tax_rate = effective_article_tax_rate(
+                    delivery_note_content, invoice.date
                 )
                 resolved_rabatt = delivery_note_content.rabatt or 0
                 key = (
@@ -671,34 +715,21 @@ class InvoiceService:
                 content_groups[key]["dn_contents"].append(delivery_note_content)
                 content_groups[key]["total_amount"] += delivery_note_content.amount or 0
 
+        # A summary line merges its group's totals, omits ``order_content``, and
+        # wires every grouped DN content on the M2M. The grouping key guarantees
+        # every merged line shares price/unit/size/rabatt; the amount snapshot is
+        # the merged total, so the serializer's *_differs fields read "unedited"
+        # like on single-DN invoices.
         for group in content_groups.values():
-            first = group["first_content"]
-
-            invoice_content = InvoiceResellerContent.objects.create(
-                invoice=invoice,
-                offer=first.offer,
-                share_article=first.share_article,
-                description=first.description,
-                unit=first.unit,
-                size=first.size,
-                sort=first.sort,
+            InvoiceService._create_invoice_article_content(
+                invoice,
+                group["first_content"],
                 amount=group["total_amount"],
-                price_per_unit=first.price_per_unit,
-                rabatt=group["rabatt"],
                 tax_rate=group["tax_rate"],
-                note=first.note,
-                # Snapshot of the merged upstream DeliveryNoteContent lines so
-                # the serializer's *_differs fields work like on single-DN
-                # invoices. The grouping key guarantees every merged line
-                # shares price/unit/size/rabatt; the amount snapshot is the
-                # merged total.
-                source_amount=group["total_amount"],
-                source_price_per_unit=first.price_per_unit,
+                rabatt=group["rabatt"],
                 source_rabatt=group["rabatt"],
-                source_unit=first.unit,
-                source_size=first.size,
+                delivery_note_contents=group["dn_contents"],
             )
-            invoice_content.delivery_note_contents.add(*group["dn_contents"])
 
     @staticmethod
     def _build_summary_crate_contents(
@@ -717,7 +748,7 @@ class InvoiceService:
                 resolved_crate_tax_rate = (
                     delivery_note_crate_content.tax_rate
                     if delivery_note_crate_content.tax_rate is not None
-                    else InvoiceService._get_crate_tax_rate(
+                    else effective_crate_tax_rate(
                         delivery_note_crate_content.crate_type, invoice.date
                     )
                 )
@@ -745,25 +776,16 @@ class InvoiceService:
                     delivery_note_crate_content
                 )
 
+        # Merged crate line — same rationale as the summary article lines above.
         for group in crate_groups.values():
-            first = group["first_content"]
-
-            crate_invoice_content = CrateContentInvoiceReseller.objects.create(
-                invoice=invoice,
-                crate_type=first.crate_type,
+            InvoiceService._create_invoice_crate_content(
+                invoice,
+                group["first_content"],
                 amount=group["total_amount"],
-                price_per_unit=first.price_per_unit,
-                rabatt=group["rabatt"],
                 tax_rate=group["tax_rate"],
-                note=first.note,
-                # Snapshot of the merged upstream CrateDeliveryNoteContent
-                # lines — same rationale as the article lines above.
-                source_amount=group["total_amount"],
-                source_price_per_unit=first.price_per_unit,
+                rabatt=group["rabatt"],
                 source_rabatt=group["rabatt"],
-            )
-            crate_invoice_content.crate_delivery_note_contents.add(
-                *group["dn_crate_contents"]
+                crate_delivery_note_contents=group["dn_crate_contents"],
             )
 
     @staticmethod

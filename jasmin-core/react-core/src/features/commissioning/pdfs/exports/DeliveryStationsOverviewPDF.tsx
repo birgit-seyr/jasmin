@@ -4,11 +4,13 @@ import type { TFunction } from "i18next";
 import type { PackingBoxesMatrixColumn } from "@shared/api/generated/models";
 
 import {
-  ComboHeader,
-  boxComboStyles,
+  ComboColumnHeaderRow,
+  ComboGroupHeaderRow,
   comboColumnWidth,
   computeGroupEdges,
+  formatComboCount,
   groupComboColumns,
+  groupEdgeStyles,
   pickComboOrientation,
   type PdfOrientation,
 } from "./boxComboPdf";
@@ -43,12 +45,6 @@ export interface DeliveryStationsOverviewPDFProps {
   t: TFunction;
 }
 
-function formatCount(value: unknown): string {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n === 0) return "";
-  return String(n);
-}
-
 function TourPageContent({
   tour_number,
   stations,
@@ -69,12 +65,6 @@ function TourPageContent({
   // Group combination columns by base share_type for the parent header row.
   const groups = groupComboColumns(columns, t);
   const groupEdges = computeGroupEdges(groups);
-  // Green rules framing each base-share_type group: left on its first column,
-  // right on its last.
-  const edgeBorders = (key: string) => [
-    groupEdges.get(key)?.left ? boxComboStyles.groupBorderLeft : {},
-    groupEdges.get(key)?.right ? boxComboStyles.groupBorderRight : {},
-  ];
 
   const comboWidth = comboColumnWidth({
     orientation,
@@ -98,57 +88,35 @@ function TourPageContent({
       <View style={listStyles.table}>
         {/* Parent header: each base share_type short_name spans its combos,
             framed by the green group rules on both sides. */}
-        <View
-          style={[listStyles.tableHeaderShaded, { borderBottomWidth: 0.5 }]}
-          fixed
-        >
-          <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
-            <Text> </Text>
-          </View>
-          {groups.map((group) => (
-            <View
-              key={group.id}
-              style={[
-                listStyles.cell,
-                { width: comboWidth * group.cols.length },
-                listStyles.cellCenter,
-                boxComboStyles.groupBorderLeft,
-                boxComboStyles.groupBorderRight,
-              ]}
-            >
-              <Text style={boxComboStyles.comboBase}>{group.name}</Text>
+        <ComboGroupHeaderRow
+          groups={groups}
+          comboWidth={comboWidth}
+          thinBorderBottom
+          leading={
+            <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
+              <Text> </Text>
             </View>
-          ))}
-        </View>
+          }
+        />
 
         {/* Sub-header: combination labels (base size + add-on badges) */}
-        <View style={listStyles.tableHeaderShaded} fixed>
-          <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
-            <Text>{t("commissioning.delivery_station")}</Text>
-          </View>
-          {columns.map((column) => (
-            <View
-              key={column.key}
-              style={[
-                listStyles.cell,
-                { width: comboWidth },
-                listStyles.cellCenter,
-                ...edgeBorders(column.key),
-              ]}
-            >
-              <ComboHeader column={column} t={t} />
+        <ComboColumnHeaderRow
+          columns={columns}
+          comboWidth={comboWidth}
+          groupEdges={groupEdges}
+          t={t}
+          leading={
+            <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
+              <Text>{t("commissioning.delivery_station")}</Text>
             </View>
-          ))}
-        </View>
+          }
+        />
 
         {/* Data rows: one per station, cells = box count of that combination */}
         {stations.map((station, index) => (
           <View
             key={(station.delivery_station_day_id as string) || index}
-            style={[
-              listStyles.tableRow,
-              index % 2 === 1 ? listStyles.tableRowAlt : {},
-            ]}
+            style={listStyles.tableRow}
             wrap={false}
           >
             <View style={[listStyles.cell, nameCell, listStyles.cellLeft]}>
@@ -165,11 +133,11 @@ function TourPageContent({
                   listStyles.cell,
                   { width: comboWidth },
                   listStyles.cellCenter,
-                  ...edgeBorders(column.key),
+                  ...groupEdgeStyles(groupEdges, column.key),
                 ]}
               >
                 <Text>
-                  {formatCount(
+                  {formatComboCount(
                     (station as Record<string, unknown>)[column.key],
                   )}
                 </Text>

@@ -109,7 +109,7 @@ export default function DocumentationPurchase() {
   });
 
   const { getUnitLabel } = useUnitOptions();
-  const { currencySymbol } = useCurrency();
+  const { currencySymbol, formatCurrency } = useCurrency();
   const { format } = useNumberFormat();
 
   const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
@@ -168,10 +168,7 @@ export default function DocumentationPurchase() {
       );
 
       if (!hasAtLeastOneStorage) {
-        throw new Error(
-          t("validation.at_least_one_storage_required") ||
-            "At least one storage must be selected",
-        );
+        throw new Error(t("validation.at_least_one_storage_required"));
       }
       const amount =
         transformedData.amount === null ||
@@ -291,7 +288,7 @@ export default function DocumentationPurchase() {
         render: (_: unknown, record: Record<string, unknown>) => (
           <>
             {record.price_per_unit
-              ? `${format(Number(record.price_per_unit), 2)} ${currencySymbol}/${getUnitLabel(
+              ? `${formatCurrency(Number(record.price_per_unit))}/${getUnitLabel(
                   record.unit as string,
                 )}`
               : ""}
@@ -313,6 +310,7 @@ export default function DocumentationPurchase() {
       storageColumns,
       sellerColumn,
       currencySymbol,
+      formatCurrency,
       getUnitLabel,
       noteColumn,
     ],
@@ -428,7 +426,7 @@ export default function DocumentationPurchase() {
           onClick={() => setCsvExportVisible(true)}
           className="download-button"
         >
-          {t("commissioning.csv_export_purchase") || "CSV Export"}
+          {t("commissioning.csv_export_purchase")}
         </Button>
       </div>
       <ExplainerText title={t("common.info")}>
