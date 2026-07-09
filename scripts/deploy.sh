@@ -110,6 +110,14 @@ docker compose build
 log "starting core services"
 docker compose up -d postgres redis backend huey frontend gateway certbot backup
 
+# nginx resolves the backend/frontend upstream hostnames ONCE, at startup.
+# `up -d` may RECREATE those containers with NEW network IPs while the
+# (config-unchanged) gateway keeps running against the stale ones — result:
+# static pages still load but every /api/ call 502s ("nobody can log in").
+# Restarting the gateway after every up forces a fresh resolve. Sub-second.
+log "restarting gateway (refresh upstream DNS after possible recreates)"
+docker compose restart gateway
+
 # ── 5. wait for the backend to migrate + go healthy ──────────────────────────
 log "waiting for the backend (runs migrations on first boot — can take minutes)"
 BACKEND_CID="$(docker compose ps -q backend)"
