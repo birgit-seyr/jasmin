@@ -17,38 +17,50 @@ export interface PriceColumn {
   label: string;
 }
 
-/**
- * Loose shape of the orval-generated `useXxxList` query hooks: takes a params
- * object plus a react-query options envelope, returns `{ data, isLoading }`.
- */
-export type UseListAtDateHook<T> = (
-  params: { active_at_date: string },
-  options: { query: { enabled: boolean } },
-) => { data: T[] | undefined; isLoading: boolean };
+export interface ExportCsvColumn {
+  key: string;
+  label: string;
+  /** Optional per-cell value transform (boolean → ja/nein, null → "", …). */
+  render?: (value: unknown, row: Record<string, unknown>) => unknown;
+}
 
-export interface ExportCsvAtDateModalProps<T> {
+/**
+ * Supplier hook: given the loaded date (or null before Load), returns the CSV
+ * row stream and its loading flag. Each consumer wires its own generated
+ * `useXxxList` query (and any client-side merge / filter) here.
+ */
+export type UseRowsAtDate = (loadedDate: string | null) => {
+  rows: Record<string, unknown>[] | null;
+  isLoading: boolean;
+};
+
+export interface ExportCsvAtDateModalProps {
   open: boolean;
   onClose: () => void;
   title: string;
   filenamePrefix: string;
-  columns: PriceColumn[];
-  useListAtDate: UseListAtDateHook<T>;
+  columns: ExportCsvColumn[];
+  useRows: UseRowsAtDate;
   width?: number;
+  /** i18n key for the "N rows loaded" success line (receives `{ count }`). */
+  loadedMessageKey?: string;
 }
 
 /**
  * Generic CSV export modal for "list at a specific date" endpoints. The user
- * picks a date, presses Load, then Download builds a CSV client-side.
+ * picks a date, presses Load (which feeds `useRows`), then Download builds a
+ * CSV client-side (honoring each column's optional `render`).
  */
-export default function ExportCsvAtDateModal<T>({
+export default function ExportCsvAtDateModal({
   open,
   onClose,
   title,
   filenamePrefix,
   columns,
-  useListAtDate,
+  useRows,
   width = 420,
-}: ExportCsvAtDateModalProps<T>) {
+  loadedMessageKey = "commissioning.prices_loaded",
+}: ExportCsvAtDateModalProps) {
   const { t } = useTranslation();
   const { getSetting } = useTenant();
   const { dateFormat } = useDateFormat();
@@ -59,33 +71,33 @@ export default function ExportCsvAtDateModal<T>({
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [loadedDate, setLoadedDate] = useState<string | null>(null);
 
-  const { data: rawData, isLoading: loading } = useListAtDate(
-    { active_at_date: loadedDate ?? "" },
-    { query: { enabled: !!loadedDate } },
+  const { rows: rawRows, isLoading: loading } = useRows(loadedDate);
+
+  const rows = useMemo<Record<string, unknown>[] | null>(
+    () => (loadedDate ? (rawRows ?? null) : null),
+    [rawRows, loadedDate],
   );
 
-  const data = useMemo<T[] | null>(
-    () => (loadedDate ? (rawData ?? null) : null),
-    [rawData, loadedDate],
-  );
-
-  const fetchPrices = useCallback(() => {
+  const fetchRows = useCallback(() => {
     if (!selectedDate) return;
     setLoadedDate(toApiDate(selectedDate));
   }, [selectedDate]);
 
   const handleExport = useCallback(() => {
-    if (!data || data.length === 0) return;
+    if (!rows || rows.length === 0) return;
     const headers = columns.map((c) => c.label);
-    const rows = data.map((row) =>
-      columns.map((c) => (row as Record<string, unknown>)[c.key]),
+    const csvRows = rows.map((row) =>
+      columns.map((c) => {
+        const raw = row[c.key];
+        return c.render ? c.render(raw, row) : (raw ?? "");
+      }),
     );
     downloadCsvBlob(
-      buildCsvString(headers, rows, dialect),
+      buildCsvString(headers, csvRows, dialect),
       `${filenamePrefix}_${selectedDate.format("YYYY-MM-DD")}`,
     );
     onClose();
-  }, [data, columns, selectedDate, filenamePrefix, onClose, dialect]);
+  }, [rows, columns, selectedDate, filenamePrefix, onClose, dialect]);
 
   const handleClose = useCallback(() => {
     setLoadedDate(null);
@@ -107,7 +119,7 @@ export default function ExportCsvAtDateModal<T>({
           type="primary"
           className="download-button"
           icon={<DownloadOutlined />}
-          disabled={!data || data.length === 0}
+          disabled={!rows || rows.length === 0}
           onClick={handleExport}
         >
           {t("common.download")}
@@ -123,7 +135,7 @@ export default function ExportCsvAtDateModal<T>({
           format={dateFormat}
           className="flex-1"
         />
-        <Button type="primary" onClick={fetchPrices} loading={loading}>
+        <Button type="primary" onClick={fetchRows} loading={loading}>
           {t("common.load")}
         </Button>
       </div>
@@ -134,13 +146,13 @@ export default function ExportCsvAtDateModal<T>({
         </div>
       )}
 
-      {!loading && data && data.length === 0 && (
+      {!loading && rows && rows.length === 0 && (
         <EmptyHint>{t("common.no_data")}</EmptyHint>
       )}
 
-      {!loading && data && data.length > 0 && (
+      {!loading && rows && rows.length > 0 && (
         <div style={{ color: "var(--color-success)", fontWeight: 500 }}>
-          {t("commissioning.prices_loaded", { count: data.length })}
+          {t(loadedMessageKey, { count: rows.length })}
         </div>
       )}
     </Modal>

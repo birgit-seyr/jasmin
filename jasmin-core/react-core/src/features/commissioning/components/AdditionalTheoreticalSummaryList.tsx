@@ -43,7 +43,7 @@ import {
   useIsMobile,
   useNoteColumn,
   useNumberFormat,
-  useSizeOptions,
+  useVegetableSizeOptions,
   useUnitOptions,
 } from "@hooks/index";
 import {
@@ -172,7 +172,7 @@ export default function AdditionalTheoreticalSummaryList(
     articleDefaults: "harvest",
   });
   const { getUnitLabel } = useUnitOptions();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
   const { format } = useNumberFormat();
   const { noteColumn } = useNoteColumn();
   const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
@@ -220,7 +220,7 @@ export default function AdditionalTheoreticalSummaryList(
 
       const sizeLabel =
         record.size && record.size !== "M"
-          ? ` (${getSizeLabel(record.size as string)})`
+          ? ` (${getVegetableSizeLabel(record.size as string)})`
           : "";
       const articleWithSize = `${record.share_article_name}${sizeLabel}`;
 
@@ -239,7 +239,7 @@ export default function AdditionalTheoreticalSummaryList(
     additionalField,
     totalAmountTextField,
     getUnitLabel,
-    getSizeLabel,
+    getVegetableSizeLabel,
     format,
   ]);
 

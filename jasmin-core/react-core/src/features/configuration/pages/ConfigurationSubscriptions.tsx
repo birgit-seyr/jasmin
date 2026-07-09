@@ -304,7 +304,7 @@ export default function ConfigurationSubscriptions() {
           inputType: "text",
           required: true,
           align: "left",
-          width: "12em",
+          width: "10em",
         },
         {
           title: t("commissioning.delivery_cycle"),
@@ -313,7 +313,7 @@ export default function ConfigurationSubscriptions() {
           inputType: "select",
           align: "center",
           required: true,
-          width: "14em",
+          width: "10em",
           disabled: isFieldDisabled,
           options: [
             { label: t("commissioning.weekly"), value: "WEEKLY" },
@@ -349,7 +349,7 @@ export default function ConfigurationSubscriptions() {
           key: "share_type_variation_sizes_in_use",
           inputType: "text",
           disabled: true,
-          width: "12em",
+          width: "8em",
           readOnly: true,
           align: "left",
           render: (value: string) => (
@@ -365,7 +365,7 @@ export default function ConfigurationSubscriptions() {
           dataIndex: "amount_of_jokers",
           key: "amount_of_jokers",
           inputType: "integer",
-          width: "4em",
+          width: "3em",
           align: "center",
           disabled: isFieldDisabled,
           render: (_: unknown, record: TableRecord) =>
@@ -381,7 +381,7 @@ export default function ConfigurationSubscriptions() {
           key: "amount_of_donation_jokers",
           inputType: "integer",
           align: "center",
-          width: "4em",
+          width: "3em",
           disabled: isFieldDisabled,
           render: (_: unknown, record: TableRecord) =>
             record.amount_of_donation_jokers == 0
@@ -419,7 +419,7 @@ export default function ConfigurationSubscriptions() {
           key: "variations_action",
           disabled: true,
           readOnly: true,
-          width: "16em",
+          width: "12em",
           render: (_: unknown, record: TableRecord) => (
             <Button
               type="primary"
@@ -594,9 +594,7 @@ export default function ConfigurationSubscriptions() {
             // shown.
             key: "reservation_ttl_days",
             label: t("settings.commissioning.reservation_ttl_days"),
-            description: t(
-              "settings.commissioning.reservation_ttl_days_desc",
-            ),
+            description: t("settings.commissioning.reservation_ttl_days_desc"),
             type: "number",
             defaultValue: 14,
             min: 0,

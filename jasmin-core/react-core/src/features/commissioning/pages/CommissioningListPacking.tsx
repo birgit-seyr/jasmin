@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -23,16 +22,15 @@ import {
   useShareArticleColumn,
 } from "@features/commissioning/hooks";
 import {
+  currentWeek,
   useIsMobile,
-  useSizeOptions,
+  useVegetableSizeOptions,
   useTenant,
   useUnitOptions,
+  useYearWeekState,
 } from "@hooks/index";
 import { formatWeekLabel, generatePdfFilename, getShareOptionLabel } from "@shared/utils";
 import { CommissioningListPackingPDFGenerator } from "@features/commissioning/pdfs";
-
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
 
 const shareArticleFilters = {
   is_harvest_share_article: true,
@@ -172,8 +170,8 @@ export default function CommissioningListPacking() {
   // not just the bulk-packed ones.
   const { bulkShareOptions, boxesShareOptions } = usePackingModeShareGroups();
 
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedDeliveryDayId, setSelectedDeliveryDayId] = useState<
     string | null
   >(null);
@@ -234,7 +232,7 @@ export default function CommissioningListPacking() {
   // (memoised) rows reference, so it can't loop.
   const isMobile = useIsMobile();
   const { getUnitLabel } = useUnitOptions();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
   const { getSetting } = useTenant();
   // Mirror the on-screen size column (``useAmountUnitSizeColumns``): hidden
   // unless the tenant's ``show_size_column`` setting is truthy.
@@ -258,14 +256,14 @@ export default function CommissioningListPacking() {
             share_article_name: row.share_article_name,
             unit_label: row.unit ? getUnitLabel(row.unit) : "",
             size_label:
-              row.size && row.size !== "M" ? getSizeLabel(row.size) : "",
+              row.size && row.size !== "M" ? getVegetableSizeLabel(row.size) : "",
             total_amount_text: Number.isInteger(row.total_amount)
               ? String(row.total_amount)
               : row.total_amount.toFixed(2),
           })),
         }))
         .filter((group) => group.rows.length > 0),
-    [shareOptionValues, rowsByOption, t, getUnitLabel, getSizeLabel],
+    [shareOptionValues, rowsByOption, t, getUnitLabel, getVegetableSizeLabel],
   );
 
   const generateFilename = useMemo(

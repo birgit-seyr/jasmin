@@ -20,6 +20,7 @@ import {
 import type { VirtualVariationComponentsRequest } from "@shared/api/generated/models";
 import { notify } from '@shared/utils';
 import { getErrorMessage } from "@shared/utils/apiError";
+import { getShareTypeVariationSizeLabelPure } from "@hooks/index";
 
 const { Text } = Typography;
 
@@ -227,7 +228,7 @@ export default function VirtualComponentModal({
                     >
                       <Text strong>
                         {(variation as unknown as { name?: string }).name ||
-                          t(`commissioning.${variation.size}`)}
+                          getShareTypeVariationSizeLabelPure(variation.size, t)}
                       </Text>
                     </Checkbox>
 

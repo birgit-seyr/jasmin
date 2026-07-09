@@ -1,10 +1,10 @@
-import { LeftOutlined, RightOutlined } from "@ant-design/icons";
-import { Button, Divider, Select, Space } from "antd";
+import { Select, Space } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useIsMobile, useDeliveryDayLabel } from "@hooks/index";
 import { dateForWeekDayNumber } from "@shared/utils";
+import SteppedSelect from "./SteppedSelect";
 
 const { Option } = Select;
 
@@ -112,59 +112,42 @@ export default function DaySelector({
 
   return (
     <Space>
-      <Space>
-        <Divider type="vertical" />
-        <Button
-          size="small"
-          icon={<LeftOutlined />}
-          onClick={prevDay}
-          className="week-selector-small-buttons"
-          disabled={!canGoPrev}
-          aria-label={t("common.previous")}
-        />
-        <Select
-          value={selectedDay}
-          style={{
-            width: isMobile ? "10em" : suffix === null ? "15em" : "22em",
-          }}
-          size={"small"}
-          onChange={handleDayChange}
-          className="bold-select week-selector-select"
-          aria-label={t("common.delivery_day")}
-        >
-          {dayOptions.map((day) => (
-            <Option
-              key={day === null ? "none" : day}
-              value={day}
-              className={
-                day !== null &&
-                usesDaysWithOrders &&
-                daysWithOrders.includes(day)
-                  ? "with-orders"
-                  : day !== null && usesDaysWithOrders
-                    ? "without-orders"
-                    : undefined
-              }
-            >
-              {day === null ? (
-                t("commissioning.all_delivery_days")
-              ) : (
-                <>
-                  {!isMobile && suffix ? `${suffix} ` : ""}{calculateDate(day)}
-                </>
-              )}
-            </Option>
-          ))}
-        </Select>
-        <Button
-          size="small"
-          icon={<RightOutlined />}
-          onClick={nextDay}
-          className="week-selector-small-buttons"
-          disabled={!canGoNext}
-          aria-label={t("common.next")}
-        />
-      </Space>
+      <SteppedSelect
+        showDivider
+        value={selectedDay}
+        onChange={handleDayChange}
+        onPrev={prevDay}
+        onNext={nextDay}
+        canGoPrev={canGoPrev}
+        canGoNext={canGoNext}
+        selectStyle={{
+          width: isMobile ? "10em" : suffix === null ? "15em" : "22em",
+        }}
+        selectAriaLabel={t("common.delivery_day")}
+      >
+        {dayOptions.map((day) => (
+          <Option
+            key={day === null ? "none" : day}
+            value={day}
+            className={
+              day !== null && usesDaysWithOrders && daysWithOrders.includes(day)
+                ? "with-orders"
+                : day !== null && usesDaysWithOrders
+                  ? "without-orders"
+                  : undefined
+            }
+          >
+            {day === null ? (
+              t("commissioning.all_delivery_days")
+            ) : (
+              <>
+                {!isMobile && suffix ? `${suffix} ` : ""}
+                {calculateDate(day)}
+              </>
+            )}
+          </Option>
+        ))}
+      </SteppedSelect>
     </Space>
   );
 }

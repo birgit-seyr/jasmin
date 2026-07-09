@@ -229,19 +229,19 @@ class WaitingListOfferService:
     @staticmethod
     def _send_offer_email(subscription) -> None:
         from apps.shared.deferred_email import schedule_deferred_email
-        from apps.shared.invitations import _frontend_base_url, _tenant_name
+        from apps.shared.tenant_urls import frontend_base_url, tenant_name
 
         member = subscription.member
         variation = subscription.share_type_variation
         share_type = getattr(variation, "share_type", None) if variation else None
         station_day = subscription.default_delivery_station_day
-        base_url = _frontend_base_url()
+        base_url = frontend_base_url()
         accept_url = f"{base_url}/waiting-list-offer/{subscription.notification_token}"
 
         # Flatten to plain scalars — never hand a live ORM instance to the
         # tenant-editable email renderer.
         context = {
-            "tenant_name": _tenant_name(),
+            "tenant_name": tenant_name(),
             "member": {
                 "first_name": getattr(member, "first_name", "") or "",
                 "email": getattr(member, "email", "") or "",

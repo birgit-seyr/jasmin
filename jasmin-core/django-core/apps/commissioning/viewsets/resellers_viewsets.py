@@ -53,6 +53,7 @@ from ..models import (
     OrderContent,
     Reseller,
 )
+from ..models.choices_text import InvitationStatus
 from ..models.members import UserInvitation
 from ..schemas import (
     get_day_number_parameter,
@@ -310,9 +311,9 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
         # invitation per row — both N+1 without the joins below. Mirror
         # ``_build_member_queryset`` so the list stays scale-invariant
         # (locked by apps/payments/tests/test_query_count_locks.py).
-        sent_invitations_qs = UserInvitation.objects.filter(status="sent").order_by(
-            "-created_at"
-        )
+        sent_invitations_qs = UserInvitation.objects.filter(
+            status=InvitationStatus.SENT
+        ).order_by("-created_at")
         queryset = (
             Reseller.objects.select_related(
                 "contact",

@@ -13,6 +13,7 @@ from datetime import date as dt_date
 from decimal import Decimal
 from typing import Any, Literal
 
+from django.db import connection
 from django.db.models import QuerySet
 from django.http import StreamingHttpResponse
 
@@ -31,42 +32,109 @@ __all__ = ["DocumentationExportService", "InvalidExportDates"]
 class DocumentationExportService:
     """Stream CSV (``StreamingHttpResponse``) exports for documentation models."""
 
+    # German is the primary locale and the default; the English labels /
+    # filename tokens are served when the tenant ``csv_format`` selects the
+    # ``en`` CSV dialect, mirroring the de/en switch :mod:`csv_format` already
+    # applies to the machine formatting. fr/it are deferred and degrade to de.
+    _SUPPORTED_LANGUAGES: tuple[str, ...] = ("de", "en")
+
     _CONFIG: dict[str, dict[str, Any]] = {
         "harvest": {
             "model": Harvest,
             "select_related": ("share_article", "storage"),
-            "filename_prefix": "ernte",
-            "headers": [
-                "Datum",
-                "KW",
-                "Tag",
-                "Artikel",
-                "Einheit",
-                "Größe",
-                "Menge",
-                "Lager",
-                "Notiz",
-            ],
+            "labels": {
+                "de": {
+                    "filename_prefix": "ernte",
+                    "headers": [
+                        "Datum",
+                        "KW",
+                        "Tag",
+                        "Artikel",
+                        "Einheit",
+                        "Größe",
+                        "Menge",
+                        "Lager",
+                        "Notiz",
+                    ],
+                },
+                "en": {
+                    "filename_prefix": "harvest",
+                    "headers": [
+                        "Date",
+                        "CW",
+                        "Day",
+                        "Article",
+                        "Unit",
+                        "Size",
+                        "Amount",
+                        "Storage",
+                        "Note",
+                    ],
+                },
+            },
         },
         "purchase": {
             "model": Purchase,
             "select_related": ("share_article", "storage", "seller"),
-            "filename_prefix": "zukauf",
-            "headers": [
-                "Datum",
-                "KW",
-                "Tag",
-                "Artikel",
-                "Einheit",
-                "Größe",
-                "Menge",
-                "Lieferant",
-                "Preis/Einheit",
-                "Lager",
-                "Notiz",
-            ],
+            "labels": {
+                "de": {
+                    "filename_prefix": "zukauf",
+                    "headers": [
+                        "Datum",
+                        "KW",
+                        "Tag",
+                        "Artikel",
+                        "Einheit",
+                        "Größe",
+                        "Menge",
+                        "Lieferant",
+                        "Preis/Einheit",
+                        "Lager",
+                        "Notiz",
+                    ],
+                },
+                "en": {
+                    "filename_prefix": "purchase",
+                    "headers": [
+                        "Date",
+                        "CW",
+                        "Day",
+                        "Article",
+                        "Unit",
+                        "Size",
+                        "Amount",
+                        "Seller",
+                        "Price/Unit",
+                        "Storage",
+                        "Note",
+                    ],
+                },
+            },
         },
     }
+
+    # Summed-sheet columns (article / unit / size / amount) + the filename
+    # suffix, localized alongside the detail headers above.
+    _SUMMED_LABELS: dict[str, dict[str, Any]] = {
+        "de": {
+            "headers": ["Artikel", "Einheit", "Größe", "Menge"],
+            "suffix": "summiert",
+        },
+        "en": {
+            "headers": ["Article", "Unit", "Size", "Amount"],
+            "suffix": "summed",
+        },
+    }
+
+    @classmethod
+    def _resolve_csv_language(cls, tenant: Any | None = None) -> str:
+        """Pick the CSV label language from the tenant ``csv_format`` — the same
+        source :func:`get_csv_dialect` reads for its preset, so the headers and
+        the machine formatting never diverge. Unknown values degrade to German."""
+        if tenant is None:
+            tenant = getattr(connection, "tenant", None)
+        key = str(getattr(tenant, "csv_format", None) or "de").lower()
+        return key if key in cls._SUPPORTED_LANGUAGES else "de"
 
     @classmethod
     def export_csv(
@@ -90,6 +158,8 @@ class DocumentationExportService:
             raise InvalidExportDates(f"Unsupported export model: {model!r}")
 
         config = cls._CONFIG[model]
+        language = cls._resolve_csv_language()
+        labels = config["labels"][language]
         queryset = cls._get_queryset(config, start, end)
         # Materialized list (relations are select_related on the queryset), so
         # the streaming generator below touches no DB after the view returns.
@@ -101,9 +171,9 @@ class DocumentationExportService:
         def rows() -> Iterator[str]:
             yield "\ufeff"  # BOM first so Excel opens UTF-8 correctly.
             if summed:
-                yield from cls._iter_summed_rows(writer, filtered, dialect)
+                yield from cls._iter_summed_rows(writer, filtered, dialect, language)
             else:
-                yield writer.writerow(escape_csv_row(config["headers"]))
+                yield writer.writerow(escape_csv_row(labels["headers"]))
                 for instance, instance_date in filtered:
                     yield writer.writerow(
                         escape_csv_row(
@@ -113,9 +183,9 @@ class DocumentationExportService:
                         )
                     )
 
-        filename = f"{config['filename_prefix']}_{date_from}_{date_to}"
+        filename = f"{labels['filename_prefix']}_{date_from}_{date_to}"
         if summed:
-            filename += "_summiert"
+            filename += f"_{cls._SUMMED_LABELS[language]['suffix']}"
 
         response = StreamingHttpResponse(rows(), content_type="text/csv; charset=utf-8")
         response["Content-Disposition"] = f'attachment; filename="{filename}.csv"'
@@ -153,9 +223,13 @@ class DocumentationExportService:
                 result.append((instance, instance_date))
         return result
 
-    @staticmethod
+    @classmethod
     def _iter_summed_rows(
-        writer: Any, filtered: list[tuple[Any, dt_date]], dialect: Any
+        cls,
+        writer: Any,
+        filtered: list[tuple[Any, dt_date]],
+        dialect: Any,
+        language: str,
     ) -> Iterator[str]:
         sums: dict[tuple, dict] = {}
         for instance, _ in filtered:
@@ -174,7 +248,7 @@ class DocumentationExportService:
             if instance.amount is not None:
                 sums[key]["amount"] += Decimal(str(instance.amount))
 
-        yield writer.writerow(escape_csv_row(["Artikel", "Einheit", "Größe", "Menge"]))
+        yield writer.writerow(escape_csv_row(cls._SUMMED_LABELS[language]["headers"]))
         for row in sorted(sums.values(), key=lambda r: r["share_article"]):
             yield writer.writerow(
                 escape_csv_row(

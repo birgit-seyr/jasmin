@@ -1,13 +1,11 @@
-import { UploadOutlined } from "@ant-design/icons";
-import { Button, Card, Col, Row, Space, Typography, Upload } from "antd";
+import { Card, Col, Row, Space, Typography } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Tenant } from "@shared/api/generated/models";
 import type { Writable } from "@shared/api/typeHelpers";
 import { tenantsTenantsPartialUpdate } from "@shared/api/generated/tenants/tenants";
-import { AutoSaveIndicator } from "@shared/ui";
+import { AutoSaveIndicator, PictureUploadField, usePictureUpload } from "@shared/ui";
 import { useAutoSave, useTenant } from "@hooks/index";
-import axiosInstance from "@shared/services/api";
 import { notify } from "@shared/utils";
 import { checkBic, checkIban, formatIbanError } from "@shared/utils/iban";
 import {
@@ -36,6 +34,38 @@ export default function ConfigurationGeneral() {
 
   const { t } = useTranslation();
   const { tenant, refreshTenant } = useTenant();
+
+  // Branding uploads (logo + organic logo) go through the shared multipart
+  // picture-upload hook — a separate, immediate PATCH decoupled from the JSON
+  // autosave of the scalar fields below.
+  const tenantEndpoint = `/api/tenants/tenants/${tenant?.id ?? ""}/`;
+
+  const resolveMediaUrl = (value: string | null | undefined): string | null =>
+    value
+      ? value.startsWith("http")
+        ? value
+        : `${import.meta.env.VITE_API_URL || ""}${value}`
+      : null;
+
+  const logoPreviewUrl = resolveMediaUrl(tenant?.logo);
+  const bioLogoPreviewUrl = resolveMediaUrl(tenant?.bio_logo);
+
+  const { uploading: logoUploading, uploadPicture: uploadLogo } =
+    usePictureUpload({
+      endpoint: tenantEndpoint,
+      fieldName: "logo",
+      invalidate: refreshTenant,
+      successMessage: t("tenant.files.logo_saved"),
+      errorMessage: t("common.error_saving_data"),
+    });
+  const { uploading: bioLogoUploading, uploadPicture: uploadBioLogo } =
+    usePictureUpload({
+      endpoint: tenantEndpoint,
+      fieldName: "bio_logo",
+      invalidate: refreshTenant,
+      successMessage: t("tenant.files.bio_logo_saved"),
+      errorMessage: t("common.error_saving_data"),
+    });
 
   // Memoize configurations
   const tenantFieldsConfig = useMemo<SettingsCategory[]>(
@@ -340,49 +370,17 @@ export default function ConfigurationGeneral() {
       const tenantId = String(currentTenantId);
       const currentTenantData = tenantDataRef.current;
 
-      const hasFileUpload =
-        currentTenantData.logo instanceof File ||
-        currentTenantData.bio_logo instanceof File;
+      // The upload fields never ride on this JSON PATCH: logo / bio_logo are
+      // FileFields handled out-of-band by ``usePictureUpload`` (multipart), and
+      // a stored URL string must not be re-sent to the ImageField.
+      const { logo: _logo, bio_logo: _bio_logo, ...tenantFields } =
+        currentTenantData;
 
-      if (hasFileUpload) {
-        const formData = new FormData();
-
-        Object.entries(currentTenantData).forEach(([key, value]) => {
-          if (key === "logo" || key === "bio_logo") {
-            if (value instanceof File) {
-              formData.append(key, value);
-            }
-          } else if (value !== null && value !== undefined) {
-            if (typeof value === "object") {
-              formData.append(key, JSON.stringify(value));
-            } else {
-              formData.append(key, String(value));
-            }
-          }
-        });
-
-        await axiosInstance.patch(
-          `/api/tenants/tenants/${tenantId}/`,
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          },
-        );
-      } else {
-        // The upload fields never ride on the JSON PATCH: a pending
-        // ``File`` takes the multipart branch above, and a stored URL
-        // string must not be re-sent to the ImageField.
-        const { logo: _logo, bio_logo: _bio_logo, ...tenantFields } =
-          currentTenantData;
-
-        // Directional cast at the orval boundary: the autosave sends a
-        // partial snapshot while the generated body type requires
-        // ``name`` — the field names/types themselves are checked by
-        // ``TenantFormState``.
-        await tenantsTenantsPartialUpdate(tenantId, tenantFields as Tenant);
-      }
+      // Directional cast at the orval boundary: the autosave sends a
+      // partial snapshot while the generated body type requires
+      // ``name`` — the field names/types themselves are checked by
+      // ``TenantFormState``.
+      await tenantsTenantsPartialUpdate(tenantId, tenantFields as Tenant);
 
       // Pull the freshly-saved tenant row into TenantContext so the
       // form's next read of ``tenant.<field>`` reflects what's in the
@@ -486,122 +484,28 @@ export default function ConfigurationGeneral() {
             <Col span={12}>
               <div style={{ padding: "4px 0" }}>
                 <Text strong>{t("tenant.files.current_logo")}</Text>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 16,
-                    marginTop: 8,
-                  }}
-                >
-                  {tenant?.logo && (
-                    <div
-                      style={{
-                        border: "1px solid var(--color-border)",
-                        borderRadius: 8,
-                        padding: 8,
-                        backgroundColor: "var(--color-bg-elevated)",
-                      }}
-                    >
-                      <img
-                        src={
-                          tenant.logo.startsWith("http")
-                            ? tenant.logo
-                            : `${import.meta.env.VITE_API_URL || ""}${
-                                tenant.logo
-                              }`
-                        }
-                        alt={t("tenant.files.current_logo")}
-                        style={{
-                          maxHeight: 60,
-                          maxWidth: 120,
-                          objectFit: "contain",
-                        }}
-                      />
-                    </div>
-                  )}
-                  <Upload
-                    name="logo"
-                    listType="picture"
-                    maxCount={1}
-                    beforeUpload={() => false}
-                    onChange={(info) => {
-                      if (info.fileList.length > 0) {
-                        handleTenantFieldChange(
-                          "logo",
-                          info.fileList[0].originFileObj,
-                          "file",
-                        );
-                      } else {
-                        handleTenantFieldChange("logo", null, "file");
-                      }
-                    }}
-                  >
-                    <Button icon={<UploadOutlined />}>
-                      {t("tenant.files.upload_logo")}
-                    </Button>
-                  </Upload>
+                <div style={{ marginTop: 8 }}>
+                  <PictureUploadField
+                    pictureUrl={logoPreviewUrl}
+                    uploading={logoUploading}
+                    onUpload={uploadLogo}
+                    previewVariant="inline"
+                    showDelete={false}
+                  />
                 </div>
               </div>
             </Col>
             <Col span={12}>
               <div style={{ padding: "4px 0" }}>
                 <Text strong>{t("tenant.files.current_bio_logo")}</Text>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 16,
-                    marginTop: 8,
-                  }}
-                >
-                  {tenant?.bio_logo && (
-                    <div
-                      style={{
-                        border: "1px solid var(--color-border)",
-                        borderRadius: 8,
-                        padding: 8,
-                        backgroundColor: "var(--color-bg-elevated)",
-                      }}
-                    >
-                      <img
-                        src={
-                          tenant.bio_logo.startsWith("http")
-                            ? tenant.bio_logo
-                            : `${import.meta.env.VITE_API_URL || ""}${
-                                tenant.bio_logo
-                              }`
-                        }
-                        alt={t("tenant.files.current_bio_logo")}
-                        style={{
-                          maxHeight: 60,
-                          maxWidth: 120,
-                          objectFit: "contain",
-                        }}
-                      />
-                    </div>
-                  )}
-                  <Upload
-                    name="bio_logo"
-                    listType="picture"
-                    maxCount={1}
-                    beforeUpload={() => false}
-                    onChange={(info) => {
-                      if (info.fileList.length > 0) {
-                        handleTenantFieldChange(
-                          "bio_logo",
-                          info.fileList[0].originFileObj,
-                          "file",
-                        );
-                      } else {
-                        handleTenantFieldChange("bio_logo", null, "file");
-                      }
-                    }}
-                  >
-                    <Button icon={<UploadOutlined />}>
-                      {t("tenant.files.upload_bio_logo")}
-                    </Button>
-                  </Upload>
+                <div style={{ marginTop: 8 }}>
+                  <PictureUploadField
+                    pictureUrl={bioLogoPreviewUrl}
+                    uploading={bioLogoUploading}
+                    onUpload={uploadBioLogo}
+                    previewVariant="inline"
+                    showDelete={false}
+                  />
                 </div>
               </div>
             </Col>

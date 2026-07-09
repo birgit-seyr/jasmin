@@ -1,8 +1,8 @@
 import { useTimeFormat } from "@hooks/index";
 import { useGdprAdminDecidedDeletionsList } from "@shared/api/generated/gdpr/gdpr";
 import type { AdminDecidedDeletion } from "@shared/api/generated/models";
-import { EmptyHint } from "@shared/ui";
-import { Space, Table, Tag, Typography } from "antd";
+import { ReadOnlyReportTable } from "@shared/tables";
+import { Space, Tag, Typography } from "antd";
 import type { TFunction } from "i18next";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -125,14 +125,12 @@ export default function DecidedDeletionsTable() {
         </h3>
       </div>
 
-      <Table
-        className="custom-jasmin-table"
+      <ReadOnlyReportTable<AdminDecidedDeletion>
         columns={columns}
         dataSource={rows}
         rowKey="id"
-        size="small"
         loading={isFetching}
-        locale={{ emptyText: <EmptyHint>{t("gdpr.no_decided")}</EmptyHint> }}
+        emptyText={t("gdpr.no_decided")}
         pagination={{
           current: page,
           pageSize: HISTORY_PAGE_SIZE,

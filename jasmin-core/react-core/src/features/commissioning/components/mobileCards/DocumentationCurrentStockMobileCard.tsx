@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useSizeOptions, useUnitOptions } from "@hooks/index";
+import { useVegetableSizeOptions, useUnitOptions } from "@hooks/index";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import {
   MOBILE_CARD_PLACEHOLDER,
@@ -21,11 +21,11 @@ export function DocumentationCurrentStockMobileCard({
   onEdit,
 }: DocumentationCurrentStockMobileCardProps) {
   const { t } = useTranslation();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
   const { getUnitLabel } = useUnitOptions();
 
   const articleName = (record.share_article_name as string) || "";
-  const sizeLabel = getSizeLabelOrEmpty(record.size as string, getSizeLabel);
+  const sizeLabel = getSizeLabelOrEmpty(record.size as string, getVegetableSizeLabel);
   const unitLabel = getUnitLabel(record.unit as string);
   const expectedStock = record.theoretical_current_stock as
     | number
@@ -69,7 +69,7 @@ export function DocumentationCurrentStockMobileCard({
                   fontSize: "1.2em",
                   color:
                     actualStock != null && actualStock > 0
-                      ? "#389e0d"
+                      ? "var(--color-success-text)"
                       : "var(--color-text-muted)",
                 }}
               >

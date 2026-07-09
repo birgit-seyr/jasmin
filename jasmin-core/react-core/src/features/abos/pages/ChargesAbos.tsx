@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Card, Popconfirm, Space, Table, Tag } from "antd";
+import { Button, Space, Tag } from "antd";
+import { ReadOnlyReportTable } from "@shared/tables";
 import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -342,12 +343,11 @@ export default function ChargesAbos() {
         </div>
       )}
 
-      <Table<DisplayRow>
+      <ReadOnlyReportTable<DisplayRow>
         rowKey="key"
         loading={isFetching}
         dataSource={displayRows}
         columns={columns}
-        size="small"
         pagination={{ pageSize: 100, showSizeChanger: true }}
         rowClassName={(r) =>
           r.type === "subtotal" ? "charges-subtotal-row" : ""

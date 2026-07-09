@@ -1,6 +1,5 @@
 import { CheckOutlined, SendOutlined } from "@ant-design/icons";
 import { Button, message } from "antd";
-import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -41,17 +40,19 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { BulkActionButton, ExplainerText, ViewDetailsButton } from "@shared/ui";
-import { useDateFormat, useTableRowSelection, useTenant } from "@hooks/index";
-
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
+import {
+  useDateFormat,
+  useTableRowSelection,
+  useTenant,
+  useYearWeekState,
+} from "@hooks/index";
 
 /** A table row: the generated overview shape + the EditableTable key. */
 type DeliveryNoteOverviewRow = CombinedOrderOverview & TableRecord;
 
 export default function DeliveryNotes() {
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedReseller, setSelectedReseller] = useState<string | null>(null);
   const { getSetting, tenant, logoUrl, bioLogoUrl } = useTenant();
 

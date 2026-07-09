@@ -15,7 +15,7 @@ from apps.commissioning.models import (
     ShareTypeVariationGrossPrice,
     VirtualVariationComponent,
 )
-from apps.commissioning.models.choices_text import SizeOptions
+from apps.commissioning.models.choices_text import ShareTypeVariationSizeOptions
 
 from .basics import ShareArticleFactory
 from .days import DeliveryStationDayFactory, SharesDeliveryDayFactory
@@ -39,7 +39,7 @@ class ShareTypeVariationFactory(factory.django.DjangoModelFactory):
 
     share_type = factory.SubFactory(ShareTypeFactory)
     variation_type = "physical"
-    size = factory.Iterator([s.value for s in SizeOptions])
+    size = factory.Iterator([s.value for s in ShareTypeVariationSizeOptions])
     valid_from = factory.LazyFunction(lambda: datetime.date(2026, 1, 5))
     sort_order = 0
 

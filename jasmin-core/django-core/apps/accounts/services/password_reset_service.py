@@ -131,32 +131,28 @@ def _send_password_reset_email(*, user: JasminUser, uid: str, token: str) -> Non
     """Render and dispatch the reset email. Best-effort — failures are
     logged but never raised, because surfacing email errors would leak
     whether the email was on file."""
-    from apps.shared.invitations import _frontend_base_url, _tenant_name
-    from apps.shared.tenants.email_service import EmailService
+    from apps.shared.deferred_email import send_email_best_effort
+    from apps.shared.tenant_urls import frontend_base_url, tenant_name
 
-    base_url = _frontend_base_url()
+    base_url = frontend_base_url()
     reset_url = f"{base_url}/reset-password/{uid}/{token}"
 
     # Flatten to plain scalars — never hand a live ORM instance to the
     # tenant-editable email renderer (see template_renderer._resolve).
     context = {
-        "tenant_name": _tenant_name(),
+        "tenant_name": tenant_name(),
         "user": {"first_name": user.first_name},
         "reset_url": reset_url,
     }
-    try:
-        ok = EmailService().send_email(
-            slug="accounts.password_reset",
-            to_emails=[user.email],
-            context=context,
-            related_object_type="user",
-            related_object_id=str(user.id),
-            language=user.user_language or None,  # EML-9: user's language
-        )
-    except (ValueError, TypeError, AttributeError, OSError) as exc:
-        # Password reset email — see ``apps/shared/invitations.py``: same
-        # best-effort contract. Real bugs propagate.
-        logger.error("password_reset.email_failed user=%s error=%s", user.pk, exc)
-    else:
-        if not ok:
-            logger.error("password_reset.email_not_sent user=%s", user.pk)
+    send_email_best_effort(
+        slug="accounts.password_reset",
+        to_emails=[user.email],
+        context=context,
+        related_object_type="user",
+        related_object_id=str(user.id),
+        language=user.user_language or None,  # EML-9: user's language
+        logger=logger,
+        log_error_event="password_reset.email_failed",
+        log_not_sent_event="password_reset.email_not_sent",
+        log_ref=f"user={user.pk}",
+    )

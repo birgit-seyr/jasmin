@@ -131,9 +131,12 @@ class TestSendDeletionApprovedEmail:
         ):
             send_deletion_approved_email(deletion_request)
 
-        # First positional arg is the format string; check the
-        # marker token is present in at least one error call.
-        emitted = [str(c.args[0]) for c in mock_error.call_args_list]
+        # The event token is passed as a positional arg to a "%s %s"
+        # format string (lazy logging), not inlined into it, so match
+        # across all args of each error call rather than just args[0].
+        emitted = [
+            " ".join(str(a) for a in c.args) for c in mock_error.call_args_list
+        ]
         assert any(
             "deletion_approved_email_not_sent" in msg for msg in emitted
         ), f"expected 'not_sent' error; got {emitted!r}"

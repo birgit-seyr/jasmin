@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Button, Tooltip } from "antd";
+import { useTranslation } from "react-i18next";
 import {
   BankOutlined,
   CheckCircleOutlined,
@@ -23,7 +24,9 @@ interface ButtonConfig {
   size?: ButtonSize;
   icon?: ReactNode;
   className?: string;
-  tooltip?: string;
+  /** i18n key for the tooltip + accessible name — resolved via ``t()`` in the
+   *  button so a caller that omits a ``tooltip`` never surfaces raw English. */
+  labelKey: string;
   style?: CSSProperties;
   danger?: boolean;
 }
@@ -34,7 +37,7 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
     type: "text",
     size: "small",
     icon: <EyeOutlined className="lib-status-icon" />,
-    tooltip: "View details",
+    labelKey: "button_library.view",
     className: "small-squared-button",
   },
   logging: {
@@ -43,7 +46,7 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
       <HistoryOutlined className="lib-status-icon lib-status-icon--future-blue" />
     ),
     className: "small-squared-button",
-    tooltip: "Activity Log",
+    labelKey: "button_library.logging",
   },
   emails: {
     type: "text",
@@ -51,13 +54,13 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
       <MailOutlined className="lib-status-icon lib-status-icon--future-blue" />
     ),
     className: "small-squared-button",
-    tooltip: "Sent emails",
+    labelKey: "button_library.emails",
   },
   coopshares: {
     type: "text",
     icon: <BankOutlined className="lib-status-icon lib-status-icon--primary" />,
     className: "small-squared-button",
-    tooltip: "Coop shares",
+    labelKey: "button_library.coopshares",
   },
   bankDetails: {
     type: "text",
@@ -65,19 +68,19 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
       <CreditCardOutlined className="lib-status-icon lib-status-icon--future-blue" />
     ),
     className: "small-squared-button",
-    tooltip: "Edit bank details",
+    labelKey: "button_library.bank_details",
   },
   coopsharesAlert: {
     type: "text",
     icon: <BankOutlined className="lib-status-icon lib-status-icon--error" />,
     className: "small-squared-button",
-    tooltip: "Coop shares — none on file",
+    labelKey: "button_library.coopshares_alert",
   },
   cancel: {
     type: "text",
     icon: <StopOutlined className="lib-status-icon lib-status-icon--error" />,
     className: "small-squared-button",
-    tooltip: "Cancel",
+    labelKey: "button_library.cancel",
   },
   ok: {
     type: "text",
@@ -85,7 +88,7 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
       <CheckCircleOutlined className="lib-status-icon lib-status-icon--success" />
     ),
     className: "small-squared-button",
-    tooltip: "ok",
+    labelKey: "button_library.ok",
   },
   not_ok: {
     type: "text",
@@ -93,7 +96,7 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
       <ExclamationCircleOutlined className="lib-status-icon lib-status-icon--error" />
     ),
     className: "small-squared-button",
-    tooltip: "not ok",
+    labelKey: "button_library.not_ok",
   },
   adminConfirmed: {
     type: "text",
@@ -101,7 +104,7 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
       <CheckCircleOutlined className="lib-status-icon lib-status-icon--base" />
     ),
     className: "small-squared-button",
-    tooltip: "Admin confirmed",
+    labelKey: "button_library.admin_confirmed",
     style: {
       backgroundColor: "var(--color-primary)",
       color: "white",
@@ -113,7 +116,7 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
       <ClockCircleOutlined className="lib-status-icon lib-status-icon--warning" />
     ),
     className: "small-squared-button",
-    tooltip: "Admin confirmation pending",
+    labelKey: "button_library.admin_pending",
   },
   adminRejected: {
     type: "text",
@@ -121,7 +124,7 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
       <CloseCircleOutlined className="lib-status-icon lib-status-icon--base" />
     ),
     className: "small-squared-button",
-    tooltip: "Application rejected",
+    labelKey: "button_library.admin_rejected",
     style: {
       backgroundColor: "var(--color-error)",
       color: "white",
@@ -131,7 +134,7 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
     type: "text",
     icon: <UserOutlined className="lib-status-icon lib-status-icon--success" />,
     className: "small-squared-button",
-    tooltip: "User account active",
+    labelKey: "button_library.user_active",
   },
   userPendingApproval: {
     type: "text",
@@ -139,7 +142,7 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
       <ClockCircleOutlined className="lib-status-icon lib-status-icon--warning" />
     ),
     className: "small-squared-button",
-    tooltip: "Pending admin approval",
+    labelKey: "button_library.user_pending_approval",
   },
   userPendingInvitation: {
     type: "text",
@@ -147,13 +150,13 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
       <MailOutlined className="lib-status-icon lib-status-icon--future-blue" />
     ),
     className: "small-squared-button",
-    tooltip: "Invitation sent",
+    labelKey: "button_library.user_pending_invitation",
   },
   userPendingInvitationExpired: {
     type: "text",
     icon: <MailOutlined className="lib-status-icon lib-status-icon--error" />,
     className: "small-squared-button",
-    tooltip: "Invitation expired",
+    labelKey: "button_library.user_pending_invitation_expired",
   },
   userInactive: {
     type: "text",
@@ -161,13 +164,13 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
       <UserOutlined className="lib-status-icon lib-status-icon--tertiary" />
     ),
     className: "small-squared-button",
-    tooltip: "User account inactive",
+    labelKey: "button_library.user_inactive",
   },
   userInvited: {
     type: "text",
     icon: <MailOutlined className="lib-status-icon lib-status-icon--warning" />,
     className: "small-squared-button",
-    tooltip: "Invitation sent",
+    labelKey: "button_library.user_invited",
   },
   userNotInvited: {
     type: "text",
@@ -175,7 +178,7 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
       <ExclamationCircleOutlined className="lib-status-icon lib-status-icon--warning" />
     ),
     className: "small-squared-button",
-    tooltip: "No invitation sent",
+    labelKey: "button_library.user_not_invited",
   },
 };
 
@@ -196,19 +199,26 @@ export const StatusButton = ({
   showTooltip = false,
   ...props
 }: StatusButtonProps) => {
+  const { t } = useTranslation();
   const config = BUTTON_CONFIGS[variant];
   if (!config) {
     console.warn(`Unknown status button variant: ${variant}`);
     return null;
   }
 
+  // ``labelKey`` is not a Button prop — strip it before spreading. The default
+  // label comes from the config's translated key; an explicit ``tooltip`` prop
+  // (already localized by the caller) still wins.
+  const { labelKey, ...buttonConfig } = config;
+  const configLabel = t(labelKey);
+
   // These are icon-only buttons — give them an accessible name so screen
   // readers announce the action, not an empty button (the visible cue is the
   // hover tooltip, which SR/keyboard users don't get).
-  const label = tooltip ?? config.tooltip;
+  const label = tooltip ?? configLabel;
   const button = (
     <Button
-      {...config}
+      {...buttonConfig}
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
@@ -216,8 +226,8 @@ export const StatusButton = ({
     />
   );
 
-  return showTooltip && (tooltip || config.tooltip) ? (
-    <Tooltip title={tooltip || config.tooltip}>{button}</Tooltip>
+  return showTooltip && (tooltip || configLabel) ? (
+    <Tooltip title={tooltip || configLabel}>{button}</Tooltip>
   ) : (
     button
   );
@@ -240,22 +250,31 @@ export const LinkButton = ({
   showTooltip = false,
   ...props
 }: LinkButtonProps) => {
+  const { t } = useTranslation();
   const config = BUTTON_CONFIGS[variant];
   if (!config) {
     console.warn(`Unknown link button variant: ${variant}`);
     return null;
   }
 
+  const { labelKey, ...buttonConfig } = config;
+  const configLabel = t(labelKey);
+
   // Icon-only button → give it an accessible name (see StatusButton).
-  const label = tooltip ?? config.tooltip;
+  const label = tooltip ?? configLabel;
   const button = (
     <Link to={to}>
-      <Button {...config} disabled={disabled} aria-label={label} {...props} />
+      <Button
+        {...buttonConfig}
+        disabled={disabled}
+        aria-label={label}
+        {...props}
+      />
     </Link>
   );
 
-  return showTooltip && (tooltip || config.tooltip) ? (
-    <Tooltip title={tooltip || config.tooltip}>{button}</Tooltip>
+  return showTooltip && (tooltip || configLabel) ? (
+    <Tooltip title={tooltip || configLabel}>{button}</Tooltip>
   ) : (
     button
   );

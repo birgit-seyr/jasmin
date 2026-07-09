@@ -51,9 +51,9 @@
   margin-bottom: 1em;
   padding: 0.5em;
   background-color: var(--color-success-bg);
-  border: 1px solid #8fc566ff;
+  border: 1px solid var(--color-success-border);
   border-radius: 4px;
-  color: #389e0d;
+  color: var(--color-success-text);
   font-weight: bold;
   text-align: center;
 }

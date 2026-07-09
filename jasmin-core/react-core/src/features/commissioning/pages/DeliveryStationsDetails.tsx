@@ -1,7 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
 import { Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -24,7 +23,12 @@ import { DaySelector, WeekSelector } from "@shared/selectors";
 import { DeliveryStationSelector } from "@features/commissioning/selectors";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, PastWarningMessage, ToolTipIcon } from "@shared/ui";
-import { useSizeOptions, useTenant, useUnitOptions } from "@hooks/index";
+import {
+  useVegetableSizeOptions,
+  useTenant,
+  useUnitOptions,
+  useYearWeekState,
+} from "@hooks/index";
 import {
   useBoxCombinationColumns,
   useDeliveryStations,
@@ -38,12 +42,9 @@ import {
   getDayName,
 } from "@shared/utils";
 
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
-
 export default function DeliveryStationDetails() {
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedDeliveryDay, setSelectedDeliveryDay] = useState<number | null>(
     null,
   );
@@ -54,7 +55,7 @@ export default function DeliveryStationDetails() {
   const { t } = useTranslation();
   const { tenantName, logoUrl, tenant, getSetting } = useTenant();
   const { getUnitLabel } = useUnitOptions();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
   const usesExternalDemand = getSetting(
     "uploads_weekly_share_amount",
     false,
@@ -71,11 +72,11 @@ export default function DeliveryStationDetails() {
       memberRows: (m?.rows ?? []).map((row) => ({
         ...row,
         unit_label: row.unit ? getUnitLabel(row.unit) : "",
-        size_label: row.size ? getSizeLabel(row.size) : "",
+        size_label: row.size ? getVegetableSizeLabel(row.size) : "",
       })),
       showSize,
     }),
-    [getUnitLabel, getSizeLabel, showSize],
+    [getUnitLabel, getVegetableSizeLabel, showSize],
   );
 
   // delivery days — derived purely from the selected year/week (no effect).

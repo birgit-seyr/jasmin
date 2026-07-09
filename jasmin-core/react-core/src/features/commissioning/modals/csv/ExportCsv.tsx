@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, isValidElement } from "react";
 import type { ReactNode } from "react";
-import { Modal, Button, Checkbox } from "antd";
+import { Modal, Button } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import {
@@ -8,6 +8,7 @@ import {
   downloadCsvBlob,
   resolveCsvDialect,
 } from "@shared/utils";
+import { CheckboxMultiSelectList } from "@shared/ui";
 import { useTenant } from "@hooks/index";
 
 interface ColumnDef {
@@ -75,22 +76,16 @@ export default function ExportCsv({
     exportableColumns.map((c) => c.dataIndex as string),
   );
 
-  const allSelected = selectedKeys.length === exportableColumns.length;
   const noneSelected = selectedKeys.length === 0;
 
-  const handleToggleAll = useCallback(() => {
-    if (allSelected) {
-      setSelectedKeys([]);
-    } else {
-      setSelectedKeys(exportableColumns.map((c) => c.dataIndex as string));
-    }
-  }, [allSelected, exportableColumns]);
-
-  const handleToggle = useCallback((key: string) => {
-    setSelectedKeys((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
-    );
-  }, []);
+  const items = useMemo(
+    () =>
+      exportableColumns.map((col) => ({
+        key: col.dataIndex as string,
+        label: getColumnTitle(col.title),
+      })),
+    [exportableColumns],
+  );
 
   const handleExport = useCallback(() => {
     const selectedCols = exportableColumns.filter((col) =>
@@ -126,35 +121,12 @@ export default function ExportCsv({
         </Button>,
       ]}
     >
-      <div style={{ marginBottom: 12 }}>
-        <Checkbox
-          checked={allSelected}
-          indeterminate={!allSelected && !noneSelected}
-          onChange={handleToggleAll}
-        >
-          <strong>{t("common.select_all")}</strong>
-        </Checkbox>
-      </div>
-      <div
-        style={{
-          maxHeight: 300,
-          overflowY: "auto",
-          border: "1px solid var(--color-border)",
-          borderRadius: 6,
-          padding: 12,
-        }}
-      >
-        {exportableColumns.map((col) => (
-          <div key={col.dataIndex as string} style={{ padding: "4px 0" }}>
-            <Checkbox
-              checked={selectedKeys.includes(col.dataIndex as string)}
-              onChange={() => handleToggle(col.dataIndex as string)}
-            >
-              {getColumnTitle(col.title)}
-            </Checkbox>
-          </div>
-        ))}
-      </div>
+      <CheckboxMultiSelectList
+        items={items}
+        selectedKeys={selectedKeys}
+        onChange={setSelectedKeys}
+        withSelectAll
+      />
     </Modal>
   );
 }

@@ -361,15 +361,13 @@ def _send_cancellation_email(member: Member) -> None:
     optimistically marking it inside the same transaction as
     ``cancelled_at``.
     """
-    from apps.shared.deferred_email import schedule_deferred_email
-    from apps.shared.invitations import _tenant_name
+    from apps.shared.tenant_urls import tenant_name
+
+    from .member_email import schedule_member_email
 
     member_id = member.id
-    # EML-9: render in the linked user's language when known (captured as a
-    # scalar before the on_commit closure; None → tenant-language fallback).
-    member_lang = getattr(getattr(member, "user", None), "user_language", None) or None
     context = {
-        "tenant_name": _tenant_name(),
+        "tenant_name": tenant_name(),
         # Flatten to plain scalars — never hand a live ORM instance to the
         # tenant-editable email renderer (see template_renderer._resolve).
         "member": {
@@ -395,16 +393,12 @@ def _send_cancellation_email(member: Member) -> None:
             cancellation_email_sent_at=timezone.now()
         )
 
-    schedule_deferred_email(
+    schedule_member_email(
+        member,
         slug="commissioning.member_cancelled",
-        to_emails=[member.email],
         context=context,
-        related_object_type="member",
-        related_object_id=str(member_id),
-        language=member_lang,
         logger=logger,
         log_error_event="member_cancelled.email_failed",
         log_not_sent_event="member_cancelled.email_not_sent",
-        log_ref=f"member={member_id}",
         post_send_callback=_stamp_email_sent,
     )

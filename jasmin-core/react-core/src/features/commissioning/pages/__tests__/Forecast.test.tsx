@@ -55,7 +55,13 @@ vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
 vi.mock("@hooks/index", async () => {
   const { makeUseTenantMock } = await import("@/test/tenantMock");
   const tenant = makeUseTenantMock();
+  const { useYearWeekState, currentYear, currentWeek } = await import(
+    "@hooks/useYearWeekState"
+  );
   return {
+    useYearWeekState,
+    currentYear,
+    currentWeek,
     useTenant: () => tenant,
     useIsMobile: () => false,
     useNoteColumn: () => ({

@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { UnitEnum } from './unitEnum';
-import type { SizeVegetableEnum } from './sizeVegetableEnum';
+import type { VegetableSizeEnum } from './vegetableSizeEnum';
 import type { ShareContentBackupUnit } from './shareContentBackupUnit';
 
 export interface ShareContent {
@@ -16,7 +16,7 @@ export interface ShareContent {
   /** @nullable */
   finalized_at?: string | null;
   unit: UnitEnum;
-  size?: SizeVegetableEnum;
+  size?: VegetableSizeEnum;
   /**
    * @nullable
    * @pattern ^-?\d{0,2}(?:\.\d{0,3})?$
@@ -34,7 +34,7 @@ export interface ShareContent {
   price_per_unit?: string | null;
   /** @nullable */
   backup_unit?: ShareContentBackupUnit;
-  backup_size?: SizeVegetableEnum;
+  backup_size?: VegetableSizeEnum;
   /**
    * @nullable
    * @pattern ^-?\d{0,2}(?:\.\d{0,3})?$

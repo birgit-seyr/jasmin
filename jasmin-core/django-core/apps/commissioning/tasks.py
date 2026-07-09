@@ -218,7 +218,7 @@ def _notify_office_of_renewal_failures(tenant, failed: list[dict], run_date) -> 
     raw_lang = (getattr(tenant, "tenant_language", "") or "").strip().lower()[:2]
     language = "de" if raw_lang == "de" else "en"
 
-    from apps.shared.tenants.email_service import EmailService
+    from apps.shared.deferred_email import send_email_best_effort
 
     context = {
         "tenant_name": tenant.name,
@@ -228,26 +228,22 @@ def _notify_office_of_renewal_failures(tenant, failed: list[dict], run_date) -> 
         "renewal_failures_text": _build_renewal_failures_text(failed, language),
         "review_url": _office_review_url(tenant, "/abos/abos"),
     }
-    try:
-        ok = EmailService(tenant.schema_name).send_email(
-            slug="commissioning.subscription_renewal_failures_office",
-            to_emails=[office_email],
-            context=context,
-            language=language,
-            priority="normal",
-        )
-        if not ok:
-            # send_email returns False on the dominant failure class (SMTP
-            # down, template error) WITHOUT raising — log it too, else the
-            # office silently never learns which renewals failed.
-            ops_log.error(
-                "renewal.digest_failed tenant=%s reason=send_returned_false",
-                tenant.schema_name,
-            )
-    except (ValueError, TypeError, AttributeError, OSError) as exc:
-        ops_log.error(
-            "renewal.digest_failed tenant=%s error=%s", tenant.schema_name, exc
-        )
+    # Runs inside the sweep's ``schema_context(tenant.schema_name)``, so the
+    # helper's default ``EmailService()`` resolves the same schema the explicit
+    # ``EmailService(tenant.schema_name)`` used to. Best-effort: a crashed or
+    # unsent digest logs ``renewal.digest_failed`` on the ops log and is
+    # swallowed so the sweep never aborts.
+    send_email_best_effort(
+        slug="commissioning.subscription_renewal_failures_office",
+        to_emails=[office_email],
+        context=context,
+        language=language,
+        priority="normal",
+        logger=ops_log,
+        log_error_event="renewal.digest_failed",
+        log_not_sent_event="renewal.digest_failed",
+        log_ref=f"tenant={tenant.schema_name}",
+    )
 
 
 @db_periodic_task(crontab(hour="4", minute="0"), retries=1, retry_delay=300)

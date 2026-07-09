@@ -20,8 +20,9 @@ import {
   useIsMobile,
   useNoteColumn,
   useNumberFormat,
-  useSizeOptions,
+  useVegetableSizeOptions,
   useUnitOptions,
+  useYearWeekState,
 } from "@hooks/index";
 import {
   formatDayLabel,
@@ -30,8 +31,6 @@ import {
   getDayName,
 } from "@shared/utils";
 
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
 const currentDay = dayjs().isoWeekday();
 
 // Derived straight from the generated client — the ``commissioning_lists``
@@ -44,14 +43,14 @@ type OrderContent = Reseller["order"]["contents"][number];
 export default function CommissioningListResellers() {
   const { t } = useTranslation();
 
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedDay, setSelectedDay] = useState<number | null>(
     currentDay === 5 || currentDay === 6 ? 0 : currentDay - 1,
   );
 
   const { getUnitLabel } = useUnitOptions();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
   const { format } = useNumberFormat();
   const isMobile = useIsMobile();
 
@@ -131,7 +130,7 @@ export default function CommissioningListResellers() {
           <>
             {record.share_article_name} {record.sort}
             {record.size && record.size !== "M" && (
-              <>, {getSizeLabel(record.size)}</>
+              <>, {getVegetableSizeLabel(record.size)}</>
             )}
           </>
         ),
@@ -151,7 +150,7 @@ export default function CommissioningListResellers() {
       },
       noteColumn as ColumnsType<OrderContent>[number],
     ],
-    [t, getUnitLabel, getSizeLabel, noteColumn, format],
+    [t, getUnitLabel, getVegetableSizeLabel, noteColumn, format],
   );
 
   const generateFilename = useMemo(() => {
@@ -255,7 +254,7 @@ export default function CommissioningListResellers() {
                       const unitLabel = getUnitLabel(item.unit);
                       const sizeLabel =
                         item.size && item.size !== "M"
-                          ? getSizeLabel(item.size)
+                          ? getVegetableSizeLabel(item.size)
                           : "";
 
                       return (

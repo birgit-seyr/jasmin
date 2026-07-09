@@ -11,11 +11,11 @@
 * `M` - M
 * `L` - L
  */
-export type SizeVegetableEnum = typeof SizeVegetableEnum[keyof typeof SizeVegetableEnum];
+export type VegetableSizeEnum = typeof VegetableSizeEnum[keyof typeof VegetableSizeEnum];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const SizeVegetableEnum = {
+export const VegetableSizeEnum = {
   S: 'S',
   M: 'M',
   L: 'L',

@@ -6,7 +6,13 @@ import { useTranslation } from "react-i18next";
 import { commissioningHarvestSharePlanningBackupUpdate } from "@shared/api/generated/commissioning/commissioning";
 import type { HarvestSharePlanningBackupRequest } from "@shared/api/generated/models/harvestSharePlanningBackupRequest";
 import { useRoles } from "@shared/auth";
-import { useNumberFormat, useSizeOptions, useUnitOptions } from "@hooks/index";
+import {
+  useNumberFormat,
+  useVegetableSizeOptions,
+  useUnitOptions,
+  getShareTypeVariationSizeLabelPure,
+} from "@hooks/index";
+import { formatAmountForUnit } from "@shared/utils";
 import {
   dayVariationKey,
   parseDayVariationKey,
@@ -64,7 +70,8 @@ export default function BackupModal({
   );
 
   const { unitOptions, getUnitLabel } = useUnitOptions();
-  const { sizeOptions, getSizeLabel } = useSizeOptions();
+  const { vegetableSizeOptions, getVegetableSizeLabel } =
+    useVegetableSizeOptions();
 
   const { shareArticles } = useShareArticles({
     is_harvest_share_article: true,
@@ -166,20 +173,20 @@ export default function BackupModal({
         width: "7em",
         align: "center",
         fixed: true,
-        options: sizeOptions,
-        render: (value: unknown) => getSizeLabel(value as string),
+        options: vegetableSizeOptions,
+        render: (value: unknown) => getVegetableSizeLabel(value as string),
       },
     ];
 
     const renderBackupCell = (value: unknown) => {
       const numValue = Number(value);
       if (isNaN(numValue) || numValue === 0) return "";
-      return data?.unit === "KG" ? format(numValue, 2) : format(numValue, 1);
+      return formatAmountForUnit(numValue, data?.unit, format);
     };
     // Match the base table's size label (the dynamic commissioning.<size> key).
     const variationTitle = (variation: ShareTypeVariationOption): ReactNode =>
       variation.size
-        ? t(`commissioning.${variation.size}`)
+        ? getShareTypeVariationSizeLabelPure(variation.size, t)
         : ((variation.label ?? "") as ReactNode);
 
     // Mirror the base planning table's nesting so the backup grid matches it
@@ -252,12 +259,12 @@ export default function BackupModal({
     shareTypeVariations,
     shareArticles,
     unitOptions,
-    sizeOptions,
+    vegetableSizeOptions,
     data,
     t,
     format,
     getUnitLabel,
-    getSizeLabel,
+    getVegetableSizeLabel,
     showDaysTogether,
   ]);
 
@@ -305,7 +312,7 @@ export default function BackupModal({
             <div>
               {t("commissioning.backup_planning")}
               {data.share_article_name || ""} -{" "}
-              {getSizeLabel(data.size as string) || ""} (
+              {getVegetableSizeLabel(data.size as string) || ""} (
               {getUnitLabel(data.unit as string) || ""})
             </div>
           </div>

@@ -7,7 +7,7 @@ import type {
 import { renderNumber } from "@shared/utils";
 import { useTenant } from "@hooks/configuration/useTenant";
 import { useNumberFormat } from "@hooks/useNumberFormat";
-import { useSizeOptions } from "@hooks/useSizeOptions";
+import { useVegetableSizeOptions } from "@hooks/useVegetableSizeOptions";
 import { useUnitOptions } from "@hooks/useUnitOptions";
 
 interface AmountUnitSizeConfig {
@@ -23,7 +23,8 @@ export const useAmountUnitSizeColumns = (config: AmountUnitSizeConfig = {}) => {
 
   const { t } = useTranslation();
   const { unitOptions, getUnitLabel } = useUnitOptions();
-  const { sizeOptions, getSizeLabel } = useSizeOptions();
+  const { vegetableSizeOptions, getVegetableSizeLabel } =
+    useVegetableSizeOptions();
   const { format } = useNumberFormat();
 
   const amountUnitSizeColumns = useMemo<
@@ -59,8 +60,8 @@ export const useAmountUnitSizeColumns = (config: AmountUnitSizeConfig = {}) => {
         width: "7em",
         align: "center",
         fixed: true,
-        options: sizeOptions,
-        render: (value: unknown) => getSizeLabel(value as string),
+        options: vegetableSizeOptions,
+        render: (value: unknown) => getVegetableSizeLabel(value as string),
         ...overrides.size,
       },
     );
@@ -99,7 +100,17 @@ export const useAmountUnitSizeColumns = (config: AmountUnitSizeConfig = {}) => {
     }
 
     return defaultColumns;
-  }, [unitOptions, sizeOptions, t, overrides, showAmount, showSizeColumn, getUnitLabel, getSizeLabel, format]);
+  }, [
+    unitOptions,
+    vegetableSizeOptions,
+    t,
+    overrides,
+    showAmount,
+    showSizeColumn,
+    getUnitLabel,
+    getVegetableSizeLabel,
+    format,
+  ]);
 
   return { amountUnitSizeColumns };
 };

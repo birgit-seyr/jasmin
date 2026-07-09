@@ -6,7 +6,7 @@
 import { ROLES } from "@shared/auth/roles";
 
 export const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  active: { bg: "#e8f5e9", color: "var(--color-share-content)" },
+  active: { bg: "var(--color-success-bg)", color: "var(--color-share-content)" },
   pending_approval: { bg: "#fff3e0", color: "#e65100" },
   pending_invitation: { bg: "#e3f2fd", color: "#1565c0" },
   inactive: { bg: "#ffebee", color: "#c62828" },

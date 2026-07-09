@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useCommissioningMemberGrowthStatisticsList } from "@shared/api/generated/commissioning/commissioning";
 import { StatsAreaChart, type StatsAreaSeries } from "@shared/ui";
+import { buildMonthAxis } from "@shared/utils";
 import {
   useDateFormat,
   useDateRangePresets,
@@ -36,27 +37,22 @@ export default function DashboardMembers() {
     // Continuous monthly buckets across the window, ALWAYS spanning at least
     // one year (12 months) ending at the range end. total_members is cumulative,
     // so months without a data point carry the previous total forward.
-    const end = (range ? range[1] : dayjs()).startOf("month");
-    const selStart = (range ? range[0] : dayjs().subtract(1, "year")).startOf(
-      "month",
-    );
-    const minStart = end.subtract(11, "month");
-    let cursor = selStart.isBefore(minStart) ? selStart : minStart;
+    const { months, labelOf } = buildMonthAxis(range);
+    const windowStartMs = months[0]?.valueOf() ?? dayjs().valueOf();
 
     const byMonth = new Map(raw.map((r) => [r.ms, r.total]));
     // Baseline: the last known cumulative total at or before the window start.
     let running = 0;
     for (const r of raw) {
-      if (r.ms <= cursor.valueOf()) running = r.total;
+      if (r.ms <= windowStartMs) running = r.total;
       else break;
     }
 
     const out: Array<Record<string, string | number>> = [];
-    while (!cursor.isAfter(end)) {
-      const hit = byMonth.get(cursor.valueOf());
+    for (const month of months) {
+      const hit = byMonth.get(month.valueOf());
       if (hit !== undefined) running = hit;
-      out.push({ label: cursor.format("MMM 'YY"), members: running });
-      cursor = cursor.add(1, "month");
+      out.push({ label: labelOf(month), members: running });
     }
     return out;
   }, [growth, range]);

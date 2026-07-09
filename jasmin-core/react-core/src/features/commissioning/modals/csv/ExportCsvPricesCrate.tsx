@@ -4,16 +4,25 @@ import { useCurrency } from "@hooks/index";
 import { useCommissioningCrateNetPricesList } from "@shared/api/generated/commissioning/commissioning";
 import ExportCsvAtDateModal, { type PriceColumn } from "./ExportCsvAtDateModal";
 
-interface CrateNetPrice {
-  name?: string;
-  short_name?: string;
-  price?: number | string;
-  tax_rate?: number | string;
-}
-
 interface ExportCsvPricesCrateProps {
   open: boolean;
   onClose: () => void;
+}
+
+/**
+ * Row supplier: the crate-prices endpoint has no date param, so it returns the
+ * current crate net prices regardless of the picked date (the date only names
+ * the export file). Gated on `loadedDate` so nothing is fetched before Load.
+ */
+function useCrateRowsAtDate(loadedDate: string | null) {
+  const { data, isLoading } = useCommissioningCrateNetPricesList(
+    {},
+    { query: { enabled: !!loadedDate } },
+  );
+  return {
+    rows: (data ?? null) as unknown as Record<string, unknown>[] | null,
+    isLoading,
+  };
 }
 
 export default function ExportCsvPricesCrate({
@@ -34,17 +43,13 @@ export default function ExportCsvPricesCrate({
   );
 
   return (
-    <ExportCsvAtDateModal<CrateNetPrice>
+    <ExportCsvAtDateModal
       open={open}
       onClose={onClose}
       title={t("commissioning.export_crate_prices_for_date")}
       filenamePrefix={t("commissioning.crate_prices")}
       columns={columns}
-      useListAtDate={
-        useCommissioningCrateNetPricesList as unknown as Parameters<
-          typeof ExportCsvAtDateModal<CrateNetPrice>
-        >[0]["useListAtDate"]
-      }
+      useRows={useCrateRowsAtDate}
     />
   );
 }

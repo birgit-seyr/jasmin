@@ -1,4 +1,4 @@
-import { useSizeOptions } from "@hooks/index";
+import { useVegetableSizeOptions } from "@hooks/index";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import {
   MobileCard,
@@ -17,9 +17,9 @@ export function WashingMobileCard({
   record,
   onEdit,
 }: WashingMobileCardProps) {
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
   const articleName = (record.share_article_name as string) || "";
-  const sizeLabel = getSizeLabelOrEmpty(record.size as string, getSizeLabel);
+  const sizeLabel = getSizeLabelOrEmpty(record.size as string, getVegetableSizeLabel);
   const washAmountText =
     (record.computed_total_wash_amount_text as string) || "";
   const noteText = (record.note as string) || "";

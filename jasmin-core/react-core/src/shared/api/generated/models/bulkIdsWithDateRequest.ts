@@ -7,7 +7,7 @@
  */
 
 /**
- * Request with IDs and an optional date.
+ * ``BulkIdsRequestSerializer`` plus an optional ``date``.
  */
 export interface BulkIdsWithDateRequest {
   /** @minItems 1 */

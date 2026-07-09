@@ -46,14 +46,13 @@ from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.mail import mail_admins
 from django.utils import timezone
-from django_tenants.utils import schema_context
 from huey import crontab
 from huey.contrib.djhuey import db_periodic_task
 
 from apps.commissioning.models import Member
 from apps.gdpr.errors import RetentionPeriodActive
 from apps.gdpr.services import GDPRService
-from apps.shared.tenants.models import Tenant
+from apps.shared.tenants.sweep import for_each_tenant
 
 log = logging.getLogger("gdpr")
 ops_log = logging.getLogger("tasks")
@@ -132,33 +131,33 @@ def anonymise_long_cancelled_members() -> dict[str, int]:
         EX_MEMBER_RETENTION_YEARS,
     )
 
-    total_anonymised = 0
-    total_blocked = 0
-    tenants_scanned = 0
+    counters = {"anonymised": 0, "blocked": 0, "tenants_scanned": 0}
 
-    for tenant in Tenant.objects.exclude(schema_name="public").iterator():
-        tenants_scanned += 1
-        try:
-            with schema_context(tenant.schema_name):
-                anonymised, blocked = _run_for_current_schema(cutoff)
-                total_anonymised += anonymised
-                total_blocked += blocked
-        except Exception:
-            log.exception(
-                "gdpr.retention_sweep.tenant_failed tenant=%s",
-                tenant.schema_name,
-            )
+    def sweep(tenant) -> None:
+        counters["tenants_scanned"] += 1
+        anonymised, blocked = _run_for_current_schema(cutoff)
+        counters["anonymised"] += anonymised
+        counters["blocked"] += blocked
+
+    # ``include_inactive=True``: a legal retention obligation persists on a
+    # frozen (is_active=False) tenant, so the erasure SLA must keep running
+    # there — matching the pre-adoption loop, which scanned every non-public
+    # tenant regardless of active status. Per-tenant failures are isolated
+    # and logged (to the gdpr log) so one bad schema never aborts the sweep.
+    for_each_tenant(
+        sweep, label="gdpr.retention_sweep", logger=log, include_inactive=True
+    )
 
     log.info(
         "gdpr.retention_sweep_done anonymised=%s blocked=%s tenants_scanned=%s",
-        total_anonymised,
-        total_blocked,
-        tenants_scanned,
+        counters["anonymised"],
+        counters["blocked"],
+        counters["tenants_scanned"],
     )
     return {
-        "anonymised": total_anonymised,
-        "blocked": total_blocked,
-        "tenants_scanned": tenants_scanned,
+        "anonymised": counters["anonymised"],
+        "blocked": counters["blocked"],
+        "tenants_scanned": counters["tenants_scanned"],
     }
 
 
@@ -289,38 +288,40 @@ def alert_on_mass_deletes() -> dict[str, int]:
     cutoff = timezone.now() - MASS_DELETE_WINDOW
     # (tenant_schema, actor_id) → Counter of "app.Model" → count.
     by_actor: dict[tuple[str, str], Counter[str]] = {}
-    tenants_scanned = 0
+    counters = {"tenants_scanned": 0}
 
-    for tenant in Tenant.objects.exclude(schema_name="public").iterator():
-        tenants_scanned += 1
-        try:
-            with schema_context(tenant.schema_name):
-                rows = (
-                    LogEntry.objects.filter(
-                        action=LogEntry.Action.DELETE,
-                        timestamp__gte=cutoff,
-                        actor_id__isnull=False,
-                    )
-                    .select_related("content_type")
-                    .values_list(
-                        "actor_id",
-                        "content_type__app_label",
-                        "content_type__model",
-                    )
-                    .iterator()
-                )
-                for actor_id, app_label, model_name in rows:
-                    lookup_key = f"{app_label}.{model_name}"
-                    display = _SENSITIVE_MODELS_DISPLAY.get(lookup_key)
-                    if display is None:
-                        continue
-                    key = (tenant.schema_name, str(actor_id))
-                    by_actor.setdefault(key, Counter())[display] += 1
-        except Exception:
-            log.exception(
-                "audit.mass_delete.tenant_failed tenant=%s",
-                tenant.schema_name,
+    def collect(tenant) -> None:
+        counters["tenants_scanned"] += 1
+        rows = (
+            LogEntry.objects.filter(
+                action=LogEntry.Action.DELETE,
+                timestamp__gte=cutoff,
+                actor_id__isnull=False,
             )
+            .select_related("content_type")
+            .values_list(
+                "actor_id",
+                "content_type__app_label",
+                "content_type__model",
+            )
+            .iterator()
+        )
+        for actor_id, app_label, model_name in rows:
+            lookup_key = f"{app_label}.{model_name}"
+            display = _SENSITIVE_MODELS_DISPLAY.get(lookup_key)
+            if display is None:
+                continue
+            key = (tenant.schema_name, str(actor_id))
+            by_actor.setdefault(key, Counter())[display] += 1
+
+    # ``include_inactive=True``: insider data destruction is exactly what a
+    # frozen (offboarding / disputed / breached) tenant is at risk of, so the
+    # forensic scan must keep watching it — matching the pre-adoption loop over
+    # every non-public tenant. Per-tenant failures are isolated (missing data
+    # for one tenant beats no alert for any) and logged to the gdpr log.
+    for_each_tenant(
+        collect, label="audit.mass_delete", logger=log, include_inactive=True
+    )
 
     now = timezone.now()
     fresh_bursts: list[tuple[tuple[str, str], Counter[str], int]] = []
@@ -353,7 +354,7 @@ def alert_on_mass_deletes() -> dict[str, int]:
         _send_mass_delete_ops_alert(fresh_bursts)
 
     return {
-        "tenants_scanned": tenants_scanned,
+        "tenants_scanned": counters["tenants_scanned"],
         "actors_with_sensitive_deletes": len(by_actor),
         "fresh_alerts": len(fresh_bursts),
     }
@@ -471,40 +472,41 @@ def alert_on_deletion_endpoint_bursts() -> dict[str, int]:
     # (tenant_schema, ip) → count for each signal type.
     lodge_by_ip: dict[tuple[str, str], int] = {}
     confirm_by_ip: dict[tuple[str, str], int] = {}
-    tenants_scanned = 0
+    counters = {"tenants_scanned": 0}
 
-    for tenant in Tenant.objects.exclude(schema_name="public").iterator():
-        tenants_scanned += 1
-        try:
-            with schema_context(tenant.schema_name):
-                lodge_rows = (
-                    DeletionRequest.objects.filter(
-                        requested_at__gte=cutoff,
-                        requested_ip__isnull=False,
-                    )
-                    .values_list("requested_ip", flat=True)
-                    .iterator()
-                )
-                for ip in lodge_rows:
-                    lodge_by_ip.setdefault((tenant.schema_name, str(ip)), 0)
-                    lodge_by_ip[(tenant.schema_name, str(ip))] += 1
-
-                confirm_rows = (
-                    DeletionRequest.objects.filter(
-                        email_confirmed_at__gte=cutoff,
-                        email_confirmed_ip__isnull=False,
-                    )
-                    .values_list("email_confirmed_ip", flat=True)
-                    .iterator()
-                )
-                for ip in confirm_rows:
-                    confirm_by_ip.setdefault((tenant.schema_name, str(ip)), 0)
-                    confirm_by_ip[(tenant.schema_name, str(ip))] += 1
-        except Exception:
-            log.exception(
-                "gdpr.deletion_burst.tenant_failed tenant=%s",
-                tenant.schema_name,
+    def collect(tenant) -> None:
+        counters["tenants_scanned"] += 1
+        lodge_rows = (
+            DeletionRequest.objects.filter(
+                requested_at__gte=cutoff,
+                requested_ip__isnull=False,
             )
+            .values_list("requested_ip", flat=True)
+            .iterator()
+        )
+        for ip in lodge_rows:
+            lodge_by_ip.setdefault((tenant.schema_name, str(ip)), 0)
+            lodge_by_ip[(tenant.schema_name, str(ip))] += 1
+
+        confirm_rows = (
+            DeletionRequest.objects.filter(
+                email_confirmed_at__gte=cutoff,
+                email_confirmed_ip__isnull=False,
+            )
+            .values_list("email_confirmed_ip", flat=True)
+            .iterator()
+        )
+        for ip in confirm_rows:
+            confirm_by_ip.setdefault((tenant.schema_name, str(ip)), 0)
+            confirm_by_ip[(tenant.schema_name, str(ip))] += 1
+
+    # ``include_inactive=True``: abuse of the public deletion endpoints stays a
+    # concern on a frozen tenant, so keep scanning every non-public tenant as
+    # the pre-adoption loop did. Per-tenant failures are isolated and logged to
+    # the gdpr log so one tenant never blocks cross-tenant aggregation.
+    for_each_tenant(
+        collect, label="gdpr.deletion_burst", logger=log, include_inactive=True
+    )
 
     now = timezone.now()
     lodge_bursts = _filter_fresh(
@@ -545,7 +547,7 @@ def alert_on_deletion_endpoint_bursts() -> dict[str, int]:
         _send_deletion_burst_ops_alert(lodge_bursts, confirm_bursts)
 
     return {
-        "tenants_scanned": tenants_scanned,
+        "tenants_scanned": counters["tenants_scanned"],
         "lodge_ips_seen": len(lodge_by_ip),
         "confirm_ips_seen": len(confirm_by_ip),
         "lodge_bursts": len(lodge_bursts),

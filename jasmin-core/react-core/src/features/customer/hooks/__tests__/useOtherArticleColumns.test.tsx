@@ -29,8 +29,8 @@ vi.mock("@hooks/useNumberFormat", () => ({
 vi.mock("@hooks/useUnitOptions", () => ({
   useUnitOptions: () => ({ getUnitLabel: (u: string) => u }),
 }));
-vi.mock("@hooks/useSizeOptions", () => ({
-  useSizeOptions: () => ({ getSizeLabel: (s: string) => s }),
+vi.mock("@hooks/useVegetableSizeOptions", () => ({
+  useVegetableSizeOptions: () => ({ getVegetableSizeLabel: (s: string) => s }),
 }));
 
 import { useOtherArticleColumns } from "../useOtherArticleColumns";

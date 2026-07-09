@@ -1,6 +1,7 @@
 import {
   useActiveStatusColumn,
   useCurrency,
+  useDefaultTaxRates,
   useTenant,
   useTimeBoundColumns,
 } from "@hooks/index";
@@ -36,8 +37,7 @@ export default function ShareTypeVariationPriceModal({
   const { t } = useTranslation();
   const { currencySymbol } = useCurrency();
   const { getSetting } = useTenant();
-  const defaultTaxRateShares =
-    (getSetting("default_tax_rate_shares") as number) ?? 7;
+  const { shares: defaultTaxRateShares } = useDefaultTaxRates();
   const allowsSolidarity = Boolean(
     getSetting("allows_solidarity_pricing", false),
   );

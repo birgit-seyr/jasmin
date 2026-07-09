@@ -1,20 +1,7 @@
-import { DeleteOutlined, UploadOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  Col,
-  Form,
-  Image,
-  Input,
-  Modal,
-  Row,
-  Space,
-  Switch,
-  Typography,
-  Upload,
-} from "antd";
+import { Col, Form, Input, Row, Switch, Typography } from "antd";
 import type { FC } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -22,10 +9,9 @@ import {
   getCommissioningDeliveryStationsListQueryKey,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { DeliveryStation } from "@shared/api/generated/models";
-import { ModalCancelSaveFooter } from "@shared/modals/shared";
-import axiosInstance from "@shared/services/api";
+import { EditFormModal, useModalMutation } from "@shared/modals/shared";
+import { PictureUploadField, usePictureUpload } from "@shared/ui";
 import { notify } from "@shared/utils";
-import { getErrorMessage } from "@shared/utils/apiError";
 
 const { Paragraph } = Typography;
 
@@ -74,11 +60,10 @@ export const DeliveryStationInfoModal: FC<DeliveryStationInfoModalProps> = ({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
-  const [saving, setSaving] = useState(false);
+  const { saving, run } = useModalMutation();
   // The uploaded picture is handled outside the form (multipart), so track its
   // current URL locally so the preview updates immediately after upload/delete.
   const [pictureUrl, setPictureUrl] = useState<string | null>(null);
-  const [uploadingPicture, setUploadingPicture] = useState(false);
 
   const invalidateStations = useCallback(
     () =>
@@ -88,22 +73,39 @@ export const DeliveryStationInfoModal: FC<DeliveryStationInfoModalProps> = ({
     [queryClient],
   );
 
+  const { uploading, uploadPicture, deletePicture } = usePictureUpload({
+    endpoint: `/api/commissioning/delivery_stations/${deliveryStation?.id ?? ""}/`,
+    invalidate: invalidateStations,
+    successMessage: t("delivery_stations.picture_saved"),
+    errorMessage: t("delivery_stations.picture_save_error"),
+    onUploaded: (data) =>
+      setPictureUrl((data as DeliveryStation)?.picture ?? null),
+    onDeleted: () => setPictureUrl(null),
+  });
+
   useEffect(() => {
     if (open && deliveryStation) {
-      form.setFieldsValue({
-        info: deliveryStation.info ?? "",
-        access_code: deliveryStation.access_code ?? "",
-        messenger_group_link: deliveryStation.messenger_group_link ?? "",
-        contact_name: deliveryStation.contact_name ?? "",
-        contact_phone: deliveryStation.contact_phone ?? "",
-        photo_link: deliveryStation.photo_link ?? "",
-        self_service: !!deliveryStation.self_service,
-        coords_lat: deliveryStation.coords_lat ?? "",
-        coords_lon: deliveryStation.coords_lon ?? "",
-      });
       setPictureUrl(deliveryStation.picture ?? null);
     }
-  }, [open, deliveryStation, form]);
+  }, [open, deliveryStation]);
+
+  const initialValues = useMemo<Record<string, unknown> | null>(
+    () =>
+      deliveryStation
+        ? {
+            info: deliveryStation.info ?? "",
+            access_code: deliveryStation.access_code ?? "",
+            messenger_group_link: deliveryStation.messenger_group_link ?? "",
+            contact_name: deliveryStation.contact_name ?? "",
+            contact_phone: deliveryStation.contact_phone ?? "",
+            photo_link: deliveryStation.photo_link ?? "",
+            self_service: !!deliveryStation.self_service,
+            coords_lat: deliveryStation.coords_lat ?? "",
+            coords_lon: deliveryStation.coords_lon ?? "",
+          }
+        : null,
+    [deliveryStation],
+  );
 
   if (!deliveryStation) return null;
 
@@ -115,231 +117,144 @@ export const DeliveryStationInfoModal: FC<DeliveryStationInfoModalProps> = ({
     }
   };
 
-  // The picture is a FileField → multipart. The generated JSON PATCH can't send
-  // a file, so post FormData straight to the station detail endpoint (same
-  // escape hatch as ShareTypeVariationModal). Uploads persist immediately (not
-  // on Save) and refresh the preview + the list.
-  const handleUploadPicture = async (file: File) => {
-    const id = String(deliveryStation.id ?? "");
-    if (!id) return;
-    setUploadingPicture(true);
-    try {
-      const formData = new FormData();
-      formData.append("picture", file);
-      const response = await axiosInstance.patch<DeliveryStation>(
-        `/api/commissioning/delivery_stations/${id}/`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } },
-      );
-      setPictureUrl(response.data.picture ?? null);
-      await invalidateStations();
-      notify.success(t("delivery_stations.picture_saved"));
-    } catch (error) {
-      notify.error(
-        getErrorMessage(error, t("delivery_stations.picture_save_error")),
-      );
-    } finally {
-      setUploadingPicture(false);
-    }
-  };
-
-  const handleDeletePicture = async () => {
-    const id = String(deliveryStation.id ?? "");
-    if (!id) return;
-    setUploadingPicture(true);
-    try {
-      await commissioningDeliveryStationsPartialUpdate(id, {
-        picture: null,
-      } as unknown as DeliveryStation);
-      setPictureUrl(null);
-      await invalidateStations();
-      notify.success(t("delivery_stations.picture_saved"));
-    } catch (error) {
-      notify.error(
-        getErrorMessage(error, t("delivery_stations.picture_save_error")),
-      );
-    } finally {
-      setUploadingPicture(false);
-    }
-  };
-
-  const handleSave = async () => {
-    const values = await form.validateFields();
-    const id = String(deliveryStation.id ?? "");
-    if (!id) return;
-    setSaving(true);
-    try {
-      const payload: Record<string, unknown> = { ...values };
-      // Empty coord strings aren't valid decimals — send null to clear.
-      for (const key of ["coords_lat", "coords_lon"]) {
-        if (payload[key] === "" || payload[key] === undefined)
-          payload[key] = null;
-      }
-      await commissioningDeliveryStationsPartialUpdate(
-        id,
-        payload as unknown as DeliveryStation,
-      );
-      await invalidateStations();
-      notify.success(t("delivery_stations.info_saved"));
-      onSaved();
-      onClose();
-    } catch (error) {
-      notify.error(
-        getErrorMessage(error, t("delivery_stations.info_save_error")),
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
+  const handleSubmit = (values: Record<string, unknown>) =>
+    run(
+      async () => {
+        const payload: Record<string, unknown> = { ...values };
+        // Empty coord strings aren't valid decimals — send null to clear.
+        for (const key of ["coords_lat", "coords_lon"]) {
+          if (payload[key] === "" || payload[key] === undefined)
+            payload[key] = null;
+        }
+        await commissioningDeliveryStationsPartialUpdate(
+          String(deliveryStation.id ?? ""),
+          payload as unknown as DeliveryStation,
+        );
+        await invalidateStations();
+      },
+      {
+        successMessage: t("delivery_stations.info_saved"),
+        errorMessage: t("delivery_stations.info_save_error"),
+        onSuccess: () => {
+          onSaved();
+          onClose();
+        },
+      },
+    );
 
   return (
-    <Modal
+    <EditFormModal
       open={open}
-      onCancel={onClose}
+      form={form}
       width={640}
-      destroyOnHidden
       title={`${t("delivery_stations.member_info_title")} — ${deliveryStation.short_name ?? ""}`}
-      footer={
-        <ModalCancelSaveFooter
-          onCancel={onClose}
-          onPrimary={handleSave}
-          loading={saving}
-        />
+      description={
+        <Paragraph type="secondary">
+          {t("delivery_stations.member_info_intro")}
+        </Paragraph>
       }
+      initialValues={initialValues}
+      onSubmit={handleSubmit}
+      onCancel={onClose}
+      loading={saving}
+      requiredMark={false}
     >
-      <Paragraph type="secondary">
-        {t("delivery_stations.member_info_intro")}
-      </Paragraph>
-      <Form form={form} layout="vertical" requiredMark={false}>
-        <Form.Item name="info" label={t("delivery_stations.info")}>
-          <Input.TextArea rows={3} maxLength={1024} showCount />
-        </Form.Item>
-        <Row gutter={12}>
-          <Col span={12}>
-            <Form.Item
-              name="access_code"
-              label={t("delivery_stations.access_code")}
-            >
-              <Input maxLength={100} />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="messenger_group_link"
-              label={t("delivery_stations.messenger_group_link")}
-            >
-              <Input maxLength={150} />
-            </Form.Item>
-          </Col>
-        </Row>
-        <Row gutter={12}>
-          <Col span={12}>
-            <Form.Item
-              name="contact_name"
-              label={t("delivery_stations.contact_name")}
-            >
-              <Input maxLength={150} />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="contact_phone"
-              label={t("delivery_stations.contact_phone")}
-            >
-              <Input maxLength={50} />
-            </Form.Item>
-          </Col>
-        </Row>
-        <Form.Item label={t("delivery_stations.picture")}>
-          <Space align="start" wrap>
-            {pictureUrl && (
-              <Image
-                src={pictureUrl}
-                alt=""
-                style={{
-                  width: 96,
-                  height: 96,
-                  objectFit: "cover",
-                  borderRadius: 6,
-                }}
-              />
-            )}
-            <Space direction="vertical">
-              <Upload
-                accept="image/*"
-                maxCount={1}
-                showUploadList={false}
-                beforeUpload={(file) => {
-                  handleUploadPicture(file);
-                  return false;
-                }}
-              >
-                <Button icon={<UploadOutlined />} loading={uploadingPicture}>
-                  {pictureUrl ? t("common.replace") : t("common.upload")}
-                </Button>
-              </Upload>
-              {pictureUrl && (
-                <Button
-                  danger
-                  icon={<DeleteOutlined />}
-                  loading={uploadingPicture}
-                  onClick={handleDeletePicture}
-                >
-                  {t("common.delete")}
-                </Button>
-              )}
-            </Space>
-          </Space>
-        </Form.Item>
+      <Form.Item name="info" label={t("delivery_stations.info")}>
+        <Input.TextArea rows={3} maxLength={1024} showCount />
+      </Form.Item>
+      <Row gutter={12}>
+        <Col span={12}>
+          <Form.Item
+            name="access_code"
+            label={t("delivery_stations.access_code")}
+          >
+            <Input maxLength={100} />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item
+            name="messenger_group_link"
+            label={t("delivery_stations.messenger_group_link")}
+          >
+            <Input maxLength={150} />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Row gutter={12}>
+        <Col span={12}>
+          <Form.Item
+            name="contact_name"
+            label={t("delivery_stations.contact_name")}
+          >
+            <Input maxLength={150} />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item
+            name="contact_phone"
+            label={t("delivery_stations.contact_phone")}
+          >
+            <Input maxLength={50} />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Form.Item label={t("delivery_stations.picture")}>
+        <PictureUploadField
+          pictureUrl={pictureUrl}
+          uploading={uploading}
+          onUpload={uploadPicture}
+          onDelete={deletePicture}
+          previewVariant="inline"
+        />
+      </Form.Item>
 
-        <Form.Item
-          name="self_service"
-          label={t("delivery_stations.self_service")}
-          valuePropName="checked"
-        >
-          <Switch />
-        </Form.Item>
+      <Form.Item
+        name="self_service"
+        label={t("delivery_stations.self_service")}
+        valuePropName="checked"
+      >
+        <Switch />
+      </Form.Item>
 
-        <Form.Item label={t("delivery_stations.paste_maps_link")}>
-          <Input
-            allowClear
-            aria-label={t("delivery_stations.paste_maps_link")}
-            placeholder={t("delivery_stations.paste_maps_link_placeholder")}
-            onChange={(event) => handlePaste(event.target.value)}
-          />
-        </Form.Item>
-        <Row gutter={12}>
-          <Col span={12}>
-            <Form.Item
-              name="coords_lat"
-              label={t("delivery_stations.coords_lat")}
-              rules={[
-                {
-                  pattern: COORD_PATTERN,
-                  message: t("delivery_stations.invalid_coordinate"),
-                },
-              ]}
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="coords_lon"
-              label={t("delivery_stations.coords_lon")}
-              rules={[
-                {
-                  pattern: COORD_PATTERN,
-                  message: t("delivery_stations.invalid_coordinate"),
-                },
-              ]}
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-        </Row>
-      </Form>
-    </Modal>
+      <Form.Item label={t("delivery_stations.paste_maps_link")}>
+        <Input
+          allowClear
+          aria-label={t("delivery_stations.paste_maps_link")}
+          placeholder={t("delivery_stations.paste_maps_link_placeholder")}
+          onChange={(event) => handlePaste(event.target.value)}
+        />
+      </Form.Item>
+      <Row gutter={12}>
+        <Col span={12}>
+          <Form.Item
+            name="coords_lat"
+            label={t("delivery_stations.coords_lat")}
+            rules={[
+              {
+                pattern: COORD_PATTERN,
+                message: t("delivery_stations.invalid_coordinate"),
+              },
+            ]}
+          >
+            <Input />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item
+            name="coords_lon"
+            label={t("delivery_stations.coords_lon")}
+            rules={[
+              {
+                pattern: COORD_PATTERN,
+                message: t("delivery_stations.invalid_coordinate"),
+              },
+            ]}
+          >
+            <Input />
+          </Form.Item>
+        </Col>
+      </Row>
+    </EditFormModal>
   );
 };
 

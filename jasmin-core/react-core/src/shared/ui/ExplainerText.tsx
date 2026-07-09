@@ -50,7 +50,7 @@ const presets: Record<string, PresetConfig> = {
   success: {
     icon: <CheckCircleOutlined />,
     backgroundColor: "var(--color-success-bg)",
-    borderColor: "#b7eb8f",
+    borderColor: "var(--color-success-border)",
     iconColor: "var(--color-success)",
   },
 };

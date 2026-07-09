@@ -30,46 +30,39 @@ def send_deletion_confirmation_email(
     import + call it directly, and so the unit tests for
     ``request_deletion`` can stay free of email-side-effect mocks.
     """
-    from apps.shared.invitations import _frontend_base_url, _tenant_name
-    from apps.shared.tenants.email_service import EmailService
+    from apps.shared.deferred_email import send_email_best_effort
+    from apps.shared.tenant_urls import frontend_base_url, tenant_name
 
-    base_url = _frontend_base_url()
+    base_url = frontend_base_url()
     confirm_url = f"{base_url}/gdpr/confirm-deletion/{deletion_request.token}"
 
     # Flatten to plain scalars — never hand a live ORM instance to the
     # tenant-editable email renderer (see template_renderer._resolve).
     context = {
-        "tenant_name": _tenant_name(),
+        "tenant_name": tenant_name(),
         "user": {"first_name": user.first_name},
         "confirm_url": confirm_url,
         "requires_admin_approval": deletion_request.requires_admin_approval,
     }
-    try:
-        ok = EmailService().send_email(
-            slug="gdpr.deletion_confirm",
-            to_emails=[user.email],
-            context=context,
-            related_object_type="gdpr.deletion_request",
-            related_object_id=str(deletion_request.pk),
-            priority="high",
-            # EML-1: render in the recipient's own language (explicit >
-            # tenant-default > DEFAULT_LANGUAGE). None preserves today's default.
-            language=getattr(user, "user_language", None) or None,
-        )
-    except (ValueError, TypeError, AttributeError, OSError) as exc:
-        logger.warning(
-            "gdpr.deletion_email_failed user=%s request_id=%s error=%s",
-            user.email,
-            deletion_request.pk,
-            exc,
-        )
-    else:
-        if not ok:
-            logger.warning(
-                "gdpr.deletion_email_not_sent user=%s request_id=%s",
-                user.email,
-                deletion_request.pk,
-            )
+    send_email_best_effort(
+        slug="gdpr.deletion_confirm",
+        to_emails=[user.email],
+        context=context,
+        related_object_type="gdpr.deletion_request",
+        related_object_id=str(deletion_request.pk),
+        priority="high",
+        # EML-1: render in the recipient's own language (explicit >
+        # tenant-default > DEFAULT_LANGUAGE). None preserves today's default.
+        language=getattr(user, "user_language", None) or None,
+        logger=logger,
+        log_error_event="gdpr.deletion_email_failed",
+        log_not_sent_event="gdpr.deletion_email_not_sent",
+        log_ref=f"user={user.email} request_id={deletion_request.pk}",
+        # A missed confirmation mail is non-actionable (the user can simply
+        # re-request), so keep this at WARNING rather than the helper's default
+        # ERROR.
+        log_level="warning",
+    )
 
 
 def send_deletion_approved_email(deletion_request: DeletionRequest) -> None:
@@ -85,8 +78,8 @@ def send_deletion_approved_email(deletion_request: DeletionRequest) -> None:
     are enough of a paper trail; if the success mail bounces the office
     can resend manually.
     """
-    from apps.shared.invitations import _tenant_name
-    from apps.shared.tenants.email_service import EmailService
+    from apps.shared.deferred_email import send_email_best_effort
+    from apps.shared.tenant_urls import tenant_name
 
     user = deletion_request.user
     context = {
@@ -95,35 +88,24 @@ def send_deletion_approved_email(deletion_request: DeletionRequest) -> None:
         # the original email, but not the first name. Fall back to
         # template's |default:"…" handling.
         "user": {"first_name": ""},
-        "tenant_name": _tenant_name(),
+        "tenant_name": tenant_name(),
     }
-    try:
-        ok = EmailService().send_email(
-            slug="gdpr.deletion_approved",
-            to_emails=[deletion_request.requested_email],
-            context=context,
-            related_object_type="gdpr.deletion_request",
-            related_object_id=str(deletion_request.pk),
-            priority="high",
-            # EML-1: the recipient's language preference is NOT in the JasminUser
-            # FIELD_CLASSIFICATION, so it survives the anonymisation that ran
-            # before this send — the cached ``user`` still carries it.
-            language=getattr(user, "user_language", None) or None,
-        )
-    except (ValueError, TypeError, AttributeError, OSError) as exc:
-        logger.error(
-            "gdpr.deletion_approved_email_failed request_id=%s user=%s error=%s",
-            deletion_request.pk,
-            deletion_request.requested_email,
-            exc,
-        )
-    else:
-        if not ok:
-            logger.error(
-                "gdpr.deletion_approved_email_not_sent request_id=%s user=%s",
-                deletion_request.pk,
-                deletion_request.requested_email,
-            )
+    send_email_best_effort(
+        slug="gdpr.deletion_approved",
+        to_emails=[deletion_request.requested_email],
+        context=context,
+        related_object_type="gdpr.deletion_request",
+        related_object_id=str(deletion_request.pk),
+        priority="high",
+        # EML-1: the recipient's language preference is NOT in the JasminUser
+        # FIELD_CLASSIFICATION, so it survives the anonymisation that ran
+        # before this send — the cached ``user`` still carries it.
+        language=getattr(user, "user_language", None) or None,
+        logger=logger,
+        log_error_event="gdpr.deletion_approved_email_failed",
+        log_not_sent_event="gdpr.deletion_approved_email_not_sent",
+        log_ref=f"request_id={deletion_request.pk} user={deletion_request.requested_email}",
+    )
 
 
 def send_deletion_pending_admin_office_email(
@@ -159,8 +141,8 @@ def send_deletion_pending_admin_office_email(
     """
     from django.db import connection
 
-    from apps.shared.invitations import _frontend_base_url, _tenant_name
-    from apps.shared.tenants.email_service import EmailService
+    from apps.shared.deferred_email import send_email_best_effort
+    from apps.shared.tenant_urls import frontend_base_url, tenant_name
 
     tenant = getattr(connection, "tenant", None)
     office_email = getattr(tenant, "email", None)
@@ -177,41 +159,35 @@ def send_deletion_pending_admin_office_email(
         )
         return
 
-    review_url = f"{_frontend_base_url()}/configuration/gdpr"
+    review_url = f"{frontend_base_url()}/configuration/gdpr"
 
     # Context carries ONLY tenant-side info + the review link. The
     # ``deletion_request`` is NOT passed in — anyone editing the
     # template later can't accidentally surface its ``requested_email``
     # or ``user.first_name`` because they aren't in the context dict.
     context = {
-        "tenant_name": _tenant_name(),
+        "tenant_name": tenant_name(),
         "review_url": review_url,
     }
-    try:
-        ok = EmailService().send_email(
-            slug="gdpr.deletion_pending_admin_office",
-            to_emails=[office_email],
-            context=context,
-            # ``related_object_id`` so the audit trail can join the
-            # EmailLog row back to which request triggered it — the
-            # office can grep for "we sent the notification for THIS
-            # request" without the user's identity being in the body.
-            related_object_type="gdpr.deletion_request",
-            related_object_id=str(deletion_request.pk),
-            priority="normal",
-        )
-    except (ValueError, TypeError, AttributeError, OSError) as exc:
-        logger.warning(
-            "gdpr.deletion_pending_office_email_failed " "request_id=%s error=%s",
-            deletion_request.pk,
-            exc,
-        )
-    else:
-        if not ok:
-            logger.warning(
-                "gdpr.deletion_pending_office_email_not_sent " "request_id=%s",
-                deletion_request.pk,
-            )
+    send_email_best_effort(
+        slug="gdpr.deletion_pending_admin_office",
+        to_emails=[office_email],
+        context=context,
+        # ``related_object_id`` so the audit trail can join the
+        # EmailLog row back to which request triggered it — the
+        # office can grep for "we sent the notification for THIS
+        # request" without the user's identity being in the body.
+        related_object_type="gdpr.deletion_request",
+        related_object_id=str(deletion_request.pk),
+        priority="normal",
+        logger=logger,
+        log_error_event="gdpr.deletion_pending_office_email_failed",
+        log_not_sent_event="gdpr.deletion_pending_office_email_not_sent",
+        log_ref=f"request_id={deletion_request.pk}",
+        # An unpushed office heads-up is non-actionable (the request is still
+        # visible in ConfigurationGDPR), so keep WARNING, not the default ERROR.
+        log_level="warning",
+    )
 
 
 def send_deletion_rejected_email(
@@ -225,38 +201,27 @@ def send_deletion_rejected_email(
     anonymisation on reject), but we prefer ``requested_email`` for
     consistency with the approve path.
     """
-    from apps.shared.invitations import _tenant_name
-    from apps.shared.tenants.email_service import EmailService
+    from apps.shared.deferred_email import send_email_best_effort
+    from apps.shared.tenant_urls import tenant_name
 
     user = deletion_request.user
     context = {
         "user": {"first_name": getattr(user, "first_name", "") if user else ""},
-        "tenant_name": _tenant_name(),
+        "tenant_name": tenant_name(),
         "reason": reason,
     }
-    try:
-        ok = EmailService().send_email(
-            slug="gdpr.deletion_rejected",
-            to_emails=[deletion_request.requested_email],
-            context=context,
-            related_object_type="gdpr.deletion_request",
-            related_object_id=str(deletion_request.pk),
-            priority="high",
-            # EML-1: render in the recipient's language. ``user`` may be None on
-            # the reject path (DeletionRequest.user is SET_NULL) — None-safe.
-            language=getattr(user, "user_language", None) or None,
-        )
-    except (ValueError, TypeError, AttributeError, OSError) as exc:
-        logger.error(
-            "gdpr.deletion_rejected_email_failed request_id=%s user=%s error=%s",
-            deletion_request.pk,
-            deletion_request.requested_email,
-            exc,
-        )
-    else:
-        if not ok:
-            logger.error(
-                "gdpr.deletion_rejected_email_not_sent request_id=%s user=%s",
-                deletion_request.pk,
-                deletion_request.requested_email,
-            )
+    send_email_best_effort(
+        slug="gdpr.deletion_rejected",
+        to_emails=[deletion_request.requested_email],
+        context=context,
+        related_object_type="gdpr.deletion_request",
+        related_object_id=str(deletion_request.pk),
+        priority="high",
+        # EML-1: render in the recipient's language. ``user`` may be None on
+        # the reject path (DeletionRequest.user is SET_NULL) — None-safe.
+        language=getattr(user, "user_language", None) or None,
+        logger=logger,
+        log_error_event="gdpr.deletion_rejected_email_failed",
+        log_not_sent_event="gdpr.deletion_rejected_email_not_sent",
+        log_ref=f"request_id={deletion_request.pk} user={deletion_request.requested_email}",
+    )

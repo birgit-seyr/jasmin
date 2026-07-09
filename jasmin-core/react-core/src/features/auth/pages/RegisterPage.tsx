@@ -16,6 +16,7 @@ import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import { authRegisterCreate } from "@shared/api/generated/auth/auth";
 import type { PublicRegisterRequest } from "@shared/api/generated/models";
 import { getErrorMessage } from "@shared/utils/apiError";
+import { passwordConfirmValidator } from "../utils/password";
 
 const { Title, Text } = Typography;
 
@@ -163,14 +164,11 @@ const RegisterPage = () => {
                 dependencies={["password"]}
                 rules={[
                   { required: true, message: t("auth.apply.confirm_required") },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (!value || getFieldValue("password") === value) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(new Error(t("auth.apply.mismatch")));
-                    },
-                  }),
+                  ({ getFieldValue }) =>
+                    passwordConfirmValidator(
+                      getFieldValue,
+                      t("auth.apply.mismatch"),
+                    ),
                 ]}
               >
                 <Input.Password prefix={<LockOutlined />} />

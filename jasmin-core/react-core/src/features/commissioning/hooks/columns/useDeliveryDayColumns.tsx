@@ -6,6 +6,7 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import ToolTipIcon from "@shared/ui/ToolTipIcon";
 import { formatAmountForUnit } from "@shared/utils";
+import { getShareTypeVariationSizeLabelPure } from "@hooks/index";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 import type { ShareDeliveryDayOption } from "../useShareDeliveryDays";
 import type { ShareTypeVariationOption } from "../useShareTypeVariations";
@@ -120,6 +121,60 @@ export function useDeliveryDayColumns({
         renderVariationCell(value, record, variation.id as string),
     });
 
+    // Tour/station leaf columns — the per-tour and per-station amount cells
+    // for a (day, variation) pair. Shared by BOTH layouts: the variation-major
+    // ("days together") columns and the day-major `createVariationColumnForDay`
+    // build the identical leaves; only the parent header (day label vs. size
+    // label) differs.
+    const buildTourLeaves = (
+      deliveryDay: DeliveryDay,
+      variation: ShareTypeVariationOption,
+    ): EditableColumnConfig<TableRecord>[] =>
+      Array.from(
+        { length: deliveryDay.used_tours?.length || 0 },
+        (_, tourIndex) => {
+          const tourNumber =
+            deliveryDay.used_tours?.[tourIndex] || tourIndex + 1;
+          const tourKey = dayVariationKey({
+            dayId: deliveryDay.id!,
+            variationId: variation.id!,
+            tour: tourNumber,
+          });
+          return {
+            title: `T${tourNumber}`,
+            dataIndex: tourKey,
+            key: tourKey,
+            inputType: "positive_decimal2",
+            align: "center",
+            width: AMOUNT_COLUMN_WIDTH,
+            render: (value: unknown, record: TableRecord) =>
+              renderVariationCell(value, record, variation.id as string),
+          };
+        },
+      );
+
+    const buildStationLeaves = (
+      deliveryDay: DeliveryDay,
+      variation: ShareTypeVariationOption,
+    ): EditableColumnConfig<TableRecord>[] =>
+      deliveryDay.delivery_stations?.map((station) => {
+        const stationKey = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          station: station.id,
+        });
+        return {
+          title: `${station.short_name}`,
+          dataIndex: stationKey,
+          key: stationKey,
+          inputType: "positive_decimal2",
+          align: "center",
+          width: STATIONS_COLUMN_WIDTH,
+          render: (value: unknown, record: TableRecord) =>
+            renderVariationCell(value, record, variation.id as string),
+        };
+      }) || [];
+
     const createTourVariationColumn = (
       deliveryDay: DeliveryDay,
       variation: ShareTypeVariationOption,
@@ -131,32 +186,7 @@ export function useDeliveryDayColumns({
       }),
       key: dayVariationKey({ dayId: deliveryDay.id!, variationId: variation.id! }),
       align: "center",
-      children: Array.from(
-        { length: deliveryDay.used_tours?.length || 0 },
-        (_, tourIndex) => {
-          const tourNumber =
-            deliveryDay.used_tours?.[tourIndex] || tourIndex + 1;
-
-          return {
-            title: `T${tourNumber}`,
-            dataIndex: dayVariationKey({
-              dayId: deliveryDay.id!,
-              variationId: variation.id!,
-              tour: tourNumber,
-            }),
-            key: dayVariationKey({
-              dayId: deliveryDay.id!,
-              variationId: variation.id!,
-              tour: tourNumber,
-            }),
-            inputType: "positive_decimal2",
-            align: "center",
-            width: AMOUNT_COLUMN_WIDTH,
-            render: (value: unknown, record: TableRecord) =>
-              renderVariationCell(value, record, variation.id as string),
-          };
-        },
-      ),
+      children: buildTourLeaves(deliveryDay, variation),
     });
 
     const createStationsVariationColumn = (
@@ -170,25 +200,7 @@ export function useDeliveryDayColumns({
       }),
       key: dayVariationKey({ dayId: deliveryDay.id!, variationId: variation.id! }),
       align: "center",
-      children:
-        deliveryDay.delivery_stations?.map((station) => ({
-          title: `${station.short_name}`,
-          dataIndex: dayVariationKey({
-            dayId: deliveryDay.id!,
-            variationId: variation.id!,
-            station: station.id,
-          }),
-          key: dayVariationKey({
-            dayId: deliveryDay.id!,
-            variationId: variation.id!,
-            station: station.id,
-          }),
-          inputType: "positive_decimal2",
-          align: "center",
-          width: STATIONS_COLUMN_WIDTH,
-          render: (value: unknown, record: TableRecord) =>
-            renderVariationCell(value, record, variation.id as string),
-        })) || [],
+      children: buildStationLeaves(deliveryDay, variation),
     });
 
     const createVariationColumnForDay = (
@@ -199,7 +211,7 @@ export function useDeliveryDayColumns({
       const variationId = variation.id!;
       const bareKey = dayVariationKey({ dayId, variationId });
       const baseColumn = {
-        title: t(`commissioning.${variation.size}`),
+        title: getShareTypeVariationSizeLabelPure(variation.size, t),
         dataIndex: bareKey,
         key: bareKey,
         align: "center" as const,
@@ -208,51 +220,12 @@ export function useDeliveryDayColumns({
       if (planningMode === "tours") {
         return {
           ...baseColumn,
-          children: Array.from(
-            { length: deliveryDay.used_tours?.length || 0 },
-            (_, tourIndex) => {
-              const tourNumber =
-                deliveryDay.used_tours?.[tourIndex] || tourIndex + 1;
-              const tourKey = dayVariationKey({
-                dayId,
-                variationId,
-                tour: tourNumber,
-              });
-
-              return {
-                title: `T${tourNumber}`,
-                dataIndex: tourKey,
-                key: tourKey,
-                inputType: "positive_decimal2",
-                align: "center",
-                width: AMOUNT_COLUMN_WIDTH,
-                render: (value: unknown, record: TableRecord) =>
-                  renderVariationCell(value, record, variation.id as string),
-              };
-            },
-          ),
+          children: buildTourLeaves(deliveryDay, variation),
         };
       } else if (planningMode === "stations") {
         return {
           ...baseColumn,
-          children:
-            deliveryDay.delivery_stations?.map((station) => {
-              const stationKey = dayVariationKey({
-                dayId,
-                variationId,
-                station: station.id,
-              });
-              return {
-                title: `${station.short_name}`,
-                dataIndex: stationKey,
-                key: stationKey,
-                inputType: "positive_decimal2",
-                align: "center",
-                width: STATIONS_COLUMN_WIDTH,
-                render: (value: unknown, record: TableRecord) =>
-                  renderVariationCell(value, record, variation.id as string),
-              };
-            }) || [],
+          children: buildStationLeaves(deliveryDay, variation),
         };
       } else {
         return {
@@ -368,7 +341,7 @@ export function useDeliveryDayColumns({
     if (showDaysTogether) {
       return shareTypeVariations.map(
         (variation: ShareTypeVariationOption, varIndex): EditableColumnConfig<TableRecord> => ({
-          title: t(`commissioning.${variation.size}`),
+          title: getShareTypeVariationSizeLabelPure(variation.size, t),
           dataIndex: variationColumnKey(variation.id!),
           key: variationColumnKey(variation.id!),
           className: varIndex === 0 ? "column-group-start" : "column-group-start column-variation-start",

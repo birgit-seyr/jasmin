@@ -48,6 +48,10 @@
   /* Surface variants */
   --color-page-bg: #f0f2f5;
   --color-success-bg: #f6ffed;
+  /* Success border + readable success text, paired with --color-success-bg for
+     confirmed/finalized surfaces (finalized-notice, success explainer). */
+  --color-success-border: #b7eb8f;
+  --color-success-text: #389e0d;
   --color-info-bg: #f0f9ff;
   --color-border-soft: #e0e0e0;
 
@@ -100,6 +104,8 @@
   /* Surface variants (dark) */
   --color-page-bg: #1a1a1a;
   --color-success-bg: #162312;
+  --color-success-border: #274916;
+  --color-success-text: #95de64;
   --color-info-bg: #111d2c;
   --color-border-soft: #424242;
 

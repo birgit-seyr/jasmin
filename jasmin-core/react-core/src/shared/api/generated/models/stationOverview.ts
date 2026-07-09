@@ -13,7 +13,7 @@ In addition to the stable fields below, each station dict carries dynamic
 keys read by iteration on the frontend (not declared here): per-variation
 ``variation_<share_type_variation_id>`` counts AND per-box-combination
 ``combo_<key>`` counts. A plain declared-field ``Serializer`` would DROP
-these undeclared keys, so ``to_representation`` re-attaches them.
+these undeclared keys, so ``DynamicPrefixPassthroughMixin`` re-attaches them.
  */
 export interface StationOverview {
   delivery_station_day_id: string;

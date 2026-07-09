@@ -20,11 +20,10 @@ import time
 from django.core.mail import mail_admins
 from django.db.models import Q
 from django.utils import timezone
-from django_tenants.utils import schema_context
 from huey import crontab
 from huey.contrib.djhuey import db_periodic_task, periodic_task
 
-from apps.shared.tenants.models import Tenant
+from apps.shared.tenants.sweep import for_each_tenant
 
 log = logging.getLogger("tasks")
 
@@ -58,33 +57,26 @@ def cleanup_stale_email_logs() -> None:
     from apps.notifications.models import EmailLog
 
     cutoff = timezone.now() - datetime.timedelta(days=RETENTION_DAYS)
-    total_deleted = 0
+    counters = {"deleted": 0}
 
-    for tenant in Tenant.objects.exclude(schema_name="public").iterator():
-        # Per-tenant try/except: a single bad tenant must NOT prevent
-        # the sweep from running on every other tenant.
-        try:
-            with schema_context(tenant.schema_name):
-                deleted, _ = EmailLog.objects.filter(
-                    created_at__lt=cutoff,
-                    status__in=DELETABLE_STATUSES,
-                ).delete()
-                total_deleted += deleted
-                if deleted:
-                    log.info(
-                        "housekeeping.email_log_pruned tenant=%s deleted=%s",
-                        tenant.schema_name,
-                        deleted,
-                    )
-        except Exception:
-            log.exception(
-                "housekeeping.email_log_pruned.tenant_failed tenant=%s",
+    def prune(tenant) -> None:
+        deleted, _ = EmailLog.objects.filter(
+            created_at__lt=cutoff,
+            status__in=DELETABLE_STATUSES,
+        ).delete()
+        counters["deleted"] += deleted
+        if deleted:
+            log.info(
+                "housekeeping.email_log_pruned tenant=%s deleted=%s",
                 tenant.schema_name,
+                deleted,
             )
+
+    for_each_tenant(prune, label="housekeeping.email_log_pruned", logger=log)
 
     log.info(
         "housekeeping.email_log_pruned total_deleted=%s retention_days=%s",
-        total_deleted,
+        counters["deleted"],
         RETENTION_DAYS,
     )
 
@@ -120,38 +112,35 @@ def reconcile_stale_background_jobs() -> None:
     stale = Q(heartbeat_at__isnull=False, heartbeat_at__lt=cutoff) | Q(
         heartbeat_at__isnull=True, created_at__lt=cutoff
     )
-    total_reconciled = 0
+    counters = {"reconciled": 0}
     reconciled_by_tenant: list[tuple[str, int]] = []
 
-    for tenant in Tenant.objects.exclude(schema_name="public").iterator():
-        # Per-tenant try/except: one bad tenant must not abort the whole sweep.
-        try:
-            with schema_context(tenant.schema_name):
-                reconciled = BackgroundJob.objects.filter(
-                    stale,
-                    status__in=(
-                        BackgroundJob.STATUS_QUEUED,
-                        BackgroundJob.STATUS_RUNNING,
-                    ),
-                ).update(
-                    status=BackgroundJob.STATUS_FAILED,
-                    error="worker lost — no heartbeat within timeout",
-                    completed_at=timezone.now(),
-                )
-                total_reconciled += reconciled
-                if reconciled:
-                    reconciled_by_tenant.append((tenant.schema_name, reconciled))
-                    log.warning(
-                        "housekeeping.background_job_reconciled tenant=%s failed=%s",
-                        tenant.schema_name,
-                        reconciled,
-                    )
-        except Exception:
-            log.exception(
-                "housekeeping.background_job_reconciled.tenant_failed tenant=%s",
+    def reconcile(tenant) -> None:
+        reconciled = BackgroundJob.objects.filter(
+            stale,
+            status__in=(
+                BackgroundJob.STATUS_QUEUED,
+                BackgroundJob.STATUS_RUNNING,
+            ),
+        ).update(
+            status=BackgroundJob.STATUS_FAILED,
+            error="worker lost — no heartbeat within timeout",
+            completed_at=timezone.now(),
+        )
+        counters["reconciled"] += reconciled
+        if reconciled:
+            reconciled_by_tenant.append((tenant.schema_name, reconciled))
+            log.warning(
+                "housekeeping.background_job_reconciled tenant=%s failed=%s",
                 tenant.schema_name,
+                reconciled,
             )
 
+    for_each_tenant(
+        reconcile, label="housekeeping.background_job_reconciled", logger=log
+    )
+
+    total_reconciled = counters["reconciled"]
     log.info(
         "housekeeping.background_job_reconciled total_failed=%s timeout=%s",
         total_reconciled,
@@ -198,34 +187,29 @@ def prune_old_background_jobs() -> None:
     from apps.notifications.models import BackgroundJob
 
     cutoff = timezone.now() - datetime.timedelta(days=RETENTION_DAYS)
-    total_deleted = 0
+    counters = {"deleted": 0}
 
-    for tenant in Tenant.objects.exclude(schema_name="public").iterator():
-        try:
-            with schema_context(tenant.schema_name):
-                deleted, _ = BackgroundJob.objects.filter(
-                    status__in=(
-                        BackgroundJob.STATUS_DONE,
-                        BackgroundJob.STATUS_FAILED,
-                    ),
-                    created_at__lt=cutoff,
-                ).delete()
-                total_deleted += deleted
-                if deleted:
-                    log.info(
-                        "housekeeping.background_job_pruned tenant=%s deleted=%s",
-                        tenant.schema_name,
-                        deleted,
-                    )
-        except Exception:
-            log.exception(
-                "housekeeping.background_job_pruned.tenant_failed tenant=%s",
+    def prune(tenant) -> None:
+        deleted, _ = BackgroundJob.objects.filter(
+            status__in=(
+                BackgroundJob.STATUS_DONE,
+                BackgroundJob.STATUS_FAILED,
+            ),
+            created_at__lt=cutoff,
+        ).delete()
+        counters["deleted"] += deleted
+        if deleted:
+            log.info(
+                "housekeeping.background_job_pruned tenant=%s deleted=%s",
                 tenant.schema_name,
+                deleted,
             )
+
+    for_each_tenant(prune, label="housekeeping.background_job_pruned", logger=log)
 
     log.info(
         "housekeeping.background_job_pruned total_deleted=%s retention_days=%s",
-        total_deleted,
+        counters["deleted"],
         RETENTION_DAYS,
     )
 

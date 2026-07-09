@@ -35,6 +35,8 @@ logger = logging.getLogger("authentication")
 
 
 def serialize_user_row(u: JasminUser) -> dict:
+    from apps.commissioning.models.choices_text import InvitationStatus
+
     # If callers prefetched the relevant invitations under
     # ``_prefetched_sent_invitations`` (see MemberViewSet.get_queryset),
     # use that to avoid an N+1; otherwise fall back to a query.
@@ -42,7 +44,11 @@ def serialize_user_row(u: JasminUser) -> dict:
     if prefetched is not None:
         invitation = prefetched[0] if prefetched else None
     else:
-        invitation = u.invitations.filter(status="sent").order_by("-created_at").first()
+        invitation = (
+            u.invitations.filter(status=InvitationStatus.SENT)
+            .order_by("-created_at")
+            .first()
+        )
     linked_reseller = getattr(u, "linked_reseller", None)
     return {
         "id": u.id,
@@ -71,11 +77,12 @@ def list_active_users() -> list[dict]:
     # (``.filter()`` on a plain prefetch bypasses the cache) plus a
     # reverse-OneToOne lookup. Local import keeps the accounts→commissioning
     # dependency off the module-load path.
+    from apps.commissioning.models.choices_text import InvitationStatus
     from apps.commissioning.models.members import UserInvitation
 
-    sent_invitations_qs = UserInvitation.objects.filter(status="sent").order_by(
-        "-created_at"
-    )
+    sent_invitations_qs = UserInvitation.objects.filter(
+        status=InvitationStatus.SENT
+    ).order_by("-created_at")
     qs = (
         JasminUser.objects.all()
         .select_related("linked_reseller")

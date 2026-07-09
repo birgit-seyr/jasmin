@@ -18,7 +18,7 @@ import type {
 import { ToolTipIcon } from "@shared/ui";
 import { editableOnlyOnCreate } from "@shared/utils";
 import { useCrates } from "../useCrates";
-import { useSizeOptions } from "@hooks/useSizeOptions";
+import { useVegetableSizeOptions } from "@hooks/useVegetableSizeOptions";
 import { useAmountUnitSizeColumns } from "./useAmountUnitSizeColumns";
 import { useNoteColumn } from "@hooks/columns/useNoteColumn";
 import { useShareArticleColumn } from "./useShareArticleColumn";
@@ -56,7 +56,7 @@ export function useHarvestingListColumns({
   isGardenerView: boolean;
 }) {
   const { t } = useTranslation();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
   const { crates } = useCrates();
   const { noteColumn } = useNoteColumn();
 
@@ -69,7 +69,7 @@ export function useHarvestingListColumns({
         render: (text: unknown, record: Record<string, unknown>) => {
           const sizeLabel =
             record.size && record.size !== "M"
-              ? ` (${getSizeLabel(record.size as string)})`
+              ? ` (${getVegetableSizeLabel(record.size as string)})`
               : "";
           return `${text}${sizeLabel}`;
         },

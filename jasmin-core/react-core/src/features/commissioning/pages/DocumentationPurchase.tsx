@@ -1,6 +1,5 @@
 import type { FormInstance } from "antd";
 import { Button } from "antd";
-import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -33,6 +32,7 @@ import {
 } from "@shared/ui";
 import { AddShareArticleEntry } from "@features/commissioning/components";
 import {
+  currentWeek,
   useCurrency,
   useNoteColumn,
   useNumberFormat,
@@ -50,8 +50,6 @@ import {
 } from "@features/commissioning/hooks";
 import type { DocumentationSummaryRecord } from "@features/commissioning/hooks/useDocumentationSummaryPage";
 import type { StorageOption } from "@features/commissioning/hooks/useStorages";
-
-const currentWeek = dayjs().isoWeek();
 
 const shareArticleFilters = {
   is_active: true,

@@ -2,6 +2,7 @@ import { StyleSheet } from "@react-pdf/renderer";
 import "../registerRoboto";
 import { DocumentTypeEnum } from "@shared/api/generated/models";
 import { formatNumber } from "@shared/utils/numberFormat";
+import { decimalsForUnit } from "@shared/utils/amountFormat";
 import { itemLineNetto, roundHalfUp } from "@shared/utils/lineNetto";
 
 /**
@@ -287,7 +288,7 @@ export function formatAmount(
 ): string {
   const numValue = Number(amount);
   if (isNaN(numValue) || numValue === 0) return "";
-  const decimals = !unit || unit === "KG" ? 2 : 1;
+  const decimals = decimalsForUnit(unit);
   return formatNumber(numValue, decimals, locale);
 }
 

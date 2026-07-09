@@ -1,8 +1,9 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import dayjs from "dayjs";
 import type { TFunction } from "i18next";
-import { getSizeLabelPure } from "@hooks/useSizeOptions";
+import { getVegetableSizeLabelPure } from "@hooks/useVegetableSizeOptions";
 import { getUnitLabelPure } from "@hooks/useUnitOptions";
+import { formatCurrency } from "@shared/utils/currency";
 import { formatNumber } from "@shared/utils/numberFormat";
 import {
   baseStyles,
@@ -107,7 +108,7 @@ export default function DeliveryNotePDF({
   const { deliveryNote, lineItems, crateItems } = data;
   const locale = tenantSettings?.number_locale ?? "de-DE";
   const getUnitLabel = (value: string) => getUnitLabelPure(value, t);
-  const getSizeLabel = (value: string) => getSizeLabelPure(value, t);
+  const getVegetableSizeLabel = (value: string) => getVegetableSizeLabelPure(value, t);
 
   return (
     <Document>
@@ -171,7 +172,7 @@ export default function DeliveryNotePDF({
               <Text style={styles.dnColSort}>{item.sort || "-"}</Text>
               <Text style={styles.dnCol5}>
                 {item.size && item.size !== "M"
-                  ? getSizeLabel(item.size)
+                  ? getVegetableSizeLabel(item.size)
                   : "-"}
               </Text>
               <Text style={styles.dnCol2}>
@@ -180,7 +181,7 @@ export default function DeliveryNotePDF({
               <Text style={styles.dnCol3}>{getUnitLabel(item.unit ?? "")}</Text>
               <Text style={styles.dnCol4}>
                 {item.price_per_unit
-                  ? `${formatNumber(item.price_per_unit, 2, locale)} ${currencySymbol}/${getUnitLabel(item.unit ?? "")}`
+                  ? `${formatCurrency(formatNumber(item.price_per_unit, 2, locale), currencySymbol)}/${getUnitLabel(item.unit ?? "")}`
                   : "-"}
               </Text>
             </View>
@@ -196,7 +197,7 @@ export default function DeliveryNotePDF({
               </Text>
               <Text style={styles.dnCol3}>{getUnitLabel(item.unit ?? "")}</Text>
               <Text style={styles.dnCol4}>
-                {item.price_per_unit ? `${formatNumber(item.price_per_unit, 2, locale)} ${currencySymbol}/${t("commissioning.piece_short")}` : "-"}
+                {item.price_per_unit ? `${formatCurrency(formatNumber(item.price_per_unit, 2, locale), currencySymbol)}/${t("commissioning.piece_short")}` : "-"}
               </Text>
             </View>
           ))}

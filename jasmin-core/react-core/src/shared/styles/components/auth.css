@@ -80,3 +80,16 @@
 .auth-banner {
   text-align: center;
 }
+
+/* ------------------------------------------------------------------
+ * New-password strength meter (reset / set password). The bar is pulled
+ * up to sit snug under the password input; the hint below is small + muted.
+ * ------------------------------------------------------------------ */
+.password-strength-meter {
+  margin-top: -16px;
+  margin-bottom: 8px;
+}
+
+.password-strength-hint {
+  font-size: 12px;
+}

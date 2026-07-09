@@ -1,23 +1,56 @@
 from __future__ import annotations
 
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from .base import JasminModel
 from .choices_text import (
     DayNumberOptions,
-    SizeVegetableOptions,
-    UnitOptions,
+    delivery_week_field,
+    size_vegetable_field,
+    unit_field,
 )
 from .mixin import ArchivableMixin, CreatedMixin, FinalizableMixin
 
 
+def documentation_daily_unique(name: str) -> models.UniqueConstraint:
+    """The per-(year, week, DAY, article, unit, size) uniqueness shared by the
+    five plain documentation daily tables (Waste, WashAmount, CleanAmount and
+    the additional-theoretical wash/clean variants). Only enforced when
+    ``day_number`` is set. Callers pass their own ``name`` so each constraint
+    keeps its existing DB identity — byte-identical, no migration.
+    """
+    return models.UniqueConstraint(
+        fields=[
+            "year",
+            "delivery_week",
+            "day_number",
+            "share_article",
+            "unit",
+            "size",
+        ],
+        condition=models.Q(day_number__isnull=False),
+        name=name,
+    )
+
+
+def documentation_year_week_indexes() -> list[models.Index]:
+    """The ``(year, delivery_week)`` + ``(year, delivery_week, day_number)``
+    index pair every daily documentation table declares.
+
+    Returns FRESH ``Index`` instances per call so each concrete model auto-names
+    them off its own table — keeping the generated index names (and therefore
+    the schema) identical to the previous inline declarations.
+    """
+    return [
+        models.Index(fields=["year", "delivery_week"]),
+        models.Index(fields=["year", "delivery_week", "day_number"]),
+    ]
+
+
 class DocumentationMixin(models.Model):
     year = models.PositiveSmallIntegerField()
-    delivery_week = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(53)],
-    )
+    delivery_week = delivery_week_field()
     day_number = models.PositiveSmallIntegerField(
         choices=DayNumberOptions.choices, blank=True, null=True
     )
@@ -26,12 +59,10 @@ class DocumentationMixin(models.Model):
         max_digits=10, decimal_places=2, blank=True, null=True
     )  # this is in kg/pcs/bunch
 
-    unit = models.CharField(max_length=20, choices=UnitOptions.choices)
-    size = models.CharField(
-        max_length=1,
-        choices=SizeVegetableOptions.choices,
-        default=SizeVegetableOptions.M,
-    )
+    # ``max_length=20`` preserves this column's historical width — every other
+    # unit column is 10; normalising it would require a migration (out of scope).
+    unit = unit_field(max_length=20)
+    size = size_vegetable_field()
     storage = models.ForeignKey("Storage", on_delete=models.CASCADE)
 
     note = models.TextField(blank=True, null=True)
@@ -194,10 +225,7 @@ class TheoreticalHarvest(
     )
 
     class Meta:
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()
 
 
 class AdditionalTheoreticalHarvest(
@@ -228,10 +256,7 @@ class AdditionalTheoreticalHarvest(
                 name="addtheoreticalharvest_unique_full",
             ),
         ]
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()
 
 
 class Harvest(
@@ -264,32 +289,15 @@ class Harvest(
                 name="harvest_unique_year_week_day_article_unit_size_storage",
             ),
         ]
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()
 
 
 class Waste(JasminModel, DocumentationMixin, CreatedMixin, ArchivableMixin):
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=[
-                    "year",
-                    "delivery_week",
-                    "day_number",
-                    "share_article",
-                    "unit",
-                    "size",
-                ],
-                condition=models.Q(day_number__isnull=False),
-                name="waste_unique_year_week_day_article_unit_size",
-            ),
+            documentation_daily_unique("waste_unique_year_week_day_article_unit_size"),
         ]
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()
 
 
 class TheoreticalPurchase(
@@ -314,10 +322,7 @@ class TheoreticalPurchase(
     )
 
     class Meta:
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()
 
 
 class AdditionalTheoreticalPurchase(
@@ -350,10 +355,7 @@ class AdditionalTheoreticalPurchase(
                 name="addtheoreticalpurchase_unique_full",
             ),
         ]
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()
 
 
 class Purchase(JasminModel, DocumentationMixin, CreatedMixin, ArchivableMixin):
@@ -405,10 +407,7 @@ class Purchase(JasminModel, DocumentationMixin, CreatedMixin, ArchivableMixin):
                 nulls_distinct=False,
             ),
         ]
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()
 
 
 class TheoreticalWashAmount(
@@ -426,10 +425,7 @@ class TheoreticalWashAmount(
     )
 
     class Meta:
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()
 
 
 class AdditionalTheoreticalWashAmount(
@@ -441,45 +437,19 @@ class AdditionalTheoreticalWashAmount(
 ):
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=[
-                    "year",
-                    "delivery_week",
-                    "day_number",
-                    "share_article",
-                    "unit",
-                    "size",
-                ],
-                condition=models.Q(day_number__isnull=False),
-                name="addtheoreticalwashamount_unique_full",
-            ),
+            documentation_daily_unique("addtheoreticalwashamount_unique_full"),
         ]
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()
 
 
 class WashAmount(JasminModel, DocumentationMixin, CreatedMixin, ArchivableMixin):
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=[
-                    "year",
-                    "delivery_week",
-                    "day_number",
-                    "share_article",
-                    "unit",
-                    "size",
-                ],
-                condition=models.Q(day_number__isnull=False),
-                name="washamount_unique_year_week_day_article_unit_size",
+            documentation_daily_unique(
+                "washamount_unique_year_week_day_article_unit_size"
             ),
         ]
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()
 
 
 class TheoreticalCleanAmount(
@@ -497,10 +467,7 @@ class TheoreticalCleanAmount(
     )
 
     class Meta:
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()
 
 
 class AdditionalTheoreticalCleanAmount(
@@ -512,42 +479,16 @@ class AdditionalTheoreticalCleanAmount(
 ):
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=[
-                    "year",
-                    "delivery_week",
-                    "day_number",
-                    "share_article",
-                    "unit",
-                    "size",
-                ],
-                condition=models.Q(day_number__isnull=False),
-                name="addtheoreticalcleanamount_unique_full",
-            ),
+            documentation_daily_unique("addtheoreticalcleanamount_unique_full"),
         ]
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()
 
 
 class CleanAmount(JasminModel, DocumentationMixin, CreatedMixin, ArchivableMixin):
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=[
-                    "year",
-                    "delivery_week",
-                    "day_number",
-                    "share_article",
-                    "unit",
-                    "size",
-                ],
-                condition=models.Q(day_number__isnull=False),
-                name="cleanamount_unique_year_week_day_article_unit_size",
+            documentation_daily_unique(
+                "cleanamount_unique_year_week_day_article_unit_size"
             ),
         ]
-        indexes = [
-            models.Index(fields=["year", "delivery_week"]),
-            models.Index(fields=["year", "delivery_week", "day_number"]),
-        ]
+        indexes = documentation_year_week_indexes()

@@ -44,7 +44,9 @@
     "upload_favicon": "Favicon hochladen",
     "current_favicon": "Aktuelles Favicon",
     "current_bio_logo": "Aktuelles Bio-Logo",
-    "upload_bio_logo": "Bio-Logo hochladen"
+    "upload_bio_logo": "Bio-Logo hochladen",
+    "logo_saved": "Logo gespeichert",
+    "bio_logo_saved": "Bio-Logo gespeichert"
   },
   "email": "email",
   "email_for_orders": "email für Bestellungen",

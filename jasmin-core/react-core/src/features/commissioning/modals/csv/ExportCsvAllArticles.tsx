@@ -1,8 +1,4 @@
-import { DownloadOutlined } from "@ant-design/icons";
-import { Button, DatePicker, Modal, Spin } from "antd";
-import { EmptyHint } from "@shared/ui";
-import dayjs, { Dayjs } from "dayjs";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useCommissioningCrateNetPricesList,
@@ -12,14 +8,11 @@ import type {
   CrateNetPrice,
   ShareArticle,
 } from "@shared/api/generated/models";
-import { useCurrency, useDateFormat, useTenant } from "@hooks/index";
-import {
-  buildCsvString,
-  downloadCsvBlob,
-  resolveCsvDialect,
-  toApiDate,
-} from "@shared/utils";
-import type { PriceColumn } from "./ExportCsvAtDateModal";
+import { useCurrency } from "@hooks/index";
+import ExportCsvAtDateModal, {
+  type ExportCsvColumn,
+  type PriceColumn,
+} from "./ExportCsvAtDateModal";
 import { useSharePriceCsvColumns } from "./useSharePriceCsvColumns";
 
 /**
@@ -28,7 +21,9 @@ import { useSharePriceCsvColumns } from "./useSharePriceCsvColumns";
  *
  * The dedicated per-type exports remain in place. This modal is the
  * one-stop panorama: every article (regular + extra) AND every crate,
- * joined with the active price row at the chosen date.
+ * joined with the active price row at the chosen date. It reuses the
+ * generic `ExportCsvAtDateModal` shell (pick-a-date → Load → build CSV) and
+ * only supplies its own two-source row merge + per-column renders.
  *
  * - Articles use the backend join: `?include_extra=true&get_price_info=true
  *   &price_date=YYYY-MM-DD` annotates each row with the matching
@@ -42,13 +37,6 @@ import { useSharePriceCsvColumns } from "./useSharePriceCsvColumns";
  * tier numbers from `used_tiers_for_offers`).
  */
 
-interface Column {
-  key: string;
-  label: string;
-  /** Optional value transform (boolean → ja/nein, null → "", etc.). */
-  render?: (value: unknown, row: Record<string, unknown>) => unknown;
-}
-
 const yesNo = (lang: string) =>
   lang.startsWith("de") ? ["ja", "nein"] : ["yes", "no"];
 
@@ -57,22 +45,12 @@ interface ExportCsvAllArticlesProps {
   onClose: () => void;
 }
 
-export default function ExportCsvAllArticles({
-  open,
-  onClose,
-}: ExportCsvAllArticlesProps) {
-  const { t, i18n } = useTranslation();
-  const { getSetting } = useTenant();
-  const { currencySymbol } = useCurrency();
-  const { dateFormat } = useDateFormat();
-  const dialect = useMemo(
-    () => resolveCsvDialect(getSetting("csv_format", "de") as string),
-    [getSetting],
-  );
-
-  const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
-  const [loadedDate, setLoadedDate] = useState<string | null>(null);
-
+/**
+ * Row supplier: merges the two data sources into one row stream. Articles carry
+ * a `__row_type: "article"` tag; crate rows are the active price per crate at
+ * the loaded date (client-side `[valid_from, valid_until]` window filter).
+ */
+function useAllArticleRowsAtDate(loadedDate: string | null) {
   // ── Articles + their active price (server-side join) ───────────────
   const { data: articleData, isLoading: articleLoading } =
     useCommissioningShareArticlesList(
@@ -113,7 +91,6 @@ export default function ExportCsvAllArticles({
     return result;
   }, [cratePricesRaw, loadedDate]);
 
-  // ── Merge into one row stream ─────────────────────────────────────
   const rows = useMemo<Record<string, unknown>[] | null>(() => {
     if (!isReady) return null;
     const articles = (articleData ?? []) as ShareArticle[];
@@ -130,27 +107,33 @@ export default function ExportCsvAllArticles({
     return [...articleRows, ...crateRows];
   }, [isReady, articleData, activeCratePrices]);
 
-  // ── Columns ───────────────────────────────────────────────────────
+  return { rows, isLoading: loading };
+}
+
+export default function ExportCsvAllArticles({
+  open,
+  onClose,
+}: ExportCsvAllArticlesProps) {
+  const { t, i18n } = useTranslation();
+  const { currencySymbol } = useCurrency();
+
   // Reuses the same price-column hook the standalone price export uses,
   // so the per-price labels are identical (`USt., €/kg, €/Stk., €/Bund,
-  // €/kg ab N VPE, …`). New `*_label` keys avoid colliding with the
-  // `commissioning.share_option` namespace, which is a nested object of
-  // share-option translations, not a scalar string.
+  // €/kg ab N VPE, …`).
   const pricePart = useSharePriceCsvColumns();
 
-  const columns = useMemo<Column[]>(() => {
+  const columns = useMemo<ExportCsvColumn[]>(() => {
     const [yes, no] = yesNo(i18n.language || "de");
     const boolToText = (v: unknown) =>
       v === true ? yes : v === false ? no : "";
     const isArticle = (row: Record<string, unknown>) =>
       row.__row_type === "article";
-    const articleOnly = (
-      inner: (v: unknown, row: Record<string, unknown>) => unknown,
-    ) =>
+    const articleOnly =
+      (inner: (v: unknown, row: Record<string, unknown>) => unknown) =>
       (v: unknown, row: Record<string, unknown>) =>
         isArticle(row) ? inner(v, row) : "";
 
-    const articleMeta: Column[] = [
+    const articleMeta: ExportCsvColumn[] = [
       {
         key: "__row_type",
         label: t("commissioning.row_type_label"),
@@ -205,7 +188,7 @@ export default function ExportCsvAllArticles({
     // Shared price columns (tax_rate + 12 price fields). For crate rows,
     // only `tax_rate` is meaningful — every other price field renders
     // empty since CrateNetPrice doesn't have those fields.
-    const sharedPrices: Column[] = pricePart.map((c: PriceColumn) => ({
+    const sharedPrices: ExportCsvColumn[] = pricePart.map((c: PriceColumn) => ({
       key: c.key,
       label: c.label,
       render:
@@ -215,7 +198,7 @@ export default function ExportCsvAllArticles({
               isArticle(row) ? (v ?? "") : "",
     }));
 
-    const crateOnly: Column[] = [
+    const crateOnly: ExportCsvColumn[] = [
       {
         key: "crate_price",
         label: `${t("commissioning.crate_price")} (${currencySymbol})`,
@@ -225,86 +208,16 @@ export default function ExportCsvAllArticles({
     return [...articleMeta, ...sharedPrices, ...crateOnly];
   }, [t, i18n.language, pricePart, currencySymbol]);
 
-  const fetchAll = useCallback(() => {
-    if (!selectedDate) return;
-    setLoadedDate(toApiDate(selectedDate));
-  }, [selectedDate]);
-
-  const handleExport = useCallback(() => {
-    if (!rows || rows.length === 0) return;
-    const headers = columns.map((c) => c.label);
-    const csvRows = rows.map((row) =>
-      columns.map((c) => {
-        const raw = row[c.key];
-        return c.render ? c.render(raw, row) : (raw ?? "");
-      }),
-    );
-    downloadCsvBlob(
-      buildCsvString(headers, csvRows, dialect),
-      `all_articles_with_prices_${selectedDate.format("YYYY-MM-DD")}`,
-    );
-    onClose();
-  }, [rows, columns, selectedDate, onClose, dialect]);
-
-  const handleClose = useCallback(() => {
-    setLoadedDate(null);
-    onClose();
-  }, [onClose]);
-
   return (
-    <Modal
-      title={t("commissioning.export_all_articles_combined")}
+    <ExportCsvAtDateModal
       open={open}
-      onCancel={handleClose}
+      onClose={onClose}
+      title={t("commissioning.export_all_articles_combined")}
+      filenamePrefix="all_articles_with_prices"
+      columns={columns}
+      useRows={useAllArticleRowsAtDate}
       width={520}
-      footer={[
-        <Button key="cancel" onClick={handleClose}>
-          {t("common.cancel")}
-        </Button>,
-        <Button
-          key="export"
-          type="primary"
-          className="download-button"
-          icon={<DownloadOutlined />}
-          disabled={!rows || rows.length === 0}
-          onClick={handleExport}
-        >
-          {t("common.download")}
-        </Button>,
-      ]}
-    >
-      <div className="flex-center-y gap-12" style={{ marginBottom: 16 }}>
-        <DatePicker
-          value={selectedDate}
-          onChange={(date) => {
-            if (date) setSelectedDate(date);
-          }}
-          format={dateFormat}
-          className="flex-1"
-        />
-        <Button type="primary" onClick={fetchAll} loading={loading}>
-          {t("common.load")}
-        </Button>
-      </div>
-
-      {loading && (
-        <div style={{ textAlign: "center", padding: 24 }}>
-          <Spin />
-        </div>
-      )}
-
-      {!loading && rows && rows.length === 0 && (
-        <EmptyHint>{t("common.no_data")}</EmptyHint>
-      )}
-
-      {!loading && rows && rows.length > 0 && (
-        <div style={{ color: "var(--color-success)", fontWeight: 500 }}>
-          {t("commissioning.articles_loaded", {
-            count: rows.length,
-            defaultValue: "{{count}} rows loaded",
-          })}
-        </div>
-      )}
-    </Modal>
+      loadedMessageKey="commissioning.articles_loaded"
+    />
   );
 }

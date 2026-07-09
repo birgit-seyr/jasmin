@@ -59,6 +59,11 @@ vi.mock("@hooks/index", async () => {
   const { useTableRowSelection } = await import(
     "@hooks/useTableRowSelection"
   );
+  // Pure React-state hook (+ its module-const currentYear/currentWeek) — use
+  // the real implementation so year/week selection behaves as in production.
+  const { useYearWeekState, currentYear, currentWeek } = await import(
+    "@hooks/useYearWeekState"
+  );
   const tenant = makeUseTenantMock({
     tenant: { id: "t-1" },
     logoUrl: "https://example.test/logo.png",
@@ -69,6 +74,9 @@ vi.mock("@hooks/index", async () => {
       formatDate: (iso?: string | null) => iso ?? "",
     }),
     useTableRowSelection,
+    useYearWeekState,
+    currentYear,
+    currentWeek,
   };
 });
 

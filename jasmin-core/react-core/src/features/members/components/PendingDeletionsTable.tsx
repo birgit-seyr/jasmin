@@ -4,8 +4,8 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Space, Table, Tag, Tooltip, Typography } from "antd";
-import { EmptyHint } from "@shared/ui";
+import { Button, Space, Tag, Tooltip, Typography } from "antd";
+import { ReadOnlyReportTable } from "@shared/tables";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -167,15 +167,13 @@ export default function PendingDeletionsTable({
         {t("gdpr.pending_deletions_description")}
       </Paragraph>
 
-      <Table
-        className="custom-jasmin-table"
+      <ReadOnlyReportTable<AdminPendingDeletion>
         columns={columns}
         dataSource={pending}
         rowKey="id"
         pagination={false}
-        size="small"
         loading={isFetching}
-        locale={{ emptyText: <EmptyHint>{t("gdpr.no_pending")}</EmptyHint> }}
+        emptyText={t("gdpr.no_pending")}
       />
     </div>
   );

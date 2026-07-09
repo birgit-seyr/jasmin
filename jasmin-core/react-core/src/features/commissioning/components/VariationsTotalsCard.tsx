@@ -6,6 +6,7 @@ import {
   type VariationsTotalsFilters,
 } from "@features/commissioning/hooks/useAggregatedVariationsTotals";
 import { useShareTypeVariations } from "@features/commissioning/hooks/useShareTypeVariations";
+import { getShareTypeVariationSizeLabelPure } from "@hooks/index";
 import ToolTipIcon from "@shared/ui/ToolTipIcon";
 
 export type { VariationsTotalEntry, VariationsTotalsFilters };
@@ -88,7 +89,7 @@ export default function VariationsTotalsCard({
                     {shareTypeName}{" "}
                   </span>
                 )}
-                {t(`commissioning.${variation.size}`)}:{" "}
+                {getShareTypeVariationSizeLabelPure(variation.size, t)}:{" "}
                 {variation.totalQuantity}
               </li>
             );

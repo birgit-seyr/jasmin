@@ -1,8 +1,7 @@
-import { LeftOutlined, RightOutlined } from "@ant-design/icons";
-import { Button, Select, Space } from "antd";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useTenant } from "@hooks/index";
+import SteppedSelect from "./SteppedSelect";
 
 interface MonthSelectorProps {
   selectedMonth: number | "all" | null;
@@ -103,36 +102,20 @@ const MonthSelector = ({
   const canGoPrev = selectedMonth !== "all" && selectedMonth !== null;
   const canGoNext = true;
 
-  const size = "small" as const;
-
   return (
-    <Space>
-      <Button
-        size={size}
-        icon={<LeftOutlined />}
-        onClick={prevMonth}
-        className="month-selector-small-buttons"
-        disabled={!canGoPrev}
-        aria-label={t("common.previous")}
-      />
-      <Select
-        value={selectedMonth}
-        style={{ width: "10em" }}
-        size={size}
-        onChange={handleMonthChange}
-        options={monthOptions}
-        className="bold-select month-selector-select"
-        aria-label={t("common.month")}
-      />
-      <Button
-        size={size}
-        icon={<RightOutlined />}
-        onClick={nextMonth}
-        className="month-selector-small-buttons"
-        disabled={!canGoNext}
-        aria-label={t("common.next")}
-      />
-    </Space>
+    <SteppedSelect
+      value={selectedMonth}
+      onChange={handleMonthChange}
+      options={monthOptions}
+      onPrev={prevMonth}
+      onNext={nextMonth}
+      canGoPrev={canGoPrev}
+      canGoNext={canGoNext}
+      selectStyle={{ width: "10em" }}
+      selectAriaLabel={t("common.month")}
+      selectClassName="bold-select month-selector-select"
+      buttonClassName="month-selector-small-buttons"
+    />
   );
 };
 

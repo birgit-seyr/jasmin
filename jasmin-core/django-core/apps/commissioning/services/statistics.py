@@ -6,6 +6,7 @@ from django.db.models import Q
 from apps.shared.money import CENT
 
 from ..models import ShareContent
+from ..models.choices_text import UnitOptions, VegetableSizeOptions
 
 
 def _compute_variation_averages(
@@ -110,15 +111,24 @@ def _compute_variation_averages(
         size = record_data["size"]
 
         _kg_per_field = {
-            ("PCS", "S"): "share_article__kg_per_piece_S",
-            ("PCS", "M"): "share_article__kg_per_piece_M",
-            ("PCS", "L"): "share_article__kg_per_piece_L",
-            ("BUNCH", "S"): "share_article__kg_per_bunch_S",
-            ("BUNCH", "M"): "share_article__kg_per_bunch_M",
-            ("BUNCH", "L"): "share_article__kg_per_bunch_L",
+            (UnitOptions.PCS, VegetableSizeOptions.S): "share_article__kg_per_piece_S",
+            (UnitOptions.PCS, VegetableSizeOptions.M): "share_article__kg_per_piece_M",
+            (UnitOptions.PCS, VegetableSizeOptions.L): "share_article__kg_per_piece_L",
+            (
+                UnitOptions.BUNCH,
+                VegetableSizeOptions.S,
+            ): "share_article__kg_per_bunch_S",
+            (
+                UnitOptions.BUNCH,
+                VegetableSizeOptions.M,
+            ): "share_article__kg_per_bunch_M",
+            (
+                UnitOptions.BUNCH,
+                VegetableSizeOptions.L,
+            ): "share_article__kg_per_bunch_L",
         }.get((unit, size))
 
-        if unit == "KG":
+        if unit == UnitOptions.KG:
             kg_amount = amount_dec
         elif _kg_per_field is not None:
             kg_amount = amount_dec * Decimal(str(record_data[_kg_per_field] or 0))

@@ -5,14 +5,18 @@ from typing import Any
 
 from django.db.models import Case, IntegerField, TextChoices, Value, When
 
-from ..models.choices_text import SizeOptions, SizeVegetableOptions, UnitOptions
+from ..models.choices_text import (
+    ShareTypeVariationSizeOptions,
+    UnitOptions,
+    VegetableSizeOptions,
+)
 
 
 def size_order_annotation():
-    """Build a Case/When annotation that maps SizeOptions to their enum index."""
+    """Build a Case/When annotation that maps ShareTypeVariationSizeOptions to their enum index."""
     whens = [
         When(size=choice[0], then=Value(idx))
-        for idx, choice in enumerate(SizeOptions.choices)
+        for idx, choice in enumerate(ShareTypeVariationSizeOptions.choices)
     ]
     return Case(*whens, default=Value(999), output_field=IntegerField())
 
@@ -56,7 +60,7 @@ def create_share_article_sorter(
 
     Args:
         unit_choices: Django TextChoices class for units (defaults to UnitOptions)
-        size_choices: Django TextChoices class for sizes (defaults to SizeVegetableOptions)
+        size_choices: Django TextChoices class for sizes (defaults to VegetableSizeOptions)
 
     Returns:
         A function that can be used as a key for sorting
@@ -68,7 +72,7 @@ def create_share_article_sorter(
     """
     # Use defaults if not provided
     unit_choices = unit_choices or UnitOptions
-    size_choices = size_choices or SizeVegetableOptions
+    size_choices = size_choices or VegetableSizeOptions
 
     # Create ordering mappings (1-indexed for clarity)
     unit_order = {choice[0]: idx for idx, choice in enumerate(unit_choices.choices, 1)}
@@ -107,7 +111,7 @@ def sort_share_articles(
     Args:
         data: List of dictionaries containing share article data
         unit_choices: Django TextChoices class for units (defaults to UnitOptions)
-        size_choices: Django TextChoices class for sizes (defaults to SizeVegetableOptions)
+        size_choices: Django TextChoices class for sizes (defaults to VegetableSizeOptions)
 
     Returns:
         Sorted list of share articles

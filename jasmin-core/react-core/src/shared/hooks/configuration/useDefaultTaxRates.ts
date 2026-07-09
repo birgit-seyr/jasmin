@@ -10,12 +10,15 @@ import { useTenant } from "./useTenant";
  */
 const DEFAULT_TAX_RATE_ARTICLES = 7;
 const DEFAULT_TAX_RATE_CRATES = 19;
+const DEFAULT_TAX_RATE_SHARES = 7;
 
 export interface DefaultTaxRates {
   /** Default tax rate (%) for share articles / share prices. */
   articles: number;
   /** Default tax rate (%) for reusable-box (crate) prices. */
   crates: number;
+  /** Default tax rate (%) for share (subscription) prices. */
+  shares: number;
 }
 
 /**
@@ -33,6 +36,7 @@ export function useDefaultTaxRates(): DefaultTaxRates {
       articles:
         getSetting("default_tax_rate_articles") ?? DEFAULT_TAX_RATE_ARTICLES,
       crates: getSetting("default_tax_rate_crates") ?? DEFAULT_TAX_RATE_CRATES,
+      shares: getSetting("default_tax_rate_shares") ?? DEFAULT_TAX_RATE_SHARES,
     }),
     [getSetting],
   );

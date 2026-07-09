@@ -20,6 +20,8 @@ import type { CrateDeliveryNoteContentWriteRequest } from "@shared/api/generated
 import type { DeliveryNoteResellerContent } from "@shared/api/generated/models/deliveryNoteResellerContent";
 import { useRoles } from "@shared/auth";
 import { useDateFormat, useDefaultTaxRates, useNoteColumn, useNumberFormat } from '@hooks/index';
+import { formatAmountForUnit } from "@shared/utils";
+import { makeContentCustomEdit, makeFkCustomSave } from "./contentTableHelpers";
 import { useAmountUnitSizeColumns, useCratesColumns, useShareArticleColumn } from '@features/commissioning/hooks';
 import { FinalizedNotice } from '@features/commissioning/components';
 import { EditableTable, gatedByPermission, wrapApiFunctions } from "@shared/tables";
@@ -125,10 +127,7 @@ export default function DeliveryNoteModal({
         render: (value: unknown, record: DeliveryNoteContentRecord) => {
           const numValue = Number(value);
           if (isNaN(numValue) || numValue === 0) return "";
-          if (!record.unit) return format(numValue, 2);
-          return record.unit === "KG"
-            ? format(numValue, 2)
-            : format(numValue, 1);
+          return formatAmountForUnit(numValue, record.unit, format);
         },
       },
     },
@@ -260,44 +259,22 @@ export default function DeliveryNoteModal({
     [shareArticleColumn, amountUnitSizeColumns, noteColumn, t],
   );
 
-  const customSave = useCallback(
-    (transformedData: Record<string, unknown>) => {
-      return {
-        ...transformedData,
-        delivery_note: deliveryNoteId,
-      };
-    },
+  const customSave = useMemo(
+    () => makeFkCustomSave("delivery_note", deliveryNoteId),
     [deliveryNoteId],
   );
 
-  const customSaveCrates = useCallback(
-    (transformedData: Record<string, unknown>) => {
-      return {
-        ...transformedData,
-        delivery_note_id: deliveryNoteData?.id,
-      };
-    },
-    [deliveryNoteData],
+  const customSaveCrates = useMemo(
+    () => makeFkCustomSave("delivery_note_id", deliveryNoteData?.id),
+    [deliveryNoteData?.id],
   );
 
-  const customEdit = useCallback(
-    (record: TableRecord, form: FormInstance) => {
-      if (record.key === -1) {
-        // ``tax_rate`` defaults to the tenant fallback so the model
-        // (``OrderableItem``) NOT NULL constraint is satisfied even
-        // if the office never picks a share_article (the on-change
-        // handler above overrides this with the picked article's own
-        // tax_rate when one is selected).
-        const defaultValues = {
-          size: "M",
-          unit: "KG",
-          tax_rate: defaultTaxRateArticles,
-        };
-        form.setFieldsValue(defaultValues);
-        return { ...record, ...defaultValues } as TableRecord;
-      }
-      return record;
-    },
+  // ``tax_rate`` defaults to the tenant fallback so the model (``OrderableItem``)
+  // NOT NULL constraint is satisfied even if the office never picks a
+  // share_article (the on-change handler overrides it with the picked article's
+  // own tax_rate when one is selected).
+  const customEdit = useMemo(
+    () => makeContentCustomEdit(defaultTaxRateArticles),
     [defaultTaxRateArticles],
   );
 

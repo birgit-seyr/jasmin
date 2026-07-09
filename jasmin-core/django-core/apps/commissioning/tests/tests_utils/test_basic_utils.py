@@ -5,9 +5,9 @@ from __future__ import annotations
 from django.db.models import IntegerField
 
 from apps.commissioning.models.choices_text import (
-    SizeOptions,
-    SizeVegetableOptions,
+    ShareTypeVariationSizeOptions,
     UnitOptions,
+    VegetableSizeOptions,
 )
 from apps.commissioning.utils.basic_utils import (
     create_share_article_sorter,
@@ -64,8 +64,8 @@ class TestSizeOrderAnnotation:
 
     def test_maps_all_size_options(self):
         annotation = size_order_annotation()
-        # Should have one When clause per SizeOptions choice
-        assert len(annotation.cases) == len(SizeOptions.choices)
+        # Should have one When clause per ShareTypeVariationSizeOptions choice
+        assert len(annotation.cases) == len(ShareTypeVariationSizeOptions.choices)
 
     def test_ordering_matches_enum_order(self):
         annotation = size_order_annotation()
@@ -98,7 +98,7 @@ class TestCreateShareArticleSorter:
         assert result[1]["unit"] == unit_order[-1]
 
     def test_sorts_by_size_within_same_name_and_unit(self):
-        size_order = [c[0] for c in SizeVegetableOptions.choices]
+        size_order = [c[0] for c in VegetableSizeOptions.choices]
         articles = [
             {"share_article_name": "Carrot", "unit": "KG", "size": size_order[-1]},
             {"share_article_name": "Carrot", "unit": "KG", "size": size_order[0]},
@@ -129,7 +129,7 @@ class TestCreateShareArticleSorter:
     def test_accepts_custom_choices(self):
         sorter = create_share_article_sorter(
             unit_choices=UnitOptions,
-            size_choices=SizeVegetableOptions,
+            size_choices=VegetableSizeOptions,
         )
         key = sorter({"share_article_name": "X", "unit": "KG", "size": "M"})
         assert isinstance(key, tuple)

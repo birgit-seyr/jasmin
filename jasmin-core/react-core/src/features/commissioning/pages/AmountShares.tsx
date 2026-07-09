@@ -4,7 +4,7 @@ import {
   useBoxCombinationColumns,
   usePlanningAxes,
 } from "@features/commissioning/hooks";
-import { useShareTypes } from "@hooks/index";
+import { currentWeek, useShareTypes, useYearWeekState } from "@hooks/index";
 import { useShareTypeVariationSizeOptions } from "@hooks/useShareTypeVariationSizeOptions";
 import {
   useCommissioningShareDeliveryBoxCombinationMatrixRetrieve,
@@ -20,15 +20,11 @@ import { ShareTypeSelector, WeekSelector } from "@shared/selectors";
 import { ExplainerText, LabeledSwitch } from "@shared/ui";
 import { Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
 import type { TFunction } from "i18next";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { activeAtDateForWeek } from "@shared/utils";
 import { EmptyHint } from "@shared/ui";
-
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
 
 type VariationRow = Record<string, unknown> & {
   id?: string;
@@ -59,8 +55,8 @@ function boxRowLabel(row: WeeklyComboMatrixRow, t: TFunction): string {
 }
 
 export default function AmountShares({ jokerMode = false }: AmountSharesProps) {
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
 
   const [selectedShareType, setSelectedShareType] = useState<string | null>(
     null,

@@ -31,14 +31,17 @@ from __future__ import annotations
 
 import hashlib
 
-from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import F, Q
 from django.utils import timezone
 
 from .base import JasminModel
 from .choices_text import ConsentKind
-from .mixin import TimeBoundMixin, time_bound_valid_range_constraint
+from .mixin import (
+    TimeBoundMixin,
+    nullable_date_order_constraint,
+    time_bound_valid_range_constraint,
+    validate_nullable_date_order,
+)
 
 
 def _sha256_of(text: str) -> str:
@@ -220,10 +223,9 @@ class ConsentRecord(JasminModel):
             # A consent cannot be revoked before it was given. Both fields are
             # DateTimeFields. NULL-tolerant: only enforced when both are set
             # (``revoked_at`` NULL means "still active").
-            models.CheckConstraint(
-                condition=Q(revoked_at__isnull=True)
-                | Q(consented_at__isnull=True)
-                | Q(revoked_at__gte=F("consented_at")),
+            nullable_date_order_constraint(
+                "revoked_at",
+                "consented_at",
                 name="consentrecord_revoked_after_consented",
             ),
         ]
@@ -236,14 +238,12 @@ class ConsentRecord(JasminModel):
         super().clean()
         # A consent cannot be revoked before it was given. NULL-tolerant: only
         # enforced when both timestamps are set.
-        if (
-            self.revoked_at is not None
-            and self.consented_at is not None
-            and self.revoked_at < self.consented_at
-        ):
-            raise ValidationError(
-                {"revoked_at": "Revocation date must be on or after the consent date."}
-            )
+        validate_nullable_date_order(
+            self,
+            "revoked_at",
+            "consented_at",
+            message="Revocation date must be on or after the consent date.",
+        )
 
     @property
     def is_active(self) -> bool:

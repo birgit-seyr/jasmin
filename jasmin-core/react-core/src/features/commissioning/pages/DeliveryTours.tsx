@@ -151,7 +151,7 @@ const TourPosition = ({
         backgroundColor: isOver
           ? "#f0f8ff"
           : station
-            ? backgroundColor || "#e8f5e9"
+            ? backgroundColor || "var(--color-success-bg)"
             : "var(--color-bg-elevated)",
         borderRadius: "4px",
         opacity: isSaving ? 0.7 : isDragging ? 0.5 : 1,

@@ -31,7 +31,7 @@ import type { DocumentationSummaryRecord } from "./useDocumentationSummaryPage";
 import { useCurrentDays } from "./useCurrentDays";
 import { useInvalidateAfterTableMutation } from "@hooks/useInvalidateAfterTableMutation";
 import { useNumberFormat } from "@hooks/useNumberFormat";
-import { useSizeOptions } from "@hooks/useSizeOptions";
+import { useVegetableSizeOptions } from "@hooks/useVegetableSizeOptions";
 import { useUnitOptions } from "@hooks/useUnitOptions";
 import type { ShareDeliveryDayOption } from "./useShareDeliveryDays";
 import { useShareDeliveryDays } from "./useShareDeliveryDays";
@@ -78,7 +78,7 @@ export function useHarvestingListData({
   const queryClient = useQueryClient();
   const { getUnitLabel } = useUnitOptions();
   const { format } = useNumberFormat();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
 
   // ── Related days + variations totals for the selected harvest day ──
 
@@ -265,7 +265,7 @@ export function useHarvestingListData({
 
       const sizeLabel =
         record.size && record.size !== "M"
-          ? ` (${getSizeLabel(record.size as string)})`
+          ? ` (${getVegetableSizeLabel(record.size as string)})`
           : "";
 
       return {
@@ -279,7 +279,7 @@ export function useHarvestingListData({
         computed_unit_label: unitLabel,
       } as TableRecord;
     });
-  }, [data, getUnitLabel, getSizeLabel, t, format]);
+  }, [data, getUnitLabel, getVegetableSizeLabel, t, format]);
 
   const roundedData = useMemo(() => {
     if (!roundUpToFullPU) return processedData;

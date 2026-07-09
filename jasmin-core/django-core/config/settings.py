@@ -1225,10 +1225,10 @@ SPECTACULAR_SETTINGS = {
         "MovementTypeEnum": "apps.commissioning.models.choices_text.MovementTypeOptions",
         "CultivationOriginEnum": "apps.commissioning.models.choices_text.CultivationOriginOptions",
         "DeliveryCycleEnum": "apps.commissioning.models.choices_text.DeliveryCycleOptions",
-        "SizeEnum": "apps.commissioning.models.choices_text.SizeOptions",
+        "ShareTypeVariationSizeEnum": "apps.commissioning.models.choices_text.ShareTypeVariationSizeOptions",
         "UnitEnum": "apps.commissioning.models.choices_text.UnitOptions",
         "PaymentCycleEnum": "apps.commissioning.models.choices_text.PaymentCycleOptions",
-        "SizeVegetableEnum": "apps.commissioning.models.choices_text.SizeVegetableOptions",
+        "VegetableSizeEnum": "apps.commissioning.models.choices_text.VegetableSizeOptions",
         "ShareTypeEnum": "apps.commissioning.models.choices_text.ShareOptions",
         # All the *_day fields across SharesDeliveryDay / OrdersDeliveryDay /
         # Order / Share / etc. use the same DayNumberOptions choice set.

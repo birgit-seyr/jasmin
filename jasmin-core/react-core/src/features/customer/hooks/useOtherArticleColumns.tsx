@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useCurrency } from "@hooks/configuration/useCurrency";
 import { useNumberFormat } from "@hooks/useNumberFormat";
-import { useSizeOptions } from "@hooks/useSizeOptions";
+import { useVegetableSizeOptions } from "@hooks/useVegetableSizeOptions";
 import { useUnitOptions } from "@hooks/useUnitOptions";
 import { computeLineNetto } from "@shared/utils/lineNetto";
 import type { OtherArticleRow } from "@features/customer/types";
@@ -20,7 +20,7 @@ export function useOtherArticleColumns() {
   const { formatCurrency } = useCurrency();
   const { format } = useNumberFormat();
   const { getUnitLabel } = useUnitOptions();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
 
   return useMemo<ColumnsType<OtherArticleRow>>(() => {
     return [
@@ -30,7 +30,7 @@ export function useOtherArticleColumns() {
         key: "share_article_name",
         render: (name: string | null, record) => {
           const size = record.size;
-          const suffix = size && size !== "M" ? `, ${getSizeLabel(size)}` : "";
+          const suffix = size && size !== "M" ? `, ${getVegetableSizeLabel(size)}` : "";
           return `${name ?? ""}${suffix}`;
         },
       },
@@ -85,5 +85,5 @@ export function useOtherArticleColumns() {
           ),
       },
     ];
-  }, [t, formatCurrency, format, getUnitLabel, getSizeLabel]);
+  }, [t, formatCurrency, format, getUnitLabel, getVegetableSizeLabel]);
 }

@@ -18,10 +18,12 @@ import {
   useDeliveryDayLabel,
   useInvalidateAfterTableMutation,
   useIsMobile,
+  currentWeek,
   useNoteColumn,
-  useSizeOptions,
+  useVegetableSizeOptions,
   useTenant,
   useUnitOptions,
+  useYearWeekState,
 } from "@hooks/index";
 import {
   getCommissioningPackingListBulkListQueryKey,
@@ -69,8 +71,6 @@ const widthShareArticle = "30%";
 const widthAmountUnitSize = "10%";
 const widthTotalAmount = "10%";
 
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
 const currentDay = dayjs().isoWeekday();
 
 // Bulk endpoint accepts ``delivery_station`` and ``is_packed_bulk`` (MIXED-mode
@@ -94,7 +94,7 @@ export default function PackingListBulk() {
   const { dateFormat, mobileDateFormat } = useDateFormat();
   const deliveryDayLabel = useDeliveryDayLabel();
   const { getUnitLabel } = useUnitOptions();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
   const { noteColumn } = useNoteColumn();
   const { getSetting, tenantName, logoUrl, tenant } = useTenant();
   const packing_mode = getSetting("packing_mode", "BOXES") as
@@ -103,8 +103,8 @@ export default function PackingListBulk() {
     | "MIXED";
   const showSize = Boolean(getSetting("show_size_column"));
 
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedDeliveryDay, setSelectedDeliveryDay] = useState<number | null>(
     currentDay - 1,
   );
@@ -372,9 +372,9 @@ export default function PackingListBulk() {
       data.map((item) => ({
         ...item,
         unit_label: item.unit ? getUnitLabel(item.unit as string) : "",
-        size_label: item.size ? getSizeLabel(item.size as string) : "",
+        size_label: item.size ? getVegetableSizeLabel(item.size as string) : "",
       })),
-    [data, getUnitLabel, getSizeLabel],
+    [data, getUnitLabel, getVegetableSizeLabel],
   );
 
   const stationName = useMemo(
@@ -406,9 +406,9 @@ export default function PackingListBulk() {
       (memberMatrix?.rows ?? []).map((row) => ({
         ...row,
         unit_label: row.unit ? getUnitLabel(row.unit) : "",
-        size_label: row.size ? getSizeLabel(row.size) : "",
+        size_label: row.size ? getVegetableSizeLabel(row.size) : "",
       })),
-    [memberMatrix, getUnitLabel, getSizeLabel],
+    [memberMatrix, getUnitLabel, getVegetableSizeLabel],
   );
 
   // Branded strip for the member-facing PDF (logo + tenant name).

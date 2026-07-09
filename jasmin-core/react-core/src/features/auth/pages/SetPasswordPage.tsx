@@ -1,17 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import {
-  Card,
-  Form,
-  Input,
-  Button,
-  Alert,
-  Typography,
-  Space,
-  Spin,
-  Progress,
-} from "antd";
+import { Card, Form, Input, Button, Alert, Typography, Space, Spin } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import {
   authInvitationsAcceptCreate,
@@ -19,29 +9,14 @@ import {
 } from "@shared/api/generated/auth/auth";
 import type { InvitationVerifyResponse } from "@shared/api/generated/models";
 import { getErrorMessage } from "@shared/utils/apiError";
+import { PasswordStrengthMeter } from "../components/PasswordStrengthMeter";
+import { passwordConfirmValidator } from "../utils/password";
 
 const { Title, Text } = Typography;
 
 interface SetPasswordValues {
   password: string;
   password_confirm: string;
-}
-
-/**
- * Quick client-side strength estimator.
- *
- * Real validation happens on the server (zxcvbn ≥ 3) — this is just a UX
- * affordance to nudge users towards a passing password without round-tripping.
- */
-function clientPasswordScore(pw: string): number {
-  if (!pw) return 0;
-  let score = 0;
-  if (pw.length >= 12) score++;
-  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-  if (pw.length >= 16) score++;
-  return Math.min(score, 4);
 }
 
 const SetPasswordPage = () => {
@@ -58,7 +33,7 @@ const SetPasswordPage = () => {
   const [info, setInfo] = useState<InvitationVerifyResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [pwScore, setPwScore] = useState(0);
+  const [password, setPassword] = useState("");
 
   // The invitation token in the URL IS the credential — scrub it from
   // the address bar so it doesn't linger in browser history or sync.
@@ -167,28 +142,15 @@ const SetPasswordPage = () => {
               >
                 <Input.Password
                   prefix={<LockOutlined />}
-                  onChange={(e) =>
-                    setPwScore(clientPasswordScore(e.target.value))
-                  }
+                  onChange={(e) => setPassword(e.target.value)}
                   autoFocus
                 />
               </Form.Item>
 
-              <Progress
-                percent={(pwScore / 4) * 100}
-                showInfo={false}
-                strokeColor={
-                  pwScore >= 3
-                    ? "var(--color-success)"
-                    : pwScore >= 2
-                      ? "var(--color-warning)"
-                      : "var(--color-error)"
-                }
-                style={{ marginTop: -16, marginBottom: 8 }}
+              <PasswordStrengthMeter
+                password={password}
+                hint={t("auth.set_password.password_hint")}
               />
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                {t("auth.set_password.password_hint")}
-              </Text>
 
               <Form.Item
                 name="password_confirm"
@@ -200,16 +162,11 @@ const SetPasswordPage = () => {
                     required: true,
                     message: t("auth.set_password.confirm_required"),
                   },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (!value || getFieldValue("password") === value) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(
-                        new Error(t("auth.set_password.mismatch")),
-                      );
-                    },
-                  }),
+                  ({ getFieldValue }) =>
+                    passwordConfirmValidator(
+                      getFieldValue,
+                      t("auth.set_password.mismatch"),
+                    ),
                 ]}
               >
                 <Input.Password prefix={<LockOutlined />} />

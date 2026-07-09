@@ -317,8 +317,10 @@ export function usePlanningHarvestSharesColumns(
                 style={{
                   minWidth: "auto",
                   padding: "0 4px",
-                  backgroundColor: hasBackup ? "#d4edda" : undefined,
-                  color: hasBackup ? "#155724" : undefined,
+                  backgroundColor: hasBackup
+                    ? "var(--color-success-bg)"
+                    : undefined,
+                  color: hasBackup ? "var(--color-success-text)" : undefined,
                 }}
               >
                 <strong>B</strong>

@@ -4,5 +4,7 @@ export { default as MonthSelector } from './MonthSelector';
 export { default as PlanningModeSelector } from './PlanningModeSelector';
 export { default as ResellerSelector } from './ResellerSelector';
 export { default as ShareTypeSelector } from './ShareTypeSelector';
+export { default as SteppedSelect } from './SteppedSelect';
+export type { SteppedSelectProps } from './SteppedSelect';
 export { default as WeekSelector } from './WeekSelector';
 export { default as YearSelector } from './YearSelector';

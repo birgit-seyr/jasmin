@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.db import models
 
 from .base import JasminModel
-from .choices_text import SizeVegetableOptions, UnitOptions
+from .choices_text import size_vegetable_field, unit_field
 
 
 class StockSnapshot(JasminModel):
@@ -23,12 +23,8 @@ class StockSnapshot(JasminModel):
         help_text="Point in time this snapshot captures the balance for.",
     )
     share_article = models.ForeignKey("ShareArticle", on_delete=models.PROTECT)
-    unit = models.CharField(max_length=10, choices=UnitOptions.choices)
-    size = models.CharField(
-        max_length=1,
-        choices=SizeVegetableOptions.choices,
-        default=SizeVegetableOptions.M,
-    )
+    unit = unit_field()
+    size = size_vegetable_field()
     storage = models.ForeignKey(
         "Storage", on_delete=models.PROTECT, blank=True, null=True
     )
@@ -71,12 +67,8 @@ class CurrentStockBalance(JasminModel):
     """
 
     share_article = models.ForeignKey("ShareArticle", on_delete=models.PROTECT)
-    unit = models.CharField(max_length=10, choices=UnitOptions.choices)
-    size = models.CharField(
-        max_length=1,
-        choices=SizeVegetableOptions.choices,
-        default=SizeVegetableOptions.M,
-    )
+    unit = unit_field()
+    size = size_vegetable_field()
     storage = models.ForeignKey(
         "Storage", on_delete=models.PROTECT, blank=True, null=True
     )

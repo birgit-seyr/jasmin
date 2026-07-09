@@ -98,6 +98,7 @@
   "list_harvest_shares_articles": "Liste Gemüse/Obst",
   "default_share_articles_in_share": "Standardmengen",
   "default_share_articles_save_failed": "Die Standardmengen konnten nicht gespeichert werden.",
+  "share_article_save_error": "Artikel konnte nicht gespeichert werden",
   "share_article": "Artikel",
   "prices_are_netto": "Preise sind netto.",
   "list_delivery_stations": "Liste Verteilstationen",

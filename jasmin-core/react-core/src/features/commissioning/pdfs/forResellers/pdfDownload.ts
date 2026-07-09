@@ -10,6 +10,11 @@ import { downloadBlob } from "@shared/utils";
 import { embedZUGFeRDXML } from "../zugferd";
 import { isCreditNote } from "./pdfBase";
 
+// Relocated to the shared utils layer (it only opens a stored URL, no
+// @react-pdf deps). Re-exported here so existing reseller-PDF importers keep
+// working; new callers should import from "@shared/utils".
+export { openStoredPdf } from "@shared/utils";
+
 /** Canonical reseller-document PDF filename: ``<Label>-<prefix>-<number>.pdf``.
  * A storno / correction is labeled "Storno-Rechnung", not "Rechnung", so a
  * cancellation isn't named like a regular invoice. */
@@ -34,11 +39,6 @@ export function deliveryNotePdfFilename(
   number: string | number | null | undefined,
 ): string {
   return `${t("commissioning.delivery_note")}-${prefix}-${number}.pdf`;
-}
-
-/** Open an already-stored PDF in a new browser tab. */
-export function openStoredPdf(url: string): void {
-  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 /**

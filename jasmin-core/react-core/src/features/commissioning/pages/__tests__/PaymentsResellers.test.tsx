@@ -66,6 +66,9 @@ vi.mock("@hooks/index", async () => {
   const { useTableRowSelection } = await import(
     "@hooks/useTableRowSelection"
   );
+  const { useYearWeekState, currentYear, currentWeek } = await import(
+    "@hooks/useYearWeekState"
+  );
   const tenant = makeUseTenantMock({
     tenant: { id: "t-1" },
     logoUrl: "https://example.test/logo.png",
@@ -73,6 +76,9 @@ vi.mock("@hooks/index", async () => {
   return {
     useTenant: () => tenant,
     useTableRowSelection,
+    useYearWeekState,
+    currentYear,
+    currentWeek,
     useDateFormat: () => ({ formatDate: (iso?: string | null) => iso ?? "" }),
     useCurrency: () => ({ currencySymbol: "€" }),
     useNumberFormat: () => ({ format: (n: number, d: number) => n.toFixed(d) }),

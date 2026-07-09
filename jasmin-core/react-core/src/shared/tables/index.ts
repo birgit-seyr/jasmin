@@ -14,6 +14,8 @@ export {
   SUMMARY_ROW_STYLE,
   SUMMARY_ROW_STYLE_HIGHLIGHT,
 } from './summaryRowStyle';
+export { default as ReadOnlyReportTable } from './ReadOnlyReportTable';
+export type { ReadOnlyReportTableProps } from './ReadOnlyReportTable';
 export { useCrudListPage } from './useCrudListPage';
 export type {
   CrudListPageApi,

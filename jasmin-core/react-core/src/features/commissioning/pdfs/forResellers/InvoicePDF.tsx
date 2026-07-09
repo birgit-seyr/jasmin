@@ -8,8 +8,9 @@ import {
 } from "@react-pdf/renderer";
 import dayjs from "dayjs";
 import type { TFunction } from "i18next";
-import { getSizeLabelPure } from "@hooks/useSizeOptions";
+import { getVegetableSizeLabelPure } from "@hooks/useVegetableSizeOptions";
 import { getUnitLabelPure } from "@hooks/useUnitOptions";
+import { formatCurrency } from "@shared/utils/currency";
 import { formatNumber } from "@shared/utils/numberFormat";
 import { itemLineNetto } from "@shared/utils/lineNetto";
 import PDFRichText from "./PDFRichText";
@@ -232,7 +233,7 @@ export default function InvoicePDF({
   const { invoice, lineItems, crateItems, taxBreakdown, totals } = data;
   const locale = tenantSettings?.number_locale ?? "de-DE";
   const getUnitLabel = (value: string) => getUnitLabelPure(value, t);
-  const getSizeLabel = (value: string) => getSizeLabelPure(value, t);
+  const getVegetableSizeLabel = (value: string) => getVegetableSizeLabelPure(value, t);
 
   const creditNote = isCreditNote(invoice.document_type);
   const documentTitle = creditNote
@@ -323,7 +324,7 @@ export default function InvoicePDF({
                   <Text>
                     {item.share_article_name}
                     {item.size && item.size !== "M"
-                      ? `, ${getSizeLabel(item.size)}`
+                      ? `, ${getVegetableSizeLabel(item.size)}`
                       : ""}
                     {tenantSettings.organic_control_number
                       ? organicMarker(item.organic_status)
@@ -341,14 +342,14 @@ export default function InvoicePDF({
                 <Text style={styles.col3}>{getUnitLabel(item.unit ?? "")}</Text>
                 <Text style={styles.col4}>
                   {item.price_per_unit
-                    ? `${formatNumber(item.price_per_unit, 2, locale)} ${currencySymbol}/${getUnitLabel(item.unit ?? "")}`
+                    ? `${formatCurrency(formatNumber(item.price_per_unit, 2, locale), currencySymbol)}/${getUnitLabel(item.unit ?? "")}`
                     : "-"}
                 </Text>
                 <Text style={styles.col5}>
                   {item.rabatt ? `${item.rabatt} %` : "-"}
                 </Text>
                 <Text style={styles.col7}>
-                  {formatNumber(finalPrice, 2, locale)} {currencySymbol}
+                  {formatCurrency(formatNumber(finalPrice, 2, locale), currencySymbol)}
                 </Text>
                 <Text style={styles.col6}>
                   {formatNumber(item.tax_rate || 0, 2, locale)} %
@@ -376,14 +377,14 @@ export default function InvoicePDF({
                 </Text>
                 <Text style={styles.col4}>
                   {item.price_per_unit
-                    ? `${formatNumber(item.price_per_unit, 2, locale)} ${currencySymbol}/${t("commissioning.piece_short")}`
+                    ? `${formatCurrency(formatNumber(item.price_per_unit, 2, locale), currencySymbol)}/${t("commissioning.piece_short")}`
                     : "-"}
                 </Text>
                 <Text style={styles.col5}>
                   {item.rabatt ? `${item.rabatt}%` : "-"}
                 </Text>
                 <Text style={styles.col7}>
-                  {formatNumber(finalPrice, 2, locale)} {currencySymbol}
+                  {formatCurrency(formatNumber(finalPrice, 2, locale), currencySymbol)}
                 </Text>
                 <Text style={styles.col6}>
                   {formatNumber(item.tax_rate || 0, 2, locale)} %
@@ -401,13 +402,13 @@ export default function InvoicePDF({
                 {t("commissioning.netto")} ({item.rate}%):
               </Text>
               <Text style={styles.taxBreakdownValue}>
-                {formatNumber(item.netto, 2, locale)} {currencySymbol}
+                {formatCurrency(formatNumber(item.netto, 2, locale), currencySymbol)}
               </Text>
               <Text style={[styles.taxBreakdownLabel, { marginLeft: 10 }]}>
                 {t("commissioning.ust")} ({item.rate}%):
               </Text>
               <Text style={styles.taxBreakdownValue}>
-                {formatNumber(item.tax, 2, locale)} {currencySymbol}
+                {formatCurrency(formatNumber(item.tax, 2, locale), currencySymbol)}
               </Text>
             </View>
           ))}
@@ -426,7 +427,7 @@ export default function InvoicePDF({
               {t("commissioning.total_sum_netto_invoice_details")}:
             </Text>
             <Text style={styles.taxSummaryValue}>
-              {formatNumber(totals.netto, 2, locale)} {currencySymbol}
+              {formatCurrency(formatNumber(totals.netto, 2, locale), currencySymbol)}
             </Text>
           </View>
 
@@ -435,7 +436,7 @@ export default function InvoicePDF({
               {t("commissioning.total_sum_ust_invoice_details")}:
             </Text>
             <Text style={styles.taxSummaryValue}>
-              {formatNumber(totals.tax, 2, locale)} {currencySymbol}
+              {formatCurrency(formatNumber(totals.tax, 2, locale), currencySymbol)}
             </Text>
           </View>
 
@@ -459,7 +460,7 @@ export default function InvoicePDF({
               {t("commissioning.total_sum_brutto_invoice_details")}:
             </Text>
             <Text style={[styles.taxSummaryValue, { fontSize: 12 }]}>
-              {formatNumber(totals.brutto, 2, locale)} {currencySymbol}
+              {formatCurrency(formatNumber(totals.brutto, 2, locale), currencySymbol)}
             </Text>
           </View>
         </View>
@@ -491,7 +492,7 @@ export default function InvoicePDF({
                     <Text>{t("commissioning.scan_qr_payment")}</Text>
                     <Text>IBAN: {bankDetails.iban || "N/A"}</Text>
                     <Text>
-                      {formatNumber(totals.brutto, 2, locale)} {currencySymbol}
+                      {formatCurrency(formatNumber(totals.brutto, 2, locale), currencySymbol)}
                     </Text>
                     <Text>
                       {invoice.prefix}-{invoice.invoice_number}

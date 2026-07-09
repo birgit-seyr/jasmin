@@ -30,3 +30,25 @@ export function currencyCodeToSymbol(code: string | null | undefined): string {
   if (!code) return "€";
   return CURRENCY_SYMBOLS[code] ?? code ?? "€";
 }
+
+/** Currency symbols that render BEFORE the amount (e.g. ``$12.00``); every
+ * other symbol renders after the amount (``12,00 €``). */
+const PREFIX_CURRENCY_SYMBOLS = ["$", "£", "C$", "A$"];
+
+/**
+ * Place a currency symbol relative to an already-formatted amount string,
+ * matching the ``useCurrency`` hook's rule: ``$/£/C$/A$`` prefix, all other
+ * symbols suffix. Pure (no hook) so non-React builders — PDF generators, CSV
+ * writers, and the money column builder, which receive ``currencySymbol`` as a
+ * prop and format the number themselves — render the symbol on the same side
+ * as the interactive UI. Any ``/unit`` suffix is appended by the caller,
+ * OUTSIDE this helper.
+ */
+export function formatCurrency(
+  formattedAmount: string,
+  currencySymbol: string,
+): string {
+  return PREFIX_CURRENCY_SYMBOLS.includes(currencySymbol)
+    ? `${currencySymbol}${formattedAmount}`
+    : `${formattedAmount} ${currencySymbol}`;
+}

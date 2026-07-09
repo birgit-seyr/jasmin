@@ -1,0 +1,21 @@
+{
+  "view": "Details anzeigen",
+  "logging": "Aktivitätsprotokoll",
+  "emails": "Gesendete E-Mails",
+  "coopshares": "Genossenschaftsanteile",
+  "bank_details": "Bankverbindung bearbeiten",
+  "coopshares_alert": "Genossenschaftsanteile — keine hinterlegt",
+  "cancel": "Abbrechen",
+  "ok": "ok",
+  "not_ok": "nicht ok",
+  "admin_confirmed": "Vom Admin bestätigt",
+  "admin_pending": "Bestätigung durch Admin ausstehend",
+  "admin_rejected": "Antrag abgelehnt",
+  "user_active": "Benutzerkonto aktiv",
+  "user_pending_approval": "Warten auf Admin-Freigabe",
+  "user_pending_invitation": "Einladung gesendet",
+  "user_pending_invitation_expired": "Einladung abgelaufen",
+  "user_inactive": "Benutzerkonto inaktiv",
+  "user_invited": "Einladung gesendet",
+  "user_not_invited": "Keine Einladung gesendet"
+}

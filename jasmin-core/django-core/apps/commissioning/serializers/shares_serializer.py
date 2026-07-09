@@ -14,6 +14,7 @@ from ..models import (
     ShareTypeVariationGrossPrice,
     Subscription,
 )
+from ..utils.capacity_window import build_capacity_by_week, parse_capacity_window
 from ..utils.dynamic_keys import AMOUNT_KEY_PREFIX, DAY_VARIATION_RE
 from ..utils.iso_week_utils import share_delivery_date
 from .box_matrix_columns_serializer import PackingBoxesMatrixColumnSerializer
@@ -115,26 +116,6 @@ class ShareTypeVariationSerializer(
         model = ShareTypeVariation
         fields = "__all__"
 
-    def _get_year_and_weeks(self):
-        """Return (year, start_week, num_weeks) from request params, mirroring
-        ``DeliveryStationDaySerializer._get_year_and_weeks`` so both capacity
-        axes share the SAME window contract on the wire."""
-        request = self.context.get("request")
-        if not request:
-            return None, None, 52
-        from ..utils.query_params import validate_query_params
-
-        parsed = validate_query_params(
-            request,
-            optional=["year", "delivery_week", "num_weeks"],
-        )
-        year = parsed["year"]
-        start_week = parsed["delivery_week"]
-        num_weeks = parsed["num_weeks"]
-        if year is not None and start_week is not None:
-            return year, start_week, num_weeks
-        return None, None, 52
-
     def _batched_variation_counts(self, year_weeks):
         """Occupancy for every variation in THIS serialization run, computed
         once and cached on the shared child serializer (kills the per-row
@@ -212,7 +193,7 @@ class ShareTypeVariationSerializer(
         serializers.DictField(child=CapacityWeekEntrySerializer(), allow_null=True)
     )
     def get_capacity_by_week(self, obj: ShareTypeVariation):
-        year, start_week, num_weeks = self._get_year_and_weeks()
+        year, start_week, num_weeks = parse_capacity_window(self.context.get("request"))
         if year is None or start_week is None:
             return None
         from ..utils.iso_week_utils import iso_week_range
@@ -225,12 +206,8 @@ class ShareTypeVariationSerializer(
             return None
         year_weeks = iso_week_range(year, start_week, num_weeks)
         counts = self._batched_variation_counts(year_weeks)
-        result = {}
-        for current_year, week in year_weeks:
-            occupied = counts.get((obj.id, current_year, week), 0)
-            free = max(0, obj.capacity - occupied)
-            result[f"{current_year}-{week}"] = {"occupied": occupied, "free": free}
-        return result
+        # Variations always carry a numeric cap → no capacity_nullable guard.
+        return build_capacity_by_week(year_weeks, counts, obj.id, obj.capacity)
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useSizeOptions, useUnitOptions } from "@hooks/index";
+import { useVegetableSizeOptions, useUnitOptions } from "@hooks/index";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import {
   MobileCard,
@@ -20,11 +20,11 @@ export function ForecastMobileCard({
   onEdit,
 }: ForecastMobileCardProps) {
   const { t } = useTranslation();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
   const { getUnitLabel } = useUnitOptions();
 
   const articleName = (record.share_article_name as string) || "";
-  const sizeLabel = getSizeLabelOrEmpty(record.size as string, getSizeLabel);
+  const sizeLabel = getSizeLabelOrEmpty(record.size as string, getVegetableSizeLabel);
   const amount = record.amount as number | null | undefined;
   const unitLabel = getUnitLabel(record.unit as string);
   const plotName = (record.plot_name as string) || "";

@@ -3,6 +3,7 @@ import { Typography } from "antd";
 import type { TFunction } from "i18next";
 import { isFieldDisabled } from "@shared/utils";
 import { formatNumber } from "@shared/utils/numberFormat";
+import { formatCurrency } from "@shared/utils/currency";
 import type { EditableColumnConfig } from "@shared/tables/BasicEditableTable/types";
 
 const { Text } = Typography;
@@ -49,7 +50,10 @@ export function buildCurrencyPriceColumn({
       if (value == null) return null;
       // Sanctioned boundary cast: money cells carry decimal strings / numbers
       // on the wire; formatNumber's parameter is narrowed to that domain.
-      const formatted = `${formatNumber(value as number | string, 2, locale)} ${currencySymbol}`;
+      const formatted = formatCurrency(
+        formatNumber(value as number | string, 2, locale),
+        currencySymbol,
+      );
       return wrapInText ? <Text>{formatted}</Text> : formatted;
     },
   };

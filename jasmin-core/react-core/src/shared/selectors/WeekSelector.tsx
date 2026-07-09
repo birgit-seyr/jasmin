@@ -1,9 +1,9 @@
-import { LeftOutlined, RightOutlined } from "@ant-design/icons";
-import { Button, Divider, Select, Space } from "antd";
+import { Select, Space } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useTenantYearOptions } from "@hooks/index";
+import SteppedSelect from "./SteppedSelect";
 
 interface WeekSelectorProps {
   selectedYear: number;
@@ -118,51 +118,33 @@ const WeekSelector = ({
 
   const canGoNext = true;
 
-  const size = "small" as const;
-
   return (
     <Space>
       <Select
         value={selectedYear}
         style={{ width: "6em" }}
-        size={size}
+        size="small"
         onChange={handleYearChange}
         options={yearOptions}
         className="week-selector-select"
         aria-label={t("common.year")}
       />
-      <Space>
-        <Divider type="vertical" />
-        <Button
-          size={size}
-          icon={<LeftOutlined />}
-          onClick={prevWeek}
-          className="week-selector-small-buttons"
-          disabled={!canGoPrev}
-          aria-label={t("common.previous")}
-        />
-        <Select
-          style={
-            include_null_option
-              ? { width: "6.5em", textAlign: "center" }
-              : { width: "6em" }
-          }
-          size={size}
-          onChange={handleWeekChange}
-          className="bold-select week-selector-select"
-          value={selectedWeek}
-          options={weekOptions}
-          aria-label={t("common.week")}
-        />
-        <Button
-          size={size}
-          icon={<RightOutlined />}
-          onClick={nextWeek}
-          className="week-selector-small-buttons"
-          disabled={!canGoNext}
-          aria-label={t("common.next")}
-        />
-      </Space>
+      <SteppedSelect
+        showDivider
+        value={selectedWeek}
+        onChange={handleWeekChange}
+        options={weekOptions}
+        onPrev={prevWeek}
+        onNext={nextWeek}
+        canGoPrev={canGoPrev}
+        canGoNext={canGoNext}
+        selectStyle={
+          include_null_option
+            ? { width: "6.5em", textAlign: "center" }
+            : { width: "6em" }
+        }
+        selectAriaLabel={t("common.week")}
+      />
     </Space>
   );
 };

@@ -5,7 +5,7 @@ import {
 } from "@ant-design/icons";
 import BubbleChartIcon from "@mui/icons-material/BubbleChart";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Image, Modal, Space, Spin, Upload } from "antd";
+import { Button, Modal, Space, Spin } from "antd";
 import dayjs from "dayjs";
 import ModalCloseFooter from "@shared/modals/ModalCloseFooter";
 import { useCallback, useMemo, useState } from "react";
@@ -28,7 +28,6 @@ import {
   useTimeBoundColumns,
 } from "@hooks/index";
 import { useCrates } from "@features/commissioning/hooks";
-import axiosInstance from "@shared/services/api";
 import { isFieldDisabled, notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import {
@@ -41,7 +40,12 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { DateRangeStatusLegend, ToolTipIcon } from "@shared/ui";
+import {
+  DateRangeStatusLegend,
+  PictureUploadField,
+  ToolTipIcon,
+  usePictureUpload,
+} from "@shared/ui";
 import ShareTypeVariationPriceModal from "@features/commissioning/modals/prices/ShareTypeVariationPriceModal";
 import RichTextEditorModal from "@shared/modals/RichTextEditorModal";
 import VirtualComponentModal from "./VirtualComponentModal";
@@ -86,7 +90,6 @@ export default function ShareTypeVariationModal({
   const [pictureModalVisible, setPictureModalVisible] = useState(false);
   const [selectedPictureRecord, setSelectedPictureRecord] =
     useState<ShareTypeVariationRecord | null>(null);
-  const [uploadingPicture, setUploadingPicture] = useState(false);
 
   const { t } = useTranslation();
   const { isOffice } = useRoles();
@@ -260,50 +263,23 @@ export default function ShareTypeVariationModal({
     setSelectedPictureRecord(null);
   }, []);
 
-  const handleUploadPicture = useCallback(
-    async (file: File) => {
-      if (!selectedPictureRecord?.id) return;
-      setUploadingPicture(true);
-      try {
-        const formData = new FormData();
-        formData.append("picture", file);
-        // Multipart escape hatch: the generated PATCH only sends JSON, so we
-        // post the FormData directly to the same endpoint. Same pattern as
-        // InvoicePDFGenerator / ConfigurationApp / ConfigurationGeneral.
-        await axiosInstance.patch(
-          `/api/commissioning/share_type_variations/${selectedPictureRecord.id}/`,
-          formData,
-          { headers: { "Content-Type": "multipart/form-data" } },
-        );
-        notify.success(t("common.saved_successfully"));
-        invalidateData();
-        handleClosePictureModal();
-      } catch (error) {
-        notify.error(getErrorMessage(error, t("common.error_saving")));
-      } finally {
-        setUploadingPicture(false);
-      }
-    },
-    [selectedPictureRecord, t, invalidateData, handleClosePictureModal],
-  );
-
-  const handleDeletePicture = useCallback(async () => {
-    if (!selectedPictureRecord?.id) return;
-    setUploadingPicture(true);
-    try {
-      await commissioningShareTypeVariationsPartialUpdate(
-        String(selectedPictureRecord.id),
-        { picture: null } as unknown as ShareTypeVariation,
-      );
-      notify.success(t("common.saved_successfully"));
-      invalidateData();
-      handleClosePictureModal();
-    } catch (error) {
-      notify.error(getErrorMessage(error, t("common.error_saving")));
-    } finally {
-      setUploadingPicture(false);
-    }
-  }, [selectedPictureRecord, t, invalidateData, handleClosePictureModal]);
+  // Multipart escape hatch: the generated PATCH only sends JSON, so the shared
+  // hook posts the FormData directly to the same endpoint (upload persists
+  // immediately) and clears via a null JSON PATCH. Same pattern as
+  // ConfigurationApp / ConfigurationGeneral. Closes the picture sub-modal on
+  // success — the refreshed list carries the new/cleared thumbnail.
+  const {
+    uploading: uploadingPicture,
+    uploadPicture,
+    deletePicture,
+  } = usePictureUpload({
+    endpoint: `/api/commissioning/share_type_variations/${selectedPictureRecord?.id ?? ""}/`,
+    invalidate: invalidateData,
+    successMessage: t("common.saved_successfully"),
+    errorMessage: t("common.error_saving"),
+    onUploaded: handleClosePictureModal,
+    onDeleted: handleClosePictureModal,
+  });
 
   const columns = useMemo<EditableColumnConfig<TableRecord>[]>(
     () =>
@@ -728,7 +704,7 @@ export default function ShareTypeVariationModal({
               danger
               icon={<DeleteOutlined />}
               loading={uploadingPicture}
-              onClick={handleDeletePicture}
+              onClick={deletePicture}
             >
               {t("common.delete")}
             </Button>
@@ -736,31 +712,13 @@ export default function ShareTypeVariationModal({
           <ModalCloseFooter key="close" onClose={handleClosePictureModal} />,
         ]}
       >
-        {selectedPictureRecord?.picture && (
-          <div style={{ textAlign: "center", marginBottom: 16 }}>
-            <Image
-              src={selectedPictureRecord.picture}
-              alt=""
-              style={{ maxWidth: "100%", maxHeight: 300 }}
-            />
-          </div>
-        )}
-        <Upload
-          name="picture"
-          accept="image/*"
-          maxCount={1}
-          showUploadList={false}
-          beforeUpload={(file) => {
-            handleUploadPicture(file);
-            return false;
-          }}
-        >
-          <Button icon={<UploadOutlined />} loading={uploadingPicture}>
-            {selectedPictureRecord?.picture
-              ? t("common.replace")
-              : t("common.upload")}
-          </Button>
-        </Upload>
+        <PictureUploadField
+          pictureUrl={selectedPictureRecord?.picture}
+          uploading={uploadingPicture}
+          onUpload={uploadPicture}
+          previewVariant="block"
+          showDelete={false}
+        />
       </Modal>
     </>
   );

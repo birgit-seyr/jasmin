@@ -6,7 +6,6 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import F, Q
 from django.utils import timezone
 
 from ..errors import CommissioningError, DocumentDateRequired, FinalizedError
@@ -14,8 +13,9 @@ from .base import JasminModel
 from .choices_text import (
     DayNumberOptions,
     DocumentType,
-    SizeVegetableOptions,
-    UnitOptions,
+    delivery_week_field,
+    size_vegetable_field,
+    unit_field,
 )
 from .mixin import (
     CreatedMixin,
@@ -27,9 +27,12 @@ from .mixin import (
     NumberedDocumentMixin,
     PayableMixin,
     SourceSnapshotMixin,
+    delete_parent_if_childless,
+    nullable_date_order_constraint,
     sum_brutto,
     sum_netto,
     tax_breakdown,
+    validate_nullable_date_order,
 )
 
 logger = logging.getLogger(__name__)
@@ -222,12 +225,8 @@ class OrderableItem(LinePricingMixin, JasminModel):
     )
 
     description = models.CharField(max_length=200, blank=True, null=True)
-    unit = models.CharField(max_length=10, choices=UnitOptions.choices)
-    size = models.CharField(
-        max_length=1,
-        choices=SizeVegetableOptions.choices,
-        default=SizeVegetableOptions.M,
-    )
+    unit = unit_field()
+    size = size_vegetable_field()
     price_per_unit = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True
     )
@@ -265,19 +264,12 @@ class Offer(FinalizableMixin, FinalizedProtectedMixin, JasminModel):
     objects = FinalizedProtectedQuerySet.as_manager()
 
     year = models.PositiveSmallIntegerField(db_index=True)
-    delivery_week = models.PositiveSmallIntegerField(
-        db_index=True,
-        validators=[MinValueValidator(1), MaxValueValidator(53)],
-    )
+    delivery_week = delivery_week_field(db_index=True)
     share_article = models.ForeignKey("ShareArticle", on_delete=models.PROTECT)
     sort = models.CharField(max_length=200, blank=True, null=True)
     description = models.CharField(max_length=40, blank=True, null=True)
-    unit = models.CharField(max_length=10, choices=UnitOptions.choices)
-    size = models.CharField(
-        max_length=1,
-        choices=SizeVegetableOptions.choices,
-        default=SizeVegetableOptions.M,
-    )
+    unit = unit_field()
+    size = size_vegetable_field()
     amount_per_pu = models.DecimalField(max_digits=7, decimal_places=3)
     used_crate = models.ForeignKey(
         "Crate", on_delete=models.PROTECT, blank=True, null=True
@@ -409,10 +401,7 @@ class Order(
     objects = FinalizedProtectedQuerySet.as_manager()
 
     year = models.PositiveSmallIntegerField(db_index=True)
-    delivery_week = models.PositiveSmallIntegerField(
-        db_index=True,
-        validators=[MinValueValidator(1), MaxValueValidator(53)],
-    )
+    delivery_week = delivery_week_field(db_index=True)
     day_number = models.PositiveSmallIntegerField(
         choices=DayNumberOptions.choices, blank=True, null=True
     )
@@ -549,12 +538,7 @@ class OrderContent(FinalizableMixin, FinalizedProtectedMixin, OrderableItem):
         """
         order = self.order
         result = super().delete(*args, **kwargs)
-        if (
-            order
-            and not order.ordercontent_set.exists()
-            and not order.crateordercontent_set.exists()
-        ):
-            order.delete()
+        delete_parent_if_childless(order, ["ordercontent_set", "crateordercontent_set"])
         return result
 
     # ------------------------------------------------------------------ #
@@ -679,12 +663,7 @@ class CrateOrderContent(
         """
         order = self.order or (self.order_content.order if self.order_content else None)
         result = super().delete(*args, **kwargs)
-        if (
-            order
-            and not order.ordercontent_set.exists()
-            and not order.crateordercontent_set.exists()
-        ):
-            order.delete()
+        delete_parent_if_childless(order, ["ordercontent_set", "crateordercontent_set"])
         return result
 
 
@@ -732,12 +711,7 @@ class CrateDeliveryNoteContent(
         """
         delivery_note = self.delivery_note
         result = super().delete(*args, **kwargs)
-        if (
-            delivery_note
-            and not delivery_note.items.exists()
-            and not delivery_note.crate_items.exists()
-        ):
-            delivery_note.delete()
+        delete_parent_if_childless(delivery_note, ["items", "crate_items"])
         return result
 
 
@@ -792,8 +766,7 @@ class CrateContentInvoiceReseller(
         invoice = self.invoice
         result = super().delete(*args, **kwargs)
 
-        if invoice and not invoice.items.exists() and not invoice.crate_items.exists():
-            invoice.delete()
+        delete_parent_if_childless(invoice, ["items", "crate_items"])
 
         return result
 
@@ -825,12 +798,7 @@ class DeliveryNoteContent(
         delivery_note = self.delivery_note
         result = super().delete(*args, **kwargs)
 
-        if (
-            delivery_note
-            and not delivery_note.items.exists()
-            and not delivery_note.crate_items.exists()
-        ):
-            delivery_note.delete()
+        delete_parent_if_childless(delivery_note, ["items", "crate_items"])
 
         return result
 
@@ -866,8 +834,7 @@ class InvoiceResellerContent(
         invoice = self.invoice
         result = super().delete(*args, **kwargs)
 
-        if invoice and not invoice.items.exists() and not invoice.crate_items.exists():
-            invoice.delete()
+        delete_parent_if_childless(invoice, ["items", "crate_items"])
 
         return result
 
@@ -1118,10 +1085,9 @@ class InvoiceReseller(
             # ``paid_at >= due_date`` comes from PayableMixin.clean()
             # (datetime-vs-date, no DB constraint). A Meta CheckConstraint is
             # independent of the FinalizedProtected trigger allowlist.
-            models.CheckConstraint(
-                condition=Q(due_date__isnull=True)
-                | Q(date__isnull=True)
-                | Q(due_date__gte=F("date")),
+            nullable_date_order_constraint(
+                "due_date",
+                "date",
                 name="invoicereseller_due_date_after_date",
             ),
         ]
@@ -1135,14 +1101,12 @@ class InvoiceReseller(
         # The payment due date must not precede the invoice date (both
         # DateFields). NULL-tolerant: only enforced when both are set.
         # ``paid_at >= due_date`` is enforced by PayableMixin.clean().
-        if (
-            self.due_date is not None
-            and self.date is not None
-            and self.due_date < self.date
-        ):
-            raise ValidationError(
-                {"due_date": "Due date must be on or after the invoice date."}
-            )
+        validate_nullable_date_order(
+            self,
+            "due_date",
+            "date",
+            message="Due date must be on or after the invoice date.",
+        )
 
         if self.cancels_invoice == self:
             raise CommissioningError(

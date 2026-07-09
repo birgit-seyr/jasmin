@@ -24,11 +24,10 @@ from django.conf import settings
 from django.core.mail import mail_admins
 from django.core.management import call_command
 from django.utils import timezone
-from django_tenants.utils import schema_context
 from huey import crontab
 from huey.contrib.djhuey import db_periodic_task
 
-from apps.shared.tenants.models import Tenant
+from apps.shared.tenants.sweep import for_each_tenant
 
 log = logging.getLogger("django.security")
 ops_log = logging.getLogger("tasks")
@@ -70,25 +69,22 @@ def alert_on_axes_bursts() -> None:
     cutoff = timezone.now() - BURST_WINDOW
     by_ip: Counter[str] = Counter()
 
-    for tenant in Tenant.objects.exclude(schema_name="public").iterator():
-        # Per-tenant try/except: one tenant's failure must not block
-        # cross-tenant aggregation. Missing data is better than no
-        # alert for any tenant.
-        try:
-            with schema_context(tenant.schema_name):
-                # django-axes upserts one row per (username, ip, user_agent)
-                # and increments ``failures_since_start`` per failure — so
-                # we sum that field, not count rows.
-                rows = (
-                    AccessAttempt.objects.filter(attempt_time__gte=cutoff)
-                    .exclude(ip_address__isnull=True)
-                    .values_list("ip_address", "failures_since_start")
-                    .iterator()
-                )
-                for ip, failures in rows:
-                    by_ip[str(ip)] += failures
-        except Exception:
-            log.exception("axes.burst.tenant_failed tenant=%s", tenant.schema_name)
+    def aggregate(tenant) -> None:
+        # django-axes upserts one row per (username, ip, user_agent)
+        # and increments ``failures_since_start`` per failure — so
+        # we sum that field, not count rows.
+        rows = (
+            AccessAttempt.objects.filter(attempt_time__gte=cutoff)
+            .exclude(ip_address__isnull=True)
+            .values_list("ip_address", "failures_since_start")
+            .iterator()
+        )
+        for ip, failures in rows:
+            by_ip[str(ip)] += failures
+
+    # Missing data from one bad tenant is better than no alert for any tenant,
+    # so failures are isolated (and routed to the security log).
+    for_each_tenant(aggregate, label="axes.burst", logger=log)
 
     now = timezone.now()
     fresh_bursts: list[tuple[str, int]] = []

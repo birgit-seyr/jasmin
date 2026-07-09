@@ -41,10 +41,12 @@ import { useRoles } from "@shared/auth";
 
 import {
   useInvalidateAfterTableMutation,
+  currentWeek,
   useIsMobile,
   useNoteColumn,
   useNumberFormat,
   useTableRowSelection,
+  useYearWeekState,
 } from "@hooks/index";
 import {
   useAmountUnitSizeColumns,
@@ -53,8 +55,6 @@ import {
   useShareArticles,
 } from "@features/commissioning/hooks";
 
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
 const currentDay = dayjs().isoWeekday();
 
 const shareArticleFilters = {
@@ -63,8 +63,8 @@ const shareArticleFilters = {
 
 export default function DocumentationCurrentStock() {
   const { isStaff } = useRoles();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedDay, setSelectedDay] = useState<number | null>(currentDay - 1);
   const [selectedStorage, setSelectedStorage] = useState<string | null>(null);
   const isPast = useMemo(

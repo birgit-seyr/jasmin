@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNumberFormat } from "../useNumberFormat";
-import { currencyCodeToSymbol } from "@shared/utils/currency";
+import { currencyCodeToSymbol, formatCurrency } from "@shared/utils/currency";
 import { useTenant } from "./useTenant";
 
 /**
@@ -35,22 +35,14 @@ export const useCurrency = () => {
    * @param {number} decimals - Number of decimal places (default: 2)
    * @returns {string} Formatted price string
    */
-  const formatCurrency = useMemo(
+  const formatCurrencyMemo = useMemo(
     () =>
       (amount: number | null | undefined, decimals = 2) => {
         if (amount === null || amount === undefined || isNaN(amount)) {
           return "";
         }
 
-        const formattedAmount = format(Number(amount), decimals);
-
-        // Currencies that go before the amount
-        if (["$", "£", "C$", "A$"].includes(currencySymbol)) {
-          return `${currencySymbol}${formattedAmount}`;
-        }
-
-        // Most currencies go after
-        return `${formattedAmount} ${currencySymbol}`;
+        return formatCurrency(format(Number(amount), decimals), currencySymbol);
       },
     [currencySymbol, format]
   );
@@ -58,6 +50,6 @@ export const useCurrency = () => {
   return {
     currencyCode,
     currencySymbol,
-    formatCurrency,
+    formatCurrency: formatCurrencyMemo,
   };
 };

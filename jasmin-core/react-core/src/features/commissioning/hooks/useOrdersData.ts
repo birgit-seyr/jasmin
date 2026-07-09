@@ -56,6 +56,7 @@ import { useCurrency } from "@hooks/configuration/useCurrency";
 import { useDefaultTaxRates } from "@hooks/configuration/useDefaultTaxRates";
 import { useTenant } from "@hooks/configuration/useTenant";
 import { useNumberFormat } from "@hooks/useNumberFormat";
+import { useOfferTiers } from "./useOfferTiers";
 
 /**
  * A row in the OrderContent table.
@@ -179,18 +180,7 @@ export function useOrdersData() {
 
   const { articles: defaultTaxRateArticles, crates: defaultTaxRateCrates } =
     useDefaultTaxRates();
-  const used_tiers_for_offers = getSetting("used_tiers_for_offers") as number[] | undefined;
-  // **Single-tier mode** when the tenant hasn't configured tiers: pass
-  // ``[1]`` so ``pickTierPrice`` never escalates beyond ``price_1``.
-  // No silent fallback to ``[1, 3, 5]`` — that bumped non-tier tenants
-  // into 3-tier pricing.
-  const finalTiers = useMemo<number[]>(
-    () =>
-      used_tiers_for_offers && used_tiers_for_offers.length > 0
-        ? used_tiers_for_offers
-        : [1],
-    [used_tiers_for_offers],
-  );
+  const finalTiers = useOfferTiers();
 
   const listParams = useMemo<CommissioningOrderContentsListParams>(
     () => ({

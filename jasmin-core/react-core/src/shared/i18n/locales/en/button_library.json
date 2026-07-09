@@ -1,0 +1,21 @@
+{
+  "view": "View details",
+  "logging": "Activity Log",
+  "emails": "Sent emails",
+  "coopshares": "Coop shares",
+  "bank_details": "Edit bank details",
+  "coopshares_alert": "Coop shares — none on file",
+  "cancel": "Cancel",
+  "ok": "ok",
+  "not_ok": "not ok",
+  "admin_confirmed": "Admin confirmed",
+  "admin_pending": "Admin confirmation pending",
+  "admin_rejected": "Application rejected",
+  "user_active": "User account active",
+  "user_pending_approval": "Pending admin approval",
+  "user_pending_invitation": "Invitation sent",
+  "user_pending_invitation_expired": "Invitation expired",
+  "user_inactive": "User account inactive",
+  "user_invited": "Invitation sent",
+  "user_not_invited": "No invitation sent"
+}

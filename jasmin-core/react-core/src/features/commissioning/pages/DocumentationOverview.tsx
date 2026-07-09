@@ -7,20 +7,27 @@ import { useCommissioningDocumentationOverviewList } from "@shared/api/generated
 import type {
   CommissioningDocumentationOverviewListParams,
   CommissioningDocumentationOverviewListSource,
+  DocumentationAggregationItem,
 } from "@shared/api/generated/models";
 import { DaySelector, WeekSelector } from "@shared/selectors";
-import { EmptyHint, ExplainerText } from "@shared/ui";
-import { Select, Table } from "antd";
-import dayjs from "dayjs";
+import { EditableTable, READ_ONLY_PERMISSION } from "@shared/tables";
+import type {
+  EditableColumnConfig,
+  TableRecord,
+} from "@shared/tables/BasicEditableTable/types";
+import { ExplainerText } from "@shared/ui";
+import { Select } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { currentWeek, useYearWeekState } from "@hooks/index";
 
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
+// The aggregation rows carry no server id (grouped by article/size/unit), so a
+// stable synthetic key is minted per row for the table.
+type DocumentationRow = DocumentationAggregationItem & TableRecord;
 
 export default function DocumentationOverview() {
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedShareArticle, setSelectedShareArticle] = useState<
     string | null
@@ -43,14 +50,25 @@ export default function DocumentationOverview() {
     ...(selectedDay != null ? { delivery_day: String(selectedDay) } : {}),
   };
 
-  const { data: rawData, isLoading: loading } =
+  const { data: rawData, isFetching } =
     useCommissioningDocumentationOverviewList(params, {
       query: { enabled: !!selectedShareArticle },
     });
 
-  const data = useMemo(() => rawData ?? [], [rawData]);
+  const data = useMemo<DocumentationRow[]>(
+    () =>
+      (rawData ?? []).map((item, index) => ({
+        ...item,
+        id: String(index),
+        key: String(index),
+      })),
+    [rawData],
+  );
 
-  const columns: any[] = [shareArticleColumn, ...amountUnitSizeColumns];
+  const columns: EditableColumnConfig<TableRecord>[] = [
+    shareArticleColumn,
+    ...amountUnitSizeColumns,
+  ];
 
   const sourceOptions = [
     { value: "HARVEST", label: t("commissioning.harvest_select") },
@@ -101,15 +119,13 @@ export default function DocumentationOverview() {
           className="bold-select"
         />
       </div>
-      <Table
+      <EditableTable
         columns={columns}
-        dataSource={data}
+        initialData={data}
+        loading={isFetching}
+        permissions={READ_ONLY_PERMISSION}
         pagination={false}
-        loading={loading}
-        size="small"
         className="custom-jasmin-table w-max"
-        rowKey="id"
-        locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
       />
 
       <ExplainerText title={t("common.info")}>

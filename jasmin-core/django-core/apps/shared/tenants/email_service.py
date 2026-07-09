@@ -46,34 +46,21 @@ def capture_tenant_email_context() -> dict:
     Keys: ``tenant_name``, ``tenant_language`` (2-char, may be ``""``),
     ``bank_details`` (``"IBAN / BIC"``), ``frontend_base_url``.
     """
-    from django.conf import settings
     from django.db import connection
 
+    from apps.shared.tenant_urls import frontend_base_url, tenant_name
+
     tenant = getattr(connection, "tenant", None)
-    name = (getattr(tenant, "name", "") or "") if tenant else ""
     language = ((getattr(tenant, "tenant_language", "") or "").strip().lower())[:2]
     iban = (getattr(tenant, "iban", "") or "") if tenant else ""
     bic = (getattr(tenant, "sepa_creditor_bic", "") or "") if tenant else ""
     bank_details = " / ".join(part for part in [iban, bic] if part)
 
-    base_url = ""
-    domains = getattr(tenant, "domains", None) if tenant else None
-    if domains is not None:
-        try:
-            domain_obj = domains.filter(is_primary=True).first() or domains.first()
-        except (AttributeError, TypeError):
-            domain_obj = None
-        if domain_obj:
-            scheme = "http" if settings.DEBUG else "https"
-            base_url = f"{scheme}://{domain_obj.domain}"
-    if not base_url:
-        base_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000")
-
     return {
-        "tenant_name": name,
+        "tenant_name": tenant_name(),
         "tenant_language": language,
         "bank_details": bank_details,
-        "frontend_base_url": base_url,
+        "frontend_base_url": frontend_base_url(),
     }
 
 

@@ -2,6 +2,19 @@ import { useMemo } from "react";
 import { useTenant } from "@hooks/configuration/useTenant";
 
 /**
+ * Resolve a tenant's raw ``used_tiers_for_offers`` setting to a usable tier
+ * list: the configured thresholds when set, else single-tier ``[1]`` (only
+ * ``price_1`` is picked, no quantity-based escalation — no silent default to
+ * ``[1, 3, 5]``). Pure (no hook) so non-React callers — PDF generators — that
+ * read the setting themselves resolve tiers exactly like ``useOfferTiers``.
+ */
+export function resolveOfferTiers(
+  usedTiers: number[] | null | undefined,
+): number[] {
+  return usedTiers && usedTiers.length > 0 ? usedTiers : [1];
+}
+
+/**
  * The offer price tiers configured for this tenant
  * (``used_tiers_for_offers``) as an ordered list of quantity thresholds.
  * Falls back to single-tier ``[1]`` when unset — only ``price_1`` is ever
@@ -15,5 +28,5 @@ import { useTenant } from "@hooks/configuration/useTenant";
 export function useOfferTiers(): number[] {
   const { getSetting } = useTenant();
   const used = getSetting("used_tiers_for_offers") as number[] | undefined;
-  return useMemo(() => (used && used.length > 0 ? used : [1]), [used]);
+  return useMemo(() => resolveOfferTiers(used), [used]);
 }

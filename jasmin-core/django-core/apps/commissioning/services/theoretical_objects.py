@@ -30,14 +30,15 @@ from ..models import (
     TheoreticalWashAmount,
     WashAmount,
 )
+from ..models.choices_text import UnitOptions
 from ..utils.iso_week_utils import compute_rolled_back_week, make_noon_datetime
 
 logger = logging.getLogger(__name__)
 
 _AMOUNT_PER_PU_MAP: dict[str, str] = {
-    "KG": "default_kg_per_pu_harvest",
-    "PCS": "default_pieces_per_pu_harvest",
-    "BUNCH": "default_bunches_per_pu_harvest",
+    UnitOptions.KG: "default_kg_per_pu_harvest",
+    UnitOptions.PCS: "default_pieces_per_pu_harvest",
+    UnitOptions.BUNCH: "default_bunches_per_pu_harvest",
 }
 
 

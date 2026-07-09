@@ -32,10 +32,8 @@ import {
   useInvalidateAfterTableMutation,
   useNumberFormat,
   useShareTypeVariationSizeOptions,
+  useYearWeekState,
 } from "@hooks/index";
-
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
 
 type ShareRow = Share & TableRecord;
 
@@ -49,8 +47,8 @@ export default function ShareWeights() {
     [canEdit],
   );
 
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [csvExportVisible, setCsvExportVisible] = useState(false);
 

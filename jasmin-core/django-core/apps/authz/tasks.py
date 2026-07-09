@@ -13,11 +13,10 @@ from __future__ import annotations
 import logging
 
 from django.core.management import call_command
-from django_tenants.utils import schema_context
 from huey import crontab
 from huey.contrib.djhuey import db_periodic_task
 
-from apps.shared.tenants.models import Tenant
+from apps.shared.tenants.sweep import for_each_tenant
 
 log = logging.getLogger("tasks")
 
@@ -32,15 +31,18 @@ def flush_expired_jwt_tokens() -> None:
     management command — it deletes outstanding tokens whose ``expires_at``
     is in the past (which cascades the blacklist rows).
     """
-    for tenant in Tenant.objects.exclude(schema_name="public").iterator():
-        # Per-tenant try/except: a single bad tenant must NOT prevent
-        # the flush from running on every other tenant.
-        try:
-            with schema_context(tenant.schema_name):
-                call_command("flushexpiredtokens", verbosity=0)
-        except Exception:
-            log.exception(
-                "housekeeping.jwt_blacklist_flushed.tenant_failed tenant=%s",
-                tenant.schema_name,
-            )
+
+    def flush(tenant) -> None:
+        call_command("flushexpiredtokens", verbosity=0)
+
+    # Per-tenant isolation: a single bad tenant must NOT prevent the flush from
+    # running on every other tenant. ``include_inactive=True`` keeps the
+    # pre-adoption behaviour of flushing every non-public tenant — a frozen
+    # tenant's blacklist tables still accumulate expired rows worth pruning.
+    for_each_tenant(
+        flush,
+        label="housekeeping.jwt_blacklist_flushed",
+        logger=log,
+        include_inactive=True,
+    )
     log.info("housekeeping.jwt_blacklist_flushed")

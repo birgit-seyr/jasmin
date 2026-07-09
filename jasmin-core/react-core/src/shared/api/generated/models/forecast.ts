@@ -7,7 +7,7 @@
  */
 import type { ForecastDayNumber } from './forecastDayNumber';
 import type { UnitEnum } from './unitEnum';
-import type { SizeVegetableEnum } from './sizeVegetableEnum';
+import type { VegetableSizeEnum } from './vegetableSizeEnum';
 
 /**
  * Mixin to automatically add related name fields.
@@ -40,7 +40,7 @@ export interface Forecast {
    */
   amount?: string | null;
   unit: UnitEnum;
-  size?: SizeVegetableEnum;
+  size?: VegetableSizeEnum;
   /** @nullable */
   note?: string | null;
   for_all_harvest_shares?: boolean;

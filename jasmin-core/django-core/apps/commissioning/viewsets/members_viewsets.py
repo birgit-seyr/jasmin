@@ -55,6 +55,7 @@ from ..errors import (
     SubscriptionConfirmedImmutable,
 )
 from ..models import CoopShare, Member, ShareDelivery, Subscription
+from ..models.choices_text import InvitationStatus
 from ..models.managers import active_on_date_q
 from ..models.members import MemberLoan, UserInvitation
 from ..schemas import (
@@ -103,9 +104,9 @@ def _build_member_queryset(request: Request) -> QuerySet[Member]:
     The N+1 lock note (see joins/prefetch below) is enforced by
     ``apps/payments/tests/test_query_count_locks.py``.
     """
-    sent_invitations_qs = UserInvitation.objects.filter(status="sent").order_by(
-        "-created_at"
-    )
+    sent_invitations_qs = UserInvitation.objects.filter(
+        status=InvitationStatus.SENT
+    ).order_by("-created_at")
     queryset: QuerySet[Member] = Member.objects.select_related(
         "user", "user__linked_reseller", "admin_confirmed_by", "created_by"
     ).prefetch_related(

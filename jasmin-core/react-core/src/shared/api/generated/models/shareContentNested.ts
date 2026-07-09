@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { UnitEnum } from './unitEnum';
-import type { SizeVegetableEnum } from './sizeVegetableEnum';
+import type { VegetableSizeEnum } from './vegetableSizeEnum';
 
 export interface ShareContentNested {
   readonly id?: string;
@@ -24,5 +24,5 @@ export interface ShareContentNested {
    */
   amount?: string | null;
   unit: UnitEnum;
-  size?: SizeVegetableEnum;
+  size?: VegetableSizeEnum;
 }

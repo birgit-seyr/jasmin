@@ -1,4 +1,5 @@
-import dayjs, { type Dayjs } from "dayjs";
+import type { Dayjs } from "dayjs";
+import { buildMonthAxis } from "@shared/utils";
 import type { StatsAreaSeries } from "@shared/ui";
 
 /** One (month, amount-string) point as returned by the income_by_month endpoint. */
@@ -21,25 +22,16 @@ export function buildMonthlyIncomeSeries(
   range: [Dayjs, Dayjs] | null,
   series: StatsAreaSeries,
 ): { data: Array<Record<string, number | string>>; series: StatsAreaSeries[] } {
-  const end = (range ? range[1] : dayjs()).startOf("month");
-  const selStart = (range ? range[0] : dayjs().subtract(1, "year")).startOf(
-    "month",
-  );
-  const minStart = end.subtract(11, "month");
-  let cursor = selStart.isBefore(minStart) ? selStart : minStart;
+  const { months, labelOf } = buildMonthAxis(range);
 
   const byMonth = new Map<string, number>();
   for (const p of points ?? []) {
     byMonth.set(p.month, Number.parseFloat(p.amount) || 0);
   }
 
-  const data: Array<Record<string, number | string>> = [];
-  while (!cursor.isAfter(end)) {
-    data.push({
-      label: cursor.format("MMM 'YY"),
-      [series.id]: byMonth.get(cursor.format("YYYY-MM")) ?? 0,
-    });
-    cursor = cursor.add(1, "month");
-  }
+  const data: Array<Record<string, number | string>> = months.map((month) => ({
+    label: labelOf(month),
+    [series.id]: byMonth.get(month.format("YYYY-MM")) ?? 0,
+  }));
   return { data, series: [series] };
 }

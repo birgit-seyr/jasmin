@@ -95,7 +95,7 @@ const t = ((key: string, options?: Record<string, unknown>) => {
   return value;
 }) as unknown as import("i18next").TFunction;
 
-// Mock useUnitOptions / useSizeOptions hooks used by OfferPDF
+// Mock useUnitOptions / useVegetableSizeOptions hooks used by OfferPDF
 const unitLabelMap: Record<string, string> = {
   KG: "kg",
   PCS: "Stk",
@@ -120,14 +120,14 @@ vi.mock("@hooks/index", async () => {
       ],
       getUnitLabel: (v: string) => unitLabelMap[v] ?? v,
     }),
-    useSizeOptions: () => ({
+    useVegetableSizeOptions: () => ({
       VEGETABLE_SIZE_OPTIONS: { S: "S", M: "M", L: "L" },
-      sizeOptions: [
+      vegetableSizeOptions: [
         { value: "S", label: "klein" },
         { value: "M", label: "mittel" },
         { value: "L", label: "groß" },
       ],
-      getSizeLabel: (v: string) => sizeLabelMap[v] ?? v,
+      getVegetableSizeLabel: (v: string) => sizeLabelMap[v] ?? v,
     }),
     useTenant: () => tenant,
   };

@@ -13,9 +13,9 @@ import {
   useCurrency,
   useDefaultTaxRates,
   useNumberFormat,
-  useTenant,
   useTimeBoundColumns,
 } from "@hooks/index";
+import { useOfferTiers } from "@features/commissioning/hooks";
 import type { EditableColumnConfig } from "@shared/tables/BasicEditableTable/types";
 import PriceEditorModal from "./PriceEditorModal";
 import { buildCurrencyPriceColumn, buildTaxRateColumn } from "./priceColumns";
@@ -47,24 +47,12 @@ export default function ShareArticlePriceModal({
     width: "9em",
   });
 
-  const { getSetting } = useTenant();
   const { articles: defaultTaxRateArticles } = useDefaultTaxRates();
 
-  const used_tiers_for_offers = getSetting("used_tiers_for_offers") as
-    | number[]
-    | undefined;
   // Single-tier mode when the tenant hasn't configured tier thresholds:
   // one column per unit using ``price_1`` only. No silent default to
   // [1, 3, 5] — that bumped non-tier tenants into multi-tier pricing.
-  // ``useMemo`` so the fallback ``[1]`` has a stable identity across
-  // renders — otherwise the columns ``useMemo`` below re-fires every render.
-  const tiersList = useMemo<number[]>(
-    () =>
-      used_tiers_for_offers && used_tiers_for_offers.length > 0
-        ? used_tiers_for_offers
-        : [1],
-    [used_tiers_for_offers],
-  );
+  const tiersList = useOfferTiers();
 
   const columns = useMemo<EditableColumnConfig[]>(() => {
     const tiers: Array<{ tier: number; idx: 1 | 2 | 3 }> = tiersList.map(

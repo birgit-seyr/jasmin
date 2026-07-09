@@ -7,7 +7,7 @@
  */
 import type { ShareTypeVariationCapacityByWeek } from './shareTypeVariationCapacityByWeek';
 import type { VariationTypeEnum } from './variationTypeEnum';
-import type { SizeEnum } from './sizeEnum';
+import type { ShareTypeVariationSizeEnum } from './shareTypeVariationSizeEnum';
 
 /**
  * Mixin to add ``can_be_deleted`` to serializers.
@@ -38,7 +38,7 @@ export interface ShareTypeVariation {
   /** @nullable */
   valid_until?: string | null;
   variation_type?: VariationTypeEnum;
-  size: SizeEnum;
+  size: ShareTypeVariationSizeEnum;
   /** @nullable */
   picture?: string | null;
   /** @nullable */

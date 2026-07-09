@@ -22,6 +22,7 @@ from ..models import (
     ShareArticle,
     ShareContent,
 )
+from ..models.choices_text import UnitOptions
 from .bulk_email_job import create_send_record_idempotent, emit_progress
 from .share_demand_service import ShareDemandService
 
@@ -29,16 +30,16 @@ logger = logging.getLogger(__name__)
 
 # Maps unit type to the PU conversion attribute on ShareArticle
 _PU_CONVERSION_ATTRS: dict[str, str] = {
-    "KG": "default_kg_per_pu_reseller",
-    "PCS": "default_pieces_per_pu_reseller",
-    "BUNCH": "default_bunches_per_pu_reseller",
+    UnitOptions.KG: "default_kg_per_pu_reseller",
+    UnitOptions.PCS: "default_pieces_per_pu_reseller",
+    UnitOptions.BUNCH: "default_bunches_per_pu_reseller",
 }
 
 # Maps unit type to the pricing attribute prefix
 _PRICING_UNIT_NAMES: dict[str, str] = {
-    "KG": "kg",
-    "PCS": "pieces",
-    "BUNCH": "bunch",
+    UnitOptions.KG: "kg",
+    UnitOptions.PCS: "pieces",
+    UnitOptions.BUNCH: "bunch",
 }
 
 
@@ -688,50 +689,50 @@ class OfferService:
             return amount
 
         # KG -> PCS
-        if from_unit == "KG" and to_unit == "PCS":
+        if from_unit == UnitOptions.KG and to_unit == UnitOptions.PCS:
             pieces_per_kg = getattr(share_article, f"pieces_per_kg_{size}", None)
             if pieces_per_kg and pieces_per_kg > 0:
                 return amount * Decimal(str(pieces_per_kg))
 
         # PCS -> KG
-        if from_unit == "PCS" and to_unit == "KG":
+        if from_unit == UnitOptions.PCS and to_unit == UnitOptions.KG:
             kg_per_piece = getattr(share_article, f"kg_per_piece_{size}", None)
             if kg_per_piece and kg_per_piece > 0:
                 return amount * Decimal(str(kg_per_piece))
 
         # KG -> BUNCH
-        if from_unit == "KG" and to_unit == "BUNCH":
+        if from_unit == UnitOptions.KG and to_unit == UnitOptions.BUNCH:
             kg_per_bunch = getattr(share_article, f"kg_per_bunch_{size}", None)
             if kg_per_bunch and kg_per_bunch > 0:
                 return amount / Decimal(str(kg_per_bunch))
 
         # BUNCH -> KG
-        if from_unit == "BUNCH" and to_unit == "KG":
+        if from_unit == UnitOptions.BUNCH and to_unit == UnitOptions.KG:
             kg_per_bunch = getattr(share_article, f"kg_per_bunch_{size}", None)
             if kg_per_bunch and kg_per_bunch > 0:
                 return amount * Decimal(str(kg_per_bunch))
 
         # PCS -> BUNCH
-        if from_unit == "PCS" and to_unit == "BUNCH":
+        if from_unit == UnitOptions.PCS and to_unit == UnitOptions.BUNCH:
             pieces_per_bunch = getattr(share_article, f"pieces_per_bunch_{size}", None)
             if pieces_per_bunch and pieces_per_bunch > 0:
                 return amount / Decimal(str(pieces_per_bunch))
 
         # BUNCH -> PCS
-        if from_unit == "BUNCH" and to_unit == "PCS":
+        if from_unit == UnitOptions.BUNCH and to_unit == UnitOptions.PCS:
             pieces_per_bunch = getattr(share_article, f"pieces_per_bunch_{size}", None)
             if pieces_per_bunch and pieces_per_bunch > 0:
                 return amount * Decimal(str(pieces_per_bunch))
 
         # Indirect conversions (e.g., PCS -> KG -> BUNCH)
-        if from_unit not in ["KG"] and to_unit not in ["KG"]:
+        if from_unit not in [UnitOptions.KG] and to_unit not in [UnitOptions.KG]:
             # Try converting through KG as intermediate
             amount_in_kg = OfferService._convert_amount(
-                amount, from_unit, "KG", size, share_article
+                amount, from_unit, UnitOptions.KG, size, share_article
             )
             if amount_in_kg:
                 return OfferService._convert_amount(
-                    amount_in_kg, "KG", to_unit, size, share_article
+                    amount_in_kg, UnitOptions.KG, to_unit, size, share_article
                 )
 
         return None

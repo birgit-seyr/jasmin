@@ -1,7 +1,7 @@
 import { CheckOutlined } from "@ant-design/icons";
 import { Button } from "antd";
 import { useTranslation } from "react-i18next";
-import { useSizeOptions } from "@hooks/index";
+import { useVegetableSizeOptions } from "@hooks/index";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import {
   MobileCard,
@@ -69,10 +69,10 @@ export function HarvestingMobileCard({
   isPast,
 }: HarvestingMobileCardProps) {
   const { t } = useTranslation();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
 
   const articleName = (record.share_article_name as string) || "";
-  const sizeLabel = getSizeLabelOrEmpty(record.size as string, getSizeLabel);
+  const sizeLabel = getSizeLabelOrEmpty(record.size as string, getVegetableSizeLabel);
   const perPuText = (record.computed_amount_per_pu_text as string) || "";
   const noteText = (record.computed_note_line as string) || "";
   const plotName = (record.forecast_plot_name as string) || "";
@@ -163,7 +163,9 @@ export function HarvestingMobileCard({
               style={{
                 width: 48,
                 height: 48,
-                backgroundColor: isConfirmed ? "#e8f5e9" : "#fce4ec",
+                backgroundColor: isConfirmed
+                  ? "var(--color-success-bg)"
+                  : "#fce4ec",
                 borderColor: isConfirmed ? "#81c784" : "#ef9a9a",
                 color: isConfirmed ? "var(--color-share-content)" : "#c62828",
                 fontSize: 20,

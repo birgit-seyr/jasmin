@@ -10,7 +10,6 @@ import {
 import { AutoSaveIndicator } from "@shared/ui";
 import { useAutoSave, useTenant } from "@hooks/index";
 import { notify } from "@shared/utils";
-import axiosInstance from "@shared/services/api";
 import {
   SettingsCategory,
   SettingsRenderer,
@@ -270,53 +269,18 @@ export default function ConfigurationApp() {
       const { tenantFields: mappedTenantFields, settingsOverlay } =
         splitSettingsForSave(currentSettings);
 
-      const hasFileUpload =
-        currentTenantData.logo instanceof File ||
-        currentTenantData.favicon instanceof File;
+      // logo / favicon are FileFields — they never ride on this JSON PATCH (a
+      // stored URL string must not be re-sent to the ImageField). A picture
+      // upload from here goes through the shared multipart ``usePictureUpload``
+      // hook, the same escape hatch ConfigurationGeneral uses.
+      const dataToSend = { ...currentTenantData };
+      delete dataToSend.logo;
+      delete dataToSend.favicon;
 
-      if (hasFileUpload) {
-        const formData = new FormData();
-
-        const combined = { ...currentTenantData, ...mappedTenantFields };
-        Object.keys(combined).forEach((key) => {
-          const value = combined[key];
-
-          if (key === "logo" || key === "favicon") {
-            if (value instanceof File) {
-              formData.append(key, value);
-            }
-          } else if (value !== null && value !== undefined) {
-            if (typeof value === "object") {
-              formData.append(key, JSON.stringify(value));
-            } else {
-              formData.append(key, String(value));
-            }
-          }
-        });
-
-        await axiosInstance.patch(
-          `/api/tenants/tenants/${tenantId}/`,
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          },
-        );
-      } else {
-        const dataToSend = { ...currentTenantData };
-        if (!(dataToSend.logo instanceof File)) {
-          delete dataToSend.logo;
-        }
-        if (!(dataToSend.favicon instanceof File)) {
-          delete dataToSend.favicon;
-        }
-
-        await tenantsTenantsPartialUpdate(tenantId, {
-          ...dataToSend,
-          ...mappedTenantFields,
-        } as unknown as Tenant);
-      }
+      await tenantsTenantsPartialUpdate(tenantId, {
+        ...dataToSend,
+        ...mappedTenantFields,
+      } as unknown as Tenant);
 
       // ``TenantSettings`` overlay (versioned, not on the Tenant row) needs
       // its own endpoint. Skip the call when nothing in the overlay changed.

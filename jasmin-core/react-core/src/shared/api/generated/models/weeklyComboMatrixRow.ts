@@ -11,8 +11,8 @@
 delivery station. Besides the stable fields below it carries dynamic count
 keys matching the ``columns`` — ``combo_<key>`` for subscription box
 combinations, ``variation_<id>`` for the flat per-variation (import) columns;
-a plain declared-field ``Serializer`` would drop them, so ``to_representation``
-re-attaches them.
+a plain declared-field ``Serializer`` would drop them, so
+``DynamicPrefixPassthroughMixin`` re-attaches them.
  */
 export interface WeeklyComboMatrixRow {
   id: string;

@@ -38,7 +38,7 @@ export interface DeliveryNoteReseller {
   /** @nullable */
   readonly order_number?: string | null;
   /**
-   * Calculate order date from year, delivery_week, and delivery_day
+   * Order date via the shared ISO-week resolver (year/week/day_number).
    * @nullable
    */
   readonly order_date?: string | null;

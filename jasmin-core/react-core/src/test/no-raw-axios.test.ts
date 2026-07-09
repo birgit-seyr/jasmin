@@ -64,8 +64,8 @@ const ALLOWED: ReadonlyArray<{ path: string; why: string }> = [
     why: "Multipart CSV upload.",
   },
   {
-    path: "src/features/commissioning/modals/ShareTypeVariationModal.tsx",
-    why: "Multipart image upload on the share-type-variation form.",
+    path: "src/shared/ui/usePictureUpload.ts",
+    why: "Shared multipart picture-upload hook (Content-Type + raw FormData body).",
   },
   {
     path: "src/features/commissioning/pdfs/forResellers/generateDeliveryNotePDF.tsx",
@@ -74,14 +74,6 @@ const ALLOWED: ReadonlyArray<{ path: string; why: string }> = [
   {
     path: "src/features/commissioning/pdfs/forResellers/generateInvoicePDF.tsx",
     why: "Multipart PDF upload after the React-PDF render.",
-  },
-  {
-    path: "src/features/configuration/pages/ConfigurationApp.tsx",
-    why: "Multipart tenant-settings PATCH (logo + bio_logo file fields).",
-  },
-  {
-    path: "src/features/configuration/pages/ConfigurationGeneral.tsx",
-    why: "Multipart tenant-settings PATCH (logo + bio_logo file fields).",
   },
   // Generic reusable components whose API target is supplied by the
   // parent. The whole point of these is that the caller passes a URL

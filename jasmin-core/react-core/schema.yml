@@ -2069,13 +2069,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BulkFinalizeShareContentRequest'
+              $ref: '#/components/schemas/BulkIdsRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/BulkFinalizeShareContentRequest'
+              $ref: '#/components/schemas/BulkIdsRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/BulkFinalizeShareContentRequest'
+              $ref: '#/components/schemas/BulkIdsRequest'
         required: true
       security:
       - tenantBoundJwtAuth: []
@@ -2336,13 +2336,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BulkFinalizeShareContentRequest'
+              $ref: '#/components/schemas/BulkIdsRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/BulkFinalizeShareContentRequest'
+              $ref: '#/components/schemas/BulkIdsRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/BulkFinalizeShareContentRequest'
+              $ref: '#/components/schemas/BulkIdsRequest'
         required: true
       security:
       - tenantBoundJwtAuth: []
@@ -5286,15 +5286,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-              - ids
-              properties:
-                ids:
-                  type: array
-                  items:
-                    type: string
-                  description: Array of composite IDs
+              $ref: '#/components/schemas/BulkIdsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BulkIdsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BulkIdsRequest'
+        required: true
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -5368,15 +5367,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-              - ids
-              properties:
-                ids:
-                  type: array
-                  items:
-                    type: string
-                  description: Array of composite IDs
+              $ref: '#/components/schemas/BulkIdsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BulkIdsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BulkIdsRequest'
+        required: true
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -5451,15 +5449,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-              - ids
-              properties:
-                ids:
-                  type: array
-                  items:
-                    type: string
-                  description: Array of composite IDs
+              $ref: '#/components/schemas/BulkIdsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BulkIdsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BulkIdsRequest'
+        required: true
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -9736,12 +9733,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                ids:
-                  type: array
-                  items:
-                    type: string
+              $ref: '#/components/schemas/BulkIdsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BulkIdsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BulkIdsRequest'
+        required: true
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -23986,30 +23985,13 @@ paths:
     get:
       operationId: commissioning_unconfirmed_coop_shares_unconfirmed_count_retrieve
       description: |-
-        ViewSet mixin that maps DRF actions to permission classes.
+        Base for the "needs office confirmation" badge counters.
 
-        Usage:
-            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-                read_permission = IsStaff
-                write_permission = IsOffice
-
-        Read actions (`list`, `retrieve`) require `read_permission`; everything
-        else (create / update / partial_update / destroy / custom @action) requires
-        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
-        the parent (via `permission_classes`) are layered on top.
-
-        Public actions:
-            Set ``public_read_actions`` to a set of action names that should be
-            accessible to *anyone* (anonymous + authenticated, no role check).
-            Use for endpoints that serve content the public needs before login —
-            the registration wizard fetching ``ConsentDocument`` text is the
-            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-            custom ``@action`` names alike; entries here override
-            ``read_permission`` / ``write_permission`` for that action only.
-
-            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-                write_permission = IsOffice          # publishing a new version
-                public_read_actions = {"list", "retrieve", "current"}
+        Each subclass sets ``count_model`` (an ``AdminConfirmableMixin`` model) and
+        optionally narrows the base ``pending_admin_confirmation_q()`` predicate via
+        ``extra_filter`` (a ``.filter``) / ``exclude_filter`` (an ``.exclude``) — the
+        trial split and the cancelled-coop-share carve-out. Returns
+        ``{"count": <int>}``.
       tags:
       - commissioning
       security:
@@ -24031,30 +24013,13 @@ paths:
     get:
       operationId: commissioning_unconfirmed_members_unconfirmed_count_retrieve
       description: |-
-        ViewSet mixin that maps DRF actions to permission classes.
+        Base for the "needs office confirmation" badge counters.
 
-        Usage:
-            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-                read_permission = IsStaff
-                write_permission = IsOffice
-
-        Read actions (`list`, `retrieve`) require `read_permission`; everything
-        else (create / update / partial_update / destroy / custom @action) requires
-        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
-        the parent (via `permission_classes`) are layered on top.
-
-        Public actions:
-            Set ``public_read_actions`` to a set of action names that should be
-            accessible to *anyone* (anonymous + authenticated, no role check).
-            Use for endpoints that serve content the public needs before login —
-            the registration wizard fetching ``ConsentDocument`` text is the
-            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-            custom ``@action`` names alike; entries here override
-            ``read_permission`` / ``write_permission`` for that action only.
-
-            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-                write_permission = IsOffice          # publishing a new version
-                public_read_actions = {"list", "retrieve", "current"}
+        Each subclass sets ``count_model`` (an ``AdminConfirmableMixin`` model) and
+        optionally narrows the base ``pending_admin_confirmation_q()`` predicate via
+        ``extra_filter`` (a ``.filter``) / ``exclude_filter`` (an ``.exclude``) — the
+        trial split and the cancelled-coop-share carve-out. Returns
+        ``{"count": <int>}``.
       tags:
       - commissioning
       security:
@@ -24076,30 +24041,13 @@ paths:
     get:
       operationId: commissioning_unconfirmed_subscriptions_unconfirmed_count_retrieve
       description: |-
-        ViewSet mixin that maps DRF actions to permission classes.
+        Base for the "needs office confirmation" badge counters.
 
-        Usage:
-            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-                read_permission = IsStaff
-                write_permission = IsOffice
-
-        Read actions (`list`, `retrieve`) require `read_permission`; everything
-        else (create / update / partial_update / destroy / custom @action) requires
-        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
-        the parent (via `permission_classes`) are layered on top.
-
-        Public actions:
-            Set ``public_read_actions`` to a set of action names that should be
-            accessible to *anyone* (anonymous + authenticated, no role check).
-            Use for endpoints that serve content the public needs before login —
-            the registration wizard fetching ``ConsentDocument`` text is the
-            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-            custom ``@action`` names alike; entries here override
-            ``read_permission`` / ``write_permission`` for that action only.
-
-            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-                write_permission = IsOffice          # publishing a new version
-                public_read_actions = {"list", "retrieve", "current"}
+        Each subclass sets ``count_model`` (an ``AdminConfirmableMixin`` model) and
+        optionally narrows the base ``pending_admin_confirmation_q()`` predicate via
+        ``extra_filter`` (a ``.filter``) / ``exclude_filter`` (an ``.exclude``) — the
+        trial split and the cancelled-coop-share carve-out. Returns
+        ``{"count": <int>}``.
       tags:
       - commissioning
       security:
@@ -24121,30 +24069,13 @@ paths:
     get:
       operationId: commissioning_unconfirmed_trial_subscriptions_unconfirmed_count_retrieve
       description: |-
-        ViewSet mixin that maps DRF actions to permission classes.
+        Base for the "needs office confirmation" badge counters.
 
-        Usage:
-            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-                read_permission = IsStaff
-                write_permission = IsOffice
-
-        Read actions (`list`, `retrieve`) require `read_permission`; everything
-        else (create / update / partial_update / destroy / custom @action) requires
-        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
-        the parent (via `permission_classes`) are layered on top.
-
-        Public actions:
-            Set ``public_read_actions`` to a set of action names that should be
-            accessible to *anyone* (anonymous + authenticated, no role check).
-            Use for endpoints that serve content the public needs before login —
-            the registration wizard fetching ``ConsentDocument`` text is the
-            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-            custom ``@action`` names alike; entries here override
-            ``read_permission`` / ``write_permission`` for that action only.
-
-            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-                write_permission = IsOffice          # publishing a new version
-                public_read_actions = {"list", "retrieve", "current"}
+        Each subclass sets ``count_model`` (an ``AdminConfirmableMixin`` model) and
+        optionally narrows the base ``pending_admin_confirmation_q()`` predicate via
+        ``extra_filter`` (a ``.filter``) / ``exclude_filter`` (an ``.exclude``) — the
+        trial split and the cancelled-coop-share carve-out. Returns
+        ``{"count": <int>}``.
       tags:
       - commissioning
       security:
@@ -27638,18 +27569,6 @@ components:
       - finalized_count
       - message
       - total_requested
-    BulkFinalizeShareContentRequest:
-      type: object
-      description: Request body for bulk finalize/unfinalize share content by composite
-        IDs.
-      properties:
-        ids:
-          type: array
-          items:
-            type: string
-          description: 'List of composite IDs (format: year_week_shareArticleId_unit_size)'
-      required:
-      - ids
     BulkFinalizeShareContentResponse:
       type: object
       properties:
@@ -27681,7 +27600,8 @@ components:
       - total_requested
     BulkIdsRequest:
       type: object
-      description: Request with only a list of IDs.
+      description: 'Request body carrying only a non-empty list of IDs: ``{"ids":
+        [...]}``.'
       properties:
         ids:
           type: array
@@ -27692,7 +27612,7 @@ components:
       - ids
     BulkIdsWithDateRequest:
       type: object
-      description: Request with IDs and an optional date.
+      description: '``BulkIdsRequestSerializer`` plus an optional ``date``.'
       properties:
         ids:
           type: array
@@ -29852,7 +29772,7 @@ components:
           type: string
           format: date
           nullable: true
-          description: Calculate order date from year, delivery_week, and delivery_day
+          description: Order date via the shared ISO-week resolver (year/week/day_number).
           readOnly: true
         order_prefix:
           type: string
@@ -29969,7 +29889,7 @@ components:
         unit:
           $ref: '#/components/schemas/UnitEnum'
         size:
-          $ref: '#/components/schemas/SizeVegetableEnum'
+          $ref: '#/components/schemas/VegetableSizeEnum'
         price_per_unit:
           type: string
           format: decimal
@@ -31037,7 +30957,7 @@ components:
           $ref: '#/components/schemas/UnitEnum'
         size:
           allOf:
-          - $ref: '#/components/schemas/SizeVegetableEnum'
+          - $ref: '#/components/schemas/VegetableSizeEnum'
           default: M
         note:
           type: string
@@ -31218,7 +31138,7 @@ components:
           $ref: '#/components/schemas/UnitEnum'
         size:
           allOf:
-          - $ref: '#/components/schemas/SizeVegetableEnum'
+          - $ref: '#/components/schemas/VegetableSizeEnum'
           default: M
         note:
           type: string
@@ -31873,7 +31793,7 @@ components:
         unit:
           $ref: '#/components/schemas/UnitEnum'
         size:
-          $ref: '#/components/schemas/SizeVegetableEnum'
+          $ref: '#/components/schemas/VegetableSizeEnum'
         price_per_unit:
           type: string
           format: decimal
@@ -33238,7 +33158,7 @@ components:
           $ref: '#/components/schemas/UnitEnum'
         size:
           allOf:
-          - $ref: '#/components/schemas/SizeVegetableEnum'
+          - $ref: '#/components/schemas/VegetableSizeEnum'
           default: M
         amount_per_pu:
           type: string
@@ -33482,7 +33402,7 @@ components:
         unit:
           $ref: '#/components/schemas/UnitEnum'
         size:
-          $ref: '#/components/schemas/SizeVegetableEnum'
+          $ref: '#/components/schemas/VegetableSizeEnum'
         price_per_unit:
           type: string
           format: decimal
@@ -34661,7 +34581,7 @@ components:
           $ref: '#/components/schemas/UnitEnum'
         size:
           allOf:
-          - $ref: '#/components/schemas/SizeVegetableEnum'
+          - $ref: '#/components/schemas/VegetableSizeEnum'
           default: M
         note:
           type: string
@@ -36843,7 +36763,7 @@ components:
           $ref: '#/components/schemas/UnitEnum'
         size:
           allOf:
-          - $ref: '#/components/schemas/SizeVegetableEnum'
+          - $ref: '#/components/schemas/VegetableSizeEnum'
           default: M
         amount:
           type: string
@@ -36865,7 +36785,7 @@ components:
           - $ref: '#/components/schemas/UnitEnum'
           nullable: true
         backup_size:
-          $ref: '#/components/schemas/SizeVegetableEnum'
+          $ref: '#/components/schemas/VegetableSizeEnum'
         backup_amount:
           type: string
           format: decimal
@@ -36961,7 +36881,7 @@ components:
         unit:
           $ref: '#/components/schemas/UnitEnum'
         size:
-          $ref: '#/components/schemas/SizeVegetableEnum'
+          $ref: '#/components/schemas/VegetableSizeEnum'
       required:
       - share_article
       - unit
@@ -37144,10 +37064,12 @@ components:
           type: string
           nullable: true
           description: |-
-            Calculate delivery date from year, week, and day number.
+            ISO-8601 (``YYYY-MM-DD``) delivery date via the shared resolver.
 
-            Returns ISO-8601 date string (``YYYY-MM-DD``) or None if the
-            underlying year/week/day_number tuple is incomplete or invalid.
+            Uses ``share_delivery_date`` — which honours the Share's
+            ``changed_day_number`` override before falling back to the delivery
+            day's ``day_number`` — so the overview matches every other delivery-
+            date surface. ``None`` for a malformed year/week/day tuple.
           readOnly: true
         joker_taken:
           type: boolean
@@ -37440,7 +37362,7 @@ components:
         variation_type:
           $ref: '#/components/schemas/VariationTypeEnum'
         size:
-          $ref: '#/components/schemas/SizeEnum'
+          $ref: '#/components/schemas/ShareTypeVariationSizeEnum'
         picture:
           type: string
           format: uri
@@ -37569,6 +37491,28 @@ components:
       - share_type_id
       - share_type_name
       - size
+    ShareTypeVariationSizeEnum:
+      enum:
+      - XS
+      - S
+      - M
+      - L
+      - XL
+      - XXL
+      - HALF
+      - FULL
+      - ONE_SIZE
+      type: string
+      description: |-
+        * `XS` - Xs
+        * `S` - S
+        * `M` - M
+        * `L` - L
+        * `XL` - Xl
+        * `XXL` - Xxl
+        * `HALF` - Half
+        * `FULL` - Full
+        * `ONE_SIZE` - Onesize
     ShareTypeVariationTotalRow:
       type: object
       description: |-
@@ -37701,38 +37645,6 @@ components:
       required:
       - day_number
       - valid_from
-    SizeEnum:
-      enum:
-      - XS
-      - S
-      - M
-      - L
-      - XL
-      - XXL
-      - HALF
-      - FULL
-      - ONE_SIZE
-      type: string
-      description: |-
-        * `XS` - Xs
-        * `S` - S
-        * `M` - M
-        * `L` - L
-        * `XL` - Xl
-        * `XXL` - Xxl
-        * `HALF` - Half
-        * `FULL` - Full
-        * `ONE_SIZE` - Onesize
-    SizeVegetableEnum:
-      enum:
-      - S
-      - M
-      - L
-      type: string
-      description: |-
-        * `S` - S
-        * `M` - M
-        * `L` - L
     StationMemberMatrix:
       type: object
       description: |-
@@ -37774,7 +37686,7 @@ components:
         keys read by iteration on the frontend (not declared here): per-variation
         ``variation_<share_type_variation_id>`` counts AND per-box-combination
         ``combo_<key>`` counts. A plain declared-field ``Serializer`` would DROP
-        these undeclared keys, so ``to_representation`` re-attaches them.
+        these undeclared keys, so ``DynamicPrefixPassthroughMixin`` re-attaches them.
       properties:
         delivery_station_day_id:
           type: string
@@ -39368,7 +39280,7 @@ components:
         unit:
           $ref: '#/components/schemas/UnitEnum'
         size:
-          $ref: '#/components/schemas/SizeVegetableEnum'
+          $ref: '#/components/schemas/VegetableSizeEnum'
         note:
           type: string
           nullable: true
@@ -39426,7 +39338,7 @@ components:
         unit:
           $ref: '#/components/schemas/UnitEnum'
         size:
-          $ref: '#/components/schemas/SizeVegetableEnum'
+          $ref: '#/components/schemas/VegetableSizeEnum'
         note:
           type: string
           nullable: true
@@ -39487,7 +39399,7 @@ components:
         unit:
           $ref: '#/components/schemas/UnitEnum'
         size:
-          $ref: '#/components/schemas/SizeVegetableEnum'
+          $ref: '#/components/schemas/VegetableSizeEnum'
         note:
           type: string
           nullable: true
@@ -39553,7 +39465,7 @@ components:
         unit:
           $ref: '#/components/schemas/UnitEnum'
         size:
-          $ref: '#/components/schemas/SizeVegetableEnum'
+          $ref: '#/components/schemas/VegetableSizeEnum'
         note:
           type: string
           nullable: true
@@ -39791,6 +39703,16 @@ components:
       description: |-
         * `physical` - Physical Share Type Variation - Needs Content Planning
         * `virtual` - Virtual Share Type Variation - Combination of Others
+    VegetableSizeEnum:
+      enum:
+      - S
+      - M
+      - L
+      type: string
+      description: |-
+        * `S` - S
+        * `M` - M
+        * `L` - L
     VirtualVariationComponentItem:
       type: object
       properties:
@@ -40058,7 +39980,7 @@ components:
           $ref: '#/components/schemas/UnitEnum'
         size:
           allOf:
-          - $ref: '#/components/schemas/SizeVegetableEnum'
+          - $ref: '#/components/schemas/VegetableSizeEnum'
           default: M
         note:
           type: string
@@ -40104,8 +40026,8 @@ components:
         delivery station. Besides the stable fields below it carries dynamic count
         keys matching the ``columns`` — ``combo_<key>`` for subscription box
         combinations, ``variation_<id>`` for the flat per-variation (import) columns;
-        a plain declared-field ``Serializer`` would drop them, so ``to_representation``
-        re-attaches them.
+        a plain declared-field ``Serializer`` would drop them, so
+        ``DynamicPrefixPassthroughMixin`` re-attaches them.
       properties:
         id:
           type: string

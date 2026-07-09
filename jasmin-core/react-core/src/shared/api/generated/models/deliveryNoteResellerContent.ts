@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { UnitEnum } from './unitEnum';
-import type { SizeVegetableEnum } from './sizeVegetableEnum';
+import type { VegetableSizeEnum } from './vegetableSizeEnum';
 
 /**
  * Adds ``share_article_name`` + ``organic_status`` to a line-item content
@@ -56,7 +56,7 @@ export interface DeliveryNoteResellerContent {
    */
   description?: string | null;
   unit: UnitEnum;
-  size?: SizeVegetableEnum;
+  size?: VegetableSizeEnum;
   /**
    * @nullable
    * @pattern ^-?\d{0,3}(?:\.\d{0,2})?$

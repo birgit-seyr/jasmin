@@ -1,5 +1,4 @@
 import { useQueryClient } from "@tanstack/react-query";
-import type { FormInstance } from "antd";
 import { Button, Modal } from "antd";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,8 +21,10 @@ import {
   itemLineNetto,
   type LineNettoInput,
 } from "@shared/utils/lineNetto";
-import { useCurrency, useDateFormat, useDefaultTaxRates, useNumberFormat, useTenant, useTimeFormat, useUnitOptions } from '@hooks/index';
-import { useAmountUnitSizeColumns, useCratesColumns, useShareArticleColumn } from '@features/commissioning/hooks';
+import { formatAmountForUnit } from "@shared/utils";
+import { makeContentCustomEdit, makeFkCustomSave } from "./contentTableHelpers";
+import { useCurrency, useDateFormat, useDefaultTaxRates, useNumberFormat, useTimeFormat, useUnitOptions } from '@hooks/index';
+import { useAmountUnitSizeColumns, useCratesColumns, useOfferTiers, useShareArticleColumn } from '@features/commissioning/hooks';
 import { FinalizedNotice } from '@features/commissioning/components';
 // InvoicePDFGenerator statically imports @react-pdf/renderer (it
 // renders ``<PDFViewer>`` for inline preview). Lazy-loading it here
@@ -68,7 +69,6 @@ export default function InvoiceModal({
   const { t } = useTranslation();
   const { isOffice } = useRoles();
   const queryClient = useQueryClient();
-  const { getSetting } = useTenant();
   const { formatDateTime } = useTimeFormat();
   const { formatDate } = useDateFormat();
   const { articles: defaultTaxRateArticles } = useDefaultTaxRates();
@@ -138,12 +138,7 @@ export default function InvoiceModal({
   // Tier thresholds for live price-per-unit on amount entry. Single-tier
   // mode (``[1]``) when the tenant hasn't configured tiers — only
   // ``price_1`` is ever picked, no quantity-based escalation.
-  const finalTiers = useMemo<number[]>(() => {
-    const fromSetting = getSetting("used_tiers_for_offers") as
-      | number[]
-      | undefined;
-    return fromSetting && fromSetting.length > 0 ? fromSetting : [1];
-  }, [getSetting]);
+  const finalTiers = useOfferTiers();
   // Invoices include both regular and extra share articles.
   const { shareArticleColumn, handleUnitChange, handleAmountChange } =
     useShareArticleColumn({
@@ -167,10 +162,7 @@ export default function InvoiceModal({
         render: (value: unknown, record: InvoiceContentRecord) => {
           const numValue = Number(value);
           if (isNaN(numValue) || numValue === 0) return "";
-          if (!record.unit) return format(numValue, 2);
-          return record.unit === "KG"
-            ? format(numValue, 2)
-            : format(numValue, 1);
+          return formatAmountForUnit(numValue, record.unit, format);
         },
       },
     },
@@ -273,39 +265,18 @@ export default function InvoiceModal({
     [t, formatCurrency, format],
   );
 
-  const customSave = useCallback(
-    (transformedData: Record<string, unknown>) => {
-      return {
-        ...transformedData,
-        invoice: invoiceId,
-      };
-    },
+  const customSave = useMemo(
+    () => makeFkCustomSave("invoice", invoiceId),
     [invoiceId],
   );
 
-  const customSaveCrates = useCallback(
-    (transformedData: Record<string, unknown>) => {
-      return {
-        ...transformedData,
-        invoice_id: invoiceData?.id,
-      };
-    },
-    [invoiceData],
+  const customSaveCrates = useMemo(
+    () => makeFkCustomSave("invoice_id", invoiceData?.id),
+    [invoiceData?.id],
   );
 
-  const customEdit = useCallback(
-    (record: TableRecord, form: FormInstance) => {
-      if (record.key === -1) {
-        const defaultValues = {
-          size: "M",
-          unit: "KG",
-          tax_rate: defaultTaxRateArticles,
-        };
-        form.setFieldsValue(defaultValues);
-        return { ...record, ...defaultValues } as TableRecord;
-      }
-      return record;
-    },
+  const customEdit = useMemo(
+    () => makeContentCustomEdit(defaultTaxRateArticles),
     [defaultTaxRateArticles],
   );
 

@@ -18,16 +18,16 @@ const { useEnumOptions, getLabelPure } = createEnumOptionsHook(
   (value, t) => t(labels[value]),
 );
 
-export const useSizeOptions = () => {
+export const useVegetableSizeOptions = () => {
   const { options, getLabel } = useEnumOptions();
   return {
     VEGETABLE_SIZE_OPTIONS,
-    sizeOptions: options,
-    getSizeLabel: getLabel,
+    vegetableSizeOptions: options,
+    getVegetableSizeLabel: getLabel,
   };
 };
 
 /** Pure function version – no hooks, safe for pdf() rendering */
-export const getSizeLabelPure = (value: string, t: TFunction): string =>
+export const getVegetableSizeLabelPure = (value: string, t: TFunction): string =>
   getLabelPure(value, t);
 

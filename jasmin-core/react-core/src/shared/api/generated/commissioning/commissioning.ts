@@ -35,7 +35,6 @@ import type {
   BulkDocumentWithDateRequest,
   BulkFinalizeRequest,
   BulkFinalizeResponse,
-  BulkFinalizeShareContentRequest,
   BulkFinalizeShareContentResponse,
   BulkIdsRequest,
   BulkIdsWithDateRequest,
@@ -65,13 +64,10 @@ import type {
   CommissioningCratesListParams,
   CommissioningCurrentStockBulkFinalizeCreate200,
   CommissioningCurrentStockBulkFinalizeCreate207,
-  CommissioningCurrentStockBulkFinalizeCreateBody,
   CommissioningCurrentStockBulkSetAsExpectedCreate200,
   CommissioningCurrentStockBulkSetAsExpectedCreate207,
-  CommissioningCurrentStockBulkSetAsExpectedCreateBody,
   CommissioningCurrentStockBulkSetToZeroCreate200,
   CommissioningCurrentStockBulkSetToZeroCreate207,
-  CommissioningCurrentStockBulkSetToZeroCreateBody,
   CommissioningCurrentStockComparisonListParams,
   CommissioningCurrentStockComparisonPartialUpdateBody,
   CommissioningDataImportCreateBody,
@@ -93,7 +89,6 @@ import type {
   CommissioningDocumentationSummaryUpdateAdditionalTheoreticalAmountUpdateBody,
   CommissioningExternalCodeMappingsListParams,
   CommissioningExternalShareDemandListParams,
-  CommissioningForecastBulkCopyToNextWeekCreateBody,
   CommissioningForecastListParams,
   CommissioningGranularityRetrieveParams,
   CommissioningHarvestExportCsvRetrieveParams,
@@ -1562,7 +1557,7 @@ export const useCommissioningBulkFinalizeDocumentsCreate = <TError = ErrorRespon
  * @summary Bulk Finalize Share Content
  */
 export const commissioningBulkFinalizeShareContentCreate = (
-    bulkFinalizeShareContentRequest: BulkFinalizeShareContentRequest,
+    bulkIdsRequest: BulkIdsRequest,
  signal?: AbortSignal
 ) => {
       
@@ -1570,7 +1565,7 @@ export const commissioningBulkFinalizeShareContentCreate = (
       return axiosService<BulkFinalizeShareContentResponse | BulkFinalizeShareContentResponse>(
       {url: `/api/commissioning/bulk_finalize_share_content/`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: bulkFinalizeShareContentRequest, signal
+      data: bulkIdsRequest, signal
     },
       );
     }
@@ -1578,8 +1573,8 @@ export const commissioningBulkFinalizeShareContentCreate = (
 
 
 export const getCommissioningBulkFinalizeShareContentCreateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningBulkFinalizeShareContentCreate>>, TError,{data: BulkFinalizeShareContentRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningBulkFinalizeShareContentCreate>>, TError,{data: BulkFinalizeShareContentRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningBulkFinalizeShareContentCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningBulkFinalizeShareContentCreate>>, TError,{data: BulkIdsRequest}, TContext> => {
 
 const mutationKey = ['commissioningBulkFinalizeShareContentCreate'];
 const {mutation: mutationOptions} = options ?
@@ -1591,7 +1586,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningBulkFinalizeShareContentCreate>>, {data: BulkFinalizeShareContentRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningBulkFinalizeShareContentCreate>>, {data: BulkIdsRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  commissioningBulkFinalizeShareContentCreate(data,)
@@ -1603,18 +1598,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningBulkFinalizeShareContentCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningBulkFinalizeShareContentCreate>>>
-    export type CommissioningBulkFinalizeShareContentCreateMutationBody = BulkFinalizeShareContentRequest
+    export type CommissioningBulkFinalizeShareContentCreateMutationBody = BulkIdsRequest
     export type CommissioningBulkFinalizeShareContentCreateMutationError = ErrorResponse
 
     /**
  * @summary Bulk Finalize Share Content
  */
 export const useCommissioningBulkFinalizeShareContentCreate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningBulkFinalizeShareContentCreate>>, TError,{data: BulkFinalizeShareContentRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningBulkFinalizeShareContentCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningBulkFinalizeShareContentCreate>>,
         TError,
-        {data: BulkFinalizeShareContentRequest},
+        {data: BulkIdsRequest},
         TContext
       > => {
 
@@ -1904,7 +1899,7 @@ export const useCommissioningBulkUnfinalizeCreate = <TError = ErrorResponse,
  * @summary Bulk Unfinalize Share Content
  */
 export const commissioningBulkUnfinalizeShareContentCreate = (
-    bulkFinalizeShareContentRequest: BulkFinalizeShareContentRequest,
+    bulkIdsRequest: BulkIdsRequest,
  signal?: AbortSignal
 ) => {
       
@@ -1912,7 +1907,7 @@ export const commissioningBulkUnfinalizeShareContentCreate = (
       return axiosService<BulkFinalizeShareContentResponse | BulkFinalizeShareContentResponse>(
       {url: `/api/commissioning/bulk_unfinalize_share_content/`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: bulkFinalizeShareContentRequest, signal
+      data: bulkIdsRequest, signal
     },
       );
     }
@@ -1920,8 +1915,8 @@ export const commissioningBulkUnfinalizeShareContentCreate = (
 
 
 export const getCommissioningBulkUnfinalizeShareContentCreateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningBulkUnfinalizeShareContentCreate>>, TError,{data: BulkFinalizeShareContentRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningBulkUnfinalizeShareContentCreate>>, TError,{data: BulkFinalizeShareContentRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningBulkUnfinalizeShareContentCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningBulkUnfinalizeShareContentCreate>>, TError,{data: BulkIdsRequest}, TContext> => {
 
 const mutationKey = ['commissioningBulkUnfinalizeShareContentCreate'];
 const {mutation: mutationOptions} = options ?
@@ -1933,7 +1928,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningBulkUnfinalizeShareContentCreate>>, {data: BulkFinalizeShareContentRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningBulkUnfinalizeShareContentCreate>>, {data: BulkIdsRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  commissioningBulkUnfinalizeShareContentCreate(data,)
@@ -1945,18 +1940,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningBulkUnfinalizeShareContentCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningBulkUnfinalizeShareContentCreate>>>
-    export type CommissioningBulkUnfinalizeShareContentCreateMutationBody = BulkFinalizeShareContentRequest
+    export type CommissioningBulkUnfinalizeShareContentCreateMutationBody = BulkIdsRequest
     export type CommissioningBulkUnfinalizeShareContentCreateMutationError = ErrorResponse
 
     /**
  * @summary Bulk Unfinalize Share Content
  */
 export const useCommissioningBulkUnfinalizeShareContentCreate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningBulkUnfinalizeShareContentCreate>>, TError,{data: BulkFinalizeShareContentRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningBulkUnfinalizeShareContentCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningBulkUnfinalizeShareContentCreate>>,
         TError,
-        {data: BulkFinalizeShareContentRequest},
+        {data: BulkIdsRequest},
         TContext
       > => {
 
@@ -5997,7 +5992,7 @@ export const useCommissioningCreateOffersCreate = <TError = ErrorResponse,
  * @summary Bulk finalize inventory entries
  */
 export const commissioningCurrentStockBulkFinalizeCreate = (
-    commissioningCurrentStockBulkFinalizeCreateBody: CommissioningCurrentStockBulkFinalizeCreateBody,
+    bulkIdsRequest: BulkIdsRequest,
  signal?: AbortSignal
 ) => {
       
@@ -6005,7 +6000,7 @@ export const commissioningCurrentStockBulkFinalizeCreate = (
       return axiosService<CommissioningCurrentStockBulkFinalizeCreate200 | CommissioningCurrentStockBulkFinalizeCreate207>(
       {url: `/api/commissioning/current_stock_bulk_finalize/`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: commissioningCurrentStockBulkFinalizeCreateBody, signal
+      data: bulkIdsRequest, signal
     },
       );
     }
@@ -6013,8 +6008,8 @@ export const commissioningCurrentStockBulkFinalizeCreate = (
 
 
 export const getCommissioningCurrentStockBulkFinalizeCreateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkFinalizeCreate>>, TError,{data: CommissioningCurrentStockBulkFinalizeCreateBody}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkFinalizeCreate>>, TError,{data: CommissioningCurrentStockBulkFinalizeCreateBody}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkFinalizeCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkFinalizeCreate>>, TError,{data: BulkIdsRequest}, TContext> => {
 
 const mutationKey = ['commissioningCurrentStockBulkFinalizeCreate'];
 const {mutation: mutationOptions} = options ?
@@ -6026,7 +6021,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCurrentStockBulkFinalizeCreate>>, {data: CommissioningCurrentStockBulkFinalizeCreateBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCurrentStockBulkFinalizeCreate>>, {data: BulkIdsRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  commissioningCurrentStockBulkFinalizeCreate(data,)
@@ -6038,18 +6033,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningCurrentStockBulkFinalizeCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningCurrentStockBulkFinalizeCreate>>>
-    export type CommissioningCurrentStockBulkFinalizeCreateMutationBody = CommissioningCurrentStockBulkFinalizeCreateBody
+    export type CommissioningCurrentStockBulkFinalizeCreateMutationBody = BulkIdsRequest
     export type CommissioningCurrentStockBulkFinalizeCreateMutationError = ErrorResponse
 
     /**
  * @summary Bulk finalize inventory entries
  */
 export const useCommissioningCurrentStockBulkFinalizeCreate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkFinalizeCreate>>, TError,{data: CommissioningCurrentStockBulkFinalizeCreateBody}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkFinalizeCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningCurrentStockBulkFinalizeCreate>>,
         TError,
-        {data: CommissioningCurrentStockBulkFinalizeCreateBody},
+        {data: BulkIdsRequest},
         TContext
       > => {
 
@@ -6065,7 +6060,7 @@ export const useCommissioningCurrentStockBulkFinalizeCreate = <TError = ErrorRes
  * @summary Bulk set inventory to expected values
  */
 export const commissioningCurrentStockBulkSetAsExpectedCreate = (
-    commissioningCurrentStockBulkSetAsExpectedCreateBody: CommissioningCurrentStockBulkSetAsExpectedCreateBody,
+    bulkIdsRequest: BulkIdsRequest,
  signal?: AbortSignal
 ) => {
       
@@ -6073,7 +6068,7 @@ export const commissioningCurrentStockBulkSetAsExpectedCreate = (
       return axiosService<CommissioningCurrentStockBulkSetAsExpectedCreate200 | CommissioningCurrentStockBulkSetAsExpectedCreate207>(
       {url: `/api/commissioning/current_stock_bulk_set_as_expected/`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: commissioningCurrentStockBulkSetAsExpectedCreateBody, signal
+      data: bulkIdsRequest, signal
     },
       );
     }
@@ -6081,8 +6076,8 @@ export const commissioningCurrentStockBulkSetAsExpectedCreate = (
 
 
 export const getCommissioningCurrentStockBulkSetAsExpectedCreateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetAsExpectedCreate>>, TError,{data: CommissioningCurrentStockBulkSetAsExpectedCreateBody}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetAsExpectedCreate>>, TError,{data: CommissioningCurrentStockBulkSetAsExpectedCreateBody}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetAsExpectedCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetAsExpectedCreate>>, TError,{data: BulkIdsRequest}, TContext> => {
 
 const mutationKey = ['commissioningCurrentStockBulkSetAsExpectedCreate'];
 const {mutation: mutationOptions} = options ?
@@ -6094,7 +6089,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetAsExpectedCreate>>, {data: CommissioningCurrentStockBulkSetAsExpectedCreateBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetAsExpectedCreate>>, {data: BulkIdsRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  commissioningCurrentStockBulkSetAsExpectedCreate(data,)
@@ -6106,18 +6101,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningCurrentStockBulkSetAsExpectedCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetAsExpectedCreate>>>
-    export type CommissioningCurrentStockBulkSetAsExpectedCreateMutationBody = CommissioningCurrentStockBulkSetAsExpectedCreateBody
+    export type CommissioningCurrentStockBulkSetAsExpectedCreateMutationBody = BulkIdsRequest
     export type CommissioningCurrentStockBulkSetAsExpectedCreateMutationError = ErrorResponse
 
     /**
  * @summary Bulk set inventory to expected values
  */
 export const useCommissioningCurrentStockBulkSetAsExpectedCreate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetAsExpectedCreate>>, TError,{data: CommissioningCurrentStockBulkSetAsExpectedCreateBody}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetAsExpectedCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningCurrentStockBulkSetAsExpectedCreate>>,
         TError,
-        {data: CommissioningCurrentStockBulkSetAsExpectedCreateBody},
+        {data: BulkIdsRequest},
         TContext
       > => {
 
@@ -6134,7 +6129,7 @@ export const useCommissioningCurrentStockBulkSetAsExpectedCreate = <TError = Err
  * @summary Bulk set inventory to zero
  */
 export const commissioningCurrentStockBulkSetToZeroCreate = (
-    commissioningCurrentStockBulkSetToZeroCreateBody: CommissioningCurrentStockBulkSetToZeroCreateBody,
+    bulkIdsRequest: BulkIdsRequest,
  signal?: AbortSignal
 ) => {
       
@@ -6142,7 +6137,7 @@ export const commissioningCurrentStockBulkSetToZeroCreate = (
       return axiosService<CommissioningCurrentStockBulkSetToZeroCreate200 | CommissioningCurrentStockBulkSetToZeroCreate207>(
       {url: `/api/commissioning/current_stock_bulk_set_to_zero/`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: commissioningCurrentStockBulkSetToZeroCreateBody, signal
+      data: bulkIdsRequest, signal
     },
       );
     }
@@ -6150,8 +6145,8 @@ export const commissioningCurrentStockBulkSetToZeroCreate = (
 
 
 export const getCommissioningCurrentStockBulkSetToZeroCreateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetToZeroCreate>>, TError,{data: CommissioningCurrentStockBulkSetToZeroCreateBody}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetToZeroCreate>>, TError,{data: CommissioningCurrentStockBulkSetToZeroCreateBody}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetToZeroCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetToZeroCreate>>, TError,{data: BulkIdsRequest}, TContext> => {
 
 const mutationKey = ['commissioningCurrentStockBulkSetToZeroCreate'];
 const {mutation: mutationOptions} = options ?
@@ -6163,7 +6158,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetToZeroCreate>>, {data: CommissioningCurrentStockBulkSetToZeroCreateBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetToZeroCreate>>, {data: BulkIdsRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  commissioningCurrentStockBulkSetToZeroCreate(data,)
@@ -6175,18 +6170,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningCurrentStockBulkSetToZeroCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetToZeroCreate>>>
-    export type CommissioningCurrentStockBulkSetToZeroCreateMutationBody = CommissioningCurrentStockBulkSetToZeroCreateBody
+    export type CommissioningCurrentStockBulkSetToZeroCreateMutationBody = BulkIdsRequest
     export type CommissioningCurrentStockBulkSetToZeroCreateMutationError = ErrorResponse
 
     /**
  * @summary Bulk set inventory to zero
  */
 export const useCommissioningCurrentStockBulkSetToZeroCreate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetToZeroCreate>>, TError,{data: CommissioningCurrentStockBulkSetToZeroCreateBody}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCurrentStockBulkSetToZeroCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningCurrentStockBulkSetToZeroCreate>>,
         TError,
-        {data: CommissioningCurrentStockBulkSetToZeroCreateBody},
+        {data: BulkIdsRequest},
         TContext
       > => {
 
@@ -11983,7 +11978,7 @@ const {mutation: mutationOptions} = options ?
  * Copy selected forecasts to the next delivery week.
  */
 export const commissioningForecastBulkCopyToNextWeekCreate = (
-    commissioningForecastBulkCopyToNextWeekCreateBody: CommissioningForecastBulkCopyToNextWeekCreateBody,
+    bulkIdsRequest: BulkIdsRequest,
  signal?: AbortSignal
 ) => {
       
@@ -11991,7 +11986,7 @@ export const commissioningForecastBulkCopyToNextWeekCreate = (
       return axiosService<ForecastBulkCopyResponse>(
       {url: `/api/commissioning/forecast/bulk_copy_to_next_week/`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: commissioningForecastBulkCopyToNextWeekCreateBody, signal
+      data: bulkIdsRequest, signal
     },
       );
     }
@@ -11999,8 +11994,8 @@ export const commissioningForecastBulkCopyToNextWeekCreate = (
 
 
 export const getCommissioningForecastBulkCopyToNextWeekCreateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningForecastBulkCopyToNextWeekCreate>>, TError,{data: CommissioningForecastBulkCopyToNextWeekCreateBody}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningForecastBulkCopyToNextWeekCreate>>, TError,{data: CommissioningForecastBulkCopyToNextWeekCreateBody}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningForecastBulkCopyToNextWeekCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningForecastBulkCopyToNextWeekCreate>>, TError,{data: BulkIdsRequest}, TContext> => {
 
 const mutationKey = ['commissioningForecastBulkCopyToNextWeekCreate'];
 const {mutation: mutationOptions} = options ?
@@ -12012,7 +12007,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningForecastBulkCopyToNextWeekCreate>>, {data: CommissioningForecastBulkCopyToNextWeekCreateBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningForecastBulkCopyToNextWeekCreate>>, {data: BulkIdsRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  commissioningForecastBulkCopyToNextWeekCreate(data,)
@@ -12024,15 +12019,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningForecastBulkCopyToNextWeekCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningForecastBulkCopyToNextWeekCreate>>>
-    export type CommissioningForecastBulkCopyToNextWeekCreateMutationBody = CommissioningForecastBulkCopyToNextWeekCreateBody
+    export type CommissioningForecastBulkCopyToNextWeekCreateMutationBody = BulkIdsRequest
     export type CommissioningForecastBulkCopyToNextWeekCreateMutationError = ErrorResponse
 
     export const useCommissioningForecastBulkCopyToNextWeekCreate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningForecastBulkCopyToNextWeekCreate>>, TError,{data: CommissioningForecastBulkCopyToNextWeekCreateBody}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningForecastBulkCopyToNextWeekCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningForecastBulkCopyToNextWeekCreate>>,
         TError,
-        {data: CommissioningForecastBulkCopyToNextWeekCreateBody},
+        {data: BulkIdsRequest},
         TContext
       > => {
 
@@ -31604,30 +31599,13 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * ViewSet mixin that maps DRF actions to permission classes.
+ * Base for the "needs office confirmation" badge counters.
 
-Usage:
-    class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-        read_permission = IsStaff
-        write_permission = IsOffice
-
-Read actions (`list`, `retrieve`) require `read_permission`; everything
-else (create / update / partial_update / destroy / custom @action) requires
-`write_permission`. Both default to `IsAuthenticated`. Any classes set on
-the parent (via `permission_classes`) are layered on top.
-
-Public actions:
-    Set ``public_read_actions`` to a set of action names that should be
-    accessible to *anyone* (anonymous + authenticated, no role check).
-    Use for endpoints that serve content the public needs before login —
-    the registration wizard fetching ``ConsentDocument`` text is the
-    canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-    custom ``@action`` names alike; entries here override
-    ``read_permission`` / ``write_permission`` for that action only.
-
-    class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-        write_permission = IsOffice          # publishing a new version
-        public_read_actions = {"list", "retrieve", "current"}
+Each subclass sets ``count_model`` (an ``AdminConfirmableMixin`` model) and
+optionally narrows the base ``pending_admin_confirmation_q()`` predicate via
+``extra_filter`` (a ``.filter``) / ``exclude_filter`` (an ``.exclude``) — the
+trial split and the cancelled-coop-share carve-out. Returns
+``{"count": <int>}``.
  */
 export const commissioningUnconfirmedCoopSharesUnconfirmedCountRetrieve = (
     
@@ -31716,30 +31694,13 @@ export function useCommissioningUnconfirmedCoopSharesUnconfirmedCountRetrieve<TD
 
 
 /**
- * ViewSet mixin that maps DRF actions to permission classes.
+ * Base for the "needs office confirmation" badge counters.
 
-Usage:
-    class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-        read_permission = IsStaff
-        write_permission = IsOffice
-
-Read actions (`list`, `retrieve`) require `read_permission`; everything
-else (create / update / partial_update / destroy / custom @action) requires
-`write_permission`. Both default to `IsAuthenticated`. Any classes set on
-the parent (via `permission_classes`) are layered on top.
-
-Public actions:
-    Set ``public_read_actions`` to a set of action names that should be
-    accessible to *anyone* (anonymous + authenticated, no role check).
-    Use for endpoints that serve content the public needs before login —
-    the registration wizard fetching ``ConsentDocument`` text is the
-    canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-    custom ``@action`` names alike; entries here override
-    ``read_permission`` / ``write_permission`` for that action only.
-
-    class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-        write_permission = IsOffice          # publishing a new version
-        public_read_actions = {"list", "retrieve", "current"}
+Each subclass sets ``count_model`` (an ``AdminConfirmableMixin`` model) and
+optionally narrows the base ``pending_admin_confirmation_q()`` predicate via
+``extra_filter`` (a ``.filter``) / ``exclude_filter`` (an ``.exclude``) — the
+trial split and the cancelled-coop-share carve-out. Returns
+``{"count": <int>}``.
  */
 export const commissioningUnconfirmedMembersUnconfirmedCountRetrieve = (
     
@@ -31828,30 +31789,13 @@ export function useCommissioningUnconfirmedMembersUnconfirmedCountRetrieve<TData
 
 
 /**
- * ViewSet mixin that maps DRF actions to permission classes.
+ * Base for the "needs office confirmation" badge counters.
 
-Usage:
-    class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-        read_permission = IsStaff
-        write_permission = IsOffice
-
-Read actions (`list`, `retrieve`) require `read_permission`; everything
-else (create / update / partial_update / destroy / custom @action) requires
-`write_permission`. Both default to `IsAuthenticated`. Any classes set on
-the parent (via `permission_classes`) are layered on top.
-
-Public actions:
-    Set ``public_read_actions`` to a set of action names that should be
-    accessible to *anyone* (anonymous + authenticated, no role check).
-    Use for endpoints that serve content the public needs before login —
-    the registration wizard fetching ``ConsentDocument`` text is the
-    canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-    custom ``@action`` names alike; entries here override
-    ``read_permission`` / ``write_permission`` for that action only.
-
-    class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-        write_permission = IsOffice          # publishing a new version
-        public_read_actions = {"list", "retrieve", "current"}
+Each subclass sets ``count_model`` (an ``AdminConfirmableMixin`` model) and
+optionally narrows the base ``pending_admin_confirmation_q()`` predicate via
+``extra_filter`` (a ``.filter``) / ``exclude_filter`` (an ``.exclude``) — the
+trial split and the cancelled-coop-share carve-out. Returns
+``{"count": <int>}``.
  */
 export const commissioningUnconfirmedSubscriptionsUnconfirmedCountRetrieve = (
     
@@ -31940,30 +31884,13 @@ export function useCommissioningUnconfirmedSubscriptionsUnconfirmedCountRetrieve
 
 
 /**
- * ViewSet mixin that maps DRF actions to permission classes.
+ * Base for the "needs office confirmation" badge counters.
 
-Usage:
-    class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-        read_permission = IsStaff
-        write_permission = IsOffice
-
-Read actions (`list`, `retrieve`) require `read_permission`; everything
-else (create / update / partial_update / destroy / custom @action) requires
-`write_permission`. Both default to `IsAuthenticated`. Any classes set on
-the parent (via `permission_classes`) are layered on top.
-
-Public actions:
-    Set ``public_read_actions`` to a set of action names that should be
-    accessible to *anyone* (anonymous + authenticated, no role check).
-    Use for endpoints that serve content the public needs before login —
-    the registration wizard fetching ``ConsentDocument`` text is the
-    canonical case. The set may include ``"list"`` / ``"retrieve"`` and
-    custom ``@action`` names alike; entries here override
-    ``read_permission`` / ``write_permission`` for that action only.
-
-    class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
-        write_permission = IsOffice          # publishing a new version
-        public_read_actions = {"list", "retrieve", "current"}
+Each subclass sets ``count_model`` (an ``AdminConfirmableMixin`` model) and
+optionally narrows the base ``pending_admin_confirmation_q()`` predicate via
+``extra_filter`` (a ``.filter``) / ``exclude_filter`` (an ``.exclude``) — the
+trial split and the cancelled-coop-share carve-out. Returns
+``{"count": <int>}``.
  */
 export const commissioningUnconfirmedTrialSubscriptionsUnconfirmedCountRetrieve = (
     

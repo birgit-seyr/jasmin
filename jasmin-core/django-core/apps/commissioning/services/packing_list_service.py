@@ -9,7 +9,6 @@ from isoweek import Week
 from ..models import (
     DeliveryStation,
     ShareArticle,
-    ShareContent,
     ShareTypeVariation,
 )
 from ..utils import sort_share_articles
@@ -17,6 +16,7 @@ from ..utils.basic_utils import size_order_annotation
 from ..utils.delivery_utils import tour_station_ids
 from ..utils.iso_week_utils import saturday_of_iso_week
 from ..utils.packing_divergence import record_amount
+from ..utils.packing_queries import packing_share_contents
 from ..utils.share_type_variation_amounts import (
     batch_get_physical_variation_totals_for_week,
 )
@@ -76,18 +76,13 @@ class PackingListService:
                 year, delivery_week, share_type, is_packed_bulk
             )
 
-        manager = ShareContent.active.for_period(is_past=is_past)
-
-        share_contents = manager.filter(
-            share__year=year,
-            share__delivery_week=delivery_week,
-            share__delivery_day__day_number=day_number,
-            share__share_type_variation__share_type=share_type,
-        )
-        if is_packed_bulk is not None:
-            share_contents = share_contents.filter(
-                share__share_type_variation__is_packed_bulk=is_packed_bulk
-            )
+        share_contents = packing_share_contents(
+            year,
+            delivery_week,
+            day_number,
+            is_past=is_past,
+            is_packed_bulk=is_packed_bulk,
+        ).filter(share__share_type_variation__share_type=share_type)
 
         if _hoisted_delivery_day is not _UNSET:
             delivery_day = _hoisted_delivery_day
@@ -248,17 +243,17 @@ class PackingListService:
         merges rows across share_types by summing, and staying in Decimal
         avoids binary-fp drift before the single float-cast at the boundary.
         """
-        manager = ShareContent.active.for_period(is_past=is_past)
-        share_contents = manager.filter(
-            share__year=year,
-            share__delivery_week=delivery_week,
-            share__delivery_day__day_number=day_number,
-            share__share_type_variation__share_type=share_type,
-        ).select_related("share")
-        if is_packed_bulk is not None:
-            share_contents = share_contents.filter(
-                share__share_type_variation__is_packed_bulk=is_packed_bulk
+        share_contents = (
+            packing_share_contents(
+                year,
+                delivery_week,
+                day_number,
+                is_past=is_past,
+                is_packed_bulk=is_packed_bulk,
             )
+            .filter(share__share_type_variation__share_type=share_type)
+            .select_related("share")
+        )
 
         first = share_contents.first()
         if first is None:
@@ -402,17 +397,14 @@ class PackingListService:
         if share_type is not None:
             share_type_ids: list[str] = [share_type]
         else:
-            base_contents = ShareContent.active.for_period(is_past=is_past).filter(
-                share__year=year,
-                share__delivery_week=delivery_week,
-                share__delivery_day__day_number=day_number,
+            base_contents = packing_share_contents(
+                year,
+                delivery_week,
+                day_number,
+                is_past=is_past,
+                is_packed_bulk=is_packed_bulk,
+                delivery_station=delivery_station,
             )
-            if delivery_station is not None:
-                base_contents = base_contents.filter(delivery_station=delivery_station)
-            if is_packed_bulk is not None:
-                base_contents = base_contents.filter(
-                    share__share_type_variation__is_packed_bulk=is_packed_bulk
-                )
             share_type_ids = list(
                 base_contents.values_list(
                     "share__share_type_variation__share_type_id", flat=True
@@ -483,17 +475,14 @@ class PackingListService:
         """
         active_at_date = saturday_of_iso_week(year, delivery_week)
 
-        share_contents = ShareContent.active.for_period(is_past=is_past).filter(
-            share__year=year,
-            share__delivery_week=delivery_week,
-            share__delivery_day__day_number=day_number,
+        share_contents = packing_share_contents(
+            year,
+            delivery_week,
+            day_number,
+            is_past=is_past,
+            is_packed_bulk=is_packed_bulk,
+            delivery_station=delivery_station,
         )
-        if is_packed_bulk is not None:
-            share_contents = share_contents.filter(
-                share__share_type_variation__is_packed_bulk=is_packed_bulk
-            )
-        if delivery_station is not None:
-            share_contents = share_contents.filter(delivery_station=delivery_station)
 
         if tour is not None:
             first = share_contents.first()

@@ -26,10 +26,13 @@ import type {
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { useAuth } from "@shared/contexts/AuthContext";
 import {
+  currentWeek,
   useCurrency,
   useTenant,
   useTimeFormat,
+  useYearWeekState,
 } from "@hooks/index";
+import { useOfferTiers } from "@features/commissioning/hooks/useOfferTiers";
 import CustomerDocumentsCard from "../components/CustomerDocumentsCard";
 import CustomerOrderHeader from "../components/CustomerOrderHeader";
 import { useCustomerOrderColumns } from "@features/customer/hooks/useCustomerOrderColumns";
@@ -39,13 +42,10 @@ import { useOrderingDeadline } from "@features/customer/hooks/useOrderingDeadlin
 
 const { Text } = Typography;
 
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
-
 export default function CustomerOrderPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { displayLogoUrl, getSetting } = useTenant();
+  const { displayLogoUrl } = useTenant();
   const { formatCurrency } = useCurrency();
   const { formatDateTime, dateFormat } = useTimeFormat();
   const queryClient = useQueryClient();
@@ -54,8 +54,8 @@ export default function CustomerOrderPage() {
   const resellerId =
     resellerIdParam || (user?.reseller_id as string | undefined);
 
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const currentDay = dayjs().isoWeekday();
   const [selectedDay, setSelectedDay] = useState(
     currentDay - 1 === 6 ? 5 : currentDay - 1,
@@ -199,10 +199,9 @@ export default function CustomerOrderPage() {
       );
   }, [orderContents, offerRows, offers]);
 
-  const usedTiers = getSetting("used_tiers_for_offers") as number[] | undefined;
   // Single-tier mode when the tenant hasn't configured tiers — only
   // ``price_1`` is ever picked, no quantity-based escalation.
-  const finalTiers = usedTiers && usedTiers.length > 0 ? usedTiers : [1];
+  const finalTiers = useOfferTiers();
 
   // Order-level info for the summary header (outside the cards): once anything
   // is ordered every row for this reseller/week/day shares one Order, so the

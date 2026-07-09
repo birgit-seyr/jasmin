@@ -55,9 +55,9 @@ vi.mock("@hooks/useUnitOptions", () => ({
   }),
 }));
 
-vi.mock("@hooks/useSizeOptions", () => ({
-  useSizeOptions: () => ({
-    getSizeLabel: (s: string) => (s === "L" ? "Large" : s),
+vi.mock("@hooks/useVegetableSizeOptions", () => ({
+  useVegetableSizeOptions: () => ({
+    getVegetableSizeLabel: (s: string) => (s === "L" ? "Large" : s),
   }),
 }));
 
@@ -228,7 +228,7 @@ describe("article column render", () => {
       id: "x",
       size: "L",
     });
-    // getSizeLabel mock turns "L" into "Large"
+    // getVegetableSizeLabel mock turns "L" into "Large"
     expect(text).toBe("Carrots, Large");
   });
 

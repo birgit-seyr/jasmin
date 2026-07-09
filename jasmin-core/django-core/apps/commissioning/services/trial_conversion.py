@@ -131,14 +131,12 @@ def _send_trial_converted_email(member: Member) -> None:
     ``accounts.welcome_user`` (user-account event). Best-effort: the
     callback never bubbles out into the caller's response.
     """
-    from apps.shared.deferred_email import schedule_deferred_email
-    from apps.shared.invitations import _frontend_base_url, _tenant_name
+    from apps.shared.tenant_urls import frontend_base_url, tenant_name
 
-    member_id = member.id
-    # EML-9: render in the linked user's language when known.
-    member_lang = getattr(getattr(member, "user", None), "user_language", None) or None
+    from .member_email import schedule_member_email
+
     context = {
-        "tenant_name": _tenant_name(),
+        "tenant_name": tenant_name(),
         # Flatten to plain scalars — never hand a live ORM instance to the
         # tenant-editable email renderer (see template_renderer._resolve).
         "member": {
@@ -153,18 +151,14 @@ def _send_trial_converted_email(member: Member) -> None:
         "entry_date": (
             member.entry_date.strftime("%d.%m.%Y") if member.entry_date else ""
         ),
-        "portal_url": _frontend_base_url(),
+        "portal_url": frontend_base_url(),
     }
 
-    schedule_deferred_email(
+    schedule_member_email(
+        member,
         slug="commissioning.trial_converted",
-        to_emails=[member.email],
         context=context,
-        related_object_type="member",
-        related_object_id=str(member_id),
-        language=member_lang,
         logger=logger,
         log_error_event="trial_converted.email_failed",
         log_not_sent_event="trial_converted.email_not_sent",
-        log_ref=f"member={member_id}",
     )

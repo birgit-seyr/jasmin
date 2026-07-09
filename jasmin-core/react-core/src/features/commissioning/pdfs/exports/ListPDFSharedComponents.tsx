@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Image, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { TFunction } from "i18next";
+import { getShareTypeVariationSizeLabelPure } from "@hooks/useShareTypeVariationSizeOptions";
 import { listStyles as styles } from "./listPdfBase";
 import { pdfTheme } from "./pdfTheme";
 
@@ -248,7 +249,7 @@ export function VariationsTotalsCard({
       {variationsTotals.map((variation, index) => (
         <View key={variation.id || index} style={variationsCardStyles.row}>
           <Text style={variationsCardStyles.label}>
-            {t(`commissioning.${variation.size}`)}:
+            {getShareTypeVariationSizeLabelPure(variation.size, t)}:
           </Text>
           <Text style={variationsCardStyles.value}>
             {variation.totalQuantity}

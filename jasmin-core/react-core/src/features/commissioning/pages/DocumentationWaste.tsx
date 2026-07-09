@@ -29,7 +29,12 @@ import type {
 import { ExplainerText, PastWarningMessage } from "@shared/ui";
 import { AddShareArticleEntry } from "@features/commissioning/components";
 import { useRoles } from "@shared/auth";
-import { useInvalidateAfterTableMutation, useNoteColumn } from "@hooks/index";
+import {
+  currentWeek,
+  useInvalidateAfterTableMutation,
+  useNoteColumn,
+  useYearWeekState,
+} from "@hooks/index";
 import {
   useAmountUnitSizeColumns,
   useShareArticleColumn,
@@ -39,8 +44,6 @@ import {
 } from "@features/commissioning/hooks";
 import type { StorageOption } from "@features/commissioning/hooks/useStorages";
 
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
 const currentDay = dayjs().isoWeekday();
 
 const shareArticleFilters = {
@@ -49,8 +52,8 @@ const shareArticleFilters = {
 
 export default function DocumentationWaste() {
   const { isStaff } = useRoles();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedDay, setSelectedDay] = useState<number | null>(currentDay - 1);
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),

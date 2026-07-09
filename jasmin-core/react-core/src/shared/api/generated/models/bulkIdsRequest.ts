@@ -7,7 +7,7 @@
  */
 
 /**
- * Request with only a list of IDs.
+ * Request body carrying only a non-empty list of IDs: ``{"ids": [...]}``.
  */
 export interface BulkIdsRequest {
   /** @minItems 1 */

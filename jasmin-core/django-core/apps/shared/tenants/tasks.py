@@ -24,7 +24,7 @@ from django_tenants.utils import schema_context
 from huey import crontab
 from huey.contrib.djhuey import db_periodic_task
 
-from apps.shared.tenants.models import Tenant
+from apps.shared.tenants.sweep import for_each_tenant
 
 log = logging.getLogger("tasks")
 
@@ -60,22 +60,17 @@ def weekly_tenant_health_report() -> None:
     so the report stays sub-second.
     """
     sections: list[str] = []
-    for tenant in Tenant.objects.exclude(schema_name="public").iterator():
-        # Per-tenant try/except: a broken schema on one tenant must
-        # not prevent the digest from covering everyone else.
-        try:
-            counts = _count_per_table(tenant.schema_name)
-        except Exception:
-            log.exception(
-                "tenant.health.report.tenant_failed tenant=%s", tenant.schema_name
-            )
-            continue
+
+    def collect(tenant) -> None:
+        counts = _count_per_table(tenant.schema_name)
         if not counts:
-            continue
+            return
         sections.append(_format_section(tenant.schema_name, counts))
         # Structured log line — parseable by grep / Loki / log aggregator.
         kv = " ".join(f"{label}={n}" for label, n in counts.items())
         log.info("tenant.health.report tenant=%s %s", tenant.schema_name, kv)
+
+    for_each_tenant(collect, label="tenant.health.report", logger=log)
 
     if not sections:
         return

@@ -15,6 +15,15 @@ export { useDateRangePresets } from './configuration/useDateRangePresets';
 export { useDeliveryDayLabel } from './useDeliveryDayLabel';
 export { useTenantYearOptions } from './configuration/useTenantYearOptions';
 export {
+  useYearWeekState,
+  currentYear,
+  currentWeek,
+} from './useYearWeekState';
+export type {
+  UseYearWeekState,
+  UseYearWeekStateOptions,
+} from './useYearWeekState';
+export {
   useFiscalYearRangeState,
   currentFiscalYearRange,
 } from './configuration/useFiscalYearRange';
@@ -28,7 +37,7 @@ export { useJob } from './useJob';
 export type { BackgroundJob } from './useJob';
 export { useModalMemberDeliveryEdit } from './modals/useModalMemberDeliveryEdit';
 export { useUserInfoModal } from './modals/useUserInfoModal';
-export { useSizeOptions } from './useSizeOptions';
+export { useVegetableSizeOptions } from './useVegetableSizeOptions';
 export { useUnitOptions } from './useUnitOptions';
 export { usePaymentCycles } from './usePaymentCycles';
 export { useNumberFormat } from './useNumberFormat';

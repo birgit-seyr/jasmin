@@ -8,6 +8,7 @@ import {
   variationAmountKey,
 } from "@features/commissioning/hooks";
 import {
+  getShareTypeVariationSizeLabelPure,
   useInvalidateAfterTableMutation,
   useNoteColumn,
   useNumberFormat,
@@ -192,7 +193,7 @@ export default function PlanningLongTermHarvestSharesBase({
     useMemo(() => {
       return shareTypeVariations.map(
         (variation): EditableColumnConfig<TableRecord> => ({
-          title: t(`commissioning.${variation.size}`),
+          title: getShareTypeVariationSizeLabelPure(variation.size, t),
           // dataIndex AND key must be the SAME wire field. The default-share
           // backend keys amounts by variation id as `amount_<id>` (there is no
           // day axis here); previously `key` said `variation_<id>` while

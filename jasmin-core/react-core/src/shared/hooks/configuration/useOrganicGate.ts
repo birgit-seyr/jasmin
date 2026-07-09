@@ -35,7 +35,7 @@ export function useOrganicGate(): {
  *
  * Plain function (not a hook) so it's callable from non-component
  * contexts like memos that build column configs. Mirrors the
- * ``getSizeLabelPure`` / ``getUnitLabelPure`` pattern in pdfBase —
+ * ``getVegetableSizeLabelPure`` / ``getUnitLabelPure`` pattern in pdfBase —
  * the caller passes its ``t`` instance in. Defaults match the German
  * UI strings used elsewhere in the app. */
 export function organicStatusLabel(

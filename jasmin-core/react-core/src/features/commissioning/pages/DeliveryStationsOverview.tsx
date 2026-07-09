@@ -5,7 +5,7 @@ import {
 } from "@features/commissioning/hooks";
 import { DeliveryStationsOverviewPDFGenerator } from "@features/commissioning/pdfs";
 import { filterBulkComboColumns } from "@features/commissioning/utils/filterBulkComboColumns";
-import { useTenant } from "@hooks/index";
+import { useTenant, useYearWeekState } from "@hooks/index";
 import { useCommissioningDeliveryStationToursOverviewRetrieve } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningDeliveryStationToursOverviewRetrieveParams,
@@ -25,13 +25,9 @@ import {
 } from "@shared/utils";
 import { Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
 
 // Flat per-variation columns (grouped by share type) for import-shares tenants:
 // they have no box combinations, so the tour table shows one column per active
@@ -131,8 +127,8 @@ function TourTable({
 }
 
 export default function DeliveryStationOverview() {
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedDeliveryDay, setSelectedDeliveryDay] = useState<number | null>(
     null,
   );

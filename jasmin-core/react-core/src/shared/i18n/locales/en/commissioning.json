@@ -94,6 +94,7 @@
   "list_harvest_shares_articles": "list vegetables/fruits",
   "default_share_articles_in_share": "default quantities",
   "default_share_articles_save_failed": "Failed to save default share article quantities.",
+  "share_article_save_error": "Failed to save the article",
   "share_article": "article",
   "prices_are_netto": "Prices are net.",
   "list_delivery_stations": "list distribution stations",

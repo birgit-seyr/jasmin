@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
-import { Button, Divider, Flex, Select, Space } from "antd";
-import { LeftOutlined, RightOutlined } from "@ant-design/icons";
+import { Flex, Select, Space } from "antd";
 import { useTranslation } from "react-i18next";
 import { useDateFormat, useDeliveryDayLabel, useIsMobile } from '@hooks/index';
 import { activeAtDateForWeek, getStatusColor } from "@shared/utils";
 import { useShareDeliveryDays } from '@features/commissioning/hooks';
+import { SteppedSelect } from "@shared/selectors";
 
 const { Option } = Select;
 
@@ -217,47 +217,31 @@ const SharesDeliveryDaySelector = ({
   if (useDayFormat) {
     return (
       <Space>
-        <Space>
-          <Divider type="vertical" />
-          <Button
-            size="small"
-            icon={<LeftOutlined />}
-            onClick={prevDay}
-            className="week-selector-small-buttons"
-            disabled={!canGoPrev}
-            aria-label={t("common.previous")}
-          />
-          <Select
-            value={selectedSharesDeliveryDay}
-            style={{ width: isMobile ? "10em" : suffix ? "22em" : "15em" }}
-            size="small"
-            onChange={handleSharesDeliveryDayChange}
-            className="bold-select week-selector-select"
-            placeholder={t("placeholder.shares_delivery_day_selector")}
-            aria-label={t("placeholder.shares_delivery_day_selector")}
-            loading={loading}
-          >
-            {include_null_option && (
-              <Option key="none" value={null}>
-                {t("commissioning.all_delivery_days")}
-              </Option>
-            )}
-            {sortedDays.map((day) => (
-              <Option key={day.id} value={day.id}>
-                {!isMobile && suffix ? `${suffix} ` : ""}
-                {calculateDate(day.day_number)}
-              </Option>
-            ))}
-          </Select>
-          <Button
-            size="small"
-            icon={<RightOutlined />}
-            onClick={nextDay}
-            className="week-selector-small-buttons"
-            disabled={!canGoNext}
-            aria-label={t("common.next")}
-          />
-        </Space>
+        <SteppedSelect
+          showDivider
+          value={selectedSharesDeliveryDay}
+          onChange={handleSharesDeliveryDayChange}
+          onPrev={prevDay}
+          onNext={nextDay}
+          canGoPrev={canGoPrev}
+          canGoNext={canGoNext}
+          selectStyle={{ width: isMobile ? "10em" : suffix ? "22em" : "15em" }}
+          selectAriaLabel={t("placeholder.shares_delivery_day_selector")}
+          placeholder={t("placeholder.shares_delivery_day_selector")}
+          loading={loading}
+        >
+          {include_null_option && (
+            <Option key="none" value={null}>
+              {t("commissioning.all_delivery_days")}
+            </Option>
+          )}
+          {sortedDays.map((day) => (
+            <Option key={day.id} value={day.id}>
+              {!isMobile && suffix ? `${suffix} ` : ""}
+              {calculateDate(day.day_number)}
+            </Option>
+          ))}
+        </SteppedSelect>
       </Space>
     );
   }

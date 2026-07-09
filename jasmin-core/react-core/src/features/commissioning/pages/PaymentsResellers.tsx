@@ -1,7 +1,6 @@
 import { CheckOutlined } from "@ant-design/icons";
 import { Tag } from "antd";
 import { useQueryClient } from "@tanstack/react-query";
-import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { isWeekInPast } from "@shared/utils";
 import { useTranslation } from "react-i18next";
@@ -42,16 +41,14 @@ import {
   useInvalidateAfterTableMutation,
   useNoteColumn,
   useTableRowSelection,
+  useYearWeekState,
 } from "@hooks/index";
-
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
 
 type CombinedOrderOverviewRow = CombinedOrderOverview & TableRecord;
 
 export default function PaymentsResellers() {
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedReseller, setSelectedReseller] = useState<string | null>(null);
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),

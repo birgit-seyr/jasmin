@@ -41,9 +41,11 @@ import validation from './validation.json';
 import about from './about.json';
 import statistics from './statistics.json';
 import impressum from './impressum.json';
+import button_library from './button_library.json';
 
 export default {
   about,
+  button_library,
   statistics,
   errors,
   economics,

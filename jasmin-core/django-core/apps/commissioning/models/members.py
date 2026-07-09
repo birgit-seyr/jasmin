@@ -13,6 +13,7 @@ from encrypted_model_fields.fields import EncryptedCharField
 from apps.shared.iban_validator import validate_iban
 
 from .base import JasminModel
+from .choices_text import InvitationStatus
 from .mixin import (
     AdminConfirmableMixin,
     CancellableMixin,
@@ -20,7 +21,9 @@ from .mixin import (
     PayableMixin,
     TimeBoundMixin,
     WaitingListMixin,
+    nullable_date_order_constraint,
     time_bound_valid_range_constraint,
+    validate_nullable_date_order,
 )
 
 
@@ -151,16 +154,14 @@ class Member(
             # set. The ``cancelled_effective_at >= cancelled_at.date()`` rule
             # comes from CancellableMixin.clean() (datetime-vs-date, no DB
             # constraint).
-            models.CheckConstraint(
-                condition=Q(cancelled_effective_at__isnull=True)
-                | Q(entry_date__isnull=True)
-                | Q(cancelled_effective_at__gte=F("entry_date")),
+            nullable_date_order_constraint(
+                "cancelled_effective_at",
+                "entry_date",
                 name="member_cancelled_effective_after_entry",
             ),
-            models.CheckConstraint(
-                condition=Q(entry_date__isnull=True)
-                | Q(birth_date__isnull=True)
-                | Q(entry_date__gte=F("birth_date")),
+            nullable_date_order_constraint(
+                "entry_date",
+                "birth_date",
                 name="member_entry_after_birth",
             ),
             # ``trial_converted_at`` is a DateTimeField, ``entry_date`` a
@@ -205,27 +206,18 @@ class Member(
         # Cross-field date-order guards. NULL-tolerant: each pair is only
         # enforced when both members are set. ``cancelled_effective_at`` vs
         # ``cancelled_at`` is enforced by CancellableMixin.clean().
-        if (
-            self.cancelled_effective_at is not None
-            and self.entry_date is not None
-            and self.cancelled_effective_at < self.entry_date
-        ):
-            raise ValidationError(
-                {
-                    "cancelled_effective_at": (
-                        "Effective cancellation date must be on or after the "
-                        "entry date."
-                    )
-                }
-            )
-        if (
-            self.entry_date is not None
-            and self.birth_date is not None
-            and self.entry_date < self.birth_date
-        ):
-            raise ValidationError(
-                {"entry_date": "Entry date must be on or after the birth date."}
-            )
+        validate_nullable_date_order(
+            self,
+            "cancelled_effective_at",
+            "entry_date",
+            message=("Effective cancellation date must be on or after the entry date."),
+        )
+        validate_nullable_date_order(
+            self,
+            "entry_date",
+            "birth_date",
+            message="Entry date must be on or after the birth date.",
+        )
         # ``trial_converted_at`` is a UTC DateTimeField, ``entry_date`` a LOCAL
         # calendar day — compare on the trial_converted_at date IN THE OPERATOR'S
         # LOCAL timezone (``.date()`` would give the UTC date, a day early near
@@ -435,16 +427,14 @@ class CoopShare(JasminModel, PayableMixin, AdminConfirmableMixin, CancellableMix
             # ``cancelled_effective_at >= cancelled_at.date()`` from
             # CancellableMixin.clean() (both datetime-vs-date, no DB
             # constraint).
-            models.CheckConstraint(
-                condition=Q(payback_due_date__isnull=True)
-                | Q(cancelled_effective_at__isnull=True)
-                | Q(payback_due_date__gte=F("cancelled_effective_at")),
+            nullable_date_order_constraint(
+                "payback_due_date",
+                "cancelled_effective_at",
                 name="coopshare_payback_due_after_cancel_effective",
             ),
-            models.CheckConstraint(
-                condition=Q(paid_back_date__isnull=True)
-                | Q(payback_due_date__isnull=True)
-                | Q(paid_back_date__gte=F("payback_due_date")),
+            nullable_date_order_constraint(
+                "paid_back_date",
+                "payback_due_date",
                 name="coopshare_paid_back_after_payback_due",
             ),
         ]
@@ -458,31 +448,21 @@ class CoopShare(JasminModel, PayableMixin, AdminConfirmableMixin, CancellableMix
         # NULL-tolerant: each pair is only enforced when both members are set.
         # ``paid_at >= due_date`` is enforced by PayableMixin.clean() and
         # ``cancelled_effective_at >= cancelled_at`` by CancellableMixin.clean().
-        if (
-            self.payback_due_date is not None
-            and self.cancelled_effective_at is not None
-            and self.payback_due_date < self.cancelled_effective_at
-        ):
-            raise ValidationError(
-                {
-                    "payback_due_date": (
-                        "Payback due date must be on or after the effective "
-                        "cancellation date."
-                    )
-                }
-            )
-        if (
-            self.paid_back_date is not None
-            and self.payback_due_date is not None
-            and self.paid_back_date < self.payback_due_date
-        ):
-            raise ValidationError(
-                {
-                    "paid_back_date": (
-                        "Paid-back date must be on or after the payback due date."
-                    )
-                }
-            )
+        validate_nullable_date_order(
+            self,
+            "payback_due_date",
+            "cancelled_effective_at",
+            message=(
+                "Payback due date must be on or after the effective "
+                "cancellation date."
+            ),
+        )
+        validate_nullable_date_order(
+            self,
+            "paid_back_date",
+            "payback_due_date",
+            message="Paid-back date must be on or after the payback due date.",
+        )
         # Service holds the actual logic so bulk paths can reuse it.
         from apps.commissioning.services.coop_share_service import CoopShareService
 
@@ -583,13 +563,8 @@ class UserInvitation(JasminModel, CreatedMixin):
 
     status = models.CharField(
         max_length=20,
-        choices=[
-            ("sent", "Sent"),
-            ("accepted", "Accepted"),
-            ("expired", "Expired"),
-            ("cancelled", "Cancelled"),
-        ],
-        default="sent",
+        choices=InvitationStatus.choices,
+        default=InvitationStatus.SENT,
     )
 
     expires_at = models.DateTimeField(blank=True, null=True)
@@ -604,7 +579,7 @@ class UserInvitation(JasminModel, CreatedMixin):
 
     @property
     def is_expired(self) -> bool:
-        return timezone.now() > self.expires_at and self.status == "sent"
+        return timezone.now() > self.expires_at and self.status == InvitationStatus.SENT
 
 
 class Subscription(
@@ -971,18 +946,20 @@ class MemberLoan(JasminModel, AdminConfirmableMixin, CreatedMixin):
             # Date-order backstops for the bulk paths that bypass ``clean()``.
             # All NULL-tolerant: only enforced when both members of a pair are
             # set.
-            models.CheckConstraint(
-                condition=Q(end_date__isnull=True)
-                | Q(start_date__isnull=True)
-                | Q(end_date__gte=F("start_date")),
+            nullable_date_order_constraint(
+                "end_date",
+                "start_date",
                 name="memberloan_end_after_start",
             ),
-            models.CheckConstraint(
-                condition=Q(paid_back_date__isnull=True)
-                | Q(start_date__isnull=True)
-                | Q(paid_back_date__gte=F("start_date")),
+            nullable_date_order_constraint(
+                "paid_back_date",
+                "start_date",
                 name="memberloan_paid_back_after_start",
             ),
+            # Reversed direction (``paid_back_date <= end_date``) — kept bespoke
+            # so the stored constraint keeps its exact field/operator ordering
+            # (rewriting it as ``end_date >= paid_back_date`` via the helper
+            # would churn a migration for no schema change).
             models.CheckConstraint(
                 condition=Q(paid_back_date__isnull=True)
                 | Q(end_date__isnull=True)
@@ -997,18 +974,18 @@ class MemberLoan(JasminModel, AdminConfirmableMixin, CreatedMixin):
     def clean(self) -> None:
         super().clean()
 
-        if self.start_date and self.end_date:
-            if self.end_date < self.start_date:
-                raise ValidationError({"end_date": "End date must be after start date"})
-
-        if (
-            self.start_date
-            and self.paid_back_date
-            and self.paid_back_date < self.start_date
-        ):
-            raise ValidationError(
-                {"paid_back_date": "Paid back date cannot be before start date"}
-            )
+        validate_nullable_date_order(
+            self,
+            "end_date",
+            "start_date",
+            message="End date must be after start date",
+        )
+        validate_nullable_date_order(
+            self,
+            "paid_back_date",
+            "start_date",
+            message="Paid back date cannot be before start date",
+        )
 
         # A loan must not be marked paid back after its own end date.
         if (

@@ -10,7 +10,7 @@ from django.contrib.postgres.fields import (
     RangeOperators,
 )
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Func
 
@@ -22,9 +22,10 @@ from .choices_text import (
     DayNumberOptions,
     DeliveryCycleOptions,
     ShareOptions,
-    SizeOptions,
-    SizeVegetableOptions,
-    UnitOptions,
+    ShareTypeVariationSizeOptions,
+    delivery_week_field,
+    size_vegetable_field,
+    unit_field,
 )
 from .mixin import (
     ArchivableMixin,
@@ -207,7 +208,7 @@ class ShareTypeVariation(JasminModel, TimeBoundMixin):
     )
     size = models.CharField(
         max_length=8,
-        choices=SizeOptions.choices,
+        choices=ShareTypeVariationSizeOptions.choices,
     )
 
     picture = models.FileField(
@@ -570,10 +571,7 @@ class ShareTypeVariationGrossPrice(JasminModel, TimeBoundMixin):
 
 class Share(JasminModel):
     year = models.PositiveSmallIntegerField(db_index=True)
-    delivery_week = models.PositiveSmallIntegerField(
-        db_index=True,
-        validators=[MinValueValidator(1), MaxValueValidator(53)],
-    )
+    delivery_week = delivery_week_field(db_index=True)
     delivery_day = models.ForeignKey(
         "SharesDeliveryDay",
         on_delete=models.CASCADE,
@@ -760,12 +758,8 @@ class ShareContent(CreatedMixin, FinalizableMixin, ArchivableMixin, JasminModel)
     seller = models.ForeignKey(
         "Reseller", on_delete=models.PROTECT, blank=True, null=True
     )
-    unit = models.CharField(max_length=10, choices=UnitOptions.choices)
-    size = models.CharField(
-        max_length=1,
-        choices=SizeVegetableOptions.choices,
-        default=SizeVegetableOptions.M,
-    )
+    unit = unit_field()
+    size = size_vegetable_field()
     amount = models.DecimalField(max_digits=5, decimal_places=3, blank=True, null=True)
     kg_per_piece = models.DecimalField(
         max_digits=5, decimal_places=3, blank=True, null=True
@@ -780,14 +774,8 @@ class ShareContent(CreatedMixin, FinalizableMixin, ArchivableMixin, JasminModel)
         blank=True,
         null=True,
     )
-    backup_unit = models.CharField(
-        max_length=10, choices=UnitOptions.choices, blank=True, null=True
-    )
-    backup_size = models.CharField(
-        max_length=1,
-        choices=SizeVegetableOptions.choices,
-        default=SizeVegetableOptions.M,
-    )
+    backup_unit = unit_field(blank=True, null=True)
+    backup_size = size_vegetable_field()
     backup_amount = models.DecimalField(
         max_digits=5, decimal_places=3, blank=True, null=True
     )
@@ -880,20 +868,14 @@ class ShareContent(CreatedMixin, FinalizableMixin, ArchivableMixin, JasminModel)
 
 class DefaultShareContent(JasminModel):
     year = models.PositiveSmallIntegerField()
-    delivery_week = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(53)],
-    )
+    delivery_week = delivery_week_field()
     share_type_variation = models.ForeignKey(
         "ShareTypeVariation", on_delete=models.PROTECT
     )
     share_article = models.ForeignKey("ShareArticle", on_delete=models.PROTECT)
     amount = models.DecimalField(max_digits=5, decimal_places=3)
-    unit = models.CharField(max_length=10, choices=UnitOptions.choices)
-    size = models.CharField(
-        max_length=1,
-        choices=SizeVegetableOptions.choices,
-        default=SizeVegetableOptions.M,
-    )
+    unit = unit_field()
+    size = size_vegetable_field()
     seller = models.ForeignKey(
         "Reseller", on_delete=models.SET_NULL, blank=True, null=True
     )

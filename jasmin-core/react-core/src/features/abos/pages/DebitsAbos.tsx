@@ -11,7 +11,8 @@ import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { CreateBillingRunModal } from "@features/abos/modals/CreateBillingRunModal";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Flex, Popconfirm, Space, Table, Tag } from "antd";
+import { Button, Popconfirm, Space, Tag } from "antd";
+import { ReadOnlyReportTable } from "@shared/tables";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -218,14 +219,12 @@ export default function DebitsAbos() {
           {t("abos.debits_create_run")}
         </Button>
       </div>
-      <Table
+      <ReadOnlyReportTable
         rowKey="id"
         loading={isFetching}
         dataSource={runs}
         columns={columns}
         pagination={false}
-        size="small"
-        className="custom-jasmin-table"
       />
 
       <CreateBillingRunModal

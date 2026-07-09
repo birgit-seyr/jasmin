@@ -12,8 +12,8 @@ from ..errors import (
     DeliveryExceptionPeriodLocked,
 )
 from ..models import DeliveryExceptionPeriod, DeliveryStation, DeliveryStationDay
+from ..utils.capacity_window import build_capacity_by_week, parse_capacity_window
 from ..utils.deletion_utils import bulk_deletable_pks, can_delete_instance
-from ..utils.query_params import validate_query_params
 from .box_matrix_columns_serializer import PackingBoxesMatrixColumnSerializer
 from .serializers_mixin import (
     DeletableMixin,
@@ -249,22 +249,6 @@ class DeliveryStationDaySerializer(
             )
         return value
 
-    def _get_year_and_weeks(self):
-        """Return (year, start_week, num_weeks) from request params."""
-        request = self.context.get("request")
-        if not request:
-            return None, None, 52
-        parsed = validate_query_params(
-            request,
-            optional=["year", "delivery_week", "num_weeks"],
-        )
-        year = parsed["year"]
-        start_week = parsed["delivery_week"]
-        num_weeks = parsed["num_weeks"]
-        if year is not None and start_week is not None:
-            return year, start_week, num_weeks
-        return None, None, 52
-
     # Returns a dict keyed by ``"<year>-<week>"`` strings, where each value
     # is ``{"occupied": int, "free": int}``. OpenAPI has no way to express
     # an open-ended string-keyed mapping precisely, so annotate as OBJECT.
@@ -326,17 +310,15 @@ class DeliveryStationDaySerializer(
         serializers.DictField(child=CapacityWeekEntrySerializer(), allow_null=True)
     )
     def get_capacity_by_week(self, obj):
-        year, start_week, num_weeks = self._get_year_and_weeks()
+        year, start_week, num_weeks = parse_capacity_window(self.context.get("request"))
         if year is None or start_week is None:
             return None
         year_weeks = self._build_year_weeks(year, start_week, num_weeks)
         counts = self._batched_capacity_counts(year_weeks)
-        result = {}
-        for current_year, week in year_weeks:
-            occupied = counts.get((obj.id, current_year, week), 0)
-            free = None if obj.capacity is None else max(0, obj.capacity - occupied)
-            result[f"{current_year}-{week}"] = {"occupied": occupied, "free": free}
-        return result
+        # Station-days may have no cap → ``free`` is None (capacity_nullable).
+        return build_capacity_by_week(
+            year_weeks, counts, obj.id, obj.capacity, capacity_nullable=True
+        )
 
     def to_representation(self, instance):
         """Re-attach the dynamic variation_* keys (via the mixin), then mask."""

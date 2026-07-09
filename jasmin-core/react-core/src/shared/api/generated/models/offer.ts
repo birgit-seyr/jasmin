@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { UnitEnum } from './unitEnum';
-import type { SizeVegetableEnum } from './sizeVegetableEnum';
+import type { VegetableSizeEnum } from './vegetableSizeEnum';
 
 export interface Offer {
   readonly id?: string;
@@ -40,7 +40,7 @@ export interface Offer {
    */
   description?: string | null;
   unit: UnitEnum;
-  size?: SizeVegetableEnum;
+  size?: VegetableSizeEnum;
   /** @pattern ^-?\d{0,4}(?:\.\d{0,3})?$ */
   amount_per_pu: string;
   /** @pattern ^-?\d{0,6}(?:\.\d{0,3})?$ */

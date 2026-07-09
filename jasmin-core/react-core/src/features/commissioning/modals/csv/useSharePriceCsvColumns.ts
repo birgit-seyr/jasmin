@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useCurrency, useTenant } from "@hooks/index";
+import { useCurrency } from "@hooks/index";
+import { useOfferTiers } from "@features/commissioning/hooks";
 import type { PriceColumn } from "./ExportCsvAtDateModal";
 
 /**
@@ -26,20 +27,7 @@ import type { PriceColumn } from "./ExportCsvAtDateModal";
 export function useSharePriceCsvColumns(): PriceColumn[] {
   const { t } = useTranslation();
   const { currencySymbol } = useCurrency();
-  const { getSetting } = useTenant();
-
-  const used_tiers_for_offers = getSetting("used_tiers_for_offers") as
-    | number[]
-    | undefined;
-  // ``useMemo`` so the fallback ``[1]`` has a stable identity across
-  // renders — otherwise the columns ``useMemo`` below re-fires every render.
-  const tiersList = useMemo<number[]>(
-    () =>
-      used_tiers_for_offers && used_tiers_for_offers.length > 0
-        ? used_tiers_for_offers
-        : [1],
-    [used_tiers_for_offers],
-  );
+  const tiersList = useOfferTiers();
 
   return useMemo(() => {
     const units: Array<"kg" | "pieces" | "bunch"> = ["kg", "pieces", "bunch"];

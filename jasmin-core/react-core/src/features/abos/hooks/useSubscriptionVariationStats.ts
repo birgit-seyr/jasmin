@@ -1,5 +1,6 @@
 import dayjs, { type Dayjs } from "dayjs";
 import { useMemo } from "react";
+import { buildMonthAxis } from "@shared/utils";
 import { useShareTypeVariationSizeOptions } from "@hooks/index";
 
 /**
@@ -150,12 +151,7 @@ export function buildMonthlyActiveByVariation(
   range: [Dayjs, Dayjs] | null,
 ) {
   const rows = subscriptions ?? [];
-  const end = (range ? range[1] : dayjs()).startOf("month");
-  const selStart = (range ? range[0] : dayjs().subtract(1, "year")).startOf(
-    "month",
-  );
-  const minStart = end.subtract(11, "month");
-  let cursor = selStart.isBefore(minStart) ? selStart : minStart;
+  const { months, labelOf } = buildMonthAxis(range);
 
   // Eligible = confirmed, not cancelled, not waiting, and actually started.
   const eligible = rows.filter(
@@ -168,11 +164,11 @@ export function buildMonthlyActiveByVariation(
 
   const data: Array<Record<string, number | string>> = [];
   const usedVarIds = new Set<string>();
-  while (!cursor.isAfter(end)) {
+  for (const cursor of months) {
     const monthStart = cursor.startOf("month");
     const monthEnd = cursor.endOf("month");
     const point: Record<string, number | string> = {
-      label: cursor.format("MMM 'YY"),
+      label: labelOf(cursor),
     };
     for (const s of eligible) {
       const id = s.share_type_variation;
@@ -183,7 +179,6 @@ export function buildMonthlyActiveByVariation(
       usedVarIds.add(id);
     }
     data.push(point);
-    cursor = cursor.add(1, "month");
   }
 
   const series = [...variationInfo.values()].filter((v) => usedVarIds.has(v.id));

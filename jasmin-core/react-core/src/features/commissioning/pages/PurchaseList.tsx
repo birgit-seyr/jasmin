@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { FormInstance } from "antd";
 import { Checkbox, Flex } from "antd";
-import dayjs from "dayjs";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -29,13 +28,10 @@ import { AddShareArticleEntry } from '@features/commissioning/components';
 // @react-pdf/renderer library. See PurchaseListPDFGenerator /
 // ListPDFGenerator for the click-to-load architecture.
 import PurchaseListPDFGenerator from "@features/commissioning/pdfs/exports/PurchaseListPDFGenerator";
-import { useInvalidateAfterTableMutation, useIsMobile, useNoteColumn, useNumberFormat, useSizeOptions, useUnitOptions } from '@hooks/index';
+import { currentWeek, useInvalidateAfterTableMutation, useIsMobile, useNoteColumn, useNumberFormat, useVegetableSizeOptions, useUnitOptions, useYearWeekState } from '@hooks/index';
 import { useAmountUnitSizeColumns, useSellers, useShareArticleColumn, useShareArticles } from '@features/commissioning/hooks';
 import type { DocumentationSummaryRecord } from "@features/commissioning/hooks/useDocumentationSummaryPage";
 import { formatWeekLabel, generatePdfFilename, isWeekInPast } from "@shared/utils";
-
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
 
 const shareArticleFilters = {
   is_harvest_share_article: true,
@@ -50,8 +46,8 @@ const widthTotalAmount = "15%";
 const widthNote = "40%";
 
 export default function PurchaseList() {
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedReseller, setSelectedReseller] = useState<string | null>(null);
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
@@ -63,7 +59,7 @@ export default function PurchaseList() {
 
   const { getUnitLabel } = useUnitOptions();
   const { format } = useNumberFormat();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
   const { sellers } = useSellers();
   const { noteColumn } = useNoteColumn();
   const selectedResellerLabel = useMemo(() => {
@@ -299,7 +295,7 @@ export default function PurchaseList() {
       // Article name with size for PDF
       const sizeLabel =
         record.size && record.size !== "M"
-          ? ` (${getSizeLabel(record.size as string)})`
+          ? ` (${getVegetableSizeLabel(record.size as string)})`
           : "";
       const articleWithSize = `${record.share_article_name}${sizeLabel}`;
 
@@ -323,7 +319,7 @@ export default function PurchaseList() {
         computed_unit_label: getUnitLabel(record.unit as string),
       };
     });
-  }, [data, getUnitLabel, getSizeLabel, t, parseNumber, format]);
+  }, [data, getUnitLabel, getVegetableSizeLabel, t, parseNumber, format]);
 
   const customSave = useCallback(
     (transformedData: Record<string, unknown>) => {

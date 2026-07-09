@@ -7,7 +7,7 @@
  */
 import type { HarvestDayNumber } from './harvestDayNumber';
 import type { UnitEnum } from './unitEnum';
-import type { SizeVegetableEnum } from './sizeVegetableEnum';
+import type { VegetableSizeEnum } from './vegetableSizeEnum';
 
 /**
  * Mixin to add dynamic storage fields functionality to serializers.
@@ -41,7 +41,7 @@ export interface Harvest {
    */
   amount?: string | null;
   unit: UnitEnum;
-  size?: SizeVegetableEnum;
+  size?: VegetableSizeEnum;
   /** @nullable */
   note?: string | null;
   /**

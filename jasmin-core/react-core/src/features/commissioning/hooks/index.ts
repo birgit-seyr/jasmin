@@ -10,7 +10,7 @@ export { useHarvestingListData } from './useHarvestingListData';
 export { useHistoricalShareTypeVariationAverages } from './useHistoricalShareTypeVariationAverage';
 export { useOfferGroups } from './useOfferGroups';
 export { useOfferOptions } from './useOfferOptions';
-export { useOfferTiers } from './useOfferTiers';
+export { useOfferTiers, resolveOfferTiers } from './useOfferTiers';
 export { useOffersData } from './useOffersData';
 export { useOrdersData } from './useOrdersData';
 export { usePackingModeShareGroups } from './usePackingModeShareGroups';

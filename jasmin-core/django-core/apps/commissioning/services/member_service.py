@@ -17,7 +17,6 @@ from typing import Any
 from django.db import transaction
 
 from apps.accounts.models import JasminUser
-from apps.shared.deferred_email import schedule_deferred_email
 
 from ..errors import (
     MemberAlreadyCancelled,
@@ -28,6 +27,7 @@ from ..errors import (
     UserInBlockedStatus,
 )
 from ..models import Member
+from .member_email import schedule_member_email
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +89,7 @@ class MemberService:
                 # this matches the ``accept_invitation`` call site, and
                 # include the portal URL the body's "log in at …" line
                 # depends on.
-                from apps.shared.invitations import _frontend_base_url
+                from apps.shared.tenant_urls import frontend_base_url
 
                 self._send_email(
                     member,
@@ -97,7 +97,7 @@ class MemberService:
                     request=request,
                     extra_context={
                         "user": {"first_name": user.first_name},
-                        "portal_url": _frontend_base_url(),
+                        "portal_url": frontend_base_url(),
                     },
                     log_label="welcome",
                 )
@@ -260,9 +260,10 @@ class MemberService:
         # cleanup is a small, focused query that doesn't justify
         # a cross-service call.
         from apps.commissioning.models import UserInvitation
+        from apps.commissioning.models.choices_text import InvitationStatus
 
-        UserInvitation.objects.filter(user=user, status="sent").update(
-            status="cancelled"
+        UserInvitation.objects.filter(user=user, status=InvitationStatus.SENT).update(
+            status=InvitationStatus.CANCELLED
         )
 
         logger.info(
@@ -366,23 +367,11 @@ class MemberService:
         if extra_context:
             context.update(extra_context)
 
-        member_id = member.id
-        # EML-9: render in the recipient's stored language when known. Captured
-        # as a plain scalar BEFORE the on_commit closure; None falls back to the
-        # tenant language (existing behaviour) inside send_email.
-        member_lang = (
-            getattr(getattr(member, "user", None), "user_language", None) or None
-        )
-
-        schedule_deferred_email(
+        schedule_member_email(
+            member,
             slug=slug,
-            to_emails=[member.email],
             context=context,
-            related_object_type="member",
-            related_object_id=str(member_id),
-            language=member_lang,
             logger=logger,
             log_error_event=f"member.{log_label}_email_crashed",
             log_not_sent_event=f"member.{log_label}_email_not_sent",
-            log_ref=f"member={member_id}",
         )

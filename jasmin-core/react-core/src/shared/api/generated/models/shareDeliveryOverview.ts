@@ -12,10 +12,12 @@ export interface ShareDeliveryOverview {
   share_type_variation_string: string;
   delivery_week: number;
   /**
-   * Calculate delivery date from year, week, and day number.
+   * ISO-8601 (``YYYY-MM-DD``) delivery date via the shared resolver.
 
-Returns ISO-8601 date string (``YYYY-MM-DD``) or None if the
-underlying year/week/day_number tuple is incomplete or invalid.
+Uses ``share_delivery_date`` — which honours the Share's
+``changed_day_number`` override before falling back to the delivery
+day's ``day_number`` — so the overview matches every other delivery-
+date surface. ``None`` for a malformed year/week/day tuple.
    * @nullable
    */
   readonly delivery_date?: string | null;

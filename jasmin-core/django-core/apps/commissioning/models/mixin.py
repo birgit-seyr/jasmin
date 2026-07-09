@@ -321,6 +321,62 @@ def time_bound_valid_range_constraint(name: str) -> models.CheckConstraint:
     )
 
 
+def nullable_date_order_constraint(
+    later: str, earlier: str, *, name: str
+) -> models.CheckConstraint:
+    """The nullable date-order invariant ``<later> >= <earlier>`` as a DB
+    CheckConstraint: ``<later> IS NULL OR <earlier> IS NULL OR
+    <later> >= <earlier>`` (a half-filled pair passes — it is not yet a
+    violation).
+
+    This is the ``Q(x__isnull) | Q(y__isnull) | Q(x__gte=F(y))`` shape
+    hand-written across the commissioning models (member entry/cancel dates,
+    coop-share payback, loan lifecycle, consent revocation, invoice due date).
+    Mirror the Python-side guard with ``validate_nullable_date_order`` in the
+    model's ``clean()``.
+
+    Only covers constraints written in the canonical ``later >= earlier``
+    direction. Two families stay bespoke:
+
+    * reversed-direction guards written as ``Q(a__lte=F(b))`` — reproducing
+      their exact field/operator ordering here would change the stored
+      constraint and force a needless migration; and
+    * timezone-pinned casts (a UTC ``DateTimeField`` compared against a local
+      ``DateField`` via ``__date``), which no field-name-only helper can
+      express.
+    """
+    return models.CheckConstraint(
+        condition=models.Q(**{f"{later}__isnull": True})
+        | models.Q(**{f"{earlier}__isnull": True})
+        | models.Q(**{f"{later}__gte": models.F(earlier)}),
+        name=name,
+    )
+
+
+def validate_nullable_date_order(
+    instance: models.Model,
+    later: str,
+    earlier: str,
+    *,
+    message: str,
+    field: str | None = None,
+) -> None:
+    """Python mirror of ``nullable_date_order_constraint`` for a model's
+    ``clean()``: raise ``ValidationError`` (keyed on ``field``, defaulting to
+    ``later``) when both dates are set and ``later`` precedes ``earlier``.
+
+    NULL-tolerant — a half-filled pair passes, matching the DB constraint.
+    """
+    later_value = getattr(instance, later)
+    earlier_value = getattr(instance, earlier)
+    if (
+        later_value is not None
+        and earlier_value is not None
+        and later_value < earlier_value
+    ):
+        raise ValidationError({field or later: message})
+
+
 class PricingMixin:
     """Mixin for models that have a related 'pricing' queryset with TimeBoundMixin entries."""
 
@@ -860,6 +916,26 @@ class FinalizedProtectedMixin:
                 f"Cannot delete {self.__class__.__name__} — it has been finalized"
             )
         super().delete(*args, **kwargs)
+
+
+def delete_parent_if_childless(parent, child_accessors: list[str]) -> None:
+    """Delete ``parent`` iff every reverse relation in ``child_accessors`` is
+    now empty.
+
+    Call this AFTER the child row's own ``super().delete()`` so the just-removed
+    row is already gone from the counts. It is the "auto-remove the now-empty
+    parent document" tail shared by the six reseller-document content models'
+    ``delete()`` overrides: each resolves its own parent — the resolution can be
+    conditional (e.g. a crate row attached EITHER directly to the order OR via
+    its ``OrderContent``) — then delegates the childless-check + delete here.
+    A ``None`` parent is a no-op. These are legally-tracked documents, so the
+    behaviour is pinned by the reseller lifecycle tests.
+    """
+    if parent is None:
+        return
+    if any(getattr(parent, accessor).exists() for accessor in child_accessors):
+        return
+    parent.delete()
 
 
 class NumberedDocumentMixin(models.Model):

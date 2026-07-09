@@ -39,8 +39,8 @@ def _notify_office_of_self_cancel(member: Member) -> None:
     cancellation (the office still sees the row in the members table). Mirrors
     ``gdpr.services.send_deletion_pending_admin_office_email``.
     """
-    from apps.shared.invitations import _frontend_base_url, _tenant_name
-    from apps.shared.tenants.email_service import EmailService
+    from apps.shared.deferred_email import send_email_best_effort
+    from apps.shared.tenant_urls import frontend_base_url, tenant_name
 
     tenant = getattr(connection, "tenant", None)
     office_email = getattr(tenant, "email", None)
@@ -53,7 +53,7 @@ def _notify_office_of_self_cancel(member: Member) -> None:
         return
 
     context = {
-        "tenant_name": _tenant_name(),
+        "tenant_name": tenant_name(),
         "member": {
             "first_name": member.first_name,
             "last_name": member.last_name,
@@ -64,31 +64,20 @@ def _notify_office_of_self_cancel(member: Member) -> None:
             if member.cancelled_effective_at
             else ""
         ),
-        "review_url": f"{_frontend_base_url()}/members/members/{member.id}",
+        "review_url": f"{frontend_base_url()}/members/members/{member.id}",
     }
-    try:
-        ok = EmailService().send_email(
-            slug="commissioning.member_self_cancelled_office",
-            to_emails=[office_email],
-            context=context,
-            related_object_type="member",
-            related_object_id=str(member.id),
-            priority="normal",
-        )
-        if not ok:
-            # send_email returns False on the dominant failure class (SMTP
-            # down, template error) without raising — log it so the office
-            # notification miss is visible.
-            logger.error(
-                "commissioning.self_cancel_office_email_not_sent member=%s",
-                member.id,
-            )
-    except (ValueError, TypeError, AttributeError, OSError) as exc:
-        logger.error(
-            "commissioning.self_cancel_office_email_failed member=%s error=%s",
-            member.id,
-            exc,
-        )
+    send_email_best_effort(
+        slug="commissioning.member_self_cancelled_office",
+        to_emails=[office_email],
+        context=context,
+        related_object_type="member",
+        related_object_id=str(member.id),
+        priority="normal",
+        logger=logger,
+        log_error_event="commissioning.self_cancel_office_email_failed",
+        log_not_sent_event="commissioning.self_cancel_office_email_not_sent",
+        log_ref=f"member={member.id}",
+    )
 
 
 @extend_schema_view(

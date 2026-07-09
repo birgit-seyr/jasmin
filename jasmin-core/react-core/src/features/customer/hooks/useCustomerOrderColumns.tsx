@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useCurrency } from "@hooks/configuration/useCurrency";
 import { useNumberFormat } from "@hooks/useNumberFormat";
-import { useSizeOptions } from "@hooks/useSizeOptions";
+import { useVegetableSizeOptions } from "@hooks/useVegetableSizeOptions";
 import { useUnitOptions } from "@hooks/useUnitOptions";
 import OrderAmountCell from "@features/customer/components/OrderAmountCell";
 import type {
@@ -50,7 +50,7 @@ export function useCustomerOrderColumns({
   const { formatCurrency } = useCurrency();
   const { format } = useNumberFormat();
   const { getUnitLabel } = useUnitOptions();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
 
   const activePriceTiers = useMemo(() => {
     return finalTiers
@@ -77,7 +77,7 @@ export function useCustomerOrderColumns({
         key: "share_article_name",
         render: (name: string | null | undefined, record) => {
           const size = record.size;
-          const suffix = size && size !== "M" ? `, ${getSizeLabel(size)}` : "";
+          const suffix = size && size !== "M" ? `, ${getVegetableSizeLabel(size)}` : "";
           return `${name ?? record.share_article_name ?? ""}${suffix}`;
         },
       },
@@ -197,7 +197,7 @@ export function useCustomerOrderColumns({
     t,
     formatCurrency,
     getUnitLabel,
-    getSizeLabel,
+    getVegetableSizeLabel,
     activePriceTiers,
     tableData,
     orderAmounts,

@@ -54,11 +54,18 @@ vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
 // hooks return benign empty configs; the option hooks return identity-ish
 // label getters; useNumberFormat returns a simple formatter. These stubs mean
 // the page never reaches the real useTenant via this barrel.
-vi.mock("@hooks/index", () => ({
-  useInvalidateAfterTableMutation: () => ({
-    onSaveSuccess: vi.fn(),
-    onDeleteSuccess: vi.fn(),
-  }),
+vi.mock("@hooks/index", async () => {
+  const { useYearWeekState, currentYear, currentWeek } = await import(
+    "@hooks/useYearWeekState"
+  );
+  return {
+    useYearWeekState,
+    currentYear,
+    currentWeek,
+    useInvalidateAfterTableMutation: () => ({
+      onSaveSuccess: vi.fn(),
+      onDeleteSuccess: vi.fn(),
+    }),
   useIsMobile: () => false,
   useNoteColumn: () => ({
     noteColumn: { title: "note", dataIndex: "note", key: "note" },
@@ -66,13 +73,14 @@ vi.mock("@hooks/index", () => ({
   useNumberFormat: () => ({
     format: (value: number) => String(value),
   }),
-  useSizeOptions: () => ({
-    getSizeLabel: (value: string) => value,
+  useVegetableSizeOptions: () => ({
+    getVegetableSizeLabel: (value: string) => value,
   }),
   useUnitOptions: () => ({
     getUnitLabel: (value: string) => value,
   }),
-}));
+  };
+});
 
 // useTenant is mocked directly too (belt-and-suspenders): the barrel mocks above
 // already short-circuit it, but any deep @hooks/configuration/useTenant import

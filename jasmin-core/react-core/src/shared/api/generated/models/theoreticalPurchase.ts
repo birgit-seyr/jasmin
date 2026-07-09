@@ -7,7 +7,7 @@
  */
 import type { TheoreticalPurchaseDayNumber } from './theoreticalPurchaseDayNumber';
 import type { UnitEnum } from './unitEnum';
-import type { SizeVegetableEnum } from './sizeVegetableEnum';
+import type { VegetableSizeEnum } from './vegetableSizeEnum';
 
 /**
  * Mixin to automatically add related name fields.
@@ -37,7 +37,7 @@ export interface TheoreticalPurchase {
    */
   amount?: string | null;
   unit: UnitEnum;
-  size?: SizeVegetableEnum;
+  size?: VegetableSizeEnum;
   /** @nullable */
   note?: string | null;
   /**

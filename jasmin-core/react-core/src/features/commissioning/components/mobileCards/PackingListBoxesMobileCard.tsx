@@ -1,5 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { useSizeOptions, useUnitOptions } from "@hooks/index";
+import {
+  useVegetableSizeOptions,
+  useUnitOptions,
+  getShareTypeVariationSizeLabelPure,
+} from "@hooks/index";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import { variationColumnKey } from "@features/commissioning/hooks/columns/columnKeys";
 import {
@@ -24,17 +28,17 @@ export function PackingListBoxesMobileCard({
   shareTypeVariations,
 }: PackingListBoxesMobileCardProps) {
   const { t } = useTranslation();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
   const { getUnitLabel } = useUnitOptions();
 
   const articleName = (record.share_article_name as string) || "";
-  const sizeLabel = getSizeLabelOrEmpty(record.size as string, getSizeLabel);
+  const sizeLabel = getSizeLabelOrEmpty(record.size as string, getVegetableSizeLabel);
   const unitLabel = getUnitLabel(record.unit as string);
   const noteText = (record.note as string) || "";
 
   const variations = shareTypeVariations
     .map((v) => ({
-      label: t(`commissioning.${v.size}`),
+      label: getShareTypeVariationSizeLabelPure(v.size, t),
       value: (record as Record<string, unknown>)[variationColumnKey(v.id!)] as
         | number
         | string

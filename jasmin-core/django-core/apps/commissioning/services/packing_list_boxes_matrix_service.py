@@ -42,11 +42,12 @@ from collections import Counter, defaultdict
 from decimal import Decimal
 from typing import Any
 
-from ..models import ShareContent, ShareDelivery
-from ..models.choices_text import SizeOptions
+from ..models import ShareDelivery
+from ..models.choices_text import ShareTypeVariationSizeOptions
 from ..utils.delivery_utils import tour_station_ids
 from ..utils.iso_week_utils import saturday_of_iso_week
 from ..utils.packing_divergence import record_amount
+from ..utils.packing_queries import packing_share_contents
 
 # (article_id, unit, size, variation_id) -> per-box amount
 _AmountByCell = dict[tuple[str, str, str, str], Decimal]
@@ -55,11 +56,11 @@ _ArticleMeta = dict[tuple[str, str, str], dict[str, Any]]
 # (base_variation_id | None, sorted add-on variation ids)
 _Signature = tuple["str | None", tuple[str, ...]]
 
-# Rank each SizeOptions code by its declared order (XS < S < M < L < …) so a
+# Rank each ShareTypeVariationSizeOptions code by its declared order (XS < S < M < L < …) so a
 # size tie-break sorts naturally. ``size`` is a plain CharField — there is NO
 # ``size_order`` column on ShareTypeVariation — so the ordering is derived here.
 _SIZE_ORDER: dict[str, int] = {
-    choice: index for index, choice in enumerate(SizeOptions.values)
+    choice: index for index, choice in enumerate(ShareTypeVariationSizeOptions.values)
 }
 
 
@@ -138,25 +139,17 @@ class PackingListBoxesMatrixService:
         (``_boxes_for_group`` + ``_build_columns``), so DeliveryStationDetails
         renders the exact same combination columns as the packing list.
         """
-        deliveries = (
-            ShareDelivery.objects.shippable()
-            .filter(
-                share__year=year,
-                share__delivery_week=delivery_week,
-                share__delivery_day__day_number=day_number,
-                subscription__isnull=False,
-                delivery_station_day__isnull=False,
-                delivery_station_day__delivery_station_id=delivery_station,
-            )
-            .select_related(
+        deliveries = cls._shippable_box_deliveries(
+            year=year,
+            delivery_week=delivery_week,
+            day_number=day_number,
+            select_related=(
                 "subscription__member",
                 "share__share_type_variation__share_type",
-            )
+            ),
+            delivery_station=delivery_station,
+            is_packed_bulk=is_packed_bulk,
         )
-        if is_packed_bulk is not None:
-            deliveries = deliveries.filter(
-                share__share_type_variation__is_packed_bulk=is_packed_bulk
-            )
 
         variation_by_id: dict[str, Any] = {}
         member_lines: defaultdict[str, list[_BoxLine]] = defaultdict(list)
@@ -214,37 +207,25 @@ class PackingListBoxesMatrixService:
         the overview, the packing list and DeliveryStationDetails all share one
         column definition.
         """
-        deliveries = (
-            ShareDelivery.objects.shippable()
-            .filter(
-                share__year=year,
-                share__delivery_week=delivery_week,
-                share__delivery_day__day_number=day_number,
-                subscription__isnull=False,
-                delivery_station_day__isnull=False,
-            )
-            .select_related(
+        deliveries = cls._shippable_box_deliveries(
+            year=year,
+            delivery_week=delivery_week,
+            day_number=day_number,
+            select_related=(
                 "subscription",
                 "share__share_type_variation__share_type",
                 "delivery_station_day",
-            )
+            ),
+            is_packed_bulk=is_packed_bulk,
         )
-        if is_packed_bulk is not None:
-            deliveries = deliveries.filter(
-                share__share_type_variation__is_packed_bulk=is_packed_bulk
-            )
 
-        variation_by_id: dict[str, Any] = {}
-        groups: defaultdict[tuple[str, str], list[_BoxLine]] = defaultdict(list)
-        for delivery in deliveries:
-            variation = delivery.share.share_type_variation
-            variation_by_id[variation.id] = variation
-            station_id = delivery.delivery_station_day.delivery_station_id
-            groups[(delivery.subscription.member_id, station_id)].append(
-                _BoxLine(
-                    variation, variation.share_type, delivery.subscription.quantity or 1
-                )
-            )
+        groups, variation_by_id = cls._group_into_boxlines(
+            deliveries,
+            lambda delivery: (
+                delivery.subscription.member_id,
+                delivery.delivery_station_day.delivery_station_id,
+            ),
+        )
 
         combinations: Counter = Counter()
         station_signature_counts: defaultdict[str, Counter] = defaultdict(Counter)
@@ -286,25 +267,17 @@ class PackingListBoxesMatrixService:
         carries ``id``, ``day_number``, ``tour`` / ``delivery_station_*`` and
         dynamic ``combo_<key>`` counts.
         """
-        deliveries = (
-            ShareDelivery.objects.shippable()
-            .filter(
-                share__year=year,
-                share__delivery_week=delivery_week,
-                subscription__isnull=False,
-                delivery_station_day__isnull=False,
-            )
-            .select_related(
+        deliveries = cls._shippable_box_deliveries(
+            year=year,
+            delivery_week=delivery_week,
+            select_related=(
                 "subscription",
                 "share__share_type_variation__share_type",
                 "share__delivery_day",
                 "delivery_station_day__delivery_station",
-            )
+            ),
+            is_packed_bulk=is_packed_bulk,
         )
-        if is_packed_bulk is not None:
-            deliveries = deliveries.filter(
-                share__share_type_variation__is_packed_bulk=is_packed_bulk
-            )
 
         variation_by_id: dict[str, Any] = {}
         # ONE pass over the week's deliveries: group a member's boxes per
@@ -407,6 +380,85 @@ class PackingListBoxesMatrixService:
 
         return {"columns": columns, "rows": rows}
 
+    # ── Shared shippable-delivery query + box-line grouping ───────────────
+    @staticmethod
+    def _shippable_box_deliveries(
+        *,
+        year: int,
+        delivery_week: int,
+        select_related: tuple[str, ...],
+        day_number: int | None = None,
+        delivery_station: str | None = None,
+        tour_station_ids: list[str] | None = None,
+        is_packed_bulk: bool | None = None,
+    ):
+        """Shippable ``ShareDelivery`` rows that can form a physical box.
+
+        The shared base every box-derivation method opens with: the
+        ``shippable()`` rows for a week (optionally narrowed to one delivery day
+        via ``day_number``) that carry BOTH a subscription and a station-day —
+        the two anchors a physical box needs. ``select_related`` is passed
+        explicitly so each caller keeps its EXACT join set; the station/tour
+        narrowing (a concrete station wins over a tour's station ids) and the
+        ``is_packed_bulk`` clause mirror the ShareContent packing ladder.
+        """
+        filters: dict[str, Any] = {
+            "share__year": year,
+            "share__delivery_week": delivery_week,
+            "subscription__isnull": False,
+            # A NULL station-day can't identify a physical box; without this
+            # every such row collapses into one bogus group.
+            "delivery_station_day__isnull": False,
+        }
+        if day_number is not None:
+            filters["share__delivery_day__day_number"] = day_number
+        deliveries = (
+            ShareDelivery.objects.shippable()
+            .filter(**filters)
+            .select_related(*select_related)
+        )
+        if delivery_station is not None:
+            deliveries = deliveries.filter(
+                delivery_station_day__delivery_station_id=delivery_station
+            )
+        elif tour_station_ids is not None:
+            deliveries = deliveries.filter(
+                delivery_station_day__delivery_station_id__in=tour_station_ids
+            )
+        if is_packed_bulk is not None:
+            deliveries = deliveries.filter(
+                share__share_type_variation__is_packed_bulk=is_packed_bulk
+            )
+        return deliveries
+
+    @staticmethod
+    def _group_into_boxlines(
+        deliveries, key_fn
+    ) -> tuple[defaultdict[Any, list[_BoxLine]], dict[str, Any]]:
+        """Group shippable deliveries into ``_BoxLine`` lists keyed by ``key_fn``.
+
+        Returns ``(groups, variation_by_id)`` — ``groups`` maps each
+        ``key_fn(delivery)`` to that member's box lines, ``variation_by_id``
+        collects every delivered variation. Serves the callers that need ONLY
+        the grouping (the station-combination counts + the packing-matrix
+        derivation); the station-member and weekly matrices read extra per-row
+        sidecar metadata (member names / day + station meta) in their own loop
+        and stay bespoke.
+        """
+        variation_by_id: dict[str, Any] = {}
+        groups: defaultdict[Any, list[_BoxLine]] = defaultdict(list)
+        for delivery in deliveries:
+            variation = delivery.share.share_type_variation
+            variation_by_id[variation.id] = variation
+            groups[key_fn(delivery)].append(
+                _BoxLine(
+                    variation,
+                    variation.share_type,
+                    delivery.subscription.quantity or 1,
+                )
+            )
+        return groups, variation_by_id
+
     # ── Step A/B: derive the box combinations + their counts ──────────────
     @classmethod
     def _derive_combinations(
@@ -424,52 +476,33 @@ class PackingListBoxesMatrixService:
 
         Returns ``(Counter[signature] -> box count, {variation_id: variation})``.
         """
-        deliveries = (
-            ShareDelivery.objects.shippable()
-            .filter(
-                share__year=year,
-                share__delivery_week=delivery_week,
-                share__delivery_day__day_number=day_number,
-                subscription__isnull=False,
-                # A NULL station-day can't identify a physical box; without this
-                # every such row collapses into one bogus group.
-                delivery_station_day__isnull=False,
-            )
-            .select_related(
+        deliveries = cls._shippable_box_deliveries(
+            year=year,
+            delivery_week=delivery_week,
+            day_number=day_number,
+            select_related=(
                 "subscription",
                 "share__share_type_variation__share_type",
                 "delivery_station_day",
-            )
+            ),
+            delivery_station=delivery_station,
+            tour_station_ids=tour_station_ids,
+            is_packed_bulk=is_packed_bulk,
         )
-        if delivery_station is not None:
-            deliveries = deliveries.filter(
-                delivery_station_day__delivery_station_id=delivery_station
-            )
-        elif tour_station_ids is not None:
-            deliveries = deliveries.filter(
-                delivery_station_day__delivery_station_id__in=tour_station_ids
-            )
-        if is_packed_bulk is not None:
-            deliveries = deliveries.filter(
-                share__share_type_variation__is_packed_bulk=is_packed_bulk
-            )
 
-        variation_by_id: dict[str, Any] = {}
         # A physical box = one member's pickup at one delivery STATION on the
         # queried day (year/week/day are already fixed by the filter above). We
         # group by (member, delivery_station) rather than by the specific
         # DeliveryStationDay row so a member's base + add-ons combine as long as
         # they ship to the same station that day — robust to DSD succession.
         # (A single active DSD per (station, day) makes the two equivalent today.)
-        groups: defaultdict[tuple[str, str], list[_BoxLine]] = defaultdict(list)
-        for delivery in deliveries:
-            variation = delivery.share.share_type_variation
-            share_type = variation.share_type
-            variation_by_id[variation.id] = variation
-            station_id = delivery.delivery_station_day.delivery_station_id
-            groups[(delivery.subscription.member_id, station_id)].append(
-                _BoxLine(variation, share_type, delivery.subscription.quantity or 1)
-            )
+        groups, variation_by_id = cls._group_into_boxlines(
+            deliveries,
+            lambda delivery: (
+                delivery.subscription.member_id,
+                delivery.delivery_station_day.delivery_station_id,
+            ),
+        )
 
         counter: Counter = Counter()
         for lines in groups.values():
@@ -594,20 +627,15 @@ class PackingListBoxesMatrixService:
         if not variation_ids:
             return amount_by_cell, article_meta
 
-        contents = ShareContent.active.for_period(is_past=is_past).filter(
-            share__year=year,
-            share__delivery_week=delivery_week,
-            share__delivery_day__day_number=day_number,
-            share__share_type_variation_id__in=variation_ids,
-        )
-        if is_packed_bulk is not None:
-            contents = contents.filter(
-                share__share_type_variation__is_packed_bulk=is_packed_bulk
-            )
-        if delivery_station is not None:
-            contents = contents.filter(delivery_station=delivery_station)
-        elif tour_station_ids is not None:
-            contents = contents.filter(delivery_station_id__in=tour_station_ids)
+        contents = packing_share_contents(
+            year,
+            delivery_week,
+            day_number,
+            is_past=is_past,
+            is_packed_bulk=is_packed_bulk,
+            delivery_station=delivery_station,
+            tour_station_ids=tour_station_ids,
+        ).filter(share__share_type_variation_id__in=variation_ids)
 
         rows = contents.values(
             "share_article__id",

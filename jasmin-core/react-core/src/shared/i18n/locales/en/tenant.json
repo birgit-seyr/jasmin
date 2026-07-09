@@ -44,7 +44,9 @@
     "upload_favicon": "Upload favicon",
     "current_favicon": "Current favicon",
     "current_bio_logo": "Current organic logo",
-    "upload_bio_logo": "Upload organic logo"
+    "upload_bio_logo": "Upload organic logo",
+    "logo_saved": "Logo saved",
+    "bio_logo_saved": "Organic logo saved"
   },
   "email": "email",
   "email_for_orders": "email for orders",

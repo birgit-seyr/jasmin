@@ -192,7 +192,7 @@ export function stopPropagation(e: MouseEvent) {
 /** Convenience helper used by several pages for the size label suffix. */
 export function getSizeLabelOrEmpty(
   size: string | null | undefined,
-  getSizeLabel: (size: string) => string,
+  getVegetableSizeLabel: (size: string) => string,
 ): string {
-  return size && size !== "M" ? getSizeLabel(size) : "";
+  return size && size !== "M" ? getVegetableSizeLabel(size) : "";
 }

@@ -34,6 +34,7 @@ from ..models import (
     ShareTypeVariation,
     Storage,
 )
+from ..models.choices_text import UnitOptions
 from ..utils import (
     batch_get_physical_variation_totals_for_weeks,
     sort_share_articles,
@@ -1694,7 +1695,7 @@ class ShareContentService:
         """Return kg_per_piece from share_content or fall back to share_article."""
         if share_content.kg_per_piece is not None:
             return share_content.kg_per_piece
-        if share_content.unit == "PCS" and share_content.size:
+        if share_content.unit == UnitOptions.PCS and share_content.size:
             # ``size`` is enum-constrained (S/M/L) and ShareArticle has
             # a matching ``kg_per_piece_<size>`` for each — no default
             # needed. A typo or unexpected size value should crash here
@@ -1723,8 +1724,8 @@ class ShareContentService:
         if pricing is None:
             return None
         unit_price_map = {
-            "KG": pricing.net_price_for_boxes_kg,
-            "PCS": pricing.net_price_for_boxes_pieces,
-            "BUNCH": pricing.net_price_for_boxes_bunch,
+            UnitOptions.KG: pricing.net_price_for_boxes_kg,
+            UnitOptions.PCS: pricing.net_price_for_boxes_pieces,
+            UnitOptions.BUNCH: pricing.net_price_for_boxes_bunch,
         }
         return unit_price_map.get(share_content.unit)

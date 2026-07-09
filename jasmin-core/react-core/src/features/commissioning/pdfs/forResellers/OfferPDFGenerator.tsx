@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useCommissioningOffersList } from "@shared/api/generated/commissioning/commissioning";
 import { useDateFormat, useTenant } from "@hooks/index";
 import { formatWeekLabel, generatePdfFilename } from "@shared/utils";
+import { resolveOfferTiers } from "@features/commissioning/hooks";
 import OfferPDF from "./OfferPDF";
 import { type ResellerInfo } from "./pdfBase";
 import { useResellerPdfContext } from "./resellerPdfContext";
@@ -44,15 +45,11 @@ export default function OfferPDFGenerator({
       docType: "offer",
     });
 
-  const used_tiers_for_offers = getSetting("used_tiers_for_offers") as
-    | number[]
-    | undefined;
   // Single-tier mode when the tenant hasn't configured tiers: the PDF
   // shows one price column (T1) only. No silent default to [1, 3, 5].
-  const finalTiers =
-    used_tiers_for_offers && used_tiers_for_offers.length > 0
-      ? used_tiers_for_offers
-      : [1];
+  const finalTiers = resolveOfferTiers(
+    getSetting("used_tiers_for_offers") as number[] | undefined,
+  );
 
   // Use same translation as Offers.tsx instead of hardcoded "T1", "T3", "T5"
   const tierLabels = finalTiers.map(

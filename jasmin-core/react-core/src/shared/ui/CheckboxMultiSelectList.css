@@ -1,0 +1,15 @@
+.checkbox-multi-select__all {
+  margin-bottom: 12px;
+}
+
+.checkbox-multi-select__list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.checkbox-multi-select__item {
+  padding: 4px 0;
+}

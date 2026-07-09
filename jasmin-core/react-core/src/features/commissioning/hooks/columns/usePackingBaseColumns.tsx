@@ -2,7 +2,7 @@ import { useCallback, useMemo } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useNoteColumn, useSizeOptions, useUnitOptions } from "@hooks/index";
+import { useNoteColumn, useVegetableSizeOptions, useUnitOptions } from "@hooks/index";
 import type {
   EditableColumnConfig,
   TableRecord,
@@ -52,7 +52,7 @@ export function usePackingBaseColumns(
 ) {
   const { t } = useTranslation();
   const { getUnitLabel } = useUnitOptions();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
   const { noteColumn } = useNoteColumn();
 
   const { shareArticleColumn } = useShareArticleColumn({
@@ -111,7 +111,7 @@ export function usePackingBaseColumns(
                   record.backup_share_article_unit as string,
                 );
               } else if (isSize && record.backup_share_article_size) {
-                backup = getSizeLabel(
+                backup = getVegetableSizeLabel(
                   record.backup_share_article_size as string,
                 );
               }
@@ -133,7 +133,7 @@ export function usePackingBaseColumns(
         };
       }),
     ],
-    [shareArticleColumn, amountUnitSizeColumns, getUnitLabel, getSizeLabel, t],
+    [shareArticleColumn, amountUnitSizeColumns, getUnitLabel, getVegetableSizeLabel, t],
   );
 
   const endNoteColumn = useMemo<EditableColumnConfig<TableRecord>>(
@@ -157,9 +157,9 @@ export function usePackingBaseColumns(
       rows.map((item) => ({
         ...item,
         unit_label: item.unit ? getUnitLabel(item.unit as string) : "",
-        size_label: item.size ? getSizeLabel(item.size as string) : "",
+        size_label: item.size ? getVegetableSizeLabel(item.size as string) : "",
       })),
-    [getUnitLabel, getSizeLabel],
+    [getUnitLabel, getVegetableSizeLabel],
   );
 
   return { baseColumns, noteColumn: endNoteColumn, withUnitSizeLabels };

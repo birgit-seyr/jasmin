@@ -6,6 +6,7 @@ import {
   useCommissioningInvoicesRetrieve,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { OrderContentListItem } from "@shared/api/generated/models";
+import { openStoredPdf } from "@shared/utils";
 
 const { Text } = Typography;
 
@@ -57,8 +58,7 @@ export default function CustomerDocumentsCard({ orderContents }: Props) {
               disabled={!deliveryNote?.file}
               type="primary"
               onClick={() =>
-                deliveryNote?.file &&
-                window.open(deliveryNote.file, "_blank", "noopener,noreferrer")
+                deliveryNote?.file && openStoredPdf(deliveryNote.file)
               }
             >
               <DownloadOutlined /> {t("customer.delivery_note")}
@@ -83,7 +83,7 @@ export default function CustomerDocumentsCard({ orderContents }: Props) {
               onClick={() =>
                 !invoiceIsCancelled &&
                 invoice?.file &&
-                window.open(invoice.file, "_blank", "noopener,noreferrer")
+                openStoredPdf(invoice.file)
               }
             >
               <DownloadOutlined /> {t("customer.invoice")}
@@ -110,8 +110,7 @@ export default function CustomerDocumentsCard({ orderContents }: Props) {
                   icon={<FilePdfOutlined />}
                   disabled={!storno?.file}
                   onClick={() =>
-                    storno?.file &&
-                    window.open(storno.file, "_blank", "noopener,noreferrer")
+                    storno?.file && openStoredPdf(storno.file)
                   }
                 >
                   <DownloadOutlined /> {t("customer.storno")}

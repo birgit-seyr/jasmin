@@ -17,11 +17,11 @@
 * `FULL` - Full
 * `ONE_SIZE` - Onesize
  */
-export type SizeEnum = typeof SizeEnum[keyof typeof SizeEnum];
+export type ShareTypeVariationSizeEnum = typeof ShareTypeVariationSizeEnum[keyof typeof ShareTypeVariationSizeEnum];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const SizeEnum = {
+export const ShareTypeVariationSizeEnum = {
   XS: 'XS',
   S: 'S',
   M: 'M',

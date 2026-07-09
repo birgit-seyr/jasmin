@@ -1,7 +1,8 @@
 import { SendOutlined } from "@ant-design/icons";
-import { Checkbox, Modal } from "antd";
+import { Modal } from "antd";
 
 import { ModalCancelSaveFooter } from "@shared/modals/shared";
+import { CheckboxMultiSelectList } from "@shared/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { notify } from "@shared/utils";
@@ -57,22 +58,12 @@ export default function SendOffersModal({
     [resellers]
   );
 
-  const allSelected = selectedIds.length === notSentResellers.length;
   const noneSelected = selectedIds.length === 0;
 
-  const handleToggleAll = useCallback(() => {
-    if (allSelected) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(notSentResellers.map((r) => r.id));
-    }
-  }, [allSelected, notSentResellers]);
-
-  const handleToggle = useCallback((id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((rid) => rid !== id) : [...prev, id]
-    );
-  }, []);
+  const selectableItems = useMemo(
+    () => notSentResellers.map((r) => ({ key: r.id, label: r.name })),
+    [notSentResellers]
+  );
 
   const handleSend = useCallback(async () => {
     if (selectedIds.length === 0) {
@@ -132,38 +123,12 @@ export default function SendOffersModal({
       </div>
 
       {notSentResellers.length > 0 && (
-        <>
-          <div style={{ marginBottom: 12 }}>
-            <Checkbox
-              checked={allSelected}
-              indeterminate={!allSelected && !noneSelected}
-              onChange={handleToggleAll}
-            >
-              <strong>{t("common.select_all")}</strong>
-            </Checkbox>
-          </div>
-
-          <div
-            style={{
-              maxHeight: 300,
-              overflowY: "auto",
-              border: "1px solid var(--color-border)",
-              borderRadius: 6,
-              padding: 12,
-            }}
-          >
-            {notSentResellers.map((reseller) => (
-              <div key={reseller.id} style={{ padding: "4px 0" }}>
-                <Checkbox
-                  checked={selectedIds.includes(reseller.id)}
-                  onChange={() => handleToggle(reseller.id)}
-                >
-                  {reseller.name}
-                </Checkbox>
-              </div>
-            ))}
-          </div>
-        </>
+        <CheckboxMultiSelectList
+          items={selectableItems}
+          selectedKeys={selectedIds}
+          onChange={setSelectedIds}
+          withSelectAll
+        />
       )}
 
       {notSentResellers.length === 0 && (

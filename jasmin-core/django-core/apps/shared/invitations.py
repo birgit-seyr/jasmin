@@ -18,7 +18,6 @@ import logging
 from collections.abc import Iterable
 from datetime import timedelta
 
-from django.conf import settings
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError
 from django.db import OperationalError, ProgrammingError, transaction
@@ -27,6 +26,7 @@ from django.utils.crypto import get_random_string
 
 from apps.accounts.models import JasminUser
 from apps.authz.roles import VALID_ROLES, Role
+from apps.shared.tenant_urls import frontend_base_url, tenant_name
 
 logger = logging.getLogger("authentication")
 
@@ -60,22 +60,6 @@ def _tenant_default_language(default: str = "en") -> str:
     return default
 
 
-def _frontend_base_url() -> str:
-    """Best-effort base URL of the React frontend for the current tenant."""
-    from django.db import connection
-
-    tenant = getattr(connection, "tenant", None)
-    if tenant is not None:
-        domain_obj = tenant.domains.filter(is_primary=True).first() or (
-            tenant.domains.first()
-        )
-        if domain_obj:
-            scheme = "http" if settings.DEBUG else "https"
-            return f"{scheme}://{domain_obj.domain}"
-    # Fallback for management commands / tests.
-    return getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000")
-
-
 def _normalize_roles(roles: Iterable[str] | None) -> list[str]:
     if not roles:
         return [Role.MEMBER]
@@ -105,6 +89,7 @@ def create_user_with_invitation(
     is already taken by an active user.
     """
     from apps.commissioning.models import UserInvitation
+    from apps.commissioning.models.choices_text import InvitationStatus
 
     email = email.strip().lower()
     existing = JasminUser.objects.filter(email__iexact=email).first()
@@ -150,7 +135,9 @@ def create_user_with_invitation(
 
     # Cancel any still-active invitation for the same user before creating
     # a fresh one — only one valid token at a time.
-    UserInvitation.objects.filter(user=user, status="sent").update(status="cancelled")
+    UserInvitation.objects.filter(user=user, status=InvitationStatus.SENT).update(
+        status=InvitationStatus.CANCELLED
+    )
 
     invitation = UserInvitation.objects.create(
         user=user,
@@ -175,8 +162,11 @@ def create_user_with_invitation(
 def resend_invitation(*, user: JasminUser, created_by: JasminUser | None = None):
     """Cancel any open invitation, mint a new one, send email."""
     from apps.commissioning.models import UserInvitation
+    from apps.commissioning.models.choices_text import InvitationStatus
 
-    UserInvitation.objects.filter(user=user, status="sent").update(status="cancelled")
+    UserInvitation.objects.filter(user=user, status=InvitationStatus.SENT).update(
+        status=InvitationStatus.CANCELLED
+    )
     member = getattr(user, "member_profile", None)
     invitation = UserInvitation.objects.create(
         user=user,
@@ -206,6 +196,7 @@ def get_invitation(token: str):
     with the same generic error message.
     """
     from apps.commissioning.models import UserInvitation
+    from apps.commissioning.models.choices_text import InvitationStatus
 
     try:
         invitation = UserInvitation.objects.select_related("user", "member").get(
@@ -213,7 +204,7 @@ def get_invitation(token: str):
         )
     except (UserInvitation.DoesNotExist, ValueError):
         return None
-    if invitation.status != "sent" or invitation.is_expired:
+    if invitation.status != InvitationStatus.SENT or invitation.is_expired:
         return None
     return invitation
 
@@ -226,6 +217,8 @@ def accept_invitation(*, token: str, password: str) -> JasminUser:
       * invalid/expired/used token
       * password failing the project validators
     """
+    from apps.commissioning.models.choices_text import InvitationStatus
+
     invitation = get_invitation(token)
     if invitation is None:
         raise ValidationError({"token": "This invitation link is invalid or expired."})
@@ -241,7 +234,7 @@ def accept_invitation(*, token: str, password: str) -> JasminUser:
     # save() on JasminUser keeps is_active in sync with account_status.
     user.save(update_fields=["password", "account_status", "is_active"])
 
-    invitation.status = "accepted"
+    invitation.status = InvitationStatus.ACCEPTED
     invitation.save(update_fields=["status"])
 
     # If the invitation was created in the context of a Member application
@@ -255,7 +248,9 @@ def accept_invitation(*, token: str, password: str) -> JasminUser:
     # so a stolen old token cannot be replayed even before its TTL expires.
     from apps.commissioning.models import UserInvitation
 
-    UserInvitation.objects.filter(user=user, status="sent").update(status="cancelled")
+    UserInvitation.objects.filter(user=user, status=InvitationStatus.SENT).update(
+        status=InvitationStatus.CANCELLED
+    )
 
     # P2-1: account-level welcome. Distinct from
     # ``accounts.application_approved`` (which fires on Member admit
@@ -290,13 +285,13 @@ def _send_invitation_email(*, user: JasminUser, invitation) -> None:
     """
     from apps.shared.deferred_email import schedule_deferred_email
 
-    base_url = _frontend_base_url()
+    base_url = frontend_base_url()
     accept_url = f"{base_url}/set-password/{invitation.token}"
 
     # Flatten to plain scalars — never hand a live ORM instance to the
     # tenant-editable email renderer (see template_renderer._resolve).
     context = {
-        "tenant_name": _tenant_name(),
+        "tenant_name": tenant_name(),
         "user": {"first_name": user.first_name, "email": user.email},
         "accept_url": accept_url,
         # EML-4: pre-format to a substitution-safe string (mirrors
@@ -326,13 +321,6 @@ def _send_invitation_email(*, user: JasminUser, invitation) -> None:
     )
 
 
-def _tenant_name() -> str:
-    from django.db import connection
-
-    tenant = getattr(connection, "tenant", None)
-    return getattr(tenant, "name", "") or ""
-
-
 def _send_welcome_email(*, user: JasminUser) -> None:
     """Dispatch the ``accounts.welcome_user`` email when a user account
     transitions to ``active``.
@@ -349,9 +337,9 @@ def _send_welcome_email(*, user: JasminUser) -> None:
     # Flatten to plain scalars — never hand a live ORM instance to the
     # tenant-editable email renderer (see template_renderer._resolve).
     context = {
-        "tenant_name": _tenant_name(),
+        "tenant_name": tenant_name(),
         "user": {"first_name": user.first_name},
-        "portal_url": _frontend_base_url(),
+        "portal_url": frontend_base_url(),
     }
     user_email = user.email
 

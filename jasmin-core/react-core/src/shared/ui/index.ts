@@ -15,6 +15,15 @@ export { default as DiffCell } from './DiffCell';
 export { default as SummaryStatsCard } from './SummaryStatsCard';
 export type { SummaryStat } from './SummaryStatsCard';
 export { default as EmptyHint } from './EmptyHint';
+export { default as CheckboxMultiSelectList } from './CheckboxMultiSelectList';
+export type {
+  CheckboxMultiSelectListItem,
+  CheckboxMultiSelectListProps,
+} from './CheckboxMultiSelectList';
+export { default as PictureUploadField } from './PictureUploadField';
+export type { PictureUploadFieldProps } from './PictureUploadField';
+export { usePictureUpload } from './usePictureUpload';
+export type { UsePictureUploadOptions } from './usePictureUpload';
 export { default as StatsAreaChart } from './StatsAreaChart';
 export type { StatsAreaSeries } from './StatsAreaChart';
 export { default as StatsBarChart } from './StatsBarChart';

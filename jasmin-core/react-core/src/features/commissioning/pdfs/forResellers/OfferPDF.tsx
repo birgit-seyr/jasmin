@@ -1,7 +1,7 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import dayjs from "dayjs";
 import type { TFunction } from "i18next";
-import { useSizeOptions, useUnitOptions } from "@hooks/index";
+import { useVegetableSizeOptions, useUnitOptions } from "@hooks/index";
 import { formatNumber } from "@shared/utils/numberFormat";
 import {
   baseStyles,
@@ -151,7 +151,7 @@ function OfferPage({
   const { offers, delivery_week } = data;
   const locale = tenantSettings?.number_locale ?? "de-DE";
   const { getUnitLabel } = useUnitOptions();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
 
   const formatPrice = (
     price: number | string | null | undefined,
@@ -311,7 +311,7 @@ function OfferPage({
           <View key={index} style={styles.tableRow} wrap={false}>
             <Text style={dynStyles.dynCol1}>
               {offer.share_article_name}
-              {offer.size !== "M" ? ", " + getSizeLabel(offer.size ?? "") : ""}
+              {offer.size !== "M" ? ", " + getVegetableSizeLabel(offer.size ?? "") : ""}
               {tenantSettings.organic_control_number
                 ? organicMarker(offer.organic_status)
                 : ""}

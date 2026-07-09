@@ -29,9 +29,26 @@ from django.db import migrations
 
 # table -> {allowed columns when finalized, one-way (cannot unfinalize)}.
 # ``is_finalized`` itself is always implicitly allowed.
+#
+# ⚠️ THIS DICT IS THE INSTALL-TIME STATE, NOT THE EFFECTIVE STATE. The six
+# ``*content*`` tables below record ``one_way: False`` — that is the trigger
+# body this migration originally installed. Migration
+# ``0015_content_finalized_one_way`` LATER rebuilds those six trigger functions
+# with ``one_way=True`` (GoBD / HGB §257 / UStG §14: a finalized content line is
+# legally immutable, mirroring ``IS_FINALIZED_ONE_WAY = True`` on the models).
+# So the LIVE database has all six content tables one-way; this ``False`` is
+# stale history kept only because migrations are frozen + forward-only.
+#
+# DO NOT copy a content row's ``one_way: False`` when building a NEW trigger
+# migration — doing so would silently un-protect legally-immutable lines. The
+# authoritative "does the model match the installed trigger?" check is the drift
+# test ``tests/tests_lifecycle/test_finalized_allowlist_sync.py`` (model ↔ LIVE
+# trigger) plus ``tests/tests_lifecycle/test_finalized_protection_dict_ssot.py``
+# (this dict + the 0015 override ↔ model).
 PROTECTED_TABLES: dict[str, dict] = {
     "commissioning_offer": {"allowed": ["amount"], "one_way": False},
     "commissioning_order": {"allowed": ["note"], "one_way": True},
+    # one_way flipped to True by 0015 (effective state); see the warning above.
     "commissioning_ordercontent": {"allowed": [], "one_way": False},
     "commissioning_crateordercontent": {"allowed": [], "one_way": False},
     "commissioning_cratedeliverynotecontent": {"allowed": [], "one_way": False},

@@ -41,7 +41,12 @@ import {
 } from "@features/commissioning/hooks";
 import type { ShareDeliveryDayOption } from "@features/commissioning/hooks/useShareDeliveryDays";
 import { PackingBoxesMatrixPDFGenerator } from "@features/commissioning/pdfs";
-import { useIsMobile, useTenant } from "@hooks/index";
+import {
+  currentWeek,
+  useIsMobile,
+  useTenant,
+  useYearWeekState,
+} from "@hooks/index";
 import {
   activeAtDateForWeek,
   formatDayLabel,
@@ -51,8 +56,6 @@ import {
   isWeekInPast,
 } from "@shared/utils";
 
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
 const currentDay = dayjs().isoWeekday();
 
 /**
@@ -95,8 +98,8 @@ export default function PackingListBoxes() {
   ) as boolean;
 
   // --- Filters (scope). No ShareType selector — all share types at once. ---
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedDeliveryDay, setSelectedDeliveryDay] = useState<number | null>(
     currentDay - 1,
   );

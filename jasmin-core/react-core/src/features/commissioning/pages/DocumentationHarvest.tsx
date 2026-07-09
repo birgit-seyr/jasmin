@@ -1,6 +1,5 @@
 import type { FormInstance } from "antd";
 import { Button } from "antd";
-import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -34,7 +33,12 @@ import {
 } from "@shared/ui";
 import { AddShareArticleEntry } from "@features/commissioning/components";
 
-import { useIsMobile, useNoteColumn, useTableRowSelection } from "@hooks/index";
+import {
+  currentWeek,
+  useIsMobile,
+  useNoteColumn,
+  useTableRowSelection,
+} from "@hooks/index";
 import {
   useAmountUnitSizeColumns,
   useDocumentationSummaryPage,
@@ -44,8 +48,6 @@ import {
   useStorages,
 } from "@features/commissioning/hooks";
 import type { DocumentationSummaryRecord } from "@features/commissioning/hooks/useDocumentationSummaryPage";
-
-const currentWeek = dayjs().isoWeek();
 
 const shareArticleFilters = {
   is_active: true,

@@ -7,8 +7,8 @@ from .base import JasminModel
 from .choices_text import (
     CultivationOriginOptions,
     MovementTypeOptions,
-    SizeVegetableOptions,
-    UnitOptions,
+    size_vegetable_field,
+    unit_field,
 )
 from .managers import DateActiveOnlyManager
 
@@ -205,12 +205,8 @@ class MovementShareArticle(JasminModel):
     is_theoretical = models.BooleanField(default=False)
 
     share_article = models.ForeignKey("ShareArticle", on_delete=models.PROTECT)
-    unit = models.CharField(max_length=10, choices=UnitOptions.choices)
-    size = models.CharField(
-        max_length=1,
-        choices=SizeVegetableOptions.choices,
-        default=SizeVegetableOptions.M,
-    )
+    unit = unit_field()
+    size = size_vegetable_field()
     amount = models.DecimalField(
         max_digits=10, decimal_places=3
     )  # this is always in the default_unit

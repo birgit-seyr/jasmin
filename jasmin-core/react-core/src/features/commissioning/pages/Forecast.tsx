@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { FormInstance } from "antd";
 import { Button, Popconfirm } from "antd";
 import dayjs from "dayjs";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   commissioningBulkFinalizeCreate,
@@ -35,11 +35,8 @@ import { BulkActionButton, ExplainerText, PastWarningMessage } from '@shared/ui'
 import { AddShareArticleEntry } from '@features/commissioning/components';
 import { activeAtDateForWeek, isWeekInPast, notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
-import { useActiveShareOptions, useInvalidateAfterTableMutation, useIsMobile, useNoteColumn, useShareTypeVariationSizeOptions, useTableRowSelection, useTenant } from '@hooks/index';
+import { currentWeek, useActiveShareOptions, useInvalidateAfterTableMutation, useIsMobile, useNoteColumn, useShareTypeVariationSizeOptions, useTableRowSelection, useTenant, useYearWeekState } from '@hooks/index';
 import { useAmountUnitSizeColumns, useFinalColumn, useForecastColumns, useOfferGroups, usePlots, useShareArticleColumn, useShareArticles, useShareTypeVariations, variationColumnKey } from '@features/commissioning/hooks';
-
-const currentYear = dayjs().year();
-const currentWeek = dayjs().isoWeek();
 
 const shareArticleFilters = {
   is_harvest_share_article: true,
@@ -48,8 +45,8 @@ const shareArticleFilters = {
 };
 
 export default function Forecast() {
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
     [selectedYear, selectedWeek],

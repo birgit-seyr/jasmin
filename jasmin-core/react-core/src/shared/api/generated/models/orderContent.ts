@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { UnitEnum } from './unitEnum';
-import type { SizeVegetableEnum } from './sizeVegetableEnum';
+import type { VegetableSizeEnum } from './vegetableSizeEnum';
 
 /**
  * Adds ``line_netto`` and ``line_brutto`` (string decimals) to a line-item
@@ -54,7 +54,7 @@ export interface OrderContent {
    */
   description?: string | null;
   unit: UnitEnum;
-  size?: SizeVegetableEnum;
+  size?: VegetableSizeEnum;
   /**
    * @nullable
    * @pattern ^-?\d{0,3}(?:\.\d{0,2})?$

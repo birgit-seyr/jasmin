@@ -1,4 +1,5 @@
-import { Input, Select, Table, Tag } from "antd";
+import { Input, Select, Tag } from "antd";
+import { ReadOnlyReportTable } from "@shared/tables";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -157,17 +158,13 @@ export default function EmailLog() {
         />
       </div>
 
-      <Table<EmailLog>
+      <ReadOnlyReportTable<EmailLog>
         columns={columns}
         dataSource={rows}
-        className="custom-jasmin-table"
         rowKey="id"
         loading={isFetching}
         pagination={{ pageSize: 50, showSizeChanger: true }}
-        size="small"
-        locale={{
-          emptyText: t("members.no_emails_sent"),
-        }}
+        emptyText={t("members.no_emails_sent")}
       />
     </div>
   );

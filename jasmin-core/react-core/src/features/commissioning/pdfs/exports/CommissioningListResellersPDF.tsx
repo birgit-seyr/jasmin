@@ -1,7 +1,7 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { TFunction } from "i18next";
 import type { CommissioningListEntry } from "@shared/api/generated/models";
-import { useSizeOptions, useUnitOptions } from "@hooks/index";
+import { useVegetableSizeOptions, useUnitOptions } from "@hooks/index";
 import { formatNumber } from "@shared/utils/numberFormat";
 import { listStyles } from "./listPdfBase";
 import {
@@ -96,7 +96,7 @@ const CommissioningListResellersPDF = ({
   locale = "de-DE",
 }: CommissioningListResellersPDFProps) => {
   const { getUnitLabel } = useUnitOptions();
-  const { getSizeLabel } = useSizeOptions();
+  const { getVegetableSizeLabel } = useVegetableSizeOptions();
 
   const resellersWithOrders = data.filter(
     (reseller) =>
@@ -167,7 +167,7 @@ const CommissioningListResellersPDF = ({
                         {item.share_article_name}
                         {item.size &&
                           item.size !== "M" &&
-                          `, ${getSizeLabel(item.size)}`}
+                          `, ${getVegetableSizeLabel(item.size)}`}
                       </Text>
                     </View>
                     <View

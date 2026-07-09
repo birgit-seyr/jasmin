@@ -1,7 +1,8 @@
 import type { FC } from "react";
 import { useMemo } from "react";
-import { Modal, Table, Tag, Tooltip } from "antd";
+import { Modal, Tag, Tooltip } from "antd";
 import ModalCloseFooter from "@shared/modals/ModalCloseFooter";
+import { ReadOnlyReportTable } from "@shared/tables";
 import type { ColumnsType } from "antd/es/table";
 import { useTranslation } from "react-i18next";
 import { useCommissioningMembersEmailsList } from "@shared/api/generated/commissioning/commissioning";
@@ -111,17 +112,13 @@ const MemberEmailsModal: FC<MemberEmailsModalProps> = ({
       footer={[<ModalCloseFooter key="close" onClose={onClose} />]}
       width={1000}
     >
-      <Table<MemberEmailLog>
+      <ReadOnlyReportTable<MemberEmailLog>
         columns={columns}
         dataSource={rows}
         rowKey="id"
         loading={isLoading}
         pagination={{ pageSize: 20 }}
-        className="custom-jasmin-table"
-        size="small"
-        locale={{
-          emptyText: t("members.no_emails_sent"),
-        }}
+        emptyText={t("members.no_emails_sent")}
       />
     </Modal>
   );

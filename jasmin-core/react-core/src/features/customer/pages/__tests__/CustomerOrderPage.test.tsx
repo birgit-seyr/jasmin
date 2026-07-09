@@ -46,17 +46,33 @@ vi.mock("@shared/contexts/AuthContext", () => ({
   useAuth: () => ({ user: { id: "u-1" }, logout: logoutMock }),
 }));
 
+// ``CustomerOrderPage`` resolves its price tiers via ``useOfferTiers`` (which
+// reads ``used_tiers_for_offers`` under the hood). Stub it so the page mounts
+// without a real TenantContext and keeps its multi-tier column shape.
+vi.mock("@features/commissioning/hooks/useOfferTiers", () => ({
+  useOfferTiers: () => [1, 3, 5],
+  resolveOfferTiers: (usedTiers?: number[] | null) =>
+    usedTiers && usedTiers.length > 0 ? usedTiers : [1],
+}));
+
 vi.mock("@hooks/index", async () => {
   const { makeUseTenantMock } = await import("@/test/tenantMock");
   const tenant = makeUseTenantMock({
     logoUrl: "https://example.test/logo.png",
-    // ``CustomerOrderPage`` reads the configured price-tier columns.
-    getSetting: (key: string, defaultValue?: unknown) =>
-      key === "used_tiers_for_offers" ? [1, 3, 5] : defaultValue,
+    getSetting: (_key: string, defaultValue?: unknown) => defaultValue,
   });
+  const { useYearWeekState, currentYear, currentWeek } = await import(
+    "@hooks/useYearWeekState"
+  );
   return {
+    useYearWeekState,
+    currentYear,
+    currentWeek,
     useTenant: () => tenant,
-    useCurrency: () => ({ currencySymbol: "€" }),
+    useCurrency: () => ({
+      currencySymbol: "€",
+      formatCurrency: (n: number) => `${n.toFixed(2)} €`,
+    }),
     useNumberFormat: () => ({ format: (n: number, d: number) => n.toFixed(d) }),
     // ``CustomerOrderPage`` uses ``useTimeFormat().formatDateTime`` for
     // the order-deadline tag. Mirror the real hook with the tenant
