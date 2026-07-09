@@ -31,6 +31,9 @@ const getSettingMock = vi.fn();
 vi.mock("@hooks/index", () => ({
   useTenant: () => ({ getSetting: getSettingMock }),
   useCurrency: () => ({ currencySymbol: "€" }),
+  // Only its `shares` rate is read, and only to forward as a prop to the
+  // stubbed editor shell — the value is irrelevant to the column assertions.
+  useDefaultTaxRates: () => ({ shares: 7 }),
   // Column hooks return inert column stubs — their concrete shape is
   // irrelevant to this test, which only inspects the solidarity column.
   useActiveStatusColumn: () => ({ key: "active", dataIndex: "active" }),

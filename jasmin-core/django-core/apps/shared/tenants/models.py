@@ -622,6 +622,18 @@ class TenantEmailConfig(models.Model):
             tenant__schema_name=schema_name, is_active=True
         ).first()
 
+    @property
+    def has_smtp_configured(self) -> bool:
+        """Whether this tenant has its OWN SMTP host set.
+
+        Sending is gated on this: with no host, ``EmailService`` refuses to
+        send rather than silently falling back to the platform ``EMAIL_*``
+        account. That platform transport is reserved for operator / ops
+        alerts (``mail_admins``) — tenant mail goes out through the tenant's
+        own SMTP or not at all. An unconfigured tenant simply cannot send.
+        """
+        return bool((self.smtp_host or "").strip())
+
     def get_backend_settings(self) -> dict[str, Any]:
         """Return Django SMTP backend settings as a dict."""
         return {

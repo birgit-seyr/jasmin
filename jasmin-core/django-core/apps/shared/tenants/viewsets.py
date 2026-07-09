@@ -689,8 +689,11 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
             raise TestEmailRecipientMissing("to_email is required")
 
         config = self.get_object()
-        if not config.from_email:
-            raise EmailConfigNotSetUp("Email config is not set up yet")
+        if not config.from_email or not config.has_smtp_configured:
+            raise EmailConfigNotSetUp(
+                "Email config is not set up yet — set the SMTP host and "
+                "from-address before sending a test."
+            )
 
         # A compromised office account must not be able to use the
         # tenant's SMTP as a spam relay: test sends only go to the

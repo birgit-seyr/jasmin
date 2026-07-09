@@ -134,9 +134,7 @@ class TestSendDeletionApprovedEmail:
         # The event token is passed as a positional arg to a "%s %s"
         # format string (lazy logging), not inlined into it, so match
         # across all args of each error call rather than just args[0].
-        emitted = [
-            " ".join(str(a) for a in c.args) for c in mock_error.call_args_list
-        ]
+        emitted = [" ".join(str(a) for a in c.args) for c in mock_error.call_args_list]
         assert any(
             "deletion_approved_email_not_sent" in msg for msg in emitted
         ), f"expected 'not_sent' error; got {emitted!r}"

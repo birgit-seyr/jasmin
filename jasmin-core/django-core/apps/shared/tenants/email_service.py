@@ -252,6 +252,16 @@ class EmailService:
             logger.error(f"Cannot send email: no config for tenant {self.schema_name}")
             return False
 
+        # A tenant with no SMTP host of its own has email sending disabled —
+        # we do NOT fall back to the platform ``EMAIL_*`` account (reserved for
+        # ops alerts). Skip before rendering/logging; nothing goes out.
+        if not self.config.has_smtp_configured:
+            logger.warning(
+                "Email sending disabled for tenant %s: no SMTP host configured",
+                self.schema_name,
+            )
+            return False
+
         if not self.config.is_verified:
             logger.warning(f"Email domain not verified for tenant {self.schema_name}")
 
@@ -553,14 +563,24 @@ class EmailService:
 
         s = self.config.get_backend_settings()
 
+        # No platform fallback. Django's ``get_connection(host=None, …)`` would
+        # silently fall back to ``settings.EMAIL_HOST`` (the platform account,
+        # reserved for ops alerts) — refuse instead. ``send_email`` already
+        # guards on ``has_smtp_configured`` before reaching here; this is the
+        # authoritative backstop so no internal caller can reintroduce the
+        # fallback. Caught by the send paths' except blocks → logged, False.
+        if not (s["EMAIL_HOST"] or "").strip():
+            raise ValueError(
+                "No SMTP host configured for this tenant; refusing to fall "
+                "back to the platform email account."
+            )
+
         # Authoritative SSRF guard: re-check the tenant-supplied host at
         # send time. Write-time validation trusts a DNS resolution the
         # office user controls, and pre-existing configs were never
-        # validated — only tenant-supplied hosts are checked (an unset
-        # ``smtp_host`` means the trusted platform default backend). A
-        # ``ValueError`` here is caught by ``send_email``'s except block,
-        # so a blocked host fails gracefully (logged, send returns False)
-        # exactly like an unreachable host, on every send path.
+        # validated. A ``ValueError`` here is caught by ``send_email``'s
+        # except block, so a blocked host fails gracefully (logged, send
+        # returns False) exactly like an unreachable host, on every send path.
         if smtp_host_is_blocked(s["EMAIL_HOST"]):
             raise ValueError(
                 f"SMTP host {s['EMAIL_HOST']!r} resolves to a private or "
