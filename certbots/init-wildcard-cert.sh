@@ -26,7 +26,7 @@
 set -euo pipefail
 
 DOMAIN="${DOMAIN:?DOMAIN is required (e.g. mydomain.com)}"
-EMAIL="${EMAIL:?EMAIL is required (for Let's Encrypt notifications)}"
+EMAIL="${EMAIL:?EMAIL is required (for Lets Encrypt renewal notices)}"
 CREDENTIALS="${CREDENTIALS:-./certbots/linode.ini}"
 
 if [[ ! -f "${CREDENTIALS}" ]]; then

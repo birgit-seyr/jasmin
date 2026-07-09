@@ -97,11 +97,46 @@ http {
     }
 
     # ---- HTTPS gateway ----------------------------------------------------
+    # ------- Apex host: closed by design ---------------------------------
+    # The product lives ONLY on subdomains (tenant hosts + the super-admin
+    # host). The bare ${FRONTEND_DOMAIN} maps to the public schema and would
+    # otherwise serve an empty shell of the SPA. Everything 404s except
+    # /health/, which stays on the apex because the public-schema Domain row
+    # for it is what the deploy smoke test and uptime probes hit. This block
+    # is load-bearing, not cosmetic: with the apex merely REMOVED from the
+    # wildcard block below, nginx's default-server fallback would route apex
+    # requests straight back into that block.
     server {
         listen      443 ssl;
         listen      [::]:443 ssl;
         http2       on;
-        server_name ${FRONTEND_DOMAIN} *.${FRONTEND_DOMAIN};
+        server_name ${FRONTEND_DOMAIN};
+
+        ssl_certificate     /etc/letsencrypt/live/${FRONTEND_DOMAIN}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/${FRONTEND_DOMAIN}/privkey.pem;
+        ssl_protocols       TLSv1.2 TLSv1.3;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+        ssl_session_cache   shared:SSL:10m;
+        ssl_session_timeout 1d;
+
+        include /etc/nginx/security_headers.conf;
+
+        location /health/ {
+            proxy_pass http://jasmin_backend;
+            access_log off;
+        }
+
+        location / {
+            return 404;
+        }
+    }
+
+    server {
+        listen      443 ssl;
+        listen      [::]:443 ssl;
+        http2       on;
+        server_name *.${FRONTEND_DOMAIN};
 
         ssl_certificate     /etc/letsencrypt/live/${FRONTEND_DOMAIN}/fullchain.pem;
         ssl_certificate_key /etc/letsencrypt/live/${FRONTEND_DOMAIN}/privkey.pem;

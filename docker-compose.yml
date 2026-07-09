@@ -32,6 +32,12 @@ x-backend-env: &backend-env
   DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?DJANGO_ALLOWED_HOSTS is required}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
   FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?FIELD_ENCRYPTION_KEY is required}
+  # First-boot SuperAdmin bootstrap — docker_entrypoint.sh runs the idempotent
+  # ``createsuperadmin --update-if-exists`` when BOTH are non-empty. Without
+  # this passthrough the vars exist only in .env and the entrypoint silently
+  # skips creation (no super_admin row, admin login impossible).
+  DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-}
+  DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-}
   EMAIL_HOST: ${EMAIL_HOST:-}
   EMAIL_PORT: ${EMAIL_PORT:-587}
   EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
@@ -356,13 +362,18 @@ services:
     # is zero-downtime. ``exec`` keeps nginx as PID 1 for graceful shutdown;
     # the reload loop is disowned via ``( … & )`` and its first reload only
     # fires after the initial 12h sleep, by which point nginx is up.
+    # YAML folding gotcha: with ``>``, continuation lines MUST keep the same
+    # indent as the first content line — deeper-indented lines keep their
+    # literal newlines, and sh then chokes on a line-leading ``&&``
+    # ("syntax error: unexpected &&", gateway crash-loop). Same indent
+    # everywhere + operators at end-of-line folds to one clean command line.
     command: >
       /bin/sh -c "envsubst '$$FRONTEND_DOMAIN $$SUPER_ADMIN_SUBDOMAIN $$BACKEND_HOST $$BACKEND_PORT $$FRONTEND_HOST $$FRONTEND_PORT'
-                  < /etc/nginx/templates/nginx.conf.template
-                  > /etc/nginx/nginx.conf
-                  && nginx -t
-                  && (while :; do sleep 12h & wait $${!}; nginx -s reload; done &)
-                  && exec nginx -g 'daemon off;'"
+      < /etc/nginx/templates/nginx.conf.template
+      > /etc/nginx/nginx.conf &&
+      nginx -t &&
+      (while :; do sleep 12h & wait $${!}; nginx -s reload; done &) &&
+      exec nginx -g 'daemon off;'"
     depends_on:
       - backend
       - frontend

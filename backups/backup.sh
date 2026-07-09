@@ -97,7 +97,12 @@ do_backup() {
         echo "[$(date)] ERROR: DB backup pipeline failed for ${FILENAME}" >&2
         return 1
     fi
-    chmod 600 "$FILEPATH"
+    # 644, not 600: this container runs as root, so 600 would lock the HOST
+    # user out of the bind-mounted file and the unprivileged restore drill
+    # (scripts/restore_drill.sh) fails with EACCES. The artifact is AES256
+    # ciphertext — the security boundary is BACKUP_ENCRYPTION_KEY, not the
+    # file mode.
+    chmod 644 "$FILEPATH"
 
     SIZE_BYTES=$(stat -c %s "$FILEPATH" 2>/dev/null || echo 0)
     if [ "$SIZE_BYTES" -lt "$BACKUP_MIN_BYTES" ]; then
@@ -142,7 +147,9 @@ do_media_backup() {
         echo "[$(date)] ERROR: media backup pipeline failed for ${FILENAME}" >&2
         return 1
     fi
-    chmod 600 "$FILEPATH"
+    # 644 for the same reason as the DB dump above: ciphertext + host-side
+    # readability for the unprivileged restore drill.
+    chmod 644 "$FILEPATH"
 
     # Verify the archive decrypts, decompresses, and lists cleanly.
     if ! gpg --batch --quiet --decrypt --passphrase "$BACKUP_ENCRYPTION_KEY" "$FILEPATH" 2>/dev/null \
