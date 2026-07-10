@@ -550,8 +550,19 @@ export function useAbosColumns({
           displayField: "payment_cycle_name",
         },
         disabled: aboIsConfirmed,
-        render: (value: unknown) =>
-          value ? paymentCycleLabel(t, value as string) : "",
+        render: (value: unknown, record: AboRecord) => {
+          // ``payment_cycle_name`` is ``payment_cycle.choice`` (a code like
+          // MONTHLY) as loaded, but an inline edit overwrites it with the select
+          // option's already-localized label — so translating ``value`` blindly
+          // double-translates ("monatlich" -> configuration.payment_cycle_monatlich).
+          // Resolve the label from the (stable) selected cycle id, falling back
+          // to translating a raw code for a cycle no longer in the active list.
+          const selected = paymentCycles.find(
+            (cycle) => cycle.value === record.payment_cycle,
+          );
+          if (selected) return selected.label;
+          return value ? paymentCycleLabel(t, value as string) : "";
+        },
       },
       {
         title: <>{t("members.deliveries")}</>,
