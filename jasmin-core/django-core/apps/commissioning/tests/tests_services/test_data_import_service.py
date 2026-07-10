@@ -269,6 +269,31 @@ class TestImportRowsFromCsv:
         # (header row + 1).
         assert result.results[0]["row"] == 2
 
+    def test_member_import_over_weekly_cap_is_refused_up_front(self, tenant):
+        """A member CSV whose size would blow the weekly MEMBER_CREATION cap is
+        refused before any row is written (the import must not partially apply),
+        closing the bulk-import bypass of the interactive create cap."""
+        from apps.commissioning.models import Member
+        from apps.shared.tenants.errors import ActionRateLimitExceeded
+
+        # Platform-owned override; connection.tenant is this fixture object.
+        tenant.action_rate_limit_overrides = {"member_creation": {"weekly": 2}}
+        # 3-row download-template shape (titles / dataIndex / type hints) + 3
+        # data rows → 3 member creations, over the weekly cap of 2.
+        csv_bytes = (
+            b"First Name,Last Name\n"  # row 0: titles
+            b"first_name,last_name\n"  # row 1: dataIndex
+            b"text,text\n"  # row 2: type hints
+            b"A,One\n"
+            b"B,Two\n"
+            b"C,Three\n"
+        )
+
+        with pytest.raises(ActionRateLimitExceeded) as exc:
+            import_rows_from_csv("member", csv_bytes)
+        assert exc.value.details["action"] == "member_creation"
+        assert not Member.objects.filter(last_name__in=["One", "Two", "Three"]).exists()
+
     def test_three_row_template_skips_type_hint_row(self, tenant):
         """The downloadable template's type-hint row (row 2) is NOT a
         data row — the import must skip it, not try to create a crate

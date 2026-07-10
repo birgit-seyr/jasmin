@@ -255,6 +255,20 @@ class BulkCreateDocumentsFromOrdersView(APIViewRolePermissionsMixin, APIView):
         if not orders.exists():
             raise NotFoundError("No valid orders found")
 
+        # The invoice branch finalizes each order's delivery note before creating
+        # the (draft) invoice — reserve that DN-finalization batch up front so a
+        # bulk run doesn't trip the per-minute cap (skip_quota below suppresses the
+        # per-item guard). The delivery_note branch only CREATES (no finalize).
+        if model == "invoice":
+            from apps.shared.tenants.models import RateLimitedAction
+            from apps.shared.tenants.rate_limits import enforce_action_quota_batch
+
+            enforce_action_quota_batch(
+                RateLimitedAction.DELIVERY_NOTE_FINALIZATION,
+                count=orders.count(),
+                actor=request.user,
+            )
+
         def handler(
             order: Order,
             results: list[dict[str, Any]],
@@ -292,10 +306,10 @@ class BulkCreateDocumentsFromOrdersView(APIViewRolePermissionsMixin, APIView):
                 order=order, date=date, user=user
             )
 
-        # Finalize delivery note if needed
+        # Finalize delivery note if needed (quota reserved for the batch in post()).
         if not delivery_note.is_finalized:
             finalize_success = DeliveryNoteService.finalize_delivery_note(
-                delivery_note=delivery_note, user=user
+                delivery_note=delivery_note, user=user, skip_quota=True
             )
             if not finalize_success:
                 raise DeliveryNoteFinalizeFailed(
@@ -335,6 +349,22 @@ class BulkFinalizeDocumentsView(APIViewRolePermissionsMixin, APIView):
         if not orders.exists():
             raise NotFoundError("No valid orders found")
 
+        # Reserve the whole batch against the weekly finalization cap up front so
+        # a legitimate bulk finalize doesn't trip the per-minute burst cap on item
+        # ~20; the per-item guards are suppressed via skip_quota below. Over-cap
+        # → 429 before any finalize (inside this @transaction.atomic).
+        from apps.shared.tenants.models import RateLimitedAction
+        from apps.shared.tenants.rate_limits import enforce_action_quota_batch
+
+        _batch_action = (
+            RateLimitedAction.DELIVERY_NOTE_FINALIZATION
+            if model == "delivery_note"
+            else RateLimitedAction.INVOICE_FINALIZATION
+        )
+        enforce_action_quota_batch(
+            _batch_action, count=orders.count(), actor=request.user
+        )
+
         def handler(
             order: Order,
             results: list[dict[str, Any]],
@@ -347,7 +377,7 @@ class BulkFinalizeDocumentsView(APIViewRolePermissionsMixin, APIView):
                     return
 
                 success = DeliveryNoteService.finalize_delivery_note(
-                    delivery_note=delivery_note, user=request.user
+                    delivery_note=delivery_note, user=request.user, skip_quota=True
                 )
                 if success:
                     results.append(_delivery_note_result(order, delivery_note))
@@ -372,7 +402,7 @@ class BulkFinalizeDocumentsView(APIViewRolePermissionsMixin, APIView):
                     return
 
                 success = InvoiceService.finalize_invoice(
-                    invoice=invoice, user=request.user
+                    invoice=invoice, user=request.user, skip_quota=True
                 )
                 if success:
                     results.append(_invoice_result(order, delivery_note, invoice))
@@ -1053,6 +1083,19 @@ class BulkCreateSummaryInvoiceFromOrdersView(APIViewRolePermissionsMixin, APIVie
         if not orders:
             raise NotFoundError("No valid orders found")
 
+        # Reserve the DN-finalization batch up front (this view finalizes each
+        # order's delivery note before rolling them into one summary invoice), so
+        # a bulk run doesn't trip the per-minute cap; skip_quota below suppresses
+        # the per-item guard. len(orders) is a safe upper bound.
+        from apps.shared.tenants.models import RateLimitedAction
+        from apps.shared.tenants.rate_limits import enforce_action_quota_batch
+
+        enforce_action_quota_batch(
+            RateLimitedAction.DELIVERY_NOTE_FINALIZATION,
+            count=len(orders),
+            actor=request.user,
+        )
+
         # ``delivery_note`` is a reverse OneToOne (FK on DeliveryNoteReseller),
         # so Order has no ``_id`` for it — read via getattr; select_related
         # above keeps the access query-free.
@@ -1106,7 +1149,7 @@ class BulkCreateSummaryInvoiceFromOrdersView(APIViewRolePermissionsMixin, APIVie
 
             if not delivery_note.is_finalized:
                 finalize_success = DeliveryNoteService.finalize_delivery_note(
-                    delivery_note=delivery_note, user=request.user
+                    delivery_note=delivery_note, user=request.user, skip_quota=True
                 )
                 if not finalize_success:
                     errors.append(

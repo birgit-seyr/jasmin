@@ -8,6 +8,8 @@ from datetime import date, timedelta
 from django.db import transaction
 from django.utils import timezone
 
+from apps.shared.tenants.models import RateLimitedAction
+from apps.shared.tenants.rate_limits import enforce_action_quota
 from core.errors import ConflictError
 
 from ..errors import CommissioningError
@@ -406,10 +408,17 @@ class InvoiceService:
 
     @staticmethod
     @transaction.atomic
-    def finalize_invoice(invoice: InvoiceReseller, user=None) -> bool:
+    def finalize_invoice(
+        invoice: InvoiceReseller, user=None, *, skip_quota: bool = False
+    ) -> bool:
         """
         Finalize an invoice (locks it from further changes).
         Cascades finalization to items, crate items, delivery notes, and orders.
+
+        ``skip_quota=True`` is passed by bulk endpoints that have already
+        reserved the whole batch against the weekly cap up front (see
+        ``enforce_action_quota_batch``); it suppresses the per-item guard so a
+        legitimate bulk finalize doesn't trip the per-minute burst cap mid-batch.
         """
         invoice.assert_not_finalized(label="Invoice", code="invoice.already_finalized")
 
@@ -421,6 +430,15 @@ class InvoiceService:
                 "Cannot finalize invoice - it has no items",
                 code="invoice.empty",
             )
+
+        # Volume cap: refuse if this tenant is over its finalization quota. This
+        # is the legally-relevant moment (a sequential number is minted and the
+        # document auto-sends), so it is where a compromised office account could
+        # do the most damage. Storno creation routes through here too, so both
+        # invoices and cancellations draw on the one INVOICE_FINALIZATION cap.
+        # Runs before assign_final_number so a refused call burns no number.
+        if not skip_quota:
+            enforce_action_quota(RateLimitedAction.INVOICE_FINALIZATION, actor=user)
 
         invoice.assign_final_number()
 

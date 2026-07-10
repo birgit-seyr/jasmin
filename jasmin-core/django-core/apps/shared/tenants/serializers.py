@@ -91,12 +91,18 @@ class TenantSerializer(_TenantSettingsOverlayMixin, serializers.ModelSerializer)
         #     a tenant admin flipping it here would self-lock the org out.
         #   * ``id`` is the primary key; ``created_at`` / ``updated_at`` are
         #     auto-managed timestamps.
+        #   * ``action_rate_limit_overrides`` is the platform-owned ceiling for
+        #     the abuse rate-limits. It lives on the public Tenant row precisely
+        #     so the office/admin tier CANNOT raise its own caps; a tenant PATCH
+        #     must never write it (only the super-admin platform may). The model
+        #     field is also ``editable=False`` as a belt-and-braces backstop.
         read_only_fields = (
             "id",
             "schema_name",
             "is_active",
             "created_at",
             "updated_at",
+            "action_rate_limit_overrides",
         )
 
 

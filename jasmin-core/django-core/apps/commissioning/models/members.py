@@ -863,7 +863,7 @@ class Subscription(
         if member and not member.admin_confirmed and member.cancelled_at is None:
             member.confirm(admin_user)
 
-        SubscriptionService().materialize_confirmed_subscription(self)
+        SubscriptionService().materialize_confirmed_subscription(self, actor=admin_user)
 
     @property
     def display_id(self) -> str:

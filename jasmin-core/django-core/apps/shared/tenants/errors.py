@@ -8,7 +8,7 @@ views raise, they don't build ``Response`` objects by hand.
 
 from __future__ import annotations
 
-from core.errors import BadRequestError
+from core.errors import BadRequestError, RateLimitError
 
 # --------------------------------------------------------------------------- #
 # Provisioning input validation                                               #
@@ -118,3 +118,39 @@ class TestEmailRecipientNotAllowed(BadRequestError):
 
 class TestEmailSendFailed(BadRequestError):
     code = "email_config.test_send_failed"
+
+
+# --------------------------------------------------------------------------- #
+# Action rate limiting                                                         #
+# Volume caps on consequential verbs (invoice/delivery-note finalization, SEPA #
+# charge runs, member/user creation, subscription confirmation) that protect   #
+# against a compromised office account generating legally-relevant nonsense en #
+# masse. See ``apps.shared.tenants.rate_limits``.                              #
+# --------------------------------------------------------------------------- #
+
+
+class ActionRateLimitExceeded(RateLimitError):
+    """A tenant exceeded the platform-owned volume cap for a consequential
+    action. ``details`` carries the ``action``, the ``scope`` that tripped
+    (``"weekly"`` / ``"per_minute"``), and the ``limit`` — enough for the client
+    to show a precise message without leaking the current count."""
+
+    code = "ratelimit.action_exceeded"
+
+    def __init__(
+        self,
+        *,
+        action: str,
+        scope: str,
+        limit: int,
+        message: str = "",
+    ) -> None:
+        super().__init__(
+            message
+            or (
+                f"Rate limit reached for '{action}': the {scope} cap of {limit} "
+                "has been hit. This is a safety limit — if it is blocking "
+                "legitimate work, a platform administrator can raise it."
+            ),
+            details={"action": str(action), "scope": scope, "limit": limit},
+        )

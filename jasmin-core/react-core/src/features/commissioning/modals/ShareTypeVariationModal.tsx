@@ -4,7 +4,7 @@ import {
   UploadOutlined,
 } from "@ant-design/icons";
 import BubbleChartIcon from "@mui/icons-material/BubbleChart";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Modal, Space, Spin } from "antd";
 import dayjs from "dayjs";
 import ModalCloseFooter from "@shared/modals/ModalCloseFooter";
@@ -15,6 +15,7 @@ import {
   commissioningShareTypeVariationsDestroy,
   commissioningShareTypeVariationsPartialUpdate,
   getCommissioningShareTypeVariationsListQueryKey,
+  getCommissioningShareTypesRetrieveQueryOptions,
   useCommissioningShareTypeVariationsList,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { CommissioningShareTypeVariationsListParams } from "@shared/api/generated/models/commissioningShareTypeVariationsListParams";
@@ -107,6 +108,19 @@ export default function ShareTypeVariationModal({
     "allows_share_type_variation_optin",
     false,
   ) as boolean;
+  // Jokers (per-share-type opt-OUT) and per-delivery opt-IN are mutually
+  // exclusive (backend enforces this in ShareType/ShareTypeVariation.clean).
+  // When this share type has any jokers configured, hide the opt-in columns
+  // entirely — even if the tenant setting would otherwise allow them.
+  const { data: parentShareType } = useQuery({
+    ...getCommissioningShareTypesRetrieveQueryOptions(share_type ?? ""),
+    enabled: visible && !!share_type,
+  });
+  const shareTypeHasJokers =
+    (parentShareType?.amount_of_jokers ?? 0) > 0 ||
+    (parentShareType?.amount_of_donation_jokers ?? 0) > 0;
+  const showOptinColumns =
+    allows_share_type_variation_optin && !shareTypeHasJokers;
   const permissions = useMemo(
     () => ({
       ...gatedByPermission(isOffice),
@@ -295,7 +309,8 @@ export default function ShareTypeVariationModal({
           options: shareTypeVariationSizeOptions,
           required: true,
           disabled: isFieldDisabled,
-          width: "7em",
+          align: "center",
+          width: "5em",
           render: (value: unknown) =>
             value ? (
               <strong>{getShareTypeVariationSizeLabel(value as string)}</strong>
@@ -474,10 +489,11 @@ export default function ShareTypeVariationModal({
             ]
           : []),
         // ---- On-off (per-delivery opt-in) columns ------------------
-        // Hidden entirely when the tenant hasn't enabled the feature.
-        // Backend mirrors this with a ``ValidationError`` on
-        // ``ShareTypeVariation.clean()`` so admin saves can't bypass.
-        ...(allows_share_type_variation_optin
+        // Hidden when the tenant hasn't enabled the feature OR this share type
+        // has jokers (jokers and opt-in are mutually exclusive). Backend
+        // mirrors both with a ``ValidationError`` on ``ShareTypeVariation.clean()``
+        // so admin saves can't bypass.
+        ...(showOptinColumns
           ? [
               {
                 title: (
@@ -555,7 +571,7 @@ export default function ShareTypeVariationModal({
       validFromColumn,
       validUntilColumn,
       packing_mode,
-      allows_share_type_variation_optin,
+      showOptinColumns,
     ],
   );
 
@@ -620,9 +636,7 @@ export default function ShareTypeVariationModal({
         // starts fresh — no carry-over of the previous variation rows, draft,
         // or recentlyAddedIds pins.
         destroyOnHidden
-        footer={[
-          <ModalCloseFooter key="close" onClose={onClose} />,
-        ]}
+        footer={[<ModalCloseFooter key="close" onClose={onClose} />]}
       >
         {loading ? (
           <div className="loading-placeholder">
@@ -661,7 +675,7 @@ export default function ShareTypeVariationModal({
         }
         share_type_variation_name={
           selectedShareTypeVariation
-            ? `${selectedShareTypeVariation.size} `
+            ? `${getShareTypeVariationSizeLabel(selectedShareTypeVariation.size ?? "")} `
             : ""
         }
         onSave={undefined}
@@ -677,21 +691,25 @@ export default function ShareTypeVariationModal({
         value={selectedDescriptionRecord?.description || ""}
         onSave={handleSaveDescription}
         placeholder={t("commissioning.enter_share_description")}
-        title={`${t("commissioning.description")} - ${
-          selectedDescriptionRecord?.size || ""
-        }`}
+        title={`${t("commissioning.description")} - ${getShareTypeVariationSizeLabel(
+          selectedDescriptionRecord?.size ?? "",
+        )}`}
       />
       <VirtualComponentModal
         visible={virtualComponentModalVisible}
         onClose={handleCloseVirtualComponentModal}
         share_type={share_type}
         share_type_variation={selectedVirtualComponentRecord?.id ?? null}
-        share_type_variation_name={selectedVirtualComponentRecord?.size || ""}
+        share_type_variation_name={getShareTypeVariationSizeLabel(
+          selectedVirtualComponentRecord?.size ?? "",
+        )}
         onSave={handleSaveVirtualComponents}
       />
 
       <Modal
-        title={`${t("commissioning.picture")} - ${selectedPictureRecord?.size || ""}`}
+        title={`${t("commissioning.picture")} - ${getShareTypeVariationSizeLabel(
+          selectedPictureRecord?.size ?? "",
+        )}`}
         open={pictureModalVisible}
         // Sibling (not nested) of the parent ShareTypeVariationModal, so AntD's
         // auto-stacking doesn't lift it — pin it above the parent's 1000.

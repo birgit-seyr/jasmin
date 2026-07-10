@@ -27,7 +27,8 @@ from apps.commissioning.models import (
 from apps.commissioning.models.choices_text import PaymentCycleOptions
 from apps.commissioning.utils.iso_week_utils import share_delivery_date
 from apps.shared.money import round_money as _money
-from apps.shared.tenants.models import Tenant, TenantSettings
+from apps.shared.tenants.models import RateLimitedAction, Tenant, TenantSettings
+from apps.shared.tenants.rate_limits import enforce_action_quota
 
 from .constants import BillingRunStatus, ChargeStatus, PaymentMethodOptions
 from .errors import (
@@ -768,6 +769,14 @@ class BillingRunService:
                 collection_date,
                 period_end,
             )
+
+        # Volume cap on billing-run creation — the highest-blast-radius verb in
+        # the platform, since a run is what ultimately pulls real money from
+        # members' bank accounts via SEPA direct debit. One run = one action.
+        # Refuse before any charge rows are locked/bundled so a capped call does
+        # no work. A compromised office account can't raise this cap: it lives on
+        # the public-schema Tenant, editable only by the super-admin platform.
+        enforce_action_quota(RateLimitedAction.SEPA_CHARGE_GENERATION, actor=created_by)
 
         # ``select_for_update(skip_locked=True, of=("self",))`` locks the
         # eligible ChargeSchedule rows — and ONLY those (``of=("self",)``

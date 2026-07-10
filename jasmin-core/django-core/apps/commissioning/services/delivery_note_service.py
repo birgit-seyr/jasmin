@@ -5,6 +5,8 @@ from datetime import date
 
 from django.db import models, transaction
 
+from apps.shared.tenants.models import RateLimitedAction
+from apps.shared.tenants.rate_limits import enforce_action_quota
 from core.errors import ConflictError
 
 from ..errors import CommissioningError
@@ -119,9 +121,15 @@ class DeliveryNoteService:
 
     @staticmethod
     @transaction.atomic
-    def finalize_delivery_note(delivery_note: DeliveryNoteReseller, user=None) -> bool:
+    def finalize_delivery_note(
+        delivery_note: DeliveryNoteReseller, user=None, *, skip_quota: bool = False
+    ) -> bool:
         """
         Finalize a delivery note and cascade to items, crate items, and the order.
+
+        ``skip_quota=True`` is passed by bulk endpoints that have already
+        reserved the whole batch against the weekly cap up front, so a legitimate
+        bulk finalize doesn't trip the per-minute burst cap mid-batch.
         """
         delivery_note.assert_not_finalized(
             label="Delivery note", code="delivery_note.already_finalized"
@@ -132,6 +140,14 @@ class DeliveryNoteService:
             raise CommissioningError(
                 "Cannot finalize delivery note - it has no items",
                 code="delivery_note.empty",
+            )
+
+        # Volume cap on the legally-relevant finalization step (mints a
+        # sequential number, becomes a sendable document). Before
+        # assign_final_number so a refused call burns no number.
+        if not skip_quota:
+            enforce_action_quota(
+                RateLimitedAction.DELIVERY_NOTE_FINALIZATION, actor=user
             )
 
         delivery_note.assign_final_number()

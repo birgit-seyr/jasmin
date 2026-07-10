@@ -27,7 +27,25 @@ from .serializers_mixin import (
 )
 
 
+class _EmptyToZeroIntegerField(serializers.IntegerField):
+    """An IntegerField that treats a cleared cell (``null`` or ``""``) as 0.
+
+    The office ShareType table lets a user blank a joker count; the intent is
+    "no jokers" (0), not a validation error. Coerce empty input to 0 instead of
+    rejecting it, without allowing a genuinely absent key to overwrite the
+    stored value on a PATCH.
+    """
+
+    def validate_empty_values(self, data):
+        if data is None or data == "":
+            return (True, 0)
+        return super().validate_empty_values(data)
+
+
 class ShareTypeSerializer(DeletableMixin, serializers.ModelSerializer):
+    # Blanking a joker count in the office table means "0", so accept null / "".
+    amount_of_jokers = _EmptyToZeroIntegerField(required=False)
+    amount_of_donation_jokers = _EmptyToZeroIntegerField(required=False)
     share_type_variation_sizes_in_use = serializers.SerializerMethodField()
     # The lower bound for this share type's ``valid_until``: it may not end
     # before its latest variation, and cannot be closed at all while a variation

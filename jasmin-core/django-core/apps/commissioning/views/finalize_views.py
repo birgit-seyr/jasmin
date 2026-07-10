@@ -131,6 +131,34 @@ class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
 
         user = user if user.is_authenticated else None
 
+        # Reserve the whole batch against the weekly finalization caps up front,
+        # so a legitimate bulk finalize doesn't trip the per-minute burst cap on
+        # item ~20 (the per-item guards are then suppressed with skip_quota). An
+        # over-cap batch is refused here (429) before any item is finalized; this
+        # runs inside the view's @transaction.atomic, so it rolls back cleanly.
+        from apps.shared.tenants.models import RateLimitedAction
+        from apps.shared.tenants.rate_limits import enforce_action_quota_batch
+
+        n_invoices = sum(
+            1
+            for o in objects
+            if isinstance(o, InvoiceReseller) and not getattr(o, "is_finalized", False)
+        )
+        n_delivery_notes = sum(
+            1
+            for o in objects
+            if isinstance(o, DeliveryNoteReseller)
+            and not getattr(o, "is_finalized", False)
+        )
+        enforce_action_quota_batch(
+            RateLimitedAction.INVOICE_FINALIZATION, count=n_invoices, actor=user
+        )
+        enforce_action_quota_batch(
+            RateLimitedAction.DELIVERY_NOTE_FINALIZATION,
+            count=n_delivery_notes,
+            actor=user,
+        )
+
         def finalize_one(obj: Any) -> None:
             nonlocal finalized_count, already_finalized_count
             if isinstance(
@@ -141,7 +169,7 @@ class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
             if isinstance(obj, InvoiceReseller):
                 from ..services import InvoiceService
 
-                InvoiceService.finalize_invoice(obj, user=user)
+                InvoiceService.finalize_invoice(obj, user=user, skip_quota=True)
                 finalized_count += 1
             elif isinstance(obj, Order):
                 from ..services import OrderService
@@ -151,7 +179,9 @@ class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
             elif isinstance(obj, DeliveryNoteReseller):
                 from ..services import DeliveryNoteService
 
-                DeliveryNoteService.finalize_delivery_note(obj, user=user)
+                DeliveryNoteService.finalize_delivery_note(
+                    obj, user=user, skip_quota=True
+                )
                 finalized_count += 1
             elif obj.finalize(user=user):
                 finalized_count += 1

@@ -587,6 +587,10 @@ MIDDLEWARE = [
     # middleware would 404 before any view runs. Answers /health/ with 200
     # without tenant/DB resolution.
     "core.middleware.HealthCheckMiddleware",
+    # Stamps Cache-Control: no-store on every /api/ response so a shared CDN
+    # (Bunny) can never cache + cross-serve a per-tenant API response. Near the
+    # top so it wraps the final response regardless of what any view sets.
+    "core.middleware.ApiNoStoreCacheControlMiddleware",
     # Must be near the top: assigns request.id and exposes it via contextvars
     # so every downstream middleware, view, and log line can correlate.
     "core.middleware.RequestIdMiddleware",

@@ -172,6 +172,9 @@ def create_user_with_invite(*, data: dict[str, Any], created_by: JasminUser) -> 
         )
 
     try:
+        # The USER_CREATION volume cap lives inside create_user_with_invitation
+        # (the shared choke point for every provisioning path), so it is enforced
+        # here without a call site of its own.
         user, _invitation = create_user_with_invitation(
             email=data["email"],
             first_name=data["first_name"].strip(),

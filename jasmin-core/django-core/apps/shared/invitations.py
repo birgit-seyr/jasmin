@@ -99,6 +99,17 @@ def create_user_with_invitation(
     ):
         raise ValidationError({"email": "A user with this email already exists."})
 
+    # Volume cap on user provisioning. This shared helper is THE choke point for
+    # every user-creation path (admin invite, public self-registration, member
+    # send-invitation), and each also fires an invite email — so the cap bounds
+    # both the account-creation and the email-spam vectors in one place. Placed
+    # after the duplicate-email guard so a rejected duplicate doesn't consume
+    # quota. No-op off the request path (see enforce_action_quota).
+    from apps.shared.tenants.models import RateLimitedAction
+    from apps.shared.tenants.rate_limits import enforce_action_quota
+
+    enforce_action_quota(RateLimitedAction.USER_CREATION, actor=created_by)
+
     user = existing
     if user is None:
         # We need a placeholder password so set_password can be called later.
@@ -163,6 +174,15 @@ def resend_invitation(*, user: JasminUser, created_by: JasminUser | None = None)
     """Cancel any open invitation, mint a new one, send email."""
     from apps.commissioning.models import UserInvitation
     from apps.commissioning.models.choices_text import InvitationStatus
+
+    # A resend fires another invite email, so it draws on the same USER_CREATION
+    # budget as the initial provisioning — otherwise looping resend_invitation is
+    # an uncapped email-bomb / SMTP-reputation vector for a compromised office
+    # account (the create path is guarded, this sibling must be too).
+    from apps.shared.tenants.models import RateLimitedAction
+    from apps.shared.tenants.rate_limits import enforce_action_quota
+
+    enforce_action_quota(RateLimitedAction.USER_CREATION, actor=created_by)
 
     UserInvitation.objects.filter(user=user, status=InvitationStatus.SENT).update(
         status=InvitationStatus.CANCELLED

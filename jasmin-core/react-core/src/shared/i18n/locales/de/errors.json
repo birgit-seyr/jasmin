@@ -191,6 +191,7 @@
     "tenant_mismatch": "Dieser Account gehört nicht zu diesem Mandanten.",
     "tenant_missing": "Mandant nicht angegeben.",
     "account_blocked": "Dieser Account ist gesperrt.",
+    "self_registration_disabled": "Die Selbst-Registrierung ist für diese Organisation deaktiviert.",
     "step_up_required": "Für diese Aktion ist eine erneute Bestätigung der Identität erforderlich.",
     "two_factor": {
       "already_enrolled": "Die Zwei-Faktor-Authentifizierung (2FA) ist bereits eingerichtet.",
@@ -225,6 +226,9 @@
   "not_found": "Datensatz nicht gefunden.",
   "conflict": "Aktion nicht möglich — anderer Datensatz blockiert sie.",
   "rate_limited": "Zu viele Anfragen — bitte einen Moment warten und erneut versuchen.",
+  "ratelimit": {
+    "action_exceeded": "Sicherheitslimit erreicht: Zum Schutz können vorübergehend keine weiteren dieser Aktionen ausgeführt werden. Bitte später erneut versuchen oder eine Plattform-Administrator:in kontaktieren, wenn das Limit angehoben werden soll."
+  },
   "internal_error": "Interner Fehler — bitte erneut versuchen oder den Support kontaktieren.",
   "auth_error": "Authentifizierung fehlgeschlagen.",
   "query": {

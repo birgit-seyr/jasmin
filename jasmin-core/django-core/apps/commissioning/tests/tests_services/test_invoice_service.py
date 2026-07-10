@@ -107,6 +107,37 @@ class TestFinalizeInvoice:
         with pytest.raises(JasminError, match="no items"):
             InvoiceService.finalize_invoice(invoice)
 
+    def test_rate_limit_refuses_finalize_over_cap(self, tenant):
+        """The invoice-finalization quota gates finalize_invoice, and a refused
+        call burns no sequential number (guard runs before assign_final_number)."""
+        from apps.shared.tenants.errors import ActionRateLimitExceeded
+        from apps.shared.tenants.models import RateLimitedAction
+
+        user = JasminUserFactory()
+        # Platform-owned override; connection.tenant is this fixture object, so
+        # the in-memory value is what the guard reads. Tighten to 1/week.
+        tenant.action_rate_limit_overrides = {
+            str(RateLimitedAction.INVOICE_FINALIZATION): {
+                "weekly": 1,
+                "per_minute": 100,
+            }
+        }
+
+        dn1 = _finalized_delivery_note(tenant, delivery_week=15)
+        invoice1 = InvoiceService.create_from_delivery_note(dn1)
+        InvoiceService.finalize_invoice(invoice1, user=user)  # 1st ok
+
+        dn2 = _finalized_delivery_note(tenant, delivery_week=16)
+        invoice2 = InvoiceService.create_from_delivery_note(dn2)
+        with pytest.raises(ActionRateLimitExceeded) as exc:
+            InvoiceService.finalize_invoice(invoice2, user=user)
+        assert exc.value.details["action"] == str(
+            RateLimitedAction.INVOICE_FINALIZATION
+        )
+        # The refused finalize rolled back — no number burned, still a draft.
+        invoice2.refresh_from_db()
+        assert invoice2.is_finalized is False
+
 
 # ---------------------------------------------------------------------------
 # recipient_snapshot (document_hash v2 — DOC-1)

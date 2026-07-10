@@ -191,6 +191,7 @@
     "tenant_mismatch": "This account does not belong to this tenant.",
     "tenant_missing": "No tenant specified.",
     "account_blocked": "This account is blocked.",
+    "self_registration_disabled": "Self-registration is disabled for this organisation.",
     "step_up_required": "This action requires re-authentication to confirm identity.",
     "two_factor": {
       "already_enrolled": "Two-factor authentication (2FA) is already set up.",
@@ -225,6 +226,9 @@
   "not_found": "Record not found.",
   "conflict": "Cannot perform action — another record is blocking it.",
   "rate_limited": "Too many requests — please wait a moment and try again.",
+  "ratelimit": {
+    "action_exceeded": "Safety limit reached: for protection, no more of this action can be performed right now. Please try again later, or contact a platform administrator if the limit needs raising."
+  },
   "internal_error": "Internal error — please try again or contact support.",
   "auth_error": "Authentication failed.",
   "query": {

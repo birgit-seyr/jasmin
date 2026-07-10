@@ -29,6 +29,35 @@ def get_current_request_id() -> str | None:
     return _request_id_var.get()
 
 
+class ApiNoStoreCacheControlMiddleware:
+    """Force ``Cache-Control: no-store, private`` on every ``/api/`` response.
+
+    Defense-in-depth against a shared CDN (Bunny) caching a per-tenant / per-user
+    API response and serving it across tenants. Django/DRF sets no
+    ``Cache-Control`` on these responses, so a CDN falls back to its OWN default
+    caching — and if its cache key ignores the Host header (Bunny's default with
+    one pull zone fronting many tenant hostnames), tenant A's cached
+    ``/api/tenants/current/`` gets served for tenant B. ``no-store`` tells every
+    intermediary (and browser) never to store the response, closing that leak
+    regardless of CDN configuration.
+
+    Scoped to ``/api/`` so static, content-hashed assets (``/static/``, which
+    ARE identical across tenants and safe to edge-cache) are untouched. Runs on
+    the response leg only; adds nothing to request handling cost.
+    """
+
+    def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]):
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        response = self.get_response(request)
+        if request.path.startswith("/api/"):
+            # Overwrite unconditionally — a stray cacheable value from any view
+            # or upstream must not survive on a dynamic, tenant-scoped endpoint.
+            response["Cache-Control"] = "no-store, private"
+        return response
+
+
 class HealthCheckMiddleware:
     """Answer ``GET /health/`` with 200 BEFORE tenant resolution.
 

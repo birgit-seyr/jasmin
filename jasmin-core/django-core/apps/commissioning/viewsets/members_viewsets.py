@@ -384,7 +384,19 @@ class MemberViewSet(
         data = {k: v for k, v in request.data.items() if k != "notify_user"}
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        member: Member = serializer.save()
+
+        from django.db import transaction
+
+        from apps.shared.tenants.models import RateLimitedAction
+        from apps.shared.tenants.rate_limits import enforce_action_quota
+
+        # Volume cap on member creation — an uncapped loop pollutes the
+        # legally-relevant Genossenschaft member register. Atomic with the save
+        # so only a successful create counts; the cap is platform-owned (public
+        # Tenant), so a compromised office account can't raise it.
+        with transaction.atomic():
+            enforce_action_quota(RateLimitedAction.MEMBER_CREATION, actor=request.user)
+            member: Member = serializer.save()
 
         if existing_user is not None:
             service.link_to_user(

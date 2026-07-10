@@ -29,7 +29,6 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.accounts.permissions import SelfRegistrationEnabled
-
 from apps.shared.auth_cookies import (
     clear_tenant_refresh_cookie,
     get_tenant_refresh_token,

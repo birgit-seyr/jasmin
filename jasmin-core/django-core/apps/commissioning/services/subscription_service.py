@@ -11,6 +11,8 @@ from django.utils import timezone
 from isoweek import Week
 
 from apps.shared.subscription_hooks import notify_subscription_changed
+from apps.shared.tenants.models import RateLimitedAction
+from apps.shared.tenants.rate_limits import enforce_action_quota
 
 from ..errors import (
     CancellationAfterValidUntil,
@@ -273,7 +275,7 @@ class SubscriptionService:
 
     @transaction.atomic
     def materialize_confirmed_subscription(
-        self, subscription: Subscription
+        self, subscription: Subscription, *, actor: Any = None
     ) -> Subscription:
         """Create Shares + ShareDeliveries + ChargeSchedule for a freshly
         confirmed subscription.
@@ -282,6 +284,9 @@ class SubscriptionService:
         are kept; only missing ones are created. Charge regeneration is
         delegated to ``ChargeScheduleService`` which itself protects locked
         (issued/paid/…) rows.
+
+        ``actor`` (the confirming user) is recorded on the rate-limit ledger
+        when this is a fresh confirmation.
         """
         if not subscription.valid_from or not subscription.valid_until:
             logger.info(
@@ -305,6 +310,14 @@ class SubscriptionService:
         #     variation's farm-wide cap, so it must be gated too (else two
         #     DSD-less drafts can both confirm past the cap).
         if fresh_confirm:
+            # Volume cap on fresh subscription confirmations (re-confirmation is
+            # idempotent and doesn't consume quota). A confirmation creates
+            # delivery + billing obligations; capping it bounds how fast those
+            # can be minted. Placed alongside the capacity gate — both reject a
+            # fresh confirm here — and the cap is platform-owned (public Tenant).
+            enforce_action_quota(
+                RateLimitedAction.SUBSCRIPTION_CONFIRMATION, actor=actor
+            )
             VariationCapacityService.assert_capacity_available(subscription)
 
         if not subscription.default_delivery_station_day_id:

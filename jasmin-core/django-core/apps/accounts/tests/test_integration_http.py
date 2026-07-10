@@ -26,9 +26,11 @@ End-to-end flows:
 
 from __future__ import annotations
 
+import datetime
 from unittest.mock import patch
 
 import pytest
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -40,8 +42,25 @@ from apps.shared.auth_cookies import (
     TENANT_REFRESH_COOKIE,
     TENANT_REFRESH_COOKIE_PATH,
 )
+from apps.shared.tenants.models import TenantSettings
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture
+def _self_registration_enabled(tenant):
+    """Opt this tenant into public self-registration (the default is off).
+
+    The register endpoints are gated by the ``SelfRegistrationEnabled``
+    permission, so the register-flow tests must enable the setting for the
+    tenant or every register call 403s with ``auth.self_registration_disabled``.
+    """
+    TenantSettings.objects.create(
+        tenant=tenant,
+        valid_from=timezone.now() - datetime.timedelta(seconds=1),
+        allows_self_registration=True,
+    )
+    return tenant
 
 
 # --------------------------------------------------------------------------- #
@@ -214,7 +233,7 @@ class TestRegisterEndpoint:
     }
 
     @pytest.fixture(autouse=True)
-    def _email_verified(self):
+    def _email_verified(self, _self_registration_enabled):
         # The final register step requires the email to have passed the code
         # check (register/verify_code/). That flow is tested separately; stub
         # it verified here so these tests focus on the register endpoint.
@@ -250,6 +269,10 @@ class TestRegisterEndpoint:
 class TestRegistrationEmailVerification:
     """The pre-account email-ownership code flow: send_code / verify_code, and
     the register step's requirement that the email was verified first."""
+
+    @pytest.fixture(autouse=True)
+    def _enable_self_registration(self, _self_registration_enabled):
+        pass
 
     def test_send_code_emails_a_code_for_a_new_address(self, tenant):
         with patch("apps.accounts.views.auth_views.schedule_deferred_email") as sched:
@@ -497,6 +520,10 @@ class TestAdminUsersGating:
 
 
 class TestEndToEndSelfRegistration:
+    @pytest.fixture(autouse=True)
+    def _enable_self_registration(self, _self_registration_enabled):
+        pass
+
     def test_full_flow(self, tenant):
         from apps.commissioning.models import UserInvitation
 

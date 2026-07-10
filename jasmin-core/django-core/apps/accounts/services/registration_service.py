@@ -157,6 +157,15 @@ def register_public_applicant(
     if intent:
         note_parts.append(intent)
 
+    # The interactive office create path (MemberViewSet.create) is volume-capped;
+    # self-registration mints a Member too, so cap it on the same weekly budget.
+    # This whole flow is atomic, so a refusal rolls back the just-created user as
+    # well. (User creation is separately capped inside create_user_with_invitation.)
+    from apps.shared.tenants.models import RateLimitedAction
+    from apps.shared.tenants.rate_limits import enforce_action_quota
+
+    enforce_action_quota(RateLimitedAction.MEMBER_CREATION, actor=user)
+
     # Trial (Probe-Abo) registration: a trial member subscribes no cooperative
     # shares (they aren't a Genosse yet); the office converts the trial to a
     # full membership later. ``is_trial`` / ``coop_shares_count`` were computed

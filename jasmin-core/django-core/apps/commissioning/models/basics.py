@@ -262,6 +262,10 @@ class ShareArticle(JasminModel, PricingMixin):
     percentage_added_to_bulk_packing_list = models.PositiveSmallIntegerField(
         blank=True, null=True
     )
+    percentage_added_to_commissioning_list_packing = models.PositiveSmallIntegerField(
+        default=5
+    )  # this because the commissioning list packing needs to provide maybe 5% more salads, because experience shows
+    # that 5% are bad
 
     # Suppliers
     seller_1 = models.ForeignKey(

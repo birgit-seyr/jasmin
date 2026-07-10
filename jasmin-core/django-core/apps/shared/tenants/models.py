@@ -170,6 +170,28 @@ class Tenant(TenantMixin, JasminModel):
     # rich-text editor on ``ConfigurationGeneral.tsx``.
     privacy_policy_html = models.TextField(blank=True, default="")
 
+    # ---- Platform-owned action rate-limit overrides ----
+    # Per-tenant overrides for the safe baseline caps in
+    # ``apps.shared.tenants.rate_limits.DEFAULT_ACTION_RATE_LIMITS``. Shape:
+    # ``{"<action>": {"weekly": int, "per_minute": int}}`` (partial keys allowed
+    # — a missing action or bound falls back to the code default).
+    #
+    # This lives on the PUBLIC-schema ``Tenant`` row ON PURPOSE: it is editable
+    # only through the super-admin platform, never from tenant/office settings.
+    # The rate cap defends against a compromised *office* account generating a
+    # flood of legally-relevant records — so the control that decides the ceiling
+    # must sit one trust tier above that account. If it lived in tenant-editable
+    # ``TenantSettings``, the attacker could simply raise their own cap first.
+    #
+    # ``editable=False`` is a belt-and-braces backstop: it keeps the field out of
+    # any ``ModelSerializer(fields="__all__")`` (e.g. the tenant-facing
+    # ``TenantSerializer``) by construction, so it can never be raised via a
+    # tenant PATCH. Super-admin writes go through explicit ORM / serializer code,
+    # which ``editable=False`` does not block.
+    action_rate_limit_overrides = models.JSONField(
+        default=dict, blank=True, editable=False
+    )
+
     auto_create_schema = True
     auto_drop_schema = True
 
@@ -179,6 +201,67 @@ class Tenant(TenantMixin, JasminModel):
 
 class Domain(DomainMixin):
     pass
+
+
+class RateLimitedAction(models.TextChoices):
+    """The consequential verbs guarded by a per-tenant volume cap.
+
+    Each value is a stable string stored in ``ActionRateLog.action`` and keyed
+    in ``DEFAULT_ACTION_RATE_LIMITS`` — treat them as part of the config
+    contract (renaming one silently drops its history + override).
+    """
+
+    INVOICE_FINALIZATION = "invoice_finalization", "Invoice finalization"
+    DELIVERY_NOTE_FINALIZATION = (
+        "delivery_note_finalization",
+        "Delivery-note finalization",
+    )
+    SEPA_CHARGE_GENERATION = "sepa_charge_generation", "SEPA charge generation"
+    MEMBER_CREATION = "member_creation", "Member creation"
+    USER_CREATION = "user_creation", "User creation"
+    SUBSCRIPTION_CONFIRMATION = (
+        "subscription_confirmation",
+        "Subscription confirmation",
+    )
+
+
+class ActionRateLog(JasminModel):
+    """Append-only ledger of rate-limited actions — one row per event.
+
+    Durable on PURPOSE: the cap protects legally-relevant volume, so it must
+    survive a Redis flush (a cache-backed counter would not). Doubles as a
+    forensic trail of who did what and when. Lives in the public schema (the
+    ``shared.tenants`` app is a SHARED_APP).
+
+    The tenant is identified by its ``schema_name`` string, NOT a FK to
+    ``Tenant``. A public-schema FK to ``Tenant`` would add a commit-time
+    constraint that a schema-only ``FakeTenant`` (background ``schema_context``
+    work) and pytest ``transaction=True`` flushes can't satisfy — and the
+    ledger needs no referential integrity, only a stable tenant key for
+    counting. ``actor_id`` is a plain string (the actor is a tenant-schema
+    ``JasminUser``; no cross-schema FK is possible). Pruned by
+    ``prune_old_action_rate_log`` in ``tasks.py``.
+    """
+
+    # Tenant.schema_name (a Postgres identifier, ≤63 chars).
+    tenant_schema = models.CharField(max_length=63)
+    action = models.CharField(max_length=40, choices=RateLimitedAction.choices)
+    # JasminUser id (tenant-schema STR pk) or "" when the actor is unknown
+    # (e.g. a background billing run). Not an FK — cross-schema is impossible.
+    actor_id = models.CharField(max_length=ID_LENGTH, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            # Serves the guard's count query: (tenant_schema, action, created_at >= t).
+            models.Index(
+                fields=["tenant_schema", "action", "created_at"],
+                name="actionratelog_lookup_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.tenant_schema}:{self.action}@{self.created_at:%Y-%m-%d %H:%M:%S}"
 
 
 class PackingMode(models.TextChoices):

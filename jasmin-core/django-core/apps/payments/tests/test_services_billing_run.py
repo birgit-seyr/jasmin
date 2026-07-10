@@ -103,6 +103,42 @@ class TestCreateRun:
         assert c1.end_to_end_id != ""
         assert len(c1.end_to_end_id) <= 35
 
+    def test_rate_limit_refuses_run_over_cap(
+        self, tenant, tenant_settings, billing_profile, subscription, member
+    ):
+        """The SEPA charge-generation quota gates create_run — a compromised
+        office account can't mint an unbounded number of direct-debit batches."""
+        from apps.shared.tenants.errors import ActionRateLimitExceeded
+        from apps.shared.tenants.models import RateLimitedAction
+
+        # Platform-owned override (connection.tenant is this fixture object, so
+        # the in-memory value is what the guard reads). Tighten to 1 run/week.
+        tenant.action_rate_limit_overrides = {
+            str(RateLimitedAction.SEPA_CHARGE_GENERATION): {
+                "weekly": 1,
+                "per_minute": 100,
+            }
+        }
+
+        _make_planned_charge(member, subscription, due_date=datetime.date(2026, 2, 1))
+        BillingRunService.create_run(
+            period_start=datetime.date(2026, 2, 1),
+            period_end=datetime.date(2026, 2, 28),
+            collection_date=datetime.date(2026, 3, 5),
+        )
+
+        # A second run (with a fresh eligible charge) is refused by the cap.
+        _make_planned_charge(member, subscription, due_date=datetime.date(2026, 2, 15))
+        with pytest.raises(ActionRateLimitExceeded) as exc:
+            BillingRunService.create_run(
+                period_start=datetime.date(2026, 2, 1),
+                period_end=datetime.date(2026, 2, 28),
+                collection_date=datetime.date(2026, 3, 5),
+            )
+        assert exc.value.details["action"] == str(
+            RateLimitedAction.SEPA_CHARGE_GENERATION
+        )
+
     def test_does_not_reload_each_charge(
         self, tenant, tenant_settings, billing_profile, subscription, member
     ):
