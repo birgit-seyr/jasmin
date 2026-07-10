@@ -19,6 +19,8 @@
   "section_members_only": "Nur Mitglieder",
 
   "invite_user": "BenutzerInnen einladen",
+  "smtp_missing_warning": "Es ist noch kein eigener SMTP-Server (E-Mail-Versand) für diese Organisation eingerichtet. Ohne SMTP können keine Einladungs-E-Mails versendet werden — das Einladen von BenutzerInnen ist daher deaktiviert.",
+  "smtp_missing_link": "→ E-Mail-Einstellungen einrichten",
   "invite_title": "Neue Benutzerin einladen",
   "send_invitation": "Einladung senden",
   "edit_roles": "Rollen bearbeiten",

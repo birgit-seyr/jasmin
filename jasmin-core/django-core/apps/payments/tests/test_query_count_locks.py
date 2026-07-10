@@ -363,7 +363,7 @@ def test_delivery_notes_list_is_scale_invariant(tenant, office_client):
 
 
 # --------------------------------------------------------------------------- #
-# /api/commissioning/commissioning_lists/                                     #
+# /api/commissioning/commissioning_lists_resellers/                           #
 # --------------------------------------------------------------------------- #
 
 
@@ -378,7 +378,7 @@ def test_commissioning_list_is_scale_invariant(tenant, office_client):
     all seeded rows must match for them to show up."""
     year, week, day = 2026, 30, 2
     url = (
-        "/api/commissioning/commissioning_lists/"
+        "/api/commissioning/commissioning_lists_resellers/"
         f"?year={year}&delivery_week={week}&day_number={day}"
     )
 
@@ -401,10 +401,12 @@ def test_commissioning_list_is_scale_invariant(tenant, office_client):
     large = _count_queries_on(office_client, url)
 
     assert large - small <= 3, (
-        f"commissioning_lists/ N+1 suspected: 2 rows -> {small} queries, "
+        f"commissioning_lists_resellers/ N+1 suspected: 2 rows -> {small} queries, "
         f"8 rows -> {large} queries (delta {large - small})."
     )
-    assert large <= HARD_CEILING, f"commissioning_lists/ exceeded hard ceiling: {large}"
+    assert (
+        large <= HARD_CEILING
+    ), f"commissioning_lists_resellers/ exceeded hard ceiling: {large}"
 
 
 # --------------------------------------------------------------------------- #

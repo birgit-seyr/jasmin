@@ -3,6 +3,7 @@ import {  Badge, Button, Space, Typography } from "antd";
 import { useQueryClient } from "@tanstack/react-query";
 import { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { ROLES, type Role } from "@shared/auth/roles";
 import { RoleTags } from "@shared/auth";
 import { InviteUserModal } from '@shared/modals';
@@ -12,7 +13,7 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { ExplainerText } from "@shared/ui";
+import { ExplainerText, PastWarningMessage } from "@shared/ui";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { useDateFormat } from "@hooks/index";
 import {
@@ -21,7 +22,11 @@ import {
   getAuthAdminUsersListQueryKey,
   useAuthAdminUsersList,
 } from "@shared/api/generated/auth/auth";
-import type { AdminUserRow } from "@shared/api/generated/models";
+import { useTenantsEmailConfigList } from "@shared/api/generated/tenants/tenants";
+import type {
+  AdminUserRow,
+  TenantEmailConfig,
+} from "@shared/api/generated/models";
 import { notify } from "@shared/utils";
 
 const { Text } = Typography;
@@ -107,6 +112,20 @@ export default function ConfigurationUsers() {
   const [resendingId, setResendingId] = useState<string | null>(null);
 
   const [roleEditUser, setRoleEditUser] = useState<UserRow | null>(null);
+
+  // Inviting a user sends an invitation email, which the backend refuses when
+  // the tenant hasn't wired its own SMTP — so gate the invite button on it and
+  // explain why, rather than let invites silently fail to send.
+  const { data: emailConfig } = useTenantsEmailConfigList({
+    query: {
+      select: (data) => {
+        // Backend returns a single object; orval types it as an array.
+        const raw = data as unknown;
+        return (Array.isArray(raw) ? raw[0] : raw) as TenantEmailConfig;
+      },
+    },
+  });
+  const smtpConfigured = Boolean(emailConfig?.smtp_host?.trim());
 
   // React Query — failures route through the global queryCache.onError
   // toast. Writes call `fetchUsers()` to invalidate and refetch.
@@ -385,9 +404,18 @@ export default function ConfigurationUsers() {
     <div>
       <h1>{t("users.title")}</h1>
       <div style={{ marginBottom: "2em", marginTop: "2em" }}>
+        {!smtpConfigured && (
+          <PastWarningMessage width="100%" className="mb-1em">
+            {t("users.smtp_missing_warning")}{" "}
+            <Link to="/configuration/email">
+              {t("users.smtp_missing_link")}
+            </Link>
+          </PastWarningMessage>
+        )}
         <Button
           type="primary"
           icon={<PlusOutlined />}
+          disabled={!smtpConfigured}
           onClick={() => setCreateOpen(true)}
         >
           {t("users.invite_user")}

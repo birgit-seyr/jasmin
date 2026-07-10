@@ -38,13 +38,7 @@ export default function ConfigurationPayments() {
             ],
             defaultValue: "EXACT_PER_PERIOD",
           },
-          {
-            key: "bills_joker_deliveries",
-            label: t("settings.payments.bills_joker_deliveries"),
-            description: t("settings.payments.bills_joker_deliveries_desc"),
-            type: "checkbox",
-            defaultValue: false,
-          },
+
           {
             key: "allows_solidarity_pricing",
             label: t("settings.payments.allows_solidarity_pricing"),
