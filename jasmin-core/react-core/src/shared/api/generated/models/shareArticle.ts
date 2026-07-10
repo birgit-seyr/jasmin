@@ -272,6 +272,11 @@ export interface ShareArticle {
    * @nullable
    */
   percentage_added_to_bulk_packing_list?: number | null;
+  /**
+   * @minimum 0
+   * @maximum 32767
+   */
+  percentage_added_to_commissioning_list_packing?: number;
   /** @nullable */
   default_crate_harvest?: string | null;
   /** @nullable */

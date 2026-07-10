@@ -733,6 +733,11 @@ class HarvestSharePlanningRowSerializer(serializers.Serializer):
     delivery_week = serializers.IntegerField()
     share_article = serializers.CharField()
     share_article_name = serializers.CharField(required=False)
+    # Per-article spoilage buffer % for the commissioning-list PACKING view;
+    # applied to the displayed amount there (the harvest-planning grid ignores it).
+    percentage_added_to_commissioning_list_packing = serializers.IntegerField(
+        required=False
+    )
     # Per-size weight references off the ShareArticle (all DecimalField, nullable).
     kg_per_piece_S = serializers.DecimalField(
         max_digits=12, decimal_places=3, allow_null=True, required=False

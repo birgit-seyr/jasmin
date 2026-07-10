@@ -16,12 +16,15 @@ import { ToolTipIcon } from "@shared/ui";
 import { organicStatusOptions } from "@hooks/index";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 import type { CrateOption } from "../useCrates";
-import { getShareOptionLabel, isFieldDisabled, renderNumber } from "@shared/utils";
+import {
+  getShareOptionLabel,
+  isFieldDisabled,
+  renderNumber,
+} from "@shared/utils";
 
 // Pure row predicates — a row is harvest-only or purchase-only based on
 // ``is_purchased``. Module-level so they're stable references.
-const isHarvestDisabled = (record: TableRecord) =>
-  record.is_purchased === true;
+const isHarvestDisabled = (record: TableRecord) => record.is_purchased === true;
 const isPurchaseDisabled = (record: TableRecord) =>
   record.is_purchased === false;
 
@@ -246,7 +249,9 @@ export function useShareArticleListColumns({
         },
         {
           title: (
-            <span className="text-sm">{t("commissioning.pieces_per_kg_S")}</span>
+            <span className="text-sm">
+              {t("commissioning.pieces_per_kg_S")}
+            </span>
           ),
           dataIndex: "pieces_per_kg_S",
           key: "pieces_per_kg_S",
@@ -260,7 +265,9 @@ export function useShareArticleListColumns({
         },
         {
           title: (
-            <span className="text-sm">{t("commissioning.pieces_per_kg_M")}</span>
+            <span className="text-sm">
+              {t("commissioning.pieces_per_kg_M")}
+            </span>
           ),
           dataIndex: "pieces_per_kg_M",
           key: "pieces_per_kg_M",
@@ -273,7 +280,9 @@ export function useShareArticleListColumns({
         },
         {
           title: (
-            <span className="text-sm">{t("commissioning.pieces_per_kg_L")}</span>
+            <span className="text-sm">
+              {t("commissioning.pieces_per_kg_L")}
+            </span>
           ),
           dataIndex: "pieces_per_kg_L",
           key: "pieces_per_kg_L",
@@ -309,6 +318,9 @@ export function useShareArticleListColumns({
                 title: (
                   <span className="text-sm">
                     {t("commissioning.percentage_added_to_bulk_packing_list")}
+                    <ToolTipIcon
+                      title={t("tooltip.percentage_bulk_packing_list")}
+                    />
                   </span>
                 ),
                 dataIndex: "percentage_added_to_bulk_packing_list",
@@ -323,6 +335,29 @@ export function useShareArticleListColumns({
               },
             ]
           : []),
+        {
+          title: (
+            <span className="text-sm">
+              {t(
+                "commissioning.percentage_added_to_commissioning_list_packing",
+              )}
+              <ToolTipIcon
+                title={t(
+                  "tooltip.percentage_added_to_commissioning_list_packing",
+                )}
+              />
+            </span>
+          ),
+          dataIndex: "percentage_added_to_commissioning_list_packing",
+          key: "percentage_added_to_commissioning_list_packing",
+          inputType: "positive_integer",
+          required: false,
+          align: "center",
+          width: "7em",
+          className: "column-group-start",
+          render: (value: number) =>
+            value ? `${format(Number(value), 0)} %` : null,
+        },
         {
           title: (
             <span className="text-sm">

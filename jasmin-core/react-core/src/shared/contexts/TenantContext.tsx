@@ -463,12 +463,13 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
     return `${backendUrl}${bioLogo}`;
   }, [currentTenant?.bio_logo]);
 
-  // NB: we intentionally do NOT <link rel="preload"> the logo. Protected-media
-  // URLs carry a per-sign `?st=` token (TimestampSigner), so the URL the slim
-  // tenant fetch yields differs from the one after ``refreshTenantFull``
-  // re-signs it — the preloaded link was always superseded and the browser
-  // logged "preloaded but not used". The login <img> already sets
-  // `fetchpriority="high"`, which is the correct LCP signal here.
+  // NB: we do NOT <link rel="preload"> the logo. The protected-media `?st=`
+  // token is now bucketed (stable within a ~1h window, see
+  // core/protected_media.py), so the slim-fetch and post-``refreshTenantFull``
+  // URLs usually match and a preload would no longer be wasted — but the login
+  // <img> already sets `fetchpriority="high"`, the correct LCP signal, so a
+  // preload adds nothing. (Historically the per-sign token rotated on every
+  // sign and the preloaded link was always superseded.)
 
   // The tenant logo doubles as the browser tab icon. Modern browsers
   // accept any image format (PNG, SVG, ...) and scale it down to favicon

@@ -19,6 +19,8 @@ queries (one per reverse relation) instead of N*R — see
  */
 export interface ShareType {
   readonly id?: string;
+  amount_of_jokers?: number;
+  amount_of_donation_jokers?: number;
   readonly share_type_variation_sizes_in_use?: string;
   /** @nullable */
   readonly variations_valid_until_max?: string | null;
@@ -47,15 +49,5 @@ export interface ShareType {
   delivery_cycle?: ShareTypeDeliveryCycle;
   needs_complex_planning?: boolean;
   is_additional_share_type?: boolean;
-  /**
-   * @minimum -2147483648
-   * @maximum 2147483647
-   */
-  amount_of_jokers?: number;
-  /**
-   * @minimum -2147483648
-   * @maximum 2147483647
-   */
-  amount_of_donation_jokers?: number;
   readonly can_be_deleted?: boolean;
 }

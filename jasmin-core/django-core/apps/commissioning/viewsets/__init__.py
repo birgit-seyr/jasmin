@@ -58,7 +58,7 @@ from .members_viewsets import (
     SubscriptionViewSet,
 )
 from .resellers_viewsets import (
-    CommissioningListViewSet,
+    CommissioningListResellersViewSet,
     CrateOrderContentViewSet,
     DeliveryNoteResellerContentViewSet,
     DeliveryNoteResellerViewSet,

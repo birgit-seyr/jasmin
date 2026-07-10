@@ -4,13 +4,13 @@ import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  useCommissioningCommissioningListsList,
+  useCommissioningCommissioningListsResellersList,
   useCommissioningDaysWithOrdersRetrieve,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
-  CommissioningCommissioningListsListParams,
+  CommissioningCommissioningListsResellersListParams,
   CommissioningDaysWithOrdersRetrieveParams,
-  CommissioningListEntry,
+  CommissioningListResellersEntry,
 } from "@shared/api/generated/models";
 import { PastWarningMessage } from "@shared/ui";
 import { CommissioningListResellersPDFGenerator } from "@features/commissioning/pdfs";
@@ -37,7 +37,7 @@ const currentDay = dayjs().isoWeekday();
 // endpoint is fully serializer-typed, so there's no parallel interface to keep
 // in sync (a hand-written one silently drifts: e.g. ``amount`` is ``number``
 // here, and ``unit`` is nullable, both of which the old interface got wrong).
-type Reseller = CommissioningListEntry;
+type Reseller = CommissioningListResellersEntry;
 type OrderContent = Reseller["order"]["contents"][number];
 
 export default function CommissioningListResellers() {
@@ -54,7 +54,7 @@ export default function CommissioningListResellers() {
   const { format } = useNumberFormat();
   const isMobile = useIsMobile();
 
-  const listParams = useMemo<CommissioningCommissioningListsListParams>(
+  const listParams = useMemo<CommissioningCommissioningListsResellersListParams>(
     () => ({
       year: selectedYear,
       delivery_week: selectedWeek!,
@@ -72,7 +72,7 @@ export default function CommissioningListResellers() {
   );
 
   const { data: resellersData, isLoading: loadingResellers } =
-    useCommissioningCommissioningListsList(listParams, {
+    useCommissioningCommissioningListsResellersList(listParams, {
       query: {
         enabled: selectedWeek != null && selectedDay != null,
       },

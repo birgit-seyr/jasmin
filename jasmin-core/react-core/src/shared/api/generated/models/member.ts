@@ -55,7 +55,7 @@ export interface Member {
   readonly notification_token?: string | null;
   is_active?: boolean;
   /** @nullable */
-  readonly entry_date?: string | null;
+  entry_date?: string | null;
   is_trial?: boolean;
   /** @nullable */
   readonly trial_converted_at?: string | null;

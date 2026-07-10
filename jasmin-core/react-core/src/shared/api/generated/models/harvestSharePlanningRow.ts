@@ -38,6 +38,7 @@ export interface HarvestSharePlanningRow {
   delivery_week: number;
   share_article: string;
   share_article_name?: string;
+  percentage_added_to_commissioning_list_packing?: number;
   /**
    * @nullable
    * @pattern ^-?\d{0,9}(?:\.\d{0,3})?$

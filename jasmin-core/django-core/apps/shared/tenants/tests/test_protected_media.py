@@ -13,9 +13,11 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 import pytest
 import time_machine
+from django.core import signing
 from django.test import RequestFactory, override_settings
 
 from core.protected_media import (
+    _SALT,
     SignedTenantFileSystemStorage,
     media_token_is_valid,
     protected_media_view,
@@ -47,6 +49,42 @@ class TestMediaToken:
         # Default max age is 24h — two days later the link is dead.
         with time_machine.travel("2026-06-03 12:00:00"):
             assert not media_token_is_valid(path, token)
+
+    def test_token_is_stable_within_a_bucket(self):
+        # The caching win: two signs in the same time bucket → IDENTICAL token,
+        # so the media URL (and its cache key) doesn't rotate on every refetch.
+        path = "test_tenants/logos/logo.png"
+        with time_machine.travel("2026-06-01 12:00:00", tick=False):
+            assert sign_media_path(path) == sign_media_path(path)
+
+    def test_token_rotates_across_buckets_but_stays_valid(self):
+        path = "test_tenants/logos/logo.png"
+        with time_machine.travel("2026-06-01 12:00:00", tick=False):
+            early = sign_media_path(path)
+        with time_machine.travel("2026-06-01 14:00:00", tick=False):
+            later = sign_media_path(path)
+            # Different bucket → different token string...
+            assert early != later
+            # ...but the earlier one is still valid (well within the 24h window).
+            assert media_token_is_valid(path, early)
+
+    def test_legacy_timestampsigner_token_is_accepted(self):
+        # Backward compat during a deploy: a token minted by the OLD per-sign
+        # scheme (signing.dumps) that's still in flight in a live browser must
+        # keep validating so the ?st= URL doesn't 403 mid-deploy.
+        path = "test_tenants/docs/invoice-1.pdf"
+        legacy = signing.dumps(path, salt=_SALT, compress=True)
+        assert media_token_is_valid(path, legacy)
+
+    def test_legacy_token_still_expires_and_is_path_bound(self):
+        path = "test_tenants/docs/invoice-1.pdf"
+        with time_machine.travel("2026-06-01 12:00:00"):
+            legacy = signing.dumps(path, salt=_SALT, compress=True)
+            assert media_token_is_valid(path, legacy)
+            # Path binding holds for the legacy branch too.
+            assert not media_token_is_valid("test_tenants/docs/other.pdf", legacy)
+        with time_machine.travel("2026-06-03 12:00:00"):
+            assert not media_token_is_valid(path, legacy)
 
 
 class TestSignedStorageUrl:

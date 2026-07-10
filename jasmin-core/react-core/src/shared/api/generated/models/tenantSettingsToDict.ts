@@ -117,6 +117,7 @@ export interface TenantSettingsToDict {
   show_summary_in_harvest_share_planning_on_top?: boolean;
   show_seller_name_of_share_article_in_share_for_member_on_page?: boolean;
   round_up_to_full_pu_harvesting?: boolean;
+  allows_self_registration?: boolean;
   has_markets?: boolean;
   sells_to_resellers?: boolean;
   /**

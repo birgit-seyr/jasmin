@@ -319,11 +319,11 @@ class TestDeliveryNoteResellerViewSet:
 
 
 # ---------------------------------------------------------------------------
-# CommissioningListViewSet
+# CommissioningListResellersViewSet
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
-class TestCommissioningListViewSet:
-    URL = reverse("commissioning_list-list")
+class TestCommissioningListResellersViewSet:
+    URL = reverse("commissioning_list_resellers-list")
 
     def test_requires_params(self, api_client, tenant):
         resp = api_client.get(self.URL)

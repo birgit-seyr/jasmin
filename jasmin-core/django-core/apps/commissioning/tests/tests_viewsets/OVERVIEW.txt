@@ -70,7 +70,7 @@ test_resellers_viewsets.py (20 tests)
   TestOrderContentViewSet                 1 test    list
   TestInvoiceResellerViewSet              6 tests   list, upload_pdf requires finalized, create_storno guards, protected fields read-only on update
   TestDeliveryNoteResellerViewSet         3 tests   list, upload_pdf requires finalized
-  TestCommissioningListViewSet            2 tests   requires params, returns for valid params
+  TestCommissioningListResellersViewSet   2 tests   requires params, returns for valid params
 
 test_consents_viewsets.py (22 tests) — DSGVO-critical access matrix
 ───────────────────────────────────────────────────────────────────

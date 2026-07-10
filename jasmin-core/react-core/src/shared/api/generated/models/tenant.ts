@@ -163,4 +163,5 @@ export interface Tenant {
   /** @maxLength 140 */
   sepa_remittance_template?: string;
   privacy_policy_html?: string;
+  readonly action_rate_limit_overrides?: unknown;
 }

@@ -1128,17 +1128,15 @@ class CreateStornoRequestSerializer(serializers.Serializer):
     reason = serializers.CharField(help_text="Reason for the storno")
 
 
-# --- Commissioning List (grouped by reseller, per week + day) ---
+# --- Commissioning List for RESELLERS (grouped by reseller, per week + day) ---
 #
-# Response shape for ``GET /api/commissioning/commissioning_lists/?year=…
-# &delivery_week=…&day_number=…``. The component names below MUST match
-# the strings the viewset previously passed to ``inline_serializer(name=…)``
-# so the Orval-generated frontend types (``CommissioningListEntry``,
-# ``CommissioningListOrder``, ``CommissioningListOrderContent``) stay
-# byte-identical.
+# The reseller pick list — distinct from the commissioning-list PACKING view
+# (harvest-share-planning based). Response shape for
+# ``GET /api/commissioning/commissioning_lists_resellers/?year=…
+# &delivery_week=…&day_number=…``.
 
 
-class CommissioningListOrderContent(serializers.Serializer):
+class CommissioningListResellersOrderContent(serializers.Serializer):
     id = serializers.CharField()
     # Null when the article can't be resolved (see _build_content_entry).
     share_article_id = serializers.CharField(allow_null=True)
@@ -1153,18 +1151,18 @@ class CommissioningListOrderContent(serializers.Serializer):
     note = serializers.CharField(allow_blank=True)
 
 
-class CommissioningListOrder(serializers.Serializer):
+class CommissioningListResellersOrder(serializers.Serializer):
     id = serializers.CharField()
     number = serializers.CharField(allow_null=True)
     note = serializers.CharField(allow_blank=True)
-    contents = CommissioningListOrderContent(many=True)
+    contents = CommissioningListResellersOrderContent(many=True)
 
 
-class CommissioningListEntry(serializers.Serializer):
+class CommissioningListResellersEntry(serializers.Serializer):
     id = serializers.CharField()
     name = serializers.CharField()
     address = serializers.CharField(allow_blank=True)
-    order = CommissioningListOrder()
+    order = CommissioningListResellersOrder()
 
 
 class BackgroundJobEnqueueResponseSerializer(serializers.Serializer):

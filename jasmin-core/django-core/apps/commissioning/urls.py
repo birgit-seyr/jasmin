@@ -52,7 +52,7 @@ from .views.waiting_list_offer_views import (
     WaitingListOfferDetailView,
 )
 from .viewsets import (
-    CommissioningListViewSet,
+    CommissioningListResellersViewSet,
     ConsentDocumentViewSet,
     ConsentRecordViewSet,
     CoopShareViewSet,
@@ -232,7 +232,9 @@ router.register(
     basename="unconfirmed_coop_shares",
 )
 router.register(
-    r"commissioning_lists", CommissioningListViewSet, basename="commissioning_list"
+    r"commissioning_lists_resellers",
+    CommissioningListResellersViewSet,
+    basename="commissioning_list_resellers",
 )
 router.register(r"forecast", ForecastViewSet, basename="forecast")
 router.register(r"share_types", ShareTypeViewSet, basename="share_type")

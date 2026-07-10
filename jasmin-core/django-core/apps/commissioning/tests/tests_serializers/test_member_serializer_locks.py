@@ -178,7 +178,10 @@ class TestUnconditionallyReadOnlyFields:
         "field,value",
         [
             ("member_number", 99999),
-            ("entry_date", datetime.date(1990, 1, 1)),
+            # ``entry_date`` is intentionally NOT here: it was removed from
+            # read_only_fields for the office "manual member transfer" flow
+            # (GenG §30 entry date set by hand when migrating existing members),
+            # so it is now writable and must not be asserted read-only.
             ("sepa_consent", timezone.now()),
             ("privacy_consent", timezone.now()),
             ("withdrawal_consent", timezone.now()),

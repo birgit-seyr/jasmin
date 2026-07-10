@@ -54,6 +54,7 @@
   "delivery_stations_details": "In den Abhollisten wird ein Pseudonym verwendet, wenn das Mitglied eines angegeben hat.",
   "amount_jokers": "",
   "users": "",
+  "commissioning_lists_packing": "Das hier sind die Mengen, die für die Packstationen zur Verfügung gestellt werden müssen. Die Zusatz-%, die bei den Artikeln hinterlegt sind (wegen Ausschuss etc.) werden hier noch dazugerechnet.",
   "default_share_articles_in_share": "Hier können Standard-Mengen festgelegt werden. Zum Beispiel: 1 Stk. Kopfsalat in S-Kisten, 2 Stk. in M-Kisten. Das wird dann bei der Kistenplanung vorgeschlagen, wenn man dort dieses Gemüse hinzufügt, kann dort aber für jede Woche überschrieben werden. Wenn bereits jede Woche 2 Salat in die Kiste sollen, dann muss das unter Langzeitplanung eingegeben werden.",
   "charges_overview": "Übersicht der erstellten und ausgeführten Zahlungen pro Mitglied und Abrechnungslauf.",
   "configuration_consents": "Hier werden die Zustimmungstexte konfiguriert, die Mitglieder bei der Registrierung akzeptieren müssen.",

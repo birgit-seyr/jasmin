@@ -1100,6 +1100,15 @@ MULTITENANT_RELATIVE_MEDIA_ROOT = "%s"
 MEDIA_URL_SIGNATURE_MAX_AGE = int(
     os.environ.get("MEDIA_URL_SIGNATURE_MAX_AGE", str(60 * 60 * 24))
 )
+# Time-bucket size (seconds) for the signed media token. The token embeds a
+# bucket number instead of an exact timestamp, so the emitted ``?st=`` URL is
+# stable for this window — letting the browser cache repeat-viewed images/PDFs
+# instead of re-downloading them on every refetch (see core/protected_media.py).
+# Kept well below MEDIA_URL_SIGNATURE_MAX_AGE so it doesn't meaningfully widen
+# the leaked-link validity window (1 h bucket vs 24 h max-age).
+MEDIA_URL_SIGNATURE_BUCKET = int(
+    os.environ.get("MEDIA_URL_SIGNATURE_BUCKET", str(60 * 60))
+)
 
 # Filesystem location of the pg_dump backup files. Read by the
 # ``prune_old_backups`` Huey task in apps/shared/tenants/tasks.py.

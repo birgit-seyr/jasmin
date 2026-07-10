@@ -1,6 +1,6 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { TFunction } from "i18next";
-import type { CommissioningListEntry } from "@shared/api/generated/models";
+import type { CommissioningListResellersEntry } from "@shared/api/generated/models";
 import { useVegetableSizeOptions, useUnitOptions } from "@hooks/index";
 import { formatNumber } from "@shared/utils/numberFormat";
 import { listStyles } from "./listPdfBase";
@@ -41,7 +41,7 @@ const localStyles = StyleSheet.create({
 });
 
 export interface CommissioningListResellersPDFProps {
-  data: CommissioningListEntry[];
+  data: CommissioningListResellersEntry[];
   year: number;
   week: number;
   dayName: string;

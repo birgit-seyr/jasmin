@@ -49,7 +49,7 @@ import type {
   CommissioningAbosListParams,
   CommissioningAbosRejectCreateBody,
   CommissioningBulkSetToPaidDocumentsCreateParams,
-  CommissioningCommissioningListsListParams,
+  CommissioningCommissioningListsResellersListParams,
   CommissioningConsentDocumentsCurrentRetrieveParams,
   CommissioningConsentDocumentsListParams,
   CommissioningConsentsListParams,
@@ -99,7 +99,7 @@ import type {
   CommissioningInvoiceContentsListParams,
   CommissioningInvoicesListParams,
   CommissioningInvoicesUploadPdfCreateBody,
-  CommissioningListEntry,
+  CommissioningListResellersEntry,
   CommissioningMemberGrowthStatisticsListParams,
   CommissioningMemberLoansListParams,
   CommissioningMembersCancelCreateBody,
@@ -1962,14 +1962,14 @@ export const useCommissioningBulkUnfinalizeShareContentCreate = <TError = ErrorR
     /**
  * Get commissioning list grouped by reseller for a given week and day_number.
  */
-export const commissioningCommissioningListsList = (
-    params: CommissioningCommissioningListsListParams,
+export const commissioningCommissioningListsResellersList = (
+    params: CommissioningCommissioningListsResellersListParams,
  signal?: AbortSignal
 ) => {
       
       
-      return axiosService<CommissioningListEntry[]>(
-      {url: `/api/commissioning/commissioning_lists/`, method: 'GET',
+      return axiosService<CommissioningListResellersEntry[]>(
+      {url: `/api/commissioning/commissioning_lists_resellers/`, method: 'GET',
         params, signal
     },
       );
@@ -1978,66 +1978,66 @@ export const commissioningCommissioningListsList = (
 
 
 
-export const getCommissioningCommissioningListsListQueryKey = (params?: CommissioningCommissioningListsListParams,) => {
+export const getCommissioningCommissioningListsResellersListQueryKey = (params?: CommissioningCommissioningListsResellersListParams,) => {
     return [
-    `/api/commissioning/commissioning_lists/`, ...(params ? [params]: [])
+    `/api/commissioning/commissioning_lists_resellers/`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getCommissioningCommissioningListsListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningCommissioningListsList>>, TError = ErrorResponse>(params: CommissioningCommissioningListsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCommissioningListsList>>, TError, TData>>, }
+export const getCommissioningCommissioningListsResellersListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>, TError = ErrorResponse>(params: CommissioningCommissioningListsResellersListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getCommissioningCommissioningListsListQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningCommissioningListsResellersListQueryKey(params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningCommissioningListsList>>> = ({ signal }) => commissioningCommissioningListsList(params, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>> = ({ signal }) => commissioningCommissioningListsResellersList(params, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningCommissioningListsList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type CommissioningCommissioningListsListQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningCommissioningListsList>>>
-export type CommissioningCommissioningListsListQueryError = ErrorResponse
+export type CommissioningCommissioningListsResellersListQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>>
+export type CommissioningCommissioningListsResellersListQueryError = ErrorResponse
 
 
-export function useCommissioningCommissioningListsList<TData = Awaited<ReturnType<typeof commissioningCommissioningListsList>>, TError = ErrorResponse>(
- params: CommissioningCommissioningListsListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCommissioningListsList>>, TError, TData>> & Pick<
+export function useCommissioningCommissioningListsResellersList<TData = Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>, TError = ErrorResponse>(
+ params: CommissioningCommissioningListsResellersListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof commissioningCommissioningListsList>>,
+          Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>,
           TError,
-          Awaited<ReturnType<typeof commissioningCommissioningListsList>>
+          Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>
         > , 'initialData'
       >, }
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCommissioningCommissioningListsList<TData = Awaited<ReturnType<typeof commissioningCommissioningListsList>>, TError = ErrorResponse>(
- params: CommissioningCommissioningListsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCommissioningListsList>>, TError, TData>> & Pick<
+export function useCommissioningCommissioningListsResellersList<TData = Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>, TError = ErrorResponse>(
+ params: CommissioningCommissioningListsResellersListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof commissioningCommissioningListsList>>,
+          Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>,
           TError,
-          Awaited<ReturnType<typeof commissioningCommissioningListsList>>
+          Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>
         > , 'initialData'
       >, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCommissioningCommissioningListsList<TData = Awaited<ReturnType<typeof commissioningCommissioningListsList>>, TError = ErrorResponse>(
- params: CommissioningCommissioningListsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCommissioningListsList>>, TError, TData>>, }
+export function useCommissioningCommissioningListsResellersList<TData = Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>, TError = ErrorResponse>(
+ params: CommissioningCommissioningListsResellersListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useCommissioningCommissioningListsList<TData = Awaited<ReturnType<typeof commissioningCommissioningListsList>>, TError = ErrorResponse>(
- params: CommissioningCommissioningListsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCommissioningListsList>>, TError, TData>>, }
+export function useCommissioningCommissioningListsResellersList<TData = Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>, TError = ErrorResponse>(
+ params: CommissioningCommissioningListsResellersListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCommissioningListsResellersList>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getCommissioningCommissioningListsListQueryOptions(params,options)
+  const queryOptions = getCommissioningCommissioningListsResellersListQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

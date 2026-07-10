@@ -370,7 +370,7 @@ def test_delivery_notes_list_is_scale_invariant(tenant, office_client):
 def test_commissioning_list_is_scale_invariant(tenant, office_client):
     """The orders-overview aggregation already prefetches
     ``reseller__contact`` and ``ordercontent_set__{share_article, offer__share_article}``
-    (see ``CommissioningListViewSet.list`` at
+    (see ``CommissioningListResellersViewSet.list`` at
     apps/commissioning/viewsets/resellers_viewsets.py). Lock that chain
     so a future contributor dropping one of those joins is loud.
 

@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type CommissioningCommissioningListsListParams = {
+export type CommissioningCommissioningListsResellersListParams = {
 /**
  * Day of the week (0=Monday, 6=Sunday)
  */

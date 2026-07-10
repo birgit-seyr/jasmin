@@ -93,9 +93,9 @@ from .my_data_serializer import (
     MySubscriptionSubscribeSerializer,
 )
 from .resellers_serializer import (
-    CommissioningListEntry,
-    CommissioningListOrder,
-    CommissioningListOrderContent,
+    CommissioningListResellersEntry,
+    CommissioningListResellersOrder,
+    CommissioningListResellersOrderContent,
     CrateContentInvoiceResellerSerializer,
     CrateDeliveryNoteContentSerializer,
     CrateItemSummarySerializer,

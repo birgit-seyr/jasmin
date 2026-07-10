@@ -5,8 +5,8 @@ import {
   governingShareType,
   PLANNING_SHARE_OPTIONS,
 } from "@shared/planning/planningShareOptions";
-import dayjs from "dayjs";
 import { toApiDate } from "@shared/utils/apiDate";
+import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import SidebarShell from "./SidebarShell";
@@ -487,18 +487,19 @@ export default function CommissioningSidebar({
                   </Link>
                 ),
               },
+              {
+                key: "commissioning-commissioning-list-packing",
+
+                requireRole: "isStaff",
+                label: (
+                  <Link to="/commissioning/commissioning-list-packing">
+                    {t("commissioning.commissioning_list_packing")}
+                  </Link>
+                ),
+              },
             ]
           : []),
-        {
-          key: "commissioning-commissioning-list-packing",
 
-          requireRole: "isStaff",
-          label: (
-            <Link to="/commissioning/commissioning-list-packing">
-              {t("commissioning.commissioning_list_packing")}
-            </Link>
-          ),
-        },
         {
           key: "commissioning-commissioning-list-resellers",
 

@@ -75,7 +75,7 @@ from ..scoping import (
     scope_to_reseller,
 )
 from ..serializers import (
-    CommissioningListEntry,
+    CommissioningListResellersEntry,
     CrateOrderContentCreateRequestSerializer,
     CrateOrderContentSerializer,
     CrateOrderContentUpdateRequestSerializer,
@@ -1279,8 +1279,9 @@ class DeliveryNoteResellerContentViewSet(RolePermissionsMixin, viewsets.ModelVie
         )
 
 
-class CommissioningListViewSet(RolePermissionsMixin, viewsets.ViewSet):
-    """ViewSet for commissioning lists grouped by reseller."""
+class CommissioningListResellersViewSet(RolePermissionsMixin, viewsets.ViewSet):
+    """ViewSet for the RESELLER commissioning list (pick list grouped by
+    reseller) — distinct from the commissioning-list PACKING view."""
 
     read_permission = IsStaff
     write_permission = IsOffice
@@ -1292,7 +1293,7 @@ class CommissioningListViewSet(RolePermissionsMixin, viewsets.ViewSet):
             get_day_number_parameter(required=True),
         ],
         description="Get commissioning list grouped by reseller for a given week and day_number.",
-        responses={200: CommissioningListEntry(many=True)},
+        responses={200: CommissioningListResellersEntry(many=True)},
     )
     def list(self, request: Request) -> Response:
         params = validate_query_params(
@@ -1320,11 +1321,11 @@ class CommissioningListViewSet(RolePermissionsMixin, viewsets.ViewSet):
             )
         )
 
-        result = [_build_commissioning_entry(order) for order in orders]
+        result = [_build_commissioning_resellers_entry(order) for order in orders]
         return Response(result)
 
 
-def _build_commissioning_entry(order: Order) -> dict[str, Any]:
+def _build_commissioning_resellers_entry(order: Order) -> dict[str, Any]:
     """Build a single commissioning list entry from an order."""
     contact = order.reseller.contact
     return {

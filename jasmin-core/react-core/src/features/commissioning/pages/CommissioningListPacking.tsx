@@ -1,6 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  dayPlannedAmountKey,
+  useAmountUnitSizeColumns,
+  usePackingModeShareGroups,
+  useShareArticleColumn,
+} from "@features/commissioning/hooks";
+import { CommissioningListPackingPDFGenerator } from "@features/commissioning/pdfs";
+import { SharesDeliveryDaySelector } from "@features/commissioning/selectors";
+import {
+  currentWeek,
+  useIsMobile,
+  useTenant,
+  useUnitOptions,
+  useVegetableSizeOptions,
+  useYearWeekState,
+} from "@hooks/index";
 import { useCommissioningHarvestSharePlanningList } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningHarvestSharePlanningListParams,
@@ -8,29 +24,17 @@ import type {
   ShareTypeEnum,
 } from "@shared/api/generated/models";
 import { WeekSelector } from "@shared/selectors";
-import { SharesDeliveryDaySelector } from "@features/commissioning/selectors";
 import { EditableTable, READ_ONLY_PERMISSION } from "@shared/tables";
 import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { MobileStack } from "@shared/ui";
+import { ExplainerText, MobileStack } from "@shared/ui";
 import {
-  dayPlannedAmountKey,
-  useAmountUnitSizeColumns,
-  usePackingModeShareGroups,
-  useShareArticleColumn,
-} from "@features/commissioning/hooks";
-import {
-  currentWeek,
-  useIsMobile,
-  useVegetableSizeOptions,
-  useTenant,
-  useUnitOptions,
-  useYearWeekState,
-} from "@hooks/index";
-import { formatWeekLabel, generatePdfFilename, getShareOptionLabel } from "@shared/utils";
-import { CommissioningListPackingPDFGenerator } from "@features/commissioning/pdfs";
+  formatWeekLabel,
+  generatePdfFilename,
+  getShareOptionLabel,
+} from "@shared/utils";
 
 const shareArticleFilters = {
   is_harvest_share_article: true,
@@ -63,8 +67,14 @@ function buildRows(
   const result: PackingRow[] = [];
   for (const row of rawData) {
     const rawAmount = row[plannedKey];
-    const amount = rawAmount != null ? parseFloat(String(rawAmount)) : 0;
-    if (!amount || amount <= 0) continue;
+    const baseAmount = rawAmount != null ? parseFloat(String(rawAmount)) : 0;
+    if (!baseAmount || baseAmount <= 0) continue;
+    // Spoilage buffer: the picker grabs `pct`% extra so ~pct% bad items still
+    // leave enough good ones. Rounded UP to a whole unit — it's an actionable
+    // pick list ("grab N"), and the buffer's intent is "have at least enough".
+    const pct =
+      Number(row.percentage_added_to_commissioning_list_packing) || 0;
+    const amount = Math.ceil(baseAmount * (1 + pct / 100));
     const id = String(row.id);
     result.push({
       key: id,
@@ -256,7 +266,9 @@ export default function CommissioningListPacking() {
             share_article_name: row.share_article_name,
             unit_label: row.unit ? getUnitLabel(row.unit) : "",
             size_label:
-              row.size && row.size !== "M" ? getVegetableSizeLabel(row.size) : "",
+              row.size && row.size !== "M"
+                ? getVegetableSizeLabel(row.size)
+                : "",
             total_amount_text: Number.isInteger(row.total_amount)
               ? String(row.total_amount)
               : row.total_amount.toFixed(2),
@@ -320,6 +332,9 @@ export default function CommissioningListPacking() {
           onRowsChange={handleRows}
         />
       ))}
+      <ExplainerText title={t("common.info")}>
+        {t("explainers.commissioning_lists_packing")}
+      </ExplainerText>{" "}
     </div>
   );
 }

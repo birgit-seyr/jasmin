@@ -5,11 +5,11 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
-import type { CommissioningListOrder } from './commissioningListOrder';
+import type { CommissioningListResellersOrder } from './commissioningListResellersOrder';
 
-export interface CommissioningListEntry {
+export interface CommissioningListResellersEntry {
   id: string;
   name: string;
   address: string;
-  order: CommissioningListOrder;
+  order: CommissioningListResellersOrder;
 }

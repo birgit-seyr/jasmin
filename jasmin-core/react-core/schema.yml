@@ -615,7 +615,6 @@ paths:
         required: true
       security:
       - tenantBoundJwtAuth: []
-      - {}
       responses:
         '201':
           content:
@@ -671,7 +670,6 @@ paths:
         required: true
       security:
       - tenantBoundJwtAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -723,7 +721,6 @@ paths:
         required: true
       security:
       - tenantBoundJwtAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -2377,9 +2374,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
-  /api/commissioning/commissioning_lists/:
+  /api/commissioning/commissioning_lists_resellers/:
     get:
-      operationId: commissioning_commissioning_lists_list
+      operationId: commissioning_commissioning_lists_resellers_list
       description: Get commissioning list grouped by reseller for a given week and
         day_number.
       parameters:
@@ -2434,7 +2431,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/CommissioningListEntry'
+                  $ref: '#/components/schemas/CommissioningListResellersEntry'
           description: ''
         '401':
           content:
@@ -28054,7 +28051,7 @@ components:
       - reseller_id
       - reseller_name
       - sum_netto
-    CommissioningListEntry:
+    CommissioningListResellersEntry:
       type: object
       properties:
         id:
@@ -28064,13 +28061,13 @@ components:
         address:
           type: string
         order:
-          $ref: '#/components/schemas/CommissioningListOrder'
+          $ref: '#/components/schemas/CommissioningListResellersOrder'
       required:
       - address
       - id
       - name
       - order
-    CommissioningListOrder:
+    CommissioningListResellersOrder:
       type: object
       properties:
         id:
@@ -28083,13 +28080,13 @@ components:
         contents:
           type: array
           items:
-            $ref: '#/components/schemas/CommissioningListOrderContent'
+            $ref: '#/components/schemas/CommissioningListResellersOrderContent'
       required:
       - contents
       - id
       - note
       - number
-    CommissioningListOrderContent:
+    CommissioningListResellersOrderContent:
       type: object
       properties:
         id:
@@ -31357,6 +31354,8 @@ components:
           type: string
         share_article_name:
           type: string
+        percentage_added_to_commissioning_list_packing:
+          type: integer
         kg_per_piece_S:
           type: string
           format: decimal
@@ -32138,7 +32137,6 @@ components:
         entry_date:
           type: string
           format: date
-          readOnly: true
           nullable: true
         is_trial:
           type: boolean
@@ -32389,7 +32387,6 @@ components:
         entry_date:
           type: string
           format: date
-          readOnly: true
           nullable: true
         is_trial:
           type: boolean
@@ -36631,6 +36628,10 @@ components:
           maximum: 32767
           minimum: 0
           nullable: true
+        percentage_added_to_commissioning_list_packing:
+          type: integer
+          maximum: 32767
+          minimum: 0
         default_crate_harvest:
           type: string
           nullable: true
@@ -37279,6 +37280,10 @@ components:
         id:
           type: string
           readOnly: true
+        amount_of_jokers:
+          type: integer
+        amount_of_donation_jokers:
+          type: integer
         share_type_variation_sizes_in_use:
           type: string
           readOnly: true
@@ -37321,14 +37326,6 @@ components:
           type: boolean
         is_additional_share_type:
           type: boolean
-        amount_of_jokers:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-        amount_of_donation_jokers:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
         can_be_deleted:
           type: boolean
           readOnly: true
@@ -38516,6 +38513,8 @@ components:
           maxLength: 140
         privacy_policy_html:
           type: string
+        action_rate_limit_overrides:
+          readOnly: true
       required:
       - name
     TenantEmailConfig:
@@ -38870,6 +38869,8 @@ components:
           type: boolean
         round_up_to_full_pu_harvesting:
           type: boolean
+        allows_self_registration:
+          type: boolean
         has_markets:
           type: boolean
         sells_to_resellers:
@@ -39171,6 +39172,8 @@ components:
         show_seller_name_of_share_article_in_share_for_member_on_page:
           type: boolean
         round_up_to_full_pu_harvesting:
+          type: boolean
+        allows_self_registration:
           type: boolean
         has_markets:
           type: boolean

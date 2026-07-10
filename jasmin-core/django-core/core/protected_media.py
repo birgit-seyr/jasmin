@@ -19,11 +19,19 @@ that survives that hop. Possession of a fresh URL grants access for
 ``MEDIA_URL_SIGNATURE_MAX_AGE`` (default 24 h); the frontend refetches
 API payloads on every mount (global ``staleTime: 0``), so live pages
 always hold fresh links.
+
+The token is BUCKETED (``_bucket_seconds``, default 1 h) rather than
+per-sign, so the emitted URL string is stable within the bucket window —
+otherwise ``staleTime: 0`` re-signing rotated the ``?st=`` on every
+refetch, changing the cache key and forcing a re-download of every image /
+PDF on each mount. With a stable URL the browser's ``private, max-age``
+cache on ``/_protected_media/`` actually applies.
 """
 
 from __future__ import annotations
 
 import posixpath
+import time
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
 
@@ -52,16 +60,83 @@ def _signature_max_age() -> int:
     return getattr(settings, "MEDIA_URL_SIGNATURE_MAX_AGE", 60 * 60 * 24)
 
 
-def sign_media_path(path: str) -> str:
-    """Token for ``path`` — the unquoted URL path below ``MEDIA_URL``
-    (i.e. ``<schema>/<storage name>``)."""
-    return signing.dumps(path, salt=_SALT, compress=True)
+def _bucket_seconds() -> int:
+    """Time-bucket size for the media token (default 1 h).
+
+    The token embeds a *bucket number* instead of an exact timestamp, so every
+    ``.url()`` call within the same bucket window emits the IDENTICAL token
+    string. That keeps the media URL (and thus the browser/CDN cache key)
+    stable across the frontend's aggressive API refetches (``staleTime: 0`` +
+    refetch-on-focus), so a repeat-viewed image / PDF is served from cache
+    instead of re-downloaded on every mount. A per-call ``TimestampSigner``
+    token (the old scheme) rotated on every sign and defeated that entirely."""
+    return getattr(settings, "MEDIA_URL_SIGNATURE_BUCKET", 60 * 60)
+
+
+def _current_bucket() -> int:
+    return int(time.time()) // _bucket_seconds()
+
+
+def _max_buckets() -> int:
+    # How many buckets a token stays valid: the max-age window in buckets.
+    return max(1, _signature_max_age() // _bucket_seconds())
+
+
+def sign_media_path(path: str, *, bucket: int | None = None) -> str:
+    """Deterministic capability token for ``path`` — the unquoted URL path below
+    ``MEDIA_URL`` (i.e. ``<schema>/<storage name>``).
+
+    Uses a plain (non-timestamp) ``Signer`` over ``{path, bucket}`` so the token
+    is STABLE for the whole bucket window (see ``_bucket_seconds``). The bucket
+    bounds the token's lifetime on the verify side. ``bucket`` is injectable for
+    tests only."""
+    if bucket is None:
+        bucket = _current_bucket()
+    return signing.Signer(salt=_SALT).sign_object(
+        {"p": path, "b": bucket}, compress=True
+    )
 
 
 def media_token_is_valid(path: str, token: str) -> bool:
+    """True iff ``token`` is a valid, unexpired capability for ``path``.
+
+    Accepts the current bucketed scheme, and — for backward compatibility during
+    a deploy — falls back to the legacy per-sign ``TimestampSigner`` scheme so
+    ``?st=`` URLs already in flight in live browsers don't 403. The legacy branch
+    self-obsoletes: an old token older than ``MEDIA_URL_SIGNATURE_MAX_AGE`` (24 h)
+    can't validate anyway, so it is safe to delete once any deploy carrying this
+    code has been live longer than that window."""
+    try:
+        # ``unsign_object`` auto-detects the compression prefix — do NOT pass
+        # ``compress`` (that kwarg is forwarded to ``unsign`` and errors).
+        data = signing.Signer(salt=_SALT).unsign_object(token)
+    except (signing.BadSignature, ValueError):
+        # Not a valid new-scheme token (bad/forged signature, or an old
+        # TimestampSigner token whose base64 payload won't decode under the
+        # plain Signer → ValueError/binascii.Error) → try the legacy scheme.
+        # Fail-closed: legacy also rejects garbage/forged tokens.
+        return _legacy_token_is_valid(path, token)
+    return (
+        isinstance(data, dict)
+        and data.get("p") == path
+        and isinstance(data.get("b"), int)
+        # ``-1`` tolerates a token minted a hair before a bucket rollover; the
+        # upper bound is the max-age window expressed in buckets.
+        and -1 <= _current_bucket() - data["b"] <= _max_buckets()
+    )
+
+
+def _legacy_token_is_valid(path: str, token: str) -> bool:
+    """Legacy per-sign ``TimestampSigner`` token check (pre-bucketing).
+
+    TRANSITIONAL — safe to remove once every deploy has been live longer than
+    ``MEDIA_URL_SIGNATURE_MAX_AGE`` (no such token can still be valid)."""
     try:
         return signing.loads(token, salt=_SALT, max_age=_signature_max_age()) == path
-    except signing.BadSignature:
+    except (signing.BadSignature, ValueError):
+        # Fail-closed: a new-scheme token fed here (or any garbage) can raise
+        # more than BadSignature (e.g. ValueError extracting a non-existent
+        # timestamp) — all mean "not a valid legacy token".
         return False
 
 

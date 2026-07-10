@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface CommissioningListOrderContent {
+export interface CommissioningListResellersOrderContent {
   id: string;
   /** @nullable */
   share_article_id: string | null;

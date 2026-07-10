@@ -608,6 +608,13 @@ class ShareContentService:
             "delivery_week": share.delivery_week,
             "share_article": share_article.id,
             "share_article_name": share_article.name,
+            # Per-article buffer % for the commissioning-list PACKING view — the
+            # picker grabs this much extra to cover spoilage. Surfaced on the row
+            # (harmless to the harvest-planning grid, which ignores it) and
+            # applied to the displayed amount client-side in CommissioningListPacking.
+            "percentage_added_to_commissioning_list_packing": (
+                share_article.percentage_added_to_commissioning_list_packing
+            ),
             "kg_per_piece_S": share_article.kg_per_piece_S,
             "kg_per_piece_M": share_article.kg_per_piece_M,
             "kg_per_piece_L": share_article.kg_per_piece_L,
