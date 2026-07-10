@@ -271,6 +271,99 @@ export default function ConfigurationGeneral() {
           },
         ],
       },
+      {
+        // Public legal-notice ("Impressum") identity block. These columns
+        // live on ``Tenant`` and save through the same autosave PATCH; the
+        // public ``PublicLegalNotice`` page reads them (each section hides
+        // when its field is blank, so eG-only rows can stay empty).
+        category: "legal_notice",
+        title: t("tenant.legal_notice.title"),
+        description: t("tenant.legal_notice.description"),
+        settings: [
+          {
+            key: "legal_form",
+            label: t("tenant.legal_notice.legal_form"),
+            description: t("tenant.legal_notice.legal_form_desc"),
+            type: "input",
+            defaultValue: "",
+          },
+          {
+            key: "register_type",
+            label: t("tenant.legal_notice.register_type"),
+            description: t("tenant.legal_notice.register_type_desc"),
+            type: "input",
+            defaultValue: "",
+          },
+          {
+            key: "register_number",
+            label: t("tenant.legal_notice.register_number"),
+            type: "input",
+            defaultValue: "",
+          },
+          {
+            key: "register_court",
+            label: t("tenant.legal_notice.register_court"),
+            type: "input",
+            defaultValue: "",
+          },
+          {
+            key: "legal_representatives",
+            label: t("tenant.legal_notice.legal_representatives"),
+            description: t("tenant.legal_notice.legal_representatives_desc"),
+            type: "input",
+            maxLength: 500,
+            defaultValue: "",
+          },
+          {
+            key: "supervisory_board",
+            label: t("tenant.legal_notice.supervisory_board"),
+            description: t("tenant.legal_notice.supervisory_board_desc"),
+            type: "input",
+            maxLength: 500,
+            defaultValue: "",
+          },
+          {
+            key: "content_responsible",
+            label: t("tenant.legal_notice.content_responsible"),
+            description: t("tenant.legal_notice.content_responsible_desc"),
+            type: "input",
+            defaultValue: "",
+          },
+          {
+            key: "participates_in_dispute_resolution",
+            label: t("tenant.legal_notice.participates_in_dispute_resolution"),
+            description: t(
+              "tenant.legal_notice.participates_in_dispute_resolution_desc",
+            ),
+            type: "checkbox",
+            defaultValue: false,
+          },
+          {
+            key: "auditing_association",
+            label: t("tenant.legal_notice.auditing_association"),
+            description: t("tenant.legal_notice.auditing_association_desc"),
+            type: "textarea",
+            rows: 4,
+            defaultValue: "",
+          },
+          {
+            key: "professional_association",
+            label: t("tenant.legal_notice.professional_association"),
+            description: t("tenant.legal_notice.professional_association_desc"),
+            type: "textarea",
+            rows: 4,
+            defaultValue: "",
+          },
+          {
+            key: "legal_notice_extra_html",
+            label: t("tenant.legal_notice.extra_html"),
+            description: t("tenant.legal_notice.extra_html_desc"),
+            type: "textarea",
+            rows: 4,
+            defaultValue: "",
+          },
+        ],
+      },
     ],
     [t],
   );
@@ -312,6 +405,19 @@ export default function ConfigurationGeneral() {
       email_for_orders: tenant.email_for_orders || "",
       website: tenant.website || "",
       days_until_payment_due: tenant.days_until_payment_due || 14,
+      // Public legal-notice ("Impressum") identity block
+      legal_form: tenant.legal_form || "",
+      register_type: tenant.register_type || "",
+      register_number: tenant.register_number || "",
+      register_court: tenant.register_court || "",
+      legal_representatives: tenant.legal_representatives || "",
+      supervisory_board: tenant.supervisory_board || "",
+      content_responsible: tenant.content_responsible || "",
+      participates_in_dispute_resolution:
+        tenant.participates_in_dispute_resolution ?? false,
+      auditing_association: tenant.auditing_association || "",
+      professional_association: tenant.professional_association || "",
+      legal_notice_extra_html: tenant.legal_notice_extra_html || "",
     };
 
     setSettings(currentSettings);

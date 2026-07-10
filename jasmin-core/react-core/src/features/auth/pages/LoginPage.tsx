@@ -346,7 +346,7 @@ const LoginPage = () => {
                 </div>
 
                 <Link to="/register">
-                  <Button type="primary" size="large" block>
+                  <Button type="primary" size="large" block disabled>
                     {t("auth.registration.start")}
                   </Button>
                 </Link>
@@ -385,7 +385,7 @@ const LoginPage = () => {
                 </div>
 
                 <Link to="/register?trial=1">
-                  <Button type="primary" size="large" block>
+                  <Button type="primary" size="large" block disabled>
                     {t("auth.registration.start_trial")}
                   </Button>
                 </Link>

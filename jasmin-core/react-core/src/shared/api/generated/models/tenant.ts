@@ -93,6 +93,22 @@ export interface Tenant {
   dpo?: string;
   /** @maxLength 200 */
   supervisory_authority?: string;
+  /** @maxLength 100 */
+  register_type?: string;
+  /** @maxLength 50 */
+  register_number?: string;
+  /** @maxLength 200 */
+  register_court?: string;
+  /** @maxLength 500 */
+  legal_representatives?: string;
+  /** @maxLength 500 */
+  supervisory_board?: string;
+  /** @maxLength 200 */
+  content_responsible?: string;
+  participates_in_dispute_resolution?: boolean;
+  auditing_association?: string;
+  professional_association?: string;
+  legal_notice_extra_html?: string;
   readonly is_active?: boolean;
   readonly created_at?: string;
   readonly updated_at?: string;

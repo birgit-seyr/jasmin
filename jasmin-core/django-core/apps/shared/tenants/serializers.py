@@ -117,6 +117,14 @@ class TenantNonStaffReadSerializer(
       * GDPR impressum (rendered by the default privacy-policy template):
         ``address``, ``zip_code``, ``city``, ``country``, ``email``,
         ``phone_number``, ``website``, ``privacy_policy_html``
+      * Public legal-notice ("Impressum") identity block — § 5 DDG /
+        § 18 MStV. Legally-public facts the public ``PublicLegalNotice``
+        page renders for signed-in roles too: ``organic_control_number``,
+        ``uid`` (VAT id), ``register_type`` / ``register_number`` /
+        ``register_court``, ``legal_representatives``, ``supervisory_board``,
+        ``content_responsible``, ``participates_in_dispute_resolution``,
+        ``auditing_association``, ``professional_association``,
+        ``legal_notice_extra_html``
       * Settings overlay: ``settings`` / ``current_settings`` (so
         ``useTenant().getSetting(...)`` works the same as for staff)
 
@@ -127,10 +135,8 @@ class TenantNonStaffReadSerializer(
 
       * Banking: ``iban``, ``sepa_creditor_id``, ``sepa_creditor_name``,
         ``sepa_creditor_bic``
-      * VAT identifier: ``uid``
       * Operational-internal: ``email_for_orders``,
-        ``organic_control_number``, ``days_until_payment_due``,
-        ``created_at``, ``updated_at``
+        ``days_until_payment_due``, ``created_at``, ``updated_at``
 
     If a future member/customer feature needs one of those, surface it
     via a dedicated endpoint (e.g. an explicit "SEPA mandate context"
@@ -168,6 +174,23 @@ class TenantNonStaffReadSerializer(
             "phone_number",
             "website",
             "privacy_policy_html",
+            # Public legal-notice ("Impressum") block — § 5 DDG / § 18 MStV.
+            # These are legally-public identity facts (register, VAT id, organic
+            # control number, representatives), rendered by the public
+            # ``PublicLegalNotice`` page for any signed-in role too.
+            "legal_form",
+            "organic_control_number",
+            "uid",
+            "register_type",
+            "register_number",
+            "register_court",
+            "legal_representatives",
+            "supervisory_board",
+            "content_responsible",
+            "participates_in_dispute_resolution",
+            "auditing_association",
+            "professional_association",
+            "legal_notice_extra_html",
             # Settings overlay
             "settings",
             "current_settings",
@@ -293,9 +316,11 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
 
     Fields here are strictly the minimum the login / register / public
     legal pages need — anonymous callers MUST NOT receive IBAN, BIC,
-    SEPA credentials, the internal ``email_for_orders``, VAT number,
-    organic-control number, or the full merged ``TenantSettings``
-    overlay:
+    SEPA credentials, the internal ``email_for_orders``, or the full
+    merged ``TenantSettings`` overlay. (The VAT id ``uid`` and the
+    organic-control number ARE exposed here: § 27a UStG / § 5 DDG make
+    them legally-public identity facts the public ``/impressum`` page
+    must render without authentication.)
 
       * Identity: ``id``, ``name``, ``description`` (NOT ``schema_name``
         — anonymous callers must not be able to enumerate internal
@@ -305,12 +330,17 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
       * Tenant-disabled UX: ``is_active``
       * Public legal-notice / GDPR contact block: ``address``,
         ``zip_code``, ``city``, ``country``, ``email``, ``phone_number``,
-        ``website``, ``privacy_policy_html``. GDPR Art. 13/14 and § 5 TMG
-        REQUIRE the operator's identity + contact details to be reachable
-        WITHOUT authentication (the public ``/privacy-policy`` and
-        ``/impressum`` pages render them). These are the tenant's PUBLIC
-        contact details — distinct from the internal ``email_for_orders``,
-        which stays office-only.
+        ``website``, ``privacy_policy_html``, plus the § 5 DDG identity
+        fields (``organic_control_number``, ``uid``, ``register_*``,
+        ``legal_representatives``, ``supervisory_board``,
+        ``content_responsible``, ``participates_in_dispute_resolution``,
+        ``auditing_association``, ``professional_association``,
+        ``legal_notice_extra_html``). GDPR Art. 13/14 and § 5 DDG REQUIRE
+        the operator's identity + contact details to be reachable WITHOUT
+        authentication (the public ``/privacy-policy`` and ``/impressum``
+        pages render them). These are the tenant's PUBLIC identity/contact
+        details — distinct from the internal ``email_for_orders``, which
+        stays office-only.
       * Register-page UX — single scalars lifted out of the otherwise-withheld
         settings overlay (the rest stays office-gated) so the public
         registration wizard can compute its coop-share bounds, subscription
@@ -389,6 +419,24 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
             # Empty string when no per-tenant override; frontend then falls
             # back to the static template in ``PrivacyPolicyPage.tsx``.
             "privacy_policy_html",
+            # Public legal-notice ("Impressum") identity block — § 5 DDG /
+            # § 18 MStV require the provider's identity to be reachable WITHOUT
+            # authentication (the public ``/impressum`` route renders these).
+            # All legally-public facts: register, VAT id (§ 27a UStG), organic
+            # control number, representatives, association memberships.
+            "legal_form",
+            "organic_control_number",
+            "uid",
+            "register_type",
+            "register_number",
+            "register_court",
+            "legal_representatives",
+            "supervisory_board",
+            "content_responsible",
+            "participates_in_dispute_resolution",
+            "auditing_association",
+            "professional_association",
+            "legal_notice_extra_html",
             "friendly_captcha_sitekey",
             "allows_trial_subscriptions",
             "min_number_coop_shares",

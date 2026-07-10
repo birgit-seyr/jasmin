@@ -23,6 +23,14 @@ Carries everything those UIs actually consume:
   * GDPR impressum (rendered by the default privacy-policy template):
     ``address``, ``zip_code``, ``city``, ``country``, ``email``,
     ``phone_number``, ``website``, ``privacy_policy_html``
+  * Public legal-notice ("Impressum") identity block — § 5 DDG /
+    § 18 MStV. Legally-public facts the public ``PublicLegalNotice``
+    page renders for signed-in roles too: ``organic_control_number``,
+    ``uid`` (VAT id), ``register_type`` / ``register_number`` /
+    ``register_court``, ``legal_representatives``, ``supervisory_board``,
+    ``content_responsible``, ``participates_in_dispute_resolution``,
+    ``auditing_association``, ``professional_association``,
+    ``legal_notice_extra_html``
   * Settings overlay: ``settings`` / ``current_settings`` (so
     ``useTenant().getSetting(...)`` works the same as for staff)
 
@@ -33,10 +41,8 @@ member/customer page consumes — confirmed by grep on
 
   * Banking: ``iban``, ``sepa_creditor_id``, ``sepa_creditor_name``,
     ``sepa_creditor_bic``
-  * VAT identifier: ``uid``
   * Operational-internal: ``email_for_orders``,
-    ``organic_control_number``, ``days_until_payment_due``,
-    ``created_at``, ``updated_at``
+    ``days_until_payment_due``, ``created_at``, ``updated_at``
 
 If a future member/customer feature needs one of those, surface it
 via a dedicated endpoint (e.g. an explicit "SEPA mandate context"
@@ -109,6 +115,34 @@ export interface TenantNonStaffRead {
    */
   website?: string | null;
   privacy_policy_html?: string;
+  /** @maxLength 100 */
+  legal_form?: string;
+  /**
+   * @maxLength 100
+   * @nullable
+   */
+  organic_control_number?: string | null;
+  /**
+   * @maxLength 20
+   * @nullable
+   */
+  uid?: string | null;
+  /** @maxLength 100 */
+  register_type?: string;
+  /** @maxLength 50 */
+  register_number?: string;
+  /** @maxLength 200 */
+  register_court?: string;
+  /** @maxLength 500 */
+  legal_representatives?: string;
+  /** @maxLength 500 */
+  supervisory_board?: string;
+  /** @maxLength 200 */
+  content_responsible?: string;
+  participates_in_dispute_resolution?: boolean;
+  auditing_association?: string;
+  professional_association?: string;
+  legal_notice_extra_html?: string;
   readonly settings?: TenantNonStaffReadSettings;
   readonly current_settings?: TenantNonStaffReadCurrentSettings;
 }

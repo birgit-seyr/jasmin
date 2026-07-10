@@ -57,6 +57,41 @@ class Tenant(TenantMixin, JasminModel):
     dpo = models.CharField(max_length=200, blank=True, default="")
     supervisory_authority = models.CharField(max_length=200, blank=True, default="")
 
+    # ---- Public legal-notice ("Impressum") fields ----
+    # Rendered by the public ``PublicLegalNotice.tsx`` page (§ 5 DDG /
+    # § 18 Abs. 2 MStV). All optional — each section on the page hides
+    # when its field is blank, so an e.V. / GmbH / eG all render cleanly
+    # from the same markup. Distinct from the GDPR ``supervisory_authority``
+    # above, which is the *data-protection* authority, not the trade one.
+    #
+    # Register identity kept as three free-text fields (not an enum) because
+    # tenants span Genossenschafts-/Vereins-/Handelsregister and possibly the
+    # Austrian Firmenbuch — an enum would fight that variety immediately.
+    register_type = models.CharField(max_length=100, blank=True, default="")
+    register_number = models.CharField(max_length=50, blank=True, default="")
+    register_court = models.CharField(max_length=200, blank=True, default="")
+    # Vertretungsberechtigte (Vorstand / Geschäftsführer) and, for a
+    # cooperative, the supervisory board — comma-separated names.
+    legal_representatives = models.CharField(max_length=500, blank=True, default="")
+    supervisory_board = models.CharField(max_length=500, blank=True, default="")
+    # Redaktionell Verantwortlicher (§ 18 Abs. 2 MStV): name only; rendered
+    # over the tenant's own postal address on the page.
+    content_responsible = models.CharField(max_length=200, blank=True, default="")
+    # § 36 VSBG dispute-resolution statement — a boolean toggling between the
+    # two boilerplate variants (willing / not willing), which live in i18n so
+    # the office never hand-writes legal text.
+    participates_in_dispute_resolution = models.BooleanField(default=False)
+    # eG-specific blocks (§ 54 GenG audit association + the accident-insurance
+    # / professional association). Multiline so the full postal block fits;
+    # the page hides the section when blank.
+    auditing_association = models.TextField(blank=True, default="")
+    professional_association = models.TextField(blank=True, default="")
+    # Catch-all for the rare "wenn zutreffend" cases (Kammer / reglementierter
+    # Beruf, licensing Aufsichtsbehörde, "in Abwicklung" notices) that don't
+    # warrant a dedicated column. Rich text, same editor + sanitization path
+    # as ``privacy_policy_html``.
+    legal_notice_extra_html = models.TextField(blank=True, default="")
+
     is_active = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

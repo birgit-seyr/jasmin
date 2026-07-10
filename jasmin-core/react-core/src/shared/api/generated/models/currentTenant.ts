@@ -16,9 +16,11 @@ with the correct branding (logo, name) and locale.
 
 Fields here are strictly the minimum the login / register / public
 legal pages need — anonymous callers MUST NOT receive IBAN, BIC,
-SEPA credentials, the internal ``email_for_orders``, VAT number,
-organic-control number, or the full merged ``TenantSettings``
-overlay:
+SEPA credentials, the internal ``email_for_orders``, or the full
+merged ``TenantSettings`` overlay. (The VAT id ``uid`` and the
+organic-control number ARE exposed here: § 27a UStG / § 5 DDG make
+them legally-public identity facts the public ``/impressum`` page
+must render without authentication.)
 
   * Identity: ``id``, ``name``, ``description`` (NOT ``schema_name``
     — anonymous callers must not be able to enumerate internal
@@ -28,12 +30,17 @@ overlay:
   * Tenant-disabled UX: ``is_active``
   * Public legal-notice / GDPR contact block: ``address``,
     ``zip_code``, ``city``, ``country``, ``email``, ``phone_number``,
-    ``website``, ``privacy_policy_html``. GDPR Art. 13/14 and § 5 TMG
-    REQUIRE the operator's identity + contact details to be reachable
-    WITHOUT authentication (the public ``/privacy-policy`` and
-    ``/impressum`` pages render them). These are the tenant's PUBLIC
-    contact details — distinct from the internal ``email_for_orders``,
-    which stays office-only.
+    ``website``, ``privacy_policy_html``, plus the § 5 DDG identity
+    fields (``organic_control_number``, ``uid``, ``register_*``,
+    ``legal_representatives``, ``supervisory_board``,
+    ``content_responsible``, ``participates_in_dispute_resolution``,
+    ``auditing_association``, ``professional_association``,
+    ``legal_notice_extra_html``). GDPR Art. 13/14 and § 5 DDG REQUIRE
+    the operator's identity + contact details to be reachable WITHOUT
+    authentication (the public ``/privacy-policy`` and ``/impressum``
+    pages render them). These are the tenant's PUBLIC identity/contact
+    details — distinct from the internal ``email_for_orders``, which
+    stays office-only.
   * Register-page UX — single scalars lifted out of the otherwise-withheld
     settings overlay (the rest stays office-gated) so the public
     registration wizard can compute its coop-share bounds, subscription
@@ -107,6 +114,34 @@ export interface CurrentTenant {
    */
   website?: string | null;
   privacy_policy_html?: string;
+  /** @maxLength 100 */
+  legal_form?: string;
+  /**
+   * @maxLength 100
+   * @nullable
+   */
+  organic_control_number?: string | null;
+  /**
+   * @maxLength 20
+   * @nullable
+   */
+  uid?: string | null;
+  /** @maxLength 100 */
+  register_type?: string;
+  /** @maxLength 50 */
+  register_number?: string;
+  /** @maxLength 200 */
+  register_court?: string;
+  /** @maxLength 500 */
+  legal_representatives?: string;
+  /** @maxLength 500 */
+  supervisory_board?: string;
+  /** @maxLength 200 */
+  content_responsible?: string;
+  participates_in_dispute_resolution?: boolean;
+  auditing_association?: string;
+  professional_association?: string;
+  legal_notice_extra_html?: string;
   readonly friendly_captcha_sitekey?: string;
   readonly allows_trial_subscriptions?: boolean;
   readonly min_number_coop_shares?: number;

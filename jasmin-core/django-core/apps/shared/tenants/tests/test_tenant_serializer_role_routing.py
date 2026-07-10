@@ -3,22 +3,22 @@
 Contract:
 
   * Staff callers (office / staff / admin) get ``TenantSerializer`` —
-    the full payload with banking (``iban``, ``sepa_*``), VAT
-    identifier (``uid``), internal email (``email_for_orders``), and
-    the bio-control number. Their UI consumes those fields
+    the full payload with banking (``iban``, ``sepa_*``) and internal
+    email (``email_for_orders``). Their UI consumes those fields
     (ConfigurationGeneral, reseller PDF generation, packing-list
     headers).
   * Non-staff callers (member / customer) get
     ``TenantNonStaffReadSerializer`` — branding + locale + GDPR
-    impressum + settings overlay only. The omitted fields aren't
-    consumed by any member/customer page (confirmed by grep across
-    ``src/pages/customer/``, ``src/pages/abos/``, and
-    ``src/components/layout/`` during the 2026-06-08 audit follow-up),
-    so shipping them to those roles is over-exposure with no UI
-    behind it.
+    impressum + public legal-notice identity + settings overlay only.
+    The omitted fields (banking, ``email_for_orders``) aren't consumed
+    by any member/customer page, so shipping them to those roles is
+    over-exposure with no UI behind it.
   * Both roles see the settings overlay (``settings`` /
-    ``current_settings``) and the GDPR impressum fields (the public
-    privacy-policy template depends on those).
+    ``current_settings``), the GDPR impressum fields (the public
+    privacy-policy template depends on those), and the public
+    legal-notice identity block — including the VAT id (``uid``,
+    § 27a UStG) and the organic-control number, which are legally
+    PUBLIC facts the ``/impressum`` page must render for every role.
 
 These assertions are field-key-presence checks; the values themselves
 (empty strings on a fresh fixture tenant) are not the point. We
@@ -40,9 +40,7 @@ OFFICE_ONLY_FIELDS = (
     "sepa_creditor_id",
     "sepa_creditor_name",
     "sepa_creditor_bic",
-    "uid",
     "email_for_orders",
-    "organic_control_number",
     "days_until_payment_due",
 )
 
@@ -64,6 +62,13 @@ SHARED_FIELDS = (
     "address",
     "email",
     "phone_number",
+    # Public legal-notice identity block — legally-public facts the
+    # ``/impressum`` page renders for every role (§ 5 DDG / § 27a UStG).
+    "uid",
+    "organic_control_number",
+    "register_type",
+    "legal_representatives",
+    "participates_in_dispute_resolution",
     # Settings overlay
     "settings",
     "current_settings",

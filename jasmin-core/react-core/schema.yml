@@ -29089,9 +29089,11 @@ components:
 
         Fields here are strictly the minimum the login / register / public
         legal pages need — anonymous callers MUST NOT receive IBAN, BIC,
-        SEPA credentials, the internal ``email_for_orders``, VAT number,
-        organic-control number, or the full merged ``TenantSettings``
-        overlay:
+        SEPA credentials, the internal ``email_for_orders``, or the full
+        merged ``TenantSettings`` overlay. (The VAT id ``uid`` and the
+        organic-control number ARE exposed here: § 27a UStG / § 5 DDG make
+        them legally-public identity facts the public ``/impressum`` page
+        must render without authentication.)
 
           * Identity: ``id``, ``name``, ``description`` (NOT ``schema_name``
             — anonymous callers must not be able to enumerate internal
@@ -29101,12 +29103,17 @@ components:
           * Tenant-disabled UX: ``is_active``
           * Public legal-notice / GDPR contact block: ``address``,
             ``zip_code``, ``city``, ``country``, ``email``, ``phone_number``,
-            ``website``, ``privacy_policy_html``. GDPR Art. 13/14 and § 5 TMG
-            REQUIRE the operator's identity + contact details to be reachable
-            WITHOUT authentication (the public ``/privacy-policy`` and
-            ``/impressum`` pages render them). These are the tenant's PUBLIC
-            contact details — distinct from the internal ``email_for_orders``,
-            which stays office-only.
+            ``website``, ``privacy_policy_html``, plus the § 5 DDG identity
+            fields (``organic_control_number``, ``uid``, ``register_*``,
+            ``legal_representatives``, ``supervisory_board``,
+            ``content_responsible``, ``participates_in_dispute_resolution``,
+            ``auditing_association``, ``professional_association``,
+            ``legal_notice_extra_html``). GDPR Art. 13/14 and § 5 DDG REQUIRE
+            the operator's identity + contact details to be reachable WITHOUT
+            authentication (the public ``/privacy-policy`` and ``/impressum``
+            pages render them). These are the tenant's PUBLIC identity/contact
+            details — distinct from the internal ``email_for_orders``, which
+            stays office-only.
           * Register-page UX — single scalars lifted out of the otherwise-withheld
             settings overlay (the rest stays office-gated) so the public
             registration wizard can compute its coop-share bounds, subscription
@@ -29185,6 +29192,43 @@ components:
           nullable: true
           maxLength: 200
         privacy_policy_html:
+          type: string
+        legal_form:
+          type: string
+          maxLength: 100
+        organic_control_number:
+          type: string
+          nullable: true
+          maxLength: 100
+        uid:
+          type: string
+          nullable: true
+          maxLength: 20
+        register_type:
+          type: string
+          maxLength: 100
+        register_number:
+          type: string
+          maxLength: 50
+        register_court:
+          type: string
+          maxLength: 200
+        legal_representatives:
+          type: string
+          maxLength: 500
+        supervisory_board:
+          type: string
+          maxLength: 500
+        content_responsible:
+          type: string
+          maxLength: 200
+        participates_in_dispute_resolution:
+          type: boolean
+        auditing_association:
+          type: string
+        professional_association:
+          type: string
+        legal_notice_extra_html:
           type: string
         friendly_captcha_sitekey:
           type: string
@@ -38369,6 +38413,32 @@ components:
         supervisory_authority:
           type: string
           maxLength: 200
+        register_type:
+          type: string
+          maxLength: 100
+        register_number:
+          type: string
+          maxLength: 50
+        register_court:
+          type: string
+          maxLength: 200
+        legal_representatives:
+          type: string
+          maxLength: 500
+        supervisory_board:
+          type: string
+          maxLength: 500
+        content_responsible:
+          type: string
+          maxLength: 200
+        participates_in_dispute_resolution:
+          type: boolean
+        auditing_association:
+          type: string
+        professional_association:
+          type: string
+        legal_notice_extra_html:
+          type: string
         is_active:
           type: boolean
           readOnly: true
@@ -38538,6 +38608,14 @@ components:
           * GDPR impressum (rendered by the default privacy-policy template):
             ``address``, ``zip_code``, ``city``, ``country``, ``email``,
             ``phone_number``, ``website``, ``privacy_policy_html``
+          * Public legal-notice ("Impressum") identity block — § 5 DDG /
+            § 18 MStV. Legally-public facts the public ``PublicLegalNotice``
+            page renders for signed-in roles too: ``organic_control_number``,
+            ``uid`` (VAT id), ``register_type`` / ``register_number`` /
+            ``register_court``, ``legal_representatives``, ``supervisory_board``,
+            ``content_responsible``, ``participates_in_dispute_resolution``,
+            ``auditing_association``, ``professional_association``,
+            ``legal_notice_extra_html``
           * Settings overlay: ``settings`` / ``current_settings`` (so
             ``useTenant().getSetting(...)`` works the same as for staff)
 
@@ -38548,10 +38626,8 @@ components:
 
           * Banking: ``iban``, ``sepa_creditor_id``, ``sepa_creditor_name``,
             ``sepa_creditor_bic``
-          * VAT identifier: ``uid``
           * Operational-internal: ``email_for_orders``,
-            ``organic_control_number``, ``days_until_payment_due``,
-            ``created_at``, ``updated_at``
+            ``days_until_payment_due``, ``created_at``, ``updated_at``
 
         If a future member/customer feature needs one of those, surface it
         via a dedicated endpoint (e.g. an explicit "SEPA mandate context"
@@ -38637,6 +38713,43 @@ components:
           nullable: true
           maxLength: 200
         privacy_policy_html:
+          type: string
+        legal_form:
+          type: string
+          maxLength: 100
+        organic_control_number:
+          type: string
+          nullable: true
+          maxLength: 100
+        uid:
+          type: string
+          nullable: true
+          maxLength: 20
+        register_type:
+          type: string
+          maxLength: 100
+        register_number:
+          type: string
+          maxLength: 50
+        register_court:
+          type: string
+          maxLength: 200
+        legal_representatives:
+          type: string
+          maxLength: 500
+        supervisory_board:
+          type: string
+          maxLength: 500
+        content_responsible:
+          type: string
+          maxLength: 200
+        participates_in_dispute_resolution:
+          type: boolean
+        auditing_association:
+          type: string
+        professional_association:
+          type: string
+        legal_notice_extra_html:
           type: string
         settings:
           type: object
