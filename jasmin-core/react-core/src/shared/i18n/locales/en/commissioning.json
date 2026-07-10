@@ -240,6 +240,8 @@
   "available_pu": "available pu",
   "ordered_pu": "ordered pu",
   "tour_planning": "tour planning",
+  "tour_label": "Tour {{number}}",
+  "tour_save_failed": "The tour plan could not be saved. Please try again.",
   "available_delivery_stations": "available distribution stations",
   "packing_list_boxes": "packing list (boxes)",
   "packing_list_boxes_2": "packing list (boxes matrix)",

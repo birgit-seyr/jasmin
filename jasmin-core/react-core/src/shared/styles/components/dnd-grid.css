@@ -1,0 +1,112 @@
+/* Shared drag-and-drop grid primitives (DraggableChip / DroppableCell).
+   Theme-aware via CSS variables — no hardcoded colours. The only inline style
+   the components set is a per-chip background tint (from usePastelColorMap). */
+
+/* ---- Palette chip ---- */
+.dnd-chip {
+  padding: 8px 12px;
+  margin: 4px 0;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 4px;
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-primary, inherit);
+  cursor: move;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.dnd-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dnd-chip:focus-visible {
+  outline: 2px solid var(--color-future-blue);
+  outline-offset: 1px;
+}
+
+.dnd-chip--dragging {
+  opacity: 0.5;
+}
+
+.dnd-chip--selected {
+  outline: 2px solid var(--color-future-blue);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px var(--color-success-bg);
+}
+
+/* ---- Grid cell (drop target / drag source) ---- */
+.dnd-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px;
+  border: 2px dashed var(--color-border-soft);
+  border-radius: 4px;
+  background-color: var(--color-bg-elevated);
+  color: var(--color-text-primary, inherit);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.dnd-cell--filled {
+  border-style: solid;
+  border-color: var(--color-border);
+  cursor: move;
+}
+
+.dnd-cell--over {
+  border-color: var(--color-future-blue);
+  background-color: var(--color-bg-hover);
+}
+
+.dnd-cell--dragging {
+  opacity: 0.5;
+}
+
+.dnd-cell--selected {
+  outline: 2px solid var(--color-future-blue);
+  outline-offset: 1px;
+}
+
+.dnd-cell:focus-visible {
+  outline: 2px solid var(--color-future-blue);
+  outline-offset: 1px;
+}
+
+.dnd-cell-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dnd-cell-placeholder {
+  color: var(--color-text-tertiary);
+  font-size: 0.85em;
+}
+
+/* Reset the global button styling for the compact remove affordance. */
+.dnd-cell-remove {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--color-error);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dnd-cell-remove:hover {
+  color: var(--color-error);
+  border-color: transparent;
+}

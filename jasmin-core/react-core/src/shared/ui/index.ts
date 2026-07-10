@@ -42,3 +42,6 @@ export type {
   DeliveryStationMapMarker,
   DeliveryStationMapProps,
 } from './DeliveryStationMap';
+// Drag-and-drop grid primitives (palette chips → 2-D cells), shared by the
+// delivery-tours planner and the staff weekly plan.
+export * from './dnd';

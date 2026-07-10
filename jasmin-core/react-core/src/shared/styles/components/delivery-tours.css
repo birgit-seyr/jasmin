@@ -1,78 +1,59 @@
-.delivery-tours-table {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+/* Delivery-tours planner page chrome. The draggable chips and drop cells are
+   styled by the shared dnd-grid.css; this file only lays out the page (palette
+   column + tour table). Theme-aware via CSS variables — no hardcoded colours. */
+
+.delivery-tours-page {
+  padding: 20px;
 }
 
-.delivery-tours-table table {
+.delivery-tours-layout {
+  display: flex;
+  gap: 20px;
+  margin-top: 2em;
+}
+
+.delivery-tours-palette {
+  flex: 0 0 15em;
+}
+
+.delivery-tours-palette-box {
+  border: 1px solid var(--color-border-soft);
+  border-radius: 4px;
+  padding: 1em;
+  max-height: 100em;
+  overflow-y: auto;
+}
+
+.delivery-tours-grid-table {
   border-collapse: collapse;
-  width: 100%;
+  margin-top: 0;
 }
 
-.delivery-tours-table th,
-.delivery-tours-table td {
-  border: 1px solid var(--color-border);
-  text-align: left;
+.delivery-tours-grid-table th,
+.delivery-tours-grid-table td {
+  border: 1px solid var(--color-border-soft);
 }
 
-.delivery-tours-table th {
+.delivery-tours-grid-table th {
+  padding: 0.5em;
   background-color: var(--color-bg-elevated);
   font-weight: 600;
 }
 
-.tour-slot {
-  min-height: 32px;
-  margin: 2px 0;
-  padding: 4px 8px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 4px;
-  background-color: var(--color-bg-base);
-  transition: all 0.2s ease;
+.delivery-tours-th-position {
+  width: 5em;
 }
 
-.tour-slot:hover {
-  border-color: var(--color-future-blue);
-  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.1);
+.delivery-tours-th-tour {
+  width: 14em;
 }
 
-.tour-slot.drop-target {
-  border: 2px dashed var(--color-future-blue);
-  background-color: #e6f7ff;
+.delivery-tours-pos-number {
+  padding: 8px;
+  text-align: center;
+  font-weight: bold;
 }
 
-.draggable-station {
-  cursor: move;
-  transition: all 0.2s ease;
-}
-
-.draggable-station:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.draggable-station.dragging {
-  opacity: 0.5;
-  transform: rotate(5deg);
-}
-
-.station-assigned {
-  background-color: var(--color-bg-hover);
-  border-color: var(--color-border);
-}
-
-.station-unassigned {
-  background-color: var(--color-bg-base);
-  border-color: #40a9ff;
-}
-
-.category-row {
-  transition: background-color 0.2s ease;
-}
-
-.remove-button {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.tour-slot:hover .remove-button {
-  opacity: 1;
+.delivery-tours-cell {
+  padding: 4px;
 }

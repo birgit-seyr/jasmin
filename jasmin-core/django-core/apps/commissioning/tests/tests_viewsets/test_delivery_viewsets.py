@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import datetime
+
 import pytest
 from django.urls import reverse
 from rest_framework import status
@@ -403,3 +405,51 @@ class TestDeliveryToursViewSet:
         DeliveryStationDayFactory(delivery_day=dd, tour_number=1, stop_order=1)
         resp = api_client.get(self.URL, {"delivery_day": str(dd.id)})
         assert resp.status_code == status.HTTP_200_OK
+
+    def test_update_tours_targets_open_row_when_station_day_is_versioned(
+        self, api_client, tenant
+    ):
+        # A (station, day) pair with history: the current open station-day plus
+        # an earlier closed one. update_tours must resolve to only the OPEN row —
+        # an update_or_create unscoped by valid_until would match BOTH rows on its
+        # implicit get() and 500 with MultipleObjectsReturned.
+        station = DeliveryStationFactory()
+        day = SharesDeliveryDayFactory(day_number=3)
+        # First day opens 2026-01-05 (factory default). Creating a second at a
+        # later Monday auto-closes this predecessor at 2026-05-31 via
+        # TimeBoundMixin succession, leaving two rows for the pair.
+        closed = DeliveryStationDayFactory(delivery_station=station, delivery_day=day)
+        current = DeliveryStationDayFactory(
+            delivery_station=station,
+            delivery_day=day,
+            valid_from=datetime.date(2026, 6, 1),
+        )
+        closed.refresh_from_db()
+        assert closed.valid_until is not None  # predecessor was closed
+        assert current.valid_until is None  # successor is the open row
+
+        resp = api_client.post(
+            reverse("delivery_tours-update-tours"),
+            {
+                "delivery_day": str(day.id),
+                "tours": [
+                    {
+                        "tour_number": 2,
+                        "positions": [
+                            {"position": 1, "delivery_station_id": str(station.id)}
+                        ],
+                    }
+                ],
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        current.refresh_from_db()
+        closed.refresh_from_db()
+        # The open row carries the new assignment; the closed history row is
+        # left exactly as it was.
+        assert current.tour_number == 2
+        assert current.stop_order == 1
+        assert closed.tour_number == 1
+        assert closed.stop_order is None

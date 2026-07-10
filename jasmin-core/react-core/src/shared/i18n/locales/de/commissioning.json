@@ -245,6 +245,8 @@
   "available_pu": "verfügbare VPE",
   "ordered_pu": "bestellte VPE",
   "tour_planning": "Tourenplanung",
+  "tour_label": "Tour {{number}}",
+  "tour_save_failed": "Die Tourenplanung konnte nicht gespeichert werden. Bitte versuche es erneut.",
   "available_delivery_stations": "Verfügbare Verteilstationen",
   "packing_list_boxes": "Pack-Liste (Kisten)",
   "packing_list_boxes_2": "Pack-Liste (Kisten-Matrix)",

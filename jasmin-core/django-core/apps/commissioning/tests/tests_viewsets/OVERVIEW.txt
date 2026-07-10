@@ -27,11 +27,11 @@ test_choices_viewsets.py (8 tests)
   TestOrdersDeliveryDayViewSet            2 tests   list
   TestPaymentCycleViewSet                 3 tests   list, is_active filter
 
-test_delivery_viewsets.py (20 tests)
+test_delivery_viewsets.py (21 tests)
 ────────────────────────────────────
   TestDeliveryStationViewSet              7 tests   list, filter is_active, retrieve, filter by member (confirmed only), member-role read
   TestDeliveryStationDayViewSet          11 tests   list, filter by station/day, capacity by week
-  TestDeliveryToursViewSet                2 tests   requires delivery_day param, list with day
+  TestDeliveryToursViewSet                3 tests   requires delivery_day param, list with day, update_tours targets open row on versioned station-day
 
 test_documentation_viewsets.py (19 tests)
 ─────────────────────────────────────────

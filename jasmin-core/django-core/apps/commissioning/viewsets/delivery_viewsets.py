@@ -261,7 +261,12 @@ class DeliveryToursViewSet(RolePermissionsMixin, viewsets.ViewSet):
                 }
             )
 
-        return Response(list(tours_data.values()))
+        # Serialize through the declared serializer so the response is enforced
+        # against the documented schema rather than shipping raw dicts.
+        serializer = DeliveryTourResponseSerializer(
+            list(tours_data.values()), many=True
+        )
+        return Response(serializer.data)
 
     @extend_schema(
         request=DeliveryToursUpdateSerializer,
@@ -291,8 +296,15 @@ class DeliveryToursViewSet(RolePermissionsMixin, viewsets.ViewSet):
         )
 
         with transaction.atomic():
+            # Only the CURRENTLY-OPEN station-day per (station, day) carries the
+            # live tour assignment. DeliveryStationDay is TimeBoundMixin: closed
+            # historical rows (valid_until set) legitimately coexist with the one
+            # open row, so scope every write here to valid_until IS NULL. Without
+            # it the reset below would rewrite tour_number/stop_order on closed
+            # history rows, and the update_or_create further down would match
+            # multiple rows on its implicit get() and raise MultipleObjectsReturned.
             all_delivery_station_days = DeliveryStationDay.objects.filter(
-                delivery_day=shares_delivery_day
+                delivery_day=shares_delivery_day, valid_until__isnull=True
             ).select_for_update()
 
             station_ids_in_tours: set[str] = set()
@@ -308,7 +320,14 @@ class DeliveryToursViewSet(RolePermissionsMixin, viewsets.ViewSet):
             for tour in tours:
                 tour_number: int = tour["tour_number"]
                 for position in tour["positions"]:
-                    station_day, created = DeliveryStationDay.objects.update_or_create(
+                    # Scope the implicit get() to the open row (see comment
+                    # above): a versioned (station, day) has >1 row and an
+                    # unscoped update_or_create would raise MultipleObjectsReturned.
+                    # The valid_until filter narrows the lookup only; a genuinely
+                    # new station-day still creates an open row (valid_until NULL).
+                    station_day, created = DeliveryStationDay.objects.filter(
+                        valid_until__isnull=True
+                    ).update_or_create(
                         delivery_station_id=position["delivery_station_id"],
                         delivery_day=shares_delivery_day,
                         defaults={

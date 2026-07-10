@@ -1,13 +1,12 @@
+import { message } from "antd";
 import dayjs from "dayjs";
-import { toApiDate } from "@shared/utils";
-import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DndProvider, useDrag, useDrop } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import { useTranslation } from "react-i18next";
+import { toApiDate } from "@shared/utils";
+import { getErrorMessage } from "@shared/utils/apiError";
 import {
-  commissioningDeliveryToursUpdateToursCreate,
   useCommissioningDeliveryToursList,
+  useCommissioningDeliveryToursUpdateToursCreate,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningDeliveryToursListParams,
@@ -15,239 +14,46 @@ import type {
   DeliveryTourResponse,
 } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
-import { SharesDeliveryDaySelector } from '@features/commissioning/selectors';
-import { DateRangeStatusLegend } from "@shared/ui";
-import { useDeliveryStations, useShareDeliveryDays } from '@features/commissioning/hooks';
+import { SharesDeliveryDaySelector } from "@features/commissioning/selectors";
+import {
+  AutoSaveIndicator,
+  DateRangeStatusLegend,
+  DndGrid,
+  DraggableChip,
+  DroppableCell,
+  usePastelColorMap,
+} from "@shared/ui";
+import type { DndDragPayload, GridPos } from "@shared/ui";
+import {
+  useDeliveryStations,
+  useShareDeliveryDays,
+} from "@features/commissioning/hooks";
 import type { DeliveryStationOption } from "@features/commissioning/hooks/useDeliveryStations";
 import type { ShareDeliveryDayOption } from "@features/commissioning/hooks/useShareDeliveryDays";
 
-// Drag item types
-const ItemTypes = {
-  DELIVERY_STATION: "delivery_station",
-};
-
-interface DragItem {
-  station: DeliveryStationOption;
-  fromPosition?: { tourIndex: number; positionIndex: number };
-}
-
 type StationSlot = DeliveryStationOption | null;
 
-const PASTEL_COLORS = [
-  "#FFE5E5",
-  "#E5F3FF",
-  "#E5FFE5",
-  "#FFF5E5",
-  "#F0E5FF",
-  "#E5FFFF",
-  "#FFFFE5",
-  "#FFE5F5",
-  "#F5FFE5",
-  "#E5F0FF",
-  "#FFE5CC",
-  "#E5CCFF",
-];
-
-const generatePastelColor = (index: number): string => {
-  return PASTEL_COLORS[index % PASTEL_COLORS.length];
-};
-
-// Drop zone for tour positions - also draggable
-interface TourPositionProps {
-  tourIndex: number;
-  positionIndex: number;
-  station: StationSlot;
-  onDrop: (
-    tourIndex: number,
-    positionIndex: number,
-    station: DeliveryStationOption,
-  ) => void;
-  onRemove: (tourIndex: number, positionIndex: number) => void;
-  onDragFromPosition: (
-    fromTourIndex: number,
-    fromPositionIndex: number,
-    toTourIndex: number,
-    toPositionIndex: number,
-  ) => void;
-  isSaving: boolean;
-  backgroundColor: string | null;
+// tourPlans is indexed [tourIndex (col)][positionIndex (row)]; a GridPos maps
+// to tourPlans[pos.col][pos.row].
+function buildTourData(tourPlans: StationSlot[][]) {
+  return tourPlans
+    .map((tour, tourIndex) => ({
+      tour_number: tourIndex + 1,
+      positions: tour
+        .map((station, positionIndex) =>
+          station
+            ? { position: positionIndex + 1, delivery_station_id: station.value }
+            : null,
+        )
+        .filter(Boolean) as { position: number; delivery_station_id: string }[],
+    }))
+    .filter((tour) => tour.positions.length > 0);
 }
-
-const TourPosition = ({
-  tourIndex,
-  positionIndex,
-  station,
-  onDrop,
-  onRemove,
-  onDragFromPosition,
-  isSaving,
-  backgroundColor,
-}: TourPositionProps) => {
-  const [{ isOver }, drop] = useDrop<DragItem, void, { isOver: boolean }>(
-    () => ({
-      accept: ItemTypes.DELIVERY_STATION,
-      drop: (item) => {
-        if (item.fromPosition) {
-          onDragFromPosition(
-            item.fromPosition.tourIndex,
-            item.fromPosition.positionIndex,
-            tourIndex,
-            positionIndex,
-          );
-        } else {
-          onDrop(tourIndex, positionIndex, item.station);
-        }
-      },
-      collect: (monitor) => ({
-        isOver: monitor.isOver(),
-      }),
-    }),
-    [tourIndex, positionIndex, onDragFromPosition, onDrop],
-  );
-
-  const [{ isDragging }, drag] = useDrag<
-    DragItem,
-    void,
-    { isDragging: boolean }
-  >(
-    {
-      type: ItemTypes.DELIVERY_STATION,
-      item: station
-        ? {
-            station,
-            fromPosition: { tourIndex, positionIndex },
-          }
-        : ({ station: null as unknown as DeliveryStationOption } as DragItem),
-      canDrag: !!station && !isSaving,
-      collect: (monitor) => ({
-        isDragging: monitor.isDragging(),
-      }),
-    },
-    [station, tourIndex, positionIndex, isSaving],
-  );
-
-  const { t } = useTranslation();
-
-  // Combine drag and drop refs
-  const dragDropRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      drag(node);
-      drop(node);
-    },
-    [drag, drop],
-  );
-
-  return (
-    <div
-      ref={dragDropRef}
-      className={`tour-position ${isOver ? "drop-over" : ""} ${
-        isDragging ? "dragging" : ""
-      } flex-between`}
-      style={{
-        height: "40px",
-        padding: "8px",
-        border: "2px dashed #ccc",
-        borderColor: isOver ? "#007bff" : "var(--color-text-tertiary)",
-        backgroundColor: isOver
-          ? "#f0f8ff"
-          : station
-            ? backgroundColor || "var(--color-success-bg)"
-            : "var(--color-bg-elevated)",
-        borderRadius: "4px",
-        opacity: isSaving ? 0.7 : isDragging ? 0.5 : 1,
-        cursor: station && !isSaving ? "move" : "default",
-      }}
-    >
-      {station ? (
-        <>
-          <span>{station.label}</span>
-          <button
-            onClick={() => onRemove(tourIndex, positionIndex)}
-            disabled={isSaving}
-            aria-label={t("commissioning.remove_station", {
-              station: station.label,
-            })}
-            className="text-error"
-            style={{
-              background: "none",
-              border: "none",
-              cursor: isSaving ? "not-allowed" : "pointer",
-              fontSize: "16px",
-            }}
-          >
-            ×
-          </button>
-        </>
-      ) : (
-        <span className="text-muted">
-          {t("commissioning.drop_station_here")}
-        </span>
-      )}
-    </div>
-  );
-};
-
-// Draggable station in the available stations list
-interface DraggableStationProps {
-  station: DeliveryStationOption;
-  onDragEnd: (station: DeliveryStationOption) => void;
-  backgroundColor: string | undefined;
-  canDrag?: boolean;
-}
-
-const DraggableStation = ({
-  station,
-  onDragEnd,
-  backgroundColor,
-  canDrag = true,
-}: DraggableStationProps) => {
-  const [{ isDragging }, drag] = useDrag<
-    DragItem,
-    void,
-    { isDragging: boolean }
-  >(
-    () => ({
-      type: ItemTypes.DELIVERY_STATION,
-      item: { station },
-      canDrag,
-      end: (item, monitor) => {
-        if (monitor.didDrop() && item) {
-          onDragEnd(item.station);
-        }
-      },
-      collect: (monitor) => ({
-        isDragging: monitor.isDragging(),
-      }),
-    }),
-    [station, canDrag, onDragEnd],
-  );
-
-  return (
-    <div
-      ref={(node) => {
-        drag(node);
-      }}
-      className={`delivery-station-item ${isDragging ? "dragging" : ""}`}
-      style={{
-        padding: "8px 12px",
-        margin: "4px 0",
-        backgroundColor: backgroundColor || "var(--color-bg-subtle)",
-        border: "1px solid var(--color-border-soft)",
-        borderRadius: "4px",
-        cursor: "move",
-        opacity: isDragging ? 0.5 : 1,
-      }}
-    >
-      {station.label}
-    </div>
-  );
-};
 
 export default function DeliveryTours() {
+  const { t } = useTranslation();
   const { isOffice } = useRoles();
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [, setSaveStatus] = useState<"" | "saving" | "success" | "error">("");
   const [numberOfTours, setNumberOfTours] = useState(1);
 
   const deliveryStationsFilters = useMemo(() => {
@@ -255,11 +61,11 @@ export default function DeliveryTours() {
   }, [selectedDay]);
   const { deliveryStations } = useDeliveryStations(deliveryStationsFilters);
 
-  // Ref to avoid putting deliveryStations in transform effect deps (the hook returns a new array ref every render)
+  // Ref to avoid putting deliveryStations in the transform/handler deps (the
+  // hook returns a new array ref every render).
   const deliveryStationsRef = useRef<DeliveryStationOption[]>([]);
   deliveryStationsRef.current = deliveryStations;
 
-  // Tour planning state
   const [tourPlans, setTourPlans] = useState<StationSlot[][]>([[], []]);
 
   useEffect(() => {
@@ -289,15 +95,11 @@ export default function DeliveryTours() {
     return assignedIds;
   }, [tourPlans]);
 
-  const { t } = useTranslation();
-
-  const stationColorMap = useMemo(() => {
-    const colorMap = new Map<string, string>();
-    deliveryStations.forEach((station, index) => {
-      colorMap.set(station.value, generatePastelColor(index));
-    });
-    return colorMap;
-  }, [deliveryStations]);
+  const stationIds = useMemo(
+    () => deliveryStations.map((station) => station.value),
+    [deliveryStations],
+  );
+  const stationColorMap = usePastelColorMap(stationIds);
 
   const listParams = useMemo<CommissioningDeliveryToursListParams>(
     () => ({
@@ -306,24 +108,24 @@ export default function DeliveryTours() {
     [selectedDay],
   );
 
-  const shareDeliveryDaysParams = useMemo<CommissioningSharesDeliveryDaysListParams>(
-    () => ({ active_at_date: toApiDate(dayjs())! }),
-    [],
-  );
-  const futureShareDeliveryDaysParams = useMemo<CommissioningSharesDeliveryDaysListParams>(
-    () => ({ active_at_date: toApiDate(dayjs())!, future: true }),
-    [],
-  );
+  const shareDeliveryDaysParams =
+    useMemo<CommissioningSharesDeliveryDaysListParams>(
+      () => ({ active_at_date: toApiDate(dayjs())! }),
+      [],
+    );
+  const futureShareDeliveryDaysParams =
+    useMemo<CommissioningSharesDeliveryDaysListParams>(
+      () => ({ active_at_date: toApiDate(dayjs())!, future: true }),
+      [],
+    );
 
   const {
     shareDeliveryDays: currentlyActiveDeliveryDays,
     toursByDay: currentToursByDay,
   } = useShareDeliveryDays(shareDeliveryDaysParams);
 
-  const {
-    shareDeliveryDays: futureDeliveryDays,
-    toursByDay: futureToursByDay,
-  } = useShareDeliveryDays(futureShareDeliveryDaysParams);
+  const { shareDeliveryDays: futureDeliveryDays, toursByDay: futureToursByDay } =
+    useShareDeliveryDays(futureShareDeliveryDaysParams);
 
   const shareDeliveryDays = useMemo(() => {
     return [
@@ -382,11 +184,12 @@ export default function DeliveryTours() {
     );
   }, [deliveryStations, assignedStationIds]);
 
-  const { data: toursData } = useCommissioningDeliveryToursList(listParams, {
-    query: {
-      enabled: !!selectedDay,
-    },
-  });
+  const { data: toursData, refetch: refetchTours } =
+    useCommissioningDeliveryToursList(listParams, {
+      query: {
+        enabled: !!selectedDay,
+      },
+    });
 
   // Transform API response into tour plans
   useEffect(() => {
@@ -424,154 +227,92 @@ export default function DeliveryTours() {
     setTourPlans(emptyTourPlans);
   }, [toursData, numberOfTours, deliveryStations.length]);
 
-  // Auto-save tour plans to backend
-  const autoSaveTourPlans = useCallback(
-    async (updatedTourPlans: StationSlot[][]) => {
-      if (!selectedDay) return;
-      const tourData = updatedTourPlans
-        .map((tour, tourIndex) => ({
-          tour_number: tourIndex + 1,
-          positions: tour
-            .map((station, positionIndex) =>
-              station
-                ? {
-                    position: positionIndex + 1,
-                    delivery_station_id: station.value,
-                  }
-                : null,
-            )
-            .filter(Boolean),
-        }))
-        .filter((tour) => tour.positions.length > 0);
+  // Auto-save via TanStack mutation. The grid is optimistic local state; on a
+  // failure we surface it AND refetch so the UI can't keep showing a plan that
+  // wasn't persisted. The whole-day payload is a full replace, so last write wins.
+  const { mutate: saveTours, isPending: isSaving } =
+    useCommissioningDeliveryToursUpdateToursCreate({
+      mutation: {
+        onError: (error) => {
+          message.error(
+            getErrorMessage(error, t("commissioning.tour_save_failed")),
+          );
+          refetchTours();
+        },
+      },
+    });
 
-      try {
-        setIsSaving(true);
-        setSaveStatus("saving");
-
-        await commissioningDeliveryToursUpdateToursCreate({
-          delivery_day: selectedDay!,
-          tours: tourData as {
-            tour_number: number;
-            positions: { position: number; delivery_station_id: string }[];
-          }[],
-        });
-
-        setSaveStatus("success");
-        setTimeout(() => setSaveStatus(""), 3000);
-      } catch (error) {
-        console.error("Failed to save tour plans:", error);
-        setSaveStatus("error");
-        setTimeout(() => setSaveStatus(""), 3000);
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [selectedDay],
-  );
-
-  // Only a genuine user edit (drop / remove / reorder) should POST. The other
+  // Only a genuine user edit (place / remove / move) should POST. The other
   // writers of tourPlans — padding the grid when the station or tour count
   // changes, and loading the saved plan from the API — must NOT trigger a
-  // save. We flag real edits with a ref the user handlers set, rather than
-  // trying to time-gate the load/reshape effects (which is racy: a queued
-  // microtask flips before React's deferred passive effect runs).
+  // save. A ref the edit handlers set flags real edits, rather than trying to
+  // time-gate the load/reshape effects (which is racy).
   const userEditedRef = useRef(false);
 
   useEffect(() => {
     if (!userEditedRef.current) return;
     userEditedRef.current = false;
-    autoSaveTourPlans(tourPlans);
+    if (!selectedDay) return;
+    saveTours({
+      data: { delivery_day: selectedDay, tours: buildTourData(tourPlans) },
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tourPlans]);
 
-  // Handle dropping a station into a tour position
-  const handleDrop = useCallback(
-    (
-      tourIndex: number,
-      positionIndex: number,
-      station: DeliveryStationOption,
-    ) => {
-      userEditedRef.current = true;
-      setTourPlans((prev) => {
-        const newPlans = prev.map((tour) => [...tour]);
-
-        // Remove station from its current position if it exists
-        newPlans.forEach((tour, tIndex) => {
-          tour.forEach((pos, pIndex) => {
-            if (pos && pos.value === station.value) {
-              newPlans[tIndex][pIndex] = null;
+  // Place a chip: from the palette (unique — clears any existing copy) or moved
+  // between cells (swaps if the target is occupied).
+  const handlePlace = useCallback((payload: DndDragPayload, to: GridPos) => {
+    userEditedRef.current = true;
+    setTourPlans((prev) => {
+      const next = prev.map((tour) => [...tour]);
+      if (payload.from) {
+        const moved = next[payload.from.col]?.[payload.from.row] ?? null;
+        const target = next[to.col]?.[to.row] ?? null;
+        if (next[payload.from.col]) {
+          next[payload.from.col][payload.from.row] = null;
+        }
+        if (next[to.col]) {
+          next[to.col][to.row] = moved;
+        }
+        if (target && next[payload.from.col]) {
+          next[payload.from.col][payload.from.row] = target;
+        }
+      } else {
+        const station = deliveryStationsRef.current.find(
+          (s) => s.value === payload.chip.id,
+        );
+        if (!station) return prev;
+        next.forEach((tour, col) =>
+          tour.forEach((slot, row) => {
+            if (slot && slot.value === station.value) {
+              next[col][row] = null;
             }
-          });
-        });
-
-        // Add station to new position
-        newPlans[tourIndex][positionIndex] = station;
-
-        return newPlans;
-      });
-    },
-    [],
-  );
-
-  // Handle removing a station from a tour position
-  const handleRemove = useCallback(
-    (tourIndex: number, positionIndex: number) => {
-      const station = tourPlans[tourIndex][positionIndex];
-      if (station) {
-        userEditedRef.current = true;
-        setTourPlans((prev) => {
-          const newPlans = prev.map((tour) => [...tour]);
-          newPlans[tourIndex][positionIndex] = null;
-          return newPlans;
-        });
+          }),
+        );
+        if (next[to.col]) {
+          next[to.col][to.row] = station;
+        }
       }
-    },
-    [tourPlans],
-  );
+      return next;
+    });
+  }, []);
 
-  const handleDragFromPosition = useCallback(
-    (
-      fromTourIndex: number,
-      fromPositionIndex: number,
-      toTourIndex: number,
-      toPositionIndex: number,
-    ) => {
-      const station = tourPlans[fromTourIndex]?.[fromPositionIndex];
-      if (station) {
-        userEditedRef.current = true;
-        setTourPlans((prev) => {
-          const newPlans = prev.map((tour) => [...tour]);
-
-          const targetStation = newPlans[toTourIndex][toPositionIndex];
-
-          newPlans[fromTourIndex][fromPositionIndex] = null;
-          newPlans[toTourIndex][toPositionIndex] = station;
-
-          if (targetStation) {
-            newPlans[fromTourIndex][fromPositionIndex] = targetStation;
-          }
-
-          return newPlans;
-        });
+  const handleRemove = useCallback((pos: GridPos) => {
+    userEditedRef.current = true;
+    setTourPlans((prev) => {
+      const next = prev.map((tour) => [...tour]);
+      if (next[pos.col]) {
+        next[pos.col][pos.row] = null;
       }
-    },
-    [tourPlans],
-  );
-
-  const handleStationDragEnd = useCallback(() => {
-    // Station will be handled by drop zones
+      return next;
+    });
   }, []);
 
   const tableWidth = `${numberOfTours * 15 + 5}em`;
-  const tableContainerStyle: CSSProperties = {
-    width: tableWidth,
-    borderCollapse: "collapse",
-    marginTop: "0em",
-  };
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div style={{ padding: "20px" }}>
+    <DndGrid onPlace={handlePlace} onRemove={handleRemove}>
+      <div className="delivery-tours-page">
         <h1>{t("commissioning.delivery_tours")}</h1>
 
         <SharesDeliveryDaySelector
@@ -582,20 +323,11 @@ export default function DeliveryTours() {
         />
         <DateRangeStatusLegend />
 
-        <div style={{ display: "flex", gap: "20px", marginTop: "2em" }}>
+        <div className="delivery-tours-layout">
           {/* Available Delivery Stations */}
-          <div style={{ flex: "0 0 15em" }}>
+          <div className="delivery-tours-palette">
             <h3>{t("commissioning.available_delivery_stations")}</h3>
-            <div
-              style={{
-                border: "1px solid var(--color-border-soft)",
-                borderRadius: "4px",
-                padding: "1em",
-                maxHeight: "100em",
-                overflowY: "auto",
-                opacity: isSaving ? 0.7 : 1,
-              }}
-            >
+            <div className="delivery-tours-palette-box">
               {availableStations.length === 0 ? (
                 <p className="text-muted text-center">
                   {deliveryStations.length === 0
@@ -604,11 +336,13 @@ export default function DeliveryTours() {
                 </p>
               ) : (
                 availableStations.map((station) => (
-                  <DraggableStation
+                  <DraggableChip
                     key={station.value}
-                    station={station}
-                    onDragEnd={handleStationDragEnd}
-                    backgroundColor={stationColorMap.get(station.value)}
+                    chip={{
+                      id: station.value,
+                      label: station.label,
+                      color: stationColorMap.get(station.value),
+                    }}
                     canDrag={isOffice}
                   />
                 ))
@@ -620,32 +354,21 @@ export default function DeliveryTours() {
           <div className="flex-1">
             <div className="flex-between">
               <h3>{t("commissioning.tour_planning")}</h3>
+              <AutoSaveIndicator saving={isSaving} hasChanges={false} />
             </div>
 
-            <table style={tableContainerStyle}>
+            <table
+              className="delivery-tours-grid-table"
+              style={{ width: tableWidth }}
+            >
               <thead>
                 <tr>
-                  <th
-                    style={{
-                      border: "1px solid var(--color-border-soft)",
-                      padding: "8px",
-                      backgroundColor: "#f8f9fa",
-                      width: "5em",
-                    }}
-                  >
+                  <th className="delivery-tours-th-position">
                     {t("delivery_stations.position")}
                   </th>
                   {Array.from({ length: numberOfTours }, (_, index) => (
-                    <th
-                      key={`tour-${index}`}
-                      style={{
-                        border: "1px solid var(--color-border-soft)",
-                        padding: "0.5em",
-                        backgroundColor: "#f8f9fa",
-                        width: "14em",
-                      }}
-                    >
-                      Tour {index + 1}
+                    <th key={`tour-${index}`} className="delivery-tours-th-tour">
+                      {t("commissioning.tour_label", { number: index + 1 })}
                     </th>
                   ))}
                 </tr>
@@ -653,42 +376,34 @@ export default function DeliveryTours() {
               <tbody>
                 {tourPlans[0]?.map((_, positionIndex) => (
                   <tr key={positionIndex}>
-                    <td
-                      style={{
-                        border: "1px solid var(--color-border-soft)",
-                        padding: "8px",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
+                    <td className="delivery-tours-pos-number">
                       {positionIndex + 1}
                     </td>
-                    {Array.from({ length: numberOfTours }, (_, tourIndex) => (
-                      <td
-                        key={`tour-${tourIndex}`}
-                        style={{
-                          border: "1px solid var(--color-border-soft)",
-                          padding: "4px",
-                        }}
-                      >
-                        <TourPosition
-                          tourIndex={tourIndex}
-                          positionIndex={positionIndex}
-                          station={tourPlans[tourIndex]?.[positionIndex]}
-                          onDrop={handleDrop}
-                          onRemove={handleRemove}
-                          onDragFromPosition={handleDragFromPosition}
-                          isSaving={isSaving || !isOffice}
-                          backgroundColor={
-                            tourPlans[tourIndex]?.[positionIndex]
-                              ? (stationColorMap.get(
-                                  tourPlans[tourIndex][positionIndex]!.value,
-                                ) ?? null)
-                              : null
-                          }
-                        />
-                      </td>
-                    ))}
+                    {Array.from({ length: numberOfTours }, (_, tourIndex) => {
+                      const station =
+                        tourPlans[tourIndex]?.[positionIndex] ?? null;
+                      return (
+                        <td key={`tour-${tourIndex}`} className="delivery-tours-cell">
+                          <DroppableCell
+                            pos={{ row: positionIndex, col: tourIndex }}
+                            occupant={
+                              station
+                                ? {
+                                    id: station.value,
+                                    label: station.label,
+                                    color: stationColorMap.get(station.value),
+                                  }
+                                : null
+                            }
+                            canEdit={isOffice}
+                            emptyLabel={t("commissioning.drop_station_here")}
+                            removeAriaLabelFor={(label) =>
+                              t("commissioning.remove_station", { station: label })
+                            }
+                          />
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
@@ -696,6 +411,6 @@ export default function DeliveryTours() {
           </div>
         </div>
       </div>
-    </DndProvider>
+    </DndGrid>
   );
 }
