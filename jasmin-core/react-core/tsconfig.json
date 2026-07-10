@@ -32,7 +32,6 @@
     "node_modules",
     "dist",
     "src/features/cultivation/pages",
-    "src/features/economics/pages",
-    "src/features/staff/pages"
+    "src/features/economics/pages"
   ]
 }

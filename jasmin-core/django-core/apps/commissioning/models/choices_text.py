@@ -1,5 +1,6 @@
-from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+from apps.shared.model_fields import iso_week_field
 
 
 # the textchoices here are given by the app, are to be chosen by the tenant, but can not be changed by the tenant:
@@ -173,10 +174,7 @@ def unit_field(
 
 
 def delivery_week_field(**kwargs) -> models.PositiveSmallIntegerField:
-    """The ISO ``delivery_week`` field with its 1..53 range validators. Extra
-    kwargs (e.g. ``db_index=True``) pass straight through; the validators are
-    the shared, previously-duplicated part."""
-    return models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(53)],
-        **kwargs,
-    )
+    """The ISO ``delivery_week`` field (1..53). Thin alias over the shared
+    :func:`apps.shared.model_fields.iso_week_field` so the 1..53 invariant has a
+    single definition; extra kwargs (e.g. ``db_index=True``) pass through."""
+    return iso_week_field(**kwargs)

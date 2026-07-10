@@ -41,7 +41,6 @@ export default [
       'src/shared/api/generated',
       'src/features/cultivation/pages',
       'src/features/economics/pages',
-      'src/features/staff/pages',
       'src/pages/gdpr',
     ],
   },
