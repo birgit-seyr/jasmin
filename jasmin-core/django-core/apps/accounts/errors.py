@@ -43,6 +43,15 @@ class AccountBlocked(AuthError):
     http_status = 403
 
 
+class SelfRegistrationDisabled(AuthError):
+    """Public self-registration is off for this tenant (TenantSettings
+    ``allows_self_registration`` is False). The register endpoints refuse so the
+    control is real, not only a hidden button."""
+
+    code = "auth.self_registration_disabled"
+    http_status = 403
+
+
 class TenantMismatch(AuthError):
     code = "auth.tenant_mismatch"
 

@@ -78,6 +78,7 @@
   "coop_subscribe_error": "Zeichnung fehlgeschlagen — bitte erneut versuchen.",
   "coop_subscribe_member_cancelled": "Eine gekündigte Mitgliedschaft kann keine neuen Geschäftsanteile zeichnen.",
   "export_member_register": "Mitgliederliste exportieren (CSV)",
+  "manual_transfer_toggle": "Händische Übertragung von bestehenden Mitgliedern",
   "coop_pending_banner": "Du hast {{count}} weitere Anteile gezeichnet. Bitte warte auf die Bestätigung des Büros.",
   "confirm_coop_share": "Anteile freigeben",
   "below_min_shares": "Summe ({{total}}) liegt unter dem Minimum ({{min}}).",

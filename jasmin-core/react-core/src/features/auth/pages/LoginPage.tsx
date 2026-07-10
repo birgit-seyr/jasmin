@@ -42,7 +42,12 @@ const LoginPage = () => {
   const [captchaSolution, setCaptchaSolution] = useState("");
   const [aboutOpen, setAboutOpen] = useState(false);
 
-  const { tenant, displayLogoUrl, loading: tenantLoading } = useTenant();
+  const {
+    tenant,
+    displayLogoUrl,
+    loading: tenantLoading,
+    getSetting,
+  } = useTenant();
   const { login, verifyTwoFactor, loading, error } = useAuth();
   const { t } = useTranslation();
 
@@ -55,6 +60,13 @@ const LoginPage = () => {
   // anonymous /tenants/current/ payload (CurrentTenantSerializer); show by
   // default, hide only when the tenant explicitly disabled trials.
   const allowsTrial = tenant?.allows_trial_subscriptions !== false;
+  // Public self-registration gate. Rides on the anonymous /tenants/current/
+  // settings payload; the register buttons enable only when the tenant opted
+  // in. The server-side ``SelfRegistrationEnabled`` permission enforces the
+  // same flag on /api/register/*, so this is convenience, not the boundary.
+  const allowSelfRegistration = Boolean(
+    getSetting("allows_self_registration", false),
+  );
   // Trial length (in deliveries/weeks) for the trial card subtitle — read from
   // the anonymous tenant payload via the shared term hook.
   const { trialDurationInDeliveries } = useSubscriptionTerm();
@@ -346,7 +358,12 @@ const LoginPage = () => {
                 </div>
 
                 <Link to="/register">
-                  <Button type="primary" size="large" block disabled>
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    disabled={!allowSelfRegistration}
+                  >
                     {t("auth.registration.start")}
                   </Button>
                 </Link>
@@ -385,7 +402,12 @@ const LoginPage = () => {
                 </div>
 
                 <Link to="/register?trial=1">
-                  <Button type="primary" size="large" block disabled>
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    disabled={!allowSelfRegistration}
+                  >
                     {t("auth.registration.start_trial")}
                   </Button>
                 </Link>

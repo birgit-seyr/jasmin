@@ -44,6 +44,7 @@
   "undo": "Undo last change",
   "sidebar_collapse": "Collapse sidebar",
   "member_number": "The member number is assigned automatically when the member is approved.",
+  "manual_transfer_toggle": "Click to transfer already-existing members. The entry date can then be set manually.",
   "locked_setting_tooltip": "This setting is locked because it affects the numbering of documents. It can only be changed at the turn of the year, when the numbering is reset.",
   "order_number": "If the order has not been committed, it has a provisional order number with the suffix v.",
   "order_days": "Harvest, washing, cleaning and commissioning day for this order. When they differ from the reseller's defaults they are highlighted in red. They can no longer be changed once the order has been created.",

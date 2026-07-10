@@ -59,6 +59,11 @@
   },
   "members": {
     "title": "Member Settings",
+    "registration": {
+      "title": "Registration"
+    },
+    "allows_self_registration": "Allow self-registration",
+    "allows_self_registration_desc": "When on, people can register themselves via the login page. When off, the register buttons are hidden AND the registration endpoints are blocked server-side.",
     "trial": {
       "title": "Trial Members"
     },

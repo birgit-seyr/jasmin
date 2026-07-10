@@ -125,6 +125,14 @@ export default function Members() {
   );
   const [inviteRow, setInviteRow] = useState<MemberRecord | null>(null);
 
+  // "Händische Übertragung von Mitgliedern" — manual member-transfer mode.
+  // While ON, the normally server-stamped ``entry_date`` (GenG §30) becomes
+  // editable in the grid so the office can hand-set historical admission dates
+  // when migrating members from another system. A deliberate, visible toggle
+  // (red while on) so it can't be flipped by accident; the serializer's
+  // read-only lock on entry_date was lifted to match (office-role gated).
+  const [manualMemberTransfer, setManualMemberTransfer] = useState(false);
+
   // Capture as a primitive so the columns useMemo can depend on a
   // stable boolean instead of ``getSetting`` itself, which is a fresh
   // function every TenantContext render — listing ``getSetting`` in
@@ -238,7 +246,6 @@ export default function Members() {
       ),
     [data],
   );
-
 
   // No ``list`` here: this page owns the data via ``useCommissioningMembersList``
   // and passes it as ``initialData``. Adding ``list`` would make EditableTable
@@ -409,7 +416,9 @@ export default function Members() {
         readOnly: false,
         align: "center",
         width: "8em",
-        disabled: true,
+        // Normally locked (server-stamped GenG §30 date). Editable only while
+        // the "händische Übertragung" toggle is on — see manualMemberTransfer.
+        disabled: !manualMemberTransfer,
         sortable: true,
 
         render: (value: unknown) => formatDate(value as string | null),
@@ -658,6 +667,7 @@ export default function Members() {
       contactColumns,
       noteColumn,
       has_coop_shares,
+      manualMemberTransfer,
     ],
   );
 
@@ -781,6 +791,7 @@ export default function Members() {
               </Button>
             </Badge>
           )}
+          <ToolTipIcon title={t("tooltip.open_members")} />
         </Space>
       )}
 
@@ -813,6 +824,22 @@ export default function Members() {
           return "";
         }}
       />
+      {isOffice && (
+        <Space size="small" align="center" style={{ marginTop: 12 }}>
+          <Button
+            type={manualMemberTransfer ? "primary" : "default"}
+            danger={manualMemberTransfer}
+            size="small"
+            onClick={() => setManualMemberTransfer((v) => !v)}
+            aria-pressed={manualMemberTransfer}
+            aria-label={t("members.manual_transfer_toggle")}
+          >
+            {manualMemberTransfer ? "● " : ""}
+            {t("members.manual_transfer_toggle")}
+          </Button>
+          <ToolTipIcon title={t("tooltip.manual_transfer_toggle")} />
+        </Space>
+      )}
 
       <AdminConfirmationModalMembers
         isOpen={isAdminConfirmationModalOpen}

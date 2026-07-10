@@ -11,6 +11,23 @@ export default function ConfigurationMembers() {
 
   const settingsConfig = useMemo<SettingsCategory[]>(
     () => [
+      {
+        category: "registration",
+        title: t("settings.members.registration.title"),
+        settings: [
+          {
+            // Public self-service registration on the login page. OFF (default)
+            // hides the register buttons AND makes /api/register/* refuse
+            // server-side (SelfRegistrationEnabled permission) — the flag is a
+            // real control, not only a hidden button.
+            key: "allows_self_registration",
+            label: t("settings.members.allows_self_registration"),
+            description: t("settings.members.allows_self_registration_desc"),
+            type: "checkbox",
+            defaultValue: false,
+          },
+        ],
+      },
       // The standalone "Probemitglieder erlauben" toggle was dropped
       // in migration 0020 — whether trial members can exist is
       // derived from the two trial-subscription settings on

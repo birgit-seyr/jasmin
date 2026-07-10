@@ -59,6 +59,11 @@
   },
   "members": {
     "title": "Mitglieder-Einstellungen",
+    "registration": {
+      "title": "Registrierung"
+    },
+    "allows_self_registration": "Selbst-Registrierung erlauben",
+    "allows_self_registration_desc": "Wenn aktiviert, können sich Personen selbst über die Login-Seite registrieren. Wenn deaktiviert, sind die Registrierungs-Buttons ausgeblendet UND die Registrierungs-Endpunkte serverseitig gesperrt.",
     "trial": {
       "title": "Probe-Mitglieder"
     },

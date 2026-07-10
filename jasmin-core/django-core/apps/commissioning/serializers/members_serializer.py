@@ -131,7 +131,14 @@ class MemberSerializer(
         # confirmation (correction window) and locked after.
         read_only_fields = (
             "member_number",
-            "entry_date",
+            # ``entry_date`` (GenG §30 Eintrittsdatum) is normally server-stamped
+            # and NOT office-editable. It is deliberately writable here so the
+            # office can hand-set it during MANUAL MEMBER TRANSFER (migrating
+            # members from another system with historical admission dates). Two
+            # gates stand in for the removed read-only lock: the office role is
+            # required to PATCH a member at all, and the members grid keeps the
+            # cell disabled (out of the save payload) unless the operator turns
+            # on the explicit "händische Übertragung" toggle.
             "sepa_consent",
             "privacy_consent",
             "withdrawal_consent",

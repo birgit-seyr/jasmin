@@ -28,6 +28,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from apps.accounts.permissions import SelfRegistrationEnabled
+
 from apps.shared.auth_cookies import (
     clear_tenant_refresh_cookie,
     get_tenant_refresh_token,
@@ -589,7 +591,7 @@ def _reject_public_schema(request) -> object:
     },
 )
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([SelfRegistrationEnabled])
 def register_send_code_view(request):
     tenant = _reject_public_schema(request)
     serializer = RegisterSendCodeRequestSerializer(data=request.data)
@@ -638,7 +640,7 @@ register_send_code_view.cls.throttle_scope = "register"
     },
 )
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([SelfRegistrationEnabled])
 def register_verify_code_view(request):
     _reject_public_schema(request)
     serializer = RegisterVerifyCodeRequestSerializer(data=request.data)
@@ -673,7 +675,7 @@ register_verify_code_view.cls.throttle_scope = "register"
     },
 )
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([SelfRegistrationEnabled])
 def public_register_view(request):
     # See ``settings.REST_FRAMEWORK.DEFAULT_THROTTLE_RATES.register`` +
     # the ``.cls.throttle_scope = ...`` assignment below the def.

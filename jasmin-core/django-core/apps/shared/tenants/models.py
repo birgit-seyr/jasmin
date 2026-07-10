@@ -306,6 +306,12 @@ class TenantSettings(JasminModel):
     )
     round_up_to_full_pu_harvesting = models.BooleanField(default=False)
 
+    # Public self-service registration on the login page. OFF hides the
+    # register buttons AND makes /api/register/* refuse (defense-in-depth, not
+    # only UI). Default False: member onboarding is manual unless a tenant
+    # explicitly opts in.
+    allows_self_registration = models.BooleanField(default=False)
+
     # Sales channels
     has_markets = models.BooleanField(default=False)
     sells_to_resellers = models.BooleanField(default=True)  # done

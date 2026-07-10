@@ -15,9 +15,40 @@ import time
 from django.conf import settings
 from rest_framework.permissions import BasePermission
 
-from apps.accounts.errors import StepUpRequired
+from apps.accounts.errors import SelfRegistrationDisabled, StepUpRequired
 
 logger = logging.getLogger("authentication")
+
+
+class SelfRegistrationEnabled(BasePermission):
+    """Allow the public self-registration endpoints ONLY when the current
+    tenant has ``TenantSettings.allows_self_registration`` True.
+
+    Server-side half of the feature flag: the login page hides the register
+    buttons when the setting is off, and this makes the ``/api/register/*``
+    endpoints refuse too — so a hidden button can't be bypassed by posting
+    straight to the API. Anonymous callers are fine when the flag is on (it
+    gates the FEATURE, not authentication), so it composes with / replaces
+    ``AllowAny``. Raises (not returns False) so the canonical
+    ``{code, message}`` body reaches the client.
+    """
+
+    def has_permission(self, request, view) -> bool:
+        from django.db import connection
+
+        from apps.shared.tenants.models import TenantSettings
+
+        current = TenantSettings.get_current_settings(connection.tenant)
+        if current is None or not current.allows_self_registration:
+            logger.info(
+                "auth.self_registration_refused tenant=%s path=%s",
+                getattr(connection.tenant, "schema_name", "?"),
+                request.path,
+            )
+            raise SelfRegistrationDisabled(
+                "Self-registration is disabled for this organisation."
+            )
+        return True
 
 
 class RequiresStepUp(BasePermission):
