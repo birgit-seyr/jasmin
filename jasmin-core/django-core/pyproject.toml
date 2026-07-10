@@ -58,7 +58,7 @@ django-otp = "^1.5"
 # generator so a malformed file is rejected before it can ever be
 # handed to the office.
 sepaxml = "^2.6"
-cryptography = ">=48.0.1,<49"
+cryptography = ">=48.0.1,<50"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"
