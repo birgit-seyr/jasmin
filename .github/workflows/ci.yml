@@ -135,7 +135,7 @@ jobs:
         run: poetry check --lock
 
       - name: Configure Poetry cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pypoetry
           key: poetry-${{ runner.os }}-${{ hashFiles('jasmin-core/django-core/poetry.lock') }}
