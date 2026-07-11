@@ -484,8 +484,12 @@ export default function PlanningHarvestSharesBase({
     onDefaultsApplied: applyRowDefaults,
   });
 
-  const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
-    overrides: {
+  // Memoized so its identity is stable across renders. An inline literal here
+  // would make ``amountUnitSizeColumns`` (which memoizes on ``overrides``) — and
+  // thus the whole ``columns`` config — churn every render, which re-fires
+  // EditableTable's initialData-sync effect and needlessly re-seeds the grid.
+  const amountUnitSizeOverrides = useMemo(
+    () => ({
       unit: {
         onFieldChange: handleUnitChange,
         disabled: (record: TableRecord) => {
@@ -513,7 +517,12 @@ export default function PlanningHarvestSharesBase({
           if (record.key != -1) return true;
         },
       },
-    },
+    }),
+    [handleUnitChange, applyRowDefaults],
+  );
+
+  const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
+    overrides: amountUnitSizeOverrides,
     showAmount: false,
   });
 
