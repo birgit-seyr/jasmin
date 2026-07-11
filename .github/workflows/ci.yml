@@ -21,7 +21,7 @@ jobs:
         working-directory: jasmin-core/react-core
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up Node
         uses: actions/setup-node@v5
@@ -113,7 +113,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up Python
         id: setup-python
@@ -192,7 +192,7 @@ jobs:
     # instead of silently leaving super-admin password-only at deploy time.
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Verify super-admin IP allowlist guardrail
         # Fail-closed deny-all terminal directive + dedicated super-admin
@@ -258,7 +258,7 @@ jobs:
     # with `docker volume rm jasmin-platform_backend_venv_dev && make dev-up`).
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Build + start backend (postgres, redis, migrations, runserver)
         # ``up backend`` also starts its depends_on (postgres, redis). The dev
@@ -303,7 +303,7 @@ jobs:
     # non-allowlisted secret.
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Run gitleaks
         run: |
