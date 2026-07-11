@@ -338,8 +338,8 @@ class ShareArticleResolutionMixin:
     serializer (Invoice / DeliveryNote), resolving through the line's ``offer``
     when ``share_article`` isn't set directly.
 
-    ``organic_status`` is the EU 2018/848 disclosure: the PDF appends "*" (Bio)
-    or "**" (Umstellung) to the article name and prints a footer block
+    ``organic_status`` is the EU 2018/848 disclosure: the PDF appends "*" (organic)
+    or "**" (in transition) to the article name and prints a footer block
     referencing ``Tenant.organic_control_number`` iff any line carries one of
     those marks. Injected via ``get_fields()`` for the same metaclass reason as
     ``LinePricingFieldsMixin``.

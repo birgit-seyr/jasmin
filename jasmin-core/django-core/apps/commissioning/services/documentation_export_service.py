@@ -75,7 +75,7 @@ class DocumentationExportService:
         },
         "purchase": {
             "model": Purchase,
-            "select_related": ("share_article", "storage", "seller"),
+            "select_related": ("share_article", "storage", "seller", "seller__contact"),
             "labels": {
                 "de": {
                     "filename_prefix": "zukauf",
@@ -88,6 +88,7 @@ class DocumentationExportService:
                         "Größe",
                         "Menge",
                         "Lieferant",
+                        "Bio-Status",
                         "Preis/Einheit",
                         "Lager",
                         "Notiz",
@@ -104,6 +105,7 @@ class DocumentationExportService:
                         "Size",
                         "Amount",
                         "Seller",
+                        "Organic status",
                         "Price/Unit",
                         "Storage",
                         "Note",
@@ -125,6 +127,75 @@ class DocumentationExportService:
             "suffix": "summed",
         },
     }
+
+    # Human labels for the unit / size CODES and the ISO weekday, per CSV
+    # language — mirrors the frontend ``getUnitLabel`` / ``getVegetableSizeLabel``
+    # (``commissioning.units.*`` / ``commissioning.small|medium|large``) so the
+    # export reads the same as the on-screen grid. Unknown codes fall back to
+    # the raw value.
+    _UNIT_LABELS: dict[str, dict[str, str]] = {
+        "de": {"KG": "kg", "PCS": "Stk", "BUNCH": "Bund", "L": "l", "G": "g"},
+        "en": {"KG": "kg", "PCS": "pcs", "BUNCH": "bunch", "L": "l", "G": "g"},
+    }
+    _SIZE_LABELS: dict[str, dict[str, str]] = {
+        "de": {"S": "klein", "M": "mittel", "L": "groß"},
+        "en": {"S": "small", "M": "medium", "L": "large"},
+    }
+    # Purchase-only organic status → localized label (mirrors the frontend
+    # OrganicStatus choices: Bio / Umstellung / Konventionell).
+    _ORGANIC_STATUS_LABELS: dict[str, dict[str, str]] = {
+        "de": {
+            "organic": "Bio",
+            "in_conversion": "Umstellung",
+            "conventional": "Konventionell",
+        },
+        "en": {
+            "organic": "Organic",
+            "in_conversion": "In conversion",
+            "conventional": "Conventional",
+        },
+    }
+    _DAY_LABELS: dict[str, list[str]] = {
+        "de": [
+            "Montag",
+            "Dienstag",
+            "Mittwoch",
+            "Donnerstag",
+            "Freitag",
+            "Samstag",
+            "Sonntag",
+        ],
+        "en": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+        ],
+    }
+
+    @classmethod
+    def _unit_label(cls, unit: str | None, language: str) -> str:
+        return cls._UNIT_LABELS.get(language, {}).get(unit, unit) if unit else ""
+
+    @classmethod
+    def _size_label(cls, size: str | None, language: str) -> str:
+        return cls._SIZE_LABELS.get(language, {}).get(size, size) if size else ""
+
+    @classmethod
+    def _organic_status_label(cls, status: str | None, language: str) -> str:
+        if not status:
+            return ""
+        return cls._ORGANIC_STATUS_LABELS.get(language, {}).get(status, status)
+
+    @classmethod
+    def _day_label(cls, day_number: int | None, language: str) -> str:
+        if day_number is None:
+            return ""
+        days = cls._DAY_LABELS.get(language, cls._DAY_LABELS["de"])
+        return days[day_number] if 0 <= day_number < len(days) else ""
 
     @classmethod
     def _resolve_csv_language(cls, tenant: Any | None = None) -> str:
@@ -163,7 +234,7 @@ class DocumentationExportService:
         queryset = cls._get_queryset(config, start, end)
         # Materialized list (relations are select_related on the queryset), so
         # the streaming generator below touches no DB after the view returns.
-        filtered = cls._filter_by_date_range(queryset, start, end)
+        filtered = cls._filter_by_date_range(queryset, start, end, model)
 
         dialect = get_csv_dialect()
         writer = csv.writer(CsvEchoBuffer(), delimiter=dialect.delimiter)
@@ -178,7 +249,7 @@ class DocumentationExportService:
                     yield writer.writerow(
                         escape_csv_row(
                             cls._format_detail_row(
-                                model, instance, instance_date, dialect
+                                model, instance, instance_date, dialect, language
                             )
                         )
                     )
@@ -207,20 +278,36 @@ class DocumentationExportService:
 
     @staticmethod
     def _filter_by_date_range(
-        queryset: QuerySet, start: dt_date, end: dt_date
+        queryset: QuerySet, start: dt_date, end: dt_date, model: str
     ) -> list[tuple[Any, dt_date]]:
         result: list[tuple[Any, dt_date]] = []
         for instance in queryset:
             try:
-                instance_date = week_day_to_date(
-                    instance.year,
-                    instance.delivery_week,
-                    instance.day_number if instance.day_number is not None else 0,
-                )
+                if model == "purchase":
+                    # Purchases are week-scoped (no delivery day; day_number is
+                    # NULL or the PURCHASE_DAY sentinel). Keep them when the
+                    # delivery WEEK overlaps the range — anchoring on a single
+                    # day would drop them whenever the range doesn't contain that
+                    # exact day (the empty-export bug). Stamp the week's Monday
+                    # as the Date cell.
+                    week_start = week_day_to_date(
+                        instance.year, instance.delivery_week, 0
+                    )
+                    week_end = week_day_to_date(
+                        instance.year, instance.delivery_week, 6
+                    )
+                    if week_start <= end and week_end >= start:
+                        result.append((instance, week_start))
+                else:
+                    instance_date = week_day_to_date(
+                        instance.year,
+                        instance.delivery_week,
+                        instance.day_number if instance.day_number is not None else 0,
+                    )
+                    if start <= instance_date <= end:
+                        result.append((instance, instance_date))
             except (ValueError, TypeError):
                 continue
-            if start <= instance_date <= end:
-                result.append((instance, instance_date))
         return result
 
     @classmethod
@@ -254,16 +341,21 @@ class DocumentationExportService:
                 escape_csv_row(
                     [
                         row["share_article"],
-                        row["unit"],
-                        row["size"],
+                        cls._unit_label(row["unit"], language),
+                        cls._size_label(row["size"], language),
                         dialect.format(row["amount"]),
                     ]
                 )
             )
 
-    @staticmethod
+    @classmethod
     def _format_detail_row(
-        model: str, instance: Any, instance_date: dt_date, dialect: Any
+        cls,
+        model: str,
+        instance: Any,
+        instance_date: dt_date,
+        dialect: Any,
+        language: str,
     ) -> list[Any]:
         amount_cell = (
             dialect.format(Decimal(str(instance.amount)))
@@ -273,19 +365,18 @@ class DocumentationExportService:
         common_prefix = [
             dialect.format(instance_date),
             instance.delivery_week,
-            (
-                instance.get_day_number_display()
-                if instance.day_number is not None
-                else ""
-            ),
+            cls._day_label(instance.day_number, language),
             instance.share_article.name if instance.share_article else "",
-            instance.unit or "",
-            instance.size or "",
+            cls._unit_label(instance.unit, language),
+            cls._size_label(instance.size, language),
             amount_cell,
         ]
         if model == "purchase":
             return common_prefix + [
-                instance.seller.name if instance.seller else "",
+                # Reseller has no ``name`` of its own — the display name lives on
+                # the linked ContactEntity (mirrors the summary service).
+                instance.seller.contact.name if instance.seller else "",
+                cls._organic_status_label(instance.organic_status, language),
                 (
                     dialect.format(Decimal(str(instance.price_per_unit)))
                     if instance.price_per_unit is not None

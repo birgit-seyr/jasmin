@@ -318,6 +318,57 @@ class TestPurchaseExportCsv:
         assert resp.status_code == status.HTTP_200_OK
         assert "text/csv" in resp["Content-Type"]
 
+    def test_week_scoped_purchase_included_and_labels_localized(
+        self, api_client, tenant
+    ):
+        """A week-scoped purchase (no day_number) must appear whenever its
+        delivery WEEK overlaps the range — not only when the week's Monday sits
+        inside it (the empty-export bug) — and the unit/size codes render as
+        localized labels, not raw ``PCS`` / ``M``."""
+        from decimal import Decimal
+
+        from apps.commissioning.services.documentation_export_service import (
+            DocumentationExportService,
+        )
+        from apps.commissioning.tests.factories import ResellerFactory
+
+        article = ShareArticleFactory(is_purchased=True, name="Möhren")
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        # A seller is the path that used to crash the export (Reseller has no
+        # ``.name`` — it's on ``seller.contact``), leaving only the header.
+        seller = ResellerFactory()
+        PurchaseFactory(
+            year=2026,
+            delivery_week=15,
+            day_number=None,
+            share_article=article,
+            unit="PCS",
+            size="M",
+            amount=Decimal("7"),
+            storage=storage,
+            seller=seller,
+            organic_status="organic",
+        )
+        # ISO week 15/2026 = Mon 2026-04-06 .. Sun 2026-04-12; start on Tuesday so
+        # the old Monday-anchored filter would have dropped the row.
+        resp = api_client.get(
+            URL_PURCHASE_EXPORT_CSV,
+            {"date_from": "2026-04-07", "date_to": "2026-04-12"},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        body = b"".join(resp.streaming_content).decode("utf-8")
+        assert "Möhren" in body
+        lang = DocumentationExportService._resolve_csv_language()
+        assert {"de": "Stk", "en": "pcs"}[lang] in body
+        assert {"de": "mittel", "en": "medium"}[lang] in body
+        assert "PCS" not in body
+        # Organic status renders localized on the data row (checked on the row,
+        # not the whole body, since "Bio"/"Organic" also appear in the header).
+        data_line = next(line for line in body.splitlines() if "Möhren" in line)
+        assert {"de": "Bio", "en": "Organic"}[lang] in data_line
+        # The seller's display name (from seller.contact, not seller.name) renders.
+        assert seller.contact.name in data_line
+
 
 @pytest.mark.django_db
 class TestHarvestExportCsv:
@@ -328,6 +379,43 @@ class TestHarvestExportCsv:
         )
         assert resp.status_code == status.HTTP_200_OK
         assert "text/csv" in resp["Content-Type"]
+
+    def test_harvest_export_localizes_day_and_labels(self, api_client, tenant):
+        """Harvest rows render the weekday + unit/size in the tenant CSV
+        language, not the model's English ``get_day_number_display`` / raw
+        codes."""
+        from decimal import Decimal
+
+        from apps.commissioning.services.documentation_export_service import (
+            DocumentationExportService,
+        )
+
+        article = ShareArticleFactory(name="Zucchini")
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        HarvestFactory(
+            year=2026,
+            delivery_week=15,
+            day_number=0,  # Monday 2026-04-06
+            share_article=article,
+            unit="PCS",
+            size="M",
+            amount=Decimal("3"),
+            storage=storage,
+        )
+        resp = api_client.get(
+            URL_HARVEST_EXPORT_CSV,
+            {"date_from": "2026-04-06", "date_to": "2026-04-12"},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        body = b"".join(resp.streaming_content).decode("utf-8")
+        assert "Zucchini" in body
+        lang = DocumentationExportService._resolve_csv_language()
+        if lang == "de":
+            assert "Montag" in body
+            assert "Monday" not in body  # the old English weekday is gone
+            assert "Stk" in body
+        else:
+            assert "Monday" in body
 
 
 @pytest.mark.django_db
