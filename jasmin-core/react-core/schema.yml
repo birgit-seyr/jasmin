@@ -14719,6 +14719,280 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/commissioning/organic_certificates/:
+    get:
+      operationId: commissioning_organic_certificates_list
+      description: |-
+        CRUD for a reseller's time-bound organic certificates (office-managed).
+
+        Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+      parameters:
+      - in: query
+        name: reseller
+        schema:
+          type: string
+        description: Reseller ID (Jasmin ID format)
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrganicCertificate'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: commissioning_organic_certificates_create
+      description: |-
+        CRUD for a reseller's time-bound organic certificates (office-managed).
+
+        Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganicCertificate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrganicCertificate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrganicCertificate'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganicCertificate'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/organic_certificates/{id}/:
+    get:
+      operationId: commissioning_organic_certificates_retrieve
+      description: |-
+        CRUD for a reseller's time-bound organic certificates (office-managed).
+
+        Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der organic certificate identifiziert.
+        required: true
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganicCertificate'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: commissioning_organic_certificates_update
+      description: |-
+        CRUD for a reseller's time-bound organic certificates (office-managed).
+
+        Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der organic certificate identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganicCertificate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrganicCertificate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrganicCertificate'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganicCertificate'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: commissioning_organic_certificates_partial_update
+      description: |-
+        CRUD for a reseller's time-bound organic certificates (office-managed).
+
+        Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der organic certificate identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganicCertificate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrganicCertificate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrganicCertificate'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganicCertificate'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: commissioning_organic_certificates_destroy
+      description: |-
+        CRUD for a reseller's time-bound organic certificates (office-managed).
+
+        Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der organic certificate identifiziert.
+        required: true
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/commissioning/packing_list/:
     get:
       operationId: commissioning_packing_list_list
@@ -34050,6 +34324,37 @@ components:
       - default_last_possible_ordering_time
       - default_packing_day
       - default_washing_day
+    OrganicCertificate:
+      type: object
+      description: |-
+        A reseller's time-bound organic certificate. ``valid_from`` (Monday) and
+        the optional ``valid_until`` (Sunday) are enforced by TimeBoundMixin, and
+        successive certificates chain (one OPEN certificate per reseller).
+      properties:
+        id:
+          type: string
+          readOnly: true
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        certificate_number:
+          type: string
+          nullable: true
+          maxLength: 100
+        link:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 500
+        reseller:
+          type: string
+      required:
+      - reseller
+      - valid_from
     OrganicStatusEnum:
       enum:
       - organic
@@ -34793,6 +35098,9 @@ components:
         has_orders:
           type: boolean
           readOnly: true
+        has_active_organic_certificate:
+          type: boolean
+          readOnly: true
         is_also_delivery_station:
           type: boolean
         linked_delivery_station:
@@ -34882,6 +35190,10 @@ components:
           type: string
           nullable: true
           maxLength: 200
+        organic_control_number:
+          type: string
+          nullable: true
+          maxLength: 50
         payment_terms_in_days:
           type: integer
           maximum: 2147483647

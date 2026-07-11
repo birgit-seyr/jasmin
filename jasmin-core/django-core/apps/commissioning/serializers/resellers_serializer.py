@@ -14,6 +14,7 @@ from ..models import (
     Offer,
     OfferGroup,
     OrderContent,
+    OrganicCertificate,
     Reseller,
 )
 from ..utils.iso_week_utils import date_from_order
@@ -87,6 +88,9 @@ class ResellerSerializer(
 ):
     LINKED_USER_ATTR = "linked_user"
     has_orders = serializers.BooleanField(read_only=True)
+    # Annotated by ResellerViewSet.get_queryset — true iff the reseller holds an
+    # organic certificate valid today. Drives the ListSellers button colour.
+    has_active_organic_certificate = serializers.BooleanField(read_only=True)
     # Computed on read from the reverse OneToOne; on write it's a transient
     # flag the service uses to auto-create / unlink a ``DeliveryStation``.
     # The actual FK lives on ``DeliveryStation.linked_reseller``.
@@ -1176,3 +1180,13 @@ class BackgroundJobEnqueueResponseSerializer(serializers.Serializer):
     job_id = serializers.UUIDField(read_only=True)
     kind = serializers.CharField(read_only=True)
     status = serializers.CharField(read_only=True)
+
+
+class OrganicCertificateSerializer(serializers.ModelSerializer):
+    """A reseller's time-bound organic certificate. ``valid_from`` (Monday) and
+    the optional ``valid_until`` (Sunday) are enforced by TimeBoundMixin, and
+    successive certificates chain (one OPEN certificate per reseller)."""
+
+    class Meta:
+        model = OrganicCertificate
+        fields = "__all__"

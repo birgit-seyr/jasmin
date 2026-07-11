@@ -39,6 +39,15 @@
   border: 1px solid #ccc !important;
 }
 
+/* Compact icon-only action button for table cells (delivery-station actions,
+   seller certificates, …). Replaces the per-call-site inline min-width/padding;
+   compose with .long-squared-button for the bordered variant. Used by the
+   shared <IconActionButton>. */
+.btn-icon-compact {
+  min-width: auto;
+  padding: 0 4px;
+}
+
 /* .forward-button {
   background-color: #4caf50;
   color: white;
@@ -149,4 +158,12 @@
 }
 .lib-status-icon--base {
   color: var(--color-bg-base);
+}
+.has-certificate {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.missing-certificate {
+  color: var(--color-error);
+  border-color: var(--color-error);
 }

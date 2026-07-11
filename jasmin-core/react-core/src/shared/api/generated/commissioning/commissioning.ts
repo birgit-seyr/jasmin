@@ -112,6 +112,7 @@ import type {
   CommissioningOffersListParams,
   CommissioningOrderContentsListParams,
   CommissioningOrdersOverviewListParams,
+  CommissioningOrganicCertificatesListParams,
   CommissioningPackingListBoxesMatrixRetrieveParams,
   CommissioningPackingListBulkListParams,
   CommissioningPackingListListParams,
@@ -234,6 +235,7 @@ import type {
   OrderContentItem,
   OrderContentListResponse,
   OrdersDeliveryDay,
+  OrganicCertificate,
   PackingBoxesMatrix,
   PackingListBulkRow,
   PackingListRow,
@@ -18886,6 +18888,438 @@ export function useCommissioningOrdersOverviewList<TData = Awaited<ReturnType<ty
 
 
 /**
+ * CRUD for a reseller's time-bound organic certificates (office-managed).
+
+Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+ */
+export const commissioningOrganicCertificatesList = (
+    params?: CommissioningOrganicCertificatesListParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<OrganicCertificate[]>(
+      {url: `/api/commissioning/organic_certificates/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningOrganicCertificatesListQueryKey = (params?: CommissioningOrganicCertificatesListParams,) => {
+    return [
+    `/api/commissioning/organic_certificates/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningOrganicCertificatesListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>, TError = ErrorResponse>(params?: CommissioningOrganicCertificatesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningOrganicCertificatesListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>> = ({ signal }) => commissioningOrganicCertificatesList(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningOrganicCertificatesListQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>>
+export type CommissioningOrganicCertificatesListQueryError = ErrorResponse
+
+
+export function useCommissioningOrganicCertificatesList<TData = Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>, TError = ErrorResponse>(
+ params: undefined |  CommissioningOrganicCertificatesListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningOrganicCertificatesList<TData = Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>, TError = ErrorResponse>(
+ params?: CommissioningOrganicCertificatesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningOrganicCertificatesList<TData = Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>, TError = ErrorResponse>(
+ params?: CommissioningOrganicCertificatesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningOrganicCertificatesList<TData = Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>, TError = ErrorResponse>(
+ params?: CommissioningOrganicCertificatesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesList>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningOrganicCertificatesListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * CRUD for a reseller's time-bound organic certificates (office-managed).
+
+Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+ */
+export const commissioningOrganicCertificatesCreate = (
+    organicCertificate: NonReadonly<OrganicCertificate>,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<OrganicCertificate>(
+      {url: `/api/commissioning/organic_certificates/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: organicCertificate, signal
+    },
+      );
+    }
+  
+
+
+export const getCommissioningOrganicCertificatesCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesCreate>>, TError,{data: NonReadonly<OrganicCertificate>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesCreate>>, TError,{data: NonReadonly<OrganicCertificate>}, TContext> => {
+
+const mutationKey = ['commissioningOrganicCertificatesCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOrganicCertificatesCreate>>, {data: NonReadonly<OrganicCertificate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  commissioningOrganicCertificatesCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningOrganicCertificatesCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningOrganicCertificatesCreate>>>
+    export type CommissioningOrganicCertificatesCreateMutationBody = NonReadonly<OrganicCertificate>
+    export type CommissioningOrganicCertificatesCreateMutationError = ErrorResponse
+
+    export const useCommissioningOrganicCertificatesCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesCreate>>, TError,{data: NonReadonly<OrganicCertificate>}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningOrganicCertificatesCreate>>,
+        TError,
+        {data: NonReadonly<OrganicCertificate>},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningOrganicCertificatesCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * CRUD for a reseller's time-bound organic certificates (office-managed).
+
+Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+ */
+export const commissioningOrganicCertificatesRetrieve = (
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<OrganicCertificate>(
+      {url: `/api/commissioning/organic_certificates/${id}/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningOrganicCertificatesRetrieveQueryKey = (id?: string,) => {
+    return [
+    `/api/commissioning/organic_certificates/${id}/`
+    ] as const;
+    }
+
+    
+export const getCommissioningOrganicCertificatesRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>, TError = ErrorResponse>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningOrganicCertificatesRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>> = ({ signal }) => commissioningOrganicCertificatesRetrieve(id, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningOrganicCertificatesRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>>
+export type CommissioningOrganicCertificatesRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningOrganicCertificatesRetrieve<TData = Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>, TError = ErrorResponse>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningOrganicCertificatesRetrieve<TData = Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningOrganicCertificatesRetrieve<TData = Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningOrganicCertificatesRetrieve<TData = Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningOrganicCertificatesRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * CRUD for a reseller's time-bound organic certificates (office-managed).
+
+Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+ */
+export const commissioningOrganicCertificatesUpdate = (
+    id: string,
+    organicCertificate: NonReadonly<OrganicCertificate>,
+ ) => {
+      
+      
+      return axiosService<OrganicCertificate>(
+      {url: `/api/commissioning/organic_certificates/${id}/`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: organicCertificate
+    },
+      );
+    }
+  
+
+
+export const getCommissioningOrganicCertificatesUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesUpdate>>, TError,{id: string;data: NonReadonly<OrganicCertificate>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesUpdate>>, TError,{id: string;data: NonReadonly<OrganicCertificate>}, TContext> => {
+
+const mutationKey = ['commissioningOrganicCertificatesUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOrganicCertificatesUpdate>>, {id: string;data: NonReadonly<OrganicCertificate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningOrganicCertificatesUpdate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningOrganicCertificatesUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningOrganicCertificatesUpdate>>>
+    export type CommissioningOrganicCertificatesUpdateMutationBody = NonReadonly<OrganicCertificate>
+    export type CommissioningOrganicCertificatesUpdateMutationError = ErrorResponse
+
+    export const useCommissioningOrganicCertificatesUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesUpdate>>, TError,{id: string;data: NonReadonly<OrganicCertificate>}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningOrganicCertificatesUpdate>>,
+        TError,
+        {id: string;data: NonReadonly<OrganicCertificate>},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningOrganicCertificatesUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * CRUD for a reseller's time-bound organic certificates (office-managed).
+
+Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+ */
+export const commissioningOrganicCertificatesPartialUpdate = (
+    id: string,
+    organicCertificate: NonReadonly<OrganicCertificate>,
+ ) => {
+      
+      
+      return axiosService<OrganicCertificate>(
+      {url: `/api/commissioning/organic_certificates/${id}/`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: organicCertificate
+    },
+      );
+    }
+  
+
+
+export const getCommissioningOrganicCertificatesPartialUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>, TError,{id: string;data: NonReadonly<OrganicCertificate>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>, TError,{id: string;data: NonReadonly<OrganicCertificate>}, TContext> => {
+
+const mutationKey = ['commissioningOrganicCertificatesPartialUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>, {id: string;data: NonReadonly<OrganicCertificate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningOrganicCertificatesPartialUpdate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningOrganicCertificatesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>>
+    export type CommissioningOrganicCertificatesPartialUpdateMutationBody = NonReadonly<OrganicCertificate>
+    export type CommissioningOrganicCertificatesPartialUpdateMutationError = ErrorResponse
+
+    export const useCommissioningOrganicCertificatesPartialUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>, TError,{id: string;data: NonReadonly<OrganicCertificate>}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>,
+        TError,
+        {id: string;data: NonReadonly<OrganicCertificate>},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningOrganicCertificatesPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * CRUD for a reseller's time-bound organic certificates (office-managed).
+
+Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+ */
+export const commissioningOrganicCertificatesDestroy = (
+    id: string,
+ ) => {
+      
+      
+      return axiosService<void>(
+      {url: `/api/commissioning/organic_certificates/${id}/`, method: 'DELETE'
+    },
+      );
+    }
+  
+
+
+export const getCommissioningOrganicCertificatesDestroyMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesDestroy>>, TError,{id: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesDestroy>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['commissioningOrganicCertificatesDestroy'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOrganicCertificatesDestroy>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  commissioningOrganicCertificatesDestroy(id,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningOrganicCertificatesDestroyMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningOrganicCertificatesDestroy>>>
+    
+    export type CommissioningOrganicCertificatesDestroyMutationError = ErrorResponse
+
+    export const useCommissioningOrganicCertificatesDestroy = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesDestroy>>, TError,{id: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningOrganicCertificatesDestroy>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningOrganicCertificatesDestroyMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Get packing list for a given week + delivery day (day_number).
  */
 export const commissioningPackingListList = (

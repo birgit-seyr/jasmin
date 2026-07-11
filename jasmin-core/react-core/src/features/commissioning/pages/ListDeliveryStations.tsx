@@ -33,6 +33,7 @@ import {
   DownloadCsvTemplateButton,
   ExplainerText,
   HideInactiveSwitch,
+  IconActionButton,
 } from "@shared/ui";
 import { useRoles } from "@shared/auth";
 import { useContactColumns, useTenant } from "@hooks/index";
@@ -199,27 +200,15 @@ export default function ListDeliveryStations() {
         disabled: true,
         width: "8em",
         render: (_: unknown, record: TableRecord) => (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "4px",
-              width: "100%",
-            }}
-          >
-            <Button
-              size="small"
-              type="text"
-              className="long-squared-button"
+          <div className="flex-center w-full gap-4">
+            <IconActionButton
               icon={<EditOutlined />}
-              aria-label={t("table.edit")}
-              onClick={(e) => {
-                e.stopPropagation();
+              label={t("table.edit")}
+              className="long-squared-button"
+              onClick={() => {
                 setIsDeliveryStationDetailModalOpen(true);
                 setSelectedDeliveryStationDetailData(record);
               }}
-              style={{ minWidth: "auto", padding: "0 4px" }}
             />
           </div>
         ),
@@ -237,36 +226,16 @@ export default function ListDeliveryStations() {
           // has key === -1 and no id yet).
           if (!isOffice || record.key === -1 || !record.id) return null;
           return (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "4px",
-                width: "100%",
-              }}
-            >
-              <Button
-                size="small"
-                type="text"
+            <div className="flex-center w-full gap-4">
+              <IconActionButton
                 icon={<InfoCircleOutlined />}
-                title={t("delivery_stations.member_info_title")}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setInfoModalStation(record);
-                }}
-                style={{ minWidth: "auto", padding: "0 4px" }}
+                label={t("delivery_stations.member_info_title")}
+                onClick={() => setInfoModalStation(record)}
               />
-              <Button
-                size="small"
-                type="text"
+              <IconActionButton
                 icon={<EuroCircleOutlined />}
-                title={t("delivery_stations.fee_title")}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setFeeModalStation(record);
-                }}
-                style={{ minWidth: "auto", padding: "0 4px" }}
+                label={t("delivery_stations.fee_title")}
+                onClick={() => setFeeModalStation(record)}
               />
             </div>
           );

@@ -1,4 +1,5 @@
-import { useCallback, useMemo } from "react";
+import { EditOutlined } from "@ant-design/icons";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   commissioningResellersCreate,
@@ -18,15 +19,22 @@ import {
   permissionsWithDeletable,
 } from "@shared/tables";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
-import { DownloadCsvTemplateButton, ToolTipIcon } from "@shared/ui";
+import {
+  DownloadCsvTemplateButton,
+  IconActionButton,
+  ToolTipIcon,
+} from "@shared/ui";
 import { useContactColumns, useTenant } from "@hooks/index";
 import { isFieldDisabled } from "@shared/utils";
+import OrganicCertificatesModal from "../modals/OrganicCertificatesModal";
 
 type ResellerRow = Reseller & TableRecord;
 
 // Sellers are Resellers scoped to ``is_seller`` — the list hook AND the query
 // key take this so invalidation targets the same cached query.
-const SELLER_LIST_PARAMS: CommissioningResellersListParams = { is_seller: true };
+const SELLER_LIST_PARAMS: CommissioningResellersListParams = {
+  is_seller: true,
+};
 const NEW_SELLER_DEFAULTS = { is_active_seller: true };
 
 const sellersResource: CrudResource<ResellerRow> = {
@@ -50,6 +58,20 @@ export default function ListSellers() {
   );
   const uploadAllowed =
     (getSetting("allow_upload_for_data_lists", false) as boolean) === true;
+
+  // The tenant's OWN organic control number gates both new columns; the
+  // per-row certificate button additionally requires the seller to have one.
+  const tenantHasOrganicNumber = Boolean(getSetting("organic_control_number"));
+  const [certReseller, setCertReseller] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const openCertModal = useCallback((record: ResellerRow) => {
+    setCertReseller({
+      id: String(record.id ?? ""),
+      name: String(record.company_name ?? record.id ?? ""),
+    });
+  }, []);
 
   const contactColumns = useContactColumns({
     translationPrefix: "resellers",
@@ -112,6 +134,44 @@ export default function ListSellers() {
         required: false,
       },
       contactColumns.companyName,
+      ...(tenantHasOrganicNumber
+        ? [
+            {
+              title: <>{t("resellers.organic_control_number")}</>,
+              dataIndex: "organic_control_number",
+              key: "organic_control_number",
+              inputType: "text",
+              required: false,
+              width: "10em",
+            },
+            {
+              title: <>{t("resellers.organic_certificates")}</>,
+              dataIndex: "organic_certificates",
+              key: "organic_certificates",
+              editable: false,
+              align: "center",
+              width: "9em",
+              // The button only appears when THIS seller has an organic control
+              // number of its own (certificates presuppose it).
+              render: (_value: unknown, record: ResellerRow) =>
+                record.organic_control_number ? (
+                  <IconActionButton
+                    icon={<EditOutlined />}
+                    label={t("resellers.manage_organic_certificates")}
+                    // Dark green when a certificate is valid TODAY, red when the
+                    // seller has an organic number but no currently-valid cert.
+
+                    className={
+                      record.has_active_organic_certificate
+                        ? "has-certificate"
+                        : "missing-certificate"
+                    }
+                    onClick={() => openCertModal(record)}
+                  />
+                ) : null,
+            },
+          ]
+        : []),
       contactColumns.firstName,
       contactColumns.lastName,
       contactColumns.address,
@@ -121,34 +181,42 @@ export default function ListSellers() {
       contactColumns.phone,
       contactColumns.phone2,
     ],
-    [t, contactColumns],
+    [t, contactColumns, tenantHasOrganicNumber, openCertModal],
   );
 
   return (
-    <CrudListPage<ResellerRow>
-      titleKey="resellers.list_sellers"
-      explainerKey="explainers.list_sellers"
-      resource={sellersResource}
-      permissions={permissions}
-      listParams={SELLER_LIST_PARAMS}
-      activeField="is_active_seller"
-      newRowDefaults={NEW_SELLER_DEFAULTS}
-      columns={columns}
-      customSave={customSave}
-      deleteContext="sellers"
-      pagination
-      showSearchBar
-    >
-      {(list) =>
-        uploadAllowed ? (
-          <DownloadCsvTemplateButton
-            columns={columns}
-            filename={t("commissioning.sellers_template.csv")}
-            modelName="reseller"
-            onUploadSuccess={list.invalidate}
-          />
-        ) : null
-      }
-    </CrudListPage>
+    <>
+      <CrudListPage<ResellerRow>
+        titleKey="resellers.list_sellers"
+        explainerKey="explainers.list_sellers"
+        resource={sellersResource}
+        permissions={permissions}
+        listParams={SELLER_LIST_PARAMS}
+        activeField="is_active_seller"
+        newRowDefaults={NEW_SELLER_DEFAULTS}
+        columns={columns}
+        customSave={customSave}
+        deleteContext="sellers"
+        pagination
+        showSearchBar
+      >
+        {(list) =>
+          uploadAllowed ? (
+            <DownloadCsvTemplateButton
+              columns={columns}
+              filename={t("commissioning.sellers_template.csv")}
+              modelName="reseller"
+              onUploadSuccess={list.invalidate}
+            />
+          ) : null
+        }
+      </CrudListPage>
+      <OrganicCertificatesModal
+        visible={!!certReseller}
+        onClose={() => setCertReseller(null)}
+        reseller={certReseller?.id ?? null}
+        reseller_name={certReseller?.name ?? ""}
+      />
+    </>
   );
 }

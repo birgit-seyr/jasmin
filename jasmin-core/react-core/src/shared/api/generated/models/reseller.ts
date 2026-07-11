@@ -19,6 +19,7 @@ queries (one per reverse relation) instead of N*R — see
 export interface Reseller {
   readonly id?: string;
   readonly has_orders?: boolean;
+  readonly has_active_organic_certificate?: boolean;
   is_also_delivery_station?: boolean;
   readonly linked_delivery_station?: string;
   /** True iff unlinking would not orphan a DS that's still in use.
@@ -92,6 +93,11 @@ checkbox when the link cannot safely be undone. */
    * @nullable
    */
   invoice_email?: string | null;
+  /**
+   * @maxLength 50
+   * @nullable
+   */
+  organic_control_number?: string | null;
   /**
    * @minimum 0
    * @maximum 2147483647

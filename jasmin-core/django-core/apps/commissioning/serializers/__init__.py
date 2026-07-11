@@ -111,6 +111,7 @@ from .resellers_serializer import (
     OrderContentListItemSerializer,
     OrderContentListResponseSerializer,
     OrderContentSerializer,
+    OrganicCertificateSerializer,
     ResellerSerializer,
 )
 from .shares_serializer import (

@@ -2,6 +2,8 @@ export { default as ToolTipIcon } from './ToolTipIcon';
 export { default as ExplainerText } from './ExplainerText';
 export { default as DownloadCsvTemplateButton } from './DownloadCsvTemplateButton';
 export { default as BulkActionButton } from './BulkActionButton';
+export { default as IconActionButton } from './IconActionButton';
+export type { IconActionButtonProps } from './IconActionButton';
 export { default as PastWarningMessage } from './PastWarningMessage';
 export { default as DateRangeStatusLegend } from './DateRangeStatusLegend';
 export { default as AutoSaveIndicator } from './AutoSaveIndicator';

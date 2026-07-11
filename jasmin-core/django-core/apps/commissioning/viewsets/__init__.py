@@ -67,6 +67,7 @@ from .resellers_viewsets import (
     OfferGroupViewSet,
     OfferViewSet,
     OrderContentViewSet,
+    OrganicCertificateViewSet,
     ResellerViewSet,
 )
 from .share_content_viewsets import (

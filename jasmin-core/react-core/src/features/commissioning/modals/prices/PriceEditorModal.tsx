@@ -57,6 +57,14 @@ export interface PriceEditorModalProps<T, TCreate, TUpdate = TCreate> {
   /** Default tax-rate to inject when adding a new row (key === -1). */
   defaultTaxRate?: number;
 
+  /** Intro node rendered above the table. Defaults to the "prices are netto"
+   *  note; pass a custom node (or an empty fragment) for non-price reuse. */
+  intro?: ReactNode;
+
+  /** Show the table's pager. Defaults to true (the price modals); pass false
+   *  for short time-bound lists that never overflow a page. */
+  pagination?: boolean;
+
   columns: EditableColumnConfig[];
 
   listHook: ListHook<T, Record<string, string>>;
@@ -82,6 +90,8 @@ export default function PriceEditorModal<T, TCreate, TUpdate = TCreate>({
   fkField,
   fkValue,
   defaultTaxRate,
+  intro,
+  pagination = true,
   columns,
   listHook,
   getListQueryKey,
@@ -197,7 +207,7 @@ export default function PriceEditorModal<T, TCreate, TUpdate = TCreate>({
         </div>
       ) : (
         <>
-          {t("commissioning.prices_are_netto")}
+          {intro === undefined ? t("commissioning.prices_are_netto") : intro}
           <EditableTable
             columns={columns}
             apiFunctions={apiFunctions}
@@ -209,7 +219,7 @@ export default function PriceEditorModal<T, TCreate, TUpdate = TCreate>({
             customSave={customSave}
             customEdit={customEdit}
             forceInlineMode={true}
-            pagination={true}
+            pagination={pagination}
             scroll={{ x: "max-content" }}
           />
           <DateRangeStatusLegend />

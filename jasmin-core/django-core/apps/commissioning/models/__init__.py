@@ -74,6 +74,7 @@ from .resellers import (
     OfferGroup,
     Order,
     OrderContent,
+    OrganicCertificate,
     Reseller,
 )
 from .shares import (

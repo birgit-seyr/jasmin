@@ -3,11 +3,13 @@ Invoice, DeliveryNote, CommissioningList viewsets."""
 
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from apps.commissioning.models import CrateOrderContent, Order
+from apps.commissioning.models import CrateOrderContent, Order, OrganicCertificate
 from apps.commissioning.tests.factories import (
     CrateFactory,
     DeliveryNoteResellerFactory,
@@ -401,3 +403,53 @@ class TestCrateOrderContentViewSetCreateValidation:
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+
+# ---------------------------------------------------------------------------
+# OrganicCertificateViewSet
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestOrganicCertificateViewSet:
+    URL = reverse("organic_certificates-list")
+
+    def test_create_certificate(self, api_client, tenant):
+        reseller = ResellerFactory()
+        resp = api_client.post(
+            self.URL,
+            {
+                "reseller": str(reseller.id),
+                "valid_from": "2026-01-05",  # a Monday (TimeBoundMixin requires it)
+                "certificate_number": "CERT-2026-001",
+                "link": "https://example.org/cert.pdf",
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["certificate_number"] == "CERT-2026-001"
+
+    def test_list_filtered_by_reseller(self, api_client, tenant):
+        reseller_a = ResellerFactory()
+        reseller_b = ResellerFactory()
+        OrganicCertificate.objects.create(
+            reseller=reseller_a, valid_from=date(2026, 1, 5)
+        )
+        OrganicCertificate.objects.create(
+            reseller=reseller_b, valid_from=date(2026, 1, 5)
+        )
+        resp = api_client.get(self.URL, {"reseller": str(reseller_a.id)})
+        assert resp.status_code == status.HTTP_200_OK
+        assert len(resp.data) == 1
+        assert resp.data[0]["reseller"] == str(reseller_a.id)
+
+    def test_second_certificate_closes_predecessor(self, api_client, tenant):
+        # TimeBoundMixin succession: opening a later certificate auto-closes the
+        # currently-open one the day before the new valid_from.
+        reseller = ResellerFactory()
+        first = OrganicCertificate.objects.create(
+            reseller=reseller, valid_from=date(2026, 1, 5)
+        )
+        OrganicCertificate.objects.create(
+            reseller=reseller, valid_from=date(2026, 6, 1)
+        )
+        first.refresh_from_db()
+        assert first.valid_until is not None

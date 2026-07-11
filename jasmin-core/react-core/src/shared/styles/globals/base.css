@@ -56,6 +56,10 @@
 }
 
 /* Gap tokens to compose with the flex utilities above. */
+.gap-4 {
+  gap: 4px;
+}
+
 .gap-8 {
   gap: 8px;
 }

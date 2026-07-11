@@ -29,6 +29,10 @@ def _merged_settings_dict(obj: Tenant, current_overlay: dict) -> dict:
         "navigation": obj.navigation or {},
         "ai": obj.ai or {},
         "allow_upload_for_data_lists": obj.allow_upload_for_data_lists,
+        # Tenant identity scalar — surfaced here so ``getSetting`` can gate the
+        # ListSellers organic-certificate columns on whether the tenant is itself
+        # organic-certified (also exposed top-level for the public Impressum).
+        "organic_control_number": obj.organic_control_number,
     }
     merged.update(current_overlay)
     return merged

@@ -51,6 +51,7 @@ from ..models import (
     OfferGroup,
     Order,
     OrderContent,
+    OrganicCertificate,
     Reseller,
 )
 from ..models.choices_text import InvitationStatus
@@ -90,6 +91,7 @@ from ..serializers import (
     OrderContentItemSerializer,
     OrderContentListResponseSerializer,
     OrderContentSerializer,
+    OrganicCertificateSerializer,
     ResellerSerializer,
 )
 from ..services import (
@@ -298,6 +300,10 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[Reseller]:
+        from django.utils import timezone
+
+        from ..models.managers import active_on_date_q
+
         # ``linked_delivery_station`` (reverse OneToOne) is read twice
         # per row by the serializer — in ``to_representation`` and
         # ``get_linked_delivery_station_can_be_deleted`` — and a reverse
@@ -326,6 +332,16 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
                     "linked_user__invitations",
                     queryset=sent_invitations_qs,
                     to_attr="_prefetched_sent_invitations",
+                )
+            )
+            .annotate(
+                # Drives the ListSellers certificate-button colour: does the
+                # reseller hold an organic certificate whose validity window
+                # covers today? One correlated subquery — stays scale-invariant.
+                has_active_organic_certificate=Exists(
+                    OrganicCertificate.objects.filter(reseller=OuterRef("pk")).filter(
+                        active_on_date_q(timezone.now().date())
+                    )
                 )
             )
             .all()
@@ -1365,3 +1381,28 @@ def _build_content_entry(content: OrderContent) -> dict[str, Any]:
         "sort": content.sort,
         "note": content.note or "",
     }
+
+
+class OrganicCertificateViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+    """CRUD for a reseller's time-bound organic certificates (office-managed).
+
+    Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
+    """
+
+    read_permission = IsStaff
+    write_permission = IsOffice
+    serializer_class = OrganicCertificateSerializer
+
+    @extend_schema(parameters=[get_reseller_parameter()])
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().list(request, *args, **kwargs)
+
+    def get_queryset(self) -> QuerySet[OrganicCertificate]:
+        queryset = OrganicCertificate.objects.select_related("reseller").order_by(
+            "-valid_from"
+        )
+        params = validate_query_params(self.request, optional=["reseller"])
+        reseller = params["reseller"]
+        if reseller is not None:
+            queryset = queryset.filter(reseller_id=reseller)
+        return queryset

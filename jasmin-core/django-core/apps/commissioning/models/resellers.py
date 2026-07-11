@@ -27,11 +27,13 @@ from .mixin import (
     NumberedDocumentMixin,
     PayableMixin,
     SourceSnapshotMixin,
+    TimeBoundMixin,
     delete_parent_if_childless,
     nullable_date_order_constraint,
     sum_brutto,
     sum_netto,
     tax_breakdown,
+    time_bound_valid_range_constraint,
     validate_nullable_date_order,
 )
 
@@ -115,6 +117,8 @@ class Reseller(JasminModel):
     invoice_plz = models.CharField(max_length=5, blank=True, null=True)
     invoice_city = models.CharField(max_length=100, blank=True, null=True)
     invoice_email = models.CharField(max_length=200, blank=True, null=True)
+
+    organic_control_number = models.CharField(max_length=50, blank=True, null=True)
 
     # ── Payment conditions ──────────────────────────────────────────────
     # Per-reseller overrides for the tenant-level defaults
@@ -216,6 +220,36 @@ class Reseller(JasminModel):
         if tenant is None:
             return None
         return TenantSettings.get_current_settings(tenant)
+
+
+class OrganicCertificate(JasminModel, TimeBoundMixin):
+    """A time-bound organic certification held by a reseller/seller.
+
+    Successive certificates form a TimeBoundMixin chain — at most one OPEN
+    (``valid_until`` NULL) certificate per reseller at a time. Surfaced in the
+    ListSellers page only when the tenant itself holds an organic control
+    number (see ``Tenant.organic_control_number``) and the reseller has one.
+    """
+
+    overlap_unique_fields = ("reseller",)
+
+    reseller = models.ForeignKey(
+        "Reseller", on_delete=models.CASCADE, related_name="organic_certificates"
+    )
+    certificate_number = models.CharField(max_length=100, blank=True, null=True)
+    link = models.URLField(max_length=500, blank=True, null=True)
+
+    class Meta:
+        # Every concrete TimeBoundMixin subclass wires the valid-range check
+        # explicitly (the abstract base's constraint does not propagate through
+        # the JasminModel/TimeBoundMixin MRO).
+        constraints = [
+            time_bound_valid_range_constraint("organiccertificate_valid_range"),
+        ]
+
+    def __str__(self) -> str:
+        number = self.certificate_number or "-"
+        return f"{self.reseller}: {number} ({self.valid_from} - {self.valid_until})"
 
 
 class OrderableItem(LinePricingMixin, JasminModel):

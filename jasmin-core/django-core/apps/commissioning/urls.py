@@ -83,6 +83,7 @@ from .viewsets import (
     OfferViewSet,
     OrderContentViewSet,
     OrdersDeliveryDayViewSet,
+    OrganicCertificateViewSet,
     PackingListBulkViewSet,
     PackingListViewSet,
     PaymentCycleViewSet,
@@ -248,6 +249,11 @@ router.register(
 router.register(r"consents", ConsentRecordViewSet, basename="consent_record")
 router.register(r"abos", SubscriptionViewSet, basename="abos")
 router.register(r"resellers", ResellerViewSet, basename="reseller")
+router.register(
+    r"organic_certificates",
+    OrganicCertificateViewSet,
+    basename="organic_certificates",
+)
 router.register(
     r"delivery_stations", DeliveryStationViewSet, basename="delivery_station"
 )
