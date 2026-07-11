@@ -20,6 +20,7 @@
   "donation_joker_taken": "Donation joker for this week? (share is donated, fee still applies)",
   "station": "Pickup day & location",
   "select_station": "Select delivery station",
+  "filter_by_day": "Delivery day",
   "free_spots_remaining": "{{count}} spots still free",
   "free_spots_of_total": "free spots ({{free}}/{{total}})",
   "map_pick_hint": "Or pick on the map"

@@ -184,6 +184,7 @@
   "delivery_pauses_in_term": "Lieferpausen in diesem Zeitraum",
   "sepa_mandate_required": "Bitte richte zuerst ein gültiges SEPA-Mandat ein.",
   "sepa_mandate_missing": "Für dieses Mitglied liegt noch kein gültiges SEPA-Mandat vor. Bitte richte es ein, bevor du das Abo speicherst.",
+  "sepa_mandate_missing_self": "Für dich liegt noch kein gültiges SEPA-Mandat vor. Bitte richte es ein, bevor du das Abo speicherst.",
   "set_up_sepa_mandate": "SEPA-Mandat einrichten",
   "accept_subscription_contract": "Ich habe den Abo-Vertrag gelesen und akzeptiere ihn:",
   "subscription_contract_required": "Bitte akzeptiere den Abo-Vertrag, bevor du fortfährst.",

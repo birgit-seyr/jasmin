@@ -88,7 +88,9 @@ export default function DefaultShareArticlesInShare() {
     variations,
     loading: variationColumnsLoading,
   } = useShareTypeVariationColumns({
-    filters: { active_at_date: today } as Record<string, unknown>,
+    // Only PHYSICAL variations get content planning here — virtual variations
+    // resolve into their physical components and carry no content of their own.
+    filters: { active_at_date: today, physical: true } as Record<string, unknown>,
     inputType: "positive_decimal2",
     width: "5em",
   });

@@ -21,6 +21,7 @@
     "donation_joker_taken": "Spende-Joker für diese Woche? (Anteil wird gespendet, Beitrag bleibt)",
     "station": "Abholtag & Abholort",
     "select_station": "Verteilstation auswählen",
+    "filter_by_day": "Liefertag",
     "free_spots_remaining": "noch {{count}} freie Plätze",
     "free_spots_of_total": "freie Plätze ({{free}}/{{total}})",
     "map_pick_hint": "Oder auf der Karte auswählen"

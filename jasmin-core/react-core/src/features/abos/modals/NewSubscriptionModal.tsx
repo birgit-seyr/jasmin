@@ -11,6 +11,7 @@ import {
   InputNumber,
   Modal,
   Row,
+  Segmented,
   Select,
   Space,
   Tag,
@@ -31,6 +32,7 @@ import ConsentDocumentField from "@shared/consent/ConsentDocumentField";
 import { useCurrentConsentDoc } from "@shared/consent/useCurrentConsentDoc";
 import { ModalCancelSaveFooter } from "@shared/modals/shared";
 import {
+  deliveryDayLabel,
   useAllShareTypeVariations,
   useCurrency,
   useDateFormat,
@@ -411,10 +413,37 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       true,
   );
 
+  // Distinct delivery weekdays present among the loaded station-days. When more
+  // than one exists, a small Segmented toggle lets the user narrow the station
+  // list (and map) to a single day.
+  const availableDays = useMemo(() => {
+    const set = new Set<number>();
+    for (const dsd of deliveryStationDays) {
+      const n = Number(dsd.delivery_day_number);
+      if (Number.isFinite(n)) set.add(n);
+    }
+    return [...set].sort((a, b) => a - b);
+  }, [deliveryStationDays]);
+
+  const [dayFilter, setDayFilter] = useState<number | "all">("all");
+
+  // Keep the filter valid if the set of available days changes (e.g. the
+  // valid_from move loads a different week's station-days).
+  useEffect(() => {
+    if (dayFilter !== "all" && !availableDays.includes(dayFilter)) {
+      setDayFilter("all");
+    }
+  }, [availableDays, dayFilter]);
+
   // Station options: the smaller secondary line shows the tightest term week's
   // free slots as "freie Plätze (free/total)".
   const stationOptions = useMemo(() => {
-    const options = deliveryStationDays.map((dsd) => {
+    const options = deliveryStationDays
+      .filter(
+        (dsd) =>
+          dayFilter === "all" || Number(dsd.delivery_day_number) === dayFilter,
+      )
+      .map((dsd) => {
       const { total, minFree, isFull } = showCapacity
         ? stationDayTermCapacity(
             dsd.capacity,
@@ -445,6 +474,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     quantity,
     allowsWaitingList,
     simplified,
+    dayFilter,
   ]);
 
   // Currently-picked station-day (shared with the Select via the same form
@@ -493,6 +523,10 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     >();
 
     for (const dsd of deliveryStationDays) {
+      // Mirror the Select's day filter so the map shows the same stations.
+      if (dayFilter !== "all" && Number(dsd.delivery_day_number) !== dayFilter) {
+        continue;
+      }
       const lat = dsd.coords_lat != null ? Number(dsd.coords_lat) : NaN;
       const lon = dsd.coords_lon != null ? Number(dsd.coords_lon) : NaN;
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
@@ -569,6 +603,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     allowsWaitingList,
     simplified,
     selectedStationDay,
+    dayFilter,
     form,
     t,
   ]);
@@ -1025,6 +1060,40 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
             />
           )}
 
+          {availableDays.length > 1 && (
+            <Form.Item label={t("delivery.filter_by_day")}>
+              <Segmented
+                size="small"
+                value={dayFilter === "all" ? "all" : String(dayFilter)}
+                onChange={(value) => {
+                  const next = value === "all" ? "all" : Number(value);
+                  setDayFilter(next);
+                  // Drop a now-hidden selection so the Select can't show a value
+                  // with no matching (visible) option.
+                  if (next !== "all" && selectedStationDay) {
+                    const selected = deliveryStationDays.find(
+                      (dsd) => dsd.value === selectedStationDay,
+                    );
+                    if (
+                      selected &&
+                      Number(selected.delivery_day_number) !== next
+                    ) {
+                      form.setFieldsValue({
+                        default_delivery_station_day: undefined,
+                      });
+                    }
+                  }
+                }}
+                options={[
+                  { label: t("common.all"), value: "all" },
+                  ...availableDays.map((n) => ({
+                    label: deliveryDayLabel(t, n),
+                    value: String(n),
+                  })),
+                ]}
+              />
+            </Form.Item>
+          )}
           <Form.Item
             name="default_delivery_station_day"
             label={t("delivery.station")}
@@ -1220,7 +1289,11 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
               type="warning"
               showIcon
               style={{ marginTop: 12 }}
-              message={t("abos.sepa_mandate_missing")}
+              message={t(
+                isMemberOnly
+                  ? "abos.sepa_mandate_missing_self"
+                  : "abos.sepa_mandate_missing",
+              )}
               action={
                 <Button
                   size="small"

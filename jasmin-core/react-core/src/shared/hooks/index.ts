@@ -28,7 +28,7 @@ export {
   currentFiscalYearRange,
 } from './configuration/useFiscalYearRange';
 export { useTimeFormat } from './configuration/useTimeFormat';
-export { useDeliveryStationDays } from './useDeliveryStationDays';
+export { useDeliveryStationDays, deliveryDayLabel } from './useDeliveryStationDays';
 export { useInvalidateAfterTableMutation } from './useInvalidateAfterTableMutation';
 export { useIsMobile } from './configuration/useIsMobile';
 export { useLogoShape } from './useLogoShape';

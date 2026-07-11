@@ -180,6 +180,7 @@
   "delivery_pauses_in_term": "Delivery pauses in this period",
   "sepa_mandate_required": "Please set up a valid SEPA mandate first.",
   "sepa_mandate_missing": "This member has no valid SEPA mandate yet. Please set one up before saving the subscription.",
+  "sepa_mandate_missing_self": "You have no valid SEPA mandate yet. Please set one up before saving the subscription.",
   "set_up_sepa_mandate": "Set up SEPA mandate",
   "accept_subscription_contract": "I have read and accept the subscription contract:",
   "subscription_contract_required": "Please accept the subscription contract before continuing.",
