@@ -1302,6 +1302,15 @@ class SharesDeliveryDayInUse(ConflictError):
         )
 
 
+class OrganicPurchaseCertificateRequired(BadRequestError):
+    """A purchase marked ``organic`` / ``in_conversion`` requires its seller to
+    hold an OrganicCertificate valid AT the purchase's delivery week — the
+    organic label can only be carried through from a currently-certified
+    supplier."""
+
+    code = "purchase.organic_certificate_required"
+
+
 __all__ = [
     "CommissioningError",
     "CompositeIdInvalid",
@@ -1411,4 +1420,5 @@ __all__ = [
     "DeliveryDayValidFromInPast",
     "DocumentNotFinalized",
     "InvalidUploadedDocument",
+    "OrganicPurchaseCertificateRequired",
 ]

@@ -16,6 +16,7 @@ import type {
   Waste,
 } from "@shared/api/generated/models";
 import { DaySelector, WeekSelector } from "@shared/selectors";
+import { StorageSelector } from "@features/commissioning/selectors";
 import {
   EditableTable,
   gatedByPermission,
@@ -26,7 +27,7 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { ExplainerText, PastWarningMessage } from "@shared/ui";
+import { ExplainerText, MobileStack, PastWarningMessage } from "@shared/ui";
 import { AddShareArticleEntry } from "@features/commissioning/components";
 import { useRoles } from "@shared/auth";
 import {
@@ -39,10 +40,7 @@ import {
   useAmountUnitSizeColumns,
   useShareArticleColumn,
   useShareArticles,
-  useStorageColumns,
-  useStorages,
 } from "@features/commissioning/hooks";
-import type { StorageOption } from "@features/commissioning/hooks/useStorages";
 
 const currentDay = dayjs().isoWeekday();
 
@@ -55,6 +53,7 @@ export default function DocumentationWaste() {
   const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
     useYearWeekState();
   const [selectedDay, setSelectedDay] = useState<number | null>(currentDay - 1);
+  const [selectedStorage, setSelectedStorage] = useState<string | null>(null);
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
     [selectedYear, selectedWeek],
@@ -65,8 +64,6 @@ export default function DocumentationWaste() {
     [isStaff, isPast],
   );
 
-  const { storages, storagesCount } = useStorages();
-  const { storageColumns } = useStorageColumns();
   const { noteColumn } = useNoteColumn();
   const { shareArticleColumn } = useShareArticleColumn({
     filters: shareArticleFilters,
@@ -106,15 +103,15 @@ export default function DocumentationWaste() {
 
   // React Query — failures route through the global queryCache.onError
   // toast. Writes call `invalidateData()` to trigger a refetch.
-  const { data: rawData, isFetching } = useCommissioningWasteList(listParams);
-  const data = useMemo(
-    () =>
-      ((rawData ?? []) as unknown as Waste[]).map((item) => ({
-        ...item,
-        key: item.id ?? "",
-      })) as unknown as TableRecord[],
-    [rawData],
-  );
+  const { data: rawData, isFetching } = useCommissioningWasteList(listParams, {
+    query: { enabled: !!selectedStorage },
+  });
+  const data = useMemo(() => {
+    const items = (rawData ?? []) as unknown as Array<Record<string, unknown>>;
+    return items
+      .filter((item) => item[`storage_${selectedStorage}`])
+      .map((item) => ({ ...item, key: item.id ?? "" })) as unknown as TableRecord[];
+  }, [rawData, selectedStorage]);
   const invalidateData = useCallback(() => {
     queryClient.invalidateQueries({
       queryKey: getCommissioningWasteListQueryKey(listParams),
@@ -124,25 +121,14 @@ export default function DocumentationWaste() {
     useInvalidateAfterTableMutation(invalidateData);
 
   const customSave = useCallback(
-    (transformedData: Record<string, unknown>) => {
-      const storageFields = storages.map(
-        (storage: StorageOption) => `storage_${storage.id}`,
-      );
-      const hasAtLeastOneStorage = storageFields.some(
-        (field) => transformedData[field] === true,
-      );
-
-      if (!hasAtLeastOneStorage) {
-        throw new Error(t("validation.at_least_one_storage_required"));
-      }
-      return {
-        ...transformedData,
-        year: selectedYear,
-        delivery_week: selectedWeek ?? currentWeek,
-        day_number: selectedDay,
-      };
-    },
-    [selectedYear, selectedWeek, selectedDay, storages, t],
+    (transformedData: Record<string, unknown>) => ({
+      ...transformedData,
+      storage: selectedStorage,
+      year: selectedYear,
+      delivery_week: selectedWeek ?? currentWeek,
+      day_number: selectedDay,
+    }),
+    [selectedYear, selectedWeek, selectedDay, selectedStorage],
   );
 
   const customEdit = useCallback((record: TableRecord, form: FormInstance) => {
@@ -161,19 +147,12 @@ export default function DocumentationWaste() {
         disabled: (record: TableRecord) => record.key != -1,
       },
       ...amountUnitSizeColumns,
-      ...(storagesCount > 1 ? storageColumns : []),
       {
         ...noteColumn,
         width: "35em",
       },
     ],
-    [
-      shareArticleColumn,
-      amountUnitSizeColumns,
-      storagesCount,
-      storageColumns,
-      noteColumn,
-    ],
+    [shareArticleColumn, amountUnitSizeColumns, noteColumn],
   );
 
   const apiFunctions = useMemo<ApiFunctions>(
@@ -190,26 +169,32 @@ export default function DocumentationWaste() {
     <div>
       <h1>{t("commissioning.documentation_waste")}</h1>
 
-      <WeekSelector
-        selectedYear={selectedYear}
-        setSelectedYear={setSelectedYear}
-        selectedWeek={selectedWeek}
-        setSelectedWeek={setSelectedWeek}
-      />
-      <DaySelector
-        selectedYear={selectedYear}
-        selectedWeek={selectedWeek ?? currentWeek}
-        selectedDay={selectedDay}
-        setSelectedDay={setSelectedDay}
-        days={[0, 1, 2, 3, 4, 5, 6]}
-      />
+      <MobileStack>
+        <WeekSelector
+          selectedYear={selectedYear}
+          setSelectedYear={setSelectedYear}
+          selectedWeek={selectedWeek}
+          setSelectedWeek={setSelectedWeek}
+        />
+        <DaySelector
+          selectedYear={selectedYear}
+          selectedWeek={selectedWeek ?? currentWeek}
+          selectedDay={selectedDay}
+          setSelectedDay={setSelectedDay}
+          days={[0, 1, 2, 3, 4, 5, 6]}
+        />
+        <StorageSelector
+          selectedStorage={selectedStorage}
+          setSelectedStorage={setSelectedStorage}
+        />
+      </MobileStack>
 
       {isPast && (
         <PastWarningMessage>{t("table.past_week_readonly")}</PastWarningMessage>
       )}
 
       <EditableTable
-        key={`${selectedYear}-${selectedWeek}-${selectedDay}`}
+        key={`${selectedYear}-${selectedWeek}-${selectedDay}-${selectedStorage}`}
         columns={columns}
         apiFunctions={apiFunctions}
         focusIndex="share_article_name"

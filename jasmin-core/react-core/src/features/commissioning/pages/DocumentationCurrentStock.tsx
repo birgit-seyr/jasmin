@@ -393,9 +393,10 @@ export default function DocumentationCurrentStock() {
             onSuccess={invalidateData}
           />
           <ToolTipIcon
-            title={t("commissioning.finalize_current_stock_tooltip")}
-            style={{ marginLeft: "-4px", marginTop: "12px" }}
+            title={t("tooltip.finalize")}
+            className="tooltip-icon-bulk-action"
           />
+
           <BulkActionButton
             selectedIds={selectedRowKeys}
             apiFunction={(payload) =>
@@ -407,10 +408,6 @@ export default function DocumentationCurrentStock() {
             buttonProps={{ type: "primary" }}
             disabled={selectedRowKeys.length === 0}
             onSuccess={invalidateData}
-          />
-          <ToolTipIcon
-            title={t("tooltip.set_current_stock_as_expecte")}
-            style={{ marginLeft: "-4px", marginTop: "12px" }}
           />
 
           <BulkActionButton

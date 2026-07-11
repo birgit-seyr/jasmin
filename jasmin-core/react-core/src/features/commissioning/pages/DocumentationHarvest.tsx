@@ -41,11 +41,10 @@ import {
 } from "@hooks/index";
 import {
   useAmountUnitSizeColumns,
-  useDocumentationSummaryPage,
   useFinalColumn,
   useShareArticleColumn,
   useShareArticles,
-  useStorages,
+  useStorageDocumentationPage,
 } from "@features/commissioning/hooks";
 import type { DocumentationSummaryRecord } from "@features/commissioning/hooks/useDocumentationSummaryPage";
 
@@ -58,26 +57,13 @@ export default function DocumentationHarvest() {
   const { isStaff } = useRoles();
   const [columnsLoaded, setColumnsLoaded] = useState(false);
   const [csvExportVisible, setCsvExportVisible] = useState(false);
-  const [selectedStorage, setSelectedStorage] = useState<string | null>(null);
 
   const { t } = useTranslation();
   const isMobile = useIsMobile();
 
-  const { storages } = useStorages();
   const { finalColumn } = useFinalColumn();
   const { noteColumn } = useNoteColumn();
 
-  const isLongTermStorage = useMemo(() => {
-    const storage = storages.find((s) => s.id === selectedStorage);
-    return storage?.is_long_term_harvest_storage ?? false;
-  }, [storages, selectedStorage]);
-
-  // Theoretical harvests are short-term-locked, so "set as expected" only makes
-  // sense for the short-term harvest storage; it's disabled for any other.
-  const isShortTermStorage = useMemo(() => {
-    const storage = storages.find((s) => s.id === selectedStorage);
-    return storage?.is_short_term_harvest_storage ?? false;
-  }, [storages, selectedStorage]);
   const { shareArticleColumn } = useShareArticleColumn({
     filters: shareArticleFilters,
     showFruitsAndVegs: true,
@@ -109,9 +95,30 @@ export default function DocumentationHarvest() {
     rowSelection: rowSelectionConfig,
   } = useTableRowSelection((record: TableRecord) => record.key === -1);
 
-  // Shared year/week/day/is_past state + summary query + invalidate wiring.
-  // The harvest-specific bits (storage filter, mutation endpoints, bulk
-  // actions, customSave) stay below. The summary query is gated until the
+  // A storage-matched harvest row is worth showing only if it carries a
+  // theoretical, additional-theoretical, or actual harvest amount.
+  const rowHasData = useCallback((item: DocumentationSummaryRecord) => {
+    const theoreticalAmount = item.theoretical_harvest_amount;
+    const additionalTheoreticalAmount =
+      item.additional_theoretical_harvest_amount;
+    // ``harvest_amount`` is a decimal string on the wire, so the zero check
+    // needs a numeric coercion.
+    const amount = item.harvest_amount;
+    const isTheoreticalEmpty =
+      theoreticalAmount == null || theoreticalAmount === 0;
+    const isAdditionalTheoreticalEmpty =
+      additionalTheoreticalAmount == null || additionalTheoreticalAmount === 0;
+    const isAmountEmpty = amount == null || Number(amount) === 0;
+    return !(
+      isTheoreticalEmpty &&
+      isAdditionalTheoreticalEmpty &&
+      isAmountEmpty
+    );
+  }, []);
+
+  // Shared year/week/day/is_past + summary query + storage selector/filter +
+  // storage-stamped customSave + remount key. Harvest-specific bits (columns,
+  // mutation endpoints, bulk actions) stay below. The query is gated until the
   // dynamic columns have loaded AND a storage is picked.
   const {
     selectedYear,
@@ -121,15 +128,33 @@ export default function DocumentationHarvest() {
     selectedDay,
     setSelectedDay,
     isPast,
-    rawData,
     isFetching,
     invalidateData,
     onSaveSuccess,
     onDeleteSuccess,
-  } = useDocumentationSummaryPage({
+    selectedStorage,
+    setSelectedStorage,
+    storages,
+    data,
+    tableKey,
+    customSave,
+  } = useStorageDocumentationPage({
     model: "harvest",
-    queryEnabled: columnsLoaded && !!selectedStorage,
+    extraQueryEnabled: columnsLoaded,
+    rowHasData,
   });
+
+  const isLongTermStorage = useMemo(() => {
+    const storage = storages.find((s) => s.id === selectedStorage);
+    return storage?.is_long_term_harvest_storage ?? false;
+  }, [storages, selectedStorage]);
+
+  // Theoretical harvests are short-term-locked, so "set as expected" only makes
+  // sense for the short-term harvest storage; it's disabled for any other.
+  const isShortTermStorage = useMemo(() => {
+    const storage = storages.find((s) => s.id === selectedStorage);
+    return storage?.is_short_term_harvest_storage ?? false;
+  }, [storages, selectedStorage]);
 
   useEffect(() => {
     if (
@@ -140,60 +165,6 @@ export default function DocumentationHarvest() {
       setColumnsLoaded(true);
     }
   }, [shareArticleColumn, amountUnitSizeColumns]);
-
-  const data = useMemo<TableRecord[]>(() => {
-    // Directional cast at the orval boundary: raw rows lack the table-only
-    // ``key`` until the map below adds it.
-    const items = (rawData ?? []) as DocumentationSummaryRecord[];
-    return items
-      .filter((item) => {
-        // Filter by selected storage
-        if (!item[`storage_${selectedStorage}`]) return false;
-
-        const theoreticalAmount = item.theoretical_harvest_amount;
-        const additionalTheoreticalAmount =
-          item.additional_theoretical_harvest_amount;
-        // ``harvest_amount`` is a decimal string on the wire, so the zero
-        // check needs a numeric coercion.
-        const amount = item.harvest_amount;
-
-        const isTheoreticalEmpty =
-          theoreticalAmount == null || theoreticalAmount === 0;
-        const isAdditionalTheoreticalEmpty =
-          additionalTheoreticalAmount == null ||
-          additionalTheoreticalAmount === 0;
-        const isAmountEmpty = amount == null || Number(amount) === 0;
-
-        return !(
-          isTheoreticalEmpty &&
-          isAdditionalTheoreticalEmpty &&
-          isAmountEmpty
-        );
-      })
-      .map((item) => ({
-        ...item,
-        key: item.id ?? "",
-      }));
-  }, [rawData, selectedStorage]);
-
-  const customSave = useCallback(
-    (transformedData: Record<string, unknown>) => {
-      return {
-        ...transformedData,
-        storage: selectedStorage,
-        year: selectedYear,
-        delivery_week: selectedWeek ?? currentWeek,
-        day_number: selectedDay ?? 0,
-        amount:
-          transformedData.amount === null ||
-          transformedData.amount === "" ||
-          transformedData.amount === undefined
-            ? 0
-            : transformedData.amount,
-      };
-    },
-    [selectedYear, selectedWeek, selectedDay, selectedStorage],
-  );
 
   const customEdit = useCallback((record: TableRecord, form: FormInstance) => {
     if (record.key === -1) {
@@ -368,6 +339,10 @@ export default function DocumentationHarvest() {
             disabled={selectedRowKeys.length === 0}
             onSuccess={invalidateData}
           />
+          <ToolTipIcon
+            title={t("tooltip.finalize")}
+            className="tooltip-icon-bulk-action"
+          />
           {selectedStorage && (
             <BulkActionButton
               selectedIds={selectedRowKeys}
@@ -421,7 +396,7 @@ export default function DocumentationHarvest() {
         <PastWarningMessage>{t("table.past_week_readonly")}</PastWarningMessage>
       )}
       <EditableTable
-        key={`${selectedYear}-${selectedWeek}-${selectedDay}-${selectedStorage}`}
+        key={tableKey}
         columns={columns}
         apiFunctions={apiFunctions}
         focusIndex="share_article_name"

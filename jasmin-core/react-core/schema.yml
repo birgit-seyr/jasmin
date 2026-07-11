@@ -34942,6 +34942,8 @@ components:
           format: decimal
           pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
           nullable: true
+        organic_status:
+          $ref: '#/components/schemas/OrganicStatusEnum'
         created_by:
           type: string
           nullable: true

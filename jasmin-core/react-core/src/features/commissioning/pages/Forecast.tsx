@@ -1,9 +1,27 @@
-import { useQueryClient } from "@tanstack/react-query";
-import type { FormInstance } from "antd";
-import { Button, Popconfirm } from "antd";
-import dayjs from "dayjs";
-import { useCallback, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { AddShareArticleEntry } from "@features/commissioning/components";
+import { ForecastMobileCard } from "@features/commissioning/components/mobileCards";
+import {
+  useAmountUnitSizeColumns,
+  useFinalColumn,
+  useForecastColumns,
+  useOfferGroups,
+  usePlots,
+  useShareArticleColumn,
+  useShareArticles,
+  useShareTypeVariations,
+  variationColumnKey,
+} from "@features/commissioning/hooks";
+import {
+  currentWeek,
+  useActiveShareOptions,
+  useInvalidateAfterTableMutation,
+  useIsMobile,
+  useNoteColumn,
+  useShareTypeVariationSizeOptions,
+  useTableRowSelection,
+  useTenant,
+  useYearWeekState,
+} from "@hooks/index";
 import {
   commissioningBulkFinalizeCreate,
   commissioningForecastBulkCopyToNextWeekCreate,
@@ -20,7 +38,6 @@ import type {
 } from "@shared/api/generated/models";
 import { ShareTypeEnum } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
-import { ForecastMobileCard } from "@features/commissioning/components/mobileCards";
 import { WeekSelector } from "@shared/selectors";
 import {
   EditableTable,
@@ -31,12 +48,20 @@ import type {
   ApiFunctions,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { BulkActionButton, ExplainerText, PastWarningMessage } from '@shared/ui';
-import { AddShareArticleEntry } from '@features/commissioning/components';
+import {
+  BulkActionButton,
+  ExplainerText,
+  PastWarningMessage,
+  ToolTipIcon,
+} from "@shared/ui";
 import { activeAtDateForWeek, isWeekInPast, notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
-import { currentWeek, useActiveShareOptions, useInvalidateAfterTableMutation, useIsMobile, useNoteColumn, useShareTypeVariationSizeOptions, useTableRowSelection, useTenant, useYearWeekState } from '@hooks/index';
-import { useAmountUnitSizeColumns, useFinalColumn, useForecastColumns, useOfferGroups, usePlots, useShareArticleColumn, useShareArticles, useShareTypeVariations, variationColumnKey } from '@features/commissioning/hooks';
+import { useQueryClient } from "@tanstack/react-query";
+import type { FormInstance } from "antd";
+import { Button, Popconfirm } from "antd";
+import dayjs from "dayjs";
+import { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 const shareArticleFilters = {
   is_harvest_share_article: true,
@@ -175,7 +200,9 @@ export default function Forecast() {
     setSelectedRowKeys,
     onSelectedRowsChange: handleRowSelectionChange,
     rowSelection: rowSelectionConfig,
-  } = useTableRowSelection((record: TableRecord) => record.key === -1 || isPast);
+  } = useTableRowSelection(
+    (record: TableRecord) => record.key === -1 || isPast,
+  );
 
   const listParams = useMemo<CommissioningForecastListParams>(
     () => ({
@@ -275,7 +302,8 @@ export default function Forecast() {
     [shareTypeVariations],
   );
   const fruitVariationKeys = useMemo(
-    () => (shareTypeVariationsFruits ?? []).map((v) => variationColumnKey(v.id!)),
+    () =>
+      (shareTypeVariationsFruits ?? []).map((v) => variationColumnKey(v.id!)),
     [shareTypeVariationsFruits],
   );
 
@@ -286,7 +314,9 @@ export default function Forecast() {
   );
   const onForAllFruitChange = useCallback(
     (value: unknown): Record<string, unknown> =>
-      Object.fromEntries(fruitVariationKeys.map((key) => [key, value === true])),
+      Object.fromEntries(
+        fruitVariationKeys.map((key) => [key, value === true]),
+      ),
     [fruitVariationKeys],
   );
   const onVegVariationChange = useCallback(
@@ -337,7 +367,12 @@ export default function Forecast() {
         onFieldChange: onVegVariationChange,
       })) || []
     );
-  }, [shareTypeVariations, t, onVegVariationChange, getShareTypeVariationSizeLabel]);
+  }, [
+    shareTypeVariations,
+    t,
+    onVegVariationChange,
+    getShareTypeVariationSizeLabel,
+  ]);
 
   const shareTypeVariationFruitsColumns = useMemo(() => {
     return (
@@ -470,6 +505,10 @@ export default function Forecast() {
             disabled={selectedRowKeys.length === 0}
             onSuccess={invalidateData}
           />
+          <ToolTipIcon
+            title={t("tooltip.finalize")}
+            className="tooltip-icon-bulk-action"
+          />
           <Popconfirm
             title={t("commissioning.confirm_forecast_copy_title")}
             description={t("commissioning.confirm_forecast_copy_message", {
@@ -519,7 +558,9 @@ export default function Forecast() {
         customEdit={customEdit}
         permissions={permissions}
         uniqueCheck={["share_article", "unit", "size"]}
-        uniqueCheckMessage={t("validation.unique.share_article_unit_size_must_be_unique")}
+        uniqueCheckMessage={t(
+          "validation.unique.share_article_unit_size_must_be_unique",
+        )}
         rowSelection={!isPast && !isMobile ? rowSelectionConfig : undefined}
         onSelectedRowsChange={handleRowSelectionChange}
         selectedRowKeys={selectedRowKeys}

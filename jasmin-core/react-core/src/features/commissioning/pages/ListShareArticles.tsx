@@ -255,7 +255,6 @@ export default function ListShareArticles() {
     priceModalColumn,
     unitOptions,
     crates,
-    organicGateEnabled,
     visibleShareOptions,
     activeFilter,
     sells_to_resellers,

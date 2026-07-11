@@ -35,6 +35,10 @@ _CLOSE_HAZARD_CLASSIFICATION = {
     # Nothing references these via FK → a close strands nothing.
     "Season": "no_strandable_children",
     "DeliveryExceptionPeriod": "no_strandable_children",
+    # Nothing FKs to it; the purchase organic-status check reads the cert at
+    # SAVE time (a validation gate), so closing/shortening it only affects
+    # future saves — no stored child rows strand.
+    "OrganicCertificate": "no_strandable_children",
     # Price windows: downstream order/invoice lines SNAPSHOT the resolved value,
     # so they are not children that strand on close; one-open is DB-backstopped
     # (sharearticlenetprice/cratenetprice/...grossprice one_open constraints).

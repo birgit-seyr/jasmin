@@ -13,8 +13,8 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ToolTipIcon } from "@shared/ui";
-import { organicStatusOptions } from "@hooks/index";
 import { useNumberFormat } from "@hooks/useNumberFormat";
+import { useOrganicStatusColumn } from "./useOrganicStatusColumn";
 import type { CrateOption } from "../useCrates";
 import {
   getShareOptionLabel,
@@ -43,7 +43,6 @@ interface UseShareArticleListColumnsArgs {
   priceModalColumn: Record<string, unknown>;
   unitOptions: UnitOptionLite[];
   crates: CrateOption[];
-  organicGateEnabled: boolean;
   visibleShareOptions: ShareOptionLite[];
   activeFilter: string;
   sells_to_resellers: boolean;
@@ -63,7 +62,6 @@ export function useShareArticleListColumns({
   priceModalColumn,
   unitOptions,
   crates,
-  organicGateEnabled,
   visibleShareOptions,
   activeFilter,
   sells_to_resellers,
@@ -75,6 +73,7 @@ export function useShareArticleListColumns({
 }: UseShareArticleListColumnsArgs): EditableColumnConfig<TableRecord>[] {
   const { t } = useTranslation();
   const { format } = useNumberFormat();
+  const organicStatusColumn = useOrganicStatusColumn();
 
   return useMemo(
     () =>
@@ -140,26 +139,7 @@ export function useShareArticleListColumns({
           sortable: true,
         },
 
-        ...(organicGateEnabled
-          ? (() => {
-              const organicOptions = organicStatusOptions(t);
-              return [
-                {
-                  title: <>{t("commissioning.organic_status")}</>,
-                  dataIndex: "organic_status",
-                  key: "organic_status",
-                  inputType: "select",
-                  required: false,
-                  sortable: true,
-                  options: organicOptions,
-                  render: (value: string) => {
-                    const match = organicOptions.find((o) => o.value === value);
-                    return match ? match.label : value || "-";
-                  },
-                },
-              ];
-            })()
-          : []),
+        ...organicStatusColumn,
         {
           title: <>{t("commissioning.description")}</>,
           dataIndex: "description",
@@ -569,7 +549,7 @@ export function useShareArticleListColumns({
       has_markets,
       isActiveColumn,
       number_packing_stations,
-      organicGateEnabled,
+      organicStatusColumn,
       packingBulk,
       priceModalColumn,
       renderHarvestNumber,

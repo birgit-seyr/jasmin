@@ -1,4 +1,7 @@
 {
+  "purchase": {
+    "organic_certificate_required": "For Organic or In-conversion, the seller must hold a certificate valid for this delivery week."
+  },
   "commissioning": {
     "past_week": "This week is in the past and cannot be modified anymore.",
     "share_days_locked": "The day fields on this share are locked because ShareContent already exists for it.",

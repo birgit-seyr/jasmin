@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from .base import JasminModel
+from .basics import ShareArticle
 from .choices_text import (
     DayNumberOptions,
     delivery_week_field,
@@ -367,6 +368,14 @@ class Purchase(JasminModel, DocumentationMixin, CreatedMixin, ArchivableMixin):
     )
     amount_per_pu = models.DecimalField(
         max_digits=7, decimal_places=3, blank=True, null=True
+    )
+    # Reuses ShareArticle's organic-status trichotomy. ``organic`` /
+    # ``in_conversion`` require the seller to hold an OrganicCertificate valid at
+    # this purchase's delivery week — enforced in PurchaseSerializer.validate.
+    organic_status = models.CharField(
+        max_length=20,
+        choices=ShareArticle.OrganicStatus.choices,
+        default=ShareArticle.OrganicStatus.CONVENTIONAL,
     )
 
     class Meta:

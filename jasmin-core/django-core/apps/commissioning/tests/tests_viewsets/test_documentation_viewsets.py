@@ -8,7 +8,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from apps.commissioning.models import Harvest, Purchase
+from apps.commissioning.models import Harvest, Purchase, Waste
 from apps.commissioning.tests.factories import (
     ForecastFactory,
     HarvestFactory,
@@ -79,6 +79,53 @@ class TestWasteViewSet:
         resp = api_client.get(self.URL)
         assert len(resp.data) >= 1
 
+    def test_create_with_page_level_storage(self, api_client, tenant):
+        """A waste create carries the page-level storage as the plain `storage`
+        FK (the shape DocumentationWaste sends after the mirror). The row lands
+        on that storage."""
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        article = ShareArticleFactory()
+        resp = api_client.post(
+            self.URL,
+            {
+                "year": 2026,
+                "delivery_week": 28,
+                "day_number": 1,
+                "share_article": str(article.id),
+                "unit": "KG",
+                "size": "M",
+                "amount": "3",
+                "storage": str(storage.id),
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        waste = Waste.objects.get(id=resp.data["id"])
+        assert waste.storage_id == storage.id
+
+    def test_create_without_plain_storage_is_rejected(self, api_client, tenant):
+        """Regression: the ``storage_<id>`` flag alone does NOT satisfy the
+        required ``storage`` FK — the client must send the resolved plain
+        ``storage``. This is the latent create bug the page-level mirror fixes."""
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        article = ShareArticleFactory()
+        resp = api_client.post(
+            self.URL,
+            {
+                "year": 2026,
+                "delivery_week": 28,
+                "day_number": 1,
+                "share_article": str(article.id),
+                "unit": "KG",
+                "size": "M",
+                "amount": "3",
+                f"storage_{storage.id}": True,
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert "storage" in resp.data["details"]
+
 
 # ---------------------------------------------------------------------------
 # HarvestViewSet
@@ -112,6 +159,29 @@ class TestPurchaseViewSet:
         PurchaseFactory()
         resp = api_client.get(self.URL)
         assert len(resp.data) >= 1
+
+    def test_create_with_page_level_storage(self, api_client, tenant):
+        """A new-row create carries the page-level storage as the plain `storage`
+        FK (the shape DocumentationPurchase now sends, mirroring
+        DocumentationHarvest). The row lands on that storage."""
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        article = ShareArticleFactory(is_purchased=True)
+        resp = api_client.post(
+            self.URL,
+            {
+                "year": 2026,
+                "delivery_week": 28,
+                "share_article": str(article.id),
+                "unit": "KG",
+                "size": "M",
+                "amount": "5",
+                "storage": str(storage.id),
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        purchase = Purchase.objects.get(id=resp.data["id"])
+        assert purchase.storage_id == storage.id
 
 
 # ---------------------------------------------------------------------------

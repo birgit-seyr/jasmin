@@ -153,6 +153,46 @@ class PurchaseSerializer(StorageFieldsMixin, serializers.ModelSerializer):
         model = Purchase
         fields = "__all__"
 
+    def validate(self, attrs):
+        from isoweek import Week
+
+        from ..errors import OrganicPurchaseCertificateRequired
+        from ..models import OrganicCertificate, ShareArticle
+        from ..models.managers import active_on_date_q
+
+        attrs = super().validate(attrs)
+
+        status = attrs.get(
+            "organic_status", getattr(self.instance, "organic_status", None)
+        )
+        if status not in (
+            ShareArticle.OrganicStatus.ORGANIC,
+            ShareArticle.OrganicStatus.IN_CONVERSION,
+        ):
+            return attrs
+
+        # ``organic`` / ``in_conversion`` may only be carried through from a
+        # seller certified AT this purchase's delivery week (the Monday of the
+        # ISO year/week). No seller, or no covering certificate → reject.
+        seller = attrs.get("seller", getattr(self.instance, "seller", None))
+        year = attrs.get("year", getattr(self.instance, "year", None))
+        week = attrs.get("delivery_week", getattr(self.instance, "delivery_week", None))
+        certified = bool(
+            seller
+            and year
+            and week
+            and OrganicCertificate.objects.filter(reseller_id=seller.pk)
+            .filter(active_on_date_q(Week(int(year), int(week)).monday()))
+            .exists()
+        )
+        if not certified:
+            raise OrganicPurchaseCertificateRequired(
+                "The seller has no organic certificate valid for this "
+                "purchase's delivery week.",
+                field="organic_status",
+            )
+        return attrs
+
 
 class HarvestSerializer(StorageFieldsMixin, serializers.ModelSerializer):
     class Meta:

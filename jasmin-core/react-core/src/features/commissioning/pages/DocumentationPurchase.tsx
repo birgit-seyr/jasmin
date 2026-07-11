@@ -15,6 +15,7 @@ import type {
 import { useRoles } from "@shared/auth";
 import { ExportCsvPurchase } from "@features/commissioning/modals";
 import { WeekSelector } from "@shared/selectors";
+import { StorageSelector } from "@features/commissioning/selectors";
 import {
   EditableTable,
   gatedByPermission,
@@ -28,6 +29,7 @@ import type {
 import {
   BulkActionButton,
   ExplainerText,
+  MobileStack,
   PastWarningMessage,
 } from "@shared/ui";
 import { AddShareArticleEntry } from "@features/commissioning/components";
@@ -41,15 +43,13 @@ import {
 } from "@hooks/index";
 import {
   useAmountUnitSizeColumns,
-  useDocumentationSummaryPage,
+  useOrganicStatusColumn,
   useSellerColumn,
   useShareArticleColumn,
   useShareArticles,
-  useStorageColumns,
-  useStorages,
+  useStorageDocumentationPage,
 } from "@features/commissioning/hooks";
 import type { DocumentationSummaryRecord } from "@features/commissioning/hooks/useDocumentationSummaryPage";
-import type { StorageOption } from "@features/commissioning/hooks/useStorages";
 
 const shareArticleFilters = {
   is_active: true,
@@ -58,21 +58,44 @@ const shareArticleFilters = {
 
 export default function DocumentationPurchase() {
   const { isStaff } = useRoles();
-  // Shared week/is_past state + summary query + invalidate wiring; the
-  // purchase-specific storage columns / seller / mutation endpoints /
-  // customSave stay below. Week-scoped (no day_number).
+
+  // A storage-matched purchase row is worth showing only if it carries a
+  // theoretical, additional-theoretical, or actual purchase amount.
+  const rowHasData = useCallback(
+    (item: DocumentationSummaryRecord) =>
+      !!(
+        item.theoretical_purchase_amount ||
+        item.additional_theoretical_purchase_amount ||
+        item.purchase_amount
+      ),
+    [],
+  );
+
+  // Shared week/is_past + summary query + storage selector/filter +
+  // storage-stamped customSave + remount key. Purchase-specific bits (columns,
+  // seller/organic, mutation endpoints, bulk action) stay below. Week-scoped
+  // (no day_number).
   const {
     selectedYear,
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
     isPast,
-    rawData,
     isFetching,
     invalidateData,
     onSaveSuccess,
     onDeleteSuccess,
-  } = useDocumentationSummaryPage({ model: "purchase", withDay: false });
+    selectedStorage,
+    setSelectedStorage,
+    storages,
+    data,
+    tableKey,
+    customSave,
+  } = useStorageDocumentationPage({
+    model: "purchase",
+    withDay: false,
+    rowHasData,
+  });
   const [csvExportVisible, setCsvExportVisible] = useState(false);
 
   const permissions = useMemo(
@@ -97,8 +120,6 @@ export default function DocumentationPurchase() {
     [isStaff, isPast],
   );
 
-  const { storages, storagesCount } = useStorages();
-  const { storageColumns } = useStorageColumns();
   const { noteColumn } = useNoteColumn();
   const { shareArticleColumn } = useShareArticleColumn({
     filters: shareArticleFilters,
@@ -127,6 +148,7 @@ export default function DocumentationPurchase() {
   });
 
   const { t } = useTranslation();
+  const organicStatusColumn = useOrganicStatusColumn();
 
   const { refetch: refetchShareArticles } =
     useShareArticles(shareArticleFilters);
@@ -134,55 +156,6 @@ export default function DocumentationPurchase() {
   const sellerColumn = useSellerColumn({
     overrides: { align: "left", sortable: true },
   });
-
-  // EditableTable's ``initialData`` resyncs from the summary query (in the
-  // hook above); writes call ``invalidateData()`` to trigger a refetch.
-  const data = useMemo<TableRecord[]>(() => {
-    // Directional cast at the orval boundary: raw rows lack the table-only
-    // ``key`` until the map below adds it.
-    const items = (rawData ?? []) as DocumentationSummaryRecord[];
-    return items
-      .filter(
-        (item) =>
-          !!(
-            item.theoretical_purchase_amount ||
-            item.additional_theoretical_purchase_amount ||
-            item.purchase_amount
-          ),
-      )
-      .map((item) => ({
-        ...item,
-        key: item.id ?? "",
-      }));
-  }, [rawData]);
-
-  const customSave = useCallback(
-    (transformedData: Record<string, unknown>) => {
-      const storageFields = storages.map(
-        (storage: StorageOption) => `storage_${storage.id}`,
-      );
-      const hasAtLeastOneStorage = storageFields.some(
-        (field) => transformedData[field] === true,
-      );
-
-      if (!hasAtLeastOneStorage) {
-        throw new Error(t("validation.at_least_one_storage_required"));
-      }
-      const amount =
-        transformedData.amount === null ||
-        transformedData.amount === undefined ||
-        transformedData.amount === ""
-          ? 0
-          : transformedData.amount;
-      return {
-        ...transformedData,
-        amount,
-        year: selectedYear,
-        delivery_week: selectedWeek ?? currentWeek,
-      };
-    },
-    [selectedYear, selectedWeek, storages, t],
-  );
 
   const customEdit = useCallback((record: TableRecord, form: FormInstance) => {
     if (record.key === -1) {
@@ -211,12 +184,7 @@ export default function DocumentationPurchase() {
     selectedRowKeys,
     onSelectedRowsChange: handleRowSelectionChange,
     rowSelection: rowSelectionConfig,
-  } = useTableRowSelection(
-    (record: TableRecord) =>
-      record.key === -1 ||
-      record.harvest_amount != null ||
-      record.theoretical_harvest_amount === 0,
-  );
+  } = useTableRowSelection((record: TableRecord) => record.key === -1);
 
   const apiFunctions = useMemo<ApiFunctions>(
     () =>
@@ -271,10 +239,11 @@ export default function DocumentationPurchase() {
             : "";
         },
       },
-      ...(storagesCount > 1
-        ? (storageColumns as unknown as EditableColumnConfig<TableRecord>[])
-        : []),
       sellerColumn,
+      // Organic status of the purchase — only when the tenant is itself
+      // certified. ``organic`` / ``in_conversion`` are rejected on save unless
+      // the seller holds a certificate valid for the purchase's week (backend).
+      ...organicStatusColumn,
       {
         title: <>{t("commissioning.price_per_unit")}</>,
         dataIndex: "price_per_unit",
@@ -304,9 +273,8 @@ export default function DocumentationPurchase() {
       amountUnitSizeColumns,
       t,
       format,
-      storagesCount,
-      storageColumns,
       sellerColumn,
+      organicStatusColumn,
       currencySymbol,
       formatCurrency,
       getUnitLabel,
@@ -314,24 +282,22 @@ export default function DocumentationPurchase() {
     ],
   );
 
-  const uniqueCheckFields = useMemo(() => {
-    const baseFields = ["share_article", "unit", "size"];
-    const storageFields = storages.map(
-      (storage: StorageOption) => `storage_${storage.id}`,
-    );
-    return [...baseFields, ...storageFields];
-  }, [storages]);
-
   return (
     <div>
       <h1>{t("commissioning.documentation_purchase")}</h1>
 
-      <WeekSelector
-        selectedYear={selectedYear}
-        setSelectedYear={setSelectedYear}
-        selectedWeek={selectedWeek}
-        setSelectedWeek={setSelectedWeek}
-      />
+      <MobileStack>
+        <WeekSelector
+          selectedYear={selectedYear}
+          setSelectedYear={setSelectedYear}
+          selectedWeek={selectedWeek}
+          setSelectedWeek={setSelectedWeek}
+        />
+        <StorageSelector
+          selectedStorage={selectedStorage}
+          setSelectedStorage={setSelectedStorage}
+        />
+      </MobileStack>
 
       {isPast && (
         <PastWarningMessage>{t("table.past_week_readonly")}</PastWarningMessage>
@@ -341,58 +307,56 @@ export default function DocumentationPurchase() {
           <strong>{t("commissioning.for_selected")}</strong>
         </div>
       )}
-      {!isPast && (
+      {!isPast && selectedStorage && (
         <div className="button-row-spaced">
-          {storages.map((storage: StorageOption) => (
-            <BulkActionButton
-              key={storage.id}
-              selectedIds={selectedRowKeys}
-              apiFunction={(payload) => {
-                const selectedData: PurchaseBulkSetAsExpectedItem[] = (
-                  payload.ids as string[]
-                ).map((id) => {
-                  const row = data.find((item) => item.id === id);
-                  const rowData = row as Record<string, unknown> | undefined;
-                  return {
-                    id: rowData?.share_article as string,
-                    theoretical_purchase_amount:
-                      rowData?.theoretical_purchase_amount as number,
-                    theoretical_purchase_unit: rowData?.unit as string,
-                    theoretical_purchase_size: rowData?.size as string,
-                    year: selectedYear,
-                    delivery_week: selectedWeek ?? currentWeek,
-                    storage: storage.id!,
-                  };
-                });
-                return commissioningPurchaseBulkSetAsExpectedCreate({
-                  selectedData,
-                });
-              }}
-              buttonText={t("commissioning.set_as_expected_purchase_for", {
-                storage: storage.name,
-              })}
-              buttonProps={{ type: "primary" }}
-              disabled={
-                selectedRowKeys.length === 0 ||
-                selectedRowKeys.some((key) => {
-                  const row = data.find((item) => item.id === key);
-                  const rowData = row as Record<string, unknown> | undefined;
-                  return (
-                    rowData?.theoretical_purchase_amount == null ||
-                    rowData?.theoretical_purchase_amount === 0 ||
-                    (rowData?.purchase_amount as number) > 0
-                  );
-                })
-              }
-              refreshData={invalidateData}
-              onSuccess={invalidateData}
-            />
-          ))}
+          <BulkActionButton
+            selectedIds={selectedRowKeys}
+            apiFunction={(payload) => {
+              const selectedData: PurchaseBulkSetAsExpectedItem[] = (
+                payload.ids as string[]
+              ).map((id) => {
+                const row = data.find((item) => item.id === id);
+                const rowData = row as Record<string, unknown> | undefined;
+                return {
+                  id: rowData?.share_article as string,
+                  theoretical_purchase_amount:
+                    rowData?.theoretical_purchase_amount as number,
+                  theoretical_purchase_unit: rowData?.unit as string,
+                  theoretical_purchase_size: rowData?.size as string,
+                  year: selectedYear,
+                  delivery_week: selectedWeek ?? currentWeek,
+                  storage: selectedStorage,
+                };
+              });
+              return commissioningPurchaseBulkSetAsExpectedCreate({
+                selectedData,
+              });
+            }}
+            buttonText={t("commissioning.set_as_expected_purchase_for", {
+              storage:
+                storages.find((s) => s.id === selectedStorage)?.name ?? "",
+            })}
+            buttonProps={{ type: "primary" }}
+            disabled={
+              selectedRowKeys.length === 0 ||
+              selectedRowKeys.some((key) => {
+                const row = data.find((item) => item.id === key);
+                const rowData = row as Record<string, unknown> | undefined;
+                return (
+                  rowData?.theoretical_purchase_amount == null ||
+                  rowData?.theoretical_purchase_amount === 0 ||
+                  (rowData?.purchase_amount as number) > 0
+                );
+              })
+            }
+            refreshData={invalidateData}
+            onSuccess={invalidateData}
+          />
         </div>
       )}
 
       <EditableTable
-        key={`${selectedYear}-${selectedWeek}`}
+        key={tableKey}
         columns={columns}
         apiFunctions={apiFunctions}
         focusIndex="share_article_name"
@@ -406,7 +370,7 @@ export default function DocumentationPurchase() {
         rowSelection={!isPast ? rowSelectionConfig : undefined}
         onSelectedRowsChange={handleRowSelectionChange}
         selectedRowKeys={selectedRowKeys}
-        uniqueCheck={uniqueCheckFields}
+        uniqueCheck={["share_article", "unit", "size"]}
         uniqueCheckMessage={t("validation.unique.documentation_purchase")}
       />
       <ExportCsvPurchase

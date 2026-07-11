@@ -7,6 +7,7 @@ interface ToolTipIconProps {
   fallbackText?: string;
   style?: CSSProperties;
   iconStyle?: CSSProperties;
+  className?: string;
 }
 
 const ToolTipIcon = ({
@@ -14,6 +15,7 @@ const ToolTipIcon = ({
   fallbackText = "Additional information",
   style = {},
   iconStyle = {},
+  className,
 }: ToolTipIconProps) => {
   const defaultIconStyle: CSSProperties = {
     marginLeft: 4,
@@ -36,6 +38,7 @@ const ToolTipIcon = ({
       classNames={{ root: "custom-tooltip" }}
     >
       <InfoCircleOutlined
+        className={className}
         style={{ ...defaultIconStyle, ...style }}
         tabIndex={0}
         role="img"

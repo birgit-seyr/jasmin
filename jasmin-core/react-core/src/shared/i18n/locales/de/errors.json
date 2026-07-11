@@ -1,4 +1,7 @@
 {
+  "purchase": {
+    "organic_certificate_required": "Für Bio oder Umstellung muss der Lieferant für diese Kalenderwoche ein gültiges Bio-Zertifikat besitzen."
+  },
   "commissioning": {
     "past_week": "Diese Woche liegt in der Vergangenheit und kann nicht mehr geändert werden.",
     "share_days_locked": "Die Tage dieses Anteils sind gesperrt, weil bereits Sharecontent dafür existiert.",

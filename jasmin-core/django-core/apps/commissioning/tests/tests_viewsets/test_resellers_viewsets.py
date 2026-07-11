@@ -453,3 +453,77 @@ class TestOrganicCertificateViewSet:
         )
         first.refresh_from_db()
         assert first.valid_until is not None
+
+
+# ---------------------------------------------------------------------------
+# PurchaseSerializer — organic-status certificate gating
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestPurchaseOrganicValidation:
+    """A purchase carrying ``organic`` / ``in_conversion`` is only accepted when
+    the seller holds an OrganicCertificate valid for the purchase's delivery
+    week (the Monday of the ISO year/week); ``conventional`` never needs one."""
+
+    @staticmethod
+    def _attrs(seller, organic_status):
+        # Minimal attrs dict as it looks post-field-validation: ``seller`` is a
+        # resolved Reseller instance, year/week are ints. Calls validate()
+        # directly so the check is exercised without the full create payload.
+        return {
+            "seller": seller,
+            "year": 2026,
+            "delivery_week": 15,
+            "organic_status": organic_status,
+        }
+
+    def test_conventional_needs_no_certificate(self, tenant):
+        from apps.commissioning.serializers import PurchaseSerializer
+
+        seller = ResellerFactory()
+        result = PurchaseSerializer().validate(self._attrs(seller, "conventional"))
+        assert result["organic_status"] == "conventional"
+
+    def test_organic_without_certificate_is_rejected(self, tenant):
+        from apps.commissioning.errors import OrganicPurchaseCertificateRequired
+        from apps.commissioning.serializers import PurchaseSerializer
+
+        seller = ResellerFactory()
+        with pytest.raises(OrganicPurchaseCertificateRequired):
+            PurchaseSerializer().validate(self._attrs(seller, "organic"))
+
+    def test_in_conversion_without_certificate_is_rejected(self, tenant):
+        from apps.commissioning.errors import OrganicPurchaseCertificateRequired
+        from apps.commissioning.serializers import PurchaseSerializer
+
+        seller = ResellerFactory()
+        with pytest.raises(OrganicPurchaseCertificateRequired):
+            PurchaseSerializer().validate(self._attrs(seller, "in_conversion"))
+
+    def test_organic_with_certificate_covering_week_is_valid(self, tenant):
+        from isoweek import Week
+
+        from apps.commissioning.serializers import PurchaseSerializer
+
+        seller = ResellerFactory()
+        # Open-ended certificate from ISO week 1 Monday → covers week 15.
+        OrganicCertificate.objects.create(
+            reseller=seller, valid_from=Week(2026, 1).monday()
+        )
+        result = PurchaseSerializer().validate(self._attrs(seller, "organic"))
+        assert result["organic_status"] == "organic"
+
+    def test_organic_rejected_when_certificate_expired_before_week(self, tenant):
+        from isoweek import Week
+
+        from apps.commissioning.errors import OrganicPurchaseCertificateRequired
+        from apps.commissioning.serializers import PurchaseSerializer
+
+        seller = ResellerFactory()
+        # Certificate closed before week 15 (valid_until = week 10 Sunday).
+        OrganicCertificate.objects.create(
+            reseller=seller,
+            valid_from=Week(2026, 1).monday(),
+            valid_until=Week(2026, 10).sunday(),
+        )
+        with pytest.raises(OrganicPurchaseCertificateRequired):
+            PurchaseSerializer().validate(self._attrs(seller, "organic"))

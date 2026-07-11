@@ -8,6 +8,7 @@
 import type { PurchaseDayNumber } from './purchaseDayNumber';
 import type { UnitEnum } from './unitEnum';
 import type { VegetableSizeEnum } from './vegetableSizeEnum';
+import type { OrganicStatusEnum } from './organicStatusEnum';
 
 /**
  * Mixin to add dynamic storage fields functionality to serializers.
@@ -54,6 +55,7 @@ export interface Purchase {
    * @pattern ^-?\d{0,4}(?:\.\d{0,3})?$
    */
   amount_per_pu?: string | null;
+  organic_status?: OrganicStatusEnum;
   /** @nullable */
   created_by?: string | null;
   share_article: string;
