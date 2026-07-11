@@ -433,6 +433,12 @@ export default function PlanningHarvestSharesBase({
   // change on the same article (→ refresh kg/price, guard amounts). Seeded by
   // customEdit when a row enters edit mode.
   const previousArticleIdRef = useRef<string | null>(null);
+  // A stock-only row is a computed placeholder (is_stock_only + current_stock,
+  // no ShareContent). When the planner turns it into a real row by adding an
+  // amount, EditableTable's in-place merge keeps the stale stock-only fields
+  // the update response doesn't carry — so that slot must refetch on save.
+  // Remembered on edit-entry, read in handleSaveSuccess.
+  const editedStockOnlyRef = useRef(false);
 
   // Single entry point wired into the article / unit / size field handlers:
   // refresh the article-derived kg/price, then prefill the per-variation
@@ -519,6 +525,7 @@ export default function PlanningHarvestSharesBase({
       previousArticleIdRef.current = record.share_article
         ? String(record.share_article)
         : null;
+      editedStockOnlyRef.current = record.is_stock_only === true;
       if (record.key === -1) {
         const defaultValues = {
           packing_station: 1,
@@ -965,7 +972,7 @@ export default function PlanningHarvestSharesBase({
   } = useTableRowSelection((record: TableRecord) => record.key === -1);
 
   const handleSaveSuccess = useCallback(
-    (savedRecord: TableRecord, _action: "create" | "update") => {
+    (savedRecord: TableRecord, action: "create" | "update") => {
       refetchGranularity?.();
       // Refetch policy for the planning grid: NEVER invalidate on
       // CREATE or UPDATE. ``EditableTable`` already shows the new /
@@ -983,7 +990,13 @@ export default function PlanningHarvestSharesBase({
         Object.keys((savedRecord.variations as object) ?? {}).length === 0 &&
         Object.keys((savedRecord.basic_variations as object) ?? {}).length ===
           0;
-      if (isClearedPlaceholder) {
+      // A stock-only placeholder that just became a real planned row: the
+      // in-place merge keeps its stale is_stock_only / current_stock fields
+      // (the update response doesn't carry them), so refetch to recompute the
+      // slot cleanly — same rationale as the cleared-placeholder case above.
+      const wasStockOnlyUpdate = action === "update" && editedStockOnlyRef.current;
+      editedStockOnlyRef.current = false;
+      if (isClearedPlaceholder || wasStockOnlyUpdate) {
         invalidateData();
       }
     },
