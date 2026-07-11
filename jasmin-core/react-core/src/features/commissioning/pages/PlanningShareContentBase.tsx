@@ -767,10 +767,11 @@ export default function PlanningHarvestSharesBase({
 
   // The purchase-cost total below tracks the grid's LIVE rows, not the list
   // query. The query is intentionally NOT invalidated on create/update (see
-  // handleSaveSuccess), so the grid holds saved rows in its own state. Seed
-  // from the query data — which re-syncs on week changes / delete-refetch —
-  // and let the table's ``onDataChange`` keep it current through in-place
-  // edits and saves, so the figure recalculates the moment a row is saved.
+  // handleSaveSuccess — the cache is patched in place via setQueryData
+  // instead), so the grid holds saved rows in its own state. Seed from the
+  // query data — which re-syncs on week changes / delete-refetch / the
+  // save-time cache patch — and let the table's ``onDataChange`` keep it
+  // current through in-place edits, so the figure recalculates per keystroke.
   const [liveData, setLiveData] = useState<TableRecord[]>([]);
   useEffect(() => {
     setLiveData(data);
@@ -998,9 +999,51 @@ export default function PlanningHarvestSharesBase({
       editedStockOnlyRef.current = false;
       if (isClearedPlaceholder || wasStockOnlyUpdate) {
         invalidateData();
+        return;
       }
+      // Patch the list CACHE in place with the saved row (setQueryData — no
+      // refetch, so no re-sort). Without this the cache keeps the PRE-save
+      // row, and EditableTable's initialData-sync effect re-seeds the grid
+      // from it whenever the effect re-fires — its deps include the row
+      // transform, which changes identity with the columns config, a routine
+      // occurrence right after a save (granularity refetch / summary-row
+      // rebuild re-renders). That re-seed silently reverted just-saved
+      // amounts to their stale values until the next real refetch.
+      //
+      // The response fully re-describes the slot's dynamic ``day_*`` cells,
+      // so drop the row's old ``day_*`` keys before overlaying: a cleared
+      // cell's backing ShareContent is deleted server-side and its key is
+      // simply ABSENT from the response — a plain spread-merge would keep
+      // the stale amount forever.
+      queryClient.setQueryData<
+        (HarvestSharePlanningRow & Record<string, unknown>)[]
+      >(
+        getCommissioningHarvestSharePlanningListQueryKey(listParams),
+        (old) => {
+          if (!old) return old;
+          const saved = savedRecord as unknown as HarvestSharePlanningRow &
+            Record<string, unknown>;
+          if (!old.some((row) => row.id === saved.id)) {
+            // Freshly-created slot the cache doesn't know yet — prepend it
+            // (EditableTable pins new rows to the top anyway).
+            return action === "create" ? [saved, ...old] : old;
+          }
+          return old.map((row) =>
+            row.id === saved.id
+              ? {
+                  ...(Object.fromEntries(
+                    Object.entries(row).filter(
+                      ([cellKey]) => !cellKey.startsWith("day_"),
+                    ),
+                  ) as HarvestSharePlanningRow & Record<string, unknown>),
+                  ...saved,
+                }
+              : row,
+          );
+        },
+      );
     },
-    [refetchGranularity, invalidateData],
+    [refetchGranularity, invalidateData, queryClient, listParams],
   );
 
   const handleDeleteSuccess = useCallback(
