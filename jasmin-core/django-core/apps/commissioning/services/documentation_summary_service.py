@@ -525,6 +525,7 @@ class DocumentationSummaryService:
                 if model == "purchase" and entry.price_per_unit
                 else None
             ),
+            "organic_status": (entry.organic_status if model == "purchase" else None),
             **storage_fields,
             "note": theoretical_note or entry.note or "",
         }

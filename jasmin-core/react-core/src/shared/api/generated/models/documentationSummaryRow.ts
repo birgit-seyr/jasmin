@@ -96,6 +96,8 @@ export interface DocumentationSummaryRow {
    */
   price_per_unit: string | null;
   /** @nullable */
+  organic_status?: string | null;
+  /** @nullable */
   theoretical_harvest_amount_share_content?: number | null;
   /** @nullable */
   theoretical_harvest_amount_order_content?: number | null;

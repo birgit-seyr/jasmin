@@ -725,7 +725,7 @@
   "no_variation_columns_message": "Für die ausgewählte Woche gibt es keine Anteilsgrößen. Bitte richte Anteilstypen und Liefertage (mit Verteilstationen) ein, damit diese Tabelle angezeigt werden kann.",
   "organic": {
     "conventional": "Konventionell",
-    "in_conversion": "Bio-Umstellung",
+    "in_conversion": "Umstellung",
     "in_conversion_footer": "aus der Umstellung auf den biologischen Landbau",
     "organic": "Bio",
     "organic_footer": "aus kontrolliert biologischem Anbau"

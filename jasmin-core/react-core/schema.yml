@@ -30900,6 +30900,9 @@ components:
           format: decimal
           pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
           nullable: true
+        organic_status:
+          type: string
+          nullable: true
         theoretical_harvest_amount_share_content:
           type: number
           format: double

@@ -234,6 +234,7 @@ class TestGetSummary:
             share_article=article,
             amount=Decimal("28"),
             storage=storage,
+            organic_status="organic",
         )
 
         result = DocumentationSummaryService.get_summary(
@@ -241,6 +242,9 @@ class TestGetSummary:
         )
         assert len(result) >= 1
         assert result[0]["purchase_amount"] == Decimal("28")
+        # The organic status must round-trip through the summary row so the
+        # DocumentationPurchase organic column reflects the saved value.
+        assert result[0]["organic_status"] == "organic"
 
 
 # ---------------------------------------------------------------------------

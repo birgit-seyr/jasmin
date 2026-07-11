@@ -28,6 +28,7 @@ export function useOrganicStatusColumn(): EditableColumnConfig<TableRecord>[] {
         inputType: "select",
         required: false,
         sortable: true,
+        width: "8em",
         options: organicOptions,
         render: (value: unknown): ReactNode => {
           const match = organicOptions.find(

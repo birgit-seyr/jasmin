@@ -151,6 +151,7 @@ vi.mock("@shared/ui", () => ({
   PastWarningMessage: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="past-warning">{children}</div>
   ),
+  ToolTipIcon: () => <span data-testid="tooltip-icon" />,
 }));
 
 // AddShareArticleEntry unconditionally mounts ShareArticleModal (which fires a

@@ -326,6 +326,9 @@ class DocumentationSummaryRowSerializer(serializers.Serializer):
     price_per_unit = serializers.DecimalField(
         max_digits=12, decimal_places=2, allow_null=True
     )
+    # Purchase-only: the documented organic status of the purchase (None for
+    # other models). Lets DocumentationPurchase's organic column round-trip.
+    organic_status = serializers.CharField(required=False, allow_null=True)
 
     # ---- harvest-only extras (present only when model == "harvest") ----
     theoretical_harvest_amount_share_content = serializers.FloatField(
