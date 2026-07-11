@@ -13,8 +13,12 @@ export const useSellers = (params: CommissioningResellersListParams = {}) => {
 
   const sellers: SellerOption[] = toOptions(
     data,
+    // Label falls back through the best available name: company name →
+    // name_for_member_pages → the contact's first/last name.
     (s) =>
-      `${s.company_name ?? ""}${s.first_name ? ` - ${s.first_name}` : ""}${s.last_name ? ` - ${s.last_name}` : ""}`,
+      s.company_name ||
+      s.name_for_member_pages ||
+      `${s.first_name ?? ""} ${s.last_name ?? ""}`.trim(),
   );
 
   return {

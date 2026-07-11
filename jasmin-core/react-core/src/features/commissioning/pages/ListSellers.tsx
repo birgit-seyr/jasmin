@@ -24,7 +24,7 @@ import {
   IconActionButton,
   ToolTipIcon,
 } from "@shared/ui";
-import { useContactColumns, useTenant } from "@hooks/index";
+import { useContactColumns, useOrganicGate, useTenant } from "@hooks/index";
 import { isFieldDisabled } from "@shared/utils";
 import OrganicCertificatesModal from "../modals/OrganicCertificatesModal";
 
@@ -61,7 +61,9 @@ export default function ListSellers() {
 
   // The tenant's OWN organic control number gates both new columns; the
   // per-row certificate button additionally requires the seller to have one.
-  const tenantHasOrganicNumber = Boolean(getSetting("organic_control_number"));
+  // Single-sourced via useOrganicGate so the trim/empty semantics match the
+  // organic-status column gate everywhere.
+  const { enabled: tenantHasOrganicNumber } = useOrganicGate();
   const [certReseller, setCertReseller] = useState<{
     id: string;
     name: string;

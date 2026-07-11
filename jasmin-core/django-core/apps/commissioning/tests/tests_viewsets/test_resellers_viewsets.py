@@ -527,3 +527,65 @@ class TestPurchaseOrganicValidation:
         )
         with pytest.raises(OrganicPurchaseCertificateRequired):
             PurchaseSerializer().validate(self._attrs(seller, "organic"))
+
+    # ── Tight boundary weeks (window pins to the delivery week's Monday) ──
+
+    def test_certificate_starting_exactly_on_delivery_week_is_valid(self, tenant):
+        """``valid_from`` == the delivery week's Monday is inclusive → covered."""
+        from isoweek import Week
+
+        from apps.commissioning.serializers import PurchaseSerializer
+
+        seller = ResellerFactory()
+        OrganicCertificate.objects.create(
+            reseller=seller, valid_from=Week(2026, 15).monday()
+        )
+        result = PurchaseSerializer().validate(self._attrs(seller, "organic"))
+        assert result["organic_status"] == "organic"
+
+    def test_certificate_starting_week_after_is_rejected(self, tenant):
+        """``valid_from`` one week after the purchase → not yet active."""
+        from isoweek import Week
+
+        from apps.commissioning.errors import OrganicPurchaseCertificateRequired
+        from apps.commissioning.serializers import PurchaseSerializer
+
+        seller = ResellerFactory()
+        OrganicCertificate.objects.create(
+            reseller=seller, valid_from=Week(2026, 16).monday()
+        )
+        with pytest.raises(OrganicPurchaseCertificateRequired):
+            PurchaseSerializer().validate(self._attrs(seller, "organic"))
+
+    def test_certificate_ending_on_delivery_week_sunday_is_valid(self, tenant):
+        """``valid_until`` == the delivery week's Sunday is inclusive (the week's
+        Monday still falls inside the window) → covered."""
+        from isoweek import Week
+
+        from apps.commissioning.serializers import PurchaseSerializer
+
+        seller = ResellerFactory()
+        OrganicCertificate.objects.create(
+            reseller=seller,
+            valid_from=Week(2026, 1).monday(),
+            valid_until=Week(2026, 15).sunday(),
+        )
+        result = PurchaseSerializer().validate(self._attrs(seller, "organic"))
+        assert result["organic_status"] == "organic"
+
+    def test_certificate_ending_prior_week_sunday_is_rejected(self, tenant):
+        """``valid_until`` == the PRIOR week's Sunday → the delivery week's Monday
+        is one day past the window (the tight closing edge)."""
+        from isoweek import Week
+
+        from apps.commissioning.errors import OrganicPurchaseCertificateRequired
+        from apps.commissioning.serializers import PurchaseSerializer
+
+        seller = ResellerFactory()
+        OrganicCertificate.objects.create(
+            reseller=seller,
+            valid_from=Week(2026, 1).monday(),
+            valid_until=Week(2026, 14).sunday(),
+        )
+        with pytest.raises(OrganicPurchaseCertificateRequired):
+            PurchaseSerializer().validate(self._attrs(seller, "organic"))

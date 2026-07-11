@@ -68,7 +68,6 @@ export type {
   ParsedDayVariationKey,
   DayVariationKeyParts,
 } from './columns/columnKeys';
-export { useStorageColumns } from './columns/useStorageColumns';
 export { useWashingCleaningColumns } from './columns/useWashingCleaningColumns';
 // modal-state hook
 export { useShareArticleModal } from './modals/useShareArticleModal';

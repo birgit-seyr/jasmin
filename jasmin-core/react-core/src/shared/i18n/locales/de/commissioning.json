@@ -583,7 +583,6 @@
   "copy_to_offer_group": "in {{name}} kopieren",
   "variations_totals": "Anzahl zu packende Kisten",
   "show_forecast_classification": "Zuteilung zu Kistengrößen aus Ernteprognose anzeigen",
-  "finalize_current_stock_tooltip": "Einträge, die leer sind, werden mit dem erwarteten Bestand gefüllt. Bereits ausgefüllte Einträge bleiben unverändert.",
   "only_odd_weeks": "nur ungerade KW",
   "only_even_weeks": "nur gerade KW",
   "send_invoices_bulk_via_email": "Rechnungen per email versenden",

@@ -12,6 +12,7 @@ import type {
   Purchase,
   PurchaseBulkSetAsExpectedItem,
 } from "@shared/api/generated/models";
+import { OrganicStatusEnum } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { ExportCsvPurchase } from "@features/commissioning/modals";
 import { WeekSelector } from "@shared/selectors";
@@ -154,31 +155,40 @@ export default function DocumentationPurchase() {
     useShareArticles(shareArticleFilters);
 
   const sellerColumn = useSellerColumn({
-    overrides: { align: "left", sortable: true },
+    overrides: { align: "left", sortable: true, required: true },
   });
 
-  const customEdit = useCallback((record: TableRecord, form: FormInstance) => {
-    if (record.key === -1) {
-      const defaultValues = { size: "M" };
-      form.setFieldsValue(defaultValues);
-      return { ...record, ...defaultValues } as TableRecord;
-    }
+  const customEdit = useCallback(
+    (record: TableRecord, form: FormInstance) => {
+      if (record.key === -1) {
+        const defaultValues: Record<string, unknown> = { size: "M" };
+        // When the tenant is organic-certified (the column is shown), default a
+        // new purchase row to ``organic`` so the common case needs no toggle.
+        if (organicStatusColumn.length > 0) {
+          defaultValues.organic_status = OrganicStatusEnum.organic;
+        }
 
-    const formValues: Record<string, unknown> = {};
-    const recordUpdates: Record<string, unknown> = {};
-    const r = record as Record<string, unknown>;
+        form.setFieldsValue(defaultValues);
+        return { ...record, ...defaultValues } as TableRecord;
+      }
 
-    if (r.purchase_amount !== null && r.purchase_amount !== undefined) {
-      formValues.amount = r.purchase_amount;
-      recordUpdates.amount = r.purchase_amount;
-    }
+      const formValues: Record<string, unknown> = {};
+      const recordUpdates: Record<string, unknown> = {};
+      const r = record as Record<string, unknown>;
 
-    if (Object.keys(formValues).length > 0) {
-      form.setFieldsValue(formValues);
-    }
+      if (r.purchase_amount !== null && r.purchase_amount !== undefined) {
+        formValues.amount = r.purchase_amount;
+        recordUpdates.amount = r.purchase_amount;
+      }
 
-    return { ...record, ...recordUpdates } as TableRecord;
-  }, []);
+      if (Object.keys(formValues).length > 0) {
+        form.setFieldsValue(formValues);
+      }
+
+      return { ...record, ...recordUpdates } as TableRecord;
+    },
+    [organicStatusColumn],
+  );
 
   const {
     selectedRowKeys,

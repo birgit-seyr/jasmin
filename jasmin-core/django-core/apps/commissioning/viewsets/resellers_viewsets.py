@@ -340,7 +340,7 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
                 # covers today? One correlated subquery — stays scale-invariant.
                 has_active_organic_certificate=Exists(
                     OrganicCertificate.objects.filter(reseller=OuterRef("pk")).filter(
-                        active_on_date_q(timezone.now().date())
+                        active_on_date_q(timezone.localdate())
                     )
                 )
             )

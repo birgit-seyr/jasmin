@@ -11,8 +11,8 @@ export type OrganicStatus = "organic" | "in_conversion" | "conventional";
  * in member-facing views, "*" / "**" markers on PDFs, control-number
  * footer) is contingent on the tenant being certified — i.e. having
  * a non-empty ``Tenant.organic_control_number``. A tenant without
- * one is, by definition, not entitled to label anything as "Bio"
- * or "Umstellung", so every UI surface hides the column/badge/dropdown.
+ * one is, by definition, not entitled to label anything as "organic"
+ * or "in transition", so every UI surface hides the column/badge/dropdown.
  *
  * Call this hook at the top of any component that renders an
  * organic-status surface; gate the render on ``enabled``.

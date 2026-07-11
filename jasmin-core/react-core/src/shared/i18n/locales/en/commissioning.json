@@ -578,7 +578,6 @@
   "copy_to_offer_group": "copy to {{name}}",
   "variations_totals": "number of crates to pack",
   "show_forecast_classification": "show allocation to box sizes from harvest forecast",
-  "finalize_current_stock_tooltip": "entries that are empty will be filled with expected stock. already filled entries remain unchanged.",
   "only_odd_weeks": "only odd weeks",
   "only_even_weeks": "only even weeks",
   "send_invoices_bulk_via_email": "send invoices via email",

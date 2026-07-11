@@ -8,8 +8,8 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 
 /**
- * The tenant-gated organic-status SELECT column (Bio / Umstellung /
- * Konventionell). Returns an EMPTY array when the tenant isn't organic-certified,
+ * The tenant-gated organic-status SELECT column (organic / in transition /
+ * conventional). Returns an EMPTY array when the tenant isn't organic-certified,
  * so callers can spread it straight into a columns array without their own gate.
  * Single source shared by ListShareArticles and DocumentationPurchase.
  */
