@@ -257,12 +257,12 @@ export default function CommissioningSidebar({
           : []),
 
         {
-          key: "commissioning-amount-shares",
+          key: "commissioning-amount-share-type-variations",
 
           requireRole: "isOffice",
           label: (
-            <Link to="/commissioning/amount-shares">
-              {t("commissioning.amount_shares")}
+            <Link to="/commissioning/amount-share-type-variations">
+              {t("commissioning.amount_share_type_variations")}
             </Link>
           ),
         },

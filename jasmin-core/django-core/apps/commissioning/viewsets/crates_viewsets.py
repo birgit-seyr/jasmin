@@ -606,7 +606,9 @@ class CrateNetPriceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             queryset = queryset.filter(crate_id=crate)
 
         current = params["current"]
-        if current is not None:
+        # Truthiness, not ``is not None``: ``current`` is a strict bool, so
+        # ``?current=false`` must NOT restrict to the open record.
+        if current:
             queryset = queryset.filter(valid_until__isnull=True)
 
         # Latest first per crate — modals scroll through price history

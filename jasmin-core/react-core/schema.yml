@@ -18646,11 +18646,12 @@ paths:
   /api/commissioning/share_delivery/box_combination_matrix/:
     get:
       operationId: commissioning_share_delivery_box_combination_matrix_retrieve
-      description: 'Whole-week matrix for AmountShares: one row per delivery day (or
-        day×tour / day×station). Subscription tenants get box-combination columns
-        (combo_<key>, each cell the box count); import (external-demand) tenants get
-        flat per-variation columns (variation_<id>) sourced from weekly demand. Both
-        render through the same frontend hook.'
+      description: 'Whole-week matrix for AmountShareTypeVariations: one row per delivery
+        day (or day×tour / day×station). Subscription tenants get box-combination
+        columns (combo_<key>, each cell the box count); import (external-demand) tenants
+        get flat per-variation columns (variation_<id>) sourced from weekly demand.
+        Both render through the same frontend hook. ``joker=true`` counts the boxes
+        skipped via a taken joker instead of the shipping ones (same columns).'
       parameters:
       - in: query
         name: delivery_week
@@ -18678,6 +18679,10 @@ paths:
           type: boolean
       - in: query
         name: is_packed_bulk
+        schema:
+          type: boolean
+      - in: query
+        name: joker
         schema:
           type: boolean
       - in: query
@@ -18800,90 +18805,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedShareDeliveryList'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
-  /api/commissioning/share_delivery/variation_delivery_counts/:
-    get:
-      operationId: commissioning_share_delivery_variation_delivery_counts_list
-      description: Get delivery counts per share_type_variation and delivery day.
-      parameters:
-      - in: query
-        name: delivery_station
-        schema:
-          type: string
-        description: Delivery station ID (Jasmin ID format)
-      - in: query
-        name: delivery_week
-        schema:
-          type: integer
-        description: ISO week number (1-53)
-        required: true
-        examples:
-          Week1:
-            value: 1
-            summary: Week 1
-          Week26:
-            value: 26
-            summary: Week 26
-          Week52:
-            value: 52
-            summary: Week 52
-      - in: query
-        name: for_stations
-        schema:
-          type: boolean
-      - in: query
-        name: for_tours
-        schema:
-          type: boolean
-      - in: query
-        name: joker
-        schema:
-          type: boolean
-      - in: query
-        name: manual
-        schema:
-          type: boolean
-      - in: query
-        name: share_type
-        schema:
-          type: string
-        description: Share type ID (Jasmin ID format)
-        required: true
-      - in: query
-        name: year
-        schema:
-          type: integer
-        description: Year (YYYY format)
-        required: true
-        examples:
-          '2024':
-            value: 2024
-          '2025':
-            value: 2025
-      tags:
-      - commissioning
-      security:
-      - tenantBoundJwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/VariationDeliveryCountRow'
           description: ''
         '400':
           content:
@@ -40103,31 +40024,6 @@ components:
           type: string
         user_language:
           $ref: '#/components/schemas/UserLanguageEnum'
-    VariationDeliveryCountRow:
-      type: object
-      description: |-
-        Stable header of a ``ShareDeliveryService.get_variation_delivery_counts``
-        row — one object per share_type_variation.
-
-        Dynamic ``amount_day_<day_id>[_tour_<n>|_station_<station_id>]`` integer
-        count keys are read by iteration on the frontend and are left OUT here.
-      properties:
-        id:
-          type: string
-        share_type_id:
-          type: string
-        share_type_name:
-          type: string
-        share_type_variation_id:
-          type: string
-        share_type_variation_size:
-          type: string
-      required:
-      - id
-      - share_type_id
-      - share_type_name
-      - share_type_variation_id
-      - share_type_variation_size
     VariationTypeEnum:
       enum:
       - physical

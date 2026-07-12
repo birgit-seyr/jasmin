@@ -122,7 +122,9 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 )
             )
 
-        if future is not None and active_at_date is not None:
+        # Truthiness, not ``is not None``: ``future`` is a strict bool, so
+        # ``?future=false`` must NOT switch to the future-days view.
+        if future and active_at_date is not None:
             future_queryset = SharesDeliveryDay.objects.filter(valid_until__isnull=True)
             active_records = SharesDeliveryDay.current.active_at_date(active_at_date)
             queryset = future_queryset.exclude(id__in=active_records)

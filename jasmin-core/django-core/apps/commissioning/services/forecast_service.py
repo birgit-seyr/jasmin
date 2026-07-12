@@ -388,17 +388,24 @@ class ForecastService:
 
         collected: dict[str, ShareTypeVariation] = {}
 
-        # "for all" flags → bulk-add all matching active variations
+        # "for all" flags → bulk-add all matching active variations. PHYSICAL
+        # only: a virtual variation's demand is already represented by its
+        # physical components, so forecasting it too would double-count, and it
+        # has no content of its own to forecast.
+        physical = ShareTypeVariation.VariationType.PHYSICAL
         if validated_data.get("for_all_harvest_shares"):
             for share_type_variation in ShareTypeVariation.current.active_at_date(
                 active_at_date
-            ).filter(share_type__share_option="HARVEST_SHARE"):
+            ).filter(share_type__share_option="HARVEST_SHARE", variation_type=physical):
                 collected[str(share_type_variation.id)] = share_type_variation
 
         if validated_data.get("for_all_harvest_shares_fruit"):
             for share_type_variation in ShareTypeVariation.current.active_at_date(
                 active_at_date
-            ).filter(share_type__share_option="HARVEST_SHARE_FRUIT"):
+            ).filter(
+                share_type__share_option="HARVEST_SHARE_FRUIT",
+                variation_type=physical,
+            ):
                 collected[str(share_type_variation.id)] = share_type_variation
 
         # Explicit variation_<id> keys (handles individual checkboxes)

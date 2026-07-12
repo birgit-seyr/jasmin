@@ -13,7 +13,7 @@
  *   [<prefix>]day_<dayId>_variation_<variationId>[ _tour_<n> | _station_<sid> ]
  *   [<prefix>]day_<dayId>_planned_amount        (per-day trailer leaf)
  *   [<prefix>]day_<dayId>_harvested             (per-day trailer leaf)
- *   amount_day_<dayId>[ _tour_<n> | _station_<sid> ]   (AmountShares, transposed)
+ *   amount_day_<dayId>[ _tour_<n> | _station_<sid> ]   (AmountShareTypeVariations, transposed)
  *   [<prefix>]variation_<variationId>           (day-less, day fixed by query)
  */
 
@@ -68,7 +68,7 @@ export interface DayAmountKeyParts {
 }
 
 /**
- * AmountShares' transposed key: `amount_day_<dayId>[_tour_<n>|_station_<sid>]`.
+ * AmountShareTypeVariations' transposed key: `amount_day_<dayId>[_tour_<n>|_station_<sid>]`.
  * There is no `_variation_` segment — the variation is the table ROW there, so
  * the column encodes only the day (+ optional tour/station tier). The backend
  * emits exactly these keys on `variationDeliveryCountRow`.

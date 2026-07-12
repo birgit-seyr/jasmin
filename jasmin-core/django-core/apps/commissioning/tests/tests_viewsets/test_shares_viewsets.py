@@ -437,6 +437,18 @@ class TestShareTypeVariationViewSet:
         resp = api_client.get(self.URL, {"physical": "true"})
         assert resp.status_code == status.HTTP_200_OK
 
+    def test_filter_physical_false_returns_both(self, api_client, tenant):
+        # ``physical`` is a strict bool: ``physical=false`` is present-but-false
+        # and must NOT restrict to physical — the filter is opt-in on an explicit
+        # true only. (Regression: keying on ``is not None`` hid virtuals here.)
+        physical = ShareTypeVariationFactory(variation_type="physical")
+        virtual = ShareTypeVariationFactory(variation_type="virtual")
+        resp = api_client.get(self.URL, {"physical": "false"})
+        assert resp.status_code == status.HTTP_200_OK
+        ids = {row["id"] for row in resp.data}
+        assert physical.id in ids
+        assert virtual.id in ids
+
     def test_filter_by_share_option(self, api_client, tenant):
         var = ShareTypeVariationFactory()
         name = var.share_type.share_option
@@ -642,32 +654,6 @@ class TestShareExportCsvAction:
         # The in-range week appears as a column; the out-of-range week does not.
         assert f"{in_week.week}/{in_week.year}" in body
         assert f"{out_week.week}/{out_week.year}" not in body
-
-
-# ---------------------------------------------------------------------------
-# ShareDeliveryViewSet — variation_delivery_counts
-# ---------------------------------------------------------------------------
-URL_SD_VARIATION_COUNTS = reverse("share_delivery-variation-delivery-counts")
-
-
-@pytest.mark.django_db
-class TestShareDeliveryVariationCountsAction:
-    def test_missing_share_type_returns_400(self, api_client, tenant):
-        resp = api_client.get(
-            URL_SD_VARIATION_COUNTS,
-            {"year": 2026, "delivery_week": 15},
-        )
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert resp.data["field"] == "share_type"
-
-    def test_returns_empty_for_unknown_share_type(self, api_client, tenant):
-        """No deliveries for the week → service returns empty container."""
-        st = ShareTypeFactory()
-        resp = api_client.get(
-            URL_SD_VARIATION_COUNTS,
-            {"share_type": str(st.id), "year": 2099, "delivery_week": 1},
-        )
-        assert resp.status_code == status.HTTP_200_OK
 
 
 # ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
  * ShareTypeSelector defaults to preserveSelection=true, so a deliberate
  * share-type pick is reconciled against the freshly-loaded options on a
  * year/week change instead of springing back to the first option (or, worse,
- * a stale invalid value persisting — the AmountShares bug this fixes).
+ * a stale invalid value persisting — the AmountShareTypeVariations bug this fixes).
  *
  * antd Select is stubbed: the behavior under test is the reconciliation
  * effect that fires setSelectedShareType, not the rendered widget.

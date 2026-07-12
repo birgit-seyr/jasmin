@@ -13,6 +13,7 @@ from types import SimpleNamespace
 import pytest
 
 from apps.commissioning.errors import PackingAmountsDivergeAcrossStations
+from apps.commissioning.models import VirtualVariationComponent
 from apps.commissioning.services.packing_list_boxes_matrix_service import (
     PackingListBoxesMatrixService,
     _BoxLine,
@@ -841,3 +842,171 @@ class TestGetWeeklyCombinationMatrix:
         rows_by_station = {row["delivery_station_id"]: row for row in result["rows"]}
         assert rows_by_station[station_a.delivery_station_id][column_key] == 2
         assert rows_by_station[station_b.delivery_station_id][column_key] == 1
+
+    def test_joker_flag_swaps_shipping_for_jokered_boxes(self, tenant):
+        """The joker view (``joker=True``) counts the boxes skipped via a taken
+        joker; the default (shipping) view excludes them — same column, mirror
+        counts. This is what the AmountShareTypeVariations joker page renders."""
+        day = SharesDeliveryDayFactory(day_number=0)
+        station = DeliveryStationDayFactory(delivery_day=day)
+        base_var = _base_variation("M")
+        share = _share(base_var, day)
+
+        # Two members ship their box; one member jokered theirs this week.
+        for joker_taken, count in ((False, 2), (True, 1)):
+            for _ in range(count):
+                member = MemberFactory()
+                sub = SubscriptionFactory(
+                    member=member,
+                    share_type_variation=base_var,
+                    quantity=1,
+                    default_delivery_station_day=station,
+                )
+                ShareDeliveryFactory(
+                    share=share,
+                    delivery_station_day=station,
+                    subscription=sub,
+                    joker_taken=joker_taken,
+                )
+
+        shipping = PackingListBoxesMatrixService.get_weekly_combination_matrix(
+            year=_YEAR, delivery_week=_WEEK, mode="day"
+        )
+        jokered = PackingListBoxesMatrixService.get_weekly_combination_matrix(
+            year=_YEAR, delivery_week=_WEEK, mode="day", joker=True
+        )
+
+        # Same single base-box column in both scopes.
+        column_key = shipping["columns"][0]["key"]
+        assert jokered["columns"][0]["key"] == column_key
+
+        # Shipping counts the 2 non-jokered boxes; the joker view counts the 1
+        # skipped box — the jokered delivery never leaks into the shipping view.
+        assert shipping["rows"][0][column_key] == 2
+        assert jokered["rows"][0][column_key] == 1
+
+
+@pytest.mark.django_db
+class TestVirtualFolding:
+    """A virtual variation is folded into its physical components before box
+    derivation: it packs as its component boxes (× component quantity), the
+    columns are physical (never the virtual wrapper), and add-ons ride a physical
+    base."""
+
+    @staticmethod
+    def _physical(weight, size):
+        return ShareTypeVariationFactory(
+            share_type=ShareTypeFactory(
+                share_option="HARVEST_SHARE", is_additional_share_type=False
+            ),
+            size=size,
+            average_weight=Decimal(weight),
+        )
+
+    @staticmethod
+    def _virtual(size, components):
+        virtual = ShareTypeVariationFactory(
+            share_type=ShareTypeFactory(
+                share_option="HARVEST_SHARE_FRUIT", is_additional_share_type=False
+            ),
+            variation_type="virtual",
+            size=size,
+        )
+        for physical, quantity in components:
+            VirtualVariationComponent.objects.create(
+                virtual_variation=virtual,
+                physical_variation=physical,
+                quantity=Decimal(quantity),
+            )
+        return virtual
+
+    def _subscribe(self, member, variation, station_day, delivery_day, quantity=1):
+        sub = SubscriptionFactory(
+            member=member,
+            share_type_variation=variation,
+            quantity=quantity,
+            default_delivery_station_day=station_day,
+        )
+        ShareDeliveryFactory(
+            share=_share(variation, delivery_day),
+            delivery_station_day=station_day,
+            subscription=sub,
+        )
+
+    def test_virtual_sub_packs_as_component_boxes(self, tenant):
+        delivery_day = SharesDeliveryDayFactory(day_number=_DAY)
+        station_day = DeliveryStationDayFactory(delivery_day=delivery_day)
+        veggie = self._physical("3.0", "M")  # heavier
+        fruit = self._physical("1.0", "S")
+        virtual = self._virtual("L", [(veggie, "1"), (fruit, "2")])
+
+        self._subscribe(MemberFactory(), virtual, station_day, delivery_day)
+
+        result = PackingListBoxesMatrixService.get_boxes_matrix(
+            year=_YEAR, delivery_week=_WEEK, day_number=_DAY
+        )
+
+        by_base = {col["base_variation_id"]: col["count"] for col in result["columns"]}
+        # Folded into the two physical components (× component quantity); the
+        # virtual wrapper never appears as a column.
+        assert virtual.pk not in by_base
+        assert by_base[veggie.pk] == 1
+        assert by_base[fruit.pk] == 2
+
+    def test_addon_rides_physical_base_never_virtual(self, tenant):
+        delivery_day = SharesDeliveryDayFactory(day_number=_DAY)
+        station_day = DeliveryStationDayFactory(delivery_day=delivery_day)
+        veggie = self._physical("3.0", "M")  # heaviest physical → primary base
+        fruit = self._physical("1.0", "S")
+        virtual = self._virtual("L", [(veggie, "1"), (fruit, "1")])
+        honey = _addon_variation("HONEY_SHARE", "HONIG")
+
+        member = MemberFactory()
+        self._subscribe(member, virtual, station_day, delivery_day)
+        self._subscribe(member, honey, station_day, delivery_day)
+
+        result = PackingListBoxesMatrixService.get_boxes_matrix(
+            year=_YEAR, delivery_week=_WEEK, day_number=_DAY
+        )
+
+        combos = {
+            (col["base_variation_id"], tuple(a["variation_id"] for a in col["add_ons"]))
+            for col in result["columns"]
+        }
+        # The add-on rides the heaviest PHYSICAL base (veggie); fruit is base-only;
+        # nothing is based on the virtual wrapper.
+        assert (veggie.pk, (honey.pk,)) in combos
+        assert (fruit.pk, ()) in combos
+        assert all(col["base_variation_id"] != virtual.pk for col in result["columns"])
+
+    def test_folded_virtual_box_carries_component_content(self, tenant):
+        """The folded box shows the physical component's real ShareContent — the
+        empty-cell virtual box is gone. (Planned content lives on the physical
+        component's Share, as prod recompute materialises it, NOT on the virtual.)"""
+        delivery_day = SharesDeliveryDayFactory(day_number=_DAY)
+        station_day = DeliveryStationDayFactory(delivery_day=delivery_day)
+        veggie = self._physical("3.0", "M")
+        virtual = self._virtual("L", [(veggie, "1")])
+
+        veggie_share = _share(veggie, delivery_day)
+        carrots = ShareArticleFactory(name="Möhren")
+        ShareContentFactory(
+            share=veggie_share,
+            share_article=carrots,
+            delivery_station=station_day.delivery_station,
+            amount=Decimal("5"),
+            unit="KG",
+            size="M",
+        )
+
+        self._subscribe(MemberFactory(), virtual, station_day, delivery_day)
+
+        result = PackingListBoxesMatrixService.get_boxes_matrix(
+            year=_YEAR, delivery_week=_WEEK, day_number=_DAY
+        )
+
+        veggie_col = next(
+            col for col in result["columns"] if col["base_variation_id"] == veggie.pk
+        )
+        rows_by_name = {row["share_article_name"]: row for row in result["rows"]}
+        assert rows_by_name["Möhren"][veggie_col["key"]] == 5

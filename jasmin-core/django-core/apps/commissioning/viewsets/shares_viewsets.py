@@ -98,7 +98,6 @@ from ..serializers.shares_serializer import (
     DeliveryExceptionGapSerializer,
     ShareDeliveryDetailsRowSerializer,
     StationMemberMatrixSerializer,
-    VariationDeliveryCountRowSerializer,
 )
 from ..services import (
     DefaultShareContentService,
@@ -387,11 +386,16 @@ class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 ).values_list("id", flat=True)
             )
 
-        if physical is not None:
+        # Truthiness, NOT ``is not None``: these are strict bools, so
+        # ``?physical=false`` parses to ``False`` (present-but-false). Keying on
+        # presence would wrongly restrict to PHYSICAL for ``physical=false`` and
+        # return an empty set for ``physical=true&virtual=true``. Only an
+        # explicit true opts into either filter.
+        if physical:
             queryset = queryset.filter(
                 variation_type=ShareTypeVariation.VariationType.PHYSICAL
             )
-        if virtual is not None:
+        if virtual:
             queryset = queryset.filter(
                 variation_type=ShareTypeVariation.VariationType.VIRTUAL
             )
@@ -823,60 +827,6 @@ class ShareDeliveryViewSet(
 
     @extend_schema(
         parameters=[
-            get_share_type_parameter(),
-            get_year_parameter(),
-            get_delivery_week_parameter(),
-            get_delivery_station_parameter(),
-            OpenApiParameter(name="manual", type=OpenApiTypes.BOOL, required=False),
-            OpenApiParameter(name="for_tours", type=OpenApiTypes.BOOL, required=False),
-            OpenApiParameter(
-                name="for_stations", type=OpenApiTypes.BOOL, required=False
-            ),
-            OpenApiParameter(name="joker", type=OpenApiTypes.BOOL, required=False),
-        ],
-        responses={
-            200: VariationDeliveryCountRowSerializer(many=True),
-            400: ErrorResponseSerializer,
-        },
-        description="Get delivery counts per share_type_variation and delivery day.",
-    )
-    # ``pagination_class=None``: the action returns a bare list (``Response(result)``,
-    # never paginated), but the ViewSet's ``OptionalLimitOffsetPagination`` would
-    # otherwise make spectacular wrap the response in a (false) ``Paginated…`` schema.
-    #
-    # Backend-agnostic despite living on ShareDeliveryViewSet: the counts come
-    # from ShareDemandService (via ShareDeliveryService.get_variation_delivery_counts),
-    # so this stays correct for external-CSV/import tenants that have no
-    # ShareDelivery rows. Do NOT reroute it to a direct ShareDelivery query.
-    @action(detail=False, methods=["get"], pagination_class=None)
-    def variation_delivery_counts(self, request: Request) -> Response:
-        enforce_privileged(request, "Staff only.")
-        params = validate_query_params(
-            request,
-            required=["share_type", "year", "delivery_week"],
-            optional=["manual", "for_tours", "for_stations", "joker"],
-        )
-        share_type = params["share_type"]
-        year = params["year"]
-        delivery_week = params["delivery_week"]
-        manual = params["manual"]
-        for_tours = params["for_tours"]
-        for_stations = params["for_stations"]
-        joker = params["joker"]
-
-        result = ShareDeliveryService.get_variation_delivery_counts(
-            share_type_id=share_type,
-            manual=manual,
-            year=year,
-            delivery_week=delivery_week,
-            joker=joker,
-            for_tours=for_tours,
-            for_stations=for_stations,
-        )
-        return Response(result)
-
-    @extend_schema(
-        parameters=[
             get_year_parameter(),
             get_delivery_week_parameter(),
             OpenApiParameter(name="for_tours", type=OpenApiTypes.BOOL, required=False),
@@ -886,18 +836,20 @@ class ShareDeliveryViewSet(
             OpenApiParameter(
                 name="is_packed_bulk", type=OpenApiTypes.BOOL, required=False
             ),
+            OpenApiParameter(name="joker", type=OpenApiTypes.BOOL, required=False),
         ],
         responses={
             200: WeeklyComboMatrixResponseSerializer,
             400: ErrorResponseSerializer,
         },
         description=(
-            "Whole-week matrix for AmountShares: one row per delivery day (or "
-            "day×tour / day×station). Subscription tenants get box-combination "
-            "columns (combo_<key>, each cell the box count); import "
-            "(external-demand) tenants get flat per-variation columns "
+            "Whole-week matrix for AmountShareTypeVariations: one row per "
+            "delivery day (or day×tour / day×station). Subscription tenants get "
+            "box-combination columns (combo_<key>, each cell the box count); "
+            "import (external-demand) tenants get flat per-variation columns "
             "(variation_<id>) sourced from weekly demand. Both render through "
-            "the same frontend hook."
+            "the same frontend hook. ``joker=true`` counts the boxes skipped via "
+            "a taken joker instead of the shipping ones (same columns)."
         ),
     )
     @action(detail=False, methods=["get"], pagination_class=None)
@@ -906,7 +858,7 @@ class ShareDeliveryViewSet(
         params = validate_query_params(
             request,
             required=["year", "delivery_week"],
-            optional=["for_tours", "for_stations", "is_packed_bulk"],
+            optional=["for_tours", "for_stations", "is_packed_bulk", "joker"],
         )
         mode = "day"
         if params["for_stations"]:
@@ -914,10 +866,12 @@ class ShareDeliveryViewSet(
         elif params["for_tours"]:
             mode = "tours"
 
+        joker = bool(params["joker"])
+
         # Import (external-demand) tenants have no ShareDelivery rows, so their
         # matrix is FLAT per-variation columns (from the demand port); everyone
         # else gets the real box combinations. Both render through the same
-        # frontend hook, so AmountShares stays one code path.
+        # frontend hook, so AmountShareTypeVariations stays one code path.
         from ..services.share_demand_service import (
             ExternalDemandBackend,
             _resolve_backend,
@@ -928,6 +882,7 @@ class ShareDeliveryViewSet(
                 year=params["year"],
                 delivery_week=params["delivery_week"],
                 mode=mode,
+                joker=joker,
             )
         else:
             result = PackingListBoxesMatrixService.get_weekly_combination_matrix(
@@ -935,6 +890,7 @@ class ShareDeliveryViewSet(
                 delivery_week=params["delivery_week"],
                 mode=mode,
                 is_packed_bulk=params["is_packed_bulk"],
+                joker=joker,
             )
         serializer = WeeklyComboMatrixResponseSerializer(result)
         return Response(serializer.data)

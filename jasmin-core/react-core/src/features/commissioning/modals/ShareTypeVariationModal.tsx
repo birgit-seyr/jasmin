@@ -580,10 +580,10 @@ export default function ShareTypeVariationModal({
       // Sort-order uniqueness — the table's built-in ``uniqueCheck``
       // prop only supports one rule (currently ``size``). Enforce
       // sort-order uniqueness here so the office can't ship two rows
-      // with the same "3". The backend's variation queryset uses
-      // ``sort_order`` as the primary ordering key (see
-      // ``ShareDeliveryService.get_variation_delivery_counts`` +
-      // ``ShareViewSet.get_queryset``); duplicates would leave
+      // with the same "3". The backend's variation querysets order by
+      // ``sort_order`` first (see
+      // ``ShareDeliveryService.get_weekly_variation_count_matrix`` +
+      // ``ShareTypeVariationViewSet.get_queryset``); duplicates would leave
       // tiebreakers up to ``id`` and confuse the office.
       const sortOrder = transformedData.sort_order;
       const editingId = transformedData.id;

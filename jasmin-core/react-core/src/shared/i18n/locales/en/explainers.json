@@ -9,7 +9,7 @@
   "commissioning_lists": "",
   "waste": "",
   "documentation_overview": "",
-  "amount_shares": "Here you can see the shares that actually need to be delivered, without jokers.",
+  "amount_share_type_variations": "Here you can see the shares that actually need to be delivered, without jokers.",
   "planning_long_term_harvest_shares": "The data entered here is carried over into the box planning of the respective week - but only into the future. (The past is ignored.) So if you enter a vegetable here for weeks 1-20, but the current week is 10, then entries only appear in the box planning from week 11-20. The entries can simply be overwritten/deleted in the actual weekly box planning if they don't fit after all. This can also be a way, for example, to always have a head of lettuce already preset in the box planning throughout the summer months.",
   "planning_long_term_harvest_shares_fruits": "The data entered here is carried over into the box planning of the respective week - but only into the future. (The past is ignored.) So if you enter a vegetable here for weeks 1-20, but the current week is 10, then entries only appear in the box planning from week 11-20. The entries can simply be overwritten/deleted in the actual weekly box planning if they don't fit after all. This can also be a way, for example, to always have a head of lettuce already preset in the box planning throughout the summer months.",
   "": "",

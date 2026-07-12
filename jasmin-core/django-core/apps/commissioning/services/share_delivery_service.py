@@ -3,11 +3,8 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-from django.db.models import QuerySet
-
 from ..models import (
     SharesDeliveryDay,
-    ShareType,
     ShareTypeVariation,
 )
 from ..utils.iso_week_utils import saturday_of_iso_week
@@ -16,111 +13,14 @@ from .share_demand_service import ShareDemandService
 
 class ShareDeliveryService:
     @staticmethod
-    def get_variation_delivery_counts(
-        share_type_id: str,
-        year: int,
-        delivery_week: int,
-        manual: bool | None = None,
-        for_tours: bool | None = None,
-        for_stations: bool | None = None,
-        joker: bool | None = None,
-    ) -> list[dict[str, Any]]:
-        """
-        Return per-variation delivery counts broken down by delivery day,
-        optionally further split by tour or station.
-
-        Each result row contains identifying fields plus dynamic
-        ``amount_day_<day_id>[_tour_<n>|_station_<id>]`` keys.
-
-        Import-safety (load-bearing): the counts come from
-        ``ShareDemandService.aggregated_rows`` — the demand PORT — NEVER from a
-        direct ``ShareDelivery`` query. For external-CSV (import) tenants
-        (``uploads_weekly_share_amount=True``) there are ZERO ``ShareDelivery``
-        rows and demand lives in ``ExternalShareDemand``, so a "simplification"
-        that reads ``ShareDelivery`` directly here would silently return
-        all-zero counts and blank the AmountShares grid for those tenants. This
-        service/viewset are named ``ShareDelivery*`` because they mostly serve
-        ShareDeliveries — but THIS method is deliberately backend-agnostic; keep
-        it routed through ``ShareDemandService``. (Locked by
-        ``test_share_delivery_service.py::…::test_import_mode_reads_external_demand``.)
-
-        ``joker``: ``False``/omitted = shipping-only (the AmountShares grid's
-        default view), ``True`` = jokered-only. The underlying
-        ``ShareDemandService.aggregated_rows`` is tri-state (``None`` = both),
-        but this entry deliberately normalises ``None`` to ``False`` — a
-        caller wanting the combined view uses ``aggregated_rows`` directly.
-        """
-        # Deliberate single normalisation (was previously re-collapsed inside
-        # each per-day/tour/station helper): default view = shipping-only.
-        joker = bool(joker)
-
-        share_type_obj = ShareType.objects.get(id=share_type_id)
-
-        active_at_date = saturday_of_iso_week(year, delivery_week)
-
-        active_delivery_days = SharesDeliveryDay.current.active_at_date(
-            active_at_date
-        ).order_by("day_number")
-
-        # Order by ``sort_order`` so the rows on AmountShares.tsx match
-        # the office's configured display order. ``id`` is the
-        # tiebreaker for stability when two variations share the same
-        # sort_order (the modal's uniqueness check should prevent that,
-        # but keep the fallback deterministic for legacy data).
-        variations = (
-            ShareTypeVariation.current.active_at_date(active_at_date)
-            .filter(share_type=share_type_obj)
-            .order_by("sort_order", "id")
-        )
-
-        result: list[dict[str, Any]] = []
-
-        for variation in variations:
-            row = _variation_header(share_type_obj, variation)
-
-            if for_tours:
-                _add_scope_counts(
-                    row,
-                    variation,
-                    active_delivery_days,
-                    year,
-                    delivery_week,
-                    joker,
-                    group="tour",
-                )
-            elif for_stations:
-                _add_scope_counts(
-                    row,
-                    variation,
-                    active_delivery_days,
-                    year,
-                    delivery_week,
-                    joker,
-                    group="station",
-                )
-            else:
-                _add_scope_counts(
-                    row,
-                    variation,
-                    active_delivery_days,
-                    year,
-                    delivery_week,
-                    joker,
-                    group="day",
-                )
-
-            result.append(row)
-
-        return result
-
-    @staticmethod
     def get_weekly_variation_count_matrix(
         year: int,
         delivery_week: int,
         mode: str = "day",
+        joker: bool = False,
     ) -> dict[str, Any]:
-        """Whole-week per-variation count matrix for AmountShares on IMPORT
-        (external-demand) tenants — the flat sibling of
+        """Whole-week per-variation count matrix for AmountShareTypeVariations on
+        IMPORT (external-demand) tenants — the flat sibling of
         ``PackingListBoxesMatrixService.get_weekly_combination_matrix``.
 
         ROWS are the week's delivery days (or day × tour / day × station);
@@ -130,6 +30,11 @@ class ShareDeliveryService:
         variation shipping in the row's scope. Counts come from the demand PORT
         (``ShareDemandService``), so this stays correct for external-CSV tenants
         that have no ``ShareDelivery`` rows.
+
+        ``joker=True`` requests the jokered counts instead of the shipping ones.
+        Import (CSV) demand carries no joker information, so the demand port
+        returns an empty result for those tenants — the joker view is simply
+        blank there, which is correct.
         """
         from ..models import DeliveryStation
         from .packing_list_service import PackingListService
@@ -159,7 +64,7 @@ class ShareDeliveryService:
             delivery_week=delivery_week,
             delivery_day_ids=[day.id for day in delivery_days],
             variation_ids=variation_ids,
-            joker=False,
+            joker=joker,
         )
 
         station_name_by_id: dict[str, str | None] = {}
@@ -223,61 +128,3 @@ class ShareDeliveryService:
             rows.append(row)
 
         return {"columns": columns, "rows": rows}
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-
-def _variation_header(
-    share_type: ShareType, variation: ShareTypeVariation
-) -> dict[str, Any]:
-    return {
-        "id": variation.id,
-        "share_type_id": share_type.id,
-        "share_type_name": share_type.name,
-        "share_type_variation_id": variation.id,
-        "share_type_variation_size": variation.size,
-    }
-
-
-def _add_scope_counts(
-    row: dict[str, Any],
-    variation: ShareTypeVariation,
-    delivery_days: QuerySet,
-    year: int,
-    delivery_week: int,
-    joker: bool | None,
-    *,
-    group: str,
-) -> None:
-    """Add dynamic ``amount_day_<...>`` counts to ``row``, collapsed to the
-    requested ``group`` scope (``'day'``, ``'tour'`` or ``'station'``).
-
-    ``aggregated_rows`` is grouped by station_day; entries are bucketed by the
-    final dynamic key and summed uniformly — never assigned — so every scope
-    that maps two source rows onto the same key (e.g. two station-days sharing
-    a ``(day, tour)``) accumulates instead of the last write winning.
-    """
-    rows = ShareDemandService.aggregated_rows(
-        year=year,
-        delivery_week=delivery_week,
-        delivery_day_ids=list(delivery_days.values_list("id", flat=True)),
-        variation_id=variation.id,
-        joker=joker,
-    )
-    bucket: dict[str, int] = {}
-    for entry in rows:
-        if group == "tour":
-            if entry["tour_number"] is None:
-                continue
-            key = f"amount_day_{entry['day_id']}_tour_{entry['tour_number']}"
-        elif group == "station":
-            if entry["station_id"] is None:
-                continue
-            key = f"amount_day_{entry['day_id']}_station_{entry['station_id']}"
-        else:
-            key = f"amount_day_{entry['day_id']}"
-        bucket[key] = bucket.get(key, 0) + entry["count"]
-    row.update(bucket)

@@ -134,7 +134,6 @@ import type {
   CommissioningShareDeliveryListParams,
   CommissioningShareDeliveryOverviewListParams,
   CommissioningShareDeliveryPendingOptinListParams,
-  CommissioningShareDeliveryVariationDeliveryCountsListParams,
   CommissioningShareImportBatchesListParams,
   CommissioningShareTypeVariationAmountsForPlanningRetrieve200,
   CommissioningShareTypeVariationAmountsForPlanningRetrieveParams,
@@ -297,7 +296,6 @@ import type {
   ToggleOptinRequest,
   UnconfirmedCountResponse,
   UpdateToursResponse,
-  VariationDeliveryCountRow,
   VirtualVariationComponentListItem,
   VirtualVariationComponentsRequest,
   VirtualVariationComponentsResponse,
@@ -24295,7 +24293,7 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Whole-week matrix for AmountShares: one row per delivery day (or day×tour / day×station). Subscription tenants get box-combination columns (combo_<key>, each cell the box count); import (external-demand) tenants get flat per-variation columns (variation_<id>) sourced from weekly demand. Both render through the same frontend hook.
+ * Whole-week matrix for AmountShareTypeVariations: one row per delivery day (or day×tour / day×station). Subscription tenants get box-combination columns (combo_<key>, each cell the box count); import (external-demand) tenants get flat per-variation columns (variation_<id>) sourced from weekly demand. Both render through the same frontend hook. ``joker=true`` counts the boxes skipped via a taken joker instead of the shipping ones (same columns).
  */
 export const commissioningShareDeliveryBoxCombinationMatrixRetrieve = (
     params: CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams,
@@ -24553,96 +24551,6 @@ export function useCommissioningShareDeliveryPendingOptinList<TData = Awaited<Re
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getCommissioningShareDeliveryPendingOptinListQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
-}
-
-
-
-
-/**
- * Get delivery counts per share_type_variation and delivery day.
- */
-export const commissioningShareDeliveryVariationDeliveryCountsList = (
-    params: CommissioningShareDeliveryVariationDeliveryCountsListParams,
- signal?: AbortSignal
-) => {
-      
-      
-      return axiosService<VariationDeliveryCountRow[]>(
-      {url: `/api/commissioning/share_delivery/variation_delivery_counts/`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-  
-
-
-
-export const getCommissioningShareDeliveryVariationDeliveryCountsListQueryKey = (params?: CommissioningShareDeliveryVariationDeliveryCountsListParams,) => {
-    return [
-    `/api/commissioning/share_delivery/variation_delivery_counts/`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getCommissioningShareDeliveryVariationDeliveryCountsListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>, TError = ErrorResponse>(params: CommissioningShareDeliveryVariationDeliveryCountsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getCommissioningShareDeliveryVariationDeliveryCountsListQueryKey(params);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>> = ({ signal }) => commissioningShareDeliveryVariationDeliveryCountsList(params, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type CommissioningShareDeliveryVariationDeliveryCountsListQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>>
-export type CommissioningShareDeliveryVariationDeliveryCountsListQueryError = ErrorResponse
-
-
-export function useCommissioningShareDeliveryVariationDeliveryCountsList<TData = Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>, TError = ErrorResponse>(
- params: CommissioningShareDeliveryVariationDeliveryCountsListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>,
-          TError,
-          Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCommissioningShareDeliveryVariationDeliveryCountsList<TData = Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>, TError = ErrorResponse>(
- params: CommissioningShareDeliveryVariationDeliveryCountsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>,
-          TError,
-          Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCommissioningShareDeliveryVariationDeliveryCountsList<TData = Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>, TError = ErrorResponse>(
- params: CommissioningShareDeliveryVariationDeliveryCountsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useCommissioningShareDeliveryVariationDeliveryCountsList<TData = Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>, TError = ErrorResponse>(
- params: CommissioningShareDeliveryVariationDeliveryCountsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningShareDeliveryVariationDeliveryCountsList>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getCommissioningShareDeliveryVariationDeliveryCountsListQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

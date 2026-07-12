@@ -104,8 +104,8 @@ const WashingList = lazy(
 const CleaningList = lazy(
   () => import("@features/commissioning/pages/CleaningList"),
 );
-const AmountShares = lazy(
-  () => import("@features/commissioning/pages/AmountShares"),
+const AmountShareTypeVariations = lazy(
+  () => import("@features/commissioning/pages/AmountShareTypeVariations"),
 );
 const ShareDays = lazy(() => import("@features/commissioning/pages/ShareDays"));
 const PurchaseList = lazy(
@@ -245,10 +245,10 @@ export const commissioningRoutes: AppRoute[] = [
     ),
   },
   {
-    path: "/commissioning/amount-shares",
+    path: "/commissioning/amount-share-type-variations",
     element: (
       <RequireRole flag="isStaff">
-        <AmountShares />
+        <AmountShareTypeVariations />
       </RequireRole>
     ),
   },

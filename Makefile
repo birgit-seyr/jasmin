@@ -143,11 +143,11 @@ generate-schema:
 	@echo "📄 Schema regenerated at $(REACT_DIR)/schema.yml"
 
 # Regenerate the TypeScript client + TanStack Query hooks from the
-# schema YAML via orval. Rewrites $(REACT_DIR)/src/api/generated/.
+# schema YAML via orval. Rewrites $(REACT_DIR)/src/shared/api/generated/.
 .PHONY: generate-frontend-api
 generate-frontend-api:
 	cd $(REACT_DIR) && npm run generate-api
-	@echo "🔧 Frontend client regenerated under $(REACT_DIR)/src/api/generated/"
+	@echo "🔧 Frontend client regenerated under $(REACT_DIR)/src/shared/api/generated/"
 
 # this one is used
 .PHONY: generate-api

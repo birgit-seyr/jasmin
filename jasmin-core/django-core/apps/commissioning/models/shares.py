@@ -917,6 +917,14 @@ class ShareDeliveryQuerySet(models.QuerySet):
         station pickup sheets."""
         return self.filter(ShareDelivery.delivery_counts_q())
 
+    def jokered(self) -> ShareDeliveryQuerySet:
+        """Rows the member skipped via a taken joker — the mirror of
+        :meth:`shippable`: ``joker_taken=True`` AND not opted out. Powers the
+        joker view of the AmountShareTypeVariations matrix (the boxes that would
+        have shipped but were jokered). Matches the ``joker=True`` branch of
+        :meth:`ShareDemandService.aggregated_rows`, which also drops opt-outs."""
+        return self.filter(joker_taken=True).exclude(ShareDelivery.opted_out_q())
+
 
 class ShareDelivery(JasminModel):
     subscription = models.ForeignKey(

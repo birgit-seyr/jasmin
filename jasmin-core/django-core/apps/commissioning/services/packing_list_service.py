@@ -39,7 +39,12 @@ class PackingListService:
         active_at_date = saturday_of_iso_week(year, delivery_week)
         qs = (
             ShareTypeVariation.current.active_at_date(active_at_date)
-            .filter(share_type=share_type)
+            # Packing lists are PHYSICAL-only: a virtual variation has no
+            # ShareContent of its own, so it would render as an always-empty
+            # column, and its demand is already folded into its physical
+            # components' amounts (see the physical-only totals below). Keeping
+            # the columns physical also aligns them with those amounts.
+            .filter(share_type=share_type, variation_type="physical")
             .annotate(size_order=size_order_annotation())
             .order_by("sort_order", "size_order")
         )

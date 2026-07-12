@@ -485,7 +485,9 @@ class ShareArticleNetPriceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             queryset = ShareArticleNetPrice.current.active_at_date(active_at_date)
         else:
             queryset = ShareArticleNetPrice.objects.all()
-            if current is not None:
+            # Truthiness, not ``is not None``: ``current`` is a strict bool, so
+            # ``?current=false`` must NOT restrict to the open record.
+            if current:
                 queryset = queryset.filter(valid_until__isnull=True)
 
         if share_article is not None:

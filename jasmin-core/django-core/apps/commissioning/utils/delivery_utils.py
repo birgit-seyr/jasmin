@@ -154,6 +154,14 @@ def get_active_share_type_variations(
         and (not station_day_ids or r["station_day_id"] in station_day_ids)
     }
 
+    # Fold virtual variations into their physical components: a virtual
+    # subscription packs as its components, so the overview's per-variation
+    # columns must be the physical ones — matching the box-combination side and
+    # the redistributed counts in ``get_variation_quantities_by_station_day``.
+    from .share_type_variation_amounts import fold_virtual_ids_to_physical
+
+    variation_ids = fold_virtual_ids_to_physical(variation_ids)
+
     return (
         ShareTypeVariation.objects.filter(id__in=variation_ids)
         .select_related("share_type")

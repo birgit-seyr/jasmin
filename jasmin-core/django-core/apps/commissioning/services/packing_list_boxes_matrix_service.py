@@ -26,14 +26,15 @@ Each cell is the per-BOX quantity of that article in that combination (base
 contents + add-on contents); the per-combination ``count`` is rendered by the
 frontend as the pinned first row.
 
-Known v1 limitation (``get_boxes_matrix`` ONLY): base / add-on variations are
-assumed PHYSICAL for the per-article amounts. A virtual variation
-(``variation_type="virtual"``) has no ShareContent rows of its own, so its
-ARTICLE cells read as empty — resolving virtual variations into their physical
-components (as the bulk path does) is a follow-up. This does NOT affect
-``get_station_member_matrix``: that path never reads ShareContent, it only
-counts boxes per member, so a virtual variation still yields correct per-member
-box counts.
+Virtual variations are FOLDED into their physical components before box
+derivation (see ``_boxlines_for_delivery``): a subscription to a virtual
+variation (``variation_type="virtual"``, no ShareContent of its own) is packed as
+its physical component boxes (× ``VirtualVariationComponent.quantity``). So the
+columns are always physical variations with real ShareContent, and an add-on
+rides a physical base — never the virtual wrapper. This folding is shared by
+every derivation below, so the packing list, the amount-shares matrix, the
+station overview and DeliveryStationDetails all agree. It is a no-op for tenants
+without virtual variations.
 """
 
 from __future__ import annotations
@@ -42,7 +43,7 @@ from collections import Counter, defaultdict
 from decimal import Decimal
 from typing import Any
 
-from ..models import ShareDelivery
+from ..models import ShareDelivery, ShareTypeVariation, VirtualVariationComponent
 from ..models.choices_text import ShareTypeVariationSizeOptions
 from ..utils.delivery_utils import tour_station_ids
 from ..utils.iso_week_utils import saturday_of_iso_week
@@ -151,20 +152,15 @@ class PackingListBoxesMatrixService:
             is_packed_bulk=is_packed_bulk,
         )
 
+        virtual_map = cls._virtual_component_map(deliveries)
         variation_by_id: dict[str, Any] = {}
         member_lines: defaultdict[str, list[_BoxLine]] = defaultdict(list)
         member_names: dict[str, str] = {}
         for delivery in deliveries:
-            variation = delivery.share.share_type_variation
-            variation_by_id[variation.id] = variation
             member = delivery.subscription.member
             member_names[member.id] = member.display_name or str(member)
-            member_lines[member.id].append(
-                _BoxLine(
-                    variation,
-                    variation.share_type,
-                    delivery.subscription.quantity or 1,
-                )
+            member_lines[member.id].extend(
+                cls._boxlines_for_delivery(delivery, virtual_map, variation_by_id)
             )
 
         combinations: Counter = Counter()
@@ -251,8 +247,9 @@ class PackingListBoxesMatrixService:
         delivery_week: int,
         mode: str = "day",
         is_packed_bulk: bool | None = None,
+        joker: bool = False,
     ) -> dict[str, Any]:
-        """Whole-week box-combination matrix for the AmountShares view.
+        """Whole-week box-combination matrix for the AmountShareTypeVariations view.
 
         ROWS are the week's delivery days (optionally split per tour or per
         delivery station via ``mode``); COLUMNS are the box combinations that
@@ -266,6 +263,10 @@ class PackingListBoxesMatrixService:
         station)). Returns ``{"columns": [...], "rows": [...]}`` where each row
         carries ``id``, ``day_number``, ``tour`` / ``delivery_station_*`` and
         dynamic ``combo_<key>`` counts.
+
+        ``joker=True`` counts the boxes that were skipped via a taken joker
+        instead of the shipping ones — same columns, same derivation, so the
+        joker view is the shipping view with a swapped delivery scope.
         """
         deliveries = cls._shippable_box_deliveries(
             year=year,
@@ -277,8 +278,10 @@ class PackingListBoxesMatrixService:
                 "delivery_station_day__delivery_station",
             ),
             is_packed_bulk=is_packed_bulk,
+            joker=joker,
         )
 
+        virtual_map = cls._virtual_component_map(deliveries)
         variation_by_id: dict[str, Any] = {}
         # ONE pass over the week's deliveries: group a member's boxes per
         # (day, station) so base + add-ons combine, and remember each row's day/
@@ -291,16 +294,12 @@ class PackingListBoxesMatrixService:
             tuple[str, str], tuple[int | None, str | None, int | None]
         ] = {}
         for delivery in deliveries:
-            variation = delivery.share.share_type_variation
-            variation_by_id[variation.id] = variation
             station_day = delivery.delivery_station_day
             day = delivery.share.delivery_day
             day_id = day.id
             station_id = station_day.delivery_station_id
-            member_groups[(day_id, station_id, delivery.subscription.member_id)].append(
-                _BoxLine(
-                    variation, variation.share_type, delivery.subscription.quantity or 1
-                )
+            member_groups[(day_id, station_id, delivery.subscription.member_id)].extend(
+                cls._boxlines_for_delivery(delivery, virtual_map, variation_by_id)
             )
             day_number_by_id[day_id] = day.day_number
             station_meta[(day_id, station_id)] = (
@@ -391,6 +390,7 @@ class PackingListBoxesMatrixService:
         delivery_station: str | None = None,
         tour_station_ids: list[str] | None = None,
         is_packed_bulk: bool | None = None,
+        joker: bool = False,
     ):
         """Shippable ``ShareDelivery`` rows that can form a physical box.
 
@@ -401,6 +401,10 @@ class PackingListBoxesMatrixService:
         explicitly so each caller keeps its EXACT join set; the station/tour
         narrowing (a concrete station wins over a tour's station ids) and the
         ``is_packed_bulk`` clause mirror the ShareContent packing ladder.
+
+        ``joker=True`` swaps the ``shippable()`` base for ``jokered()`` — the
+        boxes that would have shipped but were skipped via a taken joker — so
+        the weekly matrix's joker view reuses the exact same box derivation.
         """
         filters: dict[str, Any] = {
             "share__year": year,
@@ -412,11 +416,12 @@ class PackingListBoxesMatrixService:
         }
         if day_number is not None:
             filters["share__delivery_day__day_number"] = day_number
-        deliveries = (
-            ShareDelivery.objects.shippable()
-            .filter(**filters)
-            .select_related(*select_related)
+        base = (
+            ShareDelivery.objects.jokered()
+            if joker
+            else ShareDelivery.objects.shippable()
         )
+        deliveries = base.filter(**filters).select_related(*select_related)
         if delivery_station is not None:
             deliveries = deliveries.filter(
                 delivery_station_day__delivery_station_id=delivery_station
@@ -432,30 +437,84 @@ class PackingListBoxesMatrixService:
         return deliveries
 
     @staticmethod
+    def _virtual_component_map(deliveries) -> dict[str, list[tuple[Any, Decimal]]]:
+        """``{virtual_variation_id: [(physical_variation, quantity), ...]}`` for
+        the virtual variations among ``deliveries``.
+
+        Empty for tenants with no virtual variations (then folding is a no-op).
+        The physical component variations are fetched with their ``share_type``
+        so the box-grouping can read ``is_additional_share_type`` / weight without
+        another query. Requires ``share__share_type_variation__share_type`` in the
+        caller's ``select_related`` (every box caller already joins it)."""
+        virtual_ids = {
+            delivery.share.share_type_variation_id
+            for delivery in deliveries
+            if delivery.share.share_type_variation.variation_type
+            == ShareTypeVariation.VariationType.VIRTUAL
+        }
+        if not virtual_ids:
+            return {}
+        mapping: defaultdict[str, list[tuple[Any, Decimal]]] = defaultdict(list)
+        for component in VirtualVariationComponent.objects.filter(
+            virtual_variation_id__in=virtual_ids
+        ).select_related("physical_variation__share_type"):
+            mapping[component.virtual_variation_id].append(
+                (component.physical_variation, component.quantity)
+            )
+        return mapping
+
+    @staticmethod
+    def _boxlines_for_delivery(
+        delivery, virtual_map: dict[str, list[tuple[Any, Decimal]]], variation_by_id
+    ) -> list[_BoxLine]:
+        """The physical box line(s) for one delivery, recording each physical
+        variation in ``variation_by_id``.
+
+        A PHYSICAL variation yields itself. A VIRTUAL variation is folded into its
+        physical components (× component quantity): the virtual has no ShareContent
+        of its own, so packing it as-is gives an empty box that also wrongly
+        catches add-ons. Folding makes the components the real bases — add-ons then
+        ride a physical base, never the virtual — and the boxes carry real content.
+        No-op when ``virtual_map`` is empty."""
+        variation = delivery.share.share_type_variation
+        quantity = delivery.subscription.quantity or 1
+        components = virtual_map.get(variation.id)
+        if not components:
+            variation_by_id[variation.id] = variation
+            return [_BoxLine(variation, variation.share_type, quantity)]
+        lines: list[_BoxLine] = []
+        for physical_variation, component_quantity in components:
+            variation_by_id[physical_variation.id] = physical_variation
+            lines.append(
+                _BoxLine(
+                    physical_variation,
+                    physical_variation.share_type,
+                    int(quantity * component_quantity),
+                )
+            )
+        return lines
+
+    @classmethod
     def _group_into_boxlines(
-        deliveries, key_fn
+        cls, deliveries, key_fn
     ) -> tuple[defaultdict[Any, list[_BoxLine]], dict[str, Any]]:
         """Group shippable deliveries into ``_BoxLine`` lists keyed by ``key_fn``.
 
         Returns ``(groups, variation_by_id)`` — ``groups`` maps each
         ``key_fn(delivery)`` to that member's box lines, ``variation_by_id``
-        collects every delivered variation. Serves the callers that need ONLY
-        the grouping (the station-combination counts + the packing-matrix
-        derivation); the station-member and weekly matrices read extra per-row
-        sidecar metadata (member names / day + station meta) in their own loop
-        and stay bespoke.
+        collects every delivered PHYSICAL variation (virtual variations are folded
+        into their components — see ``_boxlines_for_delivery``). Serves the callers
+        that need ONLY the grouping (the station-combination counts + the
+        packing-matrix derivation); the station-member and weekly matrices read
+        extra per-row sidecar metadata (member names / day + station meta) in their
+        own loop and stay bespoke.
         """
+        virtual_map = cls._virtual_component_map(deliveries)
         variation_by_id: dict[str, Any] = {}
         groups: defaultdict[Any, list[_BoxLine]] = defaultdict(list)
         for delivery in deliveries:
-            variation = delivery.share.share_type_variation
-            variation_by_id[variation.id] = variation
-            groups[key_fn(delivery)].append(
-                _BoxLine(
-                    variation,
-                    variation.share_type,
-                    delivery.subscription.quantity or 1,
-                )
+            groups[key_fn(delivery)].extend(
+                cls._boxlines_for_delivery(delivery, virtual_map, variation_by_id)
             )
         return groups, variation_by_id
 

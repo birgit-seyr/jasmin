@@ -9,7 +9,7 @@
   "commissioning_lists": "",
   "waste": "",
   "documentation_overview": "",
-  "amount_shares": "Hier sieht man die tatsächlich zu liefernden Anteile, ohne Joker.",
+  "amount_share_type_variations": "Hier sieht man die tatsächlich zu liefernden Anteile, ohne Joker.",
   "planning_long_term_harvest_shares": "Die hier eingetragenen Daten werden in die Kistenplanung der jeweiligen Woche übernommen - allerdings nur in die Zukunft. (Die Vergangenheit wird ignoriert). Wenn man also ein Gemüse hier für KW 1 - 20 einträgt, aber aktuelle KW ist 10, dann erscheinen einträge in der Kistenplanung nur von KW 11 - 20. Die Einträge können in der tatsächlichen Wochen-Kistenplanung einfach überschrieben/gelöscht werden, falls sie doch nicht passen. Das hier kann auch ein Weg sein, z.B. über die Sommermonate immer einen Kopfsalat bereits in der Kistenplanung vorgegeben zu haben.",
   "planning_long_term_harvest_shares_fruits": "Die hier eingetragenen Daten werden in die Kistenplanung der jeweiligen Woche übernommen - allerdings nur in die Zukunft. (Die Vergangenheit wird ignoriert). Wenn man also ein Gemüse hier für KW 1 - 20 einträgt, aber aktuelle KW ist 10, dann erscheinen einträge in der Kistenplanung nur von KW 11 - 20. Die Einträge können in der tatsächlichen Wochen-Kistenplanung einfach überschrieben/gelöscht werden, falls sie doch nicht passen. Das hier kann auch ein Weg sein, z.B. über die Sommermonate immer einen Kopfsalat bereits in der Kistenplanung vorgegeben zu haben.",
   "": "",

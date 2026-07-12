@@ -862,21 +862,6 @@ class StationMemberMatrixSerializer(serializers.Serializer):
     rows = StationMemberMatrixRowSerializer(many=True)
 
 
-class VariationDeliveryCountRowSerializer(serializers.Serializer):
-    """Stable header of a ``ShareDeliveryService.get_variation_delivery_counts``
-    row — one object per share_type_variation.
-
-    Dynamic ``amount_day_<day_id>[_tour_<n>|_station_<station_id>]`` integer
-    count keys are read by iteration on the frontend and are left OUT here.
-    """
-
-    id = serializers.CharField()
-    share_type_id = serializers.CharField()
-    share_type_name = serializers.CharField()
-    share_type_variation_id = serializers.CharField()
-    share_type_variation_size = serializers.CharField()
-
-
 class ShareDeliveryDetailsRowSerializer(serializers.Serializer):
     """Stable fields of a ``ShareDeliveryDetailsViewSet.list`` row — one object
     per member.

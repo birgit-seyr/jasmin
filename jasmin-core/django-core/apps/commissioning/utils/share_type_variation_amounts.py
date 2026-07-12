@@ -77,6 +77,36 @@ def _build_virtual_map(
     return virtual_map
 
 
+def fold_virtual_ids_to_physical(variation_ids: Iterable[Any]) -> set:
+    """Replace each VIRTUAL variation id with its physical component ids, leaving
+    physical ids untouched.
+
+    The FORWARD sibling of :func:`_build_virtual_map`: given a demand-driven set of
+    variation ids (which may contain virtual variations), return the physical
+    component id set they actually pack as — the physical column set for the
+    delivery-stations overview. No-op (returns the input set) when none are
+    virtual."""
+    ids = set(variation_ids)
+    if not ids:
+        return ids
+    virtual_ids = list(
+        ShareTypeVariation.objects.filter(
+            id__in=ids, variation_type=ShareTypeVariation.VariationType.VIRTUAL
+        ).values_list("id", flat=True)
+    )
+    if not virtual_ids:
+        return ids
+    components: dict[object, list[object]] = defaultdict(list)
+    for virtual_id, physical_id in VirtualVariationComponent.objects.filter(
+        virtual_variation_id__in=virtual_ids
+    ).values_list("virtual_variation_id", "physical_variation_id"):
+        components[virtual_id].append(physical_id)
+    folded = {var_id for var_id in ids if var_id not in components}
+    for virtual_id in virtual_ids:
+        folded.update(components.get(virtual_id, ()))
+    return folded
+
+
 def get_total_quantity_of_share_type_variations(
     share_option: str | None = None,
     share_type: ShareType | None = None,
@@ -255,16 +285,34 @@ def get_variation_quantities_by_station_day(
     """Batch counterpart of :func:`get_variation_quantity_for_station_day`: the
     whole ``(station_day_id, variation_id) -> quantity`` grid in ONE query
     (routed through ``ShareDemandService`` so external-CSV tenants are covered).
-    Replaces the per-cell N+1 in the delivery stations/tours overview."""
+    Replaces the per-cell N+1 in the delivery stations/tours overview.
+
+    ``variation_ids`` are the PHYSICAL overview columns. A virtual-variation
+    subscription's demand is recorded against the VIRTUAL variation, but it packs
+    as its physical components — so pull the virtuals that feed these columns into
+    the query and redistribute their count onto the components (× quantity),
+    mirroring :func:`get_physical_share_type_variation_totals`. No-op (a plain
+    per-variation grid) when no virtual variations feed these columns."""
     if not variation_ids:
         return {}
+    physical_ids = set(variation_ids)
+    virtual_map = _build_virtual_map(physical_ids)
     rows = _demand_service().aggregated_rows(
         year=year,
         delivery_week=delivery_week,
-        variation_ids=list(variation_ids),
+        variation_ids=list(physical_ids | set(virtual_map.keys())),
         joker=False,
     )
-    return {(r["station_day_id"], r["variation_id"]): r["count"] for r in rows}
+    grid: dict[tuple[str, str], int] = defaultdict(int)
+    for row in rows:
+        station_day_id = row["station_day_id"]
+        variation_id = row["variation_id"]
+        count = row["count"]
+        if variation_id in physical_ids:
+            grid[(station_day_id, variation_id)] += count
+        for physical_id, quantity in virtual_map.get(variation_id, ()):
+            grid[(station_day_id, physical_id)] += int(count * quantity)
+    return dict(grid)
 
 
 def batch_get_physical_variation_totals_for_weeks(

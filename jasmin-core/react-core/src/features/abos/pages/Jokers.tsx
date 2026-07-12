@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useTenant } from "@hooks/index";
-import AmountShares from "@features/commissioning/pages/AmountShares";
+import AmountShareTypeVariations from "@features/commissioning/pages/AmountShareTypeVariations";
 
 export default function Jokers() {
   const { getSetting } = useTenant();
@@ -11,5 +11,5 @@ export default function Jokers() {
   if (!usesJokers) {
     return <Navigate to="/abos/dashboard" replace />;
   }
-  return <AmountShares jokerMode={true} />;
+  return <AmountShareTypeVariations jokerMode={true} />;
 }

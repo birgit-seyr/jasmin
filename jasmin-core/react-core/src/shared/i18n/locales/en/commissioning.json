@@ -109,7 +109,7 @@
   "open_payments_resellers": "payments",
   "list_markets": "list markets",
   "harvest_share_planning_note": "This note then appears on the packing list.",
-  "amount_shares": "number of shares",
+  "amount_share_type_variations": "number of shares",
   "please_select_share_type": "Please select a share type",
   "please_select_delivery_station": "Please select a distribution station",
   "please_enter_a_name": "Please enter a name",

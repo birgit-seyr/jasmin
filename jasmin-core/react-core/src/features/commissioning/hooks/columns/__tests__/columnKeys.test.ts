@@ -68,7 +68,7 @@ describe("trailer + transposed + day-less keys", () => {
     expect(dayHarvestedKey(DAY)).toBe(`day_${DAY}_harvested`);
   });
 
-  it("dayAmountKey (AmountShares, no variation segment)", () => {
+  it("dayAmountKey (AmountShareTypeVariations, no variation segment)", () => {
     expect(dayAmountKey({ dayId: DAY })).toBe(`amount_day_${DAY}`);
     expect(dayAmountKey({ dayId: DAY, tour: 3 })).toBe(`amount_day_${DAY}_tour_3`);
     expect(dayAmountKey({ dayId: DAY, station: STATION })).toBe(
@@ -83,7 +83,7 @@ describe("trailer + transposed + day-less keys", () => {
 
   it("variationAmountKey (long-term planner, distinct from dayAmountKey)", () => {
     expect(variationAmountKey(VAR)).toBe(`amount_${VAR}`);
-    // Must NOT collide with the transposed AmountShares day key.
+    // Must NOT collide with the transposed AmountShareTypeVariations day key.
     expect(variationAmountKey(VAR)).not.toBe(dayAmountKey({ dayId: VAR }));
   });
 });

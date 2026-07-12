@@ -14,6 +14,7 @@ delivery_week: number;
 for_stations?: boolean;
 for_tours?: boolean;
 is_packed_bulk?: boolean;
+joker?: boolean;
 /**
  * Year (YYYY format)
  */

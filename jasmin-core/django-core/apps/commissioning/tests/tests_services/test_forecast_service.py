@@ -114,6 +114,41 @@ class TestCreateForecastWithRelatedObjects:
             forecast=forecast, share_type_variation=variation
         ).exists()
 
+    def test_for_all_harvest_shares_excludes_virtual(self, tenant):
+        """``for_all_harvest_shares`` bulk-adds PHYSICAL harvest variations only.
+        A virtual variation is already represented by its physical components, so
+        forecasting it too would double-count — and it has no content of its own."""
+        article = ShareArticleFactory()
+        physical = ShareTypeVariationFactory(
+            variation_type="physical",
+            share_type__share_option="HARVEST_SHARE",
+        )
+        virtual = ShareTypeVariationFactory(
+            variation_type="virtual",
+            share_type__share_option="HARVEST_SHARE",
+        )
+
+        data = {
+            "year": 2026,
+            "delivery_week": 20,
+            "share_article": article,
+            "amount": Decimal("50"),
+            "unit": "KG",
+            "size": "M",
+            "for_all_harvest_shares": True,
+        }
+
+        svc = ForecastService()
+        forecast = svc.create_forecast_with_related_objects(data)
+
+        linked = set(
+            ForecastShareTypeVariation.objects.filter(forecast=forecast).values_list(
+                "share_type_variation_id", flat=True
+            )
+        )
+        assert physical.pk in linked
+        assert virtual.pk not in linked
+
     def test_creates_offer_groups(self, tenant):
         article = ShareArticleFactory()
         og = OfferGroupFactory()

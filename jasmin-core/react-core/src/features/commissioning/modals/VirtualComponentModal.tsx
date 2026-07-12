@@ -132,6 +132,17 @@ export default function VirtualComponentModal({
     [],
   );
 
+  // Integers only: block the keystroke itself for anything that isn't a digit —
+  // no comma, dot, "e", or sign. Control/navigation keys (length > 1: Backspace,
+  // arrows, Tab, …) and copy/paste shortcuts still pass through.
+  const handleQuantityKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.ctrlKey || event.metaKey || event.key.length > 1) return;
+      if (!/^\d$/.test(event.key)) event.preventDefault();
+    },
+    [],
+  );
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -246,6 +257,7 @@ export default function VirtualComponentModal({
                           onChange={(value) =>
                             handleQuantityChange(variation.id!, value)
                           }
+                          onKeyDown={handleQuantityKeyDown}
                           style={{ width: "70px" }}
                           size="small"
                         />

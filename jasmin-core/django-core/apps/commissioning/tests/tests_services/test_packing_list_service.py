@@ -84,6 +84,48 @@ class TestGetPackingList:
         assert f"variation_{variation.pk}" in entry
         assert entry[f"variation_{variation.pk}"] == Decimal("5")
 
+    def test_virtual_variation_excluded_from_columns(self, tenant):
+        """Packing lists are physical-only: a virtual variation (no ShareContent
+        of its own) must not surface as a column beside the physical ones — it
+        would only ever be empty, and its demand is folded into its components."""
+        physical = ShareTypeVariationFactory(variation_type="physical", size="M")
+        share_type = physical.share_type
+        virtual = ShareTypeVariationFactory(
+            share_type=share_type, variation_type="virtual", size="L"
+        )
+        delivery_day = SharesDeliveryDayFactory(day_number=2, default_packing_day=2)
+        station_day = DeliveryStationDayFactory(delivery_day=delivery_day)
+        share = ShareFactory(
+            year=2026,
+            delivery_week=15,
+            delivery_day=delivery_day,
+            share_type_variation=physical,
+        )
+        share.packing_day = 2
+        share.save()
+        article = ShareArticleFactory()
+        ShareContentFactory(
+            share=share,
+            share_article=article,
+            delivery_station=station_day.delivery_station,
+            amount=Decimal("5"),
+            unit="KG",
+            size="M",
+        )
+
+        result = PackingListService.get_packing_list(
+            year=2026,
+            delivery_week=15,
+            day_number=2,
+            share_type=str(share_type.id),
+            is_past=False,
+        )
+
+        assert len(result) >= 1
+        entry = result[0]
+        assert f"variation_{physical.pk}" in entry
+        assert f"variation_{virtual.pk}" not in entry
+
     def _two_station_setup(self, amount_a, amount_b):
         """Same (article, unit, size, variation) at two delivery stations with
         the given amounts. Returns (variation, article, station_a, station_b)."""
