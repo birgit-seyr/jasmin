@@ -4,6 +4,10 @@ const DashboardStaff = lazy(
   () => import("@features/staff/pages/DashboardStaff"),
 );
 
+const WeeklyStaffPlan = lazy(
+  () => import("@features/staff/pages/WeeklyStaffPlan"),
+);
+
 const ListWeeklyPlanCategories = lazy(
   () => import("@features/staff/pages/ListWeeklyPlanCategory"),
 );
@@ -21,6 +25,16 @@ export const staffRoutes = [
     element: <DashboardStaff />,
     meta: {
       title: "app.routes.staff_dashboard",
+      // requiredRole: [],
+      // requiredPermission: []
+    },
+  },
+
+  {
+    path: "/staff/weekly-staff-plan",
+    element: <WeeklyStaffPlan />,
+    meta: {
+      title: "app.routes.weekly_staff_plan",
       // requiredRole: [],
       // requiredPermission: []
     },

@@ -16,5 +16,17 @@
   "max_lines": "Max. rows",
   "absence_categories": "Absence categories",
   "absence_categories_description": "Absence types per year (e.g. vacation, sickness).",
-  "absence_category_year_name_unique": "This category already exists for this year."
+  "absence_category_year_name_unique": "This category already exists for this year.",
+  "copy_weekly_plan_from": "Copy weekly plan from",
+  "weekly_plan_copied_success": "Weekly plan copied successfully.",
+  "drop_employee_here": "Drop a staff member here",
+  "remove_employee": "Remove {{employee}}",
+  "no_categories": "No active weekly plan categories. Please create categories first.",
+  "no_employees": "No active staff members. Please create staff members first.",
+  "select_week": "Please select a week.",
+  "save_failed": "Saving failed.",
+  "copy_source_week": "Source week",
+  "copy_into_this_week": "Copy into this week",
+  "copy_target_not_empty": "This week already has a plan. Copy is only possible into an empty week.",
+  "already_in_category_that_day": "This person is already assigned to this category on that day."
 }

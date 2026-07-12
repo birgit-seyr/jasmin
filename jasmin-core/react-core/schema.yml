@@ -27054,6 +27054,142 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/staff/weekly_plan/:
+    post:
+      operationId: staff_weekly_plan_create
+      description: |-
+        The weekly-plan grid: a dense (category × row × weekday) matrix of
+        employee assignments for one ISO week. The grid is materialized server-side
+        from sparse ``WeeklyPlan`` rows; the client fetches it, edits locally, and
+        writes the whole week back (replace-all).
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanReplace'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanReplace'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanReplace'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyPlanGrid'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/staff/weekly_plan/copy/:
+    post:
+      operationId: staff_weekly_plan_copy_create
+      description: |-
+        The weekly-plan grid: a dense (category × row × weekday) matrix of
+        employee assignments for one ISO week. The grid is materialized server-side
+        from sparse ``WeeklyPlan`` rows; the client fetches it, edits locally, and
+        writes the whole week back (replace-all).
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanCopy'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanCopy'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanCopy'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyPlanGrid'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/staff/weekly_plan/grid/:
+    get:
+      operationId: staff_weekly_plan_grid_retrieve
+      description: |-
+        The weekly-plan grid: a dense (category × row × weekday) matrix of
+        employee assignments for one ISO week. The grid is materialized server-side
+        from sparse ``WeeklyPlan`` rows; the client fetches it, edits locally, and
+        writes the whole week back (replace-all).
+      parameters:
+      - in: query
+        name: week
+        schema:
+          type: integer
+        description: ISO week number (1–53)
+        required: true
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Calendar year
+        required: true
+      tags:
+      - staff
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyPlanGrid'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/staff/weekly_plan_categories/:
     get:
       operationId: staff_weekly_plan_categories_list
@@ -41433,6 +41569,26 @@ components:
       - delivery_station_name
       - id
       - tour
+    WeeklyPlanAssignment:
+      type: object
+      description: One filled cell in a replace-all payload.
+      properties:
+        category_id:
+          type: string
+        row_index:
+          type: integer
+          minimum: 0
+        day:
+          type: integer
+          maximum: 6
+          minimum: 0
+        employee_id:
+          type: string
+      required:
+      - category_id
+      - day
+      - employee_id
+      - row_index
     WeeklyPlanCategory:
       type: object
       description: |-
@@ -41462,6 +41618,118 @@ components:
       required:
       - max_lines
       - name
+    WeeklyPlanCategoryGrid:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        max_lines:
+          type: integer
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyPlanRow'
+      required:
+      - id
+      - max_lines
+      - name
+      - rows
+    WeeklyPlanCopy:
+      type: object
+      description: Copy the plan of ``from_week`` into an empty ``to_week`` (same
+        year).
+      properties:
+        year:
+          type: integer
+          maximum: 2100
+          minimum: 2000
+        from_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        to_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+      required:
+      - from_week
+      - to_week
+      - year
+    WeeklyPlanEmployee:
+      type: object
+      description: Palette entry — the client resolves cell employee ids against this
+        list.
+      properties:
+        id:
+          type: string
+        short_name_for_weekly_plan:
+          type: string
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+      required:
+      - first_name
+      - id
+      - last_name
+      - short_name_for_weekly_plan
+    WeeklyPlanGrid:
+      type: object
+      properties:
+        year:
+          type: integer
+        week:
+          type: integer
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyPlanCategoryGrid'
+        employees:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyPlanEmployee'
+      required:
+      - categories
+      - employees
+      - week
+      - year
+    WeeklyPlanReplace:
+      type: object
+      description: 'Whole-week replace-all: the full grid state for one ``(year, week)``.'
+      properties:
+        year:
+          type: integer
+          maximum: 2100
+          minimum: 2000
+        week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyPlanAssignment'
+      required:
+      - assignments
+      - week
+      - year
+    WeeklyPlanRow:
+      type: object
+      properties:
+        row_index:
+          type: integer
+        days:
+          type: object
+          additionalProperties:
+            type: string
+            nullable: true
+      required:
+      - days
+      - row_index
     _DeliveryStationEntry:
       type: object
       description: |-

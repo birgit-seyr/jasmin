@@ -395,5 +395,12 @@
     "reload": "Reload page",
     "sign_in": "Sign in again",
     "details": "Details:"
+  },
+  "staff": {
+    "invalid": "Invalid staff request.",
+    "employee_not_found": "Staff member not found.",
+    "weekly_plan_category_not_found": "Weekly plan category not found.",
+    "invalid_weekly_plan_assignment": "Invalid weekly plan assignment.",
+    "weekly_plan_copy_target_not_empty": "The target week already has a weekly plan. Copy is only possible into an empty week."
   }
 }

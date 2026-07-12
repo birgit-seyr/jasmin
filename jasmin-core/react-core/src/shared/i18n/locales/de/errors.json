@@ -395,5 +395,12 @@
     "reload": "Seite neu laden",
     "sign_in": "Erneut anmelden",
     "details": "Details:"
+  },
+  "staff": {
+    "invalid": "Ungültige Anfrage im Personalbereich.",
+    "employee_not_found": "MitarbeiterIn nicht gefunden.",
+    "weekly_plan_category_not_found": "Wochenplan-Kategorie nicht gefunden.",
+    "invalid_weekly_plan_assignment": "Ungültige Zuordnung im Wochenplan.",
+    "weekly_plan_copy_target_not_empty": "Die Zielwoche enthält bereits einen Wochenplan. Kopieren ist nur in eine leere Woche möglich."
   }
 }

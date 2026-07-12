@@ -3,9 +3,11 @@ from .basics import (
     EmployeeViewSet,
     WeeklyPlanCategoryViewSet,
 )
+from .weekly_plan import WeeklyPlanViewSet
 
 __all__ = [
     "AbsenceCategoryViewSet",
     "EmployeeViewSet",
     "WeeklyPlanCategoryViewSet",
+    "WeeklyPlanViewSet",
 ]

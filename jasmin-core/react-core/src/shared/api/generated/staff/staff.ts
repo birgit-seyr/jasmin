@@ -31,7 +31,11 @@ import type {
   StaffAbsenceCategoriesListParams,
   StaffEmployeesListParams,
   StaffWeeklyPlanCategoriesListParams,
-  WeeklyPlanCategory
+  StaffWeeklyPlanGridRetrieveParams,
+  WeeklyPlanCategory,
+  WeeklyPlanCopy,
+  WeeklyPlanGrid,
+  WeeklyPlanReplace
 } from '.././models';
 
 import { axiosService } from '../../../services/api';
@@ -1183,6 +1187,227 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * The weekly-plan grid: a dense (category × row × weekday) matrix of
+employee assignments for one ISO week. The grid is materialized server-side
+from sparse ``WeeklyPlan`` rows; the client fetches it, edits locally, and
+writes the whole week back (replace-all).
+ */
+export const staffWeeklyPlanCreate = (
+    weeklyPlanReplace: WeeklyPlanReplace,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<WeeklyPlanGrid>(
+      {url: `/api/staff/weekly_plan/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: weeklyPlanReplace, signal
+    },
+      );
+    }
+  
+
+
+export const getStaffWeeklyPlanCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof staffWeeklyPlanCreate>>, TError,{data: WeeklyPlanReplace}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof staffWeeklyPlanCreate>>, TError,{data: WeeklyPlanReplace}, TContext> => {
+
+const mutationKey = ['staffWeeklyPlanCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof staffWeeklyPlanCreate>>, {data: WeeklyPlanReplace}> = (props) => {
+          const {data} = props ?? {};
+
+          return  staffWeeklyPlanCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StaffWeeklyPlanCreateMutationResult = NonNullable<Awaited<ReturnType<typeof staffWeeklyPlanCreate>>>
+    export type StaffWeeklyPlanCreateMutationBody = WeeklyPlanReplace
+    export type StaffWeeklyPlanCreateMutationError = ErrorResponse
+
+    export const useStaffWeeklyPlanCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof staffWeeklyPlanCreate>>, TError,{data: WeeklyPlanReplace}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof staffWeeklyPlanCreate>>,
+        TError,
+        {data: WeeklyPlanReplace},
+        TContext
+      > => {
+
+      const mutationOptions = getStaffWeeklyPlanCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * The weekly-plan grid: a dense (category × row × weekday) matrix of
+employee assignments for one ISO week. The grid is materialized server-side
+from sparse ``WeeklyPlan`` rows; the client fetches it, edits locally, and
+writes the whole week back (replace-all).
+ */
+export const staffWeeklyPlanCopyCreate = (
+    weeklyPlanCopy: WeeklyPlanCopy,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<WeeklyPlanGrid>(
+      {url: `/api/staff/weekly_plan/copy/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: weeklyPlanCopy, signal
+    },
+      );
+    }
+  
+
+
+export const getStaffWeeklyPlanCopyCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof staffWeeklyPlanCopyCreate>>, TError,{data: WeeklyPlanCopy}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof staffWeeklyPlanCopyCreate>>, TError,{data: WeeklyPlanCopy}, TContext> => {
+
+const mutationKey = ['staffWeeklyPlanCopyCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof staffWeeklyPlanCopyCreate>>, {data: WeeklyPlanCopy}> = (props) => {
+          const {data} = props ?? {};
+
+          return  staffWeeklyPlanCopyCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StaffWeeklyPlanCopyCreateMutationResult = NonNullable<Awaited<ReturnType<typeof staffWeeklyPlanCopyCreate>>>
+    export type StaffWeeklyPlanCopyCreateMutationBody = WeeklyPlanCopy
+    export type StaffWeeklyPlanCopyCreateMutationError = ErrorResponse
+
+    export const useStaffWeeklyPlanCopyCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof staffWeeklyPlanCopyCreate>>, TError,{data: WeeklyPlanCopy}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof staffWeeklyPlanCopyCreate>>,
+        TError,
+        {data: WeeklyPlanCopy},
+        TContext
+      > => {
+
+      const mutationOptions = getStaffWeeklyPlanCopyCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * The weekly-plan grid: a dense (category × row × weekday) matrix of
+employee assignments for one ISO week. The grid is materialized server-side
+from sparse ``WeeklyPlan`` rows; the client fetches it, edits locally, and
+writes the whole week back (replace-all).
+ */
+export const staffWeeklyPlanGridRetrieve = (
+    params: StaffWeeklyPlanGridRetrieveParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<WeeklyPlanGrid>(
+      {url: `/api/staff/weekly_plan/grid/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getStaffWeeklyPlanGridRetrieveQueryKey = (params?: StaffWeeklyPlanGridRetrieveParams,) => {
+    return [
+    `/api/staff/weekly_plan/grid/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getStaffWeeklyPlanGridRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>, TError = ErrorResponse>(params: StaffWeeklyPlanGridRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getStaffWeeklyPlanGridRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>> = ({ signal }) => staffWeeklyPlanGridRetrieve(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type StaffWeeklyPlanGridRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>>
+export type StaffWeeklyPlanGridRetrieveQueryError = ErrorResponse
+
+
+export function useStaffWeeklyPlanGridRetrieve<TData = Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>, TError = ErrorResponse>(
+ params: StaffWeeklyPlanGridRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStaffWeeklyPlanGridRetrieve<TData = Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>, TError = ErrorResponse>(
+ params: StaffWeeklyPlanGridRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStaffWeeklyPlanGridRetrieve<TData = Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>, TError = ErrorResponse>(
+ params: StaffWeeklyPlanGridRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useStaffWeeklyPlanGridRetrieve<TData = Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>, TError = ErrorResponse>(
+ params: StaffWeeklyPlanGridRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof staffWeeklyPlanGridRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getStaffWeeklyPlanGridRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
  * ViewSet mixin that maps DRF actions to permission classes.
 
 Usage:

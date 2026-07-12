@@ -5,6 +5,7 @@ from .viewsets import (
     AbsenceCategoryViewSet,
     EmployeeViewSet,
     WeeklyPlanCategoryViewSet,
+    WeeklyPlanViewSet,
 )
 
 router = DefaultRouter()
@@ -19,6 +20,8 @@ router.register(
     AbsenceCategoryViewSet,
     basename="absence_categories",
 )
+# Grid/aggregate endpoint (not a CRUD collection) — singular resource name.
+router.register(r"weekly_plan", WeeklyPlanViewSet, basename="weekly_plan")
 
 
 urlpatterns = [

@@ -1,0 +1,109 @@
+/* Weekly-plan planner page chrome. The draggable chips + drop cells are styled
+   by the shared dnd-grid.css; this file only lays out the page (employee palette
+   column + category × weekday grid). Theme-aware via CSS variables. */
+
+.weekly-plan-page {
+  padding: 20px;
+}
+
+.weekly-plan-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1.5em;
+  margin: 1.5em 0;
+}
+
+.weekly-plan-copy {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5em;
+}
+
+.weekly-plan-copy-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+  font-size: 0.85em;
+}
+
+.weekly-plan-layout {
+  display: flex;
+  gap: 20px;
+  margin-top: 1em;
+  align-items: flex-start;
+}
+
+.weekly-plan-palette {
+  flex: 0 0 13em;
+  position: sticky;
+  top: 1em;
+}
+
+.weekly-plan-palette-box {
+  display: flex;
+  flex-wrap: wrap;
+  /* Horizontal gaps almost nonexistent; a hair of vertical breathing room. */
+  row-gap: 4px;
+  column-gap: 2px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 4px;
+  padding: 0.6em;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.weekly-plan-grid-wrap {
+  flex: 1;
+  overflow-x: auto;
+}
+
+.weekly-plan-grid-table {
+  border-collapse: collapse;
+}
+
+.weekly-plan-grid-table th,
+.weekly-plan-grid-table td {
+  border: 1px solid var(--color-border-soft);
+}
+
+.weekly-plan-grid-table th {
+  padding: 0.3em 0.5em;
+  background-color: var(--color-bg-elevated);
+  font-weight: 600;
+  min-width: 7em;
+}
+
+.weekly-plan-th-row-label {
+  width: 2.5em;
+  min-width: 2.5em;
+}
+
+.weekly-plan-category-row td {
+  padding: 0.2em 0.5em;
+  background-color: var(--color-bg-elevated);
+  font-weight: 600;
+}
+
+.weekly-plan-row-label {
+  padding: 2px 6px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.weekly-plan-cell {
+  padding: 2px;
+}
+
+/* Compact the shared DnD primitives — scoped to the weekly plan so
+   DeliveryTours keeps its default (taller) cells and (spaced) chips. */
+.weekly-plan-palette-box .dnd-chip {
+  margin: 0;
+  padding: 4px 8px;
+}
+
+.weekly-plan-grid-table .dnd-cell {
+  min-height: 26px;
+  padding: 2px 6px;
+  gap: 4px;
+}

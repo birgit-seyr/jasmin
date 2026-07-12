@@ -24,5 +24,15 @@
     "weekly_plan_categories_description": "Kategorien, die den Wochenplan in Zeilengruppen gliedern.",
     "absence_categories": "Abwesenheits-Kategorien",
     "absence_categories_description": "Abwesenheitsarten pro Jahr (z. B. Urlaub, Krankheit).",
-    "absence_category_year_name_unique": "Diese Kategorie existiert bereits für dieses Jahr."
+    "absence_category_year_name_unique": "Diese Kategorie existiert bereits für dieses Jahr.",
+    "drop_employee_here": "",
+    "remove_employee": "{{employee}} entfernen",
+    "no_categories": "Keine aktiven Wochenplan-Kategorien. Bitte zuerst Kategorien anlegen.",
+    "no_employees": "Keine aktiven MitarbeiterInnen. Bitte zuerst MitarbeiterInnen anlegen.",
+    "select_week": "Bitte eine Woche wählen.",
+    "save_failed": "Speichern fehlgeschlagen.",
+    "copy_source_week": "Quellwoche",
+    "copy_into_this_week": "In diese Woche kopieren",
+    "copy_target_not_empty": "Diese Woche enthält bereits einen Plan. Kopieren ist nur in eine leere Woche möglich.",
+    "already_in_category_that_day": "Diese Person ist an diesem Tag bereits in dieser Kategorie eingeteilt."
 }
