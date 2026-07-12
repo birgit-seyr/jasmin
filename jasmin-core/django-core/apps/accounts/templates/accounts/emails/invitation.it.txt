@@ -1,0 +1,10 @@
+Ciao {{ user.first_name }},
+
+sei stato invitato/a a unirti a {{ tenant_name }}.
+
+Apri questo link per impostare la tua password e attivare il tuo account:
+
+  {{ accept_url }}
+
+Questo invito scade il {{ expires_at }}.
+Se non aspettavi questa e-mail, puoi semplicemente ignorarla.

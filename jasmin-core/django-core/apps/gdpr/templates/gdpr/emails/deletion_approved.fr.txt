@@ -1,0 +1,9 @@
+Bonjour {{ user.first_name }},
+
+votre demande de suppression de toutes vos données personnelles chez {{ tenant_name }} a été approuvée par le bureau et est désormais terminée (RGPD art. 17).
+
+Supprimées ou anonymisées : nom, adresse, coordonnées, informations de paiement et tous les autres champs directement liés à votre personne.
+
+Remarque sur la conservation légale : certains enregistrements (par ex. l'historique des parts coopératives, les factures finalisées) doivent encore être conservés conformément à la loi, en vertu du GenG §31 et du HGB §257. Ces enregistrements ne contiennent plus d'identifiants directs.
+
+Pour toute question, répondez simplement à cet e-mail.

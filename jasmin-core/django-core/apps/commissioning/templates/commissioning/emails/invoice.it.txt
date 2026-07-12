@@ -1,0 +1,12 @@
+Fattura {{ invoice.number }}
+
+Gentile {{ reseller.name }},
+
+in allegato trova la Sua fattura per {{ invoice.period }}.
+
+Importo totale: {{ invoice.total }}
+Scadenza: {{ invoice.due_date }}
+
+Coordinate bancarie: {{ tenant.bank_details }}
+
+— Il team di {{ tenant_name }}

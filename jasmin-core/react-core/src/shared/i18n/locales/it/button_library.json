@@ -1,0 +1,21 @@
+{
+  "view": "Mostra dettagli",
+  "logging": "Registro attività",
+  "emails": "Email inviate",
+  "coopshares": "Quote sociali",
+  "bank_details": "Modifica coordinate bancarie",
+  "coopshares_alert": "Quote sociali — nessuna registrata",
+  "cancel": "Annulla",
+  "ok": "ok",
+  "not_ok": "non ok",
+  "admin_confirmed": "Confermato dall'amministratore",
+  "admin_pending": "In attesa di conferma dell'amministratore",
+  "admin_rejected": "Domanda respinta",
+  "user_active": "Account utente attivo",
+  "user_pending_approval": "In attesa dell'approvazione dell'amministratore",
+  "user_pending_invitation": "Invito inviato",
+  "user_pending_invitation_expired": "Invito scaduto",
+  "user_inactive": "Account utente inattivo",
+  "user_invited": "Invito inviato",
+  "user_not_invited": "Nessun invito inviato"
+}

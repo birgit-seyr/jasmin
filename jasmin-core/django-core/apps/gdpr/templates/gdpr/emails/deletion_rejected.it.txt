@@ -1,0 +1,10 @@
+Gentile {{ user.first_name }},
+
+la Sua richiesta di cancellare tutti i Suoi dati personali presso {{ tenant_name }} al momento purtroppo non può essere eseguita.
+
+Motivazione dell'ufficio:
+{{ reason }}
+
+Il Suo account resta invariato. Una volta chiariti i punti sopra indicati, potrà inviare una nuova richiesta di cancellazione dal Suo profilo.
+
+Per qualsiasi domanda, risponda pure a questa e-mail.

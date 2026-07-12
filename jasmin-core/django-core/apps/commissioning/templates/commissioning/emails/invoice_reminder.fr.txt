@@ -1,0 +1,13 @@
+Rappel de paiement
+
+Bonjour {{ reseller.name }},
+
+d'après nos registres, les factures suivantes sont encore en attente de paiement :
+
+{{ invoices_text }}
+
+Si vous avez déjà réglé, veuillez ignorer ce message.
+
+Coordonnées bancaires : {{ tenant.bank_details }}
+
+— L'équipe de {{ tenant_name }}

@@ -1,3 +1,12 @@
-{ "delivery_station_selector": "Select Delivery Station",
-  "share_type_selector": "Select Sharetype"
-  }
+{
+  "delivery_station_selector": "Sélectionner un point de distribution",
+  "delivery_station_day_selector": "Sélectionner un jour de point de distribution",
+  "share_type_selector": "Sélectionner une part",
+  "storage_selector": "Sélectionner un entrepôt",
+  "reseller_selector": "Sélectionner un revendeur",
+  "offer_group_selector": "Sélectionner un groupe d'offres",
+  "seller_selector": "Sélectionner un vendeur",
+  "member_selector": "Sélectionner un membre",
+  "share_article_selector": "Sélectionner un légume/fruit",
+  "shares_delivery_day_selector": "Sélectionner un jour de livraison"
+}

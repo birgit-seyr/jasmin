@@ -1,0 +1,378 @@
+{
+  "title": "Paramètres de l'application",
+  "save": "Enregistrer les paramètres",
+  "save_failed": "Impossible d'enregistrer le paramètre.",
+  "reset": "Annuler les modifications",
+  "unsaved_changes": "Modifications non enregistrées",
+  "save_success": "Paramètres enregistrés avec succès",
+  "unsaved_changes_warning": "Des modifications non enregistrées existent. Elles seront perdues en quittant la page.",
+  "unsaved_changes_title": "Modifications non enregistrées",
+  "general": {
+    "title": "Paramètres généraux",
+    "currency": "Devise",
+    "timezone": "Fuseau horaire",
+    "language": "Langue",
+    "dateFormat": "Format de date",
+    "csvFormat": "Format CSV",
+    "numberLocale": "Format des nombres",
+    "csvFormat_de": "Allemand (séparateur : « ; », décimale : « , », date : JJ.MM.AAAA)",
+    "csvFormat_en": "Anglais (séparateur : « , », décimale : « . », date : AAAA-MM-JJ)",
+    "timeFormat": "Format de l'heure"
+  },
+  "navigation": {
+    "title": "Modules affichés",
+    "show_members": "Module MEMBRES",
+    "show_abos": "Module ABONNEMENTS",
+    "show_commissioning": "Module PRÉPARATION DE COMMANDE",
+    "show_staff": "Module PERSONNEL",
+    "show_warehouse": "Module MOYENS D'EXPLOITATION",
+    "show_economics": "Module RENTABILITÉ",
+    "show_cultivation": "Module PLANIFICATION DES CULTURES"
+  },
+  "ai": {
+    "title": "Paramètres IA",
+    "claude_enabled": "Activer l'IA Claude"
+  },
+  "months": {
+    "january": "Janvier",
+    "february": "Février",
+    "march": "Mars",
+    "april": "Avril",
+    "may": "Mai",
+    "june": "Juin",
+    "july": "Juillet",
+    "august": "Août",
+    "september": "Septembre",
+    "october": "Octobre",
+    "november": "Novembre",
+    "december": "Décembre"
+  },
+  "gdpr": {
+    "deletion_gate": {
+      "title": "Demandes de suppression",
+      "description": "Contrôle la manière dont les demandes de suppression RGPD (art. 17) sont traitées."
+    },
+    "require_admin_approval": {
+      "label": "Exiger l'approbation d'un administrateur pour les demandes de suppression",
+      "description": "Lorsque cette option est activée (par défaut), le bureau doit approuver manuellement chaque demande de suppression après l'étape de confirmation par e-mail. Lorsqu'elle est désactivée, la demande est exécutée immédiatement dès que la personne clique sur le lien de confirmation — plus rapide, mais sans contrôle humain final. Les suppressions de comptes ayant un rôle équipe ou administrateur nécessitent toujours une approbation manuelle, indépendamment de ce paramètre."
+    }
+  },
+  "members": {
+    "title": "Paramètres des membres",
+    "registration": {
+      "title": "Inscription"
+    },
+    "allows_self_registration": "Autoriser l'auto-inscription",
+    "allows_self_registration_desc": "Lorsque cette option est activée, les personnes peuvent s'inscrire elles-mêmes via la page de connexion. Lorsqu'elle est désactivée, les boutons d'inscription sont masqués ET les points d'accès d'inscription sont bloqués côté serveur.",
+    "trial": {
+      "title": "Membres à l'essai"
+    },
+    "allows_trial_members": "Autoriser les membres à l'essai",
+    "allows_trial_members_desc": "Activer les adhésions à l'essai pour les nouveaux utilisateurs",
+
+    "only_members_trial_subs": "Seuls les membres peuvent avoir des abonnements d'essai",
+    "only_members_trial_subs_desc": "Réserver les abonnements d'essai aux membres existants",
+    "subscriptions": {
+      "title": "Règles d'abonnement"
+    },
+    "must_have_subscriptions": "Les membres doivent avoir des abonnements",
+    "must_have_subscriptions_desc": "Tous les membres doivent avoir au moins un abonnement",
+    "only_members_subscriptions": "Seuls les membres peuvent avoir des abonnements",
+    "only_members_subscriptions_desc": "Abonnements réservés aux membres enregistrés",
+    "staff_special_conditions": "Conditions spéciales pour les abonnements du personnel",
+    "staff_special_conditions_desc": "Appliquer des tarifs/conditions spéciales pour le personnel",
+    "loans": {
+      "title": "Prêts des membres"
+    },
+    "uses_member_loans": "Activer les prêts des membres",
+    "uses_member_loans_desc": "Permettre aux membres d'accorder des prêts à la coopérative",
+    "coop_shares": {
+      "title": "Parts sociales"
+    },
+    "has_coop_shares": "Utiliser les parts sociales",
+    "has_coop_shares_desc": "Activer le système de parts sociales",
+    "value_one_share": "Valeur par part sociale",
+    "value_one_share_desc": "Valeur monétaire d'une part sociale",
+    "min_shares": "Nombre minimum de parts",
+    "min_shares_desc": "Nombre minimum de parts requis pour l'adhésion",
+    "max_shares": "Nombre maximum de parts",
+    "max_shares_desc": "Nombre maximum de parts par membre",
+    "coop_payback_retention": "Délai de conservation des parts des membres résiliés",
+    "coop_payback_retention_desc": "Nombre de mois pendant lesquels les parts sociales restent dans la coopérative après le départ d'un membre avant de devenir exigibles pour le remboursement (0 = exigible immédiatement).",
+    "months_suffix": "mois",
+    "paper_signature": {
+      "title": "Signature papier"
+    },
+    "requires_paper_signature_for_membership": "Signature papier pour l'adhésion",
+    "requires_paper_signature_for_membership_desc": "Lorsque cette option est activée, les consentements d'adhésion doivent être imprimés, signés et envoyés au bureau. Le bureau enregistre la réception manuellement."
+  },
+  "payments": {
+    "strategy": {
+      "title": "Paiements des parts",
+      "description": "Comment les montants des abonnements des membres sont calculés pour chaque cycle de paiement."
+    },
+    "due": {
+      "title": "Échéance"
+    },
+    "sepa": {
+      "title": "Prélèvement SEPA"
+    },
+    "billing_strategy": "Paiements des parts",
+    "billing_strategy_desc": "_exact_ facture précisément les livraisons qui tombent dans chaque cycle. _lissé_ répartit le montant total de manière égale sur tous les cycles de la durée du contrat. _lissé_ n'est pas disponible pour le moment.",
+    "strategy_exact": "Exact par période (compter les livraisons réelles)",
+    "strategy_smoothed": "Lissé sur toute la durée du contrat",
+    "strategy_smoothed_disabled": "Lissé sur toute la durée du contrat (temporairement indisponible)",
+    "bills_joker_deliveries": "Facturer les livraisons joker",
+    "bills_joker_deliveries_desc": "Si désactivé, les livraisons marquées comme joker ne sont pas facturées.",
+    "allows_solidarity_pricing": "Autoriser les prix solidaires",
+    "allows_solidarity_pricing_desc": "Les membres peuvent fixer eux-mêmes le prix par livraison (au minimum le seuil configuré pour la variante ; sans limite supérieure). Le prix indicatif est affiché comme suggestion.",
+    "requires_paper_signature_for_sepa_mandate": "Signature papier pour le mandat SEPA",
+    "requires_paper_signature_for_sepa_mandate_desc": "Lorsque cette option est activée, le mandat SEPA doit être imprimé, signé et envoyé au bureau. Le bureau enregistre la réception manuellement.",
+    "due_day": "Jour d'échéance du mois",
+    "due_day_desc": "Jour du mois auquel le prélèvement est dû. Limité à 28 pour éviter les problèmes avec les mois courts.",
+    "sepa_collection_day": "Jour de prélèvement SEPA du mois",
+    "sepa_collection_day_desc": "Jour du mois par défaut auquel la banque doit exécuter le prélèvement SEPA. Proposé comme date de prélèvement lors de la création d'un cycle de facturation. Limité à 28."
+  },
+  "shares": {
+    "title": "Paramètres des parts"
+  },
+  "commissioning": {
+    "layout": {
+      "title": "Mise en page"
+    },
+    "logistics": {
+      "title": "Logistique"
+    },
+    "percentage_added_to_bulk_packing_list_description": "peut être ajusté directement pour chaque légume",
+    "percentage_added_to_bulk_packing_list": "% supplémentaire pour les listes de préparation (pertinent uniquement si les membres emballent eux-mêmes leurs caisses)",
+    "allow_upload_for_data_lists": "Données importables via CSV",
+    "allow_upload_for_data_lists_desc": "Pour charger de plus grandes quantités de données dans les listes de données (p. ex. les légumes des parts), des fichiers CSV peuvent être utilisés pour l'import.",
+    "uploads_weekly_amount_desc": "via un fichier CSV",
+    "show_seller_name_in_share": "Afficher le nom du fournisseur pour les articles achetés dans les caisses destinées aux membres.",
+    "packing_mode": "Mode d'emballage",
+    "packing_mode_description": "Comment les membres reçoivent leurs parts. Caisses : toutes les parts sont préemballées par point de distribution. Vrac : les membres se servent dans des caisses en vrac. Mixte : au choix par variante.",
+    "packing_mode_boxes": "Les caisses sont préemballées / des caisses prêtes sont livrées aux points de distribution",
+    "packing_mode_bulk": "Les membres emballent eux-mêmes leurs caisses aux points de distribution",
+    "packing_mode_mixed": "mixte (au choix par type de part)",
+    "number_packing_stations": "Nombre de postes d'emballage",
+    "show_size_column": "Afficher la colonne des tailles de légumes",
+    "show_summary_in_harvest_share_planning_on_top": "Afficher les lignes de totaux en haut de la planification des caisses",
+    "sales": {
+      "title": "Canaux de vente"
+    },
+    "default_planning_mode_basic": "par jours",
+    "default_planning_mode_tours": "par tournées",
+    "default_planning_mode_stations": "par points de distribution",
+    "default_planning_mode": "planification : ",
+    "default_planning_mode_description": "Ce n'est que le réglage par défaut. Il peut être modifié chaque semaine.",
+    "has_markets": "Vente sur les marchés",
+    "sells_to_resellers": "Vente aux revendeurs",
+    "different_offer_groups": "Différents groupes d'offres",
+    "tax_rates": {
+      "title": "Taux de TVA par défaut",
+      "description": "Ces taux de TVA par défaut sont préremplis lors de la création de nouveaux prix. Ils peuvent être ajustés partout dans l'application."
+    },
+    "default_tax_rate_articles": "Taux de TVA par défaut articles (%)",
+    "default_tax_rate_crates": "Taux de TVA par défaut caisses (%)",
+    "default_tax_rate_shares": "Taux de TVA par défaut parts (%)",
+    "planning": {
+      "title": "Interfaces"
+    },
+    "uploads_weekly_amount": "Importer les quantités hebdomadaires de parts",
+    "manual_weekly_amount": "Saisie manuelle des quantités hebdomadaires de parts",
+    "season": {
+      "title": "Paramètres de saison"
+    },
+    "season_start": "Début de saison",
+    "season_start_week": "Début de saison (semaine 1–53)",
+    "shares": {
+      "title": "Types de part"
+    },
+    "has_veg_shares": "Parts de légumes",
+    "has_fruit_shares": "Parts de fruits",
+    "has_chicken_shares": "Parts de poulet",
+    "has_oil_shares": "Parts d'huile",
+    "has_honey_shares": "Parts de miel",
+    "has_grain_shares": "Parts de céréales",
+    "has_bread_shares": "Parts de pain",
+    "share_types": {
+      "title": "Types de caisse"
+    },
+    "trial": {
+      "title": "Parts d'essai",
+      "description": "Contrôle si les adhésions à l'essai sont possibles et quelles conditions s'y appliquent."
+    },
+    "allows_trial_shares": "Autoriser les parts d'essai",
+    "trial_duration": "Durée des parts d'essai (nombre de livraisons)",
+    "allows_trial_subscriptions": "Autoriser les abonnements d'essai",
+    "allowed_trial_subscription_duration": "Durée autorisée des abonnements d'essai (semaines)",
+    "allowed_trial_subscription_duration_desc": "Durée maximale d'une adhésion à l'essai.",
+    "allows_trial_subscriptions_for_trial_members": "Abonnements d'essai pour les membres à l'essai",
+    "allows_trial_subscriptions_for_trial_members_desc": "Détermine si les membres à l'essai peuvent également souscrire des abonnements d'essai.",
+    "uses_jokers_for_trial_subscriptions": "Utiliser les jokers pour les abonnements d'essai",
+    "uses_jokers_for_trial_subscriptions_desc": "Détermine si les jokers sont également décomptés sur les abonnements d'essai.",
+    "jokers": {
+      "title": "Système de jokers"
+    },
+    "uses_jokers": "Activer les jokers",
+    "default_amount_jokers": "Nombre de jokers",
+    "default_amount_jokers_description": "Ceci peut être ajusté pour chaque type de part.",
+    "jokers_for_trial": "Utiliser les jokers pour les abonnements d'essai",
+    "donation_jokers": "Activer les jokers de don",
+    "default_amount_of_donation_jokers": "Jokers de don supplémentaires",
+    "default_amount_of_donation_jokers_description": "Ceci peut être ajusté pour chaque type de part.",
+
+    "subscriptions": {
+      "title": "Gestion des abonnements"
+    },
+    "end_at_season_end": "Les abonnements se terminent à la fin de la saison",
+    "end_after_year": "Les abonnements se terminent après un an",
+    "auto_renewed": "Renouveler automatiquement les abonnements",
+    "min_weeks_cancel": "Semaines minimum pour résilier avant la fin",
+    "min_weeks_cancel_description": "Nombre minimum de semaines avant sa fin auquel un abonnement doit être résilié.",
+    "share_type_changes": "Autoriser le changement de taille de part pendant un abonnement en cours",
+    "allows_share_type_variation_optin": "Autoriser les parts à la carte (opt-in par livraison)",
+    "allows_share_type_variation_optin_desc": "Certaines variantes de part peuvent être ouvertes afin de pouvoir être commandées spontanément semaine par semaine.",
+    "allows_waiting_list_for_subscriptions": "Autoriser la liste d'attente pour les abonnements",
+    "allows_waiting_list_for_subscriptions_desc": "Lorsque cette option est activée, les variantes de part complètes et les points de distribution complets peuvent être placés sur une liste d'attente. Lorsqu'elle est désactivée, les options complètes ne sont tout simplement pas sélectionnables (pas de liste d'attente, pas d'offres).",
+    "reservation_ttl_days": "Durée de réservation (jours)",
+    "reservation_ttl_days_desc": "Durée pendant laquelle un brouillon d'abonnement conserve sa place au point de distribution avant que la réservation n'expire."
+  },
+  "configure_prices": "Configurer les prix et les tailles",
+  "reseller": {
+    "footer_left_placeholder": "Saisir le pied de page gauche (p. ex. coordonnées de l'entreprise)...",
+    "footer_middle_placeholder": "Saisir le pied de page central (p. ex. coordonnées bancaires)...",
+    "footer_right_placeholder": "Saisir le pied de page droit (p. ex. informations fiscales)...",
+    "invoice_entry_1_placeholder": "Saisir le texte d'introduction de la facture...",
+    "invoice_entry_2_placeholder": "Saisir un texte de facture supplémentaire...",
+    "invoice_entry_3_placeholder": "Saisir un texte de facture supplémentaire...",
+    "invoice_greeting_1_placeholder": "Saisir la formule de politesse finale (p. ex. Cordialement)...",
+    "invoice_greeting_2_placeholder": "Saisir un texte de salutation supplémentaire...",
+    "invoice_greeting_3_placeholder": "Saisir un texte de salutation supplémentaire...",
+    "delivery_entry_1_placeholder": "Saisir le texte d'introduction du bon de livraison...",
+    "delivery_entry_1_description": "Ce texte apparaît sur les bons de livraison au-dessus du tableau des articles. Première ligne.",
+    "delivery_entry_2_description": "Ce texte apparaît sur les bons de livraison au-dessus du tableau des articles. Deuxième ligne.",
+    "delivery_entry_3_description": "Ce texte apparaît sur les bons de livraison au-dessus du tableau des articles. Troisième ligne.",
+    "delivery_greeting_1_description": "Ce texte apparaît sur les bons de livraison sous le tableau des articles. Première ligne.",
+    "delivery_greeting_2_description": "Ce texte apparaît sur les bons de livraison sous le tableau des articles. Deuxième ligne.",
+    "delivery_greeting_3_description": "Ce texte apparaît sur les bons de livraison sous le tableau des articles. Troisième ligne.",
+    "invoice_entry_1_description": "Ce texte apparaît sur les factures au-dessus du tableau des articles. Première ligne.",
+    "invoice_entry_2_description": "Ce texte apparaît sur les factures au-dessus du tableau des articles. Deuxième ligne.",
+    "invoice_entry_3_description": "Ce texte apparaît sur les factures au-dessus du tableau des articles. Troisième ligne.",
+    "invoice_greeting_1_description": "Ce texte apparaît sur les factures sous le tableau des articles. Première ligne.",
+    "invoice_greeting_2_description": "Ce texte apparaît sur les factures sous le tableau des articles. Deuxième ligne.",
+    "invoice_greeting_3_description": "Ce texte apparaît sur les factures sous le tableau des articles. Troisième ligne.",
+    "footer_left_description": "Ce texte apparaît dans la colonne de gauche du pied de page sur les factures et les bons de livraison.",
+    "footer_middle_description": "Ce texte apparaît dans la colonne centrale du pied de page sur les factures et les bons de livraison.",
+    "footer_right_description": "Ce texte apparaît dans la colonne de droite du pied de page sur les factures et les bons de livraison.",
+
+    "delivery_entry_2_placeholder": "Saisir un texte de bon de livraison supplémentaire...",
+    "delivery_entry_3_placeholder": "Saisir un texte de bon de livraison supplémentaire...",
+    "delivery_greeting_1_placeholder": "Saisir la formule de politesse finale...",
+    "delivery_greeting_2_placeholder": "Saisir un texte de salutation supplémentaire...",
+    "delivery_greeting_3_placeholder": "Saisir un texte de salutation supplémentaire...",
+    "payment_numbering": {
+      "title": "Conditions de paiement et numérotation des documents"
+    },
+    "payment_terms": "Délai de paiement (jours)",
+    "payment_terms_desc": "Nombre de jours avant l'échéance du paiement pour les revendeurs",
+    "order_prefix": "Préfixe des numéros de commande",
+    "order_prefix_desc": "Préfixe des numéros de commande (p. ex. CO-2024-001)",
+    "order_numbers_reset": "Réinitialiser les numéros de commande au changement d'année",
+    "order_numbers_reset_desc": "Recommencer la numérotation des commandes à 1 chaque année",
+    "delivery_note_prefix": "Préfixe des bons de livraison",
+    "delivery_note_reset": "Réinitialiser les numéros de bon de livraison au changement d'année",
+    "delivery_note_numbers_reset_desc": "Recommencer la numérotation des bons de livraison à 1 chaque année",
+    "invoice_prefix": "Préfixe des numéros de facture",
+    "correction_prefix": "Préfixe des factures de correction",
+    "invoice_reset": "Réinitialiser les numéros de facture au changement d'année",
+    "invoice_numbers_reset_desc": "Recommencer la numérotation des factures à 1 chaque année",
+    "offer_settings": {
+      "title": "Paramètres des offres",
+      "description": "Configuration des paliers de prix pour les offres aux revendeurs. Jusqu'à trois paliers peuvent être définis."
+    },
+    "offer_tiers": "Paliers de prix",
+    "offer_tiers_desc": "Tarification par paliers à partir d'un certain nombre d'unités de conditionnement (UC). Le premier palier commence toujours à partir de 1 UC.",
+    "offer_tier_from": "à partir de",
+    "offer_tier_pu": "UC",
+    "offer_tier_label": "Palier",
+    "offer_prices_are_per_pu": "Afficher les prix par unité de conditionnement dans les offres",
+    "offer_prices_are_per_pu_desc": "Lorsque cette option est activée, les prix dans les offres sont affichés par unité de conditionnement (UC) au lieu de par kilogramme/pièce.",
+    "footer": {
+      "title": "Pieds de page des documents"
+    },
+    "footer_left": "Colonne de gauche",
+    "footer_middle": "Colonne centrale",
+    "footer_right": "Colonne de droite",
+    "invoice_text": {
+      "title": "Lignes de texte de la facture"
+    },
+    "invoice_entry_1": "Ligne d'introduction 1",
+    "invoice_entry_2": "Ligne d'introduction 2",
+    "invoice_entry_3": "Ligne d'introduction 3",
+    "invoice_greeting_1": "Ligne de salutation 1",
+    "invoice_greeting_2": "Ligne de salutation 2",
+    "invoice_greeting_3": "Ligne de salutation 3",
+    "offer_text": {
+      "title": "Lignes de texte de l'offre"
+    },
+    "offer_entry_1": "Ligne d'introduction 1",
+    "offer_entry_2": "Ligne d'introduction 2",
+    "offer_entry_3": "Ligne d'introduction 3",
+    "offer_entry_1_description": "Ce texte apparaît sur les offres envoyées aux revendeurs au-dessus du tableau des articles. Première ligne.",
+    "offer_entry_2_description": "Ce texte apparaît sur les offres envoyées aux revendeurs au-dessus du tableau des articles. Deuxième ligne.",
+    "offer_entry_3_description": "Ce texte apparaît sur les offres envoyées aux revendeurs au-dessus du tableau des articles. Troisième ligne.",
+    "offer_entry_1_placeholder": "Saisir le texte d'introduction de l'offre...",
+    "offer_entry_2_placeholder": "Saisir un texte d'offre supplémentaire...",
+    "offer_entry_3_placeholder": "Saisir un texte d'offre supplémentaire...",
+    "offer_greeting_1": "Ligne de salutation 1",
+    "offer_greeting_2": "Ligne de salutation 2",
+    "offer_greeting_3": "Ligne de salutation 3",
+    "offer_greeting_1_description": "Ce texte apparaît sur les offres envoyées aux revendeurs sous le tableau des articles. Première ligne.",
+    "offer_greeting_2_description": "Ce texte apparaît sur les offres envoyées aux revendeurs sous le tableau des articles. Deuxième ligne.",
+    "offer_greeting_3_description": "Ce texte apparaît sur les offres envoyées aux revendeurs sous le tableau des articles. Troisième ligne.",
+    "offer_greeting_1_placeholder": "Saisir la formule de politesse finale...",
+    "offer_greeting_2_placeholder": "Saisir un texte de salutation supplémentaire...",
+    "offer_greeting_3_placeholder": "Saisir un texte de salutation supplémentaire...",
+    "offer_order_instructions": "Consignes de commande",
+    "offer_order_instructions_description": "Texte libre affiché entre les lignes d'introduction et le tableau des offres. Contenu typique : prise de commande, date limite de commande, envoi de la commande.",
+    "offer_order_instructions_placeholder": "Saisir les consignes de commande (p. ex. date limite de commande jeudi 12h00)...",
+    "correction_invoice_prefix": "Préfixe des numéros de facture de correction / d'annulation",
+    "preview": {
+      "title": "Aperçu avec le texte actuel",
+      "description": "Génère un PDF d'exemple avec des données de test pour voir à quoi ressemblent les documents.",
+      "delivery_note": "Aperçu du bon de livraison",
+      "invoice": "Aperçu de la facture",
+      "offer": "Aperçu de l'offre"
+    },
+    "delivery_text": {
+      "title": "Lignes de texte du bon de livraison"
+    },
+    "delivery_entry_1": "Ligne d'introduction 1",
+    "delivery_entry_2": "Ligne d'introduction 2",
+    "delivery_entry_3": "Ligne d'introduction 3",
+    "delivery_greeting_1": "Ligne de salutation 1",
+    "delivery_greeting_2": "Ligne de salutation 2",
+    "delivery_greeting_3": "Ligne de salutation 3"
+  },
+  "saved": "Enregistré",
+  "saving": "Enregistrement en cours …",
+  "subscriptions": {
+    "trial": {
+      "title": "Adhésion à l'essai",
+      "description": "Contrôle si les adhésions à l'essai sont possibles et quelles conditions s'y appliquent."
+    },
+    "info_sentence_about_trial_subscriptions": "Brève description des abonnements d'essai",
+    "info_sentence_about_trial_subscriptions_desc": "p. ex. : les abonnements d'essai sont possibles pour 4 semaines, puis se terminent automatiquement.",
+    "allows_trial_subscriptions": "Autoriser les abonnements d'essai",
+    "allowed_trial_subscription_duration": "Durée autorisée des abonnements d'essai (semaines)",
+    "allowed_trial_subscription_duration_desc": "Durée maximale d'une adhésion à l'essai.",
+    "allows_trial_subscriptions_for_trial_members": "Abonnements d'essai pour les membres à l'essai",
+    "allows_trial_subscriptions_for_trial_members_desc": "Détermine si les membres à l'essai peuvent également souscrire des abonnements d'essai.",
+    "uses_jokers_for_trial_subscriptions": "Utiliser les jokers pour les abonnements d'essai",
+    "uses_jokers_for_trial_subscriptions_desc": "Détermine si les jokers sont également décomptés sur les abonnements d'essai.",
+    "share_types": {
+      "title": "Types de caisse"
+    }
+  }
+}

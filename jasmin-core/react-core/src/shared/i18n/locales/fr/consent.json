@@ -1,0 +1,61 @@
+{
+  "card_title": "Consentements",
+  "empty": "Aucun consentement n'a encore été enregistré pour ce membre.",
+  "load_error": "Les consentements n'ont pas pu être chargés.",
+  "consented_at": "Consenti le",
+  "revoked_at": "Révoqué le",
+  "revoke": "Révoquer",
+  "download": "PDF",
+  "revoke_title": "Révoquer le consentement",
+  "revoke_warning": "La révocation met fin au traitement sous-jacent. Certaines fonctionnalités peuvent être immédiatement restreintes.",
+  "revoke_reason_placeholder": "Motif facultatif (enregistré dans le journal d'audit)",
+  "no_ua": "(aucun User-Agent)",
+  "kind": {
+    "privacy": "Protection des données",
+    "sepa": "Mandat SEPA",
+    "withdrawal": "Information sur le droit de rétractation",
+    "terms": "Conditions d'utilisation",
+    "coop_contract": "Contrat de souscription",
+    "subscription_contract": "Contrat d'abonnement"
+  },
+  "admin": {
+    "title": "Documents de consentement",
+    "subtitle": "Gestion des textes versionnés pour la protection des données / le mandat SEPA / la rétractation / les CGU.",
+    "filter_kind": "Type",
+    "new_version": "Nouvelle version",
+    "publish": "Publier",
+    "created": "Version du document de consentement créée.",
+    "view_body": "Afficher",
+    "valid_from": "valable à partir du",
+    "col_kind": "Type",
+    "col_version": "Version",
+    "col_title": "Titre",
+    "col_effective_from": "Valable à partir du",
+    "col_hash": "SHA-256",
+    "title_placeholder": "Titre affiché (facultatif)",
+    "body_label": "Texte (mot pour mot, tel qu'affiché aux membres)",
+    "append_only_notice": "Une nouvelle version remplace automatiquement la précédente à partir de la date choisie. Les versions existantes restent inchangées et auditables.",
+    "append_only_explainer": "Les documents de consentement sont en ajout seul. Pour modifier un texte, il faut créer une nouvelle version avec une date d'effet ultérieure. La version précédente est automatiquement clôturée — les consentements déjà donnés restent liés à leur version d'origine."
+  },
+  "block": {
+    "missing_document_title": "Texte de consentement indisponible",
+    "missing_document_body": "Aucun document de consentement valide n'est enregistré pour le type « {{kind}} » / la langue « {{locale}} ». Un membre du bureau doit d'abord en téléverser un.",
+    "version_label": "Version",
+    "effective_label": "valable à partir du",
+    "agree": {
+      "default": "J'accepte ce document",
+      "privacy": "J'ai lu la politique de confidentialité et je l'accepte",
+      "sepa": "J'accorde le mandat de prélèvement SEPA",
+      "withdrawal": "J'ai pris connaissance de l'information sur le droit de rétractation",
+      "terms": "J'accepte les conditions d'utilisation",
+      "coop_contract": "J'ai lu le contrat de souscription et je l'accepte"
+    }
+  },
+  "print": {
+    "action": "Imprimer",
+    "paper_required_hint": "Imprimer ce document, le remplir, le signer et l'envoyer par courrier à l'adresse suivante :",
+    "signature_line": "Lieu, date, signature"
+  },
+  "accept_prefix": "J'ai lu et j'accepte :",
+  "document": "le document"
+}

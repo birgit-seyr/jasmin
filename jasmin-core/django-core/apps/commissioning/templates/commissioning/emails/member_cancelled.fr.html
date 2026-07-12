@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Retrait confirmé</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Bonjour {{ member.first_name }},</h1>
+    <p>
+      nous vous confirmons par la présente votre retrait
+      {% if tenant_name %}de <strong>{{ tenant_name }}</strong>{% endif %}.
+    </p>
+    {% if cancelled_effective_at %}
+      <p>
+        Date de retrait (GenG §30) :
+        <strong>{{ cancelled_effective_at }}</strong>.
+      </p>
+    {% endif %}
+    {% if member.member_number %}
+      <p>
+        Votre ancien numéro de membre est
+        <strong>#{{ member.member_number }}</strong>. Nous le conservons
+        pendant la durée légale de conservation.
+      </p>
+    {% endif %}
+    <p>
+      Nous vous contacterons séparément au sujet du règlement de votre
+      avoir social.
+    </p>
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      Si vous avez des questions, n'hésitez pas à répondre directement à
+      cet e-mail.
+    </p>
+  </body>
+</html>

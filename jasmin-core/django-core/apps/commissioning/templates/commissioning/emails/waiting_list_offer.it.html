@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Si è liberato un posto</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Gentile {{ member.first_name }},</h1>
+    <p>
+      buone notizie — si è liberato un posto
+      {% if tenant_name %}presso <strong>{{ tenant_name }}</strong>{% endif %}
+      per l'abbonamento per il quale è in lista d'attesa:
+    </p>
+    <ul>
+      {% if variation_name %}<li><strong>{{ variation_name }}</strong></li>{% endif %}
+      {% if delivery_station_name %}<li>Ritiro: {{ delivery_station_name }}</li>{% endif %}
+      {% if valid_from %}<li>Inizio: {{ valid_from }}</li>{% endif %}
+    </ul>
+    <p>Se lo desidera ancora, La preghiamo di confermare{% if expires_at %} entro il <strong>{{ expires_at }}</strong>{% endif %}:</p>
+    <p>
+      <a href="{{ accept_url }}" style="display: inline-block; background: #2e7d32; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 6px; font-weight: 600;">Vedi l'offerta</a>
+    </p>
+    <p style="color: #666; font-size: 13px;">
+      Tramite il link può accettare o rifiutare senza effettuare l'accesso. Se non
+      risponde in tempo, il posto verrà offerto alla persona successiva.
+    </p>
+  </body>
+</html>

@@ -122,6 +122,7 @@ export default function CreateTenantModal({ onClose, onSuccess }: CreateTenantMo
               <option value="de">Deutsch</option>
               <option value="en">English</option>
               <option value="fr">Français</option>
+              <option value="it">Italiano</option>
             </select>
           </div>
 

@@ -1,0 +1,39 @@
+{
+  "purpose": "Finalité",
+  "recipient": "Destinataire",
+  "subject": "Objet",
+  "status_col": "Statut",
+  "sent_at": "envoyé",
+  "delivered_at": "remis",
+  "accounts": {
+    "invitation": "Invitation",
+    "password_reset": "Réinitialisation du mot de passe",
+    "application_received": "Demande reçue",
+    "application_approved": "Membre enregistré",
+    "application_rejected": "Demande refusée",
+    "welcome_user": "Bienvenue"
+  },
+  "commissioning": {
+    "trial_converted": "Essai → Membre",
+    "member_cancelled": "Résiliation",
+    "offer": "Offre",
+    "invoice": "Facture",
+    "delivery_note": "Bon de livraison",
+    "invoice_reminder": "Rappel de paiement"
+  },
+  "gdpr": {
+    "deletion_confirm": "Confirmation de suppression",
+    "deletion_approved": "Suppression approuvée",
+    "deletion_rejected": "Suppression refusée"
+  },
+  "status": {
+    "pending": "En attente",
+    "sent": "Envoyé",
+    "delivered": "Remis",
+    "bounced": "Rejeté (définitif)",
+    "deferred": "Différé",
+    "complained": "Marqué comme spam",
+    "rejected": "Rejet du fournisseur",
+    "failed": "Échec d'envoi"
+  }
+}

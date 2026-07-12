@@ -1,0 +1,78 @@
+{
+  "title": "Generale",
+  "basic_info": {
+    "title": "Informazioni di base",
+    "name": "Nome dell'organizzazione / dell'azienda",
+    "description": "Descrizione",
+    "tenant_language": "Lingua"
+  },
+  "address": {
+    "title": "Indirizzo",
+    "address": "Via e numero civico",
+    "zip_code": "Codice postale",
+    "city": "Città",
+    "country": "Paese"
+  },
+  "organization": {
+    "title": "Altro",
+    "organic_control_number": "Numero di controllo biologico",
+    "fiscal_year_start_month": "Inizio anno fiscale",
+    "tenant_language": "Lingua",
+    "iban": "IBAN",
+    "iban_desc": "Conto bancario della cooperativa. Viene utilizzato come conto del creditore nel file XML dell'addebito diretto SEPA (pain.008).",
+    "sepa_creditor_id": "Identificativo creditore SEPA",
+    "sepa_creditor_id_desc": "Assegnato dalla banca al momento dell'attivazione dell'addebito diretto SEPA (ad es. «DE98ZZZ09999999999»). Necessario per il file XML pain.008.",
+    "sepa_creditor_name": "Nome del creditore SEPA",
+    "sepa_creditor_name_desc": "Nome della cooperativa come appare sul mandato SEPA. Viene incorporato in ogni file pain.008; max. 70 caratteri.",
+    "sepa_creditor_bic": "BIC del creditore SEPA",
+    "sepa_creditor_bic_desc": "BIC della banca principale della cooperativa (ad es. «COBADEFFXXX» per Commerzbank). Necessario per il file XML pain.008 — la banca comunica questo codice all'attivazione SEPA.",
+    "sepa_creditor_bic_invalid": "BIC non valido. Un BIC ha 8 o 11 caratteri e inizia con 6 lettere (ad es. «COBADEFFXXX»).",
+    "sepa_remittance_template": "Causale (modello)",
+    "sepa_remittance_template_desc": "Testo che i soci vedono sul loro estratto conto.",
+    "uid": "Numero UID"
+  },
+  "legal_notice": {
+    "title": "Note legali / Informazioni legali",
+    "description": "Informazioni obbligatorie ai sensi del § 5 DDG e del § 18 comma 2 MStV. Vengono visualizzate nella pagina pubblica delle note legali; i campi vuoti vengono lì nascosti.",
+    "legal_form": "Forma giuridica",
+    "legal_form_desc": "ad es. «cooperativa registrata (eG)», «e. V.», «GmbH».",
+    "register_type": "Tipo di registro",
+    "register_type_desc": "ad es. «registro delle cooperative», «registro delle associazioni», «registro delle imprese».",
+    "register_number": "Numero di registro",
+    "register_court": "Tribunale del registro",
+    "legal_representatives": "Rappresentanti legali",
+    "legal_representatives_desc": "Consiglio di amministrazione o direzione, separati da virgola.",
+    "supervisory_board": "Consiglio di sorveglianza",
+    "supervisory_board_desc": "Solo per cooperative/associazioni con consiglio di sorveglianza. Nomi separati da virgola.",
+    "content_responsible": "Responsabile dei contenuti",
+    "content_responsible_desc": "Nome della persona responsabile ai sensi del § 18 comma 2 MStV. Viene visualizzato con l'indirizzo dell'organizzazione.",
+    "participates_in_dispute_resolution": "Partecipa alla risoluzione delle controversie dei consumatori",
+    "participates_in_dispute_resolution_desc": "Attivare solo se l'organizzazione è disposta o obbligata a partecipare a una procedura di risoluzione delle controversie davanti a un organismo di conciliazione per i consumatori. Impostazione predefinita: no.",
+    "auditing_association": "Associazione di revisione",
+    "auditing_association_desc": "Solo per cooperative (§ 54 GenG). Indirizzo completo, su più righe.",
+    "professional_association": "Istituto assicurativo di categoria",
+    "professional_association_desc": "Istituto assicurativo di categoria / assicurazione infortuni competente, su più righe.",
+    "extra_html": "Informazioni aggiuntive (HTML)",
+    "extra_html_desc": "Raramente necessario: camera/professione regolamentata, autorità di vigilanza per attività soggette ad autorizzazione, avviso «in liquidazione». L'HTML è consentito e viene ripulito prima della visualizzazione."
+  },
+  "sepa": {
+    "title": "Addebito diretto SEPA",
+    "description": "Dati bancari e testi per l'incasso tramite addebito diretto SEPA (pain.008).",
+    "remittance_insert": "Inserisci segnaposto:",
+    "remittance_preview": "Anteprima"
+  },
+  "files": {
+    "title": "Loghi",
+    "upload_logo": "Carica logo",
+    "current_logo": "Logo attuale",
+    "upload_favicon": "Carica favicon",
+    "current_favicon": "Favicon attuale",
+    "current_bio_logo": "Logo biologico attuale",
+    "upload_bio_logo": "Carica logo biologico",
+    "logo_saved": "Logo salvato",
+    "bio_logo_saved": "Logo biologico salvato"
+  },
+  "email": "e-mail",
+  "email_for_orders": "e-mail per gli ordini",
+  "phone_number": "Telefono"
+}

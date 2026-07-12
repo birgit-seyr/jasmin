@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Demande reçue</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Bonjour {{ member.first_name }},</h1>
+    <p>
+      nous avons bien reçu votre demande d'adhésion
+      {% if tenant_name %}à <strong>{{ tenant_name }}</strong>{% endif %}.
+    </p>
+    <p>
+      Notre équipe examinera votre demande et reviendra vers vous. En
+      attendant, vous pouvez vous connecter avec le mot de passe que vous
+      avez choisi pour suivre l'état de votre demande.
+    </p>
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      Merci de votre intérêt !
+    </p>
+  </body>
+</html>

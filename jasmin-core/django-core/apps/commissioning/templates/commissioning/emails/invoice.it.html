@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Fattura {{ invoice.number }}</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 640px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Fattura {{ invoice.number }}</h1>
+
+    <p>Gentile {{ reseller.name }},</p>
+
+    <p>in allegato trova la Sua fattura per {{ invoice.period }}.</p>
+
+    <p>
+      Importo totale: <strong>{{ invoice.total }}</strong><br />
+      Scadenza: {{ invoice.due_date }}
+    </p>
+
+    <p>Coordinate bancarie: {{ tenant.bank_details }}</p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">— Il team di {{ tenant_name }}</p>
+  </body>
+</html>

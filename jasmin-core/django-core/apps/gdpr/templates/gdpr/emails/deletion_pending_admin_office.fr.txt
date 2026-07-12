@@ -1,0 +1,16 @@
+Une demande de suppression RGPD est en attente d'approbation
+
+Chez {{ tenant_name|default:"la plateforme" }}, une nouvelle demande de
+suppression de données (RGPD article 17) a été reçue et confirmée par la
+personne à l'origine de la demande via un lien envoyé par e-mail.
+
+La demande est désormais dans l'état "en attente d'approbation du bureau" et
+doit être examinée et approuvée manuellement (ou refusée avec un motif) avant
+que l'anonymisation proprement dite ne soit exécutée.
+
+Ouvrir dans le bureau :
+{{ review_url }}
+
+Cet e-mail ne contient volontairement aucune information sur la personne à
+l'origine de la demande — les détails de la demande ne sont visibles que sur la
+page de configuration, qui requiert un droit d'accès.

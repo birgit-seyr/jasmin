@@ -40,20 +40,20 @@
     "register_type_desc": "e.g. \"cooperative register\", \"association register\", \"commercial register\".",
     "register_number": "Register number",
     "register_court": "Registering court",
-    "legal_representatives": "Authorised representatives",
+    "legal_representatives": "Authorized representatives",
     "legal_representatives_desc": "Board / managing directors, comma-separated.",
     "supervisory_board": "Supervisory board",
     "supervisory_board_desc": "Only for cooperatives/associations with a supervisory board. Comma-separated names.",
     "content_responsible": "Responsible for content",
-    "content_responsible_desc": "Name of the person responsible under § 18 (2) MStV. Shown together with the organisation's address.",
+    "content_responsible_desc": "Name of the person responsible under § 18 (2) MStV. Shown together with the organization's address.",
     "participates_in_dispute_resolution": "Participates in consumer dispute resolution",
-    "participates_in_dispute_resolution_desc": "Only enable if the organisation is willing or obliged to participate in dispute resolution before a consumer arbitration board. Default: no.",
+    "participates_in_dispute_resolution_desc": "Only enable if the organization is willing or obliged to participate in dispute resolution before a consumer arbitration board. Default: no.",
     "auditing_association": "Auditing association",
     "auditing_association_desc": "Cooperatives only (§ 54 GenG). Full postal address, multi-line.",
     "professional_association": "Employers' liability insurance association",
     "professional_association_desc": "Responsible professional / accident insurance association, multi-line.",
     "extra_html": "Additional information (HTML)",
-    "extra_html_desc": "Rarely needed: chamber/regulated profession, supervisory authority for licensed activities, \"in liquidation\" notice. HTML is allowed and sanitised before display."
+    "extra_html_desc": "Rarely needed: chamber/regulated profession, supervisory authority for licensed activities, \"in liquidation\" notice. HTML is allowed and sanitized before display."
   },
   "sepa": {
     "title": "SEPA Direct Debit",
@@ -72,7 +72,7 @@
     "logo_saved": "Logo saved",
     "bio_logo_saved": "Organic logo saved"
   },
-  "email": "email",
-  "email_for_orders": "email for orders",
+  "email": "Email",
+  "email_for_orders": "Email for orders",
   "phone_number": "Phone"
 }

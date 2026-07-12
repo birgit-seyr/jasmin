@@ -1,0 +1,39 @@
+{
+  "purpose": "Scopo",
+  "recipient": "Destinatario",
+  "subject": "Oggetto",
+  "status_col": "Stato",
+  "sent_at": "inviata",
+  "delivered_at": "consegnata",
+  "accounts": {
+    "invitation": "Invito",
+    "password_reset": "Reimposta password",
+    "application_received": "Domanda ricevuta",
+    "application_approved": "Socio registrato",
+    "application_rejected": "Domanda respinta",
+    "welcome_user": "Benvenuto"
+  },
+  "commissioning": {
+    "trial_converted": "Prova → socio",
+    "member_cancelled": "Disdetta",
+    "offer": "Offerta",
+    "invoice": "Fattura",
+    "delivery_note": "Bolla di consegna",
+    "invoice_reminder": "Sollecito di pagamento"
+  },
+  "gdpr": {
+    "deletion_confirm": "Conferma cancellazione",
+    "deletion_approved": "Cancellazione approvata",
+    "deletion_rejected": "Cancellazione respinta"
+  },
+  "status": {
+    "pending": "In attesa",
+    "sent": "Inviata",
+    "delivered": "Consegnata",
+    "bounced": "Bounce (definitivo)",
+    "deferred": "Differita",
+    "complained": "Segnalata come spam",
+    "rejected": "Rifiutata dal provider",
+    "failed": "Errore di invio"
+  }
+}

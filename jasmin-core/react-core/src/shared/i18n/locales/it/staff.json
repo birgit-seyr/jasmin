@@ -1,5 +1,20 @@
 {
-    "staff": "Staff", 
-    "saturdays": "Duty Saturdays",
-    "weekly_plan": "Weekly Plan"
-  }
+  "staff": "Personale",
+  "saturdays": "Turni del sabato",
+  "weekly_plan": "Piano settimanale",
+  "weekly_staff_plan": "Piano settimanale",
+  "shifts": "Turni",
+  "copy_from_week": "copiare dalla settimana ",
+  "max_lines": "righe max.",
+  "name": "Descrizione",
+  "short_name_for_weekly_plan": "Nome per il piano settimanale",
+  "employees": "Personale",
+  "saturday_shifts": "Turni del sabato",
+  "weekly_plan_categories": "Categorie del piano settimanale",
+  "copy_weekly_plan_from": "Copiare il piano settimanale da",
+  "real_hours": "Ore effettive",
+  "summary": "Riepilogo",
+  "target_hours": "Ore previste",
+  "total_hours": "Ore totali",
+  "weekly_plan_copied_success": "Piano settimanale copiato con successo"
+}

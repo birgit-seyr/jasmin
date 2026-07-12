@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Conferma la cancellazione dei Suoi dati personali</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
+      Gentile {{ user.first_name|default:"utente" }},
+    </h1>
+
+    <p>
+      abbiamo ricevuto una richiesta di cancellare tutti i Suoi dati personali presso
+      {% if tenant_name %}<strong>{{ tenant_name }}</strong>{% else %}la piattaforma{% endif %}
+      (GDPR articolo 17 — diritto all'oblio).
+    </p>
+
+    <p>
+      Per essere certi che questa richiesta provenga davvero da Lei,
+      La preghiamo di confermare la cancellazione tramite il link seguente:
+    </p>
+
+    <p style="margin: 32px 0;">
+      <a href="{{ confirm_url }}"
+         style="display: inline-block; padding: 12px 20px; background: #b00020; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        Conferma la cancellazione
+      </a>
+    </p>
+
+    <p style="color: #555; font-size: 14px;">
+      Oppure copi questo link nel Suo browser:<br />
+      <a href="{{ confirm_url }}" style="color: #b00020; word-break: break-all;">{{ confirm_url }}</a>
+    </p>
+
+    {% if requires_admin_approval %}
+    <p style="color: #555; font-size: 14px; margin-top: 24px;">
+      <strong>Nota:</strong> Dopo la conferma, l'ufficio esaminerà
+      la richiesta manualmente prima che i Suoi dati vengano definitivamente anonimizzati.
+    </p>
+    {% endif %}
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      Questo link è valido per 24 ore e può essere utilizzato una sola volta.
+      Se non ha richiesto la cancellazione, ignori pure questa e-mail
+      — il Suo account resterà invariato.
+    </p>
+  </body>
+</html>

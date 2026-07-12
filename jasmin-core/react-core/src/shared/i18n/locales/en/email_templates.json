@@ -65,7 +65,7 @@
     "commissioning_delivery_note": "Sent manually by the office to resellers when the delivery note PDF is wanted upfront or for reconciliation. The printed delivery note ships with the goods inside the crate — the email is optional and triggered per order line from DeliveryNotes.tsx.",
     "commissioning_invoice_reminder": "Friendly / second / final reminder for overdue invoices.",
     "gdpr_deletion_confirm": "Sent after someone requests their data be deleted. Contains the 24-hour confirmation link that actually triggers the deletion.",
-    "gdpr_deletion_approved": "Sent after the office approves the deletion request and the anonymisation has been executed.",
+    "gdpr_deletion_approved": "Sent after the office approves the deletion request and the anonymization has been executed.",
     "gdpr_deletion_rejected": "Sent when the office rejects the deletion request — e.g. due to open legal obligations. Contains the reason given by the office.",
     "tenants_smtp_test": "Sent on 'Send test' from the email configuration (Settings → SMTP). The content is only a confirmation that the SMTP connection works. Edits apply only to your own test emails — it appears nowhere else."
   }

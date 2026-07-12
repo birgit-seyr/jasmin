@@ -1,0 +1,13 @@
+Bonjour {{ member.first_name }},
+
+nous vous confirmons par la présente votre retrait de {{ tenant_name }}.
+
+{% if cancelled_effective_at %}Date de retrait (GenG §30) : {{ cancelled_effective_at }}.{% endif %}
+{% if member.member_number %}Votre ancien numéro de membre est #{{ member.member_number }}. Nous le conservons pendant la durée légale de conservation.{% endif %}
+
+Nous vous contacterons séparément au sujet du règlement de votre
+avoir social.
+
+Si vous avez des questions, n'hésitez pas à répondre directement à cet e-mail.
+
+— L'équipe de {{ tenant_name }}

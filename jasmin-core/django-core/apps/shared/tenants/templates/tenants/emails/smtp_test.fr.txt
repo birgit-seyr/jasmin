@@ -1,0 +1,7 @@
+Jasmin – E-mail de test
+
+Bonjour,
+
+ce message de test provient de votre plateforme Jasmin {{ tenant_name }}. Si vous pouvez le lire, votre configuration SMTP fonctionne et Jasmin peut désormais envoyer des e-mails automatiques (invitations, factures, bons de livraison, ...) à vous et à vos membres.
+
+— La plateforme Jasmin

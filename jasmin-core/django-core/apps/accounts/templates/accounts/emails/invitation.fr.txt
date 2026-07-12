@@ -1,0 +1,10 @@
+Bonjour {{ user.first_name }},
+
+vous avez été invité(e) à rejoindre {{ tenant_name }}.
+
+Ouvrez ce lien pour définir votre mot de passe et activer votre compte :
+
+  {{ accept_url }}
+
+Cette invitation expire le {{ expires_at }}.
+Si vous n'attendiez pas cet e-mail, vous pouvez simplement l'ignorer.

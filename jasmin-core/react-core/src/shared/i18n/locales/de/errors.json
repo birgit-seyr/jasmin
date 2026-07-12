@@ -152,7 +152,7 @@
   "order_content": {
     "not_found": "Bestellposition nicht gefunden.",
     "finalized": "Eine finalisierte Bestellposition kann nicht mehr geändert werden.",
-    "insufficient_stock": "Nicht genügend Bestand verfügbar — verfügbar: {{available}}, angefragt: {{requested}}."
+    "insufficient_stock": "Nicht genügend Bestand verfügbar — verfügbar: {{available}}."
   },
   "packing_list": {
     "amounts_diverge_across_stations": "Die Packmengen unterscheiden sich je nach Verteilstation. Bitte eine Verteilstation (oder Tour) auswählen, um die Packliste anzuzeigen."

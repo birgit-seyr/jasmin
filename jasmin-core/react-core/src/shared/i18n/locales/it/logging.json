@@ -1,0 +1,15 @@
+{
+  "title": "Cronologia attività",
+  "created": "Creato",
+  "updated": "Aggiornato",
+  "invited": "Invitato",
+  "accepted": "Accettato",
+  "admin_confirmed": "Approvato",
+  "admin_rejected": "Respinto",
+  "paid": "Pagato",
+  "cancelled": "Stornato",
+  "effective_at": "efficace il",
+  "expires": "Scade",
+  "no_data": "Nessun dato di attività disponibile.",
+  "reason": "Motivo"
+}

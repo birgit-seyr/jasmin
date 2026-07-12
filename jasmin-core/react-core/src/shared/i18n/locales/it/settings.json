@@ -1,0 +1,375 @@
+{
+  "title": "Impostazioni app",
+  "save": "Salva le impostazioni",
+  "save_failed": "Impossibile salvare l'impostazione.",
+  "reset": "Annulla le modifiche",
+  "unsaved_changes": "Modifiche non salvate",
+  "save_success": "Impostazioni salvate con successo",
+  "unsaved_changes_warning": "Ci sono modifiche non salvate. Uscendo dalla pagina andranno perse.",
+  "unsaved_changes_title": "Modifiche non salvate",
+  "general": {
+    "title": "Impostazioni generali",
+    "currency": "Valuta",
+    "timezone": "Fuso orario",
+    "language": "Lingua",
+    "dateFormat": "Formato data",
+    "csvFormat": "Formato CSV",
+    "numberLocale": "Formato numeri",
+    "csvFormat_de": "Tedesco (separatore: \";\", decimale: \",\", data: GG.MM.AAAA)",
+    "csvFormat_en": "Inglese (separatore: \",\", decimale: \".\", data: AAAA-MM-GG)",
+    "timeFormat": "Formato ora"
+  },
+  "navigation": {
+    "title": "Moduli visualizzati",
+    "show_members": "Modulo SOCI",
+    "show_abos": "Modulo ABBONAMENTI",
+    "show_commissioning": "Modulo PREPARAZIONE ORDINI",
+    "show_staff": "Modulo PERSONALE",
+    "show_warehouse": "Modulo MEZZI DI PRODUZIONE",
+    "show_economics": "Modulo ECONOMIA",
+    "show_cultivation": "Modulo PIANIFICAZIONE COLTURE"
+  },
+  "ai": {
+    "title": "Impostazioni IA",
+    "claude_enabled": "Attivare l'IA Claude"
+  },
+  "months": {
+    "january": "Gennaio",
+    "february": "Febbraio",
+    "march": "Marzo",
+    "april": "Aprile",
+    "may": "Maggio",
+    "june": "Giugno",
+    "july": "Luglio",
+    "august": "Agosto",
+    "september": "Settembre",
+    "october": "Ottobre",
+    "november": "Novembre",
+    "december": "Dicembre"
+  },
+  "gdpr": {
+    "deletion_gate": {
+      "title": "Richieste di cancellazione",
+      "description": "Controlla come vengono gestite le richieste di cancellazione GDPR (art. 17)."
+    },
+    "require_admin_approval": {
+      "label": "Approvazione dell'admin obbligatoria per le richieste di cancellazione",
+      "description": "Se attivo (impostazione predefinita), l'ufficio deve approvare manualmente ogni richiesta di cancellazione dopo la conferma via e-mail. Se disattivato, la richiesta viene eseguita subito dopo che l'utente ha cliccato sul link di conferma — più veloce, ma senza un controllo umano finale. Le cancellazioni di account con ruolo staff/admin richiedono sempre un'approvazione manuale, indipendentemente da questa impostazione."
+    }
+  },
+  "members": {
+    "title": "Impostazioni soci",
+    "registration": {
+      "title": "Registrazione"
+    },
+    "allows_self_registration": "Consentire la registrazione autonoma",
+    "allows_self_registration_desc": "Se attivo, le persone possono registrarsi autonomamente tramite la pagina di accesso. Se disattivato, i pulsanti di registrazione sono nascosti E gli endpoint di registrazione sono bloccati lato server.",
+    "trial": {
+      "title": "Soci in prova"
+    },
+    "allows_trial_members": "Consentire soci in prova",
+    "allows_trial_members_desc": "Attivare le adesioni di prova per i nuovi utenti",
+    "only_members_trial_subs": "Solo i soci possono avere abbonamenti di prova",
+    "only_members_trial_subs_desc": "Limitare gli abbonamenti di prova ai soci esistenti",
+    "subscriptions": {
+      "title": "Regole di abbonamento"
+    },
+    "must_have_subscriptions": "I soci devono avere abbonamenti",
+    "must_have_subscriptions_desc": "Tutti i soci devono avere almeno un abbonamento",
+    "only_members_subscriptions": "Solo i soci possono avere abbonamenti",
+    "only_members_subscriptions_desc": "Abbonamenti solo per soci registrati",
+    "staff_special_conditions": "Condizioni speciali per gli abbonamenti del personale",
+    "staff_special_conditions_desc": "Applicare prezzi/condizioni speciali per il personale",
+    "loans": {
+      "title": "Prestiti dei soci"
+    },
+    "uses_member_loans": "Attivare i prestiti dei soci",
+    "uses_member_loans_desc": "Consentire ai soci di concedere prestiti alla cooperativa",
+    "coop_shares": {
+      "title": "Quote sociali"
+    },
+    "has_coop_shares": "Usare le quote sociali",
+    "has_coop_shares_desc": "Attivare il sistema delle quote sociali",
+    "value_one_share": "Valore per quota sociale",
+    "value_one_share_desc": "Valore monetario di una quota sociale",
+    "min_shares": "Numero minimo di quote",
+    "min_shares_desc": "Numero minimo di quote richieste per l'adesione",
+    "max_shares": "Numero massimo di quote",
+    "max_shares_desc": "Numero massimo di quote per socio",
+    "coop_payback_retention": "Periodo di conservazione delle quote dei soci disdetti",
+    "coop_payback_retention_desc": "Mesi durante i quali le quote sociali restano nella cooperativa dopo l'uscita di un socio prima di diventare esigibili per il rimborso (0 = esigibili immediatamente).",
+    "months_suffix": "mesi",
+    "paper_signature": {
+      "title": "Firma cartacea"
+    },
+    "requires_paper_signature_for_membership": "Firma cartacea per l'adesione",
+    "requires_paper_signature_for_membership_desc": "Se attivo, i consensi per l'adesione devono essere stampati, firmati e inviati all'ufficio. L'ufficio registra manualmente la ricezione."
+  },
+  "payments": {
+    "strategy": {
+      "title": "Pagamenti quote",
+      "description": "Come vengono calcolati gli importi per gli abbonamenti dei soci per ogni ciclo di pagamento."
+    },
+    "due": {
+      "title": "Scadenza"
+    },
+    "sepa": {
+      "title": "Addebito SEPA"
+    },
+    "billing_strategy": "Pagamenti quote",
+    "billing_strategy_desc": "_esatto_ fattura esattamente le consegne che ricadono in ciascun ciclo. _livellato_ distribuisce l'importo totale in modo uniforme su tutti i cicli della durata del contratto. _livellato_ al momento non è disponibile.",
+    "strategy_exact": "Esatto per periodo (conta le consegne effettive)",
+    "strategy_smoothed": "Livellato sull'intera durata del contratto",
+    "strategy_smoothed_disabled": "Livellato sull'intera durata del contratto (temporaneamente non disponibile)",
+    "bills_joker_deliveries": "Fatturare le consegne con jolly",
+    "bills_joker_deliveries_desc": "Se disattivato, le consegne contrassegnate come jolly non vengono fatturate.",
+    "allows_solidarity_pricing": "Consentire prezzi solidali",
+    "allows_solidarity_pricing_desc": "I soci possono stabilire autonomamente il prezzo per consegna (almeno il limite minimo previsto per la variante; senza limite massimo). Il prezzo indicativo viene mostrato come suggerimento.",
+    "requires_paper_signature_for_sepa_mandate": "Firma cartacea per il mandato SEPA",
+    "requires_paper_signature_for_sepa_mandate_desc": "Se attivo, il mandato SEPA deve essere stampato, firmato e inviato all'ufficio. L'ufficio registra manualmente la ricezione.",
+    "due_day": "Giorno di scadenza nel mese",
+    "due_day_desc": "Giorno del mese in cui è dovuto l'addebito. Massimo 28, per evitare problemi con i mesi corti.",
+    "sepa_collection_day": "Giorno di addebito SEPA nel mese",
+    "sepa_collection_day_desc": "Giorno predefinito del mese in cui la banca deve eseguire l'addebito diretto SEPA. Viene proposto come data di addebito quando si crea un ciclo di addebito. Massimo 28."
+  },
+  "shares": {
+    "title": "Impostazioni quote"
+  },
+  "commissioning": {
+    "layout": {
+      "title": "Layout"
+    },
+    "logistics": {
+      "title": "Logistica"
+    },
+    "percentage_added_to_bulk_packing_list_description": "può essere adattato direttamente per ogni ortaggio",
+    "percentage_added_to_bulk_packing_list": "% aggiuntiva per le liste di preparazione (rilevante solo se i soci preparano da sé le proprie casse)",
+    "allow_upload_for_data_lists": "Dati caricabili tramite CSV",
+    "allow_upload_for_data_lists_desc": "Per caricare grandi quantità di dati nelle liste dati (ad es. ortaggi per le quote), è possibile usare file CSV per il caricamento.",
+    "uploads_weekly_amount_desc": "tramite un file CSV",
+    "show_seller_name_in_share": "Mostrare ai soci il nome del fornitore per gli articoli di acquisto nelle casse.",
+    "packing_mode": "Modalità di preparazione",
+    "packing_mode_description": "Come i soci ricevono le loro quote. Casse: tutte le quote vengono pre-preparate per ogni punto di distribuzione. Sfuso: i soci si servono da casse sfuse. Misto: selezionabile singolarmente per ogni variante.",
+    "packing_mode_boxes": "Le casse vengono pre-preparate / vengono consegnate casse pronte ai punti di distribuzione",
+    "packing_mode_bulk": "I soci preparano da sé le proprie casse ai punti di distribuzione",
+    "packing_mode_mixed": "misto (selezionabile per tipo di quota)",
+    "number_packing_stations": "Numero di stazioni di preparazione",
+    "show_size_column": "Mostrare la colonna delle dimensioni degli ortaggi",
+    "show_summary_in_harvest_share_planning_on_top": "Mostrare le righe dei totali in alto nella pianificazione delle casse",
+    "sales": {
+      "title": "Canali di vendita"
+    },
+    "default_planning_mode_basic": "per giorni",
+    "default_planning_mode_tours": "per giri",
+    "default_planning_mode_stations": "per punti di distribuzione",
+    "default_planning_mode": "la pianificazione avviene: ",
+    "default_planning_mode_description": "Questa è solo l'impostazione predefinita. Può essere modificata ogni settimana.",
+    "has_markets": "Vendita ai mercati",
+    "sells_to_resellers": "Vendita a rivenditori",
+    "different_offer_groups": "Gruppi di offerte diversi",
+    "tax_rates": {
+      "title": "Aliquote fiscali predefinite",
+      "description": "Queste aliquote fiscali predefinite vengono precompilate al momento della creazione di nuovi prezzi. Possono essere modificate in qualsiasi punto dell'app."
+    },
+    "default_tax_rate_articles": "Aliquota fiscale predefinita articoli (%)",
+    "default_tax_rate_crates": "Aliquota fiscale predefinita vuoti a rendere (%)",
+    "default_tax_rate_shares": "Aliquota fiscale predefinita quote (%)",
+    "planning": {
+      "title": "Interfacce"
+    },
+    "uploads_weekly_amount": "Caricare le quantità settimanali delle quote",
+    "manual_weekly_amount": "Inserimento manuale delle quantità settimanali delle quote",
+    "season": {
+      "title": "Impostazioni stagione"
+    },
+    "season_start": "Inizio stagione",
+    "season_start_week": "Inizio stagione (settimana 1–53)",
+    "shares": {
+      "title": "Tipi di quota"
+    },
+    "has_veg_shares": "Quote di verdura",
+    "has_fruit_shares": "Quote di frutta",
+    "has_chicken_shares": "Quote di pollo",
+    "has_oil_shares": "Quote di olio",
+    "has_honey_shares": "Quote di miele",
+    "has_grain_shares": "Quote di cereali",
+    "has_bread_shares": "Quote di pane",
+    "share_types": {
+      "title": "Tipi di cassa"
+    },
+    "trial": {
+      "title": "Quote di prova",
+      "description": "Controlla se le adesioni di prova sono possibili e quali condizioni si applicano."
+    },
+    "allows_trial_shares": "Consentire quote di prova",
+    "trial_duration": "Durata della quota di prova (numero di consegne)",
+    "allows_trial_subscriptions": "Consentire abbonamenti di prova",
+    "allowed_trial_subscription_duration": "Durata consentita degli abbonamenti di prova (settimane)",
+    "allowed_trial_subscription_duration_desc": "Durata massima di un'adesione di prova.",
+    "allows_trial_subscriptions_for_trial_members": "Abbonamenti di prova per soci in prova",
+    "allows_trial_subscriptions_for_trial_members_desc": "Determina se anche i soci in prova possono sottoscrivere abbonamenti di prova.",
+    "uses_jokers_for_trial_subscriptions": "Usare i jolly per gli abbonamenti di prova",
+    "uses_jokers_for_trial_subscriptions_desc": "Determina se i jolly vengono conteggiati anche sugli abbonamenti di prova.",
+    "jokers": {
+      "title": "Sistema jolly"
+    },
+    "uses_jokers": "Attivare i jolly",
+    "default_amount_jokers": "Numero di jolly",
+    "default_amount_jokers_description": "Può essere adattato per i singoli tipi di quota.",
+    "jokers_for_trial": "Usare i jolly per gli abbonamenti di prova",
+    "donation_jokers": "Attivare i jolly donazione",
+    "default_amount_of_donation_jokers": "Jolly donazione aggiuntivi",
+    "default_amount_of_donation_jokers_description": "Può essere adattato per i singoli tipi di quota.",
+    "subscriptions": {
+      "title": "Gestione abbonamenti"
+    },
+    "end_at_season_end": "Gli abbonamenti terminano con la fine della stagione",
+    "end_after_year": "Gli abbonamenti terminano dopo un anno",
+    "auto_renewed": "Rinnovare automaticamente gli abbonamenti",
+    "min_weeks_cancel": "Settimane minime per la disdetta prima della fine",
+    "min_weeks_cancel_description": "Numero minimo di settimane entro cui un abbonamento deve essere disdetto prima della sua fine.",
+    "share_type_changes": "Consentire la modifica delle dimensioni della quota durante l'abbonamento in corso",
+    "allows_share_type_variation_optin": "Consentire quote on-off (opt-in per consegna)",
+    "allows_share_type_variation_optin_desc": "Singole varianti di quota possono essere abilitate, così da poter essere aggiunte spontaneamente settimana per settimana.",
+    "allows_waiting_list_for_subscriptions": "Consentire la lista d'attesa per gli abbonamenti",
+    "allows_waiting_list_for_subscriptions_desc": "Se attivo, le varianti di quota esaurite e i punti di distribuzione al completo possono essere messi in lista d'attesa. Se disattivato, le opzioni esaurite semplicemente non sono selezionabili (nessuna lista d'attesa, nessuna offerta).",
+    "reservation_ttl_days": "Durata della prenotazione (giorni)",
+    "reservation_ttl_days_desc": "Per quanto tempo una bozza di abbonamento mantiene riservato il proprio posto al punto di distribuzione prima che la prenotazione scada."
+  },
+  "configure_prices": "Configura prezzi e dimensioni",
+  "reseller": {
+    "footer_left_placeholder": "Inserisci il piè di pagina sinistro (ad es. dati di contatto dell'azienda)...",
+    "footer_middle_placeholder": "Inserisci il piè di pagina centrale (ad es. coordinate bancarie)...",
+    "footer_right_placeholder": "Inserisci il piè di pagina destro (ad es. informazioni fiscali)...",
+    "invoice_entry_1_placeholder": "Inserisci il testo introduttivo della fattura...",
+    "invoice_entry_2_placeholder": "Inserisci testo aggiuntivo della fattura...",
+    "invoice_entry_3_placeholder": "Inserisci testo aggiuntivo della fattura...",
+    "invoice_greeting_1_placeholder": "Inserisci il saluto finale (ad es. Cordiali saluti)...",
+    "invoice_greeting_2_placeholder": "Inserisci testo di saluto aggiuntivo...",
+    "invoice_greeting_3_placeholder": "Inserisci testo di saluto aggiuntivo...",
+    "delivery_entry_1_placeholder": "Inserisci il testo introduttivo della bolla di consegna...",
+    "delivery_entry_1_description": "Questo testo appare sulle bolle di consegna sopra la tabella degli articoli. Prima riga.",
+    "delivery_entry_2_description": "Questo testo appare sulle bolle di consegna sopra la tabella degli articoli. Seconda riga.",
+    "delivery_entry_3_description": "Questo testo appare sulle bolle di consegna sopra la tabella degli articoli. Terza riga.",
+    "delivery_greeting_1_description": "Questo testo appare sulle bolle di consegna sotto la tabella degli articoli. Prima riga.",
+    "delivery_greeting_2_description": "Questo testo appare sulle bolle di consegna sotto la tabella degli articoli. Seconda riga.",
+    "delivery_greeting_3_description": "Questo testo appare sulle bolle di consegna sotto la tabella degli articoli. Terza riga.",
+    "invoice_entry_1_description": "Questo testo appare sulle fatture sopra la tabella degli articoli. Prima riga.",
+    "invoice_entry_2_description": "Questo testo appare sulle fatture sopra la tabella degli articoli. Seconda riga.",
+    "invoice_entry_3_description": "Questo testo appare sulle fatture sopra la tabella degli articoli. Terza riga.",
+    "invoice_greeting_1_description": "Questo testo appare sulle fatture sotto la tabella degli articoli. Prima riga.",
+    "invoice_greeting_2_description": "Questo testo appare sulle fatture sotto la tabella degli articoli. Seconda riga.",
+    "invoice_greeting_3_description": "Questo testo appare sulle fatture sotto la tabella degli articoli. Terza riga.",
+    "footer_left_description": "Questo testo appare nella colonna sinistra del piè di pagina su fatture e bolle di consegna.",
+    "footer_middle_description": "Questo testo appare nella colonna centrale del piè di pagina su fatture e bolle di consegna.",
+    "footer_right_description": "Questo testo appare nella colonna destra del piè di pagina su fatture e bolle di consegna.",
+    "delivery_entry_2_placeholder": "Inserisci testo aggiuntivo della bolla di consegna...",
+    "delivery_entry_3_placeholder": "Inserisci testo aggiuntivo della bolla di consegna...",
+    "delivery_greeting_1_placeholder": "Inserisci il saluto finale...",
+    "delivery_greeting_2_placeholder": "Inserisci testo di saluto aggiuntivo...",
+    "delivery_greeting_3_placeholder": "Inserisci testo di saluto aggiuntivo...",
+    "payment_numbering": {
+      "title": "Condizioni di pagamento e numerazione documenti"
+    },
+    "payment_terms": "Termine di pagamento (giorni)",
+    "payment_terms_desc": "Numero di giorni entro cui è dovuto il pagamento per i rivenditori",
+    "order_prefix": "Prefisso numeri d'ordine",
+    "order_prefix_desc": "Prefisso per i numeri d'ordine (ad es. BE-2024-001)",
+    "order_numbers_reset": "Azzerare i numeri d'ordine al cambio d'anno",
+    "order_numbers_reset_desc": "Ricominciare la numerazione degli ordini da 1 ogni anno",
+    "delivery_note_prefix": "Prefisso bolle di consegna",
+    "delivery_note_reset": "Azzerare i numeri delle bolle di consegna al cambio d'anno",
+    "delivery_note_numbers_reset_desc": "Ricominciare la numerazione delle bolle di consegna da 1 ogni anno",
+    "invoice_prefix": "Prefisso numeri di fattura",
+    "correction_prefix": "Prefisso fatture di correzione",
+    "invoice_reset": "Azzerare i numeri di fattura al cambio d'anno",
+    "invoice_numbers_reset_desc": "Ricominciare la numerazione delle fatture da 1 ogni anno",
+    "offer_settings": {
+      "title": "Impostazioni offerte",
+      "description": "Configurazione delle fasce di prezzo per le offerte ai rivenditori. È possibile definire fino a tre fasce."
+    },
+    "offer_tiers": "Fasce di prezzo",
+    "offer_tiers_desc": "Prezzi a fasce a partire da un determinato numero di unità di imballaggio (UI). La prima fascia inizia sempre da 1 UI.",
+    "offer_tier_from": "da",
+    "offer_tier_pu": "UI",
+    "offer_tier_label": "Fascia",
+    "offer_prices_are_per_pu": "Mostrare i prezzi nell'offerta per UI",
+    "offer_prices_are_per_pu_desc": "Se attivo, i prezzi nell'offerta vengono mostrati per unità di imballaggio (UI) invece che per chilogrammo/pezzo.",
+    "footer": {
+      "title": "Piè di pagina dei documenti"
+    },
+    "footer_left": "Colonna sinistra",
+    "footer_middle": "Colonna centrale",
+    "footer_right": "Colonna destra",
+    "invoice_text": {
+      "title": "Righe di testo della fattura"
+    },
+    "invoice_entry_1": "Riga introduttiva 1",
+    "invoice_entry_2": "Riga introduttiva 2",
+    "invoice_entry_3": "Riga introduttiva 3",
+    "invoice_greeting_1": "Riga di saluto 1",
+    "invoice_greeting_2": "Riga di saluto 2",
+    "invoice_greeting_3": "Riga di saluto 3",
+    "offer_text": {
+      "title": "Righe di testo dell'offerta"
+    },
+    "offer_entry_1": "Riga introduttiva 1",
+    "offer_entry_2": "Riga introduttiva 2",
+    "offer_entry_3": "Riga introduttiva 3",
+    "offer_entry_1_description": "Questo testo appare sulle offerte ai rivenditori sopra la tabella degli articoli. Prima riga.",
+    "offer_entry_2_description": "Questo testo appare sulle offerte ai rivenditori sopra la tabella degli articoli. Seconda riga.",
+    "offer_entry_3_description": "Questo testo appare sulle offerte ai rivenditori sopra la tabella degli articoli. Terza riga.",
+    "offer_entry_1_placeholder": "Inserisci il testo introduttivo dell'offerta...",
+    "offer_entry_2_placeholder": "Inserisci testo aggiuntivo dell'offerta...",
+    "offer_entry_3_placeholder": "Inserisci testo aggiuntivo dell'offerta...",
+    "offer_greeting_1": "Riga di saluto 1",
+    "offer_greeting_2": "Riga di saluto 2",
+    "offer_greeting_3": "Riga di saluto 3",
+    "offer_greeting_1_description": "Questo testo appare sulle offerte ai rivenditori sotto la tabella degli articoli. Prima riga.",
+    "offer_greeting_2_description": "Questo testo appare sulle offerte ai rivenditori sotto la tabella degli articoli. Seconda riga.",
+    "offer_greeting_3_description": "Questo testo appare sulle offerte ai rivenditori sotto la tabella degli articoli. Terza riga.",
+    "offer_greeting_1_placeholder": "Inserisci il saluto finale...",
+    "offer_greeting_2_placeholder": "Inserisci testo di saluto aggiuntivo...",
+    "offer_greeting_3_placeholder": "Inserisci testo di saluto aggiuntivo...",
+    "offer_order_instructions": "Istruzioni per l'ordine",
+    "offer_order_instructions_description": "Testo libero che appare tra le righe introduttive e la tabella dell'offerta. Contenuto tipico: accettazione dell'ordine, termine per l'ordine, invio dell'ordine.",
+    "offer_order_instructions_placeholder": "Inserisci le istruzioni per l'ordine (ad es. termine per l'ordine giovedì ore 12:00)...",
+    "correction_invoice_prefix": "Prefisso numero fattura di correzione / storno",
+    "preview": {
+      "title": "Anteprima con il testo attuale",
+      "description": "Genera un PDF di esempio con dati di prova, per vedere come appariranno i documenti.",
+      "delivery_note": "Anteprima bolla di consegna",
+      "invoice": "Anteprima fattura",
+      "offer": "Anteprima offerta"
+    },
+    "delivery_text": {
+      "title": "Righe di testo della bolla di consegna"
+    },
+    "delivery_entry_1": "Riga introduttiva 1",
+    "delivery_entry_2": "Riga introduttiva 2",
+    "delivery_entry_3": "Riga introduttiva 3",
+    "delivery_greeting_1": "Riga di saluto 1",
+    "delivery_greeting_2": "Riga di saluto 2",
+    "delivery_greeting_3": "Riga di saluto 3"
+  },
+  "saved": "Salvato",
+  "saving": "Salvataggio in corso …",
+  "subscriptions": {
+    "trial": {
+      "title": "Adesione di prova",
+      "description": "Controlla se le adesioni di prova sono possibili e quali condizioni si applicano."
+    },
+    "info_sentence_about_trial_subscriptions": "Breve descrizione degli abbonamenti di prova",
+    "info_sentence_about_trial_subscriptions_desc": "ad es.: gli abbonamenti di prova sono possibili per 4 settimane, poi terminano automaticamente.",
+    "allows_trial_subscriptions": "Consentire abbonamenti di prova",
+    "allowed_trial_subscription_duration": "Durata consentita degli abbonamenti di prova (settimane)",
+    "allowed_trial_subscription_duration_desc": "Durata massima di un'adesione di prova.",
+    "allows_trial_subscriptions_for_trial_members": "Abbonamenti di prova per soci in prova",
+    "allows_trial_subscriptions_for_trial_members_desc": "Determina se anche i soci in prova possono sottoscrivere abbonamenti di prova.",
+    "uses_jokers_for_trial_subscriptions": "Usare i jolly per gli abbonamenti di prova",
+    "uses_jokers_for_trial_subscriptions_desc": "Determina se i jolly vengono conteggiati anche sugli abbonamenti di prova.",
+    "share_types": {
+      "title": "Tipi di cassa"
+    }
+  }
+}

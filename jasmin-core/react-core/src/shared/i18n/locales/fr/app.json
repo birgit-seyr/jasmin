@@ -1,4 +1,12 @@
 {
-    "title": "Jasmin CSA",
-    "loading": "Loading..."
+  "title": "Jasmin CSA",
+  "loading": "Chargement...",
+  "routes": {
+    "staff_dashboard": "Tableau de bord du personnel",
+    "weekly_staff_plan": "Planning hebdomadaire du personnel",
+    "saturday_shifts": "Créneaux du samedi",
+    "weekly_plan_categories": "Catégories du planning hebdomadaire",
+    "employees": "Employé·es",
+    "warehouse_dashboard": "Tableau de bord Matériel et fournitures"
   }
+}

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Benvenuto come socio</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Gentile {{ member.first_name }},</h1>
+    <p>
+      con la Sua prima quota sociale è ora ufficialmente socio
+      {% if tenant_name %}di <strong>{{ tenant_name }}</strong>{% endif %}.
+    </p>
+    {% if member.member_number %}
+      <p>Il Suo numero di socio è <strong>#{{ member.member_number }}</strong>.</p>
+    {% endif %}
+    {% if entry_date %}
+      <p>Data di ingresso (GenG §30): <strong>{{ entry_date }}</strong>.</p>
+    {% endif %}
+    {% if portal_url %}
+      <p>
+        Nel <a href="{{ portal_url }}" style="color: #1f6feb;">portale soci</a>
+        trova le Sue quote, i contributi e gli abbonamenti.
+      </p>
+    {% endif %}
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      Se qualcosa non è chiaro, non esiti a contattarci.
+    </p>
+  </body>
+</html>

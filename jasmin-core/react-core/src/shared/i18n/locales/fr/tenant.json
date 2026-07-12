@@ -1,0 +1,78 @@
+{
+  "title": "Général",
+  "basic_info": {
+    "title": "Informations de base",
+    "name": "Nom de l'organisation / de l'entreprise",
+    "description": "Description",
+    "tenant_language": "Langue"
+  },
+  "address": {
+    "title": "Adresse",
+    "address": "Rue et numéro",
+    "zip_code": "Code postal",
+    "city": "Ville",
+    "country": "Pays"
+  },
+  "organization": {
+    "title": "Divers",
+    "organic_control_number": "Numéro de contrôle bio",
+    "fiscal_year_start_month": "Début de l'exercice",
+    "tenant_language": "Langue",
+    "iban": "IBAN",
+    "iban_desc": "Compte bancaire de la coopérative. Repris comme compte du créancier dans le fichier XML de prélèvement SEPA (pain.008).",
+    "sepa_creditor_id": "Identifiant créancier SEPA",
+    "sepa_creditor_id_desc": "Attribué par la banque lors de la mise en place du prélèvement SEPA (p. ex. « DE98ZZZ09999999999 »). Nécessaire pour le XML pain.008.",
+    "sepa_creditor_name": "Nom du créancier SEPA",
+    "sepa_creditor_name_desc": "Nom de la coopérative tel qu'il apparaît sur le mandat SEPA. Intégré dans chaque fichier pain.008 ; max. 70 caractères.",
+    "sepa_creditor_bic": "BIC du créancier SEPA",
+    "sepa_creditor_bic_desc": "BIC de la banque principale de la coopérative (p. ex. « COBADEFFXXX » pour la Commerzbank). Nécessaire pour le XML pain.008 — la banque communique ce code lors de la mise en place SEPA.",
+    "sepa_creditor_bic_invalid": "BIC invalide. Un BIC comporte 8 ou 11 caractères et commence par 6 lettres (p. ex. « COBADEFFXXX »).",
+    "sepa_remittance_template": "Motif de paiement (modèle)",
+    "sepa_remittance_template_desc": "Texte que les membres voient sur leur relevé de compte.",
+    "uid": "Numéro UID"
+  },
+  "legal_notice": {
+    "title": "Mentions légales / Informations juridiques",
+    "description": "Mentions obligatoires selon § 5 DDG et § 18 al. 2 MStV. Affichées sur la page publique des mentions légales ; les champs vides y sont masqués.",
+    "legal_form": "Forme juridique",
+    "legal_form_desc": "p. ex. « coopérative enregistrée (eG) », « e. V. », « GmbH ».",
+    "register_type": "Type de registre",
+    "register_type_desc": "p. ex. « registre des coopératives », « registre des associations », « registre du commerce ».",
+    "register_number": "Numéro de registre",
+    "register_court": "Tribunal du registre",
+    "legal_representatives": "Représentants légaux",
+    "legal_representatives_desc": "Direction ou gérance, séparés par des virgules.",
+    "supervisory_board": "Conseil de surveillance",
+    "supervisory_board_desc": "Uniquement pour les coopératives/associations dotées d'un conseil de surveillance. Noms séparés par des virgules.",
+    "content_responsible": "Responsable éditorial",
+    "content_responsible_desc": "Nom de la personne responsable selon § 18 al. 2 MStV. Affiché avec l'adresse de l'organisation.",
+    "participates_in_dispute_resolution": "Participe au règlement des litiges de consommation",
+    "participates_in_dispute_resolution_desc": "N'activer que si l'organisation est prête ou tenue de participer à une procédure de règlement des litiges devant un organe de conciliation des consommateurs. Par défaut : non.",
+    "auditing_association": "Fédération d'audit",
+    "auditing_association_desc": "Uniquement pour les coopératives (§ 54 GenG). Adresse complète, sur plusieurs lignes.",
+    "professional_association": "Caisse d'assurance accidents professionnelle",
+    "professional_association_desc": "Caisse d'assurance accidents professionnelle / assurance accidents compétente, sur plusieurs lignes.",
+    "extra_html": "Informations supplémentaires (HTML)",
+    "extra_html_desc": "Rarement nécessaire : chambre/profession réglementée, autorité de contrôle pour les activités soumises à autorisation, mention « en liquidation ». Le HTML est autorisé et nettoyé avant l'affichage."
+  },
+  "sepa": {
+    "title": "Prélèvement SEPA",
+    "description": "Coordonnées bancaires et textes pour le prélèvement SEPA (pain.008).",
+    "remittance_insert": "Insérer un espace réservé :",
+    "remittance_preview": "Aperçu"
+  },
+  "files": {
+    "title": "Logos",
+    "upload_logo": "Téléverser le logo",
+    "current_logo": "Logo actuel",
+    "upload_favicon": "Téléverser le favicon",
+    "current_favicon": "Favicon actuel",
+    "current_bio_logo": "Logo bio actuel",
+    "upload_bio_logo": "Téléverser le logo bio",
+    "logo_saved": "Logo enregistré",
+    "bio_logo_saved": "Logo bio enregistré"
+  },
+  "email": "e-mail",
+  "email_for_orders": "e-mail pour les commandes",
+  "phone_number": "Téléphone"
+}

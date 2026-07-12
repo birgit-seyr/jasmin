@@ -1,0 +1,12 @@
+Gentile team di {{ tenant_name }},
+
+un socio ha annullato autonomamente la propria adesione (tramite il portale soci).
+
+Socio: {{ member.first_name }} {{ member.last_name }}{% if member.member_number %} (numero di socio #{{ member.member_number }}){% endif %}
+{% if cancelled_effective_at %}Data di recesso (GenG §30): {{ cancelled_effective_at }}{% endif %}
+
+Vi preghiamo di verificare il recesso e di occuparvi della liquidazione
+della quota sociale:
+{{ review_url }}
+
+— Notifica automatica.

@@ -1,0 +1,12 @@
+Facture {{ invoice.number }}
+
+Bonjour {{ reseller.name }},
+
+veuillez trouver ci-joint votre facture pour {{ invoice.period }}.
+
+Montant total : {{ invoice.total }}
+Échéance : {{ invoice.due_date }}
+
+Coordonnées bancaires : {{ tenant.bank_details }}
+
+— L'équipe de {{ tenant_name }}

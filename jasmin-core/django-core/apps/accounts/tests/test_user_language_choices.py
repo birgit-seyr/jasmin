@@ -24,7 +24,7 @@ WRITE_SERIALIZERS = [
 
 
 @pytest.mark.parametrize("serializer_cls", WRITE_SERIALIZERS)
-@pytest.mark.parametrize("code", ["en", "de"])
+@pytest.mark.parametrize("code", ["en", "de", "fr", "it"])
 def test_supported_language_is_not_a_user_language_error(serializer_cls, code):
     # Other required fields may still error; user_language must NOT.
     serializer = serializer_cls(data={"user_language": code})
@@ -33,7 +33,7 @@ def test_supported_language_is_not_a_user_language_error(serializer_cls, code):
 
 
 @pytest.mark.parametrize("serializer_cls", WRITE_SERIALIZERS)
-@pytest.mark.parametrize("code", ["fr", "deu", "de-DE", "english", "xx", "EN"])
+@pytest.mark.parametrize("code", ["deu", "de-DE", "english", "xx", "EN"])
 def test_unsupported_language_is_rejected(serializer_cls, code):
     serializer = serializer_cls(data={"user_language": code})
     serializer.is_valid()

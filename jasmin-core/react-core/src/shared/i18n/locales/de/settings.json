@@ -144,7 +144,7 @@
       "title": "Logistik"
     },
     "percentage_added_to_bulk_packing_list_description": "kann direkt bei jedem Gemüse angepasst werden",
-    "percentage_added_to_bulk_packing_list": "zusätzliche % für Packlisten (nur relevant, wenn Mitglieder ihre Kisten selbst packen)‚",
+    "percentage_added_to_bulk_packing_list": "zusätzliche % für Packlisten (nur relevant, wenn Mitglieder ihre Kisten selbst packen)",
     "allow_upload_for_data_lists": "Daten über csv hinaufladbar",
     "allow_upload_for_data_lists_desc": "Um größere Datenmenge in die Daten-Listen zu laden (z.b. Gemüse für Anteile), können csv Dateien verwenden werden zum Upload.",
     "uploads_weekly_amount_desc": "über eine csv-Datei",

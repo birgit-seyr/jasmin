@@ -143,7 +143,7 @@
       "title": "Logistics"
     },
     "percentage_added_to_bulk_packing_list_description": "can be adjusted directly for each vegetable",
-    "percentage_added_to_bulk_packing_list": "additional % for packing lists (only relevant if members pack their own crates)‚",
+    "percentage_added_to_bulk_packing_list": "additional % for packing lists (only relevant if members pack their own crates)",
     "allow_upload_for_data_lists": "Data uploadable via CSV",
     "allow_upload_for_data_lists_desc": "To load larger amounts of data into the data lists (e.g. vegetables for shares), CSV files can be used for upload.",
     "uploads_weekly_amount_desc": "via a CSV file",
@@ -195,7 +195,7 @@
     "has_grain_shares": "Grain Shares",
     "has_bread_shares": "Bread Shares",
     "share_types": {
-      "title": "Crate Types"
+      "title": "Share types"
     },
     "trial": {
       "title": "Trial Shares",
@@ -218,6 +218,10 @@
     "jokers_for_trial": "Use Jokers for Trial Subscriptions",
     "donation_jokers": "Enable Donation Jokers",
     "additional_donation_jokers": "Additional Donation Jokers",
+    "default_amount_jokers": "Number of jokers",
+    "default_amount_jokers_description": "Can be adjusted for individual share types.",
+    "default_amount_of_donation_jokers": "Additional donation jokers",
+    "default_amount_of_donation_jokers_description": "Can be adjusted for individual share types.",
     "subscriptions": {
       "title": "Subscription Management"
     },
@@ -332,7 +336,7 @@
     "offer_order_instructions": "Order instructions",
     "offer_order_instructions_description": "Free-form text printed between the entry lines and the offers table. Typical content: order acceptance, order deadline, where to send the completed order.",
     "offer_order_instructions_placeholder": "Enter order instructions (e.g. ordering deadline Thursday 12:00)...",
-    "correction_invoice_prefix": "Correction / storno invoice number prefix",
+    "correction_invoice_prefix": "Correction / cancellation invoice number prefix",
     "preview": {
       "title": "Preview with current text",
       "description": "Generates a sample PDF using fake reseller / item data so you can see how your edits to the entry lines, greeting lines and footer columns will look on a real document. Unsaved changes are included.",
@@ -357,6 +361,8 @@
       "title": "Trial Membership",
       "description": "Controls whether trial memberships are possible and which conditions apply to them."
     },
+    "info_sentence_about_trial_subscriptions": "Short description of trial subscriptions",
+    "info_sentence_about_trial_subscriptions_desc": "e.g. Trial subscriptions run for 4 weeks, then end automatically.",
     "allows_trial_subscriptions": "Allow Trial Subscriptions",
     "allowed_trial_subscription_duration": "Allowed Trial Subscription Duration (Weeks)",
     "allowed_trial_subscription_duration_desc": "Maximum term of a trial membership.",
@@ -365,7 +371,7 @@
     "uses_jokers_for_trial_subscriptions": "Use Jokers for Trial Subscriptions",
     "uses_jokers_for_trial_subscriptions_desc": "Determines whether jokers are also counted against trial subscriptions.",
     "share_types": {
-      "title": "Crate Types"
+      "title": "Share types"
     }
   }
 }

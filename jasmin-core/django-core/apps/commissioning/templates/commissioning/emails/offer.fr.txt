@@ -1,0 +1,7 @@
+Bonjour {{ reseller.name }},
+
+votre offre pour {{ offer.period }} est prête. Ouvrez le formulaire de commande pour passer votre commande — la date limite de commande y est indiquée pour chaque jour de livraison.
+
+{{ offer_url }}
+
+— L'équipe de {{ tenant_name }}

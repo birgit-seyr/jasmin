@@ -1,0 +1,399 @@
+{
+  "commissioning": {
+    "past_week": "Questa settimana è nel passato e non può più essere modificata.",
+    "share_days_locked": "I giorni di questa quota sono bloccati perché esistono già dei contenuti quota associati.",
+    "already_finalized": "Questo record è già finalizzato e non può più essere modificato.",
+    "invalid": "Dati non validi — controllare i dati e riprovare.",
+    "not_enough_stock": "Scorte insufficienti per questa azione."
+  },
+  "stock": {
+    "insufficient": "Scorte insufficienti per questa azione.",
+    "amount_negative": "La quantità non può essere negativa.",
+    "amount_not_number": "La quantità deve essere un numero."
+  },
+  "subscription": {
+    "start_too_soon": "L'abbonamento può iniziare al più presto il {{earliest}} ({{min_weeks}} settimana/e di preavviso).",
+    "additional_requires_base": "Questa è una quota aggiuntiva e può essere aggiunta solo se il socio ha già una quota base attiva nello stesso periodo.",
+    "additional_exceeds_base": "Una quota aggiuntiva non può durare più a lungo della quota base in cui viene inserita. Impostare la data di fine al {{suggested_valid_until}} (fine della quota base) per continuare.",
+    "already_confirmed": "Questo abbonamento è già confermato.",
+    "confirmed_immutable": "Un abbonamento confermato non può più essere modificato o eliminato — terminarlo invece tramite disdetta.",
+    "variation_locked": "La variante di quota di un abbonamento confermato non può più essere modificata — creare invece un nuovo abbonamento.",
+    "renewal_variation_unavailable": "Per il rinnovo automatico non esiste alcuna variante di quota della stessa dimensione che copra l'intero nuovo periodo. Creare o estendere una variante adatta.",
+    "renewal_price_unavailable": "Per il periodo di rinnovo non è stato possibile determinare un prezzo. Configurare un prezzo per il nuovo periodo e rinnovare di nuovo.",
+    "cancel": {
+      "invalid": "La disdetta non è valida — controllare la data.",
+      "not_confirmed": "Solo gli abbonamenti confermati possono essere disdetti.",
+      "not_sunday": "La data di disdetta deve cadere di domenica (fine della settimana di consegna).",
+      "in_past": "La data di disdetta non può essere nel passato — la prima possibile è la prossima domenica.",
+      "before_valid_from": "La data di disdetta deve essere pari o successiva alla data di inizio dell'abbonamento.",
+      "after_valid_until": "La data di disdetta deve essere pari o precedente alla data di fine dell'abbonamento.",
+      "no_sunday_remains": "Tra oggi e la fine dell'abbonamento non resta più alcuna domenica valida — lasciare scadere naturalmente il periodo.",
+      "effective_at_format": "Formato data non valido — atteso AAAA-MM-GG.",
+      "effective_at_required": "È richiesta una data di disdetta."
+    },
+    "open_ended_not_allowed": "Un abbonamento deve avere una data di fine. Gli abbonamenti a tempo indeterminato non sono consentiti.",
+    "no_active_price": "Questa variante di quota non ha un prezzo valido per la data di inizio scelta. Scegliere un'altra data di inizio o un'altra variante.",
+    "solidarity_price_below_minimum": "Il prezzo scelto ({{chosen}}) è inferiore al prezzo minimo ({{minimum}}) per questa variante di quota. Scegliere un prezzo di almeno {{minimum}}.",
+    "delivery_station_day_out_of_range": "Il giorno del punto di distribuzione selezionato non copre l'intero periodo dell'abbonamento — inizia dopo l'avvio dell'abbonamento oppure termina (senza un giorno successivo) prima della fine dell'abbonamento. Scegliere un giorno del punto di distribuzione che copra l'intero periodo.",
+    "bulk_renew": {
+      "ids_required": "Selezionare almeno un abbonamento.",
+      "too_many_ids": "È possibile rinnovare al massimo 500 abbonamenti per richiesta.",
+      "invalid_valid_until": "Data di fine non valida. Scegliere una data valida."
+    },
+    "cancel_draft": "Le bozze di abbonamento non possono essere disdette — eliminarle invece.",
+    "renewal_chain_number_missing": "L'abbonamento precedente non ha un numero di abbonamento da ereditare — correggere prima la numerazione del precedente, poi rinnovare di nuovo."
+  },
+  "member": {
+    "already_confirmed": "Questo socio è già confermato.",
+    "link_conflict": "Collegamento non possibile — questo utente è già associato a un altro socio.",
+    "user_already_linked": "Questo utente è già collegato a un socio.",
+    "user_in_blocked_status": "Questo utente è bloccato e non può essere invitato.",
+    "user_already_active": "Questo utente è già attivo — nessun invito necessario.",
+    "no_email": "Questo socio non ha un indirizzo e-mail — aggiungerne prima uno.",
+    "invitation_invalid": "Questo invito non è (più) valido.",
+    "coop_shares_out_of_range": "Il numero di quote sociali ({{total}}) di questo socio è fuori dall'intervallo consentito. Modificare le quote sociali prima di confermare il socio.",
+    "coop_shares_out_of_range_range": "Questo socio ha {{total}} quota/e sociale/i. Sono consentite tra {{minimum}} e {{maximum}}. Modificare le quote sociali prima di confermare il socio.",
+    "coop_shares_out_of_range_min": "Questo socio ha {{total}} quota/e sociale/i, ma ne servono almeno {{minimum}}. Modificare le quote sociali prima di confermare il socio.",
+    "coop_shares_out_of_range_max": "Questo socio ha {{total}} quota/e sociale/i; ne sono consentite al massimo {{maximum}}. Modificare le quote sociali prima di confermare il socio.",
+    "profile_not_linked": "A questo account utente non è collegato alcun profilo socio.",
+    "locked_after_admin_confirmation": "Questo campo è fissato per legge dopo la conferma del socio e non può più essere modificato.",
+    "already_cancelled": "Questa adesione è già disdetta.",
+    "has_active_subscriptions": "La disdetta è possibile solo quando non ci sono più abbonamenti attivi. Disdire prima gli abbonamenti o lasciarli scadere.",
+    "not_found": "Socio non trovato.",
+    "cancel": {
+      "effective_at_format": "Formato data non valido — atteso AAAA-MM-GG.",
+      "effective_at_in_past": "La data di disdetta non può essere nel passato.",
+      "effective_at_required": "È richiesta una data di disdetta."
+    },
+    "confirmed_immutable": "Un socio confermato non può essere eliminato — terminare l'adesione tramite disdetta."
+  },
+  "coop_share": {
+    "contract_agreement_required": "Accettare il contratto di sottoscrizione per sottoscrivere quote sociali.",
+    "value_not_configured": "Il valore di una quota sociale non è configurato. Contattare l'ufficio.",
+    "invalid_amount": "Il numero di quote sociali deve essere maggiore di 0.",
+    "confirmed_immutable": "Una quota sociale confermata non può essere eliminata — disdire invece la quota (o il socio)."
+  },
+  "share": {
+    "not_found": "Quota non trovata."
+  },
+  "share_article": {
+    "not_found": "Articolo non trovato.",
+    "invalid_share_option": "Opzione di quota non valida."
+  },
+  "share_type": {
+    "succession_has_active_variations": "Non è possibile avviare un nuovo tipo di quota finché quello attuale ha ancora varianti attive alla data indicata o successive. Terminare prima quelle varianti oppure scegliere una data di inizio successiva.",
+    "shortening_strands_variation": "Non è possibile terminare questo tipo di quota alla data indicata: esistono varianti aperte o che terminano dopo di essa, che sopravviverebbero al proprio tipo di quota. Terminare o accorciare prima quelle varianti oppure scegliere una data di fine successiva.",
+    "invalid_share_option": "Opzione di quota non valida."
+  },
+  "time_bound": {
+    "succession_start_before_predecessor": "Non è possibile avviare un nuovo record prima del record aperto esistente che andrebbe a sostituire. Scegliere una data di inizio pari o successiva a quella del record esistente, oppure chiudere prima il record esistente."
+  },
+  "share_type_variation": {
+    "not_found": "Variante di quota non trovata.",
+    "outside_share_type_range": "La validità della variante deve rientrare nella validità del suo tipo di quota — non può iniziare prima del tipo di quota né terminare dopo di esso (o rimanere aperta una volta che il tipo di quota è terminato).",
+    "succession_has_active_subscriptions": "Una nuova variante per questa combinazione di tipo di quota e dimensione può iniziare solo dopo che è terminato l'ultimo abbonamento della variante attuale. Terminare prima quegli abbonamenti oppure scegliere una data di inizio successiva.",
+    "shortening_strands_subscriptions": "Non è possibile terminare questa variante alla data indicata: esistono abbonamenti aperti o che terminano dopo di essa, che sopravviverebbero alla propria variante. Terminare prima quegli abbonamenti oppure scegliere una data di fine successiva.",
+    "missing_bulk": "Almeno una delle varianti di quota indicate non esiste.",
+    "over_capacity": "Questo tipo di quota è esaurito per il periodo selezionato.",
+    "capacity_below_occupancy": "La capacità non può essere ridotta al di sotto della quantità già prenotata per una settimana attuale o futura."
+  },
+  "tenant_settings": {
+    "coop_shares_bounds_inverted": "Il numero minimo di quote sociali non può superare il massimo."
+  },
+  "share_content": {
+    "invalid": "Voce non valida — controllare i dati.",
+    "not_found": "Voce non trovata.",
+    "invalid_composite_id": "Identificativo del contenuto quota non valido.",
+    "invalid_pk": "Identificativo del contenuto quota non valido.",
+    "missing_required": "Campi obbligatori mancanti: anno, settimana di consegna o articolo quota."
+  },
+  "delivery_note": {
+    "finalize_failed": "Non è stato possibile finalizzare la bolla di consegna prima di creare la fattura.",
+    "not_found": "Bolla di consegna non trovata.",
+    "already_exists": "Per questo ordine esiste già una bolla di consegna.",
+    "already_finalized": "Questa bolla di consegna è già finalizzata e non può più essere modificata.",
+    "empty": "Impossibile finalizzare la bolla di consegna perché non contiene voci."
+  },
+  "delivery_day": {
+    "not_found": "Giorno di consegna non trovato.",
+    "required": "Il giorno di consegna è obbligatorio.",
+    "valid_from_in_past": "Non è possibile creare un giorno di consegna con una data di validità nel passato."
+  },
+  "delivery_station": {
+    "invalid": "Punto di distribuzione non valido — controllare i dati inseriti.",
+    "over_capacity": "Questo punto di distribuzione è al completo per la settimana {{week}}/{{year}} ({{occupied}}/{{capacity}}). Scegliere un altro punto.",
+    "capacity_below_occupancy": "La capacità non può essere impostata a {{capacity}} — nella settimana {{week}}/{{year}} sono già prenotate {{peak}} quote. Scegliere almeno {{peak}}.",
+    "in_use": "Questo punto di distribuzione non può essere eliminato perché delle consegne fanno ancora riferimento ai suoi giorni di ritiro. Spostare o terminare prima le consegne.",
+    "not_found": "Punto di distribuzione non trovato."
+  },
+  "delivery_exception": {
+    "invalid_range": "Il periodo della pausa di consegna non è valido — deve iniziare di lunedì, terminare di domenica, e l'inizio non può essere successivo alla fine.",
+    "overlap": "Per questa variante di quota il periodo si sovrappone a una pausa di consegna esistente.",
+    "locked": "Questa pausa di consegna è già iniziata o è nel passato e non può più essere modificata o eliminata."
+  },
+  "invoice": {
+    "not_found": "Fattura non trovata.",
+    "cannot_cancel_self": "Una fattura non può stornare sé stessa.",
+    "circular_cancellation": "Rilevato un ciclo di storno — controllare il collegamento.",
+    "storno_missing_target": "Una nota di storno deve fare riferimento alla fattura da stornare.",
+    "cannot_storno_storno": "Una nota di storno non può essere a sua volta stornata.",
+    "already_exists": "Per questa bolla di consegna esiste già una fattura.",
+    "already_finalized": "Questa fattura è già finalizzata e non può più essere modificata.",
+    "dn_not_finalized": "La bolla di consegna non è ancora finalizzata.",
+    "empty": "Impossibile finalizzare la fattura perché non contiene voci.",
+    "mixed_resellers": "Tutte le bolle di consegna devono appartenere allo stesso rivenditore.",
+    "no_delivery_notes": "Nessuna bolla di consegna indicata.",
+    "not_cancellable": "Questa fattura non può essere stornata."
+  },
+  "order": {
+    "not_found": "Ordine non trovato.",
+    "already_finalized": "Questo ordine è già finalizzato e non può più essere modificato."
+  },
+  "order_content": {
+    "not_found": "Voce d'ordine non trovata.",
+    "finalized": "Una voce d'ordine finalizzata non può più essere modificata.",
+    "insufficient_stock": "Scorte insufficienti — disponibili: {{available}}."
+  },
+  "packing_list": {
+    "amounts_diverge_across_stations": "Le quantità da preparare differiscono a seconda del punto di distribuzione. Selezionare un punto di distribuzione (o un giro) per visualizzare la lista di preparazione."
+  },
+  "reseller": {
+    "not_found": "Rivenditore non trovato.",
+    "invalid": "Dati del rivenditore non validi — controllare i dati.",
+    "already_linked": "Questo rivenditore è già collegato a un altro utente.",
+    "customer_role_required": "Il collegamento a un rivenditore è possibile solo per il ruolo 'cliente'.",
+    "email_missing": "Per questo rivenditore non è stato indicato alcun indirizzo e-mail di fatturazione."
+  },
+  "storage": {
+    "not_found": "Magazzino non trovato."
+  },
+  "offer": {
+    "not_found": "Offerta non trovata."
+  },
+  "offer_group": {
+    "not_found": "Gruppo di offerte non trovato.",
+    "cannot_delete_default": "Il gruppo di offerte predefinito non può essere eliminato."
+  },
+  "export": {
+    "invalid_dates": "Intervallo di date non valido per l'esportazione — controllare la data di inizio e di fine."
+  },
+  "admin_user": {
+    "not_found": "Utente amministratore non trovato.",
+    "invalid": "Dati dell'utente amministratore non validi.",
+    "not_pending_invitation": "Per questo utente non esiste alcun invito in sospeso."
+  },
+  "auth": {
+    "error": "Autenticazione non riuscita.",
+    "invalid_credentials": "Accesso non riuscito — e-mail o password non corretti.",
+    "invalid_token": "Sessione non valida o scaduta — accedere di nuovo.",
+    "missing_fields": "Compilare tutti i campi obbligatori.",
+    "refresh_missing": "Sessione scaduta — accedere di nuovo.",
+    "tenant_mismatch": "Questo account non appartiene a questo tenant.",
+    "tenant_missing": "Tenant non specificato.",
+    "account_blocked": "Questo account è bloccato.",
+    "self_registration_disabled": "La registrazione autonoma è disattivata per questa organizzazione.",
+    "step_up_required": "Questa azione richiede una nuova conferma dell'identità.",
+    "two_factor": {
+      "already_enrolled": "L'autenticazione a due fattori (2FA) è già configurata.",
+      "challenge_invalid": "La richiesta 2FA non è valida o è scaduta — accedere di nuovo.",
+      "enrolment_required": "Questo ruolo richiede la configurazione dell'autenticazione a due fattori (2FA).",
+      "invalid_code": "Il codice 2FA non è corretto — riprovare.",
+      "not_enrolled": "Per questo account non è configurata alcuna autenticazione a due fattori (2FA)."
+    }
+  },
+  "password_reset": {
+    "invalid_link": "Questo link per reimpostare la password non è valido o è scaduto.",
+    "weak_password": "Password troppo debole — sceglierne una più robusta."
+  },
+  "invitation": {
+    "invalid": "Questo invito non è (più) valido."
+  },
+  "registration": {
+    "failed": "Registrazione non riuscita — riprovare.",
+    "host_disabled": "La registrazione non è disponibile su questo host.",
+    "weak_password": "La password è troppo debole — scegliere una password più sicura.",
+    "invalid_code": "Il codice di conferma non è valido o è scaduto.",
+    "email_not_verified": "Confermare prima il proprio indirizzo e-mail."
+  },
+  "profile": {
+    "permission_denied": "Nessuna autorizzazione a modificare questo profilo."
+  },
+  "required_field": {
+    "missing": "Campo obbligatorio mancante — compilarlo."
+  },
+  "bad_request": "Richiesta non valida — controllare i dati.",
+  "forbidden": "Nessuna autorizzazione per questa azione.",
+  "not_found": "Record non trovato.",
+  "conflict": "Azione non possibile — un altro record la blocca.",
+  "rate_limited": "Troppe richieste — attendere un momento e riprovare.",
+  "ratelimit": {
+    "action_exceeded": "Limite di sicurezza raggiunto: per motivi di protezione, al momento non è possibile eseguire altre azioni di questo tipo. Riprovare più tardi oppure contattare un amministratore della piattaforma se il limite deve essere aumentato."
+  },
+  "internal_error": "Errore interno — riprovare o contattare l'assistenza.",
+  "auth_error": "Autenticazione non riuscita.",
+  "query": {
+    "invalid_param": "Parametro di richiesta non valido — controllare l'inserimento e riprovare."
+  },
+  "shares_delivery_day": {
+    "not_found": "Nessun giorno di consegna attivo trovato per il giorno indicato.",
+    "tours_reduced_while_in_use": "Questo giorno di consegna è già in uso — il numero di giri può essere solo aumentato, non ridotto. Una riduzione lascerebbe orfane le consegne sui giri rimossi.",
+    "shortening_strands_children": "Questo giorno di consegna non può essere terminato a questa data: futuri giorni del punto di distribuzione o quote continuerebbero a esistere dopo di esso e rimarrebbero orfani. Creare invece un successore (aggiungere un nuovo giorno di consegna) oppure scegliere una data di fine successiva.",
+    "succession_coverage_gap": "Non è stato possibile completare la successione del giorno di consegna: per un punto di distribuzione manca, nel nuovo giorno, un giorno del punto che copra la settimana interessata. Configurare prima quel giorno del punto di distribuzione e riprovare.",
+    "in_use": "Questo giorno di consegna non può essere eliminato perché è già utilizzato da alcune quote. Una volta utilizzato, non può più essere rimosso."
+  },
+  "delivery_station_day": {
+    "shortening_strands_children": "Questo giorno del punto di distribuzione non può essere terminato a questa data: future consegne o riserve di capacità continuerebbero a esistere dopo di esso e rimarrebbero orfane. Creare invece un giorno del punto di distribuzione successore (che le trasferisca) oppure scegliere una data di fine successiva.",
+    "in_use": "Questo giorno di ritiro non può essere eliminato perché delle consegne vi fanno ancora riferimento. Spostare o terminare prima le consegne."
+  },
+  "inventory_entry": {
+    "not_found": "Voce di inventario non trovata."
+  },
+  "data_import": {
+    "invalid": "Non è stato possibile importare il file caricato — controllare il file e riprovare."
+  },
+  "customer": {
+    "profile_not_linked": "A questo account utente non è collegato alcun profilo cliente."
+  },
+  "bulk_documents": {
+    "model_invalid": "Tipo di documento non valido — deve essere una bolla di consegna o una fattura."
+  },
+  "billing_run": {
+    "invalid_period": "La data di fine deve essere successiva alla data di inizio.",
+    "no_eligible_charges": "Nessun addebito pianificato in scadenza trovato nel periodo selezionato.",
+    "no_valid_mandates": "Nessun addebito con mandato SEPA valido trovato.",
+    "not_draft": "Questo ciclo di fatturazione è già stato esportato e non può essere esportato di nuovo.",
+    "no_charges": "Questo ciclo di fatturazione non contiene addebiti.",
+    "invalid_collection_date": "La data di addebito non può essere nel passato.",
+    "mixed_currency": "Gli addebiti in scadenza hanno valute diverse. Un ciclo di addebito deve avere un'unica valuta."
+  },
+  "sepa": {
+    "export_invalid": "Esportazione SEPA non possibile: mancano dati obbligatori del creditore o del debitore."
+  },
+  "crate_delivery_note_content": {
+    "missing_required": "Bolla di consegna, tipo di cassa e quantità sono obbligatori."
+  },
+  "crate_content_invoice": {
+    "missing_required": "Fattura, tipo di cassa e quantità sono obbligatori."
+  },
+  "amount": {
+    "invalid": "Quantità non valida — inserire un numero valido."
+  },
+  "composite_id": {
+    "invalid": "ID non valido — ricaricare la pagina e riprovare."
+  },
+  "authz": {
+    "cross_owner_access": "Nessun accesso ai dati di un altro proprietario.",
+    "no_linked_owner": "A questo account non è collegato alcun record utente — questa azione non è possibile.",
+    "privilege_required": "Questa azione è riservata all'ufficio."
+  },
+  "captcha": {
+    "verification_failed": "Verifica captcha non riuscita — riprovare."
+  },
+  "consent": {
+    "already_revoked": "Questo consenso è già stato revocato.",
+    "document_in_use": "Questo documento di consenso è già in uso e non può essere eliminato — pubblicare invece una nuova versione.",
+    "document_not_found": "Documento di consenso non trovato.",
+    "target_member_unresolved": "Non è stato possibile determinare un socio di destinazione dalla richiesta."
+  },
+  "crate": {
+    "not_found": "Cassa non trovata."
+  },
+  "document": {
+    "date_required": "Per questo documento è richiesta una data.",
+    "not_finalized": "Il documento deve essere finalizzato prima di poter caricare un PDF.",
+    "pdf_missing": "Non è ancora stato caricato alcun PDF — caricare prima il PDF."
+  },
+  "email_template": {
+    "dispatch_failed": "L'invio dell'e-mail non è riuscito — riprovare più tardi.",
+    "not_found": "Modello e-mail non trovato.",
+    "test_send_no_recipient": "Per l'invio di prova non è disponibile alcun indirizzo destinatario.",
+    "undeclared_placeholders": "Il modello utilizza segnaposto non disponibili per questa e-mail: {{placeholders}}. Usare solo le variabili mostrate."
+  },
+  "forecast": {
+    "not_found": "Previsione non trovata."
+  },
+  "gdpr": {
+    "deletion_not_pending_admin": "Questa richiesta di cancellazione non è in attesa di approvazione e non può essere elaborata.",
+    "deletion_token_expired": "Il link di conferma della cancellazione è scaduto — richiedere di nuovo la cancellazione.",
+    "deletion_token_invalid": "Il link di conferma della cancellazione non è valido.",
+    "error": "Operazione GDPR non possibile — controllare lo stato attuale.",
+    "missing_rejection_reason": "È richiesto un motivo di rifiuto.",
+    "retention_active": "Anonimizzazione non possibile — è ancora attivo un periodo di conservazione previsto per legge."
+  },
+  "optin": {
+    "deadline_passed": "Il termine per l'adesione è scaduto e non può più essere modificato.",
+    "not_applicable": "Per questa consegna non è prevista alcuna adesione.",
+    "no_member_context": "Nessun contesto socio disponibile."
+  },
+  "trial": {
+    "members_not_allowed": "I soci in prova non sono consentiti per questo tenant.",
+    "subscriptions_not_allowed": "Gli abbonamenti di prova non sono consentiti per questo tenant.",
+    "subscriptions_only_for_full_members": "Gli abbonamenti di prova sono consentiti solo per i soci a pieno titolo per questo tenant."
+  },
+  "uploaded_document": {
+    "invalid": "Il documento caricato non è valido — controllare il tipo di file e il contenuto."
+  },
+  "virtual_component": {
+    "not_physical": "Questa variante non è una variante fisica e non può essere usata come componente.",
+    "physical_variation_not_found": "La variante fisica indicata non è stata trovata."
+  },
+  "bulk_copy_offers": {
+    "ids_required": "Selezionare almeno un'offerta.",
+    "offer_group_required": "Indicare un gruppo di offerte."
+  },
+  "bulk_invoice_reminder": {
+    "ids_required": "Selezionare almeno una voce.",
+    "model_invalid": "Tipo non valido — sono supportate solo le fatture."
+  },
+  "bulk_set_paid": {
+    "ids_required": "Selezionare almeno un ordine.",
+    "model_invalid": "Tipo non valido — sono supportate solo le fatture."
+  },
+  "summary_invoice": {
+    "ids_required": "Selezionare almeno un ordine.",
+    "no_valid_dns": "Nessuna bolla di consegna valida trovata per creare una fattura riepilogativa."
+  },
+  "crate_order_content": {
+    "not_found": "Voce d'ordine cassa non trovata."
+  },
+  "default_share_content": {
+    "invalid_composite_id": "Identificativo dei contenuti quota predefiniti non valido.",
+    "no_amounts": "Non è stata indicata alcuna quantità per le varianti di quota."
+  },
+  "delivery_station_fee": {
+    "invalid_range": "La data di inizio deve essere pari o precedente alla data di fine."
+  },
+  "documentation": {
+    "invalid_model": "Tipo di modello non valido per la documentazione."
+  },
+  "finalize": {
+    "ids_not_list": "«ids» deve essere una lista.",
+    "ids_required": "Il parametro «ids» è obbligatorio.",
+    "model_not_found": "Il tipo di modello indicato non è stato trovato.",
+    "model_required": "Il parametro «model» è obbligatorio.",
+    "one_way_model": "I documenti finalizzati sono immodificabili per legge e non possono essere de-finalizzati. Per un annullamento creare uno storno, per una correzione emettere un documento di correzione."
+  },
+  "share_import": {
+    "apply_failed": "Non è stato possibile applicare l'importazione.",
+    "invalid_status": "Il batch di importazione è in uno stato che non può essere applicato (richiede «preview_ready» o «validated»)."
+  },
+  "shares_day_change": {
+    "missing_required": "Anno e settimana di consegna sono obbligatori."
+  },
+  "waiting_list": {
+    "disabled": "La lista d'attesa è disattivata per questa organizzazione. Le quote esaurite non possono essere aggiunte a una lista d'attesa."
+  },
+  "waiting_list_offer": {
+    "expired": "Questa offerta è scaduta. Contattare l'ufficio.",
+    "invalid": "Questo link dell'offerta non è valido o è già stato utilizzato.",
+    "not_available": "Questo abbonamento non è una voce aperta della lista d'attesa e non può essere offerto."
+  },
+  "boundary": {
+    "title": "Qualcosa è andato storto",
+    "subtitle": "Si è verificato un errore imprevisto.",
+    "subtitle_context": "Si è verificato un errore nell'app {{context}}.",
+    "reload": "Ricaricare la pagina",
+    "sign_in": "Accedere di nuovo",
+    "details": "Dettagli:"
+  }
+}

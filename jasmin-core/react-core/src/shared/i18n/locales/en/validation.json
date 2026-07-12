@@ -8,7 +8,7 @@
     "documentation_purchase": "Entry in the purchase documentation must be unique.",
     "invoice_modal_crate": "Crate in the invoice must be unique.",
     "list_share_articles": "The combination in the share article must be unique.",
-    "member_share_type_variation_valid_from": "Only one identical crate type may run per member from the same date.",
+    "member_share_type_variation_valid_from": "Only one identical share type may run per member from the same date.",
     "members_member_number_must_be_unique": "Member number must be unique.",
     "name": "Name must be unique.",
     "number": "Number must be unique.",

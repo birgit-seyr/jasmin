@@ -1,0 +1,10 @@
+Gentile team di {{ tenant_name }},
+
+durante l'esecuzione notturna del rinnovo automatico del {{ run_date }} NON è stato possibile rinnovare {{ failure_count }} abbonamento/i. Questi membri al momento non hanno un abbonamento successivo — vi preghiamo di verificare ed eventualmente di rinnovarli manualmente:
+
+{{ renewal_failures_text }}
+
+Alla gestione degli abbonamenti:
+{{ review_url }}
+
+— Notifica automatica.

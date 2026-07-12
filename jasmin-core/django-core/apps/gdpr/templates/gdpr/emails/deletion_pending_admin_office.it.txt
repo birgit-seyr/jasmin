@@ -1,0 +1,16 @@
+Una richiesta di cancellazione GDPR è in attesa di approvazione
+
+Presso {{ tenant_name|default:"la piattaforma" }} è pervenuta una nuova
+richiesta di cancellazione dei dati (GDPR articolo 17), confermata dalla
+persona richiedente tramite un link inviato via e-mail.
+
+La richiesta si trova ora nello stato "in attesa di approvazione dell'ufficio"
+e deve essere esaminata e approvata manualmente (oppure respinta con una
+motivazione) prima che venga eseguita l'effettiva anonimizzazione.
+
+Apri nell'ufficio:
+{{ review_url }}
+
+Questa e-mail non contiene volutamente alcuna informazione sulla persona
+richiedente — i dettagli della richiesta sono visibili solo nella pagina di
+configurazione, che richiede un diritto di accesso.

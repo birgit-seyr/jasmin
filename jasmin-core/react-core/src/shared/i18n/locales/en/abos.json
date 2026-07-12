@@ -1,5 +1,5 @@
 {
-  "abos": "Abos",
+  "abos": "Subscriptions",
   "attention_chip": "Subscriptions pending",
   "subscription_number": "Sub. no.",
   "active_subscriptions_per_variation": "Active subscriptions per variation",
@@ -17,7 +17,7 @@
     "trial": "trial subscription",
     "cancelled": "cancelled",
     "member_cancelled": "member has left",
-    "member_inactive": "member inactive (anonymised/deactivated)",
+    "member_inactive": "member inactive (anonymized/deactivated)",
     "open_ended": "open-ended (no end date to renew from)",
     "already_renewed": "already renewed",
     "no_variation": "no matching variation covers the new term",
@@ -26,6 +26,9 @@
     "invalid": "invalid"
   },
   "shares": "Shares",
+  "delivery_station_days_emails": "Recipients by delivery station",
+  "share_type_emails": "Recipients by share type",
+  "active_subscriptions_date_range_emails": "Active subscriptions",
   "trial_shares": "Trial Shares",
   "emails": "Email Management Shares",
   "debits": "Direct debits",
@@ -90,6 +93,7 @@
     "variation": "Share type",
     "station": "Pick-up",
     "start": "Starting",
+    "end": "Ending",
     "quantity": "Quantity",
     "price": "Price per delivery",
     "reply_by": "Please reply by",
@@ -189,7 +193,7 @@
   "emails_recipients": "{{count}} recipients",
   "emails_copy": "Copy",
   "emails_copied": "Copied {{count}} email addresses",
-  "emails_by_station_hint": "All e-mail addresses of members with an active share at this delivery station.",
-  "emails_by_share_type_hint": "All e-mail addresses of members with an active share of this share type.",
-  "emails_by_date_range_hint": "All e-mail addresses of members with a share that is active within this period."
+  "emails_by_station_hint": "All email addresses of members with an active share at this delivery station.",
+  "emails_by_share_type_hint": "All email addresses of members with an active share of this share type.",
+  "emails_by_date_range_hint": "All email addresses of members with a share that is active within this period."
 }

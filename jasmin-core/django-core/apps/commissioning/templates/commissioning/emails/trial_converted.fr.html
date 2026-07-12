@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Bienvenue en tant que membre</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Bonjour {{ member.first_name }},</h1>
+    <p>
+      avec votre première part sociale, vous êtes désormais officiellement membre
+      {% if tenant_name %}de <strong>{{ tenant_name }}</strong>{% endif %}.
+    </p>
+    {% if member.member_number %}
+      <p>Votre numéro de membre est <strong>#{{ member.member_number }}</strong>.</p>
+    {% endif %}
+    {% if entry_date %}
+      <p>Date d'entrée (GenG §30) : <strong>{{ entry_date }}</strong>.</p>
+    {% endif %}
+    {% if portal_url %}
+      <p>
+        Dans le <a href="{{ portal_url }}" style="color: #1f6feb;">portail des membres</a>,
+        vous trouverez vos parts, cotisations et abonnements.
+      </p>
+    {% endif %}
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      Si quelque chose n'est pas clair, n'hésitez pas à nous contacter.
+    </p>
+  </body>
+</html>

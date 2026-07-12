@@ -1,0 +1,7 @@
+Gentile {{ reseller.name }},
+
+la Sua offerta per {{ offer.period }} è pronta. Apra il modulo d'ordine per effettuare l'ordine — per ogni giorno di consegna è indicato il relativo termine ultimo.
+
+{{ offer_url }}
+
+— Il team di {{ tenant_name }}

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Confirmer la suppression de vos données personnelles</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
+      Bonjour {{ user.first_name|default:"à vous" }},
+    </h1>
+
+    <p>
+      nous avons reçu une demande de suppression de toutes vos données personnelles chez
+      {% if tenant_name %}<strong>{{ tenant_name }}</strong>{% else %}la plateforme{% endif %}
+      (RGPD article 17 — droit à l'oubli).
+    </p>
+
+    <p>
+      Afin de nous assurer que cette demande vient bien de vous,
+      merci de confirmer la suppression en suivant le lien ci-dessous :
+    </p>
+
+    <p style="margin: 32px 0;">
+      <a href="{{ confirm_url }}"
+         style="display: inline-block; padding: 12px 20px; background: #b00020; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        Confirmer la suppression
+      </a>
+    </p>
+
+    <p style="color: #555; font-size: 14px;">
+      Ou copiez ce lien dans votre navigateur :<br />
+      <a href="{{ confirm_url }}" style="color: #b00020; word-break: break-all;">{{ confirm_url }}</a>
+    </p>
+
+    {% if requires_admin_approval %}
+    <p style="color: #555; font-size: 14px; margin-top: 24px;">
+      <strong>Remarque :</strong> Après votre confirmation, le bureau examinera
+      la demande manuellement avant que vos données ne soient définitivement anonymisées.
+    </p>
+    {% endif %}
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      Ce lien est valable pendant 24 heures et ne peut être utilisé qu'une seule fois.
+      Si vous n'avez pas demandé cette suppression, ignorez simplement cet e-mail
+      — votre compte restera inchangé.
+    </p>
+  </body>
+</html>

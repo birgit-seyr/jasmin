@@ -1,0 +1,10 @@
+Bonjour l'équipe {{ tenant_name }},
+
+lors de la campagne nocturne de renouvellement automatique du {{ run_date }}, {{ failure_count }} abonnement(s) n'ont PAS pu être renouvelés. Ces membres n'ont actuellement pas d'abonnement de suite — merci de vérifier et, le cas échéant, de les renouveler manuellement :
+
+{{ renewal_failures_text }}
+
+Vers la gestion des abonnements :
+{{ review_url }}
+
+— Notification automatique.

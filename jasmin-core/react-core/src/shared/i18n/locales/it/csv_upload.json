@@ -1,0 +1,9 @@
+{
+  "button": "Carica CSV",
+  "failed": "Caricamento non riuscito",
+  "result_title": "Esito dell'importazione",
+  "summary": "{{total}} righe elaborate · {{successful}} riuscite · {{failed}} non riuscite",
+  "errors_heading": "Righe non riuscite",
+  "col_row": "Riga",
+  "col_error": "Errore"
+}

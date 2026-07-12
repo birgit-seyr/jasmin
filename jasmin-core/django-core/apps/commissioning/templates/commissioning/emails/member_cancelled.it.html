@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Recesso confermato</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Gentile {{ member.first_name }},</h1>
+    <p>
+      con la presente Le confermiamo il Suo recesso
+      {% if tenant_name %}da <strong>{{ tenant_name }}</strong>{% endif %}.
+    </p>
+    {% if cancelled_effective_at %}
+      <p>
+        Data di recesso (GenG §30):
+        <strong>{{ cancelled_effective_at }}</strong>.
+      </p>
+    {% endif %}
+    {% if member.member_number %}
+      <p>
+        Il Suo precedente numero di socio è
+        <strong>#{{ member.member_number }}</strong>. Lo conserviamo
+        per il periodo di conservazione previsto dalla legge.
+      </p>
+    {% endif %}
+    <p>
+      La contatteremo separatamente in merito alla liquidazione della
+      Sua quota sociale.
+    </p>
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      Per qualsiasi domanda, può rispondere direttamente a questa
+      e-mail.
+    </p>
+  </body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Résiliation par un membre</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Résiliation par un membre</h1>
+    <p>
+      Un membre a résilié lui-même son adhésion
+      {% if tenant_name %}à <strong>{{ tenant_name }}</strong>{% endif %}
+      (via le portail des membres).
+    </p>
+    <p>
+      Membre : <strong>{{ member.first_name }} {{ member.last_name }}</strong>{% if member.member_number %} (numéro de membre <strong>#{{ member.member_number }}</strong>){% endif %}
+    </p>
+    {% if cancelled_effective_at %}
+      <p>Date de retrait (GenG §30) : <strong>{{ cancelled_effective_at }}</strong></p>
+    {% endif %}
+    <p>
+      Merci de vérifier le retrait et de prendre en charge le règlement
+      de l'avoir social :
+    </p>
+    <p><a href="{{ review_url }}">{{ review_url }}</a></p>
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      Notification automatique.
+    </p>
+  </body>
+</html>

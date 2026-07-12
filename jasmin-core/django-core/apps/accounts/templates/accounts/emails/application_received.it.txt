@@ -1,0 +1,8 @@
+Ciao {{ member.first_name }},
+
+abbiamo ricevuto la tua richiesta di adesione{% if tenant_name %} a {{ tenant_name }}{% endif %}.
+
+Il nostro team la esaminerà e ti ricontatterà. Nel frattempo puoi accedere con
+la password che hai scelto per seguirne lo stato.
+
+Grazie per il tuo interesse!

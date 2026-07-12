@@ -1,0 +1,9 @@
+{
+  "button": "Importer un CSV",
+  "failed": "Échec de l'import",
+  "result_title": "Résultat de l'import",
+  "summary": "{{total}} lignes traitées · {{successful}} réussies · {{failed}} échouées",
+  "errors_heading": "Lignes en échec",
+  "col_row": "Ligne",
+  "col_error": "Erreur"
+}

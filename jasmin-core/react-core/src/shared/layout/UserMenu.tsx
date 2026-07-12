@@ -91,15 +91,14 @@ export default function UserMenu() {
     return !ownMember.admin_confirmed || !!ownMember.admin_rejected_at;
   })();
 
-  // Available languages mirror ``LanguageSwitcher.tsx``. Keeping them
-  // co-located in two places is fine — both are thin shells over
-  // ``useLocale``.
-  // Only the languages we support end-to-end (UI + email templates + the
-  // backend ``user_language`` choices). fr/it are deferred/incomplete and not
-  // user-selectable yet.
+  // The languages we support end-to-end: UI (i18n bundles), the backend
+  // ``user_language`` choices (``LanguageChoices``), and the email-template
+  // registry (which falls back to the default when a language has no template).
   const languages: { code: string; flag: string; label: string }[] = [
     { code: "de", flag: "🇩🇪", label: "Deutsch" },
     { code: "en", flag: "🇺🇸", label: "English" },
+    { code: "fr", flag: "🇫🇷", label: "Français" },
+    { code: "it", flag: "🇮🇹", label: "Italiano" },
   ];
 
   const items: MenuProps["items"] = gateMenu

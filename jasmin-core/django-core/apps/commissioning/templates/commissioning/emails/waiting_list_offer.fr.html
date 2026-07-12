@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Une place s'est libérée</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Bonjour {{ member.first_name }},</h1>
+    <p>
+      bonne nouvelle — une place s'est libérée
+      {% if tenant_name %}chez <strong>{{ tenant_name }}</strong>{% endif %}
+      pour l'abonnement pour lequel vous êtes sur la liste d'attente :
+    </p>
+    <ul>
+      {% if variation_name %}<li><strong>{{ variation_name }}</strong></li>{% endif %}
+      {% if delivery_station_name %}<li>Retrait : {{ delivery_station_name }}</li>{% endif %}
+      {% if valid_from %}<li>Début : {{ valid_from }}</li>{% endif %}
+    </ul>
+    <p>Si vous le souhaitez toujours, merci de confirmer{% if expires_at %} avant le <strong>{{ expires_at }}</strong>{% endif %} :</p>
+    <p>
+      <a href="{{ accept_url }}" style="display: inline-block; background: #2e7d32; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 6px; font-weight: 600;">Voir l'offre</a>
+    </p>
+    <p style="color: #666; font-size: 13px;">
+      Ce lien vous permet d'accepter ou de refuser sans vous connecter. Si vous
+      ne répondez pas à temps, la place sera proposée à la personne suivante.
+    </p>
+  </body>
+</html>

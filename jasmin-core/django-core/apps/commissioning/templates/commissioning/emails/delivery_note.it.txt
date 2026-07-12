@@ -1,0 +1,9 @@
+Bolla di consegna {{ delivery_note.number }}
+
+Gentile {{ reseller.name }},
+
+in allegato trova, in formato PDF, la bolla di consegna del {{ delivery_note.date }}{% if delivery_note.order_number %} relativa all'ordine {{ delivery_note.order_number }}{% endif %}.
+
+La bolla di consegna cartacea si trova come sempre nella cassa di consegna; questa e-mail ha valore di sola informazione preliminare e per la Sua contabilità.
+
+— Il team di {{ tenant_name }}

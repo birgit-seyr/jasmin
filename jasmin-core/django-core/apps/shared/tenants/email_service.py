@@ -98,13 +98,9 @@ def _resolve_template(
     spec = get_spec(slug)
 
     # EML-5: pick the subject in the send language so it matches the (per-language)
-    # body. ``default_subject`` is German; ``default_subject_en`` (when set) is the
-    # English one. Mirrors the body's language fallback (→ German default).
-    default_subject = (
-        spec.default_subject_en
-        if language == "en" and spec.default_subject_en
-        else spec.default_subject
-    )
+    # body. ``subject_for`` returns the language-specific subject (en/fr/it) or
+    # falls back to the German ``default_subject`` — mirroring the body fallback.
+    default_subject = spec.subject_for(language)
 
     # 1 & 2: DB override (requested lang, then fallback lang) in a SINGLE query.
     # A deterministic rank (requested=0, fallback=1) picks the preferred row —

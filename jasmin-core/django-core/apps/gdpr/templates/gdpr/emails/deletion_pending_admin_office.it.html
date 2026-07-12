@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Richiesta di cancellazione in attesa di approvazione</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
+      Una richiesta di cancellazione GDPR è in attesa di approvazione
+    </h1>
+
+    <p>
+      Presso
+      {% if tenant_name %}<strong>{{ tenant_name }}</strong>{% else %}la piattaforma{% endif %}
+      è pervenuta una nuova richiesta di cancellazione dei dati (GDPR articolo 17),
+      confermata dalla persona richiedente tramite un link inviato via e-mail.
+    </p>
+
+    <p>
+      La richiesta si trova ora nello stato <em>«in attesa di approvazione dell'ufficio»</em>
+      e deve essere esaminata e approvata manualmente (oppure respinta con una motivazione)
+      prima che venga eseguita l'effettiva anonimizzazione.
+    </p>
+
+    <p style="margin: 32px 0;">
+      <a href="{{ review_url }}"
+         style="display: inline-block; padding: 12px 20px; background: #1f6feb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        Apri nell'ufficio
+      </a>
+    </p>
+
+    <p style="color: #555; font-size: 14px;">
+      Oppure copi questo link nel Suo browser:<br />
+      <a href="{{ review_url }}" style="color: #1f6feb; word-break: break-all;">{{ review_url }}</a>
+    </p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      Questa e-mail non contiene volutamente alcuna informazione sulla persona
+      richiedente — i dettagli della richiesta sono visibili solo nella pagina di
+      configurazione, che richiede un diritto di accesso.
+    </p>
+  </body>
+</html>

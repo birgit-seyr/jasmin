@@ -45,7 +45,7 @@
     "agree": {
       "default": "I agree to this document",
       "privacy": "I have read and agree to the privacy policy",
-      "sepa": "I authorise the SEPA Direct Debit mandate",
+      "sepa": "I authorize the SEPA Direct Debit mandate",
       "withdrawal": "I acknowledge the withdrawal terms",
       "terms": "I agree to the terms of service",
       "coop_contract": "I have read and agree to the subscription contract"

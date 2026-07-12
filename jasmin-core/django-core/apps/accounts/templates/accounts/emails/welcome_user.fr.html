@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Compte activé</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Bonjour {{ user.first_name }},</h1>
+    <p>
+      votre compte{% if tenant_name %} chez <strong>{{ tenant_name }}</strong>{% endif %}
+      est désormais actif.
+    </p>
+    {% if portal_url %}
+      <p>
+        Vous pouvez dès à présent vous connecter sur
+        <a href="{{ portal_url }}" style="color: #1f6feb;">{{ portal_url }}</a>.
+      </p>
+    {% endif %}
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      — L'équipe de {{ tenant_name }}
+    </p>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Renouvellement automatique : abonnements non renouvelés</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Renouvellement automatique : abonnements non renouvelés</h1>
+    <p>
+      Lors de la campagne nocturne de renouvellement automatique chez
+      <strong>{{ tenant_name }}</strong> le {{ run_date }},
+      <strong>{{ failure_count }}</strong> abonnement(s) n'ont <strong>pas</strong> pu être renouvelés.
+      Ces membres n'ont actuellement pas d'abonnement de suite — merci de vérifier et, le cas échéant, de les renouveler manuellement :
+    </p>
+    <ul style="line-height: 1.6;">
+      {{ renewal_failures_html }}
+    </ul>
+    <p><a href="{{ review_url }}">{{ review_url }}</a></p>
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      Notification automatique.
+    </p>
+  </body>
+</html>

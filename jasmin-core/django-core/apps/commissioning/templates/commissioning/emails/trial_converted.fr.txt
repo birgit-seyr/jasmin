@@ -1,0 +1,12 @@
+Bonjour {{ member.first_name }},
+
+avec votre première part sociale, vous êtes désormais officiellement
+membre de {{ tenant_name }}.
+
+{% if member.member_number %}Votre numéro de membre est #{{ member.member_number }}.{% endif %}
+{% if entry_date %}Date d'entrée (GenG §30) : {{ entry_date }}.{% endif %}
+
+{% if portal_url %}Dans le portail des membres, vous trouverez vos parts,
+cotisations et abonnements : {{ portal_url }}{% endif %}
+
+— L'équipe de {{ tenant_name }}

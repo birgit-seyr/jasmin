@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Sei stato invitato/a</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
+      Ciao {{ user.first_name }},
+    </h1>
+
+    <p>
+      Sei stato invitato/a a unirti a
+      <strong>{{ tenant_name }}</strong>.
+      Clicca sul pulsante qui sotto per impostare la tua password e attivare il tuo account.
+    </p>
+
+    <p style="margin: 32px 0;">
+      <a href="{{ accept_url }}"
+         style="display: inline-block; padding: 12px 20px; background: #1d603e; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        Imposta la password
+      </a>
+    </p>
+
+    <p style="color: #555; font-size: 14px;">
+      Oppure copia questo link nel tuo browser:<br />
+      <a href="{{ accept_url }}" style="color: #1d603e; word-break: break-all;">{{ accept_url }}</a>
+    </p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      Questo invito scade il {{ expires_at }}.
+      Se non aspettavi questa e-mail, puoi semplicemente ignorarla.
+    </p>
+  </body>
+</html>

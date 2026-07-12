@@ -168,12 +168,8 @@ def _serialize_detail(
     default_html, default_text = _read_default(spec, language)
     is_customized = bool(override and override.is_customized)
     # Language-aware default subject — mirror EmailService._resolve_template so
-    # the editor shows the English default when ?language=en, not always German.
-    default_subject = (
-        spec.default_subject_en
-        if language == "en" and spec.default_subject_en
-        else spec.default_subject
-    )
+    # the editor shows the send-language default (en/fr/it), not always German.
+    default_subject = spec.subject_for(language)
     return {
         "slug": spec.slug,
         "label": spec.label,

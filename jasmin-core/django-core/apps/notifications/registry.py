@@ -111,10 +111,22 @@ class EmailTemplateSpec:
     # supplies the English subject; _resolve_template picks by send language.
     default_subject: str
     default_subject_en: str | None = None
+    default_subject_fr: str | None = None
+    default_subject_it: str | None = None
     # Grouping shown in the admin UI. One of CATEGORY_ORDER below.
     category: str = "users"
     variables: list[EmailVariable] = field(default_factory=list)
     sample: dict[str, object] = field(default_factory=dict)
+
+    def subject_for(self, language: str) -> str:
+        """The default subject in ``language``, falling back to the German
+        ``default_subject`` when no language-specific subject is defined —
+        mirrors the per-language body fallback in ``EmailService``."""
+        return {
+            "en": self.default_subject_en,
+            "fr": self.default_subject_fr,
+            "it": self.default_subject_it,
+        }.get(language) or self.default_subject
 
 
 # Display order for the admin UI. Templates are grouped and sorted by
@@ -206,6 +218,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="accounts/emails/invitation",
         default_subject="Du wurdest zu {{ tenant_name }} eingeladen",
         default_subject_en="You've been invited to {{ tenant_name }}",
+        default_subject_fr="Vous avez été invité·e à rejoindre {{ tenant_name }}",
+        default_subject_it="Hai ricevuto un invito da {{ tenant_name }}",
         category="users",
         variables=[
             _TENANT_NAME,
@@ -239,6 +253,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="accounts/emails/email_verification_code",
         default_subject="Dein Bestätigungscode — {{ tenant_name }}",
         default_subject_en="Your verification code — {{ tenant_name }}",
+        default_subject_fr="Votre code de vérification — {{ tenant_name }}",
+        default_subject_it="Il tuo codice di verifica — {{ tenant_name }}",
         category="members",
         variables=[
             _TENANT_NAME,
@@ -266,6 +282,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="accounts/emails/password_reset",
         default_subject="Setze dein Passwort für {{ tenant_name }} zurück",
         default_subject_en="Reset your password for {{ tenant_name }}",
+        default_subject_fr="Réinitialisez votre mot de passe pour {{ tenant_name }}",
+        default_subject_it="Reimposta la tua password per {{ tenant_name }}",
         category="users",
         variables=[
             _TENANT_NAME,
@@ -295,6 +313,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="accounts/emails/application_received",
         default_subject="Wir haben deinen Antrag erhalten — {{ tenant_name }}",
         default_subject_en="We've received your application — {{ tenant_name }}",
+        default_subject_fr="Nous avons bien reçu votre demande — {{ tenant_name }}",
+        default_subject_it="Abbiamo ricevuto la tua richiesta — {{ tenant_name }}",
         category="members",
         variables=[
             _TENANT_NAME,
@@ -320,6 +340,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="accounts/emails/application_approved",
         default_subject="Willkommen als Mitglied bei {{ tenant_name }}!",
         default_subject_en="Welcome as a member of {{ tenant_name }}!",
+        default_subject_fr="Bienvenue en tant que membre de {{ tenant_name }} !",
+        default_subject_it="Benvenuto·a come membro di {{ tenant_name }}!",
         category="members",
         variables=[
             _TENANT_NAME,
@@ -346,6 +368,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="accounts/emails/application_rejected",
         default_subject="Zu deinem Antrag bei {{ tenant_name }}",
         default_subject_en="About your application at {{ tenant_name }}",
+        default_subject_fr="Au sujet de votre demande auprès de {{ tenant_name }}",
+        default_subject_it="In merito alla tua richiesta presso {{ tenant_name }}",
         category="members",
         variables=[
             _TENANT_NAME,
@@ -381,6 +405,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="accounts/emails/welcome_user",
         default_subject="Dein Konto bei {{ tenant_name }} ist aktiv",
         default_subject_en="Your account at {{ tenant_name }} is active",
+        default_subject_fr="Votre compte chez {{ tenant_name }} est activé",
+        default_subject_it="Il tuo account presso {{ tenant_name }} è attivo",
         category="users",
         variables=[
             _TENANT_NAME,
@@ -407,6 +433,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="commissioning/emails/trial_converted",
         default_subject="Du bist jetzt Mitglied bei {{ tenant_name }}",
         default_subject_en="You're now a member of {{ tenant_name }}",
+        default_subject_fr="Vous êtes désormais membre de {{ tenant_name }}",
+        default_subject_it="Ora sei membro di {{ tenant_name }}",
         category="members",
         variables=[
             _TENANT_NAME,
@@ -458,6 +486,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="commissioning/emails/waiting_list_offer",
         default_subject="Ein Platz ist frei geworden bei {{ tenant_name }}",
         default_subject_en="A spot has opened up at {{ tenant_name }}",
+        default_subject_fr="Une place s'est libérée chez {{ tenant_name }}",
+        default_subject_it="Si è liberato un posto presso {{ tenant_name }}",
         category="members",
         variables=[
             _TENANT_NAME,
@@ -510,6 +540,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="commissioning/emails/member_cancelled",
         default_subject="Bestätigung deines Austritts bei {{ tenant_name }}",
         default_subject_en="Confirmation of your cancellation at {{ tenant_name }}",
+        default_subject_fr="Confirmation de votre départ de {{ tenant_name }}",
+        default_subject_it="Conferma del tuo recesso da {{ tenant_name }}",
         category="members",
         variables=[
             _TENANT_NAME,
@@ -560,6 +592,12 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         ),
         default_subject_en=(
             "Self-cancellation: {{ member.first_name }} {{ member.last_name }}"
+        ),
+        default_subject_fr=(
+            "Résiliation volontaire : {{ member.first_name }} {{ member.last_name }}"
+        ),
+        default_subject_it=(
+            "Recesso volontario: {{ member.first_name }} {{ member.last_name }}"
         ),
         category="office",
         variables=[
@@ -621,6 +659,12 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         ),
         default_subject_en=(
             "Auto-renewal: {{ failure_count }} subscription(s) could not be renewed"
+        ),
+        default_subject_fr=(
+            "Renouvellement automatique : {{ failure_count }} abonnement(s) non renouvelé(s)"
+        ),
+        default_subject_it=(
+            "Rinnovo automatico: {{ failure_count }} abbonamento/i non rinnovato/i"
         ),
         category="office",
         variables=[
@@ -684,6 +728,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="commissioning/emails/offer",
         default_subject="{{ tenant_name }}: Dein Angebot für {{ offer.period }}",
         default_subject_en="{{ tenant_name }}: Your offer for {{ offer.period }}",
+        default_subject_fr="{{ tenant_name }} : votre offre pour {{ offer.period }}",
+        default_subject_it="{{ tenant_name }}: la tua offerta per {{ offer.period }}",
         category="resellers",
         variables=[
             _TENANT_NAME,
@@ -713,6 +759,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="commissioning/emails/invoice",
         default_subject="Rechnung {{ invoice.number }} — {{ tenant_name }}",
         default_subject_en="Invoice {{ invoice.number }} — {{ tenant_name }}",
+        default_subject_fr="Facture {{ invoice.number }} — {{ tenant_name }}",
+        default_subject_it="Fattura {{ invoice.number }} — {{ tenant_name }}",
         category="resellers",
         variables=[
             _TENANT_NAME,
@@ -756,6 +804,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="commissioning/emails/delivery_note",
         default_subject="Lieferschein {{ delivery_note.number }} — {{ tenant_name }}",
         default_subject_en="Delivery note {{ delivery_note.number }} — {{ tenant_name }}",
+        default_subject_fr="Bon de livraison {{ delivery_note.number }} — {{ tenant_name }}",
+        default_subject_it="Bolla di consegna {{ delivery_note.number }} — {{ tenant_name }}",
         category="resellers",
         variables=[
             _TENANT_NAME,
@@ -797,6 +847,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="gdpr/emails/deletion_confirm",
         default_subject="Bitte bestätige die Löschung deiner Daten bei {{ tenant_name }}",
         default_subject_en="Please confirm the deletion of your data at {{ tenant_name }}",
+        default_subject_fr="Veuillez confirmer la suppression de vos données chez {{ tenant_name }}",
+        default_subject_it="Conferma la cancellazione dei tuoi dati presso {{ tenant_name }}",
         category="users",
         variables=[
             _TENANT_NAME,
@@ -832,6 +884,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="gdpr/emails/deletion_approved",
         default_subject="Deine Daten wurden bei {{ tenant_name }} gelöscht",
         default_subject_en="Your data has been deleted at {{ tenant_name }}",
+        default_subject_fr="Vos données ont été supprimées chez {{ tenant_name }}",
+        default_subject_it="I tuoi dati sono stati cancellati presso {{ tenant_name }}",
         category="users",
         variables=[_TENANT_NAME, _USER_FIRST],
         sample={
@@ -860,6 +914,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="gdpr/emails/deletion_pending_admin_office",
         default_subject=("Neue Löschanfrage wartet auf Freigabe — {{ tenant_name }}"),
         default_subject_en="New deletion request awaiting approval — {{ tenant_name }}",
+        default_subject_fr="Nouvelle demande de suppression en attente de validation — {{ tenant_name }}",
+        default_subject_it="Nuova richiesta di cancellazione in attesa di approvazione — {{ tenant_name }}",
         category="office",
         variables=[
             _TENANT_NAME,
@@ -889,6 +945,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="gdpr/emails/deletion_rejected",
         default_subject="Deine Löschanfrage bei {{ tenant_name }} wurde abgelehnt",
         default_subject_en="Your deletion request at {{ tenant_name }} was declined",
+        default_subject_fr="Votre demande de suppression auprès de {{ tenant_name }} a été refusée",
+        default_subject_it="La tua richiesta di cancellazione presso {{ tenant_name }} è stata respinta",
         category="users",
         variables=[
             _TENANT_NAME,
@@ -918,6 +976,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="commissioning/emails/invoice_reminder",
         default_subject="Zahlungserinnerung — {{ tenant_name }}",
         default_subject_en="Payment reminder — {{ tenant_name }}",
+        default_subject_fr="Rappel de paiement — {{ tenant_name }}",
+        default_subject_it="Sollecito di pagamento — {{ tenant_name }}",
         category="resellers",
         variables=[
             _TENANT_NAME,
@@ -975,6 +1035,8 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="tenants/emails/smtp_test",
         default_subject="Jasmin – Test-E-Mail von {{ tenant_name }}",
         default_subject_en="Jasmin – test email from {{ tenant_name }}",
+        default_subject_fr="Jasmin – e-mail de test de {{ tenant_name }}",
+        default_subject_it="Jasmin – email di prova da {{ tenant_name }}",
         category="users",
         variables=[
             _TENANT_NAME,

@@ -77,9 +77,15 @@
   "solidarity_min_price": "The lowest price a member may choose under solidarity pricing. Empty = the reference price is the floor.",
   "set_current_stock_as_expecte": "Apply current stock as expected stock",
   "variation_type": "Type of variant (pcs, bunch, weight …)",
+  "short_name_share_type": "Readable abbreviation, e.g. 'Honey' for a honey share, max. 6 letters.",
+  "is_additional_share_type": "Not packed separately — it's added to another share (e.g. the harvest share).",
+  "percentage_added_to_commissioning_list_packing": "% added to the amounts that must be provided to the packing stations, to account for waste etc.",
+  "percentage_bulk_packing_list": "% added to the packing list for shares that are delivered loose (in bulk).",
+  "open_members": "Use this button to filter out the members who have not been confirmed yet.",
+  "entry_date": "The entry date is set automatically when the member is approved.",
   "auto_renewal": "If active, the subscription automatically renews at the end of the term.",
   "bulk_renew_abos": "Renews the selected subscriptions: creates unconfirmed renewal drafts for the next term (same logic as auto-renewal). Non-renewable rows are skipped with a reason.",
   "requires_optin": "If active, each delivery is individually confirmed or skipped before its deadline.",
-  "optin_deadline_days_before_delivery": "How many days before delivery the switch locks. 3 = „until Wednesday for the Saturday crate“.",
+  "optin_deadline_days_before_delivery": "How many days before delivery the switch locks. 3 = \"until Wednesday for the Saturday crate\".",
   "peak_occupancy": "Highest occupancy in any current or future week (confirmed deliveries + active reservations). Capacity cannot be set below this."
 }

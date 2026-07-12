@@ -27,6 +27,7 @@
   "no_reseller_linked": "No customer account linked",
   "contact_admin": "Please contact the administrator to link your account with a customer profile.",
   "edit_profile": "Edit profile",
+  "prices_are_netto": "Prices are net.",
   "description": "Description",
   "ordered": "Ordered",
   "update": "Update",
@@ -35,6 +36,6 @@
   "documents": "Documents for this order",
   "delivery_note": "Delivery note",
   "invoice": "Invoice",
-  "storno": "Reversal",
-  "invoice_cancelled": "This invoice has been reversed."
+  "storno": "Cancellation",
+  "invoice_cancelled": "This invoice has been cancelled."
 }

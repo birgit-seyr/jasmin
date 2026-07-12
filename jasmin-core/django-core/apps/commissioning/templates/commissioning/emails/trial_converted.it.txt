@@ -1,0 +1,12 @@
+Gentile {{ member.first_name }},
+
+con la Sua prima quota sociale è ora ufficialmente socio
+di {{ tenant_name }}.
+
+{% if member.member_number %}Il Suo numero di socio è #{{ member.member_number }}.{% endif %}
+{% if entry_date %}Data di ingresso (GenG §30): {{ entry_date }}.{% endif %}
+
+{% if portal_url %}Nel portale soci trova le Sue quote, i contributi
+e gli abbonamenti: {{ portal_url }}{% endif %}
+
+— Il team di {{ tenant_name }}

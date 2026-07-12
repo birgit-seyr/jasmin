@@ -65,13 +65,13 @@
       "effective_at_in_past": "The effective date cannot be in the past.",
       "effective_at_required": "An effective date is required."
     },
-    "confirmed_immutable": "A confirmed member can’t be deleted — end the membership via cancellation instead."
+    "confirmed_immutable": "A confirmed member can't be deleted — end the membership via cancellation instead."
   },
   "coop_share": {
     "contract_agreement_required": "Please agree to the subscription contract to subscribe cooperative shares.",
     "value_not_configured": "The value of one cooperative share is not configured. Please contact the office.",
     "invalid_amount": "The number of coop shares must be greater than 0.",
-    "confirmed_immutable": "A confirmed cooperative share can’t be deleted — cancel the share (or the member) instead."
+    "confirmed_immutable": "A confirmed cooperative share can't be deleted — cancel the share (or the member) instead."
   },
   "share": {
     "not_found": "Share not found."
@@ -135,8 +135,8 @@
     "not_found": "Invoice not found.",
     "cannot_cancel_self": "An invoice cannot cancel itself.",
     "circular_cancellation": "Cancellation reference loop detected — please check the link.",
-    "storno_missing_target": "A storno invoice must reference the invoice being cancelled.",
-    "cannot_storno_storno": "Cannot storno a storno.",
+    "storno_missing_target": "A cancellation invoice must reference the invoice being cancelled.",
+    "cannot_storno_storno": "Cannot cancel a cancellation.",
     "already_exists": "An invoice already exists for this delivery note.",
     "already_finalized": "This invoice is already finalized and can no longer be changed.",
     "dn_not_finalized": "The delivery note is not finalized yet.",
@@ -191,7 +191,7 @@
     "tenant_mismatch": "This account does not belong to this tenant.",
     "tenant_missing": "No tenant specified.",
     "account_blocked": "This account is blocked.",
-    "self_registration_disabled": "Self-registration is disabled for this organisation.",
+    "self_registration_disabled": "Self-registration is disabled for this organization.",
     "step_up_required": "This action requires re-authentication to confirm identity.",
     "two_factor": {
       "already_enrolled": "Two-factor authentication (2FA) is already set up.",
@@ -371,7 +371,7 @@
     "ids_required": "The ids parameter is required.",
     "model_not_found": "The requested model was not found.",
     "model_required": "The model parameter is required.",
-    "one_way_model": "Finalized documents are legally immutable and cannot be unfinalized. To reverse, create a storno; to revise, issue a correction document."
+    "one_way_model": "Finalized documents are legally immutable and cannot be unfinalized. To reverse, create a cancellation; to revise, issue a correction document."
   },
   "share_import": {
     "apply_failed": "The import could not be applied.",

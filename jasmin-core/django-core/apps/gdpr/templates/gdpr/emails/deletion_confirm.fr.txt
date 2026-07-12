@@ -1,0 +1,11 @@
+Bonjour {{ user.first_name }},
+
+vous avez demandé la suppression de toutes vos données personnelles chez {{ tenant_name }} (RGPD art. 17).
+
+Afin de nous assurer que la demande vient bien de vous, merci de confirmer la suppression via ce lien (valable 24 heures) :
+
+{{ confirm_url }}
+
+{% if requires_admin_approval %}Après votre confirmation, le bureau examinera la demande manuellement avant que vos données ne soient définitivement anonymisées.
+{% endif %}
+Si vous n'avez pas demandé cela, ignorez simplement cet e-mail — votre compte restera inchangé.

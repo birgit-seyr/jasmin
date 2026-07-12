@@ -15,6 +15,8 @@ from django.db import models
 class LanguageChoices(models.TextChoices):
     EN = "en", "English"
     DE = "de", "German"
+    FR = "fr", "French"
+    IT = "it", "Italian"
 
 
 # The fallback when a requested language has no on-disk template or DB override.

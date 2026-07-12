@@ -1,0 +1,12 @@
+Gentile {{ member.first_name }},
+
+buone notizie — si è liberato un posto{% if tenant_name %} presso {{ tenant_name }}{% endif %} per l'abbonamento per il quale è in lista d'attesa:
+{% if variation_name %}- {{ variation_name }}{% endif %}
+{% if delivery_station_name %}- Ritiro: {{ delivery_station_name }}{% endif %}
+{% if valid_from %}- Inizio: {{ valid_from }}{% endif %}
+
+Se lo desidera ancora, La preghiamo di confermare{% if expires_at %} entro il {{ expires_at }}{% endif %}:
+
+{{ accept_url }}
+
+Tramite il link può accettare o rifiutare senza effettuare l'accesso. Se non risponde in tempo, il posto verrà offerto alla persona successiva.

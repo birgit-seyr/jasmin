@@ -1,0 +1,7 @@
+Jasmin – E-mail di prova
+
+Ciao,
+
+questo messaggio di prova proviene dalla vostra piattaforma Jasmin {{ tenant_name }}. Se riuscite a leggerlo, la vostra configurazione SMTP funziona e Jasmin può ora inviare e-mail automatiche (inviti, fatture, bolle di consegna, ...) a voi e ai vostri membri.
+
+— La piattaforma Jasmin

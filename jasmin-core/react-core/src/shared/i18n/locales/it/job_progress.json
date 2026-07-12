@@ -1,0 +1,17 @@
+{
+  "title": "Processo in background",
+  "queued": "In coda",
+  "running": "In esecuzione",
+  "done": "Completato",
+  "failed": "Non riuscito",
+  "counters": "{{processed}} di {{total}} elaborati · {{successful}} riusciti · {{failed}} non riusciti",
+  "per_item_results": "Risultati per voce",
+  "col_target": "Destinatario",
+  "col_outcome": "Stato",
+  "col_detail": "Dettagli",
+  "success": "Inviato",
+  "failure": "Non riuscito",
+  "already_sent": "Già inviato",
+  "announce_done": "Operazione completata.",
+  "announce_failed": "Operazione non riuscita."
+}

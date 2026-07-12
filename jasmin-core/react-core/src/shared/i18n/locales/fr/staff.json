@@ -1,5 +1,20 @@
 {
-    "staff": "Staff", 
-    "saturdays": "Duty Saturdays",
-    "weekly_plan": "Weekly Plan"
-  }
+  "staff": "Personnel",
+  "saturdays": "Permanences du samedi",
+  "weekly_plan": "Planning hebdomadaire",
+  "weekly_staff_plan": "Planning hebdomadaire",
+  "shifts": "Créneaux",
+  "copy_from_week": "copier depuis la sem. ",
+  "max_lines": "lignes max.",
+  "name": "Désignation",
+  "short_name_for_weekly_plan": "Nom pour le planning hebdomadaire",
+  "employees": "Employé·es",
+  "saturday_shifts": "Permanences du samedi",
+  "weekly_plan_categories": "Catégories du planning hebdomadaire",
+  "copy_weekly_plan_from": "Copier le planning hebdomadaire depuis",
+  "real_hours": "Heures réelles",
+  "summary": "Résumé",
+  "target_hours": "Heures prévues",
+  "total_hours": "Heures totales",
+  "weekly_plan_copied_success": "Planning hebdomadaire copié avec succès"
+}

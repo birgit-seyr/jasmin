@@ -1,0 +1,13 @@
+Sollecito di pagamento
+
+Gentile {{ reseller.name }},
+
+secondo i nostri registri le seguenti fatture risultano ancora aperte:
+
+{{ invoices_text }}
+
+Se ha già effettuato il pagamento, La preghiamo di ignorare questo messaggio.
+
+Coordinate bancarie: {{ tenant.bank_details }}
+
+— Il team di {{ tenant_name }}

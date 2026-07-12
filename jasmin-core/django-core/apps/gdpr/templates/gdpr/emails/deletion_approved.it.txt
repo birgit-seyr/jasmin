@@ -1,0 +1,9 @@
+Gentile {{ user.first_name }},
+
+la Sua richiesta di cancellare tutti i Suoi dati personali presso {{ tenant_name }} è stata approvata dall'ufficio ed è ora completata (GDPR art. 17).
+
+Rimossi o anonimizzati: nome, indirizzo, recapiti, informazioni di pagamento e tutti gli altri campi direttamente collegati alla Sua persona.
+
+Nota sulla conservazione obbligatoria per legge: alcuni dati (ad es. lo storico delle quote cooperative, le fatture finalizzate) devono ancora essere conservati per obbligo di legge ai sensi del GenG §31 e dell'HGB §257. Questi dati non contengono più identificatori diretti.
+
+Per qualsiasi domanda, risponda pure a questa e-mail.

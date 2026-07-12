@@ -1,0 +1,10 @@
+Bonjour {{ user.first_name }},
+
+votre demande de suppression de toutes vos données personnelles chez {{ tenant_name }} ne peut malheureusement pas être exécutée pour le moment.
+
+Motif du bureau :
+{{ reason }}
+
+Votre compte reste inchangé. Une fois les points ci-dessus résolus, vous pourrez soumettre une nouvelle demande de suppression depuis votre profil.
+
+Pour toute question, répondez simplement à cet e-mail.

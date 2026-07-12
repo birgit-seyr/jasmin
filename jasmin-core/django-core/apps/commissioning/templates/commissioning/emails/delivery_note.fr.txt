@@ -1,0 +1,9 @@
+Bon de livraison {{ delivery_note.number }}
+
+Bonjour {{ reseller.name }},
+
+vous trouverez ci-joint, au format PDF, le bon de livraison du {{ delivery_note.date }}{% if delivery_note.order_number %} correspondant à la commande {{ delivery_note.order_number }}{% endif %}.
+
+Le bon de livraison imprimé se trouve comme toujours dans la caisse de livraison ; cet e-mail sert uniquement d'information préalable et pour votre comptabilité.
+
+— L'équipe de {{ tenant_name }}

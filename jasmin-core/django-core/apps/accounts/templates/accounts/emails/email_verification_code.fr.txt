@@ -1,0 +1,11 @@
+Bonjour{% if first_name %} {{ first_name }}{% endif %},
+
+merci de l'intérêt que vous portez à {{ tenant_name }}.
+
+Saisissez le code suivant pour confirmer votre adresse e-mail et poursuivre
+votre inscription :
+
+  {{ code }}
+
+Le code est valable 15 minutes.
+Si vous n'attendiez pas cet e-mail, vous pouvez simplement l'ignorer.

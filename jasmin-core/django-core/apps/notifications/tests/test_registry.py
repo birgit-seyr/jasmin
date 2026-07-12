@@ -41,8 +41,11 @@ from apps.notifications.template_renderer import (
         ("en-US", "en"),
         ("english", "en"),
         ("  De  ", "de"),
+        ("fr", "fr"),
+        ("fr-FR", "fr"),
+        ("it", "it"),
+        ("it-IT", "it"),
         # Unsupported / junk → None, so callers fall through to the default.
-        ("fr", None),
         ("ja", None),
         ("", None),
         (None, None),

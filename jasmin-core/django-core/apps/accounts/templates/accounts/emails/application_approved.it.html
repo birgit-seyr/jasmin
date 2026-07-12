@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Benvenuto/a!</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Ciao {{ member.first_name }},</h1>
+    <p>
+      buone notizie — la tua richiesta di adesione
+      {% if tenant_name %}a <strong>{{ tenant_name }}</strong>{% endif %}
+      è stata accettata.
+    </p>
+    {% if member.member_number %}
+      <p>Il tuo numero di socio è <strong>#{{ member.member_number }}</strong>.</p>
+    {% endif %}
+    <p>Puoi accedere con la password che hai scelto durante la registrazione.</p>
+  </body>
+</html>

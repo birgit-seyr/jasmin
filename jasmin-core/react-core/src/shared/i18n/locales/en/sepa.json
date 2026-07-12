@@ -1,8 +1,8 @@
 {
   "setup_action": "SEPA mandate",
   "setup_title": "Set up SEPA Direct Debit",
-  "setup_intro": "Read the mandate text below, then enter your bank details. The mandate version you accept is recorded with your authorisation.",
-  "save": "Authorise mandate",
+  "setup_intro": "Read the mandate text below, then enter your bank details. The mandate version you accept is recorded with your authorization.",
+  "save": "Authorize mandate",
   "saved": "SEPA mandate saved.",
   "iban_required": "IBAN is required",
   "iban_invalid": "Please enter a valid IBAN (15–34 characters).",

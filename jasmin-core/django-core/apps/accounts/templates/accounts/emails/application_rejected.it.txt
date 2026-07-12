@@ -1,0 +1,9 @@
+Ciao {{ member.first_name }},
+
+grazie per il tuo interesse a diventare socio{% if tenant_name %} di {{ tenant_name }}{% endif %}.
+
+Purtroppo al momento non possiamo accettare la tua richiesta.
+{% if member.admin_rejection_reason %}
+Motivo: {{ member.admin_rejection_reason }}
+{% endif %}
+Per qualsiasi domanda, non esitare a contattarci.

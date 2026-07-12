@@ -1,0 +1,13 @@
+Gentile {{ member.first_name }},
+
+con la presente Le confermiamo il Suo recesso da {{ tenant_name }}.
+
+{% if cancelled_effective_at %}Data di recesso (GenG §30): {{ cancelled_effective_at }}.{% endif %}
+{% if member.member_number %}Il Suo precedente numero di socio è #{{ member.member_number }}. Lo conserviamo per il periodo di conservazione previsto dalla legge.{% endif %}
+
+La contatteremo separatamente in merito alla liquidazione della Sua
+quota sociale.
+
+Per qualsiasi domanda, può rispondere direttamente a questa e-mail.
+
+— Il team di {{ tenant_name }}

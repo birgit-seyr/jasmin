@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>{{ tenant_name }} : offre hebdomadaire</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 640px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Bonjour {{ reseller.name }},</h1>
+
+    <p>votre offre pour {{ offer.period }} est prête. Ouvrez le formulaire de commande pour passer votre commande — la date limite de commande y est indiquée pour chaque jour de livraison.</p>
+
+    <p style="margin: 32px 0;">
+      <a href="{{ offer_url }}"
+         style="display: inline-block; padding: 12px 20px; background: #1d603e; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        Ouvrir le formulaire de commande
+      </a>
+    </p>
+
+    <p style="color: #555; font-size: 14px;">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br />
+      <a href="{{ offer_url }}" style="color: #1d603e; word-break: break-all;">{{ offer_url }}</a>
+    </p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">— L'équipe de {{ tenant_name }}</p>
+  </body>
+</html>

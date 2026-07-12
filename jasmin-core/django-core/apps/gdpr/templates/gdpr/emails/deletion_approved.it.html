@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cancellazione dei Suoi dati completata</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
+      Gentile {{ user.first_name|default:"utente" }},
+    </h1>
+
+    <p>
+      la Sua richiesta di cancellare tutti i Suoi dati personali presso
+      {% if tenant_name %}<strong>{{ tenant_name }}</strong>{% else %}la piattaforma{% endif %}
+      è stata approvata dall'ufficio ed è ora completata
+      (GDPR articolo 17 — diritto all'oblio).
+    </p>
+
+    <p>
+      I seguenti dati sono stati rimossi o anonimizzati:
+      nome, indirizzo, recapiti, informazioni di pagamento e tutti gli altri
+      campi direttamente collegati alla Sua persona.
+    </p>
+
+    <p style="color: #555; font-size: 14px; margin-top: 24px;">
+      <strong>Nota sulla conservazione obbligatoria per legge:</strong> alcuni
+      dati (ad es. lo storico delle quote cooperative, le fatture finalizzate)
+      devono ancora essere conservati per obbligo di legge ai sensi del GenG §31
+      e dell'HGB §257. Questi dati non contengono più identificatori diretti.
+    </p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      Se ha domande sulla cancellazione, risponda pure a questa e-mail.
+    </p>
+  </body>
+</html>

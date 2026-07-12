@@ -1,9 +1,9 @@
 {
-    "commissioning": "Exports Commissioning",
-    "economics": "Exports Economics",
-    "warehouse": "Exports Equipment & Supplies",
-    "staff": "Exports Staff",
-    "cultivation": "Exports Cultivation",
-    "members": "Exports Members",
-    "list_exports": "List Commissioning"
-  }
+  "commissioning": "Esportazioni preparazione ordini",
+  "economics": "Esportazioni economia",
+  "warehouse": "Esportazioni attrezzature e forniture",
+  "staff": "Esportazioni personale",
+  "cultivation": "Esportazioni coltivazione",
+  "members": "Esportazioni soci",
+  "list_exports": "Elenco preparazione ordini"
+}

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Bon de livraison {{ delivery_note.number }}</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 640px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Bon de livraison {{ delivery_note.number }}</h1>
+
+    <p>Bonjour {{ reseller.name }},</p>
+
+    <p>vous trouverez ci-joint, au format PDF, le bon de livraison du {{ delivery_note.date }}{% if delivery_note.order_number %} correspondant à la commande {{ delivery_note.order_number }}{% endif %}.</p>
+
+    <p>Le bon de livraison imprimé se trouve comme toujours dans la caisse de livraison ; cet e-mail sert uniquement d'information préalable et pour votre comptabilité.</p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">— L'équipe de {{ tenant_name }}</p>
+  </body>
+</html>

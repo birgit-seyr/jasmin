@@ -1,0 +1,21 @@
+{
+  "view": "Afficher les détails",
+  "logging": "Journal d'activité",
+  "emails": "E-mails envoyés",
+  "coopshares": "Parts sociales",
+  "bank_details": "Modifier les coordonnées bancaires",
+  "coopshares_alert": "Parts sociales — aucune enregistrée",
+  "cancel": "Annuler",
+  "ok": "ok",
+  "not_ok": "pas ok",
+  "admin_confirmed": "Confirmé par l'administrateur",
+  "admin_pending": "Confirmation par l'administrateur en attente",
+  "admin_rejected": "Demande refusée",
+  "user_active": "Compte utilisateur actif",
+  "user_pending_approval": "En attente de validation par l'administrateur",
+  "user_pending_invitation": "Invitation envoyée",
+  "user_pending_invitation_expired": "Invitation expirée",
+  "user_inactive": "Compte utilisateur inactif",
+  "user_invited": "Invitation envoyée",
+  "user_not_invited": "Aucune invitation envoyée"
+}

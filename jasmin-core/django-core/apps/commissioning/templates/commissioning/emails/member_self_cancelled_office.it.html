@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Recesso di un socio</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Recesso di un socio</h1>
+    <p>
+      Un socio ha annullato autonomamente la propria adesione
+      {% if tenant_name %}presso <strong>{{ tenant_name }}</strong>{% endif %}
+      (tramite il portale soci).
+    </p>
+    <p>
+      Socio: <strong>{{ member.first_name }} {{ member.last_name }}</strong>{% if member.member_number %} (numero di socio <strong>#{{ member.member_number }}</strong>){% endif %}
+    </p>
+    {% if cancelled_effective_at %}
+      <p>Data di recesso (GenG §30): <strong>{{ cancelled_effective_at }}</strong></p>
+    {% endif %}
+    <p>
+      Vi preghiamo di verificare il recesso e di occuparvi della
+      liquidazione della quota sociale:
+    </p>
+    <p><a href="{{ review_url }}">{{ review_url }}</a></p>
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      Notifica automatica.
+    </p>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Rinnovo automatico: abbonamenti non rinnovati</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Rinnovo automatico: abbonamenti non rinnovati</h1>
+    <p>
+      Durante l'esecuzione notturna del rinnovo automatico presso <strong>{{ tenant_name }}</strong>
+      del {{ run_date }} <strong>non</strong> è stato possibile rinnovare
+      <strong>{{ failure_count }}</strong> abbonamento/i. Questi membri al momento non hanno
+      un abbonamento successivo — vi preghiamo di verificare ed eventualmente di rinnovarli manualmente:
+    </p>
+    <ul style="line-height: 1.6;">
+      {{ renewal_failures_html }}
+    </ul>
+    <p><a href="{{ review_url }}">{{ review_url }}</a></p>
+    <p style="color: #666; font-size: 12px; margin-top: 32px;">
+      Notifica automatica.
+    </p>
+  </body>
+</html>

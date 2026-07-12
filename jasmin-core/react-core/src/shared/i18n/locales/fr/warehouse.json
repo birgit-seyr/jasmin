@@ -1,6 +1,6 @@
 {
-    "fertilizer": "Fertilizer",
-    "pesticides": "Pesticides",
-    "tools": "Tools",
-    "others": "Others"
-  }
+  "fertilizer": "Engrais",
+  "pesticides": "Produits phytosanitaires",
+  "tools": "Outils",
+  "others": "Divers"
+}

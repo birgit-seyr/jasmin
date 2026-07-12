@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Demande de suppression en attente d'approbation</title>
+  </head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
+      Une demande de suppression RGPD est en attente d'approbation
+    </h1>
+
+    <p>
+      Chez
+      {% if tenant_name %}<strong>{{ tenant_name }}</strong>{% else %}la plateforme{% endif %},
+      une nouvelle demande de suppression de données (RGPD article 17) a été reçue
+      et confirmée par la personne à l'origine de la demande via un lien envoyé par e-mail.
+    </p>
+
+    <p>
+      La demande est désormais dans l'état <em>« en attente d'approbation du bureau »</em>
+      et doit être examinée et approuvée manuellement (ou refusée avec un motif)
+      avant que l'anonymisation proprement dite ne soit exécutée.
+    </p>
+
+    <p style="margin: 32px 0;">
+      <a href="{{ review_url }}"
+         style="display: inline-block; padding: 12px 20px; background: #1f6feb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        Ouvrir dans le bureau
+      </a>
+    </p>
+
+    <p style="color: #555; font-size: 14px;">
+      Ou copiez ce lien dans votre navigateur :<br />
+      <a href="{{ review_url }}" style="color: #1f6feb; word-break: break-all;">{{ review_url }}</a>
+    </p>
+
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      Cet e-mail ne contient volontairement aucune information sur la personne à
+      l'origine de la demande — les détails de la demande ne sont visibles que sur
+      la page de configuration, qui requiert un droit d'accès.
+    </p>
+  </body>
+</html>

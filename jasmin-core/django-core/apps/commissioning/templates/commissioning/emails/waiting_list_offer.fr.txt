@@ -1,0 +1,12 @@
+Bonjour {{ member.first_name }},
+
+bonne nouvelle — une place s'est libérée{% if tenant_name %} chez {{ tenant_name }}{% endif %} pour l'abonnement pour lequel vous êtes sur la liste d'attente :
+{% if variation_name %}- {{ variation_name }}{% endif %}
+{% if delivery_station_name %}- Retrait : {{ delivery_station_name }}{% endif %}
+{% if valid_from %}- Début : {{ valid_from }}{% endif %}
+
+Si vous le souhaitez toujours, merci de confirmer{% if expires_at %} avant le {{ expires_at }}{% endif %} :
+
+{{ accept_url }}
+
+Ce lien vous permet d'accepter ou de refuser sans vous connecter. Si vous ne répondez pas à temps, la place sera proposée à la personne suivante.

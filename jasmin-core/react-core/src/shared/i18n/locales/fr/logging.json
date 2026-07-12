@@ -1,0 +1,15 @@
+{
+  "title": "Historique d'activité",
+  "created": "Créé",
+  "updated": "Mis à jour",
+  "invited": "Invité",
+  "accepted": "Accepté",
+  "admin_confirmed": "Approuvé",
+  "admin_rejected": "Refusé",
+  "paid": "Payé",
+  "cancelled": "Annulé",
+  "effective_at": "prend effet le",
+  "expires": "Expire le",
+  "no_data": "Aucune donnée d'activité disponible.",
+  "reason": "Motif"
+}

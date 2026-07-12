@@ -1,0 +1,17 @@
+{
+  "title": "Tâche en arrière-plan",
+  "queued": "En file d'attente",
+  "running": "En cours",
+  "done": "Terminé",
+  "failed": "Échoué",
+  "counters": "{{processed}} sur {{total}} traités · {{successful}} réussis · {{failed}} échoués",
+  "per_item_results": "Résultats par entrée",
+  "col_target": "Destinataire",
+  "col_outcome": "Statut",
+  "col_detail": "Détails",
+  "success": "Envoyé",
+  "failure": "Échoué",
+  "already_sent": "Déjà envoyé",
+  "announce_done": "Opération terminée.",
+  "announce_failed": "Opération échouée."
+}

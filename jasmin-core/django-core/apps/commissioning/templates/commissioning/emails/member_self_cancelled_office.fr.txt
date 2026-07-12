@@ -1,0 +1,12 @@
+Bonjour l'équipe {{ tenant_name }},
+
+un membre a résilié lui-même son adhésion (via le portail des membres).
+
+Membre : {{ member.first_name }} {{ member.last_name }}{% if member.member_number %} (numéro de membre #{{ member.member_number }}){% endif %}
+{% if cancelled_effective_at %}Date de retrait (GenG §30) : {{ cancelled_effective_at }}{% endif %}
+
+Merci de vérifier le retrait et de prendre en charge le règlement de
+l'avoir social :
+{{ review_url }}
+
+— Notification automatique.

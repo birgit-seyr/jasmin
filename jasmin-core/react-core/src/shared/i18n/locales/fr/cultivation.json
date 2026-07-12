@@ -1,0 +1,20 @@
+{
+  "amounts_for_cultivation": "Quantités de culture",
+  "outdoors_cultivation": "Plein champ",
+  "sets_outdoors": "Séries plein champ",
+  "sorts_seedlings_outdoors": "Variétés de plants",
+  "sorts_seeds_outdoors": "Variétés de semences",
+  "indoors_cultivation": "Serre",
+  "sets_indoors": "Séries serre",
+  "sorts_seedlings_indoors": "Variétés de plants",
+  "sorts_seeds_indoors": "Variétés de semences ",
+  "list_planting": "Liste de plantation",
+  "list_sowing": "Liste de semis",
+  "documentation_fertilizer": "Engrais",
+  "documentation_pesticides": "Produits phytosanitaires",
+  "data": "Données",
+  "vegetable_families": "Familles de légumes",
+  "plant_families": "Familles de plantes",
+  "seller_seedlings": "Fournisseurs de plants",
+  "seller_seeds": "Fournisseurs de semences"
+}

@@ -1,0 +1,9 @@
+Bonjour {{ member.first_name }},
+
+merci de l'intérêt que vous portez à devenir membre{% if tenant_name %} de {{ tenant_name }}{% endif %}.
+
+Malheureusement, nous ne sommes pas en mesure d'accepter votre demande pour le moment.
+{% if member.admin_rejection_reason %}
+Motif : {{ member.admin_rejection_reason }}
+{% endif %}
+Si vous avez des questions, n'hésitez pas à nous contacter.

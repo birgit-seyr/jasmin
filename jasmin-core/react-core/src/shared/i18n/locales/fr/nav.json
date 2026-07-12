@@ -1,16 +1,15 @@
 {
-    "dashboard": "Dashboard",
-    "abos": "Shares",
-    "commissioning": "Commissioning",
-    "cultivation": "Cultivation",
-    "configuration": "Configuration",
-    "configuration.header1": "General Configuration",
-    "configuration.header2": "Configuration for Members",
-    "configuration.header3": "Configuration for Shares",
-    "members": "Members",
-    "staff": "Staff",
-    "warehouse": "Equipment & Supplies",
-    "economics": "Economics",
-    "exports": "Exports",
-    "imports": "Imports"
-  }
+  "main": "Navigation principale",
+  "skip_to_main": "Aller au contenu principal",
+  "dashboard": "Tableau de bord",
+  "abos": "Parts",
+  "commissioning": "Préparation des commandes",
+  "cultivation": "Cultures",
+  "configuration": "Configuration",
+  "members": "Membres",
+  "staff": "Personnel",
+  "warehouse": "Matériel et fournitures",
+  "economics": "Économie",
+  "exports": "Exports",
+  "imports": "Imports"
+}

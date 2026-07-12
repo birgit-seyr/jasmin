@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /><title>Richiesta ricevuta</title></head>
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 22px; font-weight: 600;">Ciao {{ member.first_name }},</h1>
+    <p>
+      abbiamo ricevuto la tua richiesta di adesione
+      {% if tenant_name %}a <strong>{{ tenant_name }}</strong>{% endif %}.
+    </p>
+    <p>
+      Il nostro team esaminerà la tua richiesta e ti ricontatterà. Nel
+      frattempo puoi accedere con la password che hai scelto per seguire lo
+      stato della tua richiesta.
+    </p>
+    <p style="color: #777; font-size: 13px; margin-top: 32px;">
+      Grazie per il tuo interesse!
+    </p>
+  </body>
+</html>

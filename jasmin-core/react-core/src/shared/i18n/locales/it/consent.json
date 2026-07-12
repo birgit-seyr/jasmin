@@ -1,0 +1,61 @@
+{
+  "card_title": "Consensi",
+  "empty": "Per questo socio non è ancora stato registrato alcun consenso.",
+  "load_error": "Impossibile caricare i consensi.",
+  "consented_at": "Consenso prestato",
+  "revoked_at": "Revocato",
+  "revoke": "Revoca",
+  "download": "PDF",
+  "revoke_title": "Revoca del consenso",
+  "revoke_warning": "Con la revoca cessa il trattamento sottostante. Alcune funzionalità potrebbero essere immediatamente limitate.",
+  "revoke_reason_placeholder": "Motivo facoltativo (viene registrato nel log di audit)",
+  "no_ua": "(nessun User-Agent)",
+  "kind": {
+    "privacy": "Privacy",
+    "sepa": "Mandato SEPA",
+    "withdrawal": "Informativa sul diritto di recesso",
+    "terms": "Condizioni d'uso",
+    "coop_contract": "Contratto di sottoscrizione",
+    "subscription_contract": "Contratto di abbonamento"
+  },
+  "admin": {
+    "title": "Documenti di consenso",
+    "subtitle": "Gestisce i testi versionati per privacy / mandato SEPA / recesso / condizioni generali.",
+    "filter_kind": "Tipo",
+    "new_version": "Nuova versione",
+    "publish": "Pubblica",
+    "created": "Versione del documento di consenso creata.",
+    "view_body": "Visualizza",
+    "valid_from": "valido dal",
+    "col_kind": "Tipo",
+    "col_version": "Versione",
+    "col_title": "Titolo",
+    "col_effective_from": "valido dal",
+    "col_hash": "SHA-256",
+    "title_placeholder": "Titolo visualizzato (facoltativo)",
+    "body_label": "Testo (fedele, così come viene mostrato ai soci)",
+    "append_only_notice": "Una nuova versione sostituisce automaticamente quella precedente a partire dalla data scelta. Le versioni esistenti restano invariate e verificabili.",
+    "append_only_explainer": "I documenti di consenso sono ad aggiunta soltanto (append-only). Per modificare un testo, creare una nuova versione con una data di validità successiva. La versione precedente viene chiusa automaticamente — i consensi già prestati restano collegati alla loro versione originale."
+  },
+  "block": {
+    "missing_document_title": "Testo del consenso non disponibile",
+    "missing_document_body": "Per il tipo «{{kind}}» / lingua «{{locale}}» non è disponibile alcun documento di consenso valido. Un collaboratore dell'ufficio deve prima caricarne uno.",
+    "version_label": "Versione",
+    "effective_label": "valido dal",
+    "agree": {
+      "default": "Accetto questo documento",
+      "privacy": "Ho letto e accetto l'informativa sulla privacy",
+      "sepa": "Concedo il mandato di addebito diretto SEPA",
+      "withdrawal": "Ho preso atto dell'informativa sul diritto di recesso",
+      "terms": "Accetto le condizioni d'uso",
+      "coop_contract": "Ho letto e accetto il contratto di sottoscrizione"
+    }
+  },
+  "print": {
+    "action": "Stampa",
+    "paper_required_hint": "Stampare questo documento, compilarlo, firmarlo e inviarlo per posta al seguente indirizzo:",
+    "signature_line": "Luogo, data, firma"
+  },
+  "accept_prefix": "Ho letto e accetto:",
+  "document": "il documento"
+}

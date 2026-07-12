@@ -1,0 +1,11 @@
+Gentile {{ user.first_name }},
+
+ha richiesto la cancellazione di tutti i Suoi dati personali presso {{ tenant_name }} (GDPR art. 17).
+
+Per essere certi che la richiesta provenga da Lei, La preghiamo di confermare la cancellazione tramite questo link (valido per 24 ore):
+
+{{ confirm_url }}
+
+{% if requires_admin_approval %}Dopo la conferma, l'ufficio esaminerà la richiesta manualmente prima che i Suoi dati vengano definitivamente anonimizzati.
+{% endif %}
+Se non ha richiesto questa operazione, ignori pure questa e-mail — il Suo account resterà invariato.

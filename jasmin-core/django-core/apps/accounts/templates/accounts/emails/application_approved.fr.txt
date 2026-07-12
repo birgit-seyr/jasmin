@@ -1,0 +1,7 @@
+Bonjour {{ member.first_name }},
+
+bonne nouvelle — votre demande d'adhésion{% if tenant_name %} à {{ tenant_name }}{% endif %} a été acceptée.
+{% if member.member_number %}
+Votre numéro de membre est #{{ member.member_number }}.
+{% endif %}
+Vous pouvez vous connecter avec le mot de passe que vous avez choisi lors de votre inscription.
