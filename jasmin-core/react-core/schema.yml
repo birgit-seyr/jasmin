@@ -26254,6 +26254,1206 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/staff/absence_categories/:
+    get:
+      operationId: staff_absence_categories_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+        description: Filter by active status
+      tags:
+      - staff
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AbsenceCategory'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: staff_absence_categories_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AbsenceCategory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AbsenceCategory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AbsenceCategory'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AbsenceCategory'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/staff/absence_categories/{id}/:
+    get:
+      operationId: staff_absence_categories_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der absence category identifiziert.
+        required: true
+      tags:
+      - staff
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AbsenceCategory'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: staff_absence_categories_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der absence category identifiziert.
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AbsenceCategory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AbsenceCategory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AbsenceCategory'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AbsenceCategory'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: staff_absence_categories_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der absence category identifiziert.
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AbsenceCategory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AbsenceCategory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AbsenceCategory'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AbsenceCategory'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: staff_absence_categories_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der absence category identifiziert.
+        required: true
+      tags:
+      - staff
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/staff/employees/:
+    get:
+      operationId: staff_employees_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+        description: Filter by active status
+      tags:
+      - staff
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Employee'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: staff_employees_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Employee'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Employee'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Employee'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/staff/employees/{id}/:
+    get:
+      operationId: staff_employees_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der employee identifiziert.
+        required: true
+      tags:
+      - staff
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: staff_employees_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der employee identifiziert.
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Employee'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Employee'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Employee'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: staff_employees_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der employee identifiziert.
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Employee'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Employee'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Employee'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: staff_employees_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der employee identifiziert.
+        required: true
+      tags:
+      - staff
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/staff/weekly_plan_categories/:
+    get:
+      operationId: staff_weekly_plan_categories_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+        description: Filter by active status
+      tags:
+      - staff
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WeeklyPlanCategory'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: staff_weekly_plan_categories_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanCategory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanCategory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanCategory'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyPlanCategory'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/staff/weekly_plan_categories/{id}/:
+    get:
+      operationId: staff_weekly_plan_categories_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der weekly plan category identifiziert.
+        required: true
+      tags:
+      - staff
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyPlanCategory'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: staff_weekly_plan_categories_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der weekly plan category identifiziert.
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanCategory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanCategory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanCategory'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyPlanCategory'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: staff_weekly_plan_categories_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der weekly plan category identifiziert.
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanCategory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanCategory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanCategory'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyPlanCategory'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: staff_weekly_plan_categories_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der weekly plan category identifiziert.
+        required: true
+      tags:
+      - staff
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/tenants/current/:
     get:
       operationId: tenants_current_retrieve
@@ -26919,6 +28119,35 @@ paths:
           description: Error response.
 components:
   schemas:
+    AbsenceCategory:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          maxLength: 12
+        is_active:
+          type: boolean
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        name:
+          type: string
+          maxLength: 200
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+      required:
+      - name
+      - year
     AccountStatusEnum:
       enum:
       - active
@@ -30857,6 +32086,45 @@ components:
       - description
       - label
       - name
+    Employee:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          maxLength: 12
+        is_active:
+          type: boolean
+        short_name_for_weekly_plan:
+          type: string
+          maxLength: 50
+        first_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        last_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        employee_number:
+          type: string
+          nullable: true
+          maxLength: 50
+        user:
+          type: string
+          nullable: true
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+      required:
+      - short_name_for_weekly_plan
     ErrorResponse:
       type: object
       description: |-
@@ -40165,6 +41433,35 @@ components:
       - delivery_station_name
       - id
       - tour
+    WeeklyPlanCategory:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          maxLength: 12
+        is_active:
+          type: boolean
+        name:
+          type: string
+          maxLength: 200
+        max_lines:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+      required:
+      - max_lines
+      - name
     _DeliveryStationEntry:
       type: object
       description: |-

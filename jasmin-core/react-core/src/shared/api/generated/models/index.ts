@@ -7,6 +7,7 @@
  */
 
 export * from './_deliveryStationEntry';
+export * from './absenceCategory';
 export * from './accountStatusEnum';
 export * from './activeShareOptions';
 export * from './adminDecidedDeletion';
@@ -268,6 +269,7 @@ export * from './emailTemplateListItem';
 export * from './emailTemplateTestSendResponse';
 export * from './emailTemplateUpdate';
 export * from './emailTemplateVariable';
+export * from './employee';
 export * from './errorResponse';
 export * from './errorResponseDetails';
 export * from './externalCodeMapping';
@@ -483,6 +485,9 @@ export * from './sharesDeliveryDayDefaultGetCurrentStockDay';
 export * from './sharesDeliveryDayDefaultHarvestingDay';
 export * from './sharesDeliveryDayDefaultPackingDay';
 export * from './sharesDeliveryDayDefaultWashingDay';
+export * from './staffAbsenceCategoriesListParams';
+export * from './staffEmployeesListParams';
+export * from './staffWeeklyPlanCategoriesListParams';
 export * from './stationMemberMatrix';
 export * from './stationMemberMatrixRow';
 export * from './stationOverview';
@@ -557,3 +562,4 @@ export * from './waste';
 export * from './wasteDayNumber';
 export * from './weeklyComboMatrixResponse';
 export * from './weeklyComboMatrixRow';
+export * from './weeklyPlanCategory';

@@ -49,6 +49,16 @@ export default function StaffSidebar({
       ),
       permission: "staff.team.view",
     },
+    {
+      key: "staff-absence-categories",
+      icon: <FitbitIcon />,
+      label: (
+        <Link to="/staff/absence-categories">
+          {t("staff.absence_categories")}
+        </Link>
+      ),
+      permission: "staff.team.view",
+    },
   ];
 
   return (

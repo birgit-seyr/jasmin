@@ -1,1 +1,11 @@
-from .basics import EmployeeViewSet, WeeklyPlanCategoryViewSet
+from .basics import (
+    AbsenceCategoryViewSet,
+    EmployeeViewSet,
+    WeeklyPlanCategoryViewSet,
+)
+
+__all__ = [
+    "AbsenceCategoryViewSet",
+    "EmployeeViewSet",
+    "WeeklyPlanCategoryViewSet",
+]

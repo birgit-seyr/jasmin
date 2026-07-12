@@ -5,10 +5,11 @@ const DashboardStaff = lazy(
 );
 
 const ListWeeklyPlanCategories = lazy(
-  () => import("@features/staff/pages/ListWeeklyPlanCategory.jsx"),
+  () => import("@features/staff/pages/ListWeeklyPlanCategory"),
 );
-const ListEmployees = lazy(
-  () => import("@features/staff/pages/ListEmployees.jsx"),
+const ListEmployees = lazy(() => import("@features/staff/pages/ListEmployees"));
+const ListAbsenceCategory = lazy(
+  () => import("@features/staff/pages/ListAbsenceCategory"),
 );
 const SaturdayShifts = lazy(
   () => import("@features/staff/pages/SaturdayShifts.jsx"),
@@ -48,6 +49,15 @@ export const staffRoutes = [
     element: <ListEmployees />,
     meta: {
       title: "app.routes.employees",
+      // requiredRole: [],
+      // requiredPermission: []
+    },
+  },
+  {
+    path: "/staff/absence-categories",
+    element: <ListAbsenceCategory />,
+    meta: {
+      title: "app.routes.absence_categories",
       // requiredRole: [],
       // requiredPermission: []
     },

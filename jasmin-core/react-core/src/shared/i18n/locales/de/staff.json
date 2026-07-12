@@ -16,5 +16,13 @@
     "summary": "Zusammenfassung",
     "target_hours": "Soll-Stunden",
     "total_hours": "Gesamtstunden",
-    "weekly_plan_copied_success": "Wochenplan erfolgreich kopiert"
+    "weekly_plan_copied_success": "Wochenplan erfolgreich kopiert",
+    "first_name": "Vorname",
+    "last_name": "Nachname",
+    "employee_number": "Personalnummer",
+    "employees_description": "Alle MitarbeiterInnen für die Personal- und Wochenplanung.",
+    "weekly_plan_categories_description": "Kategorien, die den Wochenplan in Zeilengruppen gliedern.",
+    "absence_categories": "Abwesenheits-Kategorien",
+    "absence_categories_description": "Abwesenheitsarten pro Jahr (z. B. Urlaub, Krankheit).",
+    "absence_category_year_name_unique": "Diese Kategorie existiert bereits für dieses Jahr."
 }
