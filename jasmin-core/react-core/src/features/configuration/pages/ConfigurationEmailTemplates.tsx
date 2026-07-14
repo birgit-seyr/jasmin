@@ -16,7 +16,19 @@ const { Text, Paragraph } = Typography;
 const CATEGORY_ORDER = ["members", "resellers", "users", "office"] as const;
 type Category = (typeof CATEGORY_ORDER)[number];
 
-export default function ConfigurationEmailTemplates() {
+interface ConfigurationEmailTemplatesProps {
+  /** Restrict the view to these registry categories
+   *  (members / resellers / users / office). Omit to show every category —
+   *  the full, un-split page kept for the legacy /email-templates route. */
+  categories?: readonly string[];
+  /** i18n key for the page heading. */
+  titleKey?: string;
+}
+
+export default function ConfigurationEmailTemplates({
+  categories,
+  titleKey = "email_templates.page_title",
+}: ConfigurationEmailTemplatesProps = {}) {
   const { t, i18n } = useTranslation();
   const { getSetting } = useTenant();
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
@@ -51,11 +63,12 @@ export default function ConfigurationEmailTemplates() {
     );
     return [...known, ...extras]
       .filter((cat) => showMembers || cat !== "members")
+      .filter((cat) => !categories || categories.includes(cat))
       .map((cat) => ({
         category: cat,
         rows: buckets[cat] ?? [],
       }));
-  }, [data, showMembers]);
+  }, [data, showMembers, categories]);
 
   const categoryLabel = (cat: string) =>
     t(`email_templates.category_${cat}`, {
@@ -134,7 +147,7 @@ export default function ConfigurationEmailTemplates() {
 
   return (
     <>
-      <h1>{t("email_templates.page_title")}</h1>
+      <h1>{t(titleKey)}</h1>
       <Paragraph type="secondary">
         {t("email_templates.page_intro")}
       </Paragraph>

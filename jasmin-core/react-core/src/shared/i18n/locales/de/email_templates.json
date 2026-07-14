@@ -1,5 +1,8 @@
 {
   "page_title": "E-Mail-Vorlagen",
+  "page_title_general": "E-Mail-Vorlagen – Allgemein",
+  "page_title_resellers": "E-Mail-Vorlagen – Wiederverkäufer",
+  "page_title_members": "E-Mail-Vorlagen – Mitglieder",
   "page_intro": "Passe Wortlaut und Layout sämtlicher E-Mails an.",
   "empty": "Keine Vorlagen konfiguriert.",
   "col_label": "Vorlage",
@@ -42,7 +45,7 @@
     "accounts_welcome_user": "Konto aktiviert",
     "commissioning_trial_converted": "Vollmitgliedschaft erreicht",
     "commissioning_member_cancelled": "Austritt bestätigt",
-    "commissioning_offer": "Wochenangebot an Wiederverkäufer",
+    "commissioning_offer": "Angebot",
     "commissioning_invoice": "Rechnung",
     "commissioning_delivery_note": "Lieferschein",
     "commissioning_invoice_reminder": "Zahlungserinnerung",

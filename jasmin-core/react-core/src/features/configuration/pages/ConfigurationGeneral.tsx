@@ -1,17 +1,28 @@
-import { Card, Col, Row, Space, Typography } from "antd";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import type { Tenant } from "@shared/api/generated/models";
-import type { Writable } from "@shared/api/typeHelpers";
-import { tenantsTenantsPartialUpdate } from "@shared/api/generated/tenants/tenants";
-import { AutoSaveIndicator, PictureUploadField, usePictureUpload } from "@shared/ui";
-import { useAutoSave, useTenant } from "@hooks/index";
-import { notify } from "@shared/utils";
-import { checkBic, checkIban, formatIbanError } from "@shared/utils/iban";
 import {
   SettingsCategory,
   SettingsRenderer,
 } from "@features/configuration/components/SettingsRenderer";
+import { useAutoSave, useTenant } from "@hooks/index";
+import type { Tenant } from "@shared/api/generated/models";
+import { tenantsTenantsPartialUpdate } from "@shared/api/generated/tenants/tenants";
+import type { Writable } from "@shared/api/typeHelpers";
+import {
+  AutoSaveIndicator,
+  PictureUploadField,
+  usePictureUpload,
+} from "@shared/ui";
+import { notify } from "@shared/utils";
+import { checkBic, checkIban } from "@shared/utils/iban";
+import { Card, Col, Row, Space, Typography } from "antd";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useTranslation } from "react-i18next";
 
 const { Text } = Typography;
 
@@ -140,6 +151,7 @@ export default function ConfigurationGeneral() {
             key: "organic_control_number",
             label: t("tenant.organization.organic_control_number"),
             type: "input",
+            description: "tenant.organization.organic_control_number_desc",
             defaultValue: "",
           },
           {
@@ -186,91 +198,7 @@ export default function ConfigurationGeneral() {
           },
         ],
       },
-      {
-        category: "sepa",
-        title: t("tenant.sepa.title"),
-        description: t("tenant.sepa.description"),
-        settings: [
-          {
-            key: "iban",
-            label: t("tenant.organization.iban"),
-            description: t("tenant.organization.iban_desc"),
-            type: "input",
-            // ISO 13616 mod-97 + country-length check. Mirrors the
-            // backend ``IBANValidator`` so the office gets immediate
-            // feedback instead of seeing a save failure later. Empty
-            // values pass through (the field is ``blank=True`` on the
-            // model; "must be present" only applies at SEPA-export
-            // time and is checked there).
-            validate: (value: string) => {
-              const result = checkIban(value);
-              if (result.valid) return null;
-              return formatIbanError(result.reasons, t);
-            },
-          },
-          {
-            // Creditor identifier issued to the organization by the
-            // member bank (one per Genossenschaft). Format is
-            // country-code + 2 check digits + 3-char business code +
-            // identifier, e.g. ``DE98ZZZ09999999999``. Stamped into
-            // every pain.008 file's ``CdtrSchmeId`` block — without
-            // it the bank rejects the entire batch.
-            key: "sepa_creditor_id",
-            label: t("tenant.organization.sepa_creditor_id"),
-            description: t("tenant.organization.sepa_creditor_id_desc"),
-            type: "input",
-          },
-          {
-            // Stamped into ``InitgPty/Nm`` and the creditor block of
-            // every pain.008 file. ISO 20022 caps the field at 70
-            // chars; longer names get truncated by the export.
-            key: "sepa_creditor_name",
-            label: t("tenant.organization.sepa_creditor_name"),
-            description: t("tenant.organization.sepa_creditor_name_desc"),
-            type: "input",
-            maxLength: 70,
-          },
-          {
-            // BIC of the COOPERATIVE'S bank (not the members'). The
-            // ``sepaxml`` library requires this in its config even
-            // though pain.008.001.02 marks the field as optional.
-            // Bank tells the office this 8 or 11 character code when
-            // they set up SEPA Direct Debit.
-            key: "sepa_creditor_bic",
-            label: t("tenant.organization.sepa_creditor_bic"),
-            description: t("tenant.organization.sepa_creditor_bic_desc"),
-            type: "input",
-            maxLength: 11,
-            // Same XSD pattern the pain.008 export enforces — flags an
-            // invalid BIC at entry instead of failing the whole batch
-            // export later. Empty passes (checked at export, like IBAN).
-            validate: (value: string) =>
-              checkBic(value).valid
-                ? null
-                : t("tenant.organization.sepa_creditor_bic_invalid"),
-          },
-          {
-            // Rendered into every pain.008 file's ``Ustrd`` — the text the
-            // member sees on their bank statement. The custom editor
-            // surfaces placeholder chips + a live preview.
-            key: "sepa_remittance_template",
-            label: t("tenant.organization.sepa_remittance_template"),
-            description: t("tenant.organization.sepa_remittance_template_desc"),
-            type: "remittance_template",
-            maxLength: 140,
-          },
 
-          {
-            key: "sepa_collection_day_of_month",
-            label: t("settings.payments.sepa_collection_day"),
-            description: t("settings.payments.sepa_collection_day_desc"),
-            type: "number",
-            defaultValue: 5,
-            min: 1,
-            max: 28,
-          },
-        ],
-      },
       {
         // Public legal-notice ("Impressum") identity block. These columns
         // live on ``Tenant`` and save through the same autosave PATCH; the
@@ -479,8 +407,11 @@ export default function ConfigurationGeneral() {
       // The upload fields never ride on this JSON PATCH: logo / bio_logo are
       // FileFields handled out-of-band by ``usePictureUpload`` (multipart), and
       // a stored URL string must not be re-sent to the ImageField.
-      const { logo: _logo, bio_logo: _bio_logo, ...tenantFields } =
-        currentTenantData;
+      const {
+        logo: _logo,
+        bio_logo: _bio_logo,
+        ...tenantFields
+      } = currentTenantData;
 
       // Directional cast at the orval boundary: the autosave sends a
       // partial snapshot while the generated body type requires
@@ -539,84 +470,89 @@ export default function ConfigurationGeneral() {
   );
 
   return (
-    <div style={{ padding: "16px" }}>
-      <div style={{ marginBottom: "16px" }}>
-        <AutoSaveIndicator saving={saving} hasChanges={hasChanges} />
-      </div>
-      <Space direction="vertical" size="middle" className="w-full">
-        {/* Tenant Fields */}
-        {tenantFieldsConfig.map((category) => (
-          <Card
-            key={category.category}
-            title={category.title}
-            className="settings-card-header page-narrow"
-            styles={{ body: { padding: "16px" } }}
-          >
-            {category.description && (
-              <Text
-                type="secondary"
-                style={{ display: "block", marginBottom: 12 }}
-              >
-                {category.description}
-              </Text>
-            )}
-            <Row gutter={[12, 12]}>
-              {category.settings.map((field) => (
-                <Col
-                  span={SettingsRenderer.getColumnSpan(field)}
-                  key={field.key}
-                >
-                  <div style={{ padding: "4px 0" }}>
-                    {SettingsRenderer.renderInput(
-                      field,
-                      getTenantFieldValue(field.key, field.defaultValue),
-                      (value) =>
-                        handleTenantFieldChange(field.key, value, field.type),
-                    )}
-                  </div>
-                </Col>
-              ))}
-            </Row>
-          </Card>
-        ))}
+    <div>
+      <h1>{t("configuration.general")}</h1>
 
-        {/* Branding: Logo + Bio Logo */}
-        <Card
-          title={t("tenant.files.title")}
-          className="settings-card-header page-narrow"
-          styles={{ body: { padding: "16px" } }}
-        >
-          <Row gutter={[12, 12]}>
-            <Col span={12}>
-              <div style={{ padding: "4px 0" }}>
-                <Text strong>{t("tenant.files.current_logo")}</Text>
-                <div style={{ marginTop: 8 }}>
-                  <PictureUploadField
-                    pictureUrl={logoPreviewUrl}
-                    uploading={logoUploading}
-                    onUpload={uploadLogo}
-                    previewVariant="inline"
-                    showDelete={false}
-                  />
-                </div>
-              </div>
-            </Col>
-            <Col span={12}>
-              <div style={{ padding: "4px 0" }}>
-                <Text strong>{t("tenant.files.current_bio_logo")}</Text>
-                <div style={{ marginTop: 8 }}>
-                  <PictureUploadField
-                    pictureUrl={bioLogoPreviewUrl}
-                    uploading={bioLogoUploading}
-                    onUpload={uploadBioLogo}
-                    previewVariant="inline"
-                    showDelete={false}
-                  />
-                </div>
-              </div>
-            </Col>
-          </Row>
-        </Card>
+      <AutoSaveIndicator saving={saving} hasChanges={hasChanges} />
+
+      <Space direction="vertical" size="middle" className="w-full">
+        {/* Tenant Fields. The branding/upload card is rendered right after the
+            "organization" (Sonstiges) card rather than at the very bottom. */}
+        {tenantFieldsConfig.map((category) => (
+          <Fragment key={category.category}>
+            <Card
+              title={category.title}
+              className="settings-card-header page-narrow"
+              styles={{ body: { padding: "16px" } }}
+            >
+              {category.description && (
+                <Text
+                  type="secondary"
+                  style={{ display: "block", marginBottom: 12 }}
+                >
+                  {category.description}
+                </Text>
+              )}
+              <Row gutter={[12, 12]}>
+                {category.settings.map((field) => (
+                  <Col
+                    span={SettingsRenderer.getColumnSpan(field)}
+                    key={field.key}
+                  >
+                    <div style={{ padding: "4px 0" }}>
+                      {SettingsRenderer.renderInput(
+                        field,
+                        getTenantFieldValue(field.key, field.defaultValue),
+                        (value) =>
+                          handleTenantFieldChange(field.key, value, field.type),
+                      )}
+                    </div>
+                  </Col>
+                ))}
+              </Row>
+            </Card>
+
+            {/* Branding: Logo + Bio Logo — placed below "Sonstiges". */}
+            {category.category === "organization" && (
+              <Card
+                title={t("tenant.files.title")}
+                className="settings-card-header page-narrow"
+                styles={{ body: { padding: "16px" } }}
+              >
+                <Row gutter={[12, 12]}>
+                  <Col span={12}>
+                    <div style={{ padding: "4px 0" }}>
+                      <Text strong>{t("tenant.files.current_logo")}</Text>
+                      <div style={{ marginTop: 8 }}>
+                        <PictureUploadField
+                          pictureUrl={logoPreviewUrl}
+                          uploading={logoUploading}
+                          onUpload={uploadLogo}
+                          previewVariant="inline"
+                          showDelete={false}
+                        />
+                      </div>
+                    </div>
+                  </Col>
+                  <Col span={12}>
+                    <div style={{ padding: "4px 0" }}>
+                      <Text strong>{t("tenant.files.current_bio_logo")}</Text>
+                      <div style={{ marginTop: 8 }}>
+                        <PictureUploadField
+                          pictureUrl={bioLogoPreviewUrl}
+                          uploading={bioLogoUploading}
+                          onUpload={uploadBioLogo}
+                          previewVariant="inline"
+                          showDelete={false}
+                        />
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+              </Card>
+            )}
+          </Fragment>
+        ))}
       </Space>
     </div>
   );

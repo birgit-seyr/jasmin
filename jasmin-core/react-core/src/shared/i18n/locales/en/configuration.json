@@ -56,5 +56,12 @@
   "email_log": "Email log",
   "data_protection": "Data Protection",
   "payments": "Payments",
-  "subscriptions": "Shares"
+  "subscriptions": "Shares",
+  "share_type_variations": "Share type variations",
+  "delivery_days": "Delivery days",
+  "group": {
+    "general": "App / General",
+    "commissioning": "Commissioning",
+    "members": "Shares / Members"
+  }
 }

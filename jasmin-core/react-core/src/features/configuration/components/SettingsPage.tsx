@@ -55,6 +55,8 @@ const EMPTY_MODAL: RichTextModalState = {
 };
 
 interface SettingsPageProps {
+  /** Page heading rendered as an `<h1>` above the cards. */
+  title?: string;
   /** Setting categories (label + inputs grouped under cards). */
   settingsConfig: SettingsCategory[];
   /** Max width for each card. Defaults to 800. Pass 900 for richtext-heavy pages. */
@@ -106,6 +108,7 @@ export interface SettingsHelpers {
  * should use this. Use `extraBefore` / `extraAfter` for custom blocks.
  */
 export default function SettingsPage({
+  title,
   settingsConfig,
   cardMaxWidth = 800,
   withLockedSettings = false,
@@ -146,18 +149,16 @@ export default function SettingsPage({
   // Locked settings (optional). React Query gates the call on
   // ``withLockedSettings`` + a tenant being present; a failure resolves
   // to an empty list via the select fallback so the page stays usable.
-  const { data: lockedSettings = [] } = useTenantsSettingsLockedSettingsRetrieve(
-    {
+  const { data: lockedSettings = [] } =
+    useTenantsSettingsLockedSettingsRetrieve({
       query: {
         enabled: !!withLockedSettings && !!tenant?.id,
         select: (res) => res.locked_settings ?? [],
       },
-    },
-  );
+    });
 
   const resolvedLockedTooltip =
-    lockedTooltip ??
-    t("tooltip.locked_setting_tooltip");
+    lockedTooltip ?? t("tooltip.locked_setting_tooltip");
 
   const resolvedConfig = useMemo<SettingsCategory[]>(() => {
     if (!withLockedSettings || lockedSettings.length === 0) {
@@ -301,10 +302,11 @@ export default function SettingsPage({
     typeof extraAfter === "function" ? extraAfter(helpers) : extraAfter;
 
   return (
-    <div style={{ padding: "16px" }}>
-      <div style={{ marginBottom: "16px" }}>
-        <AutoSaveIndicator saving={saving} hasChanges={hasChanges} />
-      </div>
+    <div>
+      {title && <h1>{title}</h1>}
+
+      <AutoSaveIndicator saving={saving} hasChanges={hasChanges} />
+
       <Space direction="vertical" size="middle" className="w-full">
         {resolvedExtraBefore}
         {resolvedConfig.map((category) => (
@@ -421,10 +423,7 @@ function TiersField({ setting, value, onChange }: TiersFieldProps) {
       )}
       <Flex vertical gap="8px">
         {tiers.map((tier, index) => (
-          <div
-            key={tierKeys.current[index]}
-            className="flex-center-y gap-8"
-          >
+          <div key={tierKeys.current[index]} className="flex-center-y gap-8">
             <Text style={{ minWidth: "60px" }}>
               {tierLabel} {index + 1}:
             </Text>

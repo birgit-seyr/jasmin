@@ -379,7 +379,7 @@ export default function ResellerDocPreviewButtons({
       </Text>
       <Flex gap="middle" wrap="wrap">
         <PDFDownloadLink document={offerDoc} fileName="preview-offer.pdf">
-          <Button icon={<DownloadOutlined />}>
+          <Button type="primary" icon={<DownloadOutlined />}>
             {t("settings.reseller.preview.offer")}
           </Button>
         </PDFDownloadLink>
@@ -387,16 +387,15 @@ export default function ResellerDocPreviewButtons({
           document={deliveryNoteDoc}
           fileName="preview-delivery-note.pdf"
         >
-          <Button icon={<DownloadOutlined />}>
+          <Button type="primary" icon={<DownloadOutlined />}>
             {t("settings.reseller.preview.delivery_note")}
           </Button>
         </PDFDownloadLink>
         <PDFDownloadLink document={invoiceDoc} fileName="preview-invoice.pdf">
-          <Button icon={<DownloadOutlined />}>
+          <Button type="primary" icon={<DownloadOutlined />}>
             {t("settings.reseller.preview.invoice")}
           </Button>
         </PDFDownloadLink>
-
       </Flex>
     </Card>
   );

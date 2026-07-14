@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { SettingsCategory } from "@features/configuration/components/SettingsRenderer";
-import SettingsPage from "@features/configuration/components/SettingsPage";
 import PaymentCyclesCard from "@features/configuration/components/PaymentCyclesCard";
+import SettingsPage from "@features/configuration/components/SettingsPage";
+import { SettingsCategory } from "@features/configuration/components/SettingsRenderer";
+import { checkBic, checkIban, formatIbanError } from "@shared/utils/iban";
 
 export default function ConfigurationPayments() {
   const { t } = useTranslation();
@@ -125,13 +126,101 @@ export default function ConfigurationPayments() {
           },
         ],
       },
+      {
+        category: "sepa",
+        title: t("tenant.sepa.title"),
+        description: t("tenant.sepa.description"),
+        settings: [
+          {
+            key: "iban",
+            label: t("tenant.organization.iban"),
+            description: t("tenant.organization.iban_desc"),
+            type: "input",
+            // ISO 13616 mod-97 + country-length check. Mirrors the
+            // backend ``IBANValidator`` so the office gets immediate
+            // feedback instead of seeing a save failure later. Empty
+            // values pass through (the field is ``blank=True`` on the
+            // model; "must be present" only applies at SEPA-export
+            // time and is checked there).
+            validate: (value: string) => {
+              const result = checkIban(value);
+              if (result.valid) return null;
+              return formatIbanError(result.reasons, t);
+            },
+          },
+          {
+            // Creditor identifier issued to the organization by the
+            // member bank (one per Genossenschaft). Format is
+            // country-code + 2 check digits + 3-char business code +
+            // identifier, e.g. ``DE98ZZZ09999999999``. Stamped into
+            // every pain.008 file's ``CdtrSchmeId`` block — without
+            // it the bank rejects the entire batch.
+            key: "sepa_creditor_id",
+            label: t("tenant.organization.sepa_creditor_id"),
+            description: t("tenant.organization.sepa_creditor_id_desc"),
+            type: "input",
+          },
+          {
+            // Stamped into ``InitgPty/Nm`` and the creditor block of
+            // every pain.008 file. ISO 20022 caps the field at 70
+            // chars; longer names get truncated by the export.
+            key: "sepa_creditor_name",
+            label: t("tenant.organization.sepa_creditor_name"),
+            description: t("tenant.organization.sepa_creditor_name_desc"),
+            type: "input",
+            maxLength: 70,
+          },
+          {
+            // BIC of the COOPERATIVE'S bank (not the members'). The
+            // ``sepaxml`` library requires this in its config even
+            // though pain.008.001.02 marks the field as optional.
+            // Bank tells the office this 8 or 11 character code when
+            // they set up SEPA Direct Debit.
+            key: "sepa_creditor_bic",
+            label: t("tenant.organization.sepa_creditor_bic"),
+            description: t("tenant.organization.sepa_creditor_bic_desc"),
+            type: "input",
+            maxLength: 11,
+            // Same XSD pattern the pain.008 export enforces — flags an
+            // invalid BIC at entry instead of failing the whole batch
+            // export later. Empty passes (checked at export, like IBAN).
+            validate: (value: string) =>
+              checkBic(value).valid
+                ? null
+                : t("tenant.organization.sepa_creditor_bic_invalid"),
+          },
+          {
+            // Rendered into every pain.008 file's ``Ustrd`` — the text the
+            // member sees on their bank statement. The custom editor
+            // surfaces placeholder chips + a live preview.
+            key: "sepa_remittance_template",
+            label: t("tenant.organization.sepa_remittance_template"),
+            description: t("tenant.organization.sepa_remittance_template_desc"),
+            type: "remittance_template",
+            maxLength: 140,
+          },
+
+          {
+            key: "sepa_collection_day_of_month",
+            label: t("settings.payments.sepa_collection_day"),
+            description: t("settings.payments.sepa_collection_day_desc"),
+            type: "number",
+            defaultValue: 5,
+            min: 1,
+            max: 28,
+          },
+        ],
+      },
     ],
     [t],
   );
 
   return (
     <>
-      <SettingsPage settingsConfig={settingsConfig} />
+      <SettingsPage
+        title={t("configuration.payments")}
+        settingsConfig={settingsConfig}
+      />
       <PaymentCyclesCard />
     </>
   );

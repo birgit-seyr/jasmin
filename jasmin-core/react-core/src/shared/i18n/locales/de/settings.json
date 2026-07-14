@@ -67,8 +67,8 @@
     "trial": {
       "title": "Probe-Mitglieder"
     },
-    "allows_trial_members": "Probe-Mitglieder erlauben",
-    "allows_trial_members_desc": "Probe-Mitgliedschaften für neue Nutzer aktivieren",
+    "allows_trial_members": "Probe-Anteile erlauben",
+    "allows_trial_members_desc": "Probe-Anteile für neue Nutzer aktivieren",
    
     "only_members_trial_subs": "Nur Mitglieder können Probe-Abonnements haben",
     "only_members_trial_subs_desc": "Probe-Abonnements auf bestehende Mitglieder beschränken",
@@ -103,7 +103,7 @@
     "paper_signature": {
       "title": "Unterschrift auf Papier"
     },
-    "requires_paper_signature_for_membership": "Papier-Unterschrift für Mitgliedschaft",
+    "requires_paper_signature_for_membership": "Papier-Unterschrift für Mitgliedschaft notwendig",
     "requires_paper_signature_for_membership_desc": "Wenn aktiviert, müssen die Mitgliedschafts-Einwilligungen ausgedruckt, unterschrieben und ans Büro geschickt werden. Das Büro vermerkt den Eingang manuell."
   },
   "payments": {
@@ -196,17 +196,17 @@
     "has_grain_shares": "Getreide-Anteile",
     "has_bread_shares": "Brot-Anteile",
     "share_types": {
-      "title": "Kistentypen"
+      "title": "Anteilsvarianten"
     },
     "trial": {
       "title": "Probe-Anteile",
-      "description": "Steuert, ob Probemitgliedschaften möglich sind und welche Bedingungen dafür gelten."
+      "description": "Steuert, ob Probe-Anteile möglich sind und welche Bedingungen dafür gelten."
     },
     "allows_trial_shares": "Probe-Anteile erlauben",
     "trial_duration": "Probe-Anteils-Dauer (Anzahl Lieferungen)",
     "allows_trial_subscriptions": "Probe-Abos erlauben",
     "allowed_trial_subscription_duration": "Erlaubte Dauer der Probe-Abos (Wochen)",
-    "allowed_trial_subscription_duration_desc": "Maximale Laufzeit einer Probemitgliedschaft.",
+    "allowed_trial_subscription_duration_desc": "Maximale Laufzeit eines Probe-Anteils.",
     "allows_trial_subscriptions_for_trial_members": "Probe-Abos für Probemitglieder",
     "allows_trial_subscriptions_for_trial_members_desc": "Bestimmt, ob auch Probemitglieder Probe-Abos abschließen können.",
     "uses_jokers_for_trial_subscriptions": "Joker für Probe-Abos verwenden",
@@ -359,8 +359,8 @@
   "saving": "Wird gespeichert …",
   "subscriptions": {
     "trial": {
-      "title": "Probemitgliedschaft",
-      "description": "Steuert, ob Probemitgliedschaften möglich sind und welche Bedingungen dafür gelten."
+      "title": "Probe-Anteile",
+      "description": "Steuert, ob Probe-Anteile möglich sind und welche Bedingungen dafür gelten."
     },
      "info_sentence_about_trial_subscriptions": "Kurzbeschreibung Probe-Abos",
     "info_sentence_about_trial_subscriptions_desc": "z.B.: Probe-Abos sind für 4 Wochen möglich, enden dann automatisch.",
@@ -372,7 +372,7 @@
     "uses_jokers_for_trial_subscriptions": "Joker für Probe-Abos verwenden",
     "uses_jokers_for_trial_subscriptions_desc": "Bestimmt, ob Joker auch auf Probe-Abos angerechnet werden.",
     "share_types": {
-      "title": "Kistentypen"
+      "title": "Anteilsvarianten"
     }
   }
 }

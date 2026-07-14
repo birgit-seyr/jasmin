@@ -60,5 +60,12 @@
     "email_log": "E-Mail-Verlauf",
     "data_protection": "Datenschutz",
     "payments": "Zahlungen",
-    "subscriptions": "Anteile"
+    "subscriptions": "Anteile",
+    "share_type_variations": "Anteilsvarianten",
+    "delivery_days": "Liefertage",
+    "group": {
+        "general": "App / Allgemein",
+        "commissioning": "Kommissionierung",
+        "members": "Anteile / Mitglieder"
+    }
 }

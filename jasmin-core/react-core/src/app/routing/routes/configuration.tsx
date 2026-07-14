@@ -17,8 +17,11 @@ const ConfigurationCommissioning = lazy(
 const ConfigurationSubscriptions = lazy(
   () => import("@features/configuration/pages/ConfigurationSubscriptions"),
 );
-const ConfigurationTimeManagement = lazy(
-  () => import("@features/configuration/pages/ConfigurationTimeManagement"),
+const ConfigurationShareTypeVariations = lazy(
+  () => import("@features/configuration/pages/ConfigurationShareTypeVariations"),
+);
+const ConfigurationDeliveryDays = lazy(
+  () => import("@/features/configuration/pages/ConfigurationDeliveryDays"),
 );
 const ConfigurationApp = lazy(
   () => import("@features/configuration/pages/ConfigurationApp"),
@@ -70,7 +73,7 @@ export const configurationRoutes: AppRoute[] = [
     path: "/configuration/time-management",
     element: (
       <RequireRole flag="isAdmin">
-        <ConfigurationTimeManagement />
+        <ConfigurationDeliveryDays />
       </RequireRole>
     ),
   },
@@ -115,6 +118,14 @@ export const configurationRoutes: AppRoute[] = [
     ),
   },
   {
+    path: "/configuration/share-type-variations",
+    element: (
+      <RequireRole flag="isAdmin">
+        <ConfigurationShareTypeVariations />
+      </RequireRole>
+    ),
+  },
+  {
     path: "/configuration/subscriptions",
     element: (
       <RequireRole flag="isAdmin">
@@ -131,10 +142,45 @@ export const configurationRoutes: AppRoute[] = [
     ),
   },
   {
+    // Legacy full view (every category) — kept for bookmarked URLs. The sidebar
+    // now links to the three category-scoped views below.
     path: "/configuration/email-templates",
     element: (
       <RequireRole flag="isAdmin">
         <ConfigurationEmailTemplates />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/configuration/email-templates/general",
+    element: (
+      <RequireRole flag="isAdmin">
+        <ConfigurationEmailTemplates
+          categories={["users"]}
+          titleKey="email_templates.page_title_general"
+        />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/configuration/email-templates/resellers",
+    element: (
+      <RequireRole flag="isAdmin">
+        <ConfigurationEmailTemplates
+          categories={["resellers"]}
+          titleKey="email_templates.page_title_resellers"
+        />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/configuration/email-templates/members",
+    element: (
+      <RequireRole flag="isAdmin">
+        <ConfigurationEmailTemplates
+          categories={["members", "office"]}
+          titleKey="email_templates.page_title_members"
+        />
       </RequireRole>
     ),
   },

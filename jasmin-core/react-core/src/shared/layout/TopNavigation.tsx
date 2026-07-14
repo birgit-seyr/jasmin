@@ -124,17 +124,17 @@ function SecondaryNavigation() {
         requireRole: "isStaff",
       },
       {
-        key: NAVIGATION_SECTIONS.ABOS,
-        icon: <AppsIcon />,
-        label: <Link to="/abos/dashboard">{t("nav.abos")}</Link>,
-        show: navigationSettings.abos,
-        requireRole: "isOffice",
-      },
-      {
         key: NAVIGATION_SECTIONS.MEMBERS,
         icon: <UserOutlined />,
         label: <Link to="/members/dashboard">{t("nav.members")}</Link>,
         show: navigationSettings.members,
+        requireRole: "isOffice",
+      },
+      {
+        key: NAVIGATION_SECTIONS.ABOS,
+        icon: <AppsIcon />,
+        label: <Link to="/abos/dashboard">{t("nav.abos")}</Link>,
+        show: navigationSettings.abos,
         requireRole: "isOffice",
       },
 

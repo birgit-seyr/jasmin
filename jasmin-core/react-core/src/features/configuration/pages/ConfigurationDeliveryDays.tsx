@@ -47,7 +47,7 @@ import { isFieldDisabled, toApiDate } from "@shared/utils";
 type SharesDeliveryDayRecord = SharesDeliveryDay & TableRecord;
 type OrdersDeliveryDayRecord = OrdersDeliveryDay & TableRecord;
 
-export default function TimeManagement() {
+export default function ConfigurationDeliveryDays() {
   const [showAll, setShowAll] = useState(true);
 
   const { t } = useTranslation();

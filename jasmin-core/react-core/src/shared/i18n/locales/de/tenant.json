@@ -16,6 +16,7 @@
   "organization": {
     "title": "Sonstiges",
     "organic_control_number": "Bio-Kontrollnummer",
+    "organic_control_number_desc": "Wenn diese Nummer gegeben wird, dann können Artikel nach Bio-Status angegeben werden und entsprechende Infos erscheinen auf Lieferscheinen und Rechnungen.",
     "fiscal_year_start_month": "Beginn Geschäftsjahr",
     "tenant_language": "Sprache",
     "iban": "IBAN",
@@ -33,7 +34,7 @@
   },
   "legal_notice": {
     "title": "Impressum / Rechtliche Angaben",
-    "description": "Pflichtangaben nach § 5 DDG und § 18 Abs. 2 MStV. Werden auf der öffentlichen Impressum-Seite angezeigt; leere Felder werden dort ausgeblendet.",
+    "description": "Werden auf der öffentlichen Impressum-Seite angezeigt; leere Felder werden dort ausgeblendet.",
     "legal_form": "Rechtsform",
     "legal_form_desc": "z. B. „eingetragene Genossenschaft (eG)“, „e. V.“, „GmbH“.",
     "register_type": "Registerart",

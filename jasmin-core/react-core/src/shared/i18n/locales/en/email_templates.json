@@ -1,5 +1,8 @@
 {
   "page_title": "Email templates",
+  "page_title_general": "Email templates – General",
+  "page_title_resellers": "Email templates – Resellers",
+  "page_title_members": "Email templates – Members",
   "page_intro": "Customize the wording and styling of every email the platform sends. Defaults ship with the product; your overrides apply only to your coop.",
   "empty": "No templates configured.",
   "col_label": "Template",

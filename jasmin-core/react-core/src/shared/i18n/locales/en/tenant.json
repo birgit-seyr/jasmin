@@ -16,6 +16,8 @@
   "organization": {
     "title": "Other",
     "organic_control_number": "Organic control number",
+        "organic_control_number_desc": "If this number is filled in, articles can be assigned an organic-status which will surface on delivery notes and invoices.",
+
     "fiscal_year_start_month": "Start of fiscal year",
     "tenant_language": "Language",
     "iban": "IBAN",

@@ -251,6 +251,7 @@ class TestSerializerValidation:
         assert not serializer.is_valid()
         assert "valid_until" in serializer.errors
 
+    @time_machine.travel(datetime.date(2026, 7, 1), tick=False)
     def test_valid_from_must_be_monday(self, tenant):
         from apps.commissioning.errors import DeliveryExceptionInvalidRange
 
@@ -265,6 +266,7 @@ class TestSerializerValidation:
         with pytest.raises(DeliveryExceptionInvalidRange):
             serializer.is_valid(raise_exception=True)
 
+    @time_machine.travel(datetime.date(2026, 7, 1), tick=False)
     def test_overlapping_period_is_rejected(self, tenant):
         from apps.commissioning.errors import DeliveryExceptionOverlap
 
@@ -284,6 +286,7 @@ class TestSerializerValidation:
         with pytest.raises(DeliveryExceptionOverlap):
             serializer.is_valid(raise_exception=True)
 
+    @time_machine.travel(datetime.date(2026, 7, 1), tick=False)
     def test_non_overlapping_period_validates(self, tenant):
         variation = _variation()
         DeliveryExceptionPeriod.objects.create(

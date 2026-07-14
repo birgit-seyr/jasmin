@@ -117,9 +117,7 @@ export default function ConfigurationEmail() {
           });
         },
         onError: () => {
-          notify.error(
-            t("email_config.save_error"),
-          );
+          notify.error(t("email_config.save_error"));
         },
       },
     });
@@ -189,21 +187,14 @@ export default function ConfigurationEmail() {
     useTenantsEmailConfigTestCreate({
       mutation: {
         onSuccess: () => {
-          notify.success(
-            t("email_config.test_sent"),
-          );
+          notify.success(t("email_config.test_sent"));
           setTestModalOpen(false);
           queryClient.invalidateQueries({
             queryKey: getTenantsEmailConfigListQueryKey(),
           });
         },
         onError: (error) => {
-          notify.error(
-            getErrorMessage(
-              error,
-              t("email_config.test_error"),
-            ),
-          );
+          notify.error(getErrorMessage(error, t("email_config.test_error")));
         },
       },
     });
@@ -315,11 +306,12 @@ export default function ConfigurationEmail() {
   }
 
   return (
-    <div style={{ padding: "16px" }}>
+    <div>
+      <h1>{t("configuration.email")}</h1>
       {/* Action buttons */}
       <Card
+        className="page-narrow"
         style={{
-          maxWidth: "900px",
           textAlign: "center",
           marginBottom: "1em",
         }}
@@ -350,9 +342,7 @@ export default function ConfigurationEmail() {
         </Space>
         {hasChanges && (
           <div style={{ marginTop: "8px" }}>
-            <Text type="warning">
-              {t("settings.unsaved_changes")}
-            </Text>
+            <Text type="warning">{t("settings.unsaved_changes")}</Text>
           </div>
         )}
       </Card>
@@ -360,7 +350,8 @@ export default function ConfigurationEmail() {
       {/* Verification status */}
       {config.from_email && (
         <Alert
-          style={{ maxWidth: "800px", marginBottom: "16px" }}
+          className="page-narrow"
+          style={{ marginBottom: "16px" }}
           type={config.is_verified ? "success" : "warning"}
           showIcon
           icon={
@@ -390,9 +381,7 @@ export default function ConfigurationEmail() {
             onChange={(v: boolean) => updateField("is_active", v)}
             label={
               <>
-                {config.is_active
-                  ? t("common.active")
-                  : t("common.inactive")}
+                {config.is_active ? t("common.active") : t("common.inactive")}
                 {config.is_verified && (
                   <Tag
                     color="green"

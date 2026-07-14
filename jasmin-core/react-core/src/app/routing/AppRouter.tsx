@@ -43,30 +43,43 @@ export const AppRouter = ({ defaultRedirect = "/" }: AppRouterProps) => {
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
         {/* All your tenant route groups */}
-        {routeGroups.map(({ path: groupPath, routes }) => (
-          <Route
-            key={groupPath}
-            path={`${groupPath}/*`}
-            element={
-              <>
-                {IMPORT_SHARES_BANNER_GROUPS.has(groupPath) && (
-                  <ImportSharesModeBanner />
-                )}
-                <Routes>
-                  {routes.map(({ path, element, meta }) => (
-                    <Route
-                      key={path}
-                      path={path.replace(groupPath, "")}
-                      element={
-                        <ProtectedRoute meta={meta}>{element}</ProtectedRoute>
-                      }
-                    />
-                  ))}
-                </Routes>
-              </>
-            }
-          />
-        ))}
+        {routeGroups.map(({ path: groupPath, routes }) => {
+          const groupRoutes = (
+            <Routes>
+              {routes.map(({ path, element, meta }) => (
+                <Route
+                  key={path}
+                  path={path.replace(groupPath, "")}
+                  element={
+                    <ProtectedRoute meta={meta}>{element}</ProtectedRoute>
+                  }
+                />
+              ))}
+            </Routes>
+          );
+
+          return (
+            <Route
+              key={groupPath}
+              path={`${groupPath}/*`}
+              element={
+                <>
+                  {IMPORT_SHARES_BANNER_GROUPS.has(groupPath) && (
+                    <ImportSharesModeBanner />
+                  )}
+                  {/* Configuration pages get a primary-coloured border on
+                      every card via this scoping wrapper (see
+                      card-headers.css). */}
+                  {groupPath === "/configuration" ? (
+                    <div className="configuration-page">{groupRoutes}</div>
+                  ) : (
+                    groupRoutes
+                  )}
+                </>
+              }
+            />
+          );
+        })}
 
         <Route path="*" element={<Navigate to={defaultRedirect} replace />} />
       </Routes>

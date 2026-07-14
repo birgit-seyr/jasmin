@@ -12,6 +12,14 @@
   border-bottom: 2px solid #d6e4ff;
 }
 
+/* Configuration pages: give every card a primary-coloured border. Scoped via
+   the ``.configuration-page`` wrapper in AppRouter so it reaches all config
+   cards (settings cards, GDPR/VVT cards, class-less ones) without touching
+   each <Card> individually. ``--color-primary`` adapts to the dark theme. */
+.configuration-page .ant-card {
+  border-color: var(--color-primary);
+}
+
 /* Reseller info chip used in commissioning views. */
 .reseller-card-header {
   display: flex;

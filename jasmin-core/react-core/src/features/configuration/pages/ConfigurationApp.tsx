@@ -111,6 +111,30 @@ export default function ConfigurationApp() {
         ],
       },
       {
+        category: "planning",
+        title: t("settings.commissioning.planning.title"),
+        settings: [
+          {
+            key: "allow_upload_for_data_lists",
+            label: t("settings.commissioning.allow_upload_for_data_lists"),
+            description: t(
+              "settings.commissioning.allow_upload_for_data_lists_desc",
+            ),
+
+            type: "checkbox",
+            defaultValue: false,
+          },
+          {
+            key: "uploads_weekly_share_amount",
+            label: t("settings.commissioning.uploads_weekly_amount"),
+            description: t("settings.commissioning.uploads_weekly_amount_desc"),
+
+            type: "checkbox",
+            defaultValue: false,
+          },
+        ],
+      },
+      {
         category: "navigation",
         title: t("settings.navigation.title"),
         settings: [
@@ -158,28 +182,7 @@ export default function ConfigurationApp() {
           },
         ],
       },
-      {
-        category: "planning",
-        title: t("settings.commissioning.planning.title"),
-        settings: [
-          {
-            key: "allow_upload_for_data_lists",
-            label: t("settings.commissioning.allow_upload_for_data_lists"),
-            description: t("settings.commissioning.allow_upload_for_data_lists_desc"),
 
-            type: "checkbox",
-            defaultValue: false,
-          },
-          {
-            key: "uploads_weekly_share_amount",
-            label: t("settings.commissioning.uploads_weekly_amount"),
-            description: t("settings.commissioning.uploads_weekly_amount_desc"),
-
-            type: "checkbox",
-            defaultValue: false,
-          },
-        ],
-      },
       // {
       //   category: "ai",
       //   title: t("settings.ai.title", "AI Settings"),
@@ -349,10 +352,11 @@ export default function ConfigurationApp() {
   }
 
   return (
-    <div style={{ padding: "16px" }}>
-      <div style={{ marginBottom: "16px" }}>
-        <AutoSaveIndicator saving={saving} hasChanges={hasChanges} />
-      </div>
+    <div>
+      <h1>{t("configuration.app")}</h1>
+
+      <AutoSaveIndicator saving={saving} hasChanges={hasChanges} />
+
       <Space direction="vertical" size="middle" className="w-full">
         {settingsConfig.map((category) => (
           <Card

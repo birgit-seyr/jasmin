@@ -797,7 +797,7 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="gdpr/emails/deletion_confirm",
         default_subject="Bitte bestätige die Löschung deiner Daten bei {{ tenant_name }}",
         default_subject_en="Please confirm the deletion of your data at {{ tenant_name }}",
-        category="users",
+        category="office",
         variables=[
             _TENANT_NAME,
             _USER_FIRST,
@@ -832,7 +832,7 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="gdpr/emails/deletion_approved",
         default_subject="Deine Daten wurden bei {{ tenant_name }} gelöscht",
         default_subject_en="Your data has been deleted at {{ tenant_name }}",
-        category="users",
+        category="office",
         variables=[_TENANT_NAME, _USER_FIRST],
         sample={
             "tenant_name": "Beispiel-Solawi",
@@ -889,7 +889,7 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="gdpr/emails/deletion_rejected",
         default_subject="Deine Löschanfrage bei {{ tenant_name }} wurde abgelehnt",
         default_subject_en="Your deletion request at {{ tenant_name }} was declined",
-        category="users",
+        category="office",
         variables=[
             _TENANT_NAME,
             _USER_FIRST,
@@ -975,7 +975,7 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         default_template="tenants/emails/smtp_test",
         default_subject="Jasmin – Test-E-Mail von {{ tenant_name }}",
         default_subject_en="Jasmin – test email from {{ tenant_name }}",
-        category="users",
+        category="office",
         variables=[
             _TENANT_NAME,
         ],

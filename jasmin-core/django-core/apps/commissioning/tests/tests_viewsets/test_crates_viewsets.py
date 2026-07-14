@@ -12,6 +12,7 @@ import datetime
 from decimal import Decimal
 
 import pytest
+import time_machine
 from django.urls import reverse
 from rest_framework import status
 
@@ -211,6 +212,7 @@ class TestCrateNetPriceViewSet:
         resp = api_client.get(URL_CRATE_NET_PRICE, params)
         assert resp.data[0]["can_be_deleted"] is False
 
+    @time_machine.travel(datetime.date(2026, 6, 1), tick=False)
     def test_future_price_deletable_even_when_crate_in_use(self, api_client, tenant):
         # Future (and past) prices stay deletable regardless of crate usage.
         crate = CrateFactory()

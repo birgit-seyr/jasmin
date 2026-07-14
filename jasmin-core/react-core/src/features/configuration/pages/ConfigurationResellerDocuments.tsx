@@ -58,7 +58,9 @@ export default function ConfigurationResellerDocuments() {
           {
             key: "delivery_note_numbers_start_new_at_year_change",
             label: t("settings.reseller.delivery_note_reset"),
-            description: t("settings.reseller.delivery_note_numbers_reset_desc"),
+            description: t(
+              "settings.reseller.delivery_note_numbers_reset_desc",
+            ),
             type: "checkbox",
             defaultValue: false,
           },
@@ -106,42 +108,7 @@ export default function ConfigurationResellerDocuments() {
           },
         ],
       },
-      {
-        category: "document_footer",
-        title: t("settings.reseller.footer.title"),
-        settings: [
-          {
-            key: "left_column_footer_documents_reseller",
-            label: t("settings.reseller.footer_left"),
-            type: "richtext",
-            description: t("settings.reseller.footer_left_description"),
-            defaultValue: "",
-            maxCharsPerLine: 40,
-            maxLines: 5,
-            placeholderKey: "settings.reseller.footer_left_placeholder",
-          },
-          {
-            key: "middle_column_footer_documents_reseller",
-            label: t("settings.reseller.footer_middle"),
-            type: "richtext",
-            description: t("settings.reseller.footer_middle_description"),
-            defaultValue: "",
-            maxCharsPerLine: 40,
-            maxLines: 5,
-            placeholderKey: "settings.reseller.footer_middle_placeholder",
-          },
-          {
-            key: "right_column_footer_documents_reseller",
-            label: t("settings.reseller.footer_right"),
-            type: "richtext",
-            description: t("settings.reseller.footer_right_description"),
-            defaultValue: "",
-            maxCharsPerLine: 40,
-            maxLines: 5,
-            placeholderKey: "settings.reseller.footer_right_placeholder",
-          },
-        ],
-      },
+
       {
         category: "offer_text",
         title: t("settings.reseller.offer_text.title"),
@@ -178,7 +145,9 @@ export default function ConfigurationResellerDocuments() {
             key: "order_instructions_offer_reseller",
             label: t("settings.reseller.offer_order_instructions"),
             type: "richtext",
-            description: t("settings.reseller.offer_order_instructions_description"),
+            description: t(
+              "settings.reseller.offer_order_instructions_description",
+            ),
             defaultValue: "",
             placeholderKey:
               "settings.reseller.offer_order_instructions_placeholder",
@@ -212,6 +181,42 @@ export default function ConfigurationResellerDocuments() {
             maxLines: 1,
             maxCharacters: 100,
             placeholderKey: "settings.reseller.offer_greeting_3_placeholder",
+          },
+        ],
+      },
+      {
+        category: "document_footer",
+        title: t("settings.reseller.footer.title"),
+        settings: [
+          {
+            key: "left_column_footer_documents_reseller",
+            label: t("settings.reseller.footer_left"),
+            type: "richtext",
+            description: t("settings.reseller.footer_left_description"),
+            defaultValue: "",
+            maxCharsPerLine: 40,
+            maxLines: 5,
+            placeholderKey: "settings.reseller.footer_left_placeholder",
+          },
+          {
+            key: "middle_column_footer_documents_reseller",
+            label: t("settings.reseller.footer_middle"),
+            type: "richtext",
+            description: t("settings.reseller.footer_middle_description"),
+            defaultValue: "",
+            maxCharsPerLine: 40,
+            maxLines: 5,
+            placeholderKey: "settings.reseller.footer_middle_placeholder",
+          },
+          {
+            key: "right_column_footer_documents_reseller",
+            label: t("settings.reseller.footer_right"),
+            type: "richtext",
+            description: t("settings.reseller.footer_right_description"),
+            defaultValue: "",
+            maxCharsPerLine: 40,
+            maxLines: 5,
+            placeholderKey: "settings.reseller.footer_right_placeholder",
           },
         ],
       },
@@ -351,6 +356,7 @@ export default function ConfigurationResellerDocuments() {
 
   return (
     <SettingsPage
+      title={t("configuration.reseller_documents")}
       settingsConfig={settingsConfig}
       cardMaxWidth={900}
       withLockedSettings

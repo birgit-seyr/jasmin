@@ -16,7 +16,7 @@ export default function ConfigurationGDPR() {
   const { t } = useTranslation();
 
   return (
-    <>
+    <div>
       <h1>{t("gdpr.title")}</h1>
       <Space direction="vertical" size="middle" className="w-full">
         <PrivacyPolicyEditorCard />
@@ -26,6 +26,6 @@ export default function ConfigurationGDPR() {
         <VVTControllerFieldsCard />
         <VVTExportCard />
       </Space>
-    </>
+    </div>
   );
 }

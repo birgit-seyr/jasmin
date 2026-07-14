@@ -793,6 +793,7 @@ class TestMySubscriptionSubscribe:
         sub = Subscription.objects.get(member=member)
         assert sub.price_per_delivery == Decimal("9.00")
 
+    @time_machine.travel(datetime.date(2026, 6, 29), tick=False)
     def test_solidarity_off_forces_future_window_reference_price(
         self, member_user, tenant
     ):
@@ -1020,12 +1021,14 @@ class TestMyMembershipCancel:
         resp = anon_client.post(URL_MEMBERSHIP_CANCEL, {}, format="json")
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
+    @time_machine.travel(datetime.date(2026, 6, 1), tick=False)
     def test_user_without_member_returns_404(self, member_user, tenant):
         resp = _client_for(member_user).post(
             URL_MEMBERSHIP_CANCEL, {"effective_at": "2026-12-31"}, format="json"
         )
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
+    @time_machine.travel(datetime.date(2026, 6, 1), tick=False)
     def test_self_cancel_without_active_subscriptions(self, member_user, tenant):
         member = MemberFactory(user=member_user, admin_confirmed=True)
         share = CoopShareFactory(member=member)
@@ -1042,6 +1045,7 @@ class TestMyMembershipCancel:
         assert share.cancelled_at is not None
         assert str(share.payback_due_date) == "2026-12-31"
 
+    @time_machine.travel(datetime.date(2026, 6, 1), tick=False)
     def test_self_cancel_blocked_with_active_subscription(self, member_user, tenant):
         member = MemberFactory(user=member_user, admin_confirmed=True)
         SubscriptionFactory(
@@ -1077,6 +1081,7 @@ class TestMyMembershipCancel:
         member.refresh_from_db()
         assert member.cancelled_at is None
 
+    @time_machine.travel(datetime.date(2026, 6, 1), tick=False)
     def test_self_cancel_already_cancelled_returns_409(self, member_user, tenant):
         from django.utils import timezone
 

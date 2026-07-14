@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 
 import pytest
+import time_machine
 from django.urls import reverse
 from rest_framework import status
 
@@ -49,6 +50,7 @@ class TestActiveShareOptionsList:
         # All options should be False when no variations exist
         assert resp.data["fruit_and_veg_shares_are_separate"] is False
 
+    @time_machine.travel(datetime.date(2026, 6, 1), tick=False)
     def test_active_harvest_share(self, api_client, tenant):
         # valid_from must be a Monday, valid_until must be a Sunday
         st = ShareTypeFactory(share_option="HARVEST_SHARE")
@@ -62,6 +64,7 @@ class TestActiveShareOptionsList:
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["HARVEST_SHARE"] is True
 
+    @time_machine.travel(datetime.date(2026, 6, 1), tick=False)
     def test_fruit_and_veg_separate(self, api_client, tenant):
         # valid_from must be a Monday, valid_until must be a Sunday
         st_veg = ShareTypeFactory(share_option="HARVEST_SHARE")

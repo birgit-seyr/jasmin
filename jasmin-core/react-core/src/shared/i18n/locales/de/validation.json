@@ -12,7 +12,7 @@
       "members_member_number_must_be_unique": "Mitgliedsnummer muss einzigartig sein.",
       "name": "Name muss einzigartig sein.",
       "number": "Nummer muss einzigartig sein.",
-      "size": "Größe muss innerhalb dieses Kistentyps einzigartig sein.",
+      "size": "Größe muss innerhalb dieser Anteilsvariante einzigartig sein.",
       "time_management": "Zeit-Konfiguration muss einzigartig sein.",
       "time_management_order_days": "Bestelltage müssen einzigartig sein.",
       "sort_order": "Diese Reihenfolge ist bereits einer anderen Variante zugewiesen."

@@ -6,6 +6,7 @@ import datetime
 from decimal import Decimal
 
 import pytest
+import time_machine
 from django.db import IntegrityError, transaction
 from django.urls import reverse
 from rest_framework import status
@@ -636,6 +637,7 @@ class TestShareArticleNetPriceViewSet:
         ShareContentFactory(share_article=price.share_article)
         assert self._can_delete(api_client, price.id) is False
 
+    @time_machine.travel(datetime.date(2026, 6, 1), tick=False)
     def test_future_price_deletable_even_when_article_in_use(self, api_client, tenant):
         # Future (and past) prices stay deletable regardless of usage.
         article = ShareArticleFactory()

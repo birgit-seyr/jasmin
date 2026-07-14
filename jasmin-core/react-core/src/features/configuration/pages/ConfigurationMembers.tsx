@@ -140,5 +140,10 @@ export default function ConfigurationMembers() {
     [t, currencySymbol],
   );
 
-  return <SettingsPage settingsConfig={settingsConfig} />;
+  return (
+    <SettingsPage
+      title={t("configuration.members")}
+      settingsConfig={settingsConfig}
+    />
+  );
 }

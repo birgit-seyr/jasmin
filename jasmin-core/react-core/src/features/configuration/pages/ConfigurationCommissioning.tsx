@@ -80,6 +80,12 @@ export default function ConfigurationCommissioning() {
             defaultValue: true,
           },
           {
+            key: "show_seller_name_of_share_article_in_share_for_member_on_page",
+            label: t("settings.commissioning.show_seller_name_in_share"),
+            type: "checkbox",
+            defaultValue: true,
+          },
+          {
             // Wired into ``PlanningHarvestSharesBase.tsx`` as the initial
             // value of ``planningMode`` (lazy useState seed). The
             // ``PlanningModeSelector`` lets the office override per week,
@@ -170,5 +176,10 @@ export default function ConfigurationCommissioning() {
     [t],
   );
 
-  return <SettingsPage settingsConfig={settingsConfig} />;
+  return (
+    <SettingsPage
+      title={t("configuration.commissioning")}
+      settingsConfig={settingsConfig}
+    />
+  );
 }
