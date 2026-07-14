@@ -124,6 +124,16 @@ export default function WeeklyStaffPlan() {
     useMemo(() => employees.map((e) => e.id), [employees]),
   );
 
+  // Live tally of how many cells each employee fills in the visible week —
+  // shown as a small badge on their palette chip.
+  const planCountByEmployee = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const employeeId of Object.values(cells)) {
+      counts.set(employeeId, (counts.get(employeeId) ?? 0) + 1);
+    }
+    return counts;
+  }, [cells]);
+
   // Flat row list (for pos.row) + its reverse (category,row → flat index).
   const flatRows = useMemo<FlatRow[]>(() => {
     const rows: FlatRow[] = [];
@@ -313,17 +323,22 @@ export default function WeeklyStaffPlan() {
                   {employees.length === 0 ? (
                     <p className="text-muted">{t("staff.no_employees")}</p>
                   ) : (
-                    employees.map((employee) => (
-                      <DraggableChip
-                        key={employee.id}
-                        chip={{
-                          id: employee.id,
-                          label: employee.short_name_for_weekly_plan,
-                          color: colorMap.get(employee.id),
-                        }}
-                        canDrag={isOffice}
-                      />
-                    ))
+                    employees.map((employee) => {
+                      const count = planCountByEmployee.get(employee.id) ?? 0;
+                      return (
+                        <DraggableChip
+                          key={employee.id}
+                          chip={{
+                            id: employee.id,
+                            label: employee.short_name_for_weekly_plan,
+                            color: colorMap.get(employee.id),
+                          }}
+                          canDrag={isOffice}
+                          count={count}
+                          ariaHint={t("staff.times_planned", { count })}
+                        />
+                      );
+                    })
                   )}
                 </div>
               </div>

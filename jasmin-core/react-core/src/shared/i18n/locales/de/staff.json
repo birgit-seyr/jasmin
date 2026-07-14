@@ -34,5 +34,6 @@
     "copy_source_week": "Quellwoche",
     "copy_into_this_week": "In diese Woche kopieren",
     "copy_target_not_empty": "Diese Woche enthält bereits einen Plan. Kopieren ist nur in eine leere Woche möglich.",
-    "already_in_category_that_day": "Diese Person ist an diesem Tag bereits in dieser Kategorie eingeteilt."
+    "already_in_category_that_day": "Diese Person ist an diesem Tag bereits in dieser Kategorie eingeteilt.",
+    "times_planned": "{{count}}× diese Woche eingeplant"
 }

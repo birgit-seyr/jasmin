@@ -41,11 +41,10 @@
 }
 
 .weekly-plan-palette-box {
+  /* One member per row, stacked vertically. */
   display: flex;
-  flex-wrap: wrap;
-  /* Horizontal gaps almost nonexistent; a hair of vertical breathing room. */
-  row-gap: 4px;
-  column-gap: 2px;
+  flex-direction: column;
+  gap: 4px;
   border: 1px solid var(--color-border-soft);
   border-radius: 4px;
   padding: 0.6em;
@@ -96,10 +95,17 @@
 }
 
 /* Compact the shared DnD primitives — scoped to the weekly plan so
-   DeliveryTours keeps its default (taller) cells and (spaced) chips. */
+   DeliveryTours keeps its default (taller) cells and (spaced) chips. The
+   palette chip mirrors the grid cell's box (same height + padding) so a member
+   in the list lines up with the same member placed in the plan. */
 .weekly-plan-palette-box .dnd-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
   margin: 0;
-  padding: 4px 8px;
+  min-height: 26px;
+  padding: 2px 6px;
 }
 
 .weekly-plan-grid-table .dnd-cell {

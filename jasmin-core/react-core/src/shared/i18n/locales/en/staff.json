@@ -28,5 +28,6 @@
   "copy_source_week": "Source week",
   "copy_into_this_week": "Copy into this week",
   "copy_target_not_empty": "This week already has a plan. Copy is only possible into an empty week.",
-  "already_in_category_that_day": "This person is already assigned to this category on that day."
+  "already_in_category_that_day": "This person is already assigned to this category on that day.",
+  "times_planned": "planned {{count}} times this week"
 }
