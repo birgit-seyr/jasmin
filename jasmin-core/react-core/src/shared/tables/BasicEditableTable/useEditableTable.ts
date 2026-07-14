@@ -427,13 +427,22 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
           const fieldsToCheck = Array.isArray(uniqueCheck) ? uniqueCheck : [uniqueCheck];
           const errors: Record<string, string> = {};
 
+          // Type-tolerant equality: form inputs hand back strings (an AntD
+          // <Input> for a numeric column emits "2"), while rows loaded from the
+          // API keep numbers (`sort_order: 2`). A strict `===` would miss every
+          // number-vs-string duplicate, so bridge primitives via String() while
+          // keeping null/undefined never-equal to a real value.
+          const sameValue = (a: unknown, b: unknown): boolean =>
+            a === b || (a != null && b != null && String(a) === String(b));
+
           if (fieldsToCheck.length > 1) {
             const duplicateExists = data.some((record) => {
               if (record.key === key || record.key === -1) return false;
-              return fieldsToCheck.every(
-                (fieldName) =>
-                  (record as Record<string, unknown>)[fieldName] ===
+              return fieldsToCheck.every((fieldName) =>
+                sameValue(
+                  (record as Record<string, unknown>)[fieldName],
                   transformedRow[fieldName],
+                ),
               );
             });
 
@@ -452,7 +461,10 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
                 (record) =>
                   record.key !== key &&
                   record.key !== -1 &&
-                  (record as Record<string, unknown>)[fieldName] === valueToCheck,
+                  sameValue(
+                    (record as Record<string, unknown>)[fieldName],
+                    valueToCheck,
+                  ),
               );
 
               if (duplicateExists) {

@@ -33,7 +33,7 @@ def build_week_grid(year: int, week: int) -> dict[str, Any]:
     full row so the client resolves id → label once.
     """
     categories = list(
-        WeeklyPlanCategory.objects.filter(is_active=True).order_by("name")
+        WeeklyPlanCategory.objects.filter(is_active=True).order_by("sort_order", "name")
     )
 
     placed: dict[tuple[str, int, int], str] = {}

@@ -67,6 +67,7 @@ export default function DraggableChip({
       }}
       className={
         "dnd-chip" +
+        (chip.color ? " dnd-chip--tinted" : "") +
         (isDragging ? " dnd-chip--dragging" : "") +
         (isSelected ? " dnd-chip--selected" : "")
       }

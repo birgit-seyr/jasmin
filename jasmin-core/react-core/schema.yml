@@ -41612,6 +41612,11 @@ components:
           type: integer
           maximum: 2147483647
           minimum: -2147483648
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
         can_be_deleted:
           type: boolean
           readOnly: true

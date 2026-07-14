@@ -104,9 +104,13 @@ class WeeklyPlanCategory(JasminModel):
     is_active = models.BooleanField(default=True, db_index=True)
     name = models.CharField(max_length=200)
     max_lines = models.IntegerField()
+    # Optional manual ordering for the weekly plan. Nullable for backward
+    # compatibility: existing rows stay NULL and — since Postgres sorts NULLs
+    # last in ASC — fall to the end (alphabetically) until an order is assigned.
+    sort_order = models.PositiveIntegerField(null=True, blank=True, db_index=True)
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["sort_order", "name"]
         verbose_name_plural = "weekly plan categories"
 
     def __str__(self) -> str:

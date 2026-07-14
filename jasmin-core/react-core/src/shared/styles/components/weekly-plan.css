@@ -17,7 +17,13 @@
 .weekly-plan-copy {
   display: flex;
   align-items: flex-end;
-  gap: 0.5em;
+  gap: 0.2em;
+}
+
+.weekly-plan-copy-hint {
+  align-self: center;
+  color: var(--color-text-secondary);
+  font-size: 0.9em;
 }
 
 .weekly-plan-copy-field {
@@ -55,39 +61,99 @@
 .weekly-plan-grid-wrap {
   flex: 1;
   overflow-x: auto;
+  /* Leave room for the table's drop shadow so `overflow-x: auto` (which forces
+     overflow-y to auto) doesn't clip it against the wrapper edge. */
+  padding: 4px 8px 16px;
 }
 
+/* Mirror the `.custom-jasmin-table` (forecast) frame so the planner reads as
+   part of the same table family: rounded corners, a primary-green border and
+   the same soft green drop shadow. `separate` (not `collapse`) is what lets the
+   rounded corners actually clip. */
 .weekly-plan-grid-table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: max-content;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--table-border-radius);
+  overflow: hidden;
+  box-shadow:
+    0 2px 4px rgba(34, 108, 71, 0.1),
+    0 4px 8px rgba(34, 108, 71, 0.15),
+    0 8px 16px rgba(34, 108, 71, 0.1),
+    0 16px 32px rgba(34, 108, 71, 0.05);
 }
 
+/* Thin vertical column separators + soft horizontal rules (forecast grid). */
 .weekly-plan-grid-table th,
 .weekly-plan-grid-table td {
-  border: 1px solid var(--color-border-soft);
+  border-left: 1px solid var(--color-bg-hover);
+  border-bottom: 1px solid var(--color-border-soft);
+}
+.weekly-plan-grid-table th:first-child,
+.weekly-plan-grid-table td:first-child {
+  border-left: none;
 }
 
-.weekly-plan-grid-table th {
-  padding: 0.3em 0.5em;
-  background-color: var(--color-bg-elevated);
-  font-weight: 600;
+/* Column header row: pale-green band, centered + bold, solid primary underline. */
+.weekly-plan-grid-table thead th {
+  padding: 0.4em 0.6em;
   min-width: 7em;
+  background-color: var(--color-primary-light);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 2px solid var(--color-primary);
 }
 
-.weekly-plan-th-row-label {
+/* Corner + row-number cells are <th> (row headers, for a11y) but must stay
+   narrow and NOT read as column headers — a higher-specificity selector
+   overrides the generic header rule above. */
+.weekly-plan-grid-table th.weekly-plan-th-row-label,
+.weekly-plan-grid-table th.weekly-plan-row-label {
   width: 2.5em;
   min-width: 2.5em;
 }
 
-.weekly-plan-category-row td {
-  padding: 0.2em 0.5em;
-  background-color: var(--color-bg-elevated);
-  font-weight: 600;
+.weekly-plan-grid-table th.weekly-plan-th-row-label {
+  background-color: var(--color-primary-light);
 }
 
-.weekly-plan-row-label {
+.weekly-plan-grid-table th.weekly-plan-row-label {
   padding: 2px 6px;
   text-align: center;
+  font-weight: 400;
+  background-color: transparent;
   color: var(--color-text-secondary);
+}
+
+/* Category header row (<th scope="colgroup"> spanning all columns): a green
+   section band, left-aligned like a section label. */
+.weekly-plan-category-row th {
+  padding: 0.35em 0.6em;
+  text-align: left;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 600;
+  min-width: 0;
+  border-top: 2px solid var(--color-primary);
+}
+
+/* Zebra striping on the data (line) rows. Each category is its own <tbody>, so
+   `nth-of-type` resets per category: the category band is row 1, the first data
+   row is row 2 (even → tinted). Forecast greens in light mode; a subtle
+   theme-aware tint replaces them in dark mode below. */
+.weekly-plan-grid-table
+  tbody
+  tr:not(.weekly-plan-category-row):nth-of-type(even)
+  td {
+  background-color: #ebf6e2;
+}
+.weekly-plan-grid-table
+  tbody
+  tr:not(.weekly-plan-category-row):hover
+  td {
+  background-color: #dbf3f3;
 }
 
 .weekly-plan-cell {
@@ -112,4 +178,21 @@
   min-height: 26px;
   padding: 2px 6px;
   gap: 4px;
+}
+
+/* Dark mode: the hardcoded forecast greens are too loud on a dark surface —
+   swap the zebra + hover for a subtle translucent-primary tint. */
+:root.dark
+  .weekly-plan-grid-table
+  tbody
+  tr:not(.weekly-plan-category-row):nth-of-type(even)
+  td {
+  background-color: rgba(76, 175, 120, 0.08);
+}
+:root.dark
+  .weekly-plan-grid-table
+  tbody
+  tr:not(.weekly-plan-category-row):hover
+  td {
+  background-color: rgba(76, 175, 120, 0.16);
 }

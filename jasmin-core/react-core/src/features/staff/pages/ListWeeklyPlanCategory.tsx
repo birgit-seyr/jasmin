@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useIsActiveColumn } from "@features/commissioning/hooks";
+import type { WeeklyPlanCategory } from "@shared/api/generated/models";
 import {
   getStaffWeeklyPlanCategoriesListQueryKey,
   staffWeeklyPlanCategoriesCreate,
@@ -7,7 +7,6 @@ import {
   staffWeeklyPlanCategoriesPartialUpdate,
   useStaffWeeklyPlanCategoriesList,
 } from "@shared/api/generated/staff/staff";
-import type { WeeklyPlanCategory } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import {
   CrudListPage,
@@ -18,7 +17,8 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { useIsActiveColumn } from "@features/commissioning/hooks";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 type WeeklyPlanCategoryRow = WeeklyPlanCategory & TableRecord;
 
@@ -45,6 +45,16 @@ export default function ListWeeklyPlanCategory() {
       // to string); cast the one hook column rather than loosen the whole array.
       isActiveColumn as EditableColumnConfig<WeeklyPlanCategoryRow>,
       {
+        // Manual order for the weekly plan; blank = unordered (falls to the end).
+        title: <>{t("staff.sort_order")}</>,
+        dataIndex: "sort_order",
+        key: "sort_order",
+        inputType: "positive_integer",
+        required: false,
+        width: "8em",
+        align: "center",
+      },
+      {
         title: <>{t("staff.name")}</>,
         dataIndex: "name",
         key: "name",
@@ -60,7 +70,7 @@ export default function ListWeeklyPlanCategory() {
         inputType: "positive_integer",
         required: true,
         width: "8em",
-        align: "right",
+        align: "center",
       },
     ],
     [isActiveColumn, t],
@@ -74,8 +84,8 @@ export default function ListWeeklyPlanCategory() {
       resource={weeklyPlanCategoriesResource}
       permissions={permissions}
       columns={columns}
-      uniqueCheck={["name"]}
-      uniqueCheckMessage={t("validation.unique.name")}
+      uniqueCheck={["sort_order"]}
+      uniqueCheckMessage={t("staff.sort_order_unique")}
       focusIndex="name"
       className="w-max custom-jasmin-table"
     />

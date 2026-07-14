@@ -1,14 +1,7 @@
-import { Button, InputNumber, message } from "antd";
+import { Button, Select, message } from "antd";
 import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -71,6 +64,12 @@ export default function WeeklyStaffPlan() {
     dayjs().isoWeek(),
   );
   const [copyFromWeek, setCopyFromWeek] = useState<number | null>(null);
+
+  // Reset the manual source-week choice when the target week changes so the
+  // picker always re-defaults to "previous week" for the new selection.
+  useEffect(() => {
+    setCopyFromWeek(null);
+  }, [selectedYear, selectedWeek]);
 
   const listParams = useMemo(
     () => ({ year: selectedYear, week: selectedWeek ?? 1 }),
@@ -240,6 +239,28 @@ export default function WeeklyStaffPlan() {
 
   const currentWeekIsEmpty = Object.keys(cells).length === 0;
 
+  // Focus the grid region after a copy: the Copy button gets disabled once the
+  // week is no longer empty, so keyboard focus would otherwise be lost.
+  const gridRegionRef = useRef<HTMLElement>(null);
+
+  // Copy source: default to the previous week (same year); the office can pick
+  // another from the dropdown. ``effectiveFromWeek`` is what a copy uses.
+  const defaultFromWeek =
+    selectedWeek != null && selectedWeek > 1 ? selectedWeek - 1 : null;
+  const effectiveFromWeek = copyFromWeek ?? defaultFromWeek;
+
+  const weekOptions = useMemo(() => {
+    // Dec 28 always falls in the last ISO week of its year → its week number is
+    // the count of ISO weeks (52 or 53), using only the isoWeek plugin.
+    const totalWeeks = dayjs(`${selectedYear}-12-28`).isoWeek();
+    return Array.from({ length: totalWeeks }, (_, i) => i + 1)
+      .filter((week) => week !== selectedWeek)
+      .map((week) => ({
+        value: week,
+        label: t("staff.week_option", { week }),
+      }));
+  }, [selectedYear, selectedWeek, t]);
+
   const { mutate: copyWeek, isPending: isCopying } =
     useStaffWeeklyPlanCopyCreate({
       mutation: {
@@ -248,6 +269,7 @@ export default function WeeklyStaffPlan() {
           queryClient.invalidateQueries({
             queryKey: getStaffWeeklyPlanGridRetrieveQueryKey(listParams),
           });
+          gridRegionRef.current?.focus();
         },
         onError: (error) => {
           message.error(
@@ -258,11 +280,11 @@ export default function WeeklyStaffPlan() {
     });
 
   const handleCopy = () => {
-    if (selectedWeek == null || copyFromWeek == null) return;
+    if (selectedWeek == null || effectiveFromWeek == null) return;
     copyWeek({
       data: {
         year: selectedYear,
-        from_week: copyFromWeek,
+        from_week: effectiveFromWeek,
         to_week: selectedWeek,
       },
     });
@@ -272,43 +294,43 @@ export default function WeeklyStaffPlan() {
 
   return (
     <>
-      <div className="flex-between">
-        <h1>{t("staff.weekly_staff_plan")}</h1>
-        <AutoSaveIndicator saving={isSaving} hasChanges={false} />
-      </div>
+      <h1>{t("staff.weekly_staff_plan")}</h1>
+      <AutoSaveIndicator saving={isSaving} hasChanges={false} />
       <WeekSelector
         selectedYear={selectedYear}
         setSelectedYear={setSelectedYear}
         selectedWeek={selectedWeek}
         setSelectedWeek={setSelectedWeek}
       />
-      <div className="weekly-plan-toolbar">
-        {isOffice && (
+      {isOffice && selectedWeek != null && currentWeekIsEmpty && (
+        <div className="weekly-plan-toolbar">
           <div className="weekly-plan-copy">
             <label className="weekly-plan-copy-field">
               {t("staff.copy_weekly_plan_from")}
-              <InputNumber
-                min={1}
-                max={53}
-                value={copyFromWeek}
+              <Select
+                aria-label={t("staff.copy_weekly_plan_from")}
+                size="small"
+                showSearch
+                optionFilterProp="label"
+                style={{ minWidth: "8em" }}
+                placeholder={t("staff.copy_source_week")}
+                value={effectiveFromWeek ?? undefined}
                 onChange={(value) => setCopyFromWeek(value)}
-                aria-label={t("staff.copy_source_week")}
+                options={weekOptions}
               />
             </label>
             <Button
+              type="primary"
+              size="small"
               onClick={handleCopy}
               loading={isCopying}
-              disabled={
-                copyFromWeek == null ||
-                copyFromWeek === selectedWeek ||
-                !currentWeekIsEmpty
-              }
+              disabled={effectiveFromWeek == null}
             >
               {t("staff.copy_into_this_week")}
             </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
       <DndGrid onPlace={handlePlace} onRemove={handleRemove}>
         <div className="weekly-plan-page">
           {selectedWeek == null ? (
@@ -317,8 +339,13 @@ export default function WeeklyStaffPlan() {
             <p className="text-muted">{t("staff.no_categories")}</p>
           ) : (
             <div className="weekly-plan-layout">
-              <div className="weekly-plan-palette">
-                <h3>{t("staff.employees")}</h3>
+              <section
+                className="weekly-plan-palette"
+                aria-labelledby="weekly-plan-employees-heading"
+              >
+                <h3 id="weekly-plan-employees-heading">
+                  {t("staff.employees")}
+                </h3>
                 <div className="weekly-plan-palette-box">
                   {employees.length === 0 ? (
                     <p className="text-muted">{t("staff.no_employees")}</p>
@@ -341,74 +368,110 @@ export default function WeeklyStaffPlan() {
                     })
                   )}
                 </div>
-              </div>
+              </section>
 
-              <div className="weekly-plan-grid-wrap">
-                <table className="weekly-plan-grid-table">
+              <section
+                className="weekly-plan-grid-wrap"
+                aria-label={t("staff.grid_caption", {
+                  week: selectedWeek,
+                  year: selectedYear,
+                })}
+                tabIndex={-1}
+                ref={gridRegionRef}
+              >
+                <table
+                  className="weekly-plan-grid-table"
+                  aria-label={t("staff.grid_caption", {
+                    week: selectedWeek,
+                    year: selectedYear,
+                  })}
+                >
                   <thead>
                     <tr>
-                      <th className="weekly-plan-th-row-label" />
+                      <th className="weekly-plan-th-row-label" scope="col" />
                       {WEEKDAYS.map((day) => (
-                        <th key={day}>{t(`commissioning.weekdays.${day}`)}</th>
+                        <th key={day} scope="col">
+                          {t(`commissioning.weekdays.${day}`)}
+                        </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
-                    {grid?.categories.map((category) => (
-                      <Fragment key={category.id}>
-                        <tr className="weekly-plan-category-row">
-                          <td colSpan={WEEKDAYS.length + 1}>{category.name}</td>
-                        </tr>
-                        {Array.from(
-                          { length: category.max_lines },
-                          (_, rowIndex) => (
-                            <tr key={`${category.id}-${rowIndex}`}>
-                              <td className="weekly-plan-row-label">
-                                {rowIndex + 1}
-                              </td>
-                              {WEEKDAYS.map((day) => {
-                                const employeeId =
-                                  cells[cellKey(category.id, rowIndex, day)];
-                                const employee = employeeId
-                                  ? employeeById.get(employeeId)
-                                  : null;
-                                const flatIndex =
-                                  flatIndexByCell.get(
-                                    `${category.id}|${rowIndex}`,
-                                  ) ?? 0;
-                                return (
-                                  <td key={day} className="weekly-plan-cell">
-                                    <DroppableCell
-                                      pos={{ row: flatIndex, col: day }}
-                                      occupant={
-                                        employee
-                                          ? {
-                                              id: employee.id,
-                                              label:
-                                                employee.short_name_for_weekly_plan,
-                                              color: colorMap.get(employee.id),
-                                            }
-                                          : null
-                                      }
-                                      canEdit={isOffice}
-                                      emptyLabel={t("staff.drop_employee_here")}
-                                      removeAriaLabelFor={(label) =>
-                                        t("staff.remove_employee", {
-                                          employee: label,
-                                        })
-                                      }
-                                    />
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          ),
-                        )}
-                      </Fragment>
-                    ))}
-                  </tbody>
+                  {grid?.categories.map((category) => (
+                    <tbody
+                      key={category.id}
+                      className="weekly-plan-category-group"
+                    >
+                      <tr className="weekly-plan-category-row">
+                        <th colSpan={WEEKDAYS.length + 1} scope="colgroup">
+                          {category.name}
+                        </th>
+                      </tr>
+                      {Array.from(
+                        { length: category.max_lines },
+                        (_, rowIndex) => (
+                          <tr key={`${category.id}-${rowIndex}`}>
+                            <th className="weekly-plan-row-label" scope="row">
+                              {rowIndex + 1}
+                            </th>
+                            {WEEKDAYS.map((day) => {
+                              const employeeId =
+                                cells[cellKey(category.id, rowIndex, day)];
+                              const employee = employeeId
+                                ? employeeById.get(employeeId)
+                                : null;
+                              const flatIndex =
+                                flatIndexByCell.get(
+                                  `${category.id}|${rowIndex}`,
+                                ) ?? 0;
+                              const dayName = t(
+                                `commissioning.weekdays.${day}`,
+                              );
+                              const cellAriaLabel = employee
+                                ? t("staff.cell_filled", {
+                                    day: dayName,
+                                    category: category.name,
+                                    row: rowIndex + 1,
+                                    employee:
+                                      employee.short_name_for_weekly_plan,
+                                  })
+                                : t("staff.cell_empty", {
+                                    day: dayName,
+                                    category: category.name,
+                                    row: rowIndex + 1,
+                                  });
+                              return (
+                                <td key={day} className="weekly-plan-cell">
+                                  <DroppableCell
+                                    pos={{ row: flatIndex, col: day }}
+                                    occupant={
+                                      employee
+                                        ? {
+                                            id: employee.id,
+                                            label:
+                                              employee.short_name_for_weekly_plan,
+                                            color: colorMap.get(employee.id),
+                                          }
+                                        : null
+                                    }
+                                    canEdit={isOffice}
+                                    emptyLabel={t("staff.drop_employee_here")}
+                                    ariaLabel={cellAriaLabel}
+                                    removeAriaLabelFor={(label) =>
+                                      t("staff.remove_employee", {
+                                        employee: label,
+                                      })
+                                    }
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ),
+                      )}
+                    </tbody>
+                  ))}
                 </table>
-              </div>
+              </section>
             </div>
           )}
 

@@ -26,5 +26,11 @@ export interface WeeklyPlanCategory {
    * @maximum 2147483647
    */
   max_lines: number;
+  /**
+   * @minimum 0
+   * @maximum 2147483647
+   * @nullable
+   */
+  sort_order?: number | null;
   readonly can_be_deleted?: boolean;
 }

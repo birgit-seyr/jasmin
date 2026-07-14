@@ -6,7 +6,9 @@
     "shifts": "Schichten", 
     "copy_from_week": "kopieren von KW ", 
     "max_lines": "max. Zeilen",
-    "name": "Bezeichnung", 
+    "sort_order": "Reihenfolge",
+    "sort_order_unique": "Diese Reihenfolge ist bereits vergeben.",
+    "name": "Bezeichnung",
     "short_name_for_weekly_plan": "Name für Wochenplan",
     "employees": "MitarbeiterInnen",
     "saturday_shifts": "Samstagsdienste",
@@ -32,8 +34,13 @@
     "select_week": "Bitte eine Woche wählen.",
     "save_failed": "Speichern fehlgeschlagen.",
     "copy_source_week": "Quellwoche",
+    "week_empty_hint": "Diese Woche ist noch leer.",
+    "week_option": "KW {{week}}",
     "copy_into_this_week": "In diese Woche kopieren",
     "copy_target_not_empty": "Diese Woche enthält bereits einen Plan. Kopieren ist nur in eine leere Woche möglich.",
     "already_in_category_that_day": "Diese Person ist an diesem Tag bereits in dieser Kategorie eingeteilt.",
-    "times_planned": "{{count}}× diese Woche eingeplant"
+    "times_planned": "{{count}}× diese Woche eingeplant",
+    "cell_filled": "{{day}}, {{category}}, Zeile {{row}}: {{employee}}",
+    "cell_empty": "{{day}}, {{category}}, Zeile {{row}}: leer, MitarbeiterIn hierher ziehen",
+    "grid_caption": "Wochenplan – KW {{week}}, {{year}}"
 }
