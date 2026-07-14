@@ -39,6 +39,9 @@ jwcrypto = ">=1.5.7"
 # Transitive (pulled in by djangorestframework-simplejwt + redis[jwt]).
 # Pinned explicitly to dodge PYSEC-2026-{175,177,178,179} on 2.12.x.
 pyjwt = ">=2.13"
+# Transitive (pulled in by weasyprint). Pinned to the security floor that
+# fixes PYSEC-2026-{2253,2254,2255,2256,2257} present on 12.2.0.
+pillow = ">=12.3.0"
 # Hardened XML parser for user-uploaded e-invoice XML (XXE / entity-expansion
 # defenses). Already present transitively via py-serializable; pinned directly
 # so the e-invoice upload path can't lose it if that transitive edge changes.
