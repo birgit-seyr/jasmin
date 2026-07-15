@@ -110,6 +110,13 @@ REDIS_PASSWORD="$(gen_hex)"
 BACKUP_ENCRYPTION_KEY="$(gen_hex)"
 GLITCHTIP_DB_PASSWORD="$(gen_hex)"
 GLITCHTIP_SECRET_KEY="$(gen_hex)"
+# Deliberately NOT generated: a non-empty value BORN-ENFORCES the tenant gate
+# before the Bunny edge rule exists → 444 for every tenant. Ships empty (gate
+# is a no-op); fill it only when wiring Bunny, per the hardening doc. Use an
+# alnum/hex token (e.g. `openssl rand -hex 32`): the value is substituted into
+# an nginx `map` key via envsubst, so a `"`, `$` or whitespace would break the
+# rendered config and crash-loop the gateway on `nginx -t`.
+BUNNY_ORIGIN_SECRET=""
 SUPERUSER_PASSWORD="$(gen_alnum)"
 
 umask 077   # .env is 0600 — it holds every secret
@@ -127,7 +134,11 @@ IMAGE_TAG=v1
 FRONTEND_DOMAIN=${DOMAIN}
 DJANGO_ALLOWED_HOSTS=${DOMAIN},.${DOMAIN}
 TIME_ZONE=${TIMEZONE}
-# Behind just nginx today = 1. Bump to 2 once Bunny sits in front (Phase 4).
+# Stays 1. real_ip (recovering the true client behind Bunny) is DEFERRED — see
+# docs/code_audit/security/bunny-origin-hardening.md. Until it ships, tenant
+# traffic behind Bunny logs the Bunny POP IP (degraded precision, and per-IP
+# rate limits key on the POP — a known limitation, not yet fixed). Do NOT set
+# to 2: that makes the direct admin path IP-spoofable via a forged XFF.
 TRUSTED_PROXY_COUNT=1
 
 # --- core secrets (generated) ---
@@ -159,6 +170,14 @@ VITE_SUPER_ADMIN_SUBDOMAIN=${SUPER_ADMIN_SUBDOMAIN}
 # The entrypoint auto-creates this SuperAdmin on first boot. SAVE THE PASSWORD.
 DJANGO_SUPERUSER_EMAIL=${ADMIN_EMAIL}
 DJANGO_SUPERUSER_PASSWORD=${SUPERUSER_PASSWORD}
+
+# --- authenticated CDN -> origin channel ---
+# Bunny injects this as an X-Origin-Secret request header (pull zone edge rule:
+# "Set Request Header"). nginx serves tenant hosts ONLY to requests carrying it,
+# so neither a direct-to-origin scanner nor an attacker's own Bunny pull zone
+# can reach tenant traffic. Add the SAME value to the Bunny edge rule. Empty ->
+# the gate is disabled (safe default until Bunny is wired).
+BUNNY_ORIGIN_SECRET=${BUNNY_ORIGIN_SECRET}
 
 # --- backups ---
 BACKUP_ENCRYPTION_KEY=${BACKUP_ENCRYPTION_KEY}

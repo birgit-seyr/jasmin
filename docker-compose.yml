@@ -344,6 +344,11 @@ services:
       BACKEND_PORT: "8000"
       FRONTEND_HOST: frontend
       FRONTEND_PORT: "80"
+      # Authenticated CDN->origin channel (see nginx.conf.template). ENFORCE is
+      # derived: "on" ONLY when the secret is non-empty, "" otherwise -> the
+      # nginx gate is a no-op on a not-yet-configured deploy (never locks out).
+      BUNNY_ORIGIN_SECRET: ${BUNNY_ORIGIN_SECRET:-}
+      BUNNY_ORIGIN_ENFORCE: ${BUNNY_ORIGIN_SECRET:+on}
     volumes:
       - ./nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
       - ./nginx/super_admin_allowed_ips.conf:/etc/nginx/super_admin_allowed_ips.conf:ro
@@ -368,7 +373,7 @@ services:
     # ("syntax error: unexpected &&", gateway crash-loop). Same indent
     # everywhere + operators at end-of-line folds to one clean command line.
     command: >
-      /bin/sh -c "envsubst '$$FRONTEND_DOMAIN $$SUPER_ADMIN_SUBDOMAIN $$BACKEND_HOST $$BACKEND_PORT $$FRONTEND_HOST $$FRONTEND_PORT'
+      /bin/sh -c "envsubst '$$FRONTEND_DOMAIN $$SUPER_ADMIN_SUBDOMAIN $$BACKEND_HOST $$BACKEND_PORT $$FRONTEND_HOST $$FRONTEND_PORT $$BUNNY_ORIGIN_SECRET $$BUNNY_ORIGIN_ENFORCE'
       < /etc/nginx/templates/nginx.conf.template
       > /etc/nginx/nginx.conf &&
       nginx -t &&

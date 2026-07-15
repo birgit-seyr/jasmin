@@ -51,6 +51,38 @@ http {
     upstream jasmin_backend  { server ${BACKEND_HOST}:${BACKEND_PORT}; keepalive 32; }
     upstream jasmin_frontend { server ${FRONTEND_HOST}:${FRONTEND_PORT}; keepalive 32; }
 
+    # ---- Real client IP behind Bunny — DEPLOY-GATED, intentionally absent ---
+    # A global http{} real_ip over the SHARED Bunny fleet was reviewed and
+    # REJECTED (DO_NOT_SHIP): trusting every Bunny edge lets an attacker's own
+    # pull zone re-front this origin from a trusted IP and forge $remote_addr —
+    # bypassing the super-admin allowlist and poisoning audit/lockout keys.
+    # The correct, authenticated design lives in
+    # docs/code_audit/security/bunny-origin-hardening.md and must be wired
+    # (secret origin header + real_ip scoped to the tenant vhost only) before
+    # any real_ip directive returns here. Until then tenant traffic logs the
+    # Bunny edge IP (degraded precision, NO spoofing) — a safe default.
+
+    # ---- Authenticated CDN -> origin channel -------------------------------
+    # Tenant hosts (*.${FRONTEND_DOMAIN}) are served ONLY to requests that came
+    # through OUR Bunny pull zone, which injects a secret request header (Bunny
+    # edge rule: "Set Request Header" X-Origin-Secret). This authenticates the
+    # CDN ITSELF — not merely "some Bunny edge IP", which every Bunny customer
+    # shares — and closes BOTH the direct-to-origin WAF bypass AND the attacker
+    # re-fronting attack (their pull zone cannot present the secret).
+    #
+    # Fail-SAFE: BUNNY_ORIGIN_ENFORCE is compose-derived as "on" ONLY when
+    # BUNNY_ORIGIN_SECRET is non-empty (docker-compose.yml: ${BUNNY_ORIGIN_SECRET:+on}).
+    # Unset -> empty -> the gate is a NO-OP, so a not-yet-configured deploy is
+    # never locked out. Admin + apex vhosts are DIRECT by design and exempt.
+    map $http_x_origin_secret $bunny_secret_ok {
+        default                  0;
+        "${BUNNY_ORIGIN_SECRET}" 1;
+    }
+    map "${BUNNY_ORIGIN_ENFORCE}$bunny_secret_ok" $tenant_deny_unauthed {
+        "on0"   1;   # enforcing AND secret absent/wrong -> reject
+        default 0;   # not enforcing, or secret correct -> allow
+    }
+
     # ---- Rate limiting -----------------------------------------------------
     # `login_zone`  - protects credential endpoints from brute-force / spray
     #                 attacks. 10 requests per minute per source IP.
@@ -147,6 +179,14 @@ http {
         ssl_session_timeout 1d;
         ssl_stapling        on;
         ssl_stapling_verify on;
+
+        # Authenticated CDN->origin gate (see the map in http{}): drop any
+        # tenant-host request that did NOT arrive through our Bunny pull zone
+        # (i.e. lacks the injected X-Origin-Secret). 444 = close the connection,
+        # revealing nothing to a direct scanner or a re-fronting attacker.
+        # No-op until BUNNY_ORIGIN_SECRET is set. server-level `if` + `return`
+        # is one of nginx's documented-safe `if` uses.
+        if ($tenant_deny_unauthed) { return 444; }
 
         # Security headers. NOTE: because nginx add_header inheritance is
         # all-or-nothing per level, this same snippet is re-included inside
