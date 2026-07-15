@@ -59,5 +59,6 @@
   "fees_billing_period": "Billing period",
   "fees_billing_period_placeholder": "Select period",
   "fee_saved": "Fees saved",
-  "fee_save_error": "Could not save fees"
+  "fee_save_error": "Could not save fees",
+  "infos": "Info"
 }

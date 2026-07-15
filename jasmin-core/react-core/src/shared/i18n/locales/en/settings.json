@@ -232,7 +232,11 @@
     "allows_waiting_list_for_subscriptions": "Allow waiting list for subscriptions",
     "allows_waiting_list_for_subscriptions_desc": "When on, at-capacity share variations and full delivery stations can be put on a waiting list. When off, full options are simply not selectable (no waiting list, no offers).",
     "reservation_ttl_days": "Reservation hold (days)",
-    "reservation_ttl_days_desc": "How long a draft subscription holds its delivery-station slot before the reservation lapses."
+    "reservation_ttl_days_desc": "How long a draft subscription holds its delivery-station slot before the reservation lapses.",
+    "default_amount_jokers": "Number of jokers",
+    "default_amount_jokers_description": "This can be adjusted for individual share types.",
+    "default_amount_of_donation_jokers": "Additional donation jokers",
+    "default_amount_of_donation_jokers_description": "This can be adjusted for individual share types."
   },
   "configure_prices": "Configure Prices & Sizes",
   "reseller": {
@@ -366,6 +370,8 @@
     "uses_jokers_for_trial_subscriptions_desc": "Determines whether jokers are also counted against trial subscriptions.",
     "share_types": {
       "title": "Crate Types"
-    }
+    },
+    "info_sentence_about_trial_subscriptions": "Short description of trial subscriptions",
+    "info_sentence_about_trial_subscriptions_desc": "e.g.: trial subscriptions are possible for 4 weeks and then end automatically."
   }
 }

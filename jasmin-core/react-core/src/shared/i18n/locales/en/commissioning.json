@@ -757,5 +757,12 @@
   "zugferd_not_available": "ZUGFeRD XML not available",
   "peak_occupancy": "Peak occupancy",
   "capacity_below_peak": "Capacity cannot be set below the peak occupancy ({{peak}}, week {{week}}).",
-  "failed_to_load_invoice": "Failed to load invoice data."
+  "failed_to_load_invoice": "Failed to load invoice data.",
+  "amount_of_donation_jokers": "Number of donation jokers",
+  "amount_of_jokers": "Number of jokers",
+  "is_additional_share_type": "Is an additional share type",
+  "no_orders_title": "No orders yet.",
+  "number_of_jokers": "Number of jokers",
+  "percentage_added_to_commissioning_list_packing": "Additional % for packing stations",
+  "planning_share_content": "Share planning"
 }

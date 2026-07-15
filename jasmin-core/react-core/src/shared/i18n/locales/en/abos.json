@@ -105,7 +105,8 @@
     "invalid_text": "The offer may have already been answered or withdrawn. Please contact the office.",
     "error_title": "Something went wrong",
     "error_text": "We couldn't process your response. Please try again or contact the office.",
-    "share": "Share"
+    "share": "Share",
+    "end": "End"
   },
   "capacities_overview": "Capacity overview",
   "capacities_variations": "Share type variations (production cap)",
@@ -192,5 +193,8 @@
   "emails_copied": "Copied {{count}} email addresses",
   "emails_by_station_hint": "All e-mail addresses of members with an active share at this delivery station.",
   "emails_by_share_type_hint": "All e-mail addresses of members with an active share of this share type.",
-  "emails_by_date_range_hint": "All e-mail addresses of members with a share that is active within this period."
+  "emails_by_date_range_hint": "All e-mail addresses of members with a share that is active within this period.",
+  "active_subscriptions_date_range_emails": "Active shares",
+  "delivery_station_days_emails": "Distribution list by delivery station",
+  "share_type_emails": "Distribution list by share type"
 }

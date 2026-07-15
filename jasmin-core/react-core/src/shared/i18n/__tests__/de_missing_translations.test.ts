@@ -92,6 +92,11 @@ function flatten(
 const definedKeys = new Set<string>();
 flatten(de, "", definedKeys);
 
+// Top-level namespaces (the locale file basenames). Used to keep the broad
+// prop-key scan below from flagging non-i18n ``…Key`` props whose value happens
+// to contain a dot — a real i18n key always starts with one of these.
+const DE_NAMESPACES = new Set(Object.keys(de as Record<string, unknown>));
+
 // ---------------------------------------------------------------------------
 // 2. Walk the source tree, extract t("...") and i18nKey="..." references
 // ---------------------------------------------------------------------------
@@ -112,6 +117,16 @@ const T_CALL_RE = /\bt\(\s*["']([^"'\n]+)["']/g;
 
 // ``<Trans i18nKey="foo">`` form — also captures single-quoted variant.
 const TRANS_KEY_RE = /\bi18nKey\s*=\s*["']([^"'\n]+)["']/g;
+
+// Keys passed INDIRECTLY as a ``…Key`` prop/field — ``titleKey="x.y"``,
+// ``descriptionKey``, ``explainerKey``, ``labelKey``, ``placeholderKey``, … —
+// that a shared component (CrudListPage, the column hooks, …) later feeds to
+// ``t()``. The ``t("literal")`` regex can't see these, so a page could ship a
+// key that exists only as a prop string. Matches the STRING-LITERAL form only;
+// ``…Key={t(...)}`` is caught by T_CALL_RE and ``…Key={var}`` is dynamic.
+// Guarded by DE_NAMESPACES at the call site so non-i18n ``…Key`` props
+// (``rowKey``, ``cacheKey``, …) with an incidental dot aren't flagged.
+const PROP_KEY_RE = /\b[A-Za-z][A-Za-z0-9]*[Kk]ey\s*[=:]\s*["']([^"'\n]+)["']/g;
 
 function walk(dir: string, files: string[]): void {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -157,6 +172,18 @@ function collectReferences(): Reference[] {
         if (!key.includes(".")) continue;
         refs.push({ key, file: relPath, line: lineNumber(text, match.index) });
       }
+    }
+
+    // Indirect ``…Key="x.y"`` props — only when the first segment is a real
+    // i18n namespace, so non-i18n key props (rowKey, cacheKey, …) with an
+    // incidental dot don't produce false positives.
+    PROP_KEY_RE.lastIndex = 0;
+    let propMatch: RegExpExecArray | null;
+    while ((propMatch = PROP_KEY_RE.exec(text)) !== null) {
+      const key = propMatch[1];
+      if (!key.includes(".")) continue;
+      if (!DE_NAMESPACES.has(key.split(".")[0])) continue;
+      refs.push({ key, file: relPath, line: lineNumber(text, propMatch.index) });
     }
   }
   return refs;

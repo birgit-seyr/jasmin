@@ -36,5 +36,6 @@
   "delivery_note": "Delivery note",
   "invoice": "Invoice",
   "storno": "Reversal",
-  "invoice_cancelled": "This invoice has been reversed."
+  "invoice_cancelled": "This invoice has been reversed.",
+  "prices_are_netto": "Prices are net."
 }

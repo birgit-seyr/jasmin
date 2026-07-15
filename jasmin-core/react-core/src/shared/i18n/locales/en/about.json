@@ -35,5 +35,7 @@
   "feature_multilingual_title": "Multilingual",
   "feature_multilingual_desc": "Interface and emails in German & English (more prepared).",
   "feature_opensource_title": "Open Source",
-  "feature_opensource_desc": "Open source and available under the GNU AGPLv3 license."
+  "feature_opensource_desc": "Open source and available under the GNU AGPLv3 license.",
+  "feature_working_lists_desc": "Harvest lists, packing lists, picking lists, ...",
+  "feature_working_lists_title": "Working lists for day-to-day operations"
 }

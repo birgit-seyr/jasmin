@@ -80,5 +80,12 @@
   "bulk_renew_abos": "Renews the selected subscriptions: creates unconfirmed renewal drafts for the next term (same logic as auto-renewal). Non-renewable rows are skipped with a reason.",
   "requires_optin": "If active, each delivery is individually confirmed or skipped before its deadline.",
   "optin_deadline_days_before_delivery": "How many days before delivery the switch locks. 3 = „until Wednesday for the Saturday crate“.",
-  "peak_occupancy": "Highest occupancy in any current or future week (confirmed deliveries + active reservations). Capacity cannot be set below this."
+  "peak_occupancy": "Highest occupancy in any current or future week (confirmed deliveries + active reservations). Capacity cannot be set below this.",
+  "entry_date": "The entry date is set automatically when the member is approved.",
+  "finalize": "This has no effect in the app. It only serves to show that whoever made the entries here considers them complete.",
+  "is_additional_share_type": "Not packed separately, but added to another share, e.g. packed together with a harvest share.",
+  "open_members": "Use this button to filter for members who have not yet been confirmed.",
+  "percentage_added_to_commissioning_list_packing": "% added to the quantities provided to the packing stations, for waste, etc.",
+  "percentage_bulk_packing_list": "% added to the packing list, for shares delivered in bulk.",
+  "short_name_share_type": "Readable abbreviation, e.g. 'Honey' for a honey share, max. 6 letters."
 }

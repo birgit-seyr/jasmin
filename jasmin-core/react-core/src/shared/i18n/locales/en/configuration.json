@@ -63,5 +63,9 @@
     "general": "App / General",
     "commissioning": "Commissioning",
     "members": "Shares / Members"
-  }
+  },
+  "checkbox_note": "Even small checkboxes can have a big impact :)",
+  "dashboard_note": "Please proceed very carefully here! The more precise and thorough the settings, the better the app works, tailored exactly to your operation!",
+  "dashboard_note2": "(The settings can be changed at any time if something in your operational workflows changes.)",
+  "dashboard_title": "Please fill in carefully!"
 }

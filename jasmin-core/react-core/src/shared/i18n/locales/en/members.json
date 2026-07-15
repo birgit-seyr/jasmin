@@ -265,5 +265,9 @@
   "member_cancelled_title": "Cancelled, effective {{date}}",
   "membership_card_title": "Membership",
   "no_active_subscriptions": "No active subscriptions.",
-  "trial_subscription_weeks": "{{weeks}}-week trial subscription"
+  "trial_subscription_weeks": "{{weeks}}-week trial subscription",
+  "amount": "Quantity",
+  "cancelled_effective_at_date": "Cancellation date",
+  "title_email_log": "Email history",
+  "value": "Value"
 }

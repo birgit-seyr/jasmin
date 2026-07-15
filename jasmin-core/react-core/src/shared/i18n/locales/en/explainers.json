@@ -58,5 +58,7 @@
   "configuration_consents": "Here the consent texts are configured that members must accept during registration.",
   "configuration_time_management": "Here delivery days, ordering days and other time-based processes are configured.",
   "packing_list_bulk": "Bulk view of the commissioning list for several box types / delivery days.",
-  "abos_emails": "Send emails to subscription holders here — for example filtered by share variation, delivery station or period."
+  "abos_emails": "Send emails to subscription holders here — for example filtered by share variation, delivery station or period.",
+  "commissioning_lists_packing": "These are the quantities that must be provided to the packing stations. The additional % stored on the articles (for waste, etc.) is added on top here.",
+  "payment_resellers": "Only invoices that have already been finalized are shown."
 }
