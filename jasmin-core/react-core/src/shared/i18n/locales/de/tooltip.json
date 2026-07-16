@@ -78,6 +78,7 @@
   "price_sum_articles": "Summe der Artikelpreise (zur Plausibilitätsprüfung).",
   "solidarity_min_price": "Niedrigster Preis, den ein Mitglied bei Solidarpreisen wählen darf. Leer = der Richtpreis ist die Untergrenze.",
   "variation_type": "Art der Variante (Stk, Bund, Gewicht …)",
+  "support_button": "Anfragen zu einem Problem stellen",
   "finalize": "Dies hat keine Auswirkungen in der App. Es dient nur dazu zu sehen, dass diejenigen, die hier eingetragen haben, die Einträge als fertiggestellt erachten.",
   "percentage_added_to_commissioning_list_packing": "%, die zu den Mengen dazugerechnet werden, die für die Packstationen zur Verfügung gestellt werden, wegen Ausschuss etc.",
   "percentage_bulk_packing_list": "%, die zu der Packliste dazugerechnet werden, für Anteile, die lose geliefert werden.",

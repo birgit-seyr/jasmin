@@ -1,9 +1,10 @@
 import { QuestionCircleOutlined } from "@ant-design/icons";
-import { Button, Tooltip, theme } from "antd";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useRoles } from "@shared/auth";
 import SupportDrawer from "@shared/support/SupportDrawer";
+import { Button, theme } from "antd";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { ToolTipIcon } from "../ui";
 
 /**
  * Top-bar "report a problem" control. Staff-only: it lives in the staff-layout
@@ -20,15 +21,14 @@ export default function HelpButton() {
 
   return (
     <>
-      <Tooltip title={t("support.help_button")}>
-        <Button
-          type="text"
-          icon={<QuestionCircleOutlined />}
-          onClick={() => setOpen(true)}
-          aria-label={t("support.help_button")}
-          style={{ color: token.colorPrimary }}
-        />
-      </Tooltip>
+      <Button
+        type="text"
+        icon={<QuestionCircleOutlined />}
+        onClick={() => setOpen(true)}
+        aria-label={t("support.help_button")}
+        style={{ color: token.colorPrimary }}
+      />
+      <ToolTipIcon title={t("tooltip.support_button")} />
       <SupportDrawer open={open} onClose={() => setOpen(false)} />
     </>
   );
