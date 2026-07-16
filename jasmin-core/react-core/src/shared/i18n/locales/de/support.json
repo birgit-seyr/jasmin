@@ -1,0 +1,40 @@
+{
+  "help_button": "Hilfe / Problem melden",
+  "drawer": {
+    "title": "Support",
+    "new_ticket": "Problem melden",
+    "back": "Zurück zur Liste"
+  },
+  "modal": {
+    "title": "Problem melden",
+    "created": "Ticket erstellt",
+    "submit": "Ticket senden",
+    "subject_label": "Betreff",
+    "subject_placeholder": "Kurze Zusammenfassung",
+    "priority_label": "Priorität",
+    "description_label": "Beschreibung",
+    "description_placeholder": "Was ist passiert? Auf welcher Seite?"
+  },
+  "priority": {
+    "low": "Niedrig",
+    "normal": "Normal",
+    "high": "Hoch"
+  },
+  "status": {
+    "open": "Offen",
+    "in_progress": "In Bearbeitung",
+    "resolved": "Gelöst",
+    "closed": "Geschlossen"
+  },
+  "author": {
+    "staff": "MitarbeiterIn",
+    "super_admin": "Support-Team"
+  },
+  "thread": {
+    "no_messages": "Noch keine Nachrichten.",
+    "empty": "Noch keine Tickets.",
+    "reply_placeholder": "Antwort schreiben …",
+    "reply_send": "Senden",
+    "reply_sent": "Antwort gesendet"
+  }
+}

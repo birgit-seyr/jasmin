@@ -69,6 +69,9 @@ TASK_REGISTRY: dict[str, list[str]] = {
     "apps.shared.super_admin.tasks": [
         "email_overdue_ops_items",
     ],
+    "apps.shared.support.tasks": [
+        "prune_orphan_support_tickets_task",
+    ],
     "apps.gdpr.tasks": [
         "anonymise_long_cancelled_members",
         "alert_on_mass_deletes",

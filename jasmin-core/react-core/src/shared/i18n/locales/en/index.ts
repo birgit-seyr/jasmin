@@ -42,10 +42,12 @@ import about from './about.json';
 import statistics from './statistics.json';
 import impressum from './impressum.json';
 import button_library from './button_library.json';
+import support from './support.json';
 
 export default {
   about,
   button_library,
+  support,
   statistics,
   errors,
   economics,

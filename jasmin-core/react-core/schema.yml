@@ -26449,6 +26449,261 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/support/tickets/:
+    get:
+      operationId: support_tickets_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - support
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupportTicketList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: support_tickets_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupportTicketCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SupportTicketCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SupportTicketCreate'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportTicketDetail'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/support/tickets/{id}/:
+    get:
+      operationId: support_tickets_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der support ticket identifiziert.
+        required: true
+      tags:
+      - support
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportTicketDetail'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/support/tickets/{id}/reply/:
+    post:
+      operationId: support_tickets_reply_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der support ticket identifiziert.
+        required: true
+      tags:
+      - support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupportTicketReplyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SupportTicketReplyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SupportTicketReplyRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportTicketDetail'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/tenants/current/:
     get:
       operationId: tenants_current_retrieve
@@ -27345,6 +27600,14 @@ components:
         reseller_id:
           type: string
           nullable: true
+    AuthorKindEnum:
+      enum:
+      - staff
+      - super_admin
+      type: string
+      description: |-
+        * `staff` - Staff
+        * `super_admin` - Super admin
     BackgroundJob:
       type: object
       description: |-
@@ -38551,6 +38814,122 @@ components:
       required:
       - count
       - members
+    SupportTicketCreate:
+      type: object
+      properties:
+        subject:
+          type: string
+          maxLength: 200
+        priority:
+          $ref: '#/components/schemas/TicketPriorityEnum'
+        context: {}
+        description:
+          type: string
+          writeOnly: true
+      required:
+      - description
+      - subject
+    SupportTicketDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        subject:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TicketStatusEnum'
+          readOnly: true
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/TicketPriorityEnum'
+          readOnly: true
+        creator_id:
+          type: string
+          readOnly: true
+        creator_name:
+          type: string
+          readOnly: true
+        context:
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        resolved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/SupportTicketMessage'
+          readOnly: true
+    SupportTicketList:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        subject:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TicketStatusEnum'
+          readOnly: true
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/TicketPriorityEnum'
+          readOnly: true
+        creator_id:
+          type: string
+          readOnly: true
+        creator_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    SupportTicketMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        author_kind:
+          allOf:
+          - $ref: '#/components/schemas/AuthorKindEnum'
+          readOnly: true
+        author_name:
+          type: string
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    SupportTicketReplyRequest:
+      type: object
+      properties:
+        body:
+          type: string
+      required:
+      - body
     Tenant:
       type: object
       description: |-
@@ -39845,6 +40224,28 @@ components:
       - storage
       - unit
       - year
+    TicketPriorityEnum:
+      enum:
+      - low
+      - normal
+      - high
+      type: string
+      description: |-
+        * `low` - Low
+        * `normal` - Normal
+        * `high` - High
+    TicketStatusEnum:
+      enum:
+      - open
+      - in_progress
+      - resolved
+      - closed
+      type: string
+      description: |-
+        * `open` - Open
+        * `in_progress` - In progress
+        * `resolved` - Resolved
+        * `closed` - Closed
     ToggleOptinRequest:
       type: object
       properties:

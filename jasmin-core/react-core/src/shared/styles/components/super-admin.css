@@ -42,6 +42,9 @@
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
+.sa-card-compact {
+  max-width: 800px;
+}
 
 .sa-section {
   background: var(--color-bg-base);
@@ -90,7 +93,7 @@
 
 .sa-table th {
   text-align: left;
-  padding: 12px 24px;
+  padding: 8px 16px;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary);
@@ -98,7 +101,7 @@
 }
 
 .sa-table td {
-  padding: 16px 24px;
+  padding: 8px 16px;
   font-size: 14px;
 }
 
@@ -468,4 +471,97 @@
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
+}
+
+/* ---- Support ticket list (grouped by tenant) ------------------------------ */
+.sa-ticket-group {
+  margin-top: 28px;
+}
+.sa-ticket-group:first-child {
+  margin-top: 4px;
+}
+
+.sa-ticket-group-title {
+  margin: 0 0 10px;
+  padding-bottom: 20px;
+  padding-left: 30px;
+  border-bottom: 1px solid var(--color-border-soft, #e0e0e0);
+  font-size: 20px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+/* ---- Support ticket detail ------------------------------------------------ */
+/* Compact metadata block: tight two-column label/value grid. */
+.sa-ticket-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  align-items: center;
+  margin: 10px 0 20px;
+  font-size: 13px;
+}
+
+.sa-ticket-meta-label {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.sa-ticket-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.sa-ticket-message {
+  border: 1px solid var(--color-border-soft, #e0e0e0);
+  border-left: 3px solid var(--color-text-secondary);
+  border-radius: 6px;
+  padding: 10px 14px;
+  background: var(--color-bg-elevated, #fafafa);
+}
+
+/* Author accent: staff green, support (super-admin) blue. */
+.sa-ticket-message--staff {
+  border-left-color: #4caf50;
+}
+.sa-ticket-message--super_admin {
+  border-left-color: #1565c0;
+}
+
+.sa-ticket-message-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.sa-ticket-message-author {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.sa-ticket-message-role {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.sa-ticket-message-time {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.sa-ticket-message-body {
+  white-space: pre-wrap;
+  font-size: 14px;
+}
+
+.sa-ticket-reply {
+  width: 100%;
+  resize: vertical;
 }
