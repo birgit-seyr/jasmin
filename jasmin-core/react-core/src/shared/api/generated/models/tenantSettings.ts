@@ -11,8 +11,7 @@ import type { DefaultPlanningGranularityEnum } from './defaultPlanningGranularit
 import type { BillingStrategyEnum } from './billingStrategyEnum';
 
 export interface TenantSettings {
-  /** @maxLength 12 */
-  id?: string;
+  readonly id?: string;
   valid_from: string;
   /** @nullable */
   valid_until?: string | null;

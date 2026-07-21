@@ -317,7 +317,7 @@ export default function PaymentsResellers() {
             apiFunction={(payload) =>
               commissioningBulkSetToPaidDocumentsCreate(
                 payload as unknown as BulkDocumentRequest,
-                { undo: "true" },
+                { undo: true },
               )
             }
             buttonText={t("commissioning.set_to_unpaid_bulk")}

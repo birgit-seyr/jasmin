@@ -6,7 +6,7 @@ from django.contrib.postgres.aggregates import JSONBAgg
 from django.db import transaction
 from django.db.models import OuterRef, Prefetch, Q, QuerySet, Subquery
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
+from drf_spectacular.utils import extend_schema
 from isoweek import Week
 from rest_framework import status, viewsets
 from rest_framework.request import Request
@@ -31,6 +31,7 @@ from ..models import (
     SharesDeliveryDay,
 )
 from ..schemas import (
+    catalogue_param,
     get_active_at_date_or_future_parameter,
     get_active_at_date_parameter,
     get_is_active_parameter,
@@ -59,21 +60,18 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         parameters=[
             get_active_at_date_parameter(),
             get_active_at_date_or_future_parameter(),
-            OpenApiParameter(
-                name="get_delivery_stations",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "get_delivery_stations",
                 required=False,
                 description="Include active delivery stations in the response.",
             ),
-            OpenApiParameter(
-                name="future",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "future",
                 required=False,
                 description="Return only future delivery days (not yet active at active_at_date).",
             ),
-            OpenApiParameter(
-                name="need_info_on_tours",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "need_info_on_tours",
                 required=False,
                 description="Annotate each delivery day with its list of used tour numbers.",
             ),

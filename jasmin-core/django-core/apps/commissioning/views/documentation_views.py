@@ -1,6 +1,5 @@
 from django.db.models import Q, Sum
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -12,6 +11,7 @@ from core.serializers import ErrorResponseSerializer
 from ..errors import InvalidQueryParam
 from ..models import Harvest, Purchase, Waste
 from ..schemas import (
+    catalogue_param,
     get_delivery_day_parameter,
     get_delivery_week_parameter,
     get_share_article_parameter,
@@ -50,9 +50,8 @@ class DocumentationOverviewView(APIViewRolePermissionsMixin, APIView):
             get_delivery_week_parameter(required=False),
             get_delivery_day_parameter(required=False),
             get_share_article_parameter(),
-            OpenApiParameter(
-                name="source",
-                type=OpenApiTypes.STR,
+            catalogue_param(
+                "source",
                 required=False,
                 description="Documentation source type (defaults to HARVEST)",
                 enum=list(SOURCE_MODEL_MAP.keys()),

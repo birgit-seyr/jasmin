@@ -10,5 +10,5 @@ export type CommissioningBulkSetToPaidDocumentsCreateParams = {
 /**
  * Set to 'true' to undo payment (mark as unpaid)
  */
-undo?: string;
+undo?: boolean;
 };

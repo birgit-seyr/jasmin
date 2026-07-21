@@ -61,8 +61,7 @@ the full ``TenantSerializer`` served by the auth-gated
 login completes.
  */
 export interface CurrentTenant {
-  /** @maxLength 12 */
-  id?: string;
+  readonly id?: string;
   /** @maxLength 200 */
   name: string;
   /** @nullable */

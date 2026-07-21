@@ -17,7 +17,7 @@
  *      (paid / unpaid / send reminders) hit
  *      ``commissioningBulkSetToPaidDocumentsCreate`` /
  *      ``commissioningBulkSendInvoiceRemindersViaEmailCreate``
- *      with ``{ ids, model: "invoice" }`` — and with ``{ undo: "true" }``
+ *      with ``{ ids, model: "invoice" }`` — and with ``{ undo: true }``
  *      for the set-to-unpaid variant.
  */
 
@@ -523,7 +523,7 @@ describe("bulk action bar", () => {
     expect(arg.model).toBe("invoice");
   });
 
-  it("passes { undo: 'true' } as the second arg when set-to-unpaid bulk fires", async () => {
+  it("passes { undo: true } as the second arg when set-to-unpaid bulk fires", async () => {
     ordersOverviewHookMock.mockReturnValue({
       data: [makeRow({ has_been_paid: true })],
       refetch: vi.fn(),
@@ -535,11 +535,13 @@ describe("bulk action bar", () => {
       expect(bulkSetToPaidMock).toHaveBeenCalledTimes(1);
     });
     // The page's apiFunction calls
-    //   commissioningBulkSetToPaidDocumentsCreate(payload, { undo: "true" })
-    // — verify both args reach the underlying call.
+    //   commissioningBulkSetToPaidDocumentsCreate(payload, { undo: true })
+    // — verify both args reach the underlying call. `undo` is a boolean: the
+    // param is catalogued as a bool and the generated client types it as one
+    // (it serialises to the same `?undo=true` on the wire).
     const call = bulkSetToPaidMock.mock.calls[0];
     expect(call[0]).toMatchObject({ ids: ["ord-1"], model: "invoice" });
-    expect(call[1]).toEqual({ undo: "true" });
+    expect(call[1]).toEqual({ undo: true });
   });
 
   it("posts { ids, model: 'invoice' } when send-reminders-bulk fires", async () => {

@@ -5,6 +5,7 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { CommissioningShareArticlesListShareOption } from './commissioningShareArticlesListShareOption';
 
 export type CommissioningShareArticlesListParams = {
 /**
@@ -39,5 +40,5 @@ price_date?: string;
 /**
  * Filter to articles assigned to this exact share option (matches share_option / share_option2 / share_option3).
  */
-share_option?: string;
+share_option?: CommissioningShareArticlesListShareOption;
 };

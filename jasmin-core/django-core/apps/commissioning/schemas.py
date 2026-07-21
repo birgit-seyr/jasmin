@@ -1,5 +1,6 @@
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter
+
+from apps.shared.openapi_params import catalogue_parameter
 
 from .utils.query_params import PARAM_CATALOGUE
 
@@ -8,32 +9,19 @@ OpenAPI schema definitions for the commissioning app.
 """
 
 
-_CATALOGUE_OPENAPI_TYPE = {
-    "int": OpenApiTypes.INT,
-    "bool": OpenApiTypes.BOOL,
-    "str": OpenApiTypes.STR,
-    "choice": OpenApiTypes.STR,
-    "date": OpenApiTypes.DATE,
-}
-
-
-def _catalogue_parameter(name, *, description="", required=False, **overrides):
+def catalogue_param(name, *, description="", required=False, **overrides):
     """Build an OpenApiParameter from PARAM_CATALOGUE[name] — single source of
-    truth for the param's type/enum/default. ``overrides`` win (e.g. required=True)."""
-    spec = PARAM_CATALOGUE[name]
-    kwargs = {
-        "name": name,
-        "type": _CATALOGUE_OPENAPI_TYPE[spec.kind],
-        "location": OpenApiParameter.QUERY,
-        "required": required,
-        "description": description,
-    }
-    if spec.kind == "choice" and spec.choices:
-        kwargs["enum"] = list(spec.choices)
-    if spec.default is not None:
-        kwargs["default"] = spec.default
-    kwargs.update(overrides)
-    return OpenApiParameter(**kwargs)
+    truth for the param's type/enum/default. ``overrides`` win (e.g. required=True).
+
+    Thin binding of the generic helper in :mod:`apps.shared.openapi_params` to
+    the commissioning catalogue."""
+    return catalogue_parameter(
+        name,
+        PARAM_CATALOGUE,
+        description=description,
+        required=required,
+        **overrides,
+    )
 
 
 # YEAR
@@ -47,7 +35,7 @@ def get_year_parameter(**overrides):
     """
     required = overrides.pop("required", True)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "year",
         description="Year (YYYY format)",
         required=required,
@@ -70,7 +58,7 @@ def get_delivery_week_parameter(**overrides):
     """
     required = overrides.pop("required", True)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "delivery_week",
         description="ISO week number (1-53)",
         required=required,
@@ -95,7 +83,7 @@ def get_day_number_parameter(**overrides):
 
     required = overrides.pop("required", True)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "day_number",
         description="Day of the week (0=Monday, 6=Sunday)",
         required=required,
@@ -113,7 +101,7 @@ def get_delivery_day_parameter(**overrides):
     """Get delivery_day parameter; this is a sharesdeliveryday object"""
     required = overrides.pop("required", True)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "delivery_day",
         description="sharesdeliveryday ID (Jasmin ID format)",
         required=required,
@@ -138,7 +126,7 @@ def get_storage_parameter(**overrides):
     # Extract 'required' from overrides or use True as default
     required = overrides.pop("required", True)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "storage",
         description="Storage ID (Jasmin ID format)",
         required=required,
@@ -151,7 +139,7 @@ def get_is_past_parameter(**overrides):
     """Get is_past boolean parameter for archive manager toggling."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "is_past",
         description=(
             "When true, includes archived/historical data. "
@@ -173,7 +161,7 @@ def get_share_article_parameter(**overrides):
     """
     required = overrides.pop("required", True)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "share_article",
         description="Share article ID (Jasmin ID format)",
         required=required,
@@ -186,7 +174,7 @@ def get_is_active_parameter(**overrides):
     """Get is_active boolean parameter for filtering by active status."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "is_active",
         description="Filter by active status",
         required=required,
@@ -199,7 +187,7 @@ def get_active_at_date_or_future_parameter(**overrides):
     """Get is_active_at_date_or_future boolean parameter for filtering by active status at a date or in the future."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "active_at_date_or_future",
         description="Filter for records active at a specific date or starting in the future",
         required=required,
@@ -212,7 +200,7 @@ def get_active_at_date_parameter(**overrides):
     """Get active_at_date date parameter for time-bound filtering."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "active_at_date",
         description="Filter for records active at the given date (YYYY-MM-DD)",
         required=required,
@@ -225,7 +213,7 @@ def get_start_date_parameter(**overrides):
     """Get start_date date parameter (inclusive range start, YYYY-MM-DD)."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "start_date",
         description="Inclusive range start (YYYY-MM-DD)",
         required=required,
@@ -237,7 +225,7 @@ def get_end_date_parameter(**overrides):
     """Get end_date date parameter (inclusive range end, YYYY-MM-DD)."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "end_date",
         description="Inclusive range end (YYYY-MM-DD)",
         required=required,
@@ -269,7 +257,7 @@ def get_current_parameter(**overrides):
     """Get current boolean parameter for filtering current prices."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "current",
         description="Filter for current prices (valid_until is null)",
         required=required,
@@ -282,7 +270,7 @@ def get_price_info_parameter(**overrides):
     """Get get_price_info boolean parameter for including price annotations."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "get_price_info",
         description="Include price information in response",
         required=required,
@@ -295,7 +283,7 @@ def get_order_id_parameter(**overrides):
     """Get order_id parameter."""
     required = overrides.pop("required", True)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "order_id",
         description="Order ID (Jasmin ID format)",
         required=required,
@@ -308,7 +296,7 @@ def get_crate_type_parameter(**overrides):
     """Get crate_type parameter."""
     required = overrides.pop("required", True)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "crate_type",
         description="Crate type ID (Jasmin ID format)",
         required=required,
@@ -321,7 +309,7 @@ def get_delivery_note_id_parameter(**overrides):
     """Get delivery_note_id parameter."""
     required = overrides.pop("required", True)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "delivery_note_id",
         description="Delivery note ID (Jasmin ID format)",
         required=required,
@@ -334,7 +322,7 @@ def get_invoice_id_parameter(**overrides):
     """Get invoice_id parameter."""
     required = overrides.pop("required", True)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "invoice_id",
         description="Invoice ID (Jasmin ID format)",
         required=required,
@@ -347,7 +335,7 @@ def get_crate_parameter(**overrides):
     """Get crate parameter for filtering by crate."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "crate",
         description="Crate ID (Jasmin ID format)",
         required=required,
@@ -360,7 +348,7 @@ def get_reseller_parameter(**overrides):
     """Get reseller parameter."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "reseller",
         description="Reseller ID (Jasmin ID format)",
         required=required,
@@ -373,7 +361,7 @@ def get_offer_group_parameter(**overrides):
     """Get offer_group parameter."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "offer_group",
         description="Offer group ID (Jasmin ID format)",
         required=required,
@@ -386,7 +374,7 @@ def get_delivery_station_parameter(**overrides):
     """Get delivery_station parameter."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "delivery_station",
         description="Delivery station ID (Jasmin ID format)",
         required=required,
@@ -399,7 +387,7 @@ def get_seller_parameter(**overrides):
     """Get seller parameter for filtering purchases by seller."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "seller",
         description="Seller ID (Jasmin ID format)",
         required=required,
@@ -412,7 +400,7 @@ def get_model_parameter(**overrides):
     """Get model parameter for summary endpoints."""
     required = overrides.pop("required", True)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "model",
         description="Data model type",
         required=required,
@@ -425,7 +413,7 @@ def get_include_next_week_parameter(**overrides):
     """Get include_next_week boolean parameter."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "include_next_week",
         description="Include data from the following week",
         required=required,
@@ -438,7 +426,7 @@ def get_is_preparation_lists_parameter(**overrides):
     """Get is_preparation_lists boolean parameter."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "is_preparation_lists",
         description="Filter by short-term storage (preparation lists)",
         required=required,
@@ -451,7 +439,7 @@ def get_tour_parameter(**overrides):
     """Get tour parameter."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "tour",
         description="Tour number",
         required=required,
@@ -464,7 +452,7 @@ def get_packing_station_parameter(**overrides):
     """Get packing_station parameter."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "packing_station",
         description="Packing station number",
         required=required,
@@ -477,7 +465,7 @@ def get_share_type_parameter(**overrides):
     """Get share_type parameter."""
     required = overrides.pop("required", True)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "share_type",
         description="Share type ID (Jasmin ID format)",
         required=required,
@@ -490,7 +478,7 @@ def get_member_parameter(**overrides):
     """Get member parameter."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "member",
         description="Member ID (Jasmin ID format)",
         required=required,
@@ -502,7 +490,7 @@ def get_is_trial_parameter(**overrides):
     """Get is_trial boolean parameter for filtering by trial status."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "is_trial",
         description="Filter by trial status (true for trial, false for non-trial)",
         required=required,
@@ -515,7 +503,7 @@ def get_share_type_variation_parameter(**overrides):
     """Get share_type_variation parameter."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "share_type_variation",
         description="Share type variation ID (Jasmin ID format)",
         required=required,
@@ -528,7 +516,7 @@ def get_share_option_parameter(**overrides):
     """Get share_option parameter."""
     required = overrides.pop("required", False)
 
-    return _catalogue_parameter(
+    return catalogue_param(
         "share_option",
         description="Share option (e.g. GEMUESE, OBST)",
         required=required,

@@ -57,6 +57,7 @@ from ..models import (
 from ..models.choices import InvitationStatus
 from ..models.members import UserInvitation
 from ..schemas import (
+    catalogue_param,
     get_day_number_parameter,
     get_delivery_day_parameter,
     get_delivery_note_id_parameter,
@@ -450,9 +451,8 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
     @extend_schema(
         description="Delete a reseller, optionally handling delivery station reassignment.",
         parameters=[
-            OpenApiParameter(
-                name="delete_context",
-                type=OpenApiTypes.STR,
+            catalogue_param(
+                "delete_context",
                 required=False,
                 description="Context for deletion logic (e.g. delivery station handling)",
             ),

@@ -9,8 +9,7 @@ from __future__ import annotations
 
 from django.db.models import Q
 from django.utils import timezone
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.request import Request
@@ -21,6 +20,7 @@ from core.serializers import ErrorResponseSerializer
 
 from ..models import Member, Subscription
 from ..models.managers import active_on_date_q
+from ..schemas import catalogue_param
 from ..serializers import SubscriptionMemberEmailsResponseSerializer
 from ..utils.query_params import validate_query_params
 
@@ -40,34 +40,24 @@ from ..utils.query_params import validate_query_params
         "blanks, non-address junk, and duplicates are dropped."
     ),
     parameters=[
-        OpenApiParameter(
+        catalogue_param(
             "delivery_station_day",
-            OpenApiTypes.STR,
             required=False,
             description="Only subscriptions assigned to this DeliveryStationDay id.",
         ),
-        OpenApiParameter(
+        catalogue_param(
             "share_type",
-            OpenApiTypes.STR,
             required=False,
-            description=(
-                "Only subscriptions whose variation belongs to this ShareType id."
-            ),
+            description="Only subscriptions whose variation belongs to this ShareType id.",
         ),
-        OpenApiParameter(
+        catalogue_param(
             "date_from",
-            OpenApiTypes.DATE,
             required=False,
-            description=(
-                "Active-window start (YYYY-MM-DD). With ``date_to``, matches "
-                "subscriptions whose term overlaps the range."
-            ),
+            description="Active-window start (YYYY-MM-DD). With ``date_to``, matches "
+            "subscriptions whose term overlaps the range.",
         ),
-        OpenApiParameter(
-            "date_to",
-            OpenApiTypes.DATE,
-            required=False,
-            description="Active-window end (YYYY-MM-DD).",
+        catalogue_param(
+            "date_to", required=False, description="Active-window end (YYYY-MM-DD)."
         ),
     ],
     responses={

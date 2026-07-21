@@ -26,7 +26,6 @@ from django.http import StreamingHttpResponse
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
-    OpenApiParameter,
     extend_schema,
     extend_schema_view,
     inline_serializer,
@@ -60,6 +59,7 @@ from ..models.managers import active_on_date_q
 from ..models.members import MemberLoan, UserInvitation
 from ..schemas import (
     EXPORT_DATE_RANGE_PARAMETERS,
+    catalogue_param,
     get_active_at_date_parameter,
     get_is_active_parameter,
     get_is_trial_parameter,
@@ -320,15 +320,13 @@ class MemberViewSet(
         parameters=[
             get_is_active_parameter(),
             get_is_trial_parameter(required=False),
-            OpenApiParameter(
-                name="only_with_subscriptions",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "only_with_subscriptions",
                 required=False,
                 description="Only return members that have subscriptions",
             ),
-            OpenApiParameter(
-                name="exclude_trial_members",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "exclude_trial_members",
                 required=False,
                 description="Exclude trial members from results",
             ),
@@ -818,9 +816,8 @@ class SubscriptionViewSet(
             get_share_option_parameter(required=False),
             get_is_trial_parameter(required=False),
             get_active_at_date_parameter(),
-            OpenApiParameter(
-                name="on_waiting_list",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "on_waiting_list",
                 required=False,
                 description="Filter by waiting list status",
             ),

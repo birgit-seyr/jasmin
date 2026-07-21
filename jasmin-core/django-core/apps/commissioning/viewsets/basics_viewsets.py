@@ -18,8 +18,6 @@ from django.db.models import (
 )
 from django.utils import timezone
 from drf_spectacular.utils import (
-    OpenApiParameter,
-    OpenApiTypes,
     extend_schema,
     extend_schema_view,
 )
@@ -46,6 +44,7 @@ from ..models import (
 from ..models.choices import ShareOptions
 from ..models.managers import active_on_date_q
 from ..schemas import (
+    catalogue_param,
     get_active_at_date_parameter,
     get_current_parameter,
     get_is_active_parameter,
@@ -149,60 +148,31 @@ class ShareArticleViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     @extend_schema(
         parameters=[
             get_is_active_parameter(),
-            OpenApiParameter(
-                name="is_purchased",
-                type=OpenApiTypes.BOOL,
+            catalogue_param("is_purchased", required=False),
+            catalogue_param(
+                "is_harvest_share_article",
+                description="Filter to articles used by share options that are planned "
+                "complexly (ShareType.needs_complex_planning=True).",
                 required=False,
             ),
-            OpenApiParameter(
-                name="is_harvest_share_article",
-                type=OpenApiTypes.BOOL,
-                description=(
-                    "Filter to articles used by share options that are planned "
-                    "complexly (ShareType.needs_complex_planning=True)."
-                ),
-                required=False,
-            ),
-            OpenApiParameter(
-                name="share_option",
-                type=OpenApiTypes.STR,
-                description=(
-                    "Filter to articles assigned to this exact share option "
-                    "(matches share_option / share_option2 / share_option3)."
-                ),
+            catalogue_param(
+                "share_option",
+                description="Filter to articles assigned to this exact share option "
+                "(matches share_option / share_option2 / share_option3).",
                 required=False,
             ),
             get_price_info_parameter(),
-            OpenApiParameter(
-                name="price_date",
-                type=OpenApiTypes.DATE,
+            catalogue_param("price_date", required=False),
+            catalogue_param("is_data_list", required=False),
+            catalogue_param("is_sold_to_resellers", required=False),
+            catalogue_param("is_extra", required=False),
+            catalogue_param(
+                "include_extra",
                 required=False,
-            ),
-            OpenApiParameter(
-                name="is_data_list",
-                type=OpenApiTypes.BOOL,
-                required=False,
-            ),
-            OpenApiParameter(
-                name="is_sold_to_resellers",
-                type=OpenApiTypes.BOOL,
-                required=False,
-            ),
-            OpenApiParameter(
-                name="is_extra",
-                type=OpenApiTypes.BOOL,
-                required=False,
-            ),
-            OpenApiParameter(
-                name="include_extra",
-                type=OpenApiTypes.BOOL,
-                required=False,
-                description=(
-                    "When true, the ``is_extra`` filter is bypassed and both "
-                    "regular and extra share articles are returned. Used by "
-                    "Orders / DeliveryNote / Invoice flows where the user "
-                    "picks from all articles."
-                ),
+                description="When true, the ``is_extra`` filter is bypassed and both "
+                "regular and extra share articles are returned. Used by "
+                "Orders / DeliveryNote / Invoice flows where the user "
+                "picks from all articles.",
             ),
         ],
         description="Get all share articles with optional filtering and annotations",

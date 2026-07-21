@@ -9,8 +9,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models import QuerySet  # noqa: F401  used in type hints
 from django.utils import timezone
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -30,6 +29,7 @@ from ..errors import (
 from ..models import MovementShareArticle, ShareArticle, Storage
 from ..models.choices import MovementTypeOptions
 from ..schemas import (
+    catalogue_param,
     get_day_number_parameter,
     get_delivery_week_parameter,
     get_share_article_parameter,
@@ -1053,16 +1053,8 @@ class StorageLoggingView(APIViewRolePermissionsMixin, APIView):
         parameters=[
             get_storage_parameter(required=True),
             get_share_article_parameter(required=False),
-            OpenApiParameter(
-                name="start_date",
-                type=OpenApiTypes.DATE,
-                required=False,
-            ),
-            OpenApiParameter(
-                name="end_date",
-                type=OpenApiTypes.DATE,
-                required=False,
-            ),
+            catalogue_param("start_date", required=False),
+            catalogue_param("end_date", required=False),
         ],
         responses={
             200: StorageLoggingEntrySerializer(many=True),

@@ -2215,7 +2215,7 @@ paths:
       - in: query
         name: undo
         schema:
-          type: string
+          type: boolean
         description: Set to 'true' to undo payment (mark as unpaid)
       tags:
       - commissioning
@@ -8227,6 +8227,7 @@ paths:
         name: num_weeks
         schema:
           type: integer
+          default: 52
         description: 'Number of weeks to return capacity for (default: 52)'
       - in: query
         name: year
@@ -10615,6 +10616,14 @@ paths:
         name: share_option
         schema:
           type: string
+          enum:
+          - BREAD_SHARE
+          - CHICKEN_SHARE
+          - GRAIN_SHARE
+          - HARVEST_SHARE
+          - HARVEST_SHARE_FRUIT
+          - HONEY_SHARE
+          - OIL_SHARE
         description: Resolve variation IDs server-side from share_option (e.g. 'gemuese').
           Use this to avoid a client-side waterfall.
       - in: query
@@ -10642,6 +10651,7 @@ paths:
         name: years_back
         schema:
           type: integer
+          default: 2
       tags:
       - commissioning
       security:
@@ -17718,6 +17728,14 @@ paths:
         name: share_option
         schema:
           type: string
+          enum:
+          - BREAD_SHARE
+          - CHICKEN_SHARE
+          - GRAIN_SHARE
+          - HARVEST_SHARE
+          - HARVEST_SHARE_FRUIT
+          - HONEY_SHARE
+          - OIL_SHARE
         description: Filter to articles assigned to this exact share option (matches
           share_option / share_option2 / share_option3).
       tags:
@@ -20154,6 +20172,7 @@ paths:
         name: num_weeks
         schema:
           type: integer
+          default: 52
         description: 'Number of weeks of per-variation capacity_by_week to return
           (default: 52). Needs year + delivery_week.'
       - in: query
@@ -29327,7 +29346,7 @@ components:
       properties:
         id:
           type: string
-          maxLength: 12
+          readOnly: true
         name:
           type: string
           maxLength: 200
@@ -38872,7 +38891,7 @@ components:
       properties:
         id:
           type: string
-          maxLength: 12
+          readOnly: true
         schema_name:
           type: string
           maxLength: 63
@@ -39008,7 +39027,7 @@ components:
       properties:
         id:
           type: string
-          maxLength: 12
+          readOnly: true
         valid_from:
           type: string
           format: date-time

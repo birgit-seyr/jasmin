@@ -49,8 +49,7 @@ via a dedicated endpoint (e.g. an explicit "SEPA mandate context"
 response) rather than widening this serializer.
  */
 export interface TenantNonStaffRead {
-  /** @maxLength 12 */
-  id?: string;
+  readonly id?: string;
   /** @maxLength 63 */
   schema_name: string;
   /** @maxLength 200 */

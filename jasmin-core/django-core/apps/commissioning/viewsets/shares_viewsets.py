@@ -23,7 +23,6 @@ from django.http import StreamingHttpResponse
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
-    OpenApiParameter,
     extend_schema,
     inline_serializer,
 )
@@ -66,6 +65,7 @@ from ..models import (
 from ..models.choices import ShareOptions
 from ..schemas import (
     EXPORT_DATE_RANGE_PARAMETERS,
+    catalogue_param,
     get_active_at_date_parameter,
     get_day_number_parameter,
     get_delivery_day_parameter,
@@ -137,16 +137,13 @@ class ShareTypeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         parameters=[
             get_active_at_date_parameter(),
             get_share_option_parameter(),
-            OpenApiParameter(
-                name="include_future",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "include_future",
                 required=False,
-                description=(
-                    "Widen the validity filter to current + future share "
-                    "types (active on the reference date OR starting after "
-                    "it), excluding only already-ended ones. Reference date "
-                    "= active_at_date if given, else today."
-                ),
+                description="Widen the validity filter to current + future share "
+                "types (active on the reference date OR starting after "
+                "it), excluding only already-ended ones. Reference date "
+                "= active_at_date if given, else today.",
             ),
         ],
     )
@@ -288,52 +285,41 @@ class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             get_active_at_date_parameter(),
             get_share_option_parameter(required=False),
             get_share_type_parameter(required=False),
-            OpenApiParameter(
-                name="include_future",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "include_future",
                 required=False,
-                description=(
-                    "Widen the validity filter to current + future "
-                    "variations (active on the reference date OR starting "
-                    "after it), excluding only already-ended ones. Reference "
-                    "date = active_at_date if given, else today."
-                ),
+                description="Widen the validity filter to current + future "
+                "variations (active on the reference date OR starting "
+                "after it), excluding only already-ended ones. Reference "
+                "date = active_at_date if given, else today.",
             ),
-            OpenApiParameter(
-                name="physical",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "physical",
                 required=False,
                 description="Filter for physical variations only",
             ),
-            OpenApiParameter(
-                name="virtual",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "virtual",
                 required=False,
                 description="Filter for virtual variations only",
             ),
-            OpenApiParameter(
-                name="is_packed_bulk",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "is_packed_bulk",
                 required=False,
-                description=(
-                    "Filter by per-variation bulk-packing flag. "
-                    "Only meaningful in MIXED packing mode; omit to "
-                    "return all variations."
-                ),
+                description="Filter by per-variation bulk-packing flag. "
+                "Only meaningful in MIXED packing mode; omit to "
+                "return all variations.",
             ),
             # Window for the per-week ``capacity_by_week`` field (same contract
             # as the delivery-station-days endpoint). Omit all three → the field
             # is null (no term-aware capacity requested).
             get_year_parameter(required=False),
             get_delivery_week_parameter(required=False),
-            OpenApiParameter(
-                name="num_weeks",
-                type=OpenApiTypes.INT,
+            catalogue_param(
+                "num_weeks",
                 required=False,
-                description=(
-                    "Number of weeks of per-variation capacity_by_week to "
-                    "return (default: 52). Needs year + delivery_week."
-                ),
+                description="Number of weeks of per-variation capacity_by_week to "
+                "return (default: 52). Needs year + delivery_week.",
             ),
         ],
     )
@@ -829,14 +815,10 @@ class ShareDeliveryViewSet(
         parameters=[
             get_year_parameter(),
             get_delivery_week_parameter(),
-            OpenApiParameter(name="for_tours", type=OpenApiTypes.BOOL, required=False),
-            OpenApiParameter(
-                name="for_stations", type=OpenApiTypes.BOOL, required=False
-            ),
-            OpenApiParameter(
-                name="is_packed_bulk", type=OpenApiTypes.BOOL, required=False
-            ),
-            OpenApiParameter(name="joker", type=OpenApiTypes.BOOL, required=False),
+            catalogue_param("for_tours", required=False),
+            catalogue_param("for_stations", required=False),
+            catalogue_param("is_packed_bulk", required=False),
+            catalogue_param("joker", required=False),
         ],
         responses={
             200: WeeklyComboMatrixResponseSerializer,
@@ -1236,9 +1218,8 @@ class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             get_year_parameter(),
             get_delivery_week_parameter(),
             get_day_number_parameter(required=False),
-            OpenApiParameter(
-                name="force",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "force",
                 required=False,
                 description="Apply the change even when the week is in the past.",
             ),
@@ -1883,15 +1864,13 @@ class VirtualComponentsViewSet(RolePermissionsMixin, viewsets.ViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(
-                name="virtual_variation",
-                type=OpenApiTypes.STR,
+            catalogue_param(
+                "virtual_variation",
                 required=False,
                 description="Virtual variation ID to list components for",
             ),
-            OpenApiParameter(
-                name="physical_variation",
-                type=OpenApiTypes.STR,
+            catalogue_param(
+                "physical_variation",
                 required=False,
                 description="Physical variation ID to find parent virtual variations",
             ),

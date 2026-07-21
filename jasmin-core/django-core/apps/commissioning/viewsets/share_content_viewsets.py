@@ -3,9 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
-    OpenApiParameter,
     extend_schema,
     inline_serializer,
 )
@@ -20,6 +18,7 @@ from core.serializers import ErrorResponseSerializer
 
 from ..errors import ShareContentError
 from ..schemas import (
+    catalogue_param,
     get_day_number_parameter,
     get_delivery_station_parameter,
     get_delivery_week_parameter,
@@ -291,15 +290,12 @@ class PackingListViewSet(RolePermissionsMixin, viewsets.ViewSet):
             get_delivery_station_parameter(),
             get_tour_parameter(),
             get_packing_station_parameter(),
-            OpenApiParameter(
-                name="is_packed_bulk",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "is_packed_bulk",
                 required=False,
-                description=(
-                    "Restrict to variations with this is_packed_bulk value. "
-                    "Used in MIXED packing mode to split the list into "
-                    "boxes (False) and bulk (True). Omit to include all."
-                ),
+                description="Restrict to variations with this is_packed_bulk value. "
+                "Used in MIXED packing mode to split the list into "
+                "boxes (False) and bulk (True). Omit to include all.",
             ),
         ],
         responses={200: PackingListRowSerializer(many=True)},
@@ -340,15 +336,12 @@ class PackingListViewSet(RolePermissionsMixin, viewsets.ViewSet):
             get_is_past_parameter(),
             get_delivery_station_parameter(),
             get_tour_parameter(),
-            OpenApiParameter(
-                name="is_packed_bulk",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "is_packed_bulk",
                 required=False,
-                description=(
-                    "Restrict to variations with this is_packed_bulk value. "
-                    "Used in MIXED packing mode to split the matrix into boxes "
-                    "(False) and bulk (True). Omit to include all."
-                ),
+                description="Restrict to variations with this is_packed_bulk value. "
+                "Used in MIXED packing mode to split the matrix into boxes "
+                "(False) and bulk (True). Omit to include all.",
             ),
         ],
         responses={200: PackingBoxesMatrixSerializer},
@@ -393,14 +386,11 @@ class PackingListViewSet(RolePermissionsMixin, viewsets.ViewSet):
             get_is_past_parameter(),
             get_delivery_station_parameter(),
             get_tour_parameter(),
-            OpenApiParameter(
-                name="is_packed_bulk",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "is_packed_bulk",
                 required=False,
-                description=(
-                    "Restrict to variations with this is_packed_bulk value. "
-                    "Omit to include all."
-                ),
+                description="Restrict to variations with this is_packed_bulk value. "
+                "Omit to include all.",
             ),
         ],
         responses={200: PackingBoxesMatrixSerializer},
@@ -454,15 +444,12 @@ class PackingListBulkViewSet(RolePermissionsMixin, viewsets.ViewSet):
             get_share_type_parameter(required=False),
             get_is_past_parameter(),
             get_delivery_station_parameter(),
-            OpenApiParameter(
-                name="is_packed_bulk",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "is_packed_bulk",
                 required=False,
-                description=(
-                    "Restrict to variations with this is_packed_bulk value. "
-                    "Used in MIXED packing mode to limit the bulk list to "
-                    "variations actually packed in bulk. Omit to include all."
-                ),
+                description="Restrict to variations with this is_packed_bulk value. "
+                "Used in MIXED packing mode to limit the bulk list to "
+                "variations actually packed in bulk. Omit to include all.",
             ),
         ],
         responses={

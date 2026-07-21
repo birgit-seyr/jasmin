@@ -4,7 +4,7 @@ from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator, MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import IntegrityError, models
 from django.db.models import F, Q
 from django.utils import timezone
 from django_tenants.models import DomainMixin, TenantMixin
@@ -13,13 +13,14 @@ from nanoid import generate
 
 from apps.shared.iban_validator import validate_iban
 
-ID_LENGTH = 12
+ID_LENGTH = 12  # this is the ID in the JasminModel
+
+# Use URL-safe alphabet (excludes similar-looking characters, excludes "_", this is needed for composite IDs!)
+JASMIN_ID_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"
 
 
 def generate_jasmin_id() -> str:
-    """Generate a nanoid. Does not use '_' because it's used as a composite key delimiter."""
-    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-    return generate(alphabet=alphabet, size=ID_LENGTH)
+    return generate(alphabet=JASMIN_ID_ALPHABET, size=ID_LENGTH)
 
 
 class JasminModel(models.Model):
@@ -29,10 +30,67 @@ class JasminModel(models.Model):
         unique=True,
         primary_key=True,
         default=generate_jasmin_id,
+        editable=False,
     )
 
     class Meta:
         abstract = True
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Save with retry logic for primary-key (nanoid) collision.
+
+        Detects PK collisions specifically by inspecting the failing
+        constraint, instead of substring-matching on the error message
+        (which previously could swallow other unique-constraint failures
+        that happened to mention the word "id").
+        """
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                super().save(*args, **kwargs)
+                return
+            except IntegrityError as e:
+                if self._is_pk_collision(e) and attempt < max_retries - 1:
+                    self.id = generate_jasmin_id()
+                else:
+                    raise
+
+    def _is_pk_collision(self, exc: IntegrityError) -> bool:
+        """Return True iff the IntegrityError is a duplicate on the PK.
+
+        Uses the psycopg constraint name when available
+        (PostgreSQL convention: ``<table>_pkey``) and falls back to a
+        narrower string match.
+        """
+        cause = getattr(exc, "__cause__", None)
+        constraint_name = getattr(getattr(cause, "diag", None), "constraint_name", None)
+        if constraint_name:
+            return constraint_name.endswith("_pkey")
+        # Fallback for non-PG backends or when diag is unavailable.
+        msg = str(exc).lower()
+        return "_pkey" in msg
+
+    def get_display_id(self) -> str:
+        """
+        Convert the nanoid to a human-readable format.
+        Examples:
+            'aBc123XyZ' -> 'ABC-123-XYZ'
+            'xK9mP2nQ4' -> 'XK9-MP2-NQ4'
+        """
+        if not self.id:
+            return ""
+
+        # Convert to uppercase for better readability
+        readable_id = self.id.upper()
+
+        # Split into groups of 3 characters with dashes
+        CHUNK_SIZE = 3
+        chunks = [
+            readable_id[i : i + CHUNK_SIZE]
+            for i in range(0, len(readable_id), CHUNK_SIZE)
+        ]
+
+        return "-".join(chunks)
 
 
 class Tenant(TenantMixin, JasminModel):
