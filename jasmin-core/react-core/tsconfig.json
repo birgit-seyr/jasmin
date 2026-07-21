@@ -30,9 +30,6 @@
   "include": ["src/**/*.ts", "src/**/*.tsx", "vitest.config.ts"],
   "exclude": [
     "node_modules",
-    "dist",
-    "src/features/cultivation/pages",
-    "src/features/economics/pages",
-    "src/features/staff/pages"
+    "dist"
   ]
 }

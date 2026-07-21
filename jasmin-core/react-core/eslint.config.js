@@ -39,10 +39,6 @@ export default [
     ignores: [
       'dist',
       'src/shared/api/generated',
-      'src/features/cultivation/pages',
-      'src/features/economics/pages',
-      'src/features/staff/pages',
-      'src/pages/gdpr',
     ],
   },
   // Node-side config files (vite.config*.js, this file, postcss/tailwind configs)
