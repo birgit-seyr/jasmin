@@ -28,7 +28,7 @@ from ..errors import (
     StorageNotFound,
 )
 from ..models import MovementShareArticle, ShareArticle, Storage
-from ..models.choices_text import MovementTypeOptions
+from ..models.choices import MovementTypeOptions
 from ..schemas import (
     get_day_number_parameter,
     get_delivery_week_parameter,

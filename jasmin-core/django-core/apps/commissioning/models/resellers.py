@@ -10,13 +10,8 @@ from django.utils import timezone
 
 from ..errors import CommissioningError, DocumentDateRequired, FinalizedError
 from .base import JasminModel
-from .choices_text import (
-    DayNumberOptions,
-    DocumentType,
-    delivery_week_field,
-    size_vegetable_field,
-    unit_field,
-)
+from .choices import DayNumberOptions, DocumentType
+from .fields import delivery_week_field, size_vegetable_field, unit_field
 from .mixin import (
     CreatedMixin,
     DateDocumentMixin,

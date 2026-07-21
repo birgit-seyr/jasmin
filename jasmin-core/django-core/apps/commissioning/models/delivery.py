@@ -6,7 +6,7 @@ from django.db import models
 from django.utils import timezone
 
 from .base import JasminModel
-from .choices_text import PaymentCycleOptions
+from .choices import PaymentCycleOptions
 from .mixin import TimeBoundMixin, time_bound_valid_range_constraint
 
 

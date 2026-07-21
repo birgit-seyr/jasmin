@@ -17,7 +17,7 @@ from ..models import (
     Purchase,
     Waste,
 )
-from ..models.choices_text import MovementTypeOptions
+from ..models.choices import MovementTypeOptions
 from ..utils import (
     clean_storage_fields,
     extract_selected_storage_id,

@@ -5,12 +5,8 @@ from django.db import models
 
 from .base import JasminModel
 from .basics import ShareArticle
-from .choices_text import (
-    DayNumberOptions,
-    delivery_week_field,
-    size_vegetable_field,
-    unit_field,
-)
+from .choices import DayNumberOptions
+from .fields import delivery_week_field, size_vegetable_field, unit_field
 from .mixin import ArchivableMixin, CreatedMixin, FinalizableMixin
 
 

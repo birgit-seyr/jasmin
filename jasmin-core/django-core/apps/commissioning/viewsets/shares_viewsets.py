@@ -63,7 +63,7 @@ from ..models import (
     Subscription,
     VirtualVariationComponent,
 )
-from ..models.choices_text import ShareOptions
+from ..models.choices import ShareOptions
 from ..schemas import (
     EXPORT_DATE_RANGE_PARAMETERS,
     get_active_at_date_parameter,

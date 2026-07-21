@@ -44,7 +44,7 @@ from decimal import Decimal
 from typing import Any
 
 from ..models import ShareDelivery, ShareTypeVariation, VirtualVariationComponent
-from ..models.choices_text import ShareTypeVariationSizeOptions
+from ..models.choices import ShareTypeVariationSizeOptions
 from ..utils.delivery_utils import tour_station_ids
 from ..utils.iso_week_utils import saturday_of_iso_week
 from ..utils.packing_divergence import record_amount

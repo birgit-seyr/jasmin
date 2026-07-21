@@ -43,7 +43,7 @@ from ..models import (
     ShareType,
     Storage,
 )
-from ..models.choices_text import ShareOptions
+from ..models.choices import ShareOptions
 from ..models.managers import active_on_date_q
 from ..schemas import (
     get_active_at_date_parameter,

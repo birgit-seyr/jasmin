@@ -24,7 +24,7 @@ from apps.commissioning.models import (
     ShareDelivery,
     Subscription,
 )
-from apps.commissioning.models.choices_text import PaymentCycleOptions
+from apps.commissioning.models.choices import PaymentCycleOptions
 from apps.commissioning.utils.iso_week_utils import share_delivery_date
 from apps.shared.money import round_money as _money
 from apps.shared.tenants.models import RateLimitedAction, Tenant, TenantSettings

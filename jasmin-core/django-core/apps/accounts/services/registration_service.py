@@ -38,7 +38,7 @@ def _assert_required_consents(accepted: dict, *, coop_shares_count: int, as_of) 
     from django.db.models import Q
 
     from apps.commissioning.models import ConsentDocument
-    from apps.commissioning.models.choices_text import ConsentKind
+    from apps.commissioning.models.choices import ConsentKind
 
     required = [ConsentKind.PRIVACY, ConsentKind.WITHDRAWAL]
     if coop_shares_count > 0:

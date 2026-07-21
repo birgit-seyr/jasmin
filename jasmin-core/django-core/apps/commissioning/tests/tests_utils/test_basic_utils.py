@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from django.db.models import IntegerField
 
-from apps.commissioning.models.choices_text import (
+from apps.commissioning.models.choices import (
     ShareTypeVariationSizeOptions,
     UnitOptions,
     VegetableSizeOptions,

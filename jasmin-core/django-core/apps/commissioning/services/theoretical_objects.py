@@ -30,7 +30,7 @@ from ..models import (
     TheoreticalWashAmount,
     WashAmount,
 )
-from ..models.choices_text import UnitOptions
+from ..models.choices import UnitOptions
 from ..utils.iso_week_utils import compute_rolled_back_week, make_noon_datetime
 
 logger = logging.getLogger(__name__)

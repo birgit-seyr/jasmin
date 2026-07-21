@@ -260,7 +260,7 @@ class MemberService:
         # cleanup is a small, focused query that doesn't justify
         # a cross-service call.
         from apps.commissioning.models import UserInvitation
-        from apps.commissioning.models.choices_text import InvitationStatus
+        from apps.commissioning.models.choices import InvitationStatus
 
         UserInvitation.objects.filter(user=user, status=InvitationStatus.SENT).update(
             status=InvitationStatus.CANCELLED

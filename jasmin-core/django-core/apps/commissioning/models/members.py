@@ -13,7 +13,7 @@ from encrypted_model_fields.fields import EncryptedCharField
 from apps.shared.iban_validator import validate_iban
 
 from .base import JasminModel
-from .choices_text import InvitationStatus
+from .choices import InvitationStatus
 from .mixin import (
     AdminConfirmableMixin,
     CancellableMixin,

@@ -18,15 +18,13 @@ from .base import JasminModel
 
 if TYPE_CHECKING:
     from .days import SharesDeliveryDay
-from .choices_text import (
+from .choices import (
     DayNumberOptions,
     DeliveryCycleOptions,
     ShareOptions,
     ShareTypeVariationSizeOptions,
-    delivery_week_field,
-    size_vegetable_field,
-    unit_field,
 )
+from .fields import delivery_week_field, size_vegetable_field, unit_field
 from .mixin import (
     ArchivableMixin,
     CreatedMixin,

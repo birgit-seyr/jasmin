@@ -1235,27 +1235,27 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_PATCH": False,
     # Map your enum classes to prevent duplicates
     "ENUM_NAME_OVERRIDES": {
-        "MovementTypeEnum": "apps.commissioning.models.choices_text.MovementTypeOptions",
-        "CultivationOriginEnum": "apps.commissioning.models.choices_text.CultivationOriginOptions",
-        "DeliveryCycleEnum": "apps.commissioning.models.choices_text.DeliveryCycleOptions",
-        "ShareTypeVariationSizeEnum": "apps.commissioning.models.choices_text.ShareTypeVariationSizeOptions",
-        "UnitEnum": "apps.commissioning.models.choices_text.UnitOptions",
-        "PaymentCycleEnum": "apps.commissioning.models.choices_text.PaymentCycleOptions",
-        "VegetableSizeEnum": "apps.commissioning.models.choices_text.VegetableSizeOptions",
-        "ShareTypeEnum": "apps.commissioning.models.choices_text.ShareOptions",
+        "MovementTypeEnum": "apps.commissioning.models.choices.MovementTypeOptions",
+        "CultivationOriginEnum": "apps.commissioning.models.choices.CultivationOriginOptions",
+        "DeliveryCycleEnum": "apps.commissioning.models.choices.DeliveryCycleOptions",
+        "ShareTypeVariationSizeEnum": "apps.commissioning.models.choices.ShareTypeVariationSizeOptions",
+        "UnitEnum": "apps.commissioning.models.choices.UnitOptions",
+        "PaymentCycleEnum": "apps.commissioning.models.choices.PaymentCycleOptions",
+        "VegetableSizeEnum": "apps.commissioning.models.choices.VegetableSizeOptions",
+        "ShareTypeEnum": "apps.commissioning.models.choices.ShareOptions",
         # All the *_day fields across SharesDeliveryDay / OrdersDeliveryDay /
         # Order / Share / etc. use the same DayNumberOptions choice set.
         # Without this override, spectacular auto-generates ~8 distinct
         # enum names (HarvestingDayEnum, WashingDayEnum, etc.) that all
         # describe the same Monday-to-Sunday set — one shared
         # ``DayNumberEnum`` keeps the generated TS client cleaner.
-        "DayNumberEnum": "apps.commissioning.models.choices_text.DayNumberOptions",
+        "DayNumberEnum": "apps.commissioning.models.choices.DayNumberOptions",
         # Three unrelated models each have a ``kind`` CharField with its
         # own choice set; without these overrides spectacular falls back
         # to hash-suffixed names like ``Kind085Enum``.
         "OpsChecklistKindEnum": "apps.shared.super_admin.models.OpsChecklistItem.KIND_CHOICES",
         "ExternalCodeMappingKindEnum": "apps.commissioning.models.imports.ExternalCodeMapping.KIND_CHOICES",
-        "ConsentKindEnum": "apps.commissioning.models.choices_text.ConsentKind",
+        "ConsentKindEnum": "apps.commissioning.models.choices.ConsentKind",
     },
     "COMPONENT_NO_READ_ONLY_REQUIRED": True,
     "SCHEMA_PATH_PREFIX": "/api/",

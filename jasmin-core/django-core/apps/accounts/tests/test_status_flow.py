@@ -255,7 +255,7 @@ class TestSelfRegistration:
         import datetime
 
         from apps.commissioning.models import ConsentDocument
-        from apps.commissioning.models.choices_text import ConsentKind
+        from apps.commissioning.models.choices import ConsentKind
 
         ConsentDocument.objects.create(
             kind=ConsentKind.COOP_CONTRACT,
@@ -279,7 +279,7 @@ class TestSelfRegistration:
         import datetime
 
         from apps.commissioning.models import ConsentDocument, ConsentRecord
-        from apps.commissioning.models.choices_text import ConsentKind
+        from apps.commissioning.models.choices import ConsentKind
 
         contract = ConsentDocument.objects.create(
             kind=ConsentKind.COOP_CONTRACT,

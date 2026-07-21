@@ -30,7 +30,7 @@ from apps.commissioning.models import (
     MemberLoan,
     UserInvitation,
 )
-from apps.commissioning.models.choices_text import ConsentKind
+from apps.commissioning.models.choices import ConsentKind
 from apps.commissioning.tests.factories import (
     ContactEntityFactory,
     CoopShareFactory,

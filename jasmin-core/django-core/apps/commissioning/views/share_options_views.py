@@ -9,7 +9,7 @@ from rest_framework.response import Response
 
 from apps.authz.permissions import IsStaff
 
-from ..models.choices_text import ShareOptions
+from ..models.choices import ShareOptions
 from ..models.shares import ShareTypeVariation
 
 

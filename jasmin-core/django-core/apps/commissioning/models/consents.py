@@ -35,7 +35,7 @@ from django.db import models
 from django.utils import timezone
 
 from .base import JasminModel
-from .choices_text import ConsentKind
+from .choices import ConsentKind
 from .mixin import (
     TimeBoundMixin,
     nullable_date_order_constraint,

@@ -54,7 +54,7 @@ from ..models import (
     OrganicCertificate,
     Reseller,
 )
-from ..models.choices_text import InvitationStatus
+from ..models.choices import InvitationStatus
 from ..models.members import UserInvitation
 from ..schemas import (
     get_day_number_parameter,

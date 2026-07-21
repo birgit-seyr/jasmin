@@ -55,7 +55,7 @@ from ..errors import (
     SubscriptionConfirmedImmutable,
 )
 from ..models import CoopShare, Member, ShareDelivery, Subscription
-from ..models.choices_text import InvitationStatus
+from ..models.choices import InvitationStatus
 from ..models.managers import active_on_date_q
 from ..models.members import MemberLoan, UserInvitation
 from ..schemas import (

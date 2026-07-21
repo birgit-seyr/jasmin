@@ -28,7 +28,7 @@ from ..models import (
     TheoreticalWashAmount,
     WashAmount,
 )
-from ..models.choices_text import MovementTypeOptions
+from ..models.choices import MovementTypeOptions
 from ..services.documentation_service import GenericDocumentationService
 from ..services.stock_service import StockService
 from ..utils import (
