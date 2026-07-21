@@ -16,7 +16,7 @@ const DashboardConfiguration: FC = () => {
     <>
       <HeartOutlined />
       <h1>{t("configuration.dashboard_title")}</h1>
-      {!loading && crates.length === 0 && (
+      {/* {!loading && crates.length === 0 && (
         <Alert
           type="warning"
           showIcon
@@ -30,7 +30,7 @@ const DashboardConfiguration: FC = () => {
             </>
           }
         />
-      )}
+      )} */}
       <div className="page-narrow">
         {t("configuration.dashboard_note")}
         {t("configuration.dashboard_note2")}

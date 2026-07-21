@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -1324,6 +1324,16 @@ class TestDefaultContentMaterializationVisibility:
 
     YEAR = 2026
     WEEK = 40  # well clear of the frozen "now" below
+
+    @pytest.fixture(autouse=True)
+    def _frozen_now(self):
+        """Pin "now" to 2026-07-20 (ISO week 30) so ``WEEK`` (40) stays future for
+        the ``is_past=False`` visibility queries. The ``_make_default_content``
+        inner freeze only wrapped content CREATION, not the query, so a run past
+        week 40 flipped the delivery week to "past" and the content vanished.
+        """
+        with time_machine.travel(datetime(2026, 7, 20, 12, 0), tick=False):
+            yield
 
     def _make_default_content(self, *, default_packing_day: int):
         """Drive ``create_default_share_content`` end-to-end for one future

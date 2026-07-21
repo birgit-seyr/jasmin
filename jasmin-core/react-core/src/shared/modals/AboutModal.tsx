@@ -6,7 +6,7 @@ const { Title, Text } = Typography;
 
 // Order shown in the modal. Each id maps to ``about.feature_<id>_{title,desc}``.
 const FEATURE_IDS = [
-  "genossenschaft",
+  "cooperative",
   "configurable",
   "delivery",
   "working_lists",

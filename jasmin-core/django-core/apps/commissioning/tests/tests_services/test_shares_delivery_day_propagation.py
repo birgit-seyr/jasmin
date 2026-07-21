@@ -7,6 +7,7 @@ import datetime
 from datetime import timedelta
 
 import pytest
+import time_machine
 from django.utils import timezone
 from isoweek import Week
 
@@ -27,6 +28,17 @@ from apps.commissioning.tests.factories import (
     ShareTypeVariationFactory,
     SubscriptionFactory,
 )
+
+
+@pytest.fixture(autouse=True)
+def _frozen_today():
+    """Freeze "today" to 2026-07-20 (ISO week 30) so the relative "N weeks ahead"
+    dates in this module stay within 2026 — otherwise a December run pushes the
+    +2/+4-week station-day/share dates across the year boundary and breaks the
+    succession-propagation math.
+    """
+    with time_machine.travel(datetime.datetime(2026, 7, 20, 12, 0), tick=False):
+        yield
 
 
 class _MondayHelpers:

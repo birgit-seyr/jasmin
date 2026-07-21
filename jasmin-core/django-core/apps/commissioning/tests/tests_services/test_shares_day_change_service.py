@@ -11,10 +11,12 @@ Verify that updating day fields on Share rows:
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
+import time_machine
 
 from apps.commissioning.errors import PastWeekError
 from apps.commissioning.models import (
@@ -45,6 +47,22 @@ from apps.commissioning.tests.factories import (
 # (Tests run with frozen "today" of 2026-04-22 = ISO week 17.)
 FUTURE_YEAR = 2026
 FUTURE_WEEK = 30
+
+
+@pytest.fixture(autouse=True)
+def _frozen_today():
+    """Freeze "today" to 2026-04-22 (ISO week 17) for every test in this module.
+
+    The share-day-change service refuses to modify shares for the past/current
+    week; these tests target ``FUTURE_WEEK`` (30), which is only "future" while
+    the real clock is before week 30/2026. Freezing here keeps that assumption
+    true forever — the module already documented this frozen date, it just was
+    never actually applied, so the suite detonated once the wall clock reached
+    week 30/2026.
+    """
+    with time_machine.travel(datetime(2026, 4, 22, 12, 0), tick=False):
+        yield
+
 
 TOTALS_PATCH_PATH = (
     "apps.commissioning.services.share_content_service"

@@ -3,7 +3,6 @@ import {
   ExclamationCircleOutlined,
   EyeInvisibleOutlined,
   LockOutlined,
-  ReloadOutlined,
   SendOutlined,
 } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,12 +11,9 @@ import {
   Button,
   Card,
   Col,
-  Form,
   Input,
   InputNumber,
-  Modal,
   Row,
-  Select,
   Space,
   Spin,
   Tag,
@@ -32,9 +28,9 @@ import {
   useTenantsEmailConfigSavePartialUpdate,
   useTenantsEmailConfigTestCreate,
 } from "@shared/api/generated/tenants/tenants";
-import { LabeledSwitch } from "@shared/ui";
+import { AutoSaveIndicator, LabeledSwitch } from "@shared/ui";
 import { useAuth } from "@shared/contexts/AuthContext";
-import { useTenant } from "@hooks/index";
+import { useAutoSave, useTenant } from "@hooks/index";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { blockNonNumericKeys } from "@shared/utils/numberFormat";
@@ -62,7 +58,6 @@ const EMPTY_CONFIG: TenantEmailConfig = {
 
 export default function ConfigurationEmail() {
   const [config, setConfig] = useState<TenantEmailConfig>(EMPTY_CONFIG);
-  const [hasChanges, setHasChanges] = useState(false);
   const [testModalOpen, setTestModalOpen] = useState(false);
   const [credentialFields, setCredentialFields] = useState<{
     smtp_password?: string;
@@ -104,54 +99,26 @@ export default function ConfigurationEmail() {
     },
   });
 
-  // Save mutation via generated hook
-  const { mutateAsync: saveConfig, isPending: saving } =
-    useTenantsEmailConfigSavePartialUpdate({
-      mutation: {
-        onSuccess: () => {
-          notify.success(t("email_config.saved"));
-          setCredentialFields({});
-          setHasChanges(false);
-          queryClient.invalidateQueries({
-            queryKey: getTenantsEmailConfigListQueryKey(),
-          });
-        },
-        onError: () => {
-          notify.error(t("email_config.save_error"));
-        },
+  // Save mutation via generated hook. No success toast — the
+  // AutoSaveIndicator carries the "saving/saved" feedback (a toast on every
+  // debounced keystroke-save would be noise). ``hasChanges`` is owned by
+  // ``useAutoSave``, so it isn't cleared here.
+  const { mutateAsync: saveConfig } = useTenantsEmailConfigSavePartialUpdate({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: getTenantsEmailConfigListQueryKey(),
+        });
       },
-    });
-
-  // Sync query data into local state — but never clobber an in-progress edit.
-  // With the global staleTime:0 + refetchOnWindowFocus, a focus-refetch
-  // returning changed server data would otherwise overwrite unsaved fields.
-  // ``hasChanges``/``saving`` are intentionally omitted from the deps so merely
-  // toggling them never re-seeds over a fresh draft (matches the
-  // ConfigurationGeneral sibling).
-  useEffect(() => {
-    if (hasChanges || saving) return;
-    if (configData) {
-      setConfig(configData);
-      setHasChanges(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [configData]);
-
-  // Track changes
-  const updateField = useCallback((field: string, value: unknown) => {
-    setConfig((prev) => ({ ...prev, [field]: value }));
-    setHasChanges(true);
-  }, []);
-
-  const updateCredential = useCallback(
-    (field: "smtp_password", value: string) => {
-      setCredentialFields((prev) => ({ ...prev, [field]: value }));
-      setHasChanges(true);
+      onError: () => {
+        notify.error(t("email_config.save_error"));
+      },
     },
-    [],
-  );
+  });
 
-  // Save
+  // The autosave save callback. Re-throws on failure so ``useAutoSave`` keeps
+  // the change dirty instead of flipping the indicator to "saved" over a
+  // change that didn't persist.
   const handleSave = useCallback(async () => {
     const payload: TenantEmailConfig = {
       smtp_host: config.smtp_host,
@@ -166,6 +133,8 @@ export default function ConfigurationEmail() {
       is_active: config.is_active,
     };
 
+    // Only send the password when the office actually typed one — an empty
+    // field must never blank the stored (encrypted) credential.
     if (credentialFields.smtp_password) {
       payload.smtp_password = credentialFields.smtp_password;
     }
@@ -173,14 +142,45 @@ export default function ConfigurationEmail() {
     await saveConfig({ data: payload });
   }, [config, credentialFields, saveConfig]);
 
-  // Reset
-  const handleReset = useCallback(() => {
+  // Single source of truth for the autosave debounce + flags. Per-field
+  // ``markChanged(fieldType)`` drives the per-change delay (switch → instant,
+  // text → 500 ms).
+  const { hasChanges, saving, markChanged } = useAutoSave({
+    enabled: !loading && Boolean(tenant?.id),
+    save: handleSave,
+  });
+
+  // Sync query data into local state — but never clobber an in-progress edit.
+  // With the global staleTime:0 + refetchOnWindowFocus, a focus-refetch
+  // returning changed server data would otherwise overwrite unsaved fields.
+  // ``hasChanges``/``saving`` are intentionally omitted from the deps so merely
+  // toggling them never re-seeds over a fresh draft (matches the
+  // ConfigurationGeneral sibling).
+  useEffect(() => {
+    if (hasChanges || saving) return;
     if (configData) {
       setConfig(configData);
     }
-    setCredentialFields({});
-    setHasChanges(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configData]);
+
+  // Track changes → mark the form dirty (fieldType tunes the debounce window).
+  const updateField = useCallback(
+    (field: string, value: unknown, fieldType?: string) => {
+      setConfig((prev) => ({ ...prev, [field]: value }));
+      markChanged(fieldType);
+    },
+    [markChanged],
+  );
+
+  const updateCredential = useCallback(
+    (field: "smtp_password", value: string) => {
+      setCredentialFields((prev) => ({ ...prev, [field]: value }));
+      // Debounced (default) — the full password autosaves once typing pauses.
+      markChanged();
+    },
+    [markChanged],
+  );
 
   // Test email mutation via generated hook
   const { mutateAsync: sendTestEmail, isPending: sendingTest } =
@@ -285,7 +285,8 @@ export default function ConfigurationEmail() {
                 {SettingsRenderer.renderInput(
                   setting,
                   (config as unknown as Record<string, unknown>)[setting.key],
-                  (newValue) => updateField(setting.key, newValue),
+                  (newValue) =>
+                    updateField(setting.key, newValue, setting.type),
                 )}
                 {SettingsRenderer.renderDescription(setting)}
               </div>
@@ -308,44 +309,7 @@ export default function ConfigurationEmail() {
   return (
     <div>
       <h1>{t("configuration.email")}</h1>
-      {/* Action buttons */}
-      <Card
-        className="page-narrow"
-        style={{
-          textAlign: "center",
-          marginBottom: "1em",
-        }}
-      >
-        <Space size="middle">
-          <Button
-            type="primary"
-            onClick={handleSave}
-            loading={saving}
-            disabled={!hasChanges}
-          >
-            {t("settings.save")}
-          </Button>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={handleReset}
-            disabled={!hasChanges || saving}
-          >
-            {t("settings.reset")}
-          </Button>
-          <Button
-            icon={<SendOutlined />}
-            onClick={() => setTestModalOpen(true)}
-            disabled={!config.from_email || hasChanges}
-          >
-            {t("email_config.send_test")}
-          </Button>
-        </Space>
-        {hasChanges && (
-          <div style={{ marginTop: "8px" }}>
-            <Text type="warning">{t("settings.unsaved_changes")}</Text>
-          </div>
-        )}
-      </Card>
+      <AutoSaveIndicator saving={saving} hasChanges={hasChanges} />
 
       {/* Verification status */}
       {config.from_email && (
@@ -378,7 +342,7 @@ export default function ConfigurationEmail() {
         >
           <LabeledSwitch
             value={config.is_active ?? true}
-            onChange={(v: boolean) => updateField("is_active", v)}
+            onChange={(v: boolean) => updateField("is_active", v, "switch")}
             label={
               <>
                 {config.is_active ? t("common.active") : t("common.inactive")}
@@ -394,6 +358,20 @@ export default function ConfigurationEmail() {
               </>
             }
           />
+        </Card>
+        {/* Test email — disabled until the config is saved (autosave settled), so
+          the test always runs against what's actually persisted. */}
+        <Card
+          className="page-narrow"
+          style={{ textAlign: "center", marginBottom: "1em" }}
+        >
+          <Button
+            icon={<SendOutlined />}
+            onClick={() => setTestModalOpen(true)}
+            disabled={!config.from_email || hasChanges || saving}
+          >
+            {t("email_config.send_test")}
+          </Button>
         </Card>
 
         {/* Sender Identity (declarative) */}
@@ -423,7 +401,9 @@ export default function ConfigurationEmail() {
               <Text strong>{t("email_config.smtp_host")}</Text>
               <Input
                 value={config.smtp_host ?? ""}
-                onChange={(e) => updateField("smtp_host", e.target.value)}
+                onChange={(e) =>
+                  updateField("smtp_host", e.target.value, "input")
+                }
                 placeholder="smtp.gmail.com"
                 style={{ marginTop: 4 }}
               />
@@ -432,7 +412,7 @@ export default function ConfigurationEmail() {
               <Text strong>{t("email_config.smtp_port")}</Text>
               <InputNumber
                 value={config.smtp_port}
-                onChange={(v) => updateField("smtp_port", v)}
+                onChange={(v) => updateField("smtp_port", v, "number")}
                 style={{ width: "100%", marginTop: 4 }}
                 min={1}
                 max={65535}
@@ -448,7 +428,9 @@ export default function ConfigurationEmail() {
               <Text strong>{t("email_config.smtp_username")}</Text>
               <Input
                 value={config.smtp_username ?? ""}
-                onChange={(e) => updateField("smtp_username", e.target.value)}
+                onChange={(e) =>
+                  updateField("smtp_username", e.target.value, "input")
+                }
                 placeholder="user@gmail.com"
                 style={{ marginTop: 4 }}
               />
@@ -477,7 +459,9 @@ export default function ConfigurationEmail() {
               <div style={{ marginTop: 8 }}>
                 <LabeledSwitch
                   value={config.smtp_use_tls ?? true}
-                  onChange={(v: boolean) => updateField("smtp_use_tls", v)}
+                  onChange={(v: boolean) =>
+                    updateField("smtp_use_tls", v, "switch")
+                  }
                   label={t("email_config.use_tls")}
                 />
               </div>

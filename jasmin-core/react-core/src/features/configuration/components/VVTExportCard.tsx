@@ -96,11 +96,9 @@ export default function VVTExportCard() {
       // token already applied to ``PlanningHarvestSharesBase`` info
       // strips and the email-template editor banner, so this card
       // stays visually consistent with the rest of the office UI.
-      styles={{ header: { backgroundColor: "var(--color-info-bg)" } }}
+      className="settings-card-header"
     >
-      <Paragraph>
-        {t("gdpr.vvt.description")}
-      </Paragraph>
+      <Paragraph>{t("gdpr.vvt.description")}</Paragraph>
 
       <Space>
         <Button
@@ -161,9 +159,7 @@ export default function VVTExportCard() {
                 {(data as { doc_reference?: string }).doc_reference}
               </Text>
             </Text>
-            <pre className="json-viewer">
-              {JSON.stringify(data, null, 2)}
-            </pre>
+            <pre className="json-viewer">{JSON.stringify(data, null, 2)}</pre>
           </>
         ) : (
           <Paragraph>{t("common.loading")}</Paragraph>

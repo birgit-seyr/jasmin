@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime
 
 import pytest
+import time_machine
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -41,6 +42,19 @@ DAY_NUMBER = 2  # Wednesday — matches SharesDeliveryDayFactory default
 # Far-future Monday..Sunday one-week term: clears any tenant lead-time floor.
 VALID_FROM = datetime.date(2026, 9, 7)
 VALID_UNTIL = datetime.date(2026, 9, 13)
+
+
+@pytest.fixture(autouse=True)
+def _frozen_today():
+    """Freeze "today" to 2026-07-20 (ISO week 30) so ``VALID_FROM`` (2026-09-07)
+    stays comfortably beyond the 2-week subscription lead time regardless of the
+    wall clock. Without this the suite rots once the real clock reaches ~2 weeks
+    before 2026-09-07 (``SubscriptionStartTooSoon`` → 400 masks the expected
+    409/response).
+    """
+    with time_machine.travel(datetime.datetime(2026, 7, 20, 12, 0), tick=False):
+        yield
+
 
 ABOS_URL = reverse("abos-list")
 

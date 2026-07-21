@@ -49,7 +49,7 @@ interface CancelMembershipModalProps {
  *     (+ the free-text reason) on the member
  *   * cascades to every open ``CoopShare`` — they're marked cancelled and get
  *     a ``payback_due_date`` snapshotted to ``effective + retention months``
- *     (the equity stays in the Genossenschaft until then)
+ *     (the equity stays in the cooperative until then)
  *   * ends the member's still-active subscriptions
  *
  * Both modes REFUSE while the member still holds active subscriptions. Member
@@ -99,11 +99,14 @@ export const CancelMembershipModal: FC<CancelMembershipModalProps> = ({
           reason: reason.trim() || undefined,
         });
       } else {
-        const result = await commissioningMembersCancelCreate(String(memberId), {
-          effective_at: toApiDate(effectiveAt)!,
-          reason: reason.trim() || undefined,
-          force,
-        });
+        const result = await commissioningMembersCancelCreate(
+          String(memberId),
+          {
+            effective_at: toApiDate(effectiveAt)!,
+            reason: reason.trim() || undefined,
+            force,
+          },
+        );
         const notEnded = result?.subscriptions_not_ended ?? [];
         if (notEnded.length > 0) {
           notify.warning(
@@ -119,12 +122,14 @@ export const CancelMembershipModal: FC<CancelMembershipModalProps> = ({
     } catch (err) {
       // Office path: the backend REFUSES (400) while active subscriptions
       // remain. Surface a clear "tick force" hint rather than the generic error.
-      const code = (err as { response?: { data?: { code?: string } } })?.response
-        ?.data?.code;
+      const code = (err as { response?: { data?: { code?: string } } })
+        ?.response?.data?.code;
       if (!self && code === "member.has_active_subscriptions") {
         notify.error(t("members.cancel_membership_active_subs_error"));
       } else {
-        notify.error(getErrorMessage(err, t("members.cancel_membership_error")));
+        notify.error(
+          getErrorMessage(err, t("members.cancel_membership_error")),
+        );
       }
     } finally {
       setLoading(false);
@@ -173,7 +178,10 @@ export const CancelMembershipModal: FC<CancelMembershipModalProps> = ({
         />
 
         <Form layout="vertical" disabled={loading}>
-          <Form.Item label={t("members.cancel_membership_effective_at")} required>
+          <Form.Item
+            label={t("members.cancel_membership_effective_at")}
+            required
+          >
             <DatePicker
               value={effectiveAt}
               onChange={setEffectiveAt}

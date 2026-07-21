@@ -65,7 +65,7 @@ def cancel_member_with_coop_shares(
 
     Each cascaded ``CoopShare`` also gets its ``payback_due_date`` snapshotted
     to ``effective + TenantSettings.retention_period_…_months`` — the equity
-    stays in the Genossenschaft for the retention period after exit, then
+    stays in the cooperative for the retention period after exit, then
     becomes due to be paid back. Frozen per-share so a later retention change
     doesn't move already-cancelled members' due dates.
 
