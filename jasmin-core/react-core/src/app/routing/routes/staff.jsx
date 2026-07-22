@@ -4,11 +4,16 @@ const DashboardStaff = lazy(
   () => import("@features/staff/pages/DashboardStaff"),
 );
 
-const ListWeeklyPlanCategories = lazy(
-  () => import("@features/staff/pages/ListWeeklyPlanCategory.jsx"),
+const WeeklyStaffPlan = lazy(
+  () => import("@features/staff/pages/WeeklyStaffPlan"),
 );
-const ListEmployees = lazy(
-  () => import("@features/staff/pages/ListEmployees.jsx"),
+
+const ListWeeklyPlanCategories = lazy(
+  () => import("@features/staff/pages/ListWeeklyPlanCategory"),
+);
+const ListEmployees = lazy(() => import("@features/staff/pages/ListEmployees"));
+const ListAbsenceCategory = lazy(
+  () => import("@features/staff/pages/ListAbsenceCategory"),
 );
 const SaturdayShifts = lazy(
   () => import("@features/staff/pages/SaturdayShifts.jsx"),
@@ -20,6 +25,16 @@ export const staffRoutes = [
     element: <DashboardStaff />,
     meta: {
       title: "app.routes.staff_dashboard",
+      // requiredRole: [],
+      // requiredPermission: []
+    },
+  },
+
+  {
+    path: "/staff/weekly-staff-plan",
+    element: <WeeklyStaffPlan />,
+    meta: {
+      title: "app.routes.weekly_staff_plan",
       // requiredRole: [],
       // requiredPermission: []
     },
@@ -48,6 +63,15 @@ export const staffRoutes = [
     element: <ListEmployees />,
     meta: {
       title: "app.routes.employees",
+      // requiredRole: [],
+      // requiredPermission: []
+    },
+  },
+  {
+    path: "/staff/absence-categories",
+    element: <ListAbsenceCategory />,
+    meta: {
+      title: "app.routes.absence_categories",
       // requiredRole: [],
       // requiredPermission: []
     },

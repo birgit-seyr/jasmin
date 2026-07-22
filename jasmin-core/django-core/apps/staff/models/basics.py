@@ -1,11 +1,11 @@
 from typing import Any
 
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import IntegrityError, models
 from nanoid import generate
 
 from apps.accounts.models import JasminUser
+from apps.shared.model_fields import day_of_week_field, iso_week_field
 
 from ..constants import ID_LENGTH, JASMIN_ID_ALPHABET
 
@@ -102,12 +102,13 @@ class Employee(JasminModel):
         related_name="employee_profile",
     )
 
-    def __str__(self):
-        return (
-            f"Employee: {self.user.get_full_name()}"
-            if self.user
-            else f"Employee: {self.id}"
-        )
+    class Meta:
+        ordering = ["short_name_for_weekly_plan"]
+
+    def __str__(self) -> str:
+        if self.user:
+            return f"Employee: {self.user.get_full_name()}"
+        return f"Employee: {self.short_name_for_weekly_plan or self.id}"
 
 
 class Employment(JasminModel):
@@ -117,6 +118,13 @@ class Employment(JasminModel):
     valid_from = models.DateField()
     valid_until = models.DateField(null=True, blank=True)
     hours_per_week = models.DecimalField(max_digits=5, decimal_places=2)
+
+    class Meta:
+        ordering = ["-valid_from"]
+
+    def __str__(self) -> str:
+        until = self.valid_until or "open"
+        return f"{self.employee}: {self.valid_from} - {until}"
 
     def save(self, *args, **kwargs) -> None:
         if self.valid_from and self.valid_until and self.valid_until < self.valid_from:
@@ -133,21 +141,50 @@ class WeeklyPlanCategory(JasminModel):
     is_active = models.BooleanField(default=True, db_index=True)
     name = models.CharField(max_length=200)
     max_lines = models.IntegerField()
+    # Optional manual ordering for the weekly plan. Nullable for backward
+    # compatibility: existing rows stay NULL and — since Postgres sorts NULLs
+    # last in ASC — fall to the end (alphabetically) until an order is assigned.
+    sort_order = models.PositiveIntegerField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        ordering = ["sort_order", "name"]
+        verbose_name_plural = "weekly plan categories"
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class WeeklyPlan(JasminModel):
     year = models.PositiveSmallIntegerField()
-    week = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(53)],
-    )
-    day = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(6)],
-    )
+    week = iso_week_field()
+    day = day_of_week_field()
     weekly_plan_category = models.ForeignKey(
         "WeeklyPlanCategory", on_delete=models.CASCADE
     )
     employee = models.ForeignKey("Employee", on_delete=models.CASCADE)
     row_index = models.IntegerField(blank=True, null=True)  # just inside the category
+
+    class Meta:
+        ordering = ["year", "week", "day", "row_index"]
+        constraints = [
+            # One employee per grid cell: a (week, day, category, row) slot holds
+            # at most one assignment. Employees may still appear in many cells.
+            # nulls_distinct=False so a null row_index can't slip duplicate cells
+            # past the constraint (Postgres 15 / Django 5).
+            models.UniqueConstraint(
+                fields=["year", "week", "day", "weekly_plan_category", "row_index"],
+                name="weeklyplan_one_employee_per_cell",
+                nulls_distinct=False,
+            ),
+        ]
+        # The unique constraint's index leads with (year, week), so the grid's
+        # per-week fetch is already covered — no separate index needed here.
+
+    def __str__(self) -> str:
+        return (
+            f"{self.year} W{self.week} D{self.day} - "
+            f"{self.employee} ({self.weekly_plan_category})"
+        )
 
 
 class AbsenceCategory(JasminModel):
@@ -155,14 +192,36 @@ class AbsenceCategory(JasminModel):
     year = models.PositiveSmallIntegerField()
     name = models.CharField(max_length=200)
 
+    class Meta:
+        ordering = ["year", "name"]
+        verbose_name_plural = "absence categories"
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.year})"
+
 
 class Absence(JasminModel):
     year = models.PositiveSmallIntegerField()
-    week = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(53)],
-    )
-    day = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(6)],
-    )
+    week = iso_week_field()
+    day = day_of_week_field()
     absence_category = models.ForeignKey("AbsenceCategory", on_delete=models.CASCADE)
     employee = models.ForeignKey("Employee", on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ["year", "week", "day"]
+        constraints = [
+            # One absence per employee per day: a person is either absent on a
+            # given day or not. The constraint's index leads with (year, week),
+            # so the absence-matrix / "who's absent this week" lookups are
+            # covered too — no separate index needed.
+            models.UniqueConstraint(
+                fields=["year", "week", "day", "employee"],
+                name="absence_one_per_employee_per_day",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.year} W{self.week} D{self.day} - "
+            f"{self.employee} ({self.absence_category})"
+        )

@@ -47,6 +47,7 @@
 @import './components/utilities.css';
 @import './components/variations-totals-card.css';
 @import './components/warnings.css';
+@import './components/weekly-plan.css';
 
 /* 4. Themes */
 @import './themes/light-dark.css';

@@ -37,6 +37,29 @@
   box-shadow: 0 0 0 3px var(--color-success-bg);
 }
 
+.dnd-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Small trailing usage-count badge (opt-in via the chip's ``count`` prop).
+   Bordered pill so it stays legible on any per-chip pastel tint, in both themes. */
+.dnd-chip-count {
+  flex: none;
+  min-width: 1.5em;
+  padding: 0 0.35em;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 999px;
+  background-color: var(--color-bg-elevated);
+  color: var(--color-text-primary, inherit);
+  font-size: 0.72em;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+}
+
 /* ---- Grid cell (drop target / drag source) ---- */
 .dnd-cell {
   display: flex;
@@ -89,6 +112,44 @@
 .dnd-cell-placeholder {
   color: var(--color-text-tertiary);
   font-size: 0.85em;
+}
+
+/* Pastel-tinted chips/cells carry a hardcoded LIGHT background (from
+   usePastelColorMap), so pin dark text: the theme ``--color-text-primary``
+   flips light in dark mode and would otherwise render light-on-light. */
+.dnd-chip--tinted,
+.dnd-cell--tinted {
+  color: #1a1a1a;
+}
+
+/* The cell's activatable control fills the whole cell and resets the global
+   button chrome (base.css) so the cell still reads/behaves as one control —
+   while the remove button stays a SIBLING of it, not nested inside it (which
+   would be an interactive-inside-interactive a11y failure). */
+.dnd-cell-action {
+  align-self: stretch;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: inherit;
+}
+
+.dnd-cell-action:hover {
+  border-color: transparent;
+}
+
+.dnd-cell-action:focus-visible {
+  outline: 2px solid var(--color-future-blue);
+  outline-offset: -2px;
 }
 
 /* Reset the global button styling for the compact remove affordance. */

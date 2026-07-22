@@ -10,8 +10,13 @@ export interface DroppableCellProps {
   occupant: DndChip | null;
   /** When false the cell is read-only (no drop, drag, keyboard or remove). */
   canEdit?: boolean;
-  /** Placeholder text + accessible name for an empty cell. Supply translated. */
+  /** Visible placeholder text for an empty cell. Supply translated. */
   emptyLabel?: string;
+  /** Full accessible name for the cell, overriding the default (occupant label
+   *  / ``emptyLabel``). Supply already-translated, position-aware text for grids
+   *  where the cell's row/column carries meaning (e.g. "Mon, Category, row 2:
+   *  empty"). */
+  ariaLabel?: string;
   /** Builds the remove button's accessible name from the occupant label.
    *  When omitted the remove button is not rendered. */
   removeAriaLabelFor?: (label: string) => string;
@@ -28,6 +33,7 @@ export default function DroppableCell({
   occupant,
   canEdit = true,
   emptyLabel,
+  ariaLabel,
   removeAriaLabelFor,
 }: DroppableCellProps) {
   const { place, remove, selected, select, itemType } = useDndGrid();
@@ -58,12 +64,6 @@ export default function DroppableCell({
     [occupant, pos, canEdit, itemType],
   );
 
-  // A filled cell is both drop target and drag source; an empty one only a target.
-  const attachRef = (node: HTMLDivElement | null) => {
-    drop(node);
-    if (occupant) drag(node);
-  };
-
   const isPickedFromHere =
     selected?.from?.row === pos.row && selected.from.col === pos.col;
 
@@ -82,7 +82,7 @@ export default function DroppableCell({
     }
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       onActivate();
@@ -92,41 +92,56 @@ export default function DroppableCell({
   const className =
     "dnd-cell" +
     (occupant ? " dnd-cell--filled" : " dnd-cell--empty") +
+    (occupant?.color ? " dnd-cell--tinted" : "") +
     (isOver ? " dnd-cell--over" : "") +
     (isDragging ? " dnd-cell--dragging" : "") +
     (isPickedFromHere ? " dnd-cell--selected" : "");
 
+  const accessibleName = ariaLabel ?? (occupant ? occupant.label : emptyLabel);
+
+  // The cell container is the DROP target; the inner <button> is the activatable
+  // control (and the drag SOURCE for a filled cell). Keeping the remove button a
+  // SIBLING of that action button — not nested inside it — avoids an interactive
+  // control inside another (the "nested interactive" a11y failure).
   return (
     <div
-      ref={attachRef}
+      ref={(node) => {
+        drop(node);
+      }}
       className={className}
       style={occupant?.color ? { backgroundColor: occupant.color } : undefined}
-      role="button"
-      tabIndex={canEdit ? 0 : -1}
-      aria-label={occupant ? occupant.label : emptyLabel}
-      onClick={onActivate}
-      onKeyDown={onKeyDown}
     >
-      {occupant ? (
-        <>
+      <button
+        ref={(node) => {
+          drag(node);
+        }}
+        type="button"
+        className="dnd-cell-action"
+        tabIndex={canEdit ? 0 : -1}
+        aria-label={accessibleName}
+        aria-pressed={isPickedFromHere || undefined}
+        onClick={onActivate}
+        onKeyDown={onKeyDown}
+      >
+        {occupant ? (
           <span className="dnd-cell-label">{occupant.label}</span>
-          {remove && canEdit && removeAriaLabelFor ? (
-            <button
-              type="button"
-              className="dnd-cell-remove"
-              aria-label={removeAriaLabelFor(occupant.label)}
-              onClick={(event) => {
-                event.stopPropagation();
-                remove(pos);
-              }}
-            >
-              ×
-            </button>
-          ) : null}
-        </>
-      ) : (
-        <span className="dnd-cell-placeholder">{emptyLabel}</span>
-      )}
+        ) : (
+          <span className="dnd-cell-placeholder">{emptyLabel}</span>
+        )}
+      </button>
+      {occupant && remove && canEdit && removeAriaLabelFor ? (
+        <button
+          type="button"
+          className="dnd-cell-remove"
+          aria-label={removeAriaLabelFor(occupant.label)}
+          onClick={(event) => {
+            event.stopPropagation();
+            remove(pos);
+          }}
+        >
+          ×
+        </button>
+      ) : null}
     </div>
   );
 }
