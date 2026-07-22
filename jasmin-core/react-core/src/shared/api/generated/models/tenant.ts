@@ -7,6 +7,9 @@
  */
 import type { TenantCurrentSettings } from './tenantCurrentSettings';
 import type { TenantSettingsProperty } from './tenantSettingsProperty';
+import type { TenantEmail } from './tenantEmail';
+import type { TenantEmailForOrders } from './tenantEmailForOrders';
+import type { TenantWebsite } from './tenantWebsite';
 
 /**
  * Full tenant payload — staff-only on read, admin-only on write.
@@ -70,21 +73,12 @@ export interface Tenant {
    * @nullable
    */
   phone_number?: string | null;
-  /**
-   * @maxLength 254
-   * @nullable
-   */
-  email?: string | null;
-  /**
-   * @maxLength 254
-   * @nullable
-   */
-  email_for_orders?: string | null;
-  /**
-   * @maxLength 200
-   * @nullable
-   */
-  website?: string | null;
+  /** @nullable */
+  email?: TenantEmail;
+  /** @nullable */
+  email_for_orders?: TenantEmailForOrders;
+  /** @nullable */
+  website?: TenantWebsite;
   /** @maxLength 100 */
   legal_form?: string;
   /** @maxLength 200 */

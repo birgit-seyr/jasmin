@@ -5,6 +5,7 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { MyMemberDataUpdateEmail } from './myMemberDataUpdateEmail';
 
 /**
  * Incoming shape for ``PATCH /commissioning/my_member_data/``.
@@ -57,11 +58,8 @@ export interface MyMemberDataUpdate {
    * @nullable
    */
   country?: string | null;
-  /**
-   * @maxLength 255
-   * @nullable
-   */
-  email?: string | null;
+  /** @nullable */
+  email?: MyMemberDataUpdateEmail;
   /** @nullable */
   birth_date?: string | null;
   /**

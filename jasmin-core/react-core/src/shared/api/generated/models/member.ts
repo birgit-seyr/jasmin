@@ -7,6 +7,7 @@
  */
 import type { MemberLinkedUserInfo } from './memberLinkedUserInfo';
 import type { WaitingListStatusEnum } from './waitingListStatusEnum';
+import type { MemberEmailProperty } from './memberEmailProperty';
 
 /**
  * Mixin to add ``can_be_deleted`` to serializers.
@@ -133,11 +134,8 @@ export interface Member {
   /** @nullable */
   cancellation_reason?: string | null;
   is_student?: boolean;
-  /**
-   * @maxLength 255
-   * @nullable
-   */
-  email?: string | null;
+  /** @nullable */
+  email?: MemberEmailProperty;
   /**
    * @maxLength 255
    * @nullable

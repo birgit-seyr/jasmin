@@ -5,6 +5,8 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { TenantNonStaffReadEmail } from './tenantNonStaffReadEmail';
+import type { TenantNonStaffReadWebsite } from './tenantNonStaffReadWebsite';
 import type { TenantNonStaffReadSettings } from './tenantNonStaffReadSettings';
 import type { TenantNonStaffReadCurrentSettings } from './tenantNonStaffReadCurrentSettings';
 
@@ -98,21 +100,15 @@ export interface TenantNonStaffRead {
    * @nullable
    */
   country?: string | null;
-  /**
-   * @maxLength 254
-   * @nullable
-   */
-  email?: string | null;
+  /** @nullable */
+  email?: TenantNonStaffReadEmail;
   /**
    * @maxLength 20
    * @nullable
    */
   phone_number?: string | null;
-  /**
-   * @maxLength 200
-   * @nullable
-   */
-  website?: string | null;
+  /** @nullable */
+  website?: TenantNonStaffReadWebsite;
   privacy_policy_html?: string;
   /** @maxLength 100 */
   legal_form?: string;

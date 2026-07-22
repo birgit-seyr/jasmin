@@ -5,6 +5,7 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { SarSubjectEmail } from './sarSubjectEmail';
 
 /**
  * Identity block at the top of the bundle — repeats the user id
@@ -14,5 +15,5 @@ even if read out of context.
 export interface SarSubject {
   user_id: string;
   /** @nullable */
-  email: string | null;
+  email: SarSubjectEmail;
 }

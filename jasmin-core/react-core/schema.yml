@@ -29652,19 +29652,25 @@ components:
           nullable: true
           maxLength: 100
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         phone_number:
           type: string
           nullable: true
           maxLength: 20
         website:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         privacy_policy_html:
           type: string
         legal_form:
@@ -30324,8 +30330,8 @@ components:
         file:
           type: string
           format: uri
-          readOnly: true
           nullable: true
+          readOnly: true
         has_been_sent_to_reseller_at:
           type: string
           format: date-time
@@ -30646,24 +30652,33 @@ components:
           pattern: ^-?\d{0,2}(?:\.\d{0,10})?$
           nullable: true
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
           maxLength: 150
         email_3:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         order_email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         phone:
           type: string
           nullable: true
@@ -32186,13 +32201,13 @@ components:
         file:
           type: string
           format: uri
-          readOnly: true
           nullable: true
+          readOnly: true
         xml_file:
           type: string
           format: uri
-          readOnly: true
           nullable: true
+          readOnly: true
         document_hash:
           type: string
           readOnly: true
@@ -32712,10 +32727,13 @@ components:
         is_student:
           type: boolean
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 255
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 255
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
@@ -32962,10 +32980,13 @@ components:
         is_student:
           type: boolean
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 255
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 255
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
@@ -33344,24 +33365,33 @@ components:
           nullable: true
           maxLength: 100
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
           maxLength: 150
         email_3:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         order_email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         phone:
           type: string
           nullable: true
@@ -33575,10 +33605,13 @@ components:
           nullable: true
           maxLength: 100
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 255
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 255
+          - type: string
+            maxLength: 0
         birth_date:
           type: string
           format: date
@@ -34552,10 +34585,13 @@ components:
           nullable: true
           maxLength: 100
         link:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 500
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
         reseller:
           type: string
       required:
@@ -35473,24 +35509,33 @@ components:
           pattern: ^-?\d{0,2}(?:\.\d{0,10})?$
           nullable: true
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
           maxLength: 150
         email_3:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         order_email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         phone:
           type: string
           nullable: true
@@ -35780,20 +35825,29 @@ components:
           pattern: ^-?\d{0,2}(?:\.\d{0,10})?$
           nullable: true
         email:
-          type: string
-          format: email
           nullable: true
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
         email_3:
-          type: string
-          format: email
           nullable: true
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
         order_email:
-          type: string
-          format: email
           nullable: true
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
         phone:
           type: string
           nullable: true
@@ -36171,9 +36225,12 @@ components:
           type: string
           nullable: true
         email:
-          type: string
-          format: email
           nullable: true
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
@@ -36526,9 +36583,12 @@ components:
         user_id:
           type: string
         email:
-          type: string
-          format: email
           nullable: true
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
       required:
       - email
       - user_id
@@ -37687,6 +37747,7 @@ components:
         file:
           type: string
           format: uri
+          nullable: true
           readOnly: true
         file_url:
           type: string
@@ -39020,20 +39081,29 @@ components:
           nullable: true
           maxLength: 20
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         email_for_orders:
-          type: string
-          format: email
           nullable: true
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         website:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         legal_form:
           type: string
           maxLength: 100
@@ -39195,16 +39265,22 @@ components:
           description: Display name for 'From' field
           maxLength: 255
         reply_to_email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         accounting_email:
-          type: string
-          format: email
           nullable: true
           description: Email address for sending invoices to accounting (e.g., DATEV)
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         max_emails_per_hour:
           type: integer
           maximum: 2147483647
@@ -39334,19 +39410,25 @@ components:
           nullable: true
           maxLength: 100
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         phone_number:
           type: string
           nullable: true
           maxLength: 20
         website:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         privacy_policy_html:
           type: string
         legal_form:

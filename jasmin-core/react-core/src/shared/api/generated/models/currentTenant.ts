@@ -5,6 +5,8 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { CurrentTenantEmail } from './currentTenantEmail';
+import type { CurrentTenantWebsite } from './currentTenantWebsite';
 
 /**
  * Pre-login bootstrap payload — **anonymous endpoint**.
@@ -97,21 +99,15 @@ export interface CurrentTenant {
    * @nullable
    */
   country?: string | null;
-  /**
-   * @maxLength 254
-   * @nullable
-   */
-  email?: string | null;
+  /** @nullable */
+  email?: CurrentTenantEmail;
   /**
    * @maxLength 20
    * @nullable
    */
   phone_number?: string | null;
-  /**
-   * @maxLength 200
-   * @nullable
-   */
-  website?: string | null;
+  /** @nullable */
+  website?: CurrentTenantWebsite;
   privacy_policy_html?: string;
   /** @maxLength 100 */
   legal_form?: string;
