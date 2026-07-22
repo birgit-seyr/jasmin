@@ -30,4 +30,11 @@ export const SUPER_ADMIN_ENDPOINTS = {
     `/api/super-admin/ops-checklist/${itemId}/run-rotation/`,
   opsChecklistMarkDone: (itemId: string | number) =>
     `/api/super-admin/ops-checklist/${itemId}/mark-done/`,
+  // Support tickets (public-schema aggregate; ticket ids are STR nanoids).
+  supportTickets: "/api/super-admin/support-tickets/",
+  supportTicket: (id: string) => `/api/super-admin/support-tickets/${id}/`,
+  supportTicketReply: (id: string) =>
+    `/api/super-admin/support-tickets/${id}/reply/`,
+  supportTicketSetStatus: (id: string) =>
+    `/api/super-admin/support-tickets/${id}/set-status/`,
 } as const;

@@ -1,0 +1,40 @@
+{
+  "help_button": "Help / report a problem",
+  "drawer": {
+    "title": "Support",
+    "new_ticket": "Report a problem",
+    "back": "Back to list"
+  },
+  "modal": {
+    "title": "Report a problem",
+    "created": "Ticket created",
+    "submit": "Send ticket",
+    "subject_label": "Subject",
+    "subject_placeholder": "Short summary",
+    "priority_label": "Priority",
+    "description_label": "Description",
+    "description_placeholder": "What happened? On which page?"
+  },
+  "priority": {
+    "low": "Low",
+    "normal": "Normal",
+    "high": "High"
+  },
+  "status": {
+    "open": "Open",
+    "in_progress": "In progress",
+    "resolved": "Resolved",
+    "closed": "Closed"
+  },
+  "author": {
+    "staff": "Staff",
+    "super_admin": "Support team"
+  },
+  "thread": {
+    "no_messages": "No messages yet.",
+    "empty": "No tickets yet.",
+    "reply_placeholder": "Write a reply …",
+    "reply_send": "Send",
+    "reply_sent": "Reply sent"
+  }
+}

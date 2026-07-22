@@ -533,6 +533,9 @@ SHARED_APPS = [
     # written to auth.log by ``apps.shared.tenants.apps.TenantsConfig``.
     "apps.shared.tenants",
     "apps.shared.super_admin",
+    # Support tickets: a PUBLIC-schema table so the super-admin can aggregate
+    # every tenant's tickets (see apps/shared/support/models.py).
+    "apps.shared.support",
 ]
 
 TENANT_APPS = [
@@ -846,6 +849,12 @@ REST_FRAMEWORK = {
         # anti-enumeration — keyed by IP. Generous for a real invitee
         # (one verify on page load, one accept).
         "invitation": "20/minute",
+        # Support tickets: an authenticated/stolen staff token could loop
+        # create → flood the public table AND email-bomb the platform admin
+        # over live SMTP (create fires mail_admins). Reply is cheaper but still
+        # capped. Keyed per authenticated user (nanoid), namespaced by schema.
+        "support_ticket_create": "10/hour",
+        "support_ticket_reply": "30/hour",
         # Tenant-detection bootstrap (``CurrentTenantView``) is ``AllowAny`` and
         # fires once on SPA load / refresh. Anti-flood only, keyed by IP;
         # generous since many users behind one shared egress IP all bootstrap.
@@ -1256,6 +1265,9 @@ SPECTACULAR_SETTINGS = {
         "OpsChecklistKindEnum": "apps.shared.super_admin.models.OpsChecklistItem.KIND_CHOICES",
         "ExternalCodeMappingKindEnum": "apps.commissioning.models.imports.ExternalCodeMapping.KIND_CHOICES",
         "ConsentKindEnum": "apps.commissioning.models.choices.ConsentKind",
+        "TicketStatusEnum": "apps.shared.support.models.TicketStatus",
+        "TicketPriorityEnum": "apps.shared.support.models.TicketPriority",
+        "AuthorKindEnum": "apps.shared.support.models.AuthorKind",
     },
     "COMPONENT_NO_READ_ONLY_REQUIRED": True,
     "SCHEMA_PATH_PREFIX": "/api/",

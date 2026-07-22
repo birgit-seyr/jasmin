@@ -207,11 +207,11 @@ def _seed(apps, schema_editor):
         )
 
 
-def _unseed(apps, schema_editor):
-    PaymentCycle = apps.get_model("commissioning", "PaymentCycle")
-    Storage = apps.get_model("commissioning", "Storage")
-    PaymentCycle.objects.filter(choice__in=PAYMENT_CYCLE_CHOICES).delete()
-    Storage.objects.filter(name__in=[n for n, _, _, _ in STORAGE_DEFAULTS]).delete()
+# No reverse for the reference-data seed. Forward-only: prod never un-seeds, and
+# a naive delete of the Storage rows would CASCADE into real documentation
+# (Harvest/Purchase/Wash/Clean/Waste/Forecast all FK Storage with on_delete=
+# CASCADE) — silently destroying data on a local `migrate ... zero`. A `noop`
+# reverse keeps the migration reversible for dev resets without that data loss.
 
 
 # ---- season "one open" partial unique index (raw SQL — non-Meta) ----------
@@ -251,7 +251,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(sql=_build_forward_sql(), reverse_sql=_build_reverse_sql()),
-        migrations.RunPython(_seed, _unseed),
+        migrations.RunPython(_seed, migrations.RunPython.noop),
         migrations.RunSQL(sql=_SEASON_INDEX_FORWARD, reverse_sql=_SEASON_INDEX_REVERSE),
         # Forward-only: reverse is a no-op (we never un-seed in prod).
         migrations.RunPython(_seed_default_offer_group, migrations.RunPython.noop),
