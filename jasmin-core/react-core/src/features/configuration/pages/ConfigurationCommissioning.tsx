@@ -72,6 +72,13 @@ export default function ConfigurationCommissioning() {
           },
 
           {
+            key: "distribute_forecast_by_weight",
+            label: t("settings.commissioning.distribute_forecast_by_weight"),
+            type: "checkbox",
+            defaultValue: false,
+          },
+
+          {
             key: "show_summary_in_harvest_share_planning_on_top",
             label: t(
               "settings.commissioning.show_summary_in_harvest_share_planning_on_top",

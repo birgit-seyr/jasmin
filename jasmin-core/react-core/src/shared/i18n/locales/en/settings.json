@@ -155,6 +155,7 @@
     "packing_mode_mixed": "mixed (selectable per share type)",
     "number_packing_stations": "Number of Packing Stations",
     "show_size_column": "Show vegetable sizes column",
+    "distribute_forecast_by_weight": "Distribute forecast amount across sizes by weight (prefill empty cells)",
     "show_summary_in_harvest_share_planning_on_top": "Show summary rows at the top of crate planning",
     "sales": {
       "title": "Sales Channels"

@@ -40985,6 +40985,8 @@ components:
           type: boolean
         show_size_column:
           type: boolean
+        distribute_forecast_by_weight:
+          type: boolean
         show_summary_in_harvest_share_planning_on_top:
           type: boolean
         show_seller_name_of_share_article_in_share_for_member_on_page:
@@ -41288,6 +41290,8 @@ components:
         allows_solidarity_pricing:
           type: boolean
         show_size_column:
+          type: boolean
+        distribute_forecast_by_weight:
           type: boolean
         show_summary_in_harvest_share_planning_on_top:
           type: boolean

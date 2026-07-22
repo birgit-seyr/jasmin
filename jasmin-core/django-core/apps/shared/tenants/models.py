@@ -440,6 +440,11 @@ class TenantSettings(JasminModel):
 
     # layout app
     show_size_column = models.BooleanField(default=True)
+    # When True, the harvest-share content planner auto-prefills each physical
+    # variation's EMPTY day cells with the forecast amount split across sizes by
+    # ``average_weight`` and weighted by the physical-variation counts (floored
+    # to 0.10). Opt-in per tenant; default False leaves planning unchanged.
+    distribute_forecast_by_weight = models.BooleanField(default=False)
     show_summary_in_harvest_share_planning_on_top = models.BooleanField(default=True)
 
     show_seller_name_of_share_article_in_share_for_member_on_page = models.BooleanField(

@@ -1080,3 +1080,72 @@ class TestCreateOrUpdateShareContentsQueryCount:
             f"for {n_stations} stations (one .exists() per pair would be "
             f"{n_stations})."
         )
+
+
+# ═══════════════════════════════════════════════════════
+# Opt-in: distribute_forecast_by_weight redefines the amount
+# ═══════════════════════════════════════════════════════
+
+_PHYSICAL_TOTALS_PATCH = (
+    "apps.commissioning.services.forecast_service"
+    ".get_physical_share_type_variation_totals"
+)
+
+
+@pytest.mark.django_db
+class TestForecastDistributeByWeight:
+    """With the flag on, the ShareContent amount is the weighted forecast split
+    instead of the default — everything else (FK, recompute, theoreticals) the
+    same as any other forecast-created ShareContent."""
+
+    def _setup_two_sizes(self):
+        StorageFactory(is_short_term_harvest_storage=True)
+        article = ShareArticleFactory()
+        stv_s = ShareTypeVariationFactory(size="S", average_weight=Decimal("1"))
+        stv_m = ShareTypeVariationFactory(size="M", average_weight=Decimal("2"))
+        sdd = SharesDeliveryDayFactory(day_number=2)
+        station = DeliveryStationFactory()
+        DeliveryStationDayFactory(delivery_station=station, delivery_day=sdd)
+        data = _forecast_data(article, stv_s)  # amount = 100
+        data[f"variation_{stv_m.pk}"] = True
+        totals = _make_totals_for_all([sdd.pk], [stv_s.pk, stv_m.pk], [station.pk])
+        return article, stv_s, stv_m, sdd, station, data, totals
+
+    def test_flag_on_persists_the_weighted_split_as_the_amount(self, tenant):
+        article, stv_s, stv_m, sdd, station, data, totals = self._setup_two_sizes()
+        # 10 S-shares, 5 M-shares -> k = 100/(10*1 + 5*2) = 5 -> S=5.0, M=10.0
+        physical_counts = [
+            {"share__share_type_variation_id": str(stv_s.pk), "total_quantity": 10},
+            {"share__share_type_variation_id": str(stv_m.pk), "total_quantity": 5},
+        ]
+        svc = ForecastService()
+        with (
+            _patch_totals(totals),
+            patch(_PHYSICAL_TOTALS_PATCH, return_value=physical_counts),
+            patch.object(
+                ForecastService,
+                "_distribute_forecast_by_weight_enabled",
+                return_value=True,
+            ),
+        ):
+            forecast = svc.create_forecast_with_related_objects(data)
+
+        amounts = {
+            sc.share.share_type_variation_id: sc.amount
+            for sc in ShareContent.objects.filter(forecast=forecast).select_related(
+                "share"
+            )
+        }
+        assert amounts[stv_s.pk] == Decimal("5.0")
+        assert amounts[stv_m.pk] == Decimal("10.0")
+
+    def test_flag_off_keeps_the_default_amount(self, tenant):
+        # Flag defaults off (no TenantSettings row) + no defaults configured ->
+        # the original resolution -> amount 0. Weighted split NOT applied.
+        article, stv_s, stv_m, sdd, station, data, totals = self._setup_two_sizes()
+        svc = ForecastService()
+        with _patch_totals(totals):
+            forecast = svc.create_forecast_with_related_objects(data)
+
+        amounts = {sc.amount for sc in ShareContent.objects.filter(forecast=forecast)}
+        assert amounts == {0}

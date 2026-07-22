@@ -156,6 +156,7 @@
     "packing_mode_mixed": "gemischt (pro Anteilsart wählbar)",
     "number_packing_stations": "Anzahl Packstationen",
     "show_size_column": "Gemüse-Größen Spalte anzeigen",
+    "distribute_forecast_by_weight": "Prognosemenge nach Gewicht auf Größen verteilen (leere Zellen vorausfüllen)",
     "show_summary_in_harvest_share_planning_on_top": "Summen-Zeilen in Kistenplanung oben anzeigen", 
     "sales": {
       "title": "Vertriebskanäle"
