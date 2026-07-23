@@ -18669,7 +18669,9 @@ paths:
         columns (combo_<key>, each cell the box count); import (external-demand) tenants
         get flat per-variation columns (variation_<id>) sourced from weekly demand.
         Both render through the same frontend hook. ``joker=true`` counts the boxes
-        skipped via a taken joker instead of the shipping ones (same columns).'
+        skipped via a taken joker instead of the shipping ones; ``donation_joker=true``
+        counts the boxes donated via a donation joker (same columns). The two flags
+        are mutually exclusive per row.'
       parameters:
       - in: query
         name: delivery_week
@@ -18687,6 +18689,10 @@ paths:
           Week52:
             value: 52
             summary: Week 52
+      - in: query
+        name: donation_joker
+        schema:
+          type: boolean
       - in: query
         name: for_stations
         schema:

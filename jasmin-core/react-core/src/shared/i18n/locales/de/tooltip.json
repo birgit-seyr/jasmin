@@ -76,6 +76,7 @@
   "must_be_subscribed_to": "Setzt voraus, dass eine andere Variante abonniert ist.",
   "needs_complex_planning": "An: wöchentlich wechselnde Planung wie bei Ernteanteilen. Aus: einfache, gleichbleibende Planung – einmal festlegen, gilt über alle Wochen.",
   "price_sum_articles": "Summe der Artikelpreise (zur Plausibilitätsprüfung).",
+  "share_type_variation_price_brutto": "Richtpreis",
   "solidarity_min_price": "Niedrigster Preis, den ein Mitglied bei Solidarpreisen wählen darf. Leer = der Richtpreis ist die Untergrenze.",
   "variation_type": "Art der Variante (Stk, Bund, Gewicht …)",
   "support_button": "Anfragen zu einem Problem stellen",

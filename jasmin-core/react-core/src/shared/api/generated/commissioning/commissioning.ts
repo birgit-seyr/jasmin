@@ -24293,7 +24293,7 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Whole-week matrix for AmountShareTypeVariations: one row per delivery day (or day×tour / day×station). Subscription tenants get box-combination columns (combo_<key>, each cell the box count); import (external-demand) tenants get flat per-variation columns (variation_<id>) sourced from weekly demand. Both render through the same frontend hook. ``joker=true`` counts the boxes skipped via a taken joker instead of the shipping ones (same columns).
+ * Whole-week matrix for AmountShareTypeVariations: one row per delivery day (or day×tour / day×station). Subscription tenants get box-combination columns (combo_<key>, each cell the box count); import (external-demand) tenants get flat per-variation columns (variation_<id>) sourced from weekly demand. Both render through the same frontend hook. ``joker=true`` counts the boxes skipped via a taken joker instead of the shipping ones; ``donation_joker=true`` counts the boxes donated via a donation joker (same columns). The two flags are mutually exclusive per row.
  */
 export const commissioningShareDeliveryBoxCombinationMatrixRetrieve = (
     params: CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams,

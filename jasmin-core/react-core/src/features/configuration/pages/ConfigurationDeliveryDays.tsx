@@ -424,7 +424,6 @@ export default function ConfigurationDeliveryDays() {
         onSaveSuccess={onOrdersSaveSuccess}
         onDeleteSuccess={onOrdersDeleteSuccess}
       />
-      <DateRangeStatusLegend />
       <ExplainerText title={t("common.info")} style={{ marginTop: "2em" }}>
         {t("explainers.configuration_time_management")}
       </ExplainerText>

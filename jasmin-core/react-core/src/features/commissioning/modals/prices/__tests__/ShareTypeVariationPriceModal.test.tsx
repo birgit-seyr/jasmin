@@ -29,7 +29,7 @@ vi.mock("react-i18next", () => ({
 // ── Tenant setting toggle (the thing under test) ───────────────────────────
 const getSettingMock = vi.fn();
 vi.mock("@hooks/index", () => ({
-  useTenant: () => ({ getSetting: getSettingMock }),
+  useTenant: () => ({ getSetting: getSettingMock, refreshTenant: vi.fn() }),
   useCurrency: () => ({ currencySymbol: "€" }),
   // Only its `shares` rate is read, and only to forward as a prop to the
   // stubbed editor shell — the value is irrelevant to the column assertions.
@@ -50,6 +50,15 @@ vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
   commissioningShareTypeVariationPricePartialUpdate: vi.fn(),
   getCommissioningShareTypeVariationPriceListQueryKey: vi.fn(),
   useCommissioningShareTypeVariationPriceList: vi.fn(),
+}));
+
+// The solidarity toggle persists via this mutation hook — stub it so the modal
+// renders without a QueryClientProvider (columns are the thing under test).
+vi.mock("@shared/api/generated/tenants/tenants", () => ({
+  useTenantsSettingsUpdateCurrentSettingsUpdate: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+  }),
 }));
 
 vi.mock("@shared/ui", () => ({

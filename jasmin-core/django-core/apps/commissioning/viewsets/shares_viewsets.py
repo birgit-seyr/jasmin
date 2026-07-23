@@ -154,14 +154,24 @@ class ShareTypeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         # One query over the active variations instead of one per share type;
         # the serializer reads this map via context.
         sizes_by_share_type: dict[str, list[str]] = {}
+        seen_sizes_by_share_type: dict[str, set[str]] = {}
+        # Ordered by the variations' ``sort_order`` (then id) so the sizes read
+        # in the configured order, not an arbitrary DB order. Dedupe in Python
+        # (preserving that order) rather than ``.distinct()``, which Postgres
+        # forbids alongside an ORDER BY on a non-selected column.
         active_variation_rows = (
             ShareTypeVariation.current.active_at_date(today)
+            .order_by("sort_order", "id")
             .values_list("share_type_id", "size")
-            .distinct()
         )
         for share_type_id, size in active_variation_rows:
-            if size:
-                sizes_by_share_type.setdefault(share_type_id, []).append(size)
+            if not size:
+                continue
+            seen = seen_sizes_by_share_type.setdefault(share_type_id, set())
+            if size in seen:
+                continue
+            seen.add(size)
+            sizes_by_share_type.setdefault(share_type_id, []).append(size)
         sizes_in_use_by_share_type = {
             share_type_id: ", ".join(sizes)
             for share_type_id, sizes in sizes_by_share_type.items()
@@ -819,6 +829,7 @@ class ShareDeliveryViewSet(
             catalogue_param("for_stations", required=False),
             catalogue_param("is_packed_bulk", required=False),
             catalogue_param("joker", required=False),
+            catalogue_param("donation_joker", required=False),
         ],
         responses={
             200: WeeklyComboMatrixResponseSerializer,
@@ -831,7 +842,9 @@ class ShareDeliveryViewSet(
             "import (external-demand) tenants get flat per-variation columns "
             "(variation_<id>) sourced from weekly demand. Both render through "
             "the same frontend hook. ``joker=true`` counts the boxes skipped via "
-            "a taken joker instead of the shipping ones (same columns)."
+            "a taken joker instead of the shipping ones; ``donation_joker=true`` "
+            "counts the boxes donated via a donation joker (same columns). The "
+            "two flags are mutually exclusive per row."
         ),
     )
     @action(detail=False, methods=["get"], pagination_class=None)
