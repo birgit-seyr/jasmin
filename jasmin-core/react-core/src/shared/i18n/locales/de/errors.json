@@ -272,6 +272,9 @@
   "sepa": {
     "export_invalid": "SEPA-Export nicht möglich: erforderliche Gläubiger- oder Zahlungspflichtige-Daten fehlen."
   },
+  "crates": {
+    "disabled_on_documents": "Kisten werden für diese Organisation nicht auf Belegen geführt und können daher nicht hinzugefügt werden."
+  },
   "crate_delivery_note_content": {
     "missing_required": "Lieferschein, Kistentyp und Menge sind erforderlich."
   },

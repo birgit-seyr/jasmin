@@ -272,6 +272,9 @@
   "sepa": {
     "export_invalid": "Cannot export SEPA file: required creditor or debtor fields are missing."
   },
+  "crates": {
+    "disabled_on_documents": "Crates are not put on documents for this tenant, so they cannot be added."
+  },
   "crate_delivery_note_content": {
     "missing_required": "Delivery note, crate type and amount are required."
   },
