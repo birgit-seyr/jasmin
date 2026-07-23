@@ -187,6 +187,11 @@ export default function DeliveryNotePDF({
             </View>
           ))}
 
+          {/* Presence-based: render crate rows whenever the document HAS them.
+              The setting gates crate CREATION (backend), so an off-tenant's
+              documents carry no crate_items and nothing renders — while a doc
+              that already has crates still reconciles to its (crate-inclusive)
+              total, incl. finalized/immutable ones. */}
           {crateItems.map((item, index) => (
             <View key={index} style={styles.tableRow} wrap={false}>
               <Text style={styles.dnCol1}>{item.crate_type_name}</Text>
@@ -195,7 +200,9 @@ export default function DeliveryNotePDF({
               <Text style={styles.dnCol2}>
                 {formatNumber(item.amount, 0, locale)}
               </Text>
-              <Text style={styles.dnCol3}>{getUnitLabel(item.unit ?? "")}</Text>
+              {/* Crates are always counted in pieces — matches the "/piece"
+                  price denominator below. ``item.unit`` is empty for crates. */}
+              <Text style={styles.dnCol3}>{t("commissioning.piece_short")}</Text>
               <Text style={styles.dnCol4}>
                 {item.price_per_unit ? `${formatCurrency(formatNumber(item.price_per_unit, 2, locale), currencySymbol)}/${t("commissioning.piece_short")}` : "-"}
               </Text>

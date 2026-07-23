@@ -67,7 +67,7 @@
   "longterm_harvest_shares_planning": "Langzeit Planung Ernteanteile",
   "longterm_additional_shares_planning": "Langzeit Planung",
   "share_planning": "Planung Anteile",
-  "storage": "Erfassung Bestand",
+  "storage": "Erfassung Lager-Bestand",
   "available_amounts": "Mengenerfassung",
   "resellers": "Wiederverkäufer",
   "offers": "Angebote",
@@ -198,7 +198,7 @@
     "5": "SA",
     "6": "SO"
   },
-  "documentation_amounts": "Erfassung Bestand",
+  "documentation_amounts": "Lager-Bestand",
   "expected_stock": "erwarteter Bestand",
   "actual_stock": "tatsächlicher Bestand",
   "harvesting_day": "Erntetag: ",

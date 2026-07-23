@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { KeyboardEvent, ReactElement, ReactNode } from "react";
+import type { Dayjs } from "dayjs";
 import { Modal, Form } from "antd";
 import FormInput from "./FormInput";
 import { useTranslation } from "react-i18next";
@@ -177,7 +178,15 @@ const EditableModal = <T extends TableRecord = TableRecord>({
         // modal mirrors it: the date restriction (valid_from → Mondays only,
         // valid_until → Sundays only, else the backend TimeBoundMixin rejects),
         // the input adornment, and any per-column styling.
-        disabledDate={column.disabledDate}
+        // Curry the live (form-merged) record in so record-aware pickers —
+        // the cross-field ``valid_until > valid_from`` floor, ``validUntilFloor``
+        // — work in modal mode too (AntD's ``disabledDate`` only passes the
+        // date). Mirrors the inline cell editor.
+        disabledDate={
+          column.disabledDate
+            ? (current: Dayjs) => column.disabledDate!(current, mergedRecord)
+            : undefined
+        }
         prefix={column.prefix}
         className={column.className}
       />

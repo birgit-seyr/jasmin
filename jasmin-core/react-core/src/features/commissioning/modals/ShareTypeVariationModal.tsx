@@ -310,7 +310,7 @@ export default function ShareTypeVariationModal({
           required: true,
           disabled: isFieldDisabled,
           align: "center",
-          width: "5em",
+          width: "7em",
           render: (value: unknown) =>
             value ? (
               <strong>{getShareTypeVariationSizeLabel(value as string)}</strong>

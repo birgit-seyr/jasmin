@@ -7,9 +7,6 @@ const DashboardMembers = lazy(
 );
 const Members = lazy(() => import("@features/members/pages/Members"));
 const MemberDetail = lazy(() => import("@features/members/pages/MemberDetail"));
-const DebitsMembers = lazy(
-  () => import("@features/members/pages/DebitsMembers"),
-);
 
 const MemberLoans = lazy(() => import("@features/members/pages/MemberLoans"));
 const StaffDetail = lazy(() => import("@features/members/pages/StaffDetail"));
@@ -58,14 +55,6 @@ export const membersRoutes: AppRoute[] = [
     ),
   },
 
-  {
-    path: "/members/debits-members",
-    element: (
-      <RequireRole flag="isOffice">
-        <DebitsMembers />
-      </RequireRole>
-    ),
-  },
   {
     path: "/members/loans",
     element: (

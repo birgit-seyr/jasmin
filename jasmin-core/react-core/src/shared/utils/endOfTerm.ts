@@ -1,6 +1,23 @@
 import dayjs, { type Dayjs } from "dayjs";
 
 /**
+ * Monday of ISO ``week`` in ISO ``year``, computed DETERMINISTICALLY (no
+ * ``dayjs()`` wall-clock seed — the isoWeek SETTER is a relative move, so a
+ * ``dayjs().year(y).isoWeek(w)`` construction leaks today's month/day into the
+ * anchor and breaks at year boundaries). Jan 4 is always in ISO week 1, so its
+ * Monday is week 1's Monday; adding ``week - 1`` weeks lands on the target week
+ * — and a week past the year's last (53 in a 52-week year) rolls forward
+ * exactly like the backend ``isoweek`` library. Mirrors
+ * ``subscription_term._sunday_before_iso_week`` so create (frontend) and
+ * renewal (backend) agree on every date, at every wall-clock.
+ */
+function mondayOfIsoWeek(isoYear: number, week: number): Dayjs {
+  return dayjs(`${isoYear}-01-04`)
+    .isoWeekday(1)
+    .add(week - 1, "week");
+}
+
+/**
  * Map ``ShareType.delivery_cycle`` (canonical backend values) to the
  * number of CALENDAR WEEKS between deliveries.
  *
@@ -84,8 +101,10 @@ export interface EndOfTermSettings {
  *       - ``validFromWeek <  seasonStartWeek`` → late join in the
  *         prior season's window → Sunday OF ``seasonStartWeek`` in
  *         the same year.
- *   * ``subscriptionsEndAfterOneYear`` → ``validFrom + 52 weeks - 1
- *     day`` (Sunday, assuming validFrom is a Monday).
+ *   * ``subscriptionsEndAfterOneYear`` → the Sunday before Monday of
+ *     ``validFrom``'s ISO week in the NEXT ISO year (anchored to the
+ *     week, not a fixed +52 weeks, so the yearly restart week stays
+ *     stable across 52- and 53-week ISO years).
  *   * None applicable → ``null`` (caller decides whether to leave
  *     the field blank or fall back to a manual value).
  */
@@ -136,30 +155,32 @@ export function computeValidUntil(
     Number(seasonStartWeek) <= 53
   ) {
     const weekNo = Number(seasonStartWeek);
-    const validFromYear = validFrom.year();
+    // ``isoWeekYear()`` (not calendar ``year()``): a valid_from in ISO week 1
+    // that falls in late December has calendar year Y-1 but ISO week-year Y.
+    const validFromWeekYear = validFrom.isoWeekYear();
     const validFromWeek = validFrom.isoWeek();
 
     if (validFromWeek >= weekNo) {
-      // Sunday of (weekNo - 1) in (validFromYear + 1) = Monday of
-      // weekNo in (validFromYear + 1) minus 1 day.
-      return dayjs()
-        .year(validFromYear + 1)
-        .isoWeek(weekNo)
-        .isoWeekday(1)
-        .subtract(1, "day");
+      // Ends the day before the season opens NEXT ISO year.
+      return mondayOfIsoWeek(validFromWeekYear + 1, weekNo).subtract(1, "day");
     }
-    // Sunday OF seasonWeek in the same year.
-    return dayjs()
-      .year(validFromYear)
-      .isoWeek(weekNo)
-      .isoWeekday(7);
+    // Late join: ends on the Sunday OF the season week THIS ISO year.
+    return mondayOfIsoWeek(validFromWeekYear, weekNo).add(6, "day");
   }
 
   if (subscriptionsEndAfterOneYear) {
-    // valid_from is always a Monday (validFromColumn enforces).
-    // +52 weeks preserves the weekday → Monday next year; -1 day
-    // lands on Sunday. Deterministic, no Sunday-snap needed.
-    return validFrom.add(52, "week").subtract(1, "day");
+    // Anchor the end to the SAME ISO week next year (NOT a fixed +52 weeks).
+    // valid_from is a Monday of ISO week W, so the term ends the day before
+    // Monday of week W next ISO year. This keeps the yearly restart on week W
+    // across 52- and 53-week ISO years — a fixed +364 days would slip the
+    // restart back one week whenever a 53-week year falls inside the term.
+    // Deterministic (via ``mondayOfIsoWeek``) and ``isoWeekYear()``-based so it
+    // stays correct at year boundaries and matches the backend
+    // ``subscription_term.compute_term_valid_until``.
+    return mondayOfIsoWeek(
+      validFrom.isoWeekYear() + 1,
+      validFrom.isoWeek(),
+    ).subtract(1, "day");
   }
 
   return null;

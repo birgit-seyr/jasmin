@@ -18,10 +18,11 @@ from rest_framework.response import Response
 from apps.authz.permissions import IsOffice, IsStaff, RolePermissionsMixin
 from core.serializers import ErrorResponseSerializer
 
-from ..constants import get_default_tax_rate_crates
+from ..constants import crates_should_be_on_documents, get_default_tax_rate_crates
 from ..errors import (
     CrateContentInvoiceMissingRequired,
     CrateDeliveryNoteContentMissingRequired,
+    CratesDisabledOnDocuments,
     FinalizedError,
 )
 from ..models import (
@@ -68,6 +69,17 @@ def _reject_finalized(obj: Any, kind: str, action: str) -> None:
         raise FinalizedError(
             f"Cannot {action} {kind}",
             code=f"{kind.replace(' ', '_')}.finalized",
+        )
+
+
+def _reject_if_crates_disabled() -> None:
+    """Reject a manual crate write when the tenant keeps crates OFF documents.
+    The office UI hides these controls, but the endpoints are still reachable
+    (direct API / a stale tab) — this closes that bypass so the setting is
+    honoured end-to-end."""
+    if not crates_should_be_on_documents():
+        raise CratesDisabledOnDocuments(
+            "Crates are disabled on documents for this tenant."
         )
 
 
@@ -196,6 +208,7 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         },
     )
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        _reject_if_crates_disabled()
         delivery_note = get_or_404(
             DeliveryNoteReseller,
             request.data.get("delivery_note_id"),
@@ -244,6 +257,7 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         pk: str | None = None,
         **kwargs: Any,
     ) -> Response:
+        _reject_if_crates_disabled()
         delivery_note_id = request.data.get("delivery_note_id")
         crate_type_id = request.data.get("crate_type")
         new_total_amount = request.data.get("amount")
@@ -435,6 +449,7 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
         },
     )
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        _reject_if_crates_disabled()
         invoice = get_or_404(InvoiceReseller, request.data.get("invoice_id"), "Invoice")
         _reject_finalized(invoice, "invoice", "add crates to finalized")
 
@@ -477,6 +492,7 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
         pk: str | None = None,
         **kwargs: Any,
     ) -> Response:
+        _reject_if_crates_disabled()
         invoice_id = request.data.get("invoice_id")
         crate_type_id = request.data.get("crate_type")
         new_total_amount = request.data.get("amount")

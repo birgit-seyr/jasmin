@@ -13,6 +13,7 @@ import { CreateBillingRunModal } from "@features/abos/modals/CreateBillingRunMod
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Popconfirm, Space, Tag } from "antd";
 import { ReadOnlyReportTable } from "@shared/tables";
+import { ExplainerText } from "@shared/ui";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -232,6 +233,10 @@ export default function DebitsAbos() {
         onClose={() => setCreateOpen(false)}
         onCreated={invalidateRuns}
       />
+
+      <ExplainerText title={t("common.info")}>
+        {t("explainers.debits_abos")}
+      </ExplainerText>
     </div>
   );
 }

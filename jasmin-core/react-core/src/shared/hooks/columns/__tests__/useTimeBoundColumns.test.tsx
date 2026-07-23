@@ -123,3 +123,55 @@ describe("useTimeBoundColumns validUntilFloor — per-row lower bound", () => {
     expect(disabledDate(dayjs("2026-09-14"), record)).toBe(true); // Monday
   });
 });
+
+describe("useTimeBoundColumns — cross-field valid_until > valid_from", () => {
+  it("disables Sundays on or before the live valid_from, allows later ones", () => {
+    const { result } = renderHook(() => useTimeBoundColumns());
+    const validUntil = result.current.validUntilColumn.disabledDate! as (
+      current: Dayjs,
+      record?: Record<string, unknown>,
+    ) => boolean;
+    const record = { valid_from: "2026-06-22" }; // Monday, ISO 2026-W26
+    expect(validUntil(dayjs("2026-06-21"), record)).toBe(true); // Sunday before start
+    expect(validUntil(dayjs("2026-06-28"), record)).toBe(false); // first Sunday after (+6d)
+    expect(validUntil(dayjs("2026-07-05"), record)).toBe(false); // a later Sunday
+    expect(validUntil(dayjs("2026-06-22"), record)).toBe(true); // Monday (not a Sunday)
+  });
+
+  it("no valid_from selected yet → only the Sunday rule applies", () => {
+    const { result } = renderHook(() => useTimeBoundColumns());
+    const validUntil = result.current.validUntilColumn.disabledDate! as (
+      current: Dayjs,
+      record?: Record<string, unknown>,
+    ) => boolean;
+    expect(validUntil(dayjs("2020-01-05"), {})).toBe(false); // Sunday, no floor
+  });
+});
+
+describe("useTimeBoundColumns — validFromFutureOnly", () => {
+  it("disables past Mondays and allows the first upcoming Monday and later", () => {
+    const { result } = renderHook(() =>
+      useTimeBoundColumns({ validFromFutureOnly: true }),
+    );
+    const validFrom = result.current.validFromColumn.disabledDate! as (
+      current: Dayjs,
+    ) => boolean;
+    // Recompute the hook's floor the same way (relative to "now").
+    const today = dayjs().startOf("day");
+    let earliest = today.day(1);
+    if (earliest.isBefore(today, "day")) earliest = earliest.add(7, "day");
+
+    expect(validFrom(earliest)).toBe(false); // first upcoming Monday allowed
+    expect(validFrom(earliest.add(7, "day"))).toBe(false); // a later Monday allowed
+    expect(validFrom(earliest.subtract(7, "day"))).toBe(true); // a past Monday blocked
+    expect(validFrom(earliest.add(1, "day"))).toBe(true); // Tuesday blocked (not a Monday)
+  });
+
+  it("without the flag, past Mondays are still allowed (default)", () => {
+    const { result } = renderHook(() => useTimeBoundColumns());
+    const validFrom = result.current.validFromColumn.disabledDate! as (
+      current: Dayjs,
+    ) => boolean;
+    expect(validFrom(dayjs("2020-01-06"))).toBe(false); // a past Monday still allowed
+  });
+});

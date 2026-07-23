@@ -23,7 +23,7 @@ import {
 } from "@shared/utils/lineNetto";
 import { formatAmountForUnit } from "@shared/utils";
 import { makeContentCustomEdit, makeFkCustomSave } from "./contentTableHelpers";
-import { useCurrency, useDateFormat, useDefaultTaxRates, useNumberFormat, useTimeFormat, useUnitOptions } from '@hooks/index';
+import { useCurrency, useDateFormat, useDefaultTaxRates, useNumberFormat, useTenant, useTimeFormat, useUnitOptions } from '@hooks/index';
 import { useAmountUnitSizeColumns, useCratesColumns, useOfferTiers, useShareArticleColumn } from '@features/commissioning/hooks';
 import { FinalizedNotice } from '@features/commissioning/components';
 // InvoicePDFGenerator statically imports @react-pdf/renderer (it
@@ -68,6 +68,14 @@ export default function InvoiceModal({
 }: InvoiceModalProps) {
   const { t } = useTranslation();
   const { isOffice } = useRoles();
+  const { getSetting } = useTenant();
+  // The setting gates crate CREATION (backend). The table shows when the tenant
+  // puts crates on documents OR the invoice already HAS crate rows (see the
+  // ``|| lineItemsCrates.length`` at the render site) — so existing crates,
+  // incl. on finalized/immutable invoices, still show and reconcile to the total.
+  const showCratesOnDocuments = Boolean(
+    getSetting("crates_should_be_on_documents", true),
+  );
   const queryClient = useQueryClient();
   const { formatDateTime } = useTimeFormat();
   const { formatDate } = useDateFormat();
@@ -507,35 +515,41 @@ export default function InvoiceModal({
             onSaveSuccess={handleSaveSuccess}
             onDeleteSuccess={handleDeleteSuccess}
           />
-          <div
-            style={{
-              marginTop: "4em",
-              marginBottom: "-1em",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5em",
-            }}
-          >
-            <h5 style={{ margin: 0 }}>
-              {t("commissioning.crates_invoicemodal")}
-            </h5>
-            <ToolTipIcon title={t("tooltip.crates_used_in_invoice")} />
-          </div>
-          <EditableTable
-            key="crates"
-            columns={filteredColumnsCrates as EditableColumnConfig[]}
-            apiFunctions={apiFunctionsCrates}
-            initialData={lineItemsCrates}
-            permissions={cratesPermissions}
-            loading={loading}
-            customSave={customSaveCrates}
-            customDelete={customDeleteCrates}
-            uniqueCheck={["crate_type"]}
-            uniqueCheckMessage={t("validation.unique.invoice_modal_crate")}
-            onDataChange={(d) => setLiveCrateItems(d as CrateContentRecord[])}
-            onSaveSuccess={handleSaveSuccess}
-            onDeleteSuccess={handleDeleteSuccess}
-          />
+          {(showCratesOnDocuments || lineItemsCrates.length > 0) && (
+            <>
+              <div
+                style={{
+                  marginTop: "4em",
+                  marginBottom: "-1em",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5em",
+                }}
+              >
+                <h5 style={{ margin: 0 }}>
+                  {t("commissioning.crates_invoicemodal")}
+                </h5>
+                <ToolTipIcon title={t("tooltip.crates_used_in_invoice")} />
+              </div>
+              <EditableTable
+                key="crates"
+                columns={filteredColumnsCrates as EditableColumnConfig[]}
+                apiFunctions={apiFunctionsCrates}
+                initialData={lineItemsCrates}
+                permissions={cratesPermissions}
+                loading={loading}
+                customSave={customSaveCrates}
+                customDelete={customDeleteCrates}
+                uniqueCheck={["crate_type"]}
+                uniqueCheckMessage={t("validation.unique.invoice_modal_crate")}
+                onDataChange={(d) =>
+                  setLiveCrateItems(d as CrateContentRecord[])
+                }
+                onSaveSuccess={handleSaveSuccess}
+                onDeleteSuccess={handleDeleteSuccess}
+              />
+            </>
+          )}
 
           <div
             style={{

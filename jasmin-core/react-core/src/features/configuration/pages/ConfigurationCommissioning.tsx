@@ -140,6 +140,15 @@ export default function ConfigurationCommissioning() {
             defaultValue: false,
             disabled: true,
           },
+          {
+            key: "crates_should_be_on_documents",
+            label: t("settings.commissioning.crates_should_be_on_documents"),
+            type: "checkbox",
+            description: t(
+              "settings.commissioning.crates_should_be_on_documents_desc",
+            ),
+            defaultValue: true,
+          },
         ],
       },
       {

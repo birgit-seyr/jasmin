@@ -88,6 +88,9 @@ const DeliveryStationDetailModal: FC<DeliveryStationDetailModalProps> = ({
   const { shareDeliveryDays } = useShareDeliveryDays();
   const { validFromColumn, validUntilColumn } = useTimeBoundColumns({
     width: "7em",
+    // A station's opening day can only be scheduled going forward — the backend
+    // rejects a past valid_from; this aligns the picker with that rule.
+    validFromFutureOnly: true,
   });
 
   const weekdayChoices = useMemo(() => getWeekdayChoices(t), [t]);

@@ -410,6 +410,14 @@ class CrateNotFound(NotFoundError):
     code = "crate.not_found"
 
 
+class CratesDisabledOnDocuments(BadRequestError):
+    """A crate write was attempted while the tenant keeps crates OFF documents
+    (``crates_should_be_on_documents=False``): crates are neither priced nor put
+    on orders / delivery notes / invoices for such tenants."""
+
+    code = "crates.disabled_on_documents"
+
+
 class CrateDeliveryNoteContentMissingRequired(BadRequestError):
     """A crate delivery-note-content write is missing one of
     ``delivery_note_id`` / ``crate_type`` / ``amount``."""
@@ -1343,6 +1351,7 @@ __all__ = [
     "OfferNotFound",
     "StorageNotFound",
     "CrateNotFound",
+    "CratesDisabledOnDocuments",
     "CrateDeliveryNoteContentMissingRequired",
     "CrateContentInvoiceMissingRequired",
     "InventoryEntryNotFound",

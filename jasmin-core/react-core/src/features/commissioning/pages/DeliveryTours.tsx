@@ -21,6 +21,7 @@ import {
   DndGrid,
   DraggableChip,
   DroppableCell,
+  ExplainerText,
   usePastelColorMap,
 } from "@shared/ui";
 import type { DndDragPayload, GridPos } from "@shared/ui";
@@ -410,6 +411,10 @@ export default function DeliveryTours() {
             </table>
           </div>
         </div>
+
+        <ExplainerText title={t("common.info")}>
+          {t("explainers.delivery_tours")}
+        </ExplainerText>
       </div>
     </DndGrid>
   );

@@ -168,6 +168,8 @@
     "default_planning_mode_description": "Das ist nur die Voreinstellung. Kann jede Woche geändert werden.",
     "has_markets": "Verkauf auf Märkten",
     "sells_to_resellers": "Verkauf an Wiederverkäufer",
+    "crates_should_be_on_documents": "Napfkisten werden verrechnet",
+    "crates_should_be_on_documents_desc": "",
     "different_offer_groups": "Verschiedene Angebotsgruppen",
     "tax_rates": {
       "title": "Standard-Steuersätze",
@@ -220,7 +222,7 @@
     "default_amount_jokers_description": "Dies kann für die einzelnen Anteils-Typen angepasst werden.",
     "jokers_for_trial": "Joker für Probe-Abonnements verwenden",
     "donation_jokers": "Spenden-Joker aktivieren",
-    "default_amount_of_donation_jokers": "Zusätzliche Spenden-Joker",
+    "default_amount_of_donation_jokers": "Anzahl Spenden-Joker",
         "default_amount_of_donation_jokers_description": "Dies kann für die einzelnen Anteils-Typen angepasst werden.",
 
     "subscriptions": {

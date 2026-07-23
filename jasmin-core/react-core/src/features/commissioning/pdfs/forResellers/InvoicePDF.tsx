@@ -358,6 +358,10 @@ export default function InvoicePDF({
             );
           })}
 
+          {/* Presence-based: render crate rows whenever the invoice HAS them,
+              so lines always reconcile to the (crate-inclusive) total + the
+              factur-x XML. The setting gates crate CREATION (backend), so an
+              off-tenant's invoices carry no crate_items and nothing renders. */}
           {crateItems.map((item, index) => {
             // Authoritative cent-rounded net from the backend
             // (models/mixin.py line_netto), not a client float recompute, so

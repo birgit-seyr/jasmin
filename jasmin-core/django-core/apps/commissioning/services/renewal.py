@@ -120,18 +120,65 @@ def _most_recent_reference_price(
     return gross.price_per_delivery if gross is not None else None
 
 
+def _current_tenant_settings():
+    """The active tenant's current ``TenantSettings``, or ``None`` when there is
+    no tenant/settings context (bound connection has no tenant, no settings row).
+    Read ONCE by the batch callers and threaded into ``create_renewal_draft`` to
+    avoid re-reading it per renewed row."""
+    from django.db import connection
+
+    from apps.shared.tenants.models import TenantSettings
+
+    try:
+        tenant = connection.tenant
+    except AttributeError:
+        return None
+    return TenantSettings.get_current_settings(tenant)
+
+
+def _anchored_term_end(valid_from: datetime.date, settings) -> datetime.date | None:
+    """The tenant's configured ISO-week-anchored term end for a renewal starting
+    on ``valid_from``, or ``None`` when ``settings`` is ``None`` or configures
+    neither end rule (caller keeps the predecessor's term length)."""
+    if settings is None:
+        return None
+
+    from .subscription_term import compute_term_valid_until
+
+    return compute_term_valid_until(
+        valid_from,
+        end_at_end_of_season=settings.subscriptions_end_at_end_of_season,
+        end_after_one_year=settings.subscriptions_end_after_one_year,
+        season_start_week=settings.season_start_week,
+    )
+
+
+# Sentinel: distinguishes "caller didn't pass settings, read them here" (direct
+# / single-row callers) from an explicit ``None`` (no settings context).
+_SETTINGS_UNSET = object()
+
+
 @transaction.atomic
 def create_renewal_draft(
     subscription: Subscription,
     new_valid_until: datetime.date | None = None,
+    *,
+    tenant_settings=_SETTINGS_UNSET,
 ) -> Subscription:
     """Create the unconfirmed renewal draft following ``subscription``'s term.
 
-    The new term starts the day after the predecessor ends. Its end defaults to
-    keeping the predecessor's term length (the daily sweep's behaviour); pass
-    ``new_valid_until`` to override it — the office bulk-renew modal does this to
-    set one common end date for the whole batch. Must be a Sunday on or after
-    ``new_valid_from`` (the model's ``clean`` enforces both).
+    The new term starts the day after the predecessor ends. Its end is
+    RE-ANCHORED to the tenant's configured ISO week (end-of-season → the season
+    boundary; end-after-one-year → the same ISO week next year) so the yearly
+    restart week doesn't drift across 52-/53-week ISO years — see
+    ``subscription_term.compute_term_valid_until``. Only when the tenant
+    configures neither end rule does it fall back to keeping the predecessor's
+    term length (the historical behaviour). Pass ``new_valid_until`` to override
+    entirely — the office bulk-renew modal does this to set one common end date
+    for the whole batch. Must be a Sunday on or after ``new_valid_from`` (the
+    model's ``clean`` enforces both). ``tenant_settings`` is read once by the
+    batch callers (``run_renewals`` / ``bulk_renew``) and threaded in to avoid an
+    N+1; a direct caller leaves it unset and it is read here.
 
     Raises ``RenewalVariationUnavailable`` if no variation covers the new term;
     the model's ``clean()`` may also raise (e.g. the carried-over delivery
@@ -140,8 +187,15 @@ def create_renewal_draft(
     """
     new_valid_from = subscription.valid_until + datetime.timedelta(days=1)
     if new_valid_until is None:
-        term_length = subscription.valid_until - subscription.valid_from
-        new_valid_until = new_valid_from + term_length
+        settings = (
+            _current_tenant_settings()
+            if tenant_settings is _SETTINGS_UNSET
+            else tenant_settings
+        )
+        new_valid_until = _anchored_term_end(new_valid_from, settings)
+        if new_valid_until is None:
+            term_length = subscription.valid_until - subscription.valid_from
+            new_valid_until = new_valid_from + term_length
 
     variation = resolve_variation_for_term(
         subscription.share_type_variation, new_valid_from, new_valid_until
@@ -292,6 +346,8 @@ def run_renewals(today: datetime.date, min_weeks_to_cancel: int) -> dict:
     """
     created = 0
     failed: list[dict] = []
+    # Read the tenant settings ONCE for the whole sweep (same for every row).
+    tenant_settings = _current_tenant_settings()
     candidates = find_renewable_subscriptions(today, min_weeks_to_cancel)
     for subscription in list(
         candidates.select_related("member", "share_type_variation")
@@ -299,7 +355,7 @@ def run_renewals(today: datetime.date, min_weeks_to_cancel: int) -> dict:
         try:
             # ``create_renewal_draft`` is itself ``@transaction.atomic`` — a
             # failure rolls back its own writes, leaving no partial renewal.
-            create_renewal_draft(subscription)
+            create_renewal_draft(subscription, tenant_settings=tenant_settings)
             created += 1
         except _renewal_business_errors() as exc:
             reason = _classify_renewal_failure(exc)
@@ -375,6 +431,8 @@ def bulk_renew(
     created = 0
     skipped: list[dict] = []
     failed: list[dict] = []
+    # Read the tenant settings ONCE for the whole batch (same for every row).
+    tenant_settings = _current_tenant_settings()
     subscriptions = (
         Subscription.objects.filter(pk__in=list(subscription_ids))
         .select_related("member", "share_type_variation")
@@ -390,7 +448,11 @@ def bulk_renew(
             skipped.append(_outcome_item(subscription, reason))
             continue
         try:
-            create_renewal_draft(subscription, new_valid_until=new_valid_until)
+            create_renewal_draft(
+                subscription,
+                new_valid_until=new_valid_until,
+                tenant_settings=tenant_settings,
+            )
             created += 1
         except _renewal_business_errors() as exc:
             reason = _classify_renewal_failure(exc)

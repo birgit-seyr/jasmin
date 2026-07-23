@@ -91,7 +91,6 @@ export default function ConfigurationPayments() {
             defaultValue: false,
             // Donation jokers are a sub-feature of jokers; hide the
             // toggle when the parent feature is off.
-            visibleIf: (getValue) => Boolean(getValue("uses_jokers", true)),
           },
           {
             key: "default_amount_of_donation_jokers",
@@ -106,7 +105,6 @@ export default function ConfigurationPayments() {
             min: 0,
             max: 20,
             visibleIf: (getValue) =>
-              Boolean(getValue("uses_jokers", true)) &&
               Boolean(getValue("uses_donation_jokers", false)),
           },
         ],

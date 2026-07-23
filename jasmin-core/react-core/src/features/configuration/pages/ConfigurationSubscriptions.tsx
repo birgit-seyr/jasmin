@@ -50,7 +50,9 @@ export default function ConfigurationSubscriptions() {
           {
             key: "min_weeks_to_cancel_before_ending",
             label: t("settings.commissioning.min_weeks_cancel"),
-            description: t("settings.commissioning.min_weeks_cancel_description"),
+            description: t(
+              "settings.commissioning.min_weeks_cancel_description",
+            ),
             type: "number",
             defaultValue: 6,
             min: 0,
@@ -69,7 +71,9 @@ export default function ConfigurationSubscriptions() {
             // Existing on-off variations stay configured but their
             // toggles are inert until the flag flips back on.
             key: "allows_share_type_variation_optin",
-            label: t("settings.commissioning.allows_share_type_variation_optin"),
+            label: t(
+              "settings.commissioning.allows_share_type_variation_optin",
+            ),
             description: t(
               "settings.commissioning.allows_share_type_variation_optin_desc",
             ),
@@ -101,6 +105,8 @@ export default function ConfigurationSubscriptions() {
             type: "number",
             defaultValue: 14,
             min: 0,
+            visibleIf: (getValue) =>
+              Boolean(getValue("allows_waiting_list_for_subscriptions", false)),
           },
         ],
       },

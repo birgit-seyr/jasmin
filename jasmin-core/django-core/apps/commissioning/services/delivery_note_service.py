@@ -9,6 +9,7 @@ from apps.shared.tenants.models import RateLimitedAction
 from apps.shared.tenants.rate_limits import enforce_action_quota
 from core.errors import ConflictError
 
+from ..constants import crates_should_be_on_documents
 from ..errors import CommissioningError
 from ..models import (
     CrateDeliveryNoteContent,
@@ -88,29 +89,33 @@ class DeliveryNoteService:
                 source_size=size,
             )
 
-        # Create crate delivery note contents from ALL crate order contents
-        all_crate_contents = (
-            CrateOrderContent.objects.filter(
-                models.Q(order=order) | models.Q(order_content__order=order)
+        # Create crate delivery note contents from ALL crate order contents.
+        # Defence-in-depth: skip entirely when the tenant keeps crates OFF
+        # documents, so even pre-existing CrateOrderContent (from before the
+        # setting was turned off) never lands — priced — on a new delivery note.
+        if crates_should_be_on_documents():
+            all_crate_contents = (
+                CrateOrderContent.objects.filter(
+                    models.Q(order=order) | models.Q(order_content__order=order)
+                )
+                .select_related("crate_type")
+                .distinct()
             )
-            .select_related("crate_type")
-            .distinct()
-        )
 
-        for crate_content in all_crate_contents:
-            CrateDeliveryNoteContent.objects.create(
-                delivery_note=delivery_note,
-                crate_type=crate_content.crate_type,
-                amount=crate_content.amount,
-                price_per_unit=crate_content.price_per_unit,
-                rabatt=crate_content.rabatt,
-                tax_rate=crate_content.tax_rate,
-                note=crate_content.note,
-                # Snapshot of upstream CrateOrderContent.
-                source_amount=crate_content.amount,
-                source_price_per_unit=crate_content.price_per_unit,
-                source_rabatt=crate_content.rabatt,
-            )
+            for crate_content in all_crate_contents:
+                CrateDeliveryNoteContent.objects.create(
+                    delivery_note=delivery_note,
+                    crate_type=crate_content.crate_type,
+                    amount=crate_content.amount,
+                    price_per_unit=crate_content.price_per_unit,
+                    rabatt=crate_content.rabatt,
+                    tax_rate=crate_content.tax_rate,
+                    note=crate_content.note,
+                    # Snapshot of upstream CrateOrderContent.
+                    source_amount=crate_content.amount,
+                    source_price_per_unit=crate_content.price_per_unit,
+                    source_rabatt=crate_content.rabatt,
+                )
 
         if not order.is_finalized:
             from .order_service import OrderService

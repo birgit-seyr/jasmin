@@ -348,7 +348,7 @@ class TenantSettings(JasminModel):
     created_at = models.DateTimeField(auto_now_add=True)
 
     # Cooperative shares
-    has_coop_shares = models.BooleanField(default=True)  # done
+    has_coop_shares = models.BooleanField(default=True)
     coop_shares_payment_after_admin_confirmation_in_days = models.IntegerField(
         default=14
     )
@@ -418,7 +418,7 @@ class TenantSettings(JasminModel):
     reservation_ttl_days = models.PositiveIntegerField(default=14)
 
     # Jokers system
-    uses_jokers = models.BooleanField(default=True)  # done
+    uses_jokers = models.BooleanField(default=True)
     default_amount_of_jokers = models.PositiveIntegerField(default=4)
     uses_jokers_for_trial_subscriptions = models.BooleanField(default=False)
     uses_donation_jokers = models.BooleanField(default=False)
@@ -460,10 +460,13 @@ class TenantSettings(JasminModel):
 
     # Sales channels
     has_markets = models.BooleanField(default=False)
-    sells_to_resellers = models.BooleanField(default=True)  # done
+    sells_to_resellers = models.BooleanField(default=True)
+    crates_should_be_on_documents = models.BooleanField(
+        default=True
+    )  # defines if crates are priced and put on deliverynote and invoices
 
     # reseller invoice & deliver note settings
-    payment_terms_reseller_in_days = models.PositiveIntegerField(default=14)  # done
+    payment_terms_reseller_in_days = models.PositiveIntegerField(default=14)
     # Tenant-level Skonto defaults (per-reseller override on
     # ``Reseller.early_payment_discount_*``). NULL on both = no Skonto
     # offered by default; the PDF / ZUGFeRD generators only emit the
@@ -472,60 +475,36 @@ class TenantSettings(JasminModel):
         max_digits=5, decimal_places=2, blank=True, null=True
     )
     early_payment_discount_days = models.PositiveIntegerField(blank=True, null=True)
-    order_numbers_start_new_at_year_change = models.BooleanField(default=False)  # done
-    order_number_prefix = models.CharField(max_length=10, default="BE")  # done
-    delivery_note_numbers_start_new_at_year_change = models.BooleanField(
-        default=False
-    )  # done
-    delivery_note_number_prefix = models.CharField(max_length=10, default="LS")  # done
-    invoice_numbers_start_new_at_year_change = models.BooleanField(
-        default=False
-    )  # done
-    invoice_number_prefix = models.CharField(max_length=10, default="RE")  # done
-    correction_invoice_number_prefix = models.CharField(
-        max_length=10, default="RK"
-    )  # done
-    left_column_footer_documents_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    middle_column_footer_documents_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    right_column_footer_documents_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    entry_line_1_invoice_reseller = models.TextField(blank=True, null=True)  # done
-    entry_line_2_invoice_reseller = models.TextField(blank=True, null=True)  # done
-    entry_line_3_invoice_reseller = models.TextField(blank=True, null=True)  # done
-    greeting_line_1_invoice_reseller = models.TextField(blank=True, null=True)  # done
-    greeting_line_2_invoice_reseller = models.TextField(blank=True, null=True)  # done
-    greeting_line_3_invoice_reseller = models.TextField(blank=True, null=True)  # done
-    entry_line_1_delivery_note_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    entry_line_2_delivery_note_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    entry_line_3_delivery_note_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    greeting_line_1_delivery_note_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    greeting_line_2_delivery_note_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    greeting_line_3_delivery_note_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
+    order_numbers_start_new_at_year_change = models.BooleanField(default=False)
+    order_number_prefix = models.CharField(max_length=10, default="BE")
+    delivery_note_numbers_start_new_at_year_change = models.BooleanField(default=False)
+    delivery_note_number_prefix = models.CharField(max_length=10, default="LS")
+    invoice_numbers_start_new_at_year_change = models.BooleanField(default=False)
+    invoice_number_prefix = models.CharField(max_length=10, default="RE")
+    correction_invoice_number_prefix = models.CharField(max_length=10, default="RK")
+    left_column_footer_documents_reseller = models.TextField(blank=True, null=True)
+    middle_column_footer_documents_reseller = models.TextField(blank=True, null=True)
+    right_column_footer_documents_reseller = models.TextField(blank=True, null=True)
+    entry_line_1_invoice_reseller = models.TextField(blank=True, null=True)
+    entry_line_2_invoice_reseller = models.TextField(blank=True, null=True)
+    entry_line_3_invoice_reseller = models.TextField(blank=True, null=True)
+    greeting_line_1_invoice_reseller = models.TextField(blank=True, null=True)
+    greeting_line_2_invoice_reseller = models.TextField(blank=True, null=True)
+    greeting_line_3_invoice_reseller = models.TextField(blank=True, null=True)
+    entry_line_1_delivery_note_reseller = models.TextField(blank=True, null=True)
+    entry_line_2_delivery_note_reseller = models.TextField(blank=True, null=True)
+    entry_line_3_delivery_note_reseller = models.TextField(blank=True, null=True)
+    greeting_line_1_delivery_note_reseller = models.TextField(blank=True, null=True)
+    greeting_line_2_delivery_note_reseller = models.TextField(blank=True, null=True)
+    greeting_line_3_delivery_note_reseller = models.TextField(blank=True, null=True)
 
     # Offer document
-    entry_line_1_offer_reseller = models.TextField(blank=True, null=True)  # done
-    entry_line_2_offer_reseller = models.TextField(blank=True, null=True)  # done
-    entry_line_3_offer_reseller = models.TextField(blank=True, null=True)  # done
-    greeting_line_1_offer_reseller = models.TextField(blank=True, null=True)  # done
-    greeting_line_2_offer_reseller = models.TextField(blank=True, null=True)  # done
-    greeting_line_3_offer_reseller = models.TextField(blank=True, null=True)  # done
+    entry_line_1_offer_reseller = models.TextField(blank=True, null=True)
+    entry_line_2_offer_reseller = models.TextField(blank=True, null=True)
+    entry_line_3_offer_reseller = models.TextField(blank=True, null=True)
+    greeting_line_1_offer_reseller = models.TextField(blank=True, null=True)
+    greeting_line_2_offer_reseller = models.TextField(blank=True, null=True)
+    greeting_line_3_offer_reseller = models.TextField(blank=True, null=True)
     order_instructions_offer_reseller = models.TextField(blank=True, null=True)
 
     # Offer groups

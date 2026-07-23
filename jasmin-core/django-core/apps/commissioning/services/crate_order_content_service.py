@@ -8,7 +8,8 @@ from typing import Any
 from django.db import transaction
 from django.db.models import Q, QuerySet
 
-from ..errors import CrateNotFound
+from ..constants import crates_should_be_on_documents
+from ..errors import CrateNotFound, CratesDisabledOnDocuments
 from ..models import Crate, CrateOrderContent, Order
 from ..utils.iso_week_utils import date_from_order, week_day_to_date
 from ..utils.tax_rate_utils import effective_crate_tax_rate
@@ -135,6 +136,10 @@ class CrateOrderContentService:
         **kwargs,
     ) -> dict[str, Any]:
         """Create a new crate order content record, finding or creating the Order."""
+        if not crates_should_be_on_documents():
+            raise CratesDisabledOnDocuments(
+                "Crates are disabled on documents for this tenant."
+            )
         order, _created = Order.objects.get_or_create(
             reseller_id=reseller,
             year=year,
@@ -200,6 +205,10 @@ class CrateOrderContentService:
         update_data: dict,
     ) -> dict[str, Any]:
         """Update all CrateOrderContent records matching crate_type + order context."""
+        if not crates_should_be_on_documents():
+            raise CratesDisabledOnDocuments(
+                "Crates are disabled on documents for this tenant."
+            )
         filter_q = CrateOrderContentService._period_filter(
             year, delivery_week, day_number, reseller
         )

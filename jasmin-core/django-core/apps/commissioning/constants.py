@@ -82,6 +82,14 @@ def get_default_tax_rate_crates():
     return value if value is not None else DEFAULT_CRATE_TAX_RATE
 
 
+def crates_should_be_on_documents() -> bool:
+    """Whether crates are priced and put on delivery notes / invoices for the
+    active tenant. Defaults to ``True`` (the model default + the safe fallback
+    when there's no tenant context) so existing tenants are unaffected."""
+    value = _resolve_tenant_setting("crates_should_be_on_documents")
+    return True if value is None else bool(value)
+
+
 def get_min_weeks_from_creation_to_start_delivery() -> int:
     """Lead time in weeks before a subscription may start, measured from
     "now". Falls back to 0 (no lead-time enforcement) when there's no tenant

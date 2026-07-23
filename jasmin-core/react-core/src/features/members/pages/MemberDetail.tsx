@@ -12,6 +12,7 @@ import {
   MemberDeliveryEditModal,
 } from "@features/members/modals";
 import SuccessModal from "@shared/modals/SuccessModal";
+import { ExplainerText } from "@shared/ui";
 import { useLogoShape, useTenant } from "@hooks/index";
 import {
   getCommissioningAbosListQueryKey,
@@ -563,6 +564,10 @@ const MemberDetail = () => {
           })
         }
       />
+
+      <ExplainerText title={t("common.info")}>
+        {t("explainers.member_detail")}
+      </ExplainerText>
     </div>
   );
 };

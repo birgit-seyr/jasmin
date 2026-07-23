@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { usePaymentsBillingProfilesList } from "@shared/api/generated/payments-—-billing-profiles/payments-—-billing-profiles";
 import type { BillingProfile } from "@shared/api/generated/models";
 import { PaymentMethodEnum } from "@shared/api/generated/models";
+import { ExplainerText } from "@shared/ui";
 import { EditableTable, READ_ONLY_PERMISSION } from "@shared/tables";
 import type {
   EditableColumnConfig,
@@ -155,6 +156,9 @@ export default function SepaMandates() {
         pagination={true}
         showSearchBar={true}
       />
+      <ExplainerText title={t("common.info")}>
+        {t("explainers.sepa_mandates")}
+      </ExplainerText>
     </div>
   );
 }
