@@ -30,5 +30,6 @@
   "invalid_date_format": "Ungültiges Datumsformat",
   "invalid_email": "Ungültige E-Mail-Adresse",
   "required": "Pflichtfeld",
+  "amount_cannot_be_reduced_while_in_use": "Die Anzahl kann nur erhöht, nicht verringert werden, solange der Anteilstyp verwendet wird.",
   "valid_dates_required_for_cancellation": "Für die Stornierung werden gültige Datumsangaben benötigt."
 }

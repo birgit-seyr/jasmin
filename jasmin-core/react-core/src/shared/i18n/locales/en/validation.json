@@ -30,5 +30,6 @@
   "invalid_date_format": "Invalid date format",
   "invalid_email": "Invalid email address",
   "required": "Required field",
+  "amount_cannot_be_reduced_while_in_use": "The number can only be increased, not reduced, while the share type is in use.",
   "valid_dates_required_for_cancellation": "Valid dates are required for cancellation."
 }
