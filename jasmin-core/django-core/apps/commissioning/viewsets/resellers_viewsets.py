@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import logging
 from typing import Any
 
 from django.contrib.postgres.aggregates import StringAgg
@@ -106,6 +108,8 @@ from ..utils import get_contact_annotations
 from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 from ..utils.queryset_helpers import apply_optional_filters
+
+logger = logging.getLogger(__name__)
 
 _BOOL_RESELLER_PARAMS = [
     OpenApiParameter(
@@ -258,6 +262,49 @@ def validate_finalized_pdf_upload(
         if mismatch:
             raise InvalidUploadedDocument(mismatch, field="xml_file")
     return uploaded_file, uploaded_xml
+
+
+def _embed_facturx_or_fallback(uploaded_file, uploaded_xml, *, invoice_pk):
+    """Turn the uploaded invoice PDF + its XML into a conformant factur-x
+    PDF/A-3 to store in place of the raw PDF.
+
+    On ANY failure — a conversion error, an I/O error reading the upload, a
+    missing dependency, an unexpected bug — log and return the original
+    ``uploaded_file`` unchanged. The invoice upload must never break because the
+    conformance post-process failed. Both file pointers are rewound to 0 either
+    way (success too), since ``uploaded_xml`` is still stored separately by the
+    caller.
+    """
+    from django.core.files.base import ContentFile
+
+    try:
+        from apps.commissioning.services.facturx_pdfa3 import to_facturx_pdfa3
+
+        pdf_bytes = uploaded_file.read()
+        xml_bytes = uploaded_xml.read()
+        hybrid_pdf = to_facturx_pdfa3(pdf_bytes, xml_bytes)
+        return ContentFile(hybrid_pdf, name=uploaded_file.name)
+    except Exception as exc:  # noqa: BLE001 - intentionally airtight
+        # Deliberately broad: the upload path is load-bearing, so it must
+        # survive any post-process failure — disk-full temp, a non-executable
+        # gs (PermissionError, not FileNotFoundError), a bug in the converter.
+        # Fall back to storing the raw upload; log with the traceback so an
+        # unexpected failure is still diagnosable.
+        logger.warning(
+            "factur-x PDF/A-3 conversion failed for invoice %s: %s — "
+            "storing the un-converted upload",
+            invoice_pk,
+            exc,
+            exc_info=True,
+        )
+        return uploaded_file
+    finally:
+        # Rewind both for the caller (on success it still stores xml_file
+        # separately; on fallback it stores the raw file + xml). Suppress seek
+        # errors so this finally can never raise over the return value.
+        for handle in (uploaded_file, uploaded_xml):
+            with contextlib.suppress(Exception):
+                handle.seek(0)
 
 
 # Reseller fields a non-privileged (customer-portal) caller may self-edit on
@@ -1007,6 +1054,18 @@ class InvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         uploaded_file, uploaded_xml = validate_finalized_pdf_upload(
             invoice, request, doc_label="Invoice", allow_xml=True
         )
+
+        # When an XML companion is present, post-process the (visual, non-PDF/A)
+        # @react-pdf upload into a conformant factur-x PDF/A-3 that carries the
+        # XML inside it — one document that is both human- and machine-readable.
+        # The raw XML is still stored separately (below) for backward
+        # compatibility. Defensive: any conversion failure falls back to storing
+        # the un-converted upload, so an invoice upload can never be dropped by
+        # the post-process.
+        if uploaded_xml is not None:
+            uploaded_file = _embed_facturx_or_fallback(
+                uploaded_file, uploaded_xml, invoice_pk=invoice.pk
+            )
 
         from django.db import transaction
         from django.utils import timezone

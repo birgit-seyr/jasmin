@@ -387,10 +387,11 @@ export interface PaymentTerms {
  * Generates ZUGFeRD 2.1 / EN 16931 compliant XML for e-invoicing.
  *
  * ``currencyCode`` is the ISO 4217 alpha-3 code (``"EUR"``, ``"USD"``,
- * ``"CHF"``, …). The XML emits it in three places: the
- * ``InvoiceCurrencyCode`` element and the ``currencyID`` attribute on
- * every monetary amount. Defaults to ``"EUR"`` so any legacy caller
- * that hasn't been migrated keeps emitting the same payload as before.
+ * ``"CHF"``, …). It is emitted in the ``InvoiceCurrencyCode`` element
+ * and, per CII-DT-031, as a ``currencyID`` attribute ONLY on
+ * ``TaxTotalAmount`` (the one summation amount that may be stated in a
+ * second tax-reporting currency) — never on the other monetary totals.
+ * Defaults to ``"EUR"``.
  *
  * ``paymentTerms`` is the per-invoice resolved payment terms. When
  * omitted, falls back to the tenant default on ``tenantSettings`` —
@@ -611,11 +612,11 @@ export function generateZUGFeRDXML(
       </ram:SpecifiedTradePaymentTerms>
 
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-        <ram:LineTotalAmount currencyID="${currencyCode}">${mag(totals.netto).toFixed(2)}</ram:LineTotalAmount>
-        <ram:TaxBasisTotalAmount currencyID="${currencyCode}">${mag(totals.netto).toFixed(2)}</ram:TaxBasisTotalAmount>
+        <ram:LineTotalAmount>${mag(totals.netto).toFixed(2)}</ram:LineTotalAmount>
+        <ram:TaxBasisTotalAmount>${mag(totals.netto).toFixed(2)}</ram:TaxBasisTotalAmount>
         <ram:TaxTotalAmount currencyID="${currencyCode}">${mag(totals.tax).toFixed(2)}</ram:TaxTotalAmount>
-        <ram:GrandTotalAmount currencyID="${currencyCode}">${mag(totals.brutto).toFixed(2)}</ram:GrandTotalAmount>
-        <ram:DuePayableAmount currencyID="${currencyCode}">${mag(totals.brutto).toFixed(2)}</ram:DuePayableAmount>
+        <ram:GrandTotalAmount>${mag(totals.brutto).toFixed(2)}</ram:GrandTotalAmount>
+        <ram:DuePayableAmount>${mag(totals.brutto).toFixed(2)}</ram:DuePayableAmount>
       </ram:SpecifiedTradeSettlementHeaderMonetarySummation>${
       // BG-3 preceding-invoice reference (BT-25): a credit note must point
       // back at the invoice it reverses so the receiver can net them.

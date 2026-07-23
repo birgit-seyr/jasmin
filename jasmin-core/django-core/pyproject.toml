@@ -62,6 +62,14 @@ django-otp = "^1.5"
 # handed to the office.
 sepaxml = "^2.6"
 cryptography = ">=48.0.1,<50"
+# factur-x / ZUGFeRD hybrid e-invoice writer. Embeds the EN 16931 CII XML
+# into a PDF as the ``factur-x.xml`` associated file and writes the factur-x
+# XMP extension schema, so an uploaded invoice is one document that is both
+# human- and machine-readable. Pure Python (pypdf + lxml). The upstream
+# PDF/A-3 normalisation (OutputIntent, font embedding, pdfaid) is done by
+# Ghostscript, a system binary in the runtime image — see
+# ``apps/commissioning/services/facturx_pdfa3.py``.
+factur-x = "^6.6"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"

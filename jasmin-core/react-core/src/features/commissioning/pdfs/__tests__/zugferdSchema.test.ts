@@ -287,18 +287,19 @@ describe("ZUGFeRD / EN 16931 structural conformance", () => {
     expect(textOf(doc, "ram:InvoiceCurrencyCode")).toBe("EUR");
   });
 
-  it("TaxTotalAmount carries the currencyID attribute", () => {
-    // This is the one element where the current generator emits
-    // currencyID. EN 16931 requires currencyID on EVERY monetary
-    // amount (see todo below).
+  it("TaxTotalAmount carries the currencyID attribute (the CII exception)", () => {
+    // TaxTotalAmount is the ONLY header-summation amount that may — and must —
+    // declare currencyID (it can be stated in a second, tax-reporting
+    // currency). The others are covered by the CII-DT-031 test below.
     const tax = findFirst(doc, "ram:TaxTotalAmount");
     expect(tax?.getAttribute("currencyID")).toBe("EUR");
   });
 
-  it("every header-summation monetary amount carries currencyID (BR-CO-25)", () => {
-    // Every BT-* amount under SpecifiedTradeSettlementHeaderMonetarySummation
-    // must declare its currency explicitly. Strict validators (Mustang /
-    // KoSIT) reject the invoice as malformed otherwise.
+  it("no currencyID on the other summation amounts (CII-DT-031)", () => {
+    // CII-DT-031: currencyID is FORBIDDEN on LineTotalAmount /
+    // TaxBasisTotalAmount / GrandTotalAmount / DuePayableAmount — the document
+    // currency is declared once in InvoiceCurrencyCode. KoSIT / Mustang reject
+    // the invoice as malformed when it IS present (real conformance failure).
     const settlement = findFirst(
       doc,
       "ram:SpecifiedTradeSettlementHeaderMonetarySummation",
@@ -306,15 +307,15 @@ describe("ZUGFeRD / EN 16931 structural conformance", () => {
     for (const tag of [
       "ram:LineTotalAmount",
       "ram:TaxBasisTotalAmount",
-      "ram:TaxTotalAmount",
       "ram:GrandTotalAmount",
       "ram:DuePayableAmount",
     ]) {
       const el = settlement.getElementsByTagName(tag)[0];
       expect(el, `${tag} must be emitted`).toBeDefined();
-      expect(el.getAttribute("currencyID"), `${tag} missing currencyID`).toBe(
-        "EUR",
-      );
+      expect(
+        el.hasAttribute("currencyID"),
+        `${tag} must NOT carry currencyID (CII-DT-031)`,
+      ).toBe(false);
     }
   });
 
@@ -322,7 +323,8 @@ describe("ZUGFeRD / EN 16931 structural conformance", () => {
     // The generator used to hardcode ``"EUR"`` in 6 places. After the
     // refactor a ``currencyCode`` parameter threads through to:
     //   * ``ram:InvoiceCurrencyCode``  (BT-5)
-    //   * every ``currencyID`` attribute on header-summation amounts
+    //   * the ``currencyID`` attribute on ``ram:TaxTotalAmount`` (the ONE
+    //     summation amount that carries it, per CII-DT-031)
     // The default stays ``"EUR"`` so non-migrated callers keep producing
     // the same payload.
 
@@ -336,13 +338,11 @@ describe("ZUGFeRD / EN 16931 structural conformance", () => {
       const defaultDoc = parse(defaultXml);
       expect(textOf(defaultDoc, "ram:InvoiceCurrencyCode")).toBe("EUR");
       expect(
-        findFirst(defaultDoc, "ram:GrandTotalAmount")?.getAttribute(
-          "currencyID",
-        ),
+        findFirst(defaultDoc, "ram:TaxTotalAmount")?.getAttribute("currencyID"),
       ).toBe("EUR");
     });
 
-    it("emits the explicit currencyCode in BT-5 and every currencyID", () => {
+    it("emits the explicit currencyCode in BT-5 and on TaxTotalAmount only", () => {
       const usdXml = generateZUGFeRDXML(
         sampleInput,
         sampleBankDetails,
@@ -355,23 +355,28 @@ describe("ZUGFeRD / EN 16931 structural conformance", () => {
       // BT-5 InvoiceCurrencyCode now reflects the caller's currency.
       expect(textOf(usdDoc, "ram:InvoiceCurrencyCode")).toBe("USD");
 
-      // Every monetary summation amount picks up the same code.
       const settlement = findFirst(
         usdDoc,
         "ram:SpecifiedTradeSettlementHeaderMonetarySummation",
       )!;
+      // TaxTotalAmount picks up the explicit code; the others carry no
+      // currencyID at all (CII-DT-031).
+      expect(
+        settlement
+          .getElementsByTagName("ram:TaxTotalAmount")[0]
+          .getAttribute("currencyID"),
+      ).toBe("USD");
       for (const tag of [
         "ram:LineTotalAmount",
         "ram:TaxBasisTotalAmount",
-        "ram:TaxTotalAmount",
         "ram:GrandTotalAmount",
         "ram:DuePayableAmount",
       ]) {
         const el = settlement.getElementsByTagName(tag)[0];
         expect(
-          el.getAttribute("currencyID"),
-          `${tag} should carry the explicit USD code`,
-        ).toBe("USD");
+          el.hasAttribute("currencyID"),
+          `${tag} must NOT carry currencyID (CII-DT-031)`,
+        ).toBe(false);
       }
 
       // Sanity: no stray EUR left over in the XML when the caller asked
