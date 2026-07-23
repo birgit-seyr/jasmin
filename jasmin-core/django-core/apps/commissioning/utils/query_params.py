@@ -43,6 +43,7 @@ _BOOL_PARAMS = (
     "is_trial",
     "manual",
     "joker",
+    "donation_joker",
     "for_tours",
     "for_stations",
     "physical",

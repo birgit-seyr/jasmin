@@ -720,8 +720,9 @@ def _build_subscription_queryset(request: Request) -> QuerySet[Subscription]:
         # as "needs admin-confirmation".
         #
         # Opt-outs for on-off variations are excluded too, so Abos.tsx agrees
-        # with the demand pipeline / preparation lists and with billing — all
-        # three now share the one ``ShareDelivery.delivery_counts_q`` rule.
+        # with the demand pipeline / preparation lists — this is a PRODUCTION
+        # count (``ShareDelivery.delivery_counts_q``), NOT a billed count: it also
+        # excludes donation jokers (billed but not produced), which billing keeps.
         deliveries_count=Count(
             "sharedelivery",
             filter=ShareDelivery.delivery_counts_q(prefix="sharedelivery__"),

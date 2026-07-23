@@ -54,6 +54,7 @@ def _make_subscription_delivery(
     delivery_week=15,
     quantity=2,
     joker_taken=False,
+    donation_joker_taken=False,
 ):
     """Create one ``ShareDelivery`` linked to a real subscription."""
     from apps.commissioning.models import Share
@@ -76,6 +77,7 @@ def _make_subscription_delivery(
         share=share,
         delivery_station_day=station_day,
         joker_taken=joker_taken,
+        donation_joker_taken=donation_joker_taken,
     )
     delivery.subscription = subscription
     delivery.save()
@@ -220,6 +222,48 @@ class TestSubscriptionDemandBackend:
 
         rows = SubscriptionDemandBackend().aggregated_rows(
             year=2026, delivery_week=15, joker=True
+        )
+        assert sum(r["count"] for r in rows) == 7
+
+    def test_aggregated_rows_excludes_donation_joker_by_default(self, tenant):
+        # A donation joker is billed but NOT produced -> excluded from demand,
+        # exactly like a regular joker.
+        variation = ShareTypeVariationFactory()
+        day = SharesDeliveryDayFactory(day_number=2)
+        sd = DeliveryStationDayFactory(delivery_day=day, tour_number=1)
+        _make_subscription_delivery(
+            variation=variation, delivery_day=day, station_day=sd, quantity=2
+        )
+        _make_subscription_delivery(
+            variation=variation,
+            delivery_day=day,
+            station_day=sd,
+            quantity=99,
+            donation_joker_taken=True,
+        )
+
+        rows = SubscriptionDemandBackend().aggregated_rows(year=2026, delivery_week=15)
+        assert sum(r["count"] for r in rows) == 2
+
+    def test_aggregated_rows_can_include_only_donation_jokers(self, tenant):
+        # The donation-report path: donation_joker=True returns ONLY the
+        # donatable boxes.
+        variation = ShareTypeVariationFactory()
+        day = SharesDeliveryDayFactory(day_number=2)
+        sd = DeliveryStationDayFactory(delivery_day=day, tour_number=1)
+        _make_subscription_delivery(
+            variation=variation, delivery_day=day, station_day=sd, quantity=2
+        )
+        _make_subscription_delivery(
+            variation=variation,
+            delivery_day=day,
+            station_day=sd,
+            quantity=7,
+            donation_joker_taken=True,
+        )
+
+        rows = SubscriptionDemandBackend().aggregated_rows(
+            year=2026, delivery_week=15, donation_joker=True
         )
         assert sum(r["count"] for r in rows) == 7
 

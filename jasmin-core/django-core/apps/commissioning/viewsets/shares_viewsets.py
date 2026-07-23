@@ -840,7 +840,13 @@ class ShareDeliveryViewSet(
         params = validate_query_params(
             request,
             required=["year", "delivery_week"],
-            optional=["for_tours", "for_stations", "is_packed_bulk", "joker"],
+            optional=[
+                "for_tours",
+                "for_stations",
+                "is_packed_bulk",
+                "joker",
+                "donation_joker",
+            ],
         )
         mode = "day"
         if params["for_stations"]:
@@ -849,6 +855,7 @@ class ShareDeliveryViewSet(
             mode = "tours"
 
         joker = bool(params["joker"])
+        donation_joker = bool(params["donation_joker"])
 
         # Import (external-demand) tenants have no ShareDelivery rows, so their
         # matrix is FLAT per-variation columns (from the demand port); everyone
@@ -865,6 +872,7 @@ class ShareDeliveryViewSet(
                 delivery_week=params["delivery_week"],
                 mode=mode,
                 joker=joker,
+                donation_joker=donation_joker,
             )
         else:
             result = PackingListBoxesMatrixService.get_weekly_combination_matrix(
@@ -873,6 +881,7 @@ class ShareDeliveryViewSet(
                 mode=mode,
                 is_packed_bulk=params["is_packed_bulk"],
                 joker=joker,
+                donation_joker=donation_joker,
             )
         serializer = WeeklyComboMatrixResponseSerializer(result)
         return Response(serializer.data)

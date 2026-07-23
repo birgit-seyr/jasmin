@@ -43,24 +43,39 @@ export default function VariationsTotalsCard({
   const { t } = useTranslation();
   const { entries: aggregated } = useAggregatedVariationsTotals(filters);
 
-  // The entries are ordered by size, NOT grouped by share type, so a row's
-  // size alone ("M") doesn't say which share type it belongs to. Look the
-  // share-type name up by variation id and show it as a small label per row.
+  // The aggregated entries carry only variation id + size, so we look up each
+  // variation's share-type name and sort_order to (a) show the share type as a
+  // small label per row and (b) order rows by share type first, then by the
+  // variation's sort_order — grouping e.g. all "Ernteanteil" sizes together in
+  // their configured order rather than the raw size ordering from the API.
   const { shareTypeVariations } = useShareTypeVariations({});
-  const shareTypeByVariation = useMemo(
+  const variationMeta = useMemo(
     () =>
       new Map(
         shareTypeVariations.map((variation) => [
           String(variation.id),
-          variation.share_type_name,
+          {
+            shareTypeName: variation.share_type_name ?? "",
+            sortOrder: variation.sort_order ?? 0,
+          },
         ]),
       ),
     [shareTypeVariations],
   );
 
-  const entries = hideZero
-    ? aggregated.filter((v) => v.totalQuantity > 0)
-    : aggregated;
+  const entries = useMemo(() => {
+    const filtered = hideZero
+      ? aggregated.filter((v) => v.totalQuantity > 0)
+      : aggregated;
+    return [...filtered].sort((a, b) => {
+      const metaA = variationMeta.get(String(a.id));
+      const metaB = variationMeta.get(String(b.id));
+      const nameA = metaA?.shareTypeName ?? "";
+      const nameB = metaB?.shareTypeName ?? "";
+      if (nameA !== nameB) return nameA.localeCompare(nameB);
+      return (metaA?.sortOrder ?? 0) - (metaB?.sortOrder ?? 0);
+    });
+  }, [aggregated, hideZero, variationMeta]);
 
   const cardClassName = ["variations-totals-card", className]
     .filter(Boolean)
@@ -79,9 +94,9 @@ export default function VariationsTotalsCard({
       ) : (
         <ul className="variations-totals-card-list">
           {entries.map((variation) => {
-            const shareTypeName = shareTypeByVariation.get(
+            const shareTypeName = variationMeta.get(
               String(variation.id),
-            );
+            )?.shareTypeName;
             return (
               <li key={String(variation.id)}>
                 {shareTypeName && (

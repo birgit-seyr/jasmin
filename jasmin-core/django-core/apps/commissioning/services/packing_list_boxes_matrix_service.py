@@ -248,6 +248,7 @@ class PackingListBoxesMatrixService:
         mode: str = "day",
         is_packed_bulk: bool | None = None,
         joker: bool = False,
+        donation_joker: bool = False,
     ) -> dict[str, Any]:
         """Whole-week box-combination matrix for the AmountShareTypeVariations view.
 
@@ -279,6 +280,7 @@ class PackingListBoxesMatrixService:
             ),
             is_packed_bulk=is_packed_bulk,
             joker=joker,
+            donation_joker=donation_joker,
         )
 
         virtual_map = cls._virtual_component_map(deliveries)
@@ -391,6 +393,7 @@ class PackingListBoxesMatrixService:
         tour_station_ids: list[str] | None = None,
         is_packed_bulk: bool | None = None,
         joker: bool = False,
+        donation_joker: bool = False,
     ):
         """Shippable ``ShareDelivery`` rows that can form a physical box.
 
@@ -416,11 +419,12 @@ class PackingListBoxesMatrixService:
         }
         if day_number is not None:
             filters["share__delivery_day__day_number"] = day_number
-        base = (
-            ShareDelivery.objects.jokered()
-            if joker
-            else ShareDelivery.objects.shippable()
-        )
+        if donation_joker:
+            base = ShareDelivery.objects.donation_jokered()
+        elif joker:
+            base = ShareDelivery.objects.jokered()
+        else:
+            base = ShareDelivery.objects.shippable()
         deliveries = base.filter(**filters).select_related(*select_related)
         if delivery_station is not None:
             deliveries = deliveries.filter(

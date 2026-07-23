@@ -923,6 +923,17 @@ class ShareDeliveryQuerySet(models.QuerySet):
         :meth:`ShareDemandService.aggregated_rows`, which also drops opt-outs."""
         return self.filter(joker_taken=True).exclude(ShareDelivery.opted_out_q())
 
+    def donation_jokered(self) -> ShareDeliveryQuerySet:
+        """Rows the member DONATED via a donation joker — the mirror of
+        :meth:`jokered` for ``donation_joker_taken=True`` AND not opted out.
+        Powers the donation-joker view of the AmountShareTypeVariations matrix
+        (the boxes that would have shipped but go to the donation pool). Matches
+        the ``donation_joker=True`` branch of
+        :meth:`ShareDemandService.aggregated_rows`."""
+        return self.filter(donation_joker_taken=True).exclude(
+            ShareDelivery.opted_out_q()
+        )
+
 
 class ShareDelivery(JasminModel):
     subscription = models.ForeignKey(
@@ -1017,11 +1028,18 @@ class ShareDelivery(JasminModel):
 
     @staticmethod
     def delivery_counts_q(*, prefix: str = "") -> models.Q:
-        """``Q`` for 'this delivery counts for demand/billing': joker not taken
-        AND not opted out (see :meth:`opted_out_q`)."""
+        """``Q`` for 'this delivery counts for PRODUCTION/demand': neither a joker
+        (skip) nor a donation joker, AND not opted out (see :meth:`opted_out_q`).
+
+        A donation joker is excluded here — the box is not grown/packed for the
+        donor — but it IS still billed. Billing has its OWN predicate in
+        ``apps/payments`` (it filters ``joker_taken`` only, keeping donation
+        jokers), so this production rule must NOT be reused for billing."""
         p = prefix
-        return models.Q(**{f"{p}joker_taken": False}) & ~ShareDelivery.opted_out_q(
-            prefix=prefix
+        return (
+            models.Q(**{f"{p}joker_taken": False})
+            & models.Q(**{f"{p}donation_joker_taken": False})
+            & ~ShareDelivery.opted_out_q(prefix=prefix)
         )
 
     @property
