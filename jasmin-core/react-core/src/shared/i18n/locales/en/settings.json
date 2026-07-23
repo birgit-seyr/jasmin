@@ -103,7 +103,9 @@
       "title": "Paper signature"
     },
     "requires_paper_signature_for_membership": "Paper signature for membership",
-    "requires_paper_signature_for_membership_desc": "When on, the membership consents must be printed, signed, and sent to the office. The office records receipt manually."
+    "requires_paper_signature_for_membership_desc": "When on, the membership consents must be printed, signed, and sent to the office. The office records receipt manually.",
+    "requires_paper_signature_for_cancellation_of_membership": "Paper signature for cancellation of membership",
+    "requires_paper_signature_for_cancellation_of_membership_desc": "When on, the cancellation form must be printed, signed, and sent to the office. The office records receipt manually."
   },
   "payments": {
     "strategy": {

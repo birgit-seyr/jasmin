@@ -602,6 +602,9 @@ class TenantSettings(JasminModel):
     )
 
     requires_paper_signature_for_membership = models.BooleanField(default=False)
+    requires_paper_signature_for_cancellation_of_membership = models.BooleanField(
+        default=False
+    )
     requires_paper_signature_for_sepa_mandate = models.BooleanField(default=False)
 
     class Meta:

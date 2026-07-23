@@ -104,7 +104,9 @@
       "title": "Unterschrift auf Papier"
     },
     "requires_paper_signature_for_membership": "Papier-Unterschrift für Mitgliedschaft notwendig",
-    "requires_paper_signature_for_membership_desc": "Wenn aktiviert, müssen die Mitgliedschafts-Einwilligungen ausgedruckt, unterschrieben und ans Büro geschickt werden. Das Büro vermerkt den Eingang manuell."
+    "requires_paper_signature_for_membership_desc": "Wenn aktiviert, müssen die Mitgliedschafts-Einwilligungen ausgedruckt, unterschrieben und ans Büro geschickt werden. Das Büro vermerkt den Eingang manuell.",
+    "requires_paper_signature_for_cancellation_of_membership": "Papier-Unterschrift für Austritt notwendig",
+    "requires_paper_signature_for_cancellation_of_membership_desc": "Wenn aktiviert, müssen die Austritts-Meldung ausgedruckt, unterschrieben und ans Büro geschickt werden. Das Büro vermerkt den Eingang manuell."
   },
   "payments": {
     "strategy": {
