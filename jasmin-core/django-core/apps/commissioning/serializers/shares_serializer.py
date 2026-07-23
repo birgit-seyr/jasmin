@@ -469,6 +469,19 @@ class ShareDeliveryOverviewSerializer(serializers.ModelSerializer):
     share_type_variation_string = serializers.CharField()
     delivery_week = serializers.IntegerField()
     delivery_date = serializers.SerializerMethodField()
+    # Per-share-type joker allowances, so the office grid can flag a
+    # subscription that has taken MORE jokers / donation-jokers than its share
+    # type grants (a warning, not a hard block — the office may over-grant for
+    # special reasons). Same share-type path the delivery-edit modal uses;
+    # covered by the viewset's ``select_related`` so it stays N+1-free.
+    amount_of_jokers = serializers.IntegerField(
+        source="share.share_type_variation.share_type.amount_of_jokers",
+        read_only=True,
+    )
+    amount_of_donation_jokers = serializers.IntegerField(
+        source="share.share_type_variation.share_type.amount_of_donation_jokers",
+        read_only=True,
+    )
 
     class Meta:
         model = ShareDelivery

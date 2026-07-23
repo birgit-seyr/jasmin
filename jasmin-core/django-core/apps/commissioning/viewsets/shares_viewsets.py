@@ -1739,7 +1739,13 @@ class ShareDeliveryOverviewViewSet(
         # walks ``share`` → ``share.delivery_day`` per row — without this the
         # all-members result set is a textbook N+1.
         queryset = (
-            queryset.select_related("share", "share__delivery_day")
+            queryset.select_related(
+                "share",
+                "share__delivery_day",
+                # Serializer reads ``share.share_type_variation.share_type``
+                # for the joker allowances — join it so the grid stays N+1-free.
+                "share__share_type_variation__share_type",
+            )
             .annotate(
                 share_type_variation_string=Concat(
                     F("subscription__share_type_variation__share_type__name"),

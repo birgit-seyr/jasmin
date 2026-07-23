@@ -21,6 +21,8 @@ date surface. ``None`` for a malformed year/week/day tuple.
    * @nullable
    */
   readonly delivery_date?: string | null;
+  readonly amount_of_jokers?: number;
+  readonly amount_of_donation_jokers?: number;
   joker_taken?: boolean;
   donation_joker_taken?: boolean;
   /** @nullable */

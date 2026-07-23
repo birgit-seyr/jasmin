@@ -66,6 +66,7 @@ export interface ShareTypeVariation {
    * @maximum 32767
    */
   optin_deadline_days_before_delivery?: number;
+  allowed_for_trial_subscription?: boolean;
   share_type: string;
   /** @nullable */
   used_crate?: string | null;

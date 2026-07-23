@@ -190,6 +190,8 @@
     },
     "season_start": "Saisonbeginn",
     "season_start_week": "Saisonbeginn (KW 1–53)",
+    "min_weeks_from_creation_to_start_delivery": "Vorlaufzeit bis Lieferstart (Wochen)",
+    "min_weeks_from_creation_to_start_delivery_desc": "Mindestanzahl Wochen zwischen dem Anlegen eines Abonnements und dem frühestmöglichen Lieferbeginn. Das früheste wählbare Startdatum (gültig ab) ist der erste Montag ab heute plus dieser Anzahl Wochen. 0 = ab dem nächsten Montag.",
     "shares": {
       "title": "Anteils-Typen"
     },

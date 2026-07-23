@@ -78,6 +78,7 @@
   "share_type_variation_price_brutto": "Reference prices",
   "variation_type": "Type of variant (pcs, bunch, weight …)",
   "auto_renewal": "If active, the subscription automatically renews at the end of the term.",
+  "allowed_for_trial_subscription": "If enabled, this size can be chosen for trial subscriptions.",
   "bulk_renew_abos": "Renews the selected subscriptions: creates unconfirmed renewal drafts for the next term (same logic as auto-renewal). Non-renewable rows are skipped with a reason.",
   "requires_optin": "If active, each delivery is individually confirmed or skipped before its deadline.",
   "optin_deadline_days_before_delivery": "How many days before delivery the switch locks. 3 = „until Wednesday for the Saturday crate“.",

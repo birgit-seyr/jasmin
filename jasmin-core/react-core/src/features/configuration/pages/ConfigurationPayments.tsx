@@ -60,55 +60,7 @@ export default function ConfigurationPayments() {
           },
         ],
       },
-      {
-        category: "jokers",
-        title: t("settings.commissioning.jokers.title"),
-        settings: [
-          {
-            key: "uses_jokers",
-            label: t("settings.commissioning.uses_jokers"),
-            type: "checkbox",
-            defaultValue: true,
-          },
-          {
-            key: "default_amount_of_jokers",
-            label: t("settings.commissioning.default_amount_jokers"),
-            description: t(
-              "settings.commissioning.default_amount_jokers_description",
-            ),
-            type: "number",
-            defaultValue: 3,
-            min: 0,
-            max: 20,
-            // Hidden while the joker feature is off — the value has no
-            // meaning when ``uses_jokers`` is false.
-            visibleIf: (getValue) => Boolean(getValue("uses_jokers", true)),
-          },
-          {
-            key: "uses_donation_jokers",
-            label: t("settings.commissioning.donation_jokers"),
-            type: "checkbox",
-            defaultValue: false,
-            // Donation jokers are a sub-feature of jokers; hide the
-            // toggle when the parent feature is off.
-          },
-          {
-            key: "default_amount_of_donation_jokers",
-            label: t(
-              "settings.commissioning.default_amount_of_donation_jokers",
-            ),
-            description: t(
-              "settings.commissioning.default_amount_of_donation_jokers_description",
-            ),
-            type: "number",
-            defaultValue: 3,
-            min: 0,
-            max: 20,
-            visibleIf: (getValue) =>
-              Boolean(getValue("uses_donation_jokers", false)),
-          },
-        ],
-      },
+
       {
         category: "billing_due",
         title: t("settings.payments.due.title"),

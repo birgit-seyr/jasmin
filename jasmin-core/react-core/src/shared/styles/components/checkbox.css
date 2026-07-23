@@ -34,3 +34,17 @@
 .is-trial-checkbox .ant-checkbox-checked .ant-checkbox-inner::after {
   border-color: var(--color-bg-base) !important;
 }
+
+/* Over-allowance joker cue: the subscription has taken MORE jokers / donation
+ * jokers than its share type grants. A warning only (the office may over-grant
+ * on purpose for special cases), never a block. */
+.over-limit-checkbox .ant-checkbox-checked .ant-checkbox-inner,
+.over-limit-checkbox.ant-checkbox-wrapper-checked .ant-checkbox-inner {
+  background-color: #ff8800 !important;
+  border-color: #ff9800 !important;
+  opacity: 1 !important;
+}
+
+.over-limit-checkbox .ant-checkbox-checked .ant-checkbox-inner::after {
+  border-color: var(--color-bg-base) !important;
+}

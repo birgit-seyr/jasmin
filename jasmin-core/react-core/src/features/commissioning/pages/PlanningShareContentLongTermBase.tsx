@@ -339,6 +339,14 @@ export default function PlanningLongTermHarvestSharesBase({
               align: "center",
               width: "9em",
               className: "column-group-start",
+              // Locale-format the displayed value (never leak the canonical
+              // "." separator). Transient/UI-only, so usually blank outside
+              // the active edit.
+              render: (value: unknown) => {
+                if (value == null || value === "") return "";
+                const numeric = Number(value);
+                return Number.isFinite(numeric) ? format(numeric, 2) : "";
+              },
               // Re-run the weight-split whenever the target total is edited.
               onFieldChange: (
                 _value: unknown,

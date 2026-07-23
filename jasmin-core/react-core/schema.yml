@@ -39173,6 +39173,12 @@ components:
             day's ``day_number`` — so the overview matches every other delivery-
             date surface. ``None`` for a malformed year/week/day tuple.
           readOnly: true
+        amount_of_jokers:
+          type: integer
+          readOnly: true
+        amount_of_donation_jokers:
+          type: integer
+          readOnly: true
         joker_taken:
           type: boolean
         donation_joker_taken:
@@ -39492,6 +39498,8 @@ components:
           type: integer
           maximum: 32767
           minimum: 0
+        allowed_for_trial_subscription:
+          type: boolean
         share_type:
           type: string
         used_crate:

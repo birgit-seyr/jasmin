@@ -28,7 +28,7 @@
   "packing_list_boxes": "",
   "share_weights": "Hier können bis zu vier Gewichte eingetragen werden, für die Statistik.",
   "waiting_list": "Ist der gewählte Abholtag einer Verteilstation voll, wird ein neues Abo automatisch zum Warteliste-Eintrag: Es belegt keinen Platz und erzeugt weder Lieferungen noch Zahlungen. Wird ein Platz frei, gibt das Büro den Eintrag über die normale Freigabe frei – dabei wird die Kapazität erneut geprüft, solange der Tag voll ist, wird die Freigabe abgelehnt. Die Position gilt pro Station und Abholtag (Reihenfolge des Eintragens) und ist nur zur Information – die Freigabe kann in beliebiger Reihenfolge erfolgen.",
-  "share_deliveries_overview": "",
+  "share_deliveries_overview": "Wenn die Checkbox für Joker orange ist, wurden schon mehr Joker vergeben, als eigentlich vorgesehen.",
   "list_sellers": "",
   "list_resellers": "",
   "upload_account_data": "Wenn ein Monat ausgewählt ist, werden die Konten, die für dieses Monat 0 Werte in H und S haben, herausgefiltert.",

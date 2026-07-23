@@ -187,6 +187,8 @@
     },
     "season_start": "Season Start",
     "season_start_week": "Season Start (KW 1–53)",
+    "min_weeks_from_creation_to_start_delivery": "Lead time before delivery start (weeks)",
+    "min_weeks_from_creation_to_start_delivery_desc": "Minimum number of weeks between creating a subscription and the earliest possible delivery start. The earliest selectable start date (valid from) is the first Monday on or after today plus this many weeks. 0 = from next Monday.",
     "shares": {
       "title": "Share Types"
     },

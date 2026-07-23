@@ -142,6 +142,8 @@
   "donation_jokers": "Donation jokers",
   "share_deliveries": "Overview Deliveries",
   "joker_taken": "Joker?",
+  "donation_joker_taken": "Donation joker?",
+  "joker_over_limit_tooltip": "More taken than this share type allows: {{taken}} of {{allowed}}.",
   "overview_jokers": "Overview Jokers",
   "pledge_round": "Pledge Round",
   "delivery": "Delivery",

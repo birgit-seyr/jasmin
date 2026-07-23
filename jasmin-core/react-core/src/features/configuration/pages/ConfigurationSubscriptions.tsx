@@ -41,9 +41,11 @@ export default function ConfigurationSubscriptions() {
             type: "checkbox",
             defaultValue: false,
           },
+
           {
             key: "subscriptions_are_auto_renewed",
             label: t("settings.commissioning.auto_renewed"),
+
             type: "checkbox",
             defaultValue: false,
           },
@@ -81,6 +83,17 @@ export default function ConfigurationSubscriptions() {
             defaultValue: false,
           },
           {
+            key: "min_weeks_from_creation_to_start_delivery",
+            label: t(
+              "settings.commissioning.min_weeks_from_creation_to_start_delivery",
+            ),
+            description: t(
+              "settings.commissioning.min_weeks_from_creation_to_start_delivery_desc",
+            ),
+            type: "number",
+            defaultValue: 2,
+          },
+          {
             // Gates the whole waiting-list flow. When off, at-capacity share
             // types can't be subscribed to (no offers, no queue) and the
             // waiting-list UI is hidden throughout the app.
@@ -107,6 +120,55 @@ export default function ConfigurationSubscriptions() {
             min: 0,
             visibleIf: (getValue) =>
               Boolean(getValue("allows_waiting_list_for_subscriptions", false)),
+          },
+        ],
+      },
+      {
+        category: "jokers",
+        title: t("settings.commissioning.jokers.title"),
+        settings: [
+          {
+            key: "uses_jokers",
+            label: t("settings.commissioning.uses_jokers"),
+            type: "checkbox",
+            defaultValue: true,
+          },
+          {
+            key: "default_amount_of_jokers",
+            label: t("settings.commissioning.default_amount_jokers"),
+            description: t(
+              "settings.commissioning.default_amount_jokers_description",
+            ),
+            type: "number",
+            defaultValue: 3,
+            min: 0,
+            max: 20,
+            // Hidden while the joker feature is off — the value has no
+            // meaning when ``uses_jokers`` is false.
+            visibleIf: (getValue) => Boolean(getValue("uses_jokers", true)),
+          },
+          {
+            key: "uses_donation_jokers",
+            label: t("settings.commissioning.donation_jokers"),
+            type: "checkbox",
+            defaultValue: false,
+            // Donation jokers are a sub-feature of jokers; hide the
+            // toggle when the parent feature is off.
+          },
+          {
+            key: "default_amount_of_donation_jokers",
+            label: t(
+              "settings.commissioning.default_amount_of_donation_jokers",
+            ),
+            description: t(
+              "settings.commissioning.default_amount_of_donation_jokers_description",
+            ),
+            type: "number",
+            defaultValue: 3,
+            min: 0,
+            max: 20,
+            visibleIf: (getValue) =>
+              Boolean(getValue("uses_donation_jokers", false)),
           },
         ],
       },
