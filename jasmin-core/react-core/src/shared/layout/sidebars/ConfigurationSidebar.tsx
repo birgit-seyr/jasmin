@@ -64,6 +64,72 @@ export default function ConfigurationSidebar({
         },
       ],
     },
+
+    {
+      type: "group",
+      key: "configuration-group-members",
+      label: t("configuration.group.members"),
+      children: [
+        {
+          key: "configuration-members",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/members">
+              {t("configuration.members")}
+            </Link>
+          ),
+        },
+        {
+          key: "configuration-subscriptions",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/subscriptions">
+              {t("configuration.subscriptions")}
+            </Link>
+          ),
+        },
+        {
+          key: "configuration-payments",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/payments">
+              {t("configuration.payments")}
+            </Link>
+          ),
+        },
+        {
+          key: "configuration-gdpr",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/gdpr">
+              {t("configuration.data_protection")}
+            </Link>
+          ),
+        },
+        {
+          key: "configuration-consents",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/consents">{t("consent.admin.title")}</Link>
+          ),
+        },
+        {
+          key: "configuration-email-templates-members",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/email-templates/members">
+              {t("configuration.email_templates")}
+            </Link>
+          ),
+        },
+      ],
+    },
     {
       type: "group",
       key: "configuration-group-commissioning",
@@ -126,71 +192,6 @@ export default function ConfigurationSidebar({
           icon: <SettingOutlined />,
           label: (
             <Link to="/configuration/email-templates/resellers">
-              {t("configuration.email_templates")}
-            </Link>
-          ),
-        },
-      ],
-    },
-    {
-      type: "group",
-      key: "configuration-group-members",
-      label: t("configuration.group.members"),
-      children: [
-        {
-          key: "configuration-members",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/members">
-              {t("configuration.members")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-subscriptions",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/subscriptions">
-              {t("configuration.subscriptions")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-payments",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/payments">
-              {t("configuration.payments")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-gdpr",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/gdpr">
-              {t("configuration.data_protection")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-consents",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/consents">{t("consent.admin.title")}</Link>
-          ),
-        },
-        {
-          key: "configuration-email-templates-members",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/email-templates/members">
               {t("configuration.email_templates")}
             </Link>
           ),

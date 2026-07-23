@@ -2458,6 +2458,7 @@ paths:
         schema:
           type: string
           enum:
+          - coop_cancellation
           - coop_contract
           - privacy
           - sepa
@@ -2828,6 +2829,7 @@ paths:
         schema:
           type: string
           enum:
+          - coop_cancellation
           - coop_contract
           - privacy
           - sepa
@@ -6449,6 +6451,69 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
         '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/default_share_contents/subscriber_counts/:
+    get:
+      operationId: commissioning_default_share_contents_subscriber_counts_retrieve
+      description: Active-subscriber snapshot per physical share_type_variation of
+        the share option, keyed by variation id — the same count the forward ``needed_amount``
+        uses. Read-only; drives the reverse 'total → per-share' planning suggestion
+        (the split math runs client-side).
+      parameters:
+      - in: query
+        name: share_option
+        schema:
+          type: string
+          enum:
+          - BREAD_SHARE
+          - CHICKEN_SHARE
+          - GRAIN_SHARE
+          - HARVEST_SHARE
+          - HARVEST_SHARE_FRUIT
+          - HONEY_SHARE
+          - OIL_SHARE
+        description: Share option (e.g. GEMUESE, OBST)
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Year (YYYY format)
+        required: true
+        examples:
+          '2024':
+            value: 2024
+          '2025':
+            value: 2025
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                example:
+                  small-variation-id: '40'
+                  medium-variation-id: '60'
+                  large-variation-id: '20'
+          description: Map of share_type_variation id → active-subscriber count (string;
+            direct + virtual subscriptions resolved onto the physical variation, snapshot
+            at today's date).
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
           content:
             application/json:
               schema:
@@ -30072,6 +30137,7 @@ components:
       - withdrawal
       - terms
       - coop_contract
+      - coop_cancellation
       - subscription_contract
       type: string
       description: |-
@@ -30080,6 +30146,7 @@ components:
         * `withdrawal` - Withdrawal terms
         * `terms` - Terms of service
         * `coop_contract` - Cooperative-share subscription contract
+        * `coop_cancellation` - Cancellation of membership in coop
         * `subscription_contract` - Subscription contract
     ConsentRecord:
       type: object
@@ -41005,6 +41072,8 @@ components:
           type: boolean
         sells_to_resellers:
           type: boolean
+        crates_should_be_on_documents:
+          type: boolean
         payment_terms_reseller_in_days:
           type: integer
           maximum: 2147483647
@@ -41176,6 +41245,8 @@ components:
             automatically once the user clicks the email link. Staff/admin deletions
             always need admin approval regardless of this.
         requires_paper_signature_for_membership:
+          type: boolean
+        requires_paper_signature_for_cancellation_of_membership:
           type: boolean
         requires_paper_signature_for_sepa_mandate:
           type: boolean
@@ -41311,6 +41382,8 @@ components:
           type: boolean
         sells_to_resellers:
           type: boolean
+        crates_should_be_on_documents:
+          type: boolean
         payment_terms_reseller_in_days:
           type: integer
           maximum: 2147483647
@@ -41465,6 +41538,8 @@ components:
             automatically once the user clicks the email link. Staff/admin deletions
             always need admin approval regardless of this.
         requires_paper_signature_for_membership:
+          type: boolean
+        requires_paper_signature_for_cancellation_of_membership:
           type: boolean
         requires_paper_signature_for_sepa_mandate:
           type: boolean

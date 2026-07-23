@@ -23,6 +23,7 @@ from django.http import StreamingHttpResponse
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
+    OpenApiResponse,
     extend_schema,
     inline_serializer,
 )
@@ -1456,6 +1457,46 @@ class DefaultShareContentViewSet(RolePermissionsMixin, viewsets.ViewSet):
         results = [r for r in results if r.get("share_option") == share_option]
 
         return Response(results, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        parameters=[
+            get_year_parameter(),
+            get_share_option_parameter(),
+        ],
+        description=(
+            "Active-subscriber snapshot per physical share_type_variation of the "
+            "share option, keyed by variation id — the same count the forward "
+            "``needed_amount`` uses. Read-only; drives the reverse "
+            "'total → per-share' planning suggestion (the split math runs "
+            "client-side)."
+        ),
+        responses={
+            200: OpenApiResponse(
+                description=(
+                    "Map of share_type_variation id → active-subscriber count "
+                    "(string; direct + virtual subscriptions resolved onto the "
+                    "physical variation, snapshot at today's date)."
+                ),
+                response={
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                    "example": {
+                        "small-variation-id": "40",
+                        "medium-variation-id": "60",
+                        "large-variation-id": "20",
+                    },
+                },
+            ),
+            400: ErrorResponseSerializer,
+        },
+    )
+    @action(detail=False, methods=["get"], url_path="subscriber_counts")
+    def subscriber_counts(self, request: Request) -> Response:
+        params = validate_query_params(request, optional=["year", "share_option"])
+        counts = DefaultShareContentService.get_subscriber_counts_for_planning(
+            params["year"], params["share_option"]
+        )
+        return Response(counts, status=status.HTTP_200_OK)
 
     @extend_schema(
         description="Create default share content entries.",

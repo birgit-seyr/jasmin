@@ -3,13 +3,16 @@ import {
   EditOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
+import { useCrates } from "@features/commissioning/hooks";
+import ShareTypeVariationPriceModal from "@features/commissioning/modals/prices/ShareTypeVariationPriceModal";
+import {
+  useActiveStatusColumn,
+  useNumberFormat,
+  useShareTypeVariationSizeOptions,
+  useTenant,
+  useTimeBoundColumns,
+} from "@hooks/index";
 import BubbleChartIcon from "@mui/icons-material/BubbleChart";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Modal, Space, Spin } from "antd";
-import dayjs from "dayjs";
-import ModalCloseFooter from "@shared/modals/ModalCloseFooter";
-import { useCallback, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import {
   commissioningShareTypeVariationsCreate,
   commissioningShareTypeVariationsDestroy,
@@ -21,16 +24,8 @@ import {
 import type { CommissioningShareTypeVariationsListParams } from "@shared/api/generated/models/commissioningShareTypeVariationsListParams";
 import type { ShareTypeVariation } from "@shared/api/generated/models/shareTypeVariation";
 import { useRoles } from "@shared/auth";
-import {
-  useActiveStatusColumn,
-  useNumberFormat,
-  useShareTypeVariationSizeOptions,
-  useTenant,
-  useTimeBoundColumns,
-} from "@hooks/index";
-import { useCrates } from "@features/commissioning/hooks";
-import { isFieldDisabled, notify } from "@shared/utils";
-import { getErrorMessage } from "@shared/utils/apiError";
+import ModalCloseFooter from "@shared/modals/ModalCloseFooter";
+import RichTextEditorModal from "@shared/modals/RichTextEditorModal";
 import {
   EditableTable,
   gatedByPermission,
@@ -47,8 +42,13 @@ import {
   ToolTipIcon,
   usePictureUpload,
 } from "@shared/ui";
-import ShareTypeVariationPriceModal from "@features/commissioning/modals/prices/ShareTypeVariationPriceModal";
-import RichTextEditorModal from "@shared/modals/RichTextEditorModal";
+import { isFieldDisabled, notify } from "@shared/utils";
+import { getErrorMessage } from "@shared/utils/apiError";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button, Modal, Space, Spin } from "antd";
+import dayjs from "dayjs";
+import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import VirtualComponentModal from "./VirtualComponentModal";
 
 interface ShareTypeVariationRecord extends TableRecord {
@@ -106,6 +106,10 @@ export default function ShareTypeVariationModal({
   // state (see ``ShareTypeVariation.clean``).
   const allows_share_type_variation_optin = getSetting(
     "allows_share_type_variation_optin",
+    false,
+  ) as boolean;
+  const allows_trial_subscriptions = getSetting(
+    "allows_trial_subscriptions",
     false,
   ) as boolean;
   // Jokers (per-share-type opt-OUT) and per-delivery opt-IN are mutually
@@ -341,7 +345,7 @@ export default function ShareTypeVariationModal({
           ),
           dataIndex: "variation_type",
           key: "variation_type",
-          width: "8em",
+          width: "6em",
           readOnly: true,
           disabled: true,
           align: "center",
@@ -470,6 +474,26 @@ export default function ShareTypeVariationModal({
             displayField: "used_crate_name",
           },
         },
+        ...(allows_trial_subscriptions
+          ? [
+              {
+                title: (
+                  <div className="text-xs">
+                    {t("commissioning.allowed_for_trial_subscription")}
+                    <ToolTipIcon
+                      title={t("tooltip.allowed_for_trial_subscription")}
+                    />
+                  </div>
+                ),
+                dataIndex: "allowed_for_trial_subscription",
+                key: "allowed_for_trial_subscription",
+                inputType: "checkbox",
+                required: false,
+                width: "6em",
+                align: "center" as const,
+              },
+            ]
+          : []),
         ...(packing_mode === "MIXED"
           ? [
               {
@@ -572,6 +596,7 @@ export default function ShareTypeVariationModal({
       validUntilColumn,
       packing_mode,
       showOptinColumns,
+      allows_trial_subscriptions,
     ],
   );
 

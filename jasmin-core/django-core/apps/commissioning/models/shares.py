@@ -258,6 +258,9 @@ class ShareTypeVariation(JasminModel, TimeBoundMixin):
     requires_optin = models.BooleanField(default=False)
     default_optin_state = models.BooleanField(default=False)
     optin_deadline_days_before_delivery = models.PositiveSmallIntegerField(default=3)
+    allowed_for_trial_subscription = models.BooleanField(
+        default=False
+    )  # if this sharetypevariation can be used in a subscription with is_trial=True
 
     class Meta:
         constraints = [

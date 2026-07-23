@@ -121,6 +121,7 @@ export interface TenantSettingsToDict {
   allows_self_registration?: boolean;
   has_markets?: boolean;
   sells_to_resellers?: boolean;
+  crates_should_be_on_documents?: boolean;
   /**
    * @minimum 0
    * @maximum 2147483647
@@ -232,5 +233,6 @@ export interface TenantSettingsToDict {
   /** If on (default), every deletion request needs an office/admin to approve after the email-confirm step. Turn off to honour Art. 17 requests automatically once the user clicks the email link. Staff/admin deletions always need admin approval regardless of this. */
   require_admin_approval_for_gdpr_deletion?: boolean;
   requires_paper_signature_for_membership?: boolean;
+  requires_paper_signature_for_cancellation_of_membership?: boolean;
   requires_paper_signature_for_sepa_mandate?: boolean;
 }

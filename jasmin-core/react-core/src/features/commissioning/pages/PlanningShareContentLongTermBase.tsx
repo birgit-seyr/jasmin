@@ -20,9 +20,11 @@ import {
   commissioningDefaultShareContentsBulkUpdatePartialUpdate,
   getCommissioningDefaultShareContentsBulkListListQueryKey,
   useCommissioningDefaultShareContentsBulkListList,
+  useCommissioningDefaultShareContentsSubscriberCountsRetrieve,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningDefaultShareContentsBulkListListParams,
+  CommissioningDefaultShareContentsSubscriberCountsRetrieveParams,
   DefaultShareContentRequest,
 } from "@shared/api/generated/models";
 import { ShareTypeEnum } from "@shared/api/generated/models";
@@ -37,12 +39,24 @@ import type {
 import { ExplainerText } from "@shared/ui";
 import { activeAtDateForWeek, isYearInPast } from "@shared/utils";
 import { useQueryClient } from "@tanstack/react-query";
+import { Button, Space } from "antd";
 import type { FormInstance } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  countDeliveryWeeks,
+  suggestPerShareAmounts,
+  type VariationWeightCount,
+} from "../utils/planningWeightSplit";
+
 const currentYear = dayjs().year();
+
+/** Long-term planning input direction: enter the per-share amount and read the
+ *  total (``per_share``, the classic view), or enter a target total + weeks and
+ *  get a suggested per-share split (``total``, the reverse view). */
+type PlanningMode = "per_share" | "total";
 
 interface PlanningLongTermHarvestSharesBaseProps {
   shareOption: ShareTypeEnum;
@@ -56,6 +70,11 @@ interface PlanningLongTermHarvestSharesBaseProps {
    *  "Gemüse / Obst" — used by the additional-share planners (honey, etc.),
    *  where the harvest framing doesn't fit. */
   genericArticleColumn?: boolean;
+  /** Whether the "Gesamtmenge" reverse-input mode (target total → suggested
+   *  per-share split) is offered. Only share types that plan complexly
+   *  (``needs_complex_planning``) get the toggle; simple ones show the classic
+   *  per-share view only. Defaults to off. */
+  allowTotalMode?: boolean;
 }
 
 export default function PlanningLongTermHarvestSharesBase({
@@ -64,8 +83,13 @@ export default function PlanningLongTermHarvestSharesBase({
   pageTitle,
   explainerKey,
   genericArticleColumn = false,
+  allowTotalMode = false,
 }: PlanningLongTermHarvestSharesBaseProps) {
   const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [mode, setMode] = useState<PlanningMode>("per_share");
+  // The toggle can be hidden (simple share types); force per-share then, so a
+  // stale "total" can never leak the reverse columns when it's not offered.
+  const effectiveMode: PlanningMode = allowTotalMode ? mode : "per_share";
   const isPast = useMemo(() => isYearInPast(selectedYear), [selectedYear]);
   const queryClient = useQueryClient();
 
@@ -149,13 +173,18 @@ export default function PlanningLongTermHarvestSharesBase({
 
   const customSave = useCallback(
     (transformedData: Record<string, unknown>) => {
-      const result = {
-        ...transformedData,
+      // ``_target_total`` is a UI-only field driving the "Gesamtmenge" mode's
+      // suggestion — never persisted. The backend keys amounts by variation id
+      // (``amount_<id>``), so strip it from the payload rather than let it ride
+      // along. (The resulting total is derived for display only, not stored.)
+      const { _target_total, ...rest } = transformedData;
+      void _target_total;
+
+      return {
+        ...rest,
         year: selectedYear,
         share_option: shareOption,
       };
-
-      return result;
     },
     [selectedYear, shareOption],
   );
@@ -189,6 +218,76 @@ export default function PlanningLongTermHarvestSharesBase({
     shareTypeVariationFilters,
   );
 
+  // Reverse ("Gesamtmenge") mode only: the per-variation active-subscriber
+  // snapshot the forward ``needed_amount`` uses, fetched once so the split can
+  // run entirely client-side. Skipped in the forward view.
+  const { data: subscriberCounts } =
+    useCommissioningDefaultShareContentsSubscriberCountsRetrieve(
+      {
+        year: selectedYear,
+        share_option: shareOption,
+      } as CommissioningDefaultShareContentsSubscriberCountsRetrieveParams,
+      { query: { enabled: effectiveMode === "total" } },
+    );
+
+  // ``average_weight`` (per size) + subscriber count (per size) — the two
+  // inputs the weight-split needs. Weight rides along on every variation; the
+  // count comes from the snapshot endpoint above.
+  const variationWeightCounts = useMemo<VariationWeightCount[]>(
+    () =>
+      shareTypeVariations.map((variation) => ({
+        variationId: String(variation.id),
+        averageWeight:
+          variation.average_weight != null
+            ? Number(variation.average_weight)
+            : null,
+        subscriberCount: Number(subscriberCounts?.[String(variation.id)] ?? 0),
+      })),
+    [shareTypeVariations, subscriberCounts],
+  );
+
+  // Given the currently-edited row's target total + week range + parity, seed
+  // the per-share amount cells with the weight-split suggestion and the live
+  // "≈ tatsächlich" preview. The office can still tweak any cell before saving.
+  const recomputeSuggestion = useCallback(
+    (form: FormInstance) => {
+      const values = form.getFieldsValue(true) as Record<string, unknown>;
+      const weeks = countDeliveryWeeks(
+        values.range_1 as number,
+        values.range_2 as number,
+        {
+          onlyOdd: Boolean(values.only_odd_weeks),
+          onlyEven: Boolean(values.only_even_weeks),
+          onlyEveryThree: Boolean(values.only_every_three_weeks),
+        },
+      );
+      const unit = values.unit as string;
+      // Piece-based units can't deliver a fractional share — floor to whole.
+      const floorStep = unit === "PCS" || unit === "BUNCH" ? 1 : 0.1;
+      const result = suggestPerShareAmounts(
+        Number(values._target_total),
+        weeks,
+        variationWeightCounts,
+        { floorStep },
+      );
+
+      // Fill the per-share amount cells with the suggestion. The "≈ tatsächlich"
+      // total is derived live in the needed_amount column's render from these
+      // (registered) fields — not stored here — so it also reflects manual
+      // tweaks and survives ``Form.useWatch`` (which only sees registered
+      // fields, so an ad-hoc ``_actual_total`` would never propagate).
+      const patch: Record<string, unknown> = {};
+      for (const variation of variationWeightCounts) {
+        if (variation.variationId in result.amountsByVariation) {
+          patch[variationAmountKey(variation.variationId)] =
+            result.amountsByVariation[variation.variationId];
+        }
+      }
+      form.setFieldsValue(patch);
+    },
+    [variationWeightCounts],
+  );
+
   const shareTypeVariationColumns: EditableColumnConfig<TableRecord>[] =
     useMemo(() => {
       return shareTypeVariations.map(
@@ -204,6 +303,8 @@ export default function PlanningLongTermHarvestSharesBase({
           key: variationAmountKey(variation.id!),
           align: "center",
           width: "5em",
+          className: "column-group-start",
+
           render: (value: unknown, record: TableRecord) => {
             if (value === null || value === undefined || value === "")
               return "";
@@ -228,14 +329,28 @@ export default function PlanningLongTermHarvestSharesBase({
       },
       ...amountUnitSizeColumns,
 
-      {
-        title: <>{t("commissioning.amount")}</>,
-        dataIndex: "_amount_group",
-        key: "amount",
-        width: "8em",
-        children: [...shareTypeVariationColumns],
-      },
-
+      ...(effectiveMode === "total"
+        ? ([
+            {
+              title: <>{t("commissioning.planning_long_term.target_total")}</>,
+              dataIndex: "_target_total",
+              key: "_target_total",
+              inputType: "positive_decimal2",
+              align: "center",
+              width: "9em",
+              className: "column-group-start",
+              // Re-run the weight-split whenever the target total is edited.
+              onFieldChange: (
+                _value: unknown,
+                _record: TableRecord,
+                form: FormInstance,
+              ) => {
+                recomputeSuggestion(form);
+                return undefined;
+              },
+            },
+          ] as EditableColumnConfig<TableRecord>[])
+        : []),
       {
         title: <>{t("commissioning.KW")}</>,
         dataIndex: "kw",
@@ -250,8 +365,20 @@ export default function PlanningLongTermHarvestSharesBase({
             inputType: "kw",
             required: true,
             align: "center",
-            width: "4.5em",
             className: "column-group-start",
+
+            width: "4.5em",
+            onFieldChange:
+              effectiveMode === "total"
+                ? (
+                    _value: unknown,
+                    _record: TableRecord,
+                    form: FormInstance,
+                  ) => {
+                    recomputeSuggestion(form);
+                    return undefined;
+                  }
+                : undefined,
           },
           {
             title: <>{t("commissioning.until")}</>,
@@ -261,6 +388,17 @@ export default function PlanningLongTermHarvestSharesBase({
             required: true,
             align: "center",
             width: "4.5em",
+            onFieldChange:
+              effectiveMode === "total"
+                ? (
+                    _value: unknown,
+                    _record: TableRecord,
+                    form: FormInstance,
+                  ) => {
+                    recomputeSuggestion(form);
+                    return undefined;
+                  }
+                : undefined,
           },
         ],
       },
@@ -282,6 +420,7 @@ export default function PlanningLongTermHarvestSharesBase({
               only_every_three_weeks: false,
             });
           }
+          if (effectiveMode === "total") recomputeSuggestion(form);
           return undefined;
         },
       },
@@ -303,6 +442,7 @@ export default function PlanningLongTermHarvestSharesBase({
               only_every_three_weeks: false,
             });
           }
+          if (effectiveMode === "total") recomputeSuggestion(form);
           return undefined;
         },
       },
@@ -324,26 +464,89 @@ export default function PlanningLongTermHarvestSharesBase({
               only_even_weeks: false,
             });
           }
+          if (effectiveMode === "total") recomputeSuggestion(form);
           return undefined;
         },
       },
+      {
+        title: <>{t("commissioning.amount")}</>,
+        dataIndex: "_amount_group",
+        key: "amount",
+        width: "8em",
+        className: "column-group-start",
+
+        children: [...shareTypeVariationColumns],
+      },
 
       {
-        title: <>{t("commissioning.needed_amount")}</>,
+        // In "total" mode this shows the LIVE result of the suggestion
+        // (``_actual_total``, updated as the office types the target total) —
+        // always ≤ the target because the split floors. For a saved row / the
+        // classic view it shows the backend-computed ``needed_amount``.
+        title: (
+          <>
+            {t(
+              effectiveMode === "total"
+                ? "commissioning.planning_long_term.actual_total"
+                : "commissioning.needed_amount",
+            )}
+          </>
+        ),
         dataIndex: "needed_amount",
         key: "needed_amount",
         inputType: "positive_integer",
+        className: "column-group-start",
+
         required: false,
         disabled: true,
         readOnly: true,
         align: "center",
         width: "10em",
-        render: (_, record) => (
-          <>
-            {format(Number(record.needed_amount), 0)}{" "}
-            {getUnitLabel(record.unit as string)}
-          </>
-        ),
+        render: (_, record) => {
+          const rec = record as Record<string, unknown>;
+          // While a row is edited in total mode (it carries the UI-only
+          // ``_target_total``), compute the resulting total LIVE from the
+          // current per-share amounts × subscribers × weeks — so it reflects
+          // the suggestion AND any manual tweak. Otherwise show the
+          // backend-computed ``needed_amount``.
+          const isEditingTotal =
+            effectiveMode === "total" &&
+            rec._target_total != null &&
+            rec._target_total !== "";
+          if (isEditingTotal) {
+            const weeks = countDeliveryWeeks(
+              rec.range_1 as number,
+              rec.range_2 as number,
+              {
+                onlyOdd: Boolean(rec.only_odd_weeks),
+                onlyEven: Boolean(rec.only_even_weeks),
+                onlyEveryThree: Boolean(rec.only_every_three_weeks),
+              },
+            );
+            let total = 0;
+            for (const variation of variationWeightCounts) {
+              const amount = Number(
+                rec[variationAmountKey(variation.variationId)] ?? 0,
+              );
+              if (Number.isFinite(amount)) {
+                total += variation.subscriberCount * amount * weeks;
+              }
+            }
+            if (total <= 0) return "";
+            return (
+              <>
+                {format(total, 0)} {getUnitLabel(record.unit as string)}
+              </>
+            );
+          }
+          const value = Number(record.needed_amount);
+          if (!Number.isFinite(value)) return "";
+          return (
+            <>
+              {format(value, 0)} {getUnitLabel(record.unit as string)}
+            </>
+          );
+        },
       },
       sellerColumn,
 
@@ -436,6 +639,9 @@ export default function PlanningLongTermHarvestSharesBase({
       t,
       format,
       getUnitLabel,
+      effectiveMode,
+      recomputeSuggestion,
+      variationWeightCounts,
     ],
   );
 
@@ -462,9 +668,31 @@ export default function PlanningLongTermHarvestSharesBase({
         selectedYear={selectedYear}
         setSelectedYear={setSelectedYear}
       />
+      <div style={{ marginTop: "2em" }}>
+        {allowTotalMode && (
+          <Space.Compact
+            aria-label={t("commissioning.planning_long_term.mode_label")}
+          >
+            <Button
+              type={mode === "per_share" ? "primary" : "default"}
+              aria-pressed={mode === "per_share"}
+              onClick={() => setMode("per_share")}
+            >
+              {t("commissioning.planning_long_term.mode_per_share")}
+            </Button>
+            <Button
+              type={mode === "total" ? "primary" : "default"}
+              aria-pressed={mode === "total"}
+              onClick={() => setMode("total")}
+            >
+              {t("commissioning.planning_long_term.mode_total")}
+            </Button>
+          </Space.Compact>
+        )}
+      </div>
 
       <EditableTable
-        key={`${selectedYear}`}
+        key={`${selectedYear}-${effectiveMode}`}
         columns={columns}
         apiFunctions={apiFunctions}
         focusIndex="share_article_name"

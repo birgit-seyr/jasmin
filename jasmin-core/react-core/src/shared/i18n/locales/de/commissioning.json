@@ -326,6 +326,14 @@
   "available_amount_harvest": "verfügbar lt. Ernte & Bestand",
   "show_detailed_columns": "Spalten mit verfügbaren Mengen anzeigen",
   "needed_amount": "ca. benötigte Gesamt-Menge",
+  "planning_long_term": {
+    "mode_label": "Eingabemodus",
+    "mode_per_share":"Planen nach Anteilsmenge",
+    "mode_total": "Planen mit Gesamtmenge",
+    "target_total": "zu verteilende Gesamtmenge",
+    "actual_total": "≈ tatsächlich"
+  },
+  "allowed_for_trial_subscription": "als Probe-Abo erlaubt",
   "summary_label_harvest_share_planning": "Summe kg pro Anteil",
   "additions_for_tours": "Zusätze Touren",
   "second_summary_label_harvest_share_planning": "Summe € pro Anteil",

@@ -680,6 +680,66 @@ class TestDefaultShareContentBulkList:
         assert resp.data == []
 
 
+URL_DSC_SUBSCRIBER_COUNTS = reverse("default_share_contents-subscriber-counts")
+
+
+@pytest.mark.django_db
+class TestDefaultShareContentSubscriberCounts:
+    """Read-only per-variation active-subscriber snapshot powering the reverse
+    'total → per-share' planning suggestion."""
+
+    def test_returns_count_per_variation(self, api_client, tenant):
+        import datetime
+
+        import time_machine
+
+        from apps.commissioning.tests.factories import (
+            DeliveryStationDayFactory,
+            ShareTypeVariationFactory,
+            SubscriptionFactory,
+        )
+
+        variation = ShareTypeVariationFactory()  # physical, HARVEST_SHARE
+        station_day = DeliveryStationDayFactory()
+        for _ in range(4):
+            SubscriptionFactory(
+                share_type_variation=variation,
+                default_delivery_station_day=station_day,
+            )
+
+        with time_machine.travel(datetime.date(2026, 6, 1), tick=False):
+            resp = api_client.get(
+                URL_DSC_SUBSCRIBER_COUNTS,
+                {"year": 2026, "share_option": "HARVEST_SHARE"},
+            )
+
+        assert resp.status_code == status.HTTP_200_OK
+        # 4 active subscriptions on this variation, keyed by variation id.
+        assert resp.data[str(variation.pk)] == "4"
+
+    def test_excludes_other_share_options(self, api_client, tenant):
+        from apps.commissioning.tests.factories import ShareTypeVariationFactory
+
+        other = ShareTypeVariationFactory(
+            share_type__share_option="HARVEST_SHARE_FRUIT"
+        )
+
+        resp = api_client.get(
+            URL_DSC_SUBSCRIBER_COUNTS,
+            {"year": 2026, "share_option": "HARVEST_SHARE"},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        # A variation of a different share option must not appear in the map.
+        assert str(other.pk) not in resp.data
+
+    def test_invalid_year_returns_400(self, api_client, tenant):
+        resp = api_client.get(
+            URL_DSC_SUBSCRIBER_COUNTS,
+            {"year": "not-a-number", "share_option": "HARVEST_SHARE"},
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+
 @pytest.mark.django_db
 class TestDefaultShareContentBulkUpdate:
     def test_invalid_composite_id_returns_400(self, api_client, tenant):

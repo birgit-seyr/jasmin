@@ -212,8 +212,8 @@
     "allows_trial_subscriptions": "Probe-Abos erlauben",
     "allowed_trial_subscription_duration": "Erlaubte Dauer der Probe-Abos (Wochen)",
     "allowed_trial_subscription_duration_desc": "Maximale Laufzeit eines Probe-Anteils.",
-    "allows_trial_subscriptions_for_trial_members": "Probe-Abos für Probemitglieder",
-    "allows_trial_subscriptions_for_trial_members_desc": "Bestimmt, ob auch Probemitglieder Probe-Abos abschließen können.",
+    "allows_trial_subscriptions_for_trial_members": "Probe-Abos auch für Probemitglieder",
+    "allows_trial_subscriptions_for_trial_members_desc": "Bestimmt, ob auch Probemitglieder Probe-Abos abschließen können. Wenn nicht angeklickt, dann dürfen nur Mitglieder Probe-Abos abschliessen.",
     "uses_jokers_for_trial_subscriptions": "Joker für Probe-Abos verwenden",
     "uses_jokers_for_trial_subscriptions_desc": "Bestimmt, ob Joker auch auf Probe-Abos angerechnet werden.",
     "jokers": {

@@ -21,6 +21,7 @@
   "for_shares": "for shares",
   "for_markets": "for markets",
   "note": "note",
+  "allowed_for_trial_subscription": "allowed for trial abos",
   "share_type_variation": "Share type variation",
   "delivery_exceptions": "Delivery pauses",
   "amounts": "amounts vegetables & fruits",
@@ -322,6 +323,13 @@
   "available_amount_harvest": "available according to harvest & stock",
   "show_detailed_columns": "show columns with available amounts",
   "needed_amount": "approx. needed total amount",
+  "planning_long_term": {
+    "mode_label": "Input mode",
+    "mode_per_share": "Per share",
+    "mode_total": "Total amount",
+    "target_total": "Total amount",
+    "actual_total": "≈ actual"
+  },
   "summary_label_harvest_share_planning": "sum kg per share",
   "additions_for_tours": "tour additions",
   "second_summary_label_harvest_share_planning": "sum € per share",

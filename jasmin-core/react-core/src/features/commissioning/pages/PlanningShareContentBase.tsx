@@ -108,6 +108,10 @@ interface PlanningHarvestSharesBaseProps {
    *  "Gemüse / Obst" — used by the additional-share planners (honey, etc.),
    *  where the harvest framing doesn't fit. */
   genericArticleColumn?: boolean;
+  /** Accepted for render-union parity with the long-term base (both are the
+   *  ``Base`` component in PlanningShareContentPage). The complex per-week
+   *  planner has no reverse "total → per-share" mode, so it is ignored here. */
+  allowTotalMode?: boolean;
 }
 
 export default function PlanningHarvestSharesBase({

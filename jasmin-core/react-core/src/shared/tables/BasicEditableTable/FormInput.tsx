@@ -556,6 +556,16 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
                 if (onChange) {
                   onChange(newEvent);
                 }
+                // Route through the column's ``onFieldChange`` too (mirrors the
+                // numeric / text cases) so cross-field handlers fire on KW
+                // edits — otherwise a column-level ``onFieldChange`` on a ``kw``
+                // input is silently dead.
+                if (onFieldChange && record && form) {
+                  const updates = onFieldChange(value, record, form);
+                  if (updates && Object.keys(updates).length > 0) {
+                    form.setFieldsValue(updates);
+                  }
+                }
               }
             }}
             onFocus={handleFocus}

@@ -259,6 +259,39 @@ class DefaultShareContentService:
         return counts
 
     @staticmethod
+    def get_subscriber_counts_for_planning(
+        year: int, share_option: str
+    ) -> dict[str, str]:
+        """Active-subscriber snapshot per physical variation of ``share_option``,
+        keyed by variation id — the exact multiplier the forward
+        ``needed_amount`` uses (``count × amount × num_weeks``).
+
+        Powers the reverse "total → per-share" planning suggestion: the frontend
+        divides the target total by the number of delivery weeks, then splits the
+        per-delivery amount across sizes by ``average_weight × count`` (mirroring
+        ``split_forecast_amount_by_weight``). Returned as ``{variation_id: str}``.
+
+        The count is a single snapshot at **today's** date (direct + virtual
+        subscriptions resolved onto the physical variation, with a next-cohort
+        fallback when none are active yet) — constant across the planned weeks,
+        exactly as ``_calculate_needed_amount`` treats it. ``year`` is taken for
+        symmetry with the forward list endpoint; like it, the snapshot date is
+        today regardless of the planned year, so the suggestion reproduces the
+        forward total.
+        """
+        variation_ids = {
+            str(variation_id)
+            for variation_id in ShareTypeVariation.objects.filter(
+                variation_type=ShareTypeVariation.VariationType.PHYSICAL,
+                share_type__share_option=share_option,
+            ).values_list("id", flat=True)
+        }
+        counts = DefaultShareContentService._subscriber_counts_by_variation(
+            variation_ids, timezone.localdate()
+        )
+        return {var_id: str(count) for var_id, count in counts.items()}
+
+    @staticmethod
     def _calculate_needed_amount(
         year: int,
         range_1: int,
