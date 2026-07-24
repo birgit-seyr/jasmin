@@ -12,8 +12,8 @@ import {
   Card,
   Col,
   Input,
-  InputNumber,
   Row,
+  Select,
   Space,
   Spin,
   Tag,
@@ -33,7 +33,6 @@ import { useAuth } from "@shared/contexts/AuthContext";
 import { useAutoSave, useTenant } from "@hooks/index";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
-import { blockNonNumericKeys } from "@shared/utils/numberFormat";
 import {
   SettingConfig,
   SettingsCategory,
@@ -48,6 +47,7 @@ const EMPTY_CONFIG: TenantEmailConfig = {
   smtp_port: 587,
   smtp_username: "",
   smtp_use_tls: true,
+  smtp_use_ssl: false,
   from_email: "",
   from_name: "",
   reply_to_email: "",
@@ -125,6 +125,7 @@ export default function ConfigurationEmail() {
       smtp_port: config.smtp_port,
       smtp_username: config.smtp_username,
       smtp_use_tls: config.smtp_use_tls,
+      smtp_use_ssl: config.smtp_use_ssl,
       from_email: config.from_email!,
       from_name: config.from_name!,
       reply_to_email: config.reply_to_email || "",
@@ -172,6 +173,47 @@ export default function ConfigurationEmail() {
     },
     [markChanged],
   );
+
+  // The port is the ONLY encryption choice the office makes — the connection
+  // security follows from it automatically (kept as two backward-compatible
+  // booleans on the wire): 465 → implicit SSL, everything else → STARTTLS.
+  const handlePortChange = useCallback(
+    (port: number) => {
+      setConfig((prev) => {
+        const useSsl = port === 465;
+        return {
+          ...prev,
+          smtp_port: port,
+          smtp_use_ssl: useSsl,
+          smtp_use_tls: !useSsl,
+        };
+      });
+      markChanged("select");
+    },
+    [markChanged],
+  );
+
+  // Two standard submission ports. A legacy config whose stored port is neither
+  // (older free-number field) is preserved as an extra option so it still
+  // displays and can be re-saved unchanged.
+  const portOptions = useMemo(() => {
+    const opts = [
+      { value: 587, label: t("email_config.port_starttls") },
+      { value: 465, label: t("email_config.port_ssl") },
+    ];
+    const current = config.smtp_port;
+    if (current != null && current !== 587 && current !== 465) {
+      // Label the legacy port with its ACTUAL stored security so an old
+      // plaintext/SSL config isn't misrepresented until it's re-picked.
+      const mode = config.smtp_use_ssl
+        ? "SSL"
+        : config.smtp_use_tls
+          ? "STARTTLS"
+          : "None";
+      opts.push({ value: current, label: `${current} – ${mode}` });
+    }
+    return opts;
+  }, [config.smtp_port, config.smtp_use_ssl, config.smtp_use_tls, t]);
 
   const updateCredential = useCallback(
     (field: "smtp_password", value: string) => {
@@ -410,18 +452,12 @@ export default function ConfigurationEmail() {
             </Col>
             <Col span={8}>
               <Text strong>{t("email_config.smtp_port")}</Text>
-              <InputNumber
-                value={config.smtp_port}
-                onChange={(v) => updateField("smtp_port", v, "number")}
+              <Select
+                value={config.smtp_port ?? 587}
+                onChange={handlePortChange}
                 style={{ width: "100%", marginTop: 4 }}
-                min={1}
-                max={65535}
-                precision={0}
-                decimalSeparator="."
-                onKeyDown={blockNonNumericKeys({
-                  allowDecimal: false,
-                  decimalChar: ".",
-                })}
+                aria-label={t("email_config.smtp_port")}
+                options={portOptions}
               />
             </Col>
             <Col span={12}>
@@ -454,17 +490,6 @@ export default function ConfigurationEmail() {
                   {t("email_config.password_set")}
                 </Text>
               )}
-            </Col>
-            <Col span={12}>
-              <div style={{ marginTop: 8 }}>
-                <LabeledSwitch
-                  value={config.smtp_use_tls ?? true}
-                  onChange={(v: boolean) =>
-                    updateField("smtp_use_tls", v, "switch")
-                  }
-                  label={t("email_config.use_tls")}
-                />
-              </div>
             </Col>
           </Row>
         </Card>

@@ -594,6 +594,7 @@ class EmailService:
             username=s["EMAIL_HOST_USER"],
             password=s["EMAIL_HOST_PASSWORD"],
             use_tls=s["EMAIL_USE_TLS"],
+            use_ssl=s["EMAIL_USE_SSL"],
             # Cap the connect/handshake so a slow/unreachable host can't
             # hang the worker (no timeout = block forever).
             timeout=getattr(settings, "EMAIL_TIMEOUT", 10),

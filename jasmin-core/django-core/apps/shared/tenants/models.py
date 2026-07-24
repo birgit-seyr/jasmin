@@ -737,7 +737,17 @@ class TenantEmailConfig(models.Model):
     smtp_port = models.IntegerField(default=587, blank=True, null=True)
     smtp_username = models.CharField(max_length=255, blank=True, null=True)
     smtp_password = EncryptedCharField(max_length=500, blank=True, null=True)
+    # Connection security is expressed as two mutually-exclusive booleans that
+    # map straight onto Django's SMTP backend:
+    #   * ``smtp_use_tls``  → STARTTLS (explicit TLS, typically port 587)
+    #   * ``smtp_use_ssl``  → implicit TLS / SMTPS (typically port 465)
+    # Both False = an unencrypted connection. Both True is invalid (Django's
+    # EmailBackend rejects it) — enforced in ``TenantEmailConfigSerializer``.
+    # The frontend presents these as a single "connection security" selector;
+    # they stay two booleans on the wire for backward compatibility (the
+    # long-standing ``smtp_use_tls`` field is never removed).
     smtp_use_tls = models.BooleanField(default=True)
+    smtp_use_ssl = models.BooleanField(default=False)
 
     # From email settings
     from_email = models.EmailField(
@@ -813,4 +823,5 @@ class TenantEmailConfig(models.Model):
             "EMAIL_HOST_USER": self.smtp_username,
             "EMAIL_HOST_PASSWORD": self.smtp_password,
             "EMAIL_USE_TLS": self.smtp_use_tls,
+            "EMAIL_USE_SSL": self.smtp_use_ssl,
         }

@@ -16,6 +16,15 @@ const ALLOWLIST = {
   // first. Remove this entry once a patched quill ships.
   "GHSA-v3m3-f69x-jf25":
     "quill HTML-export XSS — no upstream fix; output is DOMPurify-sanitised on render",
+  // React Router RSC-mode CSRF bypass. No forward fix exists — the latest
+  // published react-router-dom (7.18.1) is inside the advisory range
+  // (7.12.0–8.2.0) and npm's only "fix" is a semver-major DOWNGRADE to 7.11.0.
+  // Not exploitable here: this is a client-side Vite SPA that never runs React
+  // Router's RSC / server-components mode (no server actions, no data-router
+  // RSC handler), which is the sole attack surface for this advisory.
+  // Remove this entry once a patched forward release ships.
+  "GHSA-qwww-vcr4-c8h2":
+    "React Router RSC-mode CSRF — no forward fix (latest 7.18.1 is in-range); not exploitable in this client-only SPA (no RSC mode)",
 };
 
 let raw;

@@ -40765,6 +40765,8 @@ components:
           readOnly: true
         smtp_use_tls:
           type: boolean
+        smtp_use_ssl:
+          type: boolean
         from_email:
           type: string
           format: email

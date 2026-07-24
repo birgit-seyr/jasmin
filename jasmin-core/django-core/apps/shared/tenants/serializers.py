@@ -262,6 +262,7 @@ class TenantEmailConfigSerializer(serializers.ModelSerializer):
             "smtp_password",
             "has_smtp_password",
             "smtp_use_tls",
+            "smtp_use_ssl",
             "from_email",
             "from_name",
             "reply_to_email",
@@ -301,6 +302,23 @@ class TenantEmailConfigSerializer(serializers.ModelSerializer):
                 code="smtp_port_invalid",
             )
         return value
+
+    def validate(self, attrs):
+        # STARTTLS (``smtp_use_tls``) and implicit SSL (``smtp_use_ssl``) are
+        # mutually exclusive — Django's SMTP backend raises if both are set.
+        # Resolve the effective values across a partial update (fall back to the
+        # instance) so a PATCH that touches only one is checked against the other.
+        use_tls = attrs.get(
+            "smtp_use_tls", getattr(self.instance, "smtp_use_tls", False)
+        )
+        use_ssl = attrs.get(
+            "smtp_use_ssl", getattr(self.instance, "smtp_use_ssl", False)
+        )
+        if use_tls and use_ssl:
+            raise serializers.ValidationError(
+                {"smtp_use_ssl": "Choose either STARTTLS or SSL, not both."}
+            )
+        return attrs
 
     def update(self, instance, validated_data):
         smtp_password = validated_data.pop("smtp_password", None)
