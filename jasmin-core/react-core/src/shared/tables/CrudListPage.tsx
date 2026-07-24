@@ -121,6 +121,7 @@ export function CrudListPage<TRow extends TableRecord>({
         pagination={pagination}
         deleteContext={deleteContext}
         className={className}
+        keyboardAddShortcut={true}
       />
 
       {explainerKey && (

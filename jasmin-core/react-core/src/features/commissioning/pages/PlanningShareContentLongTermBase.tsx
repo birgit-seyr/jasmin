@@ -710,6 +710,7 @@ export default function PlanningLongTermHarvestSharesBase({
         onDeleteSuccess={onDeleteSuccess}
         customSave={customSave}
         customEdit={customEdit}
+        keyboardAddShortcut={true}
         uniqueCheck={["share_article", "unit", "size"]}
         uniqueCheckMessage={t(
           "validation.unique.share_article_unit_size_must_be_unique",

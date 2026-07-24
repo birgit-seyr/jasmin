@@ -110,7 +110,10 @@ export default function DocumentationWaste() {
     const items = (rawData ?? []) as unknown as Array<Record<string, unknown>>;
     return items
       .filter((item) => item[`storage_${selectedStorage}`])
-      .map((item) => ({ ...item, key: item.id ?? "" })) as unknown as TableRecord[];
+      .map((item) => ({
+        ...item,
+        key: item.id ?? "",
+      })) as unknown as TableRecord[];
   }, [rawData, selectedStorage]);
   const invalidateData = useCallback(() => {
     queryClient.invalidateQueries({
@@ -205,6 +208,7 @@ export default function DocumentationWaste() {
         customSave={customSave}
         customEdit={customEdit}
         permissions={permissions}
+        keyboardAddShortcut={true}
       />
       <AddShareArticleEntry
         disabled={isPast}

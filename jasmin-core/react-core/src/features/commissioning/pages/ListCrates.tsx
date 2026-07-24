@@ -59,7 +59,10 @@ export default function ListCrates() {
   const [priceExportVisible, setPriceExportVisible] = useState(false);
 
   // Everything below the columns/modals is the shared CRUD boilerplate.
-  const list = useCrudListPage<CrateRow>({ resource: cratesResource, permissions });
+  const list = useCrudListPage<CrateRow>({
+    resource: cratesResource,
+    permissions,
+  });
 
   const handleOpenModal = useCallback((record: Record<string, unknown>) => {
     setSelectedCrateId(record.id as string);
@@ -166,6 +169,7 @@ export default function ListCrates() {
         uniqueCheck={["name"]}
         uniqueCheckMessage={t("validation.unique.name")}
         permissions={list.permissions}
+        keyboardAddShortcut={true}
       />
       <ExplainerText title={t("common.info")}>
         {t("explainers.list_crates")}

@@ -382,6 +382,7 @@ export default function DocumentationPurchase() {
         selectedRowKeys={selectedRowKeys}
         uniqueCheck={["share_article", "unit", "size"]}
         uniqueCheckMessage={t("validation.unique.documentation_purchase")}
+        keyboardAddShortcut={true}
       />
       <ExportCsvPurchase
         open={csvExportVisible}

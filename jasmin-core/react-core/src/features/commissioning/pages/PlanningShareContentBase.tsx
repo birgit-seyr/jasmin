@@ -252,8 +252,9 @@ export default function PlanningHarvestSharesBase({
     }),
     [shareArticleFilters, shareOption, selectedYear, selectedWeek],
   );
-  const { shareArticles: pricingArticles } =
-    useShareArticles(pricingArticleFilters);
+  const { shareArticles: pricingArticles } = useShareArticles(
+    pricingArticleFilters,
+  );
 
   // Cast to extended type that correctly types delivery_stations as array
   const shareDeliveryDays = useMemo(
@@ -372,7 +373,12 @@ export default function PlanningHarvestSharesBase({
         form.setFieldsValue(patch);
       }
     },
-    [defaultsByArticle, shareDeliveryDays, shareTypeVariations, activeTierCellKeys],
+    [
+      defaultsByArticle,
+      shareDeliveryDays,
+      shareTypeVariations,
+      activeTierCellKeys,
+    ],
   );
 
   // Article-derived row defaults. kg/piece is SIZE-specific
@@ -458,8 +464,7 @@ export default function PlanningHarvestSharesBase({
         setFieldsValue: (values: Record<string, unknown>) => void;
       },
     ) => {
-      const articleChanged =
-        previousArticleIdRef.current !== String(articleId);
+      const articleChanged = previousArticleIdRef.current !== String(articleId);
       previousArticleIdRef.current = String(articleId);
       applyArticlePricingDefaults(articleId, unit, form, articleChanged);
       applyDefaultAmounts(articleId, unit, form, articleChanged);
@@ -1008,7 +1013,8 @@ export default function PlanningHarvestSharesBase({
       // in-place merge keeps its stale is_stock_only / current_stock fields
       // (the update response doesn't carry them), so refetch to recompute the
       // slot cleanly — same rationale as the cleared-placeholder case above.
-      const wasStockOnlyUpdate = action === "update" && editedStockOnlyRef.current;
+      const wasStockOnlyUpdate =
+        action === "update" && editedStockOnlyRef.current;
       editedStockOnlyRef.current = false;
       if (isClearedPlaceholder || wasStockOnlyUpdate) {
         invalidateData();
@@ -1030,31 +1036,28 @@ export default function PlanningHarvestSharesBase({
       // the stale amount forever.
       queryClient.setQueryData<
         (HarvestSharePlanningRow & Record<string, unknown>)[]
-      >(
-        getCommissioningHarvestSharePlanningListQueryKey(listParams),
-        (old) => {
-          if (!old) return old;
-          const saved = savedRecord as unknown as HarvestSharePlanningRow &
-            Record<string, unknown>;
-          if (!old.some((row) => row.id === saved.id)) {
-            // Freshly-created slot the cache doesn't know yet — prepend it
-            // (EditableTable pins new rows to the top anyway).
-            return action === "create" ? [saved, ...old] : old;
-          }
-          return old.map((row) =>
-            row.id === saved.id
-              ? {
-                  ...(Object.fromEntries(
-                    Object.entries(row).filter(
-                      ([cellKey]) => !cellKey.startsWith("day_"),
-                    ),
-                  ) as HarvestSharePlanningRow & Record<string, unknown>),
-                  ...saved,
-                }
-              : row,
-          );
-        },
-      );
+      >(getCommissioningHarvestSharePlanningListQueryKey(listParams), (old) => {
+        if (!old) return old;
+        const saved = savedRecord as unknown as HarvestSharePlanningRow &
+          Record<string, unknown>;
+        if (!old.some((row) => row.id === saved.id)) {
+          // Freshly-created slot the cache doesn't know yet — prepend it
+          // (EditableTable pins new rows to the top anyway).
+          return action === "create" ? [saved, ...old] : old;
+        }
+        return old.map((row) =>
+          row.id === saved.id
+            ? {
+                ...(Object.fromEntries(
+                  Object.entries(row).filter(
+                    ([cellKey]) => !cellKey.startsWith("day_"),
+                  ),
+                ) as HarvestSharePlanningRow & Record<string, unknown>),
+                ...saved,
+              }
+            : row,
+        );
+      });
     },
     [refetchGranularity, invalidateData, queryClient, listParams],
   );
@@ -1221,6 +1224,7 @@ export default function PlanningHarvestSharesBase({
           }
           summaryLabelColumnIndex={1}
           summaryRows={showSummaryRows ? summaryRows : []}
+          keyboardAddShortcut={true}
         />
       ) : (
         <NoVariationColumnsBanner />

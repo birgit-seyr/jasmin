@@ -351,6 +351,7 @@ export default function ListShareArticles() {
         permissions={list.permissions}
         pagination={true}
         showSearchBar={true}
+        keyboardAddShortcut={true}
       />
       <ExplainerText title={t("common.info")}>
         {t("explainers.list_share_articles")}

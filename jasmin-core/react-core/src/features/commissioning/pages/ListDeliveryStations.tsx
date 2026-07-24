@@ -120,7 +120,10 @@ export default function ListDeliveryStations() {
   );
 
   const shareDeliveryDays = useMemo(
-    () => [...(currentlyActiveDeliveryDays || []), ...(futureDeliveryDays || [])],
+    () => [
+      ...(currentlyActiveDeliveryDays || []),
+      ...(futureDeliveryDays || []),
+    ],
     [currentlyActiveDeliveryDays, futureDeliveryDays],
   );
 
@@ -285,6 +288,7 @@ export default function ListDeliveryStations() {
         uniqueCheckMessage={t("validation.unique.number")}
         pagination={true}
         showSearchBar={true}
+        keyboardAddShortcut={true}
       />
 
       <DeliveryStationDetailModal

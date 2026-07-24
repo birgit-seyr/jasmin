@@ -406,6 +406,7 @@ export default function DocumentationHarvest() {
         loading={isFetching}
         customSave={customSave}
         customEdit={customEdit}
+        keyboardAddShortcut={true}
         permissions={permissions}
         rowSelection={!isPast && !isMobile ? rowSelectionConfig : undefined}
         onSelectedRowsChange={handleRowSelectionChange}

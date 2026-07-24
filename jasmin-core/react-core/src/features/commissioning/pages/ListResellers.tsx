@@ -440,6 +440,7 @@ export default function ListResellers() {
         permissions={list.permissions}
         pagination={true}
         showSearchBar={true}
+        keyboardAddShortcut={true}
       />
 
       <UserInfoModal
