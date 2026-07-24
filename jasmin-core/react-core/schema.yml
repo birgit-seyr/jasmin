@@ -39443,6 +39443,12 @@ components:
           pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
           readOnly: true
           nullable: true
+        active_price_per_delivery_if_trial:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
         capacity_by_week:
           type: object
           additionalProperties:
@@ -39559,6 +39565,16 @@ components:
           format: decimal
           pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
         price_sum_articles:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          nullable: true
+        price_per_delivery_if_trial:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          nullable: true
+        solidarity_min_price_per_delivery_if_trial:
           type: string
           format: decimal
           pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
@@ -41031,6 +41047,8 @@ components:
         info_sentence_about_trial_subscriptions:
           type: string
           nullable: true
+        trial_subscriptions_have_different_prices:
+          type: boolean
         allows_waiting_list_for_subscriptions:
           type: boolean
         reservation_ttl_days:
@@ -41341,6 +41359,8 @@ components:
         info_sentence_about_trial_subscriptions:
           type: string
           nullable: true
+        trial_subscriptions_have_different_prices:
+          type: boolean
         allows_waiting_list_for_subscriptions:
           type: boolean
         reservation_ttl_days:

@@ -429,12 +429,23 @@ class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             .values("solidarity_min_price_per_delivery")[:1]
         )
 
+        # Trial reference price — the abos price auto-fill uses it when a
+        # subscription is flagged ``is_trial`` and the tenant charges trials
+        # differently. Nullable (a variation may leave it blank).
+        active_price_if_trial_subquery = (
+            ShareTypeVariationGrossPrice.current.active_at_date(lookup_date)
+            .filter(share_type_variation=OuterRef("pk"))
+            .order_by("-valid_from")
+            .values("price_per_delivery_if_trial")[:1]
+        )
+
         queryset = queryset.annotate(
             active_price_per_delivery=Subquery(active_price_subquery),
             active_price_sum_articles=Subquery(active_price_sum_articles_subquery),
             active_solidarity_min_price_per_delivery=Subquery(
                 active_solidarity_min_subquery
             ),
+            active_price_per_delivery_if_trial=Subquery(active_price_if_trial_subquery),
         )
 
         queryset = queryset.annotate(

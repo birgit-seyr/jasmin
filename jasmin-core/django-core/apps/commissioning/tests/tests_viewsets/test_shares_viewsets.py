@@ -236,6 +236,27 @@ class TestShareTypeVariationViewSet:
         resp = api_client.get(self.URL)
         assert len(resp.data) >= 1
 
+    def test_list_exposes_active_trial_price(self, api_client, tenant):
+        # ``active_price_per_delivery_if_trial`` mirrors
+        # ``active_price_per_delivery`` for the variation's TRIAL reference
+        # price — it drives the abos price auto-fill when ``is_trial`` is on.
+        price = ShareTypeVariationGrossPriceFactory(
+            price_per_delivery=Decimal("10.00"),
+            price_per_delivery_if_trial=Decimal("6.00"),
+        )
+        resp = api_client.get(
+            self.URL,
+            {
+                "share_type_variation": str(price.share_type_variation.id),
+                "active_at_date": "2026-06-01",
+            },
+        )
+        item = next(
+            d for d in resp.data if d["id"] == str(price.share_type_variation.id)
+        )
+        assert item["active_price_per_delivery"] == "10.00"
+        assert item["active_price_per_delivery_if_trial"] == "6.00"
+
     def test_list_exposes_subscription_valid_until_bounds(self, api_client, tenant):
         # The datepicker floor: a variation can't end before its LATEST
         # subscription. (Subscriptions are never open-ended — the model forbids

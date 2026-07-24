@@ -238,6 +238,19 @@ export default function ConfigurationSubscriptions() {
             visibleIf: (getValue) =>
               Boolean(getValue("allows_trial_subscriptions", true)),
           },
+          {
+            key: "trial_subscriptions_have_different_prices",
+            label: t(
+              "settings.subscriptions.trial_subscriptions_have_different_prices",
+            ),
+            description: t(
+              "settings.subscriptions.trial_subscriptions_have_different_prices_desc",
+            ),
+            type: "checkbox",
+            defaultValue: false,
+            visibleIf: (getValue) =>
+              Boolean(getValue("allows_trial_subscriptions", true)),
+          },
         ],
       },
     ],

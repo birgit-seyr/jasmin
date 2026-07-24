@@ -511,6 +511,8 @@
   "welcome": "Welcome!",
   "price_brutto": "price gross",
   "solidarity_min_price": "Solidarity floor",
+  "price_brutto_if_trial": "price gross (trial)",
+  "solidarity_min_price_if_trial": "Solidarity floor (trial)",
   "sign_in": "sign in",
   "theoretical_wash_amounts": "theoretically to wash",
   "theoretical_clean_amounts": "theoretically to clean",

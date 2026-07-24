@@ -514,6 +514,12 @@ class ShareTypeVariationGrossPrice(JasminModel, TimeBoundMixin):
     price_sum_articles = models.DecimalField(
         max_digits=6, decimal_places=2, blank=True, null=True
     )  # sum of the prices of the articles (vegetables) in the share - for comparison for the weekly planning team
+    price_per_delivery_if_trial = models.DecimalField(
+        max_digits=6, decimal_places=2, blank=True, null=True
+    )
+    solidarity_min_price_per_delivery_if_trial = models.DecimalField(
+        max_digits=6, decimal_places=2, blank=True, null=True
+    )
 
     def clean(self) -> None:
         super().clean()

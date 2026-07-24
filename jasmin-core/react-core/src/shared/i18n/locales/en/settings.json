@@ -367,6 +367,8 @@
       "description": "Controls whether trial memberships are possible and which conditions apply to them."
     },
     "allows_trial_subscriptions": "Allow Trial Subscriptions",
+    "trial_subscriptions_have_different_prices": "Trial subscriptions have different prices",
+    "trial_subscriptions_have_different_prices_desc": "If enabled, each size can carry its own price (and solidarity floor) for trial subscriptions. Otherwise trials use the regular prices.",
     "allowed_trial_subscription_duration": "Allowed Trial Subscription Duration (Weeks)",
     "allowed_trial_subscription_duration_desc": "Maximum term of a trial membership.",
     "allows_trial_subscriptions_for_trial_members": "Trial Subscriptions for Trial Members",

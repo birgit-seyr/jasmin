@@ -516,6 +516,8 @@
   "welcome": "Willkommen!",
   "price_brutto": "Preis brutto",
   "solidarity_min_price": "Solidar-Untergrenze brutto",
+  "price_brutto_if_trial": "Preis brutto (Probe)",
+  "solidarity_min_price_if_trial": "Solidar-Untergrenze (Probe)",
   "sign_in": "Anmelden",
   "theoretical_wash_amounts": "theoretisch zu waschen",
   "theoretical_clean_amounts": "theoretisch zu putzen",

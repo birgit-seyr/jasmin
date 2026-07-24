@@ -114,6 +114,12 @@ class ShareTypeVariationSerializer(
     active_solidarity_min_price_per_delivery = serializers.DecimalField(
         max_digits=8, decimal_places=2, read_only=True, allow_null=True
     )
+    # Active TRIAL reference price (null when the variation leaves it blank) —
+    # the abos price auto-fill switches to this for ``is_trial`` subscriptions
+    # when the tenant charges trials differently.
+    active_price_per_delivery_if_trial = serializers.DecimalField(
+        max_digits=8, decimal_places=2, read_only=True, allow_null=True
+    )
     # Per-ISO-week production-cap occupancy — the term-aware source of truth the
     # frontend's ``termCapacity`` evaluator reads (same
     # ``{"<year>-<week>": {occupied, free}}`` shape as the station-day's

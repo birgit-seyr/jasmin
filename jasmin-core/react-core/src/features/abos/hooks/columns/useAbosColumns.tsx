@@ -37,6 +37,40 @@ import { useSharedAboColumns } from "./useSharedAboColumns";
 type AbosData = ReturnType<typeof useAbosData>;
 type AdminConfirmation = ReturnType<typeof useAdminConfirmationModalAbos>;
 
+// Parse a price-ish value to a number, tolerant of BOTH the canonical
+// dot-decimal (backend strings like "14.00", or a raw number) AND a
+// locale-formatted string the AntD input may hold (German "14,00", or
+// thousand-separated "1.234,50"). Plain ``Number("14,00")`` is ``NaN``, which
+// is exactly what made the abos price guard misfire on de-locale tenants.
+function parsePriceLoose(value: unknown): number {
+  if (typeof value === "number") return value;
+  if (value == null || value === "") return NaN;
+  const direct = Number(value); // canonical "14.00" / "14"
+  if (Number.isFinite(direct)) return direct;
+  const s = String(value).trim();
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+  let normalized = s;
+  if (hasComma && hasDot) {
+    // The LAST separator is the decimal one (de: "1.234,50", en: "1,234.50").
+    normalized =
+      s.lastIndexOf(",") > s.lastIndexOf(".")
+        ? s.replace(/\./g, "").replace(",", ".")
+        : s.replace(/,/g, "");
+  } else if (hasComma) {
+    normalized = s.replace(",", ".");
+  }
+  return Number(normalized);
+}
+
+/** True when ``a`` and ``b`` are the same 2dp price (tolerant of float noise
+ *  and the mixed number/locale-string formats above). */
+function pricesEqual(a: unknown, b: unknown): boolean {
+  const na = parsePriceLoose(a);
+  const nb = parsePriceLoose(b);
+  return Number.isFinite(na) && Number.isFinite(nb) && Math.abs(na - nb) < 0.005;
+}
+
 export function useAbosColumns({
   members,
   paymentCycles,
@@ -234,12 +268,109 @@ export function useAbosColumns({
     [recomputeValidUntil],
   );
 
+  // Variation id → whether it may be used for a trial subscription. Default
+  // TRUE for an unknown variation (don't disable on missing data); only an
+  // explicit ``allowed_for_trial_subscription === false`` blocks the is_trial
+  // checkbox.
+  const variationAllowsTrialById = useMemo(() => {
+    const map = new Map<string, boolean>();
+    for (const variation of allShareTypeVariations) {
+      map.set(
+        String(variation.value),
+        variation.allowed_for_trial_subscription !== false,
+      );
+    }
+    return map;
+  }, [allShareTypeVariations]);
+
+  const variationAllowsTrial = useCallback(
+    (variationId: unknown): boolean => {
+      if (!variationId) return true;
+      const allowed = variationAllowsTrialById.get(String(variationId));
+      return allowed !== false; // unknown → allowed
+    },
+    [variationAllowsTrialById],
+  );
+
+  // Seed ``price_per_delivery`` from the picked variation's active reference
+  // price — the trial one (``active_price_per_delivery_if_trial``) when the sub
+  // is ``is_trial`` and the variation HAS a trial price, else the regular
+  // ``active_price_per_delivery``. Both ``override*`` args mirror the
+  // ``recomputeValidUntil`` pattern (the onChange handlers pass the post-change
+  // value before AntD flushes it to the field store).
+  //
+  // GUARD: never clobber a manually-typed price. Only (re)fill when the field
+  // is empty or still holds one of the two SUGGESTED values (regular / trial) —
+  // so toggling ``is_trial`` swaps between the two suggestions in BOTH
+  // directions, but a custom price the office entered is left untouched.
+  const applySuggestedPrice = useCallback(
+    (
+      record: AboRecord,
+      form: {
+        setFieldsValue: (values: Record<string, unknown>) => void;
+        getFieldValue?: (name: string) => unknown;
+      },
+      overrideVariationId?: string,
+      overrideIsTrial?: boolean,
+    ): Record<string, unknown> | undefined => {
+      const variationId =
+        overrideVariationId ??
+        // The FK-select stores the selected id under the column's dataIndex
+        // (``share_type_variation_string``), NOT under the valueField — reading
+        // ``share_type_variation`` returns undefined and drops new-row edits.
+        (form.getFieldValue?.("share_type_variation_string") as
+          | string
+          | undefined) ??
+        (form.getFieldValue?.("share_type_variation") as string | undefined) ??
+        (record.share_type_variation as string | undefined);
+      if (!variationId) return undefined;
+
+      const variation = allShareTypeVariations.find(
+        (candidate: {
+          value: string;
+          active_price_per_delivery?: string | null;
+          active_price_per_delivery_if_trial?: string | null;
+        }) => String(candidate.value) === String(variationId),
+      );
+      if (!variation) return undefined;
+
+      const regular = variation.active_price_per_delivery ?? null;
+      const trial = variation.active_price_per_delivery_if_trial ?? null;
+
+      const isTrialNow =
+        overrideIsTrial !== undefined
+          ? overrideIsTrial
+          : Boolean(form.getFieldValue?.("is_trial") ?? record.is_trial);
+
+      // Use the trial reference price whenever this is a trial AND the
+      // variation actually has one; otherwise the regular reference price.
+      const target = isTrialNow && trial ? trial : regular;
+      if (target == null) return undefined;
+
+      const currentRaw =
+        form.getFieldValue?.("price_per_delivery") ?? record.price_per_delivery;
+      const isEmpty =
+        currentRaw == null ||
+        currentRaw === "" ||
+        Number.isNaN(parsePriceLoose(currentRaw));
+      const matchesSuggested =
+        pricesEqual(currentRaw, regular) || pricesEqual(currentRaw, trial);
+      // Custom price the office typed — leave it exactly as is.
+      if (!isEmpty && !matchesSuggested) return undefined;
+
+      const patch = { price_per_delivery: target };
+      form.setFieldsValue(patch);
+      return patch;
+    },
+    [allShareTypeVariations],
+  );
+
   // Toggling ``is_trial`` flips the auto-fill branch in
-  // ``recomputeValidUntil``. Read ``valid_from`` from the form store
-  // (it may have been typed in the same edit) and pass the new
-  // ``is_trial`` value explicitly — the AntD Form hasn't flushed the
-  // checkbox change to ``getFieldValue("is_trial")`` yet when this
-  // handler fires.
+  // ``recomputeValidUntil`` AND swaps the suggested price (regular ↔ trial).
+  // Read ``valid_from`` from the form store (it may have been typed in the
+  // same edit) and pass the new ``is_trial`` value explicitly — the AntD Form
+  // hasn't flushed the checkbox change to ``getFieldValue("is_trial")`` yet
+  // when this handler fires.
   const handleIsTrialChange = useCallback(
     (
       newValue: unknown,
@@ -251,14 +382,24 @@ export function useAbosColumns({
     ) => {
       const validFromValue =
         form.getFieldValue?.("valid_from") ?? record.valid_from;
-      return recomputeValidUntil(
+      const patch: Record<string, unknown> = {};
+      const validUntilPatch = recomputeValidUntil(
         validFromValue,
         record,
         form,
         newValue === true,
       );
+      if (validUntilPatch) Object.assign(patch, validUntilPatch);
+      const pricePatch = applySuggestedPrice(
+        record,
+        form,
+        undefined,
+        newValue === true,
+      );
+      if (pricePatch) Object.assign(patch, pricePatch);
+      return Object.keys(patch).length > 0 ? patch : undefined;
     },
-    [recomputeValidUntil],
+    [recomputeValidUntil, applySuggestedPrice],
   );
 
   const handleShareTypeVariationChange = useCallback(
@@ -274,25 +415,30 @@ export function useAbosColumns({
 
       const patch: Record<string, unknown> = {};
 
-      try {
-        // Find the selected variation from allShareTypeVariations
-        const selectedVariation = allShareTypeVariations.find(
-          (variation: {
-            value: string;
-            active_price_per_delivery?: string;
-            price_per_delivery?: string;
-          }) => variation.value === value,
-        );
+      // If the newly-picked variation can't be a trial, force ``is_trial`` off
+      // (the checkbox also disables via the column's ``disabled``). Pass the
+      // forced value into the price seed so it uses the regular reference.
+      let forcedIsTrial: boolean | undefined;
+      if (
+        !variationAllowsTrial(value) &&
+        Boolean(form.getFieldValue?.("is_trial"))
+      ) {
+        form.setFieldsValue({ is_trial: false });
+        patch.is_trial = false;
+        forcedIsTrial = false;
+      }
 
-        if (selectedVariation && selectedVariation.active_price_per_delivery) {
-          patch.price_per_delivery =
-            selectedVariation.active_price_per_delivery;
-          form.setFieldsValue({
-            price_per_delivery: selectedVariation.active_price_per_delivery,
-          });
-        }
-      } catch (error) {
-        console.error("Error setting weekly_price:", error);
+      // Seed the price from the newly-picked variation — trial- or
+      // regular-reference-price aware, and only when the field isn't a
+      // custom-typed value (see ``applySuggestedPrice``).
+      const pricePatch = applySuggestedPrice(
+        record,
+        form,
+        value as string,
+        forcedIsTrial,
+      );
+      if (pricePatch) {
+        Object.assign(patch, pricePatch);
       }
 
       // Different variation can mean a different ``delivery_cycle`` —
@@ -316,7 +462,7 @@ export function useAbosColumns({
 
       return Object.keys(patch).length > 0 ? patch : undefined;
     },
-    [allShareTypeVariations, recomputeValidUntil],
+    [applySuggestedPrice, recomputeValidUntil, variationAllowsTrial],
   );
 
   // Already-cancelled members must not be selectable for a NEW subscription.
@@ -505,6 +651,12 @@ export function useAbosColumns({
               required: false,
               align: "center",
               sortable: true,
+              // Disabled when the (live-selected) variation may not be a trial
+              // (``allowed_for_trial_subscription === false``). ``record`` is the
+              // live-record inside an editing row, so this reacts to the office
+              // picking a different variation mid-edit.
+              disabled: (record: AboRecord) =>
+                !variationAllowsTrial(record.share_type_variation),
               // Toggling ``is_trial`` recomputes ``valid_until``:
               //   * ON  → ``valid_from + allowed_trial_subscription_duration weeks - 1 day``
               //   * OFF → falls back to the season / one-year branch
@@ -736,6 +888,7 @@ export function useAbosColumns({
       onCancel,
       onShowLog,
       format,
+      variationAllowsTrial,
     ],
   );
 

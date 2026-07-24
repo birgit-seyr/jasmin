@@ -51,6 +51,12 @@ export default function ShareTypeVariationPriceModal({
   const [allowsSolidarity, setAllowsSolidarity] = useState(() =>
     Boolean(getSetting("allows_solidarity_pricing", false)),
   );
+  const [
+    trialSubscriptionsHaveDifferentPrices,
+    setTrialSubscriptionsHaveDifferentPrices,
+  ] = useState(() =>
+    Boolean(getSetting("trial_subscriptions_have_different_prices", false)),
+  );
 
   // Re-seed when the modal (re)opens or the tenant setting loads/changes, so a
   // value set elsewhere is reflected. While the modal is open the local state
@@ -60,6 +66,9 @@ export default function ShareTypeVariationPriceModal({
     if (visible) {
       setAllowsSolidarity(
         Boolean(getSetting("allows_solidarity_pricing", false)),
+      );
+      setTrialSubscriptionsHaveDifferentPrices(
+        Boolean(getSetting("trial_subscriptions_have_different_prices", false)),
       );
     }
   }, [visible, getSetting]);
@@ -74,6 +83,24 @@ export default function ShareTypeVariationPriceModal({
         onSuccess: () => refreshTenant(),
         onError: (error) => {
           setAllowsSolidarity(!checked); // revert the optimistic toggle
+          notify.error(getErrorMessage(error, t("common.error")));
+        },
+      },
+    );
+  };
+
+  const handleToggleTrialPrices = (checked: boolean) => {
+    setTrialSubscriptionsHaveDifferentPrices(checked); // instant column reveal
+    updateSettings.mutate(
+      {
+        data: {
+          settings: { trial_subscriptions_have_different_prices: checked },
+        },
+      },
+      {
+        onSuccess: () => refreshTenant(),
+        onError: (error) => {
+          setTrialSubscriptionsHaveDifferentPrices(!checked); // revert
           notify.error(getErrorMessage(error, t("common.error")));
         },
       },
@@ -129,6 +156,37 @@ export default function ShareTypeVariationPriceModal({
               }),
             ]
           : []),
+        // Trial prices — only when the tenant charges trial subscriptions
+        // differently (``trial_subscriptions_have_different_prices``).
+        ...(trialSubscriptionsHaveDifferentPrices
+          ? [
+              buildCurrencyPriceColumn({
+                title: t("commissioning.price_brutto_if_trial"),
+                dataIndex: "price_per_delivery_if_trial",
+                currencySymbol,
+                width: "7em",
+                required: false,
+              }),
+            ]
+          : []),
+        // Trial solidarity floor — needs BOTH trial prices AND solidarity on
+        // (a floor only means something when members set their own price).
+        ...(trialSubscriptionsHaveDifferentPrices && allowsSolidarity
+          ? [
+              buildCurrencyPriceColumn({
+                title: (
+                  <>
+                    {t("commissioning.solidarity_min_price_if_trial")}
+                    <ToolTipIcon title={t("tooltip.solidarity_min_price")} />
+                  </>
+                ),
+                dataIndex: "solidarity_min_price_per_delivery_if_trial",
+                currencySymbol,
+                width: "8em",
+                required: false,
+              }),
+            ]
+          : []),
         buildTaxRateColumn(t, {
           title: t("commissioning.tax_rate"),
           inputType: "positive_integer",
@@ -162,6 +220,7 @@ export default function ShareTypeVariationPriceModal({
       validFromColumn,
       validUntilColumn,
       allowsSolidarity,
+      trialSubscriptionsHaveDifferentPrices,
     ],
   );
 
@@ -171,17 +230,38 @@ export default function ShareTypeVariationPriceModal({
       onClose={onClose}
       intro={
         <div className="mb-1em">
-          <Checkbox
-            checked={allowsSolidarity}
-            disabled={updateSettings.isPending}
-            onChange={(e) => handleToggleSolidarity(e.target.checked)}
-            aria-label={t("settings.payments.allows_solidarity_pricing")}
-          >
-            {t("settings.payments.allows_solidarity_pricing")}
-          </Checkbox>
-          <ToolTipIcon
-            title={t("settings.payments.allows_solidarity_pricing_desc")}
-          />
+          <div>
+            <Checkbox
+              checked={allowsSolidarity}
+              disabled={updateSettings.isPending}
+              onChange={(e) => handleToggleSolidarity(e.target.checked)}
+              aria-label={t("settings.payments.allows_solidarity_pricing")}
+            >
+              {t("settings.payments.allows_solidarity_pricing")}
+            </Checkbox>
+            <ToolTipIcon
+              title={t("settings.payments.allows_solidarity_pricing_desc")}
+            />
+          </div>
+          <div>
+            <Checkbox
+              checked={trialSubscriptionsHaveDifferentPrices}
+              disabled={updateSettings.isPending}
+              onChange={(e) => handleToggleTrialPrices(e.target.checked)}
+              aria-label={t(
+                "settings.subscriptions.trial_subscriptions_have_different_prices",
+              )}
+            >
+              {t(
+                "settings.subscriptions.trial_subscriptions_have_different_prices",
+              )}
+            </Checkbox>
+            <ToolTipIcon
+              title={t(
+                "settings.subscriptions.trial_subscriptions_have_different_prices_desc",
+              )}
+            />
+          </div>
         </div>
       }
       title={

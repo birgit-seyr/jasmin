@@ -38,6 +38,16 @@ export interface ShareTypeVariationGrossPrice {
    * @pattern ^-?\d{0,4}(?:\.\d{0,2})?$
    */
   price_sum_articles?: string | null;
+  /**
+   * @nullable
+   * @pattern ^-?\d{0,4}(?:\.\d{0,2})?$
+   */
+  price_per_delivery_if_trial?: string | null;
+  /**
+   * @nullable
+   * @pattern ^-?\d{0,4}(?:\.\d{0,2})?$
+   */
+  solidarity_min_price_per_delivery_if_trial?: string | null;
   share_type_variation: string;
   readonly can_be_deleted?: boolean;
 }

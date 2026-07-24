@@ -409,6 +409,7 @@ class TenantSettings(JasminModel):
     )  # in count of deliveries
     allows_trial_subscriptions_for_trial_members = models.BooleanField(default=True)
     info_sentence_about_trial_subscriptions = models.TextField(blank=True, null=True)
+    trial_subscriptions_have_different_prices = models.BooleanField(default=False)
 
     # Waiting list — gates the whole waiting-list flow (offers, putting members/
     # subscriptions on a waiting list, waiting-list UI). When False the tenant
