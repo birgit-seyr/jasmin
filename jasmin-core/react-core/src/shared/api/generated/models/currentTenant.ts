@@ -139,6 +139,7 @@ export interface CurrentTenant {
   legal_notice_extra_html?: string;
   readonly friendly_captcha_sitekey?: string;
   readonly allows_trial_subscriptions?: boolean;
+  readonly allows_trial_subscriptions_for_trial_members?: boolean;
   readonly min_number_coop_shares?: number;
   readonly max_number_coop_shares?: number;
   readonly value_one_coop_share?: number;

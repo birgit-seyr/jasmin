@@ -240,9 +240,14 @@ class TestShareTypeVariationViewSet:
         # ``active_price_per_delivery_if_trial`` mirrors
         # ``active_price_per_delivery`` for the variation's TRIAL reference
         # price — it drives the abos price auto-fill when ``is_trial`` is on.
+        # ``active_solidarity_min_price_per_delivery_if_trial`` is the trial
+        # counterpart of the solidarity floor — the modal floors a trial price
+        # against it (and the backend re-validates the same value).
         price = ShareTypeVariationGrossPriceFactory(
             price_per_delivery=Decimal("10.00"),
+            solidarity_min_price_per_delivery=Decimal("8.00"),
             price_per_delivery_if_trial=Decimal("6.00"),
+            solidarity_min_price_per_delivery_if_trial=Decimal("5.00"),
         )
         resp = api_client.get(
             self.URL,
@@ -255,7 +260,9 @@ class TestShareTypeVariationViewSet:
             d for d in resp.data if d["id"] == str(price.share_type_variation.id)
         )
         assert item["active_price_per_delivery"] == "10.00"
+        assert item["active_solidarity_min_price_per_delivery"] == "8.00"
         assert item["active_price_per_delivery_if_trial"] == "6.00"
+        assert item["active_solidarity_min_price_per_delivery_if_trial"] == "5.00"
 
     def test_list_exposes_subscription_valid_until_bounds(self, api_client, tenant):
         # The datepicker floor: a variation can't end before its LATEST

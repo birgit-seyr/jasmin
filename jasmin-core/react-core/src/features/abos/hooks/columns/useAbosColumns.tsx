@@ -21,6 +21,7 @@ import type { AboRecord } from "@features/abos/pages/types";
 import { paymentCycleLabel } from "@shared/utils/cycleLabels";
 import { parseDateLoose } from "@shared/utils/endOfTerm";
 import { getNextSunday } from "@shared/utils/nextSunday";
+import { variationAllowsTrial as variationRecordAllowsTrial } from "@shared/utils/trialVariations";
 import { useCurrency } from "@hooks/configuration/useCurrency";
 import { useDateFormat } from "@hooks/configuration/useDateFormat";
 import { useTenant } from "@hooks/configuration/useTenant";
@@ -275,10 +276,7 @@ export function useAbosColumns({
   const variationAllowsTrialById = useMemo(() => {
     const map = new Map<string, boolean>();
     for (const variation of allShareTypeVariations) {
-      map.set(
-        String(variation.value),
-        variation.allowed_for_trial_subscription !== false,
-      );
+      map.set(String(variation.value), variationRecordAllowsTrial(variation));
     }
     return map;
   }, [allShareTypeVariations]);
@@ -701,7 +699,10 @@ export function useAbosColumns({
           valueField: "payment_cycle",
           displayField: "payment_cycle_name",
         },
-        disabled: aboIsConfirmed,
+        // With exactly one allowed cycle there's nothing to choose — render it
+        // fixed (the cell falls back to the read-only label) instead of a
+        // one-option select. A finalized abo is likewise read-only.
+        disabled: aboIsConfirmed || paymentCycles.length <= 1,
         render: (value: unknown, record: AboRecord) => {
           // ``payment_cycle_name`` is ``payment_cycle.choice`` (a code like
           // MONTHLY) as loaded, but an inline edit overwrites it with the select

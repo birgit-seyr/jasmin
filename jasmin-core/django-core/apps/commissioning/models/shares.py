@@ -536,6 +536,39 @@ class ShareTypeVariationGrossPrice(JasminModel, TimeBoundMixin):
                     )
                 }
             )
+        # Same invariant for the trial pair (only checkable when both are set).
+        if (
+            self.solidarity_min_price_per_delivery_if_trial is not None
+            and self.price_per_delivery_if_trial is not None
+            and self.solidarity_min_price_per_delivery_if_trial
+            > self.price_per_delivery_if_trial
+        ):
+            raise ValidationError(
+                {
+                    "solidarity_min_price_per_delivery_if_trial": (
+                        "The trial solidarity minimum cannot exceed the trial "
+                        "reference price."
+                    )
+                }
+            )
+        # A trial floor with NO trial reference is a silent misconfiguration:
+        # the floor is gated on the trial reference everywhere it's enforced
+        # (client + server), so without one it would be discarded and the trial
+        # would fall back to the regular pair. Reject it at config time so the
+        # intent surfaces instead of vanishing. (The regular pair can't hit this
+        # — ``price_per_delivery`` is NOT NULL — so there's no regular analogue.)
+        if (
+            self.solidarity_min_price_per_delivery_if_trial is not None
+            and self.price_per_delivery_if_trial is None
+        ):
+            raise ValidationError(
+                {
+                    "solidarity_min_price_per_delivery_if_trial": (
+                        "A trial solidarity minimum requires a trial reference "
+                        "price (price_per_delivery_if_trial)."
+                    )
+                }
+            )
 
     class Meta:
         constraints = [

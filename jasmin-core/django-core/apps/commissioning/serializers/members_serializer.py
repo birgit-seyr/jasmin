@@ -592,11 +592,21 @@ class SubscriptionSerializer(
                 .first()
             )
             if gross_price is not None:
-                floor = (
-                    gross_price.solidarity_min_price_per_delivery
-                    if gross_price.solidarity_min_price_per_delivery is not None
-                    else gross_price.price_per_delivery
-                )
+                # Trial subscriptions are floored against the trial-specific
+                # pair when the variation carries a trial reference; otherwise
+                # the regular pair. Within a pair the floor falls back to the
+                # reference when no explicit floor is set. ``is_trial`` was
+                # resolved above (trial-policy check). This mirrors the client
+                # (``NewSubscriptionModal``) so the two agree on the boundary.
+                if is_trial and gross_price.price_per_delivery_if_trial is not None:
+                    reference = gross_price.price_per_delivery_if_trial
+                    explicit_floor = (
+                        gross_price.solidarity_min_price_per_delivery_if_trial
+                    )
+                else:
+                    reference = gross_price.price_per_delivery
+                    explicit_floor = gross_price.solidarity_min_price_per_delivery
+                floor = explicit_floor if explicit_floor is not None else reference
                 if floor is not None and price < floor:
                     raise SolidarityPriceBelowMinimum(chosen=price, minimum=floor)
 

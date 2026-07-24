@@ -439,6 +439,17 @@ class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             .values("price_per_delivery_if_trial")[:1]
         )
 
+        # Trial solidarity floor — the trial-specific counterpart of
+        # ``active_solidarity_min_price_per_delivery``. When a subscription is
+        # ``is_trial`` the floor is enforced against THIS, not the regular one.
+        # Nullable (falls back to the trial reference on the client + server).
+        active_solidarity_min_if_trial_subquery = (
+            ShareTypeVariationGrossPrice.current.active_at_date(lookup_date)
+            .filter(share_type_variation=OuterRef("pk"))
+            .order_by("-valid_from")
+            .values("solidarity_min_price_per_delivery_if_trial")[:1]
+        )
+
         queryset = queryset.annotate(
             active_price_per_delivery=Subquery(active_price_subquery),
             active_price_sum_articles=Subquery(active_price_sum_articles_subquery),
@@ -446,6 +457,9 @@ class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 active_solidarity_min_subquery
             ),
             active_price_per_delivery_if_trial=Subquery(active_price_if_trial_subquery),
+            active_solidarity_min_price_per_delivery_if_trial=Subquery(
+                active_solidarity_min_if_trial_subquery
+            ),
         )
 
         queryset = queryset.annotate(

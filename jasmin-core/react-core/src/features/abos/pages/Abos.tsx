@@ -197,16 +197,21 @@ export default function Abos() {
           quantity: 1,
         };
 
-        // Default the payment cycle to MONTHLY when that cycle exists. The FK
-        // select is bound to the display field (``payment_cycle_name``) and
-        // matches options by their value (the cycle id), so both keys carry the
-        // monthly cycle's id — the same shape a manual pick would produce.
-        const monthlyCycle = paymentCycles.find(
-          (cycle) => cycle.choice === PaymentCycleEnum.MONTHLY,
-        );
-        if (monthlyCycle) {
-          defaultValues.payment_cycle = monthlyCycle.value;
-          defaultValues.payment_cycle_name = monthlyCycle.value;
+        // Default the payment cycle: when only one cycle is allowed there's
+        // nothing to choose, so pre-fill it; otherwise fall back to MONTHLY
+        // when that cycle exists. The FK select is bound to the display field
+        // (``payment_cycle_name``) and matches options by their value (the
+        // cycle id), so both keys carry the cycle's id — the same shape a
+        // manual pick would produce.
+        const defaultCycle =
+          paymentCycles.length === 1
+            ? paymentCycles[0]
+            : paymentCycles.find(
+                (cycle) => cycle.choice === PaymentCycleEnum.MONTHLY,
+              );
+        if (defaultCycle) {
+          defaultValues.payment_cycle = defaultCycle.value;
+          defaultValues.payment_cycle_name = defaultCycle.value;
         }
 
         // Set the form values with defaults

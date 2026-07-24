@@ -5,6 +5,7 @@ import {
   Button,
   Checkbox,
   Col,
+  ConfigProvider,
   DatePicker,
   Flex,
   Form,
@@ -54,7 +55,7 @@ import ShareTypeVariationPickerGrid from "../components/ShareTypeVariationPicker
 import { DeliveryStationMap } from "@shared/ui";
 import type { DeliveryStationMapMarker } from "@shared/ui";
 import ToolTipIcon from "@shared/ui/ToolTipIcon";
-import { notify } from "@shared/utils";
+import { filterVariationsForTrial, notify } from "@shared/utils";
 import { getErrorCode, getErrorMessage } from "@shared/utils/apiError";
 import SepaSetupModal from "@features/members/modals/SepaSetupModal";
 import { usePaymentsBillingProfilesList } from "@shared/api/generated/payments-—-billing-profiles/payments-—-billing-profiles";
@@ -217,6 +218,23 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   });
   const { paymentCycles } = usePaymentCycles();
 
+  // "is_trial" is chosen BEFORE the variation (step 1), because not all
+  // variations may be used for a trial (``allowed_for_trial_subscription``).
+  // Public mode is forced by the ``forceTrial`` prop (the registration card
+  // already decided); office mode gets the toggle below.
+  const [pickerIsTrial, setPickerIsTrial] = useState(forceTrial);
+  const effectiveTrialForPicker = publicMode
+    ? forceTrial === true
+    : pickerIsTrial;
+  // Only trial-eligible variations are offered when the (effective) choice is a
+  // trial — the single ``filterVariationsForTrial`` predicate shared with the
+  // abos table + registration.
+  const pickerVariations = useMemo(
+    () =>
+      filterVariationsForTrial(shareTypeVariations, effectiveTrialForPicker),
+    [shareTypeVariations, effectiveTrialForPicker],
+  );
+
   // The selected variation re-read from the (valid_from-annotated) list, so its
   // active_solidarity_min / active_price reflect the chosen start date — the
   // ``selectedVariation`` state object was annotated at selection time (today).
@@ -229,19 +247,6 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         : null,
     [shareTypeVariations, selectedVariation],
   );
-
-  // Re-prefill the price when the reference for the effective start date
-  // changes: ``active_price_per_delivery`` is annotated at ``pricingDate``
-  // (the chosen valid_from, or the earliest possible start), so crossing a
-  // time-bound gross-price boundary must update the field — otherwise the
-  // office would submit the selection-time (earliest-start) price for a later
-  // term. Keyed on the price VALUE, not valid_from, so a manual solidarity
-  // edit within the SAME price window is preserved.
-  useEffect(() => {
-    const reference = liveVariation?.active_price_per_delivery;
-    if (reference == null) return;
-    form.setFieldsValue({ price_per_delivery: Number.parseFloat(reference) });
-  }, [liveVariation?.active_price_per_delivery, form]);
 
   // ── Capacity window ──────────────────────────────────────────────
   // A station's free slots depend on the subscription's term, so the
@@ -327,6 +332,50 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // there (otherwise the term math would fall through to the one-year branch).
   const effectiveIsTrial = publicMode ? forceTrial === true : isTrial === true;
 
+  // Reference price (Richtpreis) for the effective start date. When this is a
+  // trial AND the variation carries a trial-specific reference
+  // (``active_price_per_delivery_if_trial``) use that; otherwise the regular
+  // ``active_price_per_delivery``. Drives the prefill, the reference hint, and
+  // the solidarity-floor fallback so a trial shows trial pricing throughout.
+  const referencePrice =
+    effectiveIsTrial &&
+    liveVariation?.active_price_per_delivery_if_trial != null
+      ? liveVariation.active_price_per_delivery_if_trial
+      : (liveVariation?.active_price_per_delivery ?? null);
+
+  // Explicit solidarity floor for the effective mode: the trial-specific floor
+  // when this is a trial that uses the trial reference, else the regular floor
+  // (null when the variation sets none). The InputNumber min falls back to the
+  // (trial-aware) reference when there's no explicit floor — mirrors the server
+  // guard in ``SubscriptionSerializer.validate`` so client + server agree.
+  const explicitSolidarityFloor =
+    effectiveIsTrial &&
+    liveVariation?.active_price_per_delivery_if_trial != null
+      ? (liveVariation?.active_solidarity_min_price_per_delivery_if_trial ?? null)
+      : (liveVariation?.active_solidarity_min_price_per_delivery ?? null);
+  const solidarityFloor = explicitSolidarityFloor ?? referencePrice;
+
+  // Re-prefill the price when the reference for the effective start date
+  // changes: the reference is annotated at the chosen ``valid_from`` (or the
+  // earliest possible start), so crossing a time-bound gross-price boundary —
+  // or the trial/regular reference swapping — must update the field. Keyed on
+  // the reference VALUE, so a manual solidarity edit within the same window is
+  // preserved.
+  useEffect(() => {
+    if (referencePrice == null) return;
+    form.setFieldsValue({
+      price_per_delivery: Number.parseFloat(referencePrice),
+    });
+  }, [referencePrice, form]);
+
+  // With exactly one allowed payment cycle there is nothing to choose — seed
+  // it so the fixed (disabled) field below still carries a value into submit.
+  useEffect(() => {
+    if (paymentCycles.length === 1) {
+      form.setFieldsValue({ payment_cycle: paymentCycles[0].value });
+    }
+  }, [paymentCycles, form]);
+
   // ``valid_until`` is read-only + auto-filled when the tenant config fully
   // determines it (trial duration, season end, or one-year term). Otherwise
   // it's a free Sunday the office types.
@@ -408,9 +457,9 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // settings overlay) so the gate applies there too — default true.
   const allowsWaitingList = Boolean(
     getSetting("allows_waiting_list_for_subscriptions") ??
-      (tenant as Record<string, unknown> | null)
-        ?.allows_waiting_list_for_subscriptions ??
-      true,
+    (tenant as Record<string, unknown> | null)
+      ?.allows_waiting_list_for_subscriptions ??
+    true,
   );
 
   // Distinct delivery weekdays present among the loaded station-days. When more
@@ -444,24 +493,24 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
           dayFilter === "all" || Number(dsd.delivery_day_number) === dayFilter,
       )
       .map((dsd) => {
-      const { total, minFree, isFull } = showCapacity
-        ? stationDayTermCapacity(
-            dsd.capacity,
-            dsd.capacity_by_week,
-            periodWeekKeys,
-            quantity,
-          )
-        : { total: null, minFree: null, isFull: false };
-      return {
-        value: dsd.value,
-        label: dsd.label,
-        total,
-        free: minFree,
-        isFull,
-        // Office sees a full station greyed when the waiting list is off.
-        disabled: !allowsWaitingList && isFull,
-      };
-    });
+        const { total, minFree, isFull } = showCapacity
+          ? stationDayTermCapacity(
+              dsd.capacity,
+              dsd.capacity_by_week,
+              periodWeekKeys,
+              quantity,
+            )
+          : { total: null, minFree: null, isFull: false };
+        return {
+          value: dsd.value,
+          label: dsd.label,
+          total,
+          free: minFree,
+          isFull,
+          // Office sees a full station greyed when the waiting list is off.
+          disabled: !allowsWaitingList && isFull,
+        };
+      });
     // Members / public don't see full stations at all when the list is off.
     if (simplified && !allowsWaitingList) {
       return options.filter((option) => !option.isFull);
@@ -524,7 +573,10 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
 
     for (const dsd of deliveryStationDays) {
       // Mirror the Select's day filter so the map shows the same stations.
-      if (dayFilter !== "all" && Number(dsd.delivery_day_number) !== dayFilter) {
+      if (
+        dayFilter !== "all" &&
+        Number(dsd.delivery_day_number) !== dayFilter
+      ) {
         continue;
       }
       const lat = dsd.coords_lat != null ? Number(dsd.coords_lat) : NaN;
@@ -557,44 +609,46 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     return Array.from(byStation.values())
       .filter((station) => station.days.length > 0)
       .map((station) => ({
-      id: station.stationId,
-      lat: station.lat,
-      lon: station.lon,
-      label: station.name,
-      selected: station.days.some((day) => day.value === selectedStationDay),
-      disabled: station.days.every((day) => day.isFull),
-      popup: (
-        <div>
-          <strong>{station.name}</strong>
-          <Flex vertical gap={4} style={{ marginTop: 8 }}>
-            {station.days.map((day) => (
-              <Button
-                key={day.value}
-                size="small"
-                // Office sees a full day greyed when the waiting list is off.
-                disabled={!allowsWaitingList && day.isFull}
-                type={day.value === selectedStationDay ? "primary" : "default"}
-                onClick={() =>
-                  form.setFieldsValue({
-                    default_delivery_station_day: day.value,
-                  })
-                }
-              >
-                {day.label}
-                {day.isFull
-                  ? ` · ${t("abos.station_full_waiting_list")}`
-                  : day.total != null && day.free != null
-                    ? ` · ${t("delivery.free_spots_of_total", {
-                        free: day.free,
-                        total: day.total,
-                      })}`
-                    : ""}
-              </Button>
-            ))}
-          </Flex>
-        </div>
-      ),
-    }));
+        id: station.stationId,
+        lat: station.lat,
+        lon: station.lon,
+        label: station.name,
+        selected: station.days.some((day) => day.value === selectedStationDay),
+        disabled: station.days.every((day) => day.isFull),
+        popup: (
+          <div>
+            <strong>{station.name}</strong>
+            <Flex vertical gap={4} style={{ marginTop: 8 }}>
+              {station.days.map((day) => (
+                <Button
+                  key={day.value}
+                  size="small"
+                  // Office sees a full day greyed when the waiting list is off.
+                  disabled={!allowsWaitingList && day.isFull}
+                  type={
+                    day.value === selectedStationDay ? "primary" : "default"
+                  }
+                  onClick={() =>
+                    form.setFieldsValue({
+                      default_delivery_station_day: day.value,
+                    })
+                  }
+                >
+                  {day.label}
+                  {day.isFull
+                    ? ` · ${t("abos.station_full_waiting_list")}`
+                    : day.total != null && day.free != null
+                      ? ` · ${t("delivery.free_spots_of_total", {
+                          free: day.free,
+                          total: day.total,
+                        })}`
+                      : ""}
+                </Button>
+              ))}
+            </Flex>
+          </div>
+        ),
+      }));
   }, [
     deliveryStationDays,
     showCapacity,
@@ -644,13 +698,25 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   const handleSelectVariation = useCallback(
     (variation: ShareTypeVariationOption) => {
       setSelectedVariation(variation);
+      // Seed the price from the reference matching the step-1 choice: the
+      // trial reference when this is a trial AND the variation has one, else
+      // the regular reference. (The prefill effect re-confirms this once the
+      // details form mounts; seeding here avoids a regular→trial price flash.)
+      const seedReference =
+        effectiveTrialForPicker &&
+        variation.active_price_per_delivery_if_trial != null
+          ? variation.active_price_per_delivery_if_trial
+          : variation.active_price_per_delivery;
       form.setFieldsValue({
-        price_per_delivery: variation.active_price_per_delivery
-          ? Number.parseFloat(variation.active_price_per_delivery)
+        // Carry the step-1 Probe/Anteil choice into the details form so the
+        // term math + submit payload match what the office picked.
+        is_trial: effectiveTrialForPicker,
+        price_per_delivery: seedReference
+          ? Number.parseFloat(seedReference)
           : undefined,
       });
     },
-    [form],
+    [form, effectiveTrialForPicker],
   );
 
   const handleBack = useCallback(() => {
@@ -875,462 +941,494 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
 
   return (
     <>
-    <Modal
-      title={
-        selectedVariation ? (
-          <Space>
-            <Button
-              type="text"
-              icon={<ArrowLeftOutlined />}
-              onClick={handleBack}
-              size="small"
-              aria-label={t("common.back")}
-            />
-            {selectedVariation.share_type_name} –{" "}
-            {getShareTypeVariationSizeLabel(selectedVariation.size ?? "")}
-          </Space>
-        ) : (
-          t("members.additional_subscription")
-        )
-      }
-      open={visible}
-      onCancel={handleCancel}
-      destroyOnHidden
-      width={selectedVariation ? 500 : 720}
-      footer={
-        selectedVariation ? (
-          <ModalCancelSaveFooter
-            onCancel={handleCancel}
-            onPrimary={handleSave}
-            loading={saving}
-            // The Abo-Vertrag consent is mandatory: keep the primary button
-            // greyed out (not green) until it's ticked when the tenant
-            // publishes one. Also blocked when a full term can't be queued
-            // (waiting list off) — there's no way to complete the subscribe.
-            primaryDisabled={Boolean(
-              (subscriptionContractDoc && !subscriptionContractAccepted) ||
-                (!allowsWaitingList && isFullForTerm),
-            )}
-          />
-        ) : null
-      }
-    >
-      {!selectedVariation ? (
-        /* ── Step 1: visual variation picker ── */
-        <ShareTypeVariationPickerGrid
-          variations={shareTypeVariations}
-          onSelect={handleSelectVariation}
-          activeQuantityByVariation={activeQuantityByVariation}
-        />
-      ) : (
-        /* ── Step 2: subscription details form ── */
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{ quantity: 1, is_trial: forceTrial }}
-          disabled={saving}
-        >
-          {selectedVariation.picture && (
-            <div style={{ textAlign: "center", marginBottom: 16 }}>
-              <img
-                src={selectedVariation.picture}
-                alt={selectedVariation.label}
-                className="new-subscription-detail-image"
-              />
-            </div>
-          )}
-
-          {selectedVariation.description && (
-            <Paragraph
-              type="secondary"
-              style={{ marginBottom: 16, overflowWrap: "break-word" }}
-            >
-              <span
-                dangerouslySetInnerHTML={{
-                  __html: cleanDescriptionHtml(selectedVariation.description),
-                }}
-              />
-            </Paragraph>
-          )}
-
-          {/* is_trial FIRST: it changes valid_from's earliest date + the
-              auto-filled valid_until (trial end), so the applicant/office
-              decides trial before the dates. */}
-          {allowsTrial && !simplified && (
-            <>
-              <Form.Item
-                name="is_trial"
-                valuePropName="checked"
-                style={{ marginBottom: sentenceTrialAbo ? 4 : undefined }}
-                extra={
-                  isTrial ? (
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {trialEnd
-                        ? t("abos.is_trial_hint", {
-                            date: formatDate(trialEnd),
-                          })
-                        : t("abos.is_trial_hint_nodate")}
-                    </Text>
-                  ) : undefined
-                }
-              >
-                {/* MUST be the Form.Item's ONLY child — with extra siblings
-                    AntD won't bind ``checked``, so the toggle wouldn't update
-                    is_trial (and valid_until wouldn't recompute). */}
-                <Checkbox>
-                  {trialDurationInDeliveries != null
-                    ? t("members.trial_subscription_weeks", {
-                        weeks: trialDurationInDeliveries,
-                      })
-                    : t("members.is_trial_subscription")}
-                </Checkbox>
-              </Form.Item>
-              {sentenceTrialAbo && (
-                <Paragraph type="secondary" style={{ fontSize: 12 }}>
-                  {sentenceTrialAbo}
-                </Paragraph>
-              )}
-            </>
-          )}
-
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item
-                name="valid_from"
-                label={t("abos.valid_from")}
-                rules={[{ required: true, message: t("common.required") }]}
-              >
-                <DatePicker
-                  className="w-full"
-                  format={dateFormat}
-                  disabledDate={disableValidFrom}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="valid_until"
-                label={t("abos.valid_until")}
-                // A subscription must have an end date (the backend rejects
-                // open-ended ones). Disable + skip the required rule ONLY when
-                // it's auto-filled + locked (a tenant term rule populates it).
-                // Without a term rule the auto-fill never runs, so even in the
-                // simplified member/public view the field must stay editable +
-                // required — otherwise it's disabled, empty and unvalidated and
-                // the member dead-ends on a raw 400.
-                rules={
-                  lockValidUntil
-                    ? undefined
-                    : [{ required: true, message: t("common.required") }]
-                }
-                extra={
-                  validUntilHint ? (
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {validUntilHint}
-                    </Text>
-                  ) : undefined
-                }
-              >
-                <DatePicker
-                  className="w-full"
-                  format={dateFormat}
-                  disabled={lockValidUntil}
-                  disabledDate={disableValidUntil}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {pausesInTerm.length > 0 && (
-            <Alert
-              type="warning"
-              showIcon
-              style={{ marginBottom: 16 }}
-              message={t("abos.delivery_pauses_in_term")}
-              description={
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {pausesInTerm.map((p) => (
-                    <li key={`${p.share_type_variation}-${p.valid_from}`}>
-                      {formatDate(p.valid_from)} – {formatDate(p.valid_until)}
-                      {p.note ? ` — ${p.note}` : ""}
-                    </li>
-                  ))}
-                </ul>
-              }
-            />
-          )}
-
-          {availableDays.length > 1 && (
-            <Form.Item label={t("delivery.filter_by_day")}>
-              <Segmented
+      <Modal
+        title={
+          selectedVariation ? (
+            <Space>
+              <Button
+                type="text"
+                icon={<ArrowLeftOutlined />}
+                onClick={handleBack}
                 size="small"
-                value={dayFilter === "all" ? "all" : String(dayFilter)}
-                onChange={(value) => {
-                  const next = value === "all" ? "all" : Number(value);
-                  setDayFilter(next);
-                  // Drop a now-hidden selection so the Select can't show a value
-                  // with no matching (visible) option.
-                  if (next !== "all" && selectedStationDay) {
-                    const selected = deliveryStationDays.find(
-                      (dsd) => dsd.value === selectedStationDay,
-                    );
-                    if (
-                      selected &&
-                      Number(selected.delivery_day_number) !== next
-                    ) {
-                      form.setFieldsValue({
-                        default_delivery_station_day: undefined,
-                      });
-                    }
-                  }
-                }}
-                options={[
-                  { label: t("common.all"), value: "all" },
-                  ...availableDays.map((n) => ({
-                    label: deliveryDayLabel(t, n),
-                    value: String(n),
-                  })),
-                ]}
+                aria-label={t("common.back")}
               />
-            </Form.Item>
-          )}
-          <Form.Item
-            name="default_delivery_station_day"
-            label={t("delivery.station")}
-            rules={[{ required: true, message: t("common.required") }]}
+              {selectedVariation.share_type_name} –{" "}
+              {getShareTypeVariationSizeLabel(selectedVariation.size ?? "")}
+            </Space>
+          ) : (
+            t("members.additional_subscription")
+          )
+        }
+        open={visible}
+        onCancel={handleCancel}
+        destroyOnHidden
+        width={selectedVariation ? 500 : 720}
+        footer={
+          selectedVariation ? (
+            <ModalCancelSaveFooter
+              onCancel={handleCancel}
+              onPrimary={handleSave}
+              loading={saving}
+              // The Abo-Vertrag consent is mandatory: keep the primary button
+              // greyed out (not green) until it's ticked when the tenant
+              // publishes one. Also blocked when a full term can't be queued
+              // (waiting list off) — there's no way to complete the subscribe.
+              primaryDisabled={Boolean(
+                (subscriptionContractDoc && !subscriptionContractAccepted) ||
+                (!allowsWaitingList && isFullForTerm),
+              )}
+            />
+          ) : null
+        }
+      >
+        {!selectedVariation ? (
+          /* ── Step 1: Probe/Anteil choice + visual variation picker ── */
+          <>
+            {allowsTrial && !simplified && (
+              <ConfigProvider
+                theme={{
+                  components: {
+                    Segmented: {
+                      itemSelectedBg: "var(--color-primary)",
+                      itemSelectedColor: "#ffffff",
+                    },
+                  },
+                }}
+              >
+                <Segmented
+                  block
+                  value={pickerIsTrial ? "trial" : "regular"}
+                  onChange={(value) => setPickerIsTrial(value === "trial")}
+                  options={[
+                    { label: t("abos.kind_regular"), value: "regular" },
+                    { label: t("abos.kind_trial"), value: "trial" },
+                  ]}
+                  style={{ marginBottom: 16 }}
+                  aria-label={t("abos.kind_toggle_label")}
+                />
+              </ConfigProvider>
+            )}
+            <ShareTypeVariationPickerGrid
+              variations={pickerVariations}
+              onSelect={handleSelectVariation}
+              activeQuantityByVariation={activeQuantityByVariation}
+            />
+          </>
+        ) : (
+          /* ── Step 2: subscription details form ── */
+          <Form
+            form={form}
+            layout="vertical"
+            initialValues={{ quantity: 1, is_trial: effectiveTrialForPicker }}
+            disabled={saving}
           >
-            <Select
-              showSearch
-              optionFilterProp="label"
-              loading={stationsLoading}
-              placeholder={t("delivery.select_station")}
-              options={stationOptions}
-              optionRender={(option) => {
-                const total = option.data.total as number | null;
-                const free = option.data.free as number | null;
-                const isFull = Boolean(option.data.isFull);
-                return (
-                  <Flex vertical>
-                    <span>
-                      {option.label}
-                      {isFull && (
-                        <Tag color="orange" style={{ marginLeft: 8 }}>
-                          {t("abos.station_full_waiting_list")}
-                        </Tag>
-                      )}
-                    </span>
-                    {!isFull && total != null && free != null && (
+            {selectedVariation.picture && (
+              <div style={{ textAlign: "center", marginBottom: 16 }}>
+                <img
+                  src={selectedVariation.picture}
+                  alt={selectedVariation.label}
+                  className="new-subscription-detail-image"
+                />
+              </div>
+            )}
+
+            {selectedVariation.description && (
+              <Paragraph
+                type="secondary"
+                style={{ marginBottom: 16, overflowWrap: "break-word" }}
+              >
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: cleanDescriptionHtml(selectedVariation.description),
+                  }}
+                />
+              </Paragraph>
+            )}
+
+            {/* The Probe/Anteil choice is made by the step-1 toggle. Only when
+              this is a trial do we surface the (read-only) checkbox + trial-end
+              hint as a reminder; for a regular subscription it isn't shown at
+              all. Gate on the step-1 state (not the watched form field) so the
+              field is registered from first mount whenever trial was chosen —
+              office submit then reads is_trial true; a regular choice leaves it
+              unregistered → false. */}
+            {allowsTrial && !simplified && effectiveTrialForPicker && (
+              <>
+                <Form.Item
+                  name="is_trial"
+                  valuePropName="checked"
+                  style={{ marginBottom: sentenceTrialAbo ? 4 : undefined }}
+                  extra={
+                    isTrial ? (
                       <Text type="secondary" style={{ fontSize: 12 }}>
-                        {t("delivery.free_spots_of_total", { free, total })}
-                      </Text>
-                    )}
-                  </Flex>
-                );
-              }}
-            />
-          </Form.Item>
-
-          {isFullForTerm && !waitingListOffer && (
-            <Alert
-              type="warning"
-              showIcon
-              style={{ marginBottom: 16 }}
-              message={
-                !allowsWaitingList
-                  ? t("abos.full_unavailable_notice")
-                  : selectedVariationIsFull
-                    ? t("abos.waiting_list_notice_variation")
-                    : t("abos.waiting_list_notice")
-              }
-            />
-          )}
-
-          {waitingListOffer && (
-            <Alert
-              type="warning"
-              showIcon
-              style={{ marginBottom: 16 }}
-              message={
-                waitingListOffer === "variation"
-                  ? t("abos.waiting_list_offer_text_variation")
-                  : t("abos.waiting_list_offer_text")
-              }
-              action={
-                <Button
-                  size="small"
-                  type="primary"
-                  loading={saving}
-                  onClick={() => performCreate(true)}
-                >
-                  {t("abos.waiting_list_offer_confirm")}
-                </Button>
-              }
-              closable
-              onClose={() => setWaitingListOffer(null)}
-            />
-          )}
-
-          {stationMarkers.length > 0 && (
-            <Form.Item label={t("delivery.map_pick_hint")}>
-              <DeliveryStationMap markers={stationMarkers} height={300} />
-            </Form.Item>
-          )}
-
-          <Row gutter={12}>
-            <Col span={8}>
-              <Form.Item
-                name="quantity"
-                label={t("members.quantity")}
-                rules={[{ required: true, message: t("common.required") }]}
-              >
-                <InputNumber min={1} className="w-full" />
-              </Form.Item>
-            </Col>
-            <Col span={16}>
-              <Form.Item
-                name="price_per_delivery"
-                label={
-                  <>
-                    {t("abos.price_per_delivery")}
-                    {allowsSolidarity && (
-                      <ToolTipIcon
-                        title={t("abos.solidarity_pricing_tooltip")}
-                      />
-                    )}
-                  </>
-                }
-                // Only require when the field is editable. In the simplified
-                // member/public view without solidarity pricing the price is
-                // disabled + prefilled from the variation; attaching a required
-                // rule to that disabled field would show an unclearable inline
-                // error under a greyed input for an unpriced variation.
-                rules={
-                  simplified && !allowsSolidarity
-                    ? undefined
-                    : [{ required: true, message: t("common.required") }]
-                }
-                extra={
-                  allowsSolidarity && liveVariation?.active_price_per_delivery
-                    ? [
-                        // Richtpreis (recommended reference price).
-                        t("abos.reference_price_hint", {
-                          price: formatCurrency(
-                            Number.parseFloat(
-                              liveVariation.active_price_per_delivery,
-                            ),
-                          ),
-                        }),
-                        // Untere Grenze (solidarity floor the office/member may
-                        // not go below — same value the InputNumber min enforces).
-                        liveVariation?.active_solidarity_min_price_per_delivery
-                          ? t("abos.solidarity_floor_hint", {
-                              price: formatCurrency(
-                                Number.parseFloat(
-                                  liveVariation.active_solidarity_min_price_per_delivery,
-                                ),
-                              ),
+                        {trialEnd
+                          ? t("abos.is_trial_hint", {
+                              date: formatDate(trialEnd),
                             })
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")
-                    : undefined
-                }
-              >
-                <InputNumber
-                  // Solidarity floor (variation's solidarity_min, or the
-                  // reference if none) AT the chosen valid_from. The backend
-                  // re-validates this against the same valid_from window.
-                  min={
-                    allowsSolidarity
-                      ? Number.parseFloat(
-                          liveVariation?.active_solidarity_min_price_per_delivery ??
-                            liveVariation?.active_price_per_delivery ??
-                            "0",
-                        )
-                      : 0
+                          : t("abos.is_trial_hint_nodate")}
+                      </Text>
+                    ) : undefined
                   }
-                  step={0.01}
-                  precision={2}
-                  className="w-full"
-                  suffix={currencySymbol}
-                  // Members can set their own price ONLY when solidarity pricing
-                  // is enabled; otherwise it's pre-filled + derived server-side.
-                  // Office can always override it.
-                  disabled={simplified && !allowsSolidarity}
+                >
+                  {/* MUST be the Form.Item's ONLY child — with extra siblings
+                    AntD won't bind ``checked``, so the toggle wouldn't update
+                    is_trial (and valid_until wouldn't recompute). Read-only: the
+                    Probe/Anteil choice is made by the step-1 toggle (which also
+                    filters the pickable variations); this just reflects it. */}
+                  <Checkbox disabled>
+                    {trialDurationInDeliveries != null
+                      ? t("members.trial_subscription_weeks", {
+                          weeks: trialDurationInDeliveries,
+                        })
+                      : t("members.is_trial_subscription")}
+                  </Checkbox>
+                </Form.Item>
+                {sentenceTrialAbo && (
+                  <Paragraph type="secondary" style={{ fontSize: 12 }}>
+                    {sentenceTrialAbo}
+                  </Paragraph>
+                )}
+              </>
+            )}
+
+            <Row gutter={12}>
+              <Col span={12}>
+                <Form.Item
+                  name="valid_from"
+                  label={t("abos.valid_from")}
+                  rules={[{ required: true, message: t("common.required") }]}
+                >
+                  <DatePicker
+                    className="w-full"
+                    format={dateFormat}
+                    disabledDate={disableValidFrom}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="valid_until"
+                  label={t("abos.valid_until")}
+                  // A subscription must have an end date (the backend rejects
+                  // open-ended ones). Disable + skip the required rule ONLY when
+                  // it's auto-filled + locked (a tenant term rule populates it).
+                  // Without a term rule the auto-fill never runs, so even in the
+                  // simplified member/public view the field must stay editable +
+                  // required — otherwise it's disabled, empty and unvalidated and
+                  // the member dead-ends on a raw 400.
+                  rules={
+                    lockValidUntil
+                      ? undefined
+                      : [{ required: true, message: t("common.required") }]
+                  }
+                  extra={
+                    validUntilHint ? (
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {validUntilHint}
+                      </Text>
+                    ) : undefined
+                  }
+                >
+                  <DatePicker
+                    className="w-full"
+                    format={dateFormat}
+                    disabled={lockValidUntil}
+                    disabledDate={disableValidUntil}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            {pausesInTerm.length > 0 && (
+              <Alert
+                type="warning"
+                showIcon
+                style={{ marginBottom: 16 }}
+                message={t("abos.delivery_pauses_in_term")}
+                description={
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {pausesInTerm.map((p) => (
+                      <li key={`${p.share_type_variation}-${p.valid_from}`}>
+                        {formatDate(p.valid_from)} – {formatDate(p.valid_until)}
+                        {p.note ? ` — ${p.note}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                }
+              />
+            )}
+
+            {availableDays.length > 1 && (
+              <Form.Item label={t("delivery.filter_by_day")}>
+                <Segmented
+                  size="small"
+                  value={dayFilter === "all" ? "all" : String(dayFilter)}
+                  onChange={(value) => {
+                    const next = value === "all" ? "all" : Number(value);
+                    setDayFilter(next);
+                    // Drop a now-hidden selection so the Select can't show a value
+                    // with no matching (visible) option.
+                    if (next !== "all" && selectedStationDay) {
+                      const selected = deliveryStationDays.find(
+                        (dsd) => dsd.value === selectedStationDay,
+                      );
+                      if (
+                        selected &&
+                        Number(selected.delivery_day_number) !== next
+                      ) {
+                        form.setFieldsValue({
+                          default_delivery_station_day: undefined,
+                        });
+                      }
+                    }
+                  }}
+                  options={[
+                    { label: t("common.all"), value: "all" },
+                    ...availableDays.map((n) => ({
+                      label: deliveryDayLabel(t, n),
+                      value: String(n),
+                    })),
+                  ]}
                 />
               </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item
-            name="payment_cycle"
-            label={t("abos.payment_cycle")}
-            rules={[{ required: true, message: t("common.required") }]}
-          >
-            <Select
-              placeholder={t("abos.select_payment_cycle")}
-              options={paymentCycles.map((cycle) => ({
-                value: cycle.value,
-                label: cycle.label,
-              }))}
-            />
-          </Form.Item>
-          <Text type="secondary">{t("abos.payment_method_sepa")}</Text>
-          {publicMode && (
-            <Alert
-              type="info"
-              showIcon
-              style={{ marginTop: 12 }}
-              message={t("abos.public_sepa_mandate_hint")}
-            />
-          )}
-          {needsSepaMandate && !sepaReady && (
-            <Alert
-              type="warning"
-              showIcon
-              style={{ marginTop: 12 }}
-              message={t(
-                isMemberOnly
-                  ? "abos.sepa_mandate_missing_self"
-                  : "abos.sepa_mandate_missing",
-              )}
-              action={
-                <Button
-                  size="small"
-                  type="primary"
-                  onClick={() => setSepaModalOpen(true)}
-                >
-                  {t("abos.set_up_sepa_mandate")}
-                </Button>
-              }
-            />
-          )}
-
-          {/* Subscription-contract consent — only when the tenant publishes
-              one; required before the subscription can be saved (all modes). */}
-          {subscriptionContractDoc && (
-            <div style={{ marginTop: 16 }}>
-              <ConsentDocumentField
-                doc={subscriptionContractDoc}
-                accepted={subscriptionContractAccepted}
-                onChange={setSubscriptionContractAccepted}
-                labelKey="abos.accept_subscription_contract"
+            )}
+            <Form.Item
+              name="default_delivery_station_day"
+              label={t("delivery.station")}
+              rules={[{ required: true, message: t("common.required") }]}
+            >
+              <Select
+                showSearch
+                optionFilterProp="label"
+                loading={stationsLoading}
+                placeholder={t("delivery.select_station")}
+                options={stationOptions}
+                optionRender={(option) => {
+                  const total = option.data.total as number | null;
+                  const free = option.data.free as number | null;
+                  const isFull = Boolean(option.data.isFull);
+                  return (
+                    <Flex vertical>
+                      <span>
+                        {option.label}
+                        {isFull && (
+                          <Tag color="orange" style={{ marginLeft: 8 }}>
+                            {t("abos.station_full_waiting_list")}
+                          </Tag>
+                        )}
+                      </span>
+                      {!isFull && total != null && free != null && (
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {t("delivery.free_spots_of_total", { free, total })}
+                        </Text>
+                      )}
+                    </Flex>
+                  );
+                }}
               />
-            </div>
-          )}
-        </Form>
+            </Form.Item>
+
+            {isFullForTerm && !waitingListOffer && (
+              <Alert
+                type="warning"
+                showIcon
+                style={{ marginBottom: 16 }}
+                message={
+                  !allowsWaitingList
+                    ? t("abos.full_unavailable_notice")
+                    : selectedVariationIsFull
+                      ? t("abos.waiting_list_notice_variation")
+                      : t("abos.waiting_list_notice")
+                }
+              />
+            )}
+
+            {waitingListOffer && (
+              <Alert
+                type="warning"
+                showIcon
+                style={{ marginBottom: 16 }}
+                message={
+                  waitingListOffer === "variation"
+                    ? t("abos.waiting_list_offer_text_variation")
+                    : t("abos.waiting_list_offer_text")
+                }
+                action={
+                  <Button
+                    size="small"
+                    type="primary"
+                    loading={saving}
+                    onClick={() => performCreate(true)}
+                  >
+                    {t("abos.waiting_list_offer_confirm")}
+                  </Button>
+                }
+                closable
+                onClose={() => setWaitingListOffer(null)}
+              />
+            )}
+
+            {stationMarkers.length > 0 && (
+              <Form.Item label={t("delivery.map_pick_hint")}>
+                <DeliveryStationMap markers={stationMarkers} height={300} />
+              </Form.Item>
+            )}
+
+            <Row gutter={12}>
+              <Col span={8}>
+                <Form.Item
+                  name="quantity"
+                  label={t("members.quantity")}
+                  rules={[{ required: true, message: t("common.required") }]}
+                >
+                  <InputNumber min={1} className="w-full" />
+                </Form.Item>
+              </Col>
+              <Col span={16}>
+                <Form.Item
+                  name="price_per_delivery"
+                  label={
+                    <>
+                      {t("abos.price_per_delivery")}
+                      {allowsSolidarity && (
+                        <ToolTipIcon
+                          title={t("abos.solidarity_pricing_tooltip")}
+                        />
+                      )}
+                    </>
+                  }
+                  // Only require when the field is editable. In the simplified
+                  // member/public view without solidarity pricing the price is
+                  // disabled + prefilled from the variation; attaching a required
+                  // rule to that disabled field would show an unclearable inline
+                  // error under a greyed input for an unpriced variation.
+                  rules={
+                    simplified && !allowsSolidarity
+                      ? undefined
+                      : [{ required: true, message: t("common.required") }]
+                  }
+                  extra={
+                    allowsSolidarity && referencePrice != null
+                      ? [
+                          // Richtpreis (recommended reference price) — the trial
+                          // reference when this is a trial and one exists.
+                          t("abos.reference_price_hint", {
+                            price: formatCurrency(
+                              Number.parseFloat(referencePrice),
+                            ),
+                          }),
+                          // Untere Grenze (solidarity floor the office/member may
+                          // not go below — same value the InputNumber min enforces).
+                          // Trial-aware: the trial floor when this is a trial.
+                          explicitSolidarityFloor
+                            ? t("abos.solidarity_floor_hint", {
+                                price: formatCurrency(
+                                  Number.parseFloat(explicitSolidarityFloor),
+                                ),
+                              })
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")
+                      : undefined
+                  }
+                >
+                  <InputNumber
+                    // Solidarity floor (variation's solidarity_min, or the
+                    // effective reference if none) AT the chosen valid_from — the
+                    // trial pair applies for a trial. The backend re-validates
+                    // this against the same valid_from window.
+                    min={
+                      allowsSolidarity
+                        ? Number.parseFloat(solidarityFloor ?? "0")
+                        : 0
+                    }
+                    step={0.01}
+                    precision={2}
+                    className="w-full"
+                    suffix={currencySymbol}
+                    // Members can set their own price ONLY when solidarity pricing
+                    // is enabled; otherwise it's pre-filled + derived server-side.
+                    // Office can always override it.
+                    disabled={simplified && !allowsSolidarity}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item
+              name="payment_cycle"
+              label={t("abos.payment_cycle")}
+              rules={[{ required: true, message: t("common.required") }]}
+            >
+              {/* With exactly one allowed cycle there's nothing to choose — show
+                it fixed (disabled) rather than as a one-option dropdown. The
+                value is seeded by the effect above so the submit still carries
+                it (disabled fields are included in validateFields). */}
+              <Select
+                placeholder={t("abos.select_payment_cycle")}
+                disabled={paymentCycles.length <= 1}
+                options={paymentCycles.map((cycle) => ({
+                  value: cycle.value,
+                  label: cycle.label,
+                }))}
+              />
+            </Form.Item>
+            <Text type="secondary">{t("abos.payment_method_sepa")}</Text>
+            {publicMode && (
+              <Alert
+                type="info"
+                showIcon
+                style={{ marginTop: 12 }}
+                message={t("abos.public_sepa_mandate_hint")}
+              />
+            )}
+            {needsSepaMandate && !sepaReady && (
+              <Alert
+                type="warning"
+                showIcon
+                style={{ marginTop: 12 }}
+                message={t(
+                  isMemberOnly
+                    ? "abos.sepa_mandate_missing_self"
+                    : "abos.sepa_mandate_missing",
+                )}
+                action={
+                  <Button
+                    size="small"
+                    type="primary"
+                    onClick={() => setSepaModalOpen(true)}
+                  >
+                    {t("abos.set_up_sepa_mandate")}
+                  </Button>
+                }
+              />
+            )}
+
+            {/* Subscription-contract consent — only when the tenant publishes
+              one; required before the subscription can be saved (all modes). */}
+            {subscriptionContractDoc && (
+              <div style={{ marginTop: 16 }}>
+                <ConsentDocumentField
+                  doc={subscriptionContractDoc}
+                  accepted={subscriptionContractAccepted}
+                  onChange={setSubscriptionContractAccepted}
+                  labelKey="abos.accept_subscription_contract"
+                />
+              </div>
+            )}
+          </Form>
+        )}
+      </Modal>
+      {needsSepaMandate && memberId && (
+        <SepaSetupModal
+          open={sepaModalOpen}
+          memberId={memberId}
+          onClose={() => {
+            setSepaModalOpen(false);
+            refetchBillingProfiles();
+          }}
+        />
       )}
-    </Modal>
-    {needsSepaMandate && memberId && (
-      <SepaSetupModal
-        open={sepaModalOpen}
-        memberId={memberId}
-        onClose={() => {
-          setSepaModalOpen(false);
-          refetchBillingProfiles();
-        }}
-      />
-    )}
     </>
   );
 };

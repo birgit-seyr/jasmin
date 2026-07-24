@@ -387,6 +387,7 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
     # registration wizard needs pre-login; the rest of the overlay stays
     # office-gated. Resolved once via ``_overlay`` (one query per tenant).
     allows_trial_subscriptions = serializers.SerializerMethodField()
+    allows_trial_subscriptions_for_trial_members = serializers.SerializerMethodField()
     min_number_coop_shares = serializers.SerializerMethodField()
     max_number_coop_shares = serializers.SerializerMethodField()
     value_one_coop_share = serializers.SerializerMethodField()
@@ -449,6 +450,11 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
             "legal_notice_extra_html",
             "friendly_captcha_sitekey",
             "allows_trial_subscriptions",
+            # The public trial card must not offer a trial when the tenant
+            # allows trial subscriptions only for full members (a trial
+            # registrant becomes a trial member). The full derived predicate is
+            # ``allows_trial_subscriptions AND allows_trial_subscriptions_for_trial_members``.
+            "allows_trial_subscriptions_for_trial_members",
             "min_number_coop_shares",
             "max_number_coop_shares",
             "value_one_coop_share",
@@ -494,6 +500,14 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
         # Default True mirrors the TenantSettings field default — a tenant
         # with no settings row yet still shows the trial card.
         return bool(self._overlay(obj).get("allows_trial_subscriptions", True))
+
+    def get_allows_trial_subscriptions_for_trial_members(self, obj: Tenant) -> bool:
+        # Default True mirrors the TenantSettings field default. Combined with
+        # ``allows_trial_subscriptions`` on the client, this gates the public
+        # trial card (a trial registrant is created as a trial member).
+        return bool(
+            self._overlay(obj).get("allows_trial_subscriptions_for_trial_members", True)
+        )
 
     def get_min_number_coop_shares(self, obj: Tenant) -> int:
         return int(self._overlay(obj).get("min_number_coop_shares", 3))
