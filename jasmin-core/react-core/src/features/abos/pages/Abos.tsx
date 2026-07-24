@@ -8,6 +8,10 @@
 import { AdminConfirmationModalAbos } from "@features/abos/modals/AdminConfirmationModalAbos";
 import { CancelSubscriptionModal } from "@features/abos/modals/CancelSubscriptionModal";
 import { RejectAboModal } from "@features/abos/modals/RejectAboModal";
+import SepaSetupModal from "@features/members/modals/SepaSetupModal";
+import { getPaymentsBillingProfilesMandateStatusListQueryKey } from "@shared/api/generated/payments/payments";
+import { isSepaMandateActiveForTerm } from "@shared/utils";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   commissioningAbosCreate,
   commissioningAbosDestroy,
@@ -97,25 +101,51 @@ export default function Abos() {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelRecord, setCancelRecord] = useState<AboRecord | null>(null);
 
-  // SEPA mandate overview: one office-only fetch mapped by member, plus the
-  // details modal opened from the status square.
+  // SEPA mandate overview: one office-only fetch mapped by member. The status
+  // square routes by state — a GREEN (active) mandate opens the read-only
+  // details modal (with an Edit action); a RED (no/inactive) mandate opens the
+  // editable office setup modal so the office can record it directly.
+  const queryClient = useQueryClient();
   const { getMandateForMember } = useSepaMandateStatus();
   const [sepaModalOpen, setSepaModalOpen] = useState(false);
   const [sepaModalState, setSepaModalState] = useState<{
     status: SepaMandateStatus | undefined;
     memberName: string;
     validUntil: string | null;
-  }>({ status: undefined, memberName: "", validUntil: null });
+    memberId: string | null;
+  }>({ status: undefined, memberName: "", validUntil: null, memberId: null });
+  // Member whose mandate the office is creating/editing (null = setup closed).
+  const [sepaSetupMemberId, setSepaSetupMemberId] = useState<string | null>(
+    null,
+  );
+  // The square reads the ``mandate_status`` query (not the billing-profiles
+  // list the setup modal invalidates), so refresh it explicitly after a save.
+  const refreshMandateStatus = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: getPaymentsBillingProfilesMandateStatusListQueryKey(),
+    });
+  }, [queryClient]);
   const handleShowSepaDetails = useCallback(
     (status: SepaMandateStatus | undefined, record: AboRecord) => {
-      setSepaModalState({
+      const memberId = (record.member as string | undefined) ?? null;
+      const active = isSepaMandateActiveForTerm(
         status,
-        memberName:
-          record.member_string ??
-          `${record.member_first_name ?? ""} ${record.member_last_name ?? ""}`.trim(),
-        validUntil: record.valid_until ?? null,
-      });
-      setSepaModalOpen(true);
+        record.valid_until ?? null,
+      );
+      if (active) {
+        setSepaModalState({
+          status,
+          memberName:
+            record.member_string ??
+            `${record.member_first_name ?? ""} ${record.member_last_name ?? ""}`.trim(),
+          validUntil: record.valid_until ?? null,
+          memberId,
+        });
+        setSepaModalOpen(true);
+      } else {
+        // Red square → create/record the mandate directly.
+        setSepaSetupMemberId(memberId);
+      }
     },
     [],
   );
@@ -475,6 +505,23 @@ export default function Abos() {
         status={sepaModalState.status}
         memberName={sepaModalState.memberName}
         validUntil={sepaModalState.validUntil}
+        onEdit={
+          sepaModalState.memberId
+            ? () => {
+                const memberId = sepaModalState.memberId;
+                setSepaModalOpen(false);
+                setSepaSetupMemberId(memberId);
+              }
+            : undefined
+        }
+      />
+
+      <SepaSetupModal
+        open={!!sepaSetupMemberId}
+        memberId={sepaSetupMemberId ?? ""}
+        officeMode
+        onClose={() => setSepaSetupMemberId(null)}
+        onSaved={refreshMandateStatus}
       />
     </div>
   );

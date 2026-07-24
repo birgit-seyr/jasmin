@@ -1,3 +1,4 @@
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AppsIcon from "@mui/icons-material/Apps";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import BlurCircularIcon from "@mui/icons-material/BlurCircular";
@@ -93,6 +94,15 @@ export default function AboSidebar({
       requireRole: "isOffice",
       icon: <CreditCardIcon />,
       label: <Link to="/abos/debits-abos">{t("abos.debits")}</Link>,
+    },
+    {
+      key: "abos-sepa-mandates",
+
+      requireRole: "isOffice",
+      icon: <AccountBalanceIcon />,
+      label: (
+        <Link to="/abos/sepa-mandates">{t("members.sepa_mandates")}</Link>
+      ),
     },
 
     ...(uses_pledge_round

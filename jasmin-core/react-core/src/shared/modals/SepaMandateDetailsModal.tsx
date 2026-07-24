@@ -2,7 +2,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from "@ant-design/icons";
-import { Descriptions, Modal, Tag, Typography } from "antd";
+import { Button, Descriptions, Modal, Tag, Typography } from "antd";
 import type { FC } from "react";
 import { useTranslation } from "react-i18next";
 import type { SepaMandateStatus } from "@shared/api/generated/models";
@@ -20,6 +20,9 @@ interface SepaMandateDetailsModalProps {
   memberName?: string;
   /** The subscription's end date — drives the "active during this term" tag. */
   validUntil?: string | null;
+  /** When provided, an "Edit" button opens the (office) setup modal to
+   *  re-record this member's mandate. Omit for a purely read-only view. */
+  onEdit?: () => void;
 }
 
 /**
@@ -34,6 +37,7 @@ export const SepaMandateDetailsModal: FC<SepaMandateDetailsModalProps> = ({
   status,
   memberName,
   validUntil,
+  onEdit,
 }) => {
   const { t } = useTranslation();
   const { formatDate } = useDateFormat();
@@ -45,7 +49,13 @@ export const SepaMandateDetailsModal: FC<SepaMandateDetailsModalProps> = ({
       title={t("sepa.mandate_status")}
       open={isOpen}
       onCancel={onClose}
-      footer={null}
+      footer={
+        onEdit ? (
+          <Button type="primary" onClick={onEdit}>
+            {t("common.edit")}
+          </Button>
+        ) : null
+      }
       width={520}
       destroyOnHidden
     >

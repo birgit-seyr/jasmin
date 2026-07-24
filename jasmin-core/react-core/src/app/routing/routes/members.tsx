@@ -10,7 +10,6 @@ const MemberDetail = lazy(() => import("@features/members/pages/MemberDetail"));
 
 const MemberLoans = lazy(() => import("@features/members/pages/MemberLoans"));
 const StaffDetail = lazy(() => import("@features/members/pages/StaffDetail"));
-const SepaMandates = lazy(() => import("@features/members/pages/SepaMandates"));
 // Member-lifecycle / communication views that live in the Members feature: the
 // GDPR deletion-request queue and the email history are per-member operational
 // tools, not tenant settings. (The GDPR *settings* — privacy policy + Art. 30
@@ -64,14 +63,6 @@ export const membersRoutes: AppRoute[] = [
     ),
   },
 
-  {
-    path: "/members/sepa-mandates",
-    element: (
-      <RequireRole flag="isOffice">
-        <SepaMandates />
-      </RequireRole>
-    ),
-  },
   {
     path: "/members/email-log",
     element: (
