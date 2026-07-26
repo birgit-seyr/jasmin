@@ -39,12 +39,6 @@ export default function ConfigurationSidebar({
           ),
         },
         {
-          key: "configuration-users",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: <Link to="/configuration/users">{t("users.title")}</Link>,
-        },
-        {
           key: "configuration-email",
           requireRole: "isAdmin",
           icon: <SettingOutlined />,
@@ -61,6 +55,12 @@ export default function ConfigurationSidebar({
               {t("configuration.email_templates")}
             </Link>
           ),
+        },
+        {
+          key: "configuration-users",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: <Link to="/configuration/users">{t("users.title")}</Link>,
         },
       ],
     },
@@ -136,6 +136,16 @@ export default function ConfigurationSidebar({
       label: t("configuration.group.commissioning"),
       children: [
         {
+          key: "configuration-commissioning",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/commissioning">
+              {t("configuration.commissioning")}
+            </Link>
+          ),
+        },
+        {
           key: "configuration-share-type-variations",
           requireRole: "isAdmin",
           icon: <SettingOutlined />,
@@ -162,16 +172,6 @@ export default function ConfigurationSidebar({
           label: (
             <Link to="/configuration/delivery-exceptions">
               {t("commissioning.delivery_exceptions")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-commissioning",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/commissioning">
-              {t("configuration.commissioning")}
             </Link>
           ),
         },
