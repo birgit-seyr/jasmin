@@ -46,7 +46,10 @@ fi
 # ── 2. fetch + fast-forward ──────────────────────────────────────────────────
 git fetch origin
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-incoming="$(git log --oneline "HEAD..origin/${BRANCH}" | head -20)"
+# NB: cap with git's own -n, NOT `| head -20`. Under `set -euo pipefail`, head
+# closing the pipe after 20 lines sends SIGPIPE to a still-writing git log
+# (>20 incoming commits) → exit 141 → the whole script aborts silently here.
+incoming="$(git log --oneline -n 20 "HEAD..origin/${BRANCH}")"
 if [ -z "$incoming" ]; then
     echo "Already up to date with origin/${BRANCH}."
     read -r -p "Re-run deploy anyway (rebuild + restart)? [y/N] " yn
