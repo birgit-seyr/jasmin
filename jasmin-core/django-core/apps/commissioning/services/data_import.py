@@ -33,31 +33,57 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db import DatabaseError
+from django.db import DatabaseError, transaction
 from rest_framework import serializers as drf_serializers
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
+from core.errors import JasminError
+
 from ..errors import DataImportInvalid, MemberLinkConflict
 from ..serializers import (
+    CoopShareImportSerializer,
     CrateSerializer,
     DeliveryStationSerializer,
     MemberSerializer,
     ResellerSerializer,
     ShareArticleSerializer,
+    SubscriptionImportSerializer,
 )
 
 # ────────────────────────────────────────────────────────────────────────────
 # Model registry — keep keys lowercase / snake-case to match what the
-# frontend sends in ``model_name``. Add new entries here when a new list
-# page gains upload support; the import flow is fully driven by this dict.
+# frontend sends in ``model_name``. Add commissioning models here directly; a
+# model owned by ANOTHER app registers itself via ``register_import_serializer``
+# (see below). The import flow is fully driven by this dict.
 # ────────────────────────────────────────────────────────────────────────────
-MODEL_IMPORT_REGISTRY: dict[str, type[drf_serializers.ModelSerializer]] = {
+MODEL_IMPORT_REGISTRY: dict[str, type[drf_serializers.BaseSerializer]] = {
     "share_article": ShareArticleSerializer,
     "crate": CrateSerializer,
     "member": MemberSerializer,
     "delivery_station": DeliveryStationSerializer,
     "reseller": ResellerSerializer,
+    # Subscriptions resolve their FKs by natural key (see
+    # ``SubscriptionImportSerializer``) and land as unconfirmed drafts.
+    "subscription": SubscriptionImportSerializer,
+    # Cooperative shares (member equity) — created unconfirmed, GenG min/max
+    # enforced per row via CoopShare.save() → full_clean().
+    "coop_share": CoopShareImportSerializer,
 }
+
+
+def register_import_serializer(
+    model_name: str, serializer_cls: type[drf_serializers.BaseSerializer]
+) -> None:
+    """Register a CSV-import serializer for ``model_name`` from ANOTHER app.
+
+    Lets an app OUTSIDE commissioning contribute an importable model without
+    commissioning importing it — preserving the one-way isolation. The other
+    app calls this from its ``AppConfig.ready()`` (payments→commissioning is the
+    allowed direction). Payments uses it for ``sepa_mandate`` (a
+    ``BillingProfile`` create). commissioning's own models are seeded in
+    ``MODEL_IMPORT_REGISTRY`` above.
+    """
+    MODEL_IMPORT_REGISTRY[model_name] = serializer_cls
 
 
 # Hard cap on data rows per upload. Each row is one serializer.save()
@@ -151,7 +177,7 @@ def _row_to_payload(
 
 
 def _collect_bool_fields(
-    serializer_cls: type[drf_serializers.ModelSerializer],
+    serializer_cls: type[drf_serializers.BaseSerializer],
 ) -> set[str]:
     """Field names typed as ``BooleanField`` on the serializer."""
     instance = serializer_cls()
@@ -213,7 +239,7 @@ def _split_template_rows(
     return headers, data_rows, first_data_row_number
 
 
-def get_serializer_for_model(model_name: str) -> type[drf_serializers.ModelSerializer]:
+def get_serializer_for_model(model_name: str) -> type[drf_serializers.BaseSerializer]:
     """Look up the registered serializer or raise
     :class:`~apps.commissioning.errors.DataImportInvalid`."""
     serializer_cls = MODEL_IMPORT_REGISTRY.get(model_name)
@@ -255,8 +281,22 @@ def _save_imported_member(ser, payload, importing_user):
     return member
 
 
+def _persist_import_row(ser, model_name, payload, importing_user):
+    """Persist one validated row via the model-appropriate path.
+
+    ``member`` rows go through ``_save_imported_member`` (which preserves the
+    Member↔JasminUser link + conflict guard); every other model is a plain
+    ``ser.save()``. Shared by the real import AND the dry-run preview (the
+    latter calls this inside a rolled-back savepoint), so both exercise
+    identical model-level validation.
+    """
+    if model_name == "member":
+        return _save_imported_member(ser, payload, importing_user)
+    return ser.save()
+
+
 def import_rows_from_csv(
-    model_name: str, file_bytes: bytes, importing_user=None
+    model_name: str, file_bytes: bytes, importing_user=None, *, dry_run: bool = False
 ) -> DataImportResult:
     """Run an import end-to-end. Pure logic — no HTTP.
 
@@ -267,6 +307,12 @@ def import_rows_from_csv(
 
     ``importing_user`` is the office user running the import (threaded down so
     member rows can be linked to an existing JasminUser, recording the actor).
+
+    ``dry_run`` validates every row — including FK resolution (e.g. a
+    Subscription's member / variation / station-day natural keys) — WITHOUT
+    persisting anything. It is the preview pass for many-FK imports: the office
+    fixes every unresolved reference in one go before committing. No rows are
+    saved, no member↔user links are made, and no rate-limit quota is consumed.
     """
     serializer_cls = get_serializer_for_model(model_name)
     raw = _decode_csv(file_bytes)
@@ -285,7 +331,7 @@ def import_rows_from_csv(
             f"{_MAX_IMPORT_ROWS} rows per upload. Split the file."
         )
     reserved_member_quota_ids: list[str] = []
-    if model_name == "member":
+    if model_name == "member" and not dry_run:
         # The interactive create path (MemberViewSet.create) is volume-capped, so
         # the bulk import must draw on the SAME weekly member budget or it is a
         # total bypass. Reserve the whole batch up front — the per-minute burst
@@ -313,17 +359,37 @@ def import_rows_from_csv(
         ser = serializer_cls(data=payload)
         try:
             if ser.is_valid():
-                if model_name == "member":
-                    # Preserve the Member↔JasminUser linking invariant the
-                    # interactive create flow enforces: link to an existing
-                    # user (or report a 409-style conflict per row) instead of
-                    # silently orphaning a duplicate-email member.
-                    instance = _save_imported_member(ser, payload, importing_user)
+                if dry_run:
+                    # Faithful preview: run the SAME persistence path (model
+                    # full_clean via save(), member↔user linking, DB
+                    # constraints) inside a savepoint that is ALWAYS rolled
+                    # back. A row that would fail at save() surfaces its error
+                    # now; a row that would succeed persists nothing. Serializer
+                    # ``is_valid()`` alone misses model-level invariants
+                    # (TimeBoundMixin Monday/Sunday, finalized-protection, DB
+                    # constraints), so a preview that skipped save() would show
+                    # green for rows the real import later rejects.
+                    with transaction.atomic():
+                        _persist_import_row(ser, model_name, payload, importing_user)
+                        transaction.set_rollback(True)
+                    result.results.append({"row": row_number, "id": None})
                 else:
-                    instance = ser.save()
-                result.results.append(
-                    {"row": row_number, "id": getattr(instance, "id", None)}
-                )
+                    # One transaction PER ROW (requests run in autocommit). The
+                    # member path is multi-step — ``ser.save()`` then
+                    # ``link_to_user`` → ``Member.confirm`` (which can raise
+                    # e.g. ``MemberCoopSharesOutOfRange``) — so without this the
+                    # member would commit on save() and a later link/confirm
+                    # failure would strand an orphaned row that is nonetheless
+                    # reported as failed (and duplicated on re-run). Wrapping
+                    # makes each row atomic: a mid-row failure rolls the insert
+                    # back, leaving a clean per-row error and nothing persisted.
+                    with transaction.atomic():
+                        instance = _persist_import_row(
+                            ser, model_name, payload, importing_user
+                        )
+                    result.results.append(
+                        {"row": row_number, "id": getattr(instance, "id", None)}
+                    )
             else:
                 result.errors.append(
                     {
@@ -336,6 +402,7 @@ def import_rows_from_csv(
             DjangoValidationError,
             DRFValidationError,
             DatabaseError,
+            JasminError,
             MemberLinkConflict,
             ValueError,
             TypeError,
@@ -344,7 +411,10 @@ def import_rows_from_csv(
         ) as exc:
             # Per-row collection: one bad row must not stop the import.
             # Catch the realistic data/parse/DB exception families
-            # (DatabaseError covers Integrity/Data/InternalError etc.).
+            # (DatabaseError covers Integrity/Data/InternalError etc.;
+            # JasminError covers domain rules raised at save(), e.g.
+            # OpenEndedSubscriptionNotAllowed / delivery-day out-of-range —
+            # otherwise one such row would abort the whole batch).
             # Anything outside this set (KeyboardInterrupt, SystemExit,
             # an actual code bug) propagates so the bug is visible.
             result.errors.append(

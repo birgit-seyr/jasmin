@@ -1,0 +1,5 @@
+Member no.,Shares,Value per share,Increase,Note
+member_number,amount_of_coop_shares,value_one_coop_share,is_increase,note
+integer,decimal,integer,boolean,text
+1001,3,250,false,Mandatory shares
+1002,5,250,true,Increase over mandatory

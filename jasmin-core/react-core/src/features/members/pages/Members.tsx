@@ -50,12 +50,13 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import {
-  DownloadCsvTemplateButton,
   ExplainerText,
   LinkButton,
   StatusButton,
   ToolTipIcon,
 } from "@shared/ui";
+import MembersImportModal from "@features/members/modals/MembersImportModal";
+import CoopShareImportModal from "@features/members/modals/CoopShareImportModal";
 import MemberStatsCards from "@features/members/components/MemberStatsCards";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
@@ -132,6 +133,9 @@ export default function Members() {
   // (red while on) so it can't be flipped by accident; the serializer's
   // read-only lock on entry_date was lifted to match (office-role gated).
   const [manualMemberTransfer, setManualMemberTransfer] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [coopShareImportModalOpen, setCoopShareImportModalOpen] =
+    useState(false);
 
   // Capture as a primitive so the columns useMemo can depend on a
   // stable boolean instead of ``getSetting`` itself, which is a fresh
@@ -824,23 +828,6 @@ export default function Members() {
           return "";
         }}
       />
-      {isOffice && (
-        <Space size="small" align="center" style={{ marginTop: 12 }}>
-          <Button
-            type={manualMemberTransfer ? "primary" : "default"}
-            danger={manualMemberTransfer}
-            size="small"
-            onClick={() => setManualMemberTransfer((v) => !v)}
-            aria-pressed={manualMemberTransfer}
-            aria-label={t("members.manual_transfer_toggle")}
-          >
-            {manualMemberTransfer ? "● " : ""}
-            {t("members.manual_transfer_toggle")}
-          </Button>
-          <ToolTipIcon title={t("tooltip.manual_transfer_toggle")} />
-        </Space>
-      )}
-
       <AdminConfirmationModalMembers
         isOpen={isAdminConfirmationModalOpen}
         onClose={handleCloseAdminConfirmationModal}
@@ -983,14 +970,48 @@ export default function Members() {
         {t("explainers.members")}
       </ExplainerText>
 
-      {uploadAllowed && (
-        <DownloadCsvTemplateButton
-          columns={columns}
-          filename={t("commissioning.members_template.csv")}
-          modelName="member"
-          onUploadSuccess={handleDataChange}
-        />
+      {isOffice && (
+        <div style={{ marginTop: 24 }}>
+          <Space>
+            <Button
+              size="small"
+              onClick={() => setImportModalOpen(true)}
+              aria-label={
+                manualMemberTransfer
+                  ? `${t("onboarding.members_link")} — ${t("onboarding.members_manual_active")}`
+                  : undefined
+              }
+            >
+              <span aria-hidden="true">{manualMemberTransfer ? "● " : ""}</span>
+              {t("onboarding.members_link")}
+            </Button>
+            <Button
+              size="small"
+              onClick={() => setCoopShareImportModalOpen(true)}
+            >
+              {t("onboarding.coop_link")}
+            </Button>
+          </Space>
+        </div>
       )}
+
+      <MembersImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        columns={columns}
+        filename={t("commissioning.members_template.csv")}
+        uploadAllowed={uploadAllowed}
+        onUploadSuccess={handleDataChange}
+        manualTransferActive={manualMemberTransfer}
+        onToggleManualTransfer={() => setManualMemberTransfer((v) => !v)}
+      />
+
+      <CoopShareImportModal
+        open={coopShareImportModalOpen}
+        onClose={() => setCoopShareImportModalOpen(false)}
+        uploadAllowed={uploadAllowed}
+        onUploadSuccess={handleDataChange}
+      />
 
       <InviteUserModal
         open={inviteRow !== null}

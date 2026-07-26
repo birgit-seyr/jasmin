@@ -26,6 +26,7 @@ from .consents_serializer import (
     ConsentRecordSerializer,
     CurrentConsentDocumentQuerySerializer,
 )
+from .coop_share_import_serializer import CoopShareImportSerializer
 from .crates_serializer import (
     CrateOrderContentCreateRequestSerializer,
     CrateOrderContentSerializer,
@@ -138,3 +139,4 @@ from .statistics_serializer import (
     MemberGrowthStatisticSerializer,
     PurchaseCostByWeekSerializer,
 )
+from .subscription_import_serializer import SubscriptionImportSerializer

@@ -67,7 +67,7 @@
   "email_log": "",
   "gdpr_deletion_requests": "",
   "member_detail": "",
-  "sepa_mandates": "",
+  "sepa_mandates": "Overview of every member's SEPA direct-debit mandate (reference, IBAN/account holder masked, signed date, status). Read-only report — a mandate is edited from the member's own SEPA modal. Existing mandates can be imported via CSV below.",
   "staff_detail": "",
   "dashboard_abos": "",
   "debits_abos": "",

@@ -5732,11 +5732,17 @@ paths:
               properties:
                 model_name:
                   type: string
-                  description: 'Registry key for the target model. Allowed: ``crate``,
-                    ``delivery_station``, ``member``, ``reseller``, ``share_article``'
+                  description: 'Registry key for the target model. Allowed: ``coop_share``,
+                    ``crate``, ``delivery_station``, ``member``, ``reseller``, ``sepa_mandate``,
+                    ``share_article``, ``subscription``'
                 file:
                   type: string
                   format: binary
+                dry_run:
+                  type: boolean
+                  description: Validate every row (including FK resolution) without
+                    persisting anything — the preview pass for many-FK imports like
+                    subscriptions.
               required:
               - model_name
               - file
@@ -31195,6 +31201,8 @@ components:
       - name
     DataImportErrorItem:
       type: object
+      description: One row that failed, with its reason and the parsed row echoed
+        back.
       properties:
         row:
           type: integer
@@ -31209,6 +31217,7 @@ components:
       - row
     DataImportResponse:
       type: object
+      description: Outcome of one data-list CSV import call.
       properties:
         model_name:
           type: string
@@ -31235,6 +31244,11 @@ components:
       - total_rows
     DataImportResultItem:
       type: object
+      description: |-
+        One successfully-imported (or dry-run-previewed) row.
+
+        ``id`` is the created instance's primary key, or ``null`` for a dry-run
+        preview (nothing is persisted).
       properties:
         row:
           type: integer
@@ -38250,6 +38264,9 @@ components:
           readOnly: true
         payment_method:
           type: string
+        is_active:
+          type: boolean
+          readOnly: true
         sepa_mandate_reference:
           type: string
           nullable: true

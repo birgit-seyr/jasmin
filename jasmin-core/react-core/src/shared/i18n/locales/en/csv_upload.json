@@ -5,5 +5,20 @@
   "summary": "{{total}} rows processed · {{successful}} successful · {{failed}} failed",
   "errors_heading": "Failed rows",
   "col_row": "Row",
-  "col_error": "Error"
+  "col_error": "Error",
+  "validate": "Validate (dry run)",
+  "dry_run_notice": "Dry run — nothing was saved.",
+  "all_ok": "All rows are valid — ready to import!",
+  "no_rows": "No data rows found — nothing was imported.",
+  "import_success": "{{count}} row(s) imported.",
+  "model": {
+    "member": "Members",
+    "subscription": "Subscriptions",
+    "sepa_mandate": "SEPA mandates",
+    "coop_share": "Cooperative shares",
+    "crate": "Crates",
+    "share_article": "Share articles",
+    "delivery_station": "Delivery stations",
+    "reseller": "Resellers"
+  }
 }

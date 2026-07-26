@@ -1,0 +1,97 @@
+{
+  "title": "Import existing subscriptions",
+  "abos_link": "Import existing subscriptions (onboarding)",
+  "members_title": "Import existing members",
+  "members_intro": "Two ways to bring in existing members: import via CSV, or enter them by hand (with an editable entry date).",
+  "members_csv_title": "Import via CSV",
+  "members_upload_disabled": "CSV upload is disabled for this tenant (the \"allow upload for data lists\" setting).",
+  "members_manual_title": "Manual entry",
+  "members_manual_explain": "Turn on manual transfer to add or edit members by hand. The normally server-stamped entry date (GenG §30 Eintrittsdatum) then becomes editable in the grid, so you can set the historical admission date of existing members. Close this dialog and edit in the grid.",
+  "members_link": "Import existing members (onboarding)",
+  "members_manual_active": "manual transfer active",
+  "intro": "A tenant's existing members and subscriptions are imported in a fixed order: reference data first, then members, then subscriptions. Subscriptions reference the earlier data by human-readable natural keys (member number, variation name, …).",
+  "stage1": {
+    "title": "1. Set up reference data",
+    "body": "First create the data subscriptions reference: share types and their variations (incl. prices), delivery stations and days, and the payment cycles."
+  },
+  "stage2": {
+    "title": "2. Import members",
+    "body": "Import members from your CSV. Each member gets a member number that the subscriptions reference.",
+    "link": "Go to the members page"
+  },
+  "stage3": {
+    "title": "3. Import subscriptions",
+    "body": "Upload the subscriptions. Each row references — by natural key — a member, a share-type variation, a payment cycle, and (optionally) a delivery station + day. Validate with a dry run first, then import.",
+    "drafts_notice": "Imported subscriptions land as unconfirmed drafts (no deliveries, no billing). The office confirms them afterwards through the normal flow — that's where deliveries and charges are created under the usual capacity checks."
+  },
+  "columns_title": "Subscription CSV columns",
+  "col_field": "Field",
+  "col_required": "Required",
+  "col_meaning": "Meaning",
+  "sub_col": {
+    "member_number": "Member number",
+    "share_type": "Share type",
+    "size": "Size",
+    "payment_cycle": "Payment cycle",
+    "delivery_station": "Delivery station",
+    "delivery_day": "Delivery day",
+    "valid_from": "Valid from",
+    "valid_until": "Valid until",
+    "quantity": "Quantity",
+    "price_per_delivery": "Price per delivery",
+    "is_trial": "Trial",
+    "subscription_number": "Subscription number"
+  },
+  "sub_help": {
+    "member_number": "Member number (unique) — resolves the member.",
+    "share_type": "Share type name.",
+    "size": "Variation size (e.g. M) — with share type, active on the valid-from date.",
+    "payment_cycle": "Payment-cycle code (e.g. MONTHLY).",
+    "delivery_station": "Delivery station short name (optional, with delivery day).",
+    "delivery_day": "Delivery day number (0 = Monday …), optional.",
+    "valid_from": "Start date (Monday), format YYYY-MM-DD.",
+    "valid_until": "End date (Sunday), required — open-ended subscriptions are not allowed.",
+    "quantity": "Number of shares, default 1.",
+    "price_per_delivery": "Price per delivery (optional).",
+    "is_trial": "Trial? true/false (default false).",
+    "subscription_number": "Subscription number from the old system (optional, reference)."
+  },
+  "sepa_title": "Import existing SEPA mandates",
+  "sepa_link": "Import existing SEPA mandates (onboarding)",
+  "sepa_intro": "Import existing SEPA direct-debit mandates from your old system. Each row resolves a member by member number and creates that member's payment profile. Validate with a dry run first, then import.",
+  "sepa_create_only_notice": "Create-only: if a member already has a payment profile, the row is reported as a conflict and skipped — an existing mandate is never overwritten.",
+  "sepa_col": {
+    "member_number": "Member number",
+    "account_holder": "Account holder",
+    "iban": "IBAN",
+    "reference": "Mandate reference",
+    "signed_at": "Signed at",
+    "paper_received_at": "Paper received at"
+  },
+  "sepa_help": {
+    "member_number": "Member number (unique) — resolves the member.",
+    "account_holder": "Name on the bank account.",
+    "iban": "IBAN (validated).",
+    "reference": "Mandate reference (optional). Blank = a new one is generated; provided = kept.",
+    "signed_at": "Date the mandate was signed (YYYY-MM-DD).",
+    "paper_received_at": "Date the paper mandate was received (optional)."
+  },
+  "coop_title": "Import existing cooperative shares",
+  "coop_link": "Import cooperative shares (onboarding)",
+  "coop_intro": "Import members' existing cooperative shares (GenG equity). Each row resolves a member by member number. Validate with a dry run first, then import.",
+  "coop_unconfirmed_notice": "Shares are created unconfirmed. The office confirms them through the normal flow — where the min/max equity window (GenG) is enforced for confirmed members.",
+  "coop_col": {
+    "member_number": "Member number",
+    "amount": "Number of shares",
+    "value_one": "Value per share",
+    "is_increase": "Increase",
+    "note": "Note"
+  },
+  "coop_help": {
+    "member_number": "Member number (unique) — resolves the member.",
+    "amount": "Number of cooperative shares held (e.g. 3).",
+    "value_one": "Value of a single share (currency units).",
+    "is_increase": "An increase over the mandatory amount? true/false (default false).",
+    "note": "Free-text note (optional)."
+  }
+}

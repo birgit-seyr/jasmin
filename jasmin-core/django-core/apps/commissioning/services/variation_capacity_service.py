@@ -236,9 +236,24 @@ class VariationCapacityService:
             return  # variation gone — nothing to enforce
 
         quantity = subscription.quantity or 1
+        # Only current/future weeks are actually materialised (see the past-week
+        # clamp in ``SubscriptionService._delivery_weeks_excluding_paused``), so
+        # the production-cap check must evaluate the SAME range. Otherwise a full
+        # PAST week — e.g. from a historical onboarding-import term whose
+        # variation was at cap months ago — would block a confirm even though no
+        # delivery is ever created for that week. No-op in normal use (future
+        # ``valid_from``).
+        effective_valid_from = max(
+            subscription.valid_from, previous_monday(timezone.localdate())
+        )
+        if (
+            subscription.valid_until is not None
+            and effective_valid_from > subscription.valid_until
+        ):
+            return  # entire term already past → nothing materialises → no cap
         peak = cls._peak_occupied_in_term(
             variation_id=variation_id,
-            valid_from=subscription.valid_from,
+            valid_from=effective_valid_from,
             valid_until=subscription.valid_until,
             exclude_pk=subscription.pk,
         )
@@ -267,9 +282,19 @@ class VariationCapacityService:
         variation = ShareTypeVariation.objects.filter(pk=variation_id).first()
         if variation is None:
             return False
+        # Match ``assert_capacity_available``: only current/future weeks are
+        # materialised, so a fully-past week must not count toward the cap.
+        effective_valid_from = max(
+            subscription.valid_from, previous_monday(timezone.localdate())
+        )
+        if (
+            subscription.valid_until is not None
+            and effective_valid_from > subscription.valid_until
+        ):
+            return False
         peak = cls._peak_occupied_in_term(
             variation_id=variation_id,
-            valid_from=subscription.valid_from,
+            valid_from=effective_valid_from,
             valid_until=subscription.valid_until,
             exclude_pk=subscription.pk,
         )

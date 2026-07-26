@@ -1,5 +1,5 @@
 import { DownloadOutlined, UploadOutlined } from "@ant-design/icons";
-import { Button, Modal, Upload, message } from "antd";
+import { Alert, Button, Modal, Upload, message } from "antd";
 import { isValidElement, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import axiosService from "@shared/services/api";
@@ -22,6 +22,11 @@ interface ColumnLike {
   hidden?: boolean;
   hideInModal?: boolean;
   disabled?: boolean | ((record: any) => boolean);
+  // Read-only grid columns are display-only (masked aliases like
+  // ``iban_masked``, or server-managed fields like ``member_number``) — never
+  // writable serializer inputs, so they must NOT become import-template
+  // columns. Excluded from the template below.
+  readOnly?: boolean;
   inputType?: string;
   /** Select-input options. When present as a static array on a column
    * with ``inputType: "select"``, the template's type-hint row lists the
@@ -53,6 +58,21 @@ interface DownloadCsvTemplateButtonProps {
   modelName?: string;
   /** Refetch / state-refresh hook called after a successful import. */
   onUploadSuccess?: () => void;
+  /**
+   * Called after a FULLY successful real import (every row imported, none
+   * failed). The onboarding modals wire this to close themselves so the office
+   * returns to the freshly-refetched page. NOT called for dry runs or partial
+   * imports — those keep the result modal open so any failures stay visible.
+   */
+  onImported?: () => void;
+  /**
+   * When true, also render a "validate (dry run)" upload that posts
+   * ``dry_run=true`` — the backend resolves every row (incl. FK natural keys)
+   * and reports what WOULD import without persisting anything. Meant for
+   * many-FK imports like subscriptions where the office wants to fix the whole
+   * CSV before committing. Off by default (existing pages unaffected).
+   */
+  allowDryRun?: boolean;
 }
 
 // Maps an EditableColumnConfig `inputType` to a short, comma-free type hint
@@ -142,34 +162,48 @@ export default function DownloadCsvTemplateButton({
   label,
   modelName,
   onUploadSuccess,
+  onImported,
+  allowDryRun = false,
 }: DownloadCsvTemplateButtonProps) {
   const { t } = useTranslation();
 
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<DataImportResponse | null>(null);
   const [resultOpen, setResultOpen] = useState(false);
+  const [wasDryRun, setWasDryRun] = useState(false);
 
-  const handleUpload = async (file: File): Promise<boolean> => {
+  const handleUpload = async (file: File, dryRun = false): Promise<boolean> => {
     if (!modelName) return false;
     setUploading(true);
     try {
       const form = new FormData();
       form.append("model_name", modelName);
       form.append("file", file);
+      if (dryRun) form.append("dry_run", "true");
       const response = await axiosService.post<DataImportResponse>(
         "/api/commissioning/data_import/",
         form,
         { headers: { "Content-Type": "multipart/form-data" } },
       );
       setResult(response.data);
-      setResultOpen(true);
-      if (response.data.successful > 0 && onUploadSuccess) {
-        onUploadSuccess();
+      setWasDryRun(dryRun);
+      const { successful, failed } = response.data;
+      // A dry run persists nothing, so never trigger a data refetch for it.
+      if (!dryRun && successful > 0) {
+        onUploadSuccess?.();
+      }
+      // A fully successful real import needs no summary to act on: confirm with
+      // a toast and let the parent close so the office lands back on the
+      // freshly-refetched page. Dry runs and partial imports (some rows failed)
+      // still open the result modal so the outcome / failures stay visible.
+      if (!dryRun && successful > 0 && failed === 0) {
+        message.success(t("csv_upload.import_success", { count: successful }));
+        onImported?.();
+      } else {
+        setResultOpen(true);
       }
     } catch (err) {
-      message.error(
-        getErrorMessage(err, t("csv_upload.failed")),
-      );
+      message.error(getErrorMessage(err, t("csv_upload.failed")));
     } finally {
       setUploading(false);
     }
@@ -186,6 +220,9 @@ export default function DownloadCsvTemplateButton({
         typeof col.dataIndex === "string" &&
         col.hidden !== true &&
         col.hideInModal !== true &&
+        // Read-only display columns (masked aliases / server-managed fields)
+        // are not importable serializer inputs — keep them out of the template.
+        col.readOnly !== true &&
         // A function `disabled` means per-row — keep it (the new-row case is
         // editable). Only literal `true` means "always read-only".
         col.disabled !== true,
@@ -215,28 +252,49 @@ export default function DownloadCsvTemplateButton({
         .map((row) => row.map(csvCell).join(","))
         .join("\n") + "\n";
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    downloadBlob(blob, filename.endsWith(".csv") ? filename : `${filename}.csv`);
+    downloadBlob(
+      blob,
+      filename.endsWith(".csv") ? filename : `${filename}.csv`,
+    );
   };
 
   return (
     <>
-      <Button
-        className="csv-template-button"
-        size="small"
-        icon={<DownloadOutlined />}
-        onClick={handleClick}
-        style={{
-          padding: 2,
-          height: "auto",
-          fontSize: "0.85em",
-          marginTop: "0.4em",
-        }}
-      >
-        {label ?? t("download.csv_template")}
-      </Button>
-      <ToolTipIcon title={t("tooltip.explainer_csv_template")} />
-
-      <span style={{ marginLeft: "0.5em" }}>
+      <div style={{ marginBottom: "1em" }}>
+        <Button
+          className="csv-template-button"
+          icon={<DownloadOutlined />}
+          onClick={handleClick}
+        >
+          {label ?? t("download.csv_template")}
+        </Button>
+        <ToolTipIcon title={t("tooltip.explainer_csv_template")} />
+      </div>
+      <div style={{ marginBottom: "1em" }}>
+        {allowDryRun && modelName && (
+          <span>
+            <Upload
+              accept=".csv,text/csv"
+              showUploadList={false}
+              beforeUpload={(file) => {
+                handleUpload(file as unknown as File, true);
+                return false;
+              }}
+              disabled={uploading}
+            >
+              <Button
+                className="csv-template-button"
+                icon={<UploadOutlined />}
+                loading={uploading}
+              >
+                {t("csv_upload.validate")}
+              </Button>
+            </Upload>
+            <ToolTipIcon title={t("tooltip.explainer_csv_validate")} />
+          </span>
+        )}
+      </div>
+      <div>
         <Upload
           accept=".csv,text/csv"
           showUploadList={false}
@@ -248,23 +306,14 @@ export default function DownloadCsvTemplateButton({
         >
           <Button
             className="csv-template-button"
-            size="small"
             icon={<UploadOutlined />}
             loading={uploading}
-            style={{
-              padding: 2,
-              height: "auto",
-              fontSize: "0.85em",
-              marginTop: "0.4em",
-            }}
           >
             {t("csv_upload.button")}
           </Button>
         </Upload>
-        <ToolTipIcon
-          title={t("tooltip.explainer_csv_upload")}
-        />
-      </span>
+        <ToolTipIcon title={t("tooltip.explainer_csv_upload")} />
+      </div>
 
       <Modal
         open={resultOpen}
@@ -276,7 +325,7 @@ export default function DownloadCsvTemplateButton({
         {result && (
           <div>
             <p>
-              <strong>{result.model_name}</strong> —{" "}
+              <strong>{t(`csv_upload.model.${result.model_name}`)}</strong> —{" "}
               {t("csv_upload.summary", {
                 total: result.total_rows,
                 successful: result.successful,
@@ -285,7 +334,26 @@ export default function DownloadCsvTemplateButton({
                   "{{total}} rows • {{successful}} imported • {{failed}} failed",
               })}
             </p>
-            {result.errors.length > 0 && (
+            {wasDryRun && (
+              <p style={{ color: "var(--color-primary)", fontWeight: 500 }}>
+                {t("csv_upload.dry_run_notice")}
+              </p>
+            )}
+            {result.total_rows === 0 ? (
+              <Alert
+                type="warning"
+                showIcon
+                style={{ marginTop: "1em" }}
+                message={t("csv_upload.no_rows")}
+              />
+            ) : result.errors.length === 0 ? (
+              <Alert
+                type="success"
+                showIcon
+                style={{ marginTop: "1em" }}
+                message={t("csv_upload.all_ok")}
+              />
+            ) : (
               <>
                 <p style={{ marginTop: "1em", fontWeight: 500 }}>
                   {t("csv_upload.errors_heading")}

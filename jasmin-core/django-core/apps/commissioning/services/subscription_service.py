@@ -543,6 +543,30 @@ class SubscriptionService:
         if not year_weeks:
             return []
 
+        # Never materialise (or reserve capacity for) delivery weeks already in
+        # the PAST. In normal use ``valid_from`` is a future Monday, so every
+        # week is current/future and this is a no-op. It only bites when
+        # confirming a subscription whose ``valid_from`` is historical (e.g. an
+        # onboarding import of an existing member's subscription): back-dated
+        # ShareDeliveries must not be created for weeks that have already passed.
+        #
+        # Granularity is the ISO WEEK: the current week is kept even if its
+        # delivery day already passed this week (a box "for this week"), and only
+        # strictly-earlier weeks are dropped. Because the variation cap gate is
+        # clamped the same way (see ``VariationCapacityService``), materialisation
+        # and ALL capacity paths stay on one week set (the invariant this method
+        # protects). Charge impact: EXACT billing is delivery-driven, so past
+        # weeks bill €0 automatically; SMOOTHED still enumerates its own periods
+        # over the full term (dormant PLANNED past-period rows) — see apps.payments.
+        current_monday = Week.withdate(timezone.localdate()).monday()
+        year_weeks = [
+            year_week
+            for year_week in year_weeks
+            if Week(year_week[0], year_week[1]).monday() >= current_monday
+        ]
+        if not year_weeks:
+            return []
+
         from .delivery_exceptions import paused_weeks_for_variation
 
         paused = paused_weeks_for_variation(

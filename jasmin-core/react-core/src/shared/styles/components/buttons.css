@@ -120,8 +120,8 @@
 }
 
 .csv-template-button {
-  background-color: var(--color-bg-elevated) !important;
-  color: var(--color-text-secondary) !important;
+  background-color: var(--color-primary) !important;
+  color: white !important;
 }
 /* Office/team view toggle row on the washing & cleaning lists. */
 .team-view-toggle-row {

@@ -6434,6 +6434,9 @@ export const commissioningDataImportCreate = (
       const formData = new FormData();
 formData.append(`model_name`, commissioningDataImportCreateBody.model_name)
 formData.append(`file`, commissioningDataImportCreateBody.file)
+if(commissioningDataImportCreateBody.dry_run !== undefined) {
+ formData.append(`dry_run`, commissioningDataImportCreateBody.dry_run.toString())
+ }
 
       return axiosService<DataImportResponse>(
       {url: `/api/commissioning/data_import/`, method: 'POST',

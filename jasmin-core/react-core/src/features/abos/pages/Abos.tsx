@@ -35,6 +35,7 @@ import { DateRangeStatusLegend, ExplainerText } from "@shared/ui";
 import { Badge, Button } from "antd";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import ExistingSubscriptionImportModal from "@features/abos/modals/ExistingSubscriptionImportModal";
 // Imported directly from the source module (not the ``hooks`` barrel) to
 // avoid a Rollup chunk cycle: the barrel re-exports ``useAbosColumns`` while
 // that module transitively depends back on the barrel (via the ``ui`` barrel).
@@ -63,6 +64,8 @@ export default function Abos() {
   const allowsWaitingList = Boolean(
     getSetting("allows_waiting_list_for_subscriptions", true),
   );
+  const uploadAllowed =
+    getSetting("allow_upload_for_data_lists", false) === true;
   const permissions = useMemo(
     () => ({
       ...gatedByPermission(isOffice),
@@ -96,6 +99,7 @@ export default function Abos() {
     rowSelection: rowSelectionConfig,
     clearSelection,
   } = useTableRowSelection((record: TableRecord) => record.key === -1);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [loggingModalOpen, setLoggingModalOpen] = useState(false);
   const [loggingRecord, setLoggingRecord] = useState<AboRecord | null>(null);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -527,6 +531,21 @@ export default function Abos() {
         officeMode
         onClose={() => setSepaSetupMemberId(null)}
         onSaved={refreshMandateStatus}
+      />
+
+      {isOffice && (
+        <div style={{ marginTop: 24 }}>
+          <Button size="small" onClick={() => setImportModalOpen(true)}>
+            {t("onboarding.abos_link")}
+          </Button>
+        </div>
+      )}
+
+      <ExistingSubscriptionImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        uploadAllowed={uploadAllowed}
+        onUploadSuccess={invalidateData}
       />
     </div>
   );

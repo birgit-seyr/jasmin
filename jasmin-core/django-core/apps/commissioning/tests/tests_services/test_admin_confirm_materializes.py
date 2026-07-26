@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 
 import pytest
+import time_machine
 
 from apps.commissioning.services.subscription_service import SubscriptionService
 from apps.commissioning.tests.factories import (
@@ -16,6 +17,14 @@ from apps.commissioning.tests.factories import (
     ShareTypeVariationFactory,
 )
 from apps.payments.models import ChargeSchedule
+
+
+@pytest.fixture(autouse=True)
+def _freeze_clock():
+    # Fixed fixture dates predate the materialisation/capacity past-week
+    # clamp; freeze "now" to that week so the clamp is a no-op here.
+    with time_machine.travel(datetime.date(2026, 4, 6), tick=False):
+        yield
 
 
 @pytest.mark.django_db

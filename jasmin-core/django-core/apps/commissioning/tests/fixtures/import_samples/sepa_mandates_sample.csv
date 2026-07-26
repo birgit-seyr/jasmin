@@ -1,0 +1,5 @@
+Member no.,Account holder,IBAN,Mandate reference,Signed at,Paper received at
+member_number,account_holder,iban,sepa_mandate_reference,sepa_mandate_signed_at,sepa_mandate_paper_received_at
+integer,text,text,text (blank = auto),date,date (optional)
+1001,Ada Lovelace,CH9300762011623852957,MND-LEGACY-0001,2024-03-04,2024-03-06
+1002,Alan Turing,DE89370400440532013000,,2023-09-11,

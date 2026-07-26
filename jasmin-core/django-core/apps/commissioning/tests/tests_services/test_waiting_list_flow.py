@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime
 
 import pytest
+import time_machine
 from django.utils import timezone
 
 from apps.commissioning.errors import DeliveryStationOverCapacity
@@ -84,6 +85,14 @@ def _validated_data(dsd, *, on_waiting_list=False):
     if on_waiting_list:
         data["on_waiting_list"] = True
     return data
+
+
+@pytest.fixture(autouse=True)
+def _freeze_clock():
+    # Fixed fixture dates predate the materialisation/capacity past-week
+    # clamp; freeze "now" to that week so the clamp is a no-op here.
+    with time_machine.travel(datetime.date(2026, 1, 5), tick=False):
+        yield
 
 
 @pytest.mark.django_db

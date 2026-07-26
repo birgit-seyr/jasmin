@@ -216,6 +216,7 @@ class TestResyncConfirmedSubscriptions:
         )
         assert _delivered_weeks(subscription) == term_weeks
 
+    @time_machine.travel(datetime.date(2026, 7, 1), tick=False)
     def test_resync_ignores_unconfirmed_subscriptions(self, tenant):
         variation = _variation()
         subscription = _materialised_subscription(variation, confirmed=False)

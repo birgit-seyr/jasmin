@@ -5,5 +5,20 @@
   "summary": "{{total}} Zeilen verarbeitet · {{successful}} erfolgreich · {{failed}} fehlgeschlagen",
   "errors_heading": "Fehlgeschlagene Zeilen",
   "col_row": "Zeile",
-  "col_error": "Fehler"
+  "col_error": "Fehler",
+  "validate": "Prüfen (Probelauf)",
+  "dry_run_notice": "Probelauf – es wurde nichts gespeichert.",
+  "all_ok": "Alle Zeilen sind gültig – bereit zum Import!",
+  "no_rows": "Keine Datenzeilen gefunden – es wurde nichts importiert.",
+  "import_success": "{{count}} Zeile(n) importiert.",
+  "model": {
+    "member": "Mitglieder",
+    "subscription": "Abos",
+    "sepa_mandate": "SEPA-Mandate",
+    "coop_share": "Genossenschaftsanteile",
+    "crate": "Kisten",
+    "share_article": "Anteilsartikel",
+    "delivery_station": "Lieferstationen",
+    "reseller": "Wiederverkäufer"
+  }
 }

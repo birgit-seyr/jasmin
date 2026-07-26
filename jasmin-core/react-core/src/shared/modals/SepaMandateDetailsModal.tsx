@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import type { SepaMandateStatus } from "@shared/api/generated/models";
 import { useDateFormat } from "@hooks/configuration/useDateFormat";
 import { isSepaMandateActiveForTerm } from "@shared/utils";
+import { SepaMandateStatusTag } from "@shared/ui";
 
 const { Text } = Typography;
 
@@ -80,15 +81,12 @@ export const SepaMandateDetailsModal: FC<SepaMandateDetailsModalProps> = ({
             )}
           </Descriptions.Item>
           <Descriptions.Item label={t("sepa.status")}>
-            {status.has_active_sepa_mandate ? (
-              <Tag color="green" icon={<CheckCircleOutlined />}>
-                {t("sepa.mandate_active")}
-              </Tag>
-            ) : (
-              <Tag color="red" icon={<CloseCircleOutlined />}>
-                {t("sepa.mandate_missing")}
-              </Tag>
-            )}
+            {/* Shared badge — same states/colours as the SEPA mandates page. */}
+            <SepaMandateStatusTag
+              paymentMethod={status.payment_method}
+              isActive={status.is_active}
+              isSepaReady={status.has_active_sepa_mandate}
+            />
           </Descriptions.Item>
           {status.sepa_mandate_reference && (
             <Descriptions.Item label={t("sepa.mandate_reference")}>

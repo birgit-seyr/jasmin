@@ -67,7 +67,7 @@
   "email_log": "",
   "gdpr_deletion_requests": "",
   "member_detail": "",
-  "sepa_mandates": "",
+  "sepa_mandates": "Übersicht aller SEPA-Lastschriftmandate der Mitglieder (Referenz, IBAN/Kontoinhaber maskiert, Unterschriftsdatum, Status). Nur-Lese-Bericht – ein Mandat wird über das SEPA-Modal des jeweiligen Mitglieds bearbeitet. Bestehende Mandate können unten per CSV importiert werden.",
   "staff_detail": "",
   "dashboard_abos": "",
   "debits_abos": "",

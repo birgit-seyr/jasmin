@@ -1,0 +1,6 @@
+First name,Last name,Email,Address,ZIP,City,Country,Birth date,Entry date,Student,Trial
+first_name,last_name,email,address,zip_code,city,country,birth_date,entry_date,is_student,is_trial
+text,text,email,text,text,text,text,date,date,boolean,boolean
+Ada,Lovelace,ada.lovelace@example.org,1 Analytical Way,8000,Zurich,CH,1990-12-10,2024-03-04,false,false
+Alan,Turing,alan.turing@example.org,7 Enigma Street,3000,Bern,CH,1985-06-23,2023-09-11,true,false
+Grace,Hopper,grace.hopper@example.org,42 Compiler Road,6000,Lucerne,CH,1998-12-09,2025-01-06,false,false

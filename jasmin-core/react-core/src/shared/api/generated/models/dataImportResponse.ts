@@ -8,6 +8,9 @@
 import type { DataImportResultItem } from './dataImportResultItem';
 import type { DataImportErrorItem } from './dataImportErrorItem';
 
+/**
+ * Outcome of one data-list CSV import call.
+ */
 export interface DataImportResponse {
   model_name: string;
   total_rows: number;

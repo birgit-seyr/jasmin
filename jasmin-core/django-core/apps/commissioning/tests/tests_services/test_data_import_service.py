@@ -13,10 +13,13 @@ Coverage targets the gaps from the §1 test-coverage-priorities audit
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
+from django.db import DatabaseError
 
 from apps.commissioning.errors import DataImportInvalid
-from apps.commissioning.models import Crate
+from apps.commissioning.models import Crate, Member
 from apps.commissioning.serializers import CrateSerializer, ShareArticleSerializer
 from apps.commissioning.services.data_import import (
     DataImportResult,
@@ -30,6 +33,7 @@ from apps.commissioning.services.data_import import (
     get_serializer_for_model,
     import_rows_from_csv,
 )
+from apps.commissioning.tests.factories import JasminUserFactory
 
 # ---------------------------------------------------------------------------
 # Pure helpers — no DB, no fixtures needed
@@ -383,6 +387,30 @@ class TestImportRowsFromCsv:
         assert result.failed == 0
         crate = Crate.objects.get(name="ActiveCrate")
         assert crate.is_active is True
+
+    def test_member_link_failure_rolls_back_the_row(self, tenant):
+        """A member whose email matches an existing (linkable) user goes through
+        ``link_to_user`` AFTER ``ser.save()``. If that later step fails, the
+        per-row ``transaction.atomic()`` must roll the member insert back — no
+        orphaned member that is nonetheless reported as failed (and would then
+        duplicate on a re-run of the "failed" file)."""
+        JasminUserFactory(email="linkme@example.com")
+        csv_bytes = (
+            b"First,Last,Email\n"  # titles
+            b"first_name,last_name,email\n"  # dataIndex
+            b"text,text,email\n"  # type hints
+            b"Link,Me,linkme@example.com\n"
+        )
+        with patch(
+            "apps.commissioning.services.member_service.MemberService.link_to_user",
+            side_effect=DatabaseError("simulated link failure"),
+        ):
+            result = import_rows_from_csv("member", csv_bytes)
+
+        assert result.successful == 0
+        assert result.failed == 1
+        # Atomic per-row: the save() was rolled back, so no orphan remains.
+        assert not Member.objects.filter(email="linkme@example.com").exists()
 
     def test_latin1_csv_decodes(self, tenant):
         """Excel-default Latin-1 exports must round-trip — German tenants

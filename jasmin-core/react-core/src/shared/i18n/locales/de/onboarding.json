@@ -1,0 +1,97 @@
+{
+  "title": "Bestehende Abos importieren",
+  "abos_link": "Bestehende Abos importieren (Onboarding)",
+  "members_title": "Bestehende Mitglieder importieren",
+  "members_intro": "Zwei Wege, bestehende Mitglieder zu übernehmen: per CSV-Import oder händisch (mit editierbarem Eintrittsdatum).",
+  "members_csv_title": "Per CSV importieren",
+  "members_upload_disabled": "Der CSV-Upload ist für diesen Tenant deaktiviert (Einstellung „Upload für Datenlisten erlauben“).",
+  "members_manual_title": "Händisch erfassen",
+  "members_manual_explain": "Aktiviere die händische Übertragung, um Mitglieder von Hand zu erfassen oder zu bearbeiten. Dann wird das sonst automatisch gesetzte Eintrittsdatum (GenG §30) in der Tabelle editierbar – so kannst du das historische Eintrittsdatum bestehender Mitglieder eintragen. Danach dieses Fenster schließen und in der Tabelle bearbeiten.",
+  "members_link": "Bestehende Mitglieder importieren (Onboarding)",
+  "members_manual_active": "händische Übertragung aktiv",
+  "intro": "Bestehende Mitglieder und Abos können mit dieser Anleitung importiert werden: zuerst die Stammdaten, dann die Mitglieder, dann die Abos. Abos verweisen per Klartext-Schlüssel (Mitgliedsnummer, Variantenname …) auf die zuvor angelegten Daten.",
+  "stage1": {
+    "title": "1. Stammdaten anlegen",
+    "body": "Lege zuerst die Daten an, auf die Abos verweisen: Ernte-Anteile und ihre Varianten (inkl. Preise), Lieferstationen und Liefertage sowie die Zahlungszyklen."
+  },
+  "stage2": {
+    "title": "2. Mitglieder importieren",
+    "body": "Importiere die Mitglieder aus deiner CSV. Jedes Mitglied bekommt eine Mitgliedsnummer, auf die die Abos verweisen.",
+    "link": "Zur Mitglieder-Seite"
+  },
+  "stage3": {
+    "title": "3. Abos importieren",
+    "body": "Lade die Abos hoch. Jede Zeile verweist per Klartext-Schlüssel auf ein Mitglied, eine Anteilsvariante, einen Zahlungszyklus und (optional) eine Lieferstation samt Liefertag. Validiere zuerst per Probelauf und importiere dann.",
+    "drafts_notice": "Importierte Abos werden als unbestätigte Entwürfe angelegt (keine Lieferungen, keine Abrechnung). Das Büro bestätigt sie anschließend im normalen Ablauf – dabei entstehen Lieferungen und Abrechnungen unter den üblichen Kapazitätsprüfungen."
+  },
+  "columns_title": "Spalten der Abo-CSV",
+  "col_field": "Feld",
+  "col_required": "Pflicht",
+  "col_meaning": "Bedeutung",
+  "sub_col": {
+    "member_number": "Mitgliedsnummer",
+    "share_type": "Ernte-Anteil (Typ)",
+    "size": "Größe",
+    "payment_cycle": "Zahlungszyklus",
+    "delivery_station": "Lieferstation",
+    "delivery_day": "Liefertag",
+    "valid_from": "Gültig ab",
+    "valid_until": "Gültig bis",
+    "quantity": "Menge",
+    "price_per_delivery": "Preis pro Lieferung",
+    "is_trial": "Probeabo",
+    "subscription_number": "Abo-Nummer"
+  },
+  "sub_help": {
+    "member_number": "Mitgliedsnummer (eindeutig) – verweist auf das Mitglied.",
+    "share_type": "Name des Ernte-Anteils (ShareType).",
+    "size": "Größe der Variante (z. B. M), zusammen mit dem Typ am „Gültig ab“-Datum.",
+    "payment_cycle": "Zahlungszyklus-Code (z. B. MONTHLY).",
+    "delivery_station": "Kurzname der Lieferstation (optional, zusammen mit Liefertag).",
+    "delivery_day": "Liefertag als Zahl (0 = Montag …), optional.",
+    "valid_from": "Startdatum (Montag), Format JJJJ-MM-TT.",
+    "valid_until": "Enddatum (Sonntag), erforderlich – unbefristete Abos sind nicht möglich.",
+    "quantity": "Anzahl der Anteile, Standard 1.",
+    "price_per_delivery": "Preis pro Lieferung (optional).",
+    "is_trial": "Probeabo? true/false (Standard false).",
+    "subscription_number": "Abo-Nummer (optional, als Referenz)."
+  },
+  "sepa_title": "Bestehende SEPA-Mandate importieren",
+  "sepa_link": "Bestehende SEPA-Mandate importieren (Onboarding)",
+  "sepa_intro": "Importiere bestehende SEPA-Lastschriftmandate. Jede Zeile verweist per Mitgliedsnummer auf ein Mitglied und legt dessen Zahlungsprofil an. Validiere zuerst per Probelauf und importiere dann.",
+  "sepa_create_only_notice": "Nur Neuanlage: Hat ein Mitglied bereits ein Zahlungsprofil, wird die Zeile als Konflikt gemeldet und übersprungen – ein bestehendes Mandat wird nie überschrieben.",
+  "sepa_col": {
+    "member_number": "Mitgliedsnummer",
+    "account_holder": "Kontoinhaber",
+    "iban": "IBAN",
+    "reference": "Mandatsreferenz",
+    "signed_at": "unterschrieben am",
+    "paper_received_at": "Papier erhalten am"
+  },
+  "sepa_help": {
+    "member_number": "Mitgliedsnummer (eindeutig) – verweist auf das Mitglied.",
+    "account_holder": "Name des Kontoinhabers.",
+    "iban": "IBAN (wird validiert).",
+    "reference": "Mandatsreferenz (optional). Leer = neue Referenz wird erzeugt; angegeben = wird übernommen.",
+    "signed_at": "Datum der Unterschrift (JJJJ-MM-TT).",
+    "paper_received_at": "Datum, an dem das Papiermandat eingegangen ist (optional)."
+  },
+  "coop_title": "Bestehende Genossenschaftsanteile importieren",
+  "coop_link": "Genossenschaftsanteile importieren (Onboarding)",
+  "coop_intro": "Importiere bestehende Genossenschaftsanteile (Geschäftsanteile) von Mitgliedern. Jede Zeile verweist per Mitgliedsnummer auf ein Mitglied. Validiere zuerst per Probelauf und importiere dann.",
+  "coop_unconfirmed_notice": "Anteile werden als unbestätigt angelegt. Das Büro bestätigt sie anschließend im normalen Ablauf – dabei wird für bestätigte Mitglieder das Min/Max-Fenster (GenG) geprüft.",
+  "coop_col": {
+    "member_number": "Mitgliedsnummer",
+    "amount": "Anzahl Anteile",
+    "value_one": "Wert pro Anteil",
+    "is_increase": "Aufstockung",
+    "note": "Notiz"
+  },
+  "coop_help": {
+    "member_number": "Mitgliedsnummer (eindeutig) – verweist auf das Mitglied.",
+    "amount": "Anzahl der gehaltenen Genossenschaftsanteile (z. B. 3).",
+    "value_one": "Wert eines einzelnen Anteils (in Währungseinheiten).",
+    "is_increase": "Aufstockung über den Pflichtanteil hinaus? true/false (Standard false).",
+    "note": "Freitext-Notiz (optional)."
+  }
+}

@@ -68,6 +68,7 @@
   "default_commissioning_unit": "Default unit for commissioning",
   "delivery_note_creation": "Creates a delivery note from this order",
   "explainer_csv_upload": "Upload a CSV file for bulk import. Download the template first.",
+  "explainer_csv_validate": "Dry run: validates every row (incl. references like member number/variation) without saving anything.",
   "harvesting_crate_forecast": "Forecast of crates to be harvested",
   "hash_consent_documents": "Hash of the imported consent texts — changes invalidate old consents.",
   "is_packed_bulk": "If active, the article is dispensed loose (not pre-packed).",

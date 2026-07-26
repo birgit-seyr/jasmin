@@ -19,7 +19,7 @@
   "mandate_paper_pending": "Digital signiert, Papier ausstehend",
   "paper_label": "Papier-Mandat",
   "mandate_reference": "Mandatsreferenz",
-  "signed_at": "Unterschrieben am",
+  "signed_at": "unterschrieben am",
   "mandates_title": "SEPA-Mandate",
   "mandates_intro": "Übersicht aller SEPA-Lastschriftmandate der Mitglieder.",
   "member": "Mitglied",

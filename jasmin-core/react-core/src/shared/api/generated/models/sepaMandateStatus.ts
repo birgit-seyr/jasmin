@@ -20,6 +20,7 @@ export interface SepaMandateStatus {
   member: string;
   readonly has_active_sepa_mandate?: boolean;
   payment_method: string;
+  readonly is_active?: boolean;
   /** @nullable */
   sepa_mandate_reference: string | null;
   /** @nullable */

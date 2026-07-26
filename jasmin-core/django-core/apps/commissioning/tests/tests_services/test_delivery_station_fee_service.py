@@ -7,6 +7,7 @@ import datetime
 from decimal import Decimal
 
 import pytest
+import time_machine
 from django.urls import reverse
 
 from apps.commissioning.models import (
@@ -78,6 +79,14 @@ def _station_with_deliveries(*, quantity=1, **fees):
     )
     SubscriptionService().materialize_confirmed_subscription(subscription)
     return station, subscription
+
+
+@pytest.fixture(autouse=True)
+def _freeze_clock():
+    # Fixed fixture dates predate the materialisation/capacity past-week
+    # clamp; freeze "now" to that week so the clamp is a no-op here.
+    with time_machine.travel(datetime.date(2026, 7, 6), tick=False):
+        yield
 
 
 @pytest.mark.django_db

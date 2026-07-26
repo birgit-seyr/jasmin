@@ -70,6 +70,7 @@
   "default_commissioning_unit": "Standard-Einheit für die Kommissionierung",
   "delivery_note_creation": "Erzeugt einen Lieferschein aus dieser Bestellung. Wenn bereits ein Lieferschein erstellt wurde, kann die Bestellung nicht mehr geändert werden.",
   "explainer_csv_upload": "CSV-Datei zum Bulk-Import hochladen. Vorlage zuerst herunterladen.",
+  "explainer_csv_validate": "Probelauf: prüft jede Zeile (inkl. Verweise wie Mitgliedsnummer/Variante), ohne etwas zu speichern.",
   "harvesting_crate_forecast": "Prognose der zu erntenden Kisten",
   "hash_consent_documents": "Hash der eingelesenen Zustimmungstexte — Änderungen lassen alte Zustimmungen ungültig werden.",
   "is_packed_bulk": "Wenn aktiv, wird der Artikel lose (nicht abgepackt) ausgegeben.",

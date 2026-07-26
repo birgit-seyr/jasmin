@@ -9,6 +9,7 @@ from __future__ import annotations
 import datetime
 
 import pytest
+import time_machine
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
@@ -132,6 +133,33 @@ class TestVariationCapacity:
         new = _confirmed(variation, dsd, quantity=1)
         with pytest.raises(ShareTypeVariationOverCapacity):
             VariationCapacityService.assert_capacity_available(new)
+
+    @time_machine.travel(datetime.datetime(2026, 7, 20, 12, 0), tick=False)
+    def test_fully_past_occupancy_does_not_block_historical_confirm(self, tenant, dsd):
+        # Scope-A parity: only current/future weeks materialise, so the
+        # production cap must ignore a PAST-only occupant when confirming a
+        # back-dated onboarding import. Frozen on a Monday so "now" is fixed:
+        # cap=1 filled solely in weeks before this Monday still leaves the
+        # current+future weeks open, so a back-dated term reaching into the
+        # future fits. Without the clamp the past occupant would overlap the
+        # historical valid_from and wrongly block the confirm.
+        variation = ShareTypeVariationFactory(capacity=1)
+        _confirmed(
+            variation,
+            dsd,
+            quantity=1,
+            valid_from=datetime.date(2026, 1, 5),  # Monday
+            valid_until=datetime.date(2026, 6, 28),  # Sunday — before "now"
+        )
+        new = _confirmed(
+            variation,
+            dsd,
+            quantity=1,
+            valid_from=datetime.date(2026, 1, 5),  # Monday, historical
+            valid_until=datetime.date(2027, 1, 3),  # Sunday, future
+        )
+        VariationCapacityService.assert_capacity_available(new)  # no raise
+        assert VariationCapacityService.is_over_capacity(new) is False
 
     def test_capacity_cannot_drop_below_current_occupancy(self, tenant, dsd):
         from apps.commissioning.errors import (

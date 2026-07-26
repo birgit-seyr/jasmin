@@ -6,6 +6,12 @@
  * OpenAPI spec version: 1.0.0
  */
 
+/**
+ * One successfully-imported (or dry-run-previewed) row.
+
+``id`` is the created instance's primary key, or ``null`` for a dry-run
+preview (nothing is persisted).
+ */
 export interface DataImportResultItem {
   row: number;
   /** @nullable */

@@ -1,6 +1,7 @@
 export { default as ToolTipIcon } from './ToolTipIcon';
 export { default as ExplainerText } from './ExplainerText';
 export { default as DownloadCsvTemplateButton } from './DownloadCsvTemplateButton';
+export { default as SepaMandateStatusTag } from './SepaMandateStatusTag';
 export { default as BulkActionButton } from './BulkActionButton';
 export { default as IconActionButton } from './IconActionButton';
 export type { IconActionButtonProps } from './IconActionButton';
