@@ -122,6 +122,15 @@ class TestWeeksHelpers:
 
 @pytest.mark.django_db
 class TestGenerationPathSkipsPausedWeeks:
+    # Pin "now" to the file's reference date (2026-07-01) so the past-week
+    # materialisation clamp keeps the fixed term weeks (28–31) future — else it
+    # drops weeks that have since fallen behind the wall clock, and the asserted
+    # week sets rot.
+    @pytest.fixture(autouse=True)
+    def _freeze(self):
+        with time_machine.travel(datetime.date(2026, 7, 1), tick=False):
+            yield
+
     def test_no_share_delivery_is_materialised_for_a_paused_week(self, tenant):
         variation = _variation()
         DeliveryExceptionPeriod.objects.create(
