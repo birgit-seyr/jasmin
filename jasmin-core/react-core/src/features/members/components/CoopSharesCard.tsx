@@ -92,7 +92,7 @@ export default function CoopSharesCard({
               count: pendingCoopSharesCount,
             })}
           >
-            <Button type="primary" onClick={onManage}>
+            <Button type="primary" onClick={onManage} size="small">
               {t("members.subscribe_coop_shares")}
             </Button>
           </Badge>

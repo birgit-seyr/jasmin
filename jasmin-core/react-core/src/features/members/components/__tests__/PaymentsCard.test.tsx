@@ -110,6 +110,91 @@ describe("PaymentsCard", () => {
     expect(screen.queryByText(/150\.00/)).not.toBeInTheDocument();
   });
 
+  it("sums a monthly batch labelled by month when every sub is monthly", () => {
+    chargesHook.mockReturnValue({
+      data: [
+        // Two monthly subs (30-day periods), different due dates, same month.
+        {
+          id: "a",
+          due_date: "2099-01-15",
+          period_start: "2099-01-15",
+          period_end: "2099-02-14",
+          expected_amount: "20.00",
+          subscription_label: "Veggie",
+          status: "PLANNED",
+        },
+        {
+          id: "b",
+          due_date: "2099-01-20",
+          period_start: "2099-01-20",
+          period_end: "2099-02-19",
+          expected_amount: "30.00",
+          subscription_label: "Eggs",
+          status: "PLANNED",
+        },
+      ],
+    });
+    renderCard({ memberId: "m1" });
+
+    expect(screen.getByText("members.batch_total")).toBeInTheDocument();
+    // Labelled by the MONTH name (dayjs default en in tests), not a date range.
+    expect(screen.getByText(/January 2099/)).toBeInTheDocument();
+    // 20 + 30 across the month.
+    expect(screen.getByText(/50\.00/)).toBeInTheDocument();
+    // The "next payment" tag sits on the batch line — exactly once.
+    expect(screen.getAllByText("members.next_payment")).toHaveLength(1);
+  });
+
+  it("keeps a plain timeline (no batch subtotal) when cycles are mixed", () => {
+    chargesHook.mockReturnValue({
+      data: [
+        // Weekly (7-day period)…
+        {
+          id: "w",
+          due_date: "2099-01-05",
+          period_start: "2099-01-05",
+          period_end: "2099-01-11",
+          expected_amount: "10.00",
+          subscription_label: "Veggie",
+          status: "PLANNED",
+        },
+        // …plus monthly (30-day period) → mixed → no recap.
+        {
+          id: "m",
+          due_date: "2099-01-05",
+          period_start: "2099-01-05",
+          period_end: "2099-02-04",
+          expected_amount: "20.00",
+          subscription_label: "Eggs",
+          status: "PLANNED",
+        },
+      ],
+    });
+    renderCard({ memberId: "m1" });
+
+    expect(screen.queryByText("members.batch_total")).not.toBeInTheDocument();
+    // Next tag stays on the upcoming row when there is no batch line.
+    expect(screen.getByText("members.next_payment")).toBeInTheDocument();
+  });
+
+  it("shows no batch subtotal for a pure-weekly member (no period dates)", () => {
+    chargesHook.mockReturnValue({
+      data: [
+        {
+          id: "1",
+          due_date: "2099-04-06",
+          expected_amount: "10.00",
+          subscription_label: "Veggie",
+          status: "PLANNED",
+        },
+      ],
+    });
+    renderCard({ memberId: "m1" });
+    expect(screen.queryByText("members.batch_total")).not.toBeInTheDocument();
+    // Pure-weekly: the Next tag stays on the upcoming row.
+    expect(screen.getByText("members.next_payment")).toBeInTheDocument();
+  });
+
   it("accepts the paginated {results} envelope", () => {
     chargesHook.mockReturnValue({
       data: {

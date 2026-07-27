@@ -166,6 +166,7 @@
   "pickup_name": "Abholname",
   "no_payments": "Noch keine Zahlungen.",
   "next_payment": "Nächste Zahlung",
+  "batch_total": "Sammelbetrag",
   "admin_confirmation_success": "Erfolgreich freigegeben",
   "pseudonym": "Pseudonym - Abholname",
   "phone": "Telefonnummer",
