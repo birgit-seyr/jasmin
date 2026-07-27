@@ -34,7 +34,7 @@ time-machine = "^3.2.0"
 django-axes = "^8.3.1"
 django-zxcvbn-password-validator = "^1.6.0"
 django-auditlog = "^3.4.1"
-ruff = "^0.15.13"
+ruff = ">=0.15.13,<0.17.0"
 jwcrypto = ">=1.5.7"
 # Transitive (pulled in by djangorestframework-simplejwt + redis[jwt]).
 # Pinned explicitly to dodge PYSEC-2026-{175,177,178,179} on 2.12.x.
@@ -77,7 +77,7 @@ pytest-cov = "^7.1.0"
 pytest-django = "^4.5"
 black = "^26.3.1"
 factory-boy = "^3.3"
-ruff = "^0.15.13"
+ruff = ">=0.15.13,<0.17.0"
 pip-audit = "^2.10.0"
 pre-commit = "^4.6.0"
 # Per-request query-count summary printed to the runserver console.
