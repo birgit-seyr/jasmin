@@ -43,6 +43,8 @@ vi.mock("@hooks/index", () => ({
   }),
 }));
 
+vi.mock("@shared/auth", () => ({ useRoles: () => ({ isMemberOnly: false }) }));
+
 vi.mock("@features/members/modals/SepaSetupModal", () => ({ default: () => null }));
 
 import PaymentsCard from "../PaymentsCard";

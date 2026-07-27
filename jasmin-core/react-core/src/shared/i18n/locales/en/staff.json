@@ -14,6 +14,7 @@
   "weekly_plan_categories_description": "Categories that group the weekly plan into rows.",
   "name": "Name",
   "max_lines": "Max. rows",
+  "data": "Data",
   "sort_order": "Order",
   "sort_order_unique": "This order is already in use.",
   "absence_categories": "Absence categories",

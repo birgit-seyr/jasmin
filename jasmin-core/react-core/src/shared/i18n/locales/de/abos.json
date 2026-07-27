@@ -49,7 +49,7 @@
   "debits_run_deleted": "Lauf gelöscht.",
   "debits_run_delete_error": "Lauf konnte nicht gelöscht werden.",
   "debits_load_error": "Lastschriftläufe konnten nicht geladen werden.",
-  "debits_col_created_at": "Erstellt am",
+  "debits_col_created_at": "erstellt am",
   "debits_col_period": "Periode",
   "debits_col_collection_date": "Einzugsdatum",
   "debits_col_status": "Status",

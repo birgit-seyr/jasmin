@@ -1,4 +1,5 @@
 import FitbitIcon from "@mui/icons-material/Fitbit";
+import BubbleChartIcon from "@mui/icons-material/BubbleChart";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import SidebarShell from "./SidebarShell";
@@ -34,30 +35,36 @@ export default function StaffSidebar({
       permission: "staff.team.view",
     },
     {
-      key: "staff-employees",
-      icon: <FitbitIcon />,
-      label: <Link to="/staff/employees">{t("staff.employees")}</Link>,
-      permission: "staff.team.view",
-    },
-    {
-      key: "staff-weekly-plan-categories",
-      icon: <FitbitIcon />,
-      label: (
-        <Link to="/staff/weekly-plan-categories">
-          {t("staff.weekly_plan_categories")}
-        </Link>
-      ),
-      permission: "staff.team.view",
-    },
-    {
-      key: "staff-absence-categories",
-      icon: <FitbitIcon />,
-      label: (
-        <Link to="/staff/absence-categories">
-          {t("staff.absence_categories")}
-        </Link>
-      ),
-      permission: "staff.team.view",
+      key: "staff-data",
+
+      requireRole: "isStaff",
+      icon: <BubbleChartIcon />,
+      label: <div className="sidebar-section-header">{t("staff.data")}</div>,
+      children: [
+        {
+          key: "staff-employees",
+          label: <Link to="/staff/employees">{t("staff.employees")}</Link>,
+          permission: "staff.team.view",
+        },
+        {
+          key: "staff-weekly-plan-categories",
+          label: (
+            <Link to="/staff/weekly-plan-categories">
+              {t("staff.weekly_plan_categories")}
+            </Link>
+          ),
+          permission: "staff.team.view",
+        },
+        {
+          key: "staff-absence-categories",
+          label: (
+            <Link to="/staff/absence-categories">
+              {t("staff.absence_categories")}
+            </Link>
+          ),
+          permission: "staff.team.view",
+        },
+      ],
     },
   ];
 

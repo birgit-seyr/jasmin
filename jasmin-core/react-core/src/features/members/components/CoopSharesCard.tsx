@@ -1,11 +1,10 @@
-import { BankOutlined } from "@ant-design/icons";
-import { Alert, Badge, Button, Card, Space, Statistic, Typography } from "antd";
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useCurrency, useDateFormat, useTenant } from "@hooks/index";
 import { useCommissioningMyMemberDataRetrieve } from "@shared/api/generated/commissioning/commissioning";
 import type { Member } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
-import { useCurrency, useDateFormat, useTenant } from "@hooks/index";
+import { Alert, Badge, Button, Card, Typography } from "antd";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 const { Text } = Typography;
 

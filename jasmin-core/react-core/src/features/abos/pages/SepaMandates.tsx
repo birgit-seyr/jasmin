@@ -1,7 +1,12 @@
-import { Button, Typography } from "antd";
-import { useMemo, useState } from "react";
+import { EditOutlined } from "@ant-design/icons";
+import { Button, DatePicker, Modal, Popconfirm, Space, Typography } from "antd";
+import dayjs from "dayjs";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { usePaymentsBillingProfilesList } from "@shared/api/generated/payments-—-billing-profiles/payments-—-billing-profiles";
+import {
+  usePaymentsBillingProfilesList,
+  usePaymentsBillingProfilesPartialUpdate,
+} from "@shared/api/generated/payments-—-billing-profiles/payments-—-billing-profiles";
 import type { BillingProfile } from "@shared/api/generated/models";
 import { PaymentMethodEnum } from "@shared/api/generated/models";
 import { ExplainerText, SepaMandateStatusTag } from "@shared/ui";
@@ -12,9 +17,13 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import { useDateFormat, useTenant } from "@hooks/index";
 import { useRoles } from "@shared/auth";
+import { notify } from "@shared/utils";
+import { getErrorMessage } from "@shared/utils/apiError";
+import { MemberSelector } from "@shared/selectors";
 import SepaMandateImportModal from "@features/abos/modals/SepaMandateImportModal";
+import SepaSetupModal from "@features/members/modals/SepaSetupModal";
 
-const { Text } = Typography;
+const { Paragraph, Text } = Typography;
 
 type SepaMandateRow = BillingProfile & TableRecord;
 
@@ -27,12 +36,18 @@ type SepaMandateRow = BillingProfile & TableRecord;
  */
 export default function SepaMandates() {
   const { t } = useTranslation();
-  const { formatDate } = useDateFormat();
+  const { formatDate, dateFormat } = useDateFormat();
   const { isOffice } = useRoles();
   const { getSetting } = useTenant();
   const uploadAllowed =
     getSetting("allow_upload_for_data_lists", false) === true;
   const [importModalOpen, setImportModalOpen] = useState(false);
+  // "Add mandate": pick a member, then reuse the office SEPA setup modal.
+  const [addPickerOpen, setAddPickerOpen] = useState(false);
+  const [pickedMember, setPickedMember] = useState<string | null>(null);
+  const [sepaSetupMemberId, setSepaSetupMemberId] = useState<string | null>(
+    null,
+  );
 
   // Office scope: the list returns every member's profile (IBAN + account
   // holder masked in bulk reads). Show every profile that HAS a SEPA mandate —
@@ -45,6 +60,57 @@ export default function SepaMandates() {
     isLoading,
     refetch,
   } = usePaymentsBillingProfilesList();
+
+  // Two-way active toggle for a SEPA_DD profile. ``is_active`` is step-up
+  // gated on the backend; the api.ts interceptor drives the password prompt +
+  // retry, so nothing special is needed here.
+  const patchMutation = usePaymentsBillingProfilesPartialUpdate();
+  const toggleActive = useCallback(
+    async (row: SepaMandateRow, nextActive: boolean) => {
+      if (!row.id) return;
+      try {
+        await patchMutation.mutateAsync({
+          id: row.id,
+          // ``member`` is read-only on update but the generated body type
+          // still lists it as required; send the row's own member (no-op).
+          data: { member: row.member, is_active: nextActive },
+        });
+        notify.success(
+          t(nextActive ? "sepa.reactivated" : "sepa.deactivated"),
+        );
+        void refetch();
+      } catch (err) {
+        notify.error(getErrorMessage(err, t("common.error")));
+      }
+    },
+    [patchMutation, refetch, t],
+  );
+
+  // Office stamps when the signed PAPER mandate arrived. Works for ANY mandate
+  // — including one a member set up themselves (no paper field in self-service)
+  // — because ``sepa_mandate_paper_received_at`` is not step-up gated and needs
+  // no IBAN re-entry (member is read-only on update).
+  const [paperRow, setPaperRow] = useState<SepaMandateRow | null>(null);
+  const [paperDate, setPaperDate] = useState<dayjs.Dayjs | null>(null);
+  const savePaperReceived = useCallback(async () => {
+    if (!paperRow?.id) return;
+    try {
+      await patchMutation.mutateAsync({
+        id: paperRow.id,
+        data: {
+          member: paperRow.member,
+          sepa_mandate_paper_received_at: paperDate
+            ? paperDate.format("YYYY-MM-DD")
+            : null,
+        },
+      });
+      notify.success(t("sepa.paper_saved"));
+      setPaperRow(null);
+      void refetch();
+    } catch (err) {
+      notify.error(getErrorMessage(err, t("common.error")));
+    }
+  }, [paperRow, paperDate, patchMutation, refetch, t]);
 
   const data = useMemo<SepaMandateRow[]>(
     () =>
@@ -101,8 +167,24 @@ export default function SepaMandates() {
         dataIndex: "sepa_mandate_paper_received_at",
         key: "sepa_mandate_paper_received_at",
         align: "center",
-        width: "8em",
-        render: (value) => formatDate(value as string | null),
+        width: "10em",
+        render: (value: unknown, record: SepaMandateRow) => (
+          <Space size={4}>
+            <span>{formatDate(value as string | null) || "—"}</span>
+            {isOffice && (
+              <Button
+                type="text"
+                size="small"
+                icon={<EditOutlined />}
+                aria-label={t("sepa.edit_paper_received")}
+                onClick={() => {
+                  setPaperRow(record);
+                  setPaperDate(value ? dayjs(value as string) : null);
+                }}
+              />
+            )}
+          </Space>
+        ),
       },
       {
         title: t("sepa.status"),
@@ -118,8 +200,54 @@ export default function SepaMandates() {
           />
         ),
       },
+      ...(isOffice
+        ? [
+            {
+              title: "",
+              // No real field — the render works off ``record``; ``id`` is just
+              // a placeholder so the column config type-checks.
+              dataIndex: "id" as const,
+              key: "actions",
+              align: "center" as const,
+              width: "9em",
+              render: (_value: unknown, record: SepaMandateRow) => {
+                // A consent-revoked mandate sits on BANK_TRANSFER — a plain
+                // is_active flip won't make it usable again, so re-setup goes
+                // through the member's SEPA modal (payment_method + mandate).
+                if (record.payment_method !== PaymentMethodEnum.SEPA_DD) {
+                  return (
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => setSepaSetupMemberId(record.member)}
+                    >
+                      {t("sepa.set_up_again")}
+                    </Button>
+                  );
+                }
+                const active = !!record.is_active;
+                return (
+                  <Popconfirm
+                    title={
+                      active
+                        ? t("sepa.deactivate_confirm")
+                        : t("sepa.reactivate_confirm")
+                    }
+                    okText={active ? t("sepa.deactivate") : t("sepa.reactivate")}
+                    cancelText={t("common.cancel")}
+                    onConfirm={() => void toggleActive(record, !active)}
+                  >
+                    <Button type="link" size="small" danger={active}>
+                      {active ? t("sepa.deactivate") : t("sepa.reactivate")}
+                    </Button>
+                  </Popconfirm>
+                );
+              },
+            },
+          ]
+        : []),
     ],
-    [t, formatDate],
+    [t, formatDate, isOffice, toggleActive],
   );
 
   return (
@@ -142,9 +270,18 @@ export default function SepaMandates() {
 
       {isOffice && (
         <div style={{ marginTop: 24 }}>
-          <Button size="small" onClick={() => setImportModalOpen(true)}>
-            {t("onboarding.sepa_link")}
-          </Button>
+          <Space>
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => setAddPickerOpen(true)}
+            >
+              {t("sepa.add_mandate")}
+            </Button>
+            <Button size="small" onClick={() => setImportModalOpen(true)}>
+              {t("onboarding.sepa_link")}
+            </Button>
+          </Space>
         </div>
       )}
 
@@ -154,6 +291,63 @@ export default function SepaMandates() {
         uploadAllowed={uploadAllowed}
         onUploadSuccess={() => void refetch()}
       />
+
+      {/* Add: pick a member, then hand off to the office SEPA setup modal
+          (which owns create/update + the step-up flow). */}
+      <Modal
+        open={addPickerOpen}
+        title={t("sepa.add_mandate")}
+        okText={t("common.next")}
+        okButtonProps={{ disabled: !pickedMember }}
+        onOk={() => {
+          if (!pickedMember) return;
+          setSepaSetupMemberId(pickedMember);
+          setAddPickerOpen(false);
+          setPickedMember(null);
+        }}
+        onCancel={() => {
+          setAddPickerOpen(false);
+          setPickedMember(null);
+        }}
+        destroyOnHidden
+      >
+        <Paragraph type="secondary">
+          {t("sepa.add_mandate_pick_member")}
+        </Paragraph>
+        <MemberSelector
+          selectedMember={pickedMember}
+          setSelectedMember={setPickedMember}
+        />
+      </Modal>
+
+      <SepaSetupModal
+        open={!!sepaSetupMemberId}
+        memberId={sepaSetupMemberId ?? ""}
+        officeMode
+        onClose={() => setSepaSetupMemberId(null)}
+        onSaved={() => void refetch()}
+      />
+
+      {/* Stamp when the signed paper mandate arrived — a single-field PATCH,
+          usable even for a member-created mandate (no step-up, no IBAN). */}
+      <Modal
+        open={!!paperRow}
+        title={t("sepa.paper_received_at")}
+        okText={t("common.save")}
+        onOk={() => void savePaperReceived()}
+        onCancel={() => setPaperRow(null)}
+        confirmLoading={patchMutation.isPending}
+        destroyOnHidden
+      >
+        <Paragraph type="secondary">{t("sepa.paper_received_hint")}</Paragraph>
+        <DatePicker
+          value={paperDate}
+          onChange={setPaperDate}
+          format={dateFormat}
+          allowClear
+          style={{ width: "100%" }}
+        />
+      </Modal>
     </div>
   );
 }
