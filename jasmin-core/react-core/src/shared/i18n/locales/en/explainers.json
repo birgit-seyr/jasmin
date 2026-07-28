@@ -60,5 +60,10 @@
   "packing_list_bulk": "Bulk view of the commissioning list for several box types / delivery days.",
   "abos_emails": "Send emails to subscription holders here — for example filtered by share variation, delivery station or period.",
   "commissioning_lists_packing": "These are the quantities that must be provided to the packing stations. The additional % stored on the articles (for waste, etc.) is added on top here.",
-  "payment_resellers": "Only invoices that have already been finalized are shown."
+  "payment_resellers": "Only invoices that have already been finalized are shown.",
+  "list_bed_types": "Bed types and their dimensions — how wide and long a bed is.",
+  "list_break_families": "Plant families and their crop-rotation break in years — how long the same family must stay off a bed.",
+  "list_vegetable_aggregations": "Groups of vegetables that should be grown close together.",
+  "list_seedlings_vendors": "Vendors you order seedlings from.",
+  "list_seeds_vendors": "Vendors you order seeds from."
 }

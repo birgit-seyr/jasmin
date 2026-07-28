@@ -24833,6 +24833,3943 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/cultivation/bed_types/:
+    get:
+      operationId: cultivation_bed_types_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BedType'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: cultivation_bed_types_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BedType'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BedType'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BedType'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BedType'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/bed_types/{id}/:
+    get:
+      operationId: cultivation_bed_types_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der bed type identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BedType'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: cultivation_bed_types_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der bed type identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BedType'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BedType'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BedType'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BedType'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: cultivation_bed_types_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der bed type identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BedType'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BedType'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BedType'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BedType'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: cultivation_bed_types_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der bed type identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/cultivation_batches/:
+    get:
+      operationId: cultivation_cultivation_batches_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CultivationBatch'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: cultivation_cultivation_batches_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CultivationBatch'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CultivationBatch'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CultivationBatch'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationBatch'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/cultivation_batches/{id}/:
+    get:
+      operationId: cultivation_cultivation_batches_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der cultivation batch identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationBatch'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: cultivation_cultivation_batches_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der cultivation batch identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CultivationBatch'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CultivationBatch'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CultivationBatch'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationBatch'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: cultivation_cultivation_batches_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der cultivation batch identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CultivationBatch'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CultivationBatch'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CultivationBatch'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationBatch'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: cultivation_cultivation_batches_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der cultivation batch identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/cultivation_break_families/:
+    get:
+      operationId: cultivation_cultivation_break_families_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CultivationBreakFamily'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: cultivation_cultivation_break_families_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CultivationBreakFamily'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CultivationBreakFamily'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CultivationBreakFamily'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationBreakFamily'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/cultivation_break_families/{id}/:
+    get:
+      operationId: cultivation_cultivation_break_families_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der cultivation break family identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationBreakFamily'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: cultivation_cultivation_break_families_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der cultivation break family identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CultivationBreakFamily'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CultivationBreakFamily'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CultivationBreakFamily'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationBreakFamily'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: cultivation_cultivation_break_families_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der cultivation break family identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CultivationBreakFamily'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CultivationBreakFamily'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CultivationBreakFamily'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationBreakFamily'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: cultivation_cultivation_break_families_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der cultivation break family identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/historical_plantings/:
+    get:
+      operationId: cultivation_historical_plantings_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoricalPlanting'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: cultivation_historical_plantings_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HistoricalPlanting'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HistoricalPlanting'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HistoricalPlanting'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricalPlanting'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/historical_plantings/{id}/:
+    get:
+      operationId: cultivation_historical_plantings_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der historical planting identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricalPlanting'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: cultivation_historical_plantings_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der historical planting identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HistoricalPlanting'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HistoricalPlanting'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HistoricalPlanting'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricalPlanting'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: cultivation_historical_plantings_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der historical planting identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HistoricalPlanting'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HistoricalPlanting'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HistoricalPlanting'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricalPlanting'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: cultivation_historical_plantings_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der historical planting identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/plot_contents/:
+    get:
+      operationId: cultivation_plot_contents_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlotContent'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: cultivation_plot_contents_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlotContent'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlotContent'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlotContent'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlotContent'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/plot_contents/{id}/:
+    get:
+      operationId: cultivation_plot_contents_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der plot content identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlotContent'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: cultivation_plot_contents_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der plot content identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlotContent'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlotContent'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlotContent'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlotContent'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: cultivation_plot_contents_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der plot content identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlotContent'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlotContent'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlotContent'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlotContent'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: cultivation_plot_contents_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der plot content identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/plots/:
+    get:
+      operationId: cultivation_plots_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CultivationPlot'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: cultivation_plots_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CultivationPlot'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CultivationPlot'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CultivationPlot'
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationPlot'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/plots/{id}/:
+    get:
+      operationId: cultivation_plots_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der plot identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationPlot'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: cultivation_plots_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der plot identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CultivationPlot'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CultivationPlot'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CultivationPlot'
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationPlot'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: cultivation_plots_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der plot identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CultivationPlot'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CultivationPlot'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CultivationPlot'
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationPlot'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: cultivation_plots_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der plot identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/seedlings_vendors/:
+    get:
+      operationId: cultivation_seedlings_vendors_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SeedlingsVendor'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: cultivation_seedlings_vendors_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeedlingsVendor'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SeedlingsVendor'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SeedlingsVendor'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedlingsVendor'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/seedlings_vendors/{id}/:
+    get:
+      operationId: cultivation_seedlings_vendors_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der seedlings vendor identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedlingsVendor'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: cultivation_seedlings_vendors_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der seedlings vendor identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeedlingsVendor'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SeedlingsVendor'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SeedlingsVendor'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedlingsVendor'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: cultivation_seedlings_vendors_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der seedlings vendor identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeedlingsVendor'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SeedlingsVendor'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SeedlingsVendor'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedlingsVendor'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: cultivation_seedlings_vendors_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der seedlings vendor identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/seeds_vendors/:
+    get:
+      operationId: cultivation_seeds_vendors_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SeedsVendor'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: cultivation_seeds_vendors_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeedsVendor'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SeedsVendor'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SeedsVendor'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedsVendor'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/seeds_vendors/{id}/:
+    get:
+      operationId: cultivation_seeds_vendors_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der seeds vendor identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedsVendor'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: cultivation_seeds_vendors_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der seeds vendor identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeedsVendor'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SeedsVendor'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SeedsVendor'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedsVendor'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: cultivation_seeds_vendors_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der seeds vendor identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeedsVendor'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SeedsVendor'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SeedsVendor'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedsVendor'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: cultivation_seeds_vendors_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der seeds vendor identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/vegetable_aggregations/:
+    get:
+      operationId: cultivation_vegetable_aggregations_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VegetableAggregation'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: cultivation_vegetable_aggregations_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VegetableAggregation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VegetableAggregation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VegetableAggregation'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VegetableAggregation'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/vegetable_aggregations/{id}/:
+    get:
+      operationId: cultivation_vegetable_aggregations_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der vegetable aggregation identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VegetableAggregation'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: cultivation_vegetable_aggregations_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der vegetable aggregation identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VegetableAggregation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VegetableAggregation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VegetableAggregation'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VegetableAggregation'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: cultivation_vegetable_aggregations_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der vegetable aggregation identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VegetableAggregation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VegetableAggregation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VegetableAggregation'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VegetableAggregation'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: cultivation_vegetable_aggregations_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der vegetable aggregation identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/vegetables/:
+    get:
+      operationId: cultivation_vegetables_list
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vegetable'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: cultivation_vegetables_create
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vegetable'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Vegetable'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Vegetable'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vegetable'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/vegetables/{id}/:
+    get:
+      operationId: cultivation_vegetables_retrieve
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der vegetable identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vegetable'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: cultivation_vegetables_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der vegetable identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vegetable'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Vegetable'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Vegetable'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vegetable'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: cultivation_vegetables_partial_update
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der vegetable identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vegetable'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Vegetable'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Vegetable'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vegetable'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: cultivation_vegetables_destroy
+      description: |-
+        ViewSet mixin that maps DRF actions to permission classes.
+
+        Usage:
+            class InvoiceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+                read_permission = IsStaff
+                write_permission = IsOffice
+
+        Read actions (`list`, `retrieve`) require `read_permission`; everything
+        else (create / update / partial_update / destroy / custom @action) requires
+        `write_permission`. Both default to `IsAuthenticated`. Any classes set on
+        the parent (via `permission_classes`) are layered on top.
+
+        Public actions:
+            Set ``public_read_actions`` to a set of action names that should be
+            accessible to *anyone* (anonymous + authenticated, no role check).
+            Use for endpoints that serve content the public needs before login —
+            the registration wizard fetching ``ConsentDocument`` text is the
+            canonical case. The set may include ``"list"`` / ``"retrieve"`` and
+            custom ``@action`` names alike; entries here override
+            ``read_permission`` / ``write_permission`` for that action only.
+
+            class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
+                write_permission = IsOffice          # publishing a new version
+                public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der vegetable identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/gdpr/admin/approve-deletion/{request_id}/:
     post:
       operationId: gdpr_admin_approve_deletion_create
@@ -27399,6 +31336,27 @@ components:
         status:
           type: string
           readOnly: true
+    BedType:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          nullable: true
+          maxLength: 200
+        length_in_m:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        width_in_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+      required:
+      - length_in_m
+      - width_in_m
     BillingProfile:
       type: object
       description: |-
@@ -29269,6 +33227,136 @@ components:
           description: Reason for the storno
       required:
       - reason
+    CultivationBatch:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        planting_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        week_when_net_is_removed:
+          type: integer
+          maximum: 53
+          minimum: 1
+          nullable: true
+        week_when_fleece_is_removed:
+          type: integer
+          maximum: 53
+          minimum: 1
+          nullable: true
+        harvesting_start_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        harvesting_end_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        delivery_start_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+          nullable: true
+        delivery_end_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+          nullable: true
+        end_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        planting_lines:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        distance_in_row_in_m:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+        planting_mode:
+          $ref: '#/components/schemas/PlantingModeEnum'
+        seedlings_are_produced_on_site:
+          type: boolean
+        pieces_per_plant:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,1})?$
+        yield_kg_per_m2:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        amount_of_beds:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        growing_area_m2:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        note:
+          type: string
+          nullable: true
+          maxLength: 200
+        is_final:
+          type: boolean
+        vegetable:
+          type: string
+        vegetable_set:
+          type: string
+          nullable: true
+        used_bed_type:
+          type: string
+          nullable: true
+      required:
+      - distance_in_row_in_m
+      - end_week
+      - harvesting_end_week
+      - harvesting_start_week
+      - pieces_per_plant
+      - planting_lines
+      - planting_mode
+      - planting_week
+      - vegetable
+      - year
+      - yield_kg_per_m2
+    CultivationBreakFamily:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        cultivation_break_in_years:
+          type: integer
+          maximum: 32767
+          minimum: 0
+      required:
+      - cultivation_break_in_years
+      - name
+    CultivationPlot:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          nullable: true
+          maxLength: 200
+        is_greenhouse:
+          type: boolean
     CurrentTenant:
       type: object
       description: |-
@@ -29370,19 +33458,25 @@ components:
           nullable: true
           maxLength: 100
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         phone_number:
           type: string
           nullable: true
           maxLength: 20
         website:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         privacy_policy_html:
           type: string
         legal_form:
@@ -29552,6 +33646,14 @@ components:
         * `basic` - Basic
         * `tours` - Tours
         * `stations` - Stations
+    DefaultPlantingModeEnum:
+      enum:
+      - PLANTING
+      - SOWING
+      type: string
+      description: |-
+        * `PLANTING` - P
+        * `SOWING` - S
     DefaultShareArticleInShare:
       type: object
       description: |-
@@ -30042,8 +34144,8 @@ components:
         file:
           type: string
           format: uri
-          readOnly: true
           nullable: true
+          readOnly: true
         has_been_sent_to_reseller_at:
           type: string
           format: date-time
@@ -30364,24 +34466,33 @@ components:
           pattern: ^-?\d{0,2}(?:\.\d{0,10})?$
           nullable: true
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
           maxLength: 150
         email_3:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         order_email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         phone:
           type: string
           nullable: true
@@ -31157,6 +35268,16 @@ components:
         * `per_month` - per_month
         * `per_year` - per_year
         * `none` - none
+    FertilizerRequirementEnum:
+      enum:
+      - WEAK
+      - MIDDLE
+      - STRONG
+      type: string
+      description: |-
+        * `WEAK` - Weak
+        * `MIDDLE` - Middle
+        * `STRONG` - Strong
     Forecast:
       type: object
       description: Mixin to automatically add related name fields.
@@ -31703,6 +35824,46 @@ components:
         packing_station:
           type: integer
           default: 1
+    HistoricalPlanting:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        start_cell:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        cell_count:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        occupied_until_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+          nullable: true
+        note:
+          type: string
+          nullable: true
+          maxLength: 200
+        plot:
+          type: string
+        cultivation_break_family:
+          type: string
+        vegetable:
+          type: string
+          nullable: true
+      required:
+      - cell_count
+      - cultivation_break_family
+      - plot
+      - start_cell
+      - year
     InventoryEntry:
       type: object
       description: Response serializer for PATCH on an INVENTORY movement.
@@ -31904,13 +36065,13 @@ components:
         file:
           type: string
           format: uri
-          readOnly: true
           nullable: true
+          readOnly: true
         xml_file:
           type: string
           format: uri
-          readOnly: true
           nullable: true
+          readOnly: true
         document_hash:
           type: string
           readOnly: true
@@ -32430,10 +36591,13 @@ components:
         is_student:
           type: boolean
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 255
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 255
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
@@ -32680,10 +36844,13 @@ components:
         is_student:
           type: boolean
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 255
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 255
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
@@ -33062,24 +37229,33 @@ components:
           nullable: true
           maxLength: 100
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
           maxLength: 150
         email_3:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         order_email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         phone:
           type: string
           nullable: true
@@ -33293,10 +37469,13 @@ components:
           nullable: true
           maxLength: 100
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 255
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 255
+          - type: string
+            maxLength: 0
         birth_date:
           type: string
           format: date
@@ -34270,10 +38449,13 @@ components:
           nullable: true
           maxLength: 100
         link:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 500
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
         reseller:
           type: string
       required:
@@ -34624,6 +38806,14 @@ components:
       description: |-
         * `SEPA_DD` - SEPA Direct Debit
         * `BANK_TRANSFER` - Bank Transfer
+    PlantingModeEnum:
+      enum:
+      - PLANTING
+      - SOWING
+      type: string
+      description: |-
+        * `PLANTING` - P
+        * `SOWING` - S
     Plot:
       type: object
       description: |-
@@ -34648,6 +38838,24 @@ components:
           readOnly: true
       required:
       - name
+    PlotContent:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        amount:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        plot:
+          type: string
+        bed_type:
+          type: string
+      required:
+      - amount
+      - bed_type
+      - plot
     PreviewField:
       type: object
       description: |-
@@ -35191,24 +39399,33 @@ components:
           pattern: ^-?\d{0,2}(?:\.\d{0,10})?$
           nullable: true
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
           maxLength: 150
         email_3:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         order_email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 150
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
         phone:
           type: string
           nullable: true
@@ -35498,20 +39715,29 @@ components:
           pattern: ^-?\d{0,2}(?:\.\d{0,10})?$
           nullable: true
         email:
-          type: string
-          format: email
           nullable: true
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
         email_3:
-          type: string
-          format: email
           nullable: true
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
         order_email:
-          type: string
-          format: email
           nullable: true
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
         phone:
           type: string
           nullable: true
@@ -35889,9 +40115,12 @@ components:
           type: string
           nullable: true
         email:
-          type: string
-          format: email
           nullable: true
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
         email_2:
           type: string
           nullable: true
@@ -36244,9 +40473,12 @@ components:
         user_id:
           type: string
         email:
-          type: string
-          format: email
           nullable: true
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
       required:
       - email
       - user_id
@@ -36409,6 +40641,36 @@ components:
             minimum: 1
       required:
       - valid_from
+    SeedlingsVendor:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          nullable: true
+          maxLength: 200
+      required:
+      - name
+    SeedsVendor:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          nullable: true
+          maxLength: 200
+      required:
+      - name
     SepaMandateStatus:
       type: object
       description: |-
@@ -37405,6 +41667,7 @@ components:
         file:
           type: string
           format: uri
+          nullable: true
           readOnly: true
         file_url:
           type: string
@@ -38622,20 +42885,29 @@ components:
           nullable: true
           maxLength: 20
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         email_for_orders:
-          type: string
-          format: email
           nullable: true
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         website:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         legal_form:
           type: string
           maxLength: 100
@@ -38797,16 +43069,22 @@ components:
           description: Display name for 'From' field
           maxLength: 255
         reply_to_email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         accounting_email:
-          type: string
-          format: email
           nullable: true
           description: Email address for sending invoices to accounting (e.g., DATEV)
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         max_emails_per_hour:
           type: integer
           maximum: 2147483647
@@ -38936,19 +43214,25 @@ components:
           nullable: true
           maxLength: 100
         email:
-          type: string
-          format: email
           nullable: true
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         phone_number:
           type: string
           nullable: true
           maxLength: 20
         website:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         privacy_policy_html:
           type: string
         legal_form:
@@ -40032,6 +44316,65 @@ components:
       description: |-
         * `physical` - Physical Share Type Variation - Needs Content Planning
         * `virtual` - Virtual Share Type Variation - Combination of Others
+    Vegetable:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        unit:
+          $ref: '#/components/schemas/VegetableUnitEnum'
+        average_kg_per_piece:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+        default_planting_lines:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        default_distance_in_row:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+        default_planting_mode:
+          $ref: '#/components/schemas/DefaultPlantingModeEnum'
+        default_pieces_per_plant:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        default_yield_kg_per_m2:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        fertilizer_requirement:
+          $ref: '#/components/schemas/FertilizerRequirementEnum'
+        cultivation_break_family:
+          type: string
+          nullable: true
+      required:
+      - average_kg_per_piece
+      - default_distance_in_row
+      - default_planting_lines
+      - default_planting_mode
+      - fertilizer_requirement
+      - name
+      - unit
+    VegetableAggregation:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+      required:
+      - name
     VegetableSizeEnum:
       enum:
       - S
@@ -40042,6 +44385,16 @@ components:
         * `S` - S
         * `M` - M
         * `L` - L
+    VegetableUnitEnum:
+      enum:
+      - KG
+      - PCS
+      - BUNCH
+      type: string
+      description: |-
+        * `KG` - Kg
+        * `PCS` - Pcs
+        * `BUNCH` - Bunch
     VirtualVariationComponentItem:
       type: object
       properties:

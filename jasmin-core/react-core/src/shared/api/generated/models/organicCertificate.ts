@@ -5,6 +5,7 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { OrganicCertificateLink } from './organicCertificateLink';
 
 /**
  * A reseller's time-bound organic certificate. ``valid_from`` (Monday) and
@@ -21,10 +22,7 @@ export interface OrganicCertificate {
    * @nullable
    */
   certificate_number?: string | null;
-  /**
-   * @maxLength 500
-   * @nullable
-   */
-  link?: string | null;
+  /** @nullable */
+  link?: OrganicCertificateLink;
   reseller: string;
 }

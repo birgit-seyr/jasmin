@@ -176,6 +176,58 @@ export default function CultivationSidebar({
       ),
       children: [
         {
+          key: "cultivation-plots",
+          requireRole: "isGardener",
+          label: (
+            <Link to="/cultivation/plots">{t("cultivation.list_plots")}</Link>
+          ),
+        },
+        {
+          key: "cultivation-bed-types",
+          requireRole: "isGardener",
+          label: (
+            <Link to="/cultivation/bed-types">
+              {t("cultivation.list_bed_types")}
+            </Link>
+          ),
+        },
+        {
+          key: "cultivation-break-families",
+          requireRole: "isGardener",
+          label: (
+            <Link to="/cultivation/break-families">
+              {t("cultivation.list_break_families")}
+            </Link>
+          ),
+        },
+        {
+          key: "cultivation-vegetable-aggregations",
+          requireRole: "isGardener",
+          label: (
+            <Link to="/cultivation/vegetable-aggregations">
+              {t("cultivation.list_vegetable_aggregations")}
+            </Link>
+          ),
+        },
+        {
+          key: "cultivation-seedlings-vendors",
+          requireRole: "isGardener",
+          label: (
+            <Link to="/cultivation/seedlings-vendors">
+              {t("cultivation.list_seedlings_vendors")}
+            </Link>
+          ),
+        },
+        {
+          key: "cultivation-seeds-vendors",
+          requireRole: "isGardener",
+          label: (
+            <Link to="/cultivation/seeds-vendors">
+              {t("cultivation.list_seeds_vendors")}
+            </Link>
+          ),
+        },
+        {
           key: "cultivation-vegetable-families",
 
           requireRole: "isGardener",
@@ -192,26 +244,6 @@ export default function CultivationSidebar({
           label: (
             <Link to="/cultivation/plant-families">
               {t("cultivation.plant_families")}
-            </Link>
-          ),
-        },
-        {
-          key: "cultivation-seller-seedlings",
-
-          requireRole: "isGardener",
-          label: (
-            <Link to="/cultivation/seller-seedlings">
-              {t("cultivation.seller_seedlings")}
-            </Link>
-          ),
-        },
-        {
-          key: "cultivation-seller-seeds",
-
-          requireRole: "isGardener",
-          label: (
-            <Link to="/cultivation/seller-seeds">
-              {t("cultivation.seller_seeds")}
             </Link>
           ),
         },

@@ -5,6 +5,8 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { TenantEmailConfigReplyToEmail } from './tenantEmailConfigReplyToEmail';
+import type { TenantEmailConfigAccountingEmail } from './tenantEmailConfigAccountingEmail';
 
 /**
  * SMTP-only email config. ``smtp_password`` is write-only.
@@ -42,17 +44,13 @@ export interface TenantEmailConfig {
    * @maxLength 255
    */
   from_name: string;
-  /**
-   * @maxLength 254
-   * @nullable
-   */
-  reply_to_email?: string | null;
+  /** @nullable */
+  reply_to_email?: TenantEmailConfigReplyToEmail;
   /**
    * Email address for sending invoices to accounting (e.g., DATEV)
-   * @maxLength 254
    * @nullable
    */
-  accounting_email?: string | null;
+  accounting_email?: TenantEmailConfigAccountingEmail;
   /**
    * @minimum -2147483648
    * @maximum 2147483647

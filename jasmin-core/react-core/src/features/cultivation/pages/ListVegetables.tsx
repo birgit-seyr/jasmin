@@ -1,4 +1,4 @@
-const ListVegetableFamilies = () => {
+const ListVegetables = () => {
   return (
     <div>
       <h1>Vegetable Families</h1>
@@ -7,4 +7,4 @@ const ListVegetableFamilies = () => {
   );
 };
 
-export default ListVegetableFamilies;
+export default ListVegetables;

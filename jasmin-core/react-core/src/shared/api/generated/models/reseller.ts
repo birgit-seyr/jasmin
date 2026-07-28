@@ -6,6 +6,9 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ResellerLinkedUserInfo } from './resellerLinkedUserInfo';
+import type { ResellerEmail } from './resellerEmail';
+import type { ResellerEmail3 } from './resellerEmail3';
+import type { ResellerOrderEmail } from './resellerOrderEmail';
 
 /**
  * Mixin to add ``can_be_deleted`` to serializers.
@@ -167,26 +170,17 @@ checkbox when the link cannot safely be undone. */
    * @pattern ^-?\d{0,2}(?:\.\d{0,10})?$
    */
   coords_lat?: string | null;
-  /**
-   * @maxLength 150
-   * @nullable
-   */
-  email?: string | null;
+  /** @nullable */
+  email?: ResellerEmail;
   /**
    * @maxLength 150
    * @nullable
    */
   email_2?: string | null;
-  /**
-   * @maxLength 150
-   * @nullable
-   */
-  email_3?: string | null;
-  /**
-   * @maxLength 150
-   * @nullable
-   */
-  order_email?: string | null;
+  /** @nullable */
+  email_3?: ResellerEmail3;
+  /** @nullable */
+  order_email?: ResellerOrderEmail;
   /**
    * @maxLength 150
    * @nullable

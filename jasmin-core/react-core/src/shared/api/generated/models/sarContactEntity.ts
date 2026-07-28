@@ -5,6 +5,9 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { SarContactEntityEmail } from './sarContactEntityEmail';
+import type { SarContactEntityEmail3 } from './sarContactEntityEmail3';
+import type { SarContactEntityOrderEmail } from './sarContactEntityOrderEmail';
 
 /**
  * Full ``ContactEntity`` row. Excludes ``user`` FK (same reason
@@ -39,13 +42,13 @@ export interface SarContactEntity {
    */
   coords_lat: string | null;
   /** @nullable */
-  email: string | null;
+  email: SarContactEntityEmail;
   /** @nullable */
   email_2: string | null;
   /** @nullable */
-  email_3: string | null;
+  email_3: SarContactEntityEmail3;
   /** @nullable */
-  order_email: string | null;
+  order_email: SarContactEntityOrderEmail;
   /** @nullable */
   phone: string | null;
   /** @nullable */

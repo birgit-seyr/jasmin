@@ -60,8 +60,6 @@ class DocumentationMixin(models.Model):
         max_digits=10, decimal_places=2, blank=True, null=True
     )  # this is in kg/pcs/bunch
 
-    # ``max_length=20`` preserves this column's historical width — every other
-    # unit column is 10; normalising it would require a migration (out of scope).
     unit = unit_field(max_length=20)
     size = size_vegetable_field()
     storage = models.ForeignKey("Storage", on_delete=models.CASCADE)

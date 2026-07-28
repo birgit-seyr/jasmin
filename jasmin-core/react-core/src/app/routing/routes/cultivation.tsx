@@ -5,13 +5,13 @@ import type { AppRoute } from "../types";
 const DashboardCultivation = lazy(
   () => import("@features/cultivation/pages/DashboardCultivation"),
 );
-const ListPlantFamilies = lazy(
-  () => import("@features/cultivation/pages/ListPlantFamilies"),
+
+const ListVegetables = lazy(
+  () => import("@/features/cultivation/pages/ListVegetables"),
 );
-const ListVegetableFamilies = lazy(
-  () => import("@features/cultivation/pages/ListVegetableFamilies"),
+const PlantingList = lazy(
+  () => import("@features/cultivation/pages/PlantingList"),
 );
-const PlantingList = lazy(() => import("@features/cultivation/pages/PlantingList"));
 const SowingList = lazy(() => import("@features/cultivation/pages/SowingList"));
 const OrderSeedlings = lazy(
   () => import("@features/cultivation/pages/OrderSeedlings"),
@@ -26,8 +26,12 @@ const ListSellersSeedlings = lazy(
 const ListSellersSeeds = lazy(
   () => import("@features/cultivation/pages/ListSellersSeeds"),
 );
-const SetsIndoors = lazy(() => import("@features/cultivation/pages/SetsIndoors"));
-const SetsOutdoors = lazy(() => import("@features/cultivation/pages/SetsOutdoors"));
+const SetsIndoors = lazy(
+  () => import("@features/cultivation/pages/SetsIndoors"),
+);
+const SetsOutdoors = lazy(
+  () => import("@features/cultivation/pages/SetsOutdoors"),
+);
 const SortsSeedlingsIndoors = lazy(
   () => import("@features/cultivation/pages/SortsSeedlingsIndoors"),
 );
@@ -49,8 +53,72 @@ const DocumentationFertilizers = lazy(
 const DocumentationPesticides = lazy(
   () => import("@features/cultivation/pages/DocumentationPesticides"),
 );
+const ListPlots = lazy(() => import("@features/cultivation/pages/ListPlots"));
+const ListBedTypes = lazy(
+  () => import("@features/cultivation/pages/ListBedTypes"),
+);
+const ListCultivationBreakFamilies = lazy(
+  () => import("@features/cultivation/pages/ListCultivationBreakFamilies"),
+);
+const ListVegetableAggregations = lazy(
+  () => import("@features/cultivation/pages/ListVegetableAggregations"),
+);
+const ListSeedlingsVendors = lazy(
+  () => import("@features/cultivation/pages/ListSeedlingsVendors"),
+);
+const ListSeedsVendors = lazy(
+  () => import("@features/cultivation/pages/ListSeedsVendors"),
+);
 
 export const cultivationRoutes: AppRoute[] = [
+  {
+    path: "/cultivation/plots",
+    element: (
+      <RequireRole flag="isGardener">
+        <ListPlots />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/bed-types",
+    element: (
+      <RequireRole flag="isGardener">
+        <ListBedTypes />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/break-families",
+    element: (
+      <RequireRole flag="isGardener">
+        <ListCultivationBreakFamilies />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/vegetable-aggregations",
+    element: (
+      <RequireRole flag="isGardener">
+        <ListVegetableAggregations />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/seedlings-vendors",
+    element: (
+      <RequireRole flag="isGardener">
+        <ListSeedlingsVendors />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/seeds-vendors",
+    element: (
+      <RequireRole flag="isGardener">
+        <ListSeedsVendors />
+      </RequireRole>
+    ),
+  },
   {
     path: "/cultivation/dashboard",
     element: (
@@ -75,14 +143,7 @@ export const cultivationRoutes: AppRoute[] = [
       </RequireRole>
     ),
   },
-  {
-    path: "/cultivation/list-plant-families",
-    element: (
-      <RequireRole flag="isGardener">
-        <ListPlantFamilies />
-      </RequireRole>
-    ),
-  },
+
   {
     path: "/cultivation/amounts-for-cultivation",
     element: (
@@ -95,7 +156,7 @@ export const cultivationRoutes: AppRoute[] = [
     path: "/cultivation/list-vegetable-families",
     element: (
       <RequireRole flag="isGardener">
-        <ListVegetableFamilies />
+        <ListVegetables />
       </RequireRole>
     ),
   },

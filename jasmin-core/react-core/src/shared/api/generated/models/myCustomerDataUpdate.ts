@@ -5,6 +5,9 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { MyCustomerDataUpdateEmail } from './myCustomerDataUpdateEmail';
+import type { MyCustomerDataUpdateEmail3 } from './myCustomerDataUpdateEmail3';
+import type { MyCustomerDataUpdateOrderEmail } from './myCustomerDataUpdateOrderEmail';
 
 /**
  * Incoming shape for ``PATCH /commissioning/my_customer_data/``.
@@ -39,26 +42,17 @@ export interface MyCustomerDataUpdate {
    * @nullable
    */
   country?: string | null;
-  /**
-   * @maxLength 150
-   * @nullable
-   */
-  email?: string | null;
+  /** @nullable */
+  email?: MyCustomerDataUpdateEmail;
   /**
    * @maxLength 150
    * @nullable
    */
   email_2?: string | null;
-  /**
-   * @maxLength 150
-   * @nullable
-   */
-  email_3?: string | null;
-  /**
-   * @maxLength 150
-   * @nullable
-   */
-  order_email?: string | null;
+  /** @nullable */
+  email_3?: MyCustomerDataUpdateEmail3;
+  /** @nullable */
+  order_email?: MyCustomerDataUpdateOrderEmail;
   /**
    * @maxLength 150
    * @nullable

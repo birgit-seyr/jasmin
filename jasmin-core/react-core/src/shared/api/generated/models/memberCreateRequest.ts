@@ -7,6 +7,7 @@
  */
 import type { MemberCreateRequestLinkedUserInfo } from './memberCreateRequestLinkedUserInfo';
 import type { WaitingListStatusEnum } from './waitingListStatusEnum';
+import type { MemberCreateRequestEmail } from './memberCreateRequestEmail';
 
 /**
  * Schema-only request body of ``MemberViewSet.create``: the Member
@@ -130,11 +131,8 @@ export interface MemberCreateRequest {
   /** @nullable */
   cancellation_reason?: string | null;
   is_student?: boolean;
-  /**
-   * @maxLength 255
-   * @nullable
-   */
-  email?: string | null;
+  /** @nullable */
+  email?: MemberCreateRequestEmail;
   /**
    * @maxLength 255
    * @nullable

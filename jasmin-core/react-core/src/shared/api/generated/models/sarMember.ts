@@ -5,6 +5,7 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { SarMemberEmail } from './sarMemberEmail';
 
 /**
  * Full ``apps.commissioning.models.Member`` row + the mixin
@@ -35,7 +36,7 @@ export interface SarMember {
   /** @nullable */
   country: string | null;
   /** @nullable */
-  email: string | null;
+  email: SarMemberEmail;
   /** @nullable */
   email_2: string | null;
   /** @nullable */

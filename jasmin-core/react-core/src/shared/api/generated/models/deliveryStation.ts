@@ -6,6 +6,9 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { DeliveryStationFeesBillingPeriod } from './deliveryStationFeesBillingPeriod';
+import type { DeliveryStationEmail } from './deliveryStationEmail';
+import type { DeliveryStationEmail3 } from './deliveryStationEmail3';
+import type { DeliveryStationOrderEmail } from './deliveryStationOrderEmail';
 
 /**
  * Serializer for DeliveryStation with dynamic contact and day fields.
@@ -115,26 +118,17 @@ export interface DeliveryStation {
    * @pattern ^-?\d{0,2}(?:\.\d{0,10})?$
    */
   coords_lat?: string | null;
-  /**
-   * @maxLength 150
-   * @nullable
-   */
-  email?: string | null;
+  /** @nullable */
+  email?: DeliveryStationEmail;
   /**
    * @maxLength 150
    * @nullable
    */
   email_2?: string | null;
-  /**
-   * @maxLength 150
-   * @nullable
-   */
-  email_3?: string | null;
-  /**
-   * @maxLength 150
-   * @nullable
-   */
-  order_email?: string | null;
+  /** @nullable */
+  email_3?: DeliveryStationEmail3;
+  /** @nullable */
+  order_email?: DeliveryStationOrderEmail;
   /**
    * @maxLength 150
    * @nullable

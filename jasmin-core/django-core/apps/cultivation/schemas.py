@@ -45,26 +45,3 @@ def get_delivery_week_parameter(**overrides):
         ],
         **overrides
     )
-
-
-# DAY NUMBER
-def get_day_number_parameter(**overrides):
-    """
-    Get day number parameter with optional overrides.
-
-    Usage:
-        get_day_number_parameter()
-        get_day_number_parameter(required=False)
-    """
-    return OpenApiParameter(
-        name="day_number",
-        type=OpenApiTypes.INT,
-        required=True,
-        description="Day of the week (0=Monday, 6=Sunday)",
-        examples=[
-            OpenApiExample("Monday", value=0),
-            OpenApiExample("Wednesday", value=2),
-            OpenApiExample("Sunday", value=6),
-        ],
-        **overrides
-    )

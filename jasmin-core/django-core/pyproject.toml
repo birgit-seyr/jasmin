@@ -147,6 +147,7 @@ omit = [
     "*/__init__.py",
     # Research solver code, allow-listed in [tool.ruff.lint.per-file-ignores] too.
     "apps/cultivation/solver/*",
+    "apps/cultivation/optimizer/*",
     # Operator one-off scripts (seed data, manual reconciliation,
     # createsuperadmin, etc.). Run manually by ops, not part of any
     # user-facing code path. See docs/code/test-coverage-priorities.md
@@ -217,6 +218,7 @@ ignore = [
 "**/migrations/**" = ["ALL"]
 # Optimization solver code is research-style — skip it for now.
 "apps/cultivation/solver/**" = ["ALL"]
+"apps/cultivation/optimizer/**" = ["ALL"]
 # Django settings split: settings.py star-imports a local override file by
 # convention. F403/F405 are noise here, the alternative is a manifest of
 # every override which is more maintenance for less safety.

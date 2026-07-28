@@ -60,5 +60,10 @@
   "configuration_consents": "Hier werden die Zustimmungstexte konfiguriert, die Mitglieder bei der Registrierung akzeptieren müssen.",
   "configuration_time_management": "Hier werden Liefertage, Bestelltage und andere zeitliche Abläufe konfiguriert.",
   "packing_list_bulk": "Bulk-Ansicht der Kommissionierliste für mehrere Kistentypen / Liefertage.",
-  "abos_emails": "Hier kannst du E-Mails an Abonnent:innen versenden — z. B. gefiltert nach Anteilsvariante, Lieferstation oder Zeitraum."
+  "abos_emails": "Hier kannst du E-Mails an Abonnent:innen versenden — z. B. gefiltert nach Anteilsvariante, Lieferstation oder Zeitraum.",
+  "list_bed_types": "Beet-Typen mit ihren Maßen. Sie beschreiben, wie breit und lang ein Beet ist.",
+  "list_break_families": "Pflanzenfamilien und ihre Fruchtfolge-Pause in Jahren – wie lange dieselbe Familie nicht auf dieselbe Fläche darf.",
+  "list_vegetable_aggregations": "Gruppen von Gemüse, die möglichst nah beieinander angebaut werden sollen.",
+  "list_seedlings_vendors": "Lieferanten, bei denen Jungpflanzen bestellt werden.",
+  "list_seeds_vendors": "Lieferanten, bei denen Saatgut bestellt wird."
 }
