@@ -1,11 +1,18 @@
 """Tunable parameters for the placement optimizer.
 
-Weights and feature flags for the full constraint set ported from the old
-``optimizer_folder``. The heavier / more approximate features (fleece, planting-
-line dispersion) are gated OFF by default but fully implemented — flip the flag
-to bring them in. The real objective ("optimal of what") is still an open design
-question, so the weights below are a sensible placeholder, not a final answer.
+The constants below are the DEFAULTS. A run's effective values are carried by a
+:class:`SolverConfig` instance threaded through the whole build, so the office
+can tune weights / flags per tenant (see ``models/settings.py`` +
+``loading.load_solver_settings``) without touching code. Import the constants
+only for defaults; read ``settings.<field>`` inside the model builders.
+
+The heavier / more approximate features (fleece, planting-line dispersion) are
+gated OFF by default but fully implemented. The real objective ("optimal of
+what") is still an open design question, so the weights are a sensible
+placeholder, not a final answer.
 """
+
+from dataclasses import dataclass
 
 from ..constants import CELLS_PER_BED
 
@@ -29,6 +36,8 @@ __all__ = [
     "WEIGHT_COMPACT_SPAN",
     "WEIGHT_LINE_DISPERSION",
     "WEIGHT_FLEECE_COUNT",
+    "SolverConfig",
+    "DEFAULT_SETTINGS",
 ]
 
 # Solver runtime.
@@ -76,3 +85,38 @@ WEIGHT_BEDS_PER_BATCH = 5  # keep each batch bed-aligned (fewest beds spanned)
 WEIGHT_COMPACT_SPAN = 3  # no gaps between the first and last used bed of a plot
 WEIGHT_LINE_DISPERSION = 1
 WEIGHT_FLEECE_COUNT = 10
+
+
+@dataclass(frozen=True)
+class SolverConfig:
+    """Effective tunables for ONE solver run.
+
+    Defaults mirror the module constants; a run loads the tenant's overrides via
+    ``loading.load_solver_settings()``. Frozen + passed explicitly (never global
+    mutable state) so concurrent runs in different worker threads can't clobber
+    each other's configuration.
+    """
+
+    cells_per_bed: int = CELLS_PER_BED
+    # Runtime
+    max_time_seconds: float = SOLVER_MAX_TIME_SECONDS
+    workers: int = SOLVER_WORKERS
+    num_solutions: int = DEFAULT_NUM_SOLUTIONS
+    # Calendar
+    weeks_per_year: int = WEEKS_PER_YEAR
+    end_week_is_inclusive: bool = END_WEEK_IS_INCLUSIVE
+    # Feature flags
+    enable_planting_line_homogeneity: bool = ENABLE_PLANTING_LINE_HOMOGENEITY
+    enable_fleece: bool = ENABLE_FLEECE
+    fleece_width_in_beds: int = FLEECE_WIDTH_IN_BEDS
+    enable_line_dispersion: bool = ENABLE_LINE_DISPERSION
+    # Objective weights
+    weight_plots_used: int = WEIGHT_PLOTS_USED
+    weight_beds_used: int = WEIGHT_BEDS_USED
+    weight_beds_per_batch: int = WEIGHT_BEDS_PER_BATCH
+    weight_compact_span: int = WEIGHT_COMPACT_SPAN
+    weight_line_dispersion: int = WEIGHT_LINE_DISPERSION
+    weight_fleece_count: int = WEIGHT_FLEECE_COUNT
+
+
+DEFAULT_SETTINGS = SolverConfig()

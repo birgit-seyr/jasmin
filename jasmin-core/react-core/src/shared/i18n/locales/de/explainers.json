@@ -63,7 +63,10 @@
   "abos_emails": "Hier kannst du E-Mails an Abonnent:innen versenden — z. B. gefiltert nach Anteilsvariante, Lieferstation oder Zeitraum.",
   "list_bed_types": "Beet-Typen mit ihren Maßen. Sie beschreiben, wie breit und lang ein Beet ist.",
   "list_break_families": "Pflanzenfamilien und ihre Fruchtfolge-Pause in Jahren – wie lange dieselbe Familie nicht auf dieselbe Fläche darf.",
-  "list_vegetable_aggregations": "Gruppen von Gemüse, die möglichst nah beieinander angebaut werden sollen.",
-  "list_seedlings_vendors": "Lieferanten, bei denen Jungpflanzen bestellt werden.",
-  "list_seeds_vendors": "Lieferanten, bei denen Saatgut bestellt wird."
+  "list_vegetable_aggregations": "Gruppen von Gemüse, die möglichst nah beieinander angebaut werden sollen. Zum Beispiel: Wassermelonen und Zucchini, weil beide gemulcht werden.",
+  "list_seedlings_vendors": "",
+  "list_seeds_vendors": "",
+  "list_vegetables": "Diese Daten können für jeden einzelnen Satz in der Planung verändert werden.",
+  "list_plot_contents": "Wie viele Beete welchen Typs auf jeder Fläche liegen — die Grundlage für die Anbauplanung (Fläche × Beet-Typ × Anzahl).",
+  "cultivation_planner": "Der Anbauplaner zeigt jede Fläche als Beete und Zellen. Der Regler wählt die Kalenderwoche — angezeigt wird, was in dieser Woche im Boden steht. Der Solver berechnet mehrere Planvorschläge; einer wird übernommen. Platzierungen lassen sich per Drag & Drop von Hand korrigieren, denn der Solver kann nie alle Sonderfälle kennen."
 }

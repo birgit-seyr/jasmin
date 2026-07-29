@@ -34,9 +34,9 @@ def add_all_soft_constraints(
     terms += _minimize_beds_used(plots, v)
     terms += _minimize_beds_per_batch(v)
     terms += _minimize_compact_span(model, plots, v)
-    if config.ENABLE_LINE_DISPERSION:
+    if v.settings.enable_line_dispersion:
         terms += _line_dispersion(model, batches, plots, v)
-    if config.ENABLE_FLEECE:
+    if v.settings.enable_fleece:
         terms += _minimize_fleece_count(v)
     model.Minimize(sum(terms))
 
@@ -59,7 +59,7 @@ def _minimize_plots_used(
         else:
             model.Add(used == 0)
         v.plot_used[p] = used
-        terms.append(config.WEIGHT_PLOTS_USED * used)
+        terms.append(v.settings.weight_plots_used * used)
     return terms
 
 
@@ -67,7 +67,7 @@ def _minimize_beds_used(plots: list[PlotInput], v: OptimizerVars) -> list:
     """Fewer distinct beds across the whole season — rewards succession (reusing
     a bed for sequential crops)."""
     return [
-        config.WEIGHT_BEDS_USED * v.bed_used[(p, k)]
+        v.settings.weight_beds_used * v.bed_used[(p, k)]
         for p in range(len(plots))
         for k in range(v.num_beds[p])
     ]
@@ -76,7 +76,7 @@ def _minimize_beds_used(plots: list[PlotInput], v: OptimizerVars) -> list:
 def _minimize_beds_per_batch(v: OptimizerVars) -> list:
     """Keep each batch bed-aligned — the fewer beds it spans, the better (an
     unaligned start straddles an extra bed). Sum of occupancy incidences."""
-    return [config.WEIGHT_BEDS_PER_BATCH * occ for occ in v.occ.values()]
+    return [v.settings.weight_beds_per_batch * occ for occ in v.occ.values()]
 
 
 def _gap_penalty(
@@ -112,7 +112,7 @@ def _minimize_compact_span(
             continue
         used = [v.bed_used[(p, k)] for k in range(v.num_beds[p])]
         wasted = _gap_penalty(model, used, f"compact_p{p}")
-        terms.append(config.WEIGHT_COMPACT_SPAN * wasted)
+        terms.append(v.settings.weight_compact_span * wasted)
     return terms
 
 
@@ -152,10 +152,10 @@ def _line_dispersion(
                     model.Add(used == 0)
                 line_used.append(used)
             wasted = _gap_penalty(model, line_used, f"line_p{p}_l{line}")
-            terms.append(config.WEIGHT_LINE_DISPERSION * wasted)
+            terms.append(v.settings.weight_line_dispersion * wasted)
     return terms
 
 
 def _minimize_fleece_count(v: OptimizerVars) -> list:
     """Minimise the number of fleece-weeks used."""
-    return [config.WEIGHT_FLEECE_COUNT * fleece for fleece in v.fleece.values()]
+    return [v.settings.weight_fleece_count * fleece for fleece in v.fleece.values()]

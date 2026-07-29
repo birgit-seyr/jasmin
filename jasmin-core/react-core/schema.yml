@@ -26409,6 +26409,231 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/cultivation/plan_solutions/:
+    get:
+      operationId: cultivation_plan_solutions_list
+      description: |-
+        Candidate placement plans produced by the solver.
+
+        Read-only for the plans themselves (they are generated, not authored), plus
+        three actions: kick off a solver run, mark a candidate as *the* plan, and
+        store a hand-adjusted set of placements.
+      parameters:
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Year (YYYY format)
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CultivationPlanSolution'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/plan_solutions/{id}/:
+    get:
+      operationId: cultivation_plan_solutions_retrieve
+      description: |-
+        Candidate placement plans produced by the solver.
+
+        Read-only for the plans themselves (they are generated, not authored), plus
+        three actions: kick off a solver run, mark a candidate as *the* plan, and
+        store a hand-adjusted set of placements.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der cultivation plan solution identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationPlanSolutionWithDetails'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/plan_solutions/{id}/choose/:
+    post:
+      operationId: cultivation_plan_solutions_choose_create
+      description: Mark this candidate as the year's chosen plan (unsets any other).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der cultivation plan solution identifiziert.
+        required: true
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationPlanSolution'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/plan_solutions/{id}/save_placements/:
+    post:
+      operationId: cultivation_plan_solutions_save_placements_create
+      description: |-
+        Replace this plan's placements with a hand-adjusted set.
+
+        Only physically impossible states are rejected (out of bounds, or two
+        crops sharing a cell in the same week) — agronomic judgement stays with
+        the gardener.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der cultivation plan solution identifiziert.
+        required: true
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePlacementsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SavePlacementsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SavePlacementsRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CultivationPlanSolutionWithDetails'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/plan_solutions/run/:
+    post:
+      operationId: cultivation_plan_solutions_run_create
+      description: |-
+        Enqueue a solver run for a year; poll the returned job for progress.
+
+        Inputs are validated synchronously so an unplannable year is a 400 here
+        rather than a job that fails minutes later.
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunCultivationSolverRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RunCultivationSolverRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RunCultivationSolverRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunCultivationSolverResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/cultivation/plot_contents/:
     get:
       operationId: cultivation_plot_contents_list
@@ -27977,6 +28202,128 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
         '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/solver_settings/:
+    get:
+      operationId: cultivation_solver_settings_list
+      description: Return the single solver-settings row for the current tenant.
+      tags:
+      - cultivation
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SolverSettings'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/cultivation/solver_settings/save/:
+    put:
+      operationId: cultivation_solver_settings_save_update
+      description: |-
+        PUT/PATCH the singleton without a pk in the URL.
+
+        Accepts the ``{"settings": {...}}`` envelope the office settings pages
+        already send, so the shared autosave hook works unchanged; a bare object
+        is accepted too.
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSolverSettingsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UpdateSolverSettingsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateSolverSettingsRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolverSettings'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: cultivation_solver_settings_save_partial_update
+      description: |-
+        PUT/PATCH the singleton without a pk in the URL.
+
+        Accepts the ``{"settings": {...}}`` envelope the office settings pages
+        already send, so the shared autosave hook works unchanged; a bare object
+        is accepted too.
+      tags:
+      - cultivation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSolverSettingsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UpdateSolverSettingsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateSolverSettingsRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolverSettings'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
           content:
             application/json:
               schema:
@@ -33233,6 +33580,9 @@ components:
         id:
           type: string
           readOnly: true
+        vegetable_name:
+          type: string
+          readOnly: true
         year:
           type: integer
           maximum: 32767
@@ -33345,11 +33695,112 @@ components:
       required:
       - cultivation_break_in_years
       - name
+    CultivationPlanSolution:
+      type: object
+      description: A candidate plan header (no placements — fetch those via ``details``).
+      properties:
+        id:
+          type: string
+          readOnly: true
+        year:
+          type: integer
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        chosen:
+          type: boolean
+          readOnly: true
+        cells_per_bed:
+          type: integer
+          readOnly: true
+        placement_count:
+          type: integer
+          readOnly: true
+    CultivationPlanSolutionDetail:
+      type: object
+      description: |-
+        One placed batch. Carries the denormalised display fields the planner
+        grid needs (crop name, week window, rotation family) so rendering a plan
+        costs one request instead of a lookup per placement.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        solution:
+          type: string
+        batch:
+          type: string
+        plot:
+          type: string
+        start_cell:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        cell_count:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        end_cell:
+          type: integer
+          readOnly: true
+        vegetable_name:
+          type: string
+          readOnly: true
+        planting_week:
+          type: integer
+          readOnly: true
+        end_week:
+          type: integer
+          readOnly: true
+        cultivation_break_family:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - batch
+      - cell_count
+      - plot
+      - solution
+      - start_cell
+    CultivationPlanSolutionWithDetails:
+      type: object
+      description: The full plan — header plus every placement, for the planner grid.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        year:
+          type: integer
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        chosen:
+          type: boolean
+          readOnly: true
+        cells_per_bed:
+          type: integer
+          readOnly: true
+        placement_count:
+          type: integer
+          readOnly: true
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/CultivationPlanSolutionDetail'
+          readOnly: true
     CultivationPlot:
       type: object
       properties:
         id:
           type: string
+          readOnly: true
+        total_beds:
+          type: integer
+          readOnly: true
+        cell_capacity:
+          type: integer
           readOnly: true
         name:
           type: string
@@ -39450,6 +39901,30 @@ components:
       - address
       - city
       - zip_code
+    RunCultivationSolverRequest:
+      type: object
+      properties:
+        year:
+          type: integer
+        num_solutions:
+          type: integer
+          description: Defaults to the tenant's solver setting.
+      required:
+      - year
+    RunCultivationSolverResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        status:
+          type: string
+      required:
+      - job_id
+      - kind
+      - status
     SarAccount:
       type: object
       description: |-
@@ -40620,6 +41095,18 @@ components:
       - has_token
       - id
       - status
+    SavePlacementsRequest:
+      type: object
+      properties:
+        placements:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+            description: '{batch, plot, start_cell}'
+      required:
+      - placements
     Season:
       type: object
       properties:
@@ -42187,6 +42674,78 @@ components:
       required:
       - day_number
       - valid_from
+    SolverSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        solver_max_time_seconds:
+          type: integer
+          maximum: 900
+          minimum: 1
+          description: Wall-clock budget for ONE solve. Capped at 900s so a mistyped
+            value cannot pin a worker for hours.
+        solver_workers:
+          type: integer
+          maximum: 32
+          minimum: 1
+          description: CP-SAT search worker threads (num_search_workers).
+        default_num_solutions:
+          type: integer
+          maximum: 20
+          minimum: 1
+          description: How many distinct candidate plans one run produces.
+        enable_planting_line_homogeneity:
+          type: boolean
+          description: Within one bed, crops growing at the same time must share a
+            planting line (hard constraint).
+        enable_fleece:
+          type: boolean
+          description: 'Cover fleece-needing crops with 4-bed-wide fleece units (hard)
+            and minimise fleece-weeks (soft). Expensive: adds per-(plot, week, bed)
+            variables.'
+        enable_line_dispersion:
+          type: boolean
+          description: Keep beds sharing a planting line near each other (soft, aesthetic).
+            The priciest soft term.
+        weight_plots_used:
+          type: integer
+          maximum: 1000
+          minimum: 0
+          description: Consolidate the plan onto as few plots as possible.
+        weight_beds_used:
+          type: integer
+          maximum: 1000
+          minimum: 0
+          description: Fewer distinct beds across the season (rewards succession).
+        weight_beds_per_batch:
+          type: integer
+          maximum: 1000
+          minimum: 0
+          description: Keep each batch bed-aligned (spanning fewest beds).
+        weight_compact_span:
+          type: integer
+          maximum: 1000
+          minimum: 0
+          description: No gaps between the first and last used bed of a plot.
+        weight_line_dispersion:
+          type: integer
+          maximum: 1000
+          minimum: 0
+          description: Group beds that share a planting line.
+        weight_fleece_count:
+          type: integer
+          maximum: 1000
+          minimum: 0
+          description: Minimise how many fleece-weeks the plan needs.
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
     StationMemberMatrix:
       type: object
       description: |-
@@ -44260,6 +44819,15 @@ components:
       properties:
         settings:
           $ref: '#/components/schemas/TenantSettingsToDict'
+      required:
+      - settings
+    UpdateSolverSettingsRequest:
+      type: object
+      properties:
+        settings:
+          type: object
+          additionalProperties: {}
+          description: Key/value pairs of solver settings to update.
       required:
       - settings
     UpdateToursResponse:

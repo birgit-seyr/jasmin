@@ -8,6 +8,8 @@
 
 export interface CultivationPlot {
   readonly id?: string;
+  readonly total_beds?: number;
+  readonly cell_capacity?: number;
   /**
    * @maxLength 200
    * @nullable

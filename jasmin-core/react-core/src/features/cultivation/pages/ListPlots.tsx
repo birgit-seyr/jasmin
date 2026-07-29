@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { AppstoreOutlined } from "@ant-design/icons";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   cultivationPlotsCreate,
@@ -18,6 +19,8 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
+import { IconActionButton } from "@shared/ui";
+import { PlotContentModal } from "../modals";
 
 type PlotRow = CultivationPlot & TableRecord;
 
@@ -32,6 +35,8 @@ const plotsResource: CrudResource<PlotRow> = {
 export default function ListPlots() {
   const { t } = useTranslation();
   const { isGardener } = useRoles();
+  const [contentPlot, setContentPlot] = useState<PlotRow | null>(null);
+
   const permissions = useMemo(
     () => permissionsWithDeletable(isGardener),
     [isGardener],
@@ -55,6 +60,26 @@ export default function ListPlots() {
         inputType: "checkbox",
         required: false,
       },
+      {
+        // Action column: open the per-plot bed composition modal. Hidden for
+        // the unsaved new-row draft.
+        title: <>{t("cultivation.beds")}</>,
+        dataIndex: "beds",
+        key: "beds",
+        inputType: "text",
+        required: false,
+        disabled: true,
+        align: "center",
+        width: "6em",
+        render: (_: unknown, record: PlotRow) =>
+          record.key === -1 || !record.id ? null : (
+            <IconActionButton
+              icon={<AppstoreOutlined />}
+              label={t("cultivation.edit_beds")}
+              onClick={() => setContentPlot(record)}
+            />
+          ),
+      },
     ],
     [t],
   );
@@ -72,6 +97,12 @@ export default function ListPlots() {
       uniqueCheckMessage={t("validation.unique.name")}
       focusIndex="name"
       className="w-max custom-jasmin-table"
-    />
+    >
+      <PlotContentModal
+        visible={!!contentPlot}
+        plot={contentPlot}
+        onClose={() => setContentPlot(null)}
+      />
+    </CrudListPage>
   );
 }

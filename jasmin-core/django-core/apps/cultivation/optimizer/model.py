@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from ortools.sat.python import cp_model
 
+from .config import DEFAULT_SETTINGS, SolverConfig
 from .hard_constraints import add_all_hard_constraints
 from .loading import BatchInput, Blocker, Carryover, PlotInput
 from .soft_constraints import add_all_soft_constraints
@@ -29,9 +30,10 @@ def build_model(
     plots: list[PlotInput],
     blockers: list[Blocker],
     carryover: list[Carryover] = (),
+    settings: SolverConfig = DEFAULT_SETTINGS,
 ) -> tuple[cp_model.CpModel, OptimizerVars]:
     model = cp_model.CpModel()
-    variables = create_variables(batches, plots, model)
+    variables = create_variables(batches, plots, model, settings)
     add_all_hard_constraints(model, batches, plots, blockers, carryover, variables)
     add_all_soft_constraints(model, batches, plots, variables)
     return model, variables

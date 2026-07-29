@@ -22,11 +22,15 @@ from dataclasses import dataclass, field
 from ortools.sat.python import cp_model
 
 from . import config
+from .config import DEFAULT_SETTINGS, SolverConfig
 from .loading import BatchInput, PlotInput, occupancy_end_week
 
 
 @dataclass
 class OptimizerVars:
+    # Effective tunables for this run — carried here so the constraint modules
+    # read `v.settings.<field>` instead of module-level constants.
+    settings: SolverConfig
     # placement viewpoint
     present: dict[tuple[int, int], cp_model.IntVar]
     start: dict[tuple[int, int], cp_model.IntVar]
@@ -65,19 +69,22 @@ def batch_plot_options(
     return options
 
 
-def _time_span(batch: BatchInput) -> int:
+def _time_span(batch: BatchInput, settings: SolverConfig) -> int:
     """Number of weeks the batch occupies its cells (interval size).
 
     Uses the wrap-aware occupancy end so overwintering crops get their true
     multi-week span instead of collapsing to a single week.
     """
-    return occupancy_end_week(batch) - batch.planting_week + 1
+    return occupancy_end_week(batch, settings) - batch.planting_week + 1
 
 
 def create_variables(
-    batches: list[BatchInput], plots: list[PlotInput], model: cp_model.CpModel
+    batches: list[BatchInput],
+    plots: list[PlotInput],
+    model: cp_model.CpModel,
+    settings: SolverConfig = DEFAULT_SETTINGS,
 ) -> OptimizerVars:
-    width = config.CELLS_PER_BED
+    width = settings.cells_per_bed
     num_beds = [plot.cell_capacity // width for plot in plots]
     options = batch_plot_options(batches, plots)
 
@@ -90,7 +97,7 @@ def create_variables(
     occ: dict[tuple[int, int, int], cp_model.IntVar] = {}
 
     for b, batch in enumerate(batches):
-        span = _time_span(batch)
+        span = _time_span(batch, settings)
         for p in options[b]:
             plot = plots[p]
             is_present = model.NewBoolVar(f"present_b{b}_p{p}")
@@ -119,7 +126,7 @@ def create_variables(
 
     fleece: dict[tuple[int, int, int], cp_model.IntVar] = {}
     fleece_weeks: list[int] = []
-    if config.ENABLE_FLEECE:
+    if settings.enable_fleece:
         fleece_weeks = sorted(
             {
                 w
@@ -128,13 +135,14 @@ def create_variables(
                 for w in range(batch.planting_week, batch.fleece_until + 1)
             }
         )
-        wide = config.FLEECE_WIDTH_IN_BEDS
+        wide = settings.fleece_width_in_beds
         for p in range(len(plots)):
             for w in fleece_weeks:
                 for f in range(max(0, num_beds[p] - wide + 1)):
                     fleece[(p, w, f)] = model.NewBoolVar(f"fleece_p{p}_w{w}_f{f}")
 
     return OptimizerVars(
+        settings=settings,
         present=present,
         start=start,
         cell_interval=cell_interval,

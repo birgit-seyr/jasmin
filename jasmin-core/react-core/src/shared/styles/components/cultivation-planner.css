@@ -1,0 +1,165 @@
+/* Cultivation planner — plot/bed/cell grid, crop palette, solution picker. */
+
+.cultivation-planner__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1em;
+  margin: 1em 0;
+}
+
+.cultivation-planner__layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5em;
+}
+
+.cultivation-planner__palette {
+  flex: 0 0 15em;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 0.75em;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 6px;
+  background: var(--color-bg-elevated);
+}
+
+.cultivation-planner__palette-title {
+  font-weight: 600;
+  margin-bottom: 0.5em;
+}
+
+.cultivation-planner__palette-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+}
+
+.cultivation-planner__plots {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5em;
+  overflow-x: auto;
+}
+
+.cultivation-planner__plot-title {
+  font-weight: 600;
+  margin-bottom: 0.4em;
+}
+
+.cultivation-planner__plot-meta {
+  margin-left: 0.75em;
+  font-weight: 400;
+  font-size: 0.85em;
+  color: var(--color-text-muted);
+}
+
+.cultivation-planner__grid {
+  display: grid;
+  gap: 2px;
+  width: max-content;
+}
+
+/* Each bed is one row: a label cell + the bed's cells. */
+.cultivation-planner__row {
+  display: contents;
+}
+
+.cultivation-planner__bed-label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0.4em;
+  font-size: 0.8em;
+  color: var(--color-text-muted);
+}
+
+.cultivation-planner__cell {
+  min-height: 2.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 3px;
+  font-size: 0.72em;
+  line-height: 1.1;
+  text-align: center;
+  transition: outline-color 0.1s ease;
+}
+
+.cultivation-planner__cell--empty {
+  background: transparent;
+  border-style: dashed;
+}
+
+.cultivation-planner__cell--filled {
+  border-style: solid;
+  color: #2b2b2b;
+}
+
+.cultivation-planner__cell--dragging {
+  opacity: 0.4;
+}
+
+.cultivation-planner__cell--over {
+  outline: 2px solid var(--color-future-blue);
+  outline-offset: -2px;
+}
+
+.cultivation-planner__cell--highlighted {
+  outline: 2px solid var(--color-primary, #4a7c2f);
+  outline-offset: -2px;
+}
+
+.cultivation-planner__cell:focus-visible {
+  outline: 2px solid var(--color-future-blue);
+  outline-offset: 1px;
+}
+
+.cultivation-planner__cell-label {
+  padding: 0 0.15em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.cultivation-planner__empty,
+.cultivation-planner__hint {
+  color: var(--color-text-muted);
+  font-size: 0.9em;
+}
+
+.cultivation-planner__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75em;
+  margin-top: 1em;
+  font-size: 0.8em;
+}
+
+.cultivation-planner__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.cultivation-planner__legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--color-border-soft);
+}
+
+@media (max-width: 900px) {
+  .cultivation-planner__layout {
+    flex-direction: column;
+  }
+  .cultivation-planner__palette {
+    flex: 1 1 auto;
+    width: 100%;
+    max-height: 14em;
+  }
+}

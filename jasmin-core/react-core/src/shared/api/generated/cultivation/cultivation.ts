@@ -28,12 +28,20 @@ import type {
   BedType,
   CultivationBatch,
   CultivationBreakFamily,
+  CultivationPlanSolution,
+  CultivationPlanSolutionWithDetails,
+  CultivationPlanSolutionsListParams,
   CultivationPlot,
   ErrorResponse,
   HistoricalPlanting,
   PlotContent,
+  RunCultivationSolverRequest,
+  RunCultivationSolverResponse,
+  SavePlacementsRequest,
   SeedlingsVendor,
   SeedsVendor,
+  SolverSettings,
+  UpdateSolverSettingsRequest,
   Vegetable,
   VegetableAggregation
 } from '.././models';
@@ -2299,6 +2307,382 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Candidate placement plans produced by the solver.
+
+Read-only for the plans themselves (they are generated, not authored), plus
+three actions: kick off a solver run, mark a candidate as *the* plan, and
+store a hand-adjusted set of placements.
+ */
+export const cultivationPlanSolutionsList = (
+    params?: CultivationPlanSolutionsListParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<CultivationPlanSolution[]>(
+      {url: `/api/cultivation/plan_solutions/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCultivationPlanSolutionsListQueryKey = (params?: CultivationPlanSolutionsListParams,) => {
+    return [
+    `/api/cultivation/plan_solutions/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCultivationPlanSolutionsListQueryOptions = <TData = Awaited<ReturnType<typeof cultivationPlanSolutionsList>>, TError = ErrorResponse>(params?: CultivationPlanSolutionsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsList>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCultivationPlanSolutionsListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof cultivationPlanSolutionsList>>> = ({ signal }) => cultivationPlanSolutionsList(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CultivationPlanSolutionsListQueryResult = NonNullable<Awaited<ReturnType<typeof cultivationPlanSolutionsList>>>
+export type CultivationPlanSolutionsListQueryError = ErrorResponse
+
+
+export function useCultivationPlanSolutionsList<TData = Awaited<ReturnType<typeof cultivationPlanSolutionsList>>, TError = ErrorResponse>(
+ params: undefined |  CultivationPlanSolutionsListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof cultivationPlanSolutionsList>>,
+          TError,
+          Awaited<ReturnType<typeof cultivationPlanSolutionsList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCultivationPlanSolutionsList<TData = Awaited<ReturnType<typeof cultivationPlanSolutionsList>>, TError = ErrorResponse>(
+ params?: CultivationPlanSolutionsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof cultivationPlanSolutionsList>>,
+          TError,
+          Awaited<ReturnType<typeof cultivationPlanSolutionsList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCultivationPlanSolutionsList<TData = Awaited<ReturnType<typeof cultivationPlanSolutionsList>>, TError = ErrorResponse>(
+ params?: CultivationPlanSolutionsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsList>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCultivationPlanSolutionsList<TData = Awaited<ReturnType<typeof cultivationPlanSolutionsList>>, TError = ErrorResponse>(
+ params?: CultivationPlanSolutionsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsList>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCultivationPlanSolutionsListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Candidate placement plans produced by the solver.
+
+Read-only for the plans themselves (they are generated, not authored), plus
+three actions: kick off a solver run, mark a candidate as *the* plan, and
+store a hand-adjusted set of placements.
+ */
+export const cultivationPlanSolutionsRetrieve = (
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<CultivationPlanSolutionWithDetails>(
+      {url: `/api/cultivation/plan_solutions/${id}/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCultivationPlanSolutionsRetrieveQueryKey = (id?: string,) => {
+    return [
+    `/api/cultivation/plan_solutions/${id}/`
+    ] as const;
+    }
+
+    
+export const getCultivationPlanSolutionsRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>, TError = ErrorResponse>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCultivationPlanSolutionsRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>> = ({ signal }) => cultivationPlanSolutionsRetrieve(id, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CultivationPlanSolutionsRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>>
+export type CultivationPlanSolutionsRetrieveQueryError = ErrorResponse
+
+
+export function useCultivationPlanSolutionsRetrieve<TData = Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>, TError = ErrorResponse>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCultivationPlanSolutionsRetrieve<TData = Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCultivationPlanSolutionsRetrieve<TData = Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCultivationPlanSolutionsRetrieve<TData = Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCultivationPlanSolutionsRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Mark this candidate as the year's chosen plan (unsets any other).
+ */
+export const cultivationPlanSolutionsChooseCreate = (
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<CultivationPlanSolution>(
+      {url: `/api/cultivation/plan_solutions/${id}/choose/`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getCultivationPlanSolutionsChooseCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsChooseCreate>>, TError,{id: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsChooseCreate>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['cultivationPlanSolutionsChooseCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cultivationPlanSolutionsChooseCreate>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  cultivationPlanSolutionsChooseCreate(id,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CultivationPlanSolutionsChooseCreateMutationResult = NonNullable<Awaited<ReturnType<typeof cultivationPlanSolutionsChooseCreate>>>
+    
+    export type CultivationPlanSolutionsChooseCreateMutationError = ErrorResponse
+
+    export const useCultivationPlanSolutionsChooseCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsChooseCreate>>, TError,{id: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof cultivationPlanSolutionsChooseCreate>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getCultivationPlanSolutionsChooseCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Replace this plan's placements with a hand-adjusted set.
+
+Only physically impossible states are rejected (out of bounds, or two
+crops sharing a cell in the same week) — agronomic judgement stays with
+the gardener.
+ */
+export const cultivationPlanSolutionsSavePlacementsCreate = (
+    id: string,
+    savePlacementsRequest: SavePlacementsRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<CultivationPlanSolutionWithDetails>(
+      {url: `/api/cultivation/plan_solutions/${id}/save_placements/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: savePlacementsRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getCultivationPlanSolutionsSavePlacementsCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsSavePlacementsCreate>>, TError,{id: string;data: SavePlacementsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsSavePlacementsCreate>>, TError,{id: string;data: SavePlacementsRequest}, TContext> => {
+
+const mutationKey = ['cultivationPlanSolutionsSavePlacementsCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cultivationPlanSolutionsSavePlacementsCreate>>, {id: string;data: SavePlacementsRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  cultivationPlanSolutionsSavePlacementsCreate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CultivationPlanSolutionsSavePlacementsCreateMutationResult = NonNullable<Awaited<ReturnType<typeof cultivationPlanSolutionsSavePlacementsCreate>>>
+    export type CultivationPlanSolutionsSavePlacementsCreateMutationBody = SavePlacementsRequest
+    export type CultivationPlanSolutionsSavePlacementsCreateMutationError = ErrorResponse
+
+    export const useCultivationPlanSolutionsSavePlacementsCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsSavePlacementsCreate>>, TError,{id: string;data: SavePlacementsRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof cultivationPlanSolutionsSavePlacementsCreate>>,
+        TError,
+        {id: string;data: SavePlacementsRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCultivationPlanSolutionsSavePlacementsCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Enqueue a solver run for a year; poll the returned job for progress.
+
+Inputs are validated synchronously so an unplannable year is a 400 here
+rather than a job that fails minutes later.
+ */
+export const cultivationPlanSolutionsRunCreate = (
+    runCultivationSolverRequest: RunCultivationSolverRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<RunCultivationSolverResponse>(
+      {url: `/api/cultivation/plan_solutions/run/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: runCultivationSolverRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getCultivationPlanSolutionsRunCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsRunCreate>>, TError,{data: RunCultivationSolverRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsRunCreate>>, TError,{data: RunCultivationSolverRequest}, TContext> => {
+
+const mutationKey = ['cultivationPlanSolutionsRunCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cultivationPlanSolutionsRunCreate>>, {data: RunCultivationSolverRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  cultivationPlanSolutionsRunCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CultivationPlanSolutionsRunCreateMutationResult = NonNullable<Awaited<ReturnType<typeof cultivationPlanSolutionsRunCreate>>>
+    export type CultivationPlanSolutionsRunCreateMutationBody = RunCultivationSolverRequest
+    export type CultivationPlanSolutionsRunCreateMutationError = ErrorResponse
+
+    export const useCultivationPlanSolutionsRunCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cultivationPlanSolutionsRunCreate>>, TError,{data: RunCultivationSolverRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof cultivationPlanSolutionsRunCreate>>,
+        TError,
+        {data: RunCultivationSolverRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCultivationPlanSolutionsRunCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * ViewSet mixin that maps DRF actions to permission classes.
 
 Usage:
@@ -4523,6 +4907,223 @@ const {mutation: mutationOptions} = options ?
       > => {
 
       const mutationOptions = getCultivationSeedsVendorsDestroyMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Return the single solver-settings row for the current tenant.
+ */
+export const cultivationSolverSettingsList = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<SolverSettings[]>(
+      {url: `/api/cultivation/solver_settings/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCultivationSolverSettingsListQueryKey = () => {
+    return [
+    `/api/cultivation/solver_settings/`
+    ] as const;
+    }
+
+    
+export const getCultivationSolverSettingsListQueryOptions = <TData = Awaited<ReturnType<typeof cultivationSolverSettingsList>>, TError = ErrorResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationSolverSettingsList>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCultivationSolverSettingsListQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof cultivationSolverSettingsList>>> = ({ signal }) => cultivationSolverSettingsList(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof cultivationSolverSettingsList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CultivationSolverSettingsListQueryResult = NonNullable<Awaited<ReturnType<typeof cultivationSolverSettingsList>>>
+export type CultivationSolverSettingsListQueryError = ErrorResponse
+
+
+export function useCultivationSolverSettingsList<TData = Awaited<ReturnType<typeof cultivationSolverSettingsList>>, TError = ErrorResponse>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationSolverSettingsList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof cultivationSolverSettingsList>>,
+          TError,
+          Awaited<ReturnType<typeof cultivationSolverSettingsList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCultivationSolverSettingsList<TData = Awaited<ReturnType<typeof cultivationSolverSettingsList>>, TError = ErrorResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationSolverSettingsList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof cultivationSolverSettingsList>>,
+          TError,
+          Awaited<ReturnType<typeof cultivationSolverSettingsList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCultivationSolverSettingsList<TData = Awaited<ReturnType<typeof cultivationSolverSettingsList>>, TError = ErrorResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationSolverSettingsList>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCultivationSolverSettingsList<TData = Awaited<ReturnType<typeof cultivationSolverSettingsList>>, TError = ErrorResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationSolverSettingsList>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCultivationSolverSettingsListQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * PUT/PATCH the singleton without a pk in the URL.
+
+Accepts the ``{"settings": {...}}`` envelope the office settings pages
+already send, so the shared autosave hook works unchanged; a bare object
+is accepted too.
+ */
+export const cultivationSolverSettingsSaveUpdate = (
+    updateSolverSettingsRequest: UpdateSolverSettingsRequest,
+ ) => {
+      
+      
+      return axiosService<SolverSettings>(
+      {url: `/api/cultivation/solver_settings/save/`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: updateSolverSettingsRequest
+    },
+      );
+    }
+  
+
+
+export const getCultivationSolverSettingsSaveUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cultivationSolverSettingsSaveUpdate>>, TError,{data: UpdateSolverSettingsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof cultivationSolverSettingsSaveUpdate>>, TError,{data: UpdateSolverSettingsRequest}, TContext> => {
+
+const mutationKey = ['cultivationSolverSettingsSaveUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cultivationSolverSettingsSaveUpdate>>, {data: UpdateSolverSettingsRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  cultivationSolverSettingsSaveUpdate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CultivationSolverSettingsSaveUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof cultivationSolverSettingsSaveUpdate>>>
+    export type CultivationSolverSettingsSaveUpdateMutationBody = UpdateSolverSettingsRequest
+    export type CultivationSolverSettingsSaveUpdateMutationError = ErrorResponse
+
+    export const useCultivationSolverSettingsSaveUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cultivationSolverSettingsSaveUpdate>>, TError,{data: UpdateSolverSettingsRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof cultivationSolverSettingsSaveUpdate>>,
+        TError,
+        {data: UpdateSolverSettingsRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCultivationSolverSettingsSaveUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * PUT/PATCH the singleton without a pk in the URL.
+
+Accepts the ``{"settings": {...}}`` envelope the office settings pages
+already send, so the shared autosave hook works unchanged; a bare object
+is accepted too.
+ */
+export const cultivationSolverSettingsSavePartialUpdate = (
+    updateSolverSettingsRequest: UpdateSolverSettingsRequest,
+ ) => {
+      
+      
+      return axiosService<SolverSettings>(
+      {url: `/api/cultivation/solver_settings/save/`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateSolverSettingsRequest
+    },
+      );
+    }
+  
+
+
+export const getCultivationSolverSettingsSavePartialUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cultivationSolverSettingsSavePartialUpdate>>, TError,{data: UpdateSolverSettingsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof cultivationSolverSettingsSavePartialUpdate>>, TError,{data: UpdateSolverSettingsRequest}, TContext> => {
+
+const mutationKey = ['cultivationSolverSettingsSavePartialUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cultivationSolverSettingsSavePartialUpdate>>, {data: UpdateSolverSettingsRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  cultivationSolverSettingsSavePartialUpdate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CultivationSolverSettingsSavePartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof cultivationSolverSettingsSavePartialUpdate>>>
+    export type CultivationSolverSettingsSavePartialUpdateMutationBody = UpdateSolverSettingsRequest
+    export type CultivationSolverSettingsSavePartialUpdateMutationError = ErrorResponse
+
+    export const useCultivationSolverSettingsSavePartialUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cultivationSolverSettingsSavePartialUpdate>>, TError,{data: UpdateSolverSettingsRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof cultivationSolverSettingsSavePartialUpdate>>,
+        TError,
+        {data: UpdateSolverSettingsRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCultivationSolverSettingsSavePartialUpdateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

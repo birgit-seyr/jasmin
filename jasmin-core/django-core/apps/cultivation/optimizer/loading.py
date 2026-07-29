@@ -17,8 +17,9 @@ from ..models import (
     CultivationPlanSolutionDetail,
     HistoricalPlanting,
     Plot,
+    SolverSettings,
 )
-from .config import CELLS_PER_BED, END_WEEK_IS_INCLUSIVE, WEEKS_PER_YEAR
+from .config import CELLS_PER_BED, DEFAULT_SETTINGS, SolverConfig
 
 
 @dataclass(frozen=True)
@@ -64,20 +65,47 @@ class Carryover:
     until_week: int
 
 
-def occupancy_end_week(batch: BatchInput) -> int:
+def occupancy_end_week(
+    batch: BatchInput, settings: SolverConfig = DEFAULT_SETTINGS
+) -> int:
     """Last week the batch occupies its cells, on an absolute axis that unwraps
     overwintering crops.
 
     ``end_week < planting_week`` means the crop runs past the year boundary (e.g.
-    planted week 45, free again week 8 next year). We add ``WEEKS_PER_YEAR`` so
+    planted week 45, free again week 8 next year). We add ``weeks_per_year`` so
     the interval math sees a positive, correctly-ordered window instead of one
     that collapses to a single week and lets another crop reuse the cells while
     this one is still in the ground.
     """
-    end = batch.end_week if END_WEEK_IS_INCLUSIVE else batch.end_week - 1
+    end = batch.end_week if settings.end_week_is_inclusive else batch.end_week - 1
     if end < batch.planting_week:
-        end += WEEKS_PER_YEAR
+        end += settings.weeks_per_year
     return end
+
+
+def load_solver_settings() -> SolverConfig:
+    """The tenant's effective solver configuration.
+
+    Reads the ``SolverSettings`` singleton (created with the code defaults on
+    first access) and freezes it into the dataclass the model builders take.
+    ``cells_per_bed`` stays a code constant — it is the grain, not a preference.
+    """
+    row = SolverSettings.get_active()
+    return SolverConfig(
+        cells_per_bed=CELLS_PER_BED,
+        max_time_seconds=float(row.solver_max_time_seconds),
+        workers=row.solver_workers,
+        num_solutions=row.default_num_solutions,
+        enable_planting_line_homogeneity=row.enable_planting_line_homogeneity,
+        enable_fleece=row.enable_fleece,
+        enable_line_dispersion=row.enable_line_dispersion,
+        weight_plots_used=row.weight_plots_used,
+        weight_beds_used=row.weight_beds_used,
+        weight_beds_per_batch=row.weight_beds_per_batch,
+        weight_compact_span=row.weight_compact_span,
+        weight_line_dispersion=row.weight_line_dispersion,
+        weight_fleece_count=row.weight_fleece_count,
+    )
 
 
 def load_plots(cells_per_bed: int = CELLS_PER_BED) -> list[PlotInput]:
@@ -177,7 +205,9 @@ def load_blockers(year: int) -> list[Blocker]:
     return blockers
 
 
-def load_carryover(year: int) -> list[Carryover]:
+def load_carryover(
+    year: int, settings: SolverConfig = DEFAULT_SETTINGS
+) -> list[Carryover]:
     """Cells still occupied at the start of ``year`` by an overwintering crop
     from the previous year.
 
@@ -195,7 +225,7 @@ def load_carryover(year: int) -> list[Carryover]:
         batch = detail.batch
         if batch.end_week >= batch.planting_week:
             continue  # does not wrap into `year`
-        until = batch.end_week if END_WEEK_IS_INCLUSIVE else batch.end_week - 1
+        until = batch.end_week if settings.end_week_is_inclusive else batch.end_week - 1
         if until >= 1:
             carryover.append(
                 Carryover(

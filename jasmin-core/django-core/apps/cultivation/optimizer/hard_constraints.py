@@ -35,9 +35,9 @@ def add_all_hard_constraints(
     _no_overlap_space_time(model, batches, plots, carryover, v)
     _channel_bed_occupancy(model, batches, plots, v)
     _crop_rotation(model, batches, plots, blockers, v)
-    if config.ENABLE_PLANTING_LINE_HOMOGENEITY:
+    if v.settings.enable_planting_line_homogeneity:
         _planting_line_homogeneity(model, batches, plots, v)
-    if config.ENABLE_FLEECE:
+    if v.settings.enable_fleece:
         _fleece_coverage(model, batches, plots, v)
 
 
@@ -101,7 +101,7 @@ def _channel_bed_occupancy(
     ``occ[b, p, k] ⟺ present ∧ start_bed ≤ k ≤ end_bed``. Then
     ``bed_used[p, k] = OR_b occ[b, p, k]``.
     """
-    width = config.CELLS_PER_BED
+    width = v.settings.cells_per_bed
     for (b, p), s in v.start.items():
         count = batches[b].cell_count
         model.AddDivisionEquality(v.start_bed[(b, p)], s, width)
@@ -183,12 +183,12 @@ def _crop_rotation(
                 model.AddNoOverlap(intervals)
 
 
-def _time_overlap(a: BatchInput, b: BatchInput) -> bool:
+def _time_overlap(a: BatchInput, b: BatchInput, settings) -> bool:
     """Do the two occupancy windows share a week? Uses the wrap-aware end so
     an overwintering crop is compared on the same absolute axis."""
     return a.planting_week <= occupancy_end_week(
-        b
-    ) and b.planting_week <= occupancy_end_week(a)
+        b, settings
+    ) and b.planting_week <= occupancy_end_week(a, settings)
 
 
 def _planting_line_homogeneity(
@@ -206,7 +206,7 @@ def _planting_line_homogeneity(
     for b1, b2 in combinations(range(len(batches)), 2):
         if batches[b1].planting_lines == batches[b2].planting_lines:
             continue
-        if not _time_overlap(batches[b1], batches[b2]):
+        if not _time_overlap(batches[b1], batches[b2], v.settings):
             continue
         for p in range(len(plots)):
             if (b1, p) not in v.present or (b2, p) not in v.present:
@@ -230,7 +230,7 @@ def _fleece_coverage(
     any fleece, so a fleece-needing batch is forbidden from it entirely — without
     this it would otherwise be placed there uncovered.
     """
-    wide = config.FLEECE_WIDTH_IN_BEDS
+    wide = v.settings.fleece_width_in_beds
     for b, batch in enumerate(batches):
         if batch.fleece_until is None:
             continue

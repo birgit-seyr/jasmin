@@ -26,6 +26,14 @@ export default function CultivationSidebar({
 
   const baseMenuItems = [
     {
+      key: "cultivation-planner",
+      requireRole: "isGardener",
+      icon: <BubbleChartIcon />,
+      label: (
+        <Link to="/cultivation/planner">{t("cultivation.planner")}</Link>
+      ),
+    },
+    {
       key: "cultivation-amounts-for-cultivation",
 
       requireRole: "isGardener",
@@ -123,52 +131,109 @@ export default function CultivationSidebar({
       ],
     },
     {
-      key: "cultivation-list-planting",
-
+      key: "cultivation-working-lists",
       requireRole: "isGardener",
-      icon: <EmojiNatureIcon />,
+      icon: <LightModeIcon />,
       label: (
-        <Link to="/cultivation/list-planting">
-          {t("cultivation.list_planting")}
-        </Link>
+        <div className="sidebar-section-header">
+          {t("cultivation.working_lists")}
+        </div>
       ),
+      children: [
+        {
+          key: "cultivation-list-planting",
+
+          requireRole: "isGardener",
+          icon: <EmojiNatureIcon />,
+          label: (
+            <Link to="/cultivation/list-planting">
+              {t("cultivation.list_planting")}
+            </Link>
+          ),
+        },
+        {
+          key: "cultivation-list-sowing",
+
+          requireRole: "isGardener",
+          icon: <BlurOnIcon />,
+          label: (
+            <Link to="/cultivation/list-sowing">
+              {t("cultivation.list_sowing")}
+            </Link>
+          ),
+        },
+      ],
     },
     {
-      key: "cultivation-list-sowing",
-
+      key: "cultivation-order-lists",
       requireRole: "isGardener",
-      icon: <BlurOnIcon />,
+      icon: <LightModeIcon />,
       label: (
-        <Link to="/cultivation/list-sowing">
-          {t("cultivation.list_sowing")}
-        </Link>
+        <div className="sidebar-section-header">
+          {t("cultivation.order_lists")}
+        </div>
       ),
+      children: [
+        {
+          key: "cultivation-order-seedlings",
+
+          requireRole: "isGardener",
+          icon: <EmojiNatureIcon />,
+          label: (
+            <Link to="/cultivation/order-seedlings">
+              {t("cultivation.order_seedlings")}
+            </Link>
+          ),
+        },
+        {
+          key: "cultivation-order-seeds",
+
+          requireRole: "isGardener",
+          icon: <BlurOnIcon />,
+          label: (
+            <Link to="/cultivation/order-seeds">
+              {t("cultivation.order_seeds")}
+            </Link>
+          ),
+        },
+      ],
     },
     {
-      key: "cultivation-fertilizer",
-
+      key: "cultivation-documentation",
       requireRole: "isGardener",
-      icon: <LocalFloristIcon />,
+      icon: <LightModeIcon />,
       label: (
-        <Link to="/cultivation/documentation-fertilizers">
-          {t("cultivation.documentation_fertilizer")}
-        </Link>
+        <div className="sidebar-section-header">
+          {t("cultivation.documentation")}
+        </div>
       ),
-    },
-    {
-      key: "cultivation-pesticides",
+      children: [
+        {
+          key: "cultivation-fertilizer",
 
-      requireRole: "isGardener",
-      icon: <FilterVintageIcon />,
-      label: (
-        <Link to="/cultivation/documentation-pesticides">
-          {t("cultivation.documentation_pesticides")}
-        </Link>
-      ),
+          requireRole: "isGardener",
+          icon: <LocalFloristIcon />,
+          label: (
+            <Link to="/cultivation/documentation-fertilizers">
+              {t("cultivation.documentation_fertilizer")}
+            </Link>
+          ),
+        },
+        {
+          key: "cultivation-pesticides",
+
+          requireRole: "isGardener",
+          icon: <FilterVintageIcon />,
+          label: (
+            <Link to="/cultivation/documentation-pesticides">
+              {t("cultivation.documentation_pesticides")}
+            </Link>
+          ),
+        },
+      ],
     },
     {
       key: "cultivation-data",
-
       requireRole: "isGardener",
       icon: <BubbleChartIcon />,
       label: (
@@ -176,76 +241,97 @@ export default function CultivationSidebar({
       ),
       children: [
         {
-          key: "cultivation-plots",
+          key: "cultivation-areas",
           requireRole: "isGardener",
-          label: (
-            <Link to="/cultivation/plots">{t("cultivation.list_plots")}</Link>
-          ),
+          label: t("cultivation.areas"),
+          children: [
+            {
+              key: "cultivation-plots",
+              requireRole: "isGardener",
+              label: (
+                <Link to="/cultivation/plots">
+                  {t("cultivation.list_plots")}
+                </Link>
+              ),
+            },
+            {
+              key: "cultivation-solver-settings",
+              requireRole: "isGardener",
+              label: (
+                <Link to="/cultivation/solver-settings">
+                  {t("cultivation.solver_settings")}
+                </Link>
+              ),
+            },
+            {
+              key: "cultivation-bed-types",
+              requireRole: "isGardener",
+              label: (
+                <Link to="/cultivation/bed-types">
+                  {t("cultivation.list_bed_types")}
+                </Link>
+              ),
+            },
+          ],
         },
         {
-          key: "cultivation-bed-types",
+          key: "cultivation-botanical-data",
           requireRole: "isGardener",
-          label: (
-            <Link to="/cultivation/bed-types">
-              {t("cultivation.list_bed_types")}
-            </Link>
-          ),
+          label: t("cultivation.botanical_data"),
+          children: [
+            {
+              key: "cultivation-vegetables",
+              requireRole: "isGardener",
+              label: (
+                <Link to="/cultivation/list-vegetable-families">
+                  {t("cultivation.list_vegetables")}
+                </Link>
+              ),
+            },
+            {
+              key: "cultivation-vegetable-aggregations",
+              requireRole: "isGardener",
+              label: (
+                <Link to="/cultivation/vegetable-aggregations">
+                  {t("cultivation.list_vegetable_aggregations")}
+                </Link>
+              ),
+            },
+            {
+              key: "cultivation-break-families",
+              requireRole: "isGardener",
+              label: (
+                <Link to="/cultivation/break-families">
+                  {t("cultivation.list_break_families")}
+                </Link>
+              ),
+            },
+          ],
         },
         {
-          key: "cultivation-break-families",
+          key: "cultivation-vendors",
           requireRole: "isGardener",
-          label: (
-            <Link to="/cultivation/break-families">
-              {t("cultivation.list_break_families")}
-            </Link>
-          ),
-        },
-        {
-          key: "cultivation-vegetable-aggregations",
-          requireRole: "isGardener",
-          label: (
-            <Link to="/cultivation/vegetable-aggregations">
-              {t("cultivation.list_vegetable_aggregations")}
-            </Link>
-          ),
-        },
-        {
-          key: "cultivation-seedlings-vendors",
-          requireRole: "isGardener",
-          label: (
-            <Link to="/cultivation/seedlings-vendors">
-              {t("cultivation.list_seedlings_vendors")}
-            </Link>
-          ),
-        },
-        {
-          key: "cultivation-seeds-vendors",
-          requireRole: "isGardener",
-          label: (
-            <Link to="/cultivation/seeds-vendors">
-              {t("cultivation.list_seeds_vendors")}
-            </Link>
-          ),
-        },
-        {
-          key: "cultivation-vegetable-families",
-
-          requireRole: "isGardener",
-          label: (
-            <Link to="/cultivation/vegetable-families">
-              {t("cultivation.vegetable_families")}
-            </Link>
-          ),
-        },
-        {
-          key: "cultivation-plant-families",
-
-          requireRole: "isGardener",
-          label: (
-            <Link to="/cultivation/plant-families">
-              {t("cultivation.plant_families")}
-            </Link>
-          ),
+          label: t("cultivation.vendors"),
+          children: [
+            {
+              key: "cultivation-seedlings-vendors",
+              requireRole: "isGardener",
+              label: (
+                <Link to="/cultivation/seedlings-vendors">
+                  {t("cultivation.list_seedlings_vendors")}
+                </Link>
+              ),
+            },
+            {
+              key: "cultivation-seeds-vendors",
+              requireRole: "isGardener",
+              label: (
+                <Link to="/cultivation/seeds-vendors">
+                  {t("cultivation.list_seeds_vendors")}
+                </Link>
+              ),
+            },
+          ],
         },
       ],
     },

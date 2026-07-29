@@ -54,6 +54,12 @@ const DocumentationPesticides = lazy(
   () => import("@features/cultivation/pages/DocumentationPesticides"),
 );
 const ListPlots = lazy(() => import("@features/cultivation/pages/ListPlots"));
+const CultivationPlanner = lazy(
+  () => import("@features/cultivation/pages/CultivationPlanner"),
+);
+const ConfigurationSolver = lazy(
+  () => import("@features/cultivation/pages/ConfigurationSolver"),
+);
 const ListBedTypes = lazy(
   () => import("@features/cultivation/pages/ListBedTypes"),
 );
@@ -71,6 +77,22 @@ const ListSeedsVendors = lazy(
 );
 
 export const cultivationRoutes: AppRoute[] = [
+  {
+    path: "/cultivation/planner",
+    element: (
+      <RequireRole flag="isGardener">
+        <CultivationPlanner />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/solver-settings",
+    element: (
+      <RequireRole flag="isGardener">
+        <ConfigurationSolver />
+      </RequireRole>
+    ),
+  },
   {
     path: "/cultivation/plots",
     element: (

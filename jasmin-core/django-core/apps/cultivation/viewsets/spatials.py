@@ -1,3 +1,4 @@
+from django.db.models import Sum
 from rest_framework import viewsets
 
 from apps.authz.permissions import IsGardener, IsStaff, RolePermissionsMixin
@@ -10,7 +11,7 @@ class PlotViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaff
     write_permission = IsGardener
     serializer_class = PlotSerializer
-    queryset = Plot.objects.all()
+    queryset = Plot.objects.annotate(total_beds_annotated=Sum("contents__amount"))
 
 
 class BedTypeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
