@@ -45,9 +45,16 @@ RUNNING_IN_DOCKER = os.environ.get("RUNNING_IN_DOCKER", "False").lower() == "tru
 if not DEBUG:
     if SECRET_KEY == "dev-secret-key-change-in-production":
         raise ValueError("DJANGO_SECRET_KEY must be set in production.")
-    if os.environ.get("FIELD_ENCRYPTION_KEY", "") in (
-        "",
-        "HeQ7tkqHP7nVB1hA7VkX0SVIan3y_NUFrjyeDnfzcXk=",
+    # Checked per key, not on the raw string: the value may be a
+    # comma-separated rotation list, and the dev key must not survive in it
+    # as the trailing decrypt-fallback.
+    _configured_keys = [
+        _k.strip()
+        for _k in os.environ.get("FIELD_ENCRYPTION_KEY", "").split(",")
+        if _k.strip()
+    ]
+    if not _configured_keys or "HeQ7tkqHP7nVB1hA7VkX0SVIan3y_NUFrjyeDnfzcXk=" in (
+        _configured_keys
     ):
         raise ValueError(
             "FIELD_ENCRYPTION_KEY must be set in production (and must not be the dev default)."
@@ -396,10 +403,21 @@ SMTP_ALLOW_PRIVATE_HOSTS = (
 # stay stable — existing dev databases hold ciphertext encrypted with
 # it. Production refuses to boot on this value (guard at the top of
 # this file), so the fallback can never silently reach prod.
+# Comma-separated for key rotation: the FIRST key encrypts new writes, ALL
+# keys are tried when decrypting (django-encrypted-model-fields builds a
+# MultiFernet from the list). The split is load-bearing — the library calls
+# Fernet() on each list element and never splits itself, and Fernet's
+# base64 decode stops at the "=" padding that ends the first key. So a
+# comma-joined string in a one-element list decodes to exactly the first
+# key, SILENTLY discarding the old one and making every existing ciphertext
+# undecryptable. Fernet keys are url-safe base64 and never contain a comma,
+# so splitting is safe for the single-key case.
 FIELD_ENCRYPTION_KEY = [
-    os.environ.get(
+    _key.strip()
+    for _key in os.environ.get(
         "FIELD_ENCRYPTION_KEY", "HeQ7tkqHP7nVB1hA7VkX0SVIan3y_NUFrjyeDnfzcXk="
-    )
+    ).split(",")
+    if _key.strip()
 ]
 
 # Platform / super-admin domain configuration. Reads the SAME env name the
