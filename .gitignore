@@ -103,9 +103,11 @@ backups/storagebox_key
 backups/storagebox_key.pub
 
 *.pdf
-# Local AI assistant instructions (kept out of version control)
-CLAUDE.md
 text.txt
+
+# Executed AVVs / DPAs carry counterparty signatures and contact details.
+# docs/gdpr/ is public — signed contracts must never land in it.
+docs/gdpr/avv/
 
 # Local audit / working-note markdown — generated per session, never committed.
 # Limited to .md so it never swallows source code that merely contains "audit"

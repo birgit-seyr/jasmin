@@ -26,17 +26,27 @@ each merge.
 | Backup-replay command | ⚠ outdated | Only re-sets first/last/email; misses Member fields, encrypted IBAN, etc. |
 | Admin endpoint to anonymize OTHER users | ❌ missing | The view only handles self-deletion via JWT |
 
+**Snapshot of the 2026-05-25 starting point, not the current implementation.**
+Every ⚠ / "✅ basic" row above was superseded by the Steps below — except the
+missing admin anonymize-other-user endpoint, which is still open as Step 10.
+
 ## Identified gaps
 
 ### 🟠 HIGH — Anonymization is incomplete; PII survives "deletion"
+
+**⚠️ HISTORICAL — the gap list below was compiled on 2026-05-25.** These
+models were remediated by Steps 2, 4 and 9 and are now scrubbed in a single
+atomic `anonymize_user` call; see the acceptance notes below. The list is
+retained for audit traceability, annotated in place with its current status —
+so it records what was found, not the wording of the original note.
 
 `anonymize_user()` only touches `JasminUser` + `Member`. The following still hold the deleted person's PII afterward:
 
 1. **`BillingProfile`** (apps/payments) — encrypted IBAN/BIC/account_holder + `sepa_mandate_reference`. Untouched.
 2. **`Reseller.contact` → `ContactEntity`** — for a member who's ALSO a customer/reseller, all the billing-side fields (`invoice_name`, `invoice_email`, `email`, `phone`, `iban`) survive.
 3. **`UserInvitation`** — historic invitations still hold the email.
-4. **`EmailLog`** (apps/notifications) — every email ever sent to them, with recipient address. Mass leak vector.
-5. **`auditlog_logentry`** — old rows from BEFORE the §logging audit `mask_fields` was added still have plaintext PII in the `changes` JSON column.
+4. **`EmailLog`** (apps/notifications) — every email ever sent to them, with recipient address.
+5. **`auditlog_logentry`** — LEGACY rows only: entries written BEFORE the `mask_fields` masking was configured on the auditlog registrations still hold plaintext PII in the `changes` JSON column. Rows written since carry the configured `mask_fields` masking.
 6. **`axes_accessattempts` / `axes_accesslogs`** — failed-login records with username + IP.
 7. **`Member.user_FK`** — currently SET_NULL on JasminUser delete, but `anonymize_user` doesn't `.delete()` the JasminUser, it overwrites it with placeholders. Fine, but means the original user row stays as `deleted_<pk>@deleted.invalid` forever.
 
@@ -67,6 +77,10 @@ The three personas have totally different legal pictures:
 
 Industry standard: request creates a `DeletionRequest` row in `PENDING` state, sends an email with a confirmation link valid for 24h, only then anonymize.
 
+→ **Closed by Step 6:** the endpoint now creates a `DeletionRequest` in
+`PENDING_EMAIL` state and emails a 24h confirmation link; anonymization only
+runs once that link is followed and the admin-approval gate clears.
+
 ### 🟡 MEDIUM — Subject Access Request (Art. 15) is incomplete
 
 `get_personal_data_summary()` returns Member + JasminUser fields. But a complete export should include:
@@ -81,9 +95,13 @@ Industry standard: request creates a `DeletionRequest` row in `PENDING` state, s
 
 Only re-sets `first_name`, `last_name`, `email` on the JasminUser. Misses everything else `anonymize_user` does (the Member fields, encrypted IBANs, etc.). A restore would resurrect those fields.
 
+→ **Effectively closed (see the Status line above):** the command now delegates
+to `GDPRService.anonymize_user()`, so a replay re-runs the full scrub. Only the
+retention-skip-on-replay nuance remains open as Step 3.
+
 ### 🟢 LOW — No retention-cron for cleanup
 
-No Huey task that walks anonymized rows past their retention window and hard-deletes (or scrubs further). Statutory invoices from 2014 should not still have member names on them in 2026.
+No Huey task that walks anonymized rows past their retention window and hard-deletes (or scrubs further).
 
 ---
 
