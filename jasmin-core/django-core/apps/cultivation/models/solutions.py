@@ -60,6 +60,12 @@ class CultivationPlanSolutionDetail(JasminModel):
                 condition=Q(cell_count__gt=0),
                 name="solutiondetail_cell_count_positive",
             ),
+            # One position per batch per plan: a crop occupies its cells for its
+            # whole window and cannot be in two places at once.
+            models.UniqueConstraint(
+                fields=["solution", "batch"],
+                name="uniq_placement_per_batch_in_solution",
+            ),
         ]
 
     @property

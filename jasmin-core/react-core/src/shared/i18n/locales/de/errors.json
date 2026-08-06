@@ -398,5 +398,17 @@
     "reload": "Seite neu laden",
     "sign_in": "Erneut anmelden",
     "details": "Details:"
+  },
+  "cultivation": {
+    "no_batches_to_place": "Für dieses Jahr sind keine finalisierten Freiland-Sätze hinterlegt — es gibt nichts zu planen.",
+    "no_plots_available": "Für keine Freiland-Fläche sind Beete hinterlegt. Bitte zuerst Beete je Fläche eintragen.",
+    "batch_does_not_fit": "Dieser Satz braucht mehr zusammenhängende Zellen, als eine passende Fläche bietet. Entweder mehr Beete dieses Typs anlegen oder den Beet-Typ des Satzes leeren.",
+    "bed_type_mismatch": "Dieser Satz ist für einen anderen Beet-Typ gerechnet. Die Beet-Anzahl gilt für Beete dieses Typs, deshalb muss die Kultur vollständig in einem Block dieses Typs liegen.",
+    "solution_not_found": "Dieser Plan existiert nicht (mehr).",
+    "plan_infeasible": "Mit diesen Vorgaben ist kein Plan möglich. Meist übersteigt der Flächenbedarf die vorhandenen Beete, oder die Fruchtfolge lässt einer Familie keinen Platz.",
+    "plan_solve_timed_out": "Der Solver hat im Zeitbudget keinen Plan gefunden. Zeitbudget in den Solver-Einstellungen erhöhen oder die Reihenabstands-Regel abschalten.",
+    "placement_out_of_bounds": "Diese Platzierung läuft über das Ende der Fläche hinaus.",
+    "batch_placed_twice": "Ein Satz kann nur einmal platziert werden — er belegt seine Zellen über die gesamte Standzeit.",
+    "placement_overlaps": "Diese Platzierung überschneidet sich mit einer anderen Kultur in Raum und Zeit."
   }
 }

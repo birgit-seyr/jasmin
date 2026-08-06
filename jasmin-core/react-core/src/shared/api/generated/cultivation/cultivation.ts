@@ -28,6 +28,7 @@ import type {
   BedType,
   CultivationBatch,
   CultivationBreakFamily,
+  CultivationCultivationBatchesListParams,
   CultivationPlanSolution,
   CultivationPlanSolutionWithDetails,
   CultivationPlanSolutionsListParams,
@@ -662,13 +663,14 @@ Public actions:
         public_read_actions = {"list", "retrieve", "current"}
  */
 export const cultivationCultivationBatchesList = (
-    
+    params?: CultivationCultivationBatchesListParams,
  signal?: AbortSignal
 ) => {
       
       
       return axiosService<CultivationBatch[]>(
-      {url: `/api/cultivation/cultivation_batches/`, method: 'GET', signal
+      {url: `/api/cultivation/cultivation_batches/`, method: 'GET',
+        params, signal
     },
       );
     }
@@ -676,23 +678,23 @@ export const cultivationCultivationBatchesList = (
 
 
 
-export const getCultivationCultivationBatchesListQueryKey = () => {
+export const getCultivationCultivationBatchesListQueryKey = (params?: CultivationCultivationBatchesListParams,) => {
     return [
-    `/api/cultivation/cultivation_batches/`
+    `/api/cultivation/cultivation_batches/`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getCultivationCultivationBatchesListQueryOptions = <TData = Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError = ErrorResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError, TData>>, }
+export const getCultivationCultivationBatchesListQueryOptions = <TData = Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError = ErrorResponse>(params?: CultivationCultivationBatchesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getCultivationCultivationBatchesListQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getCultivationCultivationBatchesListQueryKey(params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof cultivationCultivationBatchesList>>> = ({ signal }) => cultivationCultivationBatchesList(signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof cultivationCultivationBatchesList>>> = ({ signal }) => cultivationCultivationBatchesList(params, signal);
 
       
 
@@ -706,7 +708,7 @@ export type CultivationCultivationBatchesListQueryError = ErrorResponse
 
 
 export function useCultivationCultivationBatchesList<TData = Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError = ErrorResponse>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError, TData>> & Pick<
+ params: undefined |  CultivationCultivationBatchesListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof cultivationCultivationBatchesList>>,
           TError,
@@ -716,7 +718,7 @@ export function useCultivationCultivationBatchesList<TData = Awaited<ReturnType<
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useCultivationCultivationBatchesList<TData = Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError = ErrorResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError, TData>> & Pick<
+ params?: CultivationCultivationBatchesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof cultivationCultivationBatchesList>>,
           TError,
@@ -726,16 +728,16 @@ export function useCultivationCultivationBatchesList<TData = Awaited<ReturnType<
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useCultivationCultivationBatchesList<TData = Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError = ErrorResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError, TData>>, }
+ params?: CultivationCultivationBatchesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useCultivationCultivationBatchesList<TData = Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError = ErrorResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError, TData>>, }
+ params?: CultivationCultivationBatchesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cultivationCultivationBatchesList>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getCultivationCultivationBatchesListQueryOptions(options)
+  const queryOptions = getCultivationCultivationBatchesListQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

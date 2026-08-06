@@ -27,10 +27,12 @@ class SolverSettings(JasminModel):
     # --- Solver runtime ---
     solver_max_time_seconds = models.PositiveSmallIntegerField(
         default=60,
-        validators=[MinValueValidator(1), MaxValueValidator(900)],
+        validators=[MinValueValidator(1), MaxValueValidator(7200)],
         help_text=(
-            "Wall-clock budget for ONE solve. Capped at 900s so a mistyped "
-            "value cannot pin a worker for hours."
+            "Wall-clock budget for ONE solve. A hard plan legitimately needs "
+            "10+ minutes, so this goes up to 2 hours; the default stays low for "
+            "quick feedback. A run computes several plans, so the total is this "
+            "times the number of solutions."
         ),
     )
     solver_workers = models.PositiveSmallIntegerField(
@@ -80,9 +82,13 @@ class SolverSettings(JasminModel):
         help_text="Fewer distinct beds across the season (rewards succession).",
     )
     weight_beds_per_batch = models.PositiveSmallIntegerField(
-        default=5,
+        default=0,
         validators=[MaxValueValidator(1000)],
-        help_text="Keep each batch bed-aligned (spanning fewest beds).",
+        help_text=(
+            "Keep each batch bed-aligned (spanning fewest beds). Defaults to 0: "
+            "a crop may run from one bed into the next, and forcing bed-aligned "
+            "starts strands the leftover cells of every bed, which wastes land."
+        ),
     )
     weight_compact_span = models.PositiveSmallIntegerField(
         default=3,

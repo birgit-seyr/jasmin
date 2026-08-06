@@ -5,6 +5,7 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { SolutionMetrics } from './solutionMetrics';
 
 /**
  * A candidate plan header (no placements — fetch those via ``details``).
@@ -16,4 +17,5 @@ export interface CultivationPlanSolution {
   readonly chosen?: boolean;
   readonly cells_per_bed?: number;
   readonly placement_count?: number;
+  readonly metrics?: SolutionMetrics;
 }

@@ -29,7 +29,7 @@ export default function ConfigurationSolver() {
             type: "number",
             defaultValue: 60,
             min: 1,
-            max: 900,
+            max: 7200,
           },
           {
             key: "default_num_solutions",
@@ -104,8 +104,9 @@ export default function ConfigurationSolver() {
           {
             key: "weight_beds_per_batch",
             label: t("cultivation.weight_beds_per_batch"),
+            description: t("cultivation.weight_beds_per_batch_description"),
             type: "number",
-            defaultValue: 5,
+            defaultValue: 0,
             min: 0,
             max: 1000,
           },

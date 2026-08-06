@@ -40,8 +40,15 @@ class PlotContent(JasminModel):
     plot = models.ForeignKey("Plot", related_name="contents", on_delete=models.CASCADE)
     bed_type = models.ForeignKey("BedType", on_delete=models.PROTECT)
     amount = models.PositiveIntegerField()
+    # Where this block of beds sits in the plot, walking the tractor's path.
+    # The plot's cells are numbered continuously across blocks in this order, so
+    # the ordinal decides which physical beds cell 37 refers to — it is layout,
+    # not decoration. Ties break by pk, and new blocks are appended (see the
+    # frontend default) so adding a bed type never renumbers the existing ones.
+    position = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
+        ordering = ["position", "pk"]
         constraints = [
             # One row per (plot, bed_type): "how many beds of this type this
             # plot has".

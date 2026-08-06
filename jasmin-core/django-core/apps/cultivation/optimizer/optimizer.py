@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 
 from django.db import transaction
 from django.db.models import Max
@@ -31,11 +33,20 @@ Assignment = dict[int, tuple[int, int]]
 ProgressCallback = Callable[[dict], None]
 _PROGRESS_TOTAL = 100
 _MIN_TICK_SECONDS = 1.0
+# How often to tick while a single solve is running. Each tick also refreshes the
+# BackgroundJob heartbeat, and the job watchdog fails anything silent for an hour —
+# so this must stay well under that no matter how long a solve is allowed to take.
+_HEARTBEAT_SECONDS = 20.0
 
 
 class _ProgressReporter:
-    """Throttled progress emitter shared by the solve loop and the CP-SAT
-    solution callback (which is the only hook that fires *during* a solve)."""
+    """Throttled progress emitter.
+
+    ``tick()`` writes to the DB (it refreshes the job row), so it must ONLY be
+    called from the thread that owns the request/task connection — django-tenants
+    binds the tenant schema per connection, and a fresh thread would get a
+    ``public``-schema connection where the tenant tables do not exist.
+    """
 
     def __init__(self, callback: ProgressCallback | None, budget_seconds: float):
         self._callback = callback
@@ -44,6 +55,8 @@ class _ProgressReporter:
         self._last_emit = 0.0
         self._high_water = 0
         self.solutions_found = 0
+        # Bumped from the solver thread, read by tick() on the owning thread.
+        self.improvements = 0
 
     def tick(self, *, force: bool = False, done: bool = False) -> None:
         if self._callback is None:
@@ -67,19 +80,24 @@ class _ProgressReporter:
                 "failed": 0,
                 "elapsed_seconds": round(elapsed, 1),
                 "solutions_found": self.solutions_found,
+                "improvements": self.improvements,
             }
         )
 
 
 class _SolutionTicker(cp_model.CpSolverSolutionCallback):
-    """Keeps the progress bar moving inside a single (up to max_time) solve."""
+    """Counts improving solutions found during one solve.
+
+    Runs on the SOLVER's thread, so it must not touch the database — it only
+    bumps a counter that the owning thread reports on its next tick.
+    """
 
     def __init__(self, reporter: _ProgressReporter):
         super().__init__()
         self._reporter = reporter
 
     def on_solution_callback(self) -> None:  # noqa: N802 (or-tools API)
-        self._reporter.tick()
+        self._reporter.improvements += 1
 
 
 class CultivationPlanOptimizer:
@@ -101,6 +119,10 @@ class CultivationPlanOptimizer:
         self.plots = load_plots(self.cells_per_bed)
         self.blockers = load_blockers(year)
         self.carryover = load_carryover(year, self.settings)
+        # Status of the LAST solve attempt, so callers can tell "proved there is no
+        # plan" from "ran out of time" from "nothing to plan" — all three of which
+        # otherwise return an empty solution list.
+        self.last_status: int | None = None
 
     def _new_solver(self) -> cp_model.CpSolver:
         solver = cp_model.CpSolver()
@@ -132,7 +154,12 @@ class CultivationPlanOptimizer:
         solutions: list[Assignment] = []
         for _ in range(num_solutions):
             solver = self._new_solver()
-            status = solver.Solve(model, _SolutionTicker(reporter))
+            status = self._solve_with_heartbeat(solver, model, reporter)
+            # Only the FIRST solve's status describes the problem; later ones are
+            # expected to end INFEASIBLE once the no-good cuts exhaust the
+            # alternatives, which is success, not failure.
+            if not solutions:
+                self.last_status = status
             if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
                 break
             assignment = self._extract(solver, variables)
@@ -142,6 +169,33 @@ class CultivationPlanOptimizer:
             self._forbid(model, variables, assignment)
         reporter.tick(force=True, done=True)
         return solutions
+
+    def _solve_with_heartbeat(
+        self,
+        solver: cp_model.CpSolver,
+        model: cp_model.CpModel,
+        reporter: _ProgressReporter,
+    ) -> int:
+        """Run one solve, ticking progress on a wall-clock schedule.
+
+        CP-SAT's only in-solve hook fires on *improving solutions*, so a long
+        barren search would emit nothing and let the job's heartbeat go stale.
+        The solve therefore runs on a worker thread (it is CPU-bound C++ and
+        releases the GIL) while THIS thread ticks on a timer.
+
+        That split is also what keeps the progress writes correct: every DB write
+        happens here, on the thread whose connection django-tenants has bound to
+        the tenant schema. The solution callback runs on the solver thread and
+        must stay database-free.
+        """
+        ticker = _SolutionTicker(reporter)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(solver.Solve, model, ticker)
+            while True:
+                try:
+                    return future.result(timeout=_HEARTBEAT_SECONDS)
+                except FutureTimeoutError:
+                    reporter.tick(force=True)
 
     def _extract(
         self, solver: cp_model.CpSolver, variables: OptimizerVars
@@ -189,6 +243,11 @@ class CultivationPlanOptimizer:
             or 0
         ) + 1
 
+        # An assignment that placed nothing is not a plan — storing it would put
+        # an empty candidate in the picker that looks selectable but shows
+        # nothing on the grid.
+        solutions = [assignment for assignment in solutions if assignment]
+
         saved: list[CultivationPlanSolution] = []
         for offset, assignment in enumerate(solutions):
             solution = CultivationPlanSolution.objects.create(
@@ -208,6 +267,13 @@ class CultivationPlanOptimizer:
             )
             saved.append(solution)
         return saved
+
+    @property
+    def status_name(self) -> str:
+        """Human name of the last solve status ("OPTIMAL", "INFEASIBLE", ...)."""
+        if self.last_status is None:
+            return "NOT_SOLVED"
+        return cp_model.CpSolver().StatusName(self.last_status)
 
     def run(self, num_solutions: int | None = None) -> list[CultivationPlanSolution]:
         return self.save(self.solve(num_solutions))

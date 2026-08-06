@@ -25255,6 +25255,19 @@ paths:
             class ConsentDocumentViewSet(RolePermissionsMixin, ModelViewSet):
                 write_permission = IsOffice          # publishing a new version
                 public_read_actions = {"list", "retrieve", "current"}
+      parameters:
+      - in: query
+        name: is_greenhouse
+        schema:
+          type: boolean
+        description: Filter by protected cultivation. The indoor and outdoor batch
+          pages each show one side; the placement optimizer only ever plans the outdoor
+          ones.
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: Year (YYYY format)
       tags:
       - cultivation
       security:
@@ -31683,6 +31696,27 @@ components:
         status:
           type: string
           readOnly: true
+    BedSegment:
+      type: object
+      description: |-
+        One block of same-type beds as a cell range on the plot's axis.
+
+        Read-only projection of the plot's ``PlotContent`` rows — the planner grid
+        needs it to label bed types and to grey out cells a batch may not start in.
+      properties:
+        bed_type:
+          type: string
+        bed_type_name:
+          type: string
+        start_cell:
+          type: integer
+        cell_count:
+          type: integer
+      required:
+      - bed_type
+      - bed_type_name
+      - cell_count
+      - start_cell
     BedType:
       type: object
       properties:
@@ -32338,6 +32372,29 @@ components:
       required:
       - free
       - occupied
+    CarryoverBlock:
+      type: object
+      description: |-
+        Ground still held at the start of the year by last year's overwintering
+        crop. Not part of this plan — the solver treats it as occupied — but the
+        grid must draw it, or those cells look free.
+      properties:
+        plot:
+          type: string
+        start_cell:
+          type: integer
+        cell_count:
+          type: integer
+        until_week:
+          type: integer
+        label:
+          type: string
+      required:
+      - cell_count
+      - label
+      - plot
+      - start_cell
+      - until_week
     ChargeSchedule:
       type: object
       properties:
@@ -33583,6 +33640,10 @@ components:
         vegetable_name:
           type: string
           readOnly: true
+        used_bed_type_name:
+          type: string
+          readOnly: true
+          nullable: true
         year:
           type: integer
           maximum: 32767
@@ -33659,6 +33720,8 @@ components:
           maxLength: 200
         is_final:
           type: boolean
+        is_greenhouse:
+          type: boolean
         vegetable:
           type: string
         vegetable_set:
@@ -33717,6 +33780,10 @@ components:
         placement_count:
           type: integer
           readOnly: true
+        metrics:
+          allOf:
+          - $ref: '#/components/schemas/SolutionMetrics'
+          readOnly: true
     CultivationPlanSolutionDetail:
       type: object
       description: |-
@@ -33765,7 +33832,9 @@ components:
       - start_cell
     CultivationPlanSolutionWithDetails:
       type: object
-      description: The full plan — header plus every placement, for the planner grid.
+      description: |-
+        The full plan — header, every placement, and the carryover it had to work
+        around.
       properties:
         id:
           type: string
@@ -33785,10 +33854,19 @@ components:
         placement_count:
           type: integer
           readOnly: true
+        metrics:
+          allOf:
+          - $ref: '#/components/schemas/SolutionMetrics'
+          readOnly: true
         details:
           type: array
           items:
             $ref: '#/components/schemas/CultivationPlanSolutionDetail'
+          readOnly: true
+        carryover:
+          type: array
+          items:
+            $ref: '#/components/schemas/CarryoverBlock'
           readOnly: true
     CultivationPlot:
       type: object
@@ -33801,6 +33879,11 @@ components:
           readOnly: true
         cell_capacity:
           type: integer
+          readOnly: true
+        bed_segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/BedSegment'
           readOnly: true
         name:
           type: string
@@ -39299,6 +39382,10 @@ components:
           type: integer
           maximum: 2147483647
           minimum: 0
+        position:
+          type: integer
+          maximum: 32767
+          minimum: 0
         plot:
           type: string
         bed_type:
@@ -42674,6 +42761,39 @@ components:
       required:
       - day_number
       - valid_from
+    SolutionMetrics:
+      type: object
+      description: Quality numbers for comparing candidate plans — see services/metrics.py.
+      properties:
+        planted_cell_weeks:
+          type: integer
+        bed_weeks_opened:
+          type: integer
+        wasted_cell_weeks:
+          type: integer
+        efficiency_percent:
+          type: number
+          format: double
+        plots_used:
+          type: integer
+        beds_touched:
+          type: integer
+        peak_week:
+          type: integer
+        peak_cells_used:
+          type: integer
+        successions:
+          type: integer
+      required:
+      - bed_weeks_opened
+      - beds_touched
+      - efficiency_percent
+      - peak_cells_used
+      - peak_week
+      - planted_cell_weeks
+      - plots_used
+      - successions
+      - wasted_cell_weeks
     SolverSettings:
       type: object
       properties:
@@ -42685,10 +42805,12 @@ components:
           readOnly: true
         solver_max_time_seconds:
           type: integer
-          maximum: 900
+          maximum: 7200
           minimum: 1
-          description: Wall-clock budget for ONE solve. Capped at 900s so a mistyped
-            value cannot pin a worker for hours.
+          description: Wall-clock budget for ONE solve. A hard plan legitimately needs
+            10+ minutes, so this goes up to 2 hours; the default stays low for quick
+            feedback. A run computes several plans, so the total is this times the
+            number of solutions.
         solver_workers:
           type: integer
           maximum: 32
@@ -42726,7 +42848,9 @@ components:
           type: integer
           maximum: 1000
           minimum: 0
-          description: Keep each batch bed-aligned (spanning fewest beds).
+          description: 'Keep each batch bed-aligned (spanning fewest beds). Defaults
+            to 0: a crop may run from one bed into the next, and forcing bed-aligned
+            starts strands the leftover cells of every bed, which wastes land.'
         weight_compact_span:
           type: integer
           maximum: 1000

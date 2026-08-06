@@ -19,7 +19,15 @@ from itertools import combinations
 from ortools.sat.python import cp_model
 
 from . import config
-from .loading import BatchInput, Blocker, Carryover, PlotInput, occupancy_end_week
+from .loading import (
+    BatchInput,
+    Blocker,
+    Carryover,
+    PlotInput,
+    fleece_weeks_for,
+    occupancy_end_week,
+)
+from .ranges import coalesce, coalesce_weighted
 from .variables import OptimizerVars
 
 
@@ -64,19 +72,31 @@ def _no_overlap_space_time(
     Cross-year carryover is folded in as FIXED boxes: an overwintering crop from
     last year occupies its cells for weeks ``[1, until_week]`` of this year, so a
     this-year batch overlapping those weeks cannot reuse those cells.
+
+    Those boxes are always-present, so two that overlap would contradict each other
+    and make the whole model unsatisfiable — and since every carryover box starts at
+    week 1, ANY cell overlap is automatically a 2-D overlap. They are therefore
+    coalesced per plot first, keeping the longest occupancy per cell.
     """
     plot_index = {plot.id: p for p, plot in enumerate(plots)}
-    carry_boxes: dict[int, list[tuple]] = defaultdict(list)
-    for i, c in enumerate(carryover):
+    by_plot: dict[int, list[tuple[int, int, int]]] = defaultdict(list)
+    for c in carryover:
         p = plot_index.get(c.plot_id)
         if p is None:
             continue  # plot no longer exists / is a greenhouse now
-        cell_iv = model.NewFixedSizeIntervalVar(
-            c.start_cell, c.cell_count, f"carry_cell_p{p}_{i}"
-        )
-        # weeks [1, until_week] inclusive -> interval [1, until_week + 1)
-        time_iv = model.NewFixedSizeIntervalVar(1, c.until_week, f"carry_time_p{p}_{i}")
-        carry_boxes[p].append((cell_iv, time_iv))
+        by_plot[p].append((c.start_cell, c.cell_count, c.until_week))
+
+    carry_boxes: dict[int, list[tuple]] = defaultdict(list)
+    for p, raw in by_plot.items():
+        for i, (start, count, until) in enumerate(coalesce_weighted(raw)):
+            if until < 1:
+                continue  # a zero-week box would block nothing
+            cell_iv = model.NewFixedSizeIntervalVar(
+                start, count, f"carry_cell_p{p}_{i}"
+            )
+            # weeks [1, until] inclusive -> interval [1, until + 1)
+            time_iv = model.NewFixedSizeIntervalVar(1, until, f"carry_time_p{p}_{i}")
+            carry_boxes[p].append((cell_iv, time_iv))
 
     for p in range(len(plots)):
         pairs = [
@@ -145,9 +165,17 @@ def _crop_rotation(
     """A family never reoccupies a cell within its rotation break.
 
     Per (plot, family), a 1-D no-overlap on the cell axis over this-year batches
-    of that family plus fixed blocker intervals from prior chosen plans. Being
+    of that family plus fixed blocker intervals from prior years. Being
     time-independent, it also stops a family doubling up on the same cells within
     a single year.
+
+    History blockers are always-present intervals, so two overlapping ones would be
+    a contradiction and the whole year would come back INFEASIBLE — from data that
+    is merely duplicated (a chosen plan plus a hand-entered row for the same year),
+    legitimately overlapping (intra-year succession of one family), or retroactively
+    widened (raising a family's break years pulls two older plans into one window).
+    "Blocked" is a property of the ground, so they are coalesced into disjoint runs
+    instead of being asked to satisfy each other.
     """
     family_batches: dict[str, list[int]] = defaultdict(list)
     for b, batch in enumerate(batches):
@@ -173,7 +201,7 @@ def _crop_rotation(
                 for b in member_batches
                 if (b, p) in v.cell_interval
             ]
-            for i, (s0, c0) in enumerate(history.get((p, family_id), [])):
+            for i, (s0, c0) in enumerate(coalesce(history.get((p, family_id), []))):
                 intervals.append(
                     model.NewFixedSizeIntervalVar(
                         s0, c0, f"block_p{p}_f{family_id}_{i}"
@@ -234,7 +262,7 @@ def _fleece_coverage(
     for b, batch in enumerate(batches):
         if batch.fleece_until is None:
             continue
-        weeks = range(batch.planting_week, batch.fleece_until + 1)
+        weeks = fleece_weeks_for(batch, v.settings)
         for p in range(len(plots)):
             if (b, p) not in v.present:
                 continue

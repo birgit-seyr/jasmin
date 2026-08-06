@@ -48,11 +48,17 @@ class CultivationBatch(JasminModel):
     # Only finalized batches are fed into the placement optimizer.
     is_final = models.BooleanField(default=False)
 
+    # Greenhouse/tunnel crop. The outdoor placement optimizer skips these
+    # entirely (it also skips greenhouse plots), so protected cultivation is
+    # planned separately instead of being silently placed on outdoor beds.
+    is_greenhouse = models.BooleanField(default=False)
+
     class Meta:
         ordering = ["year", "planting_week"]
         indexes = [
-            # The optimizer pulls "all finalized batches for year Y".
-            models.Index(fields=["year", "is_final"]),
+            # The optimizer pulls "all finalized OUTDOOR batches for year Y";
+            # the pages list a year's batches split by indoor/outdoor.
+            models.Index(fields=["year", "is_final", "is_greenhouse"]),
         ]
         constraints = [
             models.CheckConstraint(

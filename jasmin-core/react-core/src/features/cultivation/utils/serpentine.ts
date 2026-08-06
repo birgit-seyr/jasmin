@@ -41,11 +41,17 @@ export function bedCount(
 }
 
 /**
- * Does a batch occupy its cells during `week`?
+ * Does a batch occupy its cells during `week` **of its own planning year**?
  *
- * `endWeek < plantingWeek` means the crop overwinters into the next year, so the
- * window wraps: it covers [planting..52] ∪ [1..end]. Mirrors the backend's
- * `occupancy_end_week` unwrap.
+ * `endWeek < plantingWeek` means the crop overwinters. Within THIS year's plan it
+ * holds the ground only from `plantingWeek` to the end of the year — the
+ * `[1..endWeek]` tail belongs to the NEXT year, where it is handled as carryover.
+ *
+ * Wrapping it back into the same year is wrong and visibly so: garlic planted in
+ * KW43 would be drawn on top of the peas that legitimately occupied those cells
+ * in KW13-26, making a valid succession look like two crops in one bed. (The
+ * solver never had this problem — it unwraps onto an absolute axis, where
+ * [13,27) and [43,79) plainly do not overlap.)
  */
 export function occupiesWeek(
   plantingWeek: number | null | undefined,
@@ -54,5 +60,5 @@ export function occupiesWeek(
 ): boolean {
   if (plantingWeek == null || endWeek == null) return false;
   if (endWeek >= plantingWeek) return week >= plantingWeek && week <= endWeek;
-  return week >= plantingWeek || week <= endWeek;
+  return week >= plantingWeek;
 }

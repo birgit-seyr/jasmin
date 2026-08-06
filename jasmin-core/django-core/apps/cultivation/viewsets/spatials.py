@@ -1,4 +1,3 @@
-from django.db.models import Sum
 from rest_framework import viewsets
 
 from apps.authz.permissions import IsGardener, IsStaff, RolePermissionsMixin
@@ -11,7 +10,10 @@ class PlotViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaff
     write_permission = IsGardener
     serializer_class = PlotSerializer
-    queryset = Plot.objects.annotate(total_beds_annotated=Sum("contents__amount"))
+    # One prefetch feeds both the bed count and the bed-type segments — an
+    # aggregate could give only the count, and pairing it with this prefetch
+    # would query the same rows twice.
+    queryset = Plot.objects.prefetch_related("contents__bed_type")
 
 
 class BedTypeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):

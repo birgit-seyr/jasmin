@@ -8,6 +8,24 @@
   margin: 1em 0;
 }
 
+.cultivation-planner__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25em;
+  margin: 0 0 1em;
+  padding: 0.5em 0.75em;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 6px;
+  background: var(--color-bg-elevated);
+  font-size: 0.85em;
+  color: var(--color-text-muted);
+}
+
+.cultivation-planner__metrics strong {
+  color: inherit;
+  font-size: 1.15em;
+}
+
 .cultivation-planner__layout {
   display: flex;
   align-items: flex-start;
@@ -15,7 +33,7 @@
 }
 
 .cultivation-planner__palette {
-  flex: 0 0 15em;
+  flex: 0 0 20em;
   max-height: 70vh;
   overflow-y: auto;
   padding: 0.75em;
@@ -32,7 +50,20 @@
 .cultivation-planner__palette-list {
   display: flex;
   flex-direction: column;
-  gap: 0.35em;
+  gap: 0.25em;
+}
+
+/* Compact chips, scoped to this palette rather than restyling the shared
+   `.dnd-chip`: the list is long (every unplaced batch of the year) and the
+   column is wide enough that each name still fits on one line. */
+.cultivation-planner__palette-list .dnd-chip {
+  padding: 3px 8px;
+  margin: 0;
+  font-size: 0.8em;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cultivation-planner__plots {
@@ -57,6 +88,13 @@
 }
 
 .cultivation-planner__grid {
+  /* Width of one cell (a fifth of a bed). Every cell gets exactly this, empty
+     or planted, so a bed reads as an even row. PlotGrid builds the
+     grid-template from it — the repeat count has to be inline because it comes
+     from the solution's cells_per_bed, but the width is tuned here. Declared on
+     the grid itself so a PlotGrid rendered outside the planner page still has
+     a value to resolve. */
+  --cultivation-cell-width: 8em;
   display: grid;
   gap: 2px;
   width: max-content;
@@ -74,6 +112,27 @@
   padding-right: 0.4em;
   font-size: 0.8em;
   color: var(--color-text-muted);
+}
+
+/* Names the block of beds that starts below it. Spans the whole grid width:
+   `__row` is display:contents, so this is a direct grid item like the cells. */
+.cultivation-planner__band {
+  grid-column: 1 / -1;
+  padding: 0.35em 0.5em 0.15em;
+  font-size: 0.75em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+}
+
+/* No rule above the very first block — it would float over the grid's top.
+   Needs its own modifier: every band IS the first child of its `__row`
+   wrapper, so `:first-child` would match all of them. */
+.cultivation-planner__band--first {
+  border-top: none;
+  padding-top: 0;
 }
 
 .cultivation-planner__cell {
@@ -100,8 +159,31 @@
   color: #2b2b2b;
 }
 
+.cultivation-planner__cell--carryover {
+  /* Held by last year's overwintering crop: readable, but visibly not editable. */
+  background: repeating-linear-gradient(
+    45deg,
+    var(--color-border-soft) 0 4px,
+    transparent 4px 8px
+  );
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
 .cultivation-planner__cell--dragging {
   opacity: 0.4;
+}
+
+/* Drag feedback. A crop holds its cells for its whole window, so a cell that
+   looks free in the displayed week may still be unusable — these two states
+   say which start cells are actually legal. */
+.cultivation-planner__cell--available {
+  box-shadow: inset 0 0 0 1px var(--color-future-blue);
+}
+
+.cultivation-planner__cell--blocked {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .cultivation-planner__cell--over {
@@ -120,10 +202,36 @@
 }
 
 .cultivation-planner__cell-label {
-  padding: 0 0.15em;
   white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
+}
+
+/* Only the cell carrying the label may overflow, so a name like
+   "Cabbage (19-40) 15" can run across the cells of its own crop instead of
+   being clipped inside one 2.4em cell. */
+.cultivation-planner__cell--labelled {
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+}
+
+/* Absolute, so the crop name does NOT count towards the column's intrinsic
+   width. In flow it did, and since the grid is `width: max-content` a single
+   long name stretched its whole column — which is why a bed's cells came out
+   different widths depending on where a crop happened to start.
+   pointer-events:none keeps the spilled text from stealing clicks/drops from
+   the cells it runs over. */
+.cultivation-planner__cell--labelled .cultivation-planner__cell-label {
+  position: absolute;
+  top: 50%;
+  left: 0.25em;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* Week window + cell count: present but subordinate to the crop name. */
+.cultivation-planner__cell-meta {
+  color: var(--color-text-muted);
+  font-size: 0.9em;
 }
 
 .cultivation-planner__empty,
@@ -154,6 +262,24 @@
 }
 
 @media (max-width: 900px) {
+  .cultivation-planner__metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25em;
+    margin: 0 0 1em;
+    padding: 0.5em 0.75em;
+    border: 1px solid var(--color-border-soft);
+    border-radius: 6px;
+    background: var(--color-bg-elevated);
+    font-size: 0.85em;
+    color: var(--color-text-muted);
+  }
+
+  .cultivation-planner__metrics strong {
+    color: inherit;
+    font-size: 1.15em;
+  }
+
   .cultivation-planner__layout {
     flex-direction: column;
   }

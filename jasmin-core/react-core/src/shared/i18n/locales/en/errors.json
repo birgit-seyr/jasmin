@@ -398,5 +398,17 @@
     "reload": "Reload page",
     "sign_in": "Sign in again",
     "details": "Details:"
+  },
+  "cultivation": {
+    "no_batches_to_place": "There are no finalized outdoor batches for this year, so there is nothing to plan.",
+    "no_plots_available": "No outdoor plot has any beds configured. Add beds per plot first.",
+    "batch_does_not_fit": "This batch needs more contiguous cells than any matching block offers. Either add more beds of that type, or clear the batch's bed type so it can go anywhere.",
+    "bed_type_mismatch": "This batch is planned for a different bed type. Its bed count is measured in beds of that type, so the crop must sit wholly inside one block of it.",
+    "solution_not_found": "That plan no longer exists.",
+    "plan_infeasible": "No plan can satisfy every constraint. Usually demand exceeds the available beds, or crop rotation leaves a family nowhere to go.",
+    "plan_solve_timed_out": "The solver found no plan within its time budget. Raise the budget in the solver settings, or switch off the row-spacing rule.",
+    "placement_out_of_bounds": "This placement would run past the end of the plot.",
+    "batch_placed_twice": "A batch can only be placed once — it holds its cells for its whole growing period.",
+    "placement_overlaps": "This placement collides with another crop in space and time."
   }
 }

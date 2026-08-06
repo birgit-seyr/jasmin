@@ -13,6 +13,11 @@ export interface PlotContent {
    * @maximum 2147483647
    */
   amount: number;
+  /**
+   * @minimum 0
+   * @maximum 32767
+   */
+  position?: number;
   plot: string;
   bed_type: string;
 }

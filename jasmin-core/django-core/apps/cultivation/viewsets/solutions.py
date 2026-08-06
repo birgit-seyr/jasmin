@@ -35,9 +35,13 @@ class CultivationPlanSolutionViewSet(
     serializer_class = CultivationPlanSolutionSerializer
 
     def get_queryset(self):
-        qs = CultivationPlanSolution.objects.annotate(
-            placement_count=Count("details")
-        ).order_by("-year", "version")
+        # metrics reads every placement, so prefetch — otherwise listing N
+        # candidates is N queries.
+        qs = (
+            CultivationPlanSolution.objects.annotate(placement_count=Count("details"))
+            .prefetch_related("details__batch")
+            .order_by("-year", "version")
+        )
         year = self.request.query_params.get("year")
         if year:
             qs = qs.filter(year=year)

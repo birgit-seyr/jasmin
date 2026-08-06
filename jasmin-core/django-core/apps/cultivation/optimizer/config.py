@@ -81,7 +81,9 @@ ENABLE_LINE_DISPERSION = False
 # packing-quality tie-breakers.
 WEIGHT_PLOTS_USED = 100
 WEIGHT_BEDS_USED = 10  # fewer distinct beds across the season (rewards succession)
-WEIGHT_BEDS_PER_BATCH = 5  # keep each batch bed-aligned (fewest beds spanned)
+# 0 by design: a crop may run from one bed into the next, and forcing
+# bed-aligned starts strands each bed's leftover cells.
+WEIGHT_BEDS_PER_BATCH = 0
 WEIGHT_COMPACT_SPAN = 3  # no gaps between the first and last used bed of a plot
 WEIGHT_LINE_DISPERSION = 1
 WEIGHT_FLEECE_COUNT = 10

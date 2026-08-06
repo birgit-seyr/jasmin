@@ -17,20 +17,18 @@ const OrderSeedlings = lazy(
   () => import("@features/cultivation/pages/OrderSeedlings"),
 );
 const OrderSeeds = lazy(() => import("@features/cultivation/pages/OrderSeeds"));
-const PlantingSchemeOutdoors = lazy(
-  () => import("@features/cultivation/pages/PlantingSchemeOutdoors"),
-);
+
 const ListSellersSeedlings = lazy(
   () => import("@features/cultivation/pages/ListSellersSeedlings"),
 );
 const ListSellersSeeds = lazy(
   () => import("@features/cultivation/pages/ListSellersSeeds"),
 );
-const SetsIndoors = lazy(
-  () => import("@features/cultivation/pages/SetsIndoors"),
+const CultivationBatchIndoors = lazy(
+  () => import("@features/cultivation/pages/CultivationBatchIndoors"),
 );
-const SetsOutdoors = lazy(
-  () => import("@features/cultivation/pages/SetsOutdoors"),
+const CultivationBatchOutdoors = lazy(
+  () => import("@features/cultivation/pages/CultivationBatchOutdoors"),
 );
 const SortsSeedlingsIndoors = lazy(
   () => import("@features/cultivation/pages/SortsSeedlingsIndoors"),
@@ -214,14 +212,7 @@ export const cultivationRoutes: AppRoute[] = [
       </RequireRole>
     ),
   },
-  {
-    path: "/cultivation/planting-scheme-outdoors",
-    element: (
-      <RequireRole flag="isGardener">
-        <PlantingSchemeOutdoors />
-      </RequireRole>
-    ),
-  },
+
   {
     path: "/cultivation/list-sellers-seedlings",
     element: (
@@ -242,7 +233,7 @@ export const cultivationRoutes: AppRoute[] = [
     path: "/cultivation/sets-indoors",
     element: (
       <RequireRole flag="isGardener">
-        <SetsIndoors />
+        <CultivationBatchIndoors />
       </RequireRole>
     ),
   },
@@ -250,7 +241,7 @@ export const cultivationRoutes: AppRoute[] = [
     path: "/cultivation/sets-outdoors",
     element: (
       <RequireRole flag="isGardener">
-        <SetsOutdoors />
+        <CultivationBatchOutdoors />
       </RequireRole>
     ),
   },

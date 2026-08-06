@@ -68,5 +68,7 @@
   "list_seeds_vendors": "",
   "list_vegetables": "Diese Daten können für jeden einzelnen Satz in der Planung verändert werden.",
   "list_plot_contents": "Wie viele Beete welchen Typs auf jeder Fläche liegen — die Grundlage für die Anbauplanung (Fläche × Beet-Typ × Anzahl).",
-  "cultivation_planner": "Der Anbauplaner zeigt jede Fläche als Beete und Zellen. Der Regler wählt die Kalenderwoche — angezeigt wird, was in dieser Woche im Boden steht. Der Solver berechnet mehrere Planvorschläge; einer wird übernommen. Platzierungen lassen sich per Drag & Drop von Hand korrigieren, denn der Solver kann nie alle Sonderfälle kennen."
+  "cultivation_planner": "Der Anbauplaner zeigt jede Fläche als Beete und Zellen. Der Regler wählt die Kalenderwoche — angezeigt wird, was in dieser Woche im Boden steht. Der Solver berechnet mehrere Planvorschläge; einer wird übernommen. Platzierungen lassen sich per Drag & Drop von Hand korrigieren, denn der Solver kann nie alle Sonderfälle kennen.",
+  "cultivation_batches_outdoors": "Ein Satz ist die Planungseinheit: welches Gemüse, ab welcher KW, wie lange das Beet belegt ist und wie viele Beete gebraucht werden. Nur als „Final“ markierte Sätze gehen in den Solver.",
+  "cultivation_batches_indoors": "Sätze unter Glas/Folie. Der Freiland-Solver überspringt sie bewusst — Gewächshausflächen werden getrennt geplant."
 }

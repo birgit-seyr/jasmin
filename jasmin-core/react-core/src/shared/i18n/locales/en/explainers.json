@@ -68,5 +68,7 @@
   "list_seeds_vendors": "Vendors you order seeds from.",
   "list_vegetables": "Vegetable master data: unit, average weight, fertilizer need, rotation family, and the defaults (planting lines, spacing, yield) used for cultivation planning.",
   "list_plot_contents": "How many beds of each type each plot holds — the basis for cultivation planning (plot × bed type × amount).",
-  "cultivation_planner": "The planner shows every plot as beds and cells. The slider picks the ISO week — you see what is in the ground that week. The solver computes several candidate plans; one gets chosen. Placements can be corrected by hand via drag & drop, because the solver can never know every edge case."
+  "cultivation_planner": "The planner shows every plot as beds and cells. The slider picks the ISO week — you see what is in the ground that week. The solver computes several candidate plans; one gets chosen. Placements can be corrected by hand via drag & drop, because the solver can never know every edge case.",
+  "cultivation_batches_outdoors": "A batch is the unit the planner works with: which crop, from which week, how long it holds the bed, and how many beds it needs. Only batches marked final are fed to the solver.",
+  "cultivation_batches_indoors": "Batches under glass or tunnel. The outdoor solver deliberately skips them — protected cultivation is planned separately."
 }

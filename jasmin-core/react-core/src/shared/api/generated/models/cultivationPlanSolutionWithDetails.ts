@@ -5,10 +5,13 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { SolutionMetrics } from './solutionMetrics';
 import type { CultivationPlanSolutionDetail } from './cultivationPlanSolutionDetail';
+import type { CarryoverBlock } from './carryoverBlock';
 
 /**
- * The full plan — header plus every placement, for the planner grid.
+ * The full plan — header, every placement, and the carryover it had to work
+around.
  */
 export interface CultivationPlanSolutionWithDetails {
   readonly id?: string;
@@ -17,5 +20,7 @@ export interface CultivationPlanSolutionWithDetails {
   readonly chosen?: boolean;
   readonly cells_per_bed?: number;
   readonly placement_count?: number;
+  readonly metrics?: SolutionMetrics;
   readonly details?: readonly CultivationPlanSolutionDetail[];
+  readonly carryover?: readonly CarryoverBlock[];
 }

@@ -1,6 +1,6 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Flex, Modal, Spin } from "antd";
+import { Button, Flex, Modal, Spin, Tooltip } from "antd";
 import type { FC } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -106,12 +106,21 @@ const PlotContentModal: FC<PlotContentModalProps> = ({
     [],
   );
 
+  // Blocks are numbered from 1; a new one goes on the END. Inserting in the
+  // middle would renumber every cell after it, and the stored placements of past
+  // years would silently start pointing at different ground.
+  const nextPosition = useMemo(
+    () => rows.reduce((max, row) => Math.max(max, row.position ?? 0), 0) + 1,
+    [rows],
+  );
+
   const customSave = useCallback(
     (transformed: Record<string, unknown>) => ({
       ...transformed,
       plot: plot?.id,
+      position: transformed.position ?? nextPosition,
     }),
-    [plot?.id],
+    [plot?.id, nextPosition],
   );
 
   const permissions = useMemo(
@@ -140,6 +149,18 @@ const PlotContentModal: FC<PlotContentModalProps> = ({
         inputType: "positive_integer",
         required: true,
         width: "12em",
+      },
+      {
+        title: (
+          <Tooltip title={t("cultivation.plot_content_position_hint")}>
+            {t("cultivation.plot_content_position")}
+          </Tooltip>
+        ),
+        dataIndex: "position",
+        key: "position",
+        inputType: "positive_integer",
+        required: false,
+        width: "9em",
       },
     ],
     [t, bedTypeOptions, bedTypeNameById],

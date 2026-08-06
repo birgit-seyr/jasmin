@@ -8,7 +8,10 @@ import {
   useCultivationCultivationBreakFamiliesList,
   useCultivationVegetablesList,
 } from "@shared/api/generated/cultivation/cultivation";
-import { VegetableUnitEnum, type Vegetable } from "@shared/api/generated/models";
+import {
+  VegetableUnitEnum,
+  type Vegetable,
+} from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 import { useUnitOptions } from "@hooks/useUnitOptions";

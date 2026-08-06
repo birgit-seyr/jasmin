@@ -21,9 +21,16 @@ from dataclasses import dataclass, field
 
 from ortools.sat.python import cp_model
 
+from ..errors import BatchDoesNotFit
 from . import config
 from .config import DEFAULT_SETTINGS, SolverConfig
-from .loading import BatchInput, PlotInput, occupancy_end_week
+from .loading import (
+    BatchInput,
+    PlotInput,
+    allowed_start_ranges,
+    fleece_weeks_for,
+    occupancy_end_week,
+)
 
 
 @dataclass
@@ -54,19 +61,50 @@ class OptimizerVars:
 def batch_plot_options(
     batches: list[BatchInput], plots: list[PlotInput]
 ) -> dict[int, list[int]]:
-    """For each batch, the plot indices it fits in. Raises if it fits nowhere."""
+    """For each batch, the plot indices it fits in. Raises if it fits nowhere.
+
+    "Fits" means there is at least one legal start cell, which for a batch with a
+    ``bed_type_id`` means a block of that bed type long enough to hold the whole
+    run — not merely a plot with enough cells somewhere.
+    """
     options: dict[int, list[int]] = {}
     for b, batch in enumerate(batches):
-        fits = [
-            p for p, plot in enumerate(plots) if batch.cell_count <= plot.cell_capacity
-        ]
+        fits = [p for p, plot in enumerate(plots) if allowed_start_ranges(batch, plot)]
         if not fits:
-            raise ValueError(
-                f"Batch {batch.id} needs {batch.cell_count} cells but no plot "
-                f"is large enough."
+            # A domain error rather than ValueError: this is a data problem the
+            # office has to fix, and it reaches them through the background job's
+            # failure message, so it needs a stable code and a readable sentence.
+            if batch.bed_type_id is None:
+                raise BatchDoesNotFit(
+                    f"Batch {batch.id} needs {batch.cell_count} contiguous cells "
+                    f"but no plot is large enough.",
+                    details={"batch": batch.id, "cell_count": batch.cell_count},
+                )
+            raise BatchDoesNotFit(
+                f"Batch {batch.id} needs {batch.cell_count} contiguous cells of "
+                f"its bed type, but no plot has a block of that bed type that "
+                f"long. Either give the plot more beds of that type, or clear the "
+                f"batch's bed type to let it go anywhere.",
+                details={
+                    "batch": batch.id,
+                    "cell_count": batch.cell_count,
+                    "bed_type": batch.bed_type_id,
+                },
             )
         options[b] = fits
     return options
+
+
+def _start_domain(batch: BatchInput, plot: PlotInput) -> cp_model.Domain:
+    """The batch's legal start cells in this plot, as a CP-SAT domain.
+
+    Confining the bed-type rule to the variable's domain — rather than adding
+    constraints — means it costs the solver nothing and cannot be contradicted
+    later: an illegal start is simply not a value the variable can take.
+    """
+    return cp_model.Domain.FromIntervals(
+        [[lo, hi] for lo, hi in allowed_start_ranges(batch, plot)]
+    )
 
 
 def _time_span(batch: BatchInput, settings: SolverConfig) -> int:
@@ -101,8 +139,8 @@ def create_variables(
         for p in options[b]:
             plot = plots[p]
             is_present = model.NewBoolVar(f"present_b{b}_p{p}")
-            s = model.NewIntVar(
-                0, plot.cell_capacity - batch.cell_count, f"start_b{b}_p{p}"
+            s = model.NewIntVarFromDomain(
+                _start_domain(batch, plot), f"start_b{b}_p{p}"
             )
             present[(b, p)] = is_present
             start[(b, p)] = s
@@ -128,12 +166,7 @@ def create_variables(
     fleece_weeks: list[int] = []
     if settings.enable_fleece:
         fleece_weeks = sorted(
-            {
-                w
-                for batch in batches
-                if batch.fleece_until is not None
-                for w in range(batch.planting_week, batch.fleece_until + 1)
-            }
+            {w for batch in batches for w in fleece_weeks_for(batch, settings)}
         )
         wide = settings.fleece_width_in_beds
         for p in range(len(plots)):

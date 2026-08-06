@@ -10,6 +10,14 @@ infeasibility.
 The real objective ("optimal of what") is still open — these weighted terms are
 a reasonable placeholder. Each ``_minimize_*`` returns a list of weighted terms;
 :func:`add_all_soft_constraints` sums them into a single ``model.Minimize``.
+
+**Terms are normalised.** Raw counts differ by orders of magnitude — "plots used"
+tops out at the number of plots (say 4) while "beds used" tops out at the number
+of beds (say 100). Multiplying those by the raw weights made the numbers in the
+UI misleading: weight 100 on plots contributed at most 400, weight 10 on beds up
+to 1000, so the *smaller* weight dominated. Each term is therefore scaled by its
+own maximum, so its contribution lands in ``0..weight × _OBJECTIVE_SCALE`` and a
+weight of 100 really is ten times a weight of 10.
 """
 
 from __future__ import annotations
@@ -22,6 +30,23 @@ from . import config
 from .loading import BatchInput, PlotInput
 from .variables import OptimizerVars
 
+# Resolution of a normalised term. Big enough that dividing by a term's maximum
+# still leaves a meaningful integer coefficient (CP-SAT objectives are integral).
+_OBJECTIVE_SCALE = 10_000
+
+
+def _coefficient(weight: int, max_count: int) -> int:
+    """Per-variable coefficient that caps a term's total at ``weight × SCALE``.
+
+    Floors at 1 for an enabled term (weight > 0): a term whose maximum exceeds
+    ``weight × SCALE`` would otherwise round to a 0 coefficient and silently
+    vanish, which is the wrong way to fail — better slightly over-weighted than
+    silently ignored.
+    """
+    if weight <= 0 or max_count <= 0:
+        return 0
+    return max(1, (weight * _OBJECTIVE_SCALE) // max_count)
+
 
 def add_all_soft_constraints(
     model: cp_model.CpModel,
@@ -32,7 +57,7 @@ def add_all_soft_constraints(
     terms: list = []
     terms += _minimize_plots_used(model, batches, plots, v)
     terms += _minimize_beds_used(plots, v)
-    terms += _minimize_beds_per_batch(v)
+    terms += _minimize_beds_per_batch(batches, v)
     terms += _minimize_compact_span(model, plots, v)
     if v.settings.enable_line_dispersion:
         terms += _line_dispersion(model, batches, plots, v)
@@ -48,6 +73,7 @@ def _minimize_plots_used(
     v: OptimizerVars,
 ) -> list:
     """Consolidate the plan onto as few plots as possible."""
+    coefficient = _coefficient(v.settings.weight_plots_used, len(plots))
     terms = []
     for p in range(len(plots)):
         used = model.NewBoolVar(f"plot_used_{p}")
@@ -59,24 +85,33 @@ def _minimize_plots_used(
         else:
             model.Add(used == 0)
         v.plot_used[p] = used
-        terms.append(v.settings.weight_plots_used * used)
+        terms.append(coefficient * used)
     return terms
 
 
 def _minimize_beds_used(plots: list[PlotInput], v: OptimizerVars) -> list:
     """Fewer distinct beds across the whole season — rewards succession (reusing
     a bed for sequential crops)."""
+    coefficient = _coefficient(v.settings.weight_beds_used, sum(v.num_beds))
     return [
-        v.settings.weight_beds_used * v.bed_used[(p, k)]
+        coefficient * v.bed_used[(p, k)]
         for p in range(len(plots))
         for k in range(v.num_beds[p])
     ]
 
 
-def _minimize_beds_per_batch(v: OptimizerVars) -> list:
+def _minimize_beds_per_batch(batches: list[BatchInput], v: OptimizerVars) -> list:
     """Keep each batch bed-aligned — the fewer beds it spans, the better (an
-    unaligned start straddles an extra bed). Sum of occupancy incidences."""
-    return [v.settings.weight_beds_per_batch * occ for occ in v.occ.values()]
+    unaligned start straddles an extra bed). Sum of occupancy incidences.
+
+    Normalised against the beds a batch can actually span (its own width plus the
+    one extra bed an unaligned start straddles), NOT the number of occ variables
+    — most of those are zero because a batch sits in one plot.
+    """
+    width = v.settings.cells_per_bed
+    max_incidences = sum(-(-b.cell_count // width) + 1 for b in batches)
+    coefficient = _coefficient(v.settings.weight_beds_per_batch, max_incidences)
+    return [coefficient * occ for occ in v.occ.values()]
 
 
 def _gap_penalty(
@@ -106,13 +141,14 @@ def _minimize_compact_span(
     model: cp_model.CpModel, plots: list[PlotInput], v: OptimizerVars
 ) -> list:
     """No gaps between the first and last used bed of each plot."""
+    coefficient = _coefficient(v.settings.weight_compact_span, sum(v.num_beds))
     terms = []
     for p in range(len(plots)):
         if v.num_beds[p] == 0:
             continue
         used = [v.bed_used[(p, k)] for k in range(v.num_beds[p])]
         wasted = _gap_penalty(model, used, f"compact_p{p}")
-        terms.append(v.settings.weight_compact_span * wasted)
+        terms.append(coefficient * wasted)
     return terms
 
 
@@ -134,6 +170,9 @@ def _line_dispersion(
     for b, batch in enumerate(batches):
         by_line[batch.planting_lines].append(b)
 
+    coefficient = _coefficient(
+        v.settings.weight_line_dispersion, sum(v.num_beds) * max(len(by_line), 1)
+    )
     terms = []
     for p in range(len(plots)):
         nb = v.num_beds[p]
@@ -152,10 +191,11 @@ def _line_dispersion(
                     model.Add(used == 0)
                 line_used.append(used)
             wasted = _gap_penalty(model, line_used, f"line_p{p}_l{line}")
-            terms.append(v.settings.weight_line_dispersion * wasted)
+            terms.append(coefficient * wasted)
     return terms
 
 
 def _minimize_fleece_count(v: OptimizerVars) -> list:
     """Minimise the number of fleece-weeks used."""
-    return [v.settings.weight_fleece_count * fleece for fleece in v.fleece.values()]
+    coefficient = _coefficient(v.settings.weight_fleece_count, len(v.fleece))
+    return [coefficient * fleece for fleece in v.fleece.values()]

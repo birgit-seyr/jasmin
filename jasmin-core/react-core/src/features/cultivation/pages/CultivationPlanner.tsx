@@ -1,6 +1,15 @@
 import { PlayCircleOutlined, SaveOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Select, Slider, Space, Spin, Tag, Typography } from "antd";
+import {
+  Alert,
+  Button,
+  Select,
+  Slider,
+  Space,
+  Spin,
+  Tag,
+  Typography,
+} from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -24,7 +33,8 @@ import { ExplainerText } from "@shared/ui";
 import { JobProgressDrawer } from "@shared/ui/JobProgressDrawer";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
-import PlotGrid, { type GridPlacement } from "../components/PlotGrid";
+import PlannerGrids, { type BatchWindow } from "../components/PlannerGrids";
+import { type GridPlacement } from "../components/PlotGrid";
 import { CELLS_PER_BED, occupiesWeek } from "../utils/serpentine";
 
 const { Text } = Typography;
@@ -46,7 +56,14 @@ export default function CultivationPlanner() {
   const [saving, setSaving] = useState(false);
 
   const { data: plots, isLoading: plotsLoading } = useCultivationPlotsList();
-  const { data: batches } = useCultivationCultivationBatchesList();
+  // Only the batches this planner is responsible for. Greenhouse batches are
+  // planned separately and the outdoor solver skips them — including them here
+  // would park every tunnel crop in the "unplaced" palette forever, looking like
+  // the solver had failed to place them.
+  const { data: batches } = useCultivationCultivationBatchesList({
+    year,
+    is_greenhouse: false,
+  });
   const { data: solutions, isFetching: solutionsFetching } =
     useCultivationPlanSolutionsList({ year });
   const { data: solution, isFetching: solutionFetching } =
@@ -68,9 +85,17 @@ export default function CultivationPlanner() {
   // A fresh solution wipes any unsaved hand edits.
   useEffect(() => setEdits(null), [solutionId]);
 
-  const yearBatches = useMemo(
-    () => (batches ?? []).filter((b: CultivationBatch) => b.year === year),
-    [batches, year],
+  // Already scoped to this year + outdoor by the query above.
+  const yearBatches = useMemo<CultivationBatch[]>(
+    () => batches ?? [],
+    [batches],
+  );
+
+  // Outdoor plots only — the solver excludes greenhouse plots, so showing them
+  // here would be a grid the planner can never place anything into.
+  const outdoorPlots = useMemo(
+    () => (plots ?? []).filter((plot) => !plot.is_greenhouse),
+    [plots],
   );
   const batchById = useMemo(() => {
     const map = new Map<string, CultivationBatch>();
@@ -105,7 +130,12 @@ export default function CultivationPlanner() {
     const base: PlacementMap = {};
     const meta = new Map<
       string,
-      { label: string; plantingWeek?: number; endWeek?: number; cellCount: number }
+      {
+        label: string;
+        plantingWeek?: number;
+        endWeek?: number;
+        cellCount: number;
+      }
     >();
     details.forEach((d) => {
       base[d.batch] = { plotId: d.plot, startCell: d.start_cell };
@@ -117,24 +147,74 @@ export default function CultivationPlanner() {
       });
     });
     const effective = edits ?? base;
-    return Object.entries(effective).map(([batchId, pos]) => {
-      const info = meta.get(batchId);
-      const batch = batchById.get(batchId);
-      return {
-        batchId,
-        plotId: pos.plotId,
-        startCell: pos.startCell,
-        cellCount: info?.cellCount ?? cellCountFor(batch),
-        label: labelFor(batchId, info?.label),
-        color: colorMap.get(batchId),
-        plantingWeek: info?.plantingWeek ?? batch?.planting_week,
-        endWeek: info?.endWeek ?? batch?.end_week,
-      };
+    // Ground still held by last year's overwintering crops. Not part of this
+    // plan and not editable — but without it those cells look free, when the
+    // solver in fact had to work around them.
+    const carried: GridPlacement[] = (solution?.carryover ?? []).map((c) => ({
+      batchId: `carryover:${c.plot}:${c.start_cell}`,
+      plotId: c.plot,
+      startCell: c.start_cell,
+      cellCount: c.cell_count,
+      label: t("cultivation.carryover_label", { crop: c.label }),
+      plantingWeek: 1,
+      endWeek: c.until_week,
+      isCarryover: true,
+    }));
+    return carried.concat(
+      Object.entries(effective).map(([batchId, pos]) => {
+        const info = meta.get(batchId);
+        const batch = batchById.get(batchId);
+        return {
+          batchId,
+          plotId: pos.plotId,
+          startCell: pos.startCell,
+          // The batch's CURRENT width wins over the solver-time snapshot in
+          // `detail.cell_count`. `save_placements` recomputes it from the live
+          // `amount_of_beds` too, so trusting the snapshot would let the grid
+          // judge a drop by one width while the server judged it by another —
+          // and after this change that mismatch is a hard rejection, not just a
+          // cosmetic one. The snapshot still covers batches we have no row for.
+          cellCount: batch ? cellCountFor(batch) : (info?.cellCount ?? 1),
+          label: labelFor(batchId, info?.label),
+          color: colorMap.get(batchId),
+          plantingWeek: info?.plantingWeek ?? batch?.planting_week,
+          endWeek: info?.endWeek ?? batch?.end_week,
+        };
+      }),
+    );
+  }, [solution, edits, batchById, colorMap, cellCountFor, labelFor, t]);
+
+  // Width + week window for every batch, so a drag can be judged against the
+  // crop's whole occupancy period rather than just the week on screen.
+  const windows = useMemo(() => {
+    const map = new Map<string, BatchWindow>();
+    yearBatches.forEach((b) => {
+      if (!b.id) return;
+      map.set(b.id, {
+        cellCount: cellCountFor(b),
+        plantingWeek: b.planting_week,
+        endWeek: b.end_week,
+        bedTypeId: b.used_bed_type,
+      });
     });
-  }, [solution, edits, batchById, colorMap, cellCountFor, labelFor]);
+    // A placement's stored cell_count wins over the recomputed one. The bed type
+    // is not part of a placement — it belongs to the batch — so it is carried
+    // over rather than dropped, or a placed crop could be dragged onto beds it
+    // was never sized for.
+    placements.forEach((p) =>
+      map.set(p.batchId, {
+        cellCount: p.cellCount,
+        plantingWeek: p.plantingWeek,
+        endWeek: p.endWeek,
+        bedTypeId: batchById.get(p.batchId)?.used_bed_type ?? null,
+      }),
+    );
+    return map;
+  }, [yearBatches, placements, cellCountFor, batchById]);
 
   const placedIds = useMemo(
-    () => new Set(placements.map((p) => p.batchId)),
+    () =>
+      new Set(placements.filter((p) => !p.isCarryover).map((p) => p.batchId)),
     [placements],
   );
   // Palette = this year's batches that are not placed anywhere yet.
@@ -145,18 +225,18 @@ export default function CultivationPlanner() {
 
   const activeInWeek = useMemo(
     () =>
-      placements.filter((p) =>
-        occupiesWeek(p.plantingWeek, p.endWeek, week),
-      ),
+      placements.filter((p) => occupiesWeek(p.plantingWeek, p.endWeek, week)),
     [placements, week],
   );
 
   const currentMap = useCallback((): PlacementMap => {
     if (edits) return edits;
     const base: PlacementMap = {};
-    placements.forEach((p) => {
-      base[p.batchId] = { plotId: p.plotId, startCell: p.startCell };
-    });
+    placements
+      .filter((p) => !p.isCarryover)
+      .forEach((p) => {
+        base[p.batchId] = { plotId: p.plotId, startCell: p.startCell };
+      });
     return base;
   }, [edits, placements]);
 
@@ -218,7 +298,9 @@ export default function CultivationPlanner() {
       notify.success(t("common.saved_successfully"));
       setEdits(null);
       invalidateSolutions();
-      queryClient.invalidateQueries({ queryKey: ["cultivation", "plan_solutions"] });
+      queryClient.invalidateQueries({
+        queryKey: ["cultivation", "plan_solutions"],
+      });
     } catch (error) {
       notify.error(getErrorMessage(error, t("common.error_saving")));
     } finally {
@@ -226,16 +308,29 @@ export default function CultivationPlanner() {
     }
   }, [solutionId, edits, invalidateSolutions, queryClient, t]);
 
+  // Best candidate first by land efficiency, so the picker itself ranks them.
   const solutionOptions = useMemo(
     () =>
-      (solutions ?? []).map((s) => ({
-        value: s.id as string,
-        label: `${t("cultivation.version_short", { version: s.version })}${
-          s.chosen ? " ★" : ""
-        } · ${t("cultivation.n_placements", { count: s.placement_count ?? 0 })}`,
-      })),
+      (solutions ?? [])
+        .slice()
+        .sort(
+          (a, b) =>
+            (b.metrics?.efficiency_percent ?? 0) -
+            (a.metrics?.efficiency_percent ?? 0),
+        )
+        .map((s) => ({
+          value: s.id as string,
+          label: `${t("cultivation.version_short", { version: s.version })}${
+            s.chosen ? " ★" : ""
+          } · ${s.metrics?.efficiency_percent ?? 0}% · ${t(
+            "cultivation.n_wasted_cell_weeks",
+            { count: s.metrics?.wasted_cell_weeks ?? 0 },
+          )}`,
+        })),
     [solutions, t],
   );
+
+  const metrics = solution?.metrics;
 
   return (
     <div>
@@ -264,7 +359,9 @@ export default function CultivationPlanner() {
           </Button>
         )}
         {isGardener && solutionId && !solution?.chosen && (
-          <Button onClick={handleChoose}>{t("cultivation.choose_solution")}</Button>
+          <Button onClick={handleChoose}>
+            {t("cultivation.choose_solution")}
+          </Button>
         )}
         {solution?.chosen && <Tag color="green">{t("cultivation.chosen")}</Tag>}
         {isGardener && edits && (
@@ -296,6 +393,42 @@ export default function CultivationPlanner() {
           {t("cultivation.n_crops_in_week", { count: activeInWeek.length })}
         </Text>
       </div>
+
+      {metrics ? (
+        <div className="cultivation-planner__metrics">
+          <span title={t("cultivation.metric_efficiency_hint")}>
+            <strong>{metrics.efficiency_percent}%</strong>{" "}
+            {t("cultivation.metric_efficiency")}
+          </span>
+          <span>
+            {t("cultivation.metric_wasted", {
+              count: metrics.wasted_cell_weeks,
+            })}
+          </span>
+          <span>
+            {t("cultivation.metric_bed_weeks", {
+              count: metrics.bed_weeks_opened,
+            })}
+          </span>
+          <span>
+            {t("cultivation.metric_plots_beds", {
+              plots: metrics.plots_used,
+              beds: metrics.beds_touched,
+            })}
+          </span>
+          <span>
+            {t("cultivation.metric_successions", {
+              count: metrics.successions,
+            })}
+          </span>
+          <span>
+            {t("cultivation.metric_peak", {
+              week: metrics.peak_week,
+              cells: metrics.peak_cells_used,
+            })}
+          </span>
+        </div>
+      ) : null}
 
       {edits && (
         <Alert
@@ -338,30 +471,31 @@ export default function CultivationPlanner() {
                 </div>
               )}
               {isGardener && (
-                <p className="cultivation-planner__hint" style={{ marginTop: "0.75em" }}>
+                <p
+                  className="cultivation-planner__hint"
+                  style={{ marginTop: "0.75em" }}
+                >
                   {t("cultivation.click_placed_to_unplace")}
                 </p>
               )}
             </div>
 
             <div className="cultivation-planner__plots">
-              {(plots ?? []).length === 0 ? (
+              {outdoorPlots.length === 0 ? (
                 <p className="cultivation-planner__empty">
                   {t("cultivation.no_plots_yet")}
                 </p>
               ) : (
-                (plots ?? []).map((plot) => (
-                  <PlotGrid
-                    key={plot.id}
-                    plot={plot}
-                    placements={placements}
-                    week={week}
-                    cellsPerBed={cellsPerBed}
-                    editable={isGardener}
-                    onDropBatch={handleDropBatch}
-                    onSelectPlacement={(p) => handleUnplace(p.batchId)}
-                  />
-                ))
+                <PlannerGrids
+                  plots={outdoorPlots}
+                  placements={placements}
+                  week={week}
+                  cellsPerBed={cellsPerBed}
+                  editable={isGardener}
+                  windows={windows}
+                  onDropBatch={handleDropBatch}
+                  onSelectPlacement={(p) => handleUnplace(p.batchId)}
+                />
               )}
             </div>
           </div>

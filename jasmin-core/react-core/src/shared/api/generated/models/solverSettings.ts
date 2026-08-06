@@ -10,9 +10,9 @@ export interface SolverSettings {
   readonly id?: string;
   readonly is_active?: boolean;
   /**
-   * Wall-clock budget for ONE solve. Capped at 900s so a mistyped value cannot pin a worker for hours.
+   * Wall-clock budget for ONE solve. A hard plan legitimately needs 10+ minutes, so this goes up to 2 hours; the default stays low for quick feedback. A run computes several plans, so the total is this times the number of solutions.
    * @minimum 1
-   * @maximum 900
+   * @maximum 7200
    */
   solver_max_time_seconds?: number;
   /**
@@ -46,7 +46,7 @@ export interface SolverSettings {
    */
   weight_beds_used?: number;
   /**
-   * Keep each batch bed-aligned (spanning fewest beds).
+   * Keep each batch bed-aligned (spanning fewest beds). Defaults to 0: a crop may run from one bed into the next, and forcing bed-aligned starts strands the leftover cells of every bed, which wastes land.
    * @minimum 0
    * @maximum 1000
    */
