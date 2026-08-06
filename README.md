@@ -8,10 +8,22 @@ and each week their share of whatever was harvested is packed and delivered to a
 
 One deployment serves many independent farms. Each gets its own subdomain and its own isolated PostgreSQL schema.
 
-<!--
-Screenshots go here, e.g.:
-![Packing list](docs/images/packing-list.png)
--->
+## Screenshots
+
+The interface is German — English, French and Italian locales exist, German is the source of truth.
+
+**Member detail** — active shares with their joker counters, this week's crate contents, upcoming deliveries per station, cooperative shares, and the SEPA payment schedule.
+
+![Member detail](docs/images/memberdetail.png)
+
+**Weekly share-content planning** — one row per vegetable with stock and
+forecast, then the per-day × per-share-size quantities that make up each week's crate, with running totals per share.
+
+![Weekly share-content planning](docs/images/planningsharecontent.png)
+
+**Subscription configuration** — per-tenant rules for subscription terms and renewal, delivery lead time, waiting lists, and the joker system.
+
+![Subscription configuration](docs/images/configurationsubscriptions.png)
 
 ## What it does
 
