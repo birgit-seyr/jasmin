@@ -7,22 +7,29 @@ rotation possible — old ciphertext stays readable while the re-encryption
 pass runs.
 
 The library calls ``Fernet()`` on each list element and never splits on
-commas itself. That makes the split in ``config/settings.py`` load-bearing
-in a way that fails SILENTLY if it is ever removed:
+commas itself. That makes the split in ``config/settings.py`` load-bearing:
+a comma-joined string passed as ONE list element is never equivalent to the
+keys it holds. HOW it breaks depends on the interpreter, because CPython
+changed non-strict base64 decoding within the 3.14 series:
 
-``Fernet`` base64-decodes its key, and ``base64.urlsafe_b64decode`` stops
-at the ``=`` padding that terminates the first key. So a comma-joined
-string passed as ONE list element decodes to exactly the first key — no
-exception, no warning — and the old key is discarded. Every value written
-before the rotation then fails to decrypt with ``InvalidToken``, and the
-``rotate_field_encryption`` command cannot read the rows it exists to
-re-encrypt.
+- Older decoders (3.14.3 and before) stop at the ``=`` padding that
+  terminates the first key, so the joined string decodes to exactly the
+  first key — no exception, no warning — and the old key is discarded.
+- Newer decoders (3.14.6, which the backend image and CI run) no longer
+  treat padding as a terminator, so the joined string is rejected with
+  ``binascii.Error: Incorrect padding`` and ``Fernet()`` re-raises it as
+  ``ValueError``.
 
-These tests pin the behaviour end-to-end rather than asserting on the
-settings literal, so they keep holding if the parsing moves elsewhere.
+Either way the old key is gone: values written before the rotation fail to
+decrypt, and the ``rotate_field_encryption`` command cannot read the rows
+it exists to re-encrypt. The tests below assert that invariant rather than
+one interpreter's failure mode, and pin the behaviour end-to-end rather
+than asserting on the settings literal, so they keep holding if the
+parsing moves elsewhere.
 """
 
 import base64
+import binascii
 
 import pytest
 from cryptography.fernet import Fernet, InvalidToken, MultiFernet
@@ -34,6 +41,20 @@ SECRET = b"DE89370400440532013000"
 def _build_crypter(configured_keys):
     """Mirror ``encrypted_model_fields.fields.get_crypter``."""
     return MultiFernet([Fernet(key) for key in configured_keys])
+
+
+def _decrypt_or_none(configured_keys, token):
+    """Decrypt ``token``, collapsing both unsplit-key failure modes to None.
+
+    A key list that cannot read the token either blows up while building
+    the crypter (``ValueError`` from ``Fernet`` on a rejected key) or
+    builds fine and fails at read time (``InvalidToken`` from a key that
+    silently truncated).
+    """
+    try:
+        return _build_crypter(configured_keys).decrypt(token)
+    except (ValueError, InvalidToken):
+        return None
 
 
 def test_settings_key_is_a_list_of_individually_valid_fernet_keys():
@@ -53,32 +74,34 @@ def test_settings_key_is_a_list_of_individually_valid_fernet_keys():
         Fernet(key)  # raises if the entry is not a valid standalone key
 
 
-def test_comma_joined_key_silently_collapses_to_the_first_key():
-    """Document the trap: no exception, the old key just vanishes.
-
-    If this ever starts raising instead, the failure mode became loud and
-    the settings comment should be updated to match.
-    """
+def test_comma_joined_key_never_carries_both_keys():
+    """Document the trap, whichever way this interpreter expresses it."""
     new, old = Fernet.generate_key().decode(), Fernet.generate_key().decode()
+    joined = f"{new},{old}"
 
-    collapsed = base64.urlsafe_b64decode(f"{new},{old}")
-
-    assert collapsed == base64.urlsafe_b64decode(new)
-    assert collapsed != base64.urlsafe_b64decode(old)
+    try:
+        decoded = base64.urlsafe_b64decode(joined)
+    except binascii.Error:
+        # Loud mode: padding is no longer a terminator, so the whole value
+        # is rejected and Fernet turns that into a startup ValueError.
+        with pytest.raises(ValueError):
+            Fernet(joined)
+    else:
+        # Silent mode: the decode stopped at the "=" ending the first key.
+        assert decoded == base64.urlsafe_b64decode(new)
+        assert decoded != base64.urlsafe_b64decode(old)
 
 
 def test_unsplit_key_cannot_decrypt_ciphertext_written_with_the_old_key():
-    """The regression itself: rotation silently breaks existing rows."""
+    """The regression itself: rotation breaks existing rows."""
     new, old = Fernet.generate_key().decode(), Fernet.generate_key().decode()
     token = Fernet(old).encrypt(SECRET)
 
     # What a MISSING split produces: one element holding "new,old".
-    unsplit = _build_crypter([f"{new},{old}"])
-    with pytest.raises(InvalidToken):
-        unsplit.decrypt(token)
+    assert _decrypt_or_none([f"{new},{old}"], token) is None
 
     # What the split produces: two keys, old one still readable.
-    assert _build_crypter(f"{new},{old}".split(",")).decrypt(token) == SECRET
+    assert _decrypt_or_none(f"{new},{old}".split(","), token) == SECRET
 
 
 def test_rotation_reencrypts_under_the_first_key():

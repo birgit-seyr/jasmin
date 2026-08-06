@@ -406,12 +406,14 @@ SMTP_ALLOW_PRIVATE_HOSTS = (
 # Comma-separated for key rotation: the FIRST key encrypts new writes, ALL
 # keys are tried when decrypting (django-encrypted-model-fields builds a
 # MultiFernet from the list). The split is load-bearing — the library calls
-# Fernet() on each list element and never splits itself, and Fernet's
-# base64 decode stops at the "=" padding that ends the first key. So a
-# comma-joined string in a one-element list decodes to exactly the first
-# key, SILENTLY discarding the old one and making every existing ciphertext
-# undecryptable. Fernet keys are url-safe base64 and never contain a comma,
-# so splitting is safe for the single-key case.
+# Fernet() on each list element and never splits itself, so a comma-joined
+# string in a one-element list loses the old key and makes every existing
+# ciphertext undecryptable. How it loses it depends on the CPython patch
+# level: decoders up to 3.14.3 stop at the "=" padding ending the first key
+# and SILENTLY drop the rest, while 3.14.6+ rejects the joined value with
+# binascii.Error ("Incorrect padding") and Fernet re-raises it as a
+# ValueError at startup. Fernet keys are url-safe base64 and never contain
+# a comma, so splitting is safe for the single-key case.
 FIELD_ENCRYPTION_KEY = [
     _key.strip()
     for _key in os.environ.get(
