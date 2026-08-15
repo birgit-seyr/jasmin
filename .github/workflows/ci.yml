@@ -171,8 +171,9 @@ jobs:
           git diff --exit-code ../react-core/schema.yml
 
       - name: Security audit
-        # Suppressed advisories — each one MUST have a docs/tasks.txt
-        # entry tracking why we accepted the risk and when to re-check.
+        # Suppressed advisories — each one MUST carry its rationale HERE,
+        # in full: why the risk was accepted and what would end the
+        # suppression. No pointers to other files; they rot.
         #
         #   PYSEC-2025-183 (pyjwt) — disputed by upstream: "the key
         #     length is chosen by the application that uses the
@@ -180,7 +181,21 @@ jobs:
         #     in prod, so the advisory does not apply to our usage.
         #     No patched release available; suppression is permanent
         #     unless the advisory's scope changes.
-        run: poetry run pip-audit --strict --ignore-vuln PYSEC-2025-183
+        #
+        #   PYSEC-2026-3552 (cryptography 49.x) — Bleichenbacher /
+        #     timing oracle in pkcs7_decrypt_der/_pem/_smime when a
+        #     service decrypts attacker-supplied S/MIME EnvelopedData.
+        #     We call none of those: cryptography is only reachable via
+        #     Fernet (django-encrypted-model-fields' encrypted PII
+        #     columns) and jwcrypto, and nothing in apps/ or config/
+        #     touches PKCS#7, S/MIME or EnvelopedData. TEMPORARY: fixed
+        #     in cryptography 50.0.0, which our own pyproject ceiling
+        #     (">=48.0.1,<50") currently excludes. Drop this suppression
+        #     when that ceiling is raised and the lock updated.
+        run: >
+          poetry run pip-audit --strict
+          --ignore-vuln PYSEC-2025-183
+          --ignore-vuln PYSEC-2026-3552
 
   gateway:
     name: Gateway (super-admin allowlist + nginx config)

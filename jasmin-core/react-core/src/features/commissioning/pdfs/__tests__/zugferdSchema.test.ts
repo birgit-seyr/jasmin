@@ -40,9 +40,10 @@
  *     equals sum of line nets). Same tool required.
  *
  * So: this test catches structural regressions (a refactor that drops
- * BT-1, a typo in a namespace) at PR time. Real conformance still
- * needs an annual Mustang run — see docs/tasks.txt §"ZUGFeRD
- * conformance validation".
+ * BT-1, a typo in a namespace) at PR time. Real conformance is NOT
+ * covered here and needs a manual Mustang CLI run (command above)
+ * against a freshly generated invoice PDF — do it once a year and
+ * whenever the ZUGFeRD profile or the CII field mapping changes.
  */
 
 import { describe, expect, it } from "vitest";
