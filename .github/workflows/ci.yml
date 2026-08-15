@@ -182,20 +182,10 @@ jobs:
         #     No patched release available; suppression is permanent
         #     unless the advisory's scope changes.
         #
-        #   PYSEC-2026-3552 (cryptography 49.x) — Bleichenbacher /
-        #     timing oracle in pkcs7_decrypt_der/_pem/_smime when a
-        #     service decrypts attacker-supplied S/MIME EnvelopedData.
-        #     We call none of those: cryptography is only reachable via
-        #     Fernet (django-encrypted-model-fields' encrypted PII
-        #     columns) and jwcrypto, and nothing in apps/ or config/
-        #     touches PKCS#7, S/MIME or EnvelopedData. TEMPORARY: fixed
-        #     in cryptography 50.0.0, which our own pyproject ceiling
-        #     (">=48.0.1,<50") currently excludes. Drop this suppression
-        #     when that ceiling is raised and the lock updated.
-        run: >
-          poetry run pip-audit --strict
-          --ignore-vuln PYSEC-2025-183
-          --ignore-vuln PYSEC-2026-3552
+        # Everything else gets FIXED, not suppressed — prefer raising the
+        # version floor in pyproject.toml (see the pillow / pyjwt / pypdf
+        # pins) over adding an --ignore-vuln here.
+        run: poetry run pip-audit --strict --ignore-vuln PYSEC-2025-183
 
   gateway:
     name: Gateway (super-admin allowlist + nginx config)

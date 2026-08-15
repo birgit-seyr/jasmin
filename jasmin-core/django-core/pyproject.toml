@@ -61,7 +61,7 @@ django-otp = "^1.5"
 # generator so a malformed file is rejected before it can ever be
 # handed to the office.
 sepaxml = "^2.6"
-cryptography = ">=48.0.1,<50"
+cryptography = ">=48.0.1,<51"
 # factur-x / ZUGFeRD hybrid e-invoice writer. Embeds the EN 16931 CII XML
 # into a PDF as the ``factur-x.xml`` associated file and writes the factur-x
 # XMP extension schema, so an uploaded invoice is one document that is both
@@ -70,6 +70,12 @@ cryptography = ">=48.0.1,<50"
 # Ghostscript, a system binary in the runtime image — see
 # ``apps/commissioning/services/facturx_pdfa3.py``.
 factur-x = "^6.6"
+# Transitive (pulled in by factur-x, which only asks for >=5.3.0). Pinned to
+# the security floor that fixes PYSEC-2026-{3655,3656} present on 6.14.2 —
+# crafted /ToUnicode and font-width entries that blow up memory/runtime while
+# parsing a PDF. Reachable via the reseller invoice upload path
+# (``apps/commissioning/viewsets/resellers_viewsets.py::_embed_facturx_or_fallback``).
+pypdf = ">=6.15.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"
