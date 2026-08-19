@@ -184,6 +184,46 @@ class Tenant(TenantMixin, JasminModel):
 
     logo = models.ImageField(upload_to="logos/", blank=True, null=True)
     bio_logo = models.ImageField(upload_to="bio_logos/", blank=True, null=True)
+    # Square launcher icon for the installable web app (home-screen / PWA).
+    # Deliberately NOT ``logo``: that one is wordmark-shaped and feeds the
+    # reseller / invoice PDF headers, so it can never carry a square
+    # constraint. Uploads are validated square + >= 512px and re-encoded to
+    # exactly 512x512 PNG by ``TenantSerializer.validate_app_icon`` — that
+    # normalization is what lets the manifest declare ``sizes: "512x512"``
+    # truthfully without opening the file on every request. Served unsigned by
+    # ``TenantAppIconView`` (see its docstring for why that is safe here).
+    app_icon = models.ImageField(upload_to="app_icons/", blank=True, null=True)
+    # Launcher label under the home-screen icon. Phones truncate at roughly 12
+    # characters and ``name`` is max_length=200, so blank falls back to
+    # ``name[:12]`` in the manifest rather than shipping a clipped long name.
+    app_short_name = models.CharField(max_length=12, blank=True, default="")
+
+    @property
+    def app_icon_version(self) -> str:
+        """Cache-busting stamp for the unsigned launcher-icon URL.
+
+        Empty string when there is no icon, which doubles as the frontend's
+        "there is nothing to point at" signal — so one field answers both
+        "does this tenant have an icon?" and "which version is it?".
+
+        ``updated_at`` is ``auto_now``, so any PATCH that stores a new icon
+        moves the stamp and defeats the icon route's day-long cache. Without
+        it, replacing an icon would leave every client showing the old one for
+        up to ``_APP_ICON_MAX_AGE``.
+
+        MICROSECONDS are included deliberately: whole seconds are too coarse:
+        an admin who replaces an icon twice inside the same second (or any
+        automated flow that does) would produce a byte-identical URL for
+        different bytes, and every client would keep the stale icon for a day.
+
+        Trade-off accepted: the stamp also moves when an unrelated tenant field
+        is edited, costing one ~5 KB re-download. Deriving it from the stored
+        filename instead would avoid that but breaks when Django reuses a name
+        after a delete-then-upload, which is the failure that actually hurts.
+        """
+        if not self.app_icon or not self.updated_at:
+            return ""
+        return f"{int(self.updated_at.timestamp())}{self.updated_at.microsecond:06d}"
 
     fiscal_year_start_month = models.PositiveSmallIntegerField(
         default=1,

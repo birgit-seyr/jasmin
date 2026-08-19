@@ -879,6 +879,13 @@ REST_FRAMEWORK = {
         # fires once on SPA load / refresh. Anti-flood only, keyed by IP;
         # generous since many users behind one shared egress IP all bootstrap.
         "current_tenant": "60/minute",
+        # Web-app manifest + launcher icon (``TenantManifestView`` /
+        # ``TenantAppIconView``). Both are ``AllowAny`` because a browser
+        # fetches them without credentials, so they need the same anti-flood
+        # treatment as the bootstrap above. Fetched about once per app launch
+        # and then cached by the client, so these are anti-flood only.
+        "tenant_manifest": "60/minute",
+        "tenant_app_icon": "60/minute",
         # Super-admin login + step-up re-confirm. These authenticate via
         # ``SuperAdmin.check_password`` directly, NOT Django's
         # ``authenticate()``, so django-axes (which only hooks

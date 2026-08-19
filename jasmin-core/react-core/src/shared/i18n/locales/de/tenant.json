@@ -71,7 +71,10 @@
     "current_bio_logo": "Aktuelles Bio-Logo",
     "upload_bio_logo": "Bio-Logo hochladen",
     "logo_saved": "Logo gespeichert",
-    "bio_logo_saved": "Bio-Logo gespeichert"
+    "bio_logo_saved": "Bio-Logo gespeichert",
+    "current_app_icon": "App-Symbol (Startbildschirm)",
+    "app_icon_hint": "Quadratisch, mindestens 512x512 Pixel. Wird als Symbol angezeigt, wenn die App auf dem Handy installiert wird.",
+    "app_icon_saved": "App-Symbol gespeichert"
   },
   "email": "email",
   "email_for_orders": "email für Bestellungen",

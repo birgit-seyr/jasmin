@@ -100,6 +100,9 @@
     "over_capacity": "This share type is sold out for the selected period.",
     "capacity_below_occupancy": "Capacity can't be lowered below what's already subscribed for a current or upcoming week."
   },
+  "tenant": {
+    "app_icon_invalid": "The app icon must be a square PNG, JPEG or WEBP image of at least 512x512 pixels and at most 2 MB."
+  },
   "tenant_settings": {
     "coop_shares_bounds_inverted": "The minimum number of coop shares cannot exceed the maximum."
   },

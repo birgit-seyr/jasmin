@@ -72,6 +72,7 @@ export interface CurrentTenant {
   readonly logo?: string | null;
   /** @nullable */
   readonly bio_logo?: string | null;
+  readonly app_icon_version?: string;
   /** @maxLength 8 */
   tenant_language?: string;
   /** @maxLength 32 */

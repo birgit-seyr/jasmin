@@ -31068,6 +31068,9 @@ components:
           type: string
           nullable: true
           readOnly: true
+        app_icon_version:
+          type: string
+          readOnly: true
         tenant_language:
           type: string
           maxLength: 8
@@ -40571,6 +40574,9 @@ components:
           type: object
           additionalProperties: {}
           readOnly: true
+        app_icon_version:
+          type: string
+          readOnly: true
         schema_name:
           type: string
           readOnly: true
@@ -40716,6 +40722,13 @@ components:
           type: string
           format: uri
           nullable: true
+        app_icon:
+          type: string
+          format: uri
+          nullable: true
+        app_short_name:
+          type: string
+          maxLength: 12
         fiscal_year_start_month:
           type: integer
           maximum: 12
@@ -40893,6 +40906,9 @@ components:
           type: string
           format: uri
           nullable: true
+        app_icon_version:
+          type: string
+          readOnly: true
         is_active:
           type: boolean
         tenant_language:

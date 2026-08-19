@@ -60,6 +60,10 @@ export default function ConfigurationGeneral() {
 
   const logoPreviewUrl = resolveMediaUrl(tenant?.logo);
   const bioLogoPreviewUrl = resolveMediaUrl(tenant?.bio_logo);
+  // The admin payload carries the signed media URL, which is fine for an
+  // authenticated preview here. The launcher itself uses the unsigned
+  // /api/tenants/app-icon.png route instead — a signed URL would expire.
+  const appIconPreviewUrl = resolveMediaUrl(tenant?.app_icon);
 
   const { uploading: logoUploading, uploadPicture: uploadLogo } =
     usePictureUpload({
@@ -75,6 +79,17 @@ export default function ConfigurationGeneral() {
       fieldName: "bio_logo",
       invalidate: refreshTenant,
       successMessage: t("tenant.files.bio_logo_saved"),
+      errorMessage: t("common.error_saving_data"),
+    });
+  // Square launcher icon for the installable web app. Separate from `logo`
+  // because that one is wordmark-shaped and feeds the PDF headers; the backend
+  // validates square + >= 512px and re-encodes to a 512x512 PNG.
+  const { uploading: appIconUploading, uploadPicture: uploadAppIcon } =
+    usePictureUpload({
+      endpoint: tenantEndpoint,
+      fieldName: "app_icon",
+      invalidate: refreshTenant,
+      successMessage: t("tenant.files.app_icon_saved"),
       errorMessage: t("common.error_saving_data"),
     });
 
@@ -520,7 +535,7 @@ export default function ConfigurationGeneral() {
                 styles={{ body: { padding: "16px" } }}
               >
                 <Row gutter={[12, 12]}>
-                  <Col span={12}>
+                  <Col xs={24} md={8}>
                     <div style={{ padding: "4px 0" }}>
                       <Text strong>{t("tenant.files.current_logo")}</Text>
                       <div style={{ marginTop: 8 }}>
@@ -534,7 +549,7 @@ export default function ConfigurationGeneral() {
                       </div>
                     </div>
                   </Col>
-                  <Col span={12}>
+                  <Col xs={24} md={8}>
                     <div style={{ padding: "4px 0" }}>
                       <Text strong>{t("tenant.files.current_bio_logo")}</Text>
                       <div style={{ marginTop: 8 }}>
@@ -546,6 +561,28 @@ export default function ConfigurationGeneral() {
                           showDelete={false}
                         />
                       </div>
+                    </div>
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <div style={{ padding: "4px 0" }}>
+                      <Text strong>{t("tenant.files.current_app_icon")}</Text>
+                      <div
+                        style={{ marginTop: 4, marginBottom: 8 }}
+                        className="settings-hint"
+                      >
+                        <Text type="secondary">
+                          {t("tenant.files.app_icon_hint")}
+                        </Text>
+                      </div>
+                      <PictureUploadField
+                        pictureUrl={appIconPreviewUrl}
+                        uploading={appIconUploading}
+                        onUpload={uploadAppIcon}
+                        previewVariant="inline"
+                        showDelete={false}
+                        requireSquare
+                        minSizePx={512}
+                      />
                     </div>
                   </Col>
                 </Row>

@@ -46,6 +46,21 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "@mui/icons-material"
         update-types: ["version-update:semver-major"]
+      # React 19 is one migration, not five bumps: react, react-dom and the two
+      # @types packages have to move together (react-dom 19 against react 18 is
+      # an unsatisfiable peer combo), and react-leaflet 5 requires React 19.
+      # Dependabot proposes them individually, so each one lands red on its own.
+      # Defer all five until the React 19 upgrade is done deliberately.
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-leaflet"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions versions themselves
   - package-ecosystem: "github-actions"

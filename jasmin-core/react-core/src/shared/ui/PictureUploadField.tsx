@@ -2,6 +2,7 @@ import { DeleteOutlined, UploadOutlined } from "@ant-design/icons";
 import { Button, Image, Space, Upload } from "antd";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { notify } from "@shared/utils";
 import "./PictureUploadField.css";
 
 export interface PictureUploadFieldProps {
@@ -19,6 +20,17 @@ export interface PictureUploadFieldProps {
   previewVariant?: "inline" | "block" | "none";
   /** Render the delete button in this field (default true). */
   showDelete?: boolean;
+  /**
+   * Opt-in client-side shape check, for fields whose backend validator refuses
+   * non-square or undersized images (the tenant app icon). Rejecting here is a
+   * UX shortcut only — the serializer is the real gate — so a browser that
+   * can't decode the file simply falls through to the upload and the server
+   * answers. Off by default: the other consumers of this widget accept any
+   * shape.
+   */
+  requireSquare?: boolean;
+  /** Minimum width/height in pixels, enforced only when ``requireSquare``. */
+  minSizePx?: number;
 }
 
 /**
@@ -33,8 +45,39 @@ export default function PictureUploadField({
   onDelete,
   previewVariant = "inline",
   showDelete = true,
+  requireSquare = false,
+  minSizePx,
 }: PictureUploadFieldProps) {
   const { t } = useTranslation();
+
+  const checkShapeThenUpload = (file: File) => {
+    if (!requireSquare) {
+      onUpload(file);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    const probe = new window.Image();
+    probe.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const { naturalWidth: width, naturalHeight: height } = probe;
+      if (width !== height) {
+        notify.error(t("common.picture_must_be_square", { width, height }));
+        return;
+      }
+      if (minSizePx && width < minSizePx) {
+        notify.error(t("common.picture_too_small", { min: minSizePx, width }));
+        return;
+      }
+      onUpload(file);
+    };
+    // Undecodable here (exotic format, blocked object URL) → let the upload
+    // through and let the serializer produce the authoritative error.
+    probe.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      onUpload(file);
+    };
+    probe.src = objectUrl;
+  };
 
   const uploadButton = (
     <Upload
@@ -42,7 +85,7 @@ export default function PictureUploadField({
       maxCount={1}
       showUploadList={false}
       beforeUpload={(file) => {
-        onUpload(file);
+        checkShapeThenUpload(file);
         return false;
       }}
     >

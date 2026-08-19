@@ -360,47 +360,47 @@ const MemberDetail = () => {
             {displayLogoUrl &&
               (logoShape === "rectangle-wide" ||
               logoShape === "rectangle-tall" ? (
-              <div
-                style={{
-                  width:
-                    logoShape === "rectangle-wide"
-                      ? `${sizeLogo * logoAspectRatio}px`
-                      : `${sizeLogo}px`,
-                  height:
-                    logoShape === "rectangle-wide"
-                      ? `${sizeLogo}px`
-                      : `${sizeLogo / logoAspectRatio}px`,
-
-                  borderRadius: "8px",
-                  backgroundColor: "var(--color-bg-base)",
-                  padding: "8px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  overflow: "hidden",
-                }}
-              >
-                <img
-                  src={displayLogoUrl}
-                  alt={tenantName ?? t("common.logo")}
+                <div
                   style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "contain",
+                    width:
+                      logoShape === "rectangle-wide"
+                        ? `${sizeLogo * logoAspectRatio}px`
+                        : `${sizeLogo}px`,
+                    height:
+                      logoShape === "rectangle-wide"
+                        ? `${sizeLogo}px`
+                        : `${sizeLogo / logoAspectRatio}px`,
+
+                    borderRadius: "8px",
+                    backgroundColor: "var(--color-bg-base)",
+                    padding: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                  }}
+                >
+                  <img
+                    src={displayLogoUrl}
+                    alt={tenantName ?? t("common.logo")}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+              ) : (
+                <Avatar
+                  size={64}
+                  src={displayLogoUrl}
+                  shape="circle"
+                  style={{
+                    backgroundColor: "var(--color-bg-base)",
+                    padding: "8px",
                   }}
                 />
-              </div>
-            ) : (
-              <Avatar
-                size={64}
-                src={displayLogoUrl}
-                shape="circle"
-                style={{
-                  backgroundColor: "var(--color-bg-base)",
-                  padding: "8px",
-                }}
-              />
-            ))}
+              ))}
           </Col>
           <Col flex="auto">
             <h1 style={{ color: "var(--color-bg-base)", marginBottom: "8px" }}>
@@ -564,10 +564,6 @@ const MemberDetail = () => {
           })
         }
       />
-
-      <ExplainerText title={t("common.info")}>
-        {t("explainers.member_detail")}
-      </ExplainerText>
     </div>
   );
 };

@@ -139,5 +139,7 @@
     "10": "Okt",
     "11": "Nov",
     "12": "Dez"
-  }
+  },
+  "picture_must_be_square": "Das Bild muss quadratisch sein — dieses ist {{width}}x{{height}} Pixel.",
+  "picture_too_small": "Das Bild muss mindestens {{min}}x{{min}} Pixel groß sein — dieses ist {{width}} Pixel breit."
 }

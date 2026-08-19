@@ -100,6 +100,9 @@
     "over_capacity": "Diese Anteilsart ist für den gewählten Zeitraum ausverkauft.",
     "capacity_below_occupancy": "Die Kapazität kann nicht unter die bereits gebuchte Auslastung einer aktuellen oder kommenden Woche gesenkt werden."
   },
+  "tenant": {
+    "app_icon_invalid": "Das App-Symbol muss ein quadratisches PNG-, JPEG- oder WEBP-Bild mit mindestens 512x512 Pixeln und höchstens 2 MB sein."
+  },
   "tenant_settings": {
     "coop_shares_bounds_inverted": "Die Mindestanzahl an Geschäftsanteilen darf die Höchstanzahl nicht überschreiten."
   },

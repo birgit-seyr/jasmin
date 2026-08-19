@@ -46,12 +46,33 @@ class ApiNoStoreCacheControlMiddleware:
     the response leg only; adds nothing to request handling cost.
     """
 
+    # The only ``/api/`` responses allowed to keep their own Cache-Control.
+    # Both are public branding for the installable web app (the manifest and
+    # the launcher icon): no member, user or operational data, fetched by the
+    # BROWSER without credentials, and re-requested on every app launch — so
+    # ``no-store`` would mean re-downloading the icon forever.
+    #
+    # They still vary per tenant, so the cross-tenant hazard this middleware
+    # exists for is real for them too. That is handled in the views, which
+    # mark them ``private`` (browser-only, never a shared cache) rather than
+    # ``public``. Keep this an exact-path allowlist, never a prefix — the rest
+    # of ``/api/tenants/`` is ordinary tenant data.
+    PUBLIC_BRANDING_PATHS = frozenset(
+        {
+            "/api/tenants/manifest.webmanifest",
+            "/api/tenants/app-icon.png",
+        }
+    )
+
     def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]):
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         response = self.get_response(request)
-        if request.path.startswith("/api/"):
+        if (
+            request.path.startswith("/api/")
+            and request.path not in self.PUBLIC_BRANDING_PATHS
+        ):
             # Overwrite unconditionally — a stray cacheable value from any view
             # or upstream must not survive on a dynamic, tenant-scoped endpoint.
             response["Cache-Control"] = "no-store, private"

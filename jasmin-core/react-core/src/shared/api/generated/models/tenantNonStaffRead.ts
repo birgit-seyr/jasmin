@@ -62,6 +62,7 @@ export interface TenantNonStaffRead {
   logo?: string | null;
   /** @nullable */
   bio_logo?: string | null;
+  readonly app_icon_version?: string;
   is_active?: boolean;
   /** @maxLength 8 */
   tenant_language?: string;

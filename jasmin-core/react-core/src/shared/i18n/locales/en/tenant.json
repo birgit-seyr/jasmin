@@ -16,8 +16,7 @@
   "organization": {
     "title": "Other",
     "organic_control_number": "Organic control number",
-        "organic_control_number_desc": "If this number is filled in, articles can be assigned an organic-status which will surface on delivery notes and invoices.",
-
+    "organic_control_number_desc": "If this number is filled in, articles can be assigned an organic-status which will surface on delivery notes and invoices.",
     "fiscal_year_start_month": "Start of fiscal year",
     "tenant_language": "Language",
     "iban": "IBAN",
@@ -72,7 +71,10 @@
     "current_bio_logo": "Current organic logo",
     "upload_bio_logo": "Upload organic logo",
     "logo_saved": "Logo saved",
-    "bio_logo_saved": "Organic logo saved"
+    "bio_logo_saved": "Organic logo saved",
+    "current_app_icon": "App icon (home screen)",
+    "app_icon_hint": "Square, at least 512x512 pixels. Shown as the icon when the app is installed on a phone.",
+    "app_icon_saved": "App icon saved"
   },
   "email": "email",
   "email_for_orders": "email for orders",

@@ -139,5 +139,7 @@
     "10": "Oct",
     "11": "Nov",
     "12": "Dec"
-  }
+  },
+  "picture_must_be_square": "The image must be square — this one is {{width}}x{{height}} pixels.",
+  "picture_too_small": "The image must be at least {{min}}x{{min}} pixels — this one is {{width}} pixels wide."
 }
