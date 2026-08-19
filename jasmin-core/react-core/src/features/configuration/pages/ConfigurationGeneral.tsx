@@ -13,6 +13,7 @@ import {
 } from "@shared/ui";
 import { notify } from "@shared/utils";
 import { checkBic, checkIban } from "@shared/utils/iban";
+import { withoutTenantFileFields } from "./utils/tenantSettingsMapping";
 import { Card, Col, Row, Space, Typography } from "antd";
 import {
   Fragment,
@@ -419,14 +420,13 @@ export default function ConfigurationGeneral() {
       const tenantId = String(currentTenantId);
       const currentTenantData = tenantDataRef.current;
 
-      // The upload fields never ride on this JSON PATCH: logo / bio_logo are
-      // FileFields handled out-of-band by ``usePictureUpload`` (multipart), and
-      // a stored URL string must not be re-sent to the ImageField.
-      const {
-        logo: _logo,
-        bio_logo: _bio_logo,
-        ...tenantFields
-      } = currentTenantData;
+      // The upload fields never ride on this JSON PATCH: they are FileFields
+      // handled out-of-band by ``usePictureUpload`` (multipart), and a stored
+      // URL string must not be re-sent to an ImageField — DRF answers "the
+      // submitted data was not a file", so the user gets a 400 on whatever
+      // unrelated field they were actually editing. The list is shared, so a
+      // new file column can never be forgotten by only one save path.
+      const tenantFields = withoutTenantFileFields(currentTenantData);
 
       // Directional cast at the orval boundary: the autosave sends a
       // partial snapshot while the generated body type requires
