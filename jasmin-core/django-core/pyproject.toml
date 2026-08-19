@@ -42,6 +42,14 @@ pyjwt = ">=2.13"
 # Transitive (pulled in by weasyprint). Pinned to the security floor that
 # fixes PYSEC-2026-{2253,2254,2255,2256,2257} present on 12.2.0.
 pillow = ">=12.3.0"
+# Transitive (pulled in by django itself, which asks only for >=0.3.1). Pinned
+# to the floor that fixes CVE-2026-{71491,59894,59893,54284} present on 0.5.5 —
+# three parser DoS/ReDoS issues plus a code-generation escaping flaw. All of
+# them need attacker-controlled SQL TEXT, which nothing here feeds it: no
+# module under apps/ or config/ imports sqlparse, and Django only reaches it
+# from `sqlmigrate` / `sqlsequencereset` and the DEBUG-only django-querycount
+# middleware. Bumped anyway because it is free.
+sqlparse = ">=0.6.0"
 # Hardened XML parser for user-uploaded e-invoice XML (XXE / entity-expansion
 # defenses). Already present transitively via py-serializable; pinned directly
 # so the e-invoice upload path can't lose it if that transitive edge changes.
