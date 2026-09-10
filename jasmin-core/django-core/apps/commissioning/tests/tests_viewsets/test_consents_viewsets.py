@@ -497,3 +497,74 @@ class TestConsentDocumentPDFDownload:
         assert doc.pdf
         with doc.pdf.open("rb") as handle:
             assert handle.read(5).startswith(b"%PDF")
+
+    def test_body_cannot_make_the_server_fetch_external_resources(
+        self, tenant, monkeypatch
+    ):
+        """``body`` is office-authored HTML stored verbatim, so without a
+        restrictive ``url_fetcher`` WeasyPrint resolves ``file://`` and
+        internal HTTP references BY THE SERVER at render time — turning a
+        tenant-office privilege into host file access / SSRF.
+
+        Asserted at the socket, not at the output: a fetched secret rarely
+        SHOWS UP in the PDF (a .txt won't decode as an image, CSS is parsed
+        not echoed), so an output-only assertion passes even when the request
+        is really being made. What matters is that no request is issued.
+        """
+        from urllib import request as urllib_request
+
+        opened: list[str] = []
+        real_open = urllib_request.OpenerDirector.open
+
+        def spy(self, fullurl, *args, **kwargs):
+            opened.append(str(getattr(fullurl, "full_url", fullurl)))
+            return real_open(self, fullurl, *args, **kwargs)
+
+        monkeypatch.setattr(urllib_request.OpenerDirector, "open", spy)
+
+        doc = _make_doc(
+            body=(
+                "<p>ok</p>"
+                '<img src="file:///etc/passwd">'
+                '<link rel="stylesheet" href="http://127.0.0.1:9/x.css">'
+            )
+        )
+        try:
+            doc.ensure_pdf()
+        except OSError as exc:
+            pytest.skip(f"WeasyPrint native libs unavailable: {exc}")
+
+        assert not opened, f"render issued outbound fetches: {opened}"
+
+        # The render must still SUCCEED — a blocked reference degrades to a
+        # missing asset, it must not break a legal artifact.
+        doc.refresh_from_db()
+        assert doc.pdf
+        with doc.pdf.open("rb") as handle:
+            assert handle.read(5).startswith(b"%PDF")
+
+    def test_body_cannot_make_the_server_call_internal_hosts(self, tenant):
+        """Same guard, SSRF side: no http(s) fetch may be issued from a body.
+
+        Asserted at the fetcher rather than over the wire — the point is that
+        the scheme is refused before any socket is opened.
+        """
+        from weasyprint.urls import URLFetcher, URLFetchingError
+
+        from apps.commissioning.services.consent_pdf import (
+            _ALLOWED_RESOURCE_PROTOCOLS,
+        )
+
+        fetcher = URLFetcher(allowed_protocols=_ALLOWED_RESOURCE_PROTOCOLS)
+        for blocked in (
+            "http://169.254.169.254/latest/meta-data/",
+            "https://example.org/tracker.css",
+            "file:///etc/passwd",
+            "ftp://example.org/x",
+        ):
+            with pytest.raises((ValueError, URLFetchingError)):
+                fetcher.fetch(blocked)
+
+        # ``data:`` stays allowed — inert, and rich-text bodies embed images
+        # that way.
+        assert fetcher.fetch("data:text/css,body{color:red}") is not None
