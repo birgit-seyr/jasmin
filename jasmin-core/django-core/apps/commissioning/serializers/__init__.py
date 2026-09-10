@@ -78,6 +78,7 @@ from .members_serializer import (
     MemberCreateRequestSerializer,
     MemberEmailLogSerializer,
     MemberEmailSerializer,
+    MemberImportSerializer,
     MemberLoanSerializer,
     MemberSelfReadSerializer,
     MemberSerializer,

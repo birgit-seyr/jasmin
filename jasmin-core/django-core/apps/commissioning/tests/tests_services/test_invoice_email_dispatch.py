@@ -1,6 +1,5 @@
 """Tests for ``InvoiceService.send_to_reseller`` /
-``send_to_accounting`` — the P0-2 wiring documented in
-``docs/code/email-overview.md``.
+``send_to_accounting``.
 
 Contract:
 

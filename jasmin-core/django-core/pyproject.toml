@@ -151,8 +151,7 @@ filterwarnings = [
 # --cov-report=term`` into ``.github/workflows/ci.yml`` once a baseline
 # % is established locally, then pick ``--cov-fail-under=<N>`` 5-10
 # points below the baseline so accidental dips fail CI but won't get
-# disabled on day one. See docs/code/engineering-audit-playbook.md, Test coverage
-# measurement pass.
+# disabled on day one.
 [tool.coverage.run]
 source = ["apps"]
 # Line coverage only. Branch coverage is noisier (false negatives on
@@ -171,9 +170,8 @@ omit = [
     "apps/cultivation/solver/*",
     # Operator one-off scripts (seed data, manual reconciliation,
     # createsuperadmin, etc.). Run manually by ops, not part of any
-    # user-facing code path. See docs/code/test-coverage-priorities.md
-    # Tier 4 for the rationale. Exception: rotate_field_encryption
-    # has its own tests because it touches encrypted-data integrity.
+    # user-facing code path. Exception: rotate_field_encryption has its
+    # own tests because it touches encrypted-data integrity.
     "*/management/commands/*",
 ]
 
@@ -228,8 +226,7 @@ ignore = [
 # Huey periodic tasks (apps/*/tasks.py) iterate every tenant schema
 # in a single run. A broken schema on one tenant must not block the
 # sweep from running on every other tenant — same "try every row,
-# don't stop the batch" rationale as management commands. See the
-# Background task reliability pass in docs/code/engineering-audit-playbook.md.
+# don't stop the batch" rationale as management commands.
 "**/tasks.py" = ["BLE001"]
 # Package __init__.py files re-export submodule symbols so callers can do
 # `from apps.staff.models import Employee` instead of `from apps.staff.models.basics import Employee`.
@@ -243,13 +240,12 @@ ignore = [
 # convention. F403/F405 are noise here, the alternative is a manifest of
 # every override which is more maintenance for less safety.
 "config/settings*.py" = ["F403", "F405"]
-# Legacy BLE001 allowlists removed by the silent-defaults audit pass
-# (see docs/code/engineering-audit-playbook.md, Pass #1). All sites in
-# apps/commissioning/services, apps/notifications, and apps/shared
-# were either narrowed to specific exception families or left as
-# `try / except Exception: logger.exception(); raise` (which BLE001
-# exempts via its re-raise rule). No remaining `# noqa: BLE001` lines
-# in production code.
+# Legacy BLE001 allowlists removed by the silent-defaults audit pass.
+# All sites in apps/commissioning/services, apps/notifications, and
+# apps/shared were either narrowed to specific exception families or
+# left as `try / except Exception: logger.exception(); raise` (which
+# BLE001 exempts via its re-raise rule). No remaining `# noqa: BLE001`
+# lines in production code.
 
 [tool.vulture]
 min_confidence = 80

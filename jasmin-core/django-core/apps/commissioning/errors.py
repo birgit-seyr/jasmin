@@ -656,6 +656,19 @@ class MemberCoopSharesOutOfRange(BadRequestError):
         )
 
 
+class MemberNumberNotAllowedForTrial(BadRequestError):
+    """A CSV import row set ``member_number`` on a row with ``is_trial=True``.
+
+    Trial members are not Mitglieder under GenG (no Geschaeftsanteil yet), so
+    they carry neither a Mitgliedsnummer nor an Eintrittsdatum — the conversion
+    hook stamps both when ``is_trial`` flips to False. Accepting a number here
+    would put a non-member into the Mitgliederliste numbering space and then
+    silently keep it on conversion (``_post_confirm`` only generates a number
+    when none is set)."""
+
+    code = "member.number_not_allowed_for_trial"
+
+
 class LockedAfterAdminConfirmation(BadRequestError):
     """Caller tried to edit a field that becomes legally fixed once
     the Member is admin-confirmed (Mitglied der Genossenschaft per
@@ -1372,6 +1385,7 @@ __all__ = [
     "CustomerProfileNotLinked",
     "MemberAlreadyConfirmed",
     "LockedAfterAdminConfirmation",
+    "MemberNumberNotAllowedForTrial",
     "MemberLinkConflict",
     "UserInBlockedStatus",
     "UserAlreadyLinked",

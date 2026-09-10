@@ -17,11 +17,25 @@ then one data row per record.
 ## `members_sample.csv`
 
 Creates **unconfirmed** members (the office confirms them afterwards). Only
-writable `Member` fields are set. `member_number` is intentionally absent — it is
-server-assigned on confirmation. `entry_date` is writable here for the
-manual-transfer case (migrating members with a historical admission date); it is
-otherwise server-stamped. `email` is unique, so re-uploading the same file
-reports per-row conflicts on the second run.
+writable `Member` fields are set.
+
+`member_number` is writable **on the import path only** (the office grid keeps
+the column read-only). A tenant migrating off another system carries its
+existing Mitgliedsnummern over, and every other sample below resolves its member
+by that number — so import the members first, then the rest. Rules:
+
+- Blank is fine: the member gets no number until the office confirms them, at
+  which point `Member._post_confirm` assigns `Max(member_number) + 1` — above
+  the imported block, so the two numbering sources never collide.
+- The number is unique; a collision (with an existing member or an earlier row
+  of the same file) is a per-row error, not a partial import.
+- A **trial** row must leave it blank — trial members are not Mitglieder under
+  GenG and hold no Mitgliedsnummer (`member.number_not_allowed_for_trial`).
+
+`entry_date` is likewise writable here for the manual-transfer case (migrating
+members with a historical admission date); it is otherwise server-stamped.
+`email` is unique, so re-uploading the same file reports per-row conflicts on the
+second run.
 
 ## `subscriptions_sample.csv`
 

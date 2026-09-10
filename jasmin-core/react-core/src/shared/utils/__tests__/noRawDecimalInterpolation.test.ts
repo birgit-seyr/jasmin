@@ -20,7 +20,7 @@
  * `format(Number(x), N)` (UI) or `formatNumber(x, N, locale)` (PDFs).
  */
 
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { globSync } from "node:fs";
 import { join, relative } from "path";
 
@@ -71,9 +71,20 @@ const ACCESSORS = ["record", "item", "row", "data", "line"];
 //   - qrcodeGenerator.ts emits SEPA EPC QR code body, must be canonical
 //   - the helper itself + this test reference the field names in docs
 //   - test files / fixtures
+//
+// The first two are load-bearing, not cosmetic: money arrives from the backend
+// as a canonical 2dp STRING, so `${item.line_netto}` is the CORRECT thing to
+// write in those two files. Without the exemption the guard flags it and the
+// fix hint below tells the author to wrap it in the locale formatter — which
+// would put "12,34" into bank-facing XML / a SEPA QR payload.
+//
+// Entries are matched by suffix, so a file MOVE silently kills its exemption
+// (both PDF entries pointed at the pre-domain-first `src/shared/pdfs/` for a
+// while and matched nothing). The "every allowlist entry resolves" test below
+// is what makes that fail loudly instead.
 const ALLOWLIST = [
-  "src/shared/pdfs/zugferd.ts",
-  "src/shared/pdfs/qrcodeGenerator.ts",
+  "src/features/commissioning/pdfs/zugferd.ts",
+  "src/features/commissioning/pdfs/qrcodeGenerator.ts",
   "src/shared/utils/numberFormat.ts",
   "src/shared/utils/__tests__/noRawDecimalInterpolation.test.ts",
 ];
@@ -203,6 +214,26 @@ describe("no raw decimal interpolation in cell/PDF renders", () => {
     }
 
     expect(violations).toEqual([]);
+  });
+
+  it("every allowlist entry still resolves to a real file", () => {
+    // A dead entry is worse than no entry: the file it was meant to exempt is
+    // silently policy-enforced again, and nothing fails until someone writes
+    // the very line the exemption existed to permit. Matching is by suffix
+    // (`relPath.endsWith(a)`), so a rename/move breaks it without a trace.
+    const repoRoot = join(__dirname, "..", "..", "..", "..");
+
+    const dead = ALLOWLIST.filter(
+      (entry) => !existsSync(join(repoRoot, entry)),
+    );
+
+    expect(
+      dead,
+      `Allowlist entries point at files that no longer exist:\n${dead
+        .map((d) => `  ${d}`)
+        .join("\n")}\n\nRepoint them at the current path (or drop the entry ` +
+        `if the exemption is genuinely obsolete).`,
+    ).toEqual([]);
   });
 
   it("the regexes themselves catch the canonical bug pattern", () => {

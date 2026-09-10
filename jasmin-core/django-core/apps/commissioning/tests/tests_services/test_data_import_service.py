@@ -421,3 +421,125 @@ class TestImportRowsFromCsv:
 
         assert result.successful == 1
         assert Crate.objects.filter(name="Märchenkiste").exists()
+
+
+# ---------------------------------------------------------------------------
+# member_number on the onboarding import (MemberImportSerializer)
+# ---------------------------------------------------------------------------
+
+
+def _member_csv(*rows: str, extra_headers: str = "") -> bytes:
+    """3-row download-template CSV (titles / dataIndex / type hints) + data."""
+    header = "first_name,last_name,email,member_number,is_trial" + extra_headers
+    return (
+        "First,Last,Email,Member no.,Trial\n"
+        f"{header}\n"
+        "text,text,email,integer,boolean\n" + "".join(f"{row}\n" for row in rows)
+    ).encode("utf-8")
+
+
+@pytest.mark.django_db
+class TestMemberNumberImport:
+    """A tenant onboarding its EXISTING members brings their Mitgliedsnummern
+    with it — the office grid keeps the column read-only, but the import path
+    accepts it (``MemberImportSerializer``). Every follow-up onboarding import
+    (subscriptions, coop shares, SEPA mandates) resolves its member by that
+    number, so it has to survive the import verbatim."""
+
+    def test_member_number_is_imported(self, tenant):
+        result = import_rows_from_csv(
+            "member", _member_csv("Ada,Lovelace,ada@example.org,1001,false")
+        )
+
+        assert result.failed == 0, result.errors
+        assert Member.objects.get(email="ada@example.org").member_number == 1001
+
+    def test_imported_number_survives_admin_confirmation(self, tenant):
+        """``_post_confirm`` only generates a number when none is set — the
+        imported one must NOT be overwritten, or the whole Mitgliederliste is
+        renumbered out from under the tenant's paperwork."""
+        import_rows_from_csv(
+            "member", _member_csv("Ada,Lovelace,ada@example.org,1001,false")
+        )
+        member = Member.objects.get(email="ada@example.org")
+        admin = JasminUserFactory(email="office@example.org")
+
+        member.confirm(admin)
+        member.refresh_from_db()
+
+        assert member.member_number == 1001
+
+    def test_next_generated_number_continues_above_the_imported_block(self, tenant):
+        """The generator is ``Max(member_number) + 1``, so a member confirmed
+        AFTER the import lands above the imported range instead of colliding
+        with it."""
+        import_rows_from_csv(
+            "member", _member_csv("Ada,Lovelace,ada@example.org,1001,false")
+        )
+        fresh = Member.objects.create(
+            first_name="New", last_name="Joiner", email="new@example.org"
+        )
+        admin = JasminUserFactory(email="office2@example.org")
+
+        fresh.confirm(admin)
+        fresh.refresh_from_db()
+
+        assert fresh.member_number == 1002
+
+    def test_blank_number_still_imports(self, tenant):
+        """Leaving the column empty keeps the pre-existing behaviour: no number
+        until the office confirms the member."""
+        result = import_rows_from_csv(
+            "member", _member_csv("Grace,Hopper,grace@example.org,,false")
+        )
+
+        assert result.failed == 0, result.errors
+        assert Member.objects.get(email="grace@example.org").member_number is None
+
+    def test_duplicate_number_is_a_clean_per_row_error(self, tenant):
+        """Making the field writable attaches DRF's UniqueValidator, so a
+        collision within the same file is a per-row error — not an
+        IntegrityError that takes the batch with it."""
+        result = import_rows_from_csv(
+            "member",
+            _member_csv(
+                "Ada,Lovelace,ada@example.org,1001,false",
+                "Alan,Turing,alan@example.org,1001,false",
+            ),
+        )
+
+        assert result.successful == 1
+        assert result.failed == 1
+        assert result.errors[0]["row"] == 5
+        assert "member_number" in result.errors[0]["error"]
+        assert Member.objects.get(member_number=1001).email == "ada@example.org"
+
+    def test_trial_row_with_a_number_is_rejected(self, tenant):
+        """Trial members are not Mitglieder under GenG — no Mitgliedsnummer.
+        ``_post_confirm`` would leave an imported one in place forever."""
+        result = import_rows_from_csv(
+            "member", _member_csv("Try,Me,try@example.org,1001,true")
+        )
+
+        assert result.successful == 0
+        assert result.failed == 1
+        assert "number_not_allowed_for_trial" in result.errors[0]["error"] or (
+            "member number" in result.errors[0]["error"]
+        )
+        assert not Member.objects.filter(email="try@example.org").exists()
+
+    def test_office_grid_patch_still_cannot_set_a_number(self, tenant):
+        """The unlock is import-only: the serializer the office grid PATCHes
+        through keeps ``member_number`` read-only."""
+        from apps.commissioning.serializers import MemberSerializer
+
+        member = Member.objects.create(
+            first_name="Read", last_name="Only", email="ro@example.org"
+        )
+        ser = MemberSerializer(member, data={"member_number": 9999}, partial=True)
+
+        assert ser.is_valid(), ser.errors
+        ser.save()
+        member.refresh_from_db()
+
+        assert member.member_number is None

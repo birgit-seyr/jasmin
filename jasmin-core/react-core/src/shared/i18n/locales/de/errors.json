@@ -60,6 +60,7 @@
     "coop_shares_out_of_range_max": "Dieses Mitglied hat {{total}} Genossenschaftsanteil(e), erlaubt sind höchstens {{maximum}}. Bitte passe die Genossenschaftsanteile an, bevor du das Mitglied bestätigst.",
     "profile_not_linked": "Mit diesem Benutzerkonto ist kein Mitgliedsprofil verknüpft.",
     "locked_after_admin_confirmation": "Dieses Feld ist nach der Bestätigung des Mitglieds gesetzlich fixiert und kann nicht mehr geändert werden.",
+    "number_not_allowed_for_trial": "Probemitglieder erhalten keine Mitgliedsnummer — bitte die Spalte für Probemitglieder leer lassen.",
     "already_cancelled": "Diese Mitgliedschaft ist bereits gekündigt.",
     "has_active_subscriptions": "Eine Kündigung ist nur möglich, wenn keine aktiven Abos mehr bestehen. Bitte zuerst die Abos kündigen oder auslaufen lassen.",
     "not_found": "Mitglied nicht gefunden.",

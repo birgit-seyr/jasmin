@@ -12,10 +12,9 @@ Like the document numbering covered by
   * gap-free under realistic concurrency (so member #5 isn't followed
     by member #7 because of a wasted retry).
 
-The race-conditions audit pass (see ``docs/code/engineering-audit-playbook.md``,
-Pass #7) caught that the previous implementation chained
-``select_for_update().aggregate(...)``, which Postgres silently
-ignores. The fix replaced it with the canonical
+The race-conditions audit pass caught that the previous implementation
+chained ``select_for_update().aggregate(...)``, which Postgres
+silently ignores. The fix replaced it with the canonical
 ``pg_advisory_xact_lock`` pattern used by
 ``FinalizableDocumentMixin.save_with_number_retry``. This test
 exercises the new path under genuine concurrency.

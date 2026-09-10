@@ -404,8 +404,7 @@ class BillingRun(JasminModel):
     ``sepa_xml_export`` file is an immutable pain.008.001.02 XML
     artifact ready to upload to any SEPA-zone bank. We used to emit a
     bank-specific CSV here; the move to pain.008 standardizes the
-    output across banks (see ``docs/tenant-settings-audit.md`` for
-    the rationale).
+    output across banks.
     """
 
     created_at = models.DateTimeField(auto_now_add=True)

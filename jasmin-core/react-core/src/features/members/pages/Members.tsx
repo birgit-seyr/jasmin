@@ -339,6 +339,13 @@ export default function Members() {
         inputType: "positive_integer",
         required: false,
         readOnly: true,
+        // Locked in the grid (renumbering a live member falsifies the
+        // Mitgliederliste) but offered in the CSV onboarding template: a
+        // tenant migrating off another system carries its existing
+        // Mitgliedsnummern over, and the follow-up imports (subscriptions,
+        // coop shares, SEPA mandates) resolve their member by that number.
+        // ``MemberImportSerializer`` accepts it on the import path only.
+        importable: true,
         fixed: true,
         align: "center",
         width: "4em",
@@ -423,6 +430,11 @@ export default function Members() {
         // Normally locked (server-stamped GenG §30 date). Editable only while
         // the "händische Übertragung" toggle is on — see manualMemberTransfer.
         disabled: !manualMemberTransfer,
+        // ...but the CSV onboarding template must always offer it: the import
+        // serializer accepts ``entry_date`` (that's the whole point of the
+        // manual transfer), and gating the template column on the toggle made
+        // the downloaded file silently lose the column.
+        importable: true,
         sortable: true,
 
         render: (value: unknown) => formatDate(value as string | null),

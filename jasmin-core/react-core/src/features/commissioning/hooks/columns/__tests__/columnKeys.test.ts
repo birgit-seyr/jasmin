@@ -4,7 +4,7 @@
  * break saving/reading planning amounts. The literal expectations below are the
  * contract — do not "adjust to match" a helper change; change the helper back.
  *
- * See docs/day-variation-columns-audit.md and columnKeys.ts.
+ * See columnKeys.ts.
  */
 import { describe, expect, it } from "vitest";
 import {

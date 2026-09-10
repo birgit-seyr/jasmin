@@ -156,6 +156,22 @@ jobs:
       - name: Lint (ruff)
         run: poetry run ruff check apps config
 
+      - name: Migrations are in sync with models
+        # Catches a model field added/changed/removed without the matching
+        # migration, i.e. the models and the migration files on disk disagree.
+        # Without this the failure surfaces at DEPLOY time, when Django hits a
+        # column the database doesn't have -- and prod migrations are
+        # forward-only (see CLAUDE.md), so there is no reversing out of it.
+        # Multi-tenant makes it worse: the missing migration then has to land
+        # in every tenant schema.
+        #
+        # Plain ``makemigrations`` is correct here -- model definitions are
+        # schema-independent; ``migrate_schemas`` is only for APPLYING them.
+        #
+        # Fix when this fails: run ``poetry run python manage.py
+        # makemigrations`` locally and commit the generated migration(s).
+        run: poetry run python manage.py makemigrations --check --dry-run
+
       - name: Tests (pytest)
         run: poetry run pytest --maxfail=5 -q
 

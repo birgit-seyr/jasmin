@@ -296,8 +296,7 @@ export default function PlanningLongTermHarvestSharesBase({
           // dataIndex AND key must be the SAME wire field. The default-share
           // backend keys amounts by variation id as `amount_<id>` (there is no
           // day axis here); previously `key` said `variation_<id>` while
-          // `dataIndex` said `amount_<id>` — a latent footgun. See
-          // docs/day-variation-columns-audit.md (Phase 4).
+          // `dataIndex` said `amount_<id>` — a latent footgun.
           dataIndex: variationAmountKey(variation.id!),
           inputType: "positive_decimal2",
           key: variationAmountKey(variation.id!),

@@ -23,10 +23,20 @@ interface ColumnLike {
   hideInModal?: boolean;
   disabled?: boolean | ((record: any) => boolean);
   // Read-only grid columns are display-only (masked aliases like
-  // ``iban_masked``, or server-managed fields like ``member_number``) — never
-  // writable serializer inputs, so they must NOT become import-template
-  // columns. Excluded from the template below.
+  // ``iban_masked``) or server-managed, so by default they must NOT become
+  // import-template columns. Excluded from the template below unless the
+  // column opts back in via ``importable``.
   readOnly?: boolean;
+  /**
+   * Opts a `readOnly` / always-`disabled` column back INTO the template.
+   * Some columns are locked in the grid only because editing a LIVE row
+   * would falsify history, yet are legitimate inputs when ONBOARDING
+   * existing records (``member_number`` carried over from the tenant's
+   * previous system, ``entry_date`` for a historical admission date). The
+   * backend's import serializer must accept the field for this to be
+   * correct — the flag only changes what the template offers.
+   */
+  importable?: boolean;
   inputType?: string;
   /** Select-input options. When present as a static array on a column
    * with ``inputType: "select"``, the template's type-hint row lists the
@@ -220,12 +230,17 @@ export default function DownloadCsvTemplateButton({
         typeof col.dataIndex === "string" &&
         col.hidden !== true &&
         col.hideInModal !== true &&
-        // Read-only display columns (masked aliases / server-managed fields)
-        // are not importable serializer inputs — keep them out of the template.
-        col.readOnly !== true &&
-        // A function `disabled` means per-row — keep it (the new-row case is
-        // editable). Only literal `true` means "always read-only".
-        col.disabled !== true,
+        // `importable` overrides the two lock flags below: the column is
+        // locked in the grid but IS a valid input when onboarding existing
+        // records (see the prop's doc comment).
+        (col.importable === true ||
+          // Read-only display columns (masked aliases / server-managed
+          // fields) are not importable serializer inputs — keep them out of
+          // the template.
+          (col.readOnly !== true &&
+            // A function `disabled` means per-row — keep it (the new-row case
+            // is editable). Only literal `true` means "always read-only".
+            col.disabled !== true)),
     );
 
     const derivedHeaders =

@@ -1,5 +1,4 @@
-"""Tests for ``DeliveryNoteService.send_to_reseller`` — the P0-3
-wiring documented in ``docs/code/email-overview.md``.
+"""Tests for ``DeliveryNoteService.send_to_reseller``.
 
 Contract (mirrors InvoiceService.send_to_reseller — see
 test_invoice_email_dispatch.py — but with one structural

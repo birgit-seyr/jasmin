@@ -44,7 +44,7 @@ from ..serializers import (
     CoopShareImportSerializer,
     CrateSerializer,
     DeliveryStationSerializer,
-    MemberSerializer,
+    MemberImportSerializer,
     ResellerSerializer,
     ShareArticleSerializer,
     SubscriptionImportSerializer,
@@ -59,7 +59,11 @@ from ..serializers import (
 MODEL_IMPORT_REGISTRY: dict[str, type[drf_serializers.BaseSerializer]] = {
     "share_article": ShareArticleSerializer,
     "crate": CrateSerializer,
-    "member": MemberSerializer,
+    # Onboarding import: same serializer as the office grid, except
+    # ``member_number`` is writable so a tenant can carry its existing
+    # Mitgliedsnummern over (the other onboarding imports resolve their
+    # member by that natural key).
+    "member": MemberImportSerializer,
     "delivery_station": DeliveryStationSerializer,
     "reseller": ResellerSerializer,
     # Subscriptions resolve their FKs by natural key (see

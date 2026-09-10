@@ -60,6 +60,7 @@
     "coop_shares_out_of_range_max": "This member has {{total}} cooperative share(s); at most {{maximum}} are allowed. Please adjust the cooperative shares before confirming the member.",
     "profile_not_linked": "No member profile is linked to this user account.",
     "locked_after_admin_confirmation": "This field is legally fixed once the member is confirmed and can no longer be changed.",
+    "number_not_allowed_for_trial": "Trial members do not get a member number — leave the column blank for trial rows.",
     "already_cancelled": "This membership is already cancelled.",
     "has_active_subscriptions": "You can only cancel once you have no active subscriptions. Please cancel or let your subscriptions expire first.",
     "not_found": "Member not found.",

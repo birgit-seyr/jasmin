@@ -194,10 +194,10 @@ export default function PlanningHarvestSharesBase({
     true,
   ) as boolean;
 
-  // Single source of truth for the (day × variation) axes — see
-  // docs/day-variation-columns-audit.md. The base grid AND the BackupModal
-  // consume this same hook, so their day/variation sets can never diverge
-  // (which is exactly how the modal-shows-station-less-day bug crept in).
+  // Single source of truth for the (day × variation) axes. The base grid
+  // AND the BackupModal consume this same hook, so their day/variation
+  // sets can never diverge (which is exactly how the
+  // modal-shows-station-less-day bug crept in).
   const {
     shareDeliveryDays: rawShareDeliveryDays,
     shareTypeVariations,

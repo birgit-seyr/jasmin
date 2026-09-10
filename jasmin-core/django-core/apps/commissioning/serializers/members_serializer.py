@@ -200,6 +200,52 @@ class MemberSerializer(
         return super().validate(attrs)
 
 
+class MemberImportSerializer(MemberSerializer):
+    """``MemberSerializer`` for the CSV onboarding import — ``member_number``
+    writable.
+
+    A tenant migrating off another system brings its existing Mitgliedsnummern
+    with it: the number is printed on the members' paperwork, and every
+    follow-up onboarding import (subscriptions, coop shares, SEPA mandates)
+    resolves its member by ``member_number`` as the natural key. Letting the
+    server re-assign numbers on confirmation would renumber the whole
+    Mitgliederliste and break those references.
+
+    Only the import path unlocks the column — the office grid keeps it
+    read-only, since renumbering a live member falsifies the Mitgliederliste.
+    Making the field writable also makes DRF attach the model's
+    ``unique=True`` validator, so a collision (with an existing member or with
+    an earlier row of the same file) is reported as a clean per-row error
+    instead of an ``IntegrityError``.
+
+    A row that leaves the cell blank keeps the normal behaviour: no number
+    until admin confirmation, then ``Member._post_confirm`` assigns
+    ``Max(member_number) + 1`` — which sits above the imported block, so the
+    two numbering sources don't collide.
+    """
+
+    class Meta(MemberSerializer.Meta):
+        read_only_fields = tuple(
+            field_name
+            for field_name in MemberSerializer.Meta.read_only_fields
+            if field_name != "member_number"
+        )
+
+    def validate(self, attrs):
+        from apps.commissioning.errors import MemberNumberNotAllowedForTrial
+
+        # Trial members are not Mitglieder under GenG, so they hold no
+        # Mitgliedsnummer (see ``Member._post_confirm``). Refuse the row rather
+        # than persist a number that the conversion hook would then leave in
+        # place forever.
+        if attrs.get("member_number") is not None and attrs.get("is_trial", False):
+            raise MemberNumberNotAllowedForTrial(
+                "A trial member cannot carry a member number — leave the "
+                "column blank for trial rows."
+            )
+        return super().validate(attrs)
+
+
 class MemberSelfReadSerializer(MaskedIBANFieldMixin, serializers.ModelSerializer):
     """Member-role read of their OWN Member row on ``MemberViewSet``
     (list/retrieve).

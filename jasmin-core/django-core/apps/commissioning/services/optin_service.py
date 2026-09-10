@@ -18,9 +18,6 @@ code. Tests that need to seed a particular state can either pass
 through the service or set the model fields and call ``save()`` (the
 default-stamping logic in ``ShareDelivery.save()`` only fires on
 insert).
-
-See ``docs/on-off-share-variations-workflow.md`` for the wider
-rationale and the decisions that shaped this implementation.
 """
 
 from __future__ import annotations

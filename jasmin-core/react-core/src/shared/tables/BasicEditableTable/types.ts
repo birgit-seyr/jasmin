@@ -50,6 +50,17 @@ export interface EditableColumnConfig<T extends Record<string, unknown> = Record
   required?: boolean;
   editable?: boolean;
   readOnly?: boolean;
+  /**
+   * Opt a `readOnly` / always-`disabled` column back INTO the CSV import
+   * template (`DownloadCsvTemplateButton`). Those flags normally mean
+   * "server-managed, not a serializer input", which is also the right
+   * default for the template — but a few columns are locked in the office
+   * grid only because editing a LIVE row would falsify history, while the
+   * same field is a legitimate input when ONBOARDING existing records
+   * (e.g. `member_number`, carried over from the tenant's previous system).
+   * Affects the template only; the grid cell stays locked.
+   */
+  importable?: boolean;
   hideInModal?: boolean;
   excludeFromSave?: boolean;
   hidden?: boolean;
