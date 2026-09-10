@@ -15,6 +15,14 @@ updates:
     ignore:
       - dependency-name: "redis"
         update-types: ["version-update:semver-major"]
+      # Django 6.x. We are deliberately on the 5.2 LTS line (security-supported
+      # until April 2028), and django-tenants / the SHARED_APPS+TENANT_APPS
+      # split is the kind of thing a Django major breaks quietly. Security
+      # patches still arrive as 5.2.x through the group above — CVE-2026-15830
+      # was fixed by 5.2.17 that way, no major needed. Remove this entry when
+      # the Django 6 upgrade is scheduled deliberately.
+      - dependency-name: "django"
+        update-types: ["version-update:semver-major"]
 
   # Frontend npm deps
   - package-ecosystem: "npm"
@@ -60,6 +68,26 @@ updates:
       - dependency-name: "@types/react-dom"
         update-types: ["version-update:semver-major"]
       - dependency-name: "react-leaflet"
+        update-types: ["version-update:semver-major"]
+      # Orval 8 regenerates the WHOLE typed API client (src/shared/api/
+      # generated). That output is a build artifact we regenerate with
+      # `make generate-api` and review as a diff — never hand-merged — and CI
+      # gates that it matches schema.yml. A bot PR carrying a regenerated
+      # client from a new major is the wrong shape for that workflow.
+      - dependency-name: "orval"
+        update-types: ["version-update:semver-major"]
+      # i18next 26 + i18next-http-backend 4 are ONE migration, not two bumps
+      # (the backend plugin tracks the core's plugin API). Translation loading
+      # is load-bearing: `de` is the fallbackLng, so a regression doesn't throw
+      # — it renders raw key strings to users. Do both together, deliberately.
+      - dependency-name: "i18next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "i18next-http-backend"
+        update-types: ["version-update:semver-major"]
+      # jsdom 25 -> 30 is five majors of the test ENVIRONMENT at once. Every
+      # vitest suite runs on it, so a behavioural change surfaces as unrelated
+      # test failures across the board. Upgrade on its own, not in a bot PR.
+      - dependency-name: "jsdom"
         update-types: ["version-update:semver-major"]
 
   # GitHub Actions versions themselves
