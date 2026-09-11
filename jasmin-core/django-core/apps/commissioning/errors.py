@@ -762,6 +762,16 @@ class MemberEmailAlreadyHasUser(MemberInvitationError):
             + ". An email can hold only one login — invite that member, or "
             "give this one their own address."
         )
+        # ``context`` selects the i18next variant
+        # (``errors.member.email_already_has_user_<context>``) so the localized
+        # text can name the holder when we know them and stay generic when we
+        # don't — same mechanism as ``member.coop_shares_out_of_range``.
+        if holder_name and holder_number:
+            context = "named_numbered"
+        elif holder_name:
+            context = "named"
+        else:
+            context = "anonymous"
         super().__init__(
             message,
             details={
@@ -769,6 +779,7 @@ class MemberEmailAlreadyHasUser(MemberInvitationError):
                 "holder_name": holder_name or None,
                 "holder_member_number": holder_number,
                 "holder_member_id": str(holder.id) if holder is not None else None,
+                "context": context,
             },
         )
 

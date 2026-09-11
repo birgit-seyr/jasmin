@@ -635,3 +635,164 @@ class TestMemberExitDateImport:
 
         assert member.cancelled_effective_at is None
         assert member.cancelled_at is None
+
+
+@pytest.mark.django_db
+class TestSharedEmailImport:
+    """``Member.email`` is deliberately NOT unique — two members legitimately
+    share one inbox (an elderly couple with a single address). What cannot be
+    shared is a LOGIN: ``JasminUser.email`` is the USERNAME_FIELD."""
+
+    @staticmethod
+    def _csv(*rows: str) -> bytes:
+        return (
+            "First,Last,Email\nfirst_name,last_name,email\ntext,text,email\n"
+            + "".join(f"{row}\n" for row in rows)
+        ).encode("utf-8")
+
+    def test_two_members_may_share_an_email(self, tenant):
+        result = import_rows_from_csv(
+            "member",
+            self._csv(
+                "Anna,Mueller,shared@example.org",
+                "Hans,Mueller,shared@example.org",
+            ),
+        )
+
+        assert result.failed == 0, result.errors
+        assert Member.objects.filter(email="shared@example.org").count() == 2
+
+    def test_dry_run_agrees_with_the_real_run(self, tenant):
+        """The preview must PREDICT the real run. It used to roll every row
+        back individually, so row 2 never saw row 1 and an intra-file collision
+        previewed green then failed for real."""
+        csv = self._csv(
+            "Anna,Mueller,shared@example.org", "Hans,Mueller,shared@example.org"
+        )
+
+        dry = import_rows_from_csv("member", csv, dry_run=True)
+        assert Member.objects.count() == 0, "dry run must persist nothing"
+
+        real = import_rows_from_csv("member", csv)
+        assert (dry.successful, dry.failed) == (real.successful, real.failed)
+
+    def test_dry_run_still_catches_a_duplicate_member_number(self, tenant):
+        """The relaxation is email-only — ``member_number`` is still unique, and
+        a collision WITHIN the file must surface in the preview."""
+        csv = (
+            b"First,Last,Email,No\n"
+            b"first_name,last_name,email,member_number\n"
+            b"text,text,email,integer\n"
+            b"A,One,a@example.org,900\n"
+            b"B,Two,b@example.org,900\n"
+        )
+
+        dry = import_rows_from_csv("member", csv, dry_run=True)
+
+        assert dry.successful == 1
+        assert dry.failed == 1
+        assert "member_number" in dry.errors[0]["error"]
+        assert Member.objects.count() == 0, "dry run must persist nothing"
+
+    def test_second_member_on_a_taken_login_imports_unlinked(self, tenant):
+        """The address's login belongs to another member. Import the member
+        anyway — dropping a real Mitglied over an account they were never going
+        to have would be worse."""
+        user = JasminUserFactory(email="shared@example.org")
+        first = Member.objects.create(
+            first_name="Anna", last_name="M", email="shared@example.org", user=user
+        )
+
+        result = import_rows_from_csv(
+            "member", self._csv("Hans,Mueller,shared@example.org")
+        )
+
+        assert result.failed == 0, result.errors
+        second = Member.objects.get(first_name="Hans")
+        assert second.user_id is None, "must not steal the other member's login"
+        first.refresh_from_db()
+        assert first.user_id == user.pk, "existing link must be untouched"
+
+
+@pytest.mark.django_db
+class TestInviteOnASharedEmail:
+    """Inviting the SECOND member on a shared inbox must fail cleanly.
+
+    Without the guard the shared invitation helper would reuse the other
+    member's ``pending_invitation`` / ``inactive`` user: roll THIS member's name
+    onto it, reset its status, cancel its open invite — and only then trip the
+    ``Member.user`` OneToOne. All inside one atomic block, so nothing persists,
+    but the office would see a constraint error instead of the reason.
+    """
+
+    def _members_sharing(self, holder_status="active"):
+        user = JasminUserFactory(email="shared@example.org")
+        user.account_status = holder_status
+        user.save(update_fields=["account_status"])
+        holder = Member.objects.create(
+            first_name="Anna",
+            last_name="Mueller",
+            email="shared@example.org",
+            member_number=501,
+            user=user,
+        )
+        partner = Member.objects.create(
+            first_name="Hans", last_name="Mueller", email="shared@example.org"
+        )
+        return holder, partner
+
+    def test_raises_and_names_the_holder(self, tenant):
+        from apps.commissioning.errors import MemberEmailAlreadyHasUser
+        from apps.commissioning.services.member_service import MemberService
+
+        holder, partner = self._members_sharing()
+        admin = JasminUserFactory(email="office@example.org")
+
+        with pytest.raises(MemberEmailAlreadyHasUser) as excinfo:
+            MemberService().send_invitation(partner, admin_user=admin)
+
+        details = excinfo.value.details
+        assert details["holder_name"] == "Anna Mueller"
+        assert details["holder_member_number"] == 501
+        assert details["context"] == "named_numbered"
+        assert excinfo.value.code == "member.email_already_has_user"
+
+    def test_the_holders_account_is_left_untouched(self, tenant):
+        """A pending holder is the dangerous case — that is the branch the
+        helper would have reused and rewritten."""
+        holder, partner = self._members_sharing(holder_status="pending_invitation")
+        admin = JasminUserFactory(email="office2@example.org")
+        from apps.commissioning.errors import MemberEmailAlreadyHasUser
+        from apps.commissioning.services.member_service import MemberService
+
+        # Snapshot what the helper would have overwritten. (The user's own name
+        # comes from the factory and is unrelated to the member's — compare
+        # against the captured value, not a literal.)
+        before = {
+            "first_name": holder.user.first_name,
+            "last_name": holder.user.last_name,
+            "account_status": holder.user.account_status,
+        }
+
+        with pytest.raises(MemberEmailAlreadyHasUser):
+            MemberService().send_invitation(partner, admin_user=admin)
+
+        holder.user.refresh_from_db()
+        assert holder.user.first_name == before["first_name"], "name was rewritten"
+        assert holder.user.last_name == before["last_name"], "name was rewritten"
+        assert holder.user.account_status == before["account_status"]
+        partner.refresh_from_db()
+        assert partner.user_id is None, "partner must not have claimed the login"
+
+    def test_the_holder_themselves_can_still_be_invited(self, tenant):
+        """The guard keys on a DIFFERENT member — it must not block the person
+        the account actually belongs to."""
+        from apps.commissioning.services.member_service import MemberService
+
+        holder, _partner = self._members_sharing(holder_status="pending_invitation")
+        admin = JasminUserFactory(email="office3@example.org")
+
+        MemberService().send_invitation(holder, admin_user=admin)
+
+        holder.refresh_from_db()
+        assert holder.user is not None

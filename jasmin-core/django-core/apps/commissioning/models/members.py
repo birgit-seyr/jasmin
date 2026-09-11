@@ -250,10 +250,12 @@ class Member(
         # Validate on every save so the cross-field date-order guards in clean()
         # actually fire on the normal write path — a DjangoValidationError maps
         # to a 400 with the offending field, instead of the DB CheckConstraint
-        # tripping a generic 409. validate_unique=False: email / member_number
+        # tripping a generic 409. validate_unique=False: ``member_number``
         # uniqueness is already DB-enforced, and a per-save uniqueness query on
         # this frequently-saved model (role syncs re-save on every change) isn't
         # worth it — a duplicate still surfaces as the DB IntegrityError.
+        # ``email`` is deliberately NOT unique any more (shared inboxes), so
+        # there is nothing to validate for it on either side.
         self.full_clean(validate_unique=False)
         # MEM-7: capture the previously-linked user BEFORE the write so an
         # unlink (user→None) or relink (A→B) retracts Role.MEMBER from the old
