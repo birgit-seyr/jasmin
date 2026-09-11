@@ -27,6 +27,7 @@ processed row.
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import io
 from dataclasses import dataclass, field
@@ -262,15 +263,32 @@ def _save_imported_member(ser, payload, importing_user):
     linked (auto-confirms an active user), or rejected with ``MemberLinkConflict``
     BEFORE the row is saved (so a conflict never leaves an orphaned member). No
     welcome email is sent on import (``notify_user=False``).
+
+    Exception: an address whose login already belongs to a DIFFERENT member
+    imports as an UNLINKED member rather than failing. Shared inboxes are
+    legitimate (``Member.email`` is not unique) but a login is not shareable, so
+    the second member is simply office-managed.
     """
+    from ..errors import UserAlreadyLinked
     from .member_service import MemberService
 
     service = MemberService()
     email = (payload.get("email") or "").strip().lower()
     existing_user = service.find_existing_user_for_email(email) if email else None
     if existing_user is not None:
-        # Raises MemberLinkConflict (caught per-row) when blocked — before save.
-        service.assert_user_can_be_linked(existing_user)
+        try:
+            # Raises MemberLinkConflict (caught per-row) when blocked — before
+            # save, so a conflict never leaves an orphaned member.
+            service.assert_user_can_be_linked(existing_user)
+        except UserAlreadyLinked:
+            # The address already belongs to ANOTHER member's login. That is a
+            # legitimate shape now that ``Member.email`` is not unique — two
+            # members share one inbox, and only one of them can hold the login.
+            # Import this member anyway, unlinked: failing the row would drop a
+            # real Mitglied from the Mitgliederliste over an account they were
+            # never going to have. ``UserInBlockedStatus`` still fails the row —
+            # that one means the address is mid-flow in another application.
+            existing_user = None
 
     member = ser.save()
 
@@ -297,6 +315,27 @@ def _persist_import_row(ser, model_name, payload, importing_user):
     if model_name == "member":
         return _save_imported_member(ser, payload, importing_user)
     return ser.save()
+
+
+@contextlib.contextmanager
+def _dry_run_scope(dry_run: bool):
+    """Wrap a whole dry-run pass in ONE transaction that is always rolled back.
+
+    Successful rows stay visible to the rows that follow (so an intra-file
+    uniqueness collision surfaces in the preview), and nothing survives the
+    pass. A real import yields a no-op scope — its rows must actually commit,
+    each in its own per-row transaction.
+    """
+    if not dry_run:
+        yield
+        return
+    with transaction.atomic():
+        try:
+            yield
+        finally:
+            # ``finally`` so the rollback still happens if the caller raises
+            # (e.g. a whole-file error part-way through the loop).
+            transaction.set_rollback(True)
 
 
 def import_rows_from_csv(
@@ -354,80 +393,90 @@ def import_rows_from_csv(
     bool_fields = _collect_bool_fields(serializer_cls)
     result = DataImportResult(model_name=model_name)
 
-    for offset, cells in enumerate(data_rows):
-        row_number = first_data_row_number + offset
-        payload = _row_to_payload(headers, cells, bool_fields)
-        if not payload:
-            # Blank line in the middle of the file — silently skip.
-            continue
-        ser = serializer_cls(data=payload)
-        try:
-            if ser.is_valid():
-                if dry_run:
-                    # Faithful preview: run the SAME persistence path (model
-                    # full_clean via save(), member↔user linking, DB
-                    # constraints) inside a savepoint that is ALWAYS rolled
-                    # back. A row that would fail at save() surfaces its error
-                    # now; a row that would succeed persists nothing. Serializer
-                    # ``is_valid()`` alone misses model-level invariants
-                    # (TimeBoundMixin Monday/Sunday, finalized-protection, DB
-                    # constraints), so a preview that skipped save() would show
-                    # green for rows the real import later rejects.
-                    with transaction.atomic():
-                        _persist_import_row(ser, model_name, payload, importing_user)
-                        transaction.set_rollback(True)
-                    result.results.append({"row": row_number, "id": None})
-                else:
-                    # One transaction PER ROW (requests run in autocommit). The
-                    # member path is multi-step — ``ser.save()`` then
-                    # ``link_to_user`` → ``Member.confirm`` (which can raise
-                    # e.g. ``MemberCoopSharesOutOfRange``) — so without this the
-                    # member would commit on save() and a later link/confirm
-                    # failure would strand an orphaned row that is nonetheless
-                    # reported as failed (and duplicated on re-run). Wrapping
-                    # makes each row atomic: a mid-row failure rolls the insert
-                    # back, leaving a clean per-row error and nothing persisted.
-                    with transaction.atomic():
-                        instance = _persist_import_row(
-                            ser, model_name, payload, importing_user
+    with _dry_run_scope(dry_run):
+        for offset, cells in enumerate(data_rows):
+            row_number = first_data_row_number + offset
+            payload = _row_to_payload(headers, cells, bool_fields)
+            if not payload:
+                # Blank line in the middle of the file — silently skip.
+                continue
+            ser = serializer_cls(data=payload)
+            try:
+                if ser.is_valid():
+                    if dry_run:
+                        # Faithful preview: run the SAME persistence path (model
+                        # full_clean via save(), member↔user linking, DB
+                        # constraints). Serializer ``is_valid()`` alone misses
+                        # model-level invariants (TimeBoundMixin Monday/Sunday,
+                        # finalized-protection, DB constraints), so a preview that
+                        # skipped save() would show green for rows the real import
+                        # later rejects.
+                        #
+                        # Each row gets its own savepoint (a bad row rolls back to
+                        # here and the preview continues) but a SUCCESSFUL row is
+                        # deliberately left in place for the rest of the pass —
+                        # ``_dry_run_scope`` discards the lot at the end. That is
+                        # what makes a duplicate WITHIN the file visible: rolling
+                        # every row back individually meant row 2 never saw row 1,
+                        # so two rows sharing a unique value (email, member_number,
+                        # a member's single SEPA mandate) both previewed green and
+                        # then collided for real.
+                        with transaction.atomic():
+                            _persist_import_row(
+                                ser, model_name, payload, importing_user
+                            )
+                        result.results.append({"row": row_number, "id": None})
+                    else:
+                        # One transaction PER ROW (requests run in autocommit). The
+                        # member path is multi-step — ``ser.save()`` then
+                        # ``link_to_user`` → ``Member.confirm`` (which can raise
+                        # e.g. ``MemberCoopSharesOutOfRange``) — so without this the
+                        # member would commit on save() and a later link/confirm
+                        # failure would strand an orphaned row that is nonetheless
+                        # reported as failed (and duplicated on re-run). Wrapping
+                        # makes each row atomic: a mid-row failure rolls the insert
+                        # back, leaving a clean per-row error and nothing persisted.
+                        with transaction.atomic():
+                            instance = _persist_import_row(
+                                ser, model_name, payload, importing_user
+                            )
+                        result.results.append(
+                            {"row": row_number, "id": getattr(instance, "id", None)}
                         )
-                    result.results.append(
-                        {"row": row_number, "id": getattr(instance, "id", None)}
+                else:
+                    result.errors.append(
+                        {
+                            "row": row_number,
+                            "error": _flatten_drf_errors(ser.errors),
+                            "data": payload,
+                        }
                     )
-            else:
+            except (
+                DjangoValidationError,
+                DRFValidationError,
+                DatabaseError,
+                JasminError,
+                MemberLinkConflict,
+                ValueError,
+                TypeError,
+                AttributeError,
+                KeyError,
+            ) as exc:
+                # Per-row collection: one bad row must not stop the import.
+                # Catch the realistic data/parse/DB exception families
+                # (DatabaseError covers Integrity/Data/InternalError etc.;
+                # JasminError covers domain rules raised at save(), e.g.
+                # OpenEndedSubscriptionNotAllowed / delivery-day out-of-range —
+                # otherwise one such row would abort the whole batch).
+                # Anything outside this set (KeyboardInterrupt, SystemExit,
+                # an actual code bug) propagates so the bug is visible.
                 result.errors.append(
                     {
                         "row": row_number,
-                        "error": _flatten_drf_errors(ser.errors),
+                        "error": f"{type(exc).__name__}: {exc}",
                         "data": payload,
                     }
                 )
-        except (
-            DjangoValidationError,
-            DRFValidationError,
-            DatabaseError,
-            JasminError,
-            MemberLinkConflict,
-            ValueError,
-            TypeError,
-            AttributeError,
-            KeyError,
-        ) as exc:
-            # Per-row collection: one bad row must not stop the import.
-            # Catch the realistic data/parse/DB exception families
-            # (DatabaseError covers Integrity/Data/InternalError etc.;
-            # JasminError covers domain rules raised at save(), e.g.
-            # OpenEndedSubscriptionNotAllowed / delivery-day out-of-range —
-            # otherwise one such row would abort the whole batch).
-            # Anything outside this set (KeyboardInterrupt, SystemExit,
-            # an actual code bug) propagates so the bug is visible.
-            result.errors.append(
-                {
-                    "row": row_number,
-                    "error": f"{type(exc).__name__}: {exc}",
-                    "data": payload,
-                }
-            )
 
     if reserved_member_quota_ids:
         # Refund the reservations that never became a member (blank + failed

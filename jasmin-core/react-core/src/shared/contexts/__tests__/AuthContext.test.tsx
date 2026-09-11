@@ -228,6 +228,40 @@ describe("AuthContext.logout", () => {
     });
   });
 
+  it("never writes the access token to localStorage", async () => {
+    // The access token is deliberately in-memory ONLY (see
+    // shared/services/tokenStore.ts) so an XSS payload cannot exfiltrate it;
+    // the refresh token is HttpOnly and never reaches JS at all. localStorage
+    // holds user METADATA only. AuthMetadata has an open index signature
+    // (`[key: string]: unknown`), so nothing in the type system stops a token
+    // being spread into the persisted blob — this is the guard that does.
+    const SECRET = "super-secret-access-token-value";
+
+    renderProvider();
+    await waitFor(() =>
+      expect(screen.getByTestId("auth-isauth").textContent).toBe("true"),
+    );
+
+    act(() =>
+      probedAuth!.setSession(SECRET, { id: "u-1", email: "a@example.org" }),
+    );
+
+    // It IS live in the in-memory store...
+    expect(getAccessToken()).toBe(SECRET);
+
+    // ...and absent from every persisted value.
+    const raw = localStorage.getItem("auth");
+    expect(raw).not.toBeNull();
+    expect(raw).not.toContain(SECRET);
+    for (const key of Object.keys(localStorage)) {
+      expect(localStorage.getItem(key) ?? "").not.toContain(SECRET);
+    }
+    expect(sessionStorage.getItem("auth")).toBeNull();
+
+    // The metadata that SHOULD persist still does.
+    expect(JSON.parse(raw!).user.id).toBe("u-1");
+  });
+
   it("clears the token, wipes localStorage and navigates to /login", async () => {
     axiosPostMock.mockResolvedValue({ data: {} });
 

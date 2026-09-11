@@ -730,6 +730,49 @@ class MemberUserAlreadyActive(MemberInvitationError):
     code = "member.user_already_active"
 
 
+class MemberEmailAlreadyHasUser(MemberInvitationError):
+    """Cannot invite THIS member: their email address already holds a login
+    that belongs to a DIFFERENT member.
+
+    ``Member.email`` is deliberately not unique — two members may share one
+    inbox (an elderly couple with a single address). ``JasminUser.email`` is
+    the ``USERNAME_FIELD`` and IS unique, so a shared inbox can carry at most
+    one login. Whoever was invited first holds it; the other member is
+    office-managed and simply has no self-service account.
+
+    Raised BEFORE any user record is touched, so the existing member's account
+    (name, status, open invitation) is never rewritten by an invite meant for
+    their partner. ``details`` names the holder so the office sees who has it.
+    """
+
+    code = "member.email_already_has_user"
+
+    def __init__(self, *, email: str, holder=None) -> None:
+        holder_name = ""
+        holder_number = None
+        if holder is not None:
+            holder_name = " ".join(
+                bit for bit in (holder.first_name, holder.last_name) if bit
+            ).strip()
+            holder_number = holder.member_number
+        message = (
+            f"The address {email} already has a user account"
+            + (f" belonging to {holder_name}" if holder_name else "")
+            + (f" (#{holder_number})" if holder_number else "")
+            + ". An email can hold only one login — invite that member, or "
+            "give this one their own address."
+        )
+        super().__init__(
+            message,
+            details={
+                "email": email,
+                "holder_name": holder_name or None,
+                "holder_member_number": holder_number,
+                "holder_member_id": str(holder.id) if holder is not None else None,
+            },
+        )
+
+
 # --------------------------------------------------------------------------- #
 # Consent versioning                                                          #
 # --------------------------------------------------------------------------- #
@@ -1392,6 +1435,7 @@ __all__ = [
     "MemberInvitationError",
     "MemberHasNoEmail",
     "MemberUserAlreadyActive",
+    "MemberEmailAlreadyHasUser",
     "ConsentDocumentNotFound",
     "ConsentTargetMemberUnresolved",
     "ConsentAlreadyRevoked",

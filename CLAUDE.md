@@ -724,8 +724,13 @@ Import and boundary rules are in [Structure & imports](#structure--imports).
   Zustand was evaluated and not adopted)
 - Forms: Ant Design Form (React Hook Form was evaluated and not adopted)
 - PDF generation: @react-pdf/renderer (jsPDF was evaluated and not adopted)
-- Auth: JWT tokens stored in httpOnly cookies (refresh tokens), localStorage for
-  access tokens
+- Auth: JWT. The refresh token lives in an **HttpOnly cookie** (never visible to
+  JS); the access token is held **in memory only** (`shared/services/tokenStore.ts`
+  — a module-scoped variable), deliberately NOT in localStorage/sessionStorage so
+  an XSS payload cannot exfiltrate it. A hard reload drops the in-memory token
+  and AuthContext silently re-obtains one via `/api/auth/refresh/`, which works
+  because the HttpOnly cookie survives. **Don't "fix" the reload by persisting
+  the access token to storage** — losing it on reload is the point.
 - Locale: i18next with language detection and backend translation loader
 
 ### API generation

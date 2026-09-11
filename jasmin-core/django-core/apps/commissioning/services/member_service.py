@@ -21,6 +21,7 @@ from apps.accounts.models import JasminUser
 from ..errors import (
     MemberAlreadyCancelled,
     MemberAlreadyConfirmed,
+    MemberEmailAlreadyHasUser,
     MemberHasNoEmail,
     MemberUserAlreadyActive,
     UserAlreadyLinked,
@@ -314,6 +315,20 @@ class MemberService:
                 resend_invitation(user=member.user, created_by=admin_user)
                 return member
             raise MemberUserAlreadyActive("Member already has an active user account.")
+
+        # ``Member.email`` is not unique (shared inboxes are legitimate) but
+        # ``JasminUser.email`` IS — it is the USERNAME_FIELD. So a second member
+        # on the same address cannot get their own login. Detect that here and
+        # name the holder, instead of letting the shared invitation helper reuse
+        # the other member's account: for a ``pending_invitation`` / ``inactive``
+        # user it would roll THIS member's name onto THAT user, reset its status
+        # and cancel its open invite before finally tripping the
+        # ``Member.user`` OneToOne constraint.
+        conflicting_user = self.find_existing_user_for_email(member.email)
+        if conflicting_user is not None:
+            holder = getattr(conflicting_user, "member_profile", None)
+            if holder is not None and holder.pk != member.pk:
+                raise MemberEmailAlreadyHasUser(email=member.email, holder=holder)
 
         user, _invitation = create_user_with_invitation(
             email=member.email,

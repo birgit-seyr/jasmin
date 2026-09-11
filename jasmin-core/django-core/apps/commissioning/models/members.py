@@ -123,7 +123,14 @@ class Member(
     # CancellableMixin; this is the "why".
     cancellation_reason = models.TextField(blank=True, null=True)
     is_student = models.BooleanField(default=False)
-    email = models.EmailField(max_length=255, null=True, blank=True, unique=True)
+    # NOT unique: two members legitimately share one inbox (an elderly couple
+    # with a single email account is the common case). Each is still their own
+    # Mitglied with their own member_number, subscription and equity. What
+    # CANNOT be shared is a LOGIN — ``JasminUser.email`` is the USERNAME_FIELD
+    # and stays unique, so at most one of them can hold the user account; the
+    # other is office-managed. ``MemberService.send_invitation`` raises
+    # ``MemberEmailAlreadyHasUser`` rather than colliding on that constraint.
+    email = models.EmailField(max_length=255, null=True, blank=True)
     email_2 = models.CharField(max_length=255, null=True, blank=True)
     email_3 = models.CharField(max_length=255, null=True, blank=True)
 
