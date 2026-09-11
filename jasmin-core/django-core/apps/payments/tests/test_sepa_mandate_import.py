@@ -137,3 +137,88 @@ class TestSepaMandateImport:
         )
         assert resp.status_code in (401, 403)
         assert BillingProfile.objects.count() == 0
+
+
+@pytest.mark.django_db
+class TestSepaMandateMirrorsToMember:
+    """The mandate's IBAN / holder are also written to the member's OWN
+    encrypted columns.
+
+    ``Member.iban`` / ``Member.account_owner`` are a separate pair from
+    ``BillingProfile.iban`` / ``account_holder`` with no syncing between them.
+    Only the BillingProfile copy drives collection; the Member copy is what the
+    office grid shows, so without this an onboarded member looks half-migrated.
+    """
+
+    IBAN = "CH9300762011623852957"
+
+    def _import_one(self, api_client, member_number: int, iban: str | None = None):
+        csv = (
+            "Member no.,Account holder,IBAN,Ref,Signed,Paper\n"
+            "member_number,account_holder,iban,sepa_mandate_reference,"
+            "sepa_mandate_signed_at,sepa_mandate_paper_received_at\n"
+            "integer,text,text,text,date,date\n"
+            f"{member_number},Ada Lovelace,{iban or self.IBAN},,2024-03-04,\n"
+        ).encode()
+        return api_client.post(
+            URL,
+            {
+                "model_name": "sepa_mandate",
+                "file": SimpleUploadedFile("m.csv", csv, content_type="text/csv"),
+            },
+            format="multipart",
+        )
+
+    def test_iban_and_holder_land_on_the_member(self, api_client, tenant):
+        member = MemberFactory(member_number=4001)
+        assert not member.iban
+
+        resp = self._import_one(api_client, 4001)
+        assert resp.status_code == 200, resp.content
+        assert resp.json()["successful"] == 1, resp.json()["errors"]
+
+        member.refresh_from_db()
+        assert member.iban == self.IBAN
+        assert member.account_owner == "Ada Lovelace"
+        # ...and the mandate copy that actually drives collection is set too.
+        profile = BillingProfile.objects.get(member=member)
+        assert profile.iban == self.IBAN
+
+    def test_an_existing_member_iban_is_never_overwritten(self, api_client, tenant):
+        """Silently rewriting a stored IBAN is what the UI gates behind step-up
+        auth — this path has no such check, so it fills only."""
+        existing = "DE89370400440532013000"
+        member = MemberFactory(member_number=4002, iban=existing)
+
+        resp = self._import_one(api_client, 4002, iban=self.IBAN)
+        assert resp.status_code == 200, resp.content
+        assert resp.json()["successful"] == 1, resp.json()["errors"]
+
+        member.refresh_from_db()
+        assert member.iban == existing, "existing member IBAN must be preserved"
+        # The mandate still records what the CSV said — the two legitimately
+        # differ here, and the mandate is the one the bank sees.
+        assert BillingProfile.objects.get(member=member).iban == self.IBAN
+
+    def test_values_are_encrypted_at_rest(self, api_client, tenant):
+        """Both copies are ``EncryptedCharField`` — the raw column must not
+        contain the plaintext IBAN."""
+        from django.db import connection
+
+        member = MemberFactory(member_number=4003)
+        assert self._import_one(api_client, 4003).status_code == 200
+
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT iban FROM commissioning_member WHERE id = %s", [member.pk]
+            )
+            raw_member = cur.fetchone()[0]
+            cur.execute(
+                "SELECT iban FROM payments_billingprofile WHERE member_id = %s",
+                [member.pk],
+            )
+            raw_profile = cur.fetchone()[0]
+
+        for raw in (raw_member, raw_profile):
+            assert raw, "column should not be empty"
+            assert self.IBAN not in str(raw), "plaintext IBAN found in the column!"

@@ -65,13 +65,21 @@ export default function SepaMandateImportModal({
     },
   ];
 
+  // ``key`` is the i18n lookup; ``field`` is the ACTUAL CSV header the
+  // importer expects. They differ where the help text uses a short name, so
+  // the table must print ``field`` — printing ``key`` documented columns that
+  // do not exist and every row of a hand-built CSV failed.
   const columnDocRows = [
-    { key: "member_number", req: true },
-    { key: "account_holder", req: true },
-    { key: "iban", req: true },
-    { key: "reference", req: false },
-    { key: "signed_at", req: true },
-    { key: "paper_received_at", req: false },
+    { key: "member_number", field: "member_number", req: true },
+    { key: "account_holder", field: "account_holder", req: true },
+    { key: "iban", field: "iban", req: true },
+    { key: "reference", field: "sepa_mandate_reference", req: false },
+    { key: "signed_at", field: "sepa_mandate_signed_at", req: true },
+    {
+      key: "paper_received_at",
+      field: "sepa_mandate_paper_received_at",
+      req: false,
+    },
   ];
 
   return (
@@ -101,8 +109,8 @@ export default function SepaMandateImportModal({
             columns={[
               {
                 title: t("onboarding.col_field"),
-                dataIndex: "key",
-                render: (k: string) => <code>{k}</code>,
+                dataIndex: "field",
+                render: (f: string) => <code>{f}</code>,
               },
               {
                 title: t("onboarding.col_required"),

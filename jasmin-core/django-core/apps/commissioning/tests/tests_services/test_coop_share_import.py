@@ -8,9 +8,11 @@ min/max window is enforced for confirmed members).
 
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 
 import pytest
+from django.utils import timezone
 
 from apps.commissioning.models import CoopShare
 from apps.commissioning.services.data_import import import_rows_from_csv
@@ -62,3 +64,70 @@ class TestCoopShareImport:
         assert result.successful == 1
         assert result.failed == 1
         assert CoopShare.objects.count() == 1
+
+
+_PAY_HEADER = (
+    "member_number,amount_of_coop_shares,value_one_coop_share,"
+    "is_increase,due_date,paid_at,note"
+)
+
+
+def _pay_csv(*rows: str) -> bytes:
+    """3-row template CSV including the ``due_date`` / ``paid_at`` columns."""
+    return ("\n".join([_PAY_HEADER, _PAY_HEADER, _PAY_HEADER, *rows]) + "\n").encode(
+        "utf-8"
+    )
+
+
+@pytest.mark.django_db
+class TestCoopShareImportPaymentFields:
+    """``due_date`` / ``paid_at`` (the ``PayableMixin`` pair) come over with the
+    equity — a share imported without its payment history looks unpaid and
+    lands in the office's outstanding list."""
+
+    def test_due_date_and_paid_at_are_imported(self, tenant):
+        MemberFactory(member_number=555)
+
+        result = import_rows_from_csv(
+            "coop_share", _pay_csv("555,3,250,false,2024-03-31,2024-03-18,ok")
+        )
+
+        assert result.failed == 0, result.errors
+        share = CoopShare.objects.get(member__member_number=555)
+        assert share.due_date == datetime.date(2024, 3, 31)
+        assert share.paid_at is not None
+        assert timezone.localtime(share.paid_at).date() == datetime.date(2024, 3, 18)
+
+    def test_both_stay_optional(self, tenant):
+        """Blank cells keep the pre-existing behaviour — an unpaid share."""
+        MemberFactory(member_number=556)
+
+        result = import_rows_from_csv("coop_share", _pay_csv("556,1,100,false,,,"))
+
+        assert result.failed == 0, result.errors
+        share = CoopShare.objects.get(member__member_number=556)
+        assert share.due_date is None
+        assert share.paid_at is None
+
+    def test_paid_before_due_is_accepted(self, tenant):
+        """``due_date`` is a DEADLINE, so paying early is normal and legal —
+        there is deliberately no ``paid_at >= due_date`` invariant."""
+        MemberFactory(member_number=557)
+
+        result = import_rows_from_csv(
+            "coop_share", _pay_csv("557,1,100,false,2024-12-31,2024-01-05,early")
+        )
+
+        assert result.failed == 0, result.errors
+
+    def test_unparseable_date_is_a_clean_row_error(self, tenant):
+        MemberFactory(member_number=558)
+
+        result = import_rows_from_csv(
+            "coop_share", _pay_csv("558,1,100,false,not-a-date,,")
+        )
+
+        assert result.successful == 0
+        assert result.failed == 1
+        assert "due_date" in result.errors[0]["error"]
+        assert not CoopShare.objects.filter(member__member_number=558).exists()

@@ -151,9 +151,11 @@ class Member(
         constraints = [
             # Date-order backstops for the bulk paths that bypass ``clean()``.
             # All NULL-tolerant: only enforced when both members of a pair are
-            # set. The ``cancelled_effective_at >= cancelled_at.date()`` rule
-            # comes from CancellableMixin.clean() (datetime-vs-date, no DB
-            # constraint).
+            # NB: ``cancelled_effective_at`` vs ``cancelled_at`` is
+            # deliberately UNguarded — nothing enforces an order between them.
+            # The office cancel flow legitimately BACKDATES (recording today an
+            # exit whose legal date already passed), so the effective date may
+            # precede the recorded timestamp. See CancellableMixin.
             nullable_date_order_constraint(
                 "cancelled_effective_at",
                 "entry_date",
@@ -205,7 +207,8 @@ class Member(
         super().clean()
         # Cross-field date-order guards. NULL-tolerant: each pair is only
         # enforced when both members are set. ``cancelled_effective_at`` vs
-        # ``cancelled_at`` is enforced by CancellableMixin.clean().
+        # ``cancelled_at`` is deliberately UNguarded (backdated exits are
+        # legitimate) — see CancellableMixin.
         validate_nullable_date_order(
             self,
             "cancelled_effective_at",
@@ -423,10 +426,11 @@ class CoopShare(JasminModel, PayableMixin, AdminConfirmableMixin, CancellableMix
         constraints = [
             # Date-order backstops for the bulk paths that bypass ``clean()``.
             # All NULL-tolerant: only enforced when both members of a pair are
-            # set. ``paid_at >= due_date`` comes from PayableMixin.clean() and
-            # ``cancelled_effective_at >= cancelled_at.date()`` from
-            # CancellableMixin.clean() (both datetime-vs-date, no DB
-            # constraint).
+            # NB: two pairs are deliberately UNguarded, here and everywhere
+            # else — ``paid_at`` vs ``due_date`` (a due date is a DEADLINE, so
+            # paying early is normal; see PayableMixin) and
+            # ``cancelled_effective_at`` vs ``cancelled_at`` (the cancel flow
+            # legitimately backdates; see CancellableMixin).
             nullable_date_order_constraint(
                 "payback_due_date",
                 "cancelled_effective_at",
@@ -446,8 +450,10 @@ class CoopShare(JasminModel, PayableMixin, AdminConfirmableMixin, CancellableMix
         super().clean()
         # Date-order guards (the cancel/payback equity-return lifecycle).
         # NULL-tolerant: each pair is only enforced when both members are set.
-        # ``paid_at >= due_date`` is enforced by PayableMixin.clean() and
-        # ``cancelled_effective_at >= cancelled_at`` by CancellableMixin.clean().
+        # ``paid_at`` vs ``due_date`` and ``cancelled_effective_at`` vs
+        # ``cancelled_at`` are deliberately UNguarded — paying before a deadline
+        # and backdating an exit are both legitimate. See PayableMixin /
+        # CancellableMixin.
         validate_nullable_date_order(
             self,
             "payback_due_date",
@@ -682,8 +688,9 @@ class Subscription(
             # A cancellation can't take effect AFTER the subscription's term
             # ends. NULL-tolerant: an open-ended subscription (``valid_until``
             # NULL) or an uncancelled row (``cancelled_effective_at`` NULL) is
-            # exempt. ``cancelled_effective_at >= cancelled_at.date()`` comes
-            # from CancellableMixin.clean() (datetime-vs-date, no DB constraint).
+            # exempt. ``cancelled_effective_at`` vs ``cancelled_at`` is
+            # deliberately UNguarded (backdated exits are legitimate) — see
+            # CancellableMixin.
             #
             # NOTE: there is intentionally NO cancelled_effective_at >=
             # valid_from constraint. The member-exit cascade force-ends a
@@ -750,8 +757,9 @@ class Subscription(
 
         # A cancellation can't take effect after the term ends. NULL-tolerant:
         # only enforced when both ``cancelled_effective_at`` and ``valid_until``
-        # are set. ``valid_from <= valid_until`` is guarded by TimeBoundMixin;
-        # ``cancelled_effective_at >= cancelled_at`` by CancellableMixin.clean().
+        # are set. ``valid_from <= valid_until`` IS guarded, by TimeBoundMixin;
+        # ``cancelled_effective_at`` vs ``cancelled_at`` is deliberately
+        # UNguarded (backdated exits are legitimate) — see CancellableMixin.
         #
         # There is intentionally no lower-bound (>= valid_from) check: the
         # member-exit cascade force-ends a not-yet-started subscription

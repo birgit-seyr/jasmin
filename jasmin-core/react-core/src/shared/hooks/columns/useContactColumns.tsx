@@ -5,9 +5,15 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 
+// Country options for the shared `country` select — members, delivery
+// stations, resellers and sellers all draw on this one list. ISO 3166-1
+// alpha-2, DACH first then the other neighbours. The backend stores `country`
+// as a plain CharField (no choices), so this list is purely what the office
+// can PICK; widening it needs no migration.
 const DEFAULT_COUNTRIES = [
   { value: "DE", label: "DE" },
   { value: "AT", label: "AT" },
+  { value: "CH", label: "CH" },
   { value: "IT", label: "IT" },
   { value: "FR", label: "FR" },
 ];

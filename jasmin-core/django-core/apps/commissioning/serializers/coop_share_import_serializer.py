@@ -29,13 +29,28 @@ class CoopShareImportSerializer(serializers.Serializer):
       value_one_coop_share   int   — value of a single share (currency units)
       is_increase            bool  — an increase over the mandatory amount
                                      (default false)
+      due_date               date  — optional payment deadline (YYYY-MM-DD)
+      paid_at                date  — optional date the member actually paid
       note                   str   — optional free-text note
+
+    ``due_date`` / ``paid_at`` come from ``PayableMixin`` and are the pair the
+    office manages side by side on the coop-shares grid. A tenant migrating
+    existing equity brings both over — an onboarded share whose payment history
+    is lost would look unpaid and land in the office's outstanding list.
+
+    There is deliberately NO ``paid_at >= due_date`` invariant (see
+    ``PayableMixin``): ``due_date`` is a DEADLINE, so paying early is normal.
     """
 
     member_number = serializers.IntegerField()
     amount_of_coop_shares = serializers.DecimalField(max_digits=10, decimal_places=2)
     value_one_coop_share = serializers.IntegerField(min_value=1)
     is_increase = serializers.BooleanField(required=False, default=False)
+    due_date = serializers.DateField(required=False, allow_null=True)
+    # ``CoopShare.paid_at`` is a DateTimeField, but the office grid edits it as
+    # a plain date — a bare ``YYYY-MM-DD`` cell is accepted and DRF anchors it
+    # to midnight in the active timezone.
+    paid_at = serializers.DateTimeField(required=False, allow_null=True)
     note = serializers.CharField(required=False, allow_blank=True)
 
     @staticmethod
@@ -60,5 +75,7 @@ class CoopShareImportSerializer(serializers.Serializer):
             amount_of_coop_shares=validated_data["amount_of_coop_shares"],
             value_one_coop_share=validated_data["value_one_coop_share"],
             is_increase=bool(validated_data.get("is_increase")),
+            due_date=validated_data.get("due_date"),
+            paid_at=validated_data.get("paid_at"),
             note=validated_data.get("note") or "",
         )

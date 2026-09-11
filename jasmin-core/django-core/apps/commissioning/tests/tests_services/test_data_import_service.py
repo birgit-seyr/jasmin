@@ -13,10 +13,12 @@ Coverage targets the gaps from the §1 test-coverage-priorities audit
 
 from __future__ import annotations
 
+import datetime
 from unittest.mock import patch
 
 import pytest
 from django.db import DatabaseError
+from django.utils import timezone
 
 from apps.commissioning.errors import DataImportInvalid
 from apps.commissioning.models import Crate, Member
@@ -543,3 +545,93 @@ class TestMemberNumberImport:
         member.refresh_from_db()
 
         assert member.member_number is None
+
+
+@pytest.mark.django_db
+class TestMemberExitDateImport:
+    """Austrittsdatum (GenG §30) on the onboarding import.
+
+    A tenant migrating off another system brings DEPARTED members over too —
+    the Mitgliederliste has to retain them. The office has one date on paper
+    (the exit date), so that is the only column the template offers; the
+    serializer derives ``cancelled_at`` so the pair can never disagree.
+    """
+
+    @staticmethod
+    def _csv(*rows: str) -> bytes:
+        header = "first_name,last_name,email,entry_date,cancelled_effective_at"
+        return (
+            "First,Last,Email,Entry,Exit\n"
+            f"{header}\n"
+            "text,text,email,date,date\n" + "".join(f"{row}\n" for row in rows)
+        ).encode("utf-8")
+
+    def test_exit_date_is_imported(self, tenant):
+        result = import_rows_from_csv(
+            "member", self._csv("Ex,Member,ex@example.org,2019-04-01,2023-12-31")
+        )
+
+        assert result.failed == 0, result.errors
+        member = Member.objects.get(email="ex@example.org")
+        assert member.cancelled_effective_at == datetime.date(2023, 12, 31)
+
+    def test_cancelled_at_is_derived_so_the_row_reads_as_departed(self, tenant):
+        """``cancelled_at`` is what marks a member departed (the statistics
+        cancelled-count, the ``MemberAlreadyCancelled`` guard, the grid's
+        struck-through row), while the GenG retention sweep keys off
+        ``cancelled_effective_at``. An exit date on its own would leave a member
+        retention already targets while they still read as current."""
+        import_rows_from_csv(
+            "member", self._csv("Ex,Member,ex@example.org,2019-04-01,2023-12-31")
+        )
+
+        member = Member.objects.get(email="ex@example.org")
+        assert member.cancelled_at is not None
+        assert timezone.localtime(member.cancelled_at).date() == datetime.date(
+            2023, 12, 31
+        )
+        # The active-member filter used across the viewsets must exclude them.
+        assert not Member.objects.filter(
+            email="ex@example.org", cancelled_at__isnull=True
+        ).exists()
+
+    def test_blank_exit_date_leaves_an_active_member(self, tenant):
+        result = import_rows_from_csv(
+            "member", self._csv("Still,Here,here@example.org,2019-04-01,")
+        )
+
+        assert result.failed == 0, result.errors
+        member = Member.objects.get(email="here@example.org")
+        assert member.cancelled_effective_at is None
+        assert member.cancelled_at is None
+
+    def test_exit_before_entry_is_a_clean_row_error(self, tenant):
+        """``member_cancelled_effective_after_entry`` — you cannot leave before
+        you joined. Must surface as a per-row error, not abort the batch."""
+        result = import_rows_from_csv(
+            "member", self._csv("Bad,Dates,bad@example.org,2023-01-01,2019-04-01")
+        )
+
+        assert result.successful == 0
+        assert result.failed == 1
+        assert not Member.objects.filter(email="bad@example.org").exists()
+
+    def test_office_grid_patch_still_cannot_stamp_an_exit_date(self, tenant):
+        """The unlock is import-only. A live member's exit must keep going
+        through the cancel flow, which also cascades to their coop shares and
+        snapshots each share's payback due date (GenG §31)."""
+        from apps.commissioning.serializers import MemberSerializer
+
+        member = Member.objects.create(
+            first_name="Live", last_name="Member", email="live@example.org"
+        )
+        ser = MemberSerializer(
+            member, data={"cancelled_effective_at": "2024-01-31"}, partial=True
+        )
+
+        assert ser.is_valid(), ser.errors
+        ser.save()
+        member.refresh_from_db()
+
+        assert member.cancelled_effective_at is None
+        assert member.cancelled_at is None

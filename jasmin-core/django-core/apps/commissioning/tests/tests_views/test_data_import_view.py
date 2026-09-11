@@ -62,11 +62,17 @@ class TestMemberSampleUpload:
         assert resp.status_code == 200, resp.content
         body = resp.json()
         assert body["model_name"] == "member"
-        assert body["successful"] == 3, body["errors"]
+        assert body["successful"] == 4, body["errors"]
         assert body["failed"] == 0
         assert Member.objects.filter(email="ada.lovelace@example.org").exists()
         # Imported members land unconfirmed — the office confirms them after.
         assert not Member.objects.get(email="ada.lovelace@example.org").admin_confirmed
+        # The sample's departed member keeps their historical Austrittsdatum,
+        # and the derived ``cancelled_at`` keeps them out of the active-member
+        # queries (which all filter ``cancelled_at__isnull=True``).
+        departed = Member.objects.get(email="edsger.dijkstra@example.org")
+        assert departed.cancelled_effective_at == datetime.date(2023, 12, 31)
+        assert departed.cancelled_at is not None
 
     def test_dry_run_previews_but_persists_nothing(self, api_client):
         resp = api_client.post(
@@ -79,7 +85,7 @@ class TestMemberSampleUpload:
             format="multipart",
         )
         assert resp.status_code == 200, resp.content
-        assert resp.json()["successful"] == 3
+        assert resp.json()["successful"] == 4
         assert Member.objects.count() == 0
 
     def test_anonymous_is_rejected(self, anon_client):

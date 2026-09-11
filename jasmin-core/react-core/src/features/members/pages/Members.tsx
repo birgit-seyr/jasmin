@@ -446,6 +446,14 @@ export default function Members() {
         inputType: "date",
         required: false,
         readOnly: true,
+        // Locked in the grid — a live member's exit is stamped by the cancel
+        // flow, which also cascades to their coop shares. But the CSV
+        // onboarding template must offer it: a tenant migrating off another
+        // system brings departed members over with their historical
+        // Austrittsdatum (GenG §30), and those rows are history, not a
+        // cancellation being performed now. ``MemberImportSerializer`` accepts
+        // it on the import path only and derives ``cancelled_at`` from it.
+        importable: true,
         align: "center",
         width: "8em",
         sortable: true,

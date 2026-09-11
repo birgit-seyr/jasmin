@@ -85,6 +85,8 @@
     "amount": "Number of shares",
     "value_one": "Value per share",
     "is_increase": "Increase",
+    "due_date": "Due date",
+    "paid_at": "Paid at",
     "note": "Note"
   },
   "coop_help": {
@@ -92,6 +94,8 @@
     "amount": "Number of cooperative shares held (e.g. 3).",
     "value_one": "Value of a single share (currency units).",
     "is_increase": "An increase over the mandatory amount? true/false (default false).",
+    "due_date": "Optional — payment deadline for the shares (YYYY-MM-DD).",
+    "paid_at": "Optional — the date the member actually paid (YYYY-MM-DD). Leave blank if still outstanding.",
     "note": "Free-text note (optional)."
   }
 }

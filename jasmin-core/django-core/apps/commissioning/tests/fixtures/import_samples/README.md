@@ -34,6 +34,31 @@ by that number — so import the members first, then the rest. Rules:
 
 `entry_date` is likewise writable here for the manual-transfer case (migrating
 members with a historical admission date); it is otherwise server-stamped.
+
+`cancelled_effective_at` is the **Austrittsdatum** (GenG §30) — fill it in for
+members who have ALREADY left, so the Mitgliederliste keeps them. Leave it blank
+for current members. It is import-only for the same reason as `member_number`:
+in the office grid a live member's exit goes through the cancel flow, which also
+cascades to their coop shares and snapshots each share's payback due date
+(GenG §31). An imported row is history, not a cancellation being performed now.
+
+The importer derives `cancelled_at` from it (local midnight of the exit date),
+because the two are read by different consumers and must never disagree:
+`cancelled_at` is what marks a member departed (the statistics cancelled-count,
+the "already cancelled" guard, the struck-through row in the grid), while
+`cancelled_effective_at` drives the 10-year retention sweep. An exit date on its
+own would leave a member retention already targets while they still read as
+current everywhere else. An exit date earlier than `entry_date` is refused
+per-row.
+
+> **Known gap — a departed member's coop shares.** The member import does NOT
+> cascade to coop shares (their shares are imported afterwards, and the
+> importer has no cancellation columns), so equity imported for a departed
+> member lands as OPEN. The office has to cancel those shares through the UI
+> afterwards, which is what stamps each share's payback due date. Simplest
+> path: don't import coop shares for members who have already left, unless you
+> then cancel them by hand.
+
 `email` is unique, so re-uploading the same file reports per-row conflicts on the
 second run.
 
@@ -82,6 +107,18 @@ are required (an active SEPA mandate needs them).
 | `sepa_mandate_signed_at`         | required — signed date                    |
 | `sepa_mandate_paper_received_at` | optional — paper mandate received date    |
 
+`iban` + `account_holder` are written to **two** places: the `BillingProfile`
+(which is what the pain.008 debtor block reads, i.e. what actually collects
+money) and, mirrored, the member's own `Member.iban` / `Member.account_owner`
+columns (which is what the office members grid shows). Both are separate
+`EncryptedCharField`s with no syncing between them, so without the mirror an
+onboarded member's grid row would show a blank IBAN.
+
+The mirror is **fill-only**: a value already on the member is never overwritten,
+because silently rewriting a stored IBAN is exactly what the UI gates behind
+step-up auth. In practice the member is always blank here — the import is
+create-only, so it never runs for someone who already has a profile.
+
 ## `coop_shares_sample.csv` — Members page → "import cooperative shares"
 
 Creates members' **cooperative shares** (`CoopShare`, GenG equity) keyed by
@@ -95,4 +132,12 @@ applicants).
 | `amount_of_coop_shares` | required — number of shares held                  |
 | `value_one_coop_share`  | required — value of a single share                |
 | `is_increase`           | optional — increase over the mandatory amount     |
+| `due_date`              | optional — payment deadline (`YYYY-MM-DD`)        |
+| `paid_at`               | optional — when the member actually paid; blank = still outstanding |
 | `note`                  | optional — free text                              |
+
+`due_date` / `paid_at` are the `PayableMixin` pair the office manages side by
+side on the coop-shares grid. Bring both over when migrating existing equity —
+a share imported without its payment history looks unpaid and lands in the
+outstanding list. Paying *before* the due date is normal, so there is
+deliberately no `paid_at >= due_date` rule.

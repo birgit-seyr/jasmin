@@ -97,19 +97,23 @@ export default function ExistingSubscriptionImportModal({
     },
   ];
 
+  // ``key`` is the i18n lookup; ``field`` is the ACTUAL CSV header the
+  // importer expects. They differ where the help text uses a short name, so
+  // the table must print ``field`` — printing ``key`` documented columns that
+  // do not exist and every row of a hand-built CSV failed.
   const columnDocRows = [
-    { key: "member_number", req: true },
-    { key: "share_type", req: true },
-    { key: "size", req: true },
-    { key: "payment_cycle", req: true },
-    { key: "delivery_station", req: false },
-    { key: "delivery_day", req: false },
-    { key: "valid_from", req: true },
-    { key: "valid_until", req: true },
-    { key: "quantity", req: false },
-    { key: "price_per_delivery", req: false },
-    { key: "is_trial", req: false },
-    { key: "subscription_number", req: false },
+    { key: "member_number", field: "member_number", req: true },
+    { key: "share_type", field: "share_type", req: true },
+    { key: "size", field: "size", req: true },
+    { key: "payment_cycle", field: "payment_cycle", req: true },
+    { key: "delivery_station", field: "delivery_station", req: false },
+    { key: "delivery_day", field: "delivery_day", req: false },
+    { key: "valid_from", field: "valid_from", req: true },
+    { key: "valid_until", field: "valid_until", req: true },
+    { key: "quantity", field: "quantity", req: false },
+    { key: "price_per_delivery", field: "price_per_delivery", req: false },
+    { key: "is_trial", field: "is_trial", req: false },
+    { key: "subscription_number", field: "subscription_number", req: false },
   ];
 
   return (
@@ -173,8 +177,8 @@ export default function ExistingSubscriptionImportModal({
                     columns={[
                       {
                         title: t("onboarding.col_field"),
-                        dataIndex: "key",
-                        render: (k: string) => <code>{k}</code>,
+                        dataIndex: "field",
+                        render: (f: string) => <code>{f}</code>,
                       },
                       {
                         title: t("onboarding.col_required"),

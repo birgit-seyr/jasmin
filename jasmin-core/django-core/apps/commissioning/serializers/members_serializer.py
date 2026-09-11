@@ -1,3 +1,5 @@
+from datetime import datetime, time
+
 from rest_framework import serializers
 
 from apps.shared.pii_masking import MaskedIBANFieldMixin
@@ -31,6 +33,13 @@ CANCELLATION_READONLY_FIELDS = (
     "cancelled_effective_at",
     "cancelled_by",
 )
+
+# Locks the office grid keeps, but the CSV ONBOARDING import must not — a
+# tenant migrating off another system carries these over as historical fact.
+# See ``MemberImportSerializer``. ``cancelled_by`` deliberately stays locked:
+# it is an FK to the staff user who performed the cancellation, which has no
+# meaning for a migrated row.
+IMPORT_WRITABLE_FIELDS = ("member_number", "cancelled_effective_at")
 
 
 class MemberEmailLogSerializer(serializers.Serializer):
@@ -228,10 +237,12 @@ class MemberImportSerializer(MemberSerializer):
         read_only_fields = tuple(
             field_name
             for field_name in MemberSerializer.Meta.read_only_fields
-            if field_name != "member_number"
+            if field_name not in IMPORT_WRITABLE_FIELDS
         )
 
     def validate(self, attrs):
+        from django.utils import timezone
+
         from apps.commissioning.errors import MemberNumberNotAllowedForTrial
 
         # Trial members are not Mitglieder under GenG, so they hold no
@@ -242,6 +253,35 @@ class MemberImportSerializer(MemberSerializer):
             raise MemberNumberNotAllowedForTrial(
                 "A trial member cannot carry a member number — leave the "
                 "column blank for trial rows."
+            )
+
+        # Austrittsdatum (GenG §30). The office migrating a departed member has
+        # ONE date on paper — the exit date — so that is the only column the
+        # template offers. ``cancelled_at`` is derived from it because the two
+        # are read by DIFFERENT consumers and must never disagree:
+        #
+        #   * ``cancelled_at`` marks the member as departed — it drives the
+        #     cancelled-member count in ``services.statistics``, the
+        #     ``MemberAlreadyCancelled`` guard on the cancel action, and the
+        #     struck-through row in the office grid.
+        #   * ``cancelled_effective_at`` drives the 10-year GenG/HGB/AO
+        #     retention sweep in ``apps.gdpr.tasks``.
+        #
+        # An exit date on its own would leave a member the retention sweep
+        # already targets while they still read as CURRENT everywhere else —
+        # uncounted as cancelled, not struck through, and still cancellable.
+        # Stamping the exit date's local midnight reads as "recorded as of the
+        # exit date", the honest reading for a migrated row.
+        #
+        # ``cancelled_at`` itself stays read-only (it is not in
+        # ``IMPORT_WRITABLE_FIELDS``), so the guard below is defensive: it keeps
+        # the derivation from clobbering a caller-supplied value if that ever
+        # changes.
+        effective = attrs.get("cancelled_effective_at")
+        if effective is not None and attrs.get("cancelled_at") is None:
+            attrs["cancelled_at"] = timezone.make_aware(
+                datetime.combine(effective, time.min),
+                timezone.get_current_timezone(),
             )
         return super().validate(attrs)
 

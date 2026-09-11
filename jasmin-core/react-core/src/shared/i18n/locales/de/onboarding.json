@@ -85,6 +85,8 @@
     "amount": "Anzahl Anteile",
     "value_one": "Wert pro Anteil",
     "is_increase": "Aufstockung",
+    "due_date": "Fällig am",
+    "paid_at": "Bezahlt am",
     "note": "Notiz"
   },
   "coop_help": {
@@ -92,6 +94,8 @@
     "amount": "Anzahl der gehaltenen Genossenschaftsanteile (z. B. 3).",
     "value_one": "Wert eines einzelnen Anteils (in Währungseinheiten).",
     "is_increase": "Aufstockung über den Pflichtanteil hinaus? true/false (Standard false).",
+    "due_date": "Optional – Zahlungsfrist für die Anteile (JJJJ-MM-TT).",
+    "paid_at": "Optional – Datum, an dem das Mitglied tatsächlich bezahlt hat (JJJJ-MM-TT). Leer lassen, wenn noch offen.",
     "note": "Freitext-Notiz (optional)."
   }
 }

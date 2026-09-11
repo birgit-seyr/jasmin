@@ -50,18 +50,34 @@ export default function CoopShareImportModal({
       inputType: "checkbox",
     },
     {
+      dataIndex: "due_date",
+      title: t("onboarding.coop_col.due_date"),
+      inputType: "date",
+    },
+    {
+      dataIndex: "paid_at",
+      title: t("onboarding.coop_col.paid_at"),
+      inputType: "date",
+    },
+    {
       dataIndex: "note",
       title: t("onboarding.coop_col.note"),
       inputType: "text",
     },
   ];
 
+  // ``key`` is the i18n lookup; ``field`` is the ACTUAL CSV header the
+  // importer expects. They differ where the help text uses a short name, so
+  // the table must print ``field`` — printing ``key`` documented columns that
+  // do not exist and every row of a hand-built CSV failed.
   const columnDocRows = [
-    { key: "member_number", req: true },
-    { key: "amount", req: true },
-    { key: "value_one", req: true },
-    { key: "is_increase", req: false },
-    { key: "note", req: false },
+    { key: "member_number", field: "member_number", req: true },
+    { key: "amount", field: "amount_of_coop_shares", req: true },
+    { key: "value_one", field: "value_one_coop_share", req: true },
+    { key: "is_increase", field: "is_increase", req: false },
+    { key: "due_date", field: "due_date", req: false },
+    { key: "paid_at", field: "paid_at", req: false },
+    { key: "note", field: "note", req: false },
   ];
 
   return (
@@ -91,8 +107,8 @@ export default function CoopShareImportModal({
             columns={[
               {
                 title: t("onboarding.col_field"),
-                dataIndex: "key",
-                render: (k: string) => <code>{k}</code>,
+                dataIndex: "field",
+                render: (f: string) => <code>{f}</code>,
               },
               {
                 title: t("onboarding.col_required"),
