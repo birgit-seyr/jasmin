@@ -26,11 +26,8 @@ import {
   useCrudListPage,
 } from "@shared/tables";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
-import {
-  DownloadCsvTemplateButton,
-  ExplainerText,
-  HideInactiveSwitch,
-} from "@shared/ui";
+import { ExplainerText, HideInactiveSwitch } from "@shared/ui";
+import { CsvImportButton } from "@shared/modals";
 import { useTenant, useUnitOptions } from "@hooks/index";
 import { useIsActiveColumn } from "@features/commissioning/hooks";
 import { isFieldDisabled } from "@shared/utils";
@@ -232,14 +229,13 @@ export default function ListExtraArticles() {
         {t("explainers.list_extra_articles")}
       </ExplainerText>
 
-      {uploadAllowed && (
-        <DownloadCsvTemplateButton
-          columns={columns}
-          filename={t("commissioning.extra_articles_template.csv")}
-          modelName="share_article"
-          onUploadSuccess={list.invalidate}
-        />
-      )}
+      <CsvImportButton
+        uploadAllowed={uploadAllowed}
+        columns={columns}
+        filename={t("commissioning.extra_articles_template.csv")}
+        modelName="share_article"
+        onUploadSuccess={list.invalidate}
+      />
 
       <ExportCsv
         open={csvModalVisible}

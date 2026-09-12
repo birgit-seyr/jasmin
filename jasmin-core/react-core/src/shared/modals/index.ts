@@ -3,3 +3,4 @@ export { default as AboutModal } from './AboutModal';
 export { default as LoggingModal } from './LoggingModal';
 export { default as InviteUserModal } from './InviteUserModal';
 export { default as SepaMandateDetailsModal } from './SepaMandateDetailsModal';
+export { CsvImportModal, CsvImportButton } from './CsvImportModal';

@@ -1,4 +1,12 @@
 {
+  "open": "CSV-Import",
+  "import_title": "CSV-Import: {{entity}}",
+  "intro": "Vorlage herunterladen, ausfüllen, mit „Prüfen (Probelauf)“ testen – dabei wird nichts gespeichert – und erst dann importieren.",
+  "columns_title": "Spalten",
+  "columns_from_template": "Die Spalten und ihre Reihenfolge stehen in der heruntergeladenen Vorlage: Zeile 2 enthält die technischen Feldnamen, Zeile 3 den erwarteten Typ.",
+  "col_field": "Feld",
+  "col_required": "Pflicht",
+  "col_meaning": "Bedeutung",
   "button": "CSV hochladen",
   "failed": "Upload fehlgeschlagen",
   "result_title": "Import-Ergebnis",

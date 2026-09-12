@@ -1,4 +1,12 @@
 {
+  "open": "CSV import",
+  "import_title": "CSV import: {{entity}}",
+  "intro": "Download the template, fill it in, test it with “Validate (dry run)” — nothing is saved — and only then import.",
+  "columns_title": "Columns",
+  "columns_from_template": "The columns and their order are in the downloaded template: row 2 holds the technical field names, row 3 the expected type.",
+  "col_field": "Field",
+  "col_required": "Required",
+  "col_meaning": "Meaning",
   "button": "Upload CSV",
   "failed": "Upload failed",
   "result_title": "Import result",

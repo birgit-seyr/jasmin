@@ -37,6 +37,10 @@ interface ColumnLike {
    * correct — the flag only changes what the template offers.
    */
   importable?: boolean;
+  /** Whether the field is mandatory. Not used for the template itself (a
+   * template is empty by definition) — read by `CsvImportModal` to mark the
+   * column as required in its reference table. */
+  required?: boolean;
   inputType?: string;
   /** Select-input options. When present as a static array on a column
    * with ``inputType: "select"``, the template's type-hint row lists the

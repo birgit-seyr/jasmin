@@ -17,7 +17,7 @@
   "offers": "Once an offer has already been ordered from, only the available packing units can still be changed. Bold & green = exists in the harvest forecast.",
   "orders": "Offers with 0 packing units of available quantity are still visible, since the quantity can also still be adjusted later under --> Offers. This keeps it visible which types of vegetables are generally available.",
   "labels": "",
-  "members": "Approved members, or members who have already taken out a subscription, can no longer be deleted.",
+  "members": "Approved members, or members who have already taken out a subscription, can no longer be deleted. Members who are marked green and bold have an active subscription.",
   "create_multiple_delivery_notes": "",
   "washing_list": "",
   "cleaning_list": "",

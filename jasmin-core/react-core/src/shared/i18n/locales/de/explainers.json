@@ -17,7 +17,7 @@
   "offers": "Wenn von einem Angebot schon bestellt wurde, können nur noch die verfügbaren VPE geändert werden. Fett & grün = existiert in der Ernteprognose.",
   "orders": "Angebote mit 0VPE verfügbarer Menge sind trotzdem sichtbar, da die Menge unter --> Angebote auch später noch angepasst werden kann. So bleibt sichtbar, welche Gemüse-Arten grundsätzlich verfügbar sind.",
   "labels": "",
-  "members": "Freigegebene Mitglieder, oder Mitglieder, die schon ein Abo abgeschlossen haben, können nicht mehr gelöscht werden.",
+  "members": "Freigegebene Mitglieder, oder Mitglieder, die schon ein Abo abgeschlossen haben, können nicht mehr gelöscht werden. Mitglieder, die grün und fett markiert sind, haben ein aktives Abo.",
   "create_multiple_delivery_notes": "",
   "washing_list": "",
   "cleaning_list": "",
