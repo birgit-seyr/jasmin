@@ -87,6 +87,7 @@ class TestGetDeliveryWeeks:
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestCreateSubscriptionWithRelatedObjects:
+    @time_machine.travel(datetime.date(2026, 4, 6), tick=False)
     def test_creates_subscription_shares_and_deliveries(self, tenant):
         member = MemberFactory()
         variation = ShareTypeVariationFactory()

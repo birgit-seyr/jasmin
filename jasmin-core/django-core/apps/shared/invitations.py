@@ -89,7 +89,7 @@ def create_user_with_invitation(
     is already taken by an active user.
     """
     from apps.commissioning.models import UserInvitation
-    from apps.commissioning.models.choices_text import InvitationStatus
+    from apps.commissioning.models.choices import InvitationStatus
 
     email = email.strip().lower()
     existing = JasminUser.objects.filter(email__iexact=email).first()
@@ -173,7 +173,7 @@ def create_user_with_invitation(
 def resend_invitation(*, user: JasminUser, created_by: JasminUser | None = None):
     """Cancel any open invitation, mint a new one, send email."""
     from apps.commissioning.models import UserInvitation
-    from apps.commissioning.models.choices_text import InvitationStatus
+    from apps.commissioning.models.choices import InvitationStatus
 
     # A resend fires another invite email, so it draws on the same USER_CREATION
     # budget as the initial provisioning — otherwise looping resend_invitation is
@@ -216,7 +216,7 @@ def get_invitation(token: str):
     with the same generic error message.
     """
     from apps.commissioning.models import UserInvitation
-    from apps.commissioning.models.choices_text import InvitationStatus
+    from apps.commissioning.models.choices import InvitationStatus
 
     try:
         invitation = UserInvitation.objects.select_related("user", "member").get(
@@ -237,7 +237,7 @@ def accept_invitation(*, token: str, password: str) -> JasminUser:
       * invalid/expired/used token
       * password failing the project validators
     """
-    from apps.commissioning.models.choices_text import InvitationStatus
+    from apps.commissioning.models.choices import InvitationStatus
 
     invitation = get_invitation(token)
     if invitation is None:

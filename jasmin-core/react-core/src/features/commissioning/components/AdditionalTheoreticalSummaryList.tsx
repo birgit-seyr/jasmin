@@ -501,6 +501,7 @@ export default function AdditionalTheoreticalSummaryList(
           "validation.unique.share_article_unit_size_must_be_unique",
         )}
         renderMobileCard={renderMobileCard}
+        keyboardAddShortcut={true}
       />
       {!isMobile && (
         <ExplainerText title={t("common.info")}>

@@ -81,6 +81,7 @@ export interface TenantSettingsToDict {
   allows_trial_subscriptions_for_trial_members?: boolean;
   /** @nullable */
   info_sentence_about_trial_subscriptions?: string | null;
+  trial_subscriptions_have_different_prices?: boolean;
   allows_waiting_list_for_subscriptions?: boolean;
   /**
    * @minimum 0
@@ -114,12 +115,14 @@ export interface TenantSettingsToDict {
   number_packing_stations?: number;
   allows_solidarity_pricing?: boolean;
   show_size_column?: boolean;
+  distribute_forecast_by_weight?: boolean;
   show_summary_in_harvest_share_planning_on_top?: boolean;
   show_seller_name_of_share_article_in_share_for_member_on_page?: boolean;
   round_up_to_full_pu_harvesting?: boolean;
   allows_self_registration?: boolean;
   has_markets?: boolean;
   sells_to_resellers?: boolean;
+  crates_should_be_on_documents?: boolean;
   /**
    * @minimum 0
    * @maximum 2147483647
@@ -231,5 +234,6 @@ export interface TenantSettingsToDict {
   /** If on (default), every deletion request needs an office/admin to approve after the email-confirm step. Turn off to honour Art. 17 requests automatically once the user clicks the email link. Staff/admin deletions always need admin approval regardless of this. */
   require_admin_approval_for_gdpr_deletion?: boolean;
   requires_paper_signature_for_membership?: boolean;
+  requires_paper_signature_for_cancellation_of_membership?: boolean;
   requires_paper_signature_for_sepa_mandate?: boolean;
 }

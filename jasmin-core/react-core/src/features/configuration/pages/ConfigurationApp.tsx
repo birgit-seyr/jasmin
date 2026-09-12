@@ -272,13 +272,13 @@ export default function ConfigurationApp() {
       const { tenantFields: mappedTenantFields, settingsOverlay } =
         splitSettingsForSave(currentSettings);
 
-      // logo / favicon are FileFields — they never ride on this JSON PATCH (a
-      // stored URL string must not be re-sent to the ImageField). A picture
-      // upload from here goes through the shared multipart ``usePictureUpload``
-      // hook, the same escape hatch ConfigurationGeneral uses.
+      // No file fields to strip here: ``currentTenantData`` already came
+      // through ``tenantToSaveablePayload``, which drops every entry in
+      // ``TENANT_FILE_FIELDS`` (a stored URL string must never be re-sent to an
+      // ImageField — DRF answers "the submitted data was not a file" and the
+      // user sees a 400 on whatever unrelated field they were editing).
+      // Picture uploads use the multipart ``usePictureUpload`` hook instead.
       const dataToSend = { ...currentTenantData };
-      delete dataToSend.logo;
-      delete dataToSend.favicon;
 
       await tenantsTenantsPartialUpdate(tenantId, {
         ...dataToSend,

@@ -30,11 +30,11 @@ import {
 } from "@shared/tables";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import {
-  DownloadCsvTemplateButton,
   ExplainerText,
   HideInactiveSwitch,
   IconActionButton,
 } from "@shared/ui";
+import { CsvImportButton } from "@shared/modals";
 import { useRoles } from "@shared/auth";
 import { useContactColumns, useTenant } from "@hooks/index";
 import {
@@ -120,7 +120,10 @@ export default function ListDeliveryStations() {
   );
 
   const shareDeliveryDays = useMemo(
-    () => [...(currentlyActiveDeliveryDays || []), ...(futureDeliveryDays || [])],
+    () => [
+      ...(currentlyActiveDeliveryDays || []),
+      ...(futureDeliveryDays || []),
+    ],
     [currentlyActiveDeliveryDays, futureDeliveryDays],
   );
 
@@ -285,6 +288,7 @@ export default function ListDeliveryStations() {
         uniqueCheckMessage={t("validation.unique.number")}
         pagination={true}
         showSearchBar={true}
+        keyboardAddShortcut={true}
       />
 
       <DeliveryStationDetailModal
@@ -323,14 +327,13 @@ export default function ListDeliveryStations() {
       <ExplainerText title={t("common.info")}>
         {t("explainers.list_delivery_stations")}
       </ExplainerText>
-      {uploadAllowed && (
-        <DownloadCsvTemplateButton
-          columns={columns}
-          filename={t("commissioning.delivery_stations_template.csv")}
-          modelName="delivery_station"
-          onUploadSuccess={list.invalidate}
-        />
-      )}
+      <CsvImportButton
+        uploadAllowed={uploadAllowed}
+        columns={columns}
+        filename={t("commissioning.delivery_stations_template.csv")}
+        modelName="delivery_station"
+        onUploadSuccess={list.invalidate}
+      />
     </div>
   );
 }

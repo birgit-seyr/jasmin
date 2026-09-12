@@ -134,6 +134,17 @@ export default function ConfigurationMembers() {
             type: "checkbox",
             defaultValue: false,
           },
+          {
+            key: "requires_paper_signature_for_cancellation_of_membership",
+            label: t(
+              "settings.members.requires_paper_signature_for_cancellation_of_membership",
+            ),
+            description: t(
+              "settings.members.requires_paper_signature_for_cancellation_of_membership_desc",
+            ),
+            type: "checkbox",
+            defaultValue: false,
+          },
         ],
       },
     ],

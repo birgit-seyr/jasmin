@@ -38,7 +38,7 @@ def _assert_required_consents(accepted: dict, *, coop_shares_count: int, as_of) 
     from django.db.models import Q
 
     from apps.commissioning.models import ConsentDocument
-    from apps.commissioning.models.choices_text import ConsentKind
+    from apps.commissioning.models.choices import ConsentKind
 
     required = [ConsentKind.PRIVACY, ConsentKind.WITHDRAWAL]
     if coop_shares_count > 0:
@@ -118,6 +118,18 @@ def register_public_applicant(
     accepted = accepted if isinstance(accepted, dict) else {}
     is_trial = bool(data.get("is_trial"))
     coop_shares_count = 0 if is_trial else int(data.get("coop_shares_count") or 0)
+
+    # A trial registrant is minted as a trial member (``Member.is_trial=True``).
+    # The office create path enforces the same tenant policy; the public path
+    # must too, or a raw caller could create a trial member on a tenant that
+    # only permits trial subscriptions for full members. Reject before any
+    # side effect (user, member, email).
+    from apps.commissioning.services.trial_policy import (
+        assert_member_creation_allowed,
+    )
+
+    assert_member_creation_allowed(is_trial=is_trial)
+
     _assert_required_consents(
         accepted, coop_shares_count=coop_shares_count, as_of=as_of
     )

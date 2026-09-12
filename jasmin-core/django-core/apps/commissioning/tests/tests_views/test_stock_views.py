@@ -10,7 +10,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from apps.commissioning.models import MovementShareArticle
-from apps.commissioning.models.choices_text import MovementTypeOptions
+from apps.commissioning.models.choices import MovementTypeOptions
 from apps.commissioning.services.snapshot_service import SnapshotService
 from apps.commissioning.tests.factories import (
     HarvestFactory,

@@ -1,5 +1,4 @@
-"""Tests for the ``TenantEmailConfigViewSet.test_email`` action —
-the P0-4 wiring documented in ``docs/code/email-overview.md``.
+"""Tests for the ``TenantEmailConfigViewSet.test_email`` action.
 
 Contract:
 

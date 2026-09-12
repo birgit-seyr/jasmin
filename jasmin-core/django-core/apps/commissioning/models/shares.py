@@ -18,15 +18,13 @@ from .base import JasminModel
 
 if TYPE_CHECKING:
     from .days import SharesDeliveryDay
-from .choices_text import (
+from .choices import (
     DayNumberOptions,
     DeliveryCycleOptions,
     ShareOptions,
     ShareTypeVariationSizeOptions,
-    delivery_week_field,
-    size_vegetable_field,
-    unit_field,
 )
+from .fields import delivery_week_field, size_vegetable_field, unit_field
 from .mixin import (
     ArchivableMixin,
     CreatedMixin,
@@ -260,6 +258,9 @@ class ShareTypeVariation(JasminModel, TimeBoundMixin):
     requires_optin = models.BooleanField(default=False)
     default_optin_state = models.BooleanField(default=False)
     optin_deadline_days_before_delivery = models.PositiveSmallIntegerField(default=3)
+    allowed_for_trial_subscription = models.BooleanField(
+        default=False
+    )  # if this sharetypevariation can be used in a subscription with is_trial=True
 
     class Meta:
         constraints = [
@@ -513,6 +514,12 @@ class ShareTypeVariationGrossPrice(JasminModel, TimeBoundMixin):
     price_sum_articles = models.DecimalField(
         max_digits=6, decimal_places=2, blank=True, null=True
     )  # sum of the prices of the articles (vegetables) in the share - for comparison for the weekly planning team
+    price_per_delivery_if_trial = models.DecimalField(
+        max_digits=6, decimal_places=2, blank=True, null=True
+    )
+    solidarity_min_price_per_delivery_if_trial = models.DecimalField(
+        max_digits=6, decimal_places=2, blank=True, null=True
+    )
 
     def clean(self) -> None:
         super().clean()
@@ -526,6 +533,39 @@ class ShareTypeVariationGrossPrice(JasminModel, TimeBoundMixin):
                 {
                     "solidarity_min_price_per_delivery": (
                         "The solidarity minimum cannot exceed the reference price."
+                    )
+                }
+            )
+        # Same invariant for the trial pair (only checkable when both are set).
+        if (
+            self.solidarity_min_price_per_delivery_if_trial is not None
+            and self.price_per_delivery_if_trial is not None
+            and self.solidarity_min_price_per_delivery_if_trial
+            > self.price_per_delivery_if_trial
+        ):
+            raise ValidationError(
+                {
+                    "solidarity_min_price_per_delivery_if_trial": (
+                        "The trial solidarity minimum cannot exceed the trial "
+                        "reference price."
+                    )
+                }
+            )
+        # A trial floor with NO trial reference is a silent misconfiguration:
+        # the floor is gated on the trial reference everywhere it's enforced
+        # (client + server), so without one it would be discarded and the trial
+        # would fall back to the regular pair. Reject it at config time so the
+        # intent surfaces instead of vanishing. (The regular pair can't hit this
+        # — ``price_per_delivery`` is NOT NULL — so there's no regular analogue.)
+        if (
+            self.solidarity_min_price_per_delivery_if_trial is not None
+            and self.price_per_delivery_if_trial is None
+        ):
+            raise ValidationError(
+                {
+                    "solidarity_min_price_per_delivery_if_trial": (
+                        "A trial solidarity minimum requires a trial reference "
+                        "price (price_per_delivery_if_trial)."
                     )
                 }
             )
@@ -925,6 +965,17 @@ class ShareDeliveryQuerySet(models.QuerySet):
         :meth:`ShareDemandService.aggregated_rows`, which also drops opt-outs."""
         return self.filter(joker_taken=True).exclude(ShareDelivery.opted_out_q())
 
+    def donation_jokered(self) -> ShareDeliveryQuerySet:
+        """Rows the member DONATED via a donation joker — the mirror of
+        :meth:`jokered` for ``donation_joker_taken=True`` AND not opted out.
+        Powers the donation-joker view of the AmountShareTypeVariations matrix
+        (the boxes that would have shipped but go to the donation pool). Matches
+        the ``donation_joker=True`` branch of
+        :meth:`ShareDemandService.aggregated_rows`."""
+        return self.filter(donation_joker_taken=True).exclude(
+            ShareDelivery.opted_out_q()
+        )
+
 
 class ShareDelivery(JasminModel):
     subscription = models.ForeignKey(
@@ -1019,11 +1070,18 @@ class ShareDelivery(JasminModel):
 
     @staticmethod
     def delivery_counts_q(*, prefix: str = "") -> models.Q:
-        """``Q`` for 'this delivery counts for demand/billing': joker not taken
-        AND not opted out (see :meth:`opted_out_q`)."""
+        """``Q`` for 'this delivery counts for PRODUCTION/demand': neither a joker
+        (skip) nor a donation joker, AND not opted out (see :meth:`opted_out_q`).
+
+        A donation joker is excluded here — the box is not grown/packed for the
+        donor — but it IS still billed. Billing has its OWN predicate in
+        ``apps/payments`` (it filters ``joker_taken`` only, keeping donation
+        jokers), so this production rule must NOT be reused for billing."""
         p = prefix
-        return models.Q(**{f"{p}joker_taken": False}) & ~ShareDelivery.opted_out_q(
-            prefix=prefix
+        return (
+            models.Q(**{f"{p}joker_taken": False})
+            & models.Q(**{f"{p}donation_joker_taken": False})
+            & ~ShareDelivery.opted_out_q(prefix=prefix)
         )
 
     @property

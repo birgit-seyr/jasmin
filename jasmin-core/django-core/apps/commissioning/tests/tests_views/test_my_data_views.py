@@ -972,6 +972,64 @@ class TestMySubscriptionSubscribe:
         price.save()  # full_clean() inside save() must not raise
         assert price.pk is not None
 
+    def test_gross_price_clean_rejects_trial_floor_above_trial_reference(self, tenant):
+        # The trial pair carries the same invariant as the regular pair: the
+        # trial solidarity floor cannot exceed the trial reference price.
+        from django.core.exceptions import ValidationError
+
+        from apps.commissioning.models import ShareTypeVariationGrossPrice
+
+        variation = ShareTypeVariationFactory()
+        bad_price = ShareTypeVariationGrossPrice(
+            share_type_variation=variation,
+            price_per_delivery=Decimal("10.00"),
+            price_per_delivery_if_trial=Decimal("6.00"),
+            solidarity_min_price_per_delivery_if_trial=Decimal("7.00"),  # > trial ref
+            tax_rate=Decimal("7.00"),
+        )
+        with pytest.raises(ValidationError) as exc:
+            bad_price.full_clean()
+        assert "solidarity_min_price_per_delivery_if_trial" in exc.value.message_dict
+
+    def test_gross_price_clean_rejects_trial_floor_without_reference(self, tenant):
+        # A trial floor with NO trial reference is a silent footgun: the floor
+        # would be discarded (enforcement gates on the trial reference), so
+        # clean() rejects it at config time instead of letting it vanish.
+        from django.core.exceptions import ValidationError
+
+        from apps.commissioning.models import ShareTypeVariationGrossPrice
+
+        variation = ShareTypeVariationFactory()
+        bad_price = ShareTypeVariationGrossPrice(
+            share_type_variation=variation,
+            price_per_delivery=Decimal("10.00"),
+            # price_per_delivery_if_trial left NULL...
+            solidarity_min_price_per_delivery_if_trial=Decimal("5.00"),  # ...orphaned
+            tax_rate=Decimal("7.00"),
+        )
+        with pytest.raises(ValidationError) as exc:
+            bad_price.full_clean()
+        assert "solidarity_min_price_per_delivery_if_trial" in exc.value.message_dict
+
+    def test_gross_price_clean_allows_trial_pair_both_set(self, tenant):
+        # A fully-set trial pair with floor <= reference saves cleanly — the
+        # complement of the two trial rejection guards.
+        import datetime
+
+        from apps.commissioning.models import ShareTypeVariationGrossPrice
+
+        variation = ShareTypeVariationFactory()
+        price = ShareTypeVariationGrossPrice(
+            share_type_variation=variation,
+            valid_from=datetime.date(2026, 1, 5),  # Monday
+            price_per_delivery=Decimal("10.00"),
+            price_per_delivery_if_trial=Decimal("6.00"),
+            solidarity_min_price_per_delivery_if_trial=Decimal("5.00"),
+            tax_rate=Decimal("7.00"),
+        )
+        price.save()  # full_clean() inside save() must not raise
+        assert price.pk is not None
+
     def test_cannot_subscribe_for_another_member(self, member_user, tenant):
         """A member can only ever subscribe for THEMSELVES — the member is
         taken from the token, and any ``member`` in the body is ignored."""

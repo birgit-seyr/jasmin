@@ -1,9 +1,32 @@
 {
+  "open": "CSV-Import",
+  "import_title": "CSV-Import: {{entity}}",
+  "intro": "Vorlage herunterladen, ausfüllen, mit „Prüfen (Probelauf)“ testen – dabei wird nichts gespeichert – und erst dann importieren.",
+  "columns_title": "Spalten",
+  "columns_from_template": "Die Spalten und ihre Reihenfolge stehen in der heruntergeladenen Vorlage: Zeile 2 enthält die technischen Feldnamen, Zeile 3 den erwarteten Typ.",
+  "col_field": "Feld",
+  "col_required": "Pflicht",
+  "col_meaning": "Bedeutung",
   "button": "CSV hochladen",
   "failed": "Upload fehlgeschlagen",
   "result_title": "Import-Ergebnis",
   "summary": "{{total}} Zeilen verarbeitet · {{successful}} erfolgreich · {{failed}} fehlgeschlagen",
   "errors_heading": "Fehlgeschlagene Zeilen",
   "col_row": "Zeile",
-  "col_error": "Fehler"
+  "col_error": "Fehler",
+  "validate": "Prüfen (Probelauf)",
+  "dry_run_notice": "Probelauf – es wurde nichts gespeichert.",
+  "all_ok": "Alle Zeilen sind gültig – bereit zum Import!",
+  "no_rows": "Keine Datenzeilen gefunden – es wurde nichts importiert.",
+  "import_success": "{{count}} Zeile(n) importiert.",
+  "model": {
+    "member": "Mitglieder",
+    "subscription": "Abos",
+    "sepa_mandate": "SEPA-Mandate",
+    "coop_share": "Genossenschaftsanteile",
+    "crate": "Kisten",
+    "share_article": "Anteilsartikel",
+    "delivery_station": "Lieferstationen",
+    "reseller": "Wiederverkäufer"
+  }
 }

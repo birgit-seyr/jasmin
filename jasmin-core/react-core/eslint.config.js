@@ -181,7 +181,7 @@ export default [
   // Layer boundary: ``shared/`` is the bottom layer — it must not reach UP
   // into feature or app code. Keeps the dependency graph one-way
   // (features/app -> shared, never the reverse) so the shared layer stays
-  // extractable/publishable. See docs/frontend-structure-proposal.md.
+  // extractable/publishable.
   // (The commissioning bounded-context one-way rule is enforced in the next
   // block, using plain no-restricted-imports — no extra plugin needed.)
   {

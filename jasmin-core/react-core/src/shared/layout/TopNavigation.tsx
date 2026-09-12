@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useRoles, type RoleFlags } from "@shared/auth";
 import { useNavigation } from "@shared/contexts/NavigationContext";
 import { useIsMobile, useTenant } from "@hooks/index";
+import HelpButton from "./HelpButton";
 import ModalToggle from "./ModalToggle";
 import SidebarToggle from "./SidebarToggle";
 import UserMenu from "./UserMenu";
@@ -73,6 +74,13 @@ function PrimaryNavigation() {
           />
         )}
         {!isMobile && <ModalToggle />}
+        {!isMobile && (
+          <Divider
+            type="vertical"
+            style={{ height: "24px", margin: "0 0px" }}
+          />
+        )}
+        <HelpButton />
         {!isMobile && (
           <Divider
             type="vertical"

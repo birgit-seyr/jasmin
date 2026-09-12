@@ -35,7 +35,7 @@ logger = logging.getLogger("authentication")
 
 
 def serialize_user_row(u: JasminUser) -> dict:
-    from apps.commissioning.models.choices_text import InvitationStatus
+    from apps.commissioning.models.choices import InvitationStatus
 
     # If callers prefetched the relevant invitations under
     # ``_prefetched_sent_invitations`` (see MemberViewSet.get_queryset),
@@ -77,7 +77,7 @@ def list_active_users() -> list[dict]:
     # (``.filter()`` on a plain prefetch bypasses the cache) plus a
     # reverse-OneToOne lookup. Local import keeps the accounts→commissioning
     # dependency off the module-load path.
-    from apps.commissioning.models.choices_text import InvitationStatus
+    from apps.commissioning.models.choices import InvitationStatus
     from apps.commissioning.models.members import UserInvitation
 
     sent_invitations_qs = UserInvitation.objects.filter(

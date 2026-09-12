@@ -31,7 +31,7 @@ class TestAmountPerPuMap:
     summary."""
 
     def test_keys_are_canonical_unit_options(self):
-        from apps.commissioning.models.choices_text import UnitOptions
+        from apps.commissioning.models.choices import UnitOptions
         from apps.commissioning.services.theoretical_objects import (
             _AMOUNT_PER_PU_MAP,
         )
@@ -43,7 +43,7 @@ class TestAmountPerPuMap:
         )
 
     def test_bunch_resolves_to_its_per_pu_attr(self):
-        from apps.commissioning.models.choices_text import UnitOptions
+        from apps.commissioning.models.choices import UnitOptions
         from apps.commissioning.services.theoretical_objects import (
             _AMOUNT_PER_PU_MAP,
         )

@@ -20,7 +20,7 @@ from apps.commissioning.models import (
     ShareContent,
     TheoreticalHarvest,
 )
-from apps.commissioning.models.choices_text import MovementTypeOptions
+from apps.commissioning.models.choices import MovementTypeOptions
 from apps.commissioning.services.recompute import recompute_shares
 from apps.commissioning.services.share_content_service import ShareContentService
 from apps.commissioning.tests.factories import (

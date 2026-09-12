@@ -36,6 +36,7 @@ export interface Tenant {
   readonly id?: string;
   readonly current_settings?: TenantCurrentSettings;
   readonly settings?: TenantSettingsProperty;
+  readonly app_icon_version?: string;
   readonly schema_name?: string;
   /** @maxLength 200 */
   name: string;
@@ -128,6 +129,10 @@ export interface Tenant {
   logo?: string | null;
   /** @nullable */
   bio_logo?: string | null;
+  /** @nullable */
+  app_icon?: string | null;
+  /** @maxLength 12 */
+  app_short_name?: string;
   /**
    * @minimum 1
    * @maximum 12

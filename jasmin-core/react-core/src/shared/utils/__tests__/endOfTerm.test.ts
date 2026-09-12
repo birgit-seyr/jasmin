@@ -1,9 +1,11 @@
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import { describe, expect, it } from "vitest";
+import isoWeek from "dayjs/plugin/isoWeek";
+import { describe, expect, it, vi } from "vitest";
 import { computeValidUntil, parseDateLoose, weeksPerDelivery } from "../endOfTerm";
 
 dayjs.extend(customParseFormat);
+dayjs.extend(isoWeek);
 
 // Hand-picked 2026 Mondays + Sundays so the tests don't depend on
 // today's date. 2026-01-05 is the first Monday of 2026.
@@ -80,20 +82,56 @@ describe("computeValidUntil", () => {
       seasonStartWeek: null,
     };
 
-    it("returns validFrom + 52 weeks - 1 day (Sunday)", () => {
-      // 2026-04-06 (Monday) + 52 weeks = 2027-04-05 (Monday).
-      // -1 day = 2027-04-04 (Sunday).
+    it("anchors to the same ISO week next year (Sunday)", () => {
+      // 2026-04-06 is ISO 2026-W15. The term ends the day before Monday of
+      // week 15 in 2027 (2027-04-12) → 2027-04-11 (Sunday).
       const result = computeValidUntil(MON("2026-04-06"), settings);
-      expect(result?.format("YYYY-MM-DD")).toBe("2027-04-04");
+      expect(result?.format("YYYY-MM-DD")).toBe("2027-04-11");
       expect(result?.isoWeekday()).toBe(7);
     });
 
-    it("works correctly across year boundaries", () => {
-      // 2026-12-28 (Monday) + 52 weeks = 2027-12-27 (Monday).
-      // -1 day = 2027-12-26 (Sunday).
+    it("keeps the restart week stable across a 53-week ISO year", () => {
+      // 2026 is a 53-week ISO year. Starting ISO 2026-W26 (2026-06-22), a
+      // fixed +364 days would end in W24 and restart the NEXT term in W25 —
+      // the drift this fix removes. Anchored, it ends 2027-06-27, and the next
+      // term restarts 2027-06-28 = ISO 2027-W26 (the SAME week).
+      const result = computeValidUntil(MON("2026-06-22"), settings);
+      expect(result?.format("YYYY-MM-DD")).toBe("2027-06-27");
+      const nextStart = result?.add(1, "day");
+      expect(nextStart?.isoWeek()).toBe(26);
+      expect(nextStart?.isoWeekday()).toBe(1); // Monday
+    });
+
+    it("handles an ISO week-53 start (overflows to next year, matching the backend)", () => {
+      // 2026-12-28 is ISO 2026-W53; 2027 has no W53, so both dayjs and the
+      // backend isoweek library roll forward to 2028-01-02 (Sunday).
       const result = computeValidUntil(MON("2026-12-28"), settings);
-      expect(result?.format("YYYY-MM-DD")).toBe("2027-12-26");
+      expect(result?.format("YYYY-MM-DD")).toBe("2028-01-02");
       expect(result?.isoWeekday()).toBe(7);
+    });
+
+    it("anchors on the ISO week-year, not the calendar year (late-Dec W01 start)", () => {
+      // 2025-12-29 is a Monday in ISO 2026-W01 but CALENDAR year 2025. Anchoring
+      // on the calendar year lands BEFORE valid_from; the ISO week-year gives
+      // the day before Monday of W01 2027 = 2027-01-03. (Regression guard for
+      // the wall-clock/calendar-year bug the adversarial review found.)
+      const result = computeValidUntil(MON("2025-12-29"), settings);
+      expect(result?.format("YYYY-MM-DD")).toBe("2027-01-03");
+      expect(result?.isAfter(MON("2025-12-29"), "day")).toBe(true);
+    });
+
+    it("is independent of the wall clock (same result at a year-boundary now)", () => {
+      // The old ``dayjs()``-seeded construction leaked "today" into the anchor.
+      // With the deterministic helper the result must not move when the clock
+      // sits on a year boundary.
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date("2027-12-31T12:00:00Z"));
+        const result = computeValidUntil(MON("2026-06-22"), settings);
+        expect(result?.format("YYYY-MM-DD")).toBe("2027-06-27");
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
@@ -237,8 +275,9 @@ describe("computeValidUntil", () => {
         isTrial: false,
         trialDurationInDeliveries: 4,
       });
-      // Year branch: 2026-04-06 + 52 weeks - 1 day = 2027-04-04.
-      expect(result?.format("YYYY-MM-DD")).toBe("2027-04-04");
+      // Year branch: anchored to ISO 2026-W15 → Sunday before Monday of W15
+      // 2027 = 2027-04-11.
+      expect(result?.format("YYYY-MM-DD")).toBe("2027-04-11");
     });
   });
 

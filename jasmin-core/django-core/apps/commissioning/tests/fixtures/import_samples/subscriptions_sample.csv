@@ -1,0 +1,5 @@
+Member no.,Share type,Size,Payment cycle,Station,Delivery day,Valid from,Valid until,Quantity,Price per delivery,Trial,Subscription no.
+member_number,share_type,size,payment_cycle,delivery_station,delivery_day,valid_from,valid_until,quantity,price_per_delivery,is_trial,subscription_number
+integer,text,text,text,text,integer(0=Mon),date(Monday),date(Sunday),integer,decimal,boolean,integer
+1001,Standard,M,MONTHLY,CENTER,2,2026-01-05,2026-12-27,1,32.50,false,5001
+1002,Standard,L,MONTHLY,CENTER,2,2026-01-05,2026-12-27,1,45.00,false,5002

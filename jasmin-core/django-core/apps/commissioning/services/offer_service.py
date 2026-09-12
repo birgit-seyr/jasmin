@@ -22,7 +22,7 @@ from ..models import (
     ShareArticle,
     ShareContent,
 )
-from ..models.choices_text import UnitOptions
+from ..models.choices import UnitOptions
 from .bulk_email_job import create_send_record_idempotent, emit_progress
 from .share_demand_service import ShareDemandService
 

@@ -10,7 +10,7 @@ from ..models import (
     ShareArticleNetPrice,
     Storage,
 )
-from ..models.choices_text import ShareOptions
+from ..models.choices import ShareOptions
 from ..utils.deletion_utils import parent_in_use
 from .serializers_mixin import DeletableMixin, NameFieldMixin
 

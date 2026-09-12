@@ -1,0 +1,10 @@
+/* Support ticket thread — box each message with a primary-color border.
+   Scoped under .support-thread (two classes) so the padding beats AntD's
+   runtime-injected .ant-list-item rule, which otherwise zeroes the inline
+   padding and makes the text hug the border. */
+.support-thread .support-thread-message {
+  border: 1px solid var(--color-primary);
+  border-radius: var(--border-radius);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}

@@ -1,5 +1,6 @@
 import { Input, Select, Tag } from "antd";
 import { ReadOnlyReportTable } from "@shared/tables";
+import { ExplainerText } from "@shared/ui";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -166,6 +167,10 @@ export default function EmailLog() {
         pagination={{ pageSize: 50, showSizeChanger: true }}
         emptyText={t("members.no_emails_sent")}
       />
+
+      <ExplainerText title={t("common.info")}>
+        {t("explainers.email_log")}
+      </ExplainerText>
     </div>
   );
 }

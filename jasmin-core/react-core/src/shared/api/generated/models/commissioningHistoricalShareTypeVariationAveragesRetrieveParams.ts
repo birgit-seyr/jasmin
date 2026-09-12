@@ -5,6 +5,7 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { CommissioningHistoricalShareTypeVariationAveragesRetrieveShareOption } from './commissioningHistoricalShareTypeVariationAveragesRetrieveShareOption';
 
 export type CommissioningHistoricalShareTypeVariationAveragesRetrieveParams = {
 /**
@@ -18,7 +19,7 @@ delivery_week: number;
 /**
  * Resolve variation IDs server-side from share_option (e.g. 'gemuese'). Use this to avoid a client-side waterfall.
  */
-share_option?: string;
+share_option?: CommissioningHistoricalShareTypeVariationAveragesRetrieveShareOption;
 /**
  * Comma-separated list of share type variation IDs. Pass this OR `share_option` (+ optional `active_at_date`).
  */

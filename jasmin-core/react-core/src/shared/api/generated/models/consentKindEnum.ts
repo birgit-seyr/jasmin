@@ -12,6 +12,7 @@
 * `withdrawal` - Withdrawal terms
 * `terms` - Terms of service
 * `coop_contract` - Cooperative-share subscription contract
+* `coop_cancellation` - Cancellation of membership in coop
 * `subscription_contract` - Subscription contract
  */
 export type ConsentKindEnum = typeof ConsentKindEnum[keyof typeof ConsentKindEnum];
@@ -24,5 +25,6 @@ export const ConsentKindEnum = {
   withdrawal: 'withdrawal',
   terms: 'terms',
   coop_contract: 'coop_contract',
+  coop_cancellation: 'coop_cancellation',
   subscription_contract: 'subscription_contract',
 } as const;

@@ -20,7 +20,7 @@ from typing import Any
 from django.db.models import ProtectedError
 from django.http import FileResponse
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
@@ -44,6 +44,7 @@ from ..errors import (
     MemberNotFound,
 )
 from ..models import ConsentDocument, ConsentKind, ConsentRecord, Member
+from ..schemas import catalogue_param
 from ..scoping import enforce_privileged, own_member_id, scope_to_member
 from ..serializers import (
     ConsentDocumentSerializer,
@@ -130,18 +131,16 @@ class ConsentDocumentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(
-                name="kind",
+            catalogue_param(
+                "kind",
                 description="Filter by ConsentKind",
                 required=False,
-                type=str,
                 enum=[c[0] for c in ConsentKind.choices],
             ),
-            OpenApiParameter(
-                name="locale",
+            catalogue_param(
+                "locale",
                 description="Filter by locale (e.g. 'de', 'en')",
                 required=False,
-                type=str,
             ),
         ]
     )
@@ -161,18 +160,14 @@ class ConsentDocumentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(
-                name="kind",
+            catalogue_param(
+                "kind",
                 description="ConsentKind to look up (required)",
                 required=True,
-                type=str,
                 enum=[c[0] for c in ConsentKind.choices],
             ),
-            OpenApiParameter(
-                name="locale",
-                description="Locale (default 'de')",
-                required=False,
-                type=str,
+            catalogue_param(
+                "locale", description="Locale (default 'de')", required=False
             ),
         ],
         responses={
@@ -216,14 +211,11 @@ class ConsentRecordViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(
-                name="member",
-                description=(
-                    "Filter by member id. Office staff only — members are "
-                    "always scoped to their own consents server-side."
-                ),
+            catalogue_param(
+                "member",
+                description="Filter by member id. Office staff only — members are "
+                "always scoped to their own consents server-side.",
                 required=False,
-                type=str,
             ),
         ]
     )

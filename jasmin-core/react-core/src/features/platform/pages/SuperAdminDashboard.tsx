@@ -147,17 +147,18 @@ export default function SuperAdminDashboard() {
         >
           Ops Checklist
         </button>
+        <button
+          onClick={() => navigate("/support-tickets")}
+          className="sa-btn sa-btn--header"
+          style={{ marginRight: 8 }}
+        >
+          Support Tickets
+        </button>
         <button onClick={handleLogout} className="sa-btn sa-btn--header">
           Logout
         </button>
       </header>
-      <div className="sa-hero-band">
-        <img
-          src="/violet_flowers.jpg"
-          alt="Violet Flowers"
-          className="sa-hero-image"
-        />
-      </div>
+      <div className="sa-hero-band"></div>
 
       <div className="sa-page-content">
         <div className="sa-stats-grid">
@@ -328,4 +329,3 @@ function formatDuration(dateStr: string): string {
   const years = Math.floor(diffDays / 365);
   return years === 1 ? "1 year" : `${years} years`;
 }
-

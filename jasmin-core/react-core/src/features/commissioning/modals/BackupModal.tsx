@@ -82,8 +82,7 @@ export default function BackupModal({
   // Single source of truth for the day/variation axes — the same hook the base
   // planning page uses, so the backup grid's day and variation sets can never
   // drift from the base table (requireStations mirrors the base page's
-  // get_delivery_stations:true, which drops station-less days). See
-  // docs/day-variation-columns-audit.md.
+  // get_delivery_stations:true, which drops station-less days).
   const { shareDeliveryDays, shareTypeVariations } = usePlanningAxes({
     year,
     week: delivery_week,

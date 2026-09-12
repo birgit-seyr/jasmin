@@ -4,9 +4,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from django.db.models import QuerySet
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
-    OpenApiParameter,
     OpenApiResponse,
     extend_schema,
     inline_serializer,
@@ -20,6 +18,7 @@ from core.serializers import ErrorResponseSerializer
 
 from ..models import DeliveryStationDay, ShareContent, ShareTypeVariation
 from ..schemas import (
+    catalogue_param,
     get_day_number_parameter,
     get_delivery_day_parameter,
     get_delivery_station_parameter,
@@ -262,21 +261,14 @@ class ShareTypeVariationsTotalsView(APIViewRolePermissionsMixin, APIView):
             get_year_parameter(required=True),
             get_delivery_week_parameter(required=True),
             get_delivery_day_parameter(required=True),
-            OpenApiParameter(
-                name="tour",
-                type=OpenApiTypes.INT,
-                required=False,
-            ),
+            catalogue_param("tour", required=False),
             get_delivery_station_parameter(required=False),
-            OpenApiParameter(
-                name="physical_share_type_variations",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "physical_share_type_variations",
                 required=False,
-                description=(
-                    "If true, return physical share_type_variation totals "
-                    "resolving virtual subscriptions into their physical "
-                    "components."
-                ),
+                description="If true, return physical share_type_variation totals "
+                "resolving virtual subscriptions into their physical "
+                "components.",
             ),
         ],
         responses={

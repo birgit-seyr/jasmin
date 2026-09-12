@@ -13,6 +13,7 @@ import datetime
 from decimal import Decimal
 
 import pytest
+from django.utils import timezone
 
 from apps.commissioning.models import Member, Subscription
 from apps.commissioning.services.renewal import (
@@ -28,6 +29,7 @@ from apps.commissioning.tests.factories import (
     ShareTypeVariationGrossPriceFactory,
     SubscriptionFactory,
 )
+from apps.shared.tenants.models import TenantSettings
 
 _VALID_FROM = datetime.date(2026, 1, 5)  # Monday
 _VALID_UNTIL = datetime.date(2026, 12, 27)  # Sunday — inside the renewal window
@@ -60,6 +62,55 @@ def _renewable_sub(**kwargs) -> Subscription:
             price_per_delivery=Decimal("10.00"),
         )
     return subscription
+
+
+def _make_settings(tenant, **kwargs) -> TenantSettings:
+    """Materialise a current TenantSettings row (overrides via kwargs)."""
+    return TenantSettings.objects.create(
+        tenant=tenant,
+        valid_from=timezone.now() - datetime.timedelta(seconds=1),
+        **kwargs,
+    )
+
+
+@pytest.mark.django_db
+class TestRenewalTermAnchoring:
+    """The renewal RE-ANCHORS its term end to the tenant's configured ISO week
+    (so the yearly restart week doesn't drift across 52-/53-week ISO years),
+    falling back to the predecessor's term length only when neither end rule is
+    configured."""
+
+    def test_reanchors_to_iso_week_for_end_after_one_year(self, tenant):
+        _make_settings(
+            tenant,
+            subscriptions_end_after_one_year=True,
+            subscriptions_end_at_end_of_season=False,
+        )
+        sub = _renewable_sub(
+            valid_from=datetime.date(2026, 1, 5),  # Monday
+            valid_until=datetime.date(2026, 6, 21),  # Sunday
+        )
+        renewal = create_renewal_draft(sub)
+        # new_valid_from = 2026-06-22 (Monday, ISO 2026-W26); the anchored end is
+        # the day before Monday of W26 2027 = 2027-06-27 — NOT the raw
+        # +term_length, and the term after it restarts on ISO week 26 again.
+        assert renewal.valid_from == datetime.date(2026, 6, 22)
+        assert renewal.valid_until == datetime.date(2027, 6, 27)
+        next_start = renewal.valid_until + datetime.timedelta(days=1)
+        assert next_start.isocalendar()[1] == 26
+
+    def test_preserves_term_length_when_neither_mode_configured(self, tenant):
+        _make_settings(
+            tenant,
+            subscriptions_end_after_one_year=False,
+            subscriptions_end_at_end_of_season=False,
+        )
+        sub = _renewable_sub()
+        renewal = create_renewal_draft(sub)
+        # Backward-compatible fallback: keep the predecessor's exact term length.
+        assert renewal.valid_until == renewal.valid_from + (
+            sub.valid_until - sub.valid_from
+        )
 
 
 @pytest.mark.django_db

@@ -8,6 +8,10 @@
 import { AdminConfirmationModalAbos } from "@features/abos/modals/AdminConfirmationModalAbos";
 import { CancelSubscriptionModal } from "@features/abos/modals/CancelSubscriptionModal";
 import { RejectAboModal } from "@features/abos/modals/RejectAboModal";
+import SepaSetupModal from "@features/members/modals/SepaSetupModal";
+import { getPaymentsBillingProfilesMandateStatusListQueryKey } from "@shared/api/generated/payments/payments";
+import { isSepaMandateActiveForTerm } from "@shared/utils";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   commissioningAbosCreate,
   commissioningAbosDestroy,
@@ -31,6 +35,7 @@ import { DateRangeStatusLegend, ExplainerText } from "@shared/ui";
 import { Badge, Button } from "antd";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import ExistingSubscriptionImportModal from "@features/abos/modals/ExistingSubscriptionImportModal";
 // Imported directly from the source module (not the ``hooks`` barrel) to
 // avoid a Rollup chunk cycle: the barrel re-exports ``useAbosColumns`` while
 // that module transitively depends back on the barrel (via the ``ui`` barrel).
@@ -59,6 +64,8 @@ export default function Abos() {
   const allowsWaitingList = Boolean(
     getSetting("allows_waiting_list_for_subscriptions", true),
   );
+  const uploadAllowed =
+    getSetting("allow_upload_for_data_lists", false) === true;
   const permissions = useMemo(
     () => ({
       ...gatedByPermission(isOffice),
@@ -92,30 +99,57 @@ export default function Abos() {
     rowSelection: rowSelectionConfig,
     clearSelection,
   } = useTableRowSelection((record: TableRecord) => record.key === -1);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [loggingModalOpen, setLoggingModalOpen] = useState(false);
   const [loggingRecord, setLoggingRecord] = useState<AboRecord | null>(null);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelRecord, setCancelRecord] = useState<AboRecord | null>(null);
 
-  // SEPA mandate overview: one office-only fetch mapped by member, plus the
-  // details modal opened from the status square.
+  // SEPA mandate overview: one office-only fetch mapped by member. The status
+  // square routes by state — a GREEN (active) mandate opens the read-only
+  // details modal (with an Edit action); a RED (no/inactive) mandate opens the
+  // editable office setup modal so the office can record it directly.
+  const queryClient = useQueryClient();
   const { getMandateForMember } = useSepaMandateStatus();
   const [sepaModalOpen, setSepaModalOpen] = useState(false);
   const [sepaModalState, setSepaModalState] = useState<{
     status: SepaMandateStatus | undefined;
     memberName: string;
     validUntil: string | null;
-  }>({ status: undefined, memberName: "", validUntil: null });
+    memberId: string | null;
+  }>({ status: undefined, memberName: "", validUntil: null, memberId: null });
+  // Member whose mandate the office is creating/editing (null = setup closed).
+  const [sepaSetupMemberId, setSepaSetupMemberId] = useState<string | null>(
+    null,
+  );
+  // The square reads the ``mandate_status`` query (not the billing-profiles
+  // list the setup modal invalidates), so refresh it explicitly after a save.
+  const refreshMandateStatus = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: getPaymentsBillingProfilesMandateStatusListQueryKey(),
+    });
+  }, [queryClient]);
   const handleShowSepaDetails = useCallback(
     (status: SepaMandateStatus | undefined, record: AboRecord) => {
-      setSepaModalState({
+      const memberId = (record.member as string | undefined) ?? null;
+      const active = isSepaMandateActiveForTerm(
         status,
-        memberName:
-          record.member_string ??
-          `${record.member_first_name ?? ""} ${record.member_last_name ?? ""}`.trim(),
-        validUntil: record.valid_until ?? null,
-      });
-      setSepaModalOpen(true);
+        record.valid_until ?? null,
+      );
+      if (active) {
+        setSepaModalState({
+          status,
+          memberName:
+            record.member_string ??
+            `${record.member_first_name ?? ""} ${record.member_last_name ?? ""}`.trim(),
+          validUntil: record.valid_until ?? null,
+          memberId,
+        });
+        setSepaModalOpen(true);
+      } else {
+        // Red square → create/record the mandate directly.
+        setSepaSetupMemberId(memberId);
+      }
     },
     [],
   );
@@ -167,16 +201,21 @@ export default function Abos() {
           quantity: 1,
         };
 
-        // Default the payment cycle to MONTHLY when that cycle exists. The FK
-        // select is bound to the display field (``payment_cycle_name``) and
-        // matches options by their value (the cycle id), so both keys carry the
-        // monthly cycle's id — the same shape a manual pick would produce.
-        const monthlyCycle = paymentCycles.find(
-          (cycle) => cycle.choice === PaymentCycleEnum.MONTHLY,
-        );
-        if (monthlyCycle) {
-          defaultValues.payment_cycle = monthlyCycle.value;
-          defaultValues.payment_cycle_name = monthlyCycle.value;
+        // Default the payment cycle: when only one cycle is allowed there's
+        // nothing to choose, so pre-fill it; otherwise fall back to MONTHLY
+        // when that cycle exists. The FK select is bound to the display field
+        // (``payment_cycle_name``) and matches options by their value (the
+        // cycle id), so both keys carry the cycle's id — the same shape a
+        // manual pick would produce.
+        const defaultCycle =
+          paymentCycles.length === 1
+            ? paymentCycles[0]
+            : paymentCycles.find(
+                (cycle) => cycle.choice === PaymentCycleEnum.MONTHLY,
+              );
+        if (defaultCycle) {
+          defaultValues.payment_cycle = defaultCycle.value;
+          defaultValues.payment_cycle_name = defaultCycle.value;
         }
 
         // Set the form values with defaults
@@ -475,6 +514,38 @@ export default function Abos() {
         status={sepaModalState.status}
         memberName={sepaModalState.memberName}
         validUntil={sepaModalState.validUntil}
+        onEdit={
+          sepaModalState.memberId
+            ? () => {
+                const memberId = sepaModalState.memberId;
+                setSepaModalOpen(false);
+                setSepaSetupMemberId(memberId);
+              }
+            : undefined
+        }
+      />
+
+      <SepaSetupModal
+        open={!!sepaSetupMemberId}
+        memberId={sepaSetupMemberId ?? ""}
+        officeMode
+        onClose={() => setSepaSetupMemberId(null)}
+        onSaved={refreshMandateStatus}
+      />
+
+      {isOffice && (
+        <div style={{ marginTop: 24 }}>
+          <Button size="small" onClick={() => setImportModalOpen(true)}>
+            {t("onboarding.abos_link")}
+          </Button>
+        </div>
+      )}
+
+      <ExistingSubscriptionImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        uploadAllowed={uploadAllowed}
+        onUploadSuccess={invalidateData}
       />
     </div>
   );

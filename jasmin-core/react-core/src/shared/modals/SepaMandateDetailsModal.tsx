@@ -2,12 +2,13 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from "@ant-design/icons";
-import { Descriptions, Modal, Tag, Typography } from "antd";
+import { Button, Descriptions, Modal, Tag, Typography } from "antd";
 import type { FC } from "react";
 import { useTranslation } from "react-i18next";
 import type { SepaMandateStatus } from "@shared/api/generated/models";
 import { useDateFormat } from "@hooks/configuration/useDateFormat";
 import { isSepaMandateActiveForTerm } from "@shared/utils";
+import { SepaMandateStatusTag } from "@shared/ui";
 
 const { Text } = Typography;
 
@@ -20,6 +21,9 @@ interface SepaMandateDetailsModalProps {
   memberName?: string;
   /** The subscription's end date — drives the "active during this term" tag. */
   validUntil?: string | null;
+  /** When provided, an "Edit" button opens the (office) setup modal to
+   *  re-record this member's mandate. Omit for a purely read-only view. */
+  onEdit?: () => void;
 }
 
 /**
@@ -34,6 +38,7 @@ export const SepaMandateDetailsModal: FC<SepaMandateDetailsModalProps> = ({
   status,
   memberName,
   validUntil,
+  onEdit,
 }) => {
   const { t } = useTranslation();
   const { formatDate } = useDateFormat();
@@ -45,7 +50,13 @@ export const SepaMandateDetailsModal: FC<SepaMandateDetailsModalProps> = ({
       title={t("sepa.mandate_status")}
       open={isOpen}
       onCancel={onClose}
-      footer={null}
+      footer={
+        onEdit ? (
+          <Button type="primary" onClick={onEdit}>
+            {t("common.edit")}
+          </Button>
+        ) : null
+      }
       width={520}
       destroyOnHidden
     >
@@ -70,15 +81,12 @@ export const SepaMandateDetailsModal: FC<SepaMandateDetailsModalProps> = ({
             )}
           </Descriptions.Item>
           <Descriptions.Item label={t("sepa.status")}>
-            {status.has_active_sepa_mandate ? (
-              <Tag color="green" icon={<CheckCircleOutlined />}>
-                {t("sepa.mandate_active")}
-              </Tag>
-            ) : (
-              <Tag color="red" icon={<CloseCircleOutlined />}>
-                {t("sepa.mandate_missing")}
-              </Tag>
-            )}
+            {/* Shared badge — same states/colours as the SEPA mandates page. */}
+            <SepaMandateStatusTag
+              paymentMethod={status.payment_method}
+              isActive={status.is_active}
+              isSepaReady={status.has_active_sepa_mandate}
+            />
           </Descriptions.Item>
           {status.sepa_mandate_reference && (
             <Descriptions.Item label={t("sepa.mandate_reference")}>

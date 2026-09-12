@@ -280,6 +280,7 @@ export default function HarvestingList() {
         uniqueCheckMessage={t(
           "validation.unique.share_article_unit_size_must_be_unique",
         )}
+        keyboardAddShortcut={true}
         renderMobileCard={(
           record: TableRecord,
           onEdit: (r: TableRecord) => void,

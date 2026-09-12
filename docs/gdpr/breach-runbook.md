@@ -17,11 +17,12 @@ tenant's intended boundary.
 
 ## 0. Pre-incident setup (do this NOW)
 
-- Named **incident lead** on file: [fill in]
-- Named **data-protection contact**: [fill in]
-- Supervisory authority: [fill in — typically the state DPA
-  (Landesdatenschutzbehörde) where the tenant is registered]
-- Authority's online breach-report form bookmark: [fill in]
+Incident lead, data-protection contact, competent supervisory
+authority and its online breach-report form are recorded per
+deployment in the office's access-controlled incident file, not in
+this repository. Confirm that file is current at each annual review
+of this runbook.
+
 - This runbook printed + filed offline (in case the platform itself
   is the incident)
 
@@ -150,9 +151,8 @@ Notification is NOT required if:
 The register is required **regardless of whether the breach was
 notifiable**. One row per incident.
 
-Suggested format: a markdown file at
-`docs/gdpr/breach-register.md` (gitignored if the repo is
-shared, kept under access control by the office).
+The register is held in the office's access-controlled document
+store, outside this repository.
 
 Per-row schema:
 
@@ -172,9 +172,14 @@ In parallel with notification:
 - Patch the underlying vulnerability
 - Rotate all credentials that may have been exposed
   (`DJANGO_SECRET_KEY`, `FIELD_ENCRYPTION_KEY`,
-  SMTP passwords, DB passwords, JWT signing key)
-  — see the `FIELD_ENCRYPTION_KEY` rotation runbook in
-  `docs/code/engineering-audit-playbook.md`
+  SMTP passwords, DB passwords, JWT signing key).
+  `FIELD_ENCRYPTION_KEY` holds a comma-separated key list: the
+  first key encrypts new writes, all keys are tried on read.
+  Rotate by prepending the new key, deploying, running
+  `manage.py rotate_field_encryption` to re-encrypt every stored
+  value, then dropping the old key and deploying again. Dropping
+  the old key before that run leaves existing ciphertexts
+  undecryptable.
 - Force-logout all sessions (rotate JWT signing key + bump
   `RefreshToken` blacklist)
 - If member-facing credentials may have been exposed, trigger

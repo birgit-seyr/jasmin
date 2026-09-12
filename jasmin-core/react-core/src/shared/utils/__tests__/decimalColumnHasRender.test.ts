@@ -106,10 +106,16 @@ function findEnclosingBlock(
 // Files exempt from the rule:
 //   - EditableTable internals reference inputType in types/sorters
 //   - test files / fixtures
+//   - *ImportModal.tsx: these build CSV-template FIELD DESCRIPTORS
+//     (dataIndex/title/inputType) that DownloadCsvTemplateButton consumes to
+//     emit the template's type-hint row. They never render an Ant Table (and
+//     ColumnLike has no `render`), so the raw-decimal-leak this test guards
+//     against cannot occur here.
 function isAllowlisted(relPath: string): boolean {
   if (relPath.includes("__tests__")) return true;
   if (relPath.endsWith(".test.ts") || relPath.endsWith(".test.tsx")) return true;
   if (relPath.startsWith("shared/tables/BasicEditableTable/")) return true;
+  if (relPath.endsWith("ImportModal.tsx")) return true;
   return false;
 }
 

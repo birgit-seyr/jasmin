@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import SuperAdminDashboard from "@features/platform/pages/SuperAdminDashboard";
 import SuperAdminLoginPage from "@features/platform/pages/SuperAdminLoginPage";
 import SuperAdminOpsChecklist from "@features/platform/pages/SuperAdminOpsChecklist";
+import SuperAdminSupportTickets from "@features/platform/pages/SuperAdminSupportTickets";
 import TenantDetail from "@features/platform/pages/TenantDetail";
 import { useAuth } from "@shared/contexts/AuthContext";
 
@@ -43,6 +44,7 @@ export default function SuperAdminApp() {
       <Route path="/" element={<SuperAdminDashboard />} />
       <Route path="/tenants/:id" element={<TenantDetail />} />
       <Route path="/ops-checklist" element={<SuperAdminOpsChecklist />} />
+      <Route path="/support-tickets" element={<SuperAdminSupportTickets />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

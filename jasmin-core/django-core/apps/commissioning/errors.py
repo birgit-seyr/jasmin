@@ -410,6 +410,14 @@ class CrateNotFound(NotFoundError):
     code = "crate.not_found"
 
 
+class CratesDisabledOnDocuments(BadRequestError):
+    """A crate write was attempted while the tenant keeps crates OFF documents
+    (``crates_should_be_on_documents=False``): crates are neither priced nor put
+    on orders / delivery notes / invoices for such tenants."""
+
+    code = "crates.disabled_on_documents"
+
+
 class CrateDeliveryNoteContentMissingRequired(BadRequestError):
     """A crate delivery-note-content write is missing one of
     ``delivery_note_id`` / ``crate_type`` / ``amount``."""
@@ -648,6 +656,19 @@ class MemberCoopSharesOutOfRange(BadRequestError):
         )
 
 
+class MemberNumberNotAllowedForTrial(BadRequestError):
+    """A CSV import row set ``member_number`` on a row with ``is_trial=True``.
+
+    Trial members are not Mitglieder under GenG (no Geschaeftsanteil yet), so
+    they carry neither a Mitgliedsnummer nor an Eintrittsdatum — the conversion
+    hook stamps both when ``is_trial`` flips to False. Accepting a number here
+    would put a non-member into the Mitgliederliste numbering space and then
+    silently keep it on conversion (``_post_confirm`` only generates a number
+    when none is set)."""
+
+    code = "member.number_not_allowed_for_trial"
+
+
 class LockedAfterAdminConfirmation(BadRequestError):
     """Caller tried to edit a field that becomes legally fixed once
     the Member is admin-confirmed (Mitglied der Genossenschaft per
@@ -707,6 +728,60 @@ class MemberHasNoEmail(MemberInvitationError):
 
 class MemberUserAlreadyActive(MemberInvitationError):
     code = "member.user_already_active"
+
+
+class MemberEmailAlreadyHasUser(MemberInvitationError):
+    """Cannot invite THIS member: their email address already holds a login
+    that belongs to a DIFFERENT member.
+
+    ``Member.email`` is deliberately not unique — two members may share one
+    inbox (an elderly couple with a single address). ``JasminUser.email`` is
+    the ``USERNAME_FIELD`` and IS unique, so a shared inbox can carry at most
+    one login. Whoever was invited first holds it; the other member is
+    office-managed and simply has no self-service account.
+
+    Raised BEFORE any user record is touched, so the existing member's account
+    (name, status, open invitation) is never rewritten by an invite meant for
+    their partner. ``details`` names the holder so the office sees who has it.
+    """
+
+    code = "member.email_already_has_user"
+
+    def __init__(self, *, email: str, holder=None) -> None:
+        holder_name = ""
+        holder_number = None
+        if holder is not None:
+            holder_name = " ".join(
+                bit for bit in (holder.first_name, holder.last_name) if bit
+            ).strip()
+            holder_number = holder.member_number
+        message = (
+            f"The address {email} already has a user account"
+            + (f" belonging to {holder_name}" if holder_name else "")
+            + (f" (#{holder_number})" if holder_number else "")
+            + ". An email can hold only one login — invite that member, or "
+            "give this one their own address."
+        )
+        # ``context`` selects the i18next variant
+        # (``errors.member.email_already_has_user_<context>``) so the localized
+        # text can name the holder when we know them and stay generic when we
+        # don't — same mechanism as ``member.coop_shares_out_of_range``.
+        if holder_name and holder_number:
+            context = "named_numbered"
+        elif holder_name:
+            context = "named"
+        else:
+            context = "anonymous"
+        super().__init__(
+            message,
+            details={
+                "email": email,
+                "holder_name": holder_name or None,
+                "holder_member_number": holder_number,
+                "holder_member_id": str(holder.id) if holder is not None else None,
+                "context": context,
+            },
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -1343,6 +1418,7 @@ __all__ = [
     "OfferNotFound",
     "StorageNotFound",
     "CrateNotFound",
+    "CratesDisabledOnDocuments",
     "CrateDeliveryNoteContentMissingRequired",
     "CrateContentInvoiceMissingRequired",
     "InventoryEntryNotFound",
@@ -1363,12 +1439,14 @@ __all__ = [
     "CustomerProfileNotLinked",
     "MemberAlreadyConfirmed",
     "LockedAfterAdminConfirmation",
+    "MemberNumberNotAllowedForTrial",
     "MemberLinkConflict",
     "UserInBlockedStatus",
     "UserAlreadyLinked",
     "MemberInvitationError",
     "MemberHasNoEmail",
     "MemberUserAlreadyActive",
+    "MemberEmailAlreadyHasUser",
     "ConsentDocumentNotFound",
     "ConsentTargetMemberUnresolved",
     "ConsentAlreadyRevoked",

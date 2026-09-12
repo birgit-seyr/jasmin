@@ -9,6 +9,7 @@ import {
 } from "@shared/api/generated/gdpr/gdpr";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
+import { ExplainerText } from "@shared/ui";
 import type { AdminPendingDeletion } from "@shared/api/generated/models";
 import DecidedDeletionsTable from "@features/members/components/DecidedDeletionsTable";
 import PendingDeletionsTable from "@features/members/components/PendingDeletionsTable";
@@ -93,6 +94,10 @@ export default function GdprDeletionRequests() {
           placeholder={t("gdpr.reject_reason_placeholder")}
         />
       </Modal>
+
+      <ExplainerText title={t("common.info")}>
+        {t("explainers.gdpr_deletion_requests")}
+      </ExplainerText>
     </>
   );
 }

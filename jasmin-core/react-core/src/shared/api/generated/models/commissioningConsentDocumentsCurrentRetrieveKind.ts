@@ -11,6 +11,7 @@ export type CommissioningConsentDocumentsCurrentRetrieveKind = typeof Commission
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CommissioningConsentDocumentsCurrentRetrieveKind = {
+  coop_cancellation: 'coop_cancellation',
   coop_contract: 'coop_contract',
   privacy: 'privacy',
   sepa: 'sepa',

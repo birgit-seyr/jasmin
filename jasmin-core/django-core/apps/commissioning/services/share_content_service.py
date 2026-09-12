@@ -34,7 +34,7 @@ from ..models import (
     ShareTypeVariation,
     Storage,
 )
-from ..models.choices_text import UnitOptions
+from ..models.choices import UnitOptions
 from ..utils import (
     batch_get_physical_variation_totals_for_weeks,
     sort_share_articles,

@@ -16,8 +16,7 @@ class OfferSending(JasminModel, CreatedMixin):
     identity for "we sent THIS particular thing to this reseller".
 
     Previously this model held a single ``offer`` FK populated via
-    ``offers.first()`` in offer_service.py — see P1-2 in
-    docs/code/email-overview.md for the migration rationale.
+    ``offers.first()`` in offer_service.py.
 
     The unique constraint enforces idempotency at the DB layer: a
     second send to the same composite key will raise IntegrityError

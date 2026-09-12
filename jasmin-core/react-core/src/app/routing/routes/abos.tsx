@@ -17,6 +17,7 @@ const ShareDeliveries = lazy(
   () => import("@features/abos/pages/ShareDeliveries"),
 );
 const PledgeRound = lazy(() => import("@features/abos/pages/PledgeRound"));
+const SepaMandates = lazy(() => import("@features/abos/pages/SepaMandates"));
 
 export const abosRoutes: AppRoute[] = [
   {
@@ -91,6 +92,14 @@ export const abosRoutes: AppRoute[] = [
     element: (
       <RequireRole flag="isOffice">
         <PledgeRound />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/abos/sepa-mandates",
+    element: (
+      <RequireRole flag="isOffice">
+        <SepaMandates />
       </RequireRole>
     ),
   },

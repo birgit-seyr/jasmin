@@ -10,6 +10,9 @@ export interface DraggableChipProps {
   /** Extra context appended to the chip's accessible name (e.g. a "press Enter
    *  to select" hint). Supply already-translated text. */
   ariaHint?: string;
+  /** Optional small trailing count badge (e.g. how many times this chip is in
+   *  use). Purely visual — convey its meaning to assistive tech via ``ariaHint``. */
+  count?: number;
 }
 
 /**
@@ -21,6 +24,7 @@ export default function DraggableChip({
   chip,
   canDrag = true,
   ariaHint,
+  count,
 }: DraggableChipProps) {
   const { selected, select, itemType } = useDndGrid();
   // "Selected from the palette" = same chip, no source cell.
@@ -63,6 +67,7 @@ export default function DraggableChip({
       }}
       className={
         "dnd-chip" +
+        (chip.color ? " dnd-chip--tinted" : "") +
         (isDragging ? " dnd-chip--dragging" : "") +
         (isSelected ? " dnd-chip--selected" : "")
       }
@@ -74,7 +79,12 @@ export default function DraggableChip({
       onClick={toggleSelect}
       onKeyDown={onKeyDown}
     >
-      {chip.label}
+      <span className="dnd-chip-label">{chip.label}</span>
+      {count !== undefined && (
+        <span className="dnd-chip-count" aria-hidden="true">
+          {count}
+        </span>
+      )}
     </div>
   );
 }

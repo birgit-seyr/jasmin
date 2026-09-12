@@ -9,6 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from ..constants import (
+    crates_should_be_on_documents,
     get_default_tax_rate_articles,
     get_default_tax_rate_crates,
 )
@@ -549,7 +550,10 @@ class OrderContentService:
                 # update path's `if new_amount > 0` guard so create + update leave
                 # identical crate artefacts (a zero-amount line gets no dead
                 # amount-0 crate row + no stray empty VAT bucket downstream).
-                if amount and amount > 0:
+                # Also skip entirely when the tenant keeps crates OFF documents
+                # (the wipe above still runs, so flipping the setting off cleans
+                # up as lines are re-saved).
+                if amount and amount > 0 and crates_should_be_on_documents():
                     # Same canonical chain as above:
                     # crate pricing → tenant default → hardcoded constant.
                     crate_tax_rate = resolve_crate_tax_rate(
@@ -656,7 +660,9 @@ class OrderContentService:
                 pricing_date = date_from_order(order_content.order)
                 pricing = crate_type.get_pricing_on_date(pricing_date)
                 CrateOrderContent.objects.filter(order_content=order_content).delete()
-                if new_amount > 0:
+                # Skip when the tenant keeps crates OFF documents (the wipe still
+                # runs, mirroring the create path's gate).
+                if new_amount > 0 and crates_should_be_on_documents():
                     # Mirror the create path: `tax_rate` is NOT NULL on the
                     # CrateOrderContent table, so resolve it via the same
                     # crate pricing → tenant default → hardcoded constant

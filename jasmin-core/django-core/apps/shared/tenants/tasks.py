@@ -165,7 +165,7 @@ def classify_backups_for_pruning(
     Pure function — no filesystem mutation. Lets us drive the
     decision logic in tests without touching real disk.
 
-    Retention rule (matches docs/retention-policy.md):
+    Retention rule (mirrors the published GDPR retention policy):
 
       * Daily tier (≤ 30 days old): keep every backup
       * Weekly tier (30–365 days old): keep the LATEST backup of

@@ -38,6 +38,10 @@ urlpatterns = [
     # made ``reverse()`` ambiguous (same ``app_name``, no instance
     # namespaces). Nothing ever called the alias.
     path("api/super-admin/", include("apps.shared.super_admin.urls")),
+    # Super-admin support tickets. Second include under the same prefix (Django
+    # falls through to it for /api/super-admin/support-tickets/…); kept in the
+    # support app for cohesion. Inherits the /api/super-admin/ IP allowlist.
+    path("api/super-admin/", include("apps.shared.support.admin_urls")),
     # Signed-URL media gate for public-schema uploads, if any. NOTE:
     # this route cannot serve TENANT media — the view binds the path's
     # schema prefix to ``connection.schema_name`` ("public" here), so

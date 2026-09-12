@@ -39,6 +39,20 @@ vi.mock(
   }),
 );
 
+// Office fields depend on the tenant + date-format hooks; the base tests
+// render WITHOUT ``officeMode`` so these only need to not throw.
+vi.mock("@hooks/configuration/useTenant", () => ({
+  useTenant: () => ({
+    getSetting: (_key: string, fallback?: unknown) => fallback,
+  }),
+}));
+vi.mock("@hooks/configuration/useDateFormat", () => ({
+  useDateFormat: () => ({
+    dateFormat: "DD.MM.YYYY",
+    formatDate: (value: string) => value,
+  }),
+}));
+
 const consentCreateMock = vi.fn();
 vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
   commissioningConsentsCreate: (...args: unknown[]) =>
@@ -247,6 +261,59 @@ describe("SepaSetupModal", () => {
     ).toBeInTheDocument();
     expect(createMutateMock).not.toHaveBeenCalled();
     expect(consentCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("office mode: attestation checkbox creates the mandate with a manual reference and records NO consent", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <SepaSetupModal open memberId={MEMBER_ID} onClose={vi.fn()} officeMode />
+      </QueryClientProvider>,
+    );
+
+    fillForm();
+    fireEvent.change(screen.getByLabelText("sepa.mandate_reference"), {
+      target: { value: "MND-2026-001" },
+    });
+    // The office attestation checkbox REPLACES the member ConsentBlock.
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "sepa.office_mandate_confirm" }),
+    );
+    fireEvent.click(screen.getByTestId("primary"));
+
+    await waitFor(() => expect(createMutateMock).toHaveBeenCalledTimes(1));
+    expect(createMutateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        member: MEMBER_ID,
+        iban: "DE89370400440532013000",
+        // The office's manually-entered reference overrides auto-generation.
+        sepa_mandate_reference: "MND-2026-001",
+      }),
+    });
+    // A paper mandate is its own consent artifact — no digital ConsentRecord.
+    expect(consentCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("office mode: refuses to submit until the attestation checkbox is ticked", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <SepaSetupModal open memberId={MEMBER_ID} onClose={vi.fn()} officeMode />
+      </QueryClientProvider>,
+    );
+
+    fillForm();
+    // Skip the attestation checkbox.
+    fireEvent.click(screen.getByTestId("primary"));
+
+    expect(
+      await screen.findByText("sepa.must_accept_mandate"),
+    ).toBeInTheDocument();
+    expect(createMutateMock).not.toHaveBeenCalled();
   });
 
   it("surfaces the API failure as an inline error and does not close", async () => {

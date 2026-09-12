@@ -9,8 +9,8 @@ lock is never taken, but the code reads like it is. The canonical
 mixin.py``, lines ~730) explicitly calls this out and prescribes
 ``pg_advisory_xact_lock`` as the alternative.
 
-The race-conditions audit pass (see ``docs/code/engineering-audit-playbook.md``,
-Pass #7) found three sites where this pattern had crept back in:
+The race-conditions audit pass found three sites where this pattern
+had crept back in:
 
   * ``Member._generate_member_number``
   * ``CrateContentService.apply_total_amount_change``

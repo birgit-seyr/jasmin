@@ -42,8 +42,7 @@ export interface PlanningAxes {
  * and any other consumer resolve the SAME day and variation sets — same
  * ``active_at_date``, same station-presence filtering, same variation filter.
  * Before this hook each caller hand-built its filter object and they drifted
- * (see docs/day-variation-columns-audit.md — the modal-shows-station-less-day
- * bug came from exactly that).
+ * (the modal-shows-station-less-day bug came from exactly that).
  */
 export function usePlanningAxes({
   year,

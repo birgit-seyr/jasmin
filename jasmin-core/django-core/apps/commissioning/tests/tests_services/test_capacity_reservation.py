@@ -15,6 +15,7 @@ from __future__ import annotations
 import datetime
 
 import pytest
+import time_machine
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
@@ -39,6 +40,16 @@ from apps.commissioning.tests.factories import (
 from apps.commissioning.tests.factories.members import PaymentCycleFactory
 
 DAY_NUMBER = 2  # Wednesday — matches SharesDeliveryDayFactory default
+
+
+@pytest.fixture(autouse=True)
+def _freeze_clock():
+    # These tests use fixed Jan-2026 subscription dates and predate the
+    # materialisation/capacity "no past weeks" clamp. Freeze "now" to that week
+    # so every fixture term is current/future and the clamp is a no-op — the
+    # assertions here are about the full fixture term, not calendar time.
+    with time_machine.travel(datetime.date(2026, 1, 5), tick=False):
+        yield
 
 
 # --------------------------------------------------------------------------- #

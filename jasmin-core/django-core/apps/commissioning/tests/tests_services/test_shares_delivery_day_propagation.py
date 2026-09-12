@@ -401,6 +401,7 @@ class TestSubscriptionCreationWithFutureDeliveryStationDay:
     the SubscriptionService must use the correct (future) DeliveryStationDay
     for share deliveries in weeks where a successor DeliveryStationDay exists."""
 
+    @time_machine.travel(datetime.date(2026, 5, 4), tick=False)
     def test_shares_use_correct_delivery_day_across_succession(self, tenant):
         """Scenario:
         - Old Monday DeliveryDay valid until week N.

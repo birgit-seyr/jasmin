@@ -15,7 +15,7 @@ from apps.commissioning.models import (
     ShareTypeVariationGrossPrice,
     VirtualVariationComponent,
 )
-from apps.commissioning.models.choices_text import ShareTypeVariationSizeOptions
+from apps.commissioning.models.choices import ShareTypeVariationSizeOptions
 
 from .basics import ShareArticleFactory
 from .days import DeliveryStationDayFactory, SharesDeliveryDayFactory

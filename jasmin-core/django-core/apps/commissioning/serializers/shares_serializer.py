@@ -114,6 +114,18 @@ class ShareTypeVariationSerializer(
     active_solidarity_min_price_per_delivery = serializers.DecimalField(
         max_digits=8, decimal_places=2, read_only=True, allow_null=True
     )
+    # Active TRIAL reference price (null when the variation leaves it blank) —
+    # the abos price auto-fill switches to this for ``is_trial`` subscriptions
+    # when the tenant charges trials differently.
+    active_price_per_delivery_if_trial = serializers.DecimalField(
+        max_digits=8, decimal_places=2, read_only=True, allow_null=True
+    )
+    # Active TRIAL solidarity floor (null when none set) — the trial counterpart
+    # of ``active_solidarity_min_price_per_delivery``; the new-subscription modal
+    # floors a trial price against THIS when present (else the trial reference).
+    active_solidarity_min_price_per_delivery_if_trial = serializers.DecimalField(
+        max_digits=8, decimal_places=2, read_only=True, allow_null=True
+    )
     # Per-ISO-week production-cap occupancy — the term-aware source of truth the
     # frontend's ``termCapacity`` evaluator reads (same
     # ``{"<year>-<week>": {occupied, free}}`` shape as the station-day's
@@ -469,6 +481,19 @@ class ShareDeliveryOverviewSerializer(serializers.ModelSerializer):
     share_type_variation_string = serializers.CharField()
     delivery_week = serializers.IntegerField()
     delivery_date = serializers.SerializerMethodField()
+    # Per-share-type joker allowances, so the office grid can flag a
+    # subscription that has taken MORE jokers / donation-jokers than its share
+    # type grants (a warning, not a hard block — the office may over-grant for
+    # special reasons). Same share-type path the delivery-edit modal uses;
+    # covered by the viewset's ``select_related`` so it stays N+1-free.
+    amount_of_jokers = serializers.IntegerField(
+        source="share.share_type_variation.share_type.amount_of_jokers",
+        read_only=True,
+    )
+    amount_of_donation_jokers = serializers.IntegerField(
+        source="share.share_type_variation.share_type.amount_of_donation_jokers",
+        read_only=True,
+    )
 
     class Meta:
         model = ShareDelivery

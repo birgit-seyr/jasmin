@@ -23,7 +23,11 @@ from ..models import (
     ShareTypeVariation,
     TheoreticalHarvest,
 )
-from ..utils import sort_share_articles
+from ..utils import (
+    get_physical_share_type_variation_totals,
+    sort_share_articles,
+    split_forecast_amount_by_weight,
+)
 from ..utils.iso_week_utils import saturday_of_iso_week
 from .recompute import recompute_shares
 
@@ -619,26 +623,43 @@ class ForecastService:
         # share_article/unit/size are constant for this method).
         seen_share_station_keys: set[tuple[Any, Any]] = set()
 
+        # Opt-in: when the tenant enabled ``distribute_forecast_by_weight`` the
+        # amount for each variation comes from the weighted forecast split
+        # instead of the default resolution below — everything else about the
+        # ShareContent (and the downstream recompute) is identical.
+        weighted_amounts = ForecastService._weighted_forecast_amounts(
+            forecast, forecast_share_type_variations, year, delivery_week
+        )
+
         for variation in forecast_share_type_variations:
             share_type_variation = variation.share_type_variation
             share_type_variation_id = variation.share_type_variation_id
 
-            # Resolve default amount
-            article_in_share = default_in_shares.get(
-                (share_article.id, share_type_variation_id)
-            )
-            default_share_content = default_share_contents.get(
-                (share_type_variation_id, share_article.id)
-            )
-            if article_in_share is not None and article_in_share.quantity is not None:
-                amount = article_in_share.quantity
-            elif (
-                default_share_content is not None
-                and default_share_content.amount is not None
-            ):
-                amount = default_share_content.amount
+            # Resolve amount: the weighted forecast split wins when the tenant
+            # opted in and this variation is part of it; otherwise the configured
+            # DefaultShareArticleInShare, then a pre-existing DefaultShareContent,
+            # then 0 — the original precedence, untouched.
+            if share_type_variation_id in weighted_amounts:
+                amount = weighted_amounts[share_type_variation_id]
             else:
-                amount = 0
+                article_in_share = default_in_shares.get(
+                    (share_article.id, share_type_variation_id)
+                )
+                default_share_content = default_share_contents.get(
+                    (share_type_variation_id, share_article.id)
+                )
+                if (
+                    article_in_share is not None
+                    and article_in_share.quantity is not None
+                ):
+                    amount = article_in_share.quantity
+                elif (
+                    default_share_content is not None
+                    and default_share_content.amount is not None
+                ):
+                    amount = default_share_content.amount
+                else:
+                    amount = 0
 
             for day in days:
                 share_delivery_list = station_days_by_day.get(day.id, [])
@@ -687,6 +708,55 @@ class ForecastService:
                         )
 
         return share_contents_to_create, share_contents_to_update
+
+    @staticmethod
+    def _weighted_forecast_amounts(
+        forecast: Forecast,
+        forecast_share_type_variations: list[ForecastShareTypeVariation],
+        year: int,
+        delivery_week: int,
+    ) -> dict[Any, Any]:
+        """Per-variation weighted forecast amount, or ``{}`` when the tenant
+        hasn't opted in / there is nothing to split.
+
+        Weights are each variation's ``average_weight``; counts are the physical
+        variation demand for the week (``get_physical_share_type_variation_totals``
+        — the same totals used everywhere, folding virtual demand into physical).
+        The split is floored to 0.10 by ``split_forecast_amount_by_weight``.
+        """
+        if not ForecastService._distribute_forecast_by_weight_enabled():
+            return {}
+        if forecast is None or not forecast.amount:
+            return {}
+        weights = {
+            variation.share_type_variation_id: (
+                variation.share_type_variation.average_weight
+            )
+            for variation in forecast_share_type_variations
+        }
+        counts = {
+            row["share__share_type_variation_id"]: row["total_quantity"]
+            for row in get_physical_share_type_variation_totals(
+                year=year, delivery_week=delivery_week
+            )
+        }
+        return split_forecast_amount_by_weight(forecast.amount, weights, counts)
+
+    @staticmethod
+    def _distribute_forecast_by_weight_enabled() -> bool:
+        """True iff the active tenant opted into the weighted forecast split.
+
+        False when there is no real tenant context (a FakeTenant under
+        ``schema_context``) or no settings row — the feature is simply off."""
+        from django.db import connection
+
+        from apps.shared.tenants.models import TenantSettings
+
+        tenant = getattr(connection, "tenant", None)
+        if tenant is None:
+            return False
+        settings = TenantSettings.get_current_settings(tenant)
+        return bool(settings and settings.distribute_forecast_by_weight)
 
     @transaction.atomic
     def _create_or_update_share_contents(

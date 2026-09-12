@@ -73,6 +73,13 @@ vi.mock("@shared/utils", () => ({
     success: (...a: unknown[]) => notifySuccessMock(...a),
     error: (...a: unknown[]) => notifyErrorMock(...a),
   },
+  filterVariationsForTrial: (
+    variations: { allowed_for_trial_subscription?: boolean | null }[],
+    isTrial: boolean,
+  ) =>
+    isTrial
+      ? variations.filter((v) => v.allowed_for_trial_subscription !== false)
+      : variations,
 }));
 vi.mock("@shared/utils/apiError", () => ({
   getErrorMessage: (_e: unknown, fallback: string) => fallback,
@@ -94,6 +101,10 @@ const VARIATION = {
   valid_from: "2026-01-05",
   active_price_per_delivery: "10.00",
   active_solidarity_min_price_per_delivery: "7.00",
+  // Trial pair — only read when the subscription is a trial, so these leave the
+  // regular-mode assertions untouched.
+  active_price_per_delivery_if_trial: "6.00",
+  active_solidarity_min_price_per_delivery_if_trial: "5.00",
 };
 
 vi.mock("@hooks/index", () => ({
@@ -212,7 +223,9 @@ const futureMonday = dayjs()
   .add(4, "week")
   .format("YYYY-MM-DD");
 
-function renderModal() {
+function renderModal(
+  props: Partial<React.ComponentProps<typeof NewSubscriptionModal>> = {},
+) {
   const onSuccess = vi.fn();
   const onCancel = vi.fn();
   const client = new QueryClient({
@@ -225,6 +238,7 @@ function renderModal() {
         memberId="m-1"
         onCancel={onCancel}
         onSuccess={onSuccess}
+        {...props}
       />
     </QueryClientProvider>,
   );
@@ -313,8 +327,8 @@ describe("NewSubscriptionModal — solidarity price gating", () => {
     // Station + payment cycle selects — set via the form items' comboboxes.
     fireEvent.mouseDown(screen.getByText("delivery.select_station"));
     fireEvent.click(await screen.findByText("Station A"));
-    fireEvent.mouseDown(screen.getByText("abos.select_payment_cycle"));
-    fireEvent.click(await screen.findByText("Monatlich"));
+    // Only one allowed payment cycle → auto-seeded into a fixed (disabled)
+    // field, so there's nothing to pick here.
 
     fireEvent.click(screen.getByText("common.save"));
 
@@ -338,8 +352,8 @@ describe("NewSubscriptionModal — solidarity price gating", () => {
     fillRequiredFields();
     fireEvent.mouseDown(screen.getByText("delivery.select_station"));
     fireEvent.click(await screen.findByText("Station A"));
-    fireEvent.mouseDown(screen.getByText("abos.select_payment_cycle"));
-    fireEvent.click(await screen.findByText("Monatlich"));
+    // Only one allowed payment cycle → auto-seeded into a fixed (disabled)
+    // field, so there's nothing to pick here.
 
     fireEvent.click(screen.getByText("common.save"));
 
@@ -365,8 +379,8 @@ describe("NewSubscriptionModal — solidarity price gating", () => {
     fillRequiredFields("12");
     fireEvent.mouseDown(screen.getByText("delivery.select_station"));
     fireEvent.click(await screen.findByText("Station A"));
-    fireEvent.mouseDown(screen.getByText("abos.select_payment_cycle"));
-    fireEvent.click(await screen.findByText("Monatlich"));
+    // Only one allowed payment cycle → auto-seeded into a fixed (disabled)
+    // field, so there's nothing to pick here.
 
     fireEvent.click(screen.getByText("common.save"));
 
@@ -374,5 +388,23 @@ describe("NewSubscriptionModal — solidarity price gating", () => {
     const payload = abosCreateMock.mock.calls[0][0];
     expect(payload.price_per_delivery).toBe("12");
     expect(subscribeCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("trial: price min is the TRIAL solidarity floor, not the regular one", () => {
+    // Public trial registration (``forceTrial``) with solidarity ON. The price
+    // field's min must be the TRIAL floor (5.00), not the regular floor (7.00) —
+    // proving the modal reads ``active_solidarity_min_price_per_delivery_if_trial``
+    // when the subscription is a trial. Regular mode still asserts 7 above.
+    rolesMock.mockReturnValue({ isMemberOnly: false });
+    getSettingMock.mockImplementation((k: string, fb?: unknown) =>
+      k === "allows_solidarity_pricing" ? true : fb,
+    );
+
+    renderModal({ mode: "public", forceTrial: true, onIntent: vi.fn() });
+    selectVariation();
+
+    const priceInput = priceField();
+    expect(priceInput).toHaveAttribute("data-disabled", "false");
+    expect(priceInput).toHaveAttribute("data-min", "5");
   });
 });

@@ -120,8 +120,19 @@
 }
 
 .csv-template-button {
-  background-color: var(--color-bg-elevated) !important;
-  color: var(--color-text-secondary) !important;
+  background-color: var(--color-primary) !important;
+  color: white !important;
+}
+
+/* The list pages' CSV-import trigger (CsvImportButton). A quiet default-style
+   button that opens the import modal, so it deliberately does NOT take the
+   green ``.csv-template-button`` treatment above — that one is the primary
+   action INSIDE the modal. The margin gives it a small gap from whatever it
+   follows: on the list pages that is an ExplainerText box, which carries
+   padding but no bottom margin, so without this the button sits flush
+   against its border. */
+.csv-import-button {
+  margin-top: 1em;
 }
 /* Office/team view toggle row on the washing & cleaning lists. */
 .team-view-toggle-row {

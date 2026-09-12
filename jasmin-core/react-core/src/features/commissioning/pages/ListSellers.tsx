@@ -19,11 +19,8 @@ import {
   permissionsWithDeletable,
 } from "@shared/tables";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
-import {
-  DownloadCsvTemplateButton,
-  IconActionButton,
-  ToolTipIcon,
-} from "@shared/ui";
+import { IconActionButton, ToolTipIcon } from "@shared/ui";
+import { CsvImportButton } from "@shared/modals";
 import { useContactColumns, useOrganicGate, useTenant } from "@hooks/index";
 import { isFieldDisabled } from "@shared/utils";
 import OrganicCertificatesModal from "../modals/OrganicCertificatesModal";
@@ -204,7 +201,8 @@ export default function ListSellers() {
       >
         {(list) =>
           uploadAllowed ? (
-            <DownloadCsvTemplateButton
+            <CsvImportButton
+              uploadAllowed={uploadAllowed}
               columns={columns}
               filename={t("commissioning.sellers_template.csv")}
               modelName="reseller"

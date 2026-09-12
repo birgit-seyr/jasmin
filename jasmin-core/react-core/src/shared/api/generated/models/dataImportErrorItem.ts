@@ -7,6 +7,9 @@
  */
 import type { DataImportErrorItemData } from './dataImportErrorItemData';
 
+/**
+ * One row that failed, with its reason and the parsed row echoed back.
+ */
 export interface DataImportErrorItem {
   row: number;
   error: string;

@@ -5,7 +5,7 @@ weekly cadence — all calendar-anchored on the ISO week number. See
 services/delivery_cycle.py.
 """
 
-from apps.commissioning.models.choices_text import DeliveryCycleOptions as DC
+from apps.commissioning.models.choices import DeliveryCycleOptions as DC
 from apps.commissioning.services.delivery_cycle import filter_weeks_by_delivery_cycle
 
 

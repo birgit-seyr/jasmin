@@ -17,6 +17,7 @@ from .field_utils import (
     extract_storage_fields_from_data,
     get_contact_annotations,
 )
+from .forecast_distribution import split_forecast_amount_by_weight
 from .share_type_variation_amounts import (
     batch_get_physical_variation_totals_for_week,
     batch_get_physical_variation_totals_for_weeks,

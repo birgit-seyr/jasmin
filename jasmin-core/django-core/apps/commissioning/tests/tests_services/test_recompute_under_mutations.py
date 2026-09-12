@@ -34,7 +34,7 @@ from apps.commissioning.models import (
     TheoreticalPurchase,
     TheoreticalWashAmount,
 )
-from apps.commissioning.models.choices_text import MovementTypeOptions
+from apps.commissioning.models.choices import MovementTypeOptions
 from apps.commissioning.services.recompute import recompute_shares
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,

@@ -6,7 +6,7 @@ from django.db.models import Q, Sum
 from django.utils import timezone
 
 from ..models import MovementShareArticle, StockSnapshot
-from ..models.choices_text import MovementTypeOptions
+from ..models.choices import MovementTypeOptions
 
 
 class SnapshotService:

@@ -37,6 +37,14 @@ vi.mock("@shared/auth", () => ({
   useRoles: () => ({ isOffice: true, isMember: false, isAdmin: false }),
 }));
 
+// ``useTenant().getSetting`` gates the crates tab; return the caller's fallback
+// so ``crates_should_be_on_documents`` defaults to true (crates tab shown).
+vi.mock("@hooks/index", () => ({
+  useTenant: () => ({
+    getSetting: (_key: string, fallback?: unknown) => fallback,
+  }),
+}));
+
 // ── Orchestration hooks (mocked wholesale) ──────────────────────────────────
 //
 // ``useOrdersData`` owns the page's 4 mount queries + all derived state;

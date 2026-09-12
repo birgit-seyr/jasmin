@@ -3,7 +3,7 @@
 Three tasks live here:
 
   * ``anonymise_long_cancelled_members`` — closes the 10-year retention
-    clock that ``docs/retention-policy.md`` and the audit checklist
+    clock that the published retention policy and the audit checklist
     have been advertising. Without this task, the policy was
     theoretical: an auditor running
     ``Member.objects.filter(cancelled_effective_at__lt=ten_years_ago)``

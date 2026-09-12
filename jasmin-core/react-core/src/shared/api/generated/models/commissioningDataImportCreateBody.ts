@@ -7,7 +7,9 @@
  */
 
 export type CommissioningDataImportCreateBody = {
-  /** Registry key for the target model. Allowed: ``crate``, ``delivery_station``, ``member``, ``reseller``, ``share_article`` */
+  /** Registry key for the target model. Allowed: ``coop_share``, ``crate``, ``delivery_station``, ``member``, ``reseller``, ``sepa_mandate``, ``share_article``, ``subscription`` */
   model_name: string;
   file: Blob;
+  /** Validate every row (including FK resolution) without persisting anything — the preview pass for many-FK imports like subscriptions. */
+  dry_run?: boolean;
 };

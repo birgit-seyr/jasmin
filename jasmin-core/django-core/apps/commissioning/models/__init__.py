@@ -8,7 +8,7 @@ from .basics import (
     ShareArticleNetPrice,
     Storage,
 )
-from .choices_text import ConsentKind
+from .choices import ConsentKind
 from .consents import (
     ConsentDocument,
     ConsentRecord,

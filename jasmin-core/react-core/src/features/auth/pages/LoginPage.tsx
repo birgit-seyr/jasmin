@@ -56,10 +56,16 @@ const LoginPage = () => {
     tenant?.schema_name === "public" ||
     window.location.hostname === "admin.localhost";
 
-  // Whether to show the trial-subscription card. The flag rides on the
-  // anonymous /tenants/current/ payload (CurrentTenantSerializer); show by
-  // default, hide only when the tenant explicitly disabled trials.
-  const allowsTrial = tenant?.allows_trial_subscriptions !== false;
+  // Whether to show the trial-subscription card. A public trial registrant is
+  // created as a trial member, so the card must respect BOTH trial flags — the
+  // wholesale switch AND the "trials only for full members" restriction (which
+  // disables the trial-member concept). Mirrors the backend derived predicate
+  // ``allows_trial_subscriptions AND allows_trial_subscriptions_for_trial_members``.
+  // Both ride on the anonymous /tenants/current/ payload; show by default, hide
+  // only when the tenant explicitly opted out of either.
+  const showTrialCard =
+    tenant?.allows_trial_subscriptions !== false &&
+    tenant?.allows_trial_subscriptions_for_trial_members !== false;
   // Public self-registration gate. Rides on the anonymous /tenants/current/
   // settings payload; the register buttons enable only when the tenant opted
   // in. The server-side ``SelfRegistrationEnabled`` permission enforces the
@@ -138,7 +144,7 @@ const LoginPage = () => {
         className={`auth-stack ${
           isSuperAdminDomain
             ? "auth-stack--single"
-            : allowsTrial
+            : showTrialCard
               ? "auth-stack--triple"
               : "auth-stack--double"
         }`}
@@ -371,7 +377,7 @@ const LoginPage = () => {
             </Card>
           )}
           {/* Trial Subscription Card */}
-          {!isSuperAdminDomain && allowsTrial && (
+          {!isSuperAdminDomain && showTrialCard && (
             <Card className="auth-card auth-card--narrow auth-card--shadow">
               <Space direction="vertical" size="large" className="w-full">
                 <div className="text-center">

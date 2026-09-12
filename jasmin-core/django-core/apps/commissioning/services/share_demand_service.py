@@ -77,6 +77,7 @@ class _DemandBackend(Protocol):
         delivery_station_id: str | None = None,
         tour_number: int | None = None,
         joker: bool | None = False,
+        donation_joker: bool | None = False,
     ) -> list[dict]: ...
 
     def share_option_capacity_count(
@@ -180,12 +181,16 @@ class SubscriptionDemandBackend:
         delivery_station_id: str | None = None,
         tour_number: int | None = None,
         joker: bool | None = False,
+        donation_joker: bool | None = False,
     ) -> list[dict]:
         """Return rows aggregated by ``(week, day, variation, station_day,
         tour, station)``.
 
-        ``joker``: ``False`` (default) excludes jokers, ``True`` only jokers,
-        ``None`` includes both. ``delivery_weeks`` lets recompute-style
+        ``joker`` / ``donation_joker``: each a tri-state — ``False`` (default)
+        excludes, ``True`` selects only-those, ``None`` includes both. Production
+        demand uses the defaults (both excluded — a donation joker is billed but
+        not grown/packed); the donation report passes ``donation_joker=True`` to
+        get only the donatable boxes. ``delivery_weeks`` lets recompute-style
         callers fetch a whole season in ONE query instead of one per week;
         rows always carry ``delivery_week`` so callers can split them.
         """
@@ -216,6 +221,15 @@ class SubscriptionDemandBackend:
             qs = qs.filter(joker_taken=True)
         elif joker is False:
             qs = qs.exclude(joker_taken=True)
+
+        # Donation jokers are billed but NOT produced, so production demand
+        # excludes them by default — they must not inflate theoreticals,
+        # movements, packing, or share_type_variation amounts. ``True`` selects
+        # ONLY them (the donation report).
+        if donation_joker is True:
+            qs = qs.filter(donation_joker_taken=True)
+        elif donation_joker is False:
+            qs = qs.exclude(donation_joker_taken=True)
 
         # On-off opt-outs never ship → drop them from production demand. (Joker
         # is handled separately above via the tri-state ``joker`` param.)
@@ -476,10 +490,11 @@ class ExternalDemandBackend:
         delivery_station_id: str | None = None,
         tour_number: int | None = None,
         joker: bool | None = False,
+        donation_joker: bool | None = False,
     ) -> list[dict]:
-        # CSV imports never carry joker information; if caller asks for
-        # "only jokers" return an empty result.
-        if joker is True:
+        # CSV imports carry neither joker nor donation-joker information; if the
+        # caller asks for "only (donation) jokers" return an empty result.
+        if joker is True or donation_joker is True:
             return []
 
         qs = ExternalShareDemand.objects.all()
@@ -683,6 +698,7 @@ class ShareDemandService:
         delivery_station_id: str | None = None,
         tour_number: int | None = None,
         joker: bool | None = False,
+        donation_joker: bool | None = False,
     ) -> list[dict]:
         return _resolve_backend().aggregated_rows(
             year=year,
@@ -695,6 +711,7 @@ class ShareDemandService:
             delivery_station_id=delivery_station_id,
             tour_number=tour_number,
             joker=joker,
+            donation_joker=donation_joker,
         )
 
     @classmethod

@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.db import models
 
 from .base import JasminModel
-from .choices_text import PaymentCycleOptions
+from .choices import PaymentCycleOptions
 
 
 # the models here store the tenant specific parameters:

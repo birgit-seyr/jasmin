@@ -236,6 +236,34 @@ class TestShareTypeVariationViewSet:
         resp = api_client.get(self.URL)
         assert len(resp.data) >= 1
 
+    def test_list_exposes_active_trial_price(self, api_client, tenant):
+        # ``active_price_per_delivery_if_trial`` mirrors
+        # ``active_price_per_delivery`` for the variation's TRIAL reference
+        # price — it drives the abos price auto-fill when ``is_trial`` is on.
+        # ``active_solidarity_min_price_per_delivery_if_trial`` is the trial
+        # counterpart of the solidarity floor — the modal floors a trial price
+        # against it (and the backend re-validates the same value).
+        price = ShareTypeVariationGrossPriceFactory(
+            price_per_delivery=Decimal("10.00"),
+            solidarity_min_price_per_delivery=Decimal("8.00"),
+            price_per_delivery_if_trial=Decimal("6.00"),
+            solidarity_min_price_per_delivery_if_trial=Decimal("5.00"),
+        )
+        resp = api_client.get(
+            self.URL,
+            {
+                "share_type_variation": str(price.share_type_variation.id),
+                "active_at_date": "2026-06-01",
+            },
+        )
+        item = next(
+            d for d in resp.data if d["id"] == str(price.share_type_variation.id)
+        )
+        assert item["active_price_per_delivery"] == "10.00"
+        assert item["active_solidarity_min_price_per_delivery"] == "8.00"
+        assert item["active_price_per_delivery_if_trial"] == "6.00"
+        assert item["active_solidarity_min_price_per_delivery_if_trial"] == "5.00"
+
     def test_list_exposes_subscription_valid_until_bounds(self, api_client, tenant):
         # The datepicker floor: a variation can't end before its LATEST
         # subscription. (Subscriptions are never open-ended — the model forbids
@@ -678,6 +706,66 @@ class TestDefaultShareContentBulkList:
         )
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data == []
+
+
+URL_DSC_SUBSCRIBER_COUNTS = reverse("default_share_contents-subscriber-counts")
+
+
+@pytest.mark.django_db
+class TestDefaultShareContentSubscriberCounts:
+    """Read-only per-variation active-subscriber snapshot powering the reverse
+    'total → per-share' planning suggestion."""
+
+    def test_returns_count_per_variation(self, api_client, tenant):
+        import datetime
+
+        import time_machine
+
+        from apps.commissioning.tests.factories import (
+            DeliveryStationDayFactory,
+            ShareTypeVariationFactory,
+            SubscriptionFactory,
+        )
+
+        variation = ShareTypeVariationFactory()  # physical, HARVEST_SHARE
+        station_day = DeliveryStationDayFactory()
+        for _ in range(4):
+            SubscriptionFactory(
+                share_type_variation=variation,
+                default_delivery_station_day=station_day,
+            )
+
+        with time_machine.travel(datetime.date(2026, 6, 1), tick=False):
+            resp = api_client.get(
+                URL_DSC_SUBSCRIBER_COUNTS,
+                {"year": 2026, "share_option": "HARVEST_SHARE"},
+            )
+
+        assert resp.status_code == status.HTTP_200_OK
+        # 4 active subscriptions on this variation, keyed by variation id.
+        assert resp.data[str(variation.pk)] == "4"
+
+    def test_excludes_other_share_options(self, api_client, tenant):
+        from apps.commissioning.tests.factories import ShareTypeVariationFactory
+
+        other = ShareTypeVariationFactory(
+            share_type__share_option="HARVEST_SHARE_FRUIT"
+        )
+
+        resp = api_client.get(
+            URL_DSC_SUBSCRIBER_COUNTS,
+            {"year": 2026, "share_option": "HARVEST_SHARE"},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        # A variation of a different share option must not appear in the map.
+        assert str(other.pk) not in resp.data
+
+    def test_invalid_year_returns_400(self, api_client, tenant):
+        resp = api_client.get(
+            URL_DSC_SUBSCRIBER_COUNTS,
+            {"year": "not-a-number", "share_option": "HARVEST_SHARE"},
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
 @pytest.mark.django_db

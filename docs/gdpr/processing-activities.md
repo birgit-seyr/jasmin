@@ -79,7 +79,7 @@ implements all of them — paths refer to `apps/` packages.
 | Source                      | Member self-edit via Profile › Meine Daten; office edit via member detail page                                       |
 | Recipients                  | Office staff; SEPA service provider (if any)                                                                         |
 | Retention                   | 10 years per HGB §257 (1) Nr. 4; mandates plus 14 months after last debit per SEPA rulebook                          |
-| Security measures           | `django-encrypted-fields` for IBAN at rest; mandate stored separately; auditlog                                      |
+| Security measures           | `django-encrypted-model-fields` for IBAN at rest; mandate stored separately; auditlog                                |
 | Code locations              | `apps/payments/`                                                                                                     |
 
 ### 3.3 Communication (transactional + bulk email)
@@ -130,15 +130,14 @@ implements all of them — paths refer to `apps/` packages.
 
 Concrete platform measures that satisfy Art. 32 — all already in code:
 
-- **In transit:** TLS via gateway nginx + Let's Encrypt wildcard
-  (see [https-deploy-runbook.md](https-deploy-runbook.md))
-- **At rest:** PostgreSQL with `django-encrypted-fields` for IBAN,
+- **In transit:** TLS via gateway nginx + Let's Encrypt wildcard;
+  deployment details are documented internally
+- **At rest:** PostgreSQL with `django-encrypted-model-fields` for IBAN,
   signed JWTs, hashed passwords (Django default + zxcvbn validator)
 - **Access control:** role-based (`member` / `office` / `admin`);
   per-tenant schema isolation prevents cross-tenant reads
 - **Audit:** `django-auditlog` on writes; throttle-scope enforcement
-  via class attribute (2026-06 fix in `apps/accounts/views.py` and
-  `apps/gdpr/views.py`)
+  via class attribute
 - **Backups:** AES-256 GPG-encrypted `pg_dump`; restore replays the
   `DeletionLog` so anonymised PII doesn't resurrect
 - **Brute-force protection:** `django-axes` lockout + per-endpoint

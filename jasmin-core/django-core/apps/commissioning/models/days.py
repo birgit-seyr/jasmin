@@ -6,7 +6,7 @@ from django.db import models
 from django.db.models import Q
 
 from .base import JasminModel
-from .choices_text import DayNumberOptions
+from .choices import DayNumberOptions
 from .mixin import TimeBoundMixin, time_bound_valid_range_constraint
 
 

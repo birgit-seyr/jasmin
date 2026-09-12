@@ -4,7 +4,7 @@ from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator, MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import IntegrityError, models
 from django.db.models import F, Q
 from django.utils import timezone
 from django_tenants.models import DomainMixin, TenantMixin
@@ -13,13 +13,14 @@ from nanoid import generate
 
 from apps.shared.iban_validator import validate_iban
 
-ID_LENGTH = 12
+ID_LENGTH = 12  # this is the ID in the JasminModel
+
+# Use URL-safe alphabet (excludes similar-looking characters, excludes "_", this is needed for composite IDs!)
+JASMIN_ID_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"
 
 
 def generate_jasmin_id() -> str:
-    """Generate a nanoid. Does not use '_' because it's used as a composite key delimiter."""
-    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-    return generate(alphabet=alphabet, size=ID_LENGTH)
+    return generate(alphabet=JASMIN_ID_ALPHABET, size=ID_LENGTH)
 
 
 class JasminModel(models.Model):
@@ -29,10 +30,67 @@ class JasminModel(models.Model):
         unique=True,
         primary_key=True,
         default=generate_jasmin_id,
+        editable=False,
     )
 
     class Meta:
         abstract = True
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Save with retry logic for primary-key (nanoid) collision.
+
+        Detects PK collisions specifically by inspecting the failing
+        constraint, instead of substring-matching on the error message
+        (which previously could swallow other unique-constraint failures
+        that happened to mention the word "id").
+        """
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                super().save(*args, **kwargs)
+                return
+            except IntegrityError as e:
+                if self._is_pk_collision(e) and attempt < max_retries - 1:
+                    self.id = generate_jasmin_id()
+                else:
+                    raise
+
+    def _is_pk_collision(self, exc: IntegrityError) -> bool:
+        """Return True iff the IntegrityError is a duplicate on the PK.
+
+        Uses the psycopg constraint name when available
+        (PostgreSQL convention: ``<table>_pkey``) and falls back to a
+        narrower string match.
+        """
+        cause = getattr(exc, "__cause__", None)
+        constraint_name = getattr(getattr(cause, "diag", None), "constraint_name", None)
+        if constraint_name:
+            return constraint_name.endswith("_pkey")
+        # Fallback for non-PG backends or when diag is unavailable.
+        msg = str(exc).lower()
+        return "_pkey" in msg
+
+    def get_display_id(self) -> str:
+        """
+        Convert the nanoid to a human-readable format.
+        Examples:
+            'aBc123XyZ' -> 'ABC-123-XYZ'
+            'xK9mP2nQ4' -> 'XK9-MP2-NQ4'
+        """
+        if not self.id:
+            return ""
+
+        # Convert to uppercase for better readability
+        readable_id = self.id.upper()
+
+        # Split into groups of 3 characters with dashes
+        CHUNK_SIZE = 3
+        chunks = [
+            readable_id[i : i + CHUNK_SIZE]
+            for i in range(0, len(readable_id), CHUNK_SIZE)
+        ]
+
+        return "-".join(chunks)
 
 
 class Tenant(TenantMixin, JasminModel):
@@ -126,6 +184,46 @@ class Tenant(TenantMixin, JasminModel):
 
     logo = models.ImageField(upload_to="logos/", blank=True, null=True)
     bio_logo = models.ImageField(upload_to="bio_logos/", blank=True, null=True)
+    # Square launcher icon for the installable web app (home-screen / PWA).
+    # Deliberately NOT ``logo``: that one is wordmark-shaped and feeds the
+    # reseller / invoice PDF headers, so it can never carry a square
+    # constraint. Uploads are validated square + >= 512px and re-encoded to
+    # exactly 512x512 PNG by ``TenantSerializer.validate_app_icon`` — that
+    # normalization is what lets the manifest declare ``sizes: "512x512"``
+    # truthfully without opening the file on every request. Served unsigned by
+    # ``TenantAppIconView`` (see its docstring for why that is safe here).
+    app_icon = models.ImageField(upload_to="app_icons/", blank=True, null=True)
+    # Launcher label under the home-screen icon. Phones truncate at roughly 12
+    # characters and ``name`` is max_length=200, so blank falls back to
+    # ``name[:12]`` in the manifest rather than shipping a clipped long name.
+    app_short_name = models.CharField(max_length=12, blank=True, default="")
+
+    @property
+    def app_icon_version(self) -> str:
+        """Cache-busting stamp for the unsigned launcher-icon URL.
+
+        Empty string when there is no icon, which doubles as the frontend's
+        "there is nothing to point at" signal — so one field answers both
+        "does this tenant have an icon?" and "which version is it?".
+
+        ``updated_at`` is ``auto_now``, so any PATCH that stores a new icon
+        moves the stamp and defeats the icon route's day-long cache. Without
+        it, replacing an icon would leave every client showing the old one for
+        up to ``_APP_ICON_MAX_AGE``.
+
+        MICROSECONDS are included deliberately: whole seconds are too coarse:
+        an admin who replaces an icon twice inside the same second (or any
+        automated flow that does) would produce a byte-identical URL for
+        different bytes, and every client would keep the stale icon for a day.
+
+        Trade-off accepted: the stamp also moves when an unrelated tenant field
+        is edited, costing one ~5 KB re-download. Deriving it from the stored
+        filename instead would avoid that but breaks when Django reuses a name
+        after a delete-then-upload, which is the failure that actually hurts.
+        """
+        if not self.app_icon or not self.updated_at:
+            return ""
+        return f"{int(self.updated_at.timestamp())}{self.updated_at.microsecond:06d}"
 
     fiscal_year_start_month = models.PositiveSmallIntegerField(
         default=1,
@@ -290,7 +388,7 @@ class TenantSettings(JasminModel):
     created_at = models.DateTimeField(auto_now_add=True)
 
     # Cooperative shares
-    has_coop_shares = models.BooleanField(default=True)  # done
+    has_coop_shares = models.BooleanField(default=True)
     coop_shares_payment_after_admin_confirmation_in_days = models.IntegerField(
         default=14
     )
@@ -351,6 +449,7 @@ class TenantSettings(JasminModel):
     )  # in count of deliveries
     allows_trial_subscriptions_for_trial_members = models.BooleanField(default=True)
     info_sentence_about_trial_subscriptions = models.TextField(blank=True, null=True)
+    trial_subscriptions_have_different_prices = models.BooleanField(default=False)
 
     # Waiting list — gates the whole waiting-list flow (offers, putting members/
     # subscriptions on a waiting list, waiting-list UI). When False the tenant
@@ -360,7 +459,7 @@ class TenantSettings(JasminModel):
     reservation_ttl_days = models.PositiveIntegerField(default=14)
 
     # Jokers system
-    uses_jokers = models.BooleanField(default=True)  # done
+    uses_jokers = models.BooleanField(default=True)
     default_amount_of_jokers = models.PositiveIntegerField(default=4)
     uses_jokers_for_trial_subscriptions = models.BooleanField(default=False)
     uses_donation_jokers = models.BooleanField(default=False)
@@ -382,6 +481,11 @@ class TenantSettings(JasminModel):
 
     # layout app
     show_size_column = models.BooleanField(default=True)
+    # When True, the harvest-share content planner auto-prefills each physical
+    # variation's EMPTY day cells with the forecast amount split across sizes by
+    # ``average_weight`` and weighted by the physical-variation counts (floored
+    # to 0.10). Opt-in per tenant; default False leaves planning unchanged.
+    distribute_forecast_by_weight = models.BooleanField(default=False)
     show_summary_in_harvest_share_planning_on_top = models.BooleanField(default=True)
 
     show_seller_name_of_share_article_in_share_for_member_on_page = models.BooleanField(
@@ -397,10 +501,13 @@ class TenantSettings(JasminModel):
 
     # Sales channels
     has_markets = models.BooleanField(default=False)
-    sells_to_resellers = models.BooleanField(default=True)  # done
+    sells_to_resellers = models.BooleanField(default=True)
+    crates_should_be_on_documents = models.BooleanField(
+        default=True
+    )  # defines if crates are priced and put on deliverynote and invoices
 
     # reseller invoice & deliver note settings
-    payment_terms_reseller_in_days = models.PositiveIntegerField(default=14)  # done
+    payment_terms_reseller_in_days = models.PositiveIntegerField(default=14)
     # Tenant-level Skonto defaults (per-reseller override on
     # ``Reseller.early_payment_discount_*``). NULL on both = no Skonto
     # offered by default; the PDF / ZUGFeRD generators only emit the
@@ -409,60 +516,36 @@ class TenantSettings(JasminModel):
         max_digits=5, decimal_places=2, blank=True, null=True
     )
     early_payment_discount_days = models.PositiveIntegerField(blank=True, null=True)
-    order_numbers_start_new_at_year_change = models.BooleanField(default=False)  # done
-    order_number_prefix = models.CharField(max_length=10, default="BE")  # done
-    delivery_note_numbers_start_new_at_year_change = models.BooleanField(
-        default=False
-    )  # done
-    delivery_note_number_prefix = models.CharField(max_length=10, default="LS")  # done
-    invoice_numbers_start_new_at_year_change = models.BooleanField(
-        default=False
-    )  # done
-    invoice_number_prefix = models.CharField(max_length=10, default="RE")  # done
-    correction_invoice_number_prefix = models.CharField(
-        max_length=10, default="RK"
-    )  # done
-    left_column_footer_documents_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    middle_column_footer_documents_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    right_column_footer_documents_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    entry_line_1_invoice_reseller = models.TextField(blank=True, null=True)  # done
-    entry_line_2_invoice_reseller = models.TextField(blank=True, null=True)  # done
-    entry_line_3_invoice_reseller = models.TextField(blank=True, null=True)  # done
-    greeting_line_1_invoice_reseller = models.TextField(blank=True, null=True)  # done
-    greeting_line_2_invoice_reseller = models.TextField(blank=True, null=True)  # done
-    greeting_line_3_invoice_reseller = models.TextField(blank=True, null=True)  # done
-    entry_line_1_delivery_note_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    entry_line_2_delivery_note_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    entry_line_3_delivery_note_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    greeting_line_1_delivery_note_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    greeting_line_2_delivery_note_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
-    greeting_line_3_delivery_note_reseller = models.TextField(
-        blank=True, null=True
-    )  # done
+    order_numbers_start_new_at_year_change = models.BooleanField(default=False)
+    order_number_prefix = models.CharField(max_length=10, default="BE")
+    delivery_note_numbers_start_new_at_year_change = models.BooleanField(default=False)
+    delivery_note_number_prefix = models.CharField(max_length=10, default="LS")
+    invoice_numbers_start_new_at_year_change = models.BooleanField(default=False)
+    invoice_number_prefix = models.CharField(max_length=10, default="RE")
+    correction_invoice_number_prefix = models.CharField(max_length=10, default="RK")
+    left_column_footer_documents_reseller = models.TextField(blank=True, null=True)
+    middle_column_footer_documents_reseller = models.TextField(blank=True, null=True)
+    right_column_footer_documents_reseller = models.TextField(blank=True, null=True)
+    entry_line_1_invoice_reseller = models.TextField(blank=True, null=True)
+    entry_line_2_invoice_reseller = models.TextField(blank=True, null=True)
+    entry_line_3_invoice_reseller = models.TextField(blank=True, null=True)
+    greeting_line_1_invoice_reseller = models.TextField(blank=True, null=True)
+    greeting_line_2_invoice_reseller = models.TextField(blank=True, null=True)
+    greeting_line_3_invoice_reseller = models.TextField(blank=True, null=True)
+    entry_line_1_delivery_note_reseller = models.TextField(blank=True, null=True)
+    entry_line_2_delivery_note_reseller = models.TextField(blank=True, null=True)
+    entry_line_3_delivery_note_reseller = models.TextField(blank=True, null=True)
+    greeting_line_1_delivery_note_reseller = models.TextField(blank=True, null=True)
+    greeting_line_2_delivery_note_reseller = models.TextField(blank=True, null=True)
+    greeting_line_3_delivery_note_reseller = models.TextField(blank=True, null=True)
 
     # Offer document
-    entry_line_1_offer_reseller = models.TextField(blank=True, null=True)  # done
-    entry_line_2_offer_reseller = models.TextField(blank=True, null=True)  # done
-    entry_line_3_offer_reseller = models.TextField(blank=True, null=True)  # done
-    greeting_line_1_offer_reseller = models.TextField(blank=True, null=True)  # done
-    greeting_line_2_offer_reseller = models.TextField(blank=True, null=True)  # done
-    greeting_line_3_offer_reseller = models.TextField(blank=True, null=True)  # done
+    entry_line_1_offer_reseller = models.TextField(blank=True, null=True)
+    entry_line_2_offer_reseller = models.TextField(blank=True, null=True)
+    entry_line_3_offer_reseller = models.TextField(blank=True, null=True)
+    greeting_line_1_offer_reseller = models.TextField(blank=True, null=True)
+    greeting_line_2_offer_reseller = models.TextField(blank=True, null=True)
+    greeting_line_3_offer_reseller = models.TextField(blank=True, null=True)
     order_instructions_offer_reseller = models.TextField(blank=True, null=True)
 
     # Offer groups
@@ -560,6 +643,9 @@ class TenantSettings(JasminModel):
     )
 
     requires_paper_signature_for_membership = models.BooleanField(default=False)
+    requires_paper_signature_for_cancellation_of_membership = models.BooleanField(
+        default=False
+    )
     requires_paper_signature_for_sepa_mandate = models.BooleanField(default=False)
 
     class Meta:
@@ -691,7 +777,17 @@ class TenantEmailConfig(models.Model):
     smtp_port = models.IntegerField(default=587, blank=True, null=True)
     smtp_username = models.CharField(max_length=255, blank=True, null=True)
     smtp_password = EncryptedCharField(max_length=500, blank=True, null=True)
+    # Connection security is expressed as two mutually-exclusive booleans that
+    # map straight onto Django's SMTP backend:
+    #   * ``smtp_use_tls``  → STARTTLS (explicit TLS, typically port 587)
+    #   * ``smtp_use_ssl``  → implicit TLS / SMTPS (typically port 465)
+    # Both False = an unencrypted connection. Both True is invalid (Django's
+    # EmailBackend rejects it) — enforced in ``TenantEmailConfigSerializer``.
+    # The frontend presents these as a single "connection security" selector;
+    # they stay two booleans on the wire for backward compatibility (the
+    # long-standing ``smtp_use_tls`` field is never removed).
     smtp_use_tls = models.BooleanField(default=True)
+    smtp_use_ssl = models.BooleanField(default=False)
 
     # From email settings
     from_email = models.EmailField(
@@ -767,4 +863,5 @@ class TenantEmailConfig(models.Model):
             "EMAIL_HOST_USER": self.smtp_username,
             "EMAIL_HOST_PASSWORD": self.smtp_password,
             "EMAIL_USE_TLS": self.smtp_use_tls,
+            "EMAIL_USE_SSL": self.smtp_use_ssl,
         }

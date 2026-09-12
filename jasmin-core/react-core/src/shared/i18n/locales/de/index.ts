@@ -43,10 +43,13 @@ import about from './about.json';
 import statistics from './statistics.json';
 import impressum from './impressum.json';
 import button_library from './button_library.json';
+import support from './support.json';
+import onboarding from './onboarding.json';
 
 export default {
   about,
   button_library,
+  support,
   statistics,
   errors,
   economics,
@@ -86,6 +89,7 @@ export default {
   users,
   import_shares,
   csv_upload,
+  onboarding,
   job_progress,
   logging,
   months,

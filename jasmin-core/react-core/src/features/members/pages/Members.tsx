@@ -50,12 +50,13 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import {
-  DownloadCsvTemplateButton,
   ExplainerText,
   LinkButton,
   StatusButton,
   ToolTipIcon,
 } from "@shared/ui";
+import MembersImportModal from "@features/members/modals/MembersImportModal";
+import CoopShareImportModal from "@features/members/modals/CoopShareImportModal";
 import MemberStatsCards from "@features/members/components/MemberStatsCards";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
@@ -132,6 +133,9 @@ export default function Members() {
   // (red while on) so it can't be flipped by accident; the serializer's
   // read-only lock on entry_date was lifted to match (office-role gated).
   const [manualMemberTransfer, setManualMemberTransfer] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [coopShareImportModalOpen, setCoopShareImportModalOpen] =
+    useState(false);
 
   // Capture as a primitive so the columns useMemo can depend on a
   // stable boolean instead of ``getSetting`` itself, which is a fresh
@@ -335,6 +339,13 @@ export default function Members() {
         inputType: "positive_integer",
         required: false,
         readOnly: true,
+        // Locked in the grid (renumbering a live member falsifies the
+        // Mitgliederliste) but offered in the CSV onboarding template: a
+        // tenant migrating off another system carries its existing
+        // Mitgliedsnummern over, and the follow-up imports (subscriptions,
+        // coop shares, SEPA mandates) resolve their member by that number.
+        // ``MemberImportSerializer`` accepts it on the import path only.
+        importable: true,
         fixed: true,
         align: "center",
         width: "4em",
@@ -419,6 +430,11 @@ export default function Members() {
         // Normally locked (server-stamped GenG §30 date). Editable only while
         // the "händische Übertragung" toggle is on — see manualMemberTransfer.
         disabled: !manualMemberTransfer,
+        // ...but the CSV onboarding template must always offer it: the import
+        // serializer accepts ``entry_date`` (that's the whole point of the
+        // manual transfer), and gating the template column on the toggle made
+        // the downloaded file silently lose the column.
+        importable: true,
         sortable: true,
 
         render: (value: unknown) => formatDate(value as string | null),
@@ -430,6 +446,14 @@ export default function Members() {
         inputType: "date",
         required: false,
         readOnly: true,
+        // Locked in the grid — a live member's exit is stamped by the cancel
+        // flow, which also cascades to their coop shares. But the CSV
+        // onboarding template must offer it: a tenant migrating off another
+        // system brings departed members over with their historical
+        // Austrittsdatum (GenG §30), and those rows are history, not a
+        // cancellation being performed now. ``MemberImportSerializer`` accepts
+        // it on the import path only and derives ``cancelled_at`` from it.
+        importable: true,
         align: "center",
         width: "8em",
         sortable: true,
@@ -824,23 +848,6 @@ export default function Members() {
           return "";
         }}
       />
-      {isOffice && (
-        <Space size="small" align="center" style={{ marginTop: 12 }}>
-          <Button
-            type={manualMemberTransfer ? "primary" : "default"}
-            danger={manualMemberTransfer}
-            size="small"
-            onClick={() => setManualMemberTransfer((v) => !v)}
-            aria-pressed={manualMemberTransfer}
-            aria-label={t("members.manual_transfer_toggle")}
-          >
-            {manualMemberTransfer ? "● " : ""}
-            {t("members.manual_transfer_toggle")}
-          </Button>
-          <ToolTipIcon title={t("tooltip.manual_transfer_toggle")} />
-        </Space>
-      )}
-
       <AdminConfirmationModalMembers
         isOpen={isAdminConfirmationModalOpen}
         onClose={handleCloseAdminConfirmationModal}
@@ -983,14 +990,48 @@ export default function Members() {
         {t("explainers.members")}
       </ExplainerText>
 
-      {uploadAllowed && (
-        <DownloadCsvTemplateButton
-          columns={columns}
-          filename={t("commissioning.members_template.csv")}
-          modelName="member"
-          onUploadSuccess={handleDataChange}
-        />
+      {isOffice && (
+        <div style={{ marginTop: 24 }}>
+          <Space>
+            <Button
+              size="small"
+              onClick={() => setImportModalOpen(true)}
+              aria-label={
+                manualMemberTransfer
+                  ? `${t("onboarding.members_link")} — ${t("onboarding.members_manual_active")}`
+                  : undefined
+              }
+            >
+              <span aria-hidden="true">{manualMemberTransfer ? "● " : ""}</span>
+              {t("onboarding.members_link")}
+            </Button>
+            <Button
+              size="small"
+              onClick={() => setCoopShareImportModalOpen(true)}
+            >
+              {t("onboarding.coop_link")}
+            </Button>
+          </Space>
+        </div>
       )}
+
+      <MembersImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        columns={columns}
+        filename={t("commissioning.members_template.csv")}
+        uploadAllowed={uploadAllowed}
+        onUploadSuccess={handleDataChange}
+        manualTransferActive={manualMemberTransfer}
+        onToggleManualTransfer={() => setManualMemberTransfer((v) => !v)}
+      />
+
+      <CoopShareImportModal
+        open={coopShareImportModalOpen}
+        onClose={() => setCoopShareImportModalOpen(false)}
+        uploadAllowed={uploadAllowed}
+        onUploadSuccess={handleDataChange}
+      />
 
       <InviteUserModal
         open={inviteRow !== null}

@@ -1,7 +1,7 @@
 from django.db import models
 
 from .base import JasminModel
-from .choices_text import DayNumberOptions
+from .choices import DayNumberOptions
 
 
 # also a market on the farm itself is included here:

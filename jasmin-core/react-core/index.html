@@ -2,8 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <!--
+      Web app manifest — rendered PER TENANT by the backend from the subdomain
+      (apps/shared/tenants/views.py::TenantManifestView), because ONE built
+      bundle is served to every tenant origin and a static file could only ever
+      carry platform branding. The URL is identical everywhere; the variation
+      happens server-side.
+
+      It 404s on the super-admin/platform host (config/public_urls.py does not
+      include the tenants urlconf), which is exactly what keeps that
+      IP-allowlisted app from advertising itself as installable.
+    -->
+    <link rel="manifest" href="/api/tenants/manifest.webmanifest" />
+    <!--
+      iOS ignores manifest icons for "Add to Home Screen" and reads THIS tag
+      instead, at the moment the user taps it. TenantContext repoints it at the
+      tenant's own icon once loaded; this is the fallback until then.
+    -->
+    <link rel="apple-touch-icon" href="/pwa-icon-512.png" />
+    <!-- Paired so the installed status bar follows the OS theme, not one hardcoded value. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141414" />
+    <!-- viewport-fit=cover so a standalone window paints into the safe-area insets. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Jasmin</title>
 </head>
 <body>

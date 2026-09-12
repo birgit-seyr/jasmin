@@ -27,7 +27,7 @@ trade-off. (Month-based cycles were dropped — "monthly" needs its own
 day-of-month field to reflect a tenant's business logic; see docs/todos.)
 """
 
-from apps.commissioning.models.choices_text import DeliveryCycleOptions
+from apps.commissioning.models.choices import DeliveryCycleOptions
 
 YearWeek = tuple[int, int]
 

@@ -11,6 +11,7 @@ export type CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams = {
  * ISO week number (1-53)
  */
 delivery_week: number;
+donation_joker?: boolean;
 for_stations?: boolean;
 for_tours?: boolean;
 is_packed_bulk?: boolean;

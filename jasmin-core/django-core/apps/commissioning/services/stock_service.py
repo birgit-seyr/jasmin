@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.timezone import make_aware
 
 from ..models import CurrentStockBalance, MovementShareArticle, StockSnapshot
-from ..models.choices_text import MovementTypeOptions
+from ..models.choices import MovementTypeOptions
 from ..utils.iso_week_utils import week_day_to_date
 
 

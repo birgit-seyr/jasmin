@@ -1,7 +1,7 @@
 """Tests for the ``anonymise_long_cancelled_members`` Huey periodic task.
 
 Closes the GenG §31 / HGB §257 / AO §147 10-year clock that the
-audit checklist and ``docs/retention-policy.md`` advertise. Without
+audit checklist and the published retention policy advertise. Without
 this task, the retention claim was theoretical: an auditor running
 
     Member.objects.filter(

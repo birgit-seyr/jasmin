@@ -23,7 +23,7 @@ from django.http import StreamingHttpResponse
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
-    OpenApiParameter,
+    OpenApiResponse,
     extend_schema,
     inline_serializer,
 )
@@ -63,9 +63,10 @@ from ..models import (
     Subscription,
     VirtualVariationComponent,
 )
-from ..models.choices_text import ShareOptions
+from ..models.choices import ShareOptions
 from ..schemas import (
     EXPORT_DATE_RANGE_PARAMETERS,
+    catalogue_param,
     get_active_at_date_parameter,
     get_day_number_parameter,
     get_delivery_day_parameter,
@@ -137,16 +138,13 @@ class ShareTypeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         parameters=[
             get_active_at_date_parameter(),
             get_share_option_parameter(),
-            OpenApiParameter(
-                name="include_future",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "include_future",
                 required=False,
-                description=(
-                    "Widen the validity filter to current + future share "
-                    "types (active on the reference date OR starting after "
-                    "it), excluding only already-ended ones. Reference date "
-                    "= active_at_date if given, else today."
-                ),
+                description="Widen the validity filter to current + future share "
+                "types (active on the reference date OR starting after "
+                "it), excluding only already-ended ones. Reference date "
+                "= active_at_date if given, else today.",
             ),
         ],
     )
@@ -157,14 +155,24 @@ class ShareTypeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         # One query over the active variations instead of one per share type;
         # the serializer reads this map via context.
         sizes_by_share_type: dict[str, list[str]] = {}
+        seen_sizes_by_share_type: dict[str, set[str]] = {}
+        # Ordered by the variations' ``sort_order`` (then id) so the sizes read
+        # in the configured order, not an arbitrary DB order. Dedupe in Python
+        # (preserving that order) rather than ``.distinct()``, which Postgres
+        # forbids alongside an ORDER BY on a non-selected column.
         active_variation_rows = (
             ShareTypeVariation.current.active_at_date(today)
+            .order_by("sort_order", "id")
             .values_list("share_type_id", "size")
-            .distinct()
         )
         for share_type_id, size in active_variation_rows:
-            if size:
-                sizes_by_share_type.setdefault(share_type_id, []).append(size)
+            if not size:
+                continue
+            seen = seen_sizes_by_share_type.setdefault(share_type_id, set())
+            if size in seen:
+                continue
+            seen.add(size)
+            sizes_by_share_type.setdefault(share_type_id, []).append(size)
         sizes_in_use_by_share_type = {
             share_type_id: ", ".join(sizes)
             for share_type_id, sizes in sizes_by_share_type.items()
@@ -288,52 +296,41 @@ class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             get_active_at_date_parameter(),
             get_share_option_parameter(required=False),
             get_share_type_parameter(required=False),
-            OpenApiParameter(
-                name="include_future",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "include_future",
                 required=False,
-                description=(
-                    "Widen the validity filter to current + future "
-                    "variations (active on the reference date OR starting "
-                    "after it), excluding only already-ended ones. Reference "
-                    "date = active_at_date if given, else today."
-                ),
+                description="Widen the validity filter to current + future "
+                "variations (active on the reference date OR starting "
+                "after it), excluding only already-ended ones. Reference "
+                "date = active_at_date if given, else today.",
             ),
-            OpenApiParameter(
-                name="physical",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "physical",
                 required=False,
                 description="Filter for physical variations only",
             ),
-            OpenApiParameter(
-                name="virtual",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "virtual",
                 required=False,
                 description="Filter for virtual variations only",
             ),
-            OpenApiParameter(
-                name="is_packed_bulk",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "is_packed_bulk",
                 required=False,
-                description=(
-                    "Filter by per-variation bulk-packing flag. "
-                    "Only meaningful in MIXED packing mode; omit to "
-                    "return all variations."
-                ),
+                description="Filter by per-variation bulk-packing flag. "
+                "Only meaningful in MIXED packing mode; omit to "
+                "return all variations.",
             ),
             # Window for the per-week ``capacity_by_week`` field (same contract
             # as the delivery-station-days endpoint). Omit all three → the field
             # is null (no term-aware capacity requested).
             get_year_parameter(required=False),
             get_delivery_week_parameter(required=False),
-            OpenApiParameter(
-                name="num_weeks",
-                type=OpenApiTypes.INT,
+            catalogue_param(
+                "num_weeks",
                 required=False,
-                description=(
-                    "Number of weeks of per-variation capacity_by_week to "
-                    "return (default: 52). Needs year + delivery_week."
-                ),
+                description="Number of weeks of per-variation capacity_by_week to "
+                "return (default: 52). Needs year + delivery_week.",
             ),
         ],
     )
@@ -432,11 +429,36 @@ class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             .values("solidarity_min_price_per_delivery")[:1]
         )
 
+        # Trial reference price — the abos price auto-fill uses it when a
+        # subscription is flagged ``is_trial`` and the tenant charges trials
+        # differently. Nullable (a variation may leave it blank).
+        active_price_if_trial_subquery = (
+            ShareTypeVariationGrossPrice.current.active_at_date(lookup_date)
+            .filter(share_type_variation=OuterRef("pk"))
+            .order_by("-valid_from")
+            .values("price_per_delivery_if_trial")[:1]
+        )
+
+        # Trial solidarity floor — the trial-specific counterpart of
+        # ``active_solidarity_min_price_per_delivery``. When a subscription is
+        # ``is_trial`` the floor is enforced against THIS, not the regular one.
+        # Nullable (falls back to the trial reference on the client + server).
+        active_solidarity_min_if_trial_subquery = (
+            ShareTypeVariationGrossPrice.current.active_at_date(lookup_date)
+            .filter(share_type_variation=OuterRef("pk"))
+            .order_by("-valid_from")
+            .values("solidarity_min_price_per_delivery_if_trial")[:1]
+        )
+
         queryset = queryset.annotate(
             active_price_per_delivery=Subquery(active_price_subquery),
             active_price_sum_articles=Subquery(active_price_sum_articles_subquery),
             active_solidarity_min_price_per_delivery=Subquery(
                 active_solidarity_min_subquery
+            ),
+            active_price_per_delivery_if_trial=Subquery(active_price_if_trial_subquery),
+            active_solidarity_min_price_per_delivery_if_trial=Subquery(
+                active_solidarity_min_if_trial_subquery
             ),
         )
 
@@ -829,14 +851,11 @@ class ShareDeliveryViewSet(
         parameters=[
             get_year_parameter(),
             get_delivery_week_parameter(),
-            OpenApiParameter(name="for_tours", type=OpenApiTypes.BOOL, required=False),
-            OpenApiParameter(
-                name="for_stations", type=OpenApiTypes.BOOL, required=False
-            ),
-            OpenApiParameter(
-                name="is_packed_bulk", type=OpenApiTypes.BOOL, required=False
-            ),
-            OpenApiParameter(name="joker", type=OpenApiTypes.BOOL, required=False),
+            catalogue_param("for_tours", required=False),
+            catalogue_param("for_stations", required=False),
+            catalogue_param("is_packed_bulk", required=False),
+            catalogue_param("joker", required=False),
+            catalogue_param("donation_joker", required=False),
         ],
         responses={
             200: WeeklyComboMatrixResponseSerializer,
@@ -849,7 +868,9 @@ class ShareDeliveryViewSet(
             "import (external-demand) tenants get flat per-variation columns "
             "(variation_<id>) sourced from weekly demand. Both render through "
             "the same frontend hook. ``joker=true`` counts the boxes skipped via "
-            "a taken joker instead of the shipping ones (same columns)."
+            "a taken joker instead of the shipping ones; ``donation_joker=true`` "
+            "counts the boxes donated via a donation joker (same columns). The "
+            "two flags are mutually exclusive per row."
         ),
     )
     @action(detail=False, methods=["get"], pagination_class=None)
@@ -858,7 +879,13 @@ class ShareDeliveryViewSet(
         params = validate_query_params(
             request,
             required=["year", "delivery_week"],
-            optional=["for_tours", "for_stations", "is_packed_bulk", "joker"],
+            optional=[
+                "for_tours",
+                "for_stations",
+                "is_packed_bulk",
+                "joker",
+                "donation_joker",
+            ],
         )
         mode = "day"
         if params["for_stations"]:
@@ -867,6 +894,7 @@ class ShareDeliveryViewSet(
             mode = "tours"
 
         joker = bool(params["joker"])
+        donation_joker = bool(params["donation_joker"])
 
         # Import (external-demand) tenants have no ShareDelivery rows, so their
         # matrix is FLAT per-variation columns (from the demand port); everyone
@@ -883,6 +911,7 @@ class ShareDeliveryViewSet(
                 delivery_week=params["delivery_week"],
                 mode=mode,
                 joker=joker,
+                donation_joker=donation_joker,
             )
         else:
             result = PackingListBoxesMatrixService.get_weekly_combination_matrix(
@@ -891,6 +920,7 @@ class ShareDeliveryViewSet(
                 mode=mode,
                 is_packed_bulk=params["is_packed_bulk"],
                 joker=joker,
+                donation_joker=donation_joker,
             )
         serializer = WeeklyComboMatrixResponseSerializer(result)
         return Response(serializer.data)
@@ -1236,9 +1266,8 @@ class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             get_year_parameter(),
             get_delivery_week_parameter(),
             get_day_number_parameter(required=False),
-            OpenApiParameter(
-                name="force",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "force",
                 required=False,
                 description="Apply the change even when the week is in the past.",
             ),
@@ -1453,6 +1482,46 @@ class DefaultShareContentViewSet(RolePermissionsMixin, viewsets.ViewSet):
         results = [r for r in results if r.get("share_option") == share_option]
 
         return Response(results, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        parameters=[
+            get_year_parameter(),
+            get_share_option_parameter(),
+        ],
+        description=(
+            "Active-subscriber snapshot per physical share_type_variation of the "
+            "share option, keyed by variation id — the same count the forward "
+            "``needed_amount`` uses. Read-only; drives the reverse "
+            "'total → per-share' planning suggestion (the split math runs "
+            "client-side)."
+        ),
+        responses={
+            200: OpenApiResponse(
+                description=(
+                    "Map of share_type_variation id → active-subscriber count "
+                    "(string; direct + virtual subscriptions resolved onto the "
+                    "physical variation, snapshot at today's date)."
+                ),
+                response={
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                    "example": {
+                        "small-variation-id": "40",
+                        "medium-variation-id": "60",
+                        "large-variation-id": "20",
+                    },
+                },
+            ),
+            400: ErrorResponseSerializer,
+        },
+    )
+    @action(detail=False, methods=["get"], url_path="subscriber_counts")
+    def subscriber_counts(self, request: Request) -> Response:
+        params = validate_query_params(request, optional=["year", "share_option"])
+        counts = DefaultShareContentService.get_subscriber_counts_for_planning(
+            params["year"], params["share_option"]
+        )
+        return Response(counts, status=status.HTTP_200_OK)
 
     @extend_schema(
         description="Create default share content entries.",
@@ -1695,7 +1764,13 @@ class ShareDeliveryOverviewViewSet(
         # walks ``share`` → ``share.delivery_day`` per row — without this the
         # all-members result set is a textbook N+1.
         queryset = (
-            queryset.select_related("share", "share__delivery_day")
+            queryset.select_related(
+                "share",
+                "share__delivery_day",
+                # Serializer reads ``share.share_type_variation.share_type``
+                # for the joker allowances — join it so the grid stays N+1-free.
+                "share__share_type_variation__share_type",
+            )
             .annotate(
                 share_type_variation_string=Concat(
                     F("subscription__share_type_variation__share_type__name"),
@@ -1883,15 +1958,13 @@ class VirtualComponentsViewSet(RolePermissionsMixin, viewsets.ViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(
-                name="virtual_variation",
-                type=OpenApiTypes.STR,
+            catalogue_param(
+                "virtual_variation",
                 required=False,
                 description="Virtual variation ID to list components for",
             ),
-            OpenApiParameter(
-                name="physical_variation",
-                type=OpenApiTypes.STR,
+            catalogue_param(
+                "physical_variation",
                 required=False,
                 description="Physical variation ID to find parent virtual variations",
             ),

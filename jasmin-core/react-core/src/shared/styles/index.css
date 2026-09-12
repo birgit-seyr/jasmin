@@ -41,12 +41,14 @@
 @import './components/cultivation-planner.css';
 @import './components/summary-stats-card.css';
 @import './components/super-admin.css';
+@import './components/support.css';
 @import './components/tables.css';
 @import './components/tabs.css';
 @import './components/tooltip.css';
 @import './components/utilities.css';
 @import './components/variations-totals-card.css';
 @import './components/warnings.css';
+@import './components/weekly-plan.css';
 
 /* 4. Themes */
 @import './themes/light-dark.css';

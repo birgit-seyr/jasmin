@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useCommissioningPurchaseCostByWeekList } from "@shared/api/generated/commissioning/commissioning";
 import type { PurchaseCostByWeek } from "@shared/api/generated/models";
-import { StatsBarChart } from "@shared/ui";
+import { ExplainerText, StatsBarChart } from "@shared/ui";
 import {
   useCurrency,
   useDateFormat,
@@ -120,6 +120,10 @@ export default function StatisticsPurchase() {
           />
         </Card>
       </Spin>
+
+      <ExplainerText title={t("common.info")}>
+        {t("explainers.statistics_purchase")}
+      </ExplainerText>
     </div>
   );
 }

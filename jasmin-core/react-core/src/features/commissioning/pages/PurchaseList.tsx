@@ -22,16 +22,34 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { ExplainerText, PastWarningMessage, ToolTipIcon } from '@shared/ui';
-import { AddShareArticleEntry } from '@features/commissioning/components';
+import { ExplainerText, PastWarningMessage, ToolTipIcon } from "@shared/ui";
+import { AddShareArticleEntry } from "@features/commissioning/components";
 // Typed wrapper that internally lazy-imports the PDF template + the
 // @react-pdf/renderer library. See PurchaseListPDFGenerator /
 // ListPDFGenerator for the click-to-load architecture.
 import PurchaseListPDFGenerator from "@features/commissioning/pdfs/exports/PurchaseListPDFGenerator";
-import { currentWeek, useInvalidateAfterTableMutation, useIsMobile, useNoteColumn, useNumberFormat, useVegetableSizeOptions, useUnitOptions, useYearWeekState } from '@hooks/index';
-import { useAmountUnitSizeColumns, useSellers, useShareArticleColumn, useShareArticles } from '@features/commissioning/hooks';
+import {
+  currentWeek,
+  useInvalidateAfterTableMutation,
+  useIsMobile,
+  useNoteColumn,
+  useNumberFormat,
+  useVegetableSizeOptions,
+  useUnitOptions,
+  useYearWeekState,
+} from "@hooks/index";
+import {
+  useAmountUnitSizeColumns,
+  useSellers,
+  useShareArticleColumn,
+  useShareArticles,
+} from "@features/commissioning/hooks";
 import type { DocumentationSummaryRecord } from "@features/commissioning/hooks/useDocumentationSummaryPage";
-import { formatWeekLabel, generatePdfFilename, isWeekInPast } from "@shared/utils";
+import {
+  formatWeekLabel,
+  generatePdfFilename,
+  isWeekInPast,
+} from "@shared/utils";
 
 const shareArticleFilters = {
   is_harvest_share_article: true,
@@ -641,6 +659,7 @@ export default function PurchaseList() {
         customSave={customSave}
         customEdit={customEdit}
         permissions={permissions}
+        keyboardAddShortcut={true}
       />
       <AddShareArticleEntry
         disabled={isPast}

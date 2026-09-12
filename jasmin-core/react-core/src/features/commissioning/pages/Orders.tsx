@@ -18,6 +18,7 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, LabeledSwitch, ToolTipIcon } from "@shared/ui";
+import { useTenant } from "@hooks/index";
 import { useOrderColumns } from "@features/commissioning/hooks";
 // Imported directly from the source module (not the ``hooks`` barrel) to
 // avoid a Rollup chunk cycle: the barrel re-exports ``useOrdersData`` while
@@ -32,6 +33,13 @@ import { OrderInfoPanel } from "@features/commissioning/components/OrderInfoPane
 export default function Orders() {
   const { t } = useTranslation();
   const { isOffice } = useRoles();
+  const { getSetting } = useTenant();
+  // The setting gates crate CREATION (backend). The crates tab shows when the
+  // tenant puts crates on documents OR crates already exist this week (see the
+  // tab filter below) — an off-tenant simply has none, so the tab stays hidden.
+  const showCratesOnDocuments = Boolean(
+    getSetting("crates_should_be_on_documents", true),
+  );
 
   const orderData = useOrdersData();
   const {
@@ -404,9 +412,17 @@ export default function Orders() {
           </div>
         ),
       },
-    ],
+    ]
+      // Presence-based: keep the crates tab when the tenant puts crates on
+      // documents OR crates already exist this week (so the tab stays in sync
+      // with ``totalSum``, which counts any existing crates).
+      .filter(
+        (item) =>
+          showCratesOnDocuments || dataCratesCount > 0 || item.key !== "crates",
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
+      showCratesOnDocuments,
       t,
       selectedYear,
       selectedWeek,

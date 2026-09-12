@@ -23,7 +23,8 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Runtime libs needed in every stage (libpq for psycopg2, postgresql-client for
 # pg_isready / psql in the entrypoint, gettext for compilemessages, fonts for
-# WeasyPrint PDF generation).
+# WeasyPrint PDF generation, ghostscript for factur-x PDF/A-3 normalisation of
+# uploaded e-invoices — see apps/commissioning/services/facturx_pdfa3.py).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 \
         postgresql-client \
@@ -37,6 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libffi8 \
         shared-mime-info \
         fonts-dejavu-core \
+        ghostscript \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

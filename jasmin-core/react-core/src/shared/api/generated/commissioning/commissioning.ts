@@ -74,6 +74,8 @@ import type {
   CommissioningDaysWithOrdersRetrieveParams,
   CommissioningDefaultShareArticlesInShareListParams,
   CommissioningDefaultShareContentsBulkListListParams,
+  CommissioningDefaultShareContentsSubscriberCountsRetrieve200,
+  CommissioningDefaultShareContentsSubscriberCountsRetrieveParams,
   CommissioningDeliveryExceptionPeriodsListParams,
   CommissioningDeliveryNoteContentsListParams,
   CommissioningDeliveryNotesUploadPdfCreateBody,
@@ -6432,6 +6434,9 @@ export const commissioningDataImportCreate = (
       const formData = new FormData();
 formData.append(`model_name`, commissioningDataImportCreateBody.model_name)
 formData.append(`file`, commissioningDataImportCreateBody.file)
+if(commissioningDataImportCreateBody.dry_run !== undefined) {
+ formData.append(`dry_run`, commissioningDataImportCreateBody.dry_run.toString())
+ }
 
       return axiosService<DataImportResponse>(
       {url: `/api/commissioning/data_import/`, method: 'POST',
@@ -7434,6 +7439,96 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Active-subscriber snapshot per physical share_type_variation of the share option, keyed by variation id — the same count the forward ``needed_amount`` uses. Read-only; drives the reverse 'total → per-share' planning suggestion (the split math runs client-side).
+ */
+export const commissioningDefaultShareContentsSubscriberCountsRetrieve = (
+    params: CommissioningDefaultShareContentsSubscriberCountsRetrieveParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<CommissioningDefaultShareContentsSubscriberCountsRetrieve200>(
+      {url: `/api/commissioning/default_share_contents/subscriber_counts/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningDefaultShareContentsSubscriberCountsRetrieveQueryKey = (params?: CommissioningDefaultShareContentsSubscriberCountsRetrieveParams,) => {
+    return [
+    `/api/commissioning/default_share_contents/subscriber_counts/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningDefaultShareContentsSubscriberCountsRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>, TError = ErrorResponse>(params: CommissioningDefaultShareContentsSubscriberCountsRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningDefaultShareContentsSubscriberCountsRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>> = ({ signal }) => commissioningDefaultShareContentsSubscriberCountsRetrieve(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningDefaultShareContentsSubscriberCountsRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>>
+export type CommissioningDefaultShareContentsSubscriberCountsRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningDefaultShareContentsSubscriberCountsRetrieve<TData = Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningDefaultShareContentsSubscriberCountsRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningDefaultShareContentsSubscriberCountsRetrieve<TData = Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningDefaultShareContentsSubscriberCountsRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningDefaultShareContentsSubscriberCountsRetrieve<TData = Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningDefaultShareContentsSubscriberCountsRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningDefaultShareContentsSubscriberCountsRetrieve<TData = Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningDefaultShareContentsSubscriberCountsRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningDefaultShareContentsSubscriberCountsRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningDefaultShareContentsSubscriberCountsRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
  * CRUD for delivery exceptions ("Lieferpausen"). Office writes; members
 read (so a member can see the pauses that affect their subscription).
 
@@ -24293,7 +24388,7 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Whole-week matrix for AmountShareTypeVariations: one row per delivery day (or day×tour / day×station). Subscription tenants get box-combination columns (combo_<key>, each cell the box count); import (external-demand) tenants get flat per-variation columns (variation_<id>) sourced from weekly demand. Both render through the same frontend hook. ``joker=true`` counts the boxes skipped via a taken joker instead of the shipping ones (same columns).
+ * Whole-week matrix for AmountShareTypeVariations: one row per delivery day (or day×tour / day×station). Subscription tenants get box-combination columns (combo_<key>, each cell the box count); import (external-demand) tenants get flat per-variation columns (variation_<id>) sourced from weekly demand. Both render through the same frontend hook. ``joker=true`` counts the boxes skipped via a taken joker instead of the shipping ones; ``donation_joker=true`` counts the boxes donated via a donation joker (same columns). The two flags are mutually exclusive per row.
  */
 export const commissioningShareDeliveryBoxCombinationMatrixRetrieve = (
     params: CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams,

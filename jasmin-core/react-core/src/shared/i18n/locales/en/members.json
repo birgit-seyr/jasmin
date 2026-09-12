@@ -162,6 +162,7 @@
   "pickup_name": "Pickup name",
   "no_payments": "No payments yet.",
   "next_payment": "Next payment",
+  "batch_total": "Batch total",
   "admin_confirmation_success": "Successfully approved",
   "pseudonym": "Pseudonym - Pickup name",
   "phone": "Phone number",

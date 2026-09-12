@@ -10,13 +10,8 @@ from django.utils import timezone
 
 from ..errors import CommissioningError, DocumentDateRequired, FinalizedError
 from .base import JasminModel
-from .choices_text import (
-    DayNumberOptions,
-    DocumentType,
-    delivery_week_field,
-    size_vegetable_field,
-    unit_field,
-)
+from .choices import DayNumberOptions, DocumentType
+from .fields import delivery_week_field, size_vegetable_field, unit_field
 from .mixin import (
     CreatedMixin,
     DateDocumentMixin,
@@ -1116,9 +1111,10 @@ class InvoiceReseller(
             ),
             # The payment due date must not precede the invoice ``date`` (both
             # DateFields). NULL-tolerant: only enforced when both are set.
-            # ``paid_at >= due_date`` comes from PayableMixin.clean()
-            # (datetime-vs-date, no DB constraint). A Meta CheckConstraint is
-            # independent of the FinalizedProtected trigger allowlist.
+            # NB: ``paid_at`` vs ``due_date`` is deliberately UNguarded —
+            # a due date is a DEADLINE, so a reseller settling well inside its
+            # 14-day terms is normal (see PayableMixin). A Meta CheckConstraint
+            # is independent of the FinalizedProtected trigger allowlist.
             nullable_date_order_constraint(
                 "due_date",
                 "date",
@@ -1134,7 +1130,8 @@ class InvoiceReseller(
 
         # The payment due date must not precede the invoice date (both
         # DateFields). NULL-tolerant: only enforced when both are set.
-        # ``paid_at >= due_date`` is enforced by PayableMixin.clean().
+        # ``paid_at`` vs ``due_date`` is deliberately UNguarded — paying before
+        # the deadline is normal (see PayableMixin).
         validate_nullable_date_order(
             self,
             "due_date",

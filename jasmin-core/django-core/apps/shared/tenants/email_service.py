@@ -205,8 +205,7 @@ class EmailService:
         invalidation hazard (admin updates SMTP creds → emails go to the
         old SMTP for an hour) for a marginal perf win (~1ms per send).
         Drop the cache; revisit if a future bulk-send workload makes
-        per-send DB lookup hot. See docs/code/engineering-audit-playbook.md, Caching
-        invalidation pass.
+        per-send DB lookup hot.
         """
         # Scoped chokepoint (TenantEmailConfig is a SHARED/public-schema table
         # — never read it without a tenant scope).
@@ -594,6 +593,7 @@ class EmailService:
             username=s["EMAIL_HOST_USER"],
             password=s["EMAIL_HOST_PASSWORD"],
             use_tls=s["EMAIL_USE_TLS"],
+            use_ssl=s["EMAIL_USE_SSL"],
             # Cap the connect/handshake so a slow/unreachable host can't
             # hang the worker (no timeout = block forever).
             timeout=getattr(settings, "EMAIL_TIMEOUT", 10),

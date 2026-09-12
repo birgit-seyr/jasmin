@@ -34,12 +34,12 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import {
-  DownloadCsvTemplateButton,
   ExplainerText,
   HideInactiveSwitch,
   LinkButton,
   StatusButton,
 } from "@shared/ui";
+import { CsvImportButton } from "@shared/modals";
 import {
   useContactColumns,
   useNoteColumn,
@@ -440,6 +440,7 @@ export default function ListResellers() {
         permissions={list.permissions}
         pagination={true}
         showSearchBar={true}
+        keyboardAddShortcut={true}
       />
 
       <UserInfoModal
@@ -490,14 +491,13 @@ export default function ListResellers() {
         {t("explainers.list_resellers")}
       </ExplainerText>
 
-      {uploadAllowed && (
-        <DownloadCsvTemplateButton
-          columns={columns}
-          filename={t("commissioning.resellers_template.csv")}
-          modelName="reseller"
-          onUploadSuccess={list.invalidate}
-        />
-      )}
+      <CsvImportButton
+        uploadAllowed={uploadAllowed}
+        columns={columns}
+        filename={t("commissioning.resellers_template.csv")}
+        modelName="reseller"
+        onUploadSuccess={list.invalidate}
+      />
 
       <ResellerInvoiceSettingsModal
         open={!!invoiceDrawerReseller}

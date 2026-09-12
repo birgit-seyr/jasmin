@@ -13,9 +13,13 @@ import {
   useCommissioningShareTypeVariationPriceList,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { ShareTypeVariationGrossPrice } from "@shared/api/generated/models/shareTypeVariationGrossPrice";
+import { useTenantsSettingsUpdateCurrentSettingsUpdate } from "@shared/api/generated/tenants/tenants";
 import type { EditableColumnConfig } from "@shared/tables/BasicEditableTable/types";
 import { ToolTipIcon } from "@shared/ui";
-import { useMemo } from "react";
+import { notify } from "@shared/utils";
+import { getErrorMessage } from "@shared/utils/apiError";
+import { Checkbox } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import PriceEditorModal from "./PriceEditorModal";
 import { buildCurrencyPriceColumn, buildTaxRateColumn } from "./priceColumns";
@@ -36,11 +40,72 @@ export default function ShareTypeVariationPriceModal({
 }: ShareTypeVariationPriceModalProps) {
   const { t } = useTranslation();
   const { currencySymbol } = useCurrency();
-  const { getSetting } = useTenant();
+  const { getSetting, refreshTenant } = useTenant();
   const { shares: defaultTaxRateShares } = useDefaultTaxRates();
-  const allowsSolidarity = Boolean(
-    getSetting("allows_solidarity_pricing", false),
+
+  // ``allows_solidarity_pricing`` is a TENANT-WIDE setting, edited right here
+  // (moved out of the payments config page) so the office can flip it while
+  // setting a variation's prices. Local state mirrors the setting for INSTANT
+  // column reveal on toggle; the change is persisted to the tenant and the
+  // context refreshed so every other reader (subscriptions, dashboards) agrees.
+  const [allowsSolidarity, setAllowsSolidarity] = useState(() =>
+    Boolean(getSetting("allows_solidarity_pricing", false)),
   );
+  const [
+    trialSubscriptionsHaveDifferentPrices,
+    setTrialSubscriptionsHaveDifferentPrices,
+  ] = useState(() =>
+    Boolean(getSetting("trial_subscriptions_have_different_prices", false)),
+  );
+
+  // Re-seed when the modal (re)opens or the tenant setting loads/changes, so a
+  // value set elsewhere is reflected. While the modal is open the local state
+  // stays authoritative: ``getSetting``'s identity only changes once the
+  // refetched tenant lands, so an optimistic toggle isn't clobbered mid-save.
+  useEffect(() => {
+    if (visible) {
+      setAllowsSolidarity(
+        Boolean(getSetting("allows_solidarity_pricing", false)),
+      );
+      setTrialSubscriptionsHaveDifferentPrices(
+        Boolean(getSetting("trial_subscriptions_have_different_prices", false)),
+      );
+    }
+  }, [visible, getSetting]);
+
+  const updateSettings = useTenantsSettingsUpdateCurrentSettingsUpdate();
+
+  const handleToggleSolidarity = (checked: boolean) => {
+    setAllowsSolidarity(checked); // instant: reveal/hide the solidarity column
+    updateSettings.mutate(
+      { data: { settings: { allows_solidarity_pricing: checked } } },
+      {
+        onSuccess: () => refreshTenant(),
+        onError: (error) => {
+          setAllowsSolidarity(!checked); // revert the optimistic toggle
+          notify.error(getErrorMessage(error, t("common.error")));
+        },
+      },
+    );
+  };
+
+  const handleToggleTrialPrices = (checked: boolean) => {
+    setTrialSubscriptionsHaveDifferentPrices(checked); // instant column reveal
+    updateSettings.mutate(
+      {
+        data: {
+          settings: { trial_subscriptions_have_different_prices: checked },
+        },
+      },
+      {
+        onSuccess: () => refreshTenant(),
+        onError: (error) => {
+          setTrialSubscriptionsHaveDifferentPrices(!checked); // revert
+          notify.error(getErrorMessage(error, t("common.error")));
+        },
+      },
+    );
+  };
 
   const activeStatusColumn = useActiveStatusColumn({
     defaultSortOrder: "descend",
@@ -54,7 +119,20 @@ export default function ShareTypeVariationPriceModal({
         validFromColumn,
         validUntilColumn,
         buildCurrencyPriceColumn({
-          title: <>{t("commissioning.price_brutto")}</>,
+          // The brutto price is only a *reference* ("Richtpreis") when
+          // solidarity pricing is on — members then choose their own price
+          // around it. With solidarity off it is the fixed price, so the
+          // hint would be misleading; only show it when solidarity is on.
+          title: (
+            <>
+              {t("commissioning.price_brutto")}
+              {allowsSolidarity && (
+                <ToolTipIcon
+                  title={t("tooltip.share_type_variation_price_brutto")}
+                />
+              )}
+            </>
+          ),
           dataIndex: "price_per_delivery",
           currencySymbol,
           width: "6em",
@@ -74,6 +152,37 @@ export default function ShareTypeVariationPriceModal({
                 dataIndex: "solidarity_min_price_per_delivery",
                 currencySymbol,
                 width: "7em",
+                required: false,
+              }),
+            ]
+          : []),
+        // Trial prices — only when the tenant charges trial subscriptions
+        // differently (``trial_subscriptions_have_different_prices``).
+        ...(trialSubscriptionsHaveDifferentPrices
+          ? [
+              buildCurrencyPriceColumn({
+                title: t("commissioning.price_brutto_if_trial"),
+                dataIndex: "price_per_delivery_if_trial",
+                currencySymbol,
+                width: "7em",
+                required: false,
+              }),
+            ]
+          : []),
+        // Trial solidarity floor — needs BOTH trial prices AND solidarity on
+        // (a floor only means something when members set their own price).
+        ...(trialSubscriptionsHaveDifferentPrices && allowsSolidarity
+          ? [
+              buildCurrencyPriceColumn({
+                title: (
+                  <>
+                    {t("commissioning.solidarity_min_price_if_trial")}
+                    <ToolTipIcon title={t("tooltip.solidarity_min_price")} />
+                  </>
+                ),
+                dataIndex: "solidarity_min_price_per_delivery_if_trial",
+                currencySymbol,
+                width: "8em",
                 required: false,
               }),
             ]
@@ -111,16 +220,50 @@ export default function ShareTypeVariationPriceModal({
       validFromColumn,
       validUntilColumn,
       allowsSolidarity,
+      trialSubscriptionsHaveDifferentPrices,
     ],
   );
 
   return (
-    <PriceEditorModal<
-      ShareTypeVariationGrossPrice,
-      ShareTypeVariationGrossPrice
-    >
+    <PriceEditorModal<ShareTypeVariationGrossPrice>
       visible={visible}
       onClose={onClose}
+      intro={
+        <div className="mb-1em">
+          <div>
+            <Checkbox
+              checked={allowsSolidarity}
+              disabled={updateSettings.isPending}
+              onChange={(e) => handleToggleSolidarity(e.target.checked)}
+              aria-label={t("settings.payments.allows_solidarity_pricing")}
+            >
+              {t("settings.payments.allows_solidarity_pricing")}
+            </Checkbox>
+            <ToolTipIcon
+              title={t("settings.payments.allows_solidarity_pricing_desc")}
+            />
+          </div>
+          <div>
+            <Checkbox
+              checked={trialSubscriptionsHaveDifferentPrices}
+              disabled={updateSettings.isPending}
+              onChange={(e) => handleToggleTrialPrices(e.target.checked)}
+              aria-label={t(
+                "settings.subscriptions.trial_subscriptions_have_different_prices",
+              )}
+            >
+              {t(
+                "settings.subscriptions.trial_subscriptions_have_different_prices",
+              )}
+            </Checkbox>
+            <ToolTipIcon
+              title={t(
+                "settings.subscriptions.trial_subscriptions_have_different_prices_desc",
+              )}
+            />
+          </div>
+        </div>
+      }
       title={
         <div>
           {t("commissioning.prices_for_size")} {share_type_variation_name}

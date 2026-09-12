@@ -870,7 +870,15 @@ class TestIsOptedInForDeliveryProperty:
     (requires_optin × is_opted_in) combinations. Each delivery gets its own
     weekday so the one-open-per-day_number SharesDeliveryDay guard is happy."""
 
-    def _delivery(self, *, day_number, requires_optin, is_opted_in, tenant_settings):
+    def _delivery(
+        self,
+        *,
+        day_number,
+        requires_optin,
+        is_opted_in,
+        tenant_settings,
+        donation_joker_taken=False,
+    ):
         if requires_optin:
             tenant_settings.allows_share_type_variation_optin = True
             tenant_settings.save(update_fields=["allows_share_type_variation_optin"])
@@ -891,6 +899,7 @@ class TestIsOptedInForDeliveryProperty:
         delivery = ShareDeliveryFactory(
             share=share,
             delivery_station_day=DeliveryStationDayFactory(delivery_day=delivery_day),
+            donation_joker_taken=donation_joker_taken,
         )
         # On insert, requires_optin rows are stamped from default_optin_state;
         # plain rows keep the factory value. Force the exact row value either
@@ -927,10 +936,16 @@ class TestIsOptedInForDeliveryProperty:
         )
         assert opted_out.is_opted_in_for_delivery is False
 
-    def test_property_agrees_with_delivery_counts_q(self, tenant, tenant_settings):
-        # The rule lives twice: the Python property (billing loop) and the
-        # ``delivery_counts_q`` Q-object (demand/prep). They must classify every
-        # row identically — modulo joker, which the property is agnostic to.
+    def test_property_agrees_with_delivery_counts_q_except_donation_jokers(
+        self, tenant, tenant_settings
+    ):
+        # The ship rule lives twice: the Python BILLING property
+        # (``is_opted_in_for_delivery and not joker_taken``) and the
+        # ``delivery_counts_q`` Q-object (PRODUCTION/demand). They classify every
+        # row identically EXCEPT the donation joker — the one intended divergence:
+        # a donation joker is BILLED (member pays, then donates) but NOT produced
+        # (excluded from demand), so the billing property keeps it while
+        # delivery_counts_q drops it.
         plain = self._delivery(
             day_number=0,
             requires_optin=False,
@@ -949,6 +964,13 @@ class TestIsOptedInForDeliveryProperty:
             is_opted_in=False,
             tenant_settings=tenant_settings,
         )
+        donation = self._delivery(
+            day_number=3,
+            requires_optin=False,
+            is_opted_in=False,
+            tenant_settings=tenant_settings,
+            donation_joker_taken=True,
+        )
 
         rows = ShareDelivery.objects.all()
         counts_q_pks = set(
@@ -957,7 +979,14 @@ class TestIsOptedInForDeliveryProperty:
         property_pks = {
             d.pk for d in rows if d.is_opted_in_for_delivery and not d.joker_taken
         }
-        assert counts_q_pks == property_pks
-        # Expected partition: plain + opted-in count; opted-out does not.
-        assert property_pks == {plain.pk, onoff_in.pk}
+
+        # Billing keeps the donation joker; production drops it.
+        assert donation.pk in property_pks, "a donation joker must stay billed"
+        assert donation.pk not in counts_q_pks, "a donation joker must not be produced"
+        # The donation joker is the ONLY row where the two rules disagree.
+        assert property_pks - counts_q_pks == {donation.pk}
+        assert counts_q_pks - property_pks == set()
+        # Billed set (property): plain + opted-in + the donation joker;
+        # opted-out is not billed.
+        assert property_pks == {plain.pk, onoff_in.pk, donation.pk}
         assert onoff_out.pk not in property_pks

@@ -7,7 +7,8 @@
 #   1. create a non-root sudo user (key-login, passwordless sudo)
 #   2. copy root's SSH key to that user
 #   3. install Docker Engine + compose plugin
-#   4. unattended-upgrades (auto security patches)
+#   4. unattended-upgrades (auto security patches) + optional Ubuntu Pro
+#      Livepatch (live kernel CVE patches, no reboot) when --pro-token is given
 #   5. fail2ban (ban brute-force SSH)
 #   6. ufw (allow SSH/80/443, deny the rest) — belt-and-braces behind the
 #      Linode Cloud Firewall
@@ -17,7 +18,7 @@
 # Run as root on the box:
 #   ssh root@<server-ip>
 #   git clone <repo> jasmin-platform && cd jasmin-platform    # or scp this file
-#   ./scripts/bootstrap-server.sh --user bia
+#   ./scripts/bootstrap-server.sh --user bia [--pro-token <ubuntu-pro-token>]
 #
 # ESCAPE HATCH: if SSH ever breaks, Linode's Lish web console (Cloud Manager →
 # your Linode → "Launch LISH Console") always gets you in to fix it.
@@ -26,11 +27,13 @@ set -euo pipefail
 
 NEW_USER=""
 HARDEN_SSH=1
+PRO_TOKEN="${UBUNTU_PRO_TOKEN:-}"
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --user) NEW_USER="${2:?}"; shift 2 ;;
         --no-ssh-harden) HARDEN_SSH=0; shift ;;
+        --pro-token) PRO_TOKEN="${2:?}"; shift 2 ;;
         -h|--help) grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
@@ -95,6 +98,28 @@ APT::Periodic::Unattended-Upgrade "1";
 EOF
 systemctl enable --now unattended-upgrades >/dev/null 2>&1 || true
 systemctl enable --now fail2ban >/dev/null 2>&1 || true
+
+# ── 4b. Ubuntu Pro Livepatch (live kernel CVE patches, no reboot) ─────────────
+# unattended-upgrades installs kernel security fixes but they only take effect
+# after a reboot; Livepatch applies them to the RUNNING kernel. Optional — needs
+# a free Ubuntu Pro token (covers up to 5 machines):
+# https://ubuntu.com/pro/dashboard . Pass it with --pro-token <token> or the
+# UBUNTU_PRO_TOKEN env var. Skipped (with a note) when absent, so bootstrap still
+# succeeds without one. Idempotent: an already-attached box skips re-attaching.
+if [ -n "$PRO_TOKEN" ]; then
+    log "attaching Ubuntu Pro + enabling Livepatch"
+    if pro status --format json 2>/dev/null | grep -q '"attached": *true'; then
+        log "  already attached — skipping pro attach"
+    else
+        pro attach "$PRO_TOKEN" >/dev/null 2>&1 \
+            || log "  WARN: pro attach failed (bad/expired token?) — continuing without Livepatch"
+    fi
+    pro enable livepatch --assume-yes >/dev/null 2>&1 || true
+    canonical-livepatch status 2>/dev/null | sed 's/^/  /' | head -4 || true
+else
+    log "no --pro-token / UBUNTU_PRO_TOKEN — skipping Livepatch (kernel patches"
+    log "     still install via unattended-upgrades but need a reboot to activate)"
+fi
 
 # ── 6. ufw firewall (allow SSH/80/443, deny rest) ────────────────────────────
 log "configuring ufw"

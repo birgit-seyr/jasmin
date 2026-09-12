@@ -13,10 +13,15 @@ Coverage targets the gaps from the §1 test-coverage-priorities audit
 
 from __future__ import annotations
 
+import datetime
+from unittest.mock import patch
+
 import pytest
+from django.db import DatabaseError
+from django.utils import timezone
 
 from apps.commissioning.errors import DataImportInvalid
-from apps.commissioning.models import Crate
+from apps.commissioning.models import Crate, Member
 from apps.commissioning.serializers import CrateSerializer, ShareArticleSerializer
 from apps.commissioning.services.data_import import (
     DataImportResult,
@@ -30,6 +35,7 @@ from apps.commissioning.services.data_import import (
     get_serializer_for_model,
     import_rows_from_csv,
 )
+from apps.commissioning.tests.factories import JasminUserFactory
 
 # ---------------------------------------------------------------------------
 # Pure helpers — no DB, no fixtures needed
@@ -384,6 +390,30 @@ class TestImportRowsFromCsv:
         crate = Crate.objects.get(name="ActiveCrate")
         assert crate.is_active is True
 
+    def test_member_link_failure_rolls_back_the_row(self, tenant):
+        """A member whose email matches an existing (linkable) user goes through
+        ``link_to_user`` AFTER ``ser.save()``. If that later step fails, the
+        per-row ``transaction.atomic()`` must roll the member insert back — no
+        orphaned member that is nonetheless reported as failed (and would then
+        duplicate on a re-run of the "failed" file)."""
+        JasminUserFactory(email="linkme@example.com")
+        csv_bytes = (
+            b"First,Last,Email\n"  # titles
+            b"first_name,last_name,email\n"  # dataIndex
+            b"text,text,email\n"  # type hints
+            b"Link,Me,linkme@example.com\n"
+        )
+        with patch(
+            "apps.commissioning.services.member_service.MemberService.link_to_user",
+            side_effect=DatabaseError("simulated link failure"),
+        ):
+            result = import_rows_from_csv("member", csv_bytes)
+
+        assert result.successful == 0
+        assert result.failed == 1
+        # Atomic per-row: the save() was rolled back, so no orphan remains.
+        assert not Member.objects.filter(email="linkme@example.com").exists()
+
     def test_latin1_csv_decodes(self, tenant):
         """Excel-default Latin-1 exports must round-trip — German tenants
         upload these regularly."""
@@ -393,3 +423,376 @@ class TestImportRowsFromCsv:
 
         assert result.successful == 1
         assert Crate.objects.filter(name="Märchenkiste").exists()
+
+
+# ---------------------------------------------------------------------------
+# member_number on the onboarding import (MemberImportSerializer)
+# ---------------------------------------------------------------------------
+
+
+def _member_csv(*rows: str, extra_headers: str = "") -> bytes:
+    """3-row download-template CSV (titles / dataIndex / type hints) + data."""
+    header = "first_name,last_name,email,member_number,is_trial" + extra_headers
+    return (
+        "First,Last,Email,Member no.,Trial\n"
+        f"{header}\n"
+        "text,text,email,integer,boolean\n" + "".join(f"{row}\n" for row in rows)
+    ).encode("utf-8")
+
+
+@pytest.mark.django_db
+class TestMemberNumberImport:
+    """A tenant onboarding its EXISTING members brings their Mitgliedsnummern
+    with it — the office grid keeps the column read-only, but the import path
+    accepts it (``MemberImportSerializer``). Every follow-up onboarding import
+    (subscriptions, coop shares, SEPA mandates) resolves its member by that
+    number, so it has to survive the import verbatim."""
+
+    def test_member_number_is_imported(self, tenant):
+        result = import_rows_from_csv(
+            "member", _member_csv("Ada,Lovelace,ada@example.org,1001,false")
+        )
+
+        assert result.failed == 0, result.errors
+        assert Member.objects.get(email="ada@example.org").member_number == 1001
+
+    def test_imported_number_survives_admin_confirmation(self, tenant):
+        """``_post_confirm`` only generates a number when none is set — the
+        imported one must NOT be overwritten, or the whole Mitgliederliste is
+        renumbered out from under the tenant's paperwork."""
+        import_rows_from_csv(
+            "member", _member_csv("Ada,Lovelace,ada@example.org,1001,false")
+        )
+        member = Member.objects.get(email="ada@example.org")
+        admin = JasminUserFactory(email="office@example.org")
+
+        member.confirm(admin)
+        member.refresh_from_db()
+
+        assert member.member_number == 1001
+
+    def test_next_generated_number_continues_above_the_imported_block(self, tenant):
+        """The generator is ``Max(member_number) + 1``, so a member confirmed
+        AFTER the import lands above the imported range instead of colliding
+        with it."""
+        import_rows_from_csv(
+            "member", _member_csv("Ada,Lovelace,ada@example.org,1001,false")
+        )
+        fresh = Member.objects.create(
+            first_name="New", last_name="Joiner", email="new@example.org"
+        )
+        admin = JasminUserFactory(email="office2@example.org")
+
+        fresh.confirm(admin)
+        fresh.refresh_from_db()
+
+        assert fresh.member_number == 1002
+
+    def test_blank_number_still_imports(self, tenant):
+        """Leaving the column empty keeps the pre-existing behaviour: no number
+        until the office confirms the member."""
+        result = import_rows_from_csv(
+            "member", _member_csv("Grace,Hopper,grace@example.org,,false")
+        )
+
+        assert result.failed == 0, result.errors
+        assert Member.objects.get(email="grace@example.org").member_number is None
+
+    def test_duplicate_number_is_a_clean_per_row_error(self, tenant):
+        """Making the field writable attaches DRF's UniqueValidator, so a
+        collision within the same file is a per-row error — not an
+        IntegrityError that takes the batch with it."""
+        result = import_rows_from_csv(
+            "member",
+            _member_csv(
+                "Ada,Lovelace,ada@example.org,1001,false",
+                "Alan,Turing,alan@example.org,1001,false",
+            ),
+        )
+
+        assert result.successful == 1
+        assert result.failed == 1
+        assert result.errors[0]["row"] == 5
+        assert "member_number" in result.errors[0]["error"]
+        assert Member.objects.get(member_number=1001).email == "ada@example.org"
+
+    def test_trial_row_with_a_number_is_rejected(self, tenant):
+        """Trial members are not Mitglieder under GenG — no Mitgliedsnummer.
+        ``_post_confirm`` would leave an imported one in place forever."""
+        result = import_rows_from_csv(
+            "member", _member_csv("Try,Me,try@example.org,1001,true")
+        )
+
+        assert result.successful == 0
+        assert result.failed == 1
+        assert "number_not_allowed_for_trial" in result.errors[0]["error"] or (
+            "member number" in result.errors[0]["error"]
+        )
+        assert not Member.objects.filter(email="try@example.org").exists()
+
+    def test_office_grid_patch_still_cannot_set_a_number(self, tenant):
+        """The unlock is import-only: the serializer the office grid PATCHes
+        through keeps ``member_number`` read-only."""
+        from apps.commissioning.serializers import MemberSerializer
+
+        member = Member.objects.create(
+            first_name="Read", last_name="Only", email="ro@example.org"
+        )
+        ser = MemberSerializer(member, data={"member_number": 9999}, partial=True)
+
+        assert ser.is_valid(), ser.errors
+        ser.save()
+        member.refresh_from_db()
+
+        assert member.member_number is None
+
+
+@pytest.mark.django_db
+class TestMemberExitDateImport:
+    """Austrittsdatum (GenG §30) on the onboarding import.
+
+    A tenant migrating off another system brings DEPARTED members over too —
+    the Mitgliederliste has to retain them. The office has one date on paper
+    (the exit date), so that is the only column the template offers; the
+    serializer derives ``cancelled_at`` so the pair can never disagree.
+    """
+
+    @staticmethod
+    def _csv(*rows: str) -> bytes:
+        header = "first_name,last_name,email,entry_date,cancelled_effective_at"
+        return (
+            "First,Last,Email,Entry,Exit\n"
+            f"{header}\n"
+            "text,text,email,date,date\n" + "".join(f"{row}\n" for row in rows)
+        ).encode("utf-8")
+
+    def test_exit_date_is_imported(self, tenant):
+        result = import_rows_from_csv(
+            "member", self._csv("Ex,Member,ex@example.org,2019-04-01,2023-12-31")
+        )
+
+        assert result.failed == 0, result.errors
+        member = Member.objects.get(email="ex@example.org")
+        assert member.cancelled_effective_at == datetime.date(2023, 12, 31)
+
+    def test_cancelled_at_is_derived_so_the_row_reads_as_departed(self, tenant):
+        """``cancelled_at`` is what marks a member departed (the statistics
+        cancelled-count, the ``MemberAlreadyCancelled`` guard, the grid's
+        struck-through row), while the GenG retention sweep keys off
+        ``cancelled_effective_at``. An exit date on its own would leave a member
+        retention already targets while they still read as current."""
+        import_rows_from_csv(
+            "member", self._csv("Ex,Member,ex@example.org,2019-04-01,2023-12-31")
+        )
+
+        member = Member.objects.get(email="ex@example.org")
+        assert member.cancelled_at is not None
+        assert timezone.localtime(member.cancelled_at).date() == datetime.date(
+            2023, 12, 31
+        )
+        # The active-member filter used across the viewsets must exclude them.
+        assert not Member.objects.filter(
+            email="ex@example.org", cancelled_at__isnull=True
+        ).exists()
+
+    def test_blank_exit_date_leaves_an_active_member(self, tenant):
+        result = import_rows_from_csv(
+            "member", self._csv("Still,Here,here@example.org,2019-04-01,")
+        )
+
+        assert result.failed == 0, result.errors
+        member = Member.objects.get(email="here@example.org")
+        assert member.cancelled_effective_at is None
+        assert member.cancelled_at is None
+
+    def test_exit_before_entry_is_a_clean_row_error(self, tenant):
+        """``member_cancelled_effective_after_entry`` — you cannot leave before
+        you joined. Must surface as a per-row error, not abort the batch."""
+        result = import_rows_from_csv(
+            "member", self._csv("Bad,Dates,bad@example.org,2023-01-01,2019-04-01")
+        )
+
+        assert result.successful == 0
+        assert result.failed == 1
+        assert not Member.objects.filter(email="bad@example.org").exists()
+
+    def test_office_grid_patch_still_cannot_stamp_an_exit_date(self, tenant):
+        """The unlock is import-only. A live member's exit must keep going
+        through the cancel flow, which also cascades to their coop shares and
+        snapshots each share's payback due date (GenG §31)."""
+        from apps.commissioning.serializers import MemberSerializer
+
+        member = Member.objects.create(
+            first_name="Live", last_name="Member", email="live@example.org"
+        )
+        ser = MemberSerializer(
+            member, data={"cancelled_effective_at": "2024-01-31"}, partial=True
+        )
+
+        assert ser.is_valid(), ser.errors
+        ser.save()
+        member.refresh_from_db()
+
+        assert member.cancelled_effective_at is None
+        assert member.cancelled_at is None
+
+
+@pytest.mark.django_db
+class TestSharedEmailImport:
+    """``Member.email`` is deliberately NOT unique — two members legitimately
+    share one inbox (an elderly couple with a single address). What cannot be
+    shared is a LOGIN: ``JasminUser.email`` is the USERNAME_FIELD."""
+
+    @staticmethod
+    def _csv(*rows: str) -> bytes:
+        return (
+            "First,Last,Email\nfirst_name,last_name,email\ntext,text,email\n"
+            + "".join(f"{row}\n" for row in rows)
+        ).encode("utf-8")
+
+    def test_two_members_may_share_an_email(self, tenant):
+        result = import_rows_from_csv(
+            "member",
+            self._csv(
+                "Anna,Mueller,shared@example.org",
+                "Hans,Mueller,shared@example.org",
+            ),
+        )
+
+        assert result.failed == 0, result.errors
+        assert Member.objects.filter(email="shared@example.org").count() == 2
+
+    def test_dry_run_agrees_with_the_real_run(self, tenant):
+        """The preview must PREDICT the real run. It used to roll every row
+        back individually, so row 2 never saw row 1 and an intra-file collision
+        previewed green then failed for real."""
+        csv = self._csv(
+            "Anna,Mueller,shared@example.org", "Hans,Mueller,shared@example.org"
+        )
+
+        dry = import_rows_from_csv("member", csv, dry_run=True)
+        assert Member.objects.count() == 0, "dry run must persist nothing"
+
+        real = import_rows_from_csv("member", csv)
+        assert (dry.successful, dry.failed) == (real.successful, real.failed)
+
+    def test_dry_run_still_catches_a_duplicate_member_number(self, tenant):
+        """The relaxation is email-only — ``member_number`` is still unique, and
+        a collision WITHIN the file must surface in the preview."""
+        csv = (
+            b"First,Last,Email,No\n"
+            b"first_name,last_name,email,member_number\n"
+            b"text,text,email,integer\n"
+            b"A,One,a@example.org,900\n"
+            b"B,Two,b@example.org,900\n"
+        )
+
+        dry = import_rows_from_csv("member", csv, dry_run=True)
+
+        assert dry.successful == 1
+        assert dry.failed == 1
+        assert "member_number" in dry.errors[0]["error"]
+        assert Member.objects.count() == 0, "dry run must persist nothing"
+
+    def test_second_member_on_a_taken_login_imports_unlinked(self, tenant):
+        """The address's login belongs to another member. Import the member
+        anyway — dropping a real Mitglied over an account they were never going
+        to have would be worse."""
+        user = JasminUserFactory(email="shared@example.org")
+        first = Member.objects.create(
+            first_name="Anna", last_name="M", email="shared@example.org", user=user
+        )
+
+        result = import_rows_from_csv(
+            "member", self._csv("Hans,Mueller,shared@example.org")
+        )
+
+        assert result.failed == 0, result.errors
+        second = Member.objects.get(first_name="Hans")
+        assert second.user_id is None, "must not steal the other member's login"
+        first.refresh_from_db()
+        assert first.user_id == user.pk, "existing link must be untouched"
+
+
+@pytest.mark.django_db
+class TestInviteOnASharedEmail:
+    """Inviting the SECOND member on a shared inbox must fail cleanly.
+
+    Without the guard the shared invitation helper would reuse the other
+    member's ``pending_invitation`` / ``inactive`` user: roll THIS member's name
+    onto it, reset its status, cancel its open invite — and only then trip the
+    ``Member.user`` OneToOne. All inside one atomic block, so nothing persists,
+    but the office would see a constraint error instead of the reason.
+    """
+
+    def _members_sharing(self, holder_status="active"):
+        user = JasminUserFactory(email="shared@example.org")
+        user.account_status = holder_status
+        user.save(update_fields=["account_status"])
+        holder = Member.objects.create(
+            first_name="Anna",
+            last_name="Mueller",
+            email="shared@example.org",
+            member_number=501,
+            user=user,
+        )
+        partner = Member.objects.create(
+            first_name="Hans", last_name="Mueller", email="shared@example.org"
+        )
+        return holder, partner
+
+    def test_raises_and_names_the_holder(self, tenant):
+        from apps.commissioning.errors import MemberEmailAlreadyHasUser
+        from apps.commissioning.services.member_service import MemberService
+
+        holder, partner = self._members_sharing()
+        admin = JasminUserFactory(email="office@example.org")
+
+        with pytest.raises(MemberEmailAlreadyHasUser) as excinfo:
+            MemberService().send_invitation(partner, admin_user=admin)
+
+        details = excinfo.value.details
+        assert details["holder_name"] == "Anna Mueller"
+        assert details["holder_member_number"] == 501
+        assert details["context"] == "named_numbered"
+        assert excinfo.value.code == "member.email_already_has_user"
+
+    def test_the_holders_account_is_left_untouched(self, tenant):
+        """A pending holder is the dangerous case — that is the branch the
+        helper would have reused and rewritten."""
+        holder, partner = self._members_sharing(holder_status="pending_invitation")
+        admin = JasminUserFactory(email="office2@example.org")
+        from apps.commissioning.errors import MemberEmailAlreadyHasUser
+        from apps.commissioning.services.member_service import MemberService
+
+        # Snapshot what the helper would have overwritten. (The user's own name
+        # comes from the factory and is unrelated to the member's — compare
+        # against the captured value, not a literal.)
+        before = {
+            "first_name": holder.user.first_name,
+            "last_name": holder.user.last_name,
+            "account_status": holder.user.account_status,
+        }
+
+        with pytest.raises(MemberEmailAlreadyHasUser):
+            MemberService().send_invitation(partner, admin_user=admin)
+
+        holder.user.refresh_from_db()
+        assert holder.user.first_name == before["first_name"], "name was rewritten"
+        assert holder.user.last_name == before["last_name"], "name was rewritten"
+        assert holder.user.account_status == before["account_status"]
+        partner.refresh_from_db()
+        assert partner.user_id is None, "partner must not have claimed the login"
+
+    def test_the_holder_themselves_can_still_be_invited(self, tenant):
+        """The guard keys on a DIFFERENT member — it must not block the person
+        the account actually belongs to."""
+        from apps.commissioning.services.member_service import MemberService
+
+        holder, _partner = self._members_sharing(holder_status="pending_invitation")
+        admin = JasminUserFactory(email="office3@example.org")
+
+        MemberService().send_invitation(holder, admin_user=admin)
+
+        holder.refresh_from_db()
+        assert holder.user is not None

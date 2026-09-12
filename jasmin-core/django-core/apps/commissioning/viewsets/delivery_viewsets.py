@@ -8,8 +8,6 @@ from django.db import transaction
 from django.db.models import F, Q, QuerySet
 from django.utils import timezone
 from drf_spectacular.utils import (
-    OpenApiParameter,
-    OpenApiTypes,
     extend_schema,
     inline_serializer,
 )
@@ -46,6 +44,7 @@ from ..models import (
     Subscription,
 )
 from ..schemas import (
+    catalogue_param,
     get_active_at_date_or_future_parameter,
     get_active_at_date_parameter,
     get_delivery_day_parameter,
@@ -554,9 +553,8 @@ class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             get_member_parameter(required=False),
             get_year_parameter(required=False),
             get_delivery_week_parameter(required=False),
-            OpenApiParameter(
-                name="num_weeks",
-                type=OpenApiTypes.INT,
+            catalogue_param(
+                "num_weeks",
                 required=False,
                 description="Number of weeks to return capacity for (default: 52)",
             ),

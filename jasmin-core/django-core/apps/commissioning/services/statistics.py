@@ -6,7 +6,7 @@ from django.db.models import Q
 from apps.shared.money import CENT
 
 from ..models import ShareContent
-from ..models.choices_text import UnitOptions, VegetableSizeOptions
+from ..models.choices import UnitOptions, VegetableSizeOptions
 
 
 def _compute_variation_averages(

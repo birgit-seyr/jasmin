@@ -61,6 +61,18 @@ class NoTenantContext(BadRequestError):
     code = "tenant.no_context"
 
 
+class TenantAppIconInvalid(BadRequestError):
+    """The uploaded web-app launcher icon is not usable as one: too large,
+    not a decodable PNG/JPEG/WEBP, not square, or below the 512px minimum.
+
+    Square is a hard requirement rather than a crop-on-upload convenience —
+    the icon is rendered by the OS launcher at an aspect ratio we do not
+    control, so a non-square source would be stretched or letterboxed on the
+    user's home screen with no way for us to detect it afterwards."""
+
+    code = "tenant.app_icon_invalid"
+
+
 class YearNumberingLocked(BadRequestError):
     """A year-based numbering setting cannot be changed anymore because
     documents of the corresponding type already exist."""

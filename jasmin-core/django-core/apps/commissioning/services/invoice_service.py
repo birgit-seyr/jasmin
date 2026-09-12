@@ -12,6 +12,7 @@ from apps.shared.tenants.models import RateLimitedAction
 from apps.shared.tenants.rate_limits import enforce_action_quota
 from core.errors import ConflictError
 
+from ..constants import crates_should_be_on_documents
 from ..errors import CommissioningError
 from ..models import (
     CrateContentInvoiceReseller,
@@ -378,9 +379,15 @@ class InvoiceService:
                 delivery_note_contents=(delivery_note_content,),
             )
 
-        for crate_delivery_note_content in delivery_note.crate_items.select_related(
-            "crate_type"
-        ):
+        # Defence-in-depth: don't copy crates onto the invoice when the tenant
+        # keeps crates OFF documents — covers pre-existing delivery-note crates
+        # (from before the setting was turned off) so totals never count them.
+        crate_items = (
+            delivery_note.crate_items.select_related("crate_type")
+            if crates_should_be_on_documents()
+            else delivery_note.crate_items.none()
+        )
+        for crate_delivery_note_content in crate_items:
             InvoiceService._create_invoice_crate_content(
                 invoice,
                 crate_delivery_note_content,
@@ -759,10 +766,17 @@ class InvoiceService:
         ``rabatt`` are in the key for the same reason as the article lines."""
         crate_groups: dict[tuple, dict] = {}
 
+        # Skip crates entirely when the tenant keeps them OFF documents (read the
+        # setting once — no per-note query). Covers pre-existing delivery-note
+        # crates so a multi-note invoice's totals never count them.
+        include_crates = crates_should_be_on_documents()
         for delivery_note in delivery_notes:
-            for delivery_note_crate_content in delivery_note.crate_items.select_related(
-                "crate_type"
-            ):
+            crate_items = (
+                delivery_note.crate_items.select_related("crate_type")
+                if include_crates
+                else delivery_note.crate_items.none()
+            )
+            for delivery_note_crate_content in crate_items:
                 resolved_crate_tax_rate = (
                     delivery_note_crate_content.tax_rate
                     if delivery_note_crate_content.tax_rate is not None

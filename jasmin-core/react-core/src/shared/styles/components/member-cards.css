@@ -15,6 +15,19 @@
   background-color: var(--color-future-blue);
 }
 
+/* PaymentsCard: greyish "batch subtotal" row — what a member pays across one
+ * non-weekly cycle (e.g. a month), summed from the weekly + non-weekly charges
+ * due in that window. Sits inside a Timeline item. */
+.payment-batch-subtotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
 /* Members list header row: summary stats on the left, the CSV export button
  * pushed to the right of the page. Wraps on narrow viewports. */
 .members-list-toolbar {

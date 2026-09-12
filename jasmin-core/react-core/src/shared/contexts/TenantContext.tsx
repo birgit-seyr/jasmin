@@ -495,6 +495,42 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [faviconUrl]);
 
+  // Same trick for the iOS home-screen icon. iOS ignores the manifest's icons
+  // for "Add to Home Screen" and reads <link rel="apple-touch-icon"> from the
+  // live DOM at the moment the user taps it — long after load — which is what
+  // makes runtime injection correct here, unlike for the manifest itself.
+  //
+  // Keyed on the VERSION STAMP, not on a file URL from the payload: the
+  // anonymous and authenticated tenant responses emit file URLs in different
+  // shapes (relative vs absolute), so keying on one would re-fire this effect
+  // on every refreshTenantFull() for no visual change. The stamp is carried by
+  // all three tenant serializers and changes when the icon does, so a freshly
+  // uploaded icon replaces the tag immediately instead of after a reload — and
+  // the ?v= keeps the route's day-long cache from serving the previous icon.
+  //
+  // Empty stamp means no icon uploaded. The route would 404 and iOS would fall
+  // back to a screenshot of the page, so leave index.html's static platform
+  // icon in place rather than point at a dead URL.
+  const appIconVersion = currentTenant?.app_icon_version ?? "";
+
+  useEffect(() => {
+    if (isPlatformDomain()) return; // Platform host is not installable
+    if (!appIconVersion) return;
+    let link = document.querySelector<HTMLLinkElement>(
+      'link[rel="apple-touch-icon"]',
+    );
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "apple-touch-icon";
+      document.head.appendChild(link);
+    }
+    const previousHref = link.href;
+    link.href = `/api/tenants/app-icon.png?v=${appIconVersion}`;
+    return () => {
+      if (link) link.href = previousHref;
+    };
+  }, [appIconVersion]);
+
   const value = useMemo<TenantContextValue>(
     () => ({
       // Current tenant data

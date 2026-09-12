@@ -5,7 +5,7 @@ from typing import Any
 
 from django.db.models import Case, IntegerField, TextChoices, Value, When
 
-from ..models.choices_text import (
+from ..models.choices import (
     ShareTypeVariationSizeOptions,
     UnitOptions,
     VegetableSizeOptions,

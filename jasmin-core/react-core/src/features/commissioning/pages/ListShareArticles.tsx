@@ -27,11 +27,8 @@ import {
   useCrudListPage,
 } from "@shared/tables";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
-import {
-  DownloadCsvTemplateButton,
-  ExplainerText,
-  HideInactiveSwitch,
-} from "@shared/ui";
+import { ExplainerText, HideInactiveSwitch } from "@shared/ui";
+import { CsvImportButton } from "@shared/modals";
 import {
   useActiveShareOptions,
   useNumberFormat,
@@ -351,19 +348,19 @@ export default function ListShareArticles() {
         permissions={list.permissions}
         pagination={true}
         showSearchBar={true}
+        keyboardAddShortcut={true}
       />
       <ExplainerText title={t("common.info")}>
         {t("explainers.list_share_articles")}
       </ExplainerText>
 
-      {uploadAllowed && (
-        <DownloadCsvTemplateButton
-          columns={columns}
-          filename={t("commissioning.share_articles_template.csv")}
-          modelName="share_article"
-          onUploadSuccess={list.invalidate}
-        />
-      )}
+      <CsvImportButton
+        uploadAllowed={uploadAllowed}
+        columns={columns}
+        filename={t("commissioning.share_articles_template.csv")}
+        modelName="share_article"
+        onUploadSuccess={list.invalidate}
+      />
       <ExportCsv
         open={csvModalVisible}
         onClose={() => setCsvModalVisible(false)}

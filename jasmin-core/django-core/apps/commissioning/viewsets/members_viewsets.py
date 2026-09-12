@@ -26,7 +26,6 @@ from django.http import StreamingHttpResponse
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
-    OpenApiParameter,
     extend_schema,
     extend_schema_view,
     inline_serializer,
@@ -55,11 +54,12 @@ from ..errors import (
     SubscriptionConfirmedImmutable,
 )
 from ..models import CoopShare, Member, ShareDelivery, Subscription
-from ..models.choices_text import InvitationStatus
+from ..models.choices import InvitationStatus
 from ..models.managers import active_on_date_q
 from ..models.members import MemberLoan, UserInvitation
 from ..schemas import (
     EXPORT_DATE_RANGE_PARAMETERS,
+    catalogue_param,
     get_active_at_date_parameter,
     get_is_active_parameter,
     get_is_trial_parameter,
@@ -320,15 +320,13 @@ class MemberViewSet(
         parameters=[
             get_is_active_parameter(),
             get_is_trial_parameter(required=False),
-            OpenApiParameter(
-                name="only_with_subscriptions",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "only_with_subscriptions",
                 required=False,
                 description="Only return members that have subscriptions",
             ),
-            OpenApiParameter(
-                name="exclude_trial_members",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "exclude_trial_members",
                 required=False,
                 description="Exclude trial members from results",
             ),
@@ -722,8 +720,9 @@ def _build_subscription_queryset(request: Request) -> QuerySet[Subscription]:
         # as "needs admin-confirmation".
         #
         # Opt-outs for on-off variations are excluded too, so Abos.tsx agrees
-        # with the demand pipeline / preparation lists and with billing — all
-        # three now share the one ``ShareDelivery.delivery_counts_q`` rule.
+        # with the demand pipeline / preparation lists — this is a PRODUCTION
+        # count (``ShareDelivery.delivery_counts_q``), NOT a billed count: it also
+        # excludes donation jokers (billed but not produced), which billing keeps.
         deliveries_count=Count(
             "sharedelivery",
             filter=ShareDelivery.delivery_counts_q(prefix="sharedelivery__"),
@@ -818,9 +817,8 @@ class SubscriptionViewSet(
             get_share_option_parameter(required=False),
             get_is_trial_parameter(required=False),
             get_active_at_date_parameter(),
-            OpenApiParameter(
-                name="on_waiting_list",
-                type=OpenApiTypes.BOOL,
+            catalogue_param(
+                "on_waiting_list",
                 required=False,
                 description="Filter by waiting list status",
             ),

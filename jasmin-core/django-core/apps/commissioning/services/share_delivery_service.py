@@ -18,6 +18,7 @@ class ShareDeliveryService:
         delivery_week: int,
         mode: str = "day",
         joker: bool = False,
+        donation_joker: bool = False,
     ) -> dict[str, Any]:
         """Whole-week per-variation count matrix for AmountShareTypeVariations on
         IMPORT (external-demand) tenants — the flat sibling of
@@ -65,6 +66,7 @@ class ShareDeliveryService:
             delivery_day_ids=[day.id for day in delivery_days],
             variation_ids=variation_ids,
             joker=joker,
+            donation_joker=donation_joker,
         )
 
         station_name_by_id: dict[str, str | None] = {}

@@ -5,9 +5,7 @@ from decimal import Decimal
 from django.db.models import Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
-    OpenApiParameter,
     extend_schema,
     extend_schema_view,
     inline_serializer,
@@ -25,6 +23,7 @@ from apps.authz.permissions import (
 )
 from apps.authz.scoping import enforce_owner
 from apps.shared.money import round_money
+from apps.shared.openapi_params import catalogue_parameter
 from apps.shared.pii_logging import PIIReadLoggingMixin
 from apps.shared.query_params import (
     ParamSpec,
@@ -57,6 +56,10 @@ PARAM_CATALOGUE: dict[str, ParamSpec] = {
     "month": ParamSpec("int", min_value=1, max_value=12),
     "date_from": ParamSpec("date"),
     "date_to": ParamSpec("date"),
+    # Filter-only params: declared so the OpenAPI schema derives from this
+    # catalogue too, rather than being re-typed inline at each endpoint.
+    "member": ParamSpec("str"),
+    "status": ParamSpec("str"),
 }
 
 # "Billed" income = every charge that represents owed revenue not written off:
@@ -74,9 +77,9 @@ BILLED_INCOME_STATUSES = (*OPEN_CHARGE_STATUSES, ChargeStatus.PAID)
             "Staff (Office) sees every member's profile."
         ),
         parameters=[
-            OpenApiParameter(
+            catalogue_parameter(
                 "member",
-                str,
+                PARAM_CATALOGUE,
                 required=False,
                 description="Filter by member id (staff only).",
             ),
@@ -239,27 +242,27 @@ class BillingProfileViewSet(
             "Members only see their own rows; staff sees all."
         ),
         parameters=[
-            OpenApiParameter(
+            catalogue_parameter(
                 "member",
-                str,
+                PARAM_CATALOGUE,
                 required=False,
                 description="Filter by member id (staff only).",
             ),
-            OpenApiParameter(
+            catalogue_parameter(
                 "status",
-                str,
+                PARAM_CATALOGUE,
                 required=False,
                 description="Filter by ChargeStatus value (PLANNED, ISSUED, ...).",
             ),
-            OpenApiParameter(
+            catalogue_parameter(
                 "year",
-                int,
+                PARAM_CATALOGUE,
                 required=False,
                 description="Filter by due_date year.",
             ),
-            OpenApiParameter(
+            catalogue_parameter(
                 "month",
-                int,
+                PARAM_CATALOGUE,
                 required=False,
                 description="Filter by due_date month (1–12). Requires `year`.",
             ),
@@ -370,15 +373,15 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
             "window. Powers the DashboardAbos income chart."
         ),
         parameters=[
-            OpenApiParameter(
+            catalogue_parameter(
                 "date_from",
-                OpenApiTypes.DATE,
+                PARAM_CATALOGUE,
                 required=True,
                 description="Inclusive start (YYYY-MM-DD), matched on due_date.",
             ),
-            OpenApiParameter(
+            catalogue_parameter(
                 "date_to",
-                OpenApiTypes.DATE,
+                PARAM_CATALOGUE,
                 required=True,
                 description="Inclusive end (YYYY-MM-DD), matched on due_date.",
             ),
@@ -438,14 +441,12 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
         tags=["Payments — Billing runs"],
         summary="List billing runs (staff only)",
         parameters=[
-            OpenApiParameter(
+            catalogue_parameter(
                 "year",
-                int,
+                PARAM_CATALOGUE,
                 required=False,
-                description=(
-                    "Filter to runs whose period falls in this year "
-                    "(matched on period_start's year)."
-                ),
+                description="Filter to runs whose period falls in this year "
+                "(matched on period_start's year).",
             ),
         ],
         responses={

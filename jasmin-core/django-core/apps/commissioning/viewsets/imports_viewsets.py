@@ -4,7 +4,6 @@ from typing import Any
 
 from django.db.models import QuerySet
 from drf_spectacular.utils import (
-    OpenApiParameter,
     OpenApiResponse,
     extend_schema,
     inline_serializer,
@@ -24,7 +23,7 @@ from ..models import (
     ExternalShareDemand,
     ShareImportBatch,
 )
-from ..schemas import get_delivery_week_parameter, get_year_parameter
+from ..schemas import catalogue_param, get_delivery_week_parameter, get_year_parameter
 from ..serializers.imports_serializer import (
     ExternalCodeMappingSerializer,
     ExternalShareDemandSerializer,
@@ -49,11 +48,8 @@ class ExternalCodeMappingViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(
-                "kind",
-                str,
-                required=False,
-                description="variation | station | day",
+            catalogue_param(
+                "kind", required=False, description="variation | station | day"
             ),
         ],
     )
@@ -83,9 +79,9 @@ class ShareImportBatchViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSe
 
     @extend_schema(
         parameters=[
-            OpenApiParameter("year", int, required=False),
-            OpenApiParameter("delivery_week", int, required=False),
-            OpenApiParameter("status", str, required=False),
+            catalogue_param("year", required=False),
+            catalogue_param("delivery_week", required=False),
+            catalogue_param("status", required=False),
         ],
     )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:

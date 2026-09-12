@@ -21,8 +21,7 @@ from __future__ import annotations
 
 import os
 
-from drf_spectacular.utils import extend_schema, inline_serializer
-from rest_framework import serializers as drf_serializers
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.request import Request
@@ -33,6 +32,7 @@ from apps.authz.permissions import APIViewRolePermissionsMixin, IsOffice
 from core.serializers import ErrorResponseSerializer
 
 from ..errors import DataImportInvalid, RequiredFieldMissing
+from ..serializers.imports_serializer import DataImportResponseSerializer
 from ..services.data_import import (
     MODEL_IMPORT_REGISTRY,
     import_rows_from_csv,
@@ -68,39 +68,20 @@ class DataImportView(APIViewRolePermissionsMixin, APIView):
                         ),
                     },
                     "file": {"type": "string", "format": "binary"},
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": (
+                            "Validate every row (including FK resolution) "
+                            "without persisting anything — the preview pass for "
+                            "many-FK imports like subscriptions."
+                        ),
+                    },
                 },
                 "required": ["model_name", "file"],
             }
         },
         responses={
-            200: inline_serializer(
-                name="DataImportResponse",
-                fields={
-                    "model_name": drf_serializers.CharField(),
-                    "total_rows": drf_serializers.IntegerField(),
-                    "successful": drf_serializers.IntegerField(),
-                    "failed": drf_serializers.IntegerField(),
-                    "results": drf_serializers.ListField(
-                        child=inline_serializer(
-                            name="DataImportResultItem",
-                            fields={
-                                "row": drf_serializers.IntegerField(),
-                                "id": drf_serializers.CharField(allow_null=True),
-                            },
-                        ),
-                    ),
-                    "errors": drf_serializers.ListField(
-                        child=inline_serializer(
-                            name="DataImportErrorItem",
-                            fields={
-                                "row": drf_serializers.IntegerField(),
-                                "error": drf_serializers.CharField(),
-                                "data": drf_serializers.DictField(),
-                            },
-                        ),
-                    ),
-                },
-            ),
+            200: DataImportResponseSerializer,
             400: ErrorResponseSerializer,
         },
     )
@@ -120,11 +101,18 @@ class DataImportView(APIViewRolePermissionsMixin, APIView):
         if os.path.splitext(upload.name)[1].lower() != ".csv":
             raise DataImportInvalid("file must be a .csv", field="file")
 
+        dry_run = str(request.data.get("dry_run", "")).strip().lower() in {
+            "true",
+            "1",
+            "yes",
+            "on",
+        }
+
         # ``import_rows_from_csv`` raises ``DataImportInvalid`` directly for
         # whole-file problems; the global handler renders it. Per-row failures
         # come back on ``result`` and never raise.
         result = import_rows_from_csv(
-            model_name, upload.read(), importing_user=request.user
+            model_name, upload.read(), importing_user=request.user, dry_run=dry_run
         )
 
         return Response(result.to_dict(), status=status.HTTP_200_OK)

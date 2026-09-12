@@ -63,6 +63,9 @@ export default function ConfigurationDeliveryExceptions() {
   const { validFromColumn, validUntilColumn } = useTimeBoundColumns({
     validFromRequired: true,
     validUntilRequired: true,
+    // A delivery pause can only be scheduled going forward — the backend
+    // rejects a past valid_from; this aligns the picker with that rule.
+    validFromFutureOnly: true,
     // Once valid_from is picked, valid_until may only be a Sunday in the future
     // relative to it — the earliest being that week's Sunday (a one-week pause).
     // Evaluated live against the in-edit valid_from; the backend enforces the

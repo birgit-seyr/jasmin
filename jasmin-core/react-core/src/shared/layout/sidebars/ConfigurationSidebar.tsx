@@ -39,12 +39,6 @@ export default function ConfigurationSidebar({
           ),
         },
         {
-          key: "configuration-users",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: <Link to="/configuration/users">{t("users.title")}</Link>,
-        },
-        {
           key: "configuration-email",
           requireRole: "isAdmin",
           icon: <SettingOutlined />,
@@ -62,75 +56,15 @@ export default function ConfigurationSidebar({
             </Link>
           ),
         },
-      ],
-    },
-    {
-      type: "group",
-      key: "configuration-group-commissioning",
-      label: t("configuration.group.commissioning"),
-      children: [
         {
-          key: "configuration-time-management",
+          key: "configuration-users",
           requireRole: "isAdmin",
           icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/time-management">
-              {t("configuration.delivery_days")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-delivery-exceptions",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/delivery-exceptions">
-              {t("commissioning.delivery_exceptions")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-commissioning",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/commissioning">
-              {t("configuration.commissioning")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-share-type-variations",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/share-type-variations">
-              {t("configuration.share_type_variations")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-reseller-documents",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/reseller-documents">
-              {t("configuration.reseller_documents")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-email-templates-resellers",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/email-templates/resellers">
-              {t("configuration.email_templates")}
-            </Link>
-          ),
+          label: <Link to="/configuration/users">{t("users.title")}</Link>,
         },
       ],
     },
+
     {
       type: "group",
       key: "configuration-group-members",
@@ -190,6 +124,74 @@ export default function ConfigurationSidebar({
           icon: <SettingOutlined />,
           label: (
             <Link to="/configuration/email-templates/members">
+              {t("configuration.email_templates")}
+            </Link>
+          ),
+        },
+      ],
+    },
+    {
+      type: "group",
+      key: "configuration-group-commissioning",
+      label: t("configuration.group.commissioning"),
+      children: [
+        {
+          key: "configuration-commissioning",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/commissioning">
+              {t("configuration.commissioning")}
+            </Link>
+          ),
+        },
+        {
+          key: "configuration-share-type-variations",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/share-type-variations">
+              {t("configuration.share_type_variations")}
+            </Link>
+          ),
+        },
+        {
+          key: "configuration-time-management",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/time-management">
+              {t("configuration.delivery_days")}
+            </Link>
+          ),
+        },
+        {
+          key: "configuration-delivery-exceptions",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/delivery-exceptions">
+              {t("commissioning.delivery_exceptions")}
+            </Link>
+          ),
+        },
+
+        {
+          key: "configuration-reseller-documents",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/reseller-documents">
+              {t("configuration.reseller_documents")}
+            </Link>
+          ),
+        },
+        {
+          key: "configuration-email-templates-resellers",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/email-templates/resellers">
               {t("configuration.email_templates")}
             </Link>
           ),

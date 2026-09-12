@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
+from django.utils import timezone
 
 from apps.commissioning.models import (
     CrateOrderContent,
@@ -26,6 +28,7 @@ from apps.commissioning.tests.factories import (
     ResellerFactory,
     ShareArticleFactory,
 )
+from apps.shared.tenants.models import TenantSettings
 from core.errors import JasminError
 
 
@@ -138,6 +141,47 @@ class TestCreateOrderWithContentAndCrates:
         assert CrateOrderContent.objects.count() == 1
         coc = CrateOrderContent.objects.first()
         assert coc.crate_type == crate
+
+    @patch.object(OrderContentService, "create_movements", side_effect=_noop_movements)
+    @patch.object(
+        OrderContentService,
+        "create_all_theoretical_objects",
+        side_effect=_noop_theoretical,
+    )
+    def test_no_crate_order_content_when_crates_off_documents(
+        self, _mock_theo, _mock_mv, tenant
+    ):
+        """When the tenant keeps crates OFF documents, ordering an article whose
+        offer carries a crate creates NO CrateOrderContent — so nothing cascades
+        onto delivery notes / invoices (the root gate the whole feature hangs
+        off). Contrast ``test_creates_crate_order_content`` (default → 1)."""
+        TenantSettings.objects.create(
+            tenant=tenant,
+            valid_from=timezone.now() - datetime.timedelta(seconds=1),
+            crates_should_be_on_documents=False,
+        )
+        reseller = ResellerFactory()
+        article = ShareArticleFactory()
+        crate = CrateFactory()
+        CrateNetPriceFactory(crate=crate, price=Decimal("3.00"))
+        offer = OfferFactory(
+            share_article=article,
+            amount=Decimal("100"),
+            unit="KG",
+            size="M",
+            used_crate=crate,
+        )
+
+        OrderContentService.create_order_with_content_and_crates(
+            reseller=reseller,
+            year=2026,
+            delivery_week=15,
+            day_number=2,
+            offer=offer,
+            amount=Decimal("10"),
+        )
+
+        assert CrateOrderContent.objects.count() == 0
 
     @patch.object(OrderContentService, "create_movements", side_effect=_noop_movements)
     @patch.object(

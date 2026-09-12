@@ -5,10 +5,8 @@ from datetime import date
 
 from django.db.models import Count, QuerySet
 from django.db.models.functions import TruncMonth, TruncWeek, TruncYear
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
-    OpenApiParameter,
     OpenApiResponse,
     extend_schema,
 )
@@ -23,6 +21,7 @@ from core.serializers import ErrorResponseSerializer
 from ..errors import InvalidQueryParam
 from ..models import Member
 from ..schemas import (
+    catalogue_param,
     get_delivery_week_parameter,
     get_end_date_parameter,
     get_start_date_parameter,
@@ -48,17 +47,15 @@ from ..utils.query_params import validate_query_params
     and cumulative total. Can be filtered by time period and date range.
     """,
     parameters=[
-        OpenApiParameter(
-            name="period",
-            type=OpenApiTypes.STR,
+        catalogue_param(
+            "period",
             required=False,
             description="Time period for grouping statistics",
             enum=["month", "week", "year"],
             default="month",
         ),
-        OpenApiParameter(
-            name="start_date",
-            type=OpenApiTypes.DATE,
+        catalogue_param(
+            "start_date",
             required=False,
             description="Optional: Start date filter (YYYY-MM-DD). Ignored if 'year' is provided.",
         ),
@@ -190,14 +187,11 @@ def member_dashboard_statistics(request: Request) -> Response:
     parameters=[
         get_year_parameter(required=True),
         get_delivery_week_parameter(required=True),
-        OpenApiParameter(
-            name="share_type_variation_ids",
-            type=OpenApiTypes.STR,
+        catalogue_param(
+            "share_type_variation_ids",
             required=False,
-            description=(
-                "Comma-separated list of share type variation IDs. "
-                "Pass this OR `share_option` (+ optional `active_at_date`)."
-            ),
+            description="Comma-separated list of share type variation IDs. "
+            "Pass this OR `share_option` (+ optional `active_at_date`).",
             examples=[
                 OpenApiExample(
                     "Multiple Variations",
@@ -205,29 +199,19 @@ def member_dashboard_statistics(request: Request) -> Response:
                 )
             ],
         ),
-        OpenApiParameter(
-            name="share_option",
-            type=OpenApiTypes.STR,
+        catalogue_param(
+            "share_option",
             required=False,
-            description=(
-                "Resolve variation IDs server-side from share_option "
-                "(e.g. 'gemuese'). Use this to avoid a client-side waterfall."
-            ),
+            description="Resolve variation IDs server-side from share_option "
+            "(e.g. 'gemuese'). Use this to avoid a client-side waterfall.",
         ),
-        OpenApiParameter(
-            name="active_at_date",
-            type=OpenApiTypes.DATE,
+        catalogue_param(
+            "active_at_date",
             required=False,
-            description=(
-                "When using `share_option`: only consider variations active "
-                "at this date. Ignored if `share_type_variation_ids` given."
-            ),
+            description="When using `share_option`: only consider variations active "
+            "at this date. Ignored if `share_type_variation_ids` given.",
         ),
-        OpenApiParameter(
-            name="years_back",
-            type=OpenApiTypes.INT,
-            required=False,
-        ),
+        catalogue_param("years_back", required=False),
     ],
     responses={
         200: OpenApiResponse(

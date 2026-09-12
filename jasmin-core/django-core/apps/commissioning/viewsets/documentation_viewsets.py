@@ -6,7 +6,6 @@ from django.db import transaction
 from django.db.models import F, QuerySet
 from django.http import HttpResponse
 from drf_spectacular.utils import (
-    OpenApiParameter,
     OpenApiResponse,
     OpenApiTypes,
     extend_schema,
@@ -28,6 +27,7 @@ from ..models import (
 )
 from ..schemas import (
     EXPORT_DATE_RANGE_PARAMETERS,
+    catalogue_param,
     get_day_number_parameter,
     get_delivery_week_parameter,
     get_include_next_week_parameter,
@@ -65,9 +65,8 @@ VALID_MODELS = list(DOCUMENTATION_MODELS)
 
 _EXPORT_DATE_PARAMETERS = [
     *EXPORT_DATE_RANGE_PARAMETERS,
-    OpenApiParameter(
-        name="summed",
-        type=bool,
+    catalogue_param(
+        "summed",
         required=False,
         description="If true, sum amounts by share article instead of listing individual rows.",
     ),

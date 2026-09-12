@@ -103,7 +103,9 @@
       "title": "Paper signature"
     },
     "requires_paper_signature_for_membership": "Paper signature for membership",
-    "requires_paper_signature_for_membership_desc": "When on, the membership consents must be printed, signed, and sent to the office. The office records receipt manually."
+    "requires_paper_signature_for_membership_desc": "When on, the membership consents must be printed, signed, and sent to the office. The office records receipt manually.",
+    "requires_paper_signature_for_cancellation_of_membership": "Paper signature for cancellation of membership",
+    "requires_paper_signature_for_cancellation_of_membership_desc": "When on, the cancellation form must be printed, signed, and sent to the office. The office records receipt manually."
   },
   "payments": {
     "strategy": {
@@ -155,6 +157,7 @@
     "packing_mode_mixed": "mixed (selectable per share type)",
     "number_packing_stations": "Number of Packing Stations",
     "show_size_column": "Show vegetable sizes column",
+    "distribute_forecast_by_weight": "Distribute forecast amount across sizes by weight (prefill empty cells)",
     "show_summary_in_harvest_share_planning_on_top": "Show summary rows at the top of crate planning",
     "sales": {
       "title": "Sales Channels"
@@ -184,6 +187,8 @@
     },
     "season_start": "Season Start",
     "season_start_week": "Season Start (KW 1–53)",
+    "min_weeks_from_creation_to_start_delivery": "Lead time before delivery start (weeks)",
+    "min_weeks_from_creation_to_start_delivery_desc": "Minimum number of weeks between creating a subscription and the earliest possible delivery start. The earliest selectable start date (valid from) is the first Monday on or after today plus this many weeks. 0 = from next Monday.",
     "shares": {
       "title": "Share Types"
     },
@@ -362,6 +367,8 @@
       "description": "Controls whether trial memberships are possible and which conditions apply to them."
     },
     "allows_trial_subscriptions": "Allow Trial Subscriptions",
+    "trial_subscriptions_have_different_prices": "Trial subscriptions have different prices",
+    "trial_subscriptions_have_different_prices_desc": "If enabled, each size can carry its own price (and solidarity floor) for trial subscriptions. Otherwise trials use the regular prices.",
     "allowed_trial_subscription_duration": "Allowed Trial Subscription Duration (Weeks)",
     "allowed_trial_subscription_duration_desc": "Maximum term of a trial membership.",
     "allows_trial_subscriptions_for_trial_members": "Trial Subscriptions for Trial Members",

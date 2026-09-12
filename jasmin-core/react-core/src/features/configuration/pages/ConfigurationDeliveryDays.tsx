@@ -61,7 +61,11 @@ export default function ConfigurationDeliveryDays() {
   const activeStatusColumn = useActiveStatusColumn({
     defaultSortOrder: "descend",
   });
-  const { validFromColumn, validUntilColumn } = useTimeBoundColumns();
+  const { validFromColumn, validUntilColumn } = useTimeBoundColumns({
+    // A delivery day can only be scheduled going forward — the backend rejects
+    // a past valid_from; this aligns the picker with that rule.
+    validFromFutureOnly: true,
+  });
 
   const shareParams = useMemo<CommissioningSharesDeliveryDaysListParams>(
     () => (showAll ? {} : { active_at_date: toApiDate(dayjs())! }),
@@ -424,7 +428,6 @@ export default function ConfigurationDeliveryDays() {
         onSaveSuccess={onOrdersSaveSuccess}
         onDeleteSuccess={onOrdersDeleteSuccess}
       />
-      <DateRangeStatusLegend />
       <ExplainerText title={t("common.info")} style={{ marginTop: "2em" }}>
         {t("explainers.configuration_time_management")}
       </ExplainerText>

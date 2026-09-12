@@ -39,7 +39,7 @@ export interface PriceModalApi<TCreate, TUpdate = TCreate> {
   destroy: (id: string) => Promise<unknown>;
 }
 
-export interface PriceEditorModalProps<T, TCreate, TUpdate = TCreate> {
+export interface PriceEditorModalProps<T, TCreate = T, TUpdate = TCreate> {
   visible: boolean;
   onClose: () => void;
   title: ReactNode;
@@ -77,7 +77,7 @@ export interface PriceEditorModalProps<T, TCreate, TUpdate = TCreate> {
  * Encapsulates the shared shell used by Crate / ExtraArticle / ShareArticle /
  * ShareTypeVariation price modals.
  */
-export default function PriceEditorModal<T, TCreate, TUpdate = TCreate>({
+export default function PriceEditorModal<T, TCreate = T, TUpdate = TCreate>({
   visible,
   onClose,
   title,

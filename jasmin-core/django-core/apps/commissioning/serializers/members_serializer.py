@@ -1,3 +1,5 @@
+from datetime import datetime, time
+
 from rest_framework import serializers
 
 from apps.shared.pii_masking import MaskedIBANFieldMixin
@@ -31,6 +33,13 @@ CANCELLATION_READONLY_FIELDS = (
     "cancelled_effective_at",
     "cancelled_by",
 )
+
+# Locks the office grid keeps, but the CSV ONBOARDING import must not — a
+# tenant migrating off another system carries these over as historical fact.
+# See ``MemberImportSerializer``. ``cancelled_by`` deliberately stays locked:
+# it is an FK to the staff user who performed the cancellation, which has no
+# meaning for a migrated row.
+IMPORT_WRITABLE_FIELDS = ("member_number", "cancelled_effective_at")
 
 
 class MemberEmailLogSerializer(serializers.Serializer):
@@ -197,6 +206,83 @@ class MemberSerializer(
         was_trial = getattr(self.instance, "is_trial", False)
         if is_trial and not was_trial:
             assert_member_creation_allowed(is_trial=True)
+        return super().validate(attrs)
+
+
+class MemberImportSerializer(MemberSerializer):
+    """``MemberSerializer`` for the CSV onboarding import — ``member_number``
+    writable.
+
+    A tenant migrating off another system brings its existing Mitgliedsnummern
+    with it: the number is printed on the members' paperwork, and every
+    follow-up onboarding import (subscriptions, coop shares, SEPA mandates)
+    resolves its member by ``member_number`` as the natural key. Letting the
+    server re-assign numbers on confirmation would renumber the whole
+    Mitgliederliste and break those references.
+
+    Only the import path unlocks the column — the office grid keeps it
+    read-only, since renumbering a live member falsifies the Mitgliederliste.
+    Making the field writable also makes DRF attach the model's
+    ``unique=True`` validator, so a collision (with an existing member or with
+    an earlier row of the same file) is reported as a clean per-row error
+    instead of an ``IntegrityError``.
+
+    A row that leaves the cell blank keeps the normal behaviour: no number
+    until admin confirmation, then ``Member._post_confirm`` assigns
+    ``Max(member_number) + 1`` — which sits above the imported block, so the
+    two numbering sources don't collide.
+    """
+
+    class Meta(MemberSerializer.Meta):
+        read_only_fields = tuple(
+            field_name
+            for field_name in MemberSerializer.Meta.read_only_fields
+            if field_name not in IMPORT_WRITABLE_FIELDS
+        )
+
+    def validate(self, attrs):
+        from django.utils import timezone
+
+        from apps.commissioning.errors import MemberNumberNotAllowedForTrial
+
+        # Trial members are not Mitglieder under GenG, so they hold no
+        # Mitgliedsnummer (see ``Member._post_confirm``). Refuse the row rather
+        # than persist a number that the conversion hook would then leave in
+        # place forever.
+        if attrs.get("member_number") is not None and attrs.get("is_trial", False):
+            raise MemberNumberNotAllowedForTrial(
+                "A trial member cannot carry a member number — leave the "
+                "column blank for trial rows."
+            )
+
+        # Austrittsdatum (GenG §30). The office migrating a departed member has
+        # ONE date on paper — the exit date — so that is the only column the
+        # template offers. ``cancelled_at`` is derived from it because the two
+        # are read by DIFFERENT consumers and must never disagree:
+        #
+        #   * ``cancelled_at`` marks the member as departed — it drives the
+        #     cancelled-member count in ``services.statistics``, the
+        #     ``MemberAlreadyCancelled`` guard on the cancel action, and the
+        #     struck-through row in the office grid.
+        #   * ``cancelled_effective_at`` drives the 10-year GenG/HGB/AO
+        #     retention sweep in ``apps.gdpr.tasks``.
+        #
+        # An exit date on its own would leave a member the retention sweep
+        # already targets while they still read as CURRENT everywhere else —
+        # uncounted as cancelled, not struck through, and still cancellable.
+        # Stamping the exit date's local midnight reads as "recorded as of the
+        # exit date", the honest reading for a migrated row.
+        #
+        # ``cancelled_at`` itself stays read-only (it is not in
+        # ``IMPORT_WRITABLE_FIELDS``), so the guard below is defensive: it keeps
+        # the derivation from clobbering a caller-supplied value if that ever
+        # changes.
+        effective = attrs.get("cancelled_effective_at")
+        if effective is not None and attrs.get("cancelled_at") is None:
+            attrs["cancelled_at"] = timezone.make_aware(
+                datetime.combine(effective, time.min),
+                timezone.get_current_timezone(),
+            )
         return super().validate(attrs)
 
 
@@ -592,11 +678,21 @@ class SubscriptionSerializer(
                 .first()
             )
             if gross_price is not None:
-                floor = (
-                    gross_price.solidarity_min_price_per_delivery
-                    if gross_price.solidarity_min_price_per_delivery is not None
-                    else gross_price.price_per_delivery
-                )
+                # Trial subscriptions are floored against the trial-specific
+                # pair when the variation carries a trial reference; otherwise
+                # the regular pair. Within a pair the floor falls back to the
+                # reference when no explicit floor is set. ``is_trial`` was
+                # resolved above (trial-policy check). This mirrors the client
+                # (``NewSubscriptionModal``) so the two agree on the boundary.
+                if is_trial and gross_price.price_per_delivery_if_trial is not None:
+                    reference = gross_price.price_per_delivery_if_trial
+                    explicit_floor = (
+                        gross_price.solidarity_min_price_per_delivery_if_trial
+                    )
+                else:
+                    reference = gross_price.price_per_delivery
+                    explicit_floor = gross_price.solidarity_min_price_per_delivery
+                floor = explicit_floor if explicit_floor is not None else reference
                 if floor is not None and price < floor:
                     raise SolidarityPriceBelowMinimum(chosen=price, minimum=floor)
 

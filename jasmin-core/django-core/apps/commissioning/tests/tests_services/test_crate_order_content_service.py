@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 
 import pytest
+from django.utils import timezone
 
+from apps.commissioning.errors import CratesDisabledOnDocuments
 from apps.commissioning.models import CrateOrderContent, Order
 from apps.commissioning.services.crate_order_content_service import (
     CrateOrderContentService,
@@ -17,6 +20,7 @@ from apps.commissioning.tests.factories import (
     OrderFactory,
     ResellerFactory,
 )
+from apps.shared.tenants.models import TenantSettings
 
 
 # ---------------------------------------------------------------------------
@@ -141,6 +145,30 @@ class TestCreateCrateOrderContent:
         assert Order.objects.filter(
             reseller=reseller, year=2026, delivery_week=15, day_number=2
         ).exists()
+
+    def test_rejected_when_crates_off_documents(self, tenant):
+        """The manual crate-create path is gated too — a direct call while the
+        tenant keeps crates OFF documents raises, closing the API bypass the
+        hidden office UI would otherwise leave open."""
+        TenantSettings.objects.create(
+            tenant=tenant,
+            valid_from=timezone.now() - datetime.timedelta(seconds=1),
+            crates_should_be_on_documents=False,
+        )
+        reseller = ResellerFactory()
+        crate = CrateFactory()
+        CrateNetPriceFactory(crate=crate, price=Decimal("3.00"))
+
+        with pytest.raises(CratesDisabledOnDocuments):
+            CrateOrderContentService.create_crate_order_content(
+                crate_type_id=crate.pk,
+                amount=Decimal("10"),
+                year=2026,
+                delivery_week=15,
+                day_number=2,
+                reseller=reseller.pk,
+            )
+        assert CrateOrderContent.objects.count() == 0
 
     def test_create_result_carries_display_number_and_prefix(self, tenant):
         # The create response must carry the order's ``display_number`` (e.g.

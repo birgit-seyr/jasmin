@@ -37,7 +37,7 @@ import {
   useShareTypeVariationSizeOptions,
   useTimeBoundColumns,
 } from "@hooks/index";
-import { getDateRangeStatus, isFieldDisabled } from "@shared/utils";
+import { getDateRangeStatus, isFieldDisabled, notify } from "@shared/utils";
 
 // Single source of truth for the share-option codes is the generated
 // ``ShareTypeEnum`` (mirrors the backend ShareType.share_option choices) —
@@ -124,11 +124,40 @@ function ShareTypeTable({
   );
 
   const customSave = useCallback(
-    (saveData: Record<string, unknown>) => ({
-      ...saveData,
-      share_option: shareOption,
-    }),
-    [shareOption],
+    (saveData: Record<string, unknown>) => {
+      // Client-side joker floor: once a share type is in use
+      // (``can_be_deleted === false``) its joker / donation-joker counts may
+      // only be RAISED, never lowered — members already have the current count
+      // allocated. Mirror the backend rejection BEFORE the request (like the
+      // station-day capacity floor) so the office sees it while the row is
+      // still in edit mode.
+      const original = saveData.id
+        ? data.find((row) => String(row.id) === String(saveData.id))
+        : undefined;
+      if (original?.can_be_deleted === false) {
+        for (const field of [
+          "amount_of_jokers",
+          "amount_of_donation_jokers",
+        ] as const) {
+          const next = saveData[field];
+          if (next == null || next === "") continue;
+          if (Number(next) < Number(original[field] ?? 0)) {
+            const message = t(
+              "validation.amount_cannot_be_reduced_while_in_use",
+            );
+            notify.validationError(message);
+            // Throwing aborts the save; EditableTable keeps the row in edit
+            // mode so the office can pick a valid value.
+            throw new Error(message);
+          }
+        }
+      }
+      return {
+        ...saveData,
+        share_option: shareOption,
+      };
+    },
+    [shareOption, data, t],
   );
 
   // HARVEST_SHARE and HARVEST_SHARE_FRUIT are the primary harvest shares — they
@@ -360,7 +389,8 @@ export default function ConfigurationShareTypeVariations() {
           inputType: "integer",
           width: "3em",
           align: "center",
-          disabled: isFieldDisabled,
+          // Always editable; the "may only increase while in use" floor is
+          // enforced in ``customSave`` (mirrors the capacity floor).
           render: (_: unknown, record: TableRecord) =>
             record.amount_of_jokers == 0 ? "-" : record.amount_of_jokers,
         },
@@ -375,7 +405,8 @@ export default function ConfigurationShareTypeVariations() {
           inputType: "integer",
           align: "center",
           width: "3em",
-          disabled: isFieldDisabled,
+          // Always editable; the "may only increase while in use" floor is
+          // enforced in ``customSave`` (mirrors the capacity floor).
           render: (_: unknown, record: TableRecord) =>
             record.amount_of_donation_jokers == 0
               ? "-"

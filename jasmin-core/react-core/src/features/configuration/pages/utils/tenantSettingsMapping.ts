@@ -6,6 +6,42 @@
  * its key to the ConfigurationApp settings list — no edits here required.
  */
 
+/**
+ * Tenant columns backed by a Django ``FileField``/``ImageField``.
+ *
+ * Their READ shape is a URL string, but their WRITE shape must be an actual
+ * file — so echoing a fetched tenant straight back in a JSON PATCH makes DRF
+ * reject the string with "The submitted data was not a file", surfacing as a
+ * 400 on a completely unrelated save (a checkbox, a phone number).
+ *
+ * Uploads never go through JSON: they use the multipart ``usePictureUpload``
+ * hook against the same endpoint.
+ *
+ * **This is the single source of truth — add any new Tenant file column here.**
+ * It was previously duplicated as three hand-maintained lists that had already
+ * drifted apart from each other.
+ */
+export const TENANT_FILE_FIELDS = [
+  "logo",
+  "bio_logo",
+  "app_icon",
+  // No such column exists (the name survives only in dead frontend references);
+  // kept so the strip stays a no-op rather than a behaviour change if some
+  // stale payload still carries the key.
+  "favicon",
+] as const;
+
+/** Copy of ``tenant`` safe to send as a JSON PATCH body. */
+export function withoutTenantFileFields<T extends Record<string, unknown>>(
+  tenant: T,
+): Partial<T> {
+  const payload: Partial<T> = { ...tenant };
+  for (const field of TENANT_FILE_FIELDS) {
+    delete payload[field as keyof T];
+  }
+  return payload;
+}
+
 // Tenant response fields that are NOT user-editable settings — never copy
 // them into the form state. Anything else (booleans, scalars, simple lists)
 // flows through automatically.
@@ -16,9 +52,9 @@ const TENANT_FIELDS_TO_IGNORE = new Set<string>([
   "created_at",
   "updated_at",
   "created_on",
-  "logo",
-  "favicon",
-  "bio_logo",
+  ...TENANT_FILE_FIELDS,
+  // Read-only stamp derived from the icon + updated_at; not a setting.
+  "app_icon_version",
   "domains",
   "features",
   "is_active",

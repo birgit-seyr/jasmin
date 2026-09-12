@@ -28,8 +28,15 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
   const { getSetting } = useTenant();
   const usesJokers = getSetting("uses_jokers", true);
   const usesDonationJokers = getSetting("uses_donation_jokers", false);
-  const { form, isVisible, loading, currentDelivery, openModal, closeModal, saveDelivery } =
-    useModalMemberDeliveryEdit();
+  const {
+    form,
+    isVisible,
+    loading,
+    currentDelivery,
+    openModal,
+    closeModal,
+    saveDelivery,
+  } = useModalMemberDeliveryEdit();
 
   // Compute the delivery date from year + week + day_number to filter active DSDs
   const deliveryDate = useMemo(() => {
@@ -71,9 +78,10 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
     useDeliveryStationDays(dsdParams);
 
   // Build week key for capacity lookup
-  const weekKey = delivery?.year && delivery?.delivery_week
-    ? `${delivery.year}-${delivery.delivery_week}`
-    : undefined;
+  const weekKey =
+    delivery?.year && delivery?.delivery_week
+      ? `${delivery.year}-${delivery.delivery_week}`
+      : undefined;
 
   // Show every active station-day for the week — across ALL weekdays, not just
   // the delivery's current day — so a delivery can be moved to a different day
@@ -95,7 +103,11 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
       };
     });
     // If loading and current value isn't in options yet, add a placeholder option
-    if (dsdLoading && delivery?.delivery_station_day && !mapped.some((o) => o.value === delivery.delivery_station_day)) {
+    if (
+      dsdLoading &&
+      delivery?.delivery_station_day &&
+      !mapped.some((o) => o.value === delivery.delivery_station_day)
+    ) {
       mapped.unshift({
         value: delivery.delivery_station_day,
         label: delivery.delivery_station_name ?? t("common.loading"),
@@ -104,9 +116,18 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
       });
     }
     return mapped;
-  }, [filteredOptions, dsdLoading, delivery?.delivery_station_day, delivery?.delivery_station_name, weekKey, t]);
+  }, [
+    filteredOptions,
+    dsdLoading,
+    delivery?.delivery_station_day,
+    delivery?.delivery_station_name,
+    weekKey,
+    t,
+  ]);
 
-  const stationChanged = Form.useWatch("delivery_station_day", form) !== currentDelivery?.delivery_station_day;
+  const stationChanged =
+    Form.useWatch("delivery_station_day", form) !==
+    currentDelivery?.delivery_station_day;
 
   useEffect(() => {
     if (visible && delivery && !isVisible) {
@@ -160,10 +181,7 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
           }
         }}
       >
-        <Form.Item
-          name="delivery_station_day"
-          label={t("delivery.station")}
-        >
+        <Form.Item name="delivery_station_day" label={t("delivery.station")}>
           <Select
             loading={dsdLoading}
             options={selectOptions}

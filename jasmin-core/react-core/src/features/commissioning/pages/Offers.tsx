@@ -23,7 +23,7 @@ import {
 import type { Offer } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { JobProgressDrawer } from "@shared/ui/JobProgressDrawer";
-import { SendOffersModal } from '@features/commissioning/modals';
+import { SendOffersModal } from "@features/commissioning/modals";
 // OfferPDFGenerator statically imports @react-pdf/renderer (it uses
 // ``PDFDownloadLink`` for the offer-pdf download). Lazy-loading
 // keeps the ~484 KB gzip PDF chunk out of Offers.tsx's eager bundle.
@@ -33,8 +33,8 @@ import { SendOffersModal } from '@features/commissioning/modals';
 const OfferPDFGenerator = lazy(
   () => import("@features/commissioning/pdfs/forResellers/OfferPDFGenerator"),
 );
-import { WeekSelector } from '@shared/selectors';
-import { OfferGroupSelector } from '@features/commissioning/selectors';
+import { WeekSelector } from "@shared/selectors";
+import { OfferGroupSelector } from "@features/commissioning/selectors";
 import {
   EditableTable,
   gatedByPermission,
@@ -44,10 +44,10 @@ import type {
   ApiFunctions,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { ExplainerText, PastWarningMessage, ToolTipIcon } from '@shared/ui';
-import { AddShareArticleEntry } from '@features/commissioning/components';
-import { useTableRowSelection, useTenantSettingToggle } from '@hooks/index';
-import { useOffersColumns, useOffersData } from '@features/commissioning/hooks';
+import { ExplainerText, PastWarningMessage, ToolTipIcon } from "@shared/ui";
+import { AddShareArticleEntry } from "@features/commissioning/components";
+import { useTableRowSelection, useTenantSettingToggle } from "@hooks/index";
+import { useOffersColumns, useOffersData } from "@features/commissioning/hooks";
 import { isWeekInPast, notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import OfferSendingStatusTable from "@features/commissioning/components/OfferSendingStatusTable";
@@ -85,8 +85,10 @@ export default function Offers() {
   const { value: pricesPerPU, onChange: handlePricesPerPUChange } =
     useTenantSettingToggle("offer_prices_are_per_pu", false);
 
-  const { value: usePersonalizedOffers, onChange: handlePersonalizedOffersChange } =
-    useTenantSettingToggle("use_personalized_offers", true);
+  const {
+    value: usePersonalizedOffers,
+    onChange: handlePersonalizedOffersChange,
+  } = useTenantSettingToggle("use_personalized_offers", true);
 
   const {
     shareArticleFilters,
@@ -328,6 +330,7 @@ export default function Offers() {
         loading={isFetching}
         customSave={customSave}
         customEdit={customEdit}
+        keyboardAddShortcut={true}
         onSaveSuccess={onSaveSuccess}
         onDeleteSuccess={onDeleteSuccess}
         deleteContext={{
@@ -397,7 +400,9 @@ export default function Offers() {
       <div style={{ marginBottom: 16, marginTop: 16 }}>
         {selectedOfferGroup && data.length > 0 && allFinalized && (
           <>
-            <Suspense fallback={<Button loading size="middle" type="primary" />}>
+            <Suspense
+              fallback={<Button loading size="middle" type="primary" />}
+            >
               <OfferPDFGenerator
                 year={selectedYear}
                 delivery_week={selectedWeek}

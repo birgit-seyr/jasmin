@@ -7,7 +7,7 @@
  * literals (`` `day_${d}_variation_${v}` ``, `` `backup_day_…` ``,
  * `` `amount_day_…` ``) and the parsers hand-rolled `startsWith`/`includes`
  * checks — so the format could (and did) drift between call sites. Build and
- * parse keys ONLY through these helpers; see docs/day-variation-columns-audit.md.
+ * parse keys ONLY through these helpers.
  *
  * Key grammar (day/variation ids are UUIDs → never contain `_`):
  *   [<prefix>]day_<dayId>_variation_<variationId>[ _tour_<n> | _station_<sid> ]

@@ -1,5 +1,4 @@
 import { useTenant } from "@hooks/index";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import Diversity3Icon from "@mui/icons-material/Diversity3";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import PrivacyTipIcon from "@mui/icons-material/PrivacyTip";
@@ -44,15 +43,6 @@ export default function MembersSidebar({
         ]
       : []),
 
-    {
-      key: "members-sepa-mandates",
-
-      requireRole: "isOffice",
-      icon: <AccountBalanceIcon />,
-      label: (
-        <Link to="/members/sepa-mandates">{t("members.sepa_mandates")}</Link>
-      ),
-    },
     {
       key: "members-email-log",
 

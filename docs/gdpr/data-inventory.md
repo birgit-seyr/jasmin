@@ -3,7 +3,7 @@
 **Owner:** Operations
 **Last reviewed:** 2026-05-20
 **Next review:** 2027-05-20 (annual)
-**Companion docs:** [`retention-policy.md`](./retention-policy.md), [`AUDIT_CHECKLIST.txt`](./AUDIT_CHECKLIST.txt)
+**Companion docs:** [`retention-policy.md`](./retention-policy.md)
 
 This inventory lists every database **field** that holds personal
 data, the **legal basis** under DSGVO/GDPR Art. 6(1) for processing
@@ -13,11 +13,15 @@ Verarbeitungstätigkeiten, Art. 30) — both documents exist for
 different audit questions:
 
 - *"What data do you hold, and on what legal basis?"* — this file.
-- *"What processing activities do you perform?"* — VVT (to be written; see [`tasks.txt`](./tasks.txt)).
+- *"What processing activities do you perform?"* — the VVT: [`processing-activities.md`](./processing-activities.md).
 
-Models in apps marked "ignored for now" in `CLAUDE.md`
-(cultivation / economics / staff / gdpr) are out of scope; they
-hold no member PII at the field level.
+`cultivation`, `economics` and `staff` hold no member PII at the
+field level and are therefore out of scope for this register. The
+`gdpr` app is a special case: it holds no operational member data,
+only the erasure audit trail (`DeletionLog.user_email`,
+`DeletionRequest.requested_email` / `.requested_ip`), which is
+retained permanently on purpose — it has to outlive the data it
+evidences.
 
 ## Legend
 
@@ -126,7 +130,6 @@ Per-member SEPA mandate record. One per `Member`.
 | Field | Category | Purpose | Legal basis | Retention | Notes |
 |---|---|---|---|---|---|
 | `iban` | Financial | Direct-debit collection | Contract | Membership + 10y | **Encrypted at rest** |
-
 | `account_holder` | Financial | Named bank-account holder | Contract | Same | **Encrypted at rest** |
 | `sepa_mandate_reference` | Financial / audit | SEPA scheme requirement on every debit | Legal obligation (SEPA Rulebook) | 14 months past last debit (SEPA chargeback window) + invoice retention | Plaintext intentionally — `unique=True` would be silently broken by Fernet's random IV |
 | `sepa_mandate_signed_at` | Audit | Mandate validity | Legal obligation | Same | |
@@ -141,7 +144,7 @@ Operational record of every email sent.
 
 | Field | Category | Purpose | Legal basis | Retention | Notes |
 |---|---|---|---|---|---|
-| `recipient` | Contact | Delivery target | Contract | 90 days rolling (see [`huey-to-do.txt`](./huey-to-do.txt) §"Stale email_log cleanup") | Indexed |
+| `recipient` | Contact | Delivery target | Contract | 90 days rolling — pruned daily (02:15) by `cleanup_stale_email_logs` (`apps/notifications/tasks.py`); rows in a still-actionable status (pending / deferred / failed / rejected / complained) are kept past the window until resolved | Indexed |
 | `subject`, `template`, `purpose` | Comms | What was sent + why | Contract | 90 days | |
 | `provider_message_id` | Audit | External reference (e.g. SendGrid) | Legitimate interest | 90 days | |
 | `error` | Audit | Failure reason | Legitimate interest | 90 days | |
@@ -159,14 +162,15 @@ can be reconstructed.
 
 ### `auditlog.LogEntry` (django-auditlog)
 
-Lives in each **tenant** schema. Captures every change to the 14
-registered models (see [`AUDIT_CHECKLIST.txt`](./AUDIT_CHECKLIST.txt) §"Audit trail").
+Lives in each **tenant** schema. Captures every change to the
+registered models — the `auditlog.register(...)` calls in
+`apps/commissioning/apps.py` and `apps/payments/apps.py`.
 
 | Field | Category | Purpose | Legal basis | Retention | Notes |
 |---|---|---|---|---|---|
 | `actor_id` (FK to JasminUser) | Audit | Who made the change | Legitimate interest | Forever | Survives Member deletion via NULLing (the user's display value goes; the change record stays) |
 | `remote_addr` | Auth / security | Forensic value | Legitimate interest | Forever | `GenericIPAddressField` |
-| `changes` (JSON) | Audit | Field-level before/after | Legitimate interest | Forever | Sensitive fields are listed in `mask_fields` on the registration call (e.g. `Member.iban`, `email`, `address` — see `apps/commissioning/apps.py`) so the raw values never reach `LogEntry.changes` |
+| `changes` (JSON) | Audit | Field-level before/after | Legitimate interest | Forever | Sensitive fields are listed in `mask_fields` on the registration call (e.g. `Member.iban`, `email`, `address` — see `apps/commissioning/apps.py`). Note that django-auditlog's default mask asterisks only the **first half** of a value, so a partially masked remainder does reach `LogEntry.changes`; set `AUDITLOG_MASK_CALLABLE` to mask in full |
 | `timestamp` | Audit | When | Legitimate interest | Forever | |
 
 ### `axes.AccessAttempt` (django-axes)
@@ -184,7 +188,7 @@ Failed-login + lockout tracking, used for brute-force protection.
 
 ## Special-category data (Art. 9)
 
-**None stored.** The platform does not record:
+**None collected by design.** The platform does not record:
 
 - Health / dietary-restriction data (allergies/preferences are not persisted)
 - Religious or political affiliation
@@ -192,6 +196,11 @@ Failed-login + lockout tracking, used for brute-force protection.
 - Sexual orientation
 - Trade-union membership
 - Biometric / genetic data
+
+The office free-text fields (`Member.note`, `BillingProfile.notes`)
+are the one residual path: nothing in the schema stops an Art. 9
+detail being typed there, so the prohibition on doing so is enforced
+by policy, not by constraint.
 
 If a future feature crosses into Art. 9 territory (e.g. "allergies"
 on Member to support special baskets), a DPIA per Art. 35 is
@@ -216,9 +225,9 @@ Consequence the inventory has to acknowledge: encrypted columns
 
 | Right | Endpoint / mechanism |
 |---|---|
-| **Art. 15 — Access** | `GET /api/gdpr/my-data/` (see [`AUDIT_CHECKLIST.txt`](./AUDIT_CHECKLIST.txt) §"Art. 15"). Member portal also exposes `MemberConsentsCard` for the consent subset. |
+| **Art. 15 — Access** | `GET /api/gdpr/my-data/` (`gdpr_my_data_view`, `apps/gdpr/views.py`). Member portal also exposes `MemberConsentsCard` for the consent subset. |
 | **Art. 16 — Rectification** | Member can edit their own profile (`PATCH /api/commissioning/members/{self}/`); office staff can edit any. |
-| **Art. 17 — Erasure** | `GDPRService` deletion logic + `DeletionLog` audit trail. See [`AUDIT_CHECKLIST.txt`](./AUDIT_CHECKLIST.txt) §"Art. 17". Tax-law retention overrides erasure for invoice-linked PII (anonymise instead — task pending, see [`huey-to-do.txt`](./huey-to-do.txt)). |
+| **Art. 17 — Erasure** | `GDPRService` deletion logic + `DeletionLog` audit trail. Tax-law retention overrides erasure for invoice-linked PII; those records are anonymised once the statutory window lapses (`anonymise_long_cancelled_members`, `apps/gdpr/tasks.py`, daily 03:00, honours `check_retention_blocks`). |
 | **Art. 7(3) — Withdraw consent** | `POST /api/commissioning/consents/{id}/revoke/` (and `MemberConsentsCard` in the UI). |
 | **Art. 20 — Portability** | Same as Art. 15 access — `my-data/` returns the full JSON. |
 
@@ -226,5 +235,5 @@ Consequence the inventory has to acknowledge: encrypted columns
 
 - A new field that holds personal data is added to any model.
 - A retention window changes (cross-check with `retention-policy.md`).
-- A new processing purpose is introduced (cross-check with VVT, when that document exists).
+- A new processing purpose is introduced (cross-check with the VVT, [`processing-activities.md`](./processing-activities.md)).
 - An auditor / DPA request — at minimum re-confirm the "Last reviewed" date.

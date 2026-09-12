@@ -1,6 +1,6 @@
 import { Card, DatePicker, Divider, Spin, Table, Typography } from "antd";
 import dayjs from "dayjs";
-import { StatsAreaChart } from "@shared/ui";
+import { ExplainerText, StatsAreaChart } from "@shared/ui";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -228,6 +228,10 @@ export default function DashboardAbos() {
           </Typography.Paragraph>
         </Card>
       </Spin>
+
+      <ExplainerText title={t("common.info")}>
+        {t("explainers.dashboard_abos")}
+      </ExplainerText>
     </div>
   );
 }

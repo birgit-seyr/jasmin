@@ -34,6 +34,7 @@ export interface TenantEmailConfig {
   smtp_password?: string | null;
   readonly has_smtp_password?: boolean;
   smtp_use_tls?: boolean;
+  smtp_use_ssl?: boolean;
   /**
    * Default 'From' email address
    * @maxLength 254

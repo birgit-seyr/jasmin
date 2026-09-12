@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { Checkbox, Tooltip } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -151,6 +152,75 @@ export default function ShareDeliveries() {
     return all.filter((row) => row.delivery_week === selectedWeek);
   }, [rawData, selectedWeek]);
 
+  // Per-subscription joker usage, counted across the FULL fetched set (not the
+  // week-filtered ``data``) so the "over allowance" warning is accurate no
+  // matter which week is shown. Keyed by subscription id.
+  const { jokerCounts, donationJokerCounts } = useMemo(() => {
+    const jokers = new Map<string, number>();
+    const donations = new Map<string, number>();
+    for (const row of (rawData ?? []) as unknown as ShareDeliveryRecord[]) {
+      const subscription = row.subscription;
+      if (!subscription) continue;
+      if (row.joker_taken)
+        jokers.set(subscription, (jokers.get(subscription) ?? 0) + 1);
+      if (row.donation_joker_taken)
+        donations.set(subscription, (donations.get(subscription) ?? 0) + 1);
+    }
+    return { jokerCounts: jokers, donationJokerCounts: donations };
+  }, [rawData]);
+
+  // "Has this subscription taken more (donation-)jokers than its share type
+  // grants?" ``amount_of_jokers`` rides on every row (share-type allowance).
+  // A warning, never a block — the office may over-grant for special reasons.
+  const jokerOverLimit = useCallback(
+    (record: ShareDeliveryRecord) => {
+      const subscription = record.subscription;
+      const taken = subscription ? (jokerCounts.get(subscription) ?? 0) : 0;
+      const allowed = Number(record.amount_of_jokers ?? 0);
+      return { over: !!subscription && taken > allowed, taken, allowed };
+    },
+    [jokerCounts],
+  );
+  const donationJokerOverLimit = useCallback(
+    (record: ShareDeliveryRecord) => {
+      const subscription = record.subscription;
+      const taken = subscription
+        ? (donationJokerCounts.get(subscription) ?? 0)
+        : 0;
+      const allowed = Number(record.amount_of_donation_jokers ?? 0);
+      return { over: !!subscription && taken > allowed, taken, allowed };
+    },
+    [donationJokerCounts],
+  );
+
+  // Display-mode checkbox for the joker columns: mirrors EditableTable's default
+  // green checkbox, but turns ORANGE (with an explanatory tooltip) when the
+  // subscription is over its allowance and THIS row is one of the taken ones.
+  const renderJokerCheckbox = useCallback(
+    (checked: boolean, limit: { over: boolean; taken: number; allowed: number }) => {
+      const warn = limit.over && checked;
+      const box = (
+        <Checkbox
+          checked={checked}
+          disabled
+          className={warn ? "over-limit-checkbox" : "green-checkbox"}
+        />
+      );
+      if (!warn) return box;
+      return (
+        <Tooltip
+          title={t("abos.joker_over_limit_tooltip", {
+            taken: limit.taken,
+            allowed: limit.allowed,
+          })}
+        >
+          <span>{box}</span>
+        </Tooltip>
+      );
+    },
+    [t],
+  );
+
   const invalidateData = useCallback(() => {
     queryClient.invalidateQueries({
       queryKey: getCommissioningShareDeliveryOverviewListQueryKey(listParams),
@@ -265,6 +335,33 @@ export default function ShareDeliveries() {
               required: false,
               disabled: !uses_jokers,
               sortable: true,
+              // Joker and donation-joker are mutually exclusive (enforced in
+              // ShareDelivery.clean) — ticking one clears the other so the
+              // office never hits the validation error.
+              onFieldChange: (checked: unknown) =>
+                checked ? { donation_joker_taken: false } : undefined,
+              render: (_: unknown, record: ShareDeliveryRecord) =>
+                renderJokerCheckbox(
+                  Boolean(record.joker_taken),
+                  jokerOverLimit(record),
+                ),
+            },
+            {
+              title: t("abos.donation_joker_taken"),
+              dataIndex: "donation_joker_taken",
+              key: "donation_joker_taken",
+              inputType: "checkbox",
+              align: "center",
+              required: false,
+              disabled: !uses_jokers,
+              sortable: true,
+              onFieldChange: (checked: unknown) =>
+                checked ? { joker_taken: false } : undefined,
+              render: (_: unknown, record: ShareDeliveryRecord) =>
+                renderJokerCheckbox(
+                  Boolean(record.donation_joker_taken),
+                  donationJokerOverLimit(record),
+                ),
             },
           ] as EditableColumnConfig<ShareDeliveryRecord>[])
         : []),
@@ -303,6 +400,9 @@ export default function ShareDeliveries() {
       selectedYear,
       noteColumn,
       variationLabel,
+      renderJokerCheckbox,
+      jokerOverLimit,
+      donationJokerOverLimit,
     ],
   );
 

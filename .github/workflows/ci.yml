@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: jasmin-core/react-core/.nvmrc
           cache: npm
@@ -117,7 +117,7 @@ jobs:
 
       - name: Set up Python
         id: setup-python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.14"
 
@@ -156,6 +156,22 @@ jobs:
       - name: Lint (ruff)
         run: poetry run ruff check apps config
 
+      - name: Migrations are in sync with models
+        # Catches a model field added/changed/removed without the matching
+        # migration, i.e. the models and the migration files on disk disagree.
+        # Without this the failure surfaces at DEPLOY time, when Django hits a
+        # column the database doesn't have -- and prod migrations are
+        # forward-only (see CLAUDE.md), so there is no reversing out of it.
+        # Multi-tenant makes it worse: the missing migration then has to land
+        # in every tenant schema.
+        #
+        # Plain ``makemigrations`` is correct here -- model definitions are
+        # schema-independent; ``migrate_schemas`` is only for APPLYING them.
+        #
+        # Fix when this fails: run ``poetry run python manage.py
+        # makemigrations`` locally and commit the generated migration(s).
+        run: poetry run python manage.py makemigrations --check --dry-run
+
       - name: Tests (pytest)
         run: poetry run pytest --maxfail=5 -q
 
@@ -171,8 +187,9 @@ jobs:
           git diff --exit-code ../react-core/schema.yml
 
       - name: Security audit
-        # Suppressed advisories — each one MUST have a docs/tasks.txt
-        # entry tracking why we accepted the risk and when to re-check.
+        # Suppressed advisories — each one MUST carry its rationale HERE,
+        # in full: why the risk was accepted and what would end the
+        # suppression. No pointers to other files; they rot.
         #
         #   PYSEC-2025-183 (pyjwt) — disputed by upstream: "the key
         #     length is chosen by the application that uses the
@@ -180,6 +197,10 @@ jobs:
         #     in prod, so the advisory does not apply to our usage.
         #     No patched release available; suppression is permanent
         #     unless the advisory's scope changes.
+        #
+        # Everything else gets FIXED, not suppressed — prefer raising the
+        # version floor in pyproject.toml (see the pillow / pyjwt / pypdf
+        # pins) over adding an --ignore-vuln here.
         run: poetry run pip-audit --strict --ignore-vuln PYSEC-2025-183
 
   gateway:

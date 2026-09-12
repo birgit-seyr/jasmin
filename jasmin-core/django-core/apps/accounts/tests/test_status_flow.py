@@ -255,7 +255,7 @@ class TestSelfRegistration:
         import datetime
 
         from apps.commissioning.models import ConsentDocument
-        from apps.commissioning.models.choices_text import ConsentKind
+        from apps.commissioning.models.choices import ConsentKind
 
         ConsentDocument.objects.create(
             kind=ConsentKind.COOP_CONTRACT,
@@ -279,7 +279,7 @@ class TestSelfRegistration:
         import datetime
 
         from apps.commissioning.models import ConsentDocument, ConsentRecord
-        from apps.commissioning.models.choices_text import ConsentKind
+        from apps.commissioning.models.choices import ConsentKind
 
         contract = ConsentDocument.objects.create(
             kind=ConsentKind.COOP_CONTRACT,
@@ -698,21 +698,50 @@ class TestAdminUserUpdate:
 
 
 # --------------------------------------------------------------------------- #
-# Member.email uniqueness                                                      #
+# Member.email is shareable; the LOGIN is not                                  #
 # --------------------------------------------------------------------------- #
 
 
-class TestMemberEmailUnique:
-    def test_duplicate_email_rejected(self, tenant):
+class TestMemberEmailSharing:
+    """``Member.email`` is deliberately NOT unique.
+
+    Two members legitimately share one inbox — an elderly couple with a single
+    address is the ordinary case, and refusing it drops a real Mitglied from the
+    Mitgliederliste. Each still has their own member_number, subscription and
+    equity, and both receive their documents at the shared address.
+
+    What is NOT shareable is a LOGIN: ``JasminUser.email`` is the
+    ``USERNAME_FIELD`` and stays unique, so at most one of them holds the user
+    account and the other is office-managed. That boundary is what the last two
+    tests pin down — it is the reason relaxing ``Member.email`` is safe.
+    """
+
+    def test_two_members_may_share_an_email(self, tenant):
         MemberFactory(email="dup@example.com")
-        with pytest.raises(IntegrityError):
-            with transaction.atomic():
-                MemberFactory(email="dup@example.com")
+        MemberFactory(email="dup@example.com")
+        assert Member.objects.filter(email="dup@example.com").count() == 2
 
     def test_multiple_null_emails_allowed(self, tenant):
         MemberFactory(email=None)
         MemberFactory(email=None)
         assert Member.objects.filter(email__isnull=True).count() == 2
+
+    def test_the_login_is_still_exclusive(self, tenant):
+        """``JasminUser.email`` keeps its unique constraint — the relaxation
+        must not have leaked across to the auth identity."""
+        JasminUserFactory(email="dup@example.com")
+        with pytest.raises(IntegrityError):
+            with transaction.atomic():
+                JasminUserFactory(email="dup@example.com")
+
+    def test_one_user_cannot_be_linked_to_two_members(self, tenant):
+        """``Member.user`` is a OneToOne, so the second member on a shared
+        inbox cannot claim the same account even by direct assignment."""
+        user = JasminUserFactory(email="dup@example.com")
+        MemberFactory(email="dup@example.com", user=user)
+        with pytest.raises(IntegrityError):
+            with transaction.atomic():
+                MemberFactory(email="dup@example.com", user=user)
 
 
 # --------------------------------------------------------------------------- #

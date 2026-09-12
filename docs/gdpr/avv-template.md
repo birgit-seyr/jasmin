@@ -40,8 +40,9 @@ behalf:
 - Backup storage
 
 Each of these needs its own AVV. Most major providers publish a
-DPA you can sign electronically (e.g. SendGrid, Sentry). Keep
-signed copies on file under `docs/gdpr/avv/` (gitignored).
+DPA you can sign electronically (e.g. SendGrid, Sentry). Signed
+copies are held outside this repository, in the office document
+store. Do not commit executed AVVs to version control.
 
 ---
 
@@ -147,7 +148,12 @@ The Processor implements appropriate technical and organisational
 measures, including:
 
 - **Encryption in transit:** TLS 1.2+ via gateway nginx
-- **Encryption at rest:** `django-encrypted-fields` for IBAN
+- **Encryption at rest:** `django-encrypted-model-fields` (Fernet)
+  on the IBAN and account-holder columns. This is column-level, not
+  database-wide: audit-log rows (`auditlog_logentry`) are stored
+  unencrypted, with the sensitive fields declared in `mask_fields`
+  at registration so only a partially masked value reaches the
+  change diff
 - **Pseudonymisation:** N/A in the application layer; data is
   identifiable by design (members must be reachable)
 - **Confidentiality:** role-based access; per-tenant schema

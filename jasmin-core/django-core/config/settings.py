@@ -45,9 +45,16 @@ RUNNING_IN_DOCKER = os.environ.get("RUNNING_IN_DOCKER", "False").lower() == "tru
 if not DEBUG:
     if SECRET_KEY == "dev-secret-key-change-in-production":
         raise ValueError("DJANGO_SECRET_KEY must be set in production.")
-    if os.environ.get("FIELD_ENCRYPTION_KEY", "") in (
-        "",
-        "HeQ7tkqHP7nVB1hA7VkX0SVIan3y_NUFrjyeDnfzcXk=",
+    # Checked per key, not on the raw string: the value may be a
+    # comma-separated rotation list, and the dev key must not survive in it
+    # as the trailing decrypt-fallback.
+    _configured_keys = [
+        _k.strip()
+        for _k in os.environ.get("FIELD_ENCRYPTION_KEY", "").split(",")
+        if _k.strip()
+    ]
+    if not _configured_keys or "HeQ7tkqHP7nVB1hA7VkX0SVIan3y_NUFrjyeDnfzcXk=" in (
+        _configured_keys
     ):
         raise ValueError(
             "FIELD_ENCRYPTION_KEY must be set in production (and must not be the dev default)."
@@ -396,10 +403,23 @@ SMTP_ALLOW_PRIVATE_HOSTS = (
 # stay stable — existing dev databases hold ciphertext encrypted with
 # it. Production refuses to boot on this value (guard at the top of
 # this file), so the fallback can never silently reach prod.
+# Comma-separated for key rotation: the FIRST key encrypts new writes, ALL
+# keys are tried when decrypting (django-encrypted-model-fields builds a
+# MultiFernet from the list). The split is load-bearing — the library calls
+# Fernet() on each list element and never splits itself, so a comma-joined
+# string in a one-element list loses the old key and makes every existing
+# ciphertext undecryptable. How it loses it depends on the CPython patch
+# level: decoders up to 3.14.3 stop at the "=" padding ending the first key
+# and SILENTLY drop the rest, while 3.14.6+ rejects the joined value with
+# binascii.Error ("Incorrect padding") and Fernet re-raises it as a
+# ValueError at startup. Fernet keys are url-safe base64 and never contain
+# a comma, so splitting is safe for the single-key case.
 FIELD_ENCRYPTION_KEY = [
-    os.environ.get(
+    _key.strip()
+    for _key in os.environ.get(
         "FIELD_ENCRYPTION_KEY", "HeQ7tkqHP7nVB1hA7VkX0SVIan3y_NUFrjyeDnfzcXk="
-    )
+    ).split(",")
+    if _key.strip()
 ]
 
 # Platform / super-admin domain configuration. Reads the SAME env name the
@@ -533,6 +553,9 @@ SHARED_APPS = [
     # written to auth.log by ``apps.shared.tenants.apps.TenantsConfig``.
     "apps.shared.tenants",
     "apps.shared.super_admin",
+    # Support tickets: a PUBLIC-schema table so the super-admin can aggregate
+    # every tenant's tickets (see apps/shared/support/models.py).
+    "apps.shared.support",
 ]
 
 TENANT_APPS = [
@@ -846,10 +869,23 @@ REST_FRAMEWORK = {
         # anti-enumeration — keyed by IP. Generous for a real invitee
         # (one verify on page load, one accept).
         "invitation": "20/minute",
+        # Support tickets: an authenticated/stolen staff token could loop
+        # create → flood the public table AND email-bomb the platform admin
+        # over live SMTP (create fires mail_admins). Reply is cheaper but still
+        # capped. Keyed per authenticated user (nanoid), namespaced by schema.
+        "support_ticket_create": "10/hour",
+        "support_ticket_reply": "30/hour",
         # Tenant-detection bootstrap (``CurrentTenantView``) is ``AllowAny`` and
         # fires once on SPA load / refresh. Anti-flood only, keyed by IP;
         # generous since many users behind one shared egress IP all bootstrap.
         "current_tenant": "60/minute",
+        # Web-app manifest + launcher icon (``TenantManifestView`` /
+        # ``TenantAppIconView``). Both are ``AllowAny`` because a browser
+        # fetches them without credentials, so they need the same anti-flood
+        # treatment as the bootstrap above. Fetched about once per app launch
+        # and then cached by the client, so these are anti-flood only.
+        "tenant_manifest": "60/minute",
+        "tenant_app_icon": "60/minute",
         # Super-admin login + step-up re-confirm. These authenticate via
         # ``SuperAdmin.check_password`` directly, NOT Django's
         # ``authenticate()``, so django-axes (which only hooks
@@ -1235,27 +1271,30 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_PATCH": False,
     # Map your enum classes to prevent duplicates
     "ENUM_NAME_OVERRIDES": {
-        "MovementTypeEnum": "apps.commissioning.models.choices_text.MovementTypeOptions",
-        "CultivationOriginEnum": "apps.commissioning.models.choices_text.CultivationOriginOptions",
-        "DeliveryCycleEnum": "apps.commissioning.models.choices_text.DeliveryCycleOptions",
-        "ShareTypeVariationSizeEnum": "apps.commissioning.models.choices_text.ShareTypeVariationSizeOptions",
-        "UnitEnum": "apps.commissioning.models.choices_text.UnitOptions",
-        "PaymentCycleEnum": "apps.commissioning.models.choices_text.PaymentCycleOptions",
-        "VegetableSizeEnum": "apps.commissioning.models.choices_text.VegetableSizeOptions",
-        "ShareTypeEnum": "apps.commissioning.models.choices_text.ShareOptions",
+        "MovementTypeEnum": "apps.commissioning.models.choices.MovementTypeOptions",
+        "CultivationOriginEnum": "apps.commissioning.models.choices.CultivationOriginOptions",
+        "DeliveryCycleEnum": "apps.commissioning.models.choices.DeliveryCycleOptions",
+        "ShareTypeVariationSizeEnum": "apps.commissioning.models.choices.ShareTypeVariationSizeOptions",
+        "UnitEnum": "apps.commissioning.models.choices.UnitOptions",
+        "PaymentCycleEnum": "apps.commissioning.models.choices.PaymentCycleOptions",
+        "VegetableSizeEnum": "apps.commissioning.models.choices.VegetableSizeOptions",
+        "ShareTypeEnum": "apps.commissioning.models.choices.ShareOptions",
         # All the *_day fields across SharesDeliveryDay / OrdersDeliveryDay /
         # Order / Share / etc. use the same DayNumberOptions choice set.
         # Without this override, spectacular auto-generates ~8 distinct
         # enum names (HarvestingDayEnum, WashingDayEnum, etc.) that all
         # describe the same Monday-to-Sunday set — one shared
         # ``DayNumberEnum`` keeps the generated TS client cleaner.
-        "DayNumberEnum": "apps.commissioning.models.choices_text.DayNumberOptions",
+        "DayNumberEnum": "apps.commissioning.models.choices.DayNumberOptions",
         # Three unrelated models each have a ``kind`` CharField with its
         # own choice set; without these overrides spectacular falls back
         # to hash-suffixed names like ``Kind085Enum``.
         "OpsChecklistKindEnum": "apps.shared.super_admin.models.OpsChecklistItem.KIND_CHOICES",
         "ExternalCodeMappingKindEnum": "apps.commissioning.models.imports.ExternalCodeMapping.KIND_CHOICES",
-        "ConsentKindEnum": "apps.commissioning.models.choices_text.ConsentKind",
+        "ConsentKindEnum": "apps.commissioning.models.choices.ConsentKind",
+        "TicketStatusEnum": "apps.shared.support.models.TicketStatus",
+        "TicketPriorityEnum": "apps.shared.support.models.TicketPriority",
+        "AuthorKindEnum": "apps.shared.support.models.AuthorKind",
     },
     "COMPONENT_NO_READ_ONLY_REQUIRED": True,
     "SCHEMA_PATH_PREFIX": "/api/",

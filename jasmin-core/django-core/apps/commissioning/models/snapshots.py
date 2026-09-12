@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.db import models
 
 from .base import JasminModel
-from .choices_text import size_vegetable_field, unit_field
+from .fields import size_vegetable_field, unit_field
 
 
 class StockSnapshot(JasminModel):

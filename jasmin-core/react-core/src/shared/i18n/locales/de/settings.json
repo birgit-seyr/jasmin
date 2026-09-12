@@ -104,7 +104,9 @@
       "title": "Unterschrift auf Papier"
     },
     "requires_paper_signature_for_membership": "Papier-Unterschrift für Mitgliedschaft notwendig",
-    "requires_paper_signature_for_membership_desc": "Wenn aktiviert, müssen die Mitgliedschafts-Einwilligungen ausgedruckt, unterschrieben und ans Büro geschickt werden. Das Büro vermerkt den Eingang manuell."
+    "requires_paper_signature_for_membership_desc": "Wenn aktiviert, müssen die Mitgliedschafts-Einwilligungen ausgedruckt, unterschrieben und ans Büro geschickt werden. Das Büro vermerkt den Eingang manuell.",
+    "requires_paper_signature_for_cancellation_of_membership": "Papier-Unterschrift für Austritt notwendig",
+    "requires_paper_signature_for_cancellation_of_membership_desc": "Wenn aktiviert, müssen die Austritts-Meldung ausgedruckt, unterschrieben und ans Büro geschickt werden. Das Büro vermerkt den Eingang manuell."
   },
   "payments": {
     "strategy": {
@@ -125,7 +127,7 @@
     "bills_joker_deliveries": "Joker-Lieferungen abrechnen",
     "bills_joker_deliveries_desc": "Wenn deaktiviert, werden als Joker markierte Lieferungen nicht abgerechnet.",
     "allows_solidarity_pricing": "Solidarpreise erlauben",
-    "allows_solidarity_pricing_desc": "Mitglieder dürfen den Preis pro Lieferung selbst festlegen (mindestens die hinterlegte Untergrenze der Variante; nach oben offen). Der Richtpreis wird als Vorschlag angezeigt.",
+    "allows_solidarity_pricing_desc": "Mitglieder dürfen den Preis pro Lieferung selbst festlegen (mindestens die hinterlegte Untergrenze der Variante; nach oben offen). Der Richtpreis wird als Vorschlag angezeigt. Dies ist eine globale Einstellung und gilt überall, nicht nur hier.",
     "requires_paper_signature_for_sepa_mandate": "Papier-Unterschrift für SEPA-Mandat",
     "requires_paper_signature_for_sepa_mandate_desc": "Wenn aktiviert, muss das SEPA-Mandat ausgedruckt, unterschrieben und ans Büro geschickt werden. Das Büro vermerkt den Eingang manuell.",
     "due_day": "Fälligkeitstag im Monat",
@@ -156,6 +158,7 @@
     "packing_mode_mixed": "gemischt (pro Anteilsart wählbar)",
     "number_packing_stations": "Anzahl Packstationen",
     "show_size_column": "Gemüse-Größen Spalte anzeigen",
+    "distribute_forecast_by_weight": "Prognosemenge nach Gewicht auf Größen verteilen (leere Zellen vorausfüllen)",
     "show_summary_in_harvest_share_planning_on_top": "Summen-Zeilen in Kistenplanung oben anzeigen", 
     "sales": {
       "title": "Vertriebskanäle"
@@ -167,6 +170,8 @@
     "default_planning_mode_description": "Das ist nur die Voreinstellung. Kann jede Woche geändert werden.",
     "has_markets": "Verkauf auf Märkten",
     "sells_to_resellers": "Verkauf an Wiederverkäufer",
+    "crates_should_be_on_documents": "Napfkisten werden verrechnet",
+    "crates_should_be_on_documents_desc": "",
     "different_offer_groups": "Verschiedene Angebotsgruppen",
     "tax_rates": {
       "title": "Standard-Steuersätze",
@@ -185,6 +190,8 @@
     },
     "season_start": "Saisonbeginn",
     "season_start_week": "Saisonbeginn (KW 1–53)",
+    "min_weeks_from_creation_to_start_delivery": "Vorlaufzeit bis Lieferstart (Wochen)",
+    "min_weeks_from_creation_to_start_delivery_desc": "Mindestanzahl Wochen zwischen dem Anlegen eines Abonnements und dem frühestmöglichen Lieferbeginn. Das früheste wählbare Startdatum (gültig ab) ist der erste Montag ab heute plus dieser Anzahl Wochen. 0 = ab dem nächsten Montag.",
     "shares": {
       "title": "Anteils-Typen"
     },
@@ -207,8 +214,8 @@
     "allows_trial_subscriptions": "Probe-Abos erlauben",
     "allowed_trial_subscription_duration": "Erlaubte Dauer der Probe-Abos (Wochen)",
     "allowed_trial_subscription_duration_desc": "Maximale Laufzeit eines Probe-Anteils.",
-    "allows_trial_subscriptions_for_trial_members": "Probe-Abos für Probemitglieder",
-    "allows_trial_subscriptions_for_trial_members_desc": "Bestimmt, ob auch Probemitglieder Probe-Abos abschließen können.",
+    "allows_trial_subscriptions_for_trial_members": "Probe-Abos auch für Probemitglieder",
+    "allows_trial_subscriptions_for_trial_members_desc": "Bestimmt, ob auch Probemitglieder Probe-Abos abschließen können. Wenn nicht angeklickt, dann dürfen nur Mitglieder Probe-Abos abschliessen.",
     "uses_jokers_for_trial_subscriptions": "Joker für Probe-Abos verwenden",
     "uses_jokers_for_trial_subscriptions_desc": "Bestimmt, ob Joker auch auf Probe-Abos angerechnet werden.",
     "jokers": {
@@ -219,7 +226,7 @@
     "default_amount_jokers_description": "Dies kann für die einzelnen Anteils-Typen angepasst werden.",
     "jokers_for_trial": "Joker für Probe-Abonnements verwenden",
     "donation_jokers": "Spenden-Joker aktivieren",
-    "default_amount_of_donation_jokers": "Zusätzliche Spenden-Joker",
+    "default_amount_of_donation_jokers": "Anzahl Spenden-Joker",
         "default_amount_of_donation_jokers_description": "Dies kann für die einzelnen Anteils-Typen angepasst werden.",
 
     "subscriptions": {
@@ -365,6 +372,8 @@
      "info_sentence_about_trial_subscriptions": "Kurzbeschreibung Probe-Abos",
     "info_sentence_about_trial_subscriptions_desc": "z.B.: Probe-Abos sind für 4 Wochen möglich, enden dann automatisch.",
     "allows_trial_subscriptions": "Probe-Abos erlauben",
+    "trial_subscriptions_have_different_prices": "Probe-Abos haben andere Preise",
+    "trial_subscriptions_have_different_prices_desc": "Wenn aktiviert, kann pro Größe ein eigener Preis (und eine eigene Solidar-Untergrenze) für Probe-Abos hinterlegt werden. Andernfalls gelten für Probe-Abos die regulären Preise.",
     "allowed_trial_subscription_duration": "Erlaubte Dauer der Probe-Abos (Wochen)",
     "allowed_trial_subscription_duration_desc": "Maximale Laufzeit einer Probemitgliedschaft.",
     "allows_trial_subscriptions_for_trial_members": "Probe-Abos für Probemitglieder",

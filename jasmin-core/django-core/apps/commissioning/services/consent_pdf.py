@@ -27,6 +27,11 @@ _PAGE_CSS = """
             font-size: 8pt; color: #888; word-break: break-all; }
 """
 
+# Resource schemes a document body may pull in. ``data:`` only — see the
+# fetcher comment in ``render_consent_pdf``. Deliberately excludes ``file``,
+# ``http`` and ``https``.
+_ALLOWED_RESOURCE_PROTOCOLS = ("data",)
+
 # Minimal per-locale labels for the header (backend render has no i18n; only
 # de/en ship). Falls back to en.
 _LABELS = {
@@ -42,7 +47,9 @@ def render_consent_pdf(document) -> ContentFile:
     **valid_from** date; the body follows. The SHA-256 stays in the footer as
     the integrity anchor.
     """
-    from weasyprint import HTML  # heavy import — keep local to the call
+    # Heavy imports — keep local to the call.
+    from weasyprint import HTML
+    from weasyprint.urls import URLFetcher
 
     body = document.body or ""
     if _LOOKS_LIKE_HTML.search(body):
@@ -67,5 +74,18 @@ def render_consent_pdf(document) -> ContentFile:
         f"</body></html>"
     )
 
-    pdf_bytes = HTML(string=full_html).write_pdf()
+    # ``body`` is office-authored HTML stored VERBATIM (no server-side
+    # sanitiser), so an ``<img src="file:///app/.env">`` or a stylesheet
+    # pointing at a cloud metadata endpoint would otherwise be fetched BY THE
+    # SERVER at render time — WeasyPrint's default fetcher resolves ``file://``
+    # and internal HTTP happily. That turns a tenant-office privilege into a
+    # host file read / SSRF, across the tenant boundary.
+    #
+    # Consent PDFs are self-contained by design (inline ``_PAGE_CSS``, no
+    # external assets), so the only scheme worth allowing is ``data:`` — inert
+    # by construction: no socket, no filesystem. A blocked reference does NOT
+    # abort the render; WeasyPrint catches the fetch error and continues, so a
+    # bad URL degrades to a missing image rather than a broken legal artifact.
+    fetcher = URLFetcher(allowed_protocols=_ALLOWED_RESOURCE_PROTOCOLS)
+    pdf_bytes = HTML(string=full_html, url_fetcher=fetcher).write_pdf()
     return ContentFile(pdf_bytes)

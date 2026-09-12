@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useCommissioningMemberGrowthStatisticsList } from "@shared/api/generated/commissioning/commissioning";
-import { StatsAreaChart, type StatsAreaSeries } from "@shared/ui";
+import { ExplainerText, StatsAreaChart, type StatsAreaSeries } from "@shared/ui";
 import { buildMonthAxis } from "@shared/utils";
 import {
   useDateFormat,
@@ -88,6 +88,9 @@ export default function DashboardMembers() {
           />
         </Card>
       </Spin>
+      <ExplainerText title={t("common.info")}>
+        {t("explainers.dashboard_members")}
+      </ExplainerText>
     </div>
   );
 }

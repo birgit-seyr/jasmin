@@ -26,6 +26,8 @@
   "enter_password": "Passwort eingeben",
   "password_set": "Passwort ist gesetzt. Leer lassen, um das aktuelle beizubehalten.",
   "use_tls": "TLS verwenden",
+  "port_starttls": "587 – STARTTLS",
+  "port_ssl": "465 – SSL",
   "api_key": "API-Schlüssel",
   "enter_api_key": "API-Schlüssel eingeben",
   "api_key_set": "API-Schlüssel ist gesetzt. Leer lassen, um den aktuellen beizubehalten.",

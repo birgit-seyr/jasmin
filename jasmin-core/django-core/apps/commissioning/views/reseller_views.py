@@ -7,8 +7,6 @@ from django.core.exceptions import ValidationError
 from django.db import DatabaseError, transaction
 from django.db.models import QuerySet
 from drf_spectacular.utils import (
-    OpenApiParameter,
-    OpenApiTypes,
     extend_schema,
     inline_serializer,
 )
@@ -39,6 +37,7 @@ from ..models import (
     OrderContent,
 )
 from ..schemas import (
+    catalogue_param,
     get_day_number_parameter,
     get_delivery_week_parameter,
     get_offer_group_parameter,
@@ -527,9 +526,8 @@ class BulkSetToPaidDocumentsView(APIViewRolePermissionsMixin, APIView):
         summary="Bulk Set Documents as Paid/Unpaid",
         description="Mark invoices as paid or unpaid for multiple orders. Use ?undo=true to mark as unpaid.",
         parameters=[
-            OpenApiParameter(
-                name="undo",
-                type=OpenApiTypes.STR,
+            catalogue_param(
+                "undo",
                 required=False,
                 description="Set to 'true' to undo payment (mark as unpaid)",
             ),

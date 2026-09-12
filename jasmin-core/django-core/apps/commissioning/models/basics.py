@@ -6,7 +6,7 @@ from django.db import models
 from encrypted_model_fields.fields import EncryptedCharField
 
 from .base import JasminModel
-from .choices_text import (
+from .choices import (
     ShareOptions,
     UnitOptions,
 )

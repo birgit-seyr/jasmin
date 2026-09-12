@@ -65,3 +65,16 @@ class PaymentsConfig(AppConfig):
         )
         auditlog.register(ChargeSchedule)
         auditlog.register(BillingRun)
+
+        # Onboarding: let the office bulk-import EXISTING SEPA mandates
+        # (BillingProfile rows) through the shared data-list CSV endpoint.
+        # Registering here — from payments INTO commissioning's registry —
+        # keeps the one-way isolation intact: commissioning never imports
+        # payments; payments→commissioning is the allowed direction.
+        from apps.commissioning.services.data_import import (
+            register_import_serializer,
+        )
+
+        from .serializers import SepaMandateImportSerializer
+
+        register_import_serializer("sepa_mandate", SepaMandateImportSerializer)

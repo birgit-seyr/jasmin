@@ -68,7 +68,12 @@
       "effective_at_in_past": "The effective date cannot be in the past.",
       "effective_at_required": "An effective date is required."
     },
-    "confirmed_immutable": "A confirmed member can’t be deleted — end the membership via cancellation instead."
+    "confirmed_immutable": "A confirmed member can’t be deleted — end the membership via cancellation instead.",
+    "email_already_has_user": "This email address already has a user account belonging to another member. An address can hold only ONE login — invite that member, or give this one their own address.",
+    "email_already_has_user_named": "This email address already has a user account belonging to {{holder_name}}. An address can hold only ONE login — give this member their own address.",
+    "email_already_has_user_named_numbered": "This email address already has a user account belonging to {{holder_name}} (member #{{holder_member_number}}). An address can hold only ONE login — this member stays without their own access, or needs a separate address.",
+    "email_already_has_user_anonymous": "This email address already has a user account belonging to another member. An address can hold only ONE login.",
+    "number_not_allowed_for_trial": "Trial members do not get a member number — leave the column blank for trial rows."
   },
   "coop_share": {
     "contract_agreement_required": "Please agree to the subscription contract to subscribe cooperative shares.",
@@ -410,5 +415,18 @@
     "placement_out_of_bounds": "This placement would run past the end of the plot.",
     "batch_placed_twice": "A batch can only be placed once — it holds its cells for its whole growing period.",
     "placement_overlaps": "This placement collides with another crop in space and time."
+  },
+  "tenant": {
+    "app_icon_invalid": "The app icon must be a square PNG, JPEG or WEBP image of at least 512x512 pixels and at most 2 MB."
+  },
+  "crates": {
+    "disabled_on_documents": "Crates are not put on documents for this tenant, so they cannot be added."
+  },
+  "staff": {
+    "invalid": "Invalid staff request.",
+    "employee_not_found": "Staff member not found.",
+    "weekly_plan_category_not_found": "Weekly plan category not found.",
+    "invalid_weekly_plan_assignment": "Invalid weekly plan assignment.",
+    "weekly_plan_copy_target_not_empty": "The target week already has a weekly plan. Copy is only possible into an empty week."
   }
 }

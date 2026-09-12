@@ -19,6 +19,7 @@ urlpatterns = [
     path("api/tenants/", include("apps.shared.tenants.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
     path("api/gdpr/", include("apps.gdpr.urls")),
+    path("api/support/", include("apps.shared.support.urls")),
     # Browsers POST CSP violation reports here (header set by nginx).
     path("api/csp-report/", csp_report_view, name="csp-report"),
     # Signed-URL media gate (replaces nginx serving /media/ directly

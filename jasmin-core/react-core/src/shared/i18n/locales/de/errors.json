@@ -68,7 +68,12 @@
       "effective_at_in_past": "Das Kündigungsdatum darf nicht in der Vergangenheit liegen.",
       "effective_at_required": "Bitte ein Kündigungsdatum angeben."
     },
-    "confirmed_immutable": "Ein bestätigtes Mitglied kann nicht gelöscht werden — stattdessen über die Kündigung beenden."
+    "confirmed_immutable": "Ein bestätigtes Mitglied kann nicht gelöscht werden — stattdessen über die Kündigung beenden.",
+    "email_already_has_user": "Diese E-Mail-Adresse hat bereits ein Benutzerkonto, das zu einem anderen Mitglied gehört. Eine Adresse kann nur EIN Login haben — bitte lade dieses Mitglied ein oder hinterlege hier eine eigene Adresse.",
+    "email_already_has_user_named": "Diese E-Mail-Adresse hat bereits ein Benutzerkonto von {{holder_name}}. Eine Adresse kann nur EIN Login haben — bitte hinterlege für dieses Mitglied eine eigene Adresse.",
+    "email_already_has_user_named_numbered": "Diese E-Mail-Adresse hat bereits ein Benutzerkonto von {{holder_name}} (Mitglied #{{holder_member_number}}). Eine Adresse kann nur EIN Login haben — dieses Mitglied bleibt ohne eigenen Zugang oder braucht eine eigene Adresse.",
+    "email_already_has_user_anonymous": "Diese E-Mail-Adresse hat bereits ein Benutzerkonto, das zu einem anderen Mitglied gehört. Eine Adresse kann nur EIN Login haben.",
+    "number_not_allowed_for_trial": "Probemitglieder erhalten keine Mitgliedsnummer — bitte die Spalte für Probemitglieder leer lassen."
   },
   "coop_share": {
     "contract_agreement_required": "Bitte stimme dem Zeichnungsvertrag zu, um Genossenschaftsanteile zu zeichnen.",
@@ -410,5 +415,18 @@
     "placement_out_of_bounds": "Diese Platzierung läuft über das Ende der Fläche hinaus.",
     "batch_placed_twice": "Ein Satz kann nur einmal platziert werden — er belegt seine Zellen über die gesamte Standzeit.",
     "placement_overlaps": "Diese Platzierung überschneidet sich mit einer anderen Kultur in Raum und Zeit."
+  },
+  "tenant": {
+    "app_icon_invalid": "Das App-Symbol muss ein quadratisches PNG-, JPEG- oder WEBP-Bild mit mindestens 512x512 Pixeln und höchstens 2 MB sein."
+  },
+  "crates": {
+    "disabled_on_documents": "Kisten werden für diese Organisation nicht auf Belegen geführt und können daher nicht hinzugefügt werden."
+  },
+  "staff": {
+    "invalid": "Ungültige Anfrage im Personalbereich.",
+    "employee_not_found": "MitarbeiterIn nicht gefunden.",
+    "weekly_plan_category_not_found": "Wochenplan-Kategorie nicht gefunden.",
+    "invalid_weekly_plan_assignment": "Ungültige Zuordnung im Wochenplan.",
+    "weekly_plan_copy_target_not_empty": "Die Zielwoche enthält bereits einen Wochenplan. Kopieren ist nur in eine leere Woche möglich."
   }
 }

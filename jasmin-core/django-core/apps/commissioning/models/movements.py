@@ -4,12 +4,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from .base import JasminModel
-from .choices_text import (
-    CultivationOriginOptions,
-    MovementTypeOptions,
-    size_vegetable_field,
-    unit_field,
-)
+from .choices import CultivationOriginOptions, MovementTypeOptions
+from .fields import size_vegetable_field, unit_field
 from .managers import DateActiveOnlyManager
 
 # Module-level so that ``MovementShareArticle.Meta`` (a nested class) can reach

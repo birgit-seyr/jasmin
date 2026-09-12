@@ -36,16 +36,17 @@ const styles = {
   ...baseStyles,
   ...StyleSheet.create({
     // The shared ``baseStyles.header`` is absolutely positioned at
-    // top: 200 with a ~25pt-tall title. PDFTenantInfo's normal-flow
-    // block ends right around y=210, so the next-sibling entry lines
-    // would start at ~y=212 and get painted underneath the title's
-    // lower edge. Wrapping the entry / order-instructions block in
-    // this spacer pushes it down past the title footprint without
-    // changing the title's anchor (the other reseller PDFs rely on
-    // the absolute style as-is).
+    // top: 200 with a ~25pt-tall title (footprint ~200–225).
+    // ``baseStyles.table`` has marginTop 0, so this spacer is the ONLY
+    // thing pushing the following content clear of the title. It matches
+    // the delivery-note / invoice PDFs' ``marginTop: 40`` so all three
+    // reseller documents share the same relative layout below the title —
+    // and so a document with EMPTY entry lines (spacer only) still clears
+    // the title instead of riding up under it. (Was 10, which left the
+    // offers table crowding the title's lower edge.)
     entryBlock: {
       width: "100%",
-      marginTop: 10,
+      marginTop: 40,
     },
     col1: { ...cellBase, width: "18%", textAlign: "left" },
     col2: { ...cellBase, width: "19%", textAlign: "left" },

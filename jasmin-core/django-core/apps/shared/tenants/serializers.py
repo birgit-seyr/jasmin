@@ -1,6 +1,28 @@
+from io import BytesIO
+
+from django.core.files.base import ContentFile
+from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers
 
+from .errors import TenantAppIconInvalid
 from .models import Tenant, TenantEmailConfig, TenantSettings
+
+# ---- Web-app launcher icon (``Tenant.app_icon``) constraints ---------------
+# The stored icon is normalized to exactly one rendition, so the manifest can
+# hardcode ``sizes: "512x512"`` instead of opening the file per request.
+# 512 is the largest size any launcher asks for; Chrome's own installability
+# floor is 144px, so this is comfortably above every consumer.
+_APP_ICON_MAX_BYTES = 2 * 1024 * 1024
+_APP_ICON_MIN_PX = 512
+# 4096x4096 is ~16.8 MP, i.e. ~67 MB decoded as RGBA — survivable in a worker.
+# Anything a launcher could want is far below this; see the decompression-bomb
+# note at the check itself for why an upper bound is mandatory, not optional.
+_APP_ICON_MAX_PX = 4096
+_APP_ICON_RENDER_PX = 512
+# Formats Pillow can decode AND that a browser can render. Deliberately not
+# SVG (Pillow can't decode it, and it is an active-content format) and not
+# GIF/BMP/TIFF (no benefit here, and animation has no meaning on a launcher).
+_APP_ICON_FORMATS = frozenset({"PNG", "JPEG", "WEBP"})
 
 
 def _current_settings_dict(obj: Tenant) -> dict:
@@ -81,6 +103,11 @@ class TenantSerializer(_TenantSettingsOverlayMixin, serializers.ModelSerializer)
 
     current_settings = serializers.SerializerMethodField()
     settings = serializers.SerializerMethodField()
+    # A model PROPERTY, so ``fields = "__all__"`` would not pick it up on its
+    # own. It has to ride along here too: this is the payload
+    # ``refreshTenantFull()`` swaps in after login, and without the field the
+    # frontend would lose the icon stamp the moment a session authenticates.
+    app_icon_version = serializers.CharField(read_only=True)
 
     class Meta:
         model = Tenant
@@ -108,6 +135,89 @@ class TenantSerializer(_TenantSettingsOverlayMixin, serializers.ModelSerializer)
             "updated_at",
             "action_rate_limit_overrides",
         )
+
+    def validate_app_icon(self, value):
+        """Enforce square / minimum-size / format, then normalize.
+
+        DRF's auto-mapped ``ImageField`` already runs Pillow's ``verify()``
+        via ``django.forms.ImageField``, but that only proves "decodes as an
+        image" — it says nothing about dimensions, aspect ratio or byte size.
+
+        On success the ORIGINAL upload is discarded and a re-encoded
+        512x512 PNG is stored in its place. Normalizing on write is what keeps
+        ``TenantManifestView`` free of any per-request image work.
+        """
+        # ``None`` is the clear-the-field path (``PATCH {"app_icon": null}``
+        # from ``usePictureUpload``); ``""`` is DRF's empty-multipart form of
+        # the same thing. Neither is an upload to validate.
+        if not value:
+            return value
+
+        if value.size > _APP_ICON_MAX_BYTES:
+            raise TenantAppIconInvalid(
+                f"The app icon exceeds the "
+                f"{_APP_ICON_MAX_BYTES // (1024 * 1024)} MB limit."
+            )
+
+        # ``verify()`` is the cheap structural check, but it leaves the image
+        # object unusable — every real read needs a second ``open()``.
+        try:
+            value.seek(0)
+            probe = Image.open(value)
+            probe.verify()
+        except (UnidentifiedImageError, OSError, ValueError):
+            raise TenantAppIconInvalid(
+                "The app icon could not be read as an image."
+            ) from None
+
+        image_format = (probe.format or "").upper()
+        if image_format not in _APP_ICON_FORMATS:
+            raise TenantAppIconInvalid(
+                "The app icon must be a PNG, JPEG or WEBP image."
+            )
+
+        value.seek(0)
+        image = Image.open(value)
+        width, height = image.size
+        if width != height:
+            raise TenantAppIconInvalid(
+                f"The app icon must be square — this one is {width}x{height}."
+            )
+        if width < _APP_ICON_MIN_PX:
+            raise TenantAppIconInvalid(
+                f"The app icon must be at least {_APP_ICON_MIN_PX}x"
+                f"{_APP_ICON_MIN_PX} pixels — this one is {width}x{height}."
+            )
+        # Upper bound, and it is a DoS guard rather than a UX nicety: the byte
+        # cap above does NOT bound pixels, because flat-colour PNG compresses
+        # roughly 3500:1. A 12000x12000 single-colour PNG is ~40 KB on the wire
+        # — square, over the minimum, under 2 MB, structurally valid — and the
+        # decode below would allocate ~1 GB in a gunicorn worker shared by
+        # every tenant. Pillow does not stop it either: 144 MP sits in the
+        # warning-only band between MAX_IMAGE_PIXELS and the 2x threshold that
+        # raises DecompressionBombError. Django's own forms.ImageField
+        # deliberately stops at verify() for exactly this reason, so anything
+        # that goes on to decode must impose its own ceiling.
+        #
+        # ``image.size`` is read from the header, so rejecting here costs
+        # nothing — this MUST stay above the convert()/resize() below.
+        if width > _APP_ICON_MAX_PX:
+            raise TenantAppIconInvalid(
+                f"The app icon must be at most {_APP_ICON_MAX_PX}x"
+                f"{_APP_ICON_MAX_PX} pixels — this one is {width}x{height}."
+            )
+
+        # RGBA so a transparent source keeps its transparency; LANCZOS because
+        # a launcher icon is downscaled far enough for the filter to matter.
+        rendered = image.convert("RGBA").resize(
+            (_APP_ICON_RENDER_PX, _APP_ICON_RENDER_PX), Image.LANCZOS
+        )
+        buffer = BytesIO()
+        rendered.save(buffer, format="PNG", optimize=True)
+        # Rewind the original too: on any later failure the upload handler
+        # still expects a readable file object.
+        value.seek(0)
+        return ContentFile(buffer.getvalue(), name="app_icon.png")
 
 
 class TenantNonStaffReadSerializer(
@@ -155,6 +265,10 @@ class TenantNonStaffReadSerializer(
 
     current_settings = serializers.SerializerMethodField()
     settings = serializers.SerializerMethodField()
+    # Members and customers see the installed app icon too — this serializer is
+    # what their session gets after login, so dropping the field here would
+    # leave every non-staff install on the platform fallback.
+    app_icon_version = serializers.CharField(read_only=True)
 
     class Meta:
         model = Tenant
@@ -166,6 +280,7 @@ class TenantNonStaffReadSerializer(
             "description",
             "logo",
             "bio_logo",
+            "app_icon_version",
             "is_active",
             # Locale / formatting
             "tenant_language",
@@ -262,6 +377,7 @@ class TenantEmailConfigSerializer(serializers.ModelSerializer):
             "smtp_password",
             "has_smtp_password",
             "smtp_use_tls",
+            "smtp_use_ssl",
             "from_email",
             "from_name",
             "reply_to_email",
@@ -301,6 +417,23 @@ class TenantEmailConfigSerializer(serializers.ModelSerializer):
                 code="smtp_port_invalid",
             )
         return value
+
+    def validate(self, attrs):
+        # STARTTLS (``smtp_use_tls``) and implicit SSL (``smtp_use_ssl``) are
+        # mutually exclusive — Django's SMTP backend raises if both are set.
+        # Resolve the effective values across a partial update (fall back to the
+        # instance) so a PATCH that touches only one is checked against the other.
+        use_tls = attrs.get(
+            "smtp_use_tls", getattr(self.instance, "smtp_use_tls", False)
+        )
+        use_ssl = attrs.get(
+            "smtp_use_ssl", getattr(self.instance, "smtp_use_ssl", False)
+        )
+        if use_tls and use_ssl:
+            raise serializers.ValidationError(
+                {"smtp_use_ssl": "Choose either STARTTLS or SSL, not both."}
+            )
+        return attrs
 
     def update(self, instance, validated_data):
         smtp_password = validated_data.pop("smtp_password", None)
@@ -376,6 +509,15 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
     logo = serializers.SerializerMethodField()
     bio_logo = serializers.SerializerMethodField()
 
+    # Deliberately a VERSION STAMP, not the file URL. The launcher icon is
+    # served by its own unsigned route (``TenantAppIconView``) at a stable
+    # path, so the frontend needs two things: whether an icon exists at all
+    # (empty string = no), and a token to bust the route's day-long cache when
+    # one is replaced. ``Tenant.app_icon_version`` is both. Emitting
+    # ``app_icon.url`` here would hand out a signed URL that expires in 24h
+    # and is useless for either purpose.
+    app_icon_version = serializers.CharField(read_only=True)
+
     # Friendly Captcha public sitekey — platform-wide, identical for
     # every tenant. Empty string when the feature flag is off, so the
     # frontend can branch on truthiness to decide whether to mount the
@@ -387,6 +529,7 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
     # registration wizard needs pre-login; the rest of the overlay stays
     # office-gated. Resolved once via ``_overlay`` (one query per tenant).
     allows_trial_subscriptions = serializers.SerializerMethodField()
+    allows_trial_subscriptions_for_trial_members = serializers.SerializerMethodField()
     min_number_coop_shares = serializers.SerializerMethodField()
     max_number_coop_shares = serializers.SerializerMethodField()
     value_one_coop_share = serializers.SerializerMethodField()
@@ -410,6 +553,7 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
             "description",
             "logo",
             "bio_logo",
+            "app_icon_version",
             "tenant_language",
             "date_format",
             "currency",
@@ -449,6 +593,11 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
             "legal_notice_extra_html",
             "friendly_captcha_sitekey",
             "allows_trial_subscriptions",
+            # The public trial card must not offer a trial when the tenant
+            # allows trial subscriptions only for full members (a trial
+            # registrant becomes a trial member). The full derived predicate is
+            # ``allows_trial_subscriptions AND allows_trial_subscriptions_for_trial_members``.
+            "allows_trial_subscriptions_for_trial_members",
             "min_number_coop_shares",
             "max_number_coop_shares",
             "value_one_coop_share",
@@ -494,6 +643,14 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
         # Default True mirrors the TenantSettings field default — a tenant
         # with no settings row yet still shows the trial card.
         return bool(self._overlay(obj).get("allows_trial_subscriptions", True))
+
+    def get_allows_trial_subscriptions_for_trial_members(self, obj: Tenant) -> bool:
+        # Default True mirrors the TenantSettings field default. Combined with
+        # ``allows_trial_subscriptions`` on the client, this gates the public
+        # trial card (a trial registrant is created as a trial member).
+        return bool(
+            self._overlay(obj).get("allows_trial_subscriptions_for_trial_members", True)
+        )
 
     def get_min_number_coop_shares(self, obj: Tenant) -> int:
         return int(self._overlay(obj).get("min_number_coop_shares", 3))

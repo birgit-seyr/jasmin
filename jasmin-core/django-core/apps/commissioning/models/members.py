@@ -13,7 +13,7 @@ from encrypted_model_fields.fields import EncryptedCharField
 from apps.shared.iban_validator import validate_iban
 
 from .base import JasminModel
-from .choices_text import InvitationStatus
+from .choices import InvitationStatus
 from .mixin import (
     AdminConfirmableMixin,
     CancellableMixin,
@@ -123,7 +123,14 @@ class Member(
     # CancellableMixin; this is the "why".
     cancellation_reason = models.TextField(blank=True, null=True)
     is_student = models.BooleanField(default=False)
-    email = models.EmailField(max_length=255, null=True, blank=True, unique=True)
+    # NOT unique: two members legitimately share one inbox (an elderly couple
+    # with a single email account is the common case). Each is still their own
+    # Mitglied with their own member_number, subscription and equity. What
+    # CANNOT be shared is a LOGIN — ``JasminUser.email`` is the USERNAME_FIELD
+    # and stays unique, so at most one of them can hold the user account; the
+    # other is office-managed. ``MemberService.send_invitation`` raises
+    # ``MemberEmailAlreadyHasUser`` rather than colliding on that constraint.
+    email = models.EmailField(max_length=255, null=True, blank=True)
     email_2 = models.CharField(max_length=255, null=True, blank=True)
     email_3 = models.CharField(max_length=255, null=True, blank=True)
 
@@ -151,9 +158,11 @@ class Member(
         constraints = [
             # Date-order backstops for the bulk paths that bypass ``clean()``.
             # All NULL-tolerant: only enforced when both members of a pair are
-            # set. The ``cancelled_effective_at >= cancelled_at.date()`` rule
-            # comes from CancellableMixin.clean() (datetime-vs-date, no DB
-            # constraint).
+            # NB: ``cancelled_effective_at`` vs ``cancelled_at`` is
+            # deliberately UNguarded — nothing enforces an order between them.
+            # The office cancel flow legitimately BACKDATES (recording today an
+            # exit whose legal date already passed), so the effective date may
+            # precede the recorded timestamp. See CancellableMixin.
             nullable_date_order_constraint(
                 "cancelled_effective_at",
                 "entry_date",
@@ -205,7 +214,8 @@ class Member(
         super().clean()
         # Cross-field date-order guards. NULL-tolerant: each pair is only
         # enforced when both members are set. ``cancelled_effective_at`` vs
-        # ``cancelled_at`` is enforced by CancellableMixin.clean().
+        # ``cancelled_at`` is deliberately UNguarded (backdated exits are
+        # legitimate) — see CancellableMixin.
         validate_nullable_date_order(
             self,
             "cancelled_effective_at",
@@ -240,10 +250,12 @@ class Member(
         # Validate on every save so the cross-field date-order guards in clean()
         # actually fire on the normal write path — a DjangoValidationError maps
         # to a 400 with the offending field, instead of the DB CheckConstraint
-        # tripping a generic 409. validate_unique=False: email / member_number
+        # tripping a generic 409. validate_unique=False: ``member_number``
         # uniqueness is already DB-enforced, and a per-save uniqueness query on
         # this frequently-saved model (role syncs re-save on every change) isn't
         # worth it — a duplicate still surfaces as the DB IntegrityError.
+        # ``email`` is deliberately NOT unique any more (shared inboxes), so
+        # there is nothing to validate for it on either side.
         self.full_clean(validate_unique=False)
         # MEM-7: capture the previously-linked user BEFORE the write so an
         # unlink (user→None) or relink (A→B) retracts Role.MEMBER from the old
@@ -423,10 +435,11 @@ class CoopShare(JasminModel, PayableMixin, AdminConfirmableMixin, CancellableMix
         constraints = [
             # Date-order backstops for the bulk paths that bypass ``clean()``.
             # All NULL-tolerant: only enforced when both members of a pair are
-            # set. ``paid_at >= due_date`` comes from PayableMixin.clean() and
-            # ``cancelled_effective_at >= cancelled_at.date()`` from
-            # CancellableMixin.clean() (both datetime-vs-date, no DB
-            # constraint).
+            # NB: two pairs are deliberately UNguarded, here and everywhere
+            # else — ``paid_at`` vs ``due_date`` (a due date is a DEADLINE, so
+            # paying early is normal; see PayableMixin) and
+            # ``cancelled_effective_at`` vs ``cancelled_at`` (the cancel flow
+            # legitimately backdates; see CancellableMixin).
             nullable_date_order_constraint(
                 "payback_due_date",
                 "cancelled_effective_at",
@@ -446,8 +459,10 @@ class CoopShare(JasminModel, PayableMixin, AdminConfirmableMixin, CancellableMix
         super().clean()
         # Date-order guards (the cancel/payback equity-return lifecycle).
         # NULL-tolerant: each pair is only enforced when both members are set.
-        # ``paid_at >= due_date`` is enforced by PayableMixin.clean() and
-        # ``cancelled_effective_at >= cancelled_at`` by CancellableMixin.clean().
+        # ``paid_at`` vs ``due_date`` and ``cancelled_effective_at`` vs
+        # ``cancelled_at`` are deliberately UNguarded — paying before a deadline
+        # and backdating an exit are both legitimate. See PayableMixin /
+        # CancellableMixin.
         validate_nullable_date_order(
             self,
             "payback_due_date",
@@ -682,8 +697,9 @@ class Subscription(
             # A cancellation can't take effect AFTER the subscription's term
             # ends. NULL-tolerant: an open-ended subscription (``valid_until``
             # NULL) or an uncancelled row (``cancelled_effective_at`` NULL) is
-            # exempt. ``cancelled_effective_at >= cancelled_at.date()`` comes
-            # from CancellableMixin.clean() (datetime-vs-date, no DB constraint).
+            # exempt. ``cancelled_effective_at`` vs ``cancelled_at`` is
+            # deliberately UNguarded (backdated exits are legitimate) — see
+            # CancellableMixin.
             #
             # NOTE: there is intentionally NO cancelled_effective_at >=
             # valid_from constraint. The member-exit cascade force-ends a
@@ -750,8 +766,9 @@ class Subscription(
 
         # A cancellation can't take effect after the term ends. NULL-tolerant:
         # only enforced when both ``cancelled_effective_at`` and ``valid_until``
-        # are set. ``valid_from <= valid_until`` is guarded by TimeBoundMixin;
-        # ``cancelled_effective_at >= cancelled_at`` by CancellableMixin.clean().
+        # are set. ``valid_from <= valid_until`` IS guarded, by TimeBoundMixin;
+        # ``cancelled_effective_at`` vs ``cancelled_at`` is deliberately
+        # UNguarded (backdated exits are legitimate) — see CancellableMixin.
         #
         # There is intentionally no lower-bound (>= valid_from) check: the
         # member-exit cascade force-ends a not-yet-started subscription

@@ -28,7 +28,7 @@ from apps.shared.query_params import (
     validate_query_params as _validate_against_catalogue,
 )
 
-from ..models.choices_text import ShareOptions
+from ..models.choices import ShareOptions
 
 # Single source of truth for the documentation model discriminator — the
 # ``documentation_viewsets`` VALID_MODELS derives from this (was a hand-kept
@@ -43,6 +43,7 @@ _BOOL_PARAMS = (
     "is_trial",
     "manual",
     "joker",
+    "donation_joker",
     "for_tours",
     "for_stations",
     "physical",

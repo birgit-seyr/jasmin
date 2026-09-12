@@ -42,6 +42,8 @@ export type { ZipEntry } from './zip';
 export { activeAtDateForWeek, dateForWeekDayNumber, isoWeekRangeLabel, isWeekInPast, isYearInPast } from './weekRange';
 export { pickTierPrice, pickTierPriceFromAmount } from './tierPrice';
 export { isSepaMandateActiveForTerm } from './sepaMandate';
+export { variationAllowsTrial, filterVariationsForTrial } from './trialVariations';
+export type { TrialAllowable } from './trialVariations';
 export { toApiDate } from './apiDate';
 export { unwrapList } from './unwrapList';
 export { buildMonthAxis } from './monthAxis';

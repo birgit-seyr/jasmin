@@ -19,7 +19,7 @@ import type { CrateDeliveryNoteContent } from "@shared/api/generated/models/crat
 import type { CrateDeliveryNoteContentWriteRequest } from "@shared/api/generated/models/crateDeliveryNoteContentWriteRequest";
 import type { DeliveryNoteResellerContent } from "@shared/api/generated/models/deliveryNoteResellerContent";
 import { useRoles } from "@shared/auth";
-import { useDateFormat, useDefaultTaxRates, useNoteColumn, useNumberFormat } from '@hooks/index';
+import { useDateFormat, useDefaultTaxRates, useNoteColumn, useNumberFormat, useTenant } from '@hooks/index';
 import { formatAmountForUnit } from "@shared/utils";
 import { makeContentCustomEdit, makeFkCustomSave } from "./contentTableHelpers";
 import { useAmountUnitSizeColumns, useCratesColumns, useShareArticleColumn } from '@features/commissioning/hooks';
@@ -49,6 +49,14 @@ export default function DeliveryNoteModal({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { isOffice } = useRoles();
+  const { getSetting } = useTenant();
+  // The setting gates crate CREATION (backend). The table shows when the tenant
+  // puts crates on documents OR the document already HAS crate rows (see the
+  // ``|| lineItemsCrates.length`` at the render site) — so existing crates,
+  // incl. on finalized/immutable docs, still show and reconcile to the total.
+  const showCratesOnDocuments = Boolean(
+    getSetting("crates_should_be_on_documents", true),
+  );
   const { format } = useNumberFormat();
   const { formatDate, formatDateWithFallback } = useDateFormat();
   // Fallback tax rate for new lines when the picked ShareArticle
@@ -372,23 +380,29 @@ export default function DeliveryNoteModal({
               "validation.unique.share_article_unit_size_must_be_unique",
             )}
           />
-          <div style={{ marginTop: "4em", marginBottom: "-1em" }}>
-            <h5>{t("commissioning.crates")}</h5>
-          </div>
-          <EditableTable
-            key="crates"
-            columns={filteredColumnsCrates as EditableColumnConfig[]}
-            apiFunctions={apiFunctionsCrates}
-            initialData={lineItemsCrates}
-            onSaveSuccess={handleSaveSuccess}
-            onDeleteSuccess={handleDeleteSuccess}
-            permissions={cratesPermissions}
-            loading={loading}
-            customSave={customSaveCrates}
-            customDelete={customDeleteCrates}
-            uniqueCheck={["crate_type"]}
-            uniqueCheckMessage={t("validation.unique.delivery_note_modal_crate")}
-          />
+          {(showCratesOnDocuments || lineItemsCrates.length > 0) && (
+            <>
+              <div style={{ marginTop: "4em", marginBottom: "-1em" }}>
+                <h5>{t("commissioning.crates")}</h5>
+              </div>
+              <EditableTable
+                key="crates"
+                columns={filteredColumnsCrates as EditableColumnConfig[]}
+                apiFunctions={apiFunctionsCrates}
+                initialData={lineItemsCrates}
+                onSaveSuccess={handleSaveSuccess}
+                onDeleteSuccess={handleDeleteSuccess}
+                permissions={cratesPermissions}
+                loading={loading}
+                customSave={customSaveCrates}
+                customDelete={customDeleteCrates}
+                uniqueCheck={["crate_type"]}
+                uniqueCheckMessage={t(
+                  "validation.unique.delivery_note_modal_crate",
+                )}
+              />
+            </>
+          )}
         </div>
       )}
     </Modal>

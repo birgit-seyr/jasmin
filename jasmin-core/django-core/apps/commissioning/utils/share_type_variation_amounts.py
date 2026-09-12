@@ -33,8 +33,10 @@ def _aggregated_rows(
 ) -> list[dict]:
     """Thin wrapper around :meth:`ShareDemandService.aggregated_rows`.
 
-    Always excludes joker deliveries (the historical behaviour of
-    ``_build_base_queryset``).
+    Always excludes BOTH regular joker deliveries (``joker_taken``) and
+    donation jokers (``donation_joker_taken``): neither is produced, so they
+    must not appear in any share-type-variation total. ``donation_joker=False``
+    is passed explicitly (not left to the default) so the intent is unambiguous.
     """
     return _demand_service().aggregated_rows(
         year=year,
@@ -44,6 +46,7 @@ def _aggregated_rows(
         tour_number=tour,
         variation_ids=list(variation_ids) if variation_ids else None,
         joker=False,
+        donation_joker=False,
     )
 
 
@@ -302,6 +305,7 @@ def get_variation_quantities_by_station_day(
         delivery_week=delivery_week,
         variation_ids=list(physical_ids | set(virtual_map.keys())),
         joker=False,
+        donation_joker=False,
     )
     grid: dict[tuple[str, str], int] = defaultdict(int)
     for row in rows:
@@ -352,6 +356,7 @@ def batch_get_physical_variation_totals_for_weeks(
         delivery_weeks=weeks,
         variation_ids=all_variation_ids,
         joker=False,
+        donation_joker=False,
     )
 
     # 3. Build per-week result lookups, resolving virtual → physical
