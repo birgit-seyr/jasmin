@@ -38,8 +38,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.shared.auth_cookies import set_tenant_refresh_cookie
-from apps.shared.request_utils import client_ip
+from apps.shared.request_utils import body, client_ip
 from core.serializers import ErrorResponseSerializer
+from core.throttling import set_throttle_scope
 
 from ..errors import AuthError, TenantMissing
 from ..serializers import (
@@ -65,7 +66,7 @@ def _resolve_enrolling_user(request):
     yet). Raises ``AuthError`` when neither is present."""
     if getattr(request, "user", None) and request.user.is_authenticated:
         return request.user
-    token = (request.data.get("enrolment_token") or "").strip()
+    token = (body(request).get("enrolment_token") or "").strip()
     if not token:
         raise AuthError("Authentication or an enrolment token is required.")
     tenant = getattr(request, "tenant", None)
@@ -227,7 +228,7 @@ def two_factor_verify_view(request):
 
 # Login throttle scope so /verify/ shares the same per-IP bucket as
 # /login/ — stops the second step from being brute-forced independently.
-two_factor_verify_view.cls.throttle_scope = "login"
+set_throttle_scope(two_factor_verify_view, "login")
 
 
 # --------------------------------------------------------------------------- #

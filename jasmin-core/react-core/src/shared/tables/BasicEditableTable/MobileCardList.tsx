@@ -15,6 +15,9 @@ import type {
   TableRecord,
 } from "./types";
 
+/** Shown when a column has no value for a record; the caller drops such fields. */
+const EMPTY_DISPLAY = "–";
+
 /** Columns whose dataIndex starts with one of these prefixes are shown as tags. */
 const TAG_PREFIXES = ["variation_", "offer_group_", "for_all_"];
 const isTagColumn = (dataIndex: string) =>
@@ -35,12 +38,36 @@ function flattenColumns<T extends TableRecord>(
   return flat;
 }
 
-/** Resolve a display value for a column. */
+/** Resolve a display value for a column.
+ *
+ * A column's own `render` wins when it has one. It is the same function the
+ * desktop table cell uses, so the card shows the value the column author
+ * intended — a formatted decimal with its unit, a localized date, a currency
+ * amount, a status badge — instead of the raw API string.
+ *
+ * Without this the card fell straight through to `String(raw)`, so on a phone
+ * every one of the ~300 columns that define a `render` leaked the wire value:
+ * `"0.000"` for an amount, an ISO `"2026-09-13"` for a date, a bare id for a
+ * relation. The fallbacks below (foreign key, select label, checkbox tick) stay
+ * as the answer for columns that have no `render`.
+ */
 function resolveDisplay<T extends TableRecord>(
   col: EditableColumnConfig<T>,
   record: T,
+  index: number,
 ): ReactNode {
   const raw = (record as Record<string, unknown>)[col.dataIndex];
+
+  if (col.render) {
+    const rendered = col.render(raw, record, index);
+    // A render that yields nothing means "no value here" — fall through so the
+    // caller's `=== EMPTY_DISPLAY` check can drop the field from the card
+    // rather than printing a stray "Label:" with empty content.
+    if (rendered !== null && rendered !== undefined && rendered !== "") {
+      return rendered;
+    }
+    return EMPTY_DISPLAY;
+  }
 
   // Foreign-key → show the display field
   if (col.foreignKey) {
@@ -65,7 +92,7 @@ function resolveDisplay<T extends TableRecord>(
     return raw ? "✓" : "";
   }
 
-  if (raw === null || raw === undefined || raw === "") return "–";
+  if (raw === null || raw === undefined || raw === "") return EMPTY_DISPLAY;
   return String(raw);
 }
 
@@ -175,7 +202,7 @@ function MobileCardList<T extends TableRecord>({
           {t("table.no_data")}
         </div>
       ) : (
-        activeData.map((record) => {
+        activeData.map((record, index) => {
           if (renderMobileCard) {
             return (
               <Fragment key={String(record.key)}>
@@ -199,7 +226,7 @@ function MobileCardList<T extends TableRecord>({
           // First primary field is the "title"
           const titleCol = primary[0];
           const titleValue = titleCol
-            ? resolveDisplay(titleCol, record)
+            ? resolveDisplay(titleCol, record, index)
             : String(record.key);
 
           // Is finalized?
@@ -252,8 +279,8 @@ function MobileCardList<T extends TableRecord>({
                 {/* Secondary fields */}
                 <div className="mobile-card-details">
                   {primary.slice(1, 4).map((col) => {
-                    const val = resolveDisplay(col, record);
-                    if (val === "–") return null;
+                    const val = resolveDisplay(col, record, index);
+                    if (val === EMPTY_DISPLAY) return null;
                     return (
                       <span key={col.dataIndex} className="mobile-card-detail">
                         <span className="mobile-card-detail-label">

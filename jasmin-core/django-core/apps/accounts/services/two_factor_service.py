@@ -290,7 +290,7 @@ def regenerate_recovery_codes(*, user: JasminUser, code: str) -> list[str]:
 
 
 class _ChallengeToken(Token):
-    token_type = "two_factor_challenge"  # type: ignore[assignment]
+    token_type = "two_factor_challenge"
     lifetime = settings.TWO_FACTOR_CHALLENGE_LIFETIME
 
 
@@ -337,7 +337,7 @@ def consume_challenge_token(*, challenge: str, tenant_schema: str) -> JasminUser
 
 
 class _EnrolmentToken(Token):
-    token_type = "two_factor_enrolment"  # type: ignore[assignment]
+    token_type = "two_factor_enrolment"
     lifetime = settings.TWO_FACTOR_ENROLMENT_LIFETIME
 
 

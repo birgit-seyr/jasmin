@@ -15,7 +15,7 @@ config save, matching the model default of ``True``.
 
 from __future__ import annotations
 
-from django.db import connection
+from core.tenant_db import connection
 
 from ..errors import WaitingListDisabled
 

@@ -24,9 +24,10 @@ from apps.shared.auth_cookies import (
     get_super_admin_refresh_token,
     set_super_admin_refresh_cookie,
 )
-from apps.shared.request_utils import client_ip
+from apps.shared.request_utils import body, client_ip
 from apps.shared.tenants.models import Tenant
 from core.serializers import ErrorResponseSerializer
+from core.throttling import set_throttle_scope
 
 from ..errors import (
     NotSuperAdminToken,
@@ -173,8 +174,8 @@ def _build_super_admin_session_response(user: SuperAdmin) -> Response:
 @permission_classes([AllowAny])
 def super_admin_login_view(request: Request) -> Response:
     """Authenticate super admin user and return JWT tokens."""
-    email: str | None = request.data.get("email")
-    password: str | None = request.data.get("password")
+    email: str | None = body(request).get("email")
+    password: str | None = body(request).get("password")
 
     if not email or not password:
         raise SuperAdminMissingCredentials("Email and password are required")
@@ -233,7 +234,7 @@ def super_admin_login_view(request: Request) -> Response:
 # DRF reads ``throttle_scope`` off the wrapped view CLASS, not the function
 # (see the tenant login view for the same idiom). Anti-brute-force on the
 # highest-privilege login — keyed by IP (unauthenticated).
-super_admin_login_view.cls.throttle_scope = "super_admin_login"
+set_throttle_scope(super_admin_login_view, "super_admin_login")
 
 
 @extend_schema(
@@ -417,7 +418,7 @@ def super_admin_step_up_view(request: Request) -> Response:
     from apps.accounts.errors import InvalidCredentials
 
     user = request.user
-    password = request.data.get("password") or ""
+    password = body(request).get("password") or ""
     if not password or not user.check_password(password):
         logger.warning(
             "superadmin.step_up.verify_failed user=%s",
@@ -448,4 +449,4 @@ def super_admin_step_up_view(request: Request) -> Response:
 # Re-confirming the super-admin password is the same brute-force surface as
 # logging in — share the strict scope (keyed by super-admin pk here, since
 # the request is authenticated).
-super_admin_step_up_view.cls.throttle_scope = "super_admin_login"
+set_throttle_scope(super_admin_step_up_view, "super_admin_login")

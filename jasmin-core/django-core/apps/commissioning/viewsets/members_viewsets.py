@@ -44,6 +44,7 @@ from apps.authz.permissions import (
     RolePermissionsMixin,
 )
 from apps.shared.pii_logging import PIIReadLoggingMixin
+from apps.shared.request_utils import auth_user, body
 from core.pagination import OptionalLimitOffsetPagination
 from core.serializers import ErrorResponseSerializer
 
@@ -369,8 +370,8 @@ class MemberViewSet(
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         enforce_privileged(request, "Only office staff may create members.")
 
-        email: str = (request.data.get("email") or "").strip().lower()
-        notify_user: bool = bool(request.data.get("notify_user"))
+        email: str = (body(request).get("email") or "").strip().lower()
+        notify_user: bool = bool(body(request).get("notify_user"))
 
         service = MemberService()
         existing_user = service.find_existing_user_for_email(email)
@@ -379,7 +380,7 @@ class MemberViewSet(
             service.assert_user_can_be_linked(existing_user)
 
         # Strip the optional flag before serializer validation.
-        data = {k: v for k, v in request.data.items() if k != "notify_user"}
+        data = {k: v for k, v in body(request).items() if k != "notify_user"}
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
 
@@ -400,7 +401,7 @@ class MemberViewSet(
             service.link_to_user(
                 member,
                 existing_user,
-                admin_user=request.user,
+                admin_user=auth_user(request),
                 notify_user=notify_user,
                 request=request,
             )
@@ -451,7 +452,7 @@ class MemberViewSet(
 
             # Raises MemberAlreadyConfirmed (409) when not pending.
             MemberService().confirm_and_notify(
-                member, admin_user=request.user, request=request
+                member, admin_user=auth_user(request), request=request
             )
 
         updated_member = self.refetch_for_response(member)
@@ -476,11 +477,11 @@ class MemberViewSet(
     def reject(self, request: Request, pk: str | None = None) -> Response:
         enforce_privileged(request, "Only office staff may reject members.")
         member: Member = self.get_object()
-        reason: str | None = request.data.get("reason")
+        reason: str | None = body(request).get("reason")
 
         MemberService().reject_and_notify(
             member,
-            admin_user=request.user,
+            admin_user=auth_user(request),
             reason=reason,
             request=request,
         )
@@ -546,12 +547,12 @@ class MemberViewSet(
         # Default: refuse if active subscriptions remain (the service raises
         # MemberHasActiveSubscriptions → 409). ``force`` bypasses the restraint
         # and ends the subscriptions as part of the cascade.
-        force = bool(request.data.get("force", False))
+        force = bool(body(request).get("force", False))
         result_member = cancel_member_with_coop_shares(
             member,
             cancelled_effective_at=effective,
             cancelled_by=request.user,
-            reason=request.data.get("reason"),
+            reason=body(request).get("reason"),
             force=force,
         )
         cancellation_result = getattr(result_member, "cancellation_result", {})
@@ -654,7 +655,7 @@ class MemberViewSet(
         member: Member = self.get_object()
 
         # Raises MemberInvitationError (400) when not eligible.
-        MemberService().send_invitation(member, admin_user=request.user)
+        MemberService().send_invitation(member, admin_user=auth_user(request))
 
         updated_member = self.refetch_for_response(member)
         return Response(
@@ -966,7 +967,7 @@ class SubscriptionViewSet(
                     "Cannot confirm a subscription for a cancelled member."
                 )
 
-            subscription.confirm(admin_user=request.user, save=True)
+            subscription.confirm(admin_user=auth_user(request), save=True)
 
         updated = self.refetch_for_response(subscription)
         return Response(self.get_serializer(updated).data, status=status.HTTP_200_OK)
@@ -1002,7 +1003,7 @@ class SubscriptionViewSet(
         subscription: Subscription = self.get_object()
         WaitingListOfferService.offer_spot(
             subscription,
-            price_per_delivery=request.data.get("price_per_delivery"),
+            price_per_delivery=body(request).get("price_per_delivery"),
         )
         updated = self.refetch_for_response(subscription)
         return Response(self.get_serializer(updated).data, status=status.HTTP_200_OK)
@@ -1043,14 +1044,14 @@ class SubscriptionViewSet(
                 "Confirmed subscriptions cannot be rejected — cancel them instead."
             )
 
-        reason: str | None = request.data.get("reason")
+        reason: str | None = body(request).get("reason")
 
         # Mirrors ``MembersViewSet.reject``: no email side-effect today
         # — subscriptions don't ship a ``subscription.application_
         # rejected`` template yet. Add the email wiring alongside the
         # template if product asks. For now ``reject()`` just stamps
         # the audit fields and saves.
-        subscription.reject(admin_user=request.user, reason=reason, save=True)
+        subscription.reject(admin_user=auth_user(request), reason=reason, save=True)
 
         # Free the draft's held station-day capacity. The reject stamps flags
         # but does NOT delete the row, so the CASCADE that would otherwise drop
@@ -1110,7 +1111,7 @@ class SubscriptionViewSet(
             subscription,
             cancelled_by=request.user,
             effective_at=effective_at,
-            reason=request.data.get("reason"),
+            reason=body(request).get("reason"),
         )
 
         updated = self.refetch_for_response(subscription)
@@ -1177,7 +1178,7 @@ class SubscriptionViewSet(
         from ..errors import CommissioningError
         from ..services.renewal import bulk_renew as bulk_renew_service
 
-        ids = request.data.get("subscription_ids")
+        ids = body(request).get("subscription_ids")
         if not isinstance(ids, list) or not ids:
             raise CommissioningError(
                 "Provide a non-empty list of subscription_ids.",
@@ -1330,7 +1331,7 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 if not member.admin_confirmed:
                     try:
                         MemberService().confirm_and_notify(
-                            member, admin_user=request.user, request=request
+                            member, admin_user=auth_user(request), request=request
                         )
                     except (MemberAlreadyConfirmed, MemberCoopSharesOutOfRange):
                         pass

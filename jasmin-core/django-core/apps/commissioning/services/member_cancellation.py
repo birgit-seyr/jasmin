@@ -28,10 +28,12 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime
 
-from django.db import DatabaseError, connection, transaction
+from django.db import DatabaseError, transaction
 from django.db.models import DateField, F, Value
 from django.db.models.functions import Least
 from django.utils import timezone
+
+from core.tenant_db import connection
 
 from ..models import CoopShare, Member
 

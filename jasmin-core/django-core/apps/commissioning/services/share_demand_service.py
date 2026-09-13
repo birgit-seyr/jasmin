@@ -25,10 +25,11 @@ from collections import defaultdict
 from collections.abc import Iterable
 from typing import Protocol
 
-from django.db import connection
 from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
+
+from core.tenant_db import connection
 
 from ..models import (
     CapacityReservation,

@@ -1,13 +1,14 @@
 """Regression tests: the credential / 2FA / step-up throttles actually fire.
 
-Brute-force defense for login, 2FA-verify, and step-up is wired via the
-fragile module-level pattern ``view_fn.cls.throttle_scope = "login"`` (three
-separate assignments). The accounts conftest documents that BEFORE the
-2026-06 fix this wiring shipped as a silent no-op — brute-force protection
-was effectively disabled with green CI.
+Brute-force defense for login, 2FA-verify, and step-up is wired by three
+separate module-level ``set_throttle_scope(view_fn, "login")`` calls below
+the view definitions — fragile, because nothing but these tests notices if
+one goes missing. The accounts conftest documents that BEFORE the 2026-06
+fix this wiring shipped as a silent no-op — brute-force protection was
+effectively disabled with green CI.
 
-A 6-digit TOTP is brute-forceable, so a dropped ``.cls.throttle_scope`` line
-must fail CI, not slip through. These tests POST each endpoint past its rate
+A 6-digit TOTP is brute-forceable, so a dropped scope assignment must fail
+CI, not slip through. These tests POST each endpoint past its rate
 limit and assert the over-limit request returns 429.
 
 Login + 2FA-verify share the ``"login"`` scope (20/minute); step-up has its

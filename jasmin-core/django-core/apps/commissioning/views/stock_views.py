@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authz.permissions import APIViewRolePermissionsMixin, IsStaff
+from apps.shared.request_utils import body
 from core.serializers import ErrorResponseSerializer
 
 from ..errors import (
@@ -210,7 +211,7 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
         # code="stock.invalid_composite_id") — let it propagate, no re-wrap.
         parsed = parse_composite_id(composite_id)
 
-        amount = request.data.get("amount")
+        amount = body(request).get("amount")
         if amount is not None:
             try:
                 amount = Decimal(str(amount))
@@ -305,12 +306,12 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
                         storage=storage,
                         amount=correction,
                         counted_amount=counted,
-                        for_shares=request.data.get("for_shares", True),
-                        for_resellers=request.data.get("for_resellers", False),
-                        for_markets=request.data.get("for_markets", False),
-                        washed=request.data.get("washed", False),
-                        cleaned=request.data.get("cleaned", False),
-                        note=request.data.get("note", ""),
+                        for_shares=body(request).get("for_shares", True),
+                        for_resellers=body(request).get("for_resellers", False),
+                        for_markets=body(request).get("for_markets", False),
+                        washed=body(request).get("washed", False),
+                        cleaned=body(request).get("cleaned", False),
+                        note=body(request).get("note", ""),
                     )
             except (IntegrityError, DjangoValidationError) as exc:
                 # TXN-4: a concurrent writer created this entity-day's INVENTORY

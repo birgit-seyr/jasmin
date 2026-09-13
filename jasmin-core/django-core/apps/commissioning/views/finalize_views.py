@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authz.permissions import APIViewRolePermissionsMixin, IsOffice, IsStaff
+from apps.shared.request_utils import body
 from core.errors import JasminError, NotFoundError
 from core.serializers import ErrorResponseSerializer
 
@@ -81,8 +82,8 @@ class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
             Response with finalization results
         """
         ids = parse_bulk_ids(request)
-        model_name = request.data.get("model")
-        app_label = request.data.get("app_label", "commissioning")
+        model_name = body(request).get("model")
+        app_label = body(request).get("app_label", "commissioning")
         _require_model_name(model_name)
 
         try:
@@ -253,8 +254,8 @@ class BulkUnfinalizeView(APIViewRolePermissionsMixin, APIView):
             Response with unfinalization results
         """
         ids = parse_bulk_ids(request)
-        model_name = request.data.get("model")
-        app_label = request.data.get("app_label", "commissioning")
+        model_name = body(request).get("model")
+        app_label = body(request).get("app_label", "commissioning")
         _require_model_name(model_name)
 
         try:

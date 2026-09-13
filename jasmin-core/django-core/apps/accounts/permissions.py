@@ -34,9 +34,8 @@ class SelfRegistrationEnabled(BasePermission):
     """
 
     def has_permission(self, request, view) -> bool:
-        from django.db import connection
-
         from apps.shared.tenants.models import TenantSettings
+        from core.tenant_db import connection
 
         current = TenantSettings.get_current_settings(connection.tenant)
         if current is None or not current.allows_self_registration:

@@ -33,7 +33,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from django.db import connection
+from core.tenant_db import connection
 
 from ..errors import (
     TrialMembersNotAllowed,

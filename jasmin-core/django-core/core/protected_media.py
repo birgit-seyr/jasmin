@@ -37,7 +37,6 @@ from urllib.parse import quote, unquote, urlsplit
 
 from django.conf import settings
 from django.core import signing
-from django.db import connection
 from django.http import (
     FileResponse,
     HttpRequest,
@@ -47,6 +46,8 @@ from django.http import (
     HttpResponseNotFound,
 )
 from django_tenants.files.storage import TenantFileSystemStorage
+
+from core.tenant_db import connection
 
 _SALT = "protected-media"
 

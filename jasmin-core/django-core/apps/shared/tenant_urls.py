@@ -26,7 +26,8 @@ def frontend_base_url() -> str:
     relation — falls back to the ``FRONTEND_BASE_URL`` setting.
     """
     from django.conf import settings
-    from django.db import connection
+
+    from core.tenant_db import connection
 
     tenant = getattr(connection, "tenant", None)
     domains = getattr(tenant, "domains", None) if tenant is not None else None
@@ -43,7 +44,7 @@ def frontend_base_url() -> str:
 
 def tenant_name() -> str:
     """Human-readable name of the current tenant, or ``""`` when unresolved."""
-    from django.db import connection
+    from core.tenant_db import connection
 
     tenant = getattr(connection, "tenant", None)
     return getattr(tenant, "name", "") or ""

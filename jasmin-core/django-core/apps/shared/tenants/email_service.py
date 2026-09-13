@@ -46,9 +46,8 @@ def capture_tenant_email_context() -> dict:
     Keys: ``tenant_name``, ``tenant_language`` (2-char, may be ``""``),
     ``bank_details`` (``"IBAN / BIC"``), ``frontend_base_url``.
     """
-    from django.db import connection
-
     from apps.shared.tenant_urls import frontend_base_url, tenant_name
+    from core.tenant_db import connection
 
     tenant = getattr(connection, "tenant", None)
     language = ((getattr(tenant, "tenant_language", "") or "").strip().lower())[:2]
@@ -192,7 +191,7 @@ class EmailService:
 
     def __init__(self, schema_name: str | None = None):
         if schema_name is None:
-            from django.db import connection
+            from core.tenant_db import connection
 
             schema_name = connection.tenant.schema_name
         self.schema_name = schema_name
@@ -332,7 +331,7 @@ class EmailService:
         language_explicit = language is not None
         if language is None:
             try:
-                from django.db import connection
+                from core.tenant_db import connection
 
                 tenant = getattr(connection, "tenant", None)
                 language = normalize_language(getattr(tenant, "tenant_language", None))

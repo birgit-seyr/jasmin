@@ -18,6 +18,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.authz.permissions import IsOffice, IsStaff, RolePermissionsMixin
+from apps.shared.request_utils import body
 from core.serializers import ErrorResponseSerializer
 
 from ..errors import CommissioningError, ForecastNotFound
@@ -134,7 +135,7 @@ def _validated_model(request: Request) -> str:
     :data:`VALID_MODELS`. Used by the two additional-theoretical-amount
     actions, whose body uses ``model`` to pick the documentation model.
     """
-    model = str(request.data.get("model") or "").lower()
+    model = str(body(request).get("model") or "").lower()
     if model not in VALID_MODELS:
         raise CommissioningError(
             f"Invalid model '{model}'. Must be one of: {VALID_MODELS}",

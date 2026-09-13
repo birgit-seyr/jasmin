@@ -353,7 +353,8 @@
   },
   "bulk_copy_offers": {
     "ids_required": "Bitte mindestens ein Angebot auswählen.",
-    "offer_group_required": "Bitte eine Angebotsgruppe angeben."
+    "offer_group_required": "Bitte eine Angebotsgruppe angeben.",
+    "week_required": "Bitte Jahr und Lieferwoche angeben — ohne sie kann nicht geprüft werden, ob das Angebot in der Zielgruppe schon existiert."
   },
   "bulk_invoice_reminder": {
     "ids_required": "Bitte mindestens einen Eintrag auswählen.",

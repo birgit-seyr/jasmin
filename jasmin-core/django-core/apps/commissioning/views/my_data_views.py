@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from django.db import connection, transaction
+from django.db import transaction
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.request import Request
@@ -10,10 +10,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authz.permissions import IsCustomer, IsMember
-from apps.shared.request_utils import client_ip
+from apps.shared.request_utils import auth_user, body, client_ip
 from apps.shared.tenants.models import TenantSettings
 from core.errors import NotFoundError
 from core.serializers import ErrorResponseSerializer
+from core.tenant_db import connection
 
 from ..errors import CustomerProfileNotLinked, MemberProfileNotLinked
 from ..models import ContactEntity, CoopShare, Member, Reseller
@@ -159,7 +160,7 @@ class MyMemberDataView(APIView):
         serializer.save()
         logger.info(
             "commissioning.my_member_data.update user=%s fields=%s tenant=%s ip=%s",
-            request.user.email,
+            auth_user(request).email,
             sorted(serializer.validated_data.keys()),
             connection.schema_name,
             client_ip(request),
@@ -246,7 +247,7 @@ class MyCustomerDataView(APIView):
         serializer.save()
         logger.info(
             "commissioning.my_customer_data.update user=%s fields=%s tenant=%s ip=%s",
-            request.user.email,
+            auth_user(request).email,
             sorted(serializer.validated_data.keys()),
             connection.schema_name,
             client_ip(request),
@@ -616,7 +617,7 @@ class MyMembershipCancelView(APIView):
             member,
             cancelled_effective_at=effective,
             cancelled_by=request.user,
-            reason=request.data.get("reason"),
+            reason=body(request).get("reason"),
         )
         logger.info(
             "commissioning.membership.self_cancel member=%s effective=%s "

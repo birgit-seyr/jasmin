@@ -26,7 +26,7 @@ def _clear_throttle_cache():
     throttled endpoint within the test session gets a 429 instead of
     its expected response.
 
-    Before the 2026-06 ``view.cls.throttle_scope = ...`` fix the
+    Before the 2026-06 throttle-scope wiring fix the
     throttles were a silent no-op, so this wasn't necessary — but now
     that they actually fire, every accounts test that POSTs to
     /login/, /register/, or the password-reset endpoints starts from

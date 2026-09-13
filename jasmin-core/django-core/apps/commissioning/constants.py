@@ -42,9 +42,10 @@ def _resolve_tenant_setting(attr_name: str):
     field, etc.) bubbles up so the bug gets seen.
     """
     from django.core.exceptions import ImproperlyConfigured
-    from django.db import OperationalError, ProgrammingError, connection
+    from django.db import OperationalError, ProgrammingError
 
     from apps.shared.tenants.models import TenantSettings
+    from core.tenant_db import connection
 
     try:
         tenant = connection.tenant

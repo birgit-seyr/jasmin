@@ -14,6 +14,8 @@ from typing import Any
 
 from rest_framework.request import Request
 
+from apps.shared.request_utils import body
+
 from ..errors import CommissioningError, InvalidQueryParam, RequiredFieldMissing
 
 
@@ -130,7 +132,7 @@ def parse_body_date(
     ``required_code`` / ``format_code`` to preserve a pre-existing non-standard
     code (so consolidating the call site doesn't change the wire contract).
     """
-    raw = request.data.get(field)
+    raw = body(request).get(field)
     if not raw:
         if not required:
             return None
@@ -159,7 +161,7 @@ def parse_bulk_ids(request: Request, *, field: str = "ids") -> list[str]:
     (HTTP 400, ``field=<field>``) — when the value is missing, empty, or not a
     list, replacing the divergent per-endpoint checks.
     """
-    ids = request.data.get(field)
+    ids = body(request).get(field)
     if not ids or not isinstance(ids, list):
         raise RequiredFieldMissing(
             "A non-empty list of IDs is required.",
@@ -185,8 +187,8 @@ def validate_bulk_document_request(request: Request) -> dict[str, Any]:
         >>> model = params["model"]
     """
     order_ids = parse_bulk_ids(request)
-    model = request.data.get("model")
-    date = request.data.get("date", None)
+    model = body(request).get("model")
+    date = body(request).get("date", None)
 
     if model not in ["delivery_note", "invoice"]:
         raise CommissioningError(

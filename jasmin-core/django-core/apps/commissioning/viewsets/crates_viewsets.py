@@ -16,6 +16,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.authz.permissions import IsOffice, IsStaff, RolePermissionsMixin
+from apps.shared.request_utils import body
 from core.serializers import ErrorResponseSerializer
 
 from ..constants import crates_should_be_on_documents, get_default_tax_rate_crates
@@ -24,6 +25,7 @@ from ..errors import (
     CrateDeliveryNoteContentMissingRequired,
     CratesDisabledOnDocuments,
     FinalizedError,
+    InvalidAmount,
 )
 from ..models import (
     Crate,
@@ -61,6 +63,36 @@ def _get_tax_rate(crate: Crate | None, date: datetime.date) -> float:
         if crate is not None
         else get_default_tax_rate_crates()
     )
+
+
+def _required_crate_amount(request) -> int:
+    """Parse the mandatory ``amount`` from a crate-content create body.
+
+    ``CrateDeliveryNoteContent.amount`` and ``CrateContentInvoiceReseller.amount``
+    are NOT NULL ``IntegerField``s with no default, and both ``create()``
+    overrides read the body directly — no serializer validates them. So a body
+    without ``amount`` reached the INSERT as ``None`` (IntegrityError) and a
+    cleared quantity input reached it as ``""`` (ValueError on int coercion).
+    Either way the office got an HTTP 500 with no error code, on a finalizable
+    billing document endpoint.
+
+    Unlike an order line — where a missing amount legitimately means zero — a
+    crate line with no crate count is a malformed request, so this reports the
+    catalogued ``amount.invalid`` (400) instead of inventing a zero-crate row.
+
+    The sibling ``tax_rate`` on both call sites was already defended this way;
+    ``amount`` was simply missed.
+    """
+    raw = body(request).get("amount")
+    if raw is None or raw == "":
+        raise InvalidAmount("An amount is required.", field="amount")
+    try:
+        return int(raw)
+    except (TypeError, ValueError) as exc:
+        raise InvalidAmount(
+            f"Invalid amount {raw!r} — expected a whole number of crates.",
+            field="amount",
+        ) from exc
 
 
 def _reject_finalized(obj: Any, kind: str, action: str) -> None:
@@ -211,17 +243,17 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         _reject_if_crates_disabled()
         delivery_note = get_or_404(
             DeliveryNoteReseller,
-            request.data.get("delivery_note_id"),
+            body(request).get("delivery_note_id"),
             "Delivery note",
         )
         _reject_finalized(delivery_note, "delivery note", "add crates to finalized")
 
-        crate_type = get_or_404(Crate, request.data.get("crate_type"), "Crate type")
+        crate_type = get_or_404(Crate, body(request).get("crate_type"), "Crate type")
 
         # tax_rate is NOT NULL on the model; resolve it the same way the invoice
         # crate paths do (caller-supplied → live CrateNetPrice → tenant setting →
         # crate default) so the INSERT never sends NULL.
-        requested_tax_rate = request.data.get("tax_rate")
+        requested_tax_rate = body(request).get("tax_rate")
         if requested_tax_rate is None:
             requested_tax_rate = _get_tax_rate(
                 crate_type, date_from_order(delivery_note.order)
@@ -229,11 +261,11 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         CrateDeliveryNoteContent.objects.create(
             delivery_note=delivery_note,
             crate_type=crate_type,
-            amount=request.data.get("amount"),
-            price_per_unit=request.data.get("price_per_unit"),
-            rabatt=request.data.get("rabatt", 0),
+            amount=_required_crate_amount(request),
+            price_per_unit=body(request).get("price_per_unit"),
+            rabatt=body(request).get("rabatt", 0),
             tax_rate=requested_tax_rate,
-            note=request.data.get("note", ""),
+            note=body(request).get("note", ""),
         )
 
         return Response(
@@ -258,11 +290,11 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         **kwargs: Any,
     ) -> Response:
         _reject_if_crates_disabled()
-        delivery_note_id = request.data.get("delivery_note_id")
-        crate_type_id = request.data.get("crate_type")
-        new_total_amount = request.data.get("amount")
-        price_per_unit = request.data.get("price_per_unit")
-        rabatt = request.data.get("rabatt", 0)
+        delivery_note_id = body(request).get("delivery_note_id")
+        crate_type_id = body(request).get("crate_type")
+        new_total_amount = body(request).get("amount")
+        price_per_unit = body(request).get("price_per_unit")
+        rabatt = body(request).get("rabatt", 0)
 
         if not all([delivery_note_id, crate_type_id]) or new_total_amount is None:
             raise CrateDeliveryNoteContentMissingRequired(
@@ -282,7 +314,7 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         )
         # tax_rate is NOT NULL — an adjustment row created by the service would
         # otherwise INSERT NULL. Resolve it like create()/the invoice paths.
-        requested_tax_rate = request.data.get("tax_rate")
+        requested_tax_rate = body(request).get("tax_rate")
         tax_rate = (
             requested_tax_rate
             if requested_tax_rate is not None
@@ -331,10 +363,10 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         params = validate_query_params(
             request, optional=["delivery_note_id", "crate_type"]
         )
-        delivery_note_id = params["delivery_note_id"] or request.data.get(
+        delivery_note_id = params["delivery_note_id"] or body(request).get(
             "delivery_note_id"
         )
-        crate_type_id = params["crate_type"] or request.data.get("crate_type")
+        crate_type_id = params["crate_type"] or body(request).get("crate_type")
 
         if not delivery_note_id or not crate_type_id:
             raise CrateDeliveryNoteContentMissingRequired(
@@ -450,25 +482,27 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
     )
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         _reject_if_crates_disabled()
-        invoice = get_or_404(InvoiceReseller, request.data.get("invoice_id"), "Invoice")
+        invoice = get_or_404(
+            InvoiceReseller, body(request).get("invoice_id"), "Invoice"
+        )
         _reject_finalized(invoice, "invoice", "add crates to finalized")
 
-        crate_type = get_or_404(Crate, request.data.get("crate_type"), "Crate type")
+        crate_type = get_or_404(Crate, body(request).get("crate_type"), "Crate type")
 
         # Fall through the canonical resolution chain when the caller
         # didn't pin a tax_rate: live CrateNetPrice → tenant setting →
         # hardcoded crate default. See utils/tax_rate_utils.py.
-        requested_tax_rate = request.data.get("tax_rate")
+        requested_tax_rate = body(request).get("tax_rate")
         if requested_tax_rate is None:
             requested_tax_rate = _get_tax_rate(crate_type, invoice.date)
         CrateContentInvoiceReseller.objects.create(
             invoice=invoice,
             crate_type=crate_type,
-            amount=request.data.get("amount"),
-            price_per_unit=request.data.get("price_per_unit"),
-            rabatt=request.data.get("rabatt", 0),
+            amount=_required_crate_amount(request),
+            price_per_unit=body(request).get("price_per_unit"),
+            rabatt=body(request).get("rabatt", 0),
             tax_rate=requested_tax_rate,
-            note=request.data.get("note", ""),
+            note=body(request).get("note", ""),
         )
 
         return Response(
@@ -493,11 +527,11 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
         **kwargs: Any,
     ) -> Response:
         _reject_if_crates_disabled()
-        invoice_id = request.data.get("invoice_id")
-        crate_type_id = request.data.get("crate_type")
-        new_total_amount = request.data.get("amount")
-        price_per_unit = request.data.get("price_per_unit")
-        rabatt = request.data.get("rabatt", 0)
+        invoice_id = body(request).get("invoice_id")
+        crate_type_id = body(request).get("crate_type")
+        new_total_amount = body(request).get("amount")
+        price_per_unit = body(request).get("price_per_unit")
+        rabatt = body(request).get("rabatt", 0)
 
         if not all([invoice_id, crate_type_id]) or new_total_amount is None:
             raise CrateContentInvoiceMissingRequired(
@@ -510,7 +544,7 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
         crate_type = get_or_404(Crate, crate_type_id, "Crate type")
 
         # Same canonical resolution as create() above.
-        requested_tax_rate = request.data.get("tax_rate")
+        requested_tax_rate = body(request).get("tax_rate")
         tax_rate = (
             requested_tax_rate
             if requested_tax_rate is not None
@@ -562,8 +596,8 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
         **kwargs: Any,
     ) -> Response:
         params = validate_query_params(request, optional=["invoice_id", "crate_type"])
-        invoice_id = params["invoice_id"] or request.data.get("invoice_id")
-        crate_type_id = params["crate_type"] or request.data.get("crate_type")
+        invoice_id = params["invoice_id"] or body(request).get("invoice_id")
+        crate_type_id = params["crate_type"] or body(request).get("crate_type")
 
         if not invoice_id or not crate_type_id:
             raise CrateContentInvoiceMissingRequired(

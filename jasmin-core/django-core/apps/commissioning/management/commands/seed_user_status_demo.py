@@ -166,7 +166,10 @@ class Command(BaseCommand):
             email=email,
             first_name=f"Demo {label}",
             last_name="User",
-            language="en",
+            # The field is ``user_language`` — a plain ``language=`` kwarg made
+            # ``JasminUser()`` raise TypeError on the very first user, so this
+            # command has never seeded anything.
+            user_language="en",
             roles=[],
             account_status=status,
         )

@@ -382,7 +382,7 @@ class TestRateLimitWiring:
 class TestLoginThrottleFires:
     """End-to-end proof the rate limit engages — stronger than the wiring
     assertions above. This codebase has a documented history (the 2026-06
-    accounts fix) of the ``.cls.throttle_scope`` pattern shipping as a
+    accounts fix) of the throttle-scope wiring shipping as a
     SILENT no-op with green CI, so the highest-privilege login gets a real
     429 test. The autouse ``_clear_throttle_cache`` fixture gives each test
     a fresh bucket.

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 
-from django.db import connection
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 from rest_framework import serializers as drf_serializers
 from rest_framework import status
@@ -13,8 +12,10 @@ from rest_framework.response import Response
 
 from apps.accounts.permissions import RequiresStepUp
 from apps.authz.permissions import IsAdmin
-from apps.shared.request_utils import client_ip
+from apps.shared.request_utils import auth_user, body, client_ip
 from core.serializers import ErrorResponseSerializer
+from core.tenant_db import connection
+from core.throttling import set_throttle_scope
 
 from .errors import MissingRejectionReason
 from .models import DeletionLog, DeletionRequest, DeletionRequestState
@@ -55,18 +56,19 @@ def gdpr_my_data_view(request: Request) -> Response:
     :class:`apps.gdpr.serializers.SubjectAccessBundleSerializer`
     for the schema; the section list lives on
     :meth:`apps.gdpr.services.GDPRService.get_subject_access_bundle`."""
-    bundle = GDPRService.get_subject_access_bundle(request.user)
+    user = auth_user(request)
+    bundle = GDPRService.get_subject_access_bundle(user)
     serializer = SubjectAccessBundleSerializer(bundle)
     logger.info(
         "gdpr.sar_exported user=%s tenant=%s ip=%s",
-        request.user.email,
+        user.email,
         connection.schema_name,
         client_ip(request),
     )
     return Response(serializer.data)
 
 
-gdpr_my_data_view.cls.throttle_scope = "gdpr_sar_export"
+set_throttle_scope(gdpr_my_data_view, "gdpr_sar_export")
 
 
 # ---------------------------------------------------------------------------
@@ -108,15 +110,16 @@ def gdpr_request_deletion_view(request: Request) -> Response:
     happens after the user clicks the link (and, if the tenant /
     persona requires it, the office approves).
     """
+    user = auth_user(request)
     deletion_request = GDPRService.request_deletion(
-        request.user, requested_ip=client_ip(request)
+        user, requested_ip=client_ip(request)
     )
-    send_deletion_confirmation_email(request.user, deletion_request)
+    send_deletion_confirmation_email(user, deletion_request)
 
     logger.info(
         "gdpr.deletion_request_created user=%s request_id=%s "
         "requires_admin=%s tenant=%s ip=%s",
-        request.user.email,
+        user.email,
         deletion_request.pk,
         deletion_request.requires_admin_approval,
         connection.schema_name,
@@ -135,7 +138,7 @@ def gdpr_request_deletion_view(request: Request) -> Response:
     )
 
 
-gdpr_request_deletion_view.cls.throttle_scope = "gdpr_request_deletion"
+set_throttle_scope(gdpr_request_deletion_view, "gdpr_request_deletion")
 
 
 @extend_schema(
@@ -192,7 +195,7 @@ def gdpr_confirm_deletion_view(request: Request, token: str) -> Response:
     return Response({"message": message, "state": str(deletion_request.state)})
 
 
-gdpr_confirm_deletion_view.cls.throttle_scope = "gdpr_confirm_deletion"
+set_throttle_scope(gdpr_confirm_deletion_view, "gdpr_confirm_deletion")
 
 
 @extend_schema(
@@ -231,9 +234,10 @@ def gdpr_admin_approve_deletion_view(request: Request, request_id: str) -> Respo
     a stale session left open at a café shouldn't be able to fire it
     without a fresh password re-confirmation.
     """
+    admin = auth_user(request)
     deletion_request = _get_pending_request(request_id)
     deletion_request = GDPRService.admin_approve_deletion(
-        deletion_request, admin_user=request.user
+        deletion_request, admin_user=admin
     )
     # Email after the service transaction has committed — the helper
     # is best-effort, so a mail failure must not roll back the executed
@@ -242,7 +246,7 @@ def gdpr_admin_approve_deletion_view(request: Request, request_id: str) -> Respo
     logger.warning(
         "gdpr.deletion_admin_approved request_id=%s actor=%s tenant=%s ip=%s",
         deletion_request.pk,
-        request.user.email,
+        admin.email,
         connection.schema_name,
         client_ip(request),
     )
@@ -290,13 +294,13 @@ def gdpr_admin_reject_deletion_view(request: Request, request_id: str) -> Respon
     user phoned to cancel). The reason is required so the audit trail
     captures it."""
     deletion_request = _get_pending_request(request_id)
-    reason = (request.data.get("reason") or "").strip()
+    reason = (body(request).get("reason") or "").strip()
     if not reason:
         # 400 (bad input) — distinct from the 409 state errors the service
         # raises. The global handler renders the canonical {code,message}.
         raise MissingRejectionReason("A rejection reason is required.")
     deletion_request = GDPRService.admin_reject_deletion(
-        deletion_request, admin_user=request.user, reason=reason
+        deletion_request, admin_user=auth_user(request), reason=reason
     )
     # Email after the service transaction commits — best-effort.
     send_deletion_rejected_email(deletion_request, reason=reason)
@@ -359,7 +363,7 @@ def gdpr_admin_preview_deletion_view(request: Request, user_id: str) -> Response
     preview = GDPRService.preview_deletion(target)
     logger.info(
         "gdpr.deletion_previewed actor=%s target=%s persona=%s tenant=%s ip=%s",
-        request.user.email,
+        auth_user(request).email,
         user_id,
         preview["persona"],
         connection.schema_name,
@@ -385,7 +389,7 @@ def gdpr_my_deletion_status_view(request: Request) -> Response:
     Request Deletion button. Returns null fields when no request
     has ever been lodged."""
     latest = (
-        DeletionRequest.objects.filter(user=request.user)
+        DeletionRequest.objects.filter(user=auth_user(request))
         .order_by("-requested_at")
         .first()
     )
@@ -561,7 +565,7 @@ def gdpr_deletion_log_view(request: Request) -> Response:
     )
     logger.info(
         "gdpr.deletion_log_accessed actor=%s tenant=%s ip=%s",
-        request.user.email,
+        auth_user(request).email,
         connection.schema_name,
         client_ip(request),
     )

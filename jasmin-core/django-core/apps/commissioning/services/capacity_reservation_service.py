@@ -37,9 +37,8 @@ RESERVATION_TTL_DAYS = 14
 def _reservation_ttl_days() -> int:
     """The tenant's configured reservation TTL (days), defaulting to
     ``RESERVATION_TTL_DAYS`` when there is no settings overlay yet."""
-    from django.db import connection
-
     from apps.shared.tenants.models import TenantSettings
+    from core.tenant_db import connection
 
     settings = TenantSettings.get_current_settings(connection.tenant)
     if settings is None or settings.reservation_ttl_days is None:

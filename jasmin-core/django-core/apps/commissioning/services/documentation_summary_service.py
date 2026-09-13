@@ -272,8 +272,20 @@ class DocumentationSummaryService:
                 Week(year, delivery_week).day(day_number)
             )
         else:
-            stock_day = day_number
-            stock_week = delivery_week
+            # No ``day_number`` means the caller asked for the WHOLE delivery
+            # week (``_build_base_filter`` only adds ``Q(day_number=...)`` when
+            # one was given), so the baseline is the close of the day before the
+            # week begins — the same "stock is read from the prior day" rule the
+            # two branches above use, applied to Monday instead of a single day.
+            #
+            # This previously assigned ``stock_day = day_number`` — i.e. None,
+            # since that is the only way to reach this branch — and
+            # ``StockService.get_theoretical_current_stock`` immediately does
+            # ``int(day_number)``, so the request died with a TypeError (HTTP
+            # 500) rather than returning the week summary.
+            year, stock_week, stock_day = previous_day_stock_coordinates(
+                Week(year, delivery_week).day(0)
+            )
 
         return StockService.get_theoretical_current_stock(
             year=year,

@@ -637,3 +637,137 @@ class TestGetOffersAndOrderContentOrderBlock:
 
         assert result["order"] is None
         assert result["items"] == []
+
+
+# ---------------------------------------------------------------------------
+# amount=None on the CREATE path
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestCreateWithNullAmount:
+    """``OrderContent.amount`` is ``null=True``, so the ModelSerializer marks it
+    ``required=False, allow_null=True`` and a create body may legitimately omit
+    it. The create path then divided it by ``pu_divisor`` — ``None / Decimal``
+    — and the request died as an unhandled TypeError (HTTP 500, no error code).
+
+    The UPDATE path has always normalised ``None`` to ``Decimal("0")`` for both
+    its arithmetic and its persisted value; create now matches.
+    """
+
+    @patch.object(OrderContentService, "create_movements", side_effect=_noop_movements)
+    @patch.object(
+        OrderContentService,
+        "create_all_theoretical_objects",
+        side_effect=_noop_theoretical,
+    )
+    def test_omitted_amount_creates_a_zero_line_instead_of_crashing(
+        self, _mock_theo, _mock_mv, tenant
+    ):
+        reseller = ResellerFactory()
+        offer = OfferFactory(
+            share_article=ShareArticleFactory(),
+            amount=Decimal("100"),
+            unit="KG",
+            size="M",
+        )
+
+        result = OrderContentService.create_order_with_content_and_crates(
+            reseller=reseller,
+            year=2026,
+            delivery_week=15,
+            day_number=2,
+            offer=offer,
+            # amount deliberately omitted — exactly what the serializer allows.
+        )
+
+        assert result["amount"] == Decimal("0")
+        content = OrderContent.objects.get(pk=result["id"])
+        # Persisted as 0, matching what the update path would have stored.
+        assert content.amount == Decimal("0")
+
+    @patch.object(OrderContentService, "create_movements", side_effect=_noop_movements)
+    @patch.object(
+        OrderContentService,
+        "create_all_theoretical_objects",
+        side_effect=_noop_theoretical,
+    )
+    def test_explicit_none_amount_is_also_accepted(self, _mock_theo, _mock_mv, tenant):
+        """``{"amount": null}`` on the wire, not just an absent key."""
+        reseller = ResellerFactory()
+        offer = OfferFactory(
+            share_article=ShareArticleFactory(),
+            amount=Decimal("100"),
+            unit="KG",
+            size="M",
+        )
+
+        result = OrderContentService.create_order_with_content_and_crates(
+            reseller=reseller,
+            year=2026,
+            delivery_week=16,
+            day_number=2,
+            offer=offer,
+            amount=None,
+        )
+
+        assert result["amount"] == Decimal("0")
+
+    @patch.object(OrderContentService, "create_movements", side_effect=_noop_movements)
+    @patch.object(
+        OrderContentService,
+        "create_all_theoretical_objects",
+        side_effect=_noop_theoretical,
+    )
+    def test_a_zero_line_reserves_no_stock_and_makes_no_crate(
+        self, _mock_theo, _mock_mv, tenant
+    ):
+        """Normalising to zero must not quietly consume offer stock or emit a
+        crate row — the existing ``if amount and amount > 0`` gates cover that,
+        and this pins it."""
+        reseller = ResellerFactory()
+        offer = OfferFactory(
+            share_article=ShareArticleFactory(),
+            amount=Decimal("100"),
+            unit="KG",
+            size="M",
+        )
+
+        result = OrderContentService.create_order_with_content_and_crates(
+            reseller=reseller,
+            year=2026,
+            delivery_week=17,
+            day_number=2,
+            offer=offer,
+            amount=None,
+        )
+
+        offer.refresh_from_db()
+        assert offer.amount == Decimal("100"), "zero line must not consume stock"
+        assert not CrateOrderContent.objects.filter(
+            order_content_id=result["id"]
+        ).exists()
+
+
+@pytest.mark.django_db
+class TestLegacyNullAmountRowIsReadable:
+    """A NULL ``amount`` row must not break the LIST endpoint.
+
+    ``_serialize_order_content`` divides ``amount`` to derive
+    ``ordered_amount`` and runs once per row on the list path, so a single
+    NULL row used to 500 the whole orders grid for that reseller/week/day —
+    not just its own line. The create path no longer writes NULL, but a row
+    from an import, the shell or a migration must still be readable.
+    """
+
+    def test_serialize_tolerates_a_null_amount(self, tenant):
+        reseller = ResellerFactory()
+        order = OrderFactory(reseller=reseller, year=2026, delivery_week=18)
+        # Bypass the service to write the state it now refuses to create.
+        content = OrderContentFactory(order=order, amount=None)
+        assert content.amount is None
+
+        data = OrderContentService._serialize_order_content(content)
+
+        assert data["amount"] is None, "the raw value is reported as-is"
+        assert data["ordered_amount"] == Decimal("0"), "derived value degrades to 0"

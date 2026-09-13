@@ -1,8 +1,9 @@
 import logging
 
-from django.db import connection
 from django.http import JsonResponse
 from django_tenants.utils import get_public_schema_name
+
+from core.tenant_db import connection
 
 logger = logging.getLogger(__name__)
 

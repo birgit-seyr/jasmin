@@ -22,6 +22,7 @@ from ..serializers import (
     TheoreticalWashAmountSerializer,
 )
 from ..utils.query_params import validate_query_params
+from .base_viewsets import serializer_model
 
 _LIST_PARAMETERS = [
     get_year_parameter(required=False),
@@ -40,7 +41,7 @@ class _TheoreticalBaseViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     write_permission = IsStaff
 
     def get_queryset(self) -> QuerySet:
-        queryset = self.serializer_class.Meta.model.objects.all()
+        queryset = serializer_model(self.serializer_class).objects.all()
 
         params = validate_query_params(self.request, optional=["year", "share_article"])
         year = params["year"]
@@ -105,7 +106,7 @@ class _TheoreticalBaseViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             TheoreticalWashAmount: "theoretical_wash_amount",
             TheoreticalCleanAmount: "theoretical_clean_amount",
         }
-        fk_name = fk_by_model[self.serializer_class.Meta.model]
+        fk_name = fk_by_model[serializer_model(self.serializer_class)]
         affected_movements = list(
             MovementShareArticle.objects.filter(**{fk_name: instance})
         )

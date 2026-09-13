@@ -3,8 +3,9 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from django.db import connection
 from django.db.models import Sum
+
+from core.tenant_db import connection
 
 from ..errors import MemberCoopSharesOutOfRange
 

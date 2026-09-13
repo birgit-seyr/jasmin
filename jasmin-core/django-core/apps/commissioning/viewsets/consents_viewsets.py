@@ -34,7 +34,7 @@ from apps.authz.permissions import (
     has_any_role,
 )
 from apps.authz.roles import Role
-from apps.shared.request_utils import client_ip
+from apps.shared.request_utils import body, client_ip
 from core.serializers import ErrorResponseSerializer
 
 from ..errors import (
@@ -258,7 +258,7 @@ class ConsentRecordViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         # Determine which Member this consent is for: either the
         # caller (member-role) or an explicit ``member`` override
         # (office-only — refuse to honour for non-staff).
-        target_member_id = request.data.get("member") or own_member_id(request)
+        target_member_id = body(request).get("member") or own_member_id(request)
         if target_member_id is None:
             raise ConsentTargetMemberUnresolved(
                 "No target Member could be inferred from the request."
@@ -268,7 +268,7 @@ class ConsentRecordViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         # and admin bypass this — they legitimately record consents
         # on behalf of members during paper-based onboarding.
         if (
-            request.data.get("member")
+            body(request).get("member")
             and str(request.data["member"]) != str(own_member_id(request))
             and not has_any_role(request, Role.OFFICE, Role.ADMIN)
         ):

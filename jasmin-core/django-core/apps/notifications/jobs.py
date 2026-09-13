@@ -23,9 +23,11 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from typing import Any
 
-from django.db import connection, transaction
+from django.db import transaction
 from django.utils import timezone
 from django_tenants.utils import schema_context
+
+from core.tenant_db import connection
 
 from .models import BackgroundJob
 

@@ -39,7 +39,7 @@ class HasAnyRole(BasePermission):
 
     required_roles: Iterable[str] = ()
 
-    def has_permission(self, request, view) -> bool:  # type: ignore[override]
+    def has_permission(self, request, view) -> bool:
         if not request.user or not request.user.is_authenticated:
             return False
         actual = _user_roles(request)
@@ -193,7 +193,7 @@ class RolePermissionsMixin:
     public_read_actions: frozenset[str] = frozenset()
     _READ_ACTIONS = frozenset({"list", "retrieve"})
 
-    def get_permissions(self):  # type: ignore[override]
+    def get_permissions(self):
         action = getattr(self, "action", None)
         if action in self.public_read_actions:
             # Anonymous-friendly short-circuit. We deliberately drop the
@@ -243,7 +243,7 @@ class APIViewRolePermissionsMixin:
     write_permission: type[BasePermission] | None = None
     _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
-    def get_permissions(self):  # type: ignore[override]
+    def get_permissions(self):
         base = super().get_permissions()
         method = (getattr(self.request, "method", "") or "").upper()
         chosen = (

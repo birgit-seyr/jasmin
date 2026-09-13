@@ -369,7 +369,14 @@ class InvoiceService:
             InvoiceService._create_invoice_article_content(
                 invoice,
                 delivery_note_content,
-                amount=delivery_note_content.amount,
+                # ``InvoiceResellerContent.amount`` is NOT NULL while the upstream
+                # ``DeliveryNoteContent.amount`` is nullable, so an uncoerced None
+                # aborted the whole atomic invoice creation with an IntegrityError.
+                # The SUMMARY invoice path already coerces the same value
+                # (``amount or 0`` when accumulating ``total_amount``), so without
+                # this the identical data invoiced fine as a summary and 500'd as a
+                # single-delivery-note invoice. ``rabatt`` below was already coerced.
+                amount=delivery_note_content.amount or 0,
                 tax_rate=effective_article_tax_rate(
                     delivery_note_content, invoice.date
                 ),

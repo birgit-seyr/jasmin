@@ -1,4 +1,5 @@
 import logging
+from typing import TypedDict
 
 from rest_framework import serializers
 
@@ -15,6 +16,13 @@ from ..models import (
 from .serializers_mixin import DeletableMixin, NameFieldMixin, StorageFieldsMixin
 
 logger = logging.getLogger(__name__)
+
+
+class _DecKwargs(TypedDict):
+    """Shared ``DecimalField`` precision kwargs (see ``_DEC`` below)."""
+
+    max_digits: int
+    decimal_places: int
 
 
 class PlotSerializer(DeletableMixin, serializers.ModelSerializer):
@@ -267,7 +275,11 @@ class DocumentationSummaryRowSerializer(serializers.Serializer):
     declarable, read by iterating the storages on the frontend.
     """
 
-    _DEC = {"max_digits": 12, "decimal_places": 3}
+    # A plain dict here infers as ``dict[str, int]``, which tells a type checker
+    # nothing about WHICH keys are supplied — so it checks ``int`` against every
+    # ``DecimalField`` parameter and reports ~10 bogus errors per call site.
+    # ``_DecKwargs`` names the keys, so the splat below resolves exactly.
+    _DEC: _DecKwargs = {"max_digits": 12, "decimal_places": 3}
 
     # ---- stable identity ----
     id = serializers.CharField()

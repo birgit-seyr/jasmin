@@ -1013,9 +1013,8 @@ class NumberedDocumentMixin(models.Model):
         Reads tenant settings to decide whether numbering is year-based and
         what prefix to apply. Returns the integer to assign to ``self.number``.
         """
-        from django.db import connection
-
         from apps.shared.tenants.models import TenantSettings
+        from core.tenant_db import connection
 
         tenant = connection.tenant
         current_settings = TenantSettings.get_current_settings(tenant)

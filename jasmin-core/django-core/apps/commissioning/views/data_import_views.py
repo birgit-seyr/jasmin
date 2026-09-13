@@ -29,6 +29,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authz.permissions import APIViewRolePermissionsMixin, IsOffice
+from apps.shared.request_utils import body
 from core.serializers import ErrorResponseSerializer
 
 from ..errors import DataImportInvalid, RequiredFieldMissing
@@ -86,7 +87,7 @@ class DataImportView(APIViewRolePermissionsMixin, APIView):
         },
     )
     def post(self, request: Request) -> Response:
-        model_name = (request.data.get("model_name") or "").strip().lower()
+        model_name = (body(request).get("model_name") or "").strip().lower()
         upload = request.FILES.get("file")
 
         if not model_name:
@@ -101,7 +102,7 @@ class DataImportView(APIViewRolePermissionsMixin, APIView):
         if os.path.splitext(upload.name)[1].lower() != ".csv":
             raise DataImportInvalid("file must be a .csv", field="file")
 
-        dry_run = str(request.data.get("dry_run", "")).strip().lower() in {
+        dry_run = str(body(request).get("dry_run", "")).strip().lower() in {
             "true",
             "1",
             "yes",

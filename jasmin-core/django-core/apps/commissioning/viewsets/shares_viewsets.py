@@ -41,6 +41,7 @@ from apps.authz.permissions import (
     RolePermissionsMixin,
 )
 from apps.shared.csv_safety import CsvEchoBuffer, escape_csv_row
+from apps.shared.request_utils import auth_user, body
 from core.errors import ForbiddenError
 from core.pagination import OptionalLimitOffsetPagination
 from core.serializers import ErrorResponseSerializer
@@ -730,13 +731,13 @@ class ShareDeliveryViewSet(
         # office or the row's owning member. No extra permission
         # check needed.
 
-        opt_in = request.data.get("opt_in")
+        opt_in = body(request).get("opt_in")
         if not isinstance(opt_in, bool):
             raise RequiredFieldMissing(
                 "'opt_in' (boolean) is required.", field="opt_in"
             )
 
-        OptinService.toggle(share_delivery, opt_in=opt_in, actor=request.user)
+        OptinService.toggle(share_delivery, opt_in=opt_in, actor=auth_user(request))
         return Response(
             self.get_serializer(share_delivery).data, status=status.HTTP_200_OK
         )
@@ -763,7 +764,7 @@ class ShareDeliveryViewSet(
 
         # Resolve the requesting user's own Member row (None when the
         # caller is staff without a linked Member).
-        self_member = Member.objects.filter(user=request.user).first()
+        self_member = Member.objects.filter(user=auth_user(request)).first()
         # Explicit roles matching what get_permissions grants for this action
         # (IsOfficeOrMember = OFFICE/ADMIN/MEMBER). The default privileged set
         # also includes MANAGEMENT, but a MANAGEMENT-only user is rejected at
@@ -837,7 +838,7 @@ class ShareDeliveryViewSet(
         # ask for their own gaps; office asks for anyone.
         privileged = is_privileged(request, privileged_roles=(Role.OFFICE, Role.ADMIN))
         if not privileged:
-            self_member = Member.objects.filter(user=request.user).first()
+            self_member = Member.objects.filter(user=auth_user(request)).first()
             if self_member is None or str(self_member.pk) != str(member_id):
                 raise ForbiddenError("You may only request your own delivery gaps.")
 
@@ -952,7 +953,7 @@ class ShareDeliveryViewSet(
             if instance.share_id
             else True
         )
-        apply_to_future = self.request.data.get("apply_to_future", False)
+        apply_to_future = body(self.request).get("apply_to_future", False)
 
         with transaction.atomic():
             self._assert_capacity_for_station_day_move(

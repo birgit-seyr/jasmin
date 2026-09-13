@@ -142,8 +142,14 @@ class OrderContentService:
                 else None
             ),
             "amount": order_content.amount,
+            # Tolerate a NULL amount on READ. The create path normalises None to
+            # zero so new rows never carry NULL, but a row written by any other
+            # route (data import, shell, a migration) would otherwise divide
+            # None here — and this runs once per row on the LIST path, so one
+            # such row would 500 the entire orders grid rather than just itself.
             "ordered_amount": (
-                order_content.amount / OrderContentService._amount_per_pu_or_one(offer)
+                (order_content.amount or Decimal("0"))
+                / OrderContentService._amount_per_pu_or_one(offer)
             ),
             "size": order_content.size,
             "sort": order_content.sort,
@@ -448,6 +454,34 @@ class OrderContentService:
                 size = offer.size
             if sort is None:
                 sort = offer.sort
+
+        # ``OrderContent.amount`` is ``null=True``, so the ModelSerializer marks
+        # it ``required=False, allow_null=True`` and a create body may omit it.
+        # Normalise to zero here — NULL is not a state the rest of the system can
+        # actually carry, in three separate places:
+        #
+        #   1. ``_serialize_order_content`` divides by ``_amount_per_pu_or_one``
+        #      to build ``ordered_amount``. It runs once per row on the LIST
+        #      path, so a single NULL row 500s the whole orders grid for that
+        #      reseller/week/day — not just the row that created it.
+        #   2. The line copies forward to ``DeliveryNoteContent.amount``
+        #      (nullable) and then to ``InvoiceResellerContent.amount``, which is
+        #      NOT NULL — so a NULL surfaces much later as an IntegrityError when
+        #      the reseller is invoiced.
+        #   3. ``serializers_mixin._differs`` returns False whenever the snapshot
+        #      is None, so ``amount_differs`` on the delivery-note/invoice line
+        #      would be permanently False and ``original_amount`` null — silently
+        #      disabling a GoBD audit surface rather than crashing.
+        #
+        # Zero is also what the UPDATE path has always persisted for a None
+        # (``update_order_content_and_crates``), and update delegates here when
+        # the row is absent, so create and update now agree.
+        #
+        # NB the arithmetic below sits behind ``if offer:``, so before this a
+        # share_article line (no offer) stored NULL happily and only detonated
+        # later, at list/invoice time.
+        if amount is None:
+            amount = Decimal("0")
 
         pu_divisor = OrderContentService._amount_per_pu_or_one(offer)
 

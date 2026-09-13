@@ -18,6 +18,7 @@ the matching section of Part 1.
   - [API design & query params](#api-design--query-params)
   - [ORM & data hygiene](#orm--data-hygiene)
   - [Migrations](#migrations)
+  - [Typing (mypy)](#typing-mypy)
   - [Commissioning isolation](#commissioning-isolation)
 - [Frontend rules](#frontend-rules)
   - [Reuse the building blocks](#reuse-the-building-blocks)
@@ -307,6 +308,27 @@ Symptoms to grep for if you suspect drift:
   the assertion fails because `refresh_from_db()` reloads the unchanged value
   (the service's broad-but-bounded except swallowed the IntegrityError
   silently).
+
+### Typing (mypy)
+
+mypy runs in CI against a **frozen baseline** (`jasmin-core/django-core/mypy-baseline.txt`),
+so only findings the change introduces fail. The baseline is a ratchet: it also
+fails when it lists findings mypy no longer reports, which forces it down over
+time.
+
+- **Never hand-edit the baseline.** Regenerate it with
+  `poetry run python scripts/mypy_baseline.py freeze` (or `make mypy-freeze`)
+  and commit the result.
+- **Don't quiet a finding with `# type: ignore`.** `warn_unused_ignores` is on,
+  so a stale one becomes an error of its own — and a suppression at the call
+  site hides the same gap everywhere else it occurs. When a finding is a stub
+  gap rather than a real defect, fix it at the source with one narrow, named
+  accessor: `core/tenant_db.py` (django-tenants' `connection.schema_name` /
+  `.tenant`), `apps/shared/request_utils.py` (`body`, `auth_user`,
+  `request_tenant`), `core/throttling.py` (`set_throttle_scope`). Those exist so
+  the untyped read happens once, with the reason written down.
+- **Widening a type to silence mypy is a defect.** If the checker is right that
+  a value can be `None`, handle the `None`.
 
 ### Commissioning isolation
 
@@ -847,11 +869,14 @@ npm run type-check               # TypeScript check (no emit)
 **Backend:**
 
 ```bash
-poetry run black --check apps config          # Check formatting (CI)
-poetry run black apps config                  # Auto-format
-poetry run ruff check apps config             # Lint
-poetry run ruff check apps config --fix       # Auto-fix what's fixable
-poetry run pip-audit                          # Security audit (dependencies)
+poetry run black --check apps config core scripts   # Check formatting (CI)
+poetry run black apps config core scripts           # Auto-format
+poetry run ruff check apps config core scripts      # Lint
+poetry run ruff check apps config core scripts --fix
+poetry run pip-audit                                # Security audit (dependencies)
+
+poetry run python scripts/mypy_baseline.py check    # Type check (CI gate)
+poetry run python scripts/mypy_baseline.py freeze   # Re-freeze after fixing findings
 ```
 
 Ruff config lives in `pyproject.toml` (`[tool.ruff]` and `[tool.ruff.lint]`). The

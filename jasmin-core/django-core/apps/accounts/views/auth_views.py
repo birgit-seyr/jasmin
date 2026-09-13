@@ -35,8 +35,9 @@ from apps.shared.auth_cookies import (
     set_tenant_refresh_cookie,
 )
 from apps.shared.deferred_email import schedule_deferred_email
-from apps.shared.request_utils import client_ip
+from apps.shared.request_utils import auth_user, body, client_ip
 from core.serializers import ErrorResponseSerializer
+from core.throttling import set_throttle_scope
 
 from ..errors import (
     AuthError,
@@ -207,7 +208,7 @@ def _login_payload(*, result, tenant) -> dict:
     }
 
 
-user_login_view.cls.throttle_scope = "login"
+set_throttle_scope(user_login_view, "login")
 
 
 @extend_schema(
@@ -401,8 +402,8 @@ def invitation_accept_view(request):
 # caller-supplied token — throttle the grind. ScopedRateThrottle reads
 # ``throttle_scope`` off the wrapped view class (see the login view for
 # the same pattern).
-invitation_verify_view.cls.throttle_scope = "invitation"
-invitation_accept_view.cls.throttle_scope = "invitation"
+set_throttle_scope(invitation_verify_view, "invitation")
+set_throttle_scope(invitation_accept_view, "invitation")
 
 
 # --------------------------------------------------------------------------- #
@@ -457,10 +458,10 @@ def password_reset_request_view(request):
 # ``@api_view`` builds a ``WrappedAPIView`` subclass of ``APIView`` and
 # copies a fixed set of attributes from the function at decoration
 # time — anything set on the function AFTER decoration is invisible to
-# DRF's dispatch. Setting ``view_fn.cls.throttle_scope = ...`` lands
-# on the WrappedAPIView class, which is what ``ScopedRateThrottle``
-# reads via ``getattr(view_instance, 'throttle_scope', None)``.
-password_reset_request_view.cls.throttle_scope = "password_reset"
+# DRF's dispatch. ``set_throttle_scope`` writes to ``view_fn.cls``, i.e.
+# the WrappedAPIView class, which is what ``ScopedRateThrottle`` reads
+# via ``getattr(view_instance, 'throttle_scope', None)``.
+set_throttle_scope(password_reset_request_view, "password_reset")
 
 
 @extend_schema(
@@ -491,7 +492,7 @@ def password_reset_confirm_view(request):
     return Response({"message": "Password updated. You can now sign in."})
 
 
-password_reset_confirm_view.cls.throttle_scope = "password_reset"
+set_throttle_scope(password_reset_confirm_view, "password_reset")
 
 
 # --------------------------------------------------------------------------- #
@@ -529,7 +530,7 @@ def step_up_view(request: Request) -> Response:
     payload = getattr(request.auth, "payload", None) if request.auth else None
     try:
         access = verify_and_issue_step_up_token(
-            user=request.user,
+            user=auth_user(request),
             password=password,
             totp_code=totp_code,
             current_access_payload=payload,
@@ -554,7 +555,7 @@ def step_up_view(request: Request) -> Response:
 # password is the same brute-force surface as logging in; pairing the
 # tighter rate with the axes signal above means wrong passwords both
 # throttle AND count toward account lockout.
-step_up_view.cls.throttle_scope = "step_up"
+set_throttle_scope(step_up_view, "step_up")
 
 
 # --------------------------------------------------------------------------- #
@@ -597,7 +598,7 @@ def register_send_code_view(request):
     serializer.is_valid(raise_exception=True)
     # Captcha gates the FIRST anonymous touch of the wizard; the later
     # verify_code + register steps are gated by the code / verified marker.
-    verify_captcha(request.data.get("frc_captcha_solution"), scope="register")
+    verify_captcha(body(request).get("frc_captcha_solution"), scope="register")
     email = serializer.validated_data["email"]
     first_name = serializer.validated_data.get("first_name") or ""
     # Anti-enumeration: identical response whether or not we send. Skip the
@@ -626,7 +627,7 @@ def register_send_code_view(request):
     )
 
 
-register_send_code_view.cls.throttle_scope = "register"
+set_throttle_scope(register_send_code_view, "register")
 
 
 @extend_schema(
@@ -654,7 +655,7 @@ def register_verify_code_view(request):
     return Response({"verified": True}, status=status.HTTP_200_OK)
 
 
-register_verify_code_view.cls.throttle_scope = "register"
+set_throttle_scope(register_verify_code_view, "register")
 
 
 @extend_schema(
@@ -677,7 +678,7 @@ register_verify_code_view.cls.throttle_scope = "register"
 @permission_classes([SelfRegistrationEnabled])
 def public_register_view(request):
     # See ``settings.REST_FRAMEWORK.DEFAULT_THROTTLE_RATES.register`` +
-    # the ``.cls.throttle_scope = ...`` assignment below the def.
+    # the ``set_throttle_scope(...)`` call below the def.
     tenant = _reject_public_schema(request)
     # No captcha here: reaching this endpoint requires a verified-email
     # marker, which is only minted after ``send_code`` (captcha-gated) +
@@ -697,7 +698,7 @@ def public_register_view(request):
     return Response(result, status=status.HTTP_201_CREATED)
 
 
-public_register_view.cls.throttle_scope = "register"
+set_throttle_scope(public_register_view, "register")
 
 
 # --------------------------------------------------------------------------- #

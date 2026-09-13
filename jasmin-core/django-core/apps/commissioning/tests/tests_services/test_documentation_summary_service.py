@@ -10,6 +10,7 @@ import pytest
 from apps.commissioning.services.documentation_summary_service import (
     DocumentationSummaryService,
 )
+from apps.commissioning.services.stock_service import StockService
 from apps.commissioning.tests.factories import (
     AdditionalTheoreticalPurchaseFactory,
     HarvestFactory,
@@ -706,3 +707,57 @@ class TestUpdateAdditionalPurchaseSellerScoping:
         add_b.refresh_from_db()
         assert add_a.amount == Decimal("9.00")
         assert add_b.amount == Decimal("2.00")
+
+
+# ---------------------------------------------------------------------------
+# _get_theoretical_stock_map with NO day_number (whole-week summary)
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestTheoreticalStockMapWithoutDayNumber:
+    """``day_number`` is optional — omitting it asks for the WHOLE delivery week
+    (``_build_base_filter`` only constrains the day when one is given).
+
+    That branch used to do ``stock_day = day_number``, i.e. None, and
+    ``StockService.get_theoretical_current_stock`` immediately calls
+    ``int(day_number)`` — so the request died with a TypeError (HTTP 500).
+
+    NB every other test in this file MOCKS ``_get_theoretical_stock_map``, which
+    is precisely why this never surfaced; these call the real thing.
+    """
+
+    def test_week_summary_without_day_number_does_not_crash(self, tenant):
+        from apps.commissioning.models import Harvest
+
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        HarvestFactory(
+            year=2026,
+            delivery_week=20,
+            day_number=1,
+            share_article=article,
+            amount=Decimal("10"),
+            storage=storage,
+        )
+
+        result = DocumentationSummaryService._get_theoretical_stock_map(
+            "harvest", 2026, 20, None, None, Harvest.objects
+        )
+
+        assert isinstance(result, dict)
+
+    def test_baseline_is_the_close_of_the_day_before_the_week(self, tenant):
+        """The two working branches read stock from the PRIOR day; the no-day
+        branch applies the same rule to Monday, so the baseline is the Sunday
+        before the delivery week — not None, and not inside the week."""
+        from apps.commissioning.models import Harvest
+
+        with patch.object(
+            StockService, "get_theoretical_current_stock", return_value={}
+        ) as spy:
+            DocumentationSummaryService._get_theoretical_stock_map(
+                "harvest", 2026, 20, None, None, Harvest.objects
+            )
+
+        kwargs = spy.call_args.kwargs
+        assert kwargs["day_number"] == 6, "Sunday (0=Mon..6=Sun)"
+        assert kwargs["delivery_week"] == 19, "the week before delivery_week 20"

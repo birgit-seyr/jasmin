@@ -103,6 +103,9 @@ pre-commit = "^4.6.0"
 # writing new code" complement.
 django-querycount = "^0.8"
 vulture = "^2.16"
+mypy = "^2.3.1"
+django-stubs = "^6.1.0"
+djangorestframework-stubs = "^3.18.1"
 
 [tool.django]
 settings_module = "config.settings"
@@ -259,3 +262,32 @@ paths = ["apps"]
 #   - sender: every @receiver function on every signal
 #   - perm:   ``has_perm(perm, obj)`` auth-backend hook
 ignore_names = ["sender", "perm"]
+
+# ---------------------------------------------------------------------------
+# mypy — static type checking (BASELINE, deliberately lenient)
+# ---------------------------------------------------------------------------
+# Django's ORM is untypeable without ``django-stubs``: without the plugin below
+# mypy cannot see ``objects``, model field types or QuerySet generics, so it
+# both misses real bugs and invents false ones. The plugin needs the settings
+# module to resolve models, hence [tool.django-stubs].
+#
+# CI does not run mypy directly -- it runs scripts/mypy_baseline.py, which fails
+# only on findings absent from mypy-baseline.txt (and on baseline entries mypy no
+# longer reports, so the file can only shrink). Run it the same way locally:
+#     poetry run python scripts/mypy_baseline.py check
+#     poetry run python scripts/mypy_baseline.py freeze   # after fixing findings
+[tool.mypy]
+python_version = "3.14"
+plugins = ["mypy_django_plugin.main"]
+exclude = '(^|/)(migrations|tests)/'
+# Baseline posture: report what is CONFIDENTLY wrong, stay quiet about the 74%
+# of functions that carry no annotations yet. Tighten per-module as coverage
+# grows rather than flipping everything at once.
+ignore_missing_imports = true
+check_untyped_defs = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+show_error_codes = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings"

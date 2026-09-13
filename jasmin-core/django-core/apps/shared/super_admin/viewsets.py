@@ -45,7 +45,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from apps.authz.roles import VALID_ROLES
-from apps.shared.request_utils import client_ip
+from apps.shared.request_utils import body, client_ip
 from apps.shared.tenants.errors import SchemaAlreadyExists
 from apps.shared.tenants.models import Domain, Tenant
 from core.errors import BadRequestError, NotFoundError
@@ -1051,7 +1051,7 @@ class OpsChecklistViewSet(ViewSet):
 
         # ``dry_run`` only matters for ``rotate_email_creds``; the
         # secret-generators are side-effect-free anyway.
-        dry_run = bool(request.data.get("dry_run", False))
+        dry_run = bool(body(request).get("dry_run", False))
 
         try:
             result = rotate(item.kind, dry_run=dry_run)

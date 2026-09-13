@@ -353,7 +353,8 @@
   },
   "bulk_copy_offers": {
     "ids_required": "Provide a non-empty list of offer ids.",
-    "offer_group_required": "An offer group is required."
+    "offer_group_required": "An offer group is required.",
+    "week_required": "Year and delivery week are required — without them we cannot tell whether the offer is already in the target group."
   },
   "bulk_invoice_reminder": {
     "ids_required": "Provide a non-empty list of ids.",

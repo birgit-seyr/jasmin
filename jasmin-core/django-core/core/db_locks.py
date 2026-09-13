@@ -14,7 +14,7 @@ lock site can't forget the prefix.
 
 from __future__ import annotations
 
-from django.db import connection
+from core.tenant_db import connection
 
 
 def acquire_advisory_xact_lock(key: str) -> None:

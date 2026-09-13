@@ -19,6 +19,7 @@ from rest_framework.response import Response
 
 from apps.authz.permissions import IsStaff, RolePermissionsMixin, has_any_role
 from apps.authz.roles import Role
+from apps.shared.request_utils import auth_user, request_tenant
 
 from .errors import TicketReplyEmpty
 from .models import AuthorKind, SupportTicket, SupportTicketMessage, TicketStatus
@@ -64,7 +65,7 @@ class SupportTicketViewSet(
         # drf-spectacular introspects with no tenant context.
         if getattr(self, "swagger_fake_view", False):
             return SupportTicket.objects.none()
-        schema = self.request.tenant.schema_name
+        schema = request_tenant(self.request).schema_name
         qs = SupportTicket.objects.filter(tenant_schema=schema)
         # Visibility: office/admin triage every ticket in the tenant; other
         # staff roles see only their own ("My tickets").
@@ -86,8 +87,8 @@ class SupportTicketViewSet(
 
     def _create_ticket(self, serializer) -> SupportTicket:
         request = self.request
-        user = request.user
-        schema = request.tenant.schema_name
+        user = auth_user(request)
+        schema = request_tenant(request).schema_name
         # ``description`` is write-only → becomes the first message, not a column.
         description = serializer.validated_data.pop("description")
         with transaction.atomic():

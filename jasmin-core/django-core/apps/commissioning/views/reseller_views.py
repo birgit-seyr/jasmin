@@ -19,6 +19,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.permissions import RequiresStepUp
 from apps.authz.permissions import APIViewRolePermissionsMixin, IsOffice, IsStaff
+from apps.shared.request_utils import body
 from core.errors import ConflictError, NotFoundError
 from core.serializers import ErrorResponseSerializer
 
@@ -541,7 +542,7 @@ class BulkSetToPaidDocumentsView(APIViewRolePermissionsMixin, APIView):
     @transaction.atomic
     def post(self, request: Request) -> Response:
         order_ids = parse_bulk_ids(request)
-        model = request.data.get("model")  # Should be "invoice"
+        model = body(request).get("model")  # Should be "invoice"
         undo = validate_query_params(request, optional=["undo"])["undo"]
 
         if model != "invoice":
@@ -1015,17 +1016,32 @@ class BulkCopyOffersToOfferGroupView(APIViewRolePermissionsMixin, APIView):
     )
     @transaction.atomic
     def post(self, request: Request) -> Response:
-        year, delivery_week = request.data.get("year"), request.data.get(
+        year, delivery_week = body(request).get("year"), body(request).get(
             "delivery_week"
         )
-        offer_ids = request.data.get("ids", [])
-        offer_group = request.data.get("offer_group", None)
+        offer_ids = body(request).get("ids", [])
+        offer_group = body(request).get("offer_group", None)
 
         if not offer_group:
             raise CommissioningError(
                 "offer_group is required",
                 field="offer_group",
                 code="bulk_copy_offers.offer_group_required",
+            )
+
+        # ``year`` / ``delivery_week`` are load-bearing, not optional: they are
+        # part of ``copy_offers_to_offer_group``'s ``exists_filter``, the query
+        # that decides whether an offer is ALREADY in the target group. Passing
+        # None turns those clauses into ``IS NULL``, which matches no row, so the
+        # already-present check silently never fires and every repeat call copies
+        # the same offers again — ``skipped_count`` stuck at 0 while duplicates
+        # accumulate. Guarded here like ``offer_group`` above rather than
+        # defaulted, because there is no sane default week to invent.
+        if year is None or delivery_week is None:
+            raise CommissioningError(
+                "year and delivery_week are required",
+                field="delivery_week" if delivery_week is None else "year",
+                code="bulk_copy_offers.week_required",
             )
 
         result = OfferService.copy_offers_to_offer_group(
@@ -1064,7 +1080,7 @@ class BulkCreateSummaryInvoiceFromOrdersView(APIViewRolePermissionsMixin, APIVie
     @transaction.atomic
     def post(self, request: Request) -> Response:
         order_ids = parse_bulk_ids(request)
-        date = request.data.get("date", None)
+        date = body(request).get("date", None)
 
         # Fetch all orders at once
         orders = list(
@@ -1299,7 +1315,7 @@ class SetInvoiceNoteView(APIViewRolePermissionsMixin, APIView):
 
             raise InvoiceNotFound("No invoice found for this order")
 
-        invoice.note = request.data.get("note", "")
+        invoice.note = body(request).get("note", "")
         invoice.save(update_fields=["note"])
         return Response({"note": invoice.note})
 
@@ -1333,7 +1349,7 @@ class SetOrderNoteView(APIViewRolePermissionsMixin, APIView):
     def patch(self, request: Request, pk: str) -> Response:
         order = get_or_404(Order, pk, "Order", error_cls=OrderNotFound)
 
-        order.note = request.data.get("note", "")
+        order.note = body(request).get("note", "")
         order.save(update_fields=["note"])
         return Response({"note": order.note})
 
@@ -1369,7 +1385,7 @@ class BulkSendInvoiceRemindersViaEmailView(APIViewRolePermissionsMixin, APIView)
         from apps.shared.tenants.email_service import capture_tenant_email_context
 
         order_ids = parse_bulk_ids(request)
-        model = request.data.get("model")
+        model = body(request).get("model")
 
         if model != "invoice":
             raise CommissioningError(

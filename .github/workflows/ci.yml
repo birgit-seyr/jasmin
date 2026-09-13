@@ -151,10 +151,23 @@ jobs:
           poetry install --no-interaction --no-ansi
 
       - name: Format check (black)
-        run: poetry run black --check apps config
+        run: poetry run black --check apps config core scripts
 
       - name: Lint (ruff)
-        run: poetry run ruff check apps config
+        run: poetry run ruff check apps config core scripts
+
+      - name: Type check (mypy, frozen baseline)
+        # Fails ONLY on findings that are not already in
+        # jasmin-core/django-core/mypy-baseline.txt -- i.e. type errors this
+        # change introduced. It also fails when the baseline lists findings mypy
+        # no longer reports, so the file can only shrink: fix findings, then run
+        # ``poetry run python scripts/mypy_baseline.py freeze`` and commit it.
+        #
+        # Why a baseline and not a clean run: type checking was switched on over
+        # a codebase that predates it, so the first clean run had hundreds of
+        # findings. Blocking every PR on all of them would have stopped delivery;
+        # holding the count still and refusing new ones does not.
+        run: poetry run python scripts/mypy_baseline.py check
 
       - name: Migrations are in sync with models
         # Catches a model field added/changed/removed without the matching

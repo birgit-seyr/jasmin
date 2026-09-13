@@ -32,6 +32,7 @@ from rest_framework.response import Response
 
 from apps.authz.permissions import IsAdmin, IsOffice, RolePermissionsMixin
 from apps.shared.query_params import validate_choice_param
+from apps.shared.request_utils import auth_user
 from core.errors import NotFoundError
 from core.pagination import OptionalLimitOffsetPagination
 from core.serializers import ErrorResponseSerializer
@@ -103,7 +104,7 @@ def _tenant_language() -> str:
     inside a tenant context (e.g. during tests).
     """
     try:
-        from django.db import connection
+        from core.tenant_db import connection
 
         tenant = getattr(connection, "tenant", None)
         raw = getattr(tenant, "tenant_language", None)
@@ -364,7 +365,7 @@ class EmailTemplateViewSet(RolePermissionsMixin, viewsets.ViewSet):
 
         ser = TestSendSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        recipient = ser.validated_data.get("recipient") or request.user.email
+        recipient = ser.validated_data.get("recipient") or auth_user(request).email
         if not recipient:
             raise TestSendNoRecipient("No recipient available.")
 

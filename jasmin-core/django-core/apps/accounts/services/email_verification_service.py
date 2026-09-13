@@ -19,7 +19,8 @@ import logging
 import secrets
 
 from django.core.cache import cache
-from django.db import connection
+
+from core.tenant_db import connection
 
 logger = logging.getLogger("authentication")
 

@@ -194,6 +194,19 @@ ruff:
 ruff-fix:
 	$(COMPOSE_DEV) exec backend ruff check apps core config --fix
 
+# mypy runs against a frozen baseline: only findings that are NOT in
+# jasmin-core/django-core/mypy-baseline.txt fail. Fix findings, then
+# `make mypy-freeze` and commit the smaller baseline.
+# Needs mypy inside the container — if this reports "No module named mypy",
+# the dev venv volume predates the dependency: remove it and rebuild.
+.PHONY: mypy
+mypy:
+	$(COMPOSE_DEV) exec backend python scripts/mypy_baseline.py check
+
+.PHONY: mypy-freeze
+mypy-freeze:
+	$(COMPOSE_DEV) exec backend python scripts/mypy_baseline.py freeze
+
 # --- Frontend (in the `frontend` container) ----------------------------------
 .PHONY: lint
 lint:
@@ -213,4 +226,4 @@ test-frontend:
 
 # --- Run the whole CI gate in one shot ---------------------------------------
 .PHONY: check
-check: black ruff pytest type-check lint test-frontend
+check: black ruff mypy pytest type-check lint test-frontend

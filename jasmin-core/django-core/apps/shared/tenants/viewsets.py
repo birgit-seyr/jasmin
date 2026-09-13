@@ -21,7 +21,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.authz.permissions import IsAdmin, IsOffice, IsStaff, RolePermissionsMixin
-from apps.shared.request_utils import client_ip
+from apps.shared.request_utils import auth_user, body, client_ip, request_tenant
 from core.serializers import ErrorResponseSerializer
 from core.throttling import TenantScopedRateThrottle
 
@@ -264,7 +264,7 @@ class TenantSettingsViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
         now = timezone.now()
 
         # Apply received data (excluding system fields)
-        new_settings_data: dict[str, Any] = request.data.get("settings", {})
+        new_settings_data: dict[str, Any] = body(request).get("settings", {})
         system_fields = {"id", "tenant", "valid_from", "valid_until", "created_at"}
 
         # Serialize concurrent PUTs: read the open row UNDER A LOCK inside one
@@ -603,7 +603,7 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
 
     def get_object(self) -> TenantEmailConfig:
         """Always operate on the current tenant's config (get-or-create)."""
-        tenant = self.request.tenant
+        tenant = request_tenant(self.request)
         config, _ = TenantEmailConfig.objects.get_or_create(
             tenant=tenant,
             defaults={"from_email": tenant.email or "", "from_name": tenant.name},
@@ -684,7 +684,7 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
             TestEmailSendFailed,
         )
 
-        to_email = (request.data.get("to_email") or "").strip()
+        to_email = (body(request).get("to_email") or "").strip()
         if not to_email:
             raise TestEmailRecipientMissing("to_email is required")
 
@@ -706,7 +706,7 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
         allowed_recipients = {
             address.strip().lower()
             for address in (
-                request.user.email,
+                auth_user(request).email,
                 getattr(config.tenant, "email", None),
             )
             if address

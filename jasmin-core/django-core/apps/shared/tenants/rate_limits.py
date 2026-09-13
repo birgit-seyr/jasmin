@@ -36,11 +36,12 @@ from datetime import timedelta
 from typing import Any
 
 from django.core.mail import mail_admins
-from django.db import connection, transaction
+from django.db import transaction
 from django.utils import timezone
 
 from apps.shared.tenants.errors import ActionRateLimitExceeded
 from apps.shared.tenants.models import ActionRateLog, RateLimitedAction
+from core.tenant_db import connection
 
 # The "authz" logger routes to the security log — a refused (blocked) attempt is
 # a security-relevant signal (possible compromised office account) that would

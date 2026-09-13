@@ -14,7 +14,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from dateutil.relativedelta import relativedelta
 from django.core.files.base import ContentFile
-from django.db import connection, transaction
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from sepaxml import SepaDD
@@ -29,6 +29,7 @@ from apps.commissioning.utils.iso_week_utils import share_delivery_date
 from apps.shared.money import round_money as _money
 from apps.shared.tenants.models import RateLimitedAction, Tenant, TenantSettings
 from apps.shared.tenants.rate_limits import enforce_action_quota
+from core.tenant_db import connection
 
 from .constants import BillingRunStatus, ChargeStatus, PaymentMethodOptions
 from .errors import (

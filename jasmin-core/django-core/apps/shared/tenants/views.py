@@ -3,7 +3,6 @@ from __future__ import annotations
 from urllib.parse import quote, unquote, urlsplit
 
 from django.conf import settings
-from django.db import connection
 from django.http import FileResponse, HttpResponse, HttpResponseBase, JsonResponse
 from drf_spectacular.utils import extend_schema
 from rest_framework.request import Request
@@ -13,6 +12,7 @@ from rest_framework.views import APIView
 from core.errors import NotFoundError
 from core.protected_media import INTERNAL_MEDIA_LOCATION
 from core.serializers import ErrorResponseSerializer
+from core.tenant_db import connection
 
 from .errors import NoTenantContext
 from .models import Tenant

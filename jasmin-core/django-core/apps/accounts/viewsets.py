@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from apps.authz.permissions import IsAdmin, RolePermissionsMixin
+from apps.shared.request_utils import auth_user
 from core.serializers import ErrorResponseSerializer
 
 from .errors import UserNotFound, UserNotPendingInvitation
@@ -92,7 +93,9 @@ class AdminUserViewSet(RolePermissionsMixin, ViewSet):
         # Pass raw data: the service owns the business rules (role-combination
         # checks, member-role guard, reseller/customer coupling) and reads by
         # key; validated_data offers no benefit here.
-        payload = create_user_with_invite(data=request.data, created_by=request.user)
+        payload = create_user_with_invite(
+            data=request.data, created_by=auth_user(request)
+        )
         return Response(payload, status=status.HTTP_201_CREATED)
 
     @extend_schema(
@@ -116,7 +119,7 @@ class AdminUserViewSet(RolePermissionsMixin, ViewSet):
         # validated_data preserves the absent-vs-null membership the service
         # relies on (absent key → field untouched; null → unlink).
         payload = update_user_admin(
-            user=user, data=serializer.validated_data, actor=request.user
+            user=user, data=serializer.validated_data, actor=auth_user(request)
         )
         return Response(payload)
 
@@ -141,5 +144,5 @@ class AdminUserViewSet(RolePermissionsMixin, ViewSet):
             raise UserNotFound("User not found") from exc
         if user.account_status != "pending_invitation":
             raise UserNotPendingInvitation("User is not waiting for an invitation.")
-        resend_invitation(user=user, created_by=request.user)
+        resend_invitation(user=user, created_by=auth_user(request))
         return Response(serialize_user_row(user))

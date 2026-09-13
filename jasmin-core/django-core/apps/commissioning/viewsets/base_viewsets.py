@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.db.models import Model, QuerySet
+from django.core.exceptions import ImproperlyConfigured
+from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 
@@ -11,6 +12,32 @@ from core.pagination import OptionalLimitOffsetPagination
 
 from ..schemas import get_is_past_parameter
 from ..utils.query_params import validate_query_params
+
+
+def serializer_model(serializer_class: Any) -> type[Any]:
+    """Return the model a viewset's ``ModelSerializer`` is bound to.
+
+    ``GenericAPIView.serializer_class`` is declared ``type[BaseSerializer] | None``
+    — ``None`` because a view may build its serializer in
+    ``get_serializer_class()`` instead, and ``BaseSerializer`` because the plain
+    base class carries no ``Meta``. Neither case applies to the viewsets that
+    call this: each pins one concrete ``ModelSerializer``. Resolving it here
+    keeps that assumption in a single place, and turns a misconfigured viewset
+    into a named startup-style error instead of an ``AttributeError`` raised from
+    the middle of ``get_queryset``.
+
+    Returns ``type[Any]``, not ``type[Model]``: which model comes back depends on
+    the subclass that happens to be dispatching, and the stubs put ``objects`` /
+    ``active`` on concrete model classes only — so a ``Model`` annotation would
+    describe every caller's next line as an error.
+    """
+    model = getattr(getattr(serializer_class, "Meta", None), "model", None)
+    if model is None:
+        raise ImproperlyConfigured(
+            f"{serializer_class!r} has no Meta.model; this viewset needs a "
+            "ModelSerializer bound to a model."
+        )
+    return model
 
 
 class BaseArchivableViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
@@ -46,6 +73,6 @@ class BaseArchivableViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         return queryset
 
     @property
-    def model(self) -> type[Model]:
+    def model(self) -> type[Any]:
         """Derive the model class from the serializer."""
-        return self.serializer_class.Meta.model
+        return serializer_model(self.serializer_class)

@@ -11,13 +11,14 @@ name) on the token. Here we verify, on every request, that the token's
 
 from __future__ import annotations
 
-from django.db import connection
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken
 
+from core.tenant_db import connection
+
 
 class TenantBoundJWTAuthentication(JWTAuthentication):
-    def get_validated_token(self, raw_token):  # type: ignore[override]
+    def get_validated_token(self, raw_token):
         token = super().get_validated_token(raw_token)
         token_tenant = token.get("tenant_id")
         current_schema = getattr(connection, "schema_name", None)

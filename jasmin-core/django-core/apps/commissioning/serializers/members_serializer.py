@@ -636,9 +636,8 @@ class SubscriptionSerializer(
         # point. When solidarity is OFF this guard is a no-op here: the office
         # keeps its price discretion, and the member self-subscribe path forces
         # the reference upstream in ``MySubscriptionSubscribeView``.
-        from django.db import connection
-
         from apps.shared.tenants.models import TenantSettings
+        from core.tenant_db import connection
 
         price = attrs.get("price_per_delivery")
         variation_id = attrs.get("share_type_variation") or (

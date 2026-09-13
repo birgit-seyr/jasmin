@@ -6,8 +6,10 @@ import datetime
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 
+from apps.commissioning.models import DeliveryStationDay
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
     DeliveryStationFactory,
@@ -18,6 +20,7 @@ from apps.commissioning.tests.factories import (
     ShareTypeVariationFactory,
     SubscriptionFactory,
 )
+from apps.commissioning.utils.iso_week_utils import previous_monday
 
 
 # ---------------------------------------------------------------------------
@@ -453,3 +456,60 @@ class TestDeliveryToursViewSet:
         assert current.stop_order == 1
         assert closed.tour_number == 1
         assert closed.stop_order is None
+
+
+@pytest.mark.django_db
+class TestUpdateToursCreatesStationDay:
+    """The CREATE branch of ``update_tours``' ``update_or_create``.
+
+    Its ``defaults`` used to carry ``is_active: True``, a field
+    ``DeliveryStationDay`` does not have (its sibling ``DeliveryStation`` does —
+    a copy/paste). Django setattrs unknown defaults on the UPDATE branch, so the
+    existing versioning test stayed green; the CREATE branch passes them to the
+    constructor and raises ``TypeError: got unexpected keyword arguments``.
+
+    Activeness for this model IS ``valid_until IS NULL``, which the queryset
+    filter already expresses.
+    """
+
+    def test_assigning_a_station_with_no_station_day_creates_one(
+        self, api_client, tenant
+    ):
+        station = DeliveryStationFactory()
+        day = SharesDeliveryDayFactory(day_number=4)
+        # Deliberately NO DeliveryStationDay for this pair -> the create branch.
+        assert not DeliveryStationDay.objects.filter(
+            delivery_station=station, delivery_day=day
+        ).exists()
+
+        resp = api_client.post(
+            reverse("delivery_tours-update-tours"),
+            {
+                "delivery_day": str(day.id),
+                "tours": [
+                    {
+                        "tour_number": 3,
+                        "positions": [
+                            {"position": 1, "delivery_station_id": str(station.id)}
+                        ],
+                    }
+                ],
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        created = DeliveryStationDay.objects.get(
+            delivery_station=station, delivery_day=day
+        )
+        assert created.tour_number == 3
+        assert created.stop_order == 1
+        # Open row = the active one; there is no is_active column to set.
+        assert created.valid_until is None
+        # valid_from is NOT NULL with no model default, so the create branch has
+        # to supply it — and the project invariant is that it is always a Monday.
+        assert created.valid_from is not None
+        assert created.valid_from.weekday() == 0, "valid_from must be a Monday"
+        # Effective from the current week, matching the update branch, which
+        # re-stamps the open row and so takes effect immediately.
+        assert created.valid_from == previous_monday(timezone.localdate())

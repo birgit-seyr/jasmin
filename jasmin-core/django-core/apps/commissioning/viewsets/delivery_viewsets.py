@@ -70,7 +70,7 @@ from ..services.delivery_exceptions import (
     resync_delivery_exception,
 )
 from ..utils import get_contact_annotations
-from ..utils.iso_week_utils import weeks_in_range
+from ..utils.iso_week_utils import previous_monday, weeks_in_range
 from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 
@@ -324,6 +324,7 @@ class DeliveryToursViewSet(RolePermissionsMixin, viewsets.ViewSet):
                     # unscoped update_or_create would raise MultipleObjectsReturned.
                     # The valid_until filter narrows the lookup only; a genuinely
                     # new station-day still creates an open row (valid_until NULL).
+
                     station_day, created = DeliveryStationDay.objects.filter(
                         valid_until__isnull=True
                     ).update_or_create(
@@ -332,7 +333,16 @@ class DeliveryToursViewSet(RolePermissionsMixin, viewsets.ViewSet):
                         defaults={
                             "tour_number": tour_number,
                             "stop_order": position["position"],
-                            "is_active": True,
+                            # Required on create: TimeBoundMixin.valid_from is
+                            # NOT NULL with no default, and full_clean() also
+                            # enforces the project-wide "valid_from is always a
+                            # Monday" invariant — so omitting it turned the
+                            # create branch into a 400 "Validation failed".
+                            # The Monday of the CURRENT week, because the update
+                            # branch takes effect immediately (it just re-stamps
+                            # the open row), and a newly assigned station should
+                            # not behave differently from a reassigned one.
+                            "valid_from": previous_monday(timezone.localdate()),
                         },
                     )
                     if created:

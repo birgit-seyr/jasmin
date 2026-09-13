@@ -125,9 +125,8 @@ def _current_tenant_settings():
     no tenant/settings context (bound connection has no tenant, no settings row).
     Read ONCE by the batch callers and threaded into ``create_renewal_draft`` to
     avoid re-reading it per renewed row."""
-    from django.db import connection
-
     from apps.shared.tenants.models import TenantSettings
+    from core.tenant_db import connection
 
     try:
         tenant = connection.tenant

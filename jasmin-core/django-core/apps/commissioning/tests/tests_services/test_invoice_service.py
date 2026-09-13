@@ -300,3 +300,55 @@ class TestFindDriftedInvoices:
         InvoiceService.finalize_invoice(invoice, user=user)
 
         assert InvoiceService.find_drifted_invoices() == []
+
+
+@pytest.mark.django_db
+class TestNullAmountDeliveryNoteLine:
+    """``DeliveryNoteContent.amount`` is nullable but
+    ``InvoiceResellerContent.amount`` is NOT NULL.
+
+    An uncoerced None therefore aborted the whole atomic
+    ``create_from_delivery_note`` with an IntegrityError — while the SUMMARY
+    invoice path, which already did ``amount or 0``, invoiced the identical
+    data fine. Such lines exist because an order line without an offer used to
+    store NULL happily (the create path only crashed when an offer was set).
+    """
+
+    @staticmethod
+    def _finalized_dn_with_null_amount(tenant):
+        user = JasminUserFactory()
+        order = OrderFactory(reseller=ResellerFactory(), delivery_week=21)
+        from apps.commissioning.models import DeliveryNoteReseller
+
+        dn = DeliveryNoteReseller.objects.create(order=order, date=date.today())
+        DeliveryNoteContentFactory(
+            delivery_note=dn,
+            share_article=ShareArticleFactory(),
+            amount=None,
+            unit="KG",
+            size="M",
+            price_per_unit=Decimal("2.50"),
+        )
+        dn.finalize(user=user)
+        return dn
+
+    def test_invoicing_a_null_amount_line_does_not_blow_up(self, tenant):
+        dn = self._finalized_dn_with_null_amount(tenant)
+
+        invoice = InvoiceService.create_from_delivery_note(dn)
+
+        assert invoice.pk is not None
+        item = invoice.items.first()
+        assert item is not None, "the line must still be invoiced"
+        assert item.amount == Decimal("0")
+
+    def test_the_snapshot_mirrors_the_written_amount(self, tenant):
+        """``_create_invoice_article_content`` sets ``source_amount`` from the
+        same argument as ``amount``, so the GoBD audit snapshot must not be
+        left NULL while the written value is 0."""
+        dn = self._finalized_dn_with_null_amount(tenant)
+
+        invoice = InvoiceService.create_from_delivery_note(dn)
+
+        item = invoice.items.first()
+        assert item.source_amount == item.amount == Decimal("0")
