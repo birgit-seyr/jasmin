@@ -1940,10 +1940,12 @@ paths:
     post:
       operationId: commissioning_bulk_finalize_create
       description: "\n        Finalize multiple objects at once.\n        \n        Supports:\n
-        \       - Regular models with standard IDs (Order, DeliveryNote, etc.)\n        -
-        CurrentStock with composite IDs (format: share_article_id_unit_size_storage_id_year_week_day)\n
-        \       \n        Returns counts of:\n        - Successfully finalized objects\n
-        \       - Already finalized objects\n        - Errors encountered\n        "
+        \       - Finalizable commissioning models, by model name (case-insensitive)\n
+        \       - offer, forecast and harvest need a staff role; every other model\n
+        \         (orders, delivery notes, invoices, their lines, share contents)\n
+        \         needs office\n        \n        Returns counts of:\n        - Successfully
+        finalized objects\n        - Already finalized objects\n        - Errors encountered\n
+        \       "
       summary: Bulk Finalize Objects
       tags:
       - commissioning
@@ -2268,9 +2270,11 @@ paths:
     post:
       operationId: commissioning_bulk_unfinalize_create
       description: "\n        Unfinalize multiple objects at once.\n        \n        Supports:\n
-        \       - Regular models with standard IDs (Order, DeliveryNote, etc.)\n        -
-        CurrentStock with composite IDs (format: share_article_id_unit_size_storage_id_year_week_day)\n
-        \       \n        Only processes objects that are currently finalized.\n        "
+        \       - Finalizable commissioning models, by model name (case-insensitive)\n
+        \       - offer, forecast and harvest need a staff role; every other model\n
+        \         (orders, delivery notes, invoices, their lines, share contents)\n
+        \         needs office\n        \n        Only processes objects that are
+        currently finalized.\n        "
       summary: Bulk Unfinalize Objects
       tags:
       - commissioning
@@ -29061,6 +29065,11 @@ components:
         reseller_id:
           type: string
           nullable: true
+    AppLabelEnum:
+      enum:
+      - commissioning
+      type: string
+      description: '* `commissioning` - commissioning'
     AuthorKindEnum:
       enum:
       - staff
@@ -29448,20 +29457,71 @@ components:
       type: object
       properties:
         model:
-          type: string
-          description: Model name to finalize (e.g., 'Order', 'CurrentStock')
+          allOf:
+          - $ref: '#/components/schemas/BulkFinalizeRequestModelEnum'
+          description: |-
+            Finalizable commissioning model, by model name (case-insensitive). offer, forecast and harvest need a staff role; every other model needs office.
+
+            * `cratecontentinvoicereseller` - cratecontentinvoicereseller
+            * `cratedeliverynotecontent` - cratedeliverynotecontent
+            * `crateordercontent` - crateordercontent
+            * `deliverynotecontent` - deliverynotecontent
+            * `deliverynotereseller` - deliverynotereseller
+            * `forecast` - forecast
+            * `harvest` - harvest
+            * `invoicereseller` - invoicereseller
+            * `invoiceresellercontent` - invoiceresellercontent
+            * `offer` - offer
+            * `order` - order
+            * `ordercontent` - ordercontent
+            * `sharecontent` - sharecontent
         app_label:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/AppLabelEnum'
           default: commissioning
-          description: App label where the model is defined
+          description: |-
+            App label where the model is defined; only 'commissioning'
+
+            * `commissioning` - commissioning
         ids:
           type: array
           items:
             type: string
-          description: List of IDs to finalize (regular IDs or composite IDs for CurrentStock)
+          description: List of IDs to finalize or unfinalize
+          minItems: 1
       required:
       - ids
       - model
+    BulkFinalizeRequestModelEnum:
+      enum:
+      - cratecontentinvoicereseller
+      - cratedeliverynotecontent
+      - crateordercontent
+      - deliverynotecontent
+      - deliverynotereseller
+      - forecast
+      - harvest
+      - invoicereseller
+      - invoiceresellercontent
+      - offer
+      - order
+      - ordercontent
+      - sharecontent
+      type: string
+      description: |-
+        * `cratecontentinvoicereseller` - cratecontentinvoicereseller
+        * `cratedeliverynotecontent` - cratedeliverynotecontent
+        * `crateordercontent` - crateordercontent
+        * `deliverynotecontent` - deliverynotecontent
+        * `deliverynotereseller` - deliverynotereseller
+        * `forecast` - forecast
+        * `harvest` - harvest
+        * `invoicereseller` - invoicereseller
+        * `invoiceresellercontent` - invoiceresellercontent
+        * `offer` - offer
+        * `order` - order
+        * `ordercontent` - ordercontent
+        * `sharecontent` - sharecontent
     BulkFinalizeResponse:
       type: object
       properties:
@@ -31839,30 +31899,33 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          readOnly: true
           nullable: true
         source_unit:
           type: string
+          readOnly: true
           nullable: true
-          maxLength: 10
         source_size:
           type: string
+          readOnly: true
           nullable: true
-          maxLength: 1
         source_price_per_unit:
           type: string
           format: decimal
           pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
           nullable: true
         source_rabatt:
           type: integer
-          maximum: 100
-          minimum: 0
+          readOnly: true
           nullable: true
         is_finalized:
           type: boolean
+          readOnly: true
         finalized_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         description:
           type: string
@@ -31901,6 +31964,7 @@ components:
           nullable: true
         finalized_by:
           type: string
+          readOnly: true
           nullable: true
         offer:
           type: string
@@ -31912,6 +31976,7 @@ components:
           type: string
         order_content:
           type: string
+          readOnly: true
           nullable: true
         line_netto:
           type: string
@@ -32961,11 +33026,14 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
         is_finalized:
           type: boolean
+          readOnly: true
         finalized_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         year:
           type: integer
@@ -33015,9 +33083,11 @@ components:
           nullable: true
         created_by:
           type: string
+          readOnly: true
           nullable: true
         finalized_by:
           type: string
+          readOnly: true
           nullable: true
         share_article:
           type: string
@@ -33142,11 +33212,14 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
         is_finalized:
           type: boolean
+          readOnly: true
         finalized_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         year:
           type: integer
@@ -33187,9 +33260,11 @@ components:
           type: boolean
         created_by:
           type: string
+          readOnly: true
           nullable: true
         finalized_by:
           type: string
+          readOnly: true
           nullable: true
         share_article:
           type: string
@@ -33711,9 +33786,9 @@ components:
           nullable: true
         document_hash_version:
           type: integer
-          maximum: 32767
-          minimum: 0
+          readOnly: true
         recipient_snapshot:
+          readOnly: true
           nullable: true
         has_been_sent_to_reseller_at:
           type: string
@@ -33796,30 +33871,33 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          readOnly: true
           nullable: true
         source_unit:
           type: string
+          readOnly: true
           nullable: true
-          maxLength: 10
         source_size:
           type: string
+          readOnly: true
           nullable: true
-          maxLength: 1
         source_price_per_unit:
           type: string
           format: decimal
           pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
           nullable: true
         source_rabatt:
           type: integer
-          maximum: 100
-          minimum: 0
+          readOnly: true
           nullable: true
         is_finalized:
           type: boolean
+          readOnly: true
         finalized_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         description:
           type: string
@@ -33857,6 +33935,7 @@ components:
           pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
         finalized_by:
           type: string
+          readOnly: true
           nullable: true
         offer:
           type: string
@@ -33868,11 +33947,13 @@ components:
           type: string
         order_content:
           type: string
+          readOnly: true
           nullable: true
         delivery_note_contents:
           type: array
           items:
             type: string
+          readOnly: true
         line_netto:
           type: string
           format: decimal
@@ -34089,6 +34170,7 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
         cancelled_at:
           type: string
           format: date-time
@@ -34102,7 +34184,9 @@ components:
         on_waiting_list:
           type: boolean
         waiting_list_status:
-          $ref: '#/components/schemas/WaitingListStatusEnum'
+          allOf:
+          - $ref: '#/components/schemas/WaitingListStatusEnum'
+          readOnly: true
         waiting_list_position:
           type: integer
           readOnly: true
@@ -34110,14 +34194,17 @@ components:
         notification_sent_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         notification_expires_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         response_received_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         notification_token:
           type: string
@@ -34140,6 +34227,7 @@ components:
         cancellation_email_sent_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         birth_date:
           type: string
@@ -34213,6 +34301,7 @@ components:
         consent_withdrawn_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         membership_paper_received_at:
           type: string
@@ -34248,6 +34337,7 @@ components:
           nullable: true
         created_by:
           type: string
+          readOnly: true
           nullable: true
         cancelled_by:
           type: string
@@ -34342,6 +34432,7 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
         cancelled_at:
           type: string
           format: date-time
@@ -34355,7 +34446,9 @@ components:
         on_waiting_list:
           type: boolean
         waiting_list_status:
-          $ref: '#/components/schemas/WaitingListStatusEnum'
+          allOf:
+          - $ref: '#/components/schemas/WaitingListStatusEnum'
+          readOnly: true
         waiting_list_position:
           type: integer
           readOnly: true
@@ -34363,14 +34456,17 @@ components:
         notification_sent_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         notification_expires_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         response_received_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         notification_token:
           type: string
@@ -34393,6 +34489,7 @@ components:
         cancellation_email_sent_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         birth_date:
           type: string
@@ -34466,6 +34563,7 @@ components:
         consent_withdrawn_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         membership_paper_received_at:
           type: string
@@ -34501,6 +34599,7 @@ components:
           nullable: true
         created_by:
           type: string
+          readOnly: true
           nullable: true
         cancelled_by:
           type: string
@@ -35185,9 +35284,11 @@ components:
           nullable: true
         is_finalized:
           type: boolean
+          readOnly: true
         finalized_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         year:
           type: integer
@@ -35246,6 +35347,7 @@ components:
           type: boolean
         finalized_by:
           type: string
+          readOnly: true
           nullable: true
         share_article:
           type: string
@@ -36643,6 +36745,7 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
         year:
           type: integer
           maximum: 32767
@@ -36685,6 +36788,7 @@ components:
           $ref: '#/components/schemas/OrganicStatusEnum'
         created_by:
           type: string
+          readOnly: true
           nullable: true
         share_article:
           type: string
@@ -38878,11 +38982,14 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
         is_finalized:
           type: boolean
+          readOnly: true
         finalized_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         unit:
           $ref: '#/components/schemas/UnitEnum'
@@ -38952,9 +39059,11 @@ components:
           nullable: true
         created_by:
           type: string
+          readOnly: true
           nullable: true
         finalized_by:
           type: string
+          readOnly: true
           nullable: true
         share:
           type: string
@@ -39181,10 +39290,13 @@ components:
           readOnly: true
         quantity:
           type: integer
+          readOnly: true
         share_type_variation_string:
           type: string
+          readOnly: true
         delivery_week:
           type: integer
+          readOnly: true
         delivery_date:
           type: string
           nullable: true
@@ -39230,10 +39342,7 @@ components:
           readOnly: true
           nullable: true
       required:
-      - delivery_week
-      - quantity
       - share
-      - share_type_variation_string
     ShareImportApplyValidationFailedResponse:
       type: object
       properties:
@@ -40318,6 +40427,7 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
         cancelled_at:
           type: string
           format: date-time
@@ -40365,19 +40475,18 @@ components:
           nullable: true
         subscription_number:
           type: integer
-          maximum: 2147483647
-          minimum: 0
+          readOnly: true
           nullable: true
         renewal_generation:
           type: integer
-          maximum: 32767
-          minimum: 0
+          readOnly: true
         admin_confirmed_by:
           type: string
           readOnly: true
           nullable: true
         created_by:
           type: string
+          readOnly: true
           nullable: true
         cancelled_by:
           type: string
@@ -40385,6 +40494,7 @@ components:
           nullable: true
         previous_subscription:
           type: string
+          readOnly: true
           nullable: true
         payment_cycle:
           type: string
@@ -41653,6 +41763,7 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
         year:
           type: integer
           maximum: 32767
@@ -41681,6 +41792,7 @@ components:
           nullable: true
         created_by:
           type: string
+          readOnly: true
           nullable: true
         share_article:
           type: string
@@ -41711,6 +41823,7 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
         year:
           type: integer
           maximum: 32767
@@ -41739,6 +41852,7 @@ components:
           nullable: true
         created_by:
           type: string
+          readOnly: true
           nullable: true
         share_article:
           type: string
@@ -41772,6 +41886,7 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
         year:
           type: integer
           maximum: 32767
@@ -41805,6 +41920,7 @@ components:
           nullable: true
         created_by:
           type: string
+          readOnly: true
           nullable: true
         share_article:
           type: string
@@ -41838,6 +41954,7 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
         year:
           type: integer
           maximum: 32767
@@ -41866,6 +41983,7 @@ components:
           nullable: true
         created_by:
           type: string
+          readOnly: true
           nullable: true
         share_article:
           type: string
@@ -42349,6 +42467,7 @@ components:
         created_at:
           type: string
           format: date-time
+          readOnly: true
         year:
           type: integer
           maximum: 32767
@@ -42379,6 +42498,7 @@ components:
           nullable: true
         created_by:
           type: string
+          readOnly: true
           nullable: true
         share_article:
           type: string

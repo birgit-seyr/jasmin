@@ -5,12 +5,33 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { BulkFinalizeRequestModelEnum } from './bulkFinalizeRequestModelEnum';
+import type { AppLabelEnum } from './appLabelEnum';
 
 export interface BulkFinalizeRequest {
-  /** Model name to finalize (e.g., 'Order', 'CurrentStock') */
-  model: string;
-  /** App label where the model is defined */
-  app_label?: string;
-  /** List of IDs to finalize (regular IDs or composite IDs for CurrentStock) */
+  /** Finalizable commissioning model, by model name (case-insensitive). offer, forecast and harvest need a staff role; every other model needs office.
+
+* `cratecontentinvoicereseller` - cratecontentinvoicereseller
+* `cratedeliverynotecontent` - cratedeliverynotecontent
+* `crateordercontent` - crateordercontent
+* `deliverynotecontent` - deliverynotecontent
+* `deliverynotereseller` - deliverynotereseller
+* `forecast` - forecast
+* `harvest` - harvest
+* `invoicereseller` - invoicereseller
+* `invoiceresellercontent` - invoiceresellercontent
+* `offer` - offer
+* `order` - order
+* `ordercontent` - ordercontent
+* `sharecontent` - sharecontent */
+  model: BulkFinalizeRequestModelEnum;
+  /** App label where the model is defined; only 'commissioning'
+
+* `commissioning` - commissioning */
+  app_label?: AppLabelEnum;
+  /**
+   * List of IDs to finalize or unfinalize
+   * @minItems 1
+   */
   ids: string[];
 }

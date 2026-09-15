@@ -14,10 +14,10 @@ import type { VegetableSizeEnum } from './vegetableSizeEnum';
  */
 export interface Forecast {
   readonly id?: string;
-  created_at?: string;
-  is_finalized?: boolean;
+  readonly created_at?: string;
+  readonly is_finalized?: boolean;
   /** @nullable */
-  finalized_at?: string | null;
+  readonly finalized_at?: string | null;
   /**
    * @minimum 0
    * @maximum 32767
@@ -60,9 +60,9 @@ export interface Forecast {
    */
   sort_order?: number | null;
   /** @nullable */
-  created_by?: string | null;
+  readonly created_by?: string | null;
   /** @nullable */
-  finalized_by?: string | null;
+  readonly finalized_by?: string | null;
   share_article: string;
   /** @nullable */
   storage?: string | null;

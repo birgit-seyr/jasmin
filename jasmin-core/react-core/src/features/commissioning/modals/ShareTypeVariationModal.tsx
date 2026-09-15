@@ -39,6 +39,7 @@ import type {
 import {
   DateRangeStatusLegend,
   PictureUploadField,
+  RASTER_PICTURE_ACCEPT,
   ToolTipIcon,
   usePictureUpload,
 } from "@shared/ui";
@@ -761,6 +762,7 @@ export default function ShareTypeVariationModal({
           onUpload={uploadPicture}
           previewVariant="block"
           showDelete={false}
+          accept={RASTER_PICTURE_ACCEPT}
         />
       </Modal>
     </>

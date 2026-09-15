@@ -13,7 +13,13 @@ from ..models import (
     ShareTypeVariation,
     Waste,
 )
-from .serializers_mixin import DeletableMixin, NameFieldMixin, StorageFieldsMixin
+from .serializers_mixin import (
+    AUDIT_READONLY_FIELDS,
+    FINALIZATION_READONLY_FIELDS,
+    DeletableMixin,
+    NameFieldMixin,
+    StorageFieldsMixin,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +43,8 @@ class ForecastSerializer(NameFieldMixin, DeletableMixin, serializers.ModelSerial
     class Meta:
         model = Forecast
         fields = "__all__"
+        # Forecasts are finalized through ``/bulk_finalize/``.
+        read_only_fields = (*AUDIT_READONLY_FIELDS, *FINALIZATION_READONLY_FIELDS)
 
     def to_representation(self, instance):
         """
@@ -160,6 +168,8 @@ class PurchaseSerializer(StorageFieldsMixin, serializers.ModelSerializer):
     class Meta:
         model = Purchase
         fields = "__all__"
+        # ``created_by`` is stamped by ``PurchaseViewSet.create``.
+        read_only_fields = AUDIT_READONLY_FIELDS
 
     def validate(self, attrs):
         from isoweek import Week
@@ -206,6 +216,9 @@ class HarvestSerializer(StorageFieldsMixin, serializers.ModelSerializer):
     class Meta:
         model = Harvest
         fields = "__all__"
+        # Harvests are finalized through ``/bulk_finalize/``; ``created_by`` is
+        # stamped by ``HarvestViewSet.create``.
+        read_only_fields = (*AUDIT_READONLY_FIELDS, *FINALIZATION_READONLY_FIELDS)
 
 
 class WasteSerializer(StorageFieldsMixin, NameFieldMixin, serializers.ModelSerializer):
@@ -214,6 +227,8 @@ class WasteSerializer(StorageFieldsMixin, NameFieldMixin, serializers.ModelSeria
     class Meta:
         model = Waste
         fields = "__all__"
+        # ``created_by`` is stamped by ``WasteViewSet.create``.
+        read_only_fields = AUDIT_READONLY_FIELDS
 
 
 class DocumentationAggregationItemSerializer(serializers.Serializer):

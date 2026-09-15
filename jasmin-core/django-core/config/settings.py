@@ -1295,6 +1295,13 @@ SPECTACULAR_SETTINGS = {
         "TicketStatusEnum": "apps.shared.support.models.TicketStatus",
         "TicketPriorityEnum": "apps.shared.support.models.TicketPriority",
         "AuthorKindEnum": "apps.shared.support.models.AuthorKind",
+        # Two request bodies have a ``model`` ChoiceField with different choice
+        # sets: bulk (un)finalize and bulk documents. Once a field name carries
+        # two sets, spectacular hash-suffixes every set that has no override,
+        # so both are named here — keeping the existing ``ModelEnum`` (bulk
+        # documents, ``BulkDocumentRequestSerializer.model``) stable.
+        "BulkFinalizeRequestModelEnum": "apps.commissioning.serializers.finalize_serializer.FINALIZABLE_MODEL_NAMES",
+        "ModelEnum": ["delivery_note", "invoice"],
     },
     "COMPONENT_NO_READ_ONLY_REQUIRED": True,
     "SCHEMA_PATH_PREFIX": "/api/",

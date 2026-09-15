@@ -10,12 +10,24 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.authz.permissions import APIViewRolePermissionsMixin, IsOffice, IsStaff
+from apps.authz.permissions import (
+    APIViewRolePermissionsMixin,
+    IsOffice,
+    IsStaff,
+    has_any_role,
+)
 from apps.shared.request_utils import body
-from core.errors import JasminError, NotFoundError
+from core.errors import ForbiddenError, JasminError, NotFoundError
 from core.serializers import ErrorResponseSerializer
 
-from ..errors import CommissioningError, CompositeIdInvalid, FinalizedError
+from ..errors import (
+    BulkFinalizeAppLabelInvalid,
+    BulkFinalizeIdsInvalid,
+    BulkFinalizeModelInvalid,
+    CommissioningError,
+    CompositeIdInvalid,
+    FinalizedError,
+)
 from ..models import DeliveryNoteReseller, InvoiceReseller, Order, ShareContent
 from ..serializers import (
     BulkFinalizeRequestSerializer,
@@ -44,6 +56,57 @@ def _require_model_name(model_name: Any) -> None:
         )
 
 
+# Models any staff role may (un)finalize through the generic bulk endpoints:
+# the records behind the staff-gated Forecast and Harvest pages, and offers
+# (published to resellers, reversible). Every other finalizable model — the
+# legally one-way orders, delivery notes and invoices with their line models,
+# and ShareContent — needs office, the same gate as the dedicated
+# BulkFinalizeDocumentsView and the share-content (un)finalize endpoints. An
+# allowlist, so a newly finalizable model starts out office-only.
+_STAFF_FINALIZABLE_MODELS = frozenset({"forecast", "harvest", "offer"})
+
+
+def _validate_bulk_finalize_request(request: Request) -> tuple[list[str], str]:
+    """Validate a generic bulk (un)finalize body and gate its model by role.
+
+    Returns ``(ids, model_name)`` with ``model_name`` normalised to the
+    lowercase model name. Raises a 400 for a malformed body and a 403 when a
+    non-office staff role names an office-only model. The role check runs
+    before any row is looked up, so a refused caller learns nothing about
+    which ids exist.
+    """
+    # Run the long-standing checks first so a missing / empty ids list and a
+    # missing model keep their existing error codes.
+    parse_bulk_ids(request)
+    _require_model_name(body(request).get("model"))
+
+    serializer = BulkFinalizeRequestSerializer(data=body(request))
+    if not serializer.is_valid():
+        # The body is a dict (parse_bulk_ids passed), so every error is keyed
+        # by one of the three declared fields.
+        errors = serializer.errors
+        if "ids" in errors:
+            raise BulkFinalizeIdsInvalid("Every id must be a string.", field="ids")
+        if "model" in errors:
+            raise BulkFinalizeModelInvalid(
+                "model must name a finalizable commissioning model.",
+                field="model",
+            )
+        raise BulkFinalizeAppLabelInvalid(
+            "app_label must be 'commissioning'.", field="app_label"
+        )
+
+    model_name: str = serializer.validated_data["model"]
+    if model_name not in _STAFF_FINALIZABLE_MODELS and not has_any_role(
+        request, *IsOffice.required_roles
+    ):
+        raise ForbiddenError(
+            f"Only office may finalize or unfinalize {model_name} records.",
+            field="model",
+        )
+    return list(serializer.validated_data["ids"]), model_name
+
+
 class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
     """Bulk finalize objects that use FinalizableMixin."""
 
@@ -56,8 +119,10 @@ class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
         Finalize multiple objects at once.
         
         Supports:
-        - Regular models with standard IDs (Order, DeliveryNote, etc.)
-        - CurrentStock with composite IDs (format: share_article_id_unit_size_storage_id_year_week_day)
+        - Finalizable commissioning models, by model name (case-insensitive)
+        - offer, forecast and harvest need a staff role; every other model
+          (orders, delivery notes, invoices, their lines, share contents)
+          needs office
         
         Returns counts of:
         - Successfully finalized objects
@@ -81,17 +146,13 @@ class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
         Returns:
             Response with finalization results
         """
-        ids = parse_bulk_ids(request)
-        model_name = body(request).get("model")
-        app_label = body(request).get("app_label", "commissioning")
-        _require_model_name(model_name)
+        ids, model_name = _validate_bulk_finalize_request(request)
 
         try:
-            _, objects = get_finalizable_objects(model_name, app_label, ids)
-        except LookupError as exc:
-            raise CommissioningError(
-                f"Model {model_name} not found in app {app_label}",
-                code="finalize.model_not_found",
+            _, objects = get_finalizable_objects(model_name, "commissioning", ids)
+        except (LookupError, ValueError) as exc:
+            raise BulkFinalizeModelInvalid(
+                f"{model_name} cannot be finalized.", field="model"
             ) from exc
 
         if not objects:
@@ -231,8 +292,10 @@ class BulkUnfinalizeView(APIViewRolePermissionsMixin, APIView):
         Unfinalize multiple objects at once.
         
         Supports:
-        - Regular models with standard IDs (Order, DeliveryNote, etc.)
-        - CurrentStock with composite IDs (format: share_article_id_unit_size_storage_id_year_week_day)
+        - Finalizable commissioning models, by model name (case-insensitive)
+        - offer, forecast and harvest need a staff role; every other model
+          (orders, delivery notes, invoices, their lines, share contents)
+          needs office
         
         Only processes objects that are currently finalized.
         """,
@@ -253,19 +316,15 @@ class BulkUnfinalizeView(APIViewRolePermissionsMixin, APIView):
         Returns:
             Response with unfinalization results
         """
-        ids = parse_bulk_ids(request)
-        model_name = body(request).get("model")
-        app_label = body(request).get("app_label", "commissioning")
-        _require_model_name(model_name)
+        ids, model_name = _validate_bulk_finalize_request(request)
 
         try:
             model, objects = get_finalizable_objects(
-                model_name, app_label, ids, filters={"is_finalized": True}
+                model_name, "commissioning", ids, filters={"is_finalized": True}
             )
-        except LookupError as exc:
-            raise CommissioningError(
-                f"Model {model_name} not found in app {app_label}",
-                code="finalize.model_not_found",
+        except (LookupError, ValueError) as exc:
+            raise BulkFinalizeModelInvalid(
+                f"{model_name} cannot be unfinalized.", field="model"
             ) from exc
 
         if not objects:
@@ -279,7 +338,7 @@ class BulkUnfinalizeView(APIViewRolePermissionsMixin, APIView):
         # regardless of model (see test_404_if_none_are_finalized).
         if getattr(model, "IS_FINALIZED_ONE_WAY", False):
             raise FinalizedError(
-                f"{model_name} documents are legally immutable once "
+                f"{model.__name__} documents are legally immutable once "
                 "finalized and cannot be unfinalized. To reverse, create "
                 "a storno; to revise, issue a correction document.",
                 code="finalize.one_way_model",

@@ -6,7 +6,7 @@ from ..models import (
     TheoreticalPurchase,
     TheoreticalWashAmount,
 )
-from .serializers_mixin import NameFieldMixin
+from .serializers_mixin import AUDIT_READONLY_FIELDS, NameFieldMixin
 
 
 class TheoreticalHarvestSerializer(NameFieldMixin, serializers.ModelSerializer):
@@ -15,6 +15,8 @@ class TheoreticalHarvestSerializer(NameFieldMixin, serializers.ModelSerializer):
     class Meta:
         model = TheoreticalHarvest
         fields = "__all__"
+        # ``created_by`` is stamped by ``_TheoreticalBaseViewSet.perform_create``.
+        read_only_fields = AUDIT_READONLY_FIELDS
 
 
 class TheoreticalCleanAmountSerializer(NameFieldMixin, serializers.ModelSerializer):
@@ -23,6 +25,8 @@ class TheoreticalCleanAmountSerializer(NameFieldMixin, serializers.ModelSerializ
     class Meta:
         model = TheoreticalCleanAmount
         fields = "__all__"
+        # ``created_by`` is stamped by ``_TheoreticalBaseViewSet.perform_create``.
+        read_only_fields = AUDIT_READONLY_FIELDS
 
 
 class TheoreticalPurchaseSerializer(NameFieldMixin, serializers.ModelSerializer):
@@ -31,6 +35,8 @@ class TheoreticalPurchaseSerializer(NameFieldMixin, serializers.ModelSerializer)
     class Meta:
         model = TheoreticalPurchase
         fields = "__all__"
+        # ``created_by`` is stamped by ``_TheoreticalBaseViewSet.perform_create``.
+        read_only_fields = AUDIT_READONLY_FIELDS
 
 
 class TheoreticalWashAmountSerializer(NameFieldMixin, serializers.ModelSerializer):
@@ -39,6 +45,8 @@ class TheoreticalWashAmountSerializer(NameFieldMixin, serializers.ModelSerialize
     class Meta:
         model = TheoreticalWashAmount
         fields = "__all__"
+        # ``created_by`` is stamped by ``_TheoreticalBaseViewSet.perform_create``.
+        read_only_fields = AUDIT_READONLY_FIELDS
 
 
 class StockComparisonSerializer(serializers.Serializer):

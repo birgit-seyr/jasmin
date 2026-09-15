@@ -34,21 +34,21 @@ export interface MemberCreateRequest {
   readonly admin_rejected_at?: string | null;
   /** @nullable */
   readonly admin_rejection_reason?: string | null;
-  created_at?: string;
+  readonly created_at?: string;
   /** @nullable */
   readonly cancelled_at?: string | null;
   /** @nullable */
   readonly cancelled_effective_at?: string | null;
   on_waiting_list?: boolean;
-  waiting_list_status?: WaitingListStatusEnum;
+  readonly waiting_list_status?: WaitingListStatusEnum;
   /** @nullable */
   readonly waiting_list_position?: number | null;
   /** @nullable */
-  notification_sent_at?: string | null;
+  readonly notification_sent_at?: string | null;
   /** @nullable */
-  notification_expires_at?: string | null;
+  readonly notification_expires_at?: string | null;
   /** @nullable */
-  response_received_at?: string | null;
+  readonly response_received_at?: string | null;
   /** @nullable */
   readonly notification_token?: string | null;
   is_active?: boolean;
@@ -58,7 +58,7 @@ export interface MemberCreateRequest {
   /** @nullable */
   readonly trial_converted_at?: string | null;
   /** @nullable */
-  cancellation_email_sent_at?: string | null;
+  readonly cancellation_email_sent_at?: string | null;
   /** @nullable */
   birth_date?: string | null;
   /** @nullable */
@@ -125,7 +125,7 @@ export interface MemberCreateRequest {
   /** @nullable */
   readonly privacy_consent?: string | null;
   /** @nullable */
-  consent_withdrawn_at?: string | null;
+  readonly consent_withdrawn_at?: string | null;
   /** @nullable */
   membership_paper_received_at?: string | null;
   /** @nullable */
@@ -148,7 +148,7 @@ export interface MemberCreateRequest {
   /** @nullable */
   readonly admin_confirmed_by?: string | null;
   /** @nullable */
-  created_by?: string | null;
+  readonly created_by?: string | null;
   /** @nullable */
   readonly cancelled_by?: string | null;
   /** @nullable */

@@ -395,7 +395,8 @@ class MemberViewSet(
         # Tenant), so a compromised office account can't raise it.
         with transaction.atomic():
             enforce_action_quota(RateLimitedAction.MEMBER_CREATION, actor=request.user)
-            member: Member = serializer.save()
+            # ``created_by`` is read-only on the serializer — stamp it here.
+            member: Member = serializer.save(created_by=auth_user(request))
 
         if existing_user is not None:
             service.link_to_user(
@@ -846,7 +847,10 @@ class SubscriptionViewSet(
         serializer.is_valid(raise_exception=True)
 
         service = SubscriptionService()
-        subscription = service.create_bare_subscription(serializer.validated_data)
+        # ``created_by`` is read-only on the serializer — stamp it here.
+        subscription = service.create_bare_subscription(
+            {**serializer.validated_data, "created_by": auth_user(request)}
+        )
 
         created_subscription = self.refetch_for_response(subscription)
         response_serializer = self.get_serializer(created_subscription)

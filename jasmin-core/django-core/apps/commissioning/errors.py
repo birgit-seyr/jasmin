@@ -39,6 +39,26 @@ class FinalizedError(ConflictError):
     code = "commissioning.already_finalized"
 
 
+class BulkFinalizeModelInvalid(BadRequestError):
+    """The generic bulk (un)finalize ``model`` is not a finalizable commissioning
+    model: an unknown name, a model without finalization, or not a string."""
+
+    code = "finalize.model_invalid"
+
+
+class BulkFinalizeAppLabelInvalid(BadRequestError):
+    """The generic bulk (un)finalize ``app_label`` is anything other than
+    ``"commissioning"``, the only app whose models carry finalization."""
+
+    code = "finalize.app_label_invalid"
+
+
+class BulkFinalizeIdsInvalid(BadRequestError):
+    """A generic bulk (un)finalize ``ids`` entry is not a string id."""
+
+    code = "finalize.ids_invalid"
+
+
 class DocumentNotFinalized(BadRequestError):
     """A PDF upload was attempted before the document was finalized.
 
@@ -97,6 +117,15 @@ class SharesDeliveryDayNotFound(NotFoundError):
     """No active SharesDeliveryDay exists for the requested day."""
 
     code = "shares_delivery_day.not_found"
+
+
+class PictureInvalid(BadRequestError):
+    """An uploaded ``picture`` (share-type variation or delivery station) is not
+    a PNG/JPEG/WEBP/GIF image within the byte and pixel caps. Raised by
+    ``apps.shared.image_upload.normalize_uploaded_picture`` so a non-image
+    (HTML, SVG, …) can never be stored and served from the tenant origin."""
+
+    code = "commissioning.picture_invalid"
 
 
 class DeliveryStationError(BadRequestError):

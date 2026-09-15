@@ -79,3 +79,21 @@ test_consents_viewsets.py (22 tests) — DSGVO-critical access matrix
   TestConsentRecordCreate                 7 tests   member pinned to self; spoof attempt → 403; office can act on behalf; IP from X-Forwarded-For; UA captured; unknown document → 404
   TestConsentRecordListScoping            4 tests   anon blocked; member sees only own; office sees all; ?member= filter
   TestConsentRecordRevoke                 5 tests   anon blocked; owner revokes own; non-owning member → 404 (not leaked); office revokes any; double-revoke → 409
+
+test_server_owned_field_locks.py (18 tests) — generic writes cannot set server-owned columns
+────────────────────────────────────────────────────────────────────────────────────────────
+  TestInvoiceLineLocks                    3 tests   PATCH cannot re-point a draft line onto a finalized invoice; finalization / source_* / order_content / delivery_note_contents dropped; create still takes invoice
+  TestDeliveryNoteLineLocks               2 tests   PATCH cannot re-point or stamp a line; create still takes delivery_note
+  TestOfferLocks                          1 test    PATCH cannot finalize an offer
+  TestInvoiceRecipientSnapshotLock        1 test    PATCH cannot plant recipient_snapshot / document_hash_version on a draft
+  TestShareContentLocks                   2 tests   PATCH cannot unfinalize or rewrite authorship; create stamps request user
+  TestDocumentationLocks                  3 tests   harvest PATCH locks finalization + authorship; harvest create stamps request user; theoretical harvest authorship
+  TestSubscriptionLocks                   1 test    PATCH cannot rewrite renewal chain / waiting-list status / authorship (frozen clock)
+  TestMemberLocks                         2 tests   PATCH cannot set consent / cancellation / waiting-list / audit stamps; create stamps request user
+  TestShareDeliveryLocks                  3 tests   overview create ignores display annotations; PATCH cannot re-point subscription (both viewsets)
+
+test_picture_upload_validation.py (37 tests) — picture uploads must be raster images
+────────────────────────────────────────────────────────────────────────────────────
+  TestPictureUploadViaUpdate             24 tests   ShareTypeVariation + DeliveryStation PATCH: html / svg / markup-named-.png → 400 picture_invalid; PNG/JPEG/WEBP/GIF stored re-encoded with matching extension; multi-picture (MPO) JPEG stored as .jpg; PNG named x.html stored as .png; byte cap + pixel cap → 400; null PATCH still clears
+  TestPictureUploadViaCreate              3 tests   DeliveryStation POST rejects html / stores PNG under .png; ShareTypeVariation POST rejects svg
+  TestNormalizeUploadedPicture           10 tests   shared helper: None/"" pass through; truncated image rejected; generated name ignores client name; CMYK→RGB drops ICC profile, unconverted keeps it; EXIF orientation applied + EXIF dropped; P-mode PNG/GIF transparency kept; 16-bit PNG kept

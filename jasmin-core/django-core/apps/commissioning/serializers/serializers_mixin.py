@@ -9,6 +9,48 @@ from ..utils import (
 )
 from ..utils.deletion_utils import bulk_deletable_pks, can_delete_instance
 
+# Server-owned columns that a generic create/PATCH must never set. Shared so
+# every ``fields = "__all__"`` serializer over a model carrying the matching
+# mixin locks the same set, and a column added to the mixin can't silently stay
+# writable on one of them.
+#
+# ``FinalizableMixin``: stamped only by ``finalize()`` / ``unfinalize()`` via
+# the dedicated finalize endpoints and document services. A client-written
+# ``is_finalized`` would also skip the finalized-row protection, which decides
+# from the in-memory flag.
+FINALIZATION_READONLY_FIELDS = ("is_finalized", "finalized_at", "finalized_by")
+# ``CreatedMixin``: authorship is stamped server-side from the request user.
+AUDIT_READONLY_FIELDS = ("created_by", "created_at")
+# ``SourceSnapshotMixin``: the upstream values frozen when a document line is
+# derived from its source line. The ``*_differs`` / ``original_*`` flags (and the
+# GoBD correction trail they show) read these, so only the services set them.
+SOURCE_SNAPSHOT_READONLY_FIELDS = (
+    "source_amount",
+    "source_unit",
+    "source_size",
+    "source_price_per_unit",
+    "source_rabatt",
+)
+
+
+# Lock ``READ_ONLY_ON_UPDATE`` fields once an instance is bound — for FKs chosen
+# when a row is created that must never be re-pointed afterwards (a document
+# line's parent document, a delivery's subscription). Same shape as
+# ``BillingProfileSerializer.member``: writable on create, read-only on update,
+# where DRF drops the key silently.
+#
+# Deliberately a comment, not a docstring: drf-spectacular takes a component's
+# description from the first docstring in the serializer's MRO, so a docstring
+# here would replace the API description of every serializer using the mixin.
+class ReadOnlyOnUpdateMixin:
+    READ_ONLY_ON_UPDATE: tuple[str, ...] = ()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance is not None:
+            for field_name in self.READ_ONLY_ON_UPDATE:
+                self.fields[field_name].read_only = True
+
 
 def mask_capacity_for_anonymous(
     data: dict, request, *, internal_fields: tuple[str, ...] = ()

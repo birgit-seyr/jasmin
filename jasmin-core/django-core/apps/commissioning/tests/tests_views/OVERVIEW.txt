@@ -68,6 +68,18 @@ Total tests: 110
      - test_404_if_none_are_finalized
      - test_missing_model_returns_400
 
+   TestBulkFinalizeModelGate  (request validation + per-model role gate)
+     - test_non_office_role_cannot_finalize_an_invoice
+     - test_office_can_finalize_an_invoice
+     - test_staff_role_refused_office_only_models_before_lookup
+     - test_staff_roles_can_finalize_staff_models
+     - test_gardener_can_unfinalize_a_harvest
+     - test_unfinalize_of_a_one_way_model_is_still_refused
+     - test_invalid_model_returns_400
+     - test_app_label_other_than_commissioning_returns_400
+     - test_non_string_id_returns_400
+     - test_finalizable_model_names_match_the_model_registry
+
    TestBulkFinalizeShareContentView
      - test_finalizes_share_content
      - test_empty_ids_returns_400

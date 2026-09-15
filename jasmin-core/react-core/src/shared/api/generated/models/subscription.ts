@@ -88,7 +88,7 @@ Pass-through cases:
   readonly admin_rejected_at?: string | null;
   /** @nullable */
   readonly admin_rejection_reason?: string | null;
-  created_at?: string;
+  readonly created_at?: string;
   /** @nullable */
   readonly cancelled_at?: string | null;
   /** @nullable */
@@ -107,25 +107,17 @@ Pass-through cases:
   readonly notification_token?: string | null;
   /** @nullable */
   readonly waiting_list_reason?: SubscriptionWaitingListReason;
-  /**
-   * @minimum 0
-   * @maximum 2147483647
-   * @nullable
-   */
-  subscription_number?: number | null;
-  /**
-   * @minimum 0
-   * @maximum 32767
-   */
-  renewal_generation?: number;
+  /** @nullable */
+  readonly subscription_number?: number | null;
+  readonly renewal_generation?: number;
   /** @nullable */
   readonly admin_confirmed_by?: string | null;
   /** @nullable */
-  created_by?: string | null;
+  readonly created_by?: string | null;
   /** @nullable */
   readonly cancelled_by?: string | null;
   /** @nullable */
-  previous_subscription?: string | null;
+  readonly previous_subscription?: string | null;
   payment_cycle: string;
   /** @nullable */
   default_delivery_station_day?: string | null;

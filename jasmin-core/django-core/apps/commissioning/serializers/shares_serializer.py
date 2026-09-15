@@ -4,7 +4,9 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from ..errors import ShareTypeVariationOutsideShareTypeRange
+from apps.shared.image_upload import normalize_uploaded_picture
+
+from ..errors import PictureInvalid, ShareTypeVariationOutsideShareTypeRange
 from ..models import (
     Share,
     ShareContent,
@@ -21,8 +23,11 @@ from .box_matrix_columns_serializer import PackingBoxesMatrixColumnSerializer
 from .delivery_serializer import CapacityWeekEntrySerializer
 from .dynamic_keys import DynamicAmountKeysMixin
 from .serializers_mixin import (
+    AUDIT_READONLY_FIELDS,
+    FINALIZATION_READONLY_FIELDS,
     DeletableMixin,
     NameFieldMixin,
+    ReadOnlyOnUpdateMixin,
     mask_capacity_for_anonymous,
 )
 
@@ -246,6 +251,12 @@ class ShareTypeVariationSerializer(
         mask_capacity_for_anonymous(ret, self.context.get("request"))
         return ret
 
+    def validate_picture(self, value):
+        """Only a decodable PNG/JPEG/WEBP/GIF is stored, re-encoded under a
+        generated name with the matching extension — the served Content-Type
+        comes from that extension, so the client must not choose it."""
+        return normalize_uploaded_picture(value, error_cls=PictureInvalid)
+
     def validate_capacity(self, value):
         """Floor a capacity edit at the busiest current-or-future week's
         occupancy — the office can't drop the farm-wide cap below what's already
@@ -324,7 +335,12 @@ class ShareContentNestedSerializer(serializers.ModelSerializer):
         ]
 
 
-class ShareDeliverySerializer(serializers.ModelSerializer):
+class ShareDeliverySerializer(ReadOnlyOnUpdateMixin, serializers.ModelSerializer):
+    # Re-pointing an existing delivery to another subscription would leave the
+    # old subscription's charge schedule billing it — the write choreography
+    # only notifies the subscription the row ends up on.
+    READ_ONLY_ON_UPDATE = ("subscription",)
+
     member_first_name = serializers.CharField(
         source="subscription.member.first_name", read_only=True
     )
@@ -476,10 +492,19 @@ class ShareDeliverySerializer(serializers.ModelSerializer):
         return OptinService.is_locked(obj)
 
 
-class ShareDeliveryOverviewSerializer(serializers.ModelSerializer):
-    quantity = serializers.IntegerField()
-    share_type_variation_string = serializers.CharField()
-    delivery_week = serializers.IntegerField()
+class ShareDeliveryOverviewSerializer(
+    ReadOnlyOnUpdateMixin, serializers.ModelSerializer
+):
+    # See ``ShareDeliverySerializer.READ_ONLY_ON_UPDATE``.
+    READ_ONLY_ON_UPDATE = ("subscription",)
+
+    # Queryset annotations of ``ShareDeliveryOverviewViewSet.get_queryset`` —
+    # display-only, not ShareDelivery columns. Declared writable they were
+    # required on every create (which then crashed passing them to the model)
+    # and were setattr'd onto the instance on update without persisting.
+    quantity = serializers.IntegerField(read_only=True)
+    share_type_variation_string = serializers.CharField(read_only=True)
+    delivery_week = serializers.IntegerField(read_only=True)
     delivery_date = serializers.SerializerMethodField()
     # Per-share-type joker allowances, so the office grid can flag a
     # subscription that has taken MORE jokers / donation-jokers than its share
@@ -534,6 +559,9 @@ class ShareContentSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShareContent
         fields = "__all__"
+        # Finalization belongs to the share-content (un)finalize endpoints;
+        # authorship is stamped by ``ShareContentViewSet.perform_create``.
+        read_only_fields = (*AUDIT_READONLY_FIELDS, *FINALIZATION_READONLY_FIELDS)
 
 
 class ShareSerializer(serializers.ModelSerializer):

@@ -10,7 +10,11 @@ import {
 } from "@shared/api/generated/commissioning/commissioning";
 import type { DeliveryStation } from "@shared/api/generated/models";
 import { EditFormModal, useModalMutation } from "@shared/modals/shared";
-import { PictureUploadField, usePictureUpload } from "@shared/ui";
+import {
+  PictureUploadField,
+  RASTER_PICTURE_ACCEPT,
+  usePictureUpload,
+} from "@shared/ui";
 import { notify } from "@shared/utils";
 
 const { Paragraph } = Typography;
@@ -205,6 +209,7 @@ export const DeliveryStationInfoModal: FC<DeliveryStationInfoModalProps> = ({
           onUpload={uploadPicture}
           onDelete={deletePicture}
           previewVariant="inline"
+          accept={RASTER_PICTURE_ACCEPT}
         />
       </Form.Item>
 

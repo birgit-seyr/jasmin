@@ -11,10 +11,10 @@ import type { ShareContentBackupUnit } from './shareContentBackupUnit';
 
 export interface ShareContent {
   readonly id?: string;
-  created_at?: string;
-  is_finalized?: boolean;
+  readonly created_at?: string;
+  readonly is_finalized?: boolean;
   /** @nullable */
-  finalized_at?: string | null;
+  readonly finalized_at?: string | null;
   unit: UnitEnum;
   size?: VegetableSizeEnum;
   /**
@@ -73,9 +73,9 @@ export interface ShareContent {
   /** @nullable */
   washing_backup?: boolean | null;
   /** @nullable */
-  created_by?: string | null;
+  readonly created_by?: string | null;
   /** @nullable */
-  finalized_by?: string | null;
+  readonly finalized_by?: string | null;
   share: string;
   share_article: string;
   /** @nullable */

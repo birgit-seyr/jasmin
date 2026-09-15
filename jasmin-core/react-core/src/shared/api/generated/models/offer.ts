@@ -16,9 +16,9 @@ export interface Offer {
   readonly amount_ordered?: string;
   /** @nullable */
   readonly organic_status?: string | null;
-  is_finalized?: boolean;
+  readonly is_finalized?: boolean;
   /** @nullable */
-  finalized_at?: string | null;
+  readonly finalized_at?: string | null;
   /**
    * @minimum 0
    * @maximum 32767
@@ -69,7 +69,7 @@ export interface Offer {
   washing?: boolean;
   comes_from_long_term_storage?: boolean;
   /** @nullable */
-  finalized_by?: string | null;
+  readonly finalized_by?: string | null;
   share_article: string;
   /** @nullable */
   used_crate?: string | null;

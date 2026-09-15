@@ -21,6 +21,8 @@ from ..utils.iso_week_utils import date_from_order
 from .serializers_mixin import (
     ARTICLE_DIFF_FIELDS,
     CRATE_DIFF_FIELDS,
+    FINALIZATION_READONLY_FIELDS,
+    SOURCE_SNAPSHOT_READONLY_FIELDS,
     CreatedByNameMixin,
     DeletableListSerializer,
     DeletableMixin,
@@ -29,8 +31,19 @@ from .serializers_mixin import (
     LinePricingFieldsMixin,
     LinkedUserInfoMixin,
     NameFieldMixin,
+    ReadOnlyOnUpdateMixin,
     ShareArticleResolutionMixin,
     TaxBreakdownFieldMixin,
+)
+
+# Columns of an article line on an invoice / delivery note that only the
+# document services write: the line's finalization stamps, the GoBD source
+# snapshot, and its provenance links to the order line (and, on invoice lines,
+# to the delivery-note lines it was billed from).
+DOCUMENT_LINE_READONLY_FIELDS = (
+    *FINALIZATION_READONLY_FIELDS,
+    *SOURCE_SNAPSHOT_READONLY_FIELDS,
+    "order_content",
 )
 
 
@@ -252,6 +265,8 @@ class OfferSerializer(serializers.ModelSerializer):
     class Meta:
         model = Offer
         fields = "__all__"
+        # Offers are finalized only through ``/bulk_finalize/``.
+        read_only_fields = FINALIZATION_READONLY_FIELDS
 
 
 class OrderContentSerializer(
@@ -339,6 +354,7 @@ class CrateContentInvoiceResellerSerializer(
 
 # for the Invoice Modal:
 class InvoiceResellerContentSerializer(
+    ReadOnlyOnUpdateMixin,
     ShareArticleResolutionMixin,
     DifferenceTrackingMixin,
     LinePricingFieldsMixin,
@@ -351,9 +367,16 @@ class InvoiceResellerContentSerializer(
     # upstream FK is not snapshotted (intentional — see SourceSnapshotMixin).
     DIFF_FIELDS = ARTICLE_DIFF_FIELDS
 
+    # The office adds a manual line to a draft invoice by POSTing its
+    # ``invoice`` (the model refuses a finalized parent on insert). Re-pointing
+    # an existing line would move it onto another — possibly finalized —
+    # invoice, which neither the model nor the protection trigger checks.
+    READ_ONLY_ON_UPDATE = ("invoice",)
+
     class Meta:
         model = InvoiceResellerContent
         fields = "__all__"
+        read_only_fields = (*DOCUMENT_LINE_READONLY_FIELDS, "delivery_note_contents")
 
 
 class CrateItemSummarySerializer(serializers.Serializer):
@@ -680,6 +703,12 @@ class InvoiceResellerSerializer(
             "created_at",
             "has_been_sent_to_reseller_at",
             "has_been_sent_to_accounting_at",
+            # Frozen §14 recipient block + hash format: written only by
+            # ``InvoiceService.finalize_invoice`` / ``create_storno``. Finalize
+            # keeps a pre-populated snapshot, so a client-written one would
+            # become the recipient sealed into the legal invoice.
+            "recipient_snapshot",
+            "document_hash_version",
         ]
 
     def get_cancels_invoice_number(self, obj) -> str | None:
@@ -738,6 +767,7 @@ class InvoiceResellerSerializer(
 
 # for the Delivery Note Modal:
 class DeliveryNoteResellerContentSerializer(
+    ReadOnlyOnUpdateMixin,
     ShareArticleResolutionMixin,
     DifferenceTrackingMixin,
     LinePricingFieldsMixin,
@@ -748,9 +778,14 @@ class DeliveryNoteResellerContentSerializer(
 
     DIFF_FIELDS = ARTICLE_DIFF_FIELDS
 
+    # See ``InvoiceResellerContentSerializer.READ_ONLY_ON_UPDATE``. Delivery
+    # notes carry no document hash, so a re-pointed line would go unnoticed.
+    READ_ONLY_ON_UPDATE = ("delivery_note",)
+
     class Meta:
         model = DeliveryNoteContent
         fields = "__all__"
+        read_only_fields = DOCUMENT_LINE_READONLY_FIELDS
 
 
 class CrateDeliveryNoteContentSerializer(

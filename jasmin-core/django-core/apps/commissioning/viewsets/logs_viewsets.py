@@ -12,6 +12,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.authz.permissions import IsStaff, RolePermissionsMixin
+from apps.shared.request_utils import auth_user
 from core.pagination import OptionalLimitOffsetPagination
 
 from ..schemas import get_share_article_parameter, get_year_parameter
@@ -77,6 +78,10 @@ class _TheoreticalBaseViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     @extend_schema(parameters=_LIST_PARAMETERS)
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return super().list(request, *args, **kwargs)
+
+    def perform_create(self, serializer: Any) -> None:
+        # Authorship is read-only on the serializer — stamp it here.
+        serializer.save(created_by=auth_user(self.request))
 
     @transaction.atomic
     def perform_destroy(self, instance: Any) -> None:

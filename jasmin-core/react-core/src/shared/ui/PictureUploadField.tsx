@@ -5,6 +5,13 @@ import { useTranslation } from "react-i18next";
 import { notify } from "@shared/utils";
 import "./PictureUploadField.css";
 
+/**
+ * The raster types the share-type-variation and delivery-station picture
+ * endpoints accept (the backend re-encodes them and refuses anything else).
+ * Never SVG — it is active content.
+ */
+export const RASTER_PICTURE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
+
 export interface PictureUploadFieldProps {
   /** Current picture URL to preview (falsy → no preview, "Upload" label). */
   pictureUrl?: string | null;
@@ -31,6 +38,12 @@ export interface PictureUploadFieldProps {
   requireSquare?: boolean;
   /** Minimum width/height in pixels, enforced only when ``requireSquare``. */
   minSizePx?: number;
+  /**
+   * File-picker filter (the input's ``accept``). Default ``image/*``. Narrow it
+   * to what the endpoint accepts (e.g. ``RASTER_PICTURE_ACCEPT``) so unsupported
+   * types are not offered; the serializer remains the real gate.
+   */
+  accept?: string;
 }
 
 /**
@@ -47,6 +60,7 @@ export default function PictureUploadField({
   showDelete = true,
   requireSquare = false,
   minSizePx,
+  accept = "image/*",
 }: PictureUploadFieldProps) {
   const { t } = useTranslation();
 
@@ -81,7 +95,7 @@ export default function PictureUploadField({
 
   const uploadButton = (
     <Upload
-      accept="image/*"
+      accept={accept}
       maxCount={1}
       showUploadList={false}
       beforeUpload={(file) => {

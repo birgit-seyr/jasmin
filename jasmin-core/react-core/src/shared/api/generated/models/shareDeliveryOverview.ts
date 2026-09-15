@@ -8,9 +8,9 @@
 
 export interface ShareDeliveryOverview {
   readonly id?: string;
-  quantity: number;
-  share_type_variation_string: string;
-  delivery_week: number;
+  readonly quantity?: number;
+  readonly share_type_variation_string?: string;
+  readonly delivery_week?: number;
   /**
    * ISO-8601 (``YYYY-MM-DD``) delivery date via the shared resolver.
 

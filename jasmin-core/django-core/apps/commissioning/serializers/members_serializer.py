@@ -6,6 +6,7 @@ from apps.shared.pii_masking import MaskedIBANFieldMixin
 
 from ..models import CoopShare, Member, Subscription
 from .serializers_mixin import (
+    AUDIT_READONLY_FIELDS,
     DeletableMixin,
     LinkedUserInfoMixin,
     MemberStringFieldMixin,
@@ -32,6 +33,18 @@ CANCELLATION_READONLY_FIELDS = (
     "cancelled_at",
     "cancelled_effective_at",
     "cancelled_by",
+)
+# The ``WaitingListMixin`` state stamped exclusively by the waiting-list service
+# methods (enqueue, notify_spot_available, confirm_spot, decline_spot,
+# mark_as_expired). Only ``on_waiting_list`` stays writable — it is the intended
+# flip flag. Left writable, these let a crafted API call stamp a waiting-list
+# status (even deflating variation capacity via the SPOT_AVAILABLE/CONFIRMED
+# occupancy clause) without ever hitting the waiting-list gate.
+WAITING_LIST_READONLY_FIELDS = (
+    "waiting_list_status",
+    "notification_sent_at",
+    "notification_expires_at",
+    "response_received_at",
 )
 
 # Locks the office grid keeps, but the CSV ONBOARDING import must not — a
@@ -138,7 +151,10 @@ class MemberSerializer(
         # ``birth_date`` and ``is_trial`` are CONDITIONALLY locked —
         # see ``validate`` below. They're editable before
         # confirmation (correction window) and locked after.
-        read_only_fields = (
+        #
+        # Annotated as a variable-length tuple so ``MemberImportSerializer``
+        # can narrow it with a filtered ``tuple(...)``.
+        read_only_fields: tuple[str, ...] = (
             "member_number",
             # ``entry_date`` (GenG §30 Eintrittsdatum) is normally server-stamped
             # and NOT office-editable. It is deliberately writable here so the
@@ -159,6 +175,13 @@ class MemberSerializer(
             # user). Linking is owned by the create-path service; Member.save
             # keeps the role in sync if it ever does change.
             "user",
+            # Set by ``ConsentService`` on withdrawal / re-consent.
+            "consent_withdrawn_at",
+            # Set by the cancellation flow after the confirmation email is sent.
+            "cancellation_email_sent_at",
+            *WAITING_LIST_READONLY_FIELDS,
+            # ``created_by`` is stamped by ``MemberViewSet.create``.
+            *AUDIT_READONLY_FIELDS,
         )
         # The decrypted IBAN / account_owner must never ride along on a bulk
         # read — they are accepted on write (the model's IBANValidator still
@@ -493,19 +516,19 @@ class SubscriptionSerializer(
             # Server-inferred at enqueue (which capacity gate was full) — never
             # client-set. See ``SubscriptionService._infer_waiting_list_reason``.
             "waiting_list_reason",
-            # The rest of the waiting-list state is stamped exclusively by the
-            # service / ``WaitingListMixin`` methods (enqueue, notify_spot_
-            # available, confirm_spot, decline_spot, mark_as_expired). Only
-            # ``on_waiting_list`` stays writable — it is the intended flip flag
-            # routed through ``_enqueue_on_waiting_list`` (and thus the
-            # ``allows_waiting_list_for_subscriptions`` gate). Left writable,
-            # these let a crafted API call stamp a waiting-list status — even
-            # deflating variation capacity via the SPOT_AVAILABLE/CONFIRMED
-            # occupancy clause — WITHOUT ever hitting the gate.
-            "waiting_list_status",
-            "notification_sent_at",
-            "notification_expires_at",
-            "response_received_at",
+            # The rest of the waiting-list state. ``on_waiting_list`` stays
+            # writable and is routed through ``_enqueue_on_waiting_list`` (and
+            # thus the ``allows_waiting_list_for_subscriptions`` gate).
+            *WAITING_LIST_READONLY_FIELDS,
+            # Renewal-chain identity: ``Subscription.save`` assigns the number
+            # (inherited along a renewal chain) and ``services.renewal`` sets
+            # ``previous_subscription``. A client-set predecessor or number would
+            # splice a draft into another member's chain.
+            "subscription_number",
+            "renewal_generation",
+            "previous_subscription",
+            # ``created_by`` is stamped by ``SubscriptionViewSet.create``.
+            *AUDIT_READONLY_FIELDS,
             # Admin-confirm/reject 5-tuple — stamped exclusively by the
             # ``POST /subscriptions/{id}/confirm/`` + ``/reject/`` actions (the
             # confirm action runs the capacity backstop, materialises

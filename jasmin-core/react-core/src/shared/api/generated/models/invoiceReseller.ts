@@ -79,13 +79,9 @@ export interface InvoiceReseller {
   readonly xml_file?: string | null;
   /** @nullable */
   readonly document_hash?: string | null;
-  /**
-   * @minimum 0
-   * @maximum 32767
-   */
-  document_hash_version?: number;
+  readonly document_hash_version?: number;
   /** @nullable */
-  recipient_snapshot?: InvoiceResellerRecipientSnapshot;
+  readonly recipient_snapshot?: InvoiceResellerRecipientSnapshot;
   /** @nullable */
   readonly has_been_sent_to_reseller_at?: string | null;
   /** @nullable */

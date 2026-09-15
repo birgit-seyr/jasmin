@@ -1408,8 +1408,10 @@ export const useCommissioningBulkDeleteDocumentsCreate = <TError = ErrorResponse
         Finalize multiple objects at once.
         
         Supports:
-        - Regular models with standard IDs (Order, DeliveryNote, etc.)
-        - CurrentStock with composite IDs (format: share_article_id_unit_size_storage_id_year_week_day)
+        - Finalizable commissioning models, by model name (case-insensitive)
+        - offer, forecast and harvest need a staff role; every other model
+          (orders, delivery notes, invoices, their lines, share contents)
+          needs office
         
         Returns counts of:
         - Successfully finalized objects
@@ -1821,8 +1823,10 @@ export const useCommissioningBulkSetToPaidDocumentsCreate = <TError = ErrorRespo
         Unfinalize multiple objects at once.
         
         Supports:
-        - Regular models with standard IDs (Order, DeliveryNote, etc.)
-        - CurrentStock with composite IDs (format: share_article_id_unit_size_storage_id_year_week_day)
+        - Finalizable commissioning models, by model name (case-insensitive)
+        - offer, forecast and harvest need a staff role; every other model
+          (orders, delivery notes, invoices, their lines, share contents)
+          needs office
         
         Only processes objects that are currently finalized.
         

@@ -1083,7 +1083,8 @@ class ShareContentViewSet(BaseArchivableViewSet):
         from ..services.recompute import recompute_shares
 
         with transaction.atomic():
-            instance = serializer.save()
+            # Authorship is read-only on the serializer — stamp it here.
+            instance = serializer.save(created_by=auth_user(self.request))
             if instance.share_id:
                 recompute_shares([instance.share_id])
 

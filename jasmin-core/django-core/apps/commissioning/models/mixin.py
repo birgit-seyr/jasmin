@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import uuid
+from collections.abc import Iterable
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -811,10 +812,17 @@ class FinalizedProtectedMixin:
     whose parent is currently finalized — closing the gap in the
     Postgres ``BEFORE UPDATE OR DELETE`` trigger which by design does
     not fire on INSERT.
+
+    The same fields also guard UPDATE: ``save()`` refuses to re-point an
+    existing row's parent FK when the stored (old) or the new parent is
+    finalized, so a draft line cannot be moved onto a sealed document or
+    pulled off one. The protection trigger enforces the same rule for
+    ``QuerySet.update()`` and raw SQL.
     """
 
     ALLOWED_FINALIZED_UPDATES: list[str] = []
-    #: FK field names whose target object must NOT be finalized at INSERT.
+    #: FK field names whose target object must NOT be finalized at INSERT,
+    #: and which may not be re-pointed onto or off a finalized parent.
     PARENT_FK_FIELDS: list[str] = []
     #: When ``True``, ``is_finalized = True → False`` flips are refused at
     #: the ``save()`` layer (in addition to the existing ``unfinalize()``
@@ -840,6 +848,73 @@ class FinalizedProtectedMixin:
                 raise FinalizedError(
                     f"Cannot add {self.__class__.__name__} to a finalized "
                     f"{parent.__class__.__name__} (id={parent.pk})."
+                )
+
+    def _check_no_parent_move_across_finalized(
+        self, update_fields: Iterable[str] | None
+    ) -> None:
+        """Refuse re-pointing an existing row onto or off a finalized parent.
+
+        Compared against the STORED row — the in-memory instance already
+        carries the new value. Only parent FKs this save writes are checked
+        (``update_fields=None`` writes every field): a save whose
+        ``update_fields`` leaves the parents out costs no query, any other
+        costs one primary-key read, plus one parent lookup per changed FK.
+        """
+        from apps.commissioning.errors import FinalizedError
+
+        if not isinstance(self, models.Model):
+            raise TypeError(
+                f"{type(self).__name__} uses FinalizedProtectedMixin but is not "
+                "a Django model."
+            )
+        written = None if update_fields is None else set(update_fields)
+        fields: list[models.ForeignKey] = []
+        for name in self.PARENT_FK_FIELDS:
+            field = self._meta.get_field(name)
+            if not isinstance(field, models.ForeignKey):
+                raise TypeError(
+                    f"{type(self).__name__}.PARENT_FK_FIELDS entry {name!r} is "
+                    "not a ForeignKey."
+                )
+            if written is None or field.name in written or field.attname in written:
+                fields.append(field)
+        if not fields:
+            return
+
+        stored = (
+            type(self)
+            ._base_manager.filter(pk=self.pk)
+            .values_list(*(field.attname for field in fields))
+            .first()
+        )
+        if stored is None:
+            # No stored row: Django falls back to an INSERT, so apply the
+            # insert-time guard instead.
+            self._check_no_finalized_parent_on_insert()
+            return
+
+        for field, old_parent_id in zip(fields, stored, strict=True):
+            new_parent_id = getattr(self, field.attname)
+            if old_parent_id == new_parent_id:
+                continue
+            parent_ids = [
+                parent_id
+                for parent_id in (old_parent_id, new_parent_id)
+                if parent_id is not None
+            ]
+            finalized_parent_id = (
+                field.related_model._base_manager.filter(
+                    pk__in=parent_ids, is_finalized=True
+                )
+                .values_list("pk", flat=True)
+                .first()
+            )
+            if finalized_parent_id is not None:
+                raise FinalizedError(
+                    f"Cannot move {self.__class__.__name__} onto or off a "
+                    f"finalized {field.related_model.__name__} "
+                    f"(id={finalized_parent_id})."
                 )
 
     def save(self, *args, **kwargs) -> None:
@@ -905,6 +980,8 @@ class FinalizedProtectedMixin:
 
         if is_insert and self.PARENT_FK_FIELDS:
             self._check_no_finalized_parent_on_insert()
+        elif self.PARENT_FK_FIELDS:
+            self._check_no_parent_move_across_finalized(update_fields)
 
         super().save(*args, **kwargs)
 

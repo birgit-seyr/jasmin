@@ -23,7 +23,10 @@ export type {
   CheckboxMultiSelectListItem,
   CheckboxMultiSelectListProps,
 } from './CheckboxMultiSelectList';
-export { default as PictureUploadField } from './PictureUploadField';
+export {
+  default as PictureUploadField,
+  RASTER_PICTURE_ACCEPT,
+} from './PictureUploadField';
 export type { PictureUploadFieldProps } from './PictureUploadField';
 export { usePictureUpload } from './usePictureUpload';
 export type { UsePictureUploadOptions } from './usePictureUpload';

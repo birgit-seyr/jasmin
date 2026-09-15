@@ -45,6 +45,12 @@ from django.db import migrations
 # test ``tests/tests_lifecycle/test_finalized_allowlist_sync.py`` (model ↔ LIVE
 # trigger) plus ``tests/tests_lifecycle/test_finalized_protection_dict_ssot.py``
 # (this dict + the 0015 override ↔ model).
+#
+# Migration ``0024_content_parent_move_protection`` rebuilds the same six
+# content functions once more, adding a block that refuses re-pointing a line's
+# parent FK onto or off a finalized parent. A rebuild of those functions must
+# keep that block too — ``tests/tests_lifecycle/test_finalized_parent_move.py``
+# checks the live trigger for it.
 PROTECTED_TABLES: dict[str, dict] = {
     "commissioning_offer": {"allowed": ["amount"], "one_way": False},
     "commissioning_order": {"allowed": ["note"], "one_way": True},

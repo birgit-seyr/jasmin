@@ -5,11 +5,13 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.authz.permissions import IsStaff, has_any_role
+from apps.shared.image_upload import normalize_uploaded_picture
 
 from ..errors import (
     DeliveryExceptionInvalidRange,
     DeliveryExceptionOverlap,
     DeliveryExceptionPeriodLocked,
+    PictureInvalid,
 )
 from ..models import DeliveryExceptionPeriod, DeliveryStation, DeliveryStationDay
 from ..utils.capacity_window import build_capacity_by_week, parse_capacity_window
@@ -137,6 +139,14 @@ class DeliveryStationSerializer(
         # List path bulk-precomputes both deletability flags (one batch per
         # reverse relation) instead of running ``can_delete_instance`` per row.
         list_serializer_class = DeliveryStationListSerializer
+
+    def validate_picture(self, value):
+        """Only a decodable PNG/JPEG/WEBP/GIF is stored, re-encoded under a
+        generated name with the matching extension — the served Content-Type
+        comes from that extension, so the client must not choose it. Runs for
+        create and update alike; ``ResellerAndDeliveryStationService`` then
+        persists ``validated_data`` as-is."""
+        return normalize_uploaded_picture(value, error_cls=PictureInvalid)
 
     def get_can_be_deleted(self, obj) -> bool:
         """Check if this instance can be deleted"""

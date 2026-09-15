@@ -25,31 +25,21 @@ export interface InvoiceResellerContent {
    * @nullable
    * @pattern ^-?\d{0,7}(?:\.\d{0,3})?$
    */
-  source_amount?: string | null;
-  /**
-   * @maxLength 10
-   * @nullable
-   */
-  source_unit?: string | null;
-  /**
-   * @maxLength 1
-   * @nullable
-   */
-  source_size?: string | null;
+  readonly source_amount?: string | null;
+  /** @nullable */
+  readonly source_unit?: string | null;
+  /** @nullable */
+  readonly source_size?: string | null;
   /**
    * @nullable
    * @pattern ^-?\d{0,3}(?:\.\d{0,2})?$
    */
-  source_price_per_unit?: string | null;
-  /**
-   * @minimum 0
-   * @maximum 100
-   * @nullable
-   */
-  source_rabatt?: number | null;
-  is_finalized?: boolean;
+  readonly source_price_per_unit?: string | null;
   /** @nullable */
-  finalized_at?: string | null;
+  readonly source_rabatt?: number | null;
+  readonly is_finalized?: boolean;
+  /** @nullable */
+  readonly finalized_at?: string | null;
   /**
    * @maxLength 200
    * @nullable
@@ -83,15 +73,15 @@ export interface InvoiceResellerContent {
   /** @pattern ^-?\d{0,7}(?:\.\d{0,3})?$ */
   amount: string;
   /** @nullable */
-  finalized_by?: string | null;
+  readonly finalized_by?: string | null;
   /** @nullable */
   offer?: string | null;
   /** @nullable */
   share_article?: string | null;
   invoice: string;
   /** @nullable */
-  order_content?: string | null;
-  delivery_note_contents?: string[];
+  readonly order_content?: string | null;
+  readonly delivery_note_contents?: readonly string[];
   /** @pattern ^-?\d{0,10}(?:\.\d{0,2})?$ */
   readonly line_netto?: string;
   /** @pattern ^-?\d{0,10}(?:\.\d{0,2})?$ */

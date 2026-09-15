@@ -7,7 +7,8 @@
     "share_days_locked": "The day fields on this share are locked because ShareContent already exists for it.",
     "already_finalized": "This record is finalized and cannot be modified anymore.",
     "invalid": "Invalid input — please check the data and try again.",
-    "not_enough_stock": "Not enough stock for this action."
+    "not_enough_stock": "Not enough stock for this action.",
+    "picture_invalid": "The picture must be a PNG, JPEG, WEBP or GIF image of at most 20 MB and 40 megapixels."
   },
   "stock": {
     "insufficient": "Not enough stock for this action.",
@@ -382,8 +383,11 @@
     "invalid_model": "Invalid documentation model."
   },
   "finalize": {
+    "app_label_invalid": "Invalid app_label — only commissioning is supported.",
+    "ids_invalid": "ids may only contain string IDs.",
     "ids_not_list": "ids must be a list.",
     "ids_required": "The ids parameter is required.",
+    "model_invalid": "This model type does not exist or cannot be finalized.",
     "model_not_found": "The requested model was not found.",
     "model_required": "The model parameter is required.",
     "one_way_model": "Finalized documents are legally immutable and cannot be unfinalized. To reverse, create a storno; to revise, issue a correction document."

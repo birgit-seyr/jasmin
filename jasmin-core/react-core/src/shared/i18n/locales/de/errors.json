@@ -7,7 +7,8 @@
     "share_days_locked": "Die Tage dieses Anteils sind gesperrt, weil bereits Sharecontent dafür existiert.",
     "already_finalized": "Dieser Datensatz ist bereits finalisiert und kann nicht mehr geändert werden.",
     "invalid": "Eingabe ungültig — bitte die Daten prüfen und erneut speichern.",
-    "not_enough_stock": "Nicht genug Bestand für diese Aktion."
+    "not_enough_stock": "Nicht genug Bestand für diese Aktion.",
+    "picture_invalid": "Das Bild muss ein PNG-, JPEG-, WEBP- oder GIF-Bild mit höchstens 20 MB und 40 Megapixeln sein."
   },
   "stock": {
     "insufficient": "Nicht genug Bestand für diese Aktion.",
@@ -382,8 +383,11 @@
     "invalid_model": "Ungültiger Modelltyp für die Dokumentation."
   },
   "finalize": {
+    "app_label_invalid": "Ungültiges „app_label“ — nur „commissioning“ ist zulässig.",
+    "ids_invalid": "„ids“ darf nur Text-IDs enthalten.",
     "ids_not_list": "„ids“ muss eine Liste sein.",
     "ids_required": "Der Parameter „ids“ ist erforderlich.",
+    "model_invalid": "Dieser Modelltyp existiert nicht oder kann nicht finalisiert werden.",
     "model_not_found": "Der angegebene Modelltyp wurde nicht gefunden.",
     "model_required": "Der Parameter „model“ ist erforderlich.",
     "one_way_model": "Finalisierte Belege sind gesetzlich unveränderlich und können nicht wieder entfinalisiert werden. Für eine Rückabwicklung bitte eine Stornierung erstellen, für eine Korrektur ein Korrekturdokument."

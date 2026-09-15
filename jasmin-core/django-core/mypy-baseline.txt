@@ -2,7 +2,7 @@
 # Managed by scripts/mypy_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/mypy_baseline.py freeze
-# 370 finding(s).
+# 367 finding(s).
 
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
@@ -74,7 +74,6 @@ apps/commissioning/serializers/finalize_serializer.py: Incompatible types in ass
 apps/commissioning/serializers/finalize_serializer.py: Incompatible types in assignment (expression has type "ListField", base class "Serializer" defined the type as "ReturnDict[Any, Any]")  [assignment]
 apps/commissioning/serializers/imports_serializer.py: Incompatible types in assignment (expression has type "DataImportErrorItemSerializer", base class "Serializer" defined the type as "ReturnDict[Any, Any]")  [assignment]
 apps/commissioning/serializers/imports_serializer.py: Incompatible types in assignment (expression has type "DictField", base class "Serializer" defined the type as "ReturnDict[Any, Any]")  [assignment]
-apps/commissioning/serializers/members_serializer.py: Incompatible types in assignment (expression has type "tuple[str, ...]", base class "Meta" defined the type as "tuple[str, str, str, str, str, str, str, str, str, str, str, str, str, str]")  [assignment]
 apps/commissioning/serializers/my_data_serializer.py: Incompatible return value type (got "ReturnDict[Any, Any]", expected "list[dict[Any, Any]]")  [return-value]
 apps/commissioning/serializers/resellers_serializer.py: Incompatible types in assignment (expression has type "ListField", base class "Serializer" defined the type as "ReturnDict[Any, Any]")  [assignment]
 apps/commissioning/serializers/resellers_serializer.py: Incompatible types in assignment (expression has type "ListField", base class "Serializer" defined the type as "ReturnDict[Any, Any]")  [assignment]
@@ -221,8 +220,6 @@ apps/commissioning/utils/weight.py: Incompatible types in assignment (expression
 apps/commissioning/views/documentation_views.py: "type[JasminModel]" has no attribute "objects"  [attr-defined]
 apps/commissioning/views/finalize_views.py: "Model" has no attribute "unfinalize"  [attr-defined]
 apps/commissioning/views/finalize_views.py: Argument "fields" to "parse_composite_pk" has incompatible type "list[tuple[str, type]]"; expected "list[tuple[str, Callable[[str], Any]]]"  [arg-type]
-apps/commissioning/views/finalize_views.py: Argument 1 to "get_finalizable_objects" has incompatible type "Any | None"; expected "str"  [arg-type]
-apps/commissioning/views/finalize_views.py: Argument 1 to "get_finalizable_objects" has incompatible type "Any | None"; expected "str"  [arg-type]
 apps/commissioning/views/my_data_views.py: Unsupported operand types for > ("date" and "None")  [operator]
 apps/commissioning/views/reseller_views.py: Incompatible types in assignment (expression has type "list[Order]", variable has type "FinalizedProtectedQuerySet[Order, Order]")  [assignment]
 apps/commissioning/views/share_views.py: "object" has no attribute "id"  [attr-defined]

@@ -19,7 +19,7 @@ export interface Purchase {
   readonly seller_first_name?: string;
   readonly seller_last_name?: string;
   readonly seller_company_name?: string;
-  created_at?: string;
+  readonly created_at?: string;
   /**
    * @minimum 0
    * @maximum 32767
@@ -57,7 +57,7 @@ export interface Purchase {
   amount_per_pu?: string | null;
   organic_status?: OrganicStatusEnum;
   /** @nullable */
-  created_by?: string | null;
+  readonly created_by?: string | null;
   share_article: string;
   storage: string;
   /** @nullable */

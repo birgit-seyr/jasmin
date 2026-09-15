@@ -18,7 +18,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.authz.permissions import IsOffice, IsStaff, RolePermissionsMixin
-from apps.shared.request_utils import body
+from apps.shared.request_utils import auth_user, body
 from core.serializers import ErrorResponseSerializer
 
 from ..errors import CommissioningError, ForecastNotFound
@@ -434,7 +434,11 @@ class WasteViewSet(_MovementSourceDestroyMixin, BaseArchivableViewSet):
         serializer.is_valid(raise_exception=True)
 
         waste = GenericDocumentationService.create_waste_with_related_objects(
-            validated_data=serializer.validated_data
+            # ``created_by`` is read-only on the serializer — stamp it here.
+            validated_data={
+                **serializer.validated_data,
+                "created_by": auth_user(request),
+            }
         )
 
         response_serializer = self.get_serializer(waste)
@@ -468,7 +472,11 @@ class PurchaseViewSet(_MovementSourceDestroyMixin, BaseArchivableViewSet):
         serializer.is_valid(raise_exception=True)
 
         purchase = GenericDocumentationService.create_purchase_with_related_objects(
-            validated_data=serializer.validated_data
+            # ``created_by`` is read-only on the serializer — stamp it here.
+            validated_data={
+                **serializer.validated_data,
+                "created_by": auth_user(request),
+            }
         )
 
         return _summary_echo_response(
@@ -659,7 +667,11 @@ class HarvestViewSet(_MovementSourceDestroyMixin, BaseArchivableViewSet):
         serializer.is_valid(raise_exception=True)
 
         harvest = GenericDocumentationService.create_harvest_with_related_objects(
-            validated_data=serializer.validated_data
+            # ``created_by`` is read-only on the serializer — stamp it here.
+            validated_data={
+                **serializer.validated_data,
+                "created_by": auth_user(request),
+            }
         )
 
         return _summary_echo_response(

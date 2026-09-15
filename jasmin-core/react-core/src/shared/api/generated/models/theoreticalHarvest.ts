@@ -14,7 +14,7 @@ import type { VegetableSizeEnum } from './vegetableSizeEnum';
  */
 export interface TheoreticalHarvest {
   readonly id?: string;
-  created_at?: string;
+  readonly created_at?: string;
   /**
    * @minimum 0
    * @maximum 32767
@@ -41,7 +41,7 @@ export interface TheoreticalHarvest {
   /** @nullable */
   note?: string | null;
   /** @nullable */
-  created_by?: string | null;
+  readonly created_by?: string | null;
   share_article: string;
   storage: string;
   /** @nullable */

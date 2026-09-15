@@ -11,11 +11,15 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.test import APIClient
 
 from apps.commissioning.models import ShareContent
 from apps.commissioning.tests.factories import (
     DeliveryNoteContentFactory,
+    ForecastFactory,
+    HarvestFactory,
     JasminUserFactory,
+    OfferFactory,
     OrderFactory,
     ResellerFactory,
     ShareArticleFactory,
@@ -235,6 +239,193 @@ class TestBulkUnfinalizeView:
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+
+# ---------------------------------------------------------------------------
+# BulkFinalizeView / BulkUnfinalizeView — request validation and role gate
+# ---------------------------------------------------------------------------
+def _client_with_roles(*roles: str) -> APIClient:
+    client = APIClient()
+    client.force_authenticate(user=JasminUserFactory(roles=list(roles)))
+    return client
+
+
+@pytest.mark.django_db
+class TestBulkFinalizeModelGate:
+    """Both generic endpoints are IsStaff, but only offer / forecast / harvest
+    stay open to every staff role. The one-way reseller documents, their line
+    models and ShareContent need office — the gate the dedicated
+    documents and share-content endpoints already apply. The body is validated
+    by the declared request serializer, so a bad model / app_label / id is a
+    400 instead of a 500."""
+
+    @pytest.mark.parametrize("role", ["gardener", "staff", "management"])
+    def test_non_office_role_cannot_finalize_an_invoice(self, tenant, role):
+        invoice = _finalizable_invoice(tenant)
+
+        resp = _client_with_roles(role).post(
+            URL_FINALIZE,
+            {"model": "InvoiceReseller", "ids": [str(invoice.id)]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "forbidden"
+        invoice.refresh_from_db()
+        assert invoice.is_finalized is False
+
+    def test_office_can_finalize_an_invoice(self, api_client, tenant):
+        invoice = _finalizable_invoice(tenant)
+
+        resp = api_client.post(
+            URL_FINALIZE,
+            {"model": "invoicereseller", "ids": [str(invoice.id)]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["finalized_count"] == 1
+        invoice.refresh_from_db()
+        assert invoice.is_finalized is True
+
+    @pytest.mark.parametrize("url", [URL_FINALIZE, URL_UNFINALIZE])
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "Order",
+            "DeliveryNoteReseller",
+            "DeliveryNoteContent",
+            "InvoiceResellerContent",
+            "CrateOrderContent",
+            "ShareContent",
+        ],
+    )
+    def test_staff_role_refused_office_only_models_before_lookup(
+        self, tenant, url, model
+    ):
+        """Refused before any row is looked up: an unknown id gives 403, not
+        404, so the caller learns nothing about which ids exist."""
+        resp = _client_with_roles("staff").post(
+            url, {"model": model, "ids": ["missing-id"]}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "forbidden"
+
+    @pytest.mark.parametrize(
+        ("role", "factory", "model"),
+        [
+            ("staff", OfferFactory, "offer"),
+            ("gardener", ForecastFactory, "forecast"),
+            ("gardener", HarvestFactory, "harvest"),
+        ],
+    )
+    def test_staff_roles_can_finalize_staff_models(self, tenant, role, factory, model):
+        """The live callers: the Offers, Forecast and Harvest pages send these
+        lowercase names with app_label "commissioning"."""
+        obj = factory()
+
+        resp = _client_with_roles(role).post(
+            URL_FINALIZE,
+            {"model": model, "app_label": "commissioning", "ids": [str(obj.id)]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["finalized_count"] == 1
+        obj.refresh_from_db()
+        assert obj.is_finalized is True
+
+    def test_gardener_can_unfinalize_a_harvest(self, tenant):
+        harvest = HarvestFactory()
+        type(harvest).objects.filter(pk=harvest.pk).update(is_finalized=True)
+
+        resp = _client_with_roles("gardener").post(
+            URL_UNFINALIZE,
+            {"model": "harvest", "ids": [str(harvest.id)]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        harvest.refresh_from_db()
+        assert harvest.is_finalized is False
+
+    def test_unfinalize_of_a_one_way_model_is_still_refused(self, api_client, tenant):
+        invoice = _finalizable_invoice(tenant)
+        finalize = api_client.post(
+            URL_FINALIZE,
+            {"model": "invoicereseller", "ids": [str(invoice.id)]},
+            format="json",
+        )
+        assert finalize.status_code == status.HTTP_200_OK
+
+        resp = api_client.post(
+            URL_UNFINALIZE,
+            {"model": "invoicereseller", "ids": [str(invoice.id)]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "finalize.one_way_model"
+        assert resp.data["message"].startswith("InvoiceReseller documents")
+        invoice.refresh_from_db()
+        assert invoice.is_finalized is True
+
+    @pytest.mark.parametrize("url", [URL_FINALIZE, URL_UNFINALIZE])
+    @pytest.mark.parametrize(
+        "model", ["member", "Member", 5, True, ["offer"], {"name": "offer"}]
+    )
+    def test_invalid_model_returns_400(self, api_client, tenant, url, model):
+        """An unknown name, a real model without finalization, and a non-string
+        used to raise LookupError / ValueError / AttributeError (the last two a
+        500)."""
+        resp = api_client.post(url, {"model": model, "ids": ["x"]}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "finalize.model_invalid"
+        assert resp.data["field"] == "model"
+
+    @pytest.mark.parametrize("url", [URL_FINALIZE, URL_UNFINALIZE])
+    @pytest.mark.parametrize("app_label", ["payments", "", ["commissioning"], {}])
+    def test_app_label_other_than_commissioning_returns_400(
+        self, api_client, tenant, url, app_label
+    ):
+        """An unhashable app_label used to raise TypeError (a 500)."""
+        resp = api_client.post(
+            url,
+            {"model": "offer", "app_label": app_label, "ids": ["x"]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "finalize.app_label_invalid"
+        assert resp.data["field"] == "app_label"
+
+    @pytest.mark.parametrize("url", [URL_FINALIZE, URL_UNFINALIZE])
+    @pytest.mark.parametrize("bad_id", [None, {"id": "x"}, ["x"], True])
+    def test_non_string_id_returns_400(self, api_client, tenant, url, bad_id):
+        resp = api_client.post(
+            url, {"model": "offer", "ids": ["ok-id", bad_id]}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "finalize.ids_invalid"
+        assert resp.data["field"] == "ids"
+
+    def test_finalizable_model_names_match_the_model_registry(self):
+        """Drift guard: the serializer's model choices are exactly the models
+        that carry FinalizableMixin, so a new finalizable model can't be
+        silently unreachable (or a removed one still offered)."""
+        from django.apps import apps
+
+        from apps.commissioning.models.mixin import FinalizableMixin
+        from apps.commissioning.serializers.finalize_serializer import (
+            FINALIZABLE_MODEL_NAMES,
+        )
+
+        finalizable = [m for m in apps.get_models() if issubclass(m, FinalizableMixin)]
+        assert {m._meta.app_label for m in finalizable} == {"commissioning"}
+        assert set(FINALIZABLE_MODEL_NAMES) == {m._meta.model_name for m in finalizable}
 
 
 # ---------------------------------------------------------------------------
