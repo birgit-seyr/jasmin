@@ -15,7 +15,9 @@ import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from apps.commissioning.models import OrderContent
 from apps.commissioning.tests.factories.accounts import JasminUserFactory
+from apps.commissioning.tests.factories.basics import ShareArticleFactory
 from apps.commissioning.tests.factories.members import MemberFactory
 from apps.commissioning.tests.factories.resellers import (
     DeliveryNoteResellerFactory,
@@ -252,6 +254,212 @@ class TestCustomerOrderPage_OrderContentScoping:
         assert resp.status_code == status.HTTP_403_FORBIDDEN
         own.refresh_from_db()
         assert own.price_per_unit == Decimal("4.00")
+
+
+# --- OrderContentViewSet: what a customer may order ------------------------
+
+ORDER_CONTENTS_URL = "/api/commissioning/order_contents/"
+
+
+def _customer_create_body(reseller, **line):
+    """The customer order page's create body (``useCustomerOrderMutations``)
+    minus ``price_per_unit``, which the office-only pricing guard rejects for a
+    customer before the offer checks run."""
+    return {
+        "year": 2026,
+        "delivery_week": 15,
+        "day_number": 2,
+        "reseller": reseller.id,
+        "amount": "3.000",
+        "unit": "KG",
+        **line,
+    }
+
+
+class TestCustomerOrderPage_OrderContentOfferScoping:
+    def test_create_offer_of_own_offer_group_ok(
+        self, customer_caller_client, customer_caller
+    ):
+        _u, my_reseller, my_group = customer_caller
+        offer = OfferFactory(
+            offer_group=my_group, is_finalized=True, amount=Decimal("100.000")
+        )
+
+        resp = customer_caller_client.post(
+            ORDER_CONTENTS_URL,
+            _customer_create_body(my_reseller, offer=offer.id),
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        line = OrderContent.objects.get(offer=offer)
+        assert line.order.reseller_id == my_reseller.id
+        assert line.amount == Decimal("3.000")
+        offer.refresh_from_db()
+        assert offer.amount == Decimal("97.000")
+
+    def test_create_offer_of_other_offer_group_forbidden(
+        self, customer_caller_client, customer_caller, other_reseller
+    ):
+        _u, my_reseller, _g = customer_caller
+        foreign_offer = OfferFactory(
+            offer_group=other_reseller.offer_group,
+            is_finalized=True,
+            amount=Decimal("100.000"),
+        )
+
+        resp = customer_caller_client.post(
+            ORDER_CONTENTS_URL,
+            _customer_create_body(my_reseller, offer=foreign_offer.id),
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "order_content.offer_not_in_offer_group"
+        assert not OrderContent.objects.filter(offer=foreign_offer).exists()
+        foreign_offer.refresh_from_db()
+        assert foreign_offer.amount == Decimal("100.000")
+
+    def test_create_when_own_reseller_has_no_offer_group_forbidden(
+        self, customer_caller_client, customer_caller
+    ):
+        # The absent side of the nullable Reseller.offer_group FK: a reseller
+        # without an offer group is listed no offers, so it may order none.
+        _u, my_reseller, my_group = customer_caller
+        offer = OfferFactory(offer_group=my_group, is_finalized=True)
+        my_reseller.offer_group = None
+        my_reseller.save(update_fields=["offer_group"])
+
+        resp = customer_caller_client.post(
+            ORDER_CONTENTS_URL,
+            _customer_create_body(my_reseller, offer=offer.id),
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "order_content.offer_not_in_offer_group"
+        assert not OrderContent.objects.filter(offer=offer).exists()
+
+    def test_create_share_article_line_forbidden(
+        self, customer_caller_client, customer_caller
+    ):
+        _u, my_reseller, _g = customer_caller
+        article = ShareArticleFactory()
+
+        resp = customer_caller_client.post(
+            ORDER_CONTENTS_URL,
+            _customer_create_body(my_reseller, share_article=article.id),
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "order_content.offer_required"
+        assert not OrderContent.objects.filter(share_article=article).exists()
+
+    def test_patch_changing_offer_forbidden(
+        self, customer_caller_client, customer_caller
+    ):
+        _u, my_reseller, my_group = customer_caller
+        booked = OfferFactory(offer_group=my_group, amount=Decimal("90.000"))
+        other = OfferFactory(offer_group=my_group, amount=Decimal("100.000"))
+        line = OrderContentFactory(
+            order=OrderFactory(reseller=my_reseller),
+            offer=booked,
+            share_article=None,
+            amount=Decimal("10.000"),
+        )
+
+        resp = customer_caller_client.patch(
+            f"{ORDER_CONTENTS_URL}{line.id}/",
+            {"offer": other.id, "amount": "10.000"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "order_content.item_change_forbidden"
+        line.refresh_from_db()
+        assert line.offer_id == booked.id
+        booked.refresh_from_db()
+        other.refresh_from_db()
+        assert booked.amount == Decimal("90.000")
+        assert other.amount == Decimal("100.000")
+
+    def test_patch_adding_share_article_forbidden(
+        self, customer_caller_client, customer_caller
+    ):
+        _u, my_reseller, my_group = customer_caller
+        booked = OfferFactory(offer_group=my_group, amount=Decimal("90.000"))
+        line = OrderContentFactory(
+            order=OrderFactory(reseller=my_reseller),
+            offer=booked,
+            share_article=None,
+            amount=Decimal("10.000"),
+        )
+
+        resp = customer_caller_client.patch(
+            f"{ORDER_CONTENTS_URL}{line.id}/",
+            {"share_article": ShareArticleFactory().id},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "order_content.item_change_forbidden"
+        line.refresh_from_db()
+        assert line.share_article_id is None
+        assert line.amount == Decimal("10.000")
+
+    def test_patch_resending_current_offer_ok(
+        self, customer_caller_client, customer_caller
+    ):
+        _u, my_reseller, my_group = customer_caller
+        booked = OfferFactory(offer_group=my_group, amount=Decimal("90.000"))
+        line = OrderContentFactory(
+            order=OrderFactory(reseller=my_reseller),
+            offer=booked,
+            share_article=None,
+            amount=Decimal("10.000"),
+        )
+
+        resp = customer_caller_client.patch(
+            f"{ORDER_CONTENTS_URL}{line.id}/",
+            {"offer": booked.id, "amount": "12.000"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        line.refresh_from_db()
+        assert line.amount == Decimal("12.000")
+        booked.refresh_from_db()
+        assert booked.amount == Decimal("88.000")
+
+    def test_patch_finalization_stamps_not_applied(
+        self, customer_caller_client, customer_caller
+    ):
+        user, my_reseller, my_group = customer_caller
+        booked = OfferFactory(offer_group=my_group, amount=Decimal("90.000"))
+        line = OrderContentFactory(
+            order=OrderFactory(reseller=my_reseller),
+            offer=booked,
+            share_article=None,
+            amount=Decimal("10.000"),
+        )
+
+        resp = customer_caller_client.patch(
+            f"{ORDER_CONTENTS_URL}{line.id}/",
+            {
+                "amount": "12.000",
+                "finalized_by": user.pk,
+                "finalized_at": "2026-04-06T12:00:00Z",
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        line.refresh_from_db()
+        assert line.finalized_by_id is None
+        assert line.finalized_at is None
+        assert line.is_finalized is False
+        assert line.amount == Decimal("12.000")
 
 
 # --- CrateOrderContent -----------------------------------------------------

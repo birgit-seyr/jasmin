@@ -1,22 +1,90 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from django.db import models
 from django.db.models import Sum
 
 from core.tenant_db import connection
 
-from ..errors import MemberCoopSharesOutOfRange
+from ..errors import (
+    CoopShareConfirmedFieldsLocked,
+    CoopShareInvalidAmount,
+    MemberCoopSharesOutOfRange,
+)
 
 if TYPE_CHECKING:
-    from apps.commissioning.models import Member
+    from apps.commissioning.models import CoopShare, Member
 
 
 class CoopShareService:
     """Business logic for ``CoopShare`` that needs to be reusable by both
     ``CoopShare.clean()`` and any path that ``clean()`` cannot guard.
     """
+
+    # What the office still maintains on an admin-confirmed share: the payment
+    # and payback bookkeeping, the cancellation reason and the note. Every other
+    # writable field is the committed Geschäftsanteil and is locked.
+    CONFIRMED_EDITABLE_FIELDS = frozenset(
+        {"note", "paid_at", "paid_back_date", "cancellation_reason"}
+    )
+    # The per-share value snapshot (GenG §31). The office grid re-sends the
+    # tenant's CURRENT value on every save, so on a confirmed share a differing
+    # value is dropped and the snapshot kept, instead of refusing the save —
+    # refusing would block every note / paid-back edit on that share once the
+    # tenant changes its share value.
+    CONFIRMED_SNAPSHOT_FIELDS = frozenset({"value_one_coop_share"})
+
+    @staticmethod
+    def assert_valid_amount(amount: Decimal | int | None) -> None:
+        """Raise ``CoopShareInvalidAmount`` unless ``amount`` is a whole number
+        greater than zero — a cooperative share is a whole Geschäftsanteil.
+
+        The single rule for every write path (office grid, CSV import, member
+        self-service). Deliberately not a model validator: ``CoopShare.save()``
+        runs ``full_clean()`` on every save (cancellation cascade, confirm), and
+        rows written before this rule existed must keep saving.
+        """
+        if amount is None or amount <= 0:
+            raise CoopShareInvalidAmount("amount_of_coop_shares must be greater than 0")
+        if amount % 1 != 0:
+            raise CoopShareInvalidAmount("amount_of_coop_shares must be a whole number")
+
+    @staticmethod
+    def apply_confirmed_share_edit_lock(
+        coop_share: CoopShare, attrs: dict[str, Any]
+    ) -> None:
+        """Refuse an update that changes the committed terms of an
+        admin-confirmed coop share; no-op for an unconfirmed one.
+
+        Compares VALUES, not keys: the office grid sends the whole row, so an
+        unchanged amount / member / due date riding along with a note edit is
+        fine. A differing ``value_one_coop_share`` is removed from ``attrs``
+        (mutated in place) so the stored snapshot survives. Raises
+        ``CoopShareConfirmedFieldsLocked`` naming every other changed field.
+        """
+        if not coop_share.admin_confirmed:
+            return
+        offending: list[str] = []
+        for field_name in list(attrs):
+            if field_name in CoopShareService.CONFIRMED_EDITABLE_FIELDS:
+                continue
+            new_value = attrs[field_name]
+            if isinstance(new_value, models.Model):
+                new_value = new_value.pk
+            # Serializer attrs are concrete columns (``member`` compares by its
+            # ``member_id`` attname); a reverse relation never reaches here.
+            field = coop_share._meta.get_field(field_name)
+            attname = field.attname if isinstance(field, models.Field) else field_name
+            if new_value == getattr(coop_share, attname):
+                continue
+            if field_name in CoopShareService.CONFIRMED_SNAPSHOT_FIELDS:
+                del attrs[field_name]
+                continue
+            offending.append(field_name)
+        if offending:
+            raise CoopShareConfirmedFieldsLocked(sorted(offending))
 
     @staticmethod
     def member_total_shares(

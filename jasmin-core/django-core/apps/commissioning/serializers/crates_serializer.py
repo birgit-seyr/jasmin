@@ -69,6 +69,70 @@ class CrateOrderContentUpdateRequestSerializer(serializers.Serializer):
     )
 
 
+# The two write bodies below are what the crate lines on delivery notes and
+# invoices are built from. ``create`` inserts a row and ``update`` rewrites every
+# row of the crate type through ``QuerySet.update()``; neither path runs
+# ``full_clean()``, so these fields are the only place the model's limits hold
+# (``rabatt`` 0-100, ``numeric(5, 2)`` prices and tax rates, a 500-char note).
+# Each field mirrors its model column. The optional ones are left out of
+# ``validated_data`` when the client does not send them, which is what lets
+# ``update`` keep the stored value instead of overwriting it.
+#
+# The class names produce the OpenAPI components
+# ``CrateDeliveryNoteContentWriteRequest`` / ``CrateInvoiceContentWriteRequest``
+# that the frontend crate tables import, so keep them stable.
+
+
+class CrateDeliveryNoteContentWriteRequestSerializer(serializers.Serializer):
+    """Request body for creating or updating a crate line on a delivery note.
+
+    ``tax_rate`` null or omitted resolves the crate's rate for the delivery
+    date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
+    keeps the stored value.
+    """
+
+    delivery_note_id = serializers.CharField()
+    crate_type = serializers.CharField()
+    amount = serializers.IntegerField()
+    price_per_unit = serializers.DecimalField(
+        max_digits=5, decimal_places=2, required=False, allow_null=True
+    )
+    rabatt = serializers.IntegerField(
+        min_value=0, max_value=100, required=False, allow_null=True
+    )
+    tax_rate = serializers.DecimalField(
+        max_digits=5, decimal_places=2, required=False, allow_null=True
+    )
+    note = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True, max_length=500
+    )
+
+
+class CrateInvoiceContentWriteRequestSerializer(serializers.Serializer):
+    """Request body for creating or updating a crate line on an invoice.
+
+    ``tax_rate`` null or omitted resolves the crate's rate for the invoice
+    date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
+    keeps the stored value.
+    """
+
+    invoice_id = serializers.CharField()
+    crate_type = serializers.CharField()
+    amount = serializers.IntegerField()
+    price_per_unit = serializers.DecimalField(
+        max_digits=5, decimal_places=2, required=False, allow_null=True
+    )
+    rabatt = serializers.IntegerField(
+        min_value=0, max_value=100, required=False, allow_null=True
+    )
+    tax_rate = serializers.DecimalField(
+        max_digits=5, decimal_places=2, required=False, allow_null=True
+    )
+    note = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True, max_length=500
+    )
+
+
 # NOTE: ``CrateDeliveryNoteContentSerializer`` and
 # ``CrateContentInvoiceResellerSerializer`` live in ``resellers_serializer.py``
 # — the diff-tracking variants (``DifferenceTrackingMixin``), matching their

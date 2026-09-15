@@ -17,6 +17,7 @@ Translation table
 ``django ValidationError``           → 400 (field map preserved in ``details``)
 ``django ObjectDoesNotExist``        → 404
 ``django IntegrityError``            → 409 (logged as warning — likely race)
+``django DataError``                 → 400 ``data.value_invalid`` (logged as error)
 DRF ``APIException`` & subclasses    → original status, payload normalised
 Anything else                        → 500 with traceback logged, no ``str(exc)`` leak
 
@@ -32,13 +33,14 @@ from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db import IntegrityError
+from django.db import DataError, IntegrityError
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 
 from .errors import (
     BadRequestError,
     ConflictError,
+    DataValueInvalid,
     JasminError,
     NotFoundError,
 )
@@ -108,6 +110,34 @@ def jasmin_exception_handler(
             log_level=None,  # already logged above
         )
 
+    if isinstance(exc, DataError):
+        # The database refused a value for its column (too long, out of range,
+        # not castable). That is almost always client input the request
+        # validation let through, so a 400 rather than a 500. The database text
+        # can quote the value, so it goes to the log only, never the response.
+        #
+        # Logged at ERROR with the traceback, as the 500 path did before this
+        # mapping existed: Sentry turns only ERROR records into events, and a
+        # DataError still means a missing serializer bound — or a server-side
+        # bug (an over-long generated value, a division by zero in SQL).
+        logger.error(
+            "DataError in %s: %s",
+            view_name,
+            exc,
+            exc_info=exc,
+            extra={"request_id": request_id},
+        )
+        return _respond(
+            DataValueInvalid(
+                "A value is too long, out of range or in the wrong format."
+            ).to_dict(),
+            400,
+            request_id,
+            exc,
+            view_name,
+            log_level=None,  # already logged above
+        )
+
     # Fall through to DRF's default handler (APIException, NotAuthenticated,
     # PermissionDenied, Throttled, serializers.ValidationError, ...)
     response = drf_exception_handler(exc, context)
@@ -122,7 +152,7 @@ def jasmin_exception_handler(
         exc,
         extra={"request_id": request_id},
     )
-    payload: dict[str, Any] = {
+    payload = {
         "code": "internal_error",
         "message": "An unexpected error occurred.",
     }

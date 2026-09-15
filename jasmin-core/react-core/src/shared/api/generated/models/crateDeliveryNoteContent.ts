@@ -35,28 +35,18 @@ export interface CrateDeliveryNoteContent {
    * @nullable
    * @pattern ^-?\d{0,7}(?:\.\d{0,3})?$
    */
-  source_amount?: string | null;
-  /**
-   * @maxLength 10
-   * @nullable
-   */
-  source_unit?: string | null;
-  /**
-   * @maxLength 1
-   * @nullable
-   */
-  source_size?: string | null;
+  readonly source_amount?: string | null;
+  /** @nullable */
+  readonly source_unit?: string | null;
+  /** @nullable */
+  readonly source_size?: string | null;
   /**
    * @nullable
    * @pattern ^-?\d{0,3}(?:\.\d{0,2})?$
    */
-  source_price_per_unit?: string | null;
-  /**
-   * @minimum 0
-   * @maximum 100
-   * @nullable
-   */
-  source_rabatt?: number | null;
+  readonly source_price_per_unit?: string | null;
+  /** @nullable */
+  readonly source_rabatt?: number | null;
   readonly is_finalized?: boolean;
   /** @nullable */
   readonly finalized_at?: string | null;

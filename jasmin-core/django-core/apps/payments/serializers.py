@@ -298,10 +298,11 @@ class SepaMandateImportSerializer(serializers.Serializer):
         would otherwise show a blank IBAN there and look half-migrated.
 
         **Fill-only, never overwrite.** A differing value already on the member
-        is left alone: silently rewriting a stored IBAN is the exact change the
-        UI gates behind step-up auth, and this path has no such check. In
-        practice the member is always blank here — the caller is create-only,
-        so it never runs for a member who already has a profile.
+        is left alone: silently rewriting a stored IBAN is not what a mandate
+        import is for, even though a real import is step-up gated like the
+        interactive IBAN edit. In practice the member is always blank here —
+        the caller is create-only, so it never runs for a member who already
+        has a profile.
         """
         updated_fields: list[str] = []
         if not member.iban:

@@ -38,6 +38,7 @@
     "open_ended_not_allowed": "Ein Abo muss ein End-Datum haben. Unbefristete Abos sind nicht zulässig.",
     "no_active_price": "Für diese Anteilsvariante gibt es zum gewählten Startdatum keinen gültigen Preis. Bitte wähle ein anderes Startdatum oder eine andere Variante.",
     "solidarity_price_below_minimum": "Der gewählte Preis ({{chosen}}) liegt unter dem Mindestpreis ({{minimum}}) für diese Anteilsvariante. Bitte einen Preis von mindestens {{minimum}} wählen.",
+    "invalid_price": "Der Preis pro Lieferung muss eine Zahl von mindestens 0 sein.",
     "delivery_station_day_out_of_range": "Der gewählte Lieferstationstag deckt nicht den gesamten Abozeitraum ab — er beginnt nach dem Abostart oder endet (ohne Nachfolge-Tag) vor dem Aboende. Bitte einen Lieferstationstag wählen, der den gesamten Zeitraum abdeckt.",
     "bulk_renew": {
       "ids_required": "Bitte mindestens ein Abo auswählen.",
@@ -79,15 +80,17 @@
   "coop_share": {
     "contract_agreement_required": "Bitte stimme dem Zeichnungsvertrag zu, um Genossenschaftsanteile zu zeichnen.",
     "value_not_configured": "Der Wert eines Genossenschaftsanteils ist nicht konfiguriert. Bitte wende dich an das Büro.",
-    "invalid_amount": "Die Anzahl der Genossenschaftsanteile muss größer als 0 sein.",
-    "confirmed_immutable": "Ein bestätigter Geschäftsanteil kann nicht gelöscht werden — stattdessen den Anteil (oder das Mitglied) kündigen."
+    "invalid_amount": "Die Anzahl der Genossenschaftsanteile muss eine ganze Zahl größer als 0 sein.",
+    "confirmed_immutable": "Ein bestätigter Geschäftsanteil kann nicht gelöscht werden — stattdessen den Anteil (oder das Mitglied) kündigen.",
+    "confirmed_fields_locked": "Bei einem bestätigten Geschäftsanteil können Anzahl, Mitglied, Fälligkeitsdatum und Aufstockung nicht mehr geändert werden — stattdessen den Anteil kündigen und einen neuen erfassen."
   },
   "share": {
     "not_found": "Anteil nicht gefunden."
   },
   "share_article": {
     "not_found": "Artikel nicht gefunden.",
-    "invalid_share_option": "Ungültige Anteilsoption."
+    "invalid_share_option": "Ungültige Anteilsoption.",
+    "net_price_in_use": "Dieser aktuell gültige Preis kann nicht gelöscht werden, weil der Artikel bereits verwendet wird. Stattdessen einen neuen Preis mit späterem Gültigkeitsbeginn anlegen."
   },
   "share_type": {
     "succession_has_active_variations": "Es kann kein neuer Anteilstyp begonnen werden, solange der aktuelle noch Varianten hat, die an oder nach diesem Datum aktiv sind. Beende zuerst diese Varianten oder wähle ein späteres Startdatum.",
@@ -104,7 +107,8 @@
     "shortening_strands_subscriptions": "Die Variante kann nicht zu diesem Datum beendet werden: Es gibt Abos, die offen sind oder danach enden und damit ihre Variante überdauern würden. Beende zuerst diese Abos oder wähle ein späteres Enddatum.",
     "missing_bulk": "Mindestens eine der angegebenen Anteilsvarianten existiert nicht.",
     "over_capacity": "Diese Anteilsart ist für den gewählten Zeitraum ausverkauft.",
-    "capacity_below_occupancy": "Die Kapazität kann nicht unter die bereits gebuchte Auslastung einer aktuellen oder kommenden Woche gesenkt werden."
+    "capacity_below_occupancy": "Die Kapazität kann nicht unter die bereits gebuchte Auslastung einer aktuellen oder kommenden Woche gesenkt werden.",
+    "gross_price_in_use": "Dieser Preis kann nicht gelöscht werden, weil für diese Anteilsvariation bereits Abos bestehen."
   },
   "tenant": {
     "app_icon_invalid": "Das App-Symbol muss ein quadratisches PNG-, JPEG- oder WEBP-Bild mit mindestens 512x512 Pixeln und höchstens 2 MB sein."
@@ -164,7 +168,10 @@
   "order_content": {
     "not_found": "Bestellposition nicht gefunden.",
     "finalized": "Eine finalisierte Bestellposition kann nicht mehr geändert werden.",
-    "insufficient_stock": "Nicht genügend Bestand verfügbar — verfügbar: {{available}}, angefragt: {{requested}}."
+    "insufficient_stock": "Nicht genügend Bestand verfügbar — verfügbar: {{available}}, angefragt: {{requested}}.",
+    "offer_required": "Du kannst nur Angebote bestellen.",
+    "offer_not_in_offer_group": "Dieses Angebot gehört nicht zu deiner Angebotsgruppe.",
+    "item_change_forbidden": "Angebot oder Artikel einer Bestellposition kann nur das Büro ändern."
   },
   "packing_list": {
     "amounts_diverge_across_stations": "Die Packmengen unterscheiden sich je nach Verteilstation. Bitte eine Verteilstation (oder Tour) auswählen, um die Packliste anzuzeigen."
@@ -246,6 +253,12 @@
   "query": {
     "invalid_param": "Ungültiger Anfrage-Parameter — bitte Eingabe prüfen und erneut versuchen."
   },
+  "data": {
+    "value_invalid": "Ein Wert ist zu lang, außerhalb des zulässigen Bereichs oder hat das falsche Format — bitte Eingaben prüfen."
+  },
+  "bulk": {
+    "ids_invalid": "„ids“ darf nur nicht-leere Text-IDs enthalten."
+  },
   "shares_delivery_day": {
     "not_found": "Für den angegebenen Tag wurde kein aktiver Liefertag gefunden.",
     "tours_reduced_while_in_use": "Dieser Liefertag wird bereits verwendet – die Anzahl der Touren kann nur erhöht, nicht verringert werden. Eine Verringerung würde Lieferungen auf den entfernten Touren verwaisen lassen.",
@@ -308,10 +321,12 @@
     "already_revoked": "Diese Einwilligung wurde bereits widerrufen.",
     "document_in_use": "Dieses Einwilligungsdokument wird bereits verwendet und kann nicht gelöscht werden — stattdessen eine neue Version veröffentlichen.",
     "document_not_found": "Einwilligungsdokument nicht gefunden.",
-    "target_member_unresolved": "Es konnte kein Ziel-Mitglied aus der Anfrage ermittelt werden."
+    "target_member_unresolved": "Es konnte kein Ziel-Mitglied aus der Anfrage ermittelt werden.",
+    "document_immutable": "Diesem Einwilligungsdokument haben bereits Mitglieder zugestimmt — Text, Titel, Art, Sprache, Version und Gültigkeitsbeginn können nicht mehr geändert werden. Stattdessen eine neue Version veröffentlichen."
   },
   "crate": {
-    "not_found": "Kiste nicht gefunden."
+    "not_found": "Kiste nicht gefunden.",
+    "net_price_in_use": "Dieser aktuell gültige Preis kann nicht gelöscht werden, weil die Kiste bereits verwendet wird. Stattdessen einen neuen Preis mit späterem Gültigkeitsbeginn anlegen."
   },
   "document": {
     "date_required": "Für dieses Dokument ist ein Datum erforderlich.",
@@ -420,6 +435,9 @@
     "employee_not_found": "MitarbeiterIn nicht gefunden.",
     "weekly_plan_category_not_found": "Wochenplan-Kategorie nicht gefunden.",
     "invalid_weekly_plan_assignment": "Ungültige Zuordnung im Wochenplan.",
-    "weekly_plan_copy_target_not_empty": "Die Zielwoche enthält bereits einen Wochenplan. Kopieren ist nur in eine leere Woche möglich."
+    "weekly_plan_copy_target_not_empty": "Die Zielwoche enthält bereits einen Wochenplan. Kopieren ist nur in eine leere Woche möglich.",
+    "employee_in_use": "Diese MitarbeiterIn kann nicht gelöscht werden, weil noch Wochenplan-Einträge, Abwesenheiten oder Anstellungen auf sie verweisen. Stattdessen deaktivieren.",
+    "weekly_plan_category_in_use": "Diese Wochenplan-Kategorie kann nicht gelöscht werden, weil sie im Wochenplan verwendet wird. Stattdessen deaktivieren.",
+    "absence_category_in_use": "Diese Abwesenheits-Kategorie kann nicht gelöscht werden, weil noch Abwesenheiten auf sie verweisen. Stattdessen deaktivieren."
   }
 }

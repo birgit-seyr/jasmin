@@ -28,6 +28,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.permissions import RequiresStepUp
 from apps.authz.permissions import APIViewRolePermissionsMixin, IsOffice
 from apps.shared.request_utils import body
 from core.serializers import ErrorResponseSerializer
@@ -36,6 +37,8 @@ from ..errors import DataImportInvalid, RequiredFieldMissing
 from ..serializers.imports_serializer import DataImportResponseSerializer
 from ..services.data_import import (
     MODEL_IMPORT_REGISTRY,
+    bank_data_columns_in_csv,
+    get_serializer_for_model,
     import_rows_from_csv,
 )
 
@@ -109,11 +112,34 @@ class DataImportView(APIViewRolePermissionsMixin, APIView):
             "on",
         }
 
+        file_bytes = upload.read()
+        if not dry_run:
+            self._require_step_up_for_bank_columns(request, model_name, file_bytes)
+
         # ``import_rows_from_csv`` raises ``DataImportInvalid`` directly for
         # whole-file problems; the global handler renders it. Per-row failures
         # come back on ``result`` and never raise.
         result = import_rows_from_csv(
-            model_name, upload.read(), importing_user=request.user, dry_run=dry_run
+            model_name, file_bytes, importing_user=request.user, dry_run=dry_run
         )
 
         return Response(result.to_dict(), status=status.HTTP_200_OK)
+
+    def _require_step_up_for_bank_columns(
+        self, request: Request, model_name: str, file_bytes: bytes
+    ) -> None:
+        """Refuse a real import that writes bank data without fresh step-up auth.
+
+        IBANs, account holders and SEPA mandates need a fresh step-up claim on
+        every interactive write, so a bulk upload must not be the way around
+        that. Only a real import is gated: a dry run persists nothing, so the
+        office can still preview a bank-data file without re-authenticating.
+        """
+        # An unknown model gets its 400 before any step-up prompt.
+        get_serializer_for_model(model_name)
+        if not bank_data_columns_in_csv(file_bytes):
+            return
+        # Raises ``StepUpRequired`` (403 ``auth.step_up_required``, the code the
+        # frontend interceptor answers with the step-up modal and a retry) when
+        # the access token carries no fresh step-up claim.
+        RequiresStepUp().has_permission(request, self)

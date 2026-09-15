@@ -167,3 +167,57 @@ class TestSubscriptionImport:
         assert result.successful == 1
         assert result.failed == 1
         assert Subscription.objects.count() == 1
+
+
+_PRICE_HEADER = (
+    "member_number,share_type,size,payment_cycle,valid_from,"
+    "valid_until,quantity,price_per_delivery,is_trial"
+)
+
+
+def _price_csv(*rows: str) -> bytes:
+    """3-row template CSV including the ``price_per_delivery`` column."""
+    return (
+        "\n".join([_PRICE_HEADER, _PRICE_HEADER, _PRICE_HEADER, *rows]) + "\n"
+    ).encode("utf-8")
+
+
+@pytest.mark.django_db
+class TestSubscriptionImportPriceBound:
+    @pytest.fixture(autouse=True)
+    def _freeze(self):
+        with time_machine.travel(_FROZEN, tick=False):
+            yield
+
+    def _variation_key(self):
+        MemberFactory(member_number=4243)
+        variation = ShareTypeVariationFactory()
+        PaymentCycle.objects.get_or_create(choice=PaymentCycleOptions.MONTHLY)
+        return variation.share_type.name, variation.size
+
+    def test_negative_price_is_a_row_error(self, tenant):
+        share_type, size = self._variation_key()
+        result = import_rows_from_csv(
+            "subscription",
+            _price_csv(
+                f"4243,{share_type},{size},MONTHLY,{_VALID_FROM},{_VALID_UNTIL},"
+                "1,-1.00,false"
+            ),
+        )
+        assert result.successful == 0
+        assert result.failed == 1
+        assert "price_per_delivery" in result.errors[0]["error"]
+        assert not Subscription.objects.exists()
+
+    def test_price_zero_is_imported(self, tenant):
+        share_type, size = self._variation_key()
+        result = import_rows_from_csv(
+            "subscription",
+            _price_csv(
+                f"4243,{share_type},{size},MONTHLY,{_VALID_FROM},{_VALID_UNTIL},"
+                "1,0.00,true"
+            ),
+        )
+        assert result.successful == 1, result.errors
+        subscription = Subscription.objects.get()
+        assert str(subscription.price_per_delivery) == "0.00"

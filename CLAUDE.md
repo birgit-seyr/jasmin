@@ -300,6 +300,15 @@ needs a follow-up migration that rebuilds the trigger function with the matching
 `0002_finalized_protection_and_reference_data` (self-contained, reverse=noop).
 Same column names on both sides.
 
+**The six content tables: copy 0024, not 0002.**
+`apps/commissioning/migrations/0024_content_parent_move_protection.py` rebuilt
+their trigger functions with a parent-move block (an UPDATE that changes a
+parent FK is refused when the old or the new parent is finalized). A future
+rebuild of those functions must copy 0024's builder (`_function_sql` /
+`_parent_move_block` / `_build`), not 0002's, and keep that block —
+`apps/commissioning/tests/tests_lifecycle/test_finalized_parent_move.py` checks
+the live trigger.
+
 Symptoms to grep for if you suspect drift:
 
 - `IntegrityError: Cannot update column "X" on commissioning_Y: row has been

@@ -4,6 +4,7 @@ Invoice, DeliveryNote, CommissioningList viewsets."""
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 
 import pytest
 from django.urls import reverse
@@ -12,6 +13,7 @@ from rest_framework import status
 from apps.commissioning.models import CrateOrderContent, Order, OrganicCertificate
 from apps.commissioning.tests.factories import (
     CrateFactory,
+    CrateNetPriceFactory,
     DeliveryNoteResellerFactory,
     InvoiceResellerFactory,
     OfferFactory,
@@ -19,6 +21,7 @@ from apps.commissioning.tests.factories import (
     OrderContentFactory,
     OrderFactory,
     ResellerFactory,
+    ShareArticleFactory,
 )
 
 
@@ -161,6 +164,218 @@ class TestOrderContentViewSet:
         assert resp.status_code == status.HTTP_200_OK, resp.data
         order_content = OrderContent.objects.get(offer=offer)
         assert order_content.tax_rate is not None
+
+    # The Orders page (``useOrdersData`` + ``useOrderColumns`` custom saves)
+    # sends the whole edited row: EditableTable seeds the form with every key
+    # of the record, then the save adds the order-level keys.
+    ORDER_DAYS = {
+        "harvesting_day": 1,
+        "packing_day": 2,
+        "washing_day": 1,
+        "cleaning_day": 1,
+    }
+
+    def _detail_url(self, order_content):
+        return reverse("order_contents-detail", kwargs={"pk": order_content.pk})
+
+    def test_orders_page_offer_row_create_and_patch(self, api_client, tenant):
+        from apps.commissioning.models import OrderContent
+
+        reseller = ResellerFactory()
+        offer = OfferFactory(amount=Decimal("100.000"), amount_per_pu=Decimal("2.000"))
+        create_body = {
+            "washing": False,
+            "cleaning": False,
+            "comes_from_long_term_storage": False,
+            "offer": offer.id,
+            "offer_available_amount": "100.000",
+            "ordered_amount": 4,
+            "amount": 8.0,
+            "price_per_unit": 2.5,
+            "rabatt": None,
+            "tax_rate": None,
+            "note": "",
+            "unit": "KG",
+            "size": "M",
+            "sort": None,
+            "is_placeholder": True,
+            "year": 2026,
+            "delivery_week": 15,
+            "day_number": 2,
+            "reseller": reseller.id,
+            **self.ORDER_DAYS,
+        }
+
+        created = api_client.post(self.URL, create_body, format="json")
+
+        assert created.status_code == status.HTTP_200_OK, created.data
+        line = OrderContent.objects.get(offer=offer)
+        assert line.amount == Decimal("8.000")
+        offer.refresh_from_db()
+        assert offer.amount == Decimal("96.000")
+
+        patch_body = {
+            **create_body,
+            "id": line.id,
+            "is_placeholder": False,
+            "share_article": None,
+            "is_finalized": False,
+            "finalized_at": None,
+            "finalized_by": None,
+            "ordered_amount": 5,
+            "amount": 10.0,
+            "price_per_unit": 2.4,
+            "rabatt": 10,
+            "tax_rate": "7.00",
+            "note": "wash please",
+        }
+        patched = api_client.patch(self._detail_url(line), patch_body, format="json")
+
+        assert patched.status_code == status.HTTP_200_OK, patched.data
+        line.refresh_from_db()
+        assert line.offer_id == offer.id
+        assert line.amount == Decimal("10.000")
+        assert line.price_per_unit == Decimal("2.40")
+        assert line.rabatt == 10
+        assert line.tax_rate == Decimal("7.00")
+        assert line.note == "wash please"
+        offer.refresh_from_db()
+        assert offer.amount == Decimal("95.000")
+
+    def test_orders_page_article_row_create_and_patch(self, api_client, tenant):
+        from apps.commissioning.models import OrderContent
+
+        reseller = ResellerFactory()
+        article = ShareArticleFactory()
+        create_body = {
+            "washing": False,
+            "cleaning": False,
+            "comes_from_long_term_storage": False,
+            "share_article": article.id,
+            "sort": "red",
+            "amount": 6,
+            "unit": "KG",
+            "size": "M",
+            "price_per_unit": 3.2,
+            "rabatt": None,
+            "tax_rate": "7.00",
+            "note": "",
+            "year": 2026,
+            "delivery_week": 15,
+            "day_number": 2,
+            "reseller": reseller.id,
+            **self.ORDER_DAYS,
+        }
+
+        created = api_client.post(self.URL, create_body, format="json")
+
+        assert created.status_code == status.HTTP_200_OK, created.data
+        line = OrderContent.objects.get(share_article=article)
+        assert line.amount == Decimal("6.000")
+
+        patch_body = {
+            **create_body,
+            "id": line.id,
+            "offer": None,
+            "is_finalized": False,
+            "finalized_at": None,
+            "finalized_by": None,
+            "amount": 7.5,
+            "sort": "yellow",
+            "rabatt": 5,
+            "note": "late delivery",
+        }
+        patched = api_client.patch(self._detail_url(line), patch_body, format="json")
+
+        assert patched.status_code == status.HTTP_200_OK, patched.data
+        line.refresh_from_db()
+        assert line.share_article_id == article.id
+        assert line.amount == Decimal("7.500")
+        assert line.sort == "yellow"
+        assert line.rabatt == 5
+        assert line.note == "late delivery"
+
+    def test_customer_page_payloads_via_staff_route(self, api_client, tenant):
+        """``CustomerOrderPage`` is also mounted for staff at
+        ``/commissioning/customer-orders/:resellerId``; its exact create and
+        PATCH bodies (``useCustomerOrderMutations``) must keep working there."""
+        from apps.commissioning.models import OrderContent
+
+        reseller = ResellerFactory()
+        offer = OfferFactory(amount=Decimal("100.000"), amount_per_pu=Decimal("2.000"))
+
+        created = api_client.post(
+            self.URL,
+            {
+                "offer": offer.id,
+                "year": 2026,
+                "delivery_week": 15,
+                "day_number": 3,
+                "reseller": reseller.id,
+                "amount": "6.000",
+                "price_per_unit": "1.2",
+                "unit": "KG",
+            },
+            format="json",
+        )
+        assert created.status_code == status.HTTP_200_OK, created.data
+        line = OrderContent.objects.get(offer=offer)
+
+        patched = api_client.patch(
+            self._detail_url(line),
+            {"amount": "12.000", "price_per_unit": "1"},
+            format="json",
+        )
+
+        assert patched.status_code == status.HTTP_200_OK, patched.data
+        line.refresh_from_db()
+        assert line.amount == Decimal("12.000")
+        assert line.price_per_unit == Decimal("1.00")
+        offer.refresh_from_db()
+        assert offer.amount == Decimal("94.000")
+
+    def test_patch_without_amount_keeps_amount_stock_and_crate_row(
+        self, api_client, tenant
+    ):
+        from apps.commissioning.models import OrderContent
+
+        reseller = ResellerFactory()
+        crate = CrateFactory()
+        CrateNetPriceFactory(crate=crate, price=Decimal("2.50"))
+        offer = OfferFactory(amount=Decimal("100.000"), used_crate=crate)
+        created = api_client.post(
+            self.URL,
+            {
+                "offer": offer.id,
+                "year": 2026,
+                "delivery_week": 15,
+                "day_number": 2,
+                "reseller": reseller.id,
+                "amount": "8.000",
+                "price_per_unit": "4.50",
+                "unit": "KG",
+            },
+            format="json",
+        )
+        assert created.status_code == status.HTTP_200_OK, created.data
+        line = OrderContent.objects.get(offer=offer)
+        crate_row = CrateOrderContent.objects.get(order_content=line)
+        offer.refresh_from_db()
+        assert offer.amount == Decimal("92.000")
+
+        resp = api_client.patch(
+            self._detail_url(line), {"note": "ring the bell"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        line.refresh_from_db()
+        assert line.note == "ring the bell"
+        assert line.amount == Decimal("8.000")
+        offer.refresh_from_db()
+        assert offer.amount == Decimal("92.000")
+        crate_rows = list(CrateOrderContent.objects.filter(order_content=line))
+        assert [row.id for row in crate_rows] == [crate_row.id]
+        assert crate_rows[0].amount == crate_row.amount
 
 
 # ---------------------------------------------------------------------------

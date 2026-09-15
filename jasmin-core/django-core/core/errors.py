@@ -94,6 +94,19 @@ class InvalidQueryParam(BadRequestError):
     code = "query.invalid_param"
 
 
+class DataValueInvalid(BadRequestError):
+    """The database refused a value for its column (Django ``DataError``): a
+    string longer than a varchar, a number beyond a decimal's precision, text
+    that does not cast to the column type.
+
+    Raised by the exception handler as the backstop for writes whose request
+    validation is looser than the column. The message stays generic because
+    the database's own text can quote the rejected value.
+    """
+
+    code = "data.value_invalid"
+
+
 class AuthError(JasminError):
     """Authentication failed: missing/invalid/expired credentials or token."""
 

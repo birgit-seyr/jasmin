@@ -995,6 +995,7 @@ class SubscriptionViewSet(
                     decimal_places=2,
                     required=False,
                     allow_null=True,
+                    min_value=Decimal("0"),
                 ),
             },
         ),
@@ -1293,6 +1294,38 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 acquire_advisory_xact_lock(f"coop_share_bounds:{member.pk}")
             instance = serializer.save()
             instance.confirm(self.request.user)
+
+    def perform_update(self, serializer: Any) -> None:
+        from django.db import transaction
+
+        from core.db_locks import acquire_advisory_xact_lock
+
+        from ..services.coop_share_service import CoopShareService
+
+        stale_instance: CoopShare = serializer.instance
+        # The same per-member lock as ``perform_create``: ``CoopShare.clean()``
+        # re-reads the member's total for the GenG min/max check, so two
+        # concurrent updates (or an update racing a create) could both pass
+        # against the same stale total. A reassignment also re-validates the
+        # LOSING member, so both members are locked — in sorted order, so two
+        # opposite reassignments can't deadlock.
+        member_ids = {str(stale_instance.member_id)}
+        new_member = serializer.validated_data.get("member")
+        if new_member is not None:
+            member_ids.add(str(new_member.pk))
+        with transaction.atomic():
+            for member_id in sorted(member_ids):
+                acquire_advisory_xact_lock(f"coop_share_bounds:{member_id}")
+            # Re-read the row under a row lock (``confirm`` locks it too). A
+            # confirmation that committed after ``get_object`` must still lock
+            # the committed terms, and saving the stale instance would write its
+            # ``admin_confirmed=False`` back over that confirmation.
+            current = CoopShare.objects.select_for_update().get(pk=stale_instance.pk)
+            CoopShareService.apply_confirmed_share_edit_lock(
+                current, serializer.validated_data
+            )
+            serializer.instance = current
+            serializer.save()
 
     @extend_schema(
         # No body — without ``request=None`` spectacular would infer a full

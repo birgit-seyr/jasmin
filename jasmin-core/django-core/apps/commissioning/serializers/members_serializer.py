@@ -1,4 +1,5 @@
 from datetime import datetime, time
+from decimal import Decimal
 
 from rest_framework import serializers
 
@@ -456,8 +457,14 @@ class SubscriptionSerializer(
     )
 
     is_trial = serializers.BooleanField()
-    quantity = serializers.IntegerField()
-    price_per_delivery = serializers.DecimalField(max_digits=8, decimal_places=2)
+    # Bounded like the member self-service and CSV import paths: redeclaring
+    # these drops the model-derived validators. 0 deliveries bill nothing, and a
+    # negative price produces negative or no charges. A price of 0 stays valid
+    # (e.g. a free trial).
+    quantity = serializers.IntegerField(min_value=1)
+    price_per_delivery = serializers.DecimalField(
+        max_digits=8, decimal_places=2, min_value=Decimal("0")
+    )
     notice_period_duration = serializers.IntegerField(allow_null=True, read_only=True)
 
     valid_from = serializers.DateField()
@@ -650,73 +657,44 @@ class SubscriptionSerializer(
                 field="valid_until",
             )
 
-        # 5. Solidarity-pricing floor.
+        # 5. Solidarity-pricing floor (``services.solidarity_pricing``, shared
+        # with the waiting-list offer).
         #
-        # When the tenant enables ``allows_solidarity_pricing``, the chosen
-        # ``price_per_delivery`` may dip below the reference price but NOT below
-        # the variation's floor (``solidarity_min_price_per_delivery``, or the
-        # reference if no explicit floor). No upper bound — paying MORE is the
-        # point. When solidarity is OFF this guard is a no-op here: the office
-        # keeps its price discretion, and the member self-subscribe path forces
-        # the reference upstream in ``MySubscriptionSubscribeView``.
-        from apps.shared.tenants.models import TenantSettings
-        from core.tenant_db import connection
+        # Checked on create, and on an update whenever an input to the floor
+        # changes: the price itself (re-sent at all, as before), the variation
+        # (a different floor), the start date (a different price window) or
+        # ``is_trial`` (the trial pair). When the update doesn't re-send the
+        # price, the STORED price is checked against the new floor. An update
+        # touching none of these leaves the check alone, so an unrelated edit of
+        # an older draft is not blocked by a floor raised after it was priced.
+        from django.utils import timezone
 
-        price = attrs.get("price_per_delivery")
-        variation_id = attrs.get("share_type_variation") or (
-            self.instance.share_type_variation_id if self.instance else None
+        from apps.commissioning.services.solidarity_pricing import (
+            assert_price_meets_solidarity_floor,
         )
-        current_settings = TenantSettings.get_current_settings(connection.tenant)
-        if (
-            price is not None
-            and variation_id is not None
-            and current_settings
-            and current_settings.allows_solidarity_pricing
-        ):
-            from django.utils import timezone
 
-            from apps.commissioning.errors import SolidarityPriceBelowMinimum
-            from apps.commissioning.models import ShareTypeVariationGrossPrice
-
-            # Resolve the floor at the subscription's START date, not today.
-            # ``ShareTypeVariationGrossPrice`` is time-bound (one window per
-            # variation, each with its own ``solidarity_min_price_per_delivery``),
-            # and ``valid_from`` is virtually always a future Monday. Looking the
-            # window up at today would (a) silently evade a future window's higher
-            # floor — an under-floor price would lock into billing — and (b) miss a
-            # future-price-only variation entirely. Fall back to the instance's
-            # ``valid_from`` on a partial update that doesn't re-send it, then to
-            # today if neither is available.
-            effective_date = (
-                attrs.get("valid_from")
-                or getattr(self.instance, "valid_from", None)
-                or timezone.localdate()
+        instance = self.instance
+        floor_inputs_changed = instance is None or (
+            "price_per_delivery" in attrs
+            or (
+                "share_type_variation" in attrs
+                and attrs["share_type_variation"] != instance.share_type_variation_id
             )
-            gross_price = (
-                ShareTypeVariationGrossPrice.current.active_at_date(
-                    effective_date.isoformat()
-                )
-                .filter(share_type_variation_id=variation_id)
-                .first()
+            or ("valid_from" in attrs and attrs["valid_from"] != instance.valid_from)
+            or ("is_trial" in attrs and attrs["is_trial"] != instance.is_trial)
+        )
+        if floor_inputs_changed:
+            assert_price_meets_solidarity_floor(
+                price=attrs.get(
+                    "price_per_delivery", getattr(instance, "price_per_delivery", None)
+                ),
+                share_type_variation_id=attrs.get("share_type_variation")
+                or getattr(instance, "share_type_variation_id", None),
+                effective_date=attrs.get("valid_from")
+                or getattr(instance, "valid_from", None)
+                or timezone.localdate(),
+                is_trial=is_trial,
             )
-            if gross_price is not None:
-                # Trial subscriptions are floored against the trial-specific
-                # pair when the variation carries a trial reference; otherwise
-                # the regular pair. Within a pair the floor falls back to the
-                # reference when no explicit floor is set. ``is_trial`` was
-                # resolved above (trial-policy check). This mirrors the client
-                # (``NewSubscriptionModal``) so the two agree on the boundary.
-                if is_trial and gross_price.price_per_delivery_if_trial is not None:
-                    reference = gross_price.price_per_delivery_if_trial
-                    explicit_floor = (
-                        gross_price.solidarity_min_price_per_delivery_if_trial
-                    )
-                else:
-                    reference = gross_price.price_per_delivery
-                    explicit_floor = gross_price.solidarity_min_price_per_delivery
-                floor = explicit_floor if explicit_floor is not None else reference
-                if floor is not None and price < floor:
-                    raise SolidarityPriceBelowMinimum(chosen=price, minimum=floor)
 
         return super().validate(attrs)
 
@@ -813,6 +791,26 @@ class CoopShareSerializer(
             # returned.
             "payback_due_date",
         )
+
+    def validate_amount_of_coop_shares(self, value):
+        from ..services.coop_share_service import CoopShareService
+
+        # The whole-Geschäftsanteil rule shared with the CSV import and member
+        # self-service. Only a new or CHANGED amount is checked: the office grid
+        # re-sends the whole row, and rows stored before this rule existed must
+        # stay editable (note, payback) without first rewriting their amount.
+        if self.instance is None or value != self.instance.amount_of_coop_shares:
+            CoopShareService.assert_valid_amount(value)
+        return value
+
+    def validate(self, attrs):
+        from ..services.coop_share_service import CoopShareService
+
+        # Once confirmed, the committed terms are part of the GenG register.
+        # ``CoopShareViewSet.perform_update`` re-applies this under the row lock.
+        if self.instance is not None:
+            CoopShareService.apply_confirmed_share_edit_lock(self.instance, attrs)
+        return super().validate(attrs)
 
 
 class MemberLoanSerializer(MemberStringFieldMixin, serializers.ModelSerializer):

@@ -40,3 +40,25 @@ class WeeklyPlanCopyTargetNotEmpty(ConflictError):
     copying would silently merge two plans. Clear the target week first."""
 
     code = "staff.weekly_plan_copy_target_not_empty"
+
+
+class EmployeeInUse(ConflictError):
+    """An employee cannot be deleted while weekly-plan cells, absences or
+    employments still reference them — a delete would CASCADE all of those
+    away. Deactivate the employee instead."""
+
+    code = "staff.employee_in_use"
+
+
+class WeeklyPlanCategoryInUse(ConflictError):
+    """A weekly-plan category cannot be deleted while weekly-plan cells use it
+    — a delete would CASCADE them away. Deactivate the category instead."""
+
+    code = "staff.weekly_plan_category_in_use"
+
+
+class AbsenceCategoryInUse(ConflictError):
+    """An absence category cannot be deleted while absences use it — a delete
+    would CASCADE them away. Deactivate the category instead."""
+
+    code = "staff.absence_category_in_use"

@@ -30,7 +30,12 @@ from apps.authz.permissions import IsOffice, IsStaff, RolePermissionsMixin
 from core.pagination import OptionalLimitOffsetPagination
 from core.serializers import ErrorResponseSerializer
 
-from ..errors import CommissioningError, InvalidQueryParam, ShareArticleNotFound
+from ..errors import (
+    CommissioningError,
+    InvalidQueryParam,
+    ShareArticleNetPriceInUse,
+    ShareArticleNotFound,
+)
 from ..models import (
     Crate,
     CrateNetPrice,
@@ -63,6 +68,7 @@ from ..serializers import (
     StorageSerializer,
 )
 from ..utils.query_params import validate_query_params
+from .base_viewsets import CanBeDeletedDestroyMixin
 
 _SHARE_OPTION_FIELDS: list[str] = ["share_option", "share_option2", "share_option3"]
 
@@ -421,7 +427,9 @@ class ShareArticleViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             validated_data[field] = value
 
 
-class ShareArticleNetPriceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+class ShareArticleNetPriceViewSet(
+    CanBeDeletedDestroyMixin, RolePermissionsMixin, viewsets.ModelViewSet
+):
     """
     ViewSet for managing share article prices.
 
@@ -431,6 +439,9 @@ class ShareArticleNetPriceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaff
     write_permission = IsOffice
     serializer_class = ShareArticleNetPriceSerializer
+    # DELETE enforces the serializer's ``can_be_deleted`` rule: an active price
+    # of an article that is in use is refused.
+    not_deletable_error = ShareArticleNetPriceInUse
 
     @extend_schema(
         parameters=[

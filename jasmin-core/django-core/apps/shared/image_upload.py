@@ -16,12 +16,15 @@ The error class is injected by the caller so each app keeps raising its own
 
 from __future__ import annotations
 
+import threading
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from io import BytesIO
 from typing import Any
 
 from django.core.files.base import ContentFile
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageFile, ImageOps, UnidentifiedImageError
 
 from core.errors import JasminError
 
@@ -49,6 +52,26 @@ _DECODE_ERRORS = (
     EOFError,
     Image.DecompressionBombError,
 )
+
+
+# Pillow's LOAD_TRUNCATED_IMAGES switch is process-wide, and importing WeasyPrint
+# turns it on so its renders tolerate truncated images. With it on, Pillow fills
+# corrupt pixel data instead of raising, which upload validation must not accept.
+# Upload decoding and consent-PDF rendering both hold this lock, so a gunicorn
+# gthread worker never flips the switch while a render runs in its other thread.
+PILLOW_TRUNCATED_IMAGES_LOCK = threading.Lock()
+
+
+@contextmanager
+def strict_image_decoding() -> Iterator[None]:
+    """Decode with Pillow's truncated-image tolerance off, then restore it."""
+    with PILLOW_TRUNCATED_IMAGES_LOCK:
+        previous = ImageFile.LOAD_TRUNCATED_IMAGES
+        ImageFile.LOAD_TRUNCATED_IMAGES = False
+        try:
+            yield
+        finally:
+            ImageFile.LOAD_TRUNCATED_IMAGES = previous
 
 
 def normalize_uploaded_picture(
@@ -104,35 +127,36 @@ def normalize_uploaded_picture(
 
     try:
         value.seek(0)
-        image = Image.open(value, formats=[image_format])
-        width, height = image.size
-        # Header-only read so far — this MUST stay above the decode below.
-        if width * height > PICTURE_MAX_PIXELS:
-            raise error_cls(
-                f"The picture must be at most "
-                f"{PICTURE_MAX_PIXELS // 1_000_000} megapixels — "
-                f"this one is {width}x{height}.",
-                field=field,
-            )
-        icc_profile = image.info.get("icc_profile")
-        rendered = ImageOps.exif_transpose(image)
-        source_mode = rendered.mode
-        save_kwargs: dict[str, Any] = {}
-        if image_format == "JPEG":
-            if rendered.mode not in ("RGB", "L"):
-                rendered = rendered.convert("RGB")
-            save_kwargs["quality"] = 90
-        elif image_format == "WEBP":
-            if rendered.mode not in ("RGB", "RGBA"):
-                rendered = rendered.convert("RGBA")
-            save_kwargs["quality"] = 90
-        # A profile describes the ORIGINAL colour space (e.g. CMYK). Once the
-        # pixels were converted it no longer matches them, and attaching it would
-        # make viewers mis-render or ignore the colours, so drop it.
-        if icc_profile and image_format != "GIF" and rendered.mode == source_mode:
-            save_kwargs["icc_profile"] = icc_profile
-        buffer = BytesIO()
-        rendered.save(buffer, format=image_format, **save_kwargs)
+        with strict_image_decoding():
+            image = Image.open(value, formats=[image_format])
+            width, height = image.size
+            # Header-only read so far — this MUST stay above the decode below.
+            if width * height > PICTURE_MAX_PIXELS:
+                raise error_cls(
+                    f"The picture must be at most "
+                    f"{PICTURE_MAX_PIXELS // 1_000_000} megapixels — "
+                    f"this one is {width}x{height}.",
+                    field=field,
+                )
+            icc_profile = image.info.get("icc_profile")
+            rendered = ImageOps.exif_transpose(image)
+            source_mode = rendered.mode
+            save_kwargs: dict[str, Any] = {}
+            if image_format == "JPEG":
+                if rendered.mode not in ("RGB", "L"):
+                    rendered = rendered.convert("RGB")
+                save_kwargs["quality"] = 90
+            elif image_format == "WEBP":
+                if rendered.mode not in ("RGB", "RGBA"):
+                    rendered = rendered.convert("RGBA")
+                save_kwargs["quality"] = 90
+            # A profile describes the ORIGINAL colour space (e.g. CMYK). Once the
+            # pixels were converted it no longer matches them, and attaching it would
+            # make viewers mis-render or ignore the colours, so drop it.
+            if icc_profile and image_format != "GIF" and rendered.mode == source_mode:
+                save_kwargs["icc_profile"] = icc_profile
+            buffer = BytesIO()
+            rendered.save(buffer, format=image_format, **save_kwargs)
     except _DECODE_ERRORS:
         raise error_cls(
             f"The picture must be a {allowed} image.", field=field

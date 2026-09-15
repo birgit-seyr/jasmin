@@ -11,7 +11,11 @@ from django.db import IntegrityError, transaction
 from django.urls import reverse
 from rest_framework import status
 
-from apps.commissioning.models import DefaultShareArticleInShare, Season
+from apps.commissioning.models import (
+    DefaultShareArticleInShare,
+    Season,
+    ShareArticleNetPrice,
+)
 from apps.commissioning.tests.factories import (
     SeasonFactory,
     ShareArticleFactory,
@@ -648,3 +652,53 @@ class TestShareArticleNetPriceViewSet:
             valid_until=None,
         )
         assert self._can_delete(api_client, future.id) is True
+
+
+# ---------------------------------------------------------------------------
+# ShareArticleNetPriceViewSet — DELETE enforces can_be_deleted
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestShareArticleNetPriceDestroyGuard:
+    @pytest.fixture(autouse=True)
+    def _frozen_clock(self):
+        # "Active" is judged against today: pin it inside the factory's default
+        # 2026-01-05..2026-12-27 validity so the default price stays active.
+        with time_machine.travel(datetime.datetime(2026, 6, 1, 12, 0), tick=False):
+            yield
+
+    @staticmethod
+    def _url(price) -> str:
+        return reverse("share_article_net_price-detail", args=[price.id])
+
+    def test_active_price_of_article_in_use_is_409_and_kept(self, api_client, tenant):
+        price = ShareArticleNetPriceFactory()
+        ShareContentFactory(share_article=price.share_article)
+
+        resp = api_client.delete(self._url(price))
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "share_article.net_price_in_use"
+        assert ShareArticleNetPrice.objects.filter(pk=price.pk).exists()
+
+    def test_active_price_of_unused_article_is_deleted(self, api_client, tenant):
+        price = ShareArticleNetPriceFactory()
+
+        resp = api_client.delete(self._url(price))
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        assert not ShareArticleNetPrice.objects.filter(pk=price.pk).exists()
+
+    @time_machine.travel(datetime.datetime(2026, 6, 1, 12, 0), tick=False)
+    def test_future_price_of_article_in_use_is_deleted(self, api_client, tenant):
+        article = ShareArticleFactory()
+        ShareContentFactory(share_article=article)
+        future = ShareArticleNetPriceFactory(
+            share_article=article,
+            valid_from=datetime.date(2027, 1, 4),  # Monday, future
+            valid_until=None,
+        )
+
+        resp = api_client.delete(self._url(future))
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        assert not ShareArticleNetPrice.objects.filter(pk=future.pk).exists()

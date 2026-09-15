@@ -50,6 +50,7 @@ from ..errors import (
     CommissioningError,
     RequiredFieldMissing,
     ShareArticleNotFound,
+    ShareTypeVariationGrossPriceInUse,
     ShareTypeVariationNotFound,
     VirtualComponentNotPhysical,
 )
@@ -113,7 +114,7 @@ from ..utils.iso_week_utils import week_day_to_date
 from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 from ..utils.weight import quantize_weight
-from .base_viewsets import BaseArchivableViewSet
+from .base_viewsets import BaseArchivableViewSet, CanBeDeletedDestroyMixin
 
 
 def _validate_share_option(value: str) -> str | None:
@@ -1907,10 +1908,15 @@ class ShareDeliveryDetailsViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         return queryset
 
 
-class ShareTypeVariationGrossPriceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+class ShareTypeVariationGrossPriceViewSet(
+    CanBeDeletedDestroyMixin, RolePermissionsMixin, viewsets.ModelViewSet
+):
     read_permission = IsStaff
     write_permission = IsOffice
     serializer_class = ShareTypeVariationGrossPriceSerializer
+    # DELETE enforces the serializer's ``can_be_deleted`` rule: no price of a
+    # variation any member has subscribed to may be deleted.
+    not_deletable_error = ShareTypeVariationGrossPriceInUse
 
     @extend_schema(parameters=[get_share_type_variation_parameter()])
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:

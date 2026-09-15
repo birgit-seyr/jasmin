@@ -11,7 +11,9 @@ from rest_framework.response import Response
 from apps.authz.permissions import IsOffice, IsStaff, RolePermissionsMixin
 from apps.commissioning.schemas import get_is_active_parameter
 from apps.commissioning.utils.query_params import validate_query_params
+from apps.commissioning.viewsets.base_viewsets import CanBeDeletedDestroyMixin
 
+from ..errors import AbsenceCategoryInUse, EmployeeInUse, WeeklyPlanCategoryInUse
 from ..models import AbsenceCategory, Employee, WeeklyPlanCategory
 from ..serializers import (
     AbsenceCategorySerializer,
@@ -19,11 +21,18 @@ from ..serializers import (
     WeeklyPlanCategorySerializer,
 )
 
+# All three viewsets enforce ``can_be_deleted`` on DELETE: every row that
+# references an employee / category (weekly-plan cells, absences, employments)
+# is ``on_delete=CASCADE``, so an unchecked delete silently wipes them.
 
-class EmployeeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+
+class EmployeeViewSet(
+    CanBeDeletedDestroyMixin, RolePermissionsMixin, viewsets.ModelViewSet
+):
     read_permission = IsStaff
     write_permission = IsOffice
     serializer_class = EmployeeSerializer
+    not_deletable_error = EmployeeInUse
 
     @extend_schema(parameters=[get_is_active_parameter()])
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -39,10 +48,13 @@ class EmployeeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         return queryset
 
 
-class WeeklyPlanCategoryViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+class WeeklyPlanCategoryViewSet(
+    CanBeDeletedDestroyMixin, RolePermissionsMixin, viewsets.ModelViewSet
+):
     read_permission = IsStaff
     write_permission = IsOffice
     serializer_class = WeeklyPlanCategorySerializer
+    not_deletable_error = WeeklyPlanCategoryInUse
 
     @extend_schema(parameters=[get_is_active_parameter()])
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -58,10 +70,13 @@ class WeeklyPlanCategoryViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         return queryset
 
 
-class AbsenceCategoryViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+class AbsenceCategoryViewSet(
+    CanBeDeletedDestroyMixin, RolePermissionsMixin, viewsets.ModelViewSet
+):
     read_permission = IsStaff
     write_permission = IsOffice
     serializer_class = AbsenceCategorySerializer
+    not_deletable_error = AbsenceCategoryInUse
 
     @extend_schema(parameters=[get_is_active_parameter()])
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:

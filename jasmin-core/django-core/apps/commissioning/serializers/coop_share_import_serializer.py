@@ -62,6 +62,15 @@ class CoopShareImportSerializer(serializers.Serializer):
             )
         return member
 
+    def validate_amount_of_coop_shares(self, value):
+        from ..services.coop_share_service import CoopShareService
+
+        # A cooperative share is a whole Geschäftsanteil — the same rule as the
+        # office grid and member self-service (zero, negative and fractional
+        # amounts come back as a per-row error).
+        CoopShareService.assert_valid_amount(value)
+        return value
+
     def validate(self, attrs):
         attrs["_member"] = self._resolve_member(attrs["member_number"])
         return attrs

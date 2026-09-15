@@ -707,3 +707,19 @@ class TestProfileUpdateEndpoint:
             f"/api/auth/{other.id}/", data={"first_name": "X"}, format="json"
         )
         assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_over_long_name_returns_400_not_500(self, tenant):
+        # The request serializer has no max_length, so the value reaches the
+        # varchar column and Postgres raises DataError. The exception handler
+        # maps it to a 400 without echoing the value or the database text.
+        user = JasminUserFactory(roles=[Role.OFFICE])
+        client = APIClient()
+        client.force_authenticate(user=user)
+        long_name = "N" * 300
+        resp = client.patch(
+            f"/api/auth/{user.id}/", data={"first_name": long_name}, format="json"
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "data.value_invalid"
+        assert long_name not in str(resp.data)
+        assert "varying" not in str(resp.data)

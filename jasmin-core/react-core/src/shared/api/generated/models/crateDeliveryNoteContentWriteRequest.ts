@@ -6,6 +6,13 @@
  * OpenAPI spec version: 1.0.0
  */
 
+/**
+ * Request body for creating or updating a crate line on a delivery note.
+
+``tax_rate`` null or omitted resolves the crate's rate for the delivery
+date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
+keeps the stored value.
+ */
 export interface CrateDeliveryNoteContentWriteRequest {
   delivery_note_id: string;
   crate_type: string;
@@ -15,7 +22,20 @@ export interface CrateDeliveryNoteContentWriteRequest {
    * @pattern ^-?\d{0,3}(?:\.\d{0,2})?$
    */
   price_per_unit?: string | null;
-  /** @nullable */
+  /**
+   * @minimum 0
+   * @maximum 100
+   * @nullable
+   */
   rabatt?: number | null;
-  note?: string;
+  /**
+   * @nullable
+   * @pattern ^-?\d{0,3}(?:\.\d{0,2})?$
+   */
+  tax_rate?: string | null;
+  /**
+   * @maxLength 500
+   * @nullable
+   */
+  note?: string | null;
 }

@@ -2634,6 +2634,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ConsentDocument'
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -2699,6 +2705,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConsentDocument'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '401':
           content:
@@ -4942,6 +4954,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -17719,6 +17737,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -20168,6 +20192,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -26931,6 +26961,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -27331,6 +27367,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -27867,6 +27909,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -30461,24 +30509,25 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          readOnly: true
           nullable: true
         source_unit:
           type: string
+          readOnly: true
           nullable: true
-          maxLength: 10
         source_size:
           type: string
+          readOnly: true
           nullable: true
-          maxLength: 1
         source_price_per_unit:
           type: string
           format: decimal
           pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
           nullable: true
         source_rabatt:
           type: integer
-          maximum: 100
-          minimum: 0
+          readOnly: true
           nullable: true
         is_finalized:
           type: boolean
@@ -30523,6 +30572,7 @@ components:
           type: array
           items:
             type: string
+          readOnly: true
         line_netto:
           type: string
           format: decimal
@@ -30590,24 +30640,25 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          readOnly: true
           nullable: true
         source_unit:
           type: string
+          readOnly: true
           nullable: true
-          maxLength: 10
         source_size:
           type: string
+          readOnly: true
           nullable: true
-          maxLength: 1
         source_price_per_unit:
           type: string
           format: decimal
           pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
           nullable: true
         source_rabatt:
           type: integer
-          maximum: 100
-          minimum: 0
+          readOnly: true
           nullable: true
         is_finalized:
           type: boolean
@@ -30685,6 +30736,12 @@ components:
       - tax_rate
     CrateDeliveryNoteContentWriteRequest:
       type: object
+      description: |-
+        Request body for creating or updating a crate line on a delivery note.
+
+        ``tax_rate`` null or omitted resolves the crate's rate for the delivery
+        date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
+        keeps the stored value.
       properties:
         delivery_note_id:
           type: string
@@ -30699,15 +30756,30 @@ components:
           nullable: true
         rabatt:
           type: integer
+          maximum: 100
+          minimum: 0
+          nullable: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
           nullable: true
         note:
           type: string
+          nullable: true
+          maxLength: 500
       required:
       - amount
       - crate_type
       - delivery_note_id
     CrateInvoiceContentWriteRequest:
       type: object
+      description: |-
+        Request body for creating or updating a crate line on an invoice.
+
+        ``tax_rate`` null or omitted resolves the crate's rate for the invoice
+        date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
+        keeps the stored value.
       properties:
         invoice_id:
           type: string
@@ -30722,6 +30794,8 @@ components:
           nullable: true
         rabatt:
           type: integer
+          maximum: 100
+          minimum: 0
           nullable: true
         tax_rate:
           type: string
@@ -30730,6 +30804,8 @@ components:
           nullable: true
         note:
           type: string
+          nullable: true
+          maxLength: 500
       required:
       - amount
       - crate_type
@@ -40352,6 +40428,7 @@ components:
           type: boolean
         quantity:
           type: integer
+          minimum: 1
         price_per_delivery:
           type: string
           format: decimal

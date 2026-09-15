@@ -568,3 +568,129 @@ class TestConsentDocumentPDFDownload:
         # ``data:`` stays allowed — inert, and rich-text bodies embed images
         # that way.
         assert fetcher.fetch("data:text/css,body{color:red}") is not None
+
+
+# --------------------------------------------------------------------------- #
+# ConsentDocument — immutable once consented to                               #
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.django_db
+class TestConsentDocumentImmutableOnceConsented:
+    """PUT/PATCH must not rewrite what members consented to. ``save()``
+    recomputes ``body_sha256`` for the new text, so without the guard the
+    tamper check stays silent while the stored PDF keeps the old text.
+    Drafts nobody consented to yet stay editable."""
+
+    @staticmethod
+    def _url(doc: ConsentDocument) -> str:
+        return reverse("consent_document-detail", args=[doc.pk])
+
+    @staticmethod
+    def _consented_doc() -> ConsentDocument:
+        doc = _make_doc(body="Original consented text.")
+        ConsentRecord.objects.create(member=MemberFactory(), document=doc)
+        return doc
+
+    def test_patch_body_of_consented_document_is_409_and_unchanged(
+        self, api_client, tenant
+    ):
+        doc = self._consented_doc()
+        original_sha = doc.body_sha256
+
+        resp = api_client.patch(
+            self._url(doc), {"body": "Rewritten text."}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "consent.document_immutable"
+        assert resp.data["details"]["fields"] == ["body"]
+        doc.refresh_from_db()
+        assert doc.body == "Original consented text."
+        assert doc.body_sha256 == original_sha
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("title", "Renamed policy"),
+            ("kind", "sepa"),
+            ("locale", "en"),
+            ("version", "v9"),
+            ("valid_from", "2026-02-02"),
+        ],
+    )
+    def test_patch_identifying_field_of_consented_document_is_409(
+        self, api_client, tenant, field, value
+    ):
+        doc = self._consented_doc()
+        before = ConsentDocument.objects.values(field).get(pk=doc.pk)
+
+        resp = api_client.patch(self._url(doc), {field: value}, format="json")
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["details"]["fields"] == [field]
+        assert ConsentDocument.objects.values(field).get(pk=doc.pk) == before
+
+    def test_put_rewrite_of_consented_document_is_409(self, api_client, tenant):
+        doc = self._consented_doc()
+        payload = {
+            "kind": doc.kind,
+            "locale": doc.locale,
+            "version": doc.version,
+            "title": doc.title,
+            "valid_from": doc.valid_from.isoformat(),
+            "body": "Rewritten via PUT.",
+        }
+
+        resp = api_client.put(self._url(doc), payload, format="json")
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        doc.refresh_from_db()
+        assert doc.body == "Original consented text."
+
+    def test_unchanged_values_on_consented_document_are_accepted(
+        self, api_client, tenant
+    ):
+        # A client re-sending the row as it loaded it changes nothing that was
+        # consented to, so it must not start failing.
+        doc = self._consented_doc()
+
+        resp = api_client.patch(
+            self._url(doc),
+            {"body": doc.body, "title": doc.title, "version": doc.version},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_patch_body_of_draft_is_saved(self, api_client, tenant):
+        doc = _make_doc(body="Draft text.")
+        old_sha = doc.body_sha256
+
+        resp = api_client.patch(
+            self._url(doc), {"body": "Corrected draft text."}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        doc.refresh_from_db()
+        assert doc.body == "Corrected draft text."
+        assert doc.body_sha256 != old_sha
+
+    @patch("apps.commissioning.services.consent_pdf.render_consent_pdf")
+    def test_patch_body_of_draft_rerenders_its_stored_pdf(
+        self, mock_render, api_client, tenant
+    ):
+        mock_render.return_value = ContentFile(b"%PDF-1.4 old text")
+        doc = _make_doc(body="Draft text.")
+        doc.ensure_pdf()
+        mock_render.return_value = ContentFile(b"%PDF-1.4 new text")
+
+        resp = api_client.patch(
+            self._url(doc), {"body": "Corrected draft text."}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        doc.refresh_from_db()
+        assert mock_render.call_count == 2
+        with doc.pdf.open("rb") as handle:
+            assert handle.read() == b"%PDF-1.4 new text"

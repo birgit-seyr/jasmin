@@ -34,12 +34,14 @@ from django.db import transaction
 from django.utils import timezone
 
 from ..errors import (
+    SubscriptionPriceInvalid,
     WaitingListOfferExpired,
     WaitingListOfferInvalid,
     WaitingListOfferNotAvailable,
 )
 from ..models import Subscription
 from .capacity_reservation_service import CapacityReservationService
+from .solidarity_pricing import assert_price_meets_solidarity_floor
 from .variation_capacity_service import VariationCapacityService
 from .waiting_list_policy import assert_waiting_list_enabled, waiting_list_enabled
 
@@ -86,10 +88,29 @@ class WaitingListOfferService:
         # Office-adjusted price (e.g. refreshed after a long wait) — applied
         # before the email so the member sees the FINAL price on the offer page.
         # Persisted by ``notify_spot_available``'s save below.
+        offered_price = subscription.price_per_delivery
         if price_per_delivery is not None and price_per_delivery != "":
+            from decimal import InvalidOperation
+
             from apps.shared.money import to_decimal
 
-            subscription.price_per_delivery = to_decimal(price_per_delivery)
+            try:
+                offered_price = to_decimal(price_per_delivery)
+            except (InvalidOperation, ValueError, TypeError):
+                raise SubscriptionPriceInvalid(price_per_delivery) from None
+            if not offered_price.is_finite() or offered_price < 0:
+                raise SubscriptionPriceInvalid(price_per_delivery)
+
+        # The offered price (new or stored) must clear the solidarity floor —
+        # the same rule the subscription serializer applies. The member accepts
+        # exactly this price, so an under-floor offer would lock into billing.
+        assert_price_meets_solidarity_floor(
+            price=offered_price,
+            share_type_variation_id=subscription.share_type_variation_id,
+            effective_date=subscription.valid_from or timezone.localdate(),
+            is_trial=subscription.is_trial,
+        )
+        subscription.price_per_delivery = offered_price
 
         # Confirm a slot is genuinely free NOW, under the row locks — variation
         # first (production cap), then station-day (logistics). ``reserve_for_

@@ -45,6 +45,12 @@ DOCUMENT_LINE_READONLY_FIELDS = (
     *SOURCE_SNAPSHOT_READONLY_FIELDS,
     "order_content",
 )
+# The crate-line counterpart: crate lines on invoices and delivery notes carry
+# the same finalization stamps and GoBD source snapshot, but no order-line link.
+CRATE_DOCUMENT_LINE_READONLY_FIELDS = (
+    *FINALIZATION_READONLY_FIELDS,
+    *SOURCE_SNAPSHOT_READONLY_FIELDS,
+)
 
 
 class ResellerListSerializer(DeletableListSerializer):
@@ -338,6 +344,7 @@ class OfferGroupSerializer(DeletableMixin, serializers.ModelSerializer):
 
 
 class CrateContentInvoiceResellerSerializer(
+    ReadOnlyOnUpdateMixin,
     DifferenceTrackingMixin,
     LinePricingFieldsMixin,
     NameFieldMixin,
@@ -345,11 +352,19 @@ class CrateContentInvoiceResellerSerializer(
 ):
     NAME_FIELDS = ["crate_type_name"]
     DIFF_FIELDS = CRATE_DIFF_FIELDS
+    # Same rule as the article invoice line: a crate line is created on its
+    # invoice and never re-pointed onto another (possibly finalized) one.
+    READ_ONLY_ON_UPDATE = ("invoice",)
 
     class Meta:
         model = CrateContentInvoiceReseller
         fields = "__all__"
-        read_only_fields = ["is_finalized", "finalized_at", "finalized_by"]
+        # ``crate_delivery_note_contents`` is the provenance link the invoice
+        # service sets once when it builds the invoice from its delivery notes.
+        read_only_fields = (
+            *CRATE_DOCUMENT_LINE_READONLY_FIELDS,
+            "crate_delivery_note_contents",
+        )
 
 
 # for the Invoice Modal:
@@ -789,6 +804,7 @@ class DeliveryNoteResellerContentSerializer(
 
 
 class CrateDeliveryNoteContentSerializer(
+    ReadOnlyOnUpdateMixin,
     DifferenceTrackingMixin,
     LinePricingFieldsMixin,
     NameFieldMixin,
@@ -797,11 +813,14 @@ class CrateDeliveryNoteContentSerializer(
     NAME_FIELDS = ["crate_type_name"]
 
     DIFF_FIELDS = CRATE_DIFF_FIELDS
+    # A crate line is created on its delivery note and never re-pointed onto
+    # another (possibly finalized) one.
+    READ_ONLY_ON_UPDATE = ("delivery_note",)
 
     class Meta:
         model = CrateDeliveryNoteContent
         fields = "__all__"
-        read_only_fields = ["is_finalized", "finalized_at", "finalized_by"]
+        read_only_fields = CRATE_DOCUMENT_LINE_READONLY_FIELDS
 
 
 class DeliveryNoteResellerSerializer(

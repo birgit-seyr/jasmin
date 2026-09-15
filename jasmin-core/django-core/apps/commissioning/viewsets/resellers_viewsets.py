@@ -39,6 +39,9 @@ from ..errors import (
     DocumentPdfMissing,
     InvalidUploadedDocument,
     OfferGroupCannotDeleteDefault,
+    OrderContentItemChangeForbidden,
+    OrderContentOfferNotInOfferGroup,
+    OrderContentOfferRequired,
     RequiredFieldMissing,
     ResellerEmailMissing,
     ResellerNotFound,
@@ -104,6 +107,7 @@ from ..services import (
     OrderContentService,
     ResellerAndDeliveryStationService,
 )
+from ..services.order_content_service import AMOUNT_NOT_SENT
 from ..utils import get_contact_annotations
 from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
@@ -620,6 +624,9 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         reseller_id = getattr(reseller_obj, "pk", reseller_obj)
         enforce_own_reseller(request, reseller_id)
         self._reject_office_only_pricing(request, serializer.validated_data)
+        self._require_own_offer_group_offer(
+            request, serializer.validated_data, reseller_obj
+        )
 
         result = OrderContentService.create_order_with_content_and_crates(
             created_by=getattr(request, "user", None),
@@ -637,19 +644,69 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Enforce ownership: get_object() honours the scoped get_queryset() and
         # raises 404 for rows the caller may not access.
-        self.get_object()
+        instance = self.get_object()
         order_content_id = kwargs.get("pk")
         partial = kwargs.pop("partial", False)
         serializer = self.get_serializer(data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        self._reject_office_only_pricing(request, serializer.validated_data)
+        validated_data = serializer.validated_data
+        self._reject_office_only_pricing(request, validated_data)
+        self._reject_customer_item_change(request, instance, validated_data)
 
         result = OrderContentService.update_order_content(
             order_content_id=order_content_id,
-            amount=serializer.validated_data.get("amount"),
-            **{k: v for k, v in serializer.validated_data.items() if k != "amount"},
+            # A body without ``amount`` (a PATCH of another field) keeps the
+            # stored amount instead of zeroing the line and releasing its stock.
+            amount=validated_data.get("amount", AMOUNT_NOT_SENT),
+            **{k: v for k, v in validated_data.items() if k != "amount"},
         )
         return Response(result)
+
+    @staticmethod
+    def _require_own_offer_group_offer(
+        request: Request, validated_data: dict, reseller: Reseller | None
+    ) -> None:
+        """Non-privileged (customer) callers may only order an offer of their
+        own reseller's offer group — the offers the customer order page lists.
+        A free ``share_article`` line has no offer, so it would bypass both the
+        stock check and that offer set; it stays office-only. Privileged roles
+        bypass.
+        """
+        if is_privileged(request):
+            return
+        offer = validated_data.get("offer")
+        if offer is None or validated_data.get("share_article") is not None:
+            raise OrderContentOfferRequired("Customers may only order offers.")
+        offer_group_id = reseller.offer_group_id if reseller is not None else None
+        if offer_group_id is None or offer.offer_group_id != offer_group_id:
+            raise OrderContentOfferNotInOfferGroup(
+                "This offer is not part of your offer group."
+            )
+
+    @staticmethod
+    def _reject_customer_item_change(
+        request: Request, instance: OrderContent, validated_data: dict
+    ) -> None:
+        """A non-privileged (customer) caller may edit their own line but never
+        re-point it at another offer or article: its stock was reserved on the
+        current offer, and the offer-group check ran against that offer at
+        create. Re-sending the current value is not a change. Privileged roles
+        bypass.
+        """
+        if is_privileged(request):
+            return
+        current_ids = {
+            "offer": instance.offer_id,
+            "share_article": instance.share_article_id,
+        }
+        for field, current_id in current_ids.items():
+            if field not in validated_data:
+                continue
+            if getattr(validated_data[field], "pk", None) != current_id:
+                raise OrderContentItemChangeForbidden(
+                    "Only office staff may change the offer or article of an "
+                    "order line."
+                )
 
     @staticmethod
     def _reject_office_only_pricing(request: Request, validated_data: dict) -> None:

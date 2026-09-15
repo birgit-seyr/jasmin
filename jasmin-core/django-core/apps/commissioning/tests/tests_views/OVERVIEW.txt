@@ -83,11 +83,13 @@ Total tests: 110
    TestBulkFinalizeShareContentView
      - test_finalizes_share_content
      - test_empty_ids_returns_400
+     - test_non_string_id_returns_400
      - test_nonexistent_ids_returns_404
 
    TestBulkUnfinalizeShareContentView
      - test_unfinalizes_share_content
      - test_empty_ids_returns_400
+     - test_non_string_id_returns_400
 
 ================================================================================
 5. test_reseller_views.py  (24 tests)
@@ -111,6 +113,10 @@ Total tests: 110
    TestBulkCopyOffersToNextWeekView
      - test_copies_offers
      - test_empty_ids_returns_400
+
+   TestBulkResellerEndpointsRejectNonStringIds
+     - test_non_string_id_returns_400  (copy offers, create / finalize / delete
+       documents, set to paid, summary invoice)
 
    TestBulkCopyOffersToOfferGroupView
      - test_copies_to_group
@@ -155,6 +161,9 @@ Total tests: 110
    TestCurrentStockComparisonDelete
      - test_deletes_inventory
      - test_delete_nonexistent_returns_404
+
+   TestBulkInventoryRejectsNonStringIds
+     - test_non_string_id_returns_400  (all three bulk inventory endpoints)
 
    TestBulkFinalizeCurrentStock
      - test_no_ids_returns_400

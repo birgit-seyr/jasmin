@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Callable
 from typing import Any
 
 from django.db import transaction
@@ -8,7 +9,6 @@ from django.db.models import QuerySet
 from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
-    inline_serializer,
 )
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
@@ -23,6 +23,7 @@ from ..constants import crates_should_be_on_documents, get_default_tax_rate_crat
 from ..errors import (
     CrateContentInvoiceMissingRequired,
     CrateDeliveryNoteContentMissingRequired,
+    CrateNetPriceInUse,
     CratesDisabledOnDocuments,
     FinalizedError,
     InvalidAmount,
@@ -45,6 +46,8 @@ from ..schemas import (
 from ..serializers import (
     CrateContentInvoiceResellerSerializer,
     CrateDeliveryNoteContentSerializer,
+    CrateDeliveryNoteContentWriteRequestSerializer,
+    CrateInvoiceContentWriteRequestSerializer,
     CrateItemSummarySerializer,
     CrateNetPriceSerializer,
 )
@@ -54,6 +57,7 @@ from ..utils.iso_week_utils import date_from_order
 from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 from ..utils.tax_rate_utils import resolve_crate_tax_rate
+from .base_viewsets import CanBeDeletedDestroyMixin
 
 
 def _get_tax_rate(crate: Crate | None, date: datetime.date) -> float:
@@ -65,34 +69,59 @@ def _get_tax_rate(crate: Crate | None, date: datetime.date) -> float:
     )
 
 
-def _required_crate_amount(request) -> int:
-    """Parse the mandatory ``amount`` from a crate-content create body.
+def _validated_crate_write(
+    serializer_class: type[drf_serializers.Serializer], request: Request
+) -> dict[str, Any]:
+    """Validate a crate-line create/update body and return its validated data.
 
-    ``CrateDeliveryNoteContent.amount`` and ``CrateContentInvoiceReseller.amount``
-    are NOT NULL ``IntegerField``s with no default, and both ``create()``
-    overrides read the body directly — no serializer validates them. So a body
-    without ``amount`` reached the INSERT as ``None`` (IntegrityError) and a
-    cleared quantity input reached it as ``""`` (ValueError on int coercion).
-    Either way the office got an HTTP 500 with no error code, on a finalizable
-    billing document endpoint.
-
-    Unlike an order line — where a missing amount legitimately means zero — a
-    crate line with no crate count is a malformed request, so this reports the
-    catalogued ``amount.invalid`` (400) instead of inventing a zero-crate row.
-
-    The sibling ``tax_rate`` on both call sites was already defended this way;
-    ``amount`` was simply missed.
+    A missing, blank or non-integer ``amount`` reports the catalogued
+    ``amount.invalid`` (400) the create endpoints already returned for it,
+    rather than the serializer's generic ``validation_error``: unlike an order
+    line, where a missing amount means zero, a crate line with no crate count
+    is a malformed request. Every other field error is the serializer's own 400
+    with a per-field ``details`` map.
     """
-    raw = body(request).get("amount")
-    if raw is None or raw == "":
-        raise InvalidAmount("An amount is required.", field="amount")
-    try:
-        return int(raw)
-    except (TypeError, ValueError) as exc:
+    serializer = serializer_class(data=request.data)
+    if not serializer.is_valid() and "amount" in serializer.errors:
+        raw = body(request).get("amount")
+        if raw is None or raw == "":
+            raise InvalidAmount("An amount is required.", field="amount")
         raise InvalidAmount(
             f"Invalid amount {raw!r} — expected a whole number of crates.",
             field="amount",
-        ) from exc
+        )
+    serializer.is_valid(raise_exception=True)
+    return dict(serializer.validated_data)
+
+
+def _crate_update_fields(
+    data: dict[str, Any], resolve_tax_rate: Callable[[], float]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Split a validated crate update into ``(update_fields, new_row_defaults)``.
+
+    ``update_fields`` is written to every existing row of the crate type, so it
+    carries only the keys the client sent: a body without ``price_per_unit``,
+    ``rabatt`` or ``tax_rate`` keeps the stored values instead of clearing the
+    price and discount of a document line. ``tax_rate`` is NOT NULL, so an
+    explicit null resolves the crate's rate and writes that.
+
+    ``new_row_defaults`` covers a row the service creates for the amount
+    difference when the crate type has no rows yet: an omitted ``rabatt``
+    stores 0 (as ``create`` does) and an omitted ``tax_rate`` the resolved rate.
+    """
+    update_fields: dict[str, Any] = {
+        field: data[field] for field in ("price_per_unit", "rabatt") if field in data
+    }
+    new_row_defaults: dict[str, Any] = {}
+    if "rabatt" not in data:
+        new_row_defaults["rabatt"] = 0
+    if data.get("tax_rate") is not None:
+        update_fields["tax_rate"] = data["tax_rate"]
+    elif "tax_rate" in data:
+        update_fields["tax_rate"] = resolve_tax_rate()
+    else:
+        new_row_defaults["tax_rate"] = resolve_tax_rate()
+    return update_fields, new_row_defaults
 
 
 def _reject_finalized(obj: Any, kind: str, action: str) -> None:
@@ -113,41 +142,6 @@ def _reject_if_crates_disabled() -> None:
         raise CratesDisabledOnDocuments(
             "Crates are disabled on documents for this tenant."
         )
-
-
-# Explicit request bodies: create/update read raw ``request.data`` keys, so
-# the model serializers declared on the viewsets do NOT describe the actual
-# request payloads. Shared by create and update per viewset.
-_CRATE_DELIVERY_NOTE_CONTENT_WRITE_REQUEST = inline_serializer(
-    name="CrateDeliveryNoteContentWriteRequest",
-    fields={
-        "delivery_note_id": drf_serializers.CharField(),
-        "crate_type": drf_serializers.CharField(),
-        "amount": drf_serializers.IntegerField(),
-        "price_per_unit": drf_serializers.DecimalField(
-            max_digits=5, decimal_places=2, required=False, allow_null=True
-        ),
-        "rabatt": drf_serializers.IntegerField(required=False, allow_null=True),
-        "note": drf_serializers.CharField(required=False, allow_blank=True),
-    },
-)
-
-_CRATE_INVOICE_CONTENT_WRITE_REQUEST = inline_serializer(
-    name="CrateInvoiceContentWriteRequest",
-    fields={
-        "invoice_id": drf_serializers.CharField(),
-        "crate_type": drf_serializers.CharField(),
-        "amount": drf_serializers.IntegerField(),
-        "price_per_unit": drf_serializers.DecimalField(
-            max_digits=5, decimal_places=2, required=False, allow_null=True
-        ),
-        "rabatt": drf_serializers.IntegerField(required=False, allow_null=True),
-        "tax_rate": drf_serializers.DecimalField(
-            max_digits=5, decimal_places=2, required=False, allow_null=True
-        ),
-        "note": drf_serializers.CharField(required=False, allow_blank=True),
-    },
-)
 
 
 class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
@@ -232,7 +226,7 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
     @transaction.atomic
     @extend_schema(
         description="Create a new crate entry for a delivery note.",
-        request=_CRATE_DELIVERY_NOTE_CONTENT_WRITE_REQUEST,
+        request=CrateDeliveryNoteContentWriteRequestSerializer,
         responses={
             201: CrateItemSummarySerializer,
             404: ErrorResponseSerializer,
@@ -249,11 +243,14 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         _reject_finalized(delivery_note, "delivery note", "add crates to finalized")
 
         crate_type = get_or_404(Crate, body(request).get("crate_type"), "Crate type")
+        data = _validated_crate_write(
+            CrateDeliveryNoteContentWriteRequestSerializer, request
+        )
 
         # tax_rate is NOT NULL on the model; resolve it the same way the invoice
         # crate paths do (caller-supplied → live CrateNetPrice → tenant setting →
         # crate default) so the INSERT never sends NULL.
-        requested_tax_rate = body(request).get("tax_rate")
+        requested_tax_rate = data.get("tax_rate")
         if requested_tax_rate is None:
             requested_tax_rate = _get_tax_rate(
                 crate_type, date_from_order(delivery_note.order)
@@ -261,11 +258,11 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         CrateDeliveryNoteContent.objects.create(
             delivery_note=delivery_note,
             crate_type=crate_type,
-            amount=_required_crate_amount(request),
-            price_per_unit=body(request).get("price_per_unit"),
-            rabatt=body(request).get("rabatt", 0),
+            amount=data["amount"],
+            price_per_unit=data.get("price_per_unit"),
+            rabatt=data.get("rabatt", 0),
             tax_rate=requested_tax_rate,
-            note=body(request).get("note", ""),
+            note=data.get("note", ""),
         )
 
         return Response(
@@ -276,7 +273,7 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
     @transaction.atomic
     @extend_schema(
         description="Update crate amount for a delivery note via adjustment entries.",
-        request=_CRATE_DELIVERY_NOTE_CONTENT_WRITE_REQUEST,
+        request=CrateDeliveryNoteContentWriteRequestSerializer,
         responses={
             200: CrateItemSummarySerializer,
             404: ErrorResponseSerializer,
@@ -292,11 +289,11 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         _reject_if_crates_disabled()
         delivery_note_id = body(request).get("delivery_note_id")
         crate_type_id = body(request).get("crate_type")
-        new_total_amount = body(request).get("amount")
-        price_per_unit = body(request).get("price_per_unit")
-        rabatt = body(request).get("rabatt", 0)
 
-        if not all([delivery_note_id, crate_type_id]) or new_total_amount is None:
+        if (
+            not all([delivery_note_id, crate_type_id])
+            or body(request).get("amount") is None
+        ):
             raise CrateDeliveryNoteContentMissingRequired(
                 "delivery_note_id, crate_type and amount are required"
             )
@@ -307,6 +304,9 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         _reject_finalized(delivery_note, "delivery note", "modify crates in finalized")
 
         crate_type = get_or_404(Crate, crate_type_id, "Crate type")
+        data = _validated_crate_write(
+            CrateDeliveryNoteContentWriteRequestSerializer, request
+        )
 
         scope_qs = CrateDeliveryNoteContent.objects.filter(
             delivery_note=delivery_note,
@@ -314,24 +314,19 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
         )
         # tax_rate is NOT NULL — an adjustment row created by the service would
         # otherwise INSERT NULL. Resolve it like create()/the invoice paths.
-        requested_tax_rate = body(request).get("tax_rate")
-        tax_rate = (
-            requested_tax_rate
-            if requested_tax_rate is not None
-            else _get_tax_rate(crate_type, date_from_order(delivery_note.order))
+        update_fields, new_row_defaults = _crate_update_fields(
+            data,
+            lambda: _get_tax_rate(crate_type, date_from_order(delivery_note.order)),
         )
         CrateContentService.apply_total_amount_change(
             scope_qs=scope_qs,
             adjustment_qs=None,
-            new_total_amount=int(new_total_amount),
-            update_fields={
-                "price_per_unit": price_per_unit,
-                "rabatt": rabatt,
-                "tax_rate": tax_rate,
-            },
+            new_total_amount=data["amount"],
+            update_fields=update_fields,
             create_kwargs={
                 "delivery_note": delivery_note,
                 "crate_type": crate_type,
+                **new_row_defaults,
             },
             model_class=CrateDeliveryNoteContent,
             lock_key=f"crate_totals:DeliveryNoteReseller:{delivery_note.id}:{crate_type.id}",
@@ -473,7 +468,7 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
     @transaction.atomic
     @extend_schema(
         description="Create a new crate entry for an invoice.",
-        request=_CRATE_INVOICE_CONTENT_WRITE_REQUEST,
+        request=CrateInvoiceContentWriteRequestSerializer,
         responses={
             201: CrateItemSummarySerializer,
             404: ErrorResponseSerializer,
@@ -488,21 +483,24 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
         _reject_finalized(invoice, "invoice", "add crates to finalized")
 
         crate_type = get_or_404(Crate, body(request).get("crate_type"), "Crate type")
+        data = _validated_crate_write(
+            CrateInvoiceContentWriteRequestSerializer, request
+        )
 
         # Fall through the canonical resolution chain when the caller
         # didn't pin a tax_rate: live CrateNetPrice → tenant setting →
         # hardcoded crate default. See utils/tax_rate_utils.py.
-        requested_tax_rate = body(request).get("tax_rate")
+        requested_tax_rate = data.get("tax_rate")
         if requested_tax_rate is None:
             requested_tax_rate = _get_tax_rate(crate_type, invoice.date)
         CrateContentInvoiceReseller.objects.create(
             invoice=invoice,
             crate_type=crate_type,
-            amount=_required_crate_amount(request),
-            price_per_unit=body(request).get("price_per_unit"),
-            rabatt=body(request).get("rabatt", 0),
+            amount=data["amount"],
+            price_per_unit=data.get("price_per_unit"),
+            rabatt=data.get("rabatt", 0),
             tax_rate=requested_tax_rate,
-            note=body(request).get("note", ""),
+            note=data.get("note", ""),
         )
 
         return Response(
@@ -513,7 +511,7 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
     @transaction.atomic
     @extend_schema(
         description="Update crate amount for an invoice via adjustment entries.",
-        request=_CRATE_INVOICE_CONTENT_WRITE_REQUEST,
+        request=CrateInvoiceContentWriteRequestSerializer,
         responses={
             200: CrateItemSummarySerializer,
             404: ErrorResponseSerializer,
@@ -529,11 +527,8 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
         _reject_if_crates_disabled()
         invoice_id = body(request).get("invoice_id")
         crate_type_id = body(request).get("crate_type")
-        new_total_amount = body(request).get("amount")
-        price_per_unit = body(request).get("price_per_unit")
-        rabatt = body(request).get("rabatt", 0)
 
-        if not all([invoice_id, crate_type_id]) or new_total_amount is None:
+        if not all([invoice_id, crate_type_id]) or body(request).get("amount") is None:
             raise CrateContentInvoiceMissingRequired(
                 "invoice_id, crate_type and amount are required"
             )
@@ -542,13 +537,13 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
         _reject_finalized(invoice, "invoice", "modify crates in finalized")
 
         crate_type = get_or_404(Crate, crate_type_id, "Crate type")
+        data = _validated_crate_write(
+            CrateInvoiceContentWriteRequestSerializer, request
+        )
 
         # Same canonical resolution as create() above.
-        requested_tax_rate = body(request).get("tax_rate")
-        tax_rate = (
-            requested_tax_rate
-            if requested_tax_rate is not None
-            else _get_tax_rate(crate_type, invoice.date)
+        update_fields, new_row_defaults = _crate_update_fields(
+            data, lambda: _get_tax_rate(crate_type, invoice.date)
         )
 
         scope_qs = CrateContentInvoiceReseller.objects.filter(
@@ -558,15 +553,12 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
         CrateContentService.apply_total_amount_change(
             scope_qs=scope_qs,
             adjustment_qs=None,
-            new_total_amount=int(new_total_amount),
-            update_fields={
-                "price_per_unit": price_per_unit,
-                "rabatt": rabatt,
-                "tax_rate": tax_rate,
-            },
+            new_total_amount=data["amount"],
+            update_fields=update_fields,
             create_kwargs={
                 "invoice": invoice,
                 "crate_type": crate_type,
+                **new_row_defaults,
             },
             model_class=CrateContentInvoiceReseller,
             lock_key=f"crate_totals:InvoiceReseller:{invoice.id}:{crate_type.id}",
@@ -628,7 +620,9 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
     update=extend_schema(responses=CrateNetPriceSerializer),
     partial_update=extend_schema(responses=CrateNetPriceSerializer),
 )
-class CrateNetPriceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+class CrateNetPriceViewSet(
+    CanBeDeletedDestroyMixin, RolePermissionsMixin, viewsets.ModelViewSet
+):
     """ViewSet for managing crate prices.
 
     Prices are time-bound with valid_from / valid_until dates. Pass
@@ -638,6 +632,9 @@ class CrateNetPriceViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaff
     write_permission = IsOffice
     serializer_class = CrateNetPriceSerializer
+    # DELETE enforces the serializer's ``can_be_deleted`` rule: an active price
+    # of a crate that is in use is refused.
+    not_deletable_error = CrateNetPriceInUse
 
     @extend_schema(
         parameters=[get_crate_parameter(), get_current_parameter()],

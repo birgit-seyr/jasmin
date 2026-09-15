@@ -28,6 +28,8 @@ from .consents_serializer import (
 )
 from .coop_share_import_serializer import CoopShareImportSerializer
 from .crates_serializer import (
+    CrateDeliveryNoteContentWriteRequestSerializer,
+    CrateInvoiceContentWriteRequestSerializer,
     CrateOrderContentCreateRequestSerializer,
     CrateOrderContentSerializer,
     CrateOrderContentUpdateRequestSerializer,

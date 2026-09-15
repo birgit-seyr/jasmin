@@ -15,16 +15,21 @@ Three things are load-bearing and each has a test here:
 from __future__ import annotations
 
 import json
+import struct
+import zlib
 from io import BytesIO
 
 import pytest
 from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test import override_settings
 from PIL import Image
 from rest_framework.test import APIClient
 
+from apps.commissioning.tests.factories import JasminUserFactory
 from apps.shared.tenants.errors import NoTenantContext, TenantAppIconInvalid
+from apps.shared.tenants.models import Tenant
 from apps.shared.tenants.serializers import TenantSerializer
 from apps.shared.tenants.views import FALLBACK_APP_ICON_PATH, _tenant_from_schema
 
@@ -38,6 +43,44 @@ def _image_bytes(width: int, height: int, image_format: str = "PNG") -> bytes:
     mode = "RGBA" if image_format == "PNG" else "RGB"
     Image.new(mode, (width, height), "green").save(buffer, format=image_format)
     return buffer.getvalue()
+
+
+def _idat_bounds(data: bytes) -> tuple[int, int]:
+    """Return (start of the IDAT chunk data, start of its CRC) in a PNG."""
+    position = 8  # past the PNG signature
+    while position < len(data):
+        length = struct.unpack(">I", data[position : position + 4])[0]
+        chunk_type = bytes(data[position + 4 : position + 8])
+        data_start = position + 8
+        crc_position = data_start + length
+        if chunk_type == b"IDAT":
+            return data_start, crc_position
+        position = crc_position + 4
+    raise AssertionError("no IDAT chunk in the generated PNG")
+
+
+def _bad_checksum_png() -> bytes:
+    """A 512x512 PNG whose IDAT chunk CRC is corrupted. The header chunks stay
+    intact, so ``Image.open`` succeeds and only ``verify()`` fails."""
+    data = bytearray(_image_bytes(512, 512))
+    _, crc_position = _idat_bounds(data)
+    data[crc_position] ^= 0xFF
+    return bytes(data)
+
+
+def _corrupt_pixel_data_png() -> bytes:
+    """A 512x512 PNG whose compressed IDAT data is garbled but whose CRC is
+    recomputed to match. ``verify()`` only checks CRCs, so it — and DRF's
+    ``ImageField``, which stops at ``verify()`` — accepts the file; only
+    decoding the pixels fails."""
+    data = bytearray(_image_bytes(512, 512))
+    data_start, crc_position = _idat_bounds(data)
+    # Keep the two-byte zlib header so the stream starts, garble the rest.
+    garbled = bytes(byte ^ 0xFF for byte in data[data_start + 2 : crc_position])
+    data[data_start + 2 : crc_position] = garbled
+    crc = zlib.crc32(b"IDAT" + bytes(data[data_start:crc_position]))
+    data[crc_position : crc_position + 4] = struct.pack(">I", crc)
+    return bytes(data)
 
 
 def _upload(width: int, height: int, image_format: str = "PNG") -> ContentFile:
@@ -139,10 +182,75 @@ class TestAppIconValidation:
 
         assert excinfo.value.code == "tenant.app_icon_invalid"
 
+    def test_rejects_png_with_a_bad_chunk_checksum(self):
+        """``verify()`` reports a corrupt PNG chunk as ``SyntaxError``, which
+        used to escape the validator as a 500."""
+        upload = ContentFile(_bad_checksum_png(), name="icon.png")
+
+        with pytest.raises(TenantAppIconInvalid) as excinfo:
+            _validate(upload)
+
+        assert excinfo.value.code == "tenant.app_icon_invalid"
+
+    def test_rejects_png_whose_pixel_data_is_corrupt(self):
+        """Checksums intact, compressed pixel data garbled: ``verify()``
+        passes and the decode in ``convert()`` raises ``OSError``, which used
+        to escape the validator as a 500."""
+        payload = _corrupt_pixel_data_png()
+        Image.open(BytesIO(payload)).verify()  # fixture must get past verify()
+        upload = ContentFile(payload, name="icon.png")
+
+        with pytest.raises(TenantAppIconInvalid) as excinfo:
+            _validate(upload)
+
+        assert excinfo.value.code == "tenant.app_icon_invalid"
+
     @pytest.mark.parametrize("empty", [None, ""])
     def test_clearing_the_field_passes_through(self, empty):
         """``PATCH {"app_icon": null}`` is how the upload widget clears it."""
         assert _validate(empty) == empty
+
+
+@pytest.mark.django_db
+class TestAppIconUploadEndpoint:
+    @staticmethod
+    def _stored_icon(tenant):
+        return Tenant.objects.values_list("app_icon", flat=True).get(pk=tenant.pk)
+
+    @staticmethod
+    def _patch_icon(tenant, payload: bytes):
+        admin = JasminUserFactory(roles=["admin"])
+        client = APIClient(HTTP_HOST=TENANT_HOST)
+        client.force_authenticate(user=admin)
+        upload = SimpleUploadedFile("icon.png", payload, content_type="image/png")
+        return client.patch(
+            f"/api/tenants/tenants/{tenant.id}/",
+            {"app_icon": upload},
+            format="multipart",
+        )
+
+    def test_png_with_a_bad_chunk_checksum_is_refused_with_400(self, tenant):
+        """DRF's ``ImageField`` already runs ``verify()`` and refuses this file
+        before ``validate_app_icon`` sees it."""
+        stored_before = self._stored_icon(tenant)
+
+        resp = self._patch_icon(tenant, _bad_checksum_png())
+
+        assert resp.status_code == 400, resp.content
+        assert resp.data["field"] == "app_icon"
+        assert self._stored_icon(tenant) == stored_before
+
+    def test_png_with_corrupt_pixel_data_is_refused_with_400(self, tenant):
+        """This file gets past DRF's ``ImageField`` (it stops at ``verify()``),
+        so ``validate_app_icon``'s decode is the only gate; an uncaught decode
+        error there was a 500."""
+        stored_before = self._stored_icon(tenant)
+
+        resp = self._patch_icon(tenant, _corrupt_pixel_data_png())
+
+        assert resp.status_code == 400, resp.content
+        assert resp.data["code"] == "tenant.app_icon_invalid"
+        assert self._stored_icon(tenant) == stored_before
 
 
 @pytest.mark.django_db

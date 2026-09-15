@@ -10,6 +10,7 @@ from __future__ import annotations
 from core.errors import (
     BadRequestError,
     ConflictError,
+    ForbiddenError,
     InvalidQueryParam,
     NotFoundError,
 )
@@ -53,7 +54,13 @@ class BulkFinalizeAppLabelInvalid(BadRequestError):
     code = "finalize.app_label_invalid"
 
 
-class BulkFinalizeIdsInvalid(BadRequestError):
+class BulkIdsInvalid(BadRequestError):
+    """A bulk-by-ids ``ids`` entry is not a non-empty string id."""
+
+    code = "bulk.ids_invalid"
+
+
+class BulkFinalizeIdsInvalid(BulkIdsInvalid):
     """A generic bulk (un)finalize ``ids`` entry is not a string id."""
 
     code = "finalize.ids_invalid"
@@ -415,6 +422,29 @@ class OrderContentNotFound(NotFoundError):
     code = "order_content.not_found"
 
 
+class OrderContentOfferRequired(ForbiddenError):
+    """A customer order line must order an offer. A free ``share_article`` line
+    has no offer, so it would skip the stock check and the offer group's
+    offer set; only office staff may add one."""
+
+    code = "order_content.offer_required"
+
+
+class OrderContentOfferNotInOfferGroup(ForbiddenError):
+    """A customer tried to order an offer outside their own reseller's offer
+    group (or their reseller has no offer group, so no offer is theirs)."""
+
+    code = "order_content.offer_not_in_offer_group"
+
+
+class OrderContentItemChangeForbidden(ForbiddenError):
+    """A customer tried to re-point an existing order line at another offer or
+    article. Stock was reserved on the line's current offer, so only office
+    staff may change what a line orders."""
+
+    code = "order_content.item_change_forbidden"
+
+
 class DeliveryNoteNotFound(NotFoundError):
     code = "delivery_note.not_found"
 
@@ -437,6 +467,15 @@ class StorageNotFound(NotFoundError):
 
 class CrateNotFound(NotFoundError):
     code = "crate.not_found"
+
+
+class CrateNetPriceInUse(ConflictError):
+    """A currently valid ``CrateNetPrice`` cannot be deleted while its crate is
+    in use (offers, crate orders, deliveries, a variation's packing crate) —
+    the same rule its serializer's ``can_be_deleted`` reports. Future and past
+    prices stay deletable."""
+
+    code = "crate.net_price_in_use"
 
 
 class CratesDisabledOnDocuments(BadRequestError):
@@ -503,8 +542,26 @@ class ShareArticleNotFound(NotFoundError):
     code = "share_article.not_found"
 
 
+class ShareArticleNetPriceInUse(ConflictError):
+    """A currently valid ``ShareArticleNetPrice`` cannot be deleted while its
+    article is in use (offers, member shares, reseller orders, deliveries,
+    stock, forecasts) — the same rule its serializer's ``can_be_deleted``
+    reports. Future and past prices stay deletable."""
+
+    code = "share_article.net_price_in_use"
+
+
 class ShareTypeVariationNotFound(NotFoundError):
     code = "share_type_variation.not_found"
+
+
+class ShareTypeVariationGrossPriceInUse(ConflictError):
+    """A ``ShareTypeVariationGrossPrice`` cannot be deleted once any member has
+    subscribed to its variation: the price is part of that variation's
+    billable history — the same rule its serializer's ``can_be_deleted``
+    reports."""
+
+    code = "share_type_variation.gross_price_in_use"
 
 
 class VirtualComponentNotPhysical(BadRequestError):
@@ -847,6 +904,16 @@ class ConsentDocumentInUse(ConflictError):
     code = "consent.document_in_use"
 
 
+class ConsentDocumentImmutable(ConflictError):
+    """Caller tried to change what members consented to — ``body``, ``title``,
+    ``kind``, ``locale``, ``version`` or ``valid_from`` — on a ConsentDocument
+    that at least one ConsentRecord references. Consented documents are
+    append-only; publish a new version instead. Drafts nobody has consented to
+    yet stay editable."""
+
+    code = "consent.document_immutable"
+
+
 # --------------------------------------------------------------------------- #
 # Trial members / subscriptions                                                #
 # --------------------------------------------------------------------------- #
@@ -907,6 +974,52 @@ class CoopShareConfirmedImmutable(ConflictError):
     member) instead of hard-deleting it."""
 
     code = "coop_share.confirmed_immutable"
+
+
+class CoopShareConfirmedFieldsLocked(ConflictError):
+    """Update attempted to change the committed terms of an admin-confirmed
+    coop share (amount, member, due date, increase flag). Once confirmed the
+    Geschäftsanteil is part of the GenG register; only the payment / payback /
+    note bookkeeping stays editable. Cancel the share and record a new one
+    instead of rewriting it."""
+
+    code = "coop_share.confirmed_fields_locked"
+
+    def __init__(self, field_names: list[str]) -> None:
+        super().__init__(
+            "Cannot change "
+            + ", ".join(field_names)
+            + " on a confirmed coop share. Cancel it and record a new share instead.",
+            field=field_names[0] if field_names else None,
+            details={"fields": field_names},
+        )
+
+
+class CoopShareInvalidAmount(BadRequestError):
+    """``amount_of_coop_shares`` is not a whole number greater than zero. A
+    cooperative share is a whole Geschäftsanteil (GenG) — zero, negative and
+    fractional amounts are rejected on every write path (office, CSV import,
+    member self-service)."""
+
+    code = "coop_share.invalid_amount"
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message, field="amount_of_coop_shares")
+
+
+class SubscriptionPriceInvalid(BadRequestError):
+    """``price_per_delivery`` is not a valid non-negative amount on a path that
+    takes it outside a serializer (the waiting-list offer). A negative price
+    would make the subscription produce negative or no charges."""
+
+    code = "subscription.invalid_price"
+
+    def __init__(self, value) -> None:
+        super().__init__(
+            f"Invalid price_per_delivery ({value}); it must be a number of at least 0.",
+            field="price_per_delivery",
+            details={"value": str(value)},
+        )
 
 
 class SubscriptionStartTooSoon(BadRequestError):
@@ -1447,6 +1560,7 @@ __all__ = [
     "OfferNotFound",
     "StorageNotFound",
     "CrateNotFound",
+    "CrateNetPriceInUse",
     "CratesDisabledOnDocuments",
     "CrateDeliveryNoteContentMissingRequired",
     "CrateContentInvoiceMissingRequired",
@@ -1454,7 +1568,9 @@ __all__ = [
     "RequiredFieldMissing",
     "DocumentDateRequired",
     "ShareArticleNotFound",
+    "ShareArticleNetPriceInUse",
     "ShareTypeVariationNotFound",
+    "ShareTypeVariationGrossPriceInUse",
     "VirtualComponentNotPhysical",
     "ShareContentError",
     "ShareContentNotFound",
@@ -1480,6 +1596,7 @@ __all__ = [
     "ConsentTargetMemberUnresolved",
     "ConsentAlreadyRevoked",
     "ConsentDocumentInUse",
+    "ConsentDocumentImmutable",
     "TrialMembersNotAllowed",
     "TrialSubscriptionsNotAllowed",
     "TrialSubscriptionsOnlyForFullMembers",
@@ -1487,6 +1604,9 @@ __all__ = [
     "SubscriptionConfirmedImmutable",
     "MemberConfirmedImmutable",
     "CoopShareConfirmedImmutable",
+    "CoopShareConfirmedFieldsLocked",
+    "CoopShareInvalidAmount",
+    "SubscriptionPriceInvalid",
     "SubscriptionStartTooSoon",
     "SolidarityPriceBelowMinimum",
     "SubscriptionCancellationError",

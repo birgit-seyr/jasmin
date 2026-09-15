@@ -364,6 +364,36 @@ class TestUpdateOrderContent:
         # offer amount should decrease by the difference (5)
         assert offer.amount == Decimal("85")
 
+    @patch.object(OrderContentService, "create_movements", side_effect=_noop_movements)
+    @patch.object(
+        OrderContentService,
+        "create_all_theoretical_objects",
+        side_effect=_noop_theoretical,
+    )
+    def test_server_owned_fields_are_not_applied(
+        self, _mock_theo, _mock_mv, tenant, user
+    ):
+        """Only line fields are written from ``kwargs``: the parent order and
+        the finalization stamps are server-owned, whoever the caller is."""
+        offer = OfferFactory(amount=Decimal("90"))
+        oc = OrderContentFactory(offer=offer, share_article=None, amount=Decimal("10"))
+        original_order_id = oc.order_id
+
+        OrderContentService.update_order_content(
+            order_content_id=oc.pk,
+            amount=Decimal("10"),
+            order=OrderFactory(),
+            finalized_by=user,
+            finalized_at=timezone.now(),
+            note="applied",
+        )
+
+        oc.refresh_from_db()
+        assert oc.order_id == original_order_id
+        assert oc.finalized_by_id is None
+        assert oc.finalized_at is None
+        assert oc.note == "applied"
+
     def test_raises_if_finalized(self, tenant):
         # Build without save (FinalizedProtectedMixin blocks save of finalized objects)
         oc = OrderContentFactory(amount=Decimal("10"))

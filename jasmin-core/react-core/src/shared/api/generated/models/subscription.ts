@@ -46,6 +46,7 @@ export interface Subscription {
   /** @nullable */
   readonly cancellation_reason?: string | null;
   is_trial: boolean;
+  /** @minimum 1 */
   quantity: number;
   /** @pattern ^-?\d{0,6}(?:\.\d{0,2})?$ */
   price_per_delivery: string;

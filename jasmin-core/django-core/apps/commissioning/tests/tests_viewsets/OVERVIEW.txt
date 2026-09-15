@@ -10,7 +10,7 @@ test_badge_viewsets.py (9 tests)
   TestUnConfirmedTrialSubscriptionsViewSet 3 tests  unconfirmed_trial_subscriptions badge count
   TestUnConfirmedMembersViewSet           3 tests   unconfirmed_members badge count
 
-test_basics_viewsets.py (33 tests)
+test_basics_viewsets.py (36 tests)
 ──────────────────────────────────
   TestSeasonViewSet                       3 tests   list, create (with valid_from/valid_until)
   TestStorageViewSet                      5 tests   list, isPast active/inactive filter, ordering
@@ -20,6 +20,9 @@ test_basics_viewsets.py (33 tests)
                                                     fallback unit, explicit unit, scope filter,
                                                     404 on missing share_article, 400 on bad payload),
                                                     permissions (member/anon)
+  TestShareArticleNetPriceDestroyGuard    3 tests   DELETE enforces can_be_deleted: active price of
+                                                    in-use article → 409 + row kept; unused → 204;
+                                                    future price of in-use article → 204
 
 test_choices_viewsets.py (8 tests)
 ──────────────────────────────────
@@ -49,11 +52,13 @@ test_members_viewsets.py (15 tests)
   TestSubscriptionViewSet                 4 tests   list, filter is_trial, filter by member
   TestCoopShareViewSet                    3 tests   list, filter by member
 
-test_shares_viewsets.py (30 tests)
+test_shares_viewsets.py (32 tests)
 ──────────────────────────────────
   TestShareTypeViewSet                    7 tests   list, filter share_option, create/update uppercase, invalid 400
   TestShareTypeVariationViewSet           5 tests   list, filter by share_type/physical/internal_name
   TestShareTypeVariationGrossPriceViewSet 3 tests   list, filter by variation
+  TestShareTypeVariationGrossPriceDestroyGuard 2 tests  DELETE enforces can_be_deleted: price of a
+                                                    subscribed variation → 409 + row kept; unsubscribed → 204
   TestShareViewSet                        4 tests   list, filter year/week, get_days action
   TestDefaultShareContentBulkCreateValidation 3 tests  valid amount_<var> cell persists (200); missing field 400; NaN/non-finite 400
   TestDefaultShareContentBulkUpdateValidation 2 tests  composite-id PUT replaces slot amount; bad-typed field 400
@@ -67,15 +72,21 @@ test_resellers_viewsets.py (20 tests)
   TestResellerViewSet                     6 tests   list, filter is_reseller/is_active_reseller, retrieve, delete
   TestOfferGroupViewSet                   2 tests   list
   TestOfferViewSet                        3 tests   list, filter by year/week
-  TestOrderContentViewSet                 1 test    list
+  TestOrderContentViewSet                 6 tests   list, create derives tax_rate, Orders page offer/article row
+                                                    create+PATCH payloads, customer page payloads via staff route,
+                                                    PATCH without amount keeps amount/stock/crate row
   TestInvoiceResellerViewSet              6 tests   list, upload_pdf requires finalized, create_storno guards, protected fields read-only on update
   TestDeliveryNoteResellerViewSet         3 tests   list, upload_pdf requires finalized
   TestCommissioningListResellersViewSet   2 tests   requires params, returns for valid params
 
-test_consents_viewsets.py (22 tests) — DSGVO-critical access matrix
+test_consents_viewsets.py (32 tests) — DSGVO-critical access matrix
 ───────────────────────────────────────────────────────────────────
   TestConsentDocumentReadAccess           6 tests   anon + member + office all 200; current/ 200 + clean 404
   TestConsentDocumentWriteAccess          6 tests   anon 401/403, member 403; office 201; PROTECTed delete → 409
+  TestConsentDocumentImmutableOnceConsented 10 tests  PATCH/PUT changing body/title/kind/locale/version/valid_from
+                                                    of a consented doc → 409 consent.document_immutable, row +
+                                                    sha unchanged; unchanged values → 200; draft edit → 200 +
+                                                    stored PDF re-rendered
   TestConsentRecordCreate                 7 tests   member pinned to self; spoof attempt → 403; office can act on behalf; IP from X-Forwarded-For; UA captured; unknown document → 404
   TestConsentRecordListScoping            4 tests   anon blocked; member sees only own; office sees all; ?member= filter
   TestConsentRecordRevoke                 5 tests   anon blocked; owner revokes own; non-owning member → 404 (not leaked); office revokes any; double-revoke → 409
@@ -91,6 +102,17 @@ test_server_owned_field_locks.py (18 tests) — generic writes cannot set server
   TestSubscriptionLocks                   1 test    PATCH cannot rewrite renewal chain / waiting-list status / authorship (frozen clock)
   TestMemberLocks                         2 tests   PATCH cannot set consent / cancellation / waiting-list / audit stamps; create stamps request user
   TestShareDeliveryLocks                  3 tests   overview create ignores display annotations; PATCH cannot re-point subscription (both viewsets)
+
+test_coop_share_amount_and_confirmed_lock.py (16 tests) — coop-share amount rule + confirmed-share edit lock
+─────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestOfficeCoopShareAmount               6 tests   office create -2 / 0 / 2.5 → 400 coop_share.invalid_amount; whole amount 201; PATCH to a fractional amount → 400; unchanged legacy fractional amount stays editable
+  TestConfirmedCoopShareEditLock          8 tests   PATCH amount / is_increase / due_date / member on a confirmed share → 409 coop_share.confirmed_fields_locked; PUT rewriting amount → 409; office-grid bookkeeping save (paid_back_date + note, re-sent tenant value) → 200 keeping the value snapshot; unconfirmed terms editable; confirm committed after load still locks (row re-read under lock)
+  TestCoopShareUpdateBoundsLock           2 tests   update takes the per-member coop_share_bounds advisory lock; reassignment locks both members in sorted order
+
+test_subscription_price_bounds.py (12 tests) — office subscription quantity/price bounds + solidarity floor on PATCH (frozen clock)
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestOfficeSubscriptionBounds            6 tests   create quantity 0 / -1 → 400; price -1 → 400; PATCH quantity 0 → 400; price 0 and a free trial still 201
+  TestSolidarityFloorOnPatch              6 tests   PATCH variation / valid_from / is_trial re-checks the STORED price against the new floor → 400; variation + price at the floor → 200; unrelated edit of a below-floor draft → 200; solidarity off keeps price discretion
 
 test_picture_upload_validation.py (37 tests) — picture uploads must be raster images
 ────────────────────────────────────────────────────────────────────────────────────

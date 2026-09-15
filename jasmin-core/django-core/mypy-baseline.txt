@@ -2,7 +2,7 @@
 # Managed by scripts/mypy_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/mypy_baseline.py freeze
-# 367 finding(s).
+# 366 finding(s).
 
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
@@ -370,4 +370,3 @@ apps/staff/services/weekly_plan.py: Invalid index type "tuple[str, int | None, A
 config/settings.py: "object" has no attribute "pop"  [attr-defined]
 config/settings.py: "object" has no attribute "values"  [attr-defined]
 config/urls.py: Function "django.urls.conf.path" is not valid as a type  [valid-type]
-core/exception_handler.py: Name "payload" already defined on line 71  [no-redef]

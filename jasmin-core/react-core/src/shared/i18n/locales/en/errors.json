@@ -38,6 +38,7 @@
     "open_ended_not_allowed": "A subscription must have an end date. Open-ended subscriptions are not allowed.",
     "no_active_price": "This share-type variation has no valid price for the chosen start date. Please pick a different start date or variation.",
     "solidarity_price_below_minimum": "The chosen price ({{chosen}}) is below the minimum price ({{minimum}}) for this share-type variation. Please choose a price of at least {{minimum}}.",
+    "invalid_price": "The price per delivery must be a number of at least 0.",
     "delivery_station_day_out_of_range": "The selected delivery-station day doesn't cover the whole subscription term — it starts after the subscription begins or ends (with no successor day) before the subscription ends. Please choose a delivery-station day that covers the term.",
     "bulk_renew": {
       "ids_required": "Provide a non-empty list of subscription ids.",
@@ -79,15 +80,17 @@
   "coop_share": {
     "contract_agreement_required": "Please agree to the subscription contract to subscribe cooperative shares.",
     "value_not_configured": "The value of one cooperative share is not configured. Please contact the office.",
-    "invalid_amount": "The number of coop shares must be greater than 0.",
-    "confirmed_immutable": "A confirmed cooperative share can’t be deleted — cancel the share (or the member) instead."
+    "invalid_amount": "The number of coop shares must be a whole number greater than 0.",
+    "confirmed_immutable": "A confirmed cooperative share can’t be deleted — cancel the share (or the member) instead.",
+    "confirmed_fields_locked": "The amount, member, due date and increase flag of a confirmed cooperative share can no longer be changed — cancel the share and record a new one instead."
   },
   "share": {
     "not_found": "Share not found."
   },
   "share_article": {
     "not_found": "Share article not found.",
-    "invalid_share_option": "Invalid share option."
+    "invalid_share_option": "Invalid share option.",
+    "net_price_in_use": "This currently valid price can't be deleted because the article is already in use. Add a new price with a later start date instead."
   },
   "share_type": {
     "succession_has_active_variations": "Can't start a new share type while the current one still has variations active on or after this date. End those variations first, or choose a later start date.",
@@ -104,7 +107,8 @@
     "shortening_strands_subscriptions": "Can't end this variation on the given date: some subscriptions are open or end after it and would outlive their variation. End those subscriptions first, or choose a later end date.",
     "missing_bulk": "One or more of the given share type variations do not exist.",
     "over_capacity": "This share type is sold out for the selected period.",
-    "capacity_below_occupancy": "Capacity can't be lowered below what's already subscribed for a current or upcoming week."
+    "capacity_below_occupancy": "Capacity can't be lowered below what's already subscribed for a current or upcoming week.",
+    "gross_price_in_use": "This price can't be deleted because the share type variation already has subscriptions."
   },
   "tenant": {
     "app_icon_invalid": "The app icon must be a square PNG, JPEG or WEBP image of at least 512x512 pixels and at most 2 MB."
@@ -164,7 +168,10 @@
   "order_content": {
     "not_found": "Order line not found.",
     "finalized": "Cannot update a finalized order content.",
-    "insufficient_stock": "Not enough stock available — available: {{available}}."
+    "insufficient_stock": "Not enough stock available — available: {{available}}.",
+    "offer_required": "You can only order offers.",
+    "offer_not_in_offer_group": "This offer is not part of your offer group.",
+    "item_change_forbidden": "Only office staff can change the offer or article of an order line."
   },
   "packing_list": {
     "amounts_diverge_across_stations": "Packing amounts differ between delivery stations. Select a delivery station (or tour) to view the packing list."
@@ -246,6 +253,12 @@
   "query": {
     "invalid_param": "Invalid request parameter — please check your input and try again."
   },
+  "data": {
+    "value_invalid": "A value is too long, out of range or in the wrong format — please check your input."
+  },
+  "bulk": {
+    "ids_invalid": "ids may only contain non-empty string IDs."
+  },
   "shares_delivery_day": {
     "not_found": "No active delivery day found for the given day.",
     "tours_reduced_while_in_use": "This delivery day is already in use — the number of tours can only be increased, not reduced. Lowering it would strand deliveries on the removed tours.",
@@ -308,10 +321,12 @@
     "already_revoked": "This consent has already been revoked.",
     "document_in_use": "This consent document is already in use and cannot be deleted — publish a new version instead.",
     "document_not_found": "Consent document not found.",
-    "target_member_unresolved": "No target member could be inferred from the request."
+    "target_member_unresolved": "No target member could be inferred from the request.",
+    "document_immutable": "Members have already consented to this consent document — its text, title, kind, language, version and start date can no longer be changed. Publish a new version instead."
   },
   "crate": {
-    "not_found": "Crate not found."
+    "not_found": "Crate not found.",
+    "net_price_in_use": "This currently valid price can't be deleted because the crate is already in use. Add a new price with a later start date instead."
   },
   "document": {
     "date_required": "A date is required for this document.",
@@ -420,6 +435,9 @@
     "employee_not_found": "Staff member not found.",
     "weekly_plan_category_not_found": "Weekly plan category not found.",
     "invalid_weekly_plan_assignment": "Invalid weekly plan assignment.",
-    "weekly_plan_copy_target_not_empty": "The target week already has a weekly plan. Copy is only possible into an empty week."
+    "weekly_plan_copy_target_not_empty": "The target week already has a weekly plan. Copy is only possible into an empty week.",
+    "employee_in_use": "This staff member can't be deleted because weekly plan entries, absences or employments still reference them. Deactivate them instead.",
+    "weekly_plan_category_in_use": "This weekly plan category can't be deleted because it is used in the weekly plan. Deactivate it instead.",
+    "absence_category_in_use": "This absence category can't be deleted because absences still reference it. Deactivate it instead."
   }
 }

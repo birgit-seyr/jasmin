@@ -13,6 +13,8 @@ import re
 
 from django.core.files.base import ContentFile
 
+from apps.shared.image_upload import PILLOW_TRUNCATED_IMAGES_LOCK
+
 # A leading ``<tag>`` anywhere means the body is HTML (tenant convention:
 # "store it as-shown"); otherwise treat it as plain text and preserve its line
 # breaks with ``white-space: pre-wrap`` instead of collapsing them.
@@ -41,6 +43,17 @@ _LABELS = {
 
 
 def render_consent_pdf(document) -> ContentFile:
+    """Render ``document`` to PDF while holding the Pillow truncated-image lock.
+
+    WeasyPrint needs Pillow's process-wide truncated-image tolerance on, and upload
+    validation switches it off while decoding; holding the shared lock keeps the
+    two from overlapping in a threaded worker.
+    """
+    with PILLOW_TRUNCATED_IMAGES_LOCK:
+        return _render_consent_pdf(document)
+
+
+def _render_consent_pdf(document) -> ContentFile:
     """Return a ``ContentFile`` of the document's ``body`` rendered to PDF.
 
     Header is the document's **title**, then its **version**, then its

@@ -6,6 +6,13 @@
  * OpenAPI spec version: 1.0.0
  */
 
+/**
+ * Request body for creating or updating a crate line on an invoice.
+
+``tax_rate`` null or omitted resolves the crate's rate for the invoice
+date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
+keeps the stored value.
+ */
 export interface CrateInvoiceContentWriteRequest {
   invoice_id: string;
   crate_type: string;
@@ -15,12 +22,20 @@ export interface CrateInvoiceContentWriteRequest {
    * @pattern ^-?\d{0,3}(?:\.\d{0,2})?$
    */
   price_per_unit?: string | null;
-  /** @nullable */
+  /**
+   * @minimum 0
+   * @maximum 100
+   * @nullable
+   */
   rabatt?: number | null;
   /**
    * @nullable
    * @pattern ^-?\d{0,3}(?:\.\d{0,2})?$
    */
   tax_rate?: string | null;
-  note?: string;
+  /**
+   * @maxLength 500
+   * @nullable
+   */
+  note?: string | null;
 }

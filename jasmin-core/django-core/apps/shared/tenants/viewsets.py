@@ -135,6 +135,27 @@ class TenantViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     # exposed over the API.
     http_method_names = ["get", "put", "patch", "head", "options"]
 
+    # The tenant's IBAN and SEPA creditor identity decide where SEPA
+    # collections are paid, so changing any of them needs fresh step-up auth,
+    # like every other bank-data write (member / billing-profile IBANs, the
+    # billing fields of tenant settings). ``requires_step_up_for_fields`` fires
+    # only when a value actually changes, so a configuration autosave that
+    # echoes these unchanged next to a name or address edit does not prompt.
+    _STEP_UP_SENSITIVE_FIELDS = (
+        "iban",
+        "sepa_creditor_id",
+        "sepa_creditor_name",
+        "sepa_creditor_bic",
+    )
+
+    def get_permissions(self):
+        from apps.accounts.permissions import requires_step_up_for_fields
+
+        perms = super().get_permissions()
+        if self.action in {"update", "partial_update"}:
+            perms.append(requires_step_up_for_fields(*self._STEP_UP_SENSITIVE_FIELDS)())
+        return perms
+
     def get_serializer_class(self):
         """Pick the narrower serializer for non-staff reads.
 

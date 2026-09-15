@@ -127,6 +127,37 @@ class TestBulkCopyOffersToNextWeekView:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
+@pytest.mark.django_db
+class TestBulkResellerEndpointsRejectNonStringIds:
+    """Every ids entry must be a non-empty string; a number, null or object
+    entry is refused before any row is looked up."""
+
+    @pytest.mark.parametrize(
+        ("url_name", "extra"),
+        [
+            ("bulk_copy_offers_to_next_week", {}),
+            ("bulk_create_documents_from_orders", {"model": "invoice"}),
+            ("bulk_finalize_documents", {"model": "delivery_note"}),
+            ("bulk_delete_documents", {"model": "invoice"}),
+            ("bulk_set_to_paid_documents", {"model": "invoice"}),
+            ("bulk_create_summary_invoice_from_orders", {}),
+        ],
+    )
+    @pytest.mark.parametrize("bad_id", [123, None, {"id": "x"}])
+    def test_non_string_id_returns_400(
+        self, api_client, tenant, url_name, extra, bad_id
+    ):
+        order = OrderFactory()
+        resp = api_client.post(
+            reverse(url_name),
+            {"ids": [str(order.id), bad_id], **extra},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "bulk.ids_invalid"
+        assert resp.data["field"] == "ids"
+
+
 # ---------------------------------------------------------------------------
 # BulkCopyOffersToOfferGroupView
 # ---------------------------------------------------------------------------

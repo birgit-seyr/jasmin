@@ -326,6 +326,28 @@ class TestCurrentStockComparisonDelete:
 # Bulk stock operations
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
+class TestBulkInventoryRejectsNonStringIds:
+    @pytest.mark.parametrize(
+        "url", [URL_BULK_FINALIZE, URL_BULK_EXPECTED, URL_BULK_ZERO]
+    )
+    @pytest.mark.parametrize("bad_id", [123, None, "", {"id": "x"}])
+    def test_non_string_id_returns_400(self, api_client, tenant, url, bad_id):
+        """A non-string composite id used to reach ``.split`` and return 500."""
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        valid_id = _make_composite_id(article, "KG", "M", storage)
+
+        resp = api_client.post(url, {"ids": [valid_id, bad_id]}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "bulk.ids_invalid"
+        assert resp.data["field"] == "ids"
+        assert not MovementShareArticle.objects.filter(
+            movement_type=MovementTypeOptions.INVENTORY, share_article=article
+        ).exists()
+
+
+@pytest.mark.django_db
 class TestBulkFinalizeCurrentStock:
     def test_no_ids_returns_400(self, api_client, tenant):
         resp = api_client.post(URL_BULK_FINALIZE, {"ids": []}, format="json")

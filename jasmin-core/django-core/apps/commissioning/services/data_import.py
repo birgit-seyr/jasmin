@@ -106,6 +106,23 @@ _EMPTY_CELL_VALUES = {"", "none", "null", "nan"}
 _TRUTHY_BOOL_VALUES = {"true", "1", "yes", "y", "ja", "wahr"}
 _FALSY_BOOL_VALUES = {"false", "0", "no", "n", "nein", "falsch"}
 
+# Upload columns that write bank-account / SEPA-mandate data: ``Member.iban`` /
+# ``account_owner`` (``member``), the mandate fields of ``sepa_mandate``, and
+# ``ContactEntity.iban``, which the ``reseller`` / ``delivery_station`` imports
+# accept through their dynamic contact fields. Every interactive write of these
+# requires fresh step-up auth, so a real import carrying any of them requires
+# it too — ``DataImportView`` enforces that via ``bank_data_columns_in_csv``.
+BANK_DATA_IMPORT_COLUMNS = frozenset(
+    {
+        "iban",
+        "account_owner",
+        "account_holder",
+        "sepa_mandate_reference",
+        "sepa_mandate_signed_at",
+        "sepa_mandate_paper_received_at",
+    }
+)
+
 
 @dataclass
 class DataImportResult:
@@ -244,6 +261,27 @@ def _split_template_rows(
     return headers, data_rows, first_data_row_number
 
 
+def _read_csv_rows(file_bytes: bytes) -> list[list[str]]:
+    """Decode the upload and return its rows, dropping blank lines."""
+    reader = csv.reader(io.StringIO(_decode_csv(file_bytes)))
+    return [row for row in reader if any(cell.strip() for cell in row)]
+
+
+def bank_data_columns_in_csv(file_bytes: bytes) -> set[str]:
+    """Return the :data:`BANK_DATA_IMPORT_COLUMNS` named by the upload's schema row.
+
+    Reads the header exactly as :func:`import_rows_from_csv` does (same
+    decoding, same template-vs-hand-rolled row pick), so the result matches
+    the field names the import hands to the serializer. A file too short to
+    import reports nothing; the import itself rejects it.
+    """
+    all_rows = _read_csv_rows(file_bytes)
+    if len(all_rows) < 2:
+        return set()
+    headers, _data_rows, _first_data_row_number = _split_template_rows(all_rows)
+    return set(BANK_DATA_IMPORT_COLUMNS.intersection(headers))
+
+
 def get_serializer_for_model(model_name: str) -> type[drf_serializers.BaseSerializer]:
     """Look up the registered serializer or raise
     :class:`~apps.commissioning.errors.DataImportInvalid`."""
@@ -358,10 +396,7 @@ def import_rows_from_csv(
     saved, no member↔user links are made, and no rate-limit quota is consumed.
     """
     serializer_cls = get_serializer_for_model(model_name)
-    raw = _decode_csv(file_bytes)
-
-    reader = csv.reader(io.StringIO(raw))
-    all_rows = [row for row in reader if any(cell.strip() for cell in row)]
+    all_rows = _read_csv_rows(file_bytes)
     if len(all_rows) < 2:
         raise DataImportInvalid(
             "CSV must contain at least a header row and one data row."

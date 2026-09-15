@@ -12,11 +12,14 @@ from rest_framework import status
 from rest_framework.test import APIRequestFactory
 
 from apps.commissioning.errors import (
+    BulkFinalizeIdsInvalid,
+    BulkIdsInvalid,
     CommissioningError,
     InvalidQueryParam,
     RequiredFieldMissing,
 )
 from apps.commissioning.utils.validation_utils import (
+    parse_bulk_ids,
     validate_and_parse_int_params,
     validate_bulk_document_request,
 )
@@ -164,3 +167,42 @@ class TestValidateBulkDocumentRequest:
         with pytest.raises(RequiredFieldMissing) as excinfo:
             validate_bulk_document_request(request)
         assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
+
+    def test_non_string_id_raises(self):
+        request = _make_post_request({"ids": ["id1", 123], "model": "invoice"})
+        with pytest.raises(BulkIdsInvalid) as excinfo:
+            validate_bulk_document_request(request)
+        assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
+        assert excinfo.value.field == "ids"
+
+
+# ---------------------------------------------------------------------------
+# parse_bulk_ids
+# ---------------------------------------------------------------------------
+class TestParseBulkIds:
+    def test_returns_string_ids(self):
+        request = _make_post_request({"ids": ["id1", "2026_15_abc_KG_M"]})
+        assert parse_bulk_ids(request) == ["id1", "2026_15_abc_KG_M"]
+
+    @pytest.mark.parametrize(
+        "bad_id", [123, 1.5, True, None, "", "   ", ["id1"], {"id": "id1"}]
+    )
+    def test_non_string_or_blank_id_raises(self, bad_id):
+        request = _make_post_request({"ids": ["id1", bad_id]})
+        with pytest.raises(BulkIdsInvalid) as excinfo:
+            parse_bulk_ids(request)
+        assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
+        assert excinfo.value.code == "bulk.ids_invalid"
+        assert excinfo.value.field == "ids"
+
+    def test_empty_list_still_raises_required_field_missing(self):
+        request = _make_post_request({"ids": []})
+        with pytest.raises(RequiredFieldMissing):
+            parse_bulk_ids(request)
+
+    def test_caller_can_keep_its_own_item_error(self):
+        request = _make_post_request({"ids": [123]})
+        with pytest.raises(BulkFinalizeIdsInvalid) as excinfo:
+            parse_bulk_ids(request, invalid_item_error=BulkFinalizeIdsInvalid)
+        assert excinfo.value.code == "finalize.ids_invalid"
+        assert excinfo.value.field == "ids"

@@ -131,3 +131,22 @@ class TestCoopShareImportPaymentFields:
         assert result.failed == 1
         assert "due_date" in result.errors[0]["error"]
         assert not CoopShare.objects.filter(member__member_number=558).exists()
+
+
+@pytest.mark.django_db
+class TestCoopShareImportAmountRule:
+    """The whole-Geschäftsanteil rule shared with the office grid and member
+    self-service: zero, negative and fractional amounts are per-row errors."""
+
+    @pytest.mark.parametrize("amount", ["-2", "0", "2.5"])
+    def test_amount_that_is_not_a_whole_positive_number_is_a_row_error(
+        self, tenant, amount
+    ):
+        MemberFactory(member_number=559)
+
+        result = import_rows_from_csv("coop_share", _csv(f"559,{amount},100,false,"))
+
+        assert result.successful == 0
+        assert result.failed == 1
+        assert "CoopShareInvalidAmount" in result.errors[0]["error"]
+        assert not CoopShare.objects.filter(member__member_number=559).exists()

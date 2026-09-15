@@ -1,17 +1,76 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from django.core.exceptions import ImproperlyConfigured
+from django.db import transaction
 from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema
-from rest_framework import viewsets
+from rest_framework import mixins, viewsets
+from rest_framework.generics import GenericAPIView
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from apps.authz.permissions import IsStaff, RolePermissionsMixin
+from core.errors import ConflictError
 from core.pagination import OptionalLimitOffsetPagination
+from core.serializers import ErrorResponseSerializer
 
 from ..schemas import get_is_past_parameter
+from ..serializers.serializers_mixin import DeletableMixin
 from ..utils.query_params import validate_query_params
+
+# Enforce the serializer's ``can_be_deleted`` flag on ``destroy``.
+#
+# A ``DeletableMixin`` serializer reports ``can_be_deleted`` and the frontend
+# hides the delete button when it is False, but DRF's stock ``destroy`` never
+# looks at it — a direct ``DELETE`` bypasses the rule (and CASCADEs away any
+# dependent rows). A viewset that mixes this in refuses such a delete with its
+# ``not_deletable_error`` (a 409 ``ConflictError`` subclass carrying a per-model
+# code). The check calls the very same ``get_can_be_deleted`` the UI flag comes
+# from, so the server rule and the hidden button cannot drift.
+#
+# List it BEFORE ``RolePermissionsMixin`` / ``ModelViewSet`` in the bases.
+# Deliberately a comment, not a docstring: drf-spectacular describes a viewset
+# without its own docstring by the first docstring in its MRO, so a docstring
+# here would replace those endpoints' published descriptions.
+# Typed as a GenericAPIView for mypy (``get_serializer``), but a plain mixin at
+# runtime, so it is not itself discovered as a view by the permission guard.
+if TYPE_CHECKING:
+    _DestroyBase = GenericAPIView
+else:
+    _DestroyBase = object
+
+
+class CanBeDeletedDestroyMixin(mixins.DestroyModelMixin, _DestroyBase):
+    not_deletable_error: type[ConflictError]
+
+    @extend_schema(responses={204: None, 409: ErrorResponseSerializer})
+    def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().destroy(request, *args, **kwargs)
+
+    def perform_destroy(self, instance: Any) -> None:
+        with transaction.atomic():
+            # Lock the row before checking: inserting a row that references it
+            # takes a KEY SHARE lock on it, so a dependent row created
+            # concurrently is either visible to the check or blocked until the
+            # delete commits — it can't slip in between and be cascaded away.
+            locked = (
+                type(instance)._base_manager.select_for_update().get(pk=instance.pk)
+            )
+            serializer = self.get_serializer(locked)
+            if not isinstance(serializer, DeletableMixin):
+                raise ImproperlyConfigured(
+                    f"{type(self).__name__} enforces can_be_deleted, but its "
+                    "serializer is not a DeletableMixin."
+                )
+            if not serializer.get_can_be_deleted(locked):
+                raise self.not_deletable_error(
+                    f"{type(locked).__name__} '{locked}' is still in use and "
+                    "cannot be deleted.",
+                    details={"id": str(locked.pk)},
+                )
+            super().perform_destroy(locked)
 
 
 def serializer_model(serializer_class: Any) -> type[Any]:

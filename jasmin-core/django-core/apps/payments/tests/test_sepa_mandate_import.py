@@ -15,9 +15,11 @@ from pathlib import Path
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from rest_framework.test import APIClient
 
 # The sample lives with the other import samples in the commissioning tests.
 import apps.commissioning.tests as _commissioning_tests
+from apps.commissioning.tests.conftest import make_step_up_token
 from apps.commissioning.tests.factories import MemberFactory
 from apps.payments.constants import PaymentMethodOptions
 from apps.payments.models import BillingProfile
@@ -36,13 +38,22 @@ def _upload() -> SimpleUploadedFile:
     )
 
 
+@pytest.fixture()
+def step_up_client(user):
+    """Office client whose token carries a fresh step-up claim: a real mandate
+    import writes IBANs, so it is step-up gated like the interactive path."""
+    client = APIClient()
+    client.force_authenticate(user=user, token=make_step_up_token(user))
+    return client
+
+
 @pytest.mark.django_db
 class TestSepaMandateImport:
-    def test_office_uploads_mandate_sample(self, api_client):
+    def test_office_uploads_mandate_sample(self, step_up_client):
         MemberFactory(member_number=1001)
         MemberFactory(member_number=1002)
 
-        resp = api_client.post(
+        resp = step_up_client.post(
             URL,
             {"model_name": "sepa_mandate", "file": _upload()},
             format="multipart",
@@ -82,7 +93,7 @@ class TestSepaMandateImport:
         assert resp.json()["successful"] == 2
         assert BillingProfile.objects.count() == 0
 
-    def test_create_only_skips_member_with_existing_profile(self, api_client):
+    def test_create_only_skips_member_with_existing_profile(self, step_up_client):
         # Member 1001 already has a profile → that row is a per-row conflict and
         # is left untouched; member 1002 (no profile) still imports.
         member_1001 = MemberFactory(member_number=1001)
@@ -96,7 +107,7 @@ class TestSepaMandateImport:
             sepa_mandate_signed_at="2020-01-01",
         )
 
-        resp = api_client.post(
+        resp = step_up_client.post(
             URL,
             {"model_name": "sepa_mandate", "file": _upload()},
             format="multipart",
@@ -114,9 +125,9 @@ class TestSepaMandateImport:
         # Member 1002's mandate did import.
         assert BillingProfile.objects.filter(member__member_number=1002).exists()
 
-    def test_unknown_member_is_a_row_error(self, api_client):
+    def test_unknown_member_is_a_row_error(self, step_up_client):
         # No members created → both rows fail to resolve, none crash the batch.
-        resp = api_client.post(
+        resp = step_up_client.post(
             URL,
             {"model_name": "sepa_mandate", "file": _upload()},
             format="multipart",
@@ -125,6 +136,18 @@ class TestSepaMandateImport:
         body = resp.json()
         assert body["successful"] == 0
         assert body["failed"] == 2
+        assert BillingProfile.objects.count() == 0
+
+    def test_real_import_without_step_up_is_refused(self, api_client):
+        MemberFactory(member_number=1001)
+        MemberFactory(member_number=1002)
+        resp = api_client.post(
+            URL,
+            {"model_name": "sepa_mandate", "file": _upload()},
+            format="multipart",
+        )
+        assert resp.status_code == 403, resp.content
+        assert resp.json()["code"] == "auth.step_up_required"
         assert BillingProfile.objects.count() == 0
 
     def test_anonymous_is_rejected(self, tenant, anon_client):
@@ -152,7 +175,7 @@ class TestSepaMandateMirrorsToMember:
 
     IBAN = "CH9300762011623852957"
 
-    def _import_one(self, api_client, member_number: int, iban: str | None = None):
+    def _import_one(self, step_up_client, member_number: int, iban: str | None = None):
         csv = (
             "Member no.,Account holder,IBAN,Ref,Signed,Paper\n"
             "member_number,account_holder,iban,sepa_mandate_reference,"
@@ -160,7 +183,7 @@ class TestSepaMandateMirrorsToMember:
             "integer,text,text,text,date,date\n"
             f"{member_number},Ada Lovelace,{iban or self.IBAN},,2024-03-04,\n"
         ).encode()
-        return api_client.post(
+        return step_up_client.post(
             URL,
             {
                 "model_name": "sepa_mandate",
@@ -169,11 +192,11 @@ class TestSepaMandateMirrorsToMember:
             format="multipart",
         )
 
-    def test_iban_and_holder_land_on_the_member(self, api_client, tenant):
+    def test_iban_and_holder_land_on_the_member(self, step_up_client, tenant):
         member = MemberFactory(member_number=4001)
         assert not member.iban
 
-        resp = self._import_one(api_client, 4001)
+        resp = self._import_one(step_up_client, 4001)
         assert resp.status_code == 200, resp.content
         assert resp.json()["successful"] == 1, resp.json()["errors"]
 
@@ -184,13 +207,13 @@ class TestSepaMandateMirrorsToMember:
         profile = BillingProfile.objects.get(member=member)
         assert profile.iban == self.IBAN
 
-    def test_an_existing_member_iban_is_never_overwritten(self, api_client, tenant):
-        """Silently rewriting a stored IBAN is what the UI gates behind step-up
-        auth — this path has no such check, so it fills only."""
+    def test_an_existing_member_iban_is_never_overwritten(self, step_up_client, tenant):
+        """The mandate import fills the member's IBAN only; it never rewrites a
+        stored one."""
         existing = "DE89370400440532013000"
         member = MemberFactory(member_number=4002, iban=existing)
 
-        resp = self._import_one(api_client, 4002, iban=self.IBAN)
+        resp = self._import_one(step_up_client, 4002, iban=self.IBAN)
         assert resp.status_code == 200, resp.content
         assert resp.json()["successful"] == 1, resp.json()["errors"]
 
@@ -200,13 +223,13 @@ class TestSepaMandateMirrorsToMember:
         # differ here, and the mandate is the one the bank sees.
         assert BillingProfile.objects.get(member=member).iban == self.IBAN
 
-    def test_values_are_encrypted_at_rest(self, api_client, tenant):
+    def test_values_are_encrypted_at_rest(self, step_up_client, tenant):
         """Both copies are ``EncryptedCharField`` — the raw column must not
         contain the plaintext IBAN."""
         from django.db import connection
 
         member = MemberFactory(member_number=4003)
-        assert self._import_one(api_client, 4003).status_code == 200
+        assert self._import_one(step_up_client, 4003).status_code == 200
 
         with connection.cursor() as cur:
             cur.execute(

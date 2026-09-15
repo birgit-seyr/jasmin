@@ -18,6 +18,7 @@ from apps.commissioning.models import (
     DeliveryExceptionPeriod,
     Share,
     ShareContent,
+    ShareTypeVariationGrossPrice,
     VirtualVariationComponent,
 )
 from apps.commissioning.tests.factories import (
@@ -1481,3 +1482,31 @@ class TestShareDeliveryExceptionGaps:
         client.force_authenticate(user=member_user)
         resp = client.get(self.URL, {"member": str(other.id), "year": 2026})
         assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# ShareTypeVariationGrossPriceViewSet — DELETE enforces can_be_deleted
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestShareTypeVariationGrossPriceDestroyGuard:
+    @staticmethod
+    def _url(price) -> str:
+        return reverse("share_type_variation_price-detail", args=[price.id])
+
+    def test_price_of_subscribed_variation_is_409_and_kept(self, api_client, tenant):
+        price = ShareTypeVariationGrossPriceFactory()
+        SubscriptionFactory(share_type_variation=price.share_type_variation)
+
+        resp = api_client.delete(self._url(price))
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "share_type_variation.gross_price_in_use"
+        assert ShareTypeVariationGrossPrice.objects.filter(pk=price.pk).exists()
+
+    def test_price_of_unsubscribed_variation_is_deleted(self, api_client, tenant):
+        price = ShareTypeVariationGrossPriceFactory()
+
+        resp = api_client.delete(self._url(price))
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        assert not ShareTypeVariationGrossPrice.objects.filter(pk=price.pk).exists()

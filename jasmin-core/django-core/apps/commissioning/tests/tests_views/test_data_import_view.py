@@ -109,6 +109,86 @@ class TestMemberSampleUpload:
         assert Member.objects.count() == 0
 
 
+_BANK_IBAN = "DE89370400440532013000"
+
+
+def _member_csv_with_bank_columns(layout: str) -> SimpleUploadedFile:
+    """One member row carrying ``iban`` + ``account_owner``, as the three-row
+    download template or as a hand-rolled header + data CSV."""
+    fields = (
+        "first_name,last_name,email,address,zip_code,city,country,iban,account_owner"
+    )
+    row = (
+        "Ada,Lovelace,ada.bank@example.org,1 Analytical Way,8000,Zurich,CH,"
+        f"{_BANK_IBAN},Ada Lovelace"
+    )
+    if layout == "template":
+        rows = [
+            "First name,Last name,Email,Address,ZIP,City,Country,IBAN,Account owner",
+            fields,
+            "text,text,email,text,text,text,text,text,text",
+            row,
+        ]
+    else:
+        rows = [fields, row]
+    return SimpleUploadedFile(
+        "members_bank.csv", ("\n".join(rows) + "\n").encode(), content_type="text/csv"
+    )
+
+
+@pytest.mark.django_db
+class TestBankColumnsRequireStepUp:
+    """A real import whose schema row names a bank column writes IBANs, so it
+    needs the same fresh step-up claim as the interactive IBAN writes. A dry run
+    persists nothing and stays open to a plain office session."""
+
+    @pytest.mark.parametrize("layout", ["template", "two_row"])
+    def test_real_import_without_step_up_is_refused(self, api_client, layout):
+        resp = api_client.post(
+            URL,
+            {"model_name": "member", "file": _member_csv_with_bank_columns(layout)},
+            format="multipart",
+        )
+        assert resp.status_code == 403, resp.content
+        assert resp.json()["code"] == "auth.step_up_required"
+        assert Member.objects.count() == 0
+
+    def test_dry_run_without_step_up_is_allowed(self, api_client):
+        resp = api_client.post(
+            URL,
+            {
+                "model_name": "member",
+                "file": _member_csv_with_bank_columns("template"),
+                "dry_run": "true",
+            },
+            format="multipart",
+        )
+        assert resp.status_code == 200, resp.content
+        assert resp.json()["successful"] == 1, resp.json()["errors"]
+        assert Member.objects.count() == 0
+
+    def test_real_import_with_step_up_imports(self, step_up_client):
+        resp = step_up_client.post(
+            URL,
+            {"model_name": "member", "file": _member_csv_with_bank_columns("template")},
+            format="multipart",
+        )
+        assert resp.status_code == 200, resp.content
+        assert resp.json()["successful"] == 1, resp.json()["errors"]
+        member = Member.objects.get(email="ada.bank@example.org")
+        assert member.iban == _BANK_IBAN
+        assert member.account_owner == "Ada Lovelace"
+
+    def test_unknown_model_is_a_400_not_a_step_up_prompt(self, api_client):
+        resp = api_client.post(
+            URL,
+            {"model_name": "nope", "file": _member_csv_with_bank_columns("template")},
+            format="multipart",
+        )
+        assert resp.status_code == 400, resp.content
+        assert resp.json()["code"] == "data_import.invalid"
+
+
 @pytest.mark.django_db
 class TestSubscriptionSampleUpload:
     @pytest.fixture(autouse=True)

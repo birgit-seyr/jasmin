@@ -211,3 +211,91 @@ class TestWaitingListOffer:
         assert WaitingListOfferService.expire_stale_offers() == 1
         sub.refresh_from_db()
         assert sub.waiting_list_status == Subscription.WaitingListStatus.EXPIRED
+
+
+@pytest.mark.django_db
+class TestWaitingListOfferPriceRules:
+    """``offer_spot`` writes the price the member accepts, so it applies the
+    same non-negative bound and solidarity floor as the subscription serializer.
+    The floor is resolved at the subscription's start (``_SPAN``), not today."""
+
+    def _enable_solidarity(self, tenant):
+        from apps.shared.tenants.models import TenantSettings
+
+        TenantSettings.objects.create(
+            tenant=tenant,
+            valid_from=timezone.now() - datetime.timedelta(seconds=1),
+            allows_solidarity_pricing=True,
+        )
+
+    def _variation_with_floor(self):
+        from decimal import Decimal
+
+        from apps.commissioning.tests.factories.shares import (
+            ShareTypeVariationGrossPriceFactory,
+        )
+
+        variation = ShareTypeVariationFactory(capacity=5)
+        ShareTypeVariationGrossPriceFactory(
+            share_type_variation=variation,
+            valid_from=_SPAN["valid_from"],
+            price_per_delivery=Decimal("10.00"),
+            solidarity_min_price_per_delivery=Decimal("7.00"),
+        )
+        return variation
+
+    def test_offer_below_the_solidarity_floor_is_refused(self, tenant, dsd):
+        from apps.commissioning.errors import SolidarityPriceBelowMinimum
+
+        self._enable_solidarity(tenant)
+        sub = _pending(self._variation_with_floor(), dsd)
+
+        with pytest.raises(SolidarityPriceBelowMinimum):
+            WaitingListOfferService.offer_spot(sub, price_per_delivery="6.00")
+
+        sub.refresh_from_db()
+        assert sub.waiting_list_status == Subscription.WaitingListStatus.PENDING
+        assert sub.price_per_delivery is None
+
+    def test_offer_keeping_a_stored_price_below_the_floor_is_refused(self, tenant, dsd):
+        from decimal import Decimal
+
+        from apps.commissioning.errors import SolidarityPriceBelowMinimum
+
+        self._enable_solidarity(tenant)
+        sub = _pending(self._variation_with_floor(), dsd)
+        Subscription.objects.filter(pk=sub.pk).update(
+            price_per_delivery=Decimal("6.00")
+        )
+        sub.refresh_from_db()
+
+        with pytest.raises(SolidarityPriceBelowMinimum):
+            WaitingListOfferService.offer_spot(sub)
+
+        sub.refresh_from_db()
+        assert sub.waiting_list_status == Subscription.WaitingListStatus.PENDING
+
+    def test_offer_at_the_floor_is_sent(self, tenant, dsd):
+        from decimal import Decimal
+
+        self._enable_solidarity(tenant)
+        sub = _pending(self._variation_with_floor(), dsd)
+
+        WaitingListOfferService.offer_spot(sub, price_per_delivery="7.00")
+
+        sub.refresh_from_db()
+        assert sub.waiting_list_status == Subscription.WaitingListStatus.SPOT_AVAILABLE
+        assert sub.price_per_delivery == Decimal("7.00")
+
+    @pytest.mark.parametrize("price", ["-1", "abc", "NaN"])
+    def test_offer_with_an_invalid_price_is_refused(self, tenant, dsd, price):
+        from apps.commissioning.errors import SubscriptionPriceInvalid
+
+        sub = _pending(ShareTypeVariationFactory(capacity=5), dsd)
+
+        with pytest.raises(SubscriptionPriceInvalid):
+            WaitingListOfferService.offer_spot(sub, price_per_delivery=price)
+
+        sub.refresh_from_db()
+        assert sub.waiting_list_status == Subscription.WaitingListStatus.PENDING
+        assert sub.price_per_delivery is None

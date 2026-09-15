@@ -4,6 +4,8 @@ from django.core.files.base import ContentFile
 from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers
 
+from apps.shared.image_upload import strict_image_decoding
+
 from .errors import TenantAppIconInvalid
 from .models import Tenant, TenantEmailConfig, TenantSettings
 
@@ -23,6 +25,10 @@ _APP_ICON_RENDER_PX = 512
 # SVG (Pillow can't decode it, and it is an active-content format) and not
 # GIF/BMP/TIFF (no benefit here, and animation has no meaning on a launcher).
 _APP_ICON_FORMATS = frozenset({"PNG", "JPEG", "WEBP"})
+# What Pillow raises for bytes it cannot read as an image. Its PNG plugin
+# reports a corrupt chunk (bad CRC) as ``SyntaxError``; a corrupt or truncated
+# compressed pixel stream surfaces as ``OSError``, and only once it is decoded.
+_UNREADABLE_IMAGE_ERRORS = (UnidentifiedImageError, OSError, ValueError, SyntaxError)
 
 
 def _current_settings_dict(obj: Tenant) -> dict:
@@ -165,7 +171,7 @@ class TenantSerializer(_TenantSettingsOverlayMixin, serializers.ModelSerializer)
             value.seek(0)
             probe = Image.open(value)
             probe.verify()
-        except (UnidentifiedImageError, OSError, ValueError):
+        except _UNREADABLE_IMAGE_ERRORS:
             raise TenantAppIconInvalid(
                 "The app icon could not be read as an image."
             ) from None
@@ -209,9 +215,19 @@ class TenantSerializer(_TenantSettingsOverlayMixin, serializers.ModelSerializer)
 
         # RGBA so a transparent source keeps its transparency; LANCZOS because
         # a launcher icon is downscaled far enough for the filter to matter.
-        rendered = image.convert("RGBA").resize(
-            (_APP_ICON_RENDER_PX, _APP_ICON_RENDER_PX), Image.LANCZOS
-        )
+        #
+        # ``convert()`` is the first real decode. ``verify()`` above checks
+        # chunk checksums but never decompresses, so a file with intact
+        # checksums and corrupt or truncated pixel data only fails here.
+        try:
+            with strict_image_decoding():
+                rendered = image.convert("RGBA").resize(
+                    (_APP_ICON_RENDER_PX, _APP_ICON_RENDER_PX), Image.LANCZOS
+                )
+        except _UNREADABLE_IMAGE_ERRORS:
+            raise TenantAppIconInvalid(
+                "The app icon could not be read as an image."
+            ) from None
         buffer = BytesIO()
         rendered.save(buffer, format="PNG", optimize=True)
         # Rewind the original too: on any later failure the upload handler

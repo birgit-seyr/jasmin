@@ -16,7 +16,12 @@ from rest_framework.request import Request
 
 from apps.shared.request_utils import body
 
-from ..errors import CommissioningError, InvalidQueryParam, RequiredFieldMissing
+from ..errors import (
+    BulkIdsInvalid,
+    CommissioningError,
+    InvalidQueryParam,
+    RequiredFieldMissing,
+)
 
 
 def validate_and_parse_int_params(
@@ -151,15 +156,26 @@ def parse_body_date(
         ) from exc
 
 
-def parse_bulk_ids(request: Request, *, field: str = "ids") -> list[str]:
+def parse_bulk_ids(
+    request: Request,
+    *,
+    field: str = "ids",
+    invalid_item_error: type[BulkIdsInvalid] = BulkIdsInvalid,
+) -> list[str]:
     """Extract and validate the ``{field: [...]}`` array from a bulk request body.
 
     The single canonical parser for every bulk-by-IDs endpoint (finalize,
     inventory, forecast-copy, offer/reminder-send, set-to-paid, …). Returns the
-    list of IDs and raises one canonical error —
+    list of IDs and raises
     :class:`apps.commissioning.errors.RequiredFieldMissing`
-    (HTTP 400, ``field=<field>``) — when the value is missing, empty, or not a
+    (HTTP 400, ``field=<field>``) when the value is missing, empty, or not a
     list, replacing the divergent per-endpoint checks.
+
+    Every entry must be a non-empty string, otherwise ``invalid_item_error``
+    (default :class:`apps.commissioning.errors.BulkIdsInvalid`, HTTP 400,
+    ``field=<field>``) is raised. Ids are string primary keys or string
+    composite ids; a number, null, list or object entry used to reach the
+    composite-id parsers, which call ``.split`` on it and returned a 500.
     """
     ids = body(request).get(field)
     if not ids or not isinstance(ids, list):
@@ -167,6 +183,8 @@ def parse_bulk_ids(request: Request, *, field: str = "ids") -> list[str]:
             "A non-empty list of IDs is required.",
             field=field,
         )
+    if not all(isinstance(item, str) and item.strip() for item in ids):
+        raise invalid_item_error("Every id must be a non-empty string.", field=field)
     return ids
 
 

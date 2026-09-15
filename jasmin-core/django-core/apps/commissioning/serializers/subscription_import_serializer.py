@@ -24,6 +24,8 @@ date rules, DB constraints) via ``Subscription.save() → full_clean()``.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from ..models import (
@@ -71,8 +73,14 @@ class SubscriptionImportSerializer(serializers.Serializer):
     # rather than deferred to a model-level error at save.
     valid_until = serializers.DateField()
     quantity = serializers.IntegerField(required=False, default=1, min_value=1)
+    # >= 0, like the office grid: a negative price bills nothing. 0 stays valid
+    # (e.g. a free trial).
     price_per_delivery = serializers.DecimalField(
-        max_digits=8, decimal_places=2, required=False, allow_null=True
+        max_digits=8,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+        min_value=Decimal("0"),
     )
     is_trial = serializers.BooleanField(required=False, default=False)
     subscription_number = serializers.IntegerField(required=False, allow_null=True)

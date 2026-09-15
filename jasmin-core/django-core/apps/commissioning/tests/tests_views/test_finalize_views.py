@@ -402,7 +402,7 @@ class TestBulkFinalizeModelGate:
         assert resp.data["field"] == "app_label"
 
     @pytest.mark.parametrize("url", [URL_FINALIZE, URL_UNFINALIZE])
-    @pytest.mark.parametrize("bad_id", [None, {"id": "x"}, ["x"], True])
+    @pytest.mark.parametrize("bad_id", [None, {"id": "x"}, ["x"], True, 123, ""])
     def test_non_string_id_returns_400(self, api_client, tenant, url, bad_id):
         resp = api_client.post(
             url, {"model": "offer", "ids": ["ok-id", bad_id]}, format="json"
@@ -464,6 +464,16 @@ class TestBulkFinalizeShareContentView:
     def test_empty_ids_returns_400(self, api_client, tenant):
         resp = api_client.post(URL_FINALIZE_SC, {"ids": []}, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    @pytest.mark.parametrize("bad_id", [123, None, {"id": "x"}])
+    def test_non_string_id_returns_400(self, api_client, tenant, bad_id):
+        """A non-string composite id used to reach ``.split`` and return 500."""
+        resp = api_client.post(
+            URL_FINALIZE_SC, {"ids": ["2026_15_abc_KG_M", bad_id]}, format="json"
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "bulk.ids_invalid"
+        assert resp.data["field"] == "ids"
 
     def test_nonexistent_ids_returns_404(self, api_client, tenant):
         resp = api_client.post(
@@ -594,6 +604,16 @@ class TestBulkUnfinalizeShareContentView:
     def test_empty_ids_returns_400(self, api_client, tenant):
         resp = api_client.post(URL_UNFINALIZE_SC, {"ids": []}, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    @pytest.mark.parametrize("bad_id", [123, None, {"id": "x"}])
+    def test_non_string_id_returns_400(self, api_client, tenant, bad_id):
+        """A non-string composite id used to reach ``.split`` and return 500."""
+        resp = api_client.post(
+            URL_UNFINALIZE_SC, {"ids": ["2026_15_abc_KG_M", bad_id]}, format="json"
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "bulk.ids_invalid"
+        assert resp.data["field"] == "ids"
 
     def test_partial_success_malformed_id_returns_207(self, api_client, tenant):
         """A valid (finalized) composite id alongside a malformed one yields

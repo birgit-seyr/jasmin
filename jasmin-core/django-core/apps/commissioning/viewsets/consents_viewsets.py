@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from django.db import transaction
 from django.db.models import ProtectedError
 from django.http import FileResponse
 from drf_spectacular.types import OpenApiTypes
@@ -38,6 +39,7 @@ from apps.shared.request_utils import body, client_ip
 from core.serializers import ErrorResponseSerializer
 
 from ..errors import (
+    ConsentDocumentImmutable,
     ConsentDocumentInUse,
     ConsentDocumentNotFound,
     ConsentTargetMemberUnresolved,
@@ -58,6 +60,20 @@ from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 
 logger = logging.getLogger(__name__)
+
+# What a member consented to: the verbatim ``body``, the fields the version is
+# looked up and identified by (``kind`` / ``locale`` / ``version`` /
+# ``valid_from``), and ``title`` — which is rendered into the stored PDF's
+# header and download filename and shown on every ConsentRecord as "you agreed
+# to <title> v<version>". Frozen once any ConsentRecord references the document.
+CONSENTED_DOCUMENT_LOCKED_FIELDS = (
+    "body",
+    "kind",
+    "locale",
+    "title",
+    "valid_from",
+    "version",
+)
 
 
 class ConsentDocumentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
@@ -85,6 +101,74 @@ class ConsentDocumentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         # Best-effort: a render hiccup must not fail publishing the document —
         # ``download_pdf`` regenerates lazily via ensure_pdf if it's missing.
         try:
+            document.ensure_pdf()
+        except Exception:
+            logger.exception("consent.pdf.render_failed doc=%s", document.pk)
+
+    @extend_schema(
+        responses={
+            200: ConsentDocumentSerializer,
+            # ``ConsentDocumentImmutable``.
+            409: ErrorResponseSerializer,
+        },
+    )
+    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        responses={
+            200: ConsentDocumentSerializer,
+            # ``ConsentDocumentImmutable``.
+            409: ErrorResponseSerializer,
+        },
+    )
+    def partial_update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().partial_update(request, *args, **kwargs)
+
+    def perform_update(self, serializer: Any) -> None:
+        """Refuse to change what members consented to.
+
+        Once any ConsentRecord references the document, a change to one of
+        ``CONSENTED_DOCUMENT_LOCKED_FIELDS`` is a 409: ``save()`` would recompute
+        ``body_sha256`` to match the new text (so the tamper check stays silent)
+        while the stored PDF keeps the old one. Writes that leave those fields
+        unchanged still pass, and drafts nobody consented to stay editable —
+        their stale stored PDF is dropped and re-rendered from the new values.
+        """
+        document = serializer.instance
+        changed_fields = sorted(
+            field
+            for field in CONSENTED_DOCUMENT_LOCKED_FIELDS
+            if field in serializer.validated_data
+            and serializer.validated_data[field] != getattr(document, field)
+        )
+        if not changed_fields:
+            serializer.save()
+            return
+
+        with transaction.atomic():
+            # Lock the row: recording a consent inserts a ConsentRecord whose FK
+            # takes a KEY SHARE lock on this document, so a concurrent consent
+            # is either visible to the check below or waits for this edit.
+            ConsentDocument.objects.select_for_update().get(pk=document.pk)
+            if ConsentRecord.objects.filter(document_id=document.pk).exists():
+                raise ConsentDocumentImmutable(
+                    "Members have already consented to this document version; "
+                    "its text and identifying fields can no longer change. "
+                    "Publish a new version instead.",
+                    details={"fields": changed_fields},
+                )
+            stale_pdf_name = document.pdf.name if document.pdf else None
+            if stale_pdf_name:
+                document = serializer.save(pdf=None)
+            else:
+                document = serializer.save()
+
+        # Best-effort, like perform_create: ``download_pdf`` re-renders lazily
+        # via ensure_pdf if this fails.
+        try:
+            if stale_pdf_name:
+                document.pdf.storage.delete(stale_pdf_name)
             document.ensure_pdf()
         except Exception:
             logger.exception("consent.pdf.render_failed doc=%s", document.pk)

@@ -77,7 +77,7 @@ def _validate_bulk_finalize_request(request: Request) -> tuple[list[str], str]:
     """
     # Run the long-standing checks first so a missing / empty ids list and a
     # missing model keep their existing error codes.
-    parse_bulk_ids(request)
+    parse_bulk_ids(request, invalid_item_error=BulkFinalizeIdsInvalid)
     _require_model_name(body(request).get("model"))
 
     serializer = BulkFinalizeRequestSerializer(data=body(request))

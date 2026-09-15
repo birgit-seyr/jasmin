@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 import math
 from decimal import Decimal
 from types import SimpleNamespace
@@ -37,6 +38,46 @@ from ..models import (
 from ..utils.iso_week_utils import date_from_order
 from ..utils.tax_rate_utils import resolve_article_tax_rate, resolve_crate_tax_rate
 from .snapshot_service import SnapshotService
+
+
+class _AmountNotSent(enum.Enum):
+    """Type of ``AMOUNT_NOT_SENT`` (a single-member enum so the sentinel is
+    distinguishable from ``None`` for the type checker)."""
+
+    TOKEN = "amount_not_sent"
+
+
+# ``update_order_content(amount=AMOUNT_NOT_SENT)``: the request body carried no
+# ``amount`` (e.g. a PATCH of only ``note``), so the stored amount, the offer
+# stock and the crate row stay exactly as they are. An explicit ``None`` still
+# means zero.
+AMOUNT_NOT_SENT = _AmountNotSent.TOKEN
+
+# Order-line fields ``update_order_content`` may write from its ``kwargs``. An
+# ALLOWLIST: the finalization stamps, the parent ``order`` and the order-level
+# keys the serializer also accepts (year / delivery_week / day_number /
+# reseller / the ``*_day`` planning days) are server-owned and never applied
+# here, and a field added to the model later stays unwritable until listed.
+# ``amount`` is passed separately because it re-balances stock and crates.
+# Whether a non-privileged caller may re-point ``offer`` / ``share_article`` is
+# decided by the viewset before this runs.
+_UPDATABLE_ORDER_CONTENT_FIELDS = frozenset(
+    {
+        "offer",
+        "share_article",
+        "description",
+        "unit",
+        "size",
+        "price_per_unit",
+        "sort",
+        "note",
+        "rabatt",
+        "tax_rate",
+        "washing",
+        "cleaning",
+        "comes_from_long_term_storage",
+    }
+)
 
 
 class OrderContentService:
@@ -619,11 +660,15 @@ class OrderContentService:
     @transaction.atomic
     def update_order_content(
         order_content_id: str,
-        amount: Decimal,
+        amount: Decimal | None | _AmountNotSent,
         **kwargs,
     ) -> dict[str, Any]:
         """Update order content and adjust offer availability.
         If the ID is actually an offer (unused-offer stub), create a new order content.
+
+        ``amount=AMOUNT_NOT_SENT`` leaves the stored amount, the offer stock and
+        the crate row untouched; ``None`` means zero. Only the
+        ``_UPDATABLE_ORDER_CONTENT_FIELDS`` in ``kwargs`` are applied.
         """
         try:
             order_content = OrderContent.objects.get(id=order_content_id)
@@ -633,7 +678,9 @@ class OrderContentService:
                 offer = Offer.objects.get(id=order_content_id)
                 kwargs.pop("offer", None)
                 return OrderContentService.create_order_with_content_and_crates(
-                    offer=offer, amount=amount, **kwargs
+                    offer=offer,
+                    amount=None if isinstance(amount, _AmountNotSent) else amount,
+                    **kwargs,
                 )
             except Offer.DoesNotExist as exc:
                 raise OrderContentNotFound(
@@ -647,13 +694,20 @@ class OrderContentService:
                 code="order_content.finalized",
             )
 
+        # ``None`` when the body carried no amount: the offer stock and the crate
+        # row are then left alone rather than re-balanced to a zeroed line.
+        new_amount = (
+            None
+            if isinstance(amount, _AmountNotSent)
+            else (amount if amount is not None else Decimal("0"))
+        )
+
         offer = order_content.offer
 
-        if offer is not None:
+        if offer is not None and new_amount is not None:
             # Lock the offer row to prevent race conditions on availability
             offer = Offer.objects.select_for_update().get(pk=offer.pk)
             old_amount = order_content.amount or Decimal("0")
-            new_amount = amount if amount is not None else Decimal("0")
             amount_difference = new_amount - old_amount
             pu_divisor = OrderContentService._amount_per_pu_or_one(offer)
 
@@ -714,9 +768,11 @@ class OrderContentService:
                         tax_rate=crate_tax_rate,
                     )
 
-        order_content.amount = amount if amount is not None else Decimal("0")
+        if new_amount is not None:
+            order_content.amount = new_amount
         for key, value in kwargs.items():
-            setattr(order_content, key, value)
+            if key in _UPDATABLE_ORDER_CONTENT_FIELDS:
+                setattr(order_content, key, value)
         order_content.save()
 
         # Same canonical entry as the create path. The helper wipes the

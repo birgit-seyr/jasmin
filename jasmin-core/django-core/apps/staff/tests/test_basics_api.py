@@ -9,8 +9,10 @@ from django.urls import reverse
 from rest_framework import status
 
 from apps.staff.models import (
+    Absence,
     AbsenceCategory,
     Employee,
+    Employment,
     WeeklyPlan,
     WeeklyPlanCategory,
 )
@@ -165,3 +167,100 @@ def test_anonymous_cannot_read(anon_client):
         status.HTTP_401_UNAUTHORIZED,
         status.HTTP_403_FORBIDDEN,
     )
+
+
+# --------------------------------------------------------------------------- #
+# Delete enforcement — DELETE honours ``can_be_deleted`` server-side. Every row
+# referencing an employee / category is ON DELETE CASCADE, so an unchecked
+# DELETE would silently wipe weekly-plan cells, absences and employments.
+# --------------------------------------------------------------------------- #
+def _weekly_plan_cell(employee, category):
+    return WeeklyPlan.objects.create(
+        year=2026, week=1, day=0, weekly_plan_category=category, employee=employee
+    )
+
+
+def _absence(employee, category):
+    return Absence.objects.create(
+        year=2026, week=1, day=0, absence_category=category, employee=employee
+    )
+
+
+_EMPLOYEE_REFERENCES = {
+    "weekly_plan": lambda employee: _weekly_plan_cell(
+        employee, WeeklyPlanCategory.objects.create(name="Kitchen", max_lines=3)
+    ),
+    "absence": lambda employee: _absence(
+        employee, AbsenceCategory.objects.create(year=2026, name="Vacation")
+    ),
+    "employment": lambda employee: Employment.objects.create(
+        employee=employee, valid_from="2026-01-05", hours_per_week="20.00"
+    ),
+}
+
+
+@pytest.mark.parametrize("reference", sorted(_EMPLOYEE_REFERENCES))
+def test_referenced_employee_delete_is_409_and_keeps_rows(api_client, reference):
+    employee = Employee.objects.create(short_name_for_weekly_plan="Dana")
+    dependent = _EMPLOYEE_REFERENCES[reference](employee)
+
+    response = api_client.delete(reverse("employees-detail", args=[employee.id]))
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["code"] == "staff.employee_in_use"
+    assert Employee.objects.filter(id=employee.id).exists()
+    assert type(dependent).objects.filter(id=dependent.id).exists()
+
+
+def test_weekly_plan_category_in_use_delete_is_409_and_keeps_cells(api_client):
+    category = WeeklyPlanCategory.objects.create(name="Kitchen", max_lines=3)
+    cell = _weekly_plan_cell(
+        Employee.objects.create(short_name_for_weekly_plan="Dana"), category
+    )
+
+    response = api_client.delete(
+        reverse("weekly_plan_categories-detail", args=[category.id])
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["code"] == "staff.weekly_plan_category_in_use"
+    assert WeeklyPlanCategory.objects.filter(id=category.id).exists()
+    assert WeeklyPlan.objects.filter(id=cell.id).exists()
+
+
+def test_unused_weekly_plan_category_is_deletable(api_client):
+    category = WeeklyPlanCategory.objects.create(name="Unused", max_lines=1)
+
+    response = api_client.delete(
+        reverse("weekly_plan_categories-detail", args=[category.id])
+    )
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not WeeklyPlanCategory.objects.filter(id=category.id).exists()
+
+
+def test_absence_category_in_use_delete_is_409_and_keeps_absences(api_client):
+    category = AbsenceCategory.objects.create(year=2026, name="Vacation")
+    absence = _absence(
+        Employee.objects.create(short_name_for_weekly_plan="Dana"), category
+    )
+
+    response = api_client.delete(
+        reverse("absence_categories-detail", args=[category.id])
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["code"] == "staff.absence_category_in_use"
+    assert AbsenceCategory.objects.filter(id=category.id).exists()
+    assert Absence.objects.filter(id=absence.id).exists()
+
+
+def test_unused_absence_category_is_deletable(api_client):
+    category = AbsenceCategory.objects.create(year=2026, name="Unused")
+
+    response = api_client.delete(
+        reverse("absence_categories-detail", args=[category.id])
+    )
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not AbsenceCategory.objects.filter(id=category.id).exists()
