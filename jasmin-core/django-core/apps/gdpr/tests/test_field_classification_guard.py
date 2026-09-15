@@ -17,8 +17,7 @@ has to either:
 
 Both are conscious decisions; either is fine. What's NOT fine is
 silently shipping a new PII column that ``anonymize_user`` doesn't
-know about — which is exactly the bug pattern that motivated this
-roadmap.
+know about.
 
 The ignore list is the documentation. Anything in it is a deliberate
 choice ("this field NAME looks like PII but isn't / is intentionally
@@ -59,7 +58,7 @@ PII_SUBSTRING_TOKENS = (
     "country",
     # Free-text cancellation reasons routinely hold PII — force every
     # ``cancellation_reason`` / ``cancelled_reason`` column to be classified or
-    # explicitly ignored (GDPR-DEL-2). Exact-ish names, not a broad "reason", so
+    # explicitly ignored. Exact-ish names, not a broad "reason", so
     # unrelated ``revoked_reason`` / ``correction_reason`` aren't dragged in.
     "cancellation_reason",
     "cancelled_reason",
@@ -79,8 +78,7 @@ PII_EXACT_TOKENS = (
 # Field names that ALWAYS indicate PII regardless of column type.
 # Without this list the walker below skips date/integer/boolean
 # columns entirely (to avoid e.g. ``capacity`` matching ``city``),
-# which means PII dates like ``birth_date`` slip through silently —
-# that's how DoB went unclassified in the 2026-06 GenG §30 audit.
+# which means PII dates like ``birth_date`` would slip through silently.
 # Add a new entry here whenever a field of a non-text type is
 # personal data (e.g. a hypothetical ``passport_expiry: DateField``).
 PII_NAMES_ANY_TYPE = (
@@ -259,10 +257,9 @@ def test_ignored_fields_still_exist_on_their_model():
 def test_guard_catches_date_typed_pii_when_unclassified(monkeypatch):
     """Self-check on the guard's own logic.
 
-    The 2026-06 ``birth_date`` regression slipped past the original
-    text-only walker because ``DateField`` isn't in
-    ``PII_CAPABLE_FIELD_TYPES``. The fix was to add
-    ``PII_NAMES_ANY_TYPE`` and a two-pass check.
+    A text-only walker misses ``birth_date`` because ``DateField`` isn't
+    in ``PII_CAPABLE_FIELD_TYPES``; ``PII_NAMES_ANY_TYPE`` and the
+    two-pass check cover date-typed PII.
 
     Lock that behaviour: temporarily drop ``birth_date`` from the
     classification map; assert the walker raises a violation naming

@@ -229,8 +229,8 @@ def _notify_office_of_renewal_failures(tenant, failed: list[dict], run_date) -> 
         "review_url": _office_review_url(tenant, "/abos/abos"),
     }
     # Runs inside the sweep's ``schema_context(tenant.schema_name)``, so the
-    # helper's default ``EmailService()`` resolves the same schema the explicit
-    # ``EmailService(tenant.schema_name)`` used to. Best-effort: a crashed or
+    # helper's default ``EmailService()`` resolves the tenant's schema.
+    # Best-effort: a crashed or
     # unsent digest logs ``renewal.digest_failed`` on the ops log and is
     # swallowed so the sweep never aborts.
     send_email_best_effort(

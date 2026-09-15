@@ -60,9 +60,8 @@ type PlanningMode = "per_share" | "total";
 
 interface PlanningLongTermHarvestSharesBaseProps {
   shareOption: ShareTypeEnum;
-  // Boolean article-list flags (e.g. ``is_active``, ``get_price_info``). Was
-  // typed ``string`` but every caller passes booleans; aligned with
-  // ``PlanningHarvestSharesBase`` so both can share a dispatcher.
+  // Boolean article-list flags (e.g. ``is_active``, ``get_price_info``), typed
+  // like ``PlanningHarvestSharesBase`` so both can share a dispatcher.
   shareArticleFilters: Record<string, boolean>;
   pageTitle: string;
   explainerKey: string;
@@ -295,8 +294,7 @@ export default function PlanningLongTermHarvestSharesBase({
           title: getShareTypeVariationSizeLabelPure(variation.size, t),
           // dataIndex AND key must be the SAME wire field. The default-share
           // backend keys amounts by variation id as `amount_<id>` (there is no
-          // day axis here); previously `key` said `variation_<id>` while
-          // `dataIndex` said `amount_<id>` — a latent footgun.
+          // day axis here).
           dataIndex: variationAmountKey(variation.id!),
           inputType: "positive_decimal2",
           key: variationAmountKey(variation.id!),

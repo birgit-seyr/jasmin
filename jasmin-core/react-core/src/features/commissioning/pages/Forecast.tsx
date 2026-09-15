@@ -106,9 +106,8 @@ export default function Forecast() {
       // Forecast is a HARVEST forecast — ALWAYS scope to harvest-share
       // variations. The fruit-share variations are fetched separately
       // (``shareTypeVariationFiltersFruits``) only when the tenant runs fruit
-      // and veg as separate shares. Previously the "not separate" case dropped
-      // ``share_option`` entirely, so the query returned EVERY share option
-      // (egg / chicken / …) once no fruit share was active.
+      // and veg as separate shares. Without ``share_option`` the query returns
+      // EVERY share option (egg / chicken / …).
       share_option: ShareTypeEnum.HARVEST_SHARE,
     };
   }, [selectedYear, selectedWeek]);
@@ -151,7 +150,7 @@ export default function Forecast() {
   const { shareArticleColumn } = useShareArticleColumn({
     filters: shareArticleFilters,
     showFruitsAndVegs: true,
-    // Restores the auto-fill of ``unit`` from
+    // Auto-fills ``unit`` from
     // ``share_article.default_movement_unit`` on share-article change.
     // Forecast has no amount_per_pu / crate / description columns, so the
     // other patch fields written by the "harvest" context are ignored by

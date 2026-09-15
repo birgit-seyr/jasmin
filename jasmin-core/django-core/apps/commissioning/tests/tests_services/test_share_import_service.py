@@ -586,7 +586,7 @@ class TestShareImportPipeline:
 
 
 # ---------------------------------------------------------------------------
-# Recompute propagation on apply (2026-06-04)
+# Recompute propagation on apply
 # ---------------------------------------------------------------------------
 
 
@@ -596,7 +596,7 @@ class TestApplyTriggersRecompute:
     a re-import that corrects demand numbers propagates into the
     downstream ShareContent / theoretical / movement tables. Without
     this wiring, the planning UI silently shows stale numbers until
-    the office manually clicks Recompute — that was the original gap.
+    the office manually clicks Recompute.
 
     The recompute itself is exercised by its own tests
     (``test_share_content_service``, ``recompute.py`` callers); here
@@ -719,7 +719,7 @@ class TestApplyTriggersRecompute:
 
 
 # ---------------------------------------------------------------------------
-# Forward-seed the next week with an estimate (2026-06-09)
+# Forward-seed the next week with an estimate
 # ---------------------------------------------------------------------------
 
 
@@ -960,9 +960,8 @@ class TestReimportPropagatesIntoTheoreticals:
         )
 
         # ---- Reimport: quantity=12 ----
-        # This is the case that USED to silently leave the planning
-        # numbers at 45 — the office had to remember to click
-        # Recompute. The wiring we shipped makes this automatic.
+        # Without the apply → recompute wiring this would silently leave the
+        # planning numbers at 45 until the office clicked Recompute.
         with self._force_external_demand_backend():
             self._apply(import_world, quantity=12)
 

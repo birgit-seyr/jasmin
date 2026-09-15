@@ -1,10 +1,8 @@
 """Huey periodic tasks for the tenants app.
 
-Currently a single task: ``weekly_tenant_health_report``. See
-``docs/todos/huey-to-do.txt`` for the full backlog.
+Currently a single task: ``weekly_tenant_health_report``.
 
-Bootstrap reminder: nothing in this file runs until the ``HUEY`` config
-block in ``config/settings.py`` is uncommented and a worker process
+Bootstrap reminder: nothing in this file runs until a Huey worker process
 starts.
 """
 

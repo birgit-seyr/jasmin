@@ -418,9 +418,8 @@ class TestSerializerShape:
         assert self.EXPECTED_CRATE_FIELDS.issubset(data.keys())
 
     def test_no_dead_article_diff_field(self, tenant):
-        """``article_differs`` / ``original_share_article_name`` were
-        removed when the FK snapshots were dropped — make sure they do
-        not reappear."""
+        """``article_differs`` / ``original_share_article_name`` have no FK
+        snapshot to diff against — make sure they do not reappear."""
         _, _, _, _, invoice = _make_dn_with_invoice(tenant)
         data = InvoiceResellerContentSerializer(invoice.items.get()).data
         assert "article_differs" not in data

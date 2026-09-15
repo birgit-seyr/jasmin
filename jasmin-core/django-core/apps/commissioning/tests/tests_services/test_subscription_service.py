@@ -252,7 +252,7 @@ class TestCancelSubscription:
         assert confirmed_subscription.cancellation_reason == "Member moved away."
 
     def test_re_cancel_is_a_noop_preserving_audit_stamp(self, confirmed_subscription):
-        # MEM-4: a second cancel must NOT re-truncate the term, delete more
+        # A second cancel must NOT re-truncate the term, delete more
         # deliveries, or overwrite the original cancellation audit stamp.
         first_actor = JasminUserFactory()
         SubscriptionService().cancel_subscription(

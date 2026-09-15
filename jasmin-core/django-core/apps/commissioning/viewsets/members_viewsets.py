@@ -101,7 +101,7 @@ class RefetchForResponseMixin:
 def _build_member_queryset(request: Request) -> QuerySet[Member]:
     """Return the annotated/filtered Member queryset for list/retrieve.
 
-    Extracted from `MemberViewSet.get_queryset` to keep the viewset thin.
+    Kept outside `MemberViewSet.get_queryset` to keep the viewset thin.
     The N+1 lock note (see joins/prefetch below) is enforced by
     ``apps/payments/tests/test_query_count_locks.py``.
     """
@@ -186,7 +186,7 @@ def _build_member_queryset(request: Request) -> QuerySet[Member]:
     # Count of the member's coop shares still awaiting office confirmation
     # (unconfirmed, not rejected, not cancelled). Reuses the badge_viewsets
     # ``pending_admin_confirmation_q()`` predicate so it can't drift from the
-    # counters (the previous hand-rolled ``admin_confirmed=False`` dropped the
+    # counters (a hand-rolled ``admin_confirmed=False`` would drop the
     # ``admin_confirmed__isnull=True`` branch). Drives the gold "needs
     # confirmation" badge on the Members table's coop-shares button + the
     # member-detail card. Subquery so it doesn't fan out / clash with the other
@@ -711,9 +711,9 @@ def _build_subscription_queryset(request: Request) -> QuerySet[Subscription]:
     ).annotate(
         # ``deliveries_count`` counts materialised ``ShareDelivery``
         # rows for this subscription, excluding joker-taken weeks.
-        # Source of truth for the "Lieferungen" column on Abos.tsx —
-        # replaces the prior frontend calendar arithmetic which
-        # double-counted fortnightly cycles and ignored jokers.
+        # Source of truth for the "Lieferungen" column on Abos.tsx (calendar
+        # arithmetic would double-count fortnightly cycles and ignore
+        # jokers).
         #
         # Zero is a meaningful value: a not-yet-confirmed
         # subscription has no ShareDelivery rows yet (materialisation
@@ -778,7 +778,7 @@ def _build_subscription_queryset(request: Request) -> QuerySet[Subscription]:
 
 
 @extend_schema_view(
-    # ``retrieve`` is inherited (no override) and was guessed; the viewset's
+    # ``retrieve`` is inherited (no override) and would be guessed; the viewset's
     # ``serializer_class`` / ``_build_subscription_queryset`` return a single
     # ``SubscriptionSerializer`` row.
     retrieve=extend_schema(responses={200: SubscriptionSerializer}),
@@ -946,7 +946,7 @@ class SubscriptionViewSet(
         from django.db import transaction
 
         # All-or-nothing: ``confirm`` flips ``admin_confirmed`` then materialises
-        # shares/deliveries, which can now raise ``DeliveryStationOverCapacity``
+        # shares/deliveries, which can raise ``DeliveryStationOverCapacity``
         # (a reserved slot lapsed and was taken). Wrap so the flag rolls back
         # with it instead of leaving a confirmed-but-empty subscription.
         with transaction.atomic():
@@ -1232,9 +1232,8 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         parameters=[
             get_member_parameter(required=True),
             # ``year`` is optional at runtime — see ``get_queryset`` below,
-            # which only filters when present. Schema previously claimed
-            # required=True; relaxed so the per-member CoopSharesModal can
-            # ask for "all years" by omitting the param.
+            # which only filters when present. Optional so the per-member
+            # CoopSharesModal can ask for "all years" by omitting the param.
             get_year_parameter(required=False),
         ],
         responses={200: CoopShareSerializer(many=True)},

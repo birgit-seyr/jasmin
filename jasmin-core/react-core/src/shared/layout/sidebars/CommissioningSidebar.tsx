@@ -40,7 +40,7 @@ export default function CommissioningSidebar({
   const { shareTypes: activePlanningShareTypes } = useShareTypes({
     active_at_date: planningToday,
     // Current + upcoming share types, so an option whose season hasn't started
-    // yet still gets its planning nav (the old harvest links were unconditional).
+    // yet still gets its planning nav.
     include_future: true,
   });
   // Group by option, then classify each by its GOVERNING share type (the one

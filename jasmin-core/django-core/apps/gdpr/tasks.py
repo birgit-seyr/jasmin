@@ -2,12 +2,10 @@
 
 Three tasks live here:
 
-  * ``anonymise_long_cancelled_members`` — closes the 10-year retention
-    clock that the published retention policy and the audit checklist
-    have been advertising. Without this task, the policy was
-    theoretical: an auditor running
-    ``Member.objects.filter(cancelled_effective_at__lt=ten_years_ago)``
-    would have found PII the policy claimed was erased.
+  * ``anonymise_long_cancelled_members`` — enforces the 10-year retention
+    clock that the published retention policy advertises. Without this
+    task, ``Member.objects.filter(cancelled_effective_at__lt=ten_years_ago)``
+    would find PII the policy claims is erased.
 
   * ``alert_on_mass_deletes`` — detects mass-deletion bursts on
     PII / legally-relevant tables. The brute-force alert in
@@ -141,9 +139,8 @@ def anonymise_long_cancelled_members() -> dict[str, int]:
 
     # ``include_inactive=True``: a legal retention obligation persists on a
     # frozen (is_active=False) tenant, so the erasure SLA must keep running
-    # there — matching the pre-adoption loop, which scanned every non-public
-    # tenant regardless of active status. Per-tenant failures are isolated
-    # and logged (to the gdpr log) so one bad schema never aborts the sweep.
+    # there. Per-tenant failures are isolated and logged (to the gdpr log)
+    # so one bad schema never aborts the sweep.
     for_each_tenant(
         sweep, label="gdpr.retention_sweep", logger=log, include_inactive=True
     )
@@ -316,9 +313,9 @@ def alert_on_mass_deletes() -> dict[str, int]:
 
     # ``include_inactive=True``: insider data destruction is exactly what a
     # frozen (offboarding / disputed / breached) tenant is at risk of, so the
-    # forensic scan must keep watching it — matching the pre-adoption loop over
-    # every non-public tenant. Per-tenant failures are isolated (missing data
-    # for one tenant beats no alert for any) and logged to the gdpr log.
+    # forensic scan must keep watching it. Per-tenant failures are isolated
+    # (missing data for one tenant beats no alert for any) and logged to the
+    # gdpr log.
     for_each_tenant(
         collect, label="audit.mass_delete", logger=log, include_inactive=True
     )
@@ -444,8 +441,8 @@ def alert_on_deletion_endpoint_bursts() -> dict[str, int]:
       * **Lodge burst** — ``DeletionRequest`` rows created in the last
         hour, grouped by ``requested_ip``. Alerts when one IP exceeds
         ``DELETION_LODGE_BURST_THRESHOLD`` across users. ``requested_ip``
-        was added in migration ``gdpr/0003`` and is captured by the
-        view at request time; pre-0003 rows are skipped.
+        is captured by the view at request time; rows without it are
+        skipped.
       * **Confirm spray** — same model, grouped by
         ``email_confirmed_ip``. Alerts when one IP exceeds
         ``DELETION_CONFIRM_BURST_THRESHOLD`` confirmations in an hour.
@@ -464,7 +461,6 @@ def alert_on_deletion_endpoint_bursts() -> dict[str, int]:
     compromised credentials, which has its own control via
     ``alert_on_axes_bursts``. Adding a SAR-access model + view rewire
     for a marginal threat-coverage improvement isn't deploy-blocking.
-    Tracked in the audit checklist if the threat model shifts.
     """
     from apps.gdpr.models import DeletionRequest
 
@@ -501,9 +497,9 @@ def alert_on_deletion_endpoint_bursts() -> dict[str, int]:
             confirm_by_ip[(tenant.schema_name, str(ip))] += 1
 
     # ``include_inactive=True``: abuse of the public deletion endpoints stays a
-    # concern on a frozen tenant, so keep scanning every non-public tenant as
-    # the pre-adoption loop did. Per-tenant failures are isolated and logged to
-    # the gdpr log so one tenant never blocks cross-tenant aggregation.
+    # concern on a frozen tenant, so keep scanning every non-public tenant.
+    # Per-tenant failures are isolated and logged to the gdpr log so one
+    # tenant never blocks cross-tenant aggregation.
     for_each_tenant(
         collect, label="gdpr.deletion_burst", logger=log, include_inactive=True
     )

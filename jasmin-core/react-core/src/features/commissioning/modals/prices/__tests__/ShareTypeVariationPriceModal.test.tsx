@@ -1,10 +1,8 @@
 /**
  * Column-gating test for ``ShareTypeVariationPriceModal``.
  *
- * The solidarity-pricing audit (SOL-9/SOL-10) flagged that the
- * ``solidarity_min_price_per_delivery`` column is spread into the price grid
- * ONLY when ``allows_solidarity_pricing`` is on — and that this gate had zero
- * coverage. This pins it.
+ * The ``solidarity_min_price_per_delivery`` column is spread into the price
+ * grid ONLY when ``allows_solidarity_pricing`` is on. This pins that gate.
  *
  * Strategy: stub ``PriceEditorModal`` (the generic shell that renders the real
  * AntD ``EditableTable`` — which hangs vitest, see the project note) so we can

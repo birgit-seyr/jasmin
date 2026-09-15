@@ -45,8 +45,7 @@ class AdminConfirmableMixin(models.Model):
 
         Subclasses opt in to side-effects by overriding ``_post_confirm()``
         (e.g. ``Member`` generates a member-number, ``Subscription``
-        materialises shares + deliveries + charge schedule). This replaces
-        the previous ``admin_confirmed`` Signal dispatch.
+        materialises shares + deliveries + charge schedule).
         """
         self.admin_confirmed = True
         self.admin_confirmed_by = admin_user
@@ -410,7 +409,7 @@ PRICE_QUANTIZE = _PRICE_QUANTIZE
 
 
 # Float-safe coercer — the shared primitive (apps.shared.money.to_decimal),
-# re-exported under the historical name so existing imports keep working.
+# re-exported as ``_to_decimal`` so existing imports keep working.
 _to_decimal = to_decimal
 
 
@@ -497,10 +496,10 @@ class LinePricingMixin:
 
     Requires ``amount``, ``price_per_unit``, ``rabatt`` and ``tax_rate``
     attributes. The net is ``amount × price_per_unit × (1 − rabatt/100)`` for
-    EVERY reseller line model (amount in units, price €/unit) — do NOT
-    re-introduce an ``amount_per_pu`` price multiplier: that quantity is for PU
-    conversion (stock / ``ordered_amount``), not pricing, and a multiplier here
-    would diverge the order net from the legally-issued invoice (DOC-1).
+    EVERY reseller line model (amount in units, price €/unit) — do NOT add an
+    ``amount_per_pu`` price multiplier: that quantity is for PU conversion
+    (stock / ``ordered_amount``), not pricing, and a multiplier here would
+    diverge the order net from the legally-issued invoice.
     """
 
     @property
@@ -1141,17 +1140,17 @@ class NumberedDocumentMixin(models.Model):
 
         ``pg_advisory_xact_lock`` blocks any other writer holding the
         same key until our transaction commits — at which point the
-        next writer sees our row and computes our number+1. This
-        replaces the previous ``Max(number)+1 → IntegrityError → retry``
-        loop, which was O(N) under contention and could exhaust its
-        retry budget at scale.
+        next writer sees our row and computes our number+1. A
+        ``Max(number)+1 → IntegrityError → retry`` loop instead would be O(N)
+        under contention and could exhaust its retry budget at scale.
 
         The DB-level ``UNIQUE (prefix, number[, document_type])``
         constraint stays as a belt-and-suspenders safety net: if the
         lock ever fails (migration mismatch, manual SQL writer, etc.)
         the unique constraint still refuses duplicate numbers.
 
-        Name kept for historical reference (callers grep for it).
+        Despite the name there is no retry loop; the name stays because callers
+        grep for it.
         """
         with transaction.atomic():
             acquire_advisory_xact_lock(self._advisory_lock_key())

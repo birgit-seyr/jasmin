@@ -383,12 +383,12 @@ export default function DeliveryStationDetails() {
     ];
   }, [comboColumns, t]);
 
-  // NOTE: no "reset station to null on day/week change" effect here. That
-  // unconditionally wiped a still-valid station (and blanked the table,
-  // because the query is gated on a station being selected). The station
-  // selector now reconciles itself via preserveSelection — it keeps the pick
-  // when it's still scheduled for the new day, and only falls back to the
-  // first station when it's gone.
+  // NOTE: no "reset station to null on day/week change" effect here — it
+  // would wipe a still-valid station (and blank the table, because the query
+  // is gated on a station being selected). The station selector reconciles
+  // itself via preserveSelection — it keeps the pick when it's still
+  // scheduled for the new day, and only falls back to the first station when
+  // it's gone.
 
   // Pickup lists are inherently per-member (rows are members); import-shares
   // tenants have no members / ShareDeliveries, so the list can't be built. Show

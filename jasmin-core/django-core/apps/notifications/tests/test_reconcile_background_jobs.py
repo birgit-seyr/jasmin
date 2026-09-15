@@ -1,6 +1,6 @@
 """Tests for ``apps.notifications.tasks.reconcile_stale_background_jobs``.
 
-TXN-6: a SIGKILL/OOM of the Huey worker mid-task never runs ``mark_done`` /
+A SIGKILL/OOM of the Huey worker mid-task never runs ``mark_done`` /
 ``mark_failed``, so the ``BackgroundJob`` row is stranded at ``running`` (or
 ``queued`` when the on_commit dispatch failed) forever. The sweep marks such
 rows failed once their last liveness signal — ``heartbeat_at``, falling back to
@@ -137,7 +137,7 @@ class TestReconcileAlertsAdmins:
 
 @pytest.mark.django_db
 class TestPruneOldBackgroundJobs:
-    """TASK-5: terminal rows past the retention window are deleted; queued/
+    """Terminal rows past the retention window are deleted; queued/
     running rows and recent terminal rows are kept."""
 
     OLD = datetime.timedelta(days=notification_tasks.RETENTION_DAYS + 5)

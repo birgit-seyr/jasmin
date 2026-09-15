@@ -39,12 +39,12 @@ class RetentionChecksMixin:
         - **GenG §5 / §15** — any ``CoopShare`` row attached to the
           subject's Member blocks anonymization (registry obligation
           while shares are held). Future: also block for 10 years
-          after the last share is paid back (handled by Step 8's
+          after the last share is paid back (handled by a
           retention cron once it's wired).
         - **HGB §257 / UStG §14b** — any **open** finalized invoice
           (``has_been_paid=False``) on a reseller linked to the user
           blocks anonymization. After payment + 10 years, retention
-          is satisfied and the cleanup cron (Step 8) handles the
+          is satisfied and a future cleanup cron will handle the
           historical rows.
         - **Active subscription** — a current ``Subscription`` row
           (``valid_until IS NULL`` or in the future) on the subject's

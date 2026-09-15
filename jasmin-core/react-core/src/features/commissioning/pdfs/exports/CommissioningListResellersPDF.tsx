@@ -18,10 +18,9 @@ const localStyles = StyleSheet.create({
   table: {
     width: "100%",
   },
-  // ``tableHeaderPadding`` used to be a complete tableHeader style
-  // duplicating ``listStyles.tableHeader``. Now we just override the
-  // single extra rule (``padding: 5``) and compose at render time
-  // via ``style={[listStyles.tableHeader, localStyles.tableHeaderPadding]}``.
+  // ``tableHeaderPadding`` only adds the extra rule (``padding: 5``) on top
+  // of ``listStyles.tableHeader``; compose them at render time via
+  // ``style={[listStyles.tableHeader, localStyles.tableHeaderPadding]}``.
   tableHeaderPadding: {
     padding: 5,
   },

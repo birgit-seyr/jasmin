@@ -282,9 +282,9 @@ def test_invoices_list_is_scale_invariant(tenant, office_client):
     """InvoiceResellerViewSet's prefetch chain — including the Python-side
     aggregation in ``InvoiceResellerSerializer.get_crate_items`` — must
     not produce per-row queries. Regression here means someone either
-    removed a ``select_related`` / ``prefetch_related`` or restored the
-    fresh ``CrateContentInvoiceReseller.objects.filter(invoice=obj)``
-    pattern that the 2026-05-24 audit replaced."""
+    removed a ``select_related`` / ``prefetch_related`` or introduced a
+    fresh per-row ``CrateContentInvoiceReseller.objects.filter(invoice=obj)``
+    query."""
     reseller = ResellerFactory()
 
     week = 10
@@ -547,7 +547,7 @@ def test_email_logs_list_is_scale_invariant(tenant, office_client):
 
 
 # --------------------------------------------------------------------------- #
-# /api/commissioning/orders_overview/  (PERF-1)                                #
+# /api/commissioning/orders_overview/                                          #
 # --------------------------------------------------------------------------- #
 
 
@@ -555,7 +555,7 @@ def _make_order_with_invoiced_delivery_note(*, reseller, year, delivery_week):
     """Order with a delivery note AND a linked invoice (via the
     ``InvoiceResellerContent.delivery_note_contents`` M2M) plus line items, so
     ``CombinedOrderOverviewView``'s batched invoice lookup + ``sum_netto`` are
-    both exercised. Pre-fix this ran a per-order invoice query (+ a
+    both exercised. Without batching this runs a per-order invoice query (+ a
     ``cancelled_by_invoice`` fetch) per row."""
     from apps.commissioning.models import InvoiceResellerContent
 
@@ -580,7 +580,7 @@ def _make_order_with_invoiced_delivery_note(*, reseller, year, delivery_week):
 
 def test_orders_overview_is_scale_invariant(tenant, office_client):
     """CombinedOrderOverviewView resolves each order's invoice and computes
-    ``sum_netto``. The per-order invoice lookup must be batched (PERF-1) —
+    ``sum_netto``. The per-order invoice lookup must be batched —
     adding orders must not add proportional queries."""
     reseller = ResellerFactory()
 
@@ -611,17 +611,17 @@ def test_orders_overview_is_scale_invariant(tenant, office_client):
 
 
 # --------------------------------------------------------------------------- #
-# /api/commissioning/resellers/ WITH linked users  (PERF-2)                    #
+# /api/commissioning/resellers/ WITH linked users                              #
 # --------------------------------------------------------------------------- #
 # The lock above seeds plain resellers (``linked_user=None``), which
-# short-circuits ``get_linked_user_info`` — so it never caught the linked-user
+# short-circuits ``get_linked_user_info`` — so it can't catch the linked-user
 # N+1. This one sets a linked user per row to exercise that path.
 
 
 def test_resellers_list_with_linked_user_is_scale_invariant(tenant, office_client):
     """``ResellerSerializer.get_linked_user_info`` serializes the linked user
     per row — its sent-invitation lookup and the reverse ``linked_reseller``
-    OneToOne must be prefetched (PERF-2). A linked user is set explicitly here
+    OneToOne must be prefetched. A linked user is set explicitly here
     or the path would short-circuit and the lock would catch nothing."""
     for _ in range(2):
         ResellerFactory(linked_user=JasminUserFactory())
@@ -641,7 +641,7 @@ def test_resellers_list_with_linked_user_is_scale_invariant(tenant, office_clien
 
 
 # --------------------------------------------------------------------------- #
-# /api/commissioning/resellers/ WITH linked delivery stations  (PERF-4)        #
+# /api/commissioning/resellers/ WITH linked delivery stations                  #
 # --------------------------------------------------------------------------- #
 # The locks above seed resellers without a linked delivery station, so
 # ``get_linked_delivery_station_can_be_deleted`` short-circuits (returns True)
@@ -652,8 +652,8 @@ def test_resellers_list_with_linked_user_is_scale_invariant(tenant, office_clien
 def test_resellers_list_with_linked_delivery_station_is_scale_invariant(
     tenant, office_client
 ):
-    """``get_linked_delivery_station_can_be_deleted`` ran ``can_delete_instance``
-    (R queries) per row's linked DeliveryStation. ``ResellerListSerializer``
+    """``get_linked_delivery_station_can_be_deleted`` needs ``can_delete_instance``
+    (R queries) for each row's linked DeliveryStation. ``ResellerListSerializer``
     bulk-precomputes it; a linked station is set per row or the field would
     short-circuit and the lock would catch nothing."""
 
@@ -679,7 +679,7 @@ def test_resellers_list_with_linked_delivery_station_is_scale_invariant(
 
 
 # --------------------------------------------------------------------------- #
-# /api/auth/admin/users/  (PERF-3)                                            #
+# /api/auth/admin/users/                                                      #
 # --------------------------------------------------------------------------- #
 # AdminUserViewSet.list -> list_active_users serializes every user via
 # serialize_user_row, which reads a sent-invitation lookup AND the reverse
@@ -720,7 +720,7 @@ def test_admin_users_list_is_scale_invariant(tenant, office_client):
 def test_offers_list_is_scale_invariant(tenant, office_client):
     """OfferSerializer.organic_status reads ``share_article.organic_status`` per
     row, so OfferViewSet.get_queryset must ``select_related("share_article")`` or
-    the offers list (one offer per article, often dozens) goes N+1 (NQ-1). The
+    the offers list (one offer per article, often dozens) goes N+1. The
     ``share_article_name`` F() annotation only pulls the name column via JOIN —
     it does NOT populate the related instance the serializer dereferences."""
     from apps.commissioning.tests.factories import OfferFactory, OfferGroupFactory

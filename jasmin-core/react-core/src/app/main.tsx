@@ -38,11 +38,9 @@ if (typeof globalScope.Buffer === "undefined") {
   globalScope.Buffer = Buffer;
 }
 // Variable Inter font — one woff2 covers every weight (100-900) via
-// the OpenType variations table. Replaces 6 individual weight CSS
-// imports (200/300/400/500/600/700) that previously shipped ~180 KB
-// of CSS-with-fonts in the main bundle.
-// PDF generation still uses @fontsource/roboto static weights (see
-// components/pdfs/registerRoboto.ts) because @react-pdf/renderer
+// the OpenType variations table.
+// PDF generation uses @fontsource/roboto static weights (see
+// features/commissioning/pdfs/registerRoboto.ts) because @react-pdf/renderer
 // expects per-weight font files at Font.register() time.
 import "@fontsource-variable/inter";
 import "@shared/styles/index.css";
@@ -50,7 +48,7 @@ import "@shared/styles/index.css";
 // This app no longer ships a service worker, but older builds did. A leftover
 // SW lives in the BROWSER PROFILE (a fresh build/container doesn't clear it),
 // intercepts fetches, and serves stale chunks/HTML — a silent white page with no
-// console error, historically only escapable via "clear site data" (Firefox is
+// console error, otherwise only escapable via "clear site data" (Firefox is
 // especially prone: an unregistered worker keeps controlling existing clients).
 // This guard self-heals it: if a worker controls the page, purge it and
 // hard-reload ONCE into a clean, worker-free load BEFORE mounting the app.

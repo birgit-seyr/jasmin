@@ -3,9 +3,9 @@
 The command fires every Huey periodic task synchronously for dev/QA, but it
 iterates a STATIC registry — a new ``@db_periodic_task`` / ``@periodic_task``
 added without registering it is silently omitted, and the command still reports
-all-green (TASK-7). This test AST-scans the app tree for periodic-task
+all-green. This test AST-scans the app tree for periodic-task
 decorators and fails the build when one is neither in TASK_REGISTRY nor
-allow-listed as pure infra, so the registry can't drift out of coverage again.
+allow-listed as pure infra, so the registry can't drift out of coverage.
 """
 
 from __future__ import annotations

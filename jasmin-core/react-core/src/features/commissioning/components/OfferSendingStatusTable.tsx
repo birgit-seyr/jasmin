@@ -42,7 +42,7 @@ export default function OfferSendingStatusTable({
       align: "left",
       width: "24em",
       render: (_: unknown, record: TableRecord) =>
-        // A11Y-14: status must not be conveyed by colour alone — the icon is
+        // Status must not be conveyed by colour alone — the icon is
         // aria-hidden and a visible text label (the date carries a sr-only
         // "sent" prefix; the not-sent state shows its label) makes it readable.
         record.sent_at ? (

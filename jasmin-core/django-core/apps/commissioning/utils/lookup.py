@@ -1,9 +1,9 @@
 """Shared object-lookup helper for viewsets/views.
 
 ``get_or_404`` is the single "fetch a row by id or raise a canonical domain
-error" primitive. It replaces the hand-rolled ``try``/``DoesNotExist`` → raise
-blocks (and the DRF ``get_object_or_404`` calls that produced a non-canonical
-``{"detail": ...}`` body) scattered across the commissioning viewsets/views.
+error" primitive — use it instead of hand-rolled ``try``/``DoesNotExist`` →
+raise blocks or DRF ``get_object_or_404`` (which produces a non-canonical
+``{"detail": ...}`` body).
 
 The raised exceptions are ``core.errors.JasminError`` subclasses, so the DRF
 exception handler renders them as the structured Jasmin error body — callers

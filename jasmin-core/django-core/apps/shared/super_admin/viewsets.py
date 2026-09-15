@@ -178,7 +178,7 @@ class TenantManagementViewSet(ViewSet):
     def list(self, request: Request) -> Response:
         # Allowlist (default on): only explicit truthy tokens enable the
         # expensive per-tenant COUNT. A garbage value falls to False instead
-        # of silently triggering the count (the old denylist's footgun).
+        # of silently triggering the count.
         include_user_count = request.query_params.get(
             "include_user_count", "true"
         ).strip().lower() in ("true", "1", "yes", "on")

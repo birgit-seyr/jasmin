@@ -218,7 +218,7 @@ class TestLockedSettingsEndpoint:
 
 
 # ===================================================================
-# DOC-1 / DOC-3: numbering prefixes are legal-document labels — none of the
+# Numbering prefixes are legal-document labels — none of the
 # four may be blanked via update_current_settings.
 # ===================================================================
 @pytest.mark.django_db
@@ -245,7 +245,7 @@ class TestPrefixBlankGuard:
 
 
 # ===================================================================
-# Settings field validation (TEN-1)
+# Settings field validation
 # ===================================================================
 @pytest.mark.django_db
 class TestSettingsFieldValidation:

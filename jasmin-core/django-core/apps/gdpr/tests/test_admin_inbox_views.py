@@ -1,5 +1,4 @@
-"""Tests for the admin-inbox + user-status endpoints added in the
-2026-06 GDPR pass:
+"""Tests for the admin-inbox + user-status endpoints:
 
   - ``GET /api/gdpr/admin/pending-deletions/`` — admin's PENDING_ADMIN
     inbox with per-row ``blockers``.

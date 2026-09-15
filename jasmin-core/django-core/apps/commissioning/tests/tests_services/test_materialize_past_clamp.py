@@ -1,4 +1,4 @@
-"""Scope-A clamp: materialisation (and the capacity paths that share the week
+"""Past-week clamp: materialisation (and the capacity paths that share the week
 list) never touch delivery weeks already in the PAST.
 
 In normal use ``valid_from`` is a future Monday, so this is a no-op. It only

@@ -301,8 +301,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // Abos table (capacityWindowParams) — one fetch shape everywhere — so every
   // realistic term's week keys are present and the fullness evaluation is
   // always term-relative instead of anchored to whichever week the modal
-  // happened to fetch first (the old 1-week today-anchored fetch made the
-  // tag and the submitted flag disagree with the chosen term).
+  // happened to fetch first.
   const dsdParams = useMemo(() => {
     const start = (validFrom ?? dayjs()).startOf("isoWeek");
     return {
@@ -430,11 +429,10 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
 
   // Capacity is only DEFINED relative to a term: "full" means some week of
   // [valid_from, valid_until] has no free slot. Until both dates are known we
-  // therefore show NO capacity claims at all (the old today-anchored numbers
-  // answered a different question than the one that matters). Capacity also
-  // only applies to harvest variations — add-on shares (chicken, honey, …)
-  // ride along in the base box and never consume a slot, so they never see
-  // a full tag or a waiting_list offer.
+  // therefore show NO capacity claims at all. Capacity also only applies to
+  // harvest variations — add-on shares (chicken, honey, …) ride along in the
+  // base box and never consume a slot, so they never see a full tag or a
+  // waiting_list offer.
   const termKnown = Boolean(validFrom && validUntil);
   const capacityRelevant = useMemo(() => {
     if (!selectedVariation) return false;

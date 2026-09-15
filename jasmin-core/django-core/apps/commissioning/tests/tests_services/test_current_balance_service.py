@@ -142,7 +142,7 @@ class TestGetDrift:
 
 @pytest.mark.django_db
 class TestReconcilerSelfConsistency:
-    """REF-7: get_drift's 'expected' (raw ledger sum) and the --fix repair must
+    """get_drift's 'expected' (raw ledger sum) and the --fix repair must
     compute the SAME quantity, or repair never converges on a corrupt snapshot.
     Also: a ledger entity with no projection row must be detectable."""
 
@@ -168,7 +168,7 @@ class TestReconcilerSelfConsistency:
             snapshot_date=_ts(2026, 5, 5),
             balance=Decimal("100.000"),
         )
-        # Snapshot-baselined recompute would write 100 + 5 = 105 (the bug).
+        # Snapshot-baselined recompute would write 100 + 5 = 105 (wrong).
         snapshot_based = SnapshotService.compute_balance(
             article.id, "KG", "M", storage.id
         )
@@ -252,7 +252,7 @@ class TestCascadeHookUpdatesBalance:
 
 @pytest.mark.django_db
 class TestSnapshotDrift:
-    """Audit #7: reconcile must also detect + repair corrupt ``StockSnapshot``
+    """Reconcile must also detect + repair corrupt ``StockSnapshot``
     baselines, not just the current-balance projection — a snapshot wrong at its
     own date re-drifts every future ``from_ledger=False`` recompute and every
     historical ``compute_balance(up_to=...)`` even when the current total is fine.

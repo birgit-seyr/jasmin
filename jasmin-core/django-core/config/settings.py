@@ -21,8 +21,8 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-change-in-produ
 # Rotation support for ``django.core.signing`` (password-reset + invitation
 # links, sessions, CSRF): to rotate, set DJANGO_SECRET_KEY to the NEW key and
 # DJANGO_SECRET_KEY_FALLBACK to the previous one — Django verifies existing
-# signatures against SECRET_KEY + fallbacks, so rotation no longer instantly
-# invalidates every in-flight signed link. (SimpleJWT HS256 signs with
+# signatures against SECRET_KEY + fallbacks, so rotation doesn't instantly
+# invalidate every in-flight signed link. (SimpleJWT HS256 signs with
 # SIGNING_KEY = SECRET_KEY and does NOT consult fallbacks, so already-issued
 # JWTs still re-auth after a rotation — but access tokens live only 15 min.)
 SECRET_KEY_FALLBACKS = [
@@ -31,7 +31,7 @@ SECRET_KEY_FALLBACKS = [
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Default OFF (fail safe): a real deploy that forgets to set DEBUG boots
-# secure, not insecure. Two dev conveniences preserve the old ergonomics where
+# secure, not insecure. Two dev conveniences keep local runs working where
 # DEBUG is unset: (1) under pytest we default it ON (the suite runs on the dev
 # secrets and must skip the prod-only ``if not DEBUG`` boot guards below), and
 # (2) ``manage.py`` ``setdefault``s it True for local CLI use. The prod compose
@@ -82,7 +82,7 @@ if not DEBUG:
             "(mail_admins / AdminEmailHandler alerts connect to it; an empty "
             "or loopback host silently drops every ops alert)."
         )
-    # CFG-3: the CORS allow-regex + CSRF trusted origins for the browser auth
+    # The CORS allow-regex + CSRF trusted origins for the browser auth
     # surface are DERIVED from FRONTEND_DOMAIN. Unset, the tenant-subdomain CORS
     # regex is never built and the app boots with a broken cross-origin auth
     # surface — fail fast instead.
@@ -91,7 +91,7 @@ if not DEBUG:
             "FRONTEND_DOMAIN must be set in production (drives the CORS "
             "allow-regex and CSRF trusted origins for the browser auth surface)."
         )
-    # CFG-4: defense-in-depth, symmetric with the SECRET_KEY / FIELD_ENCRYPTION
+    # Defense-in-depth, symmetric with the SECRET_KEY / FIELD_ENCRYPTION
     # _KEY guards above — refuse to boot on the committed dev DB password.
     if os.environ.get("POSTGRES_PASSWORD", "") == "DontForgetMeAgain":
         raise ValueError(
@@ -467,7 +467,7 @@ else:
         CORS_ALLOWED_ORIGINS = []
 
     # Allow https://<anything>.<FRONTEND_DOMAIN> (tenant subdomains).
-    # CFG-3: define the regex list UNCONDITIONALLY so a prod branch with
+    # Define the regex list UNCONDITIONALLY so a prod branch with
     # FRONTEND_DOMAIN unset has an explicit (empty) value rather than leaving
     # the setting undefined.
     CORS_ALLOWED_ORIGIN_REGEXES = []
@@ -541,8 +541,8 @@ SHARED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # NOTE: ``auditlog`` is in TENANT_APPS only. We tried adding it to
-    # SHARED_APPS too so Tenant + TenantSettings could be audited, but
+    # NOTE: ``auditlog`` is in TENANT_APPS only. Adding it to SHARED_APPS
+    # too (so Tenant + TenantSettings could be audited) fails:
     # auditlog.LogEntry has a hard FK to ``settings.AUTH_USER_MODEL``
     # (= accounts.JasminUser, tenant-scoped) — creating the table in
     # the public schema fails with "relation accounts_jasminuser does
@@ -582,7 +582,7 @@ TENANT_APPS = [
     # defense-in-depth, ``SuperAdminIPAllowlistMiddleware`` enforces the
     # SAME allowlist inside Django over the ``/api/super-admin/`` path
     # prefix when ``SUPER_ADMIN_ALLOWED_IPS`` is set (see that setting
-    # below), so the control no longer depends on nginx host routing alone.
+    # below), so the control does not depend on nginx host routing alone.
     "django_otp",
     "django_otp.plugins.otp_totp",
     "django_otp.plugins.otp_static",
@@ -671,7 +671,7 @@ MIDDLEWARE = [
 #   members/      ~25 queries
 #   abos/         ~30
 #   share_delivery ~28
-#   invoices/     ~16-20 (post-fix)
+#   invoices/     ~16-20
 # So MEDIUM=50 is well above normal but well below the hard ceiling
 # (HARD_CEILING=80 in the lock tests).
 if DEBUG:
@@ -855,9 +855,9 @@ REST_FRAMEWORK = {
         # Keyed PER AUTHENTICATED USER, so a caller can only ever fetch their
         # OWN bundle — one user pulling their own data isn't a meaningful DoS.
         # NOTE: the "My data" profile tab fetches this bundle on every open (for
-        # the consents read-out + the "Export as JSON" payload), so the old
-        # 2/hour locked the tab out after a couple of opens. 30/hour matches
-        # normal tab usage while still capping a runaway client.
+        # the consents read-out + the "Export as JSON" payload), so a tight
+        # limit like 2/hour locks the tab out after a couple of opens. 30/hour
+        # matches normal tab usage while still capping a runaway client.
         "gdpr_sar_export": "30/hour",
         # Test-send in the email-template editor sends a real mail.
         # A compromised office account could use it as a spam relay.
@@ -895,10 +895,10 @@ REST_FRAMEWORK = {
         # allowlist. Strict — login keys by IP, step-up by the super-admin
         # pk. Treat the IP allowlist as defense-in-depth, not the sole gate.
         "super_admin_login": "10/hour",
-        # Tenant step-up password re-confirm. Previously shared the generous
-        # ``login`` bucket (20/min); a valid low-privilege token could grind
-        # the password at that ceiling to mint a sudo-mode token. Tighter
-        # per-user rate here PLUS the step-up view now feeds django-axes so
+        # Tenant step-up password re-confirm. Its own bucket: at the generous
+        # ``login`` ceiling (20/min) a valid low-privilege token could grind
+        # the password to mint a sudo-mode token. Tighter
+        # per-user rate here PLUS the step-up view feeds django-axes so
         # repeated wrong passwords lock the (username, ip) pair.
         "step_up": "10/minute",
     },

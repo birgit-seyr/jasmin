@@ -45,11 +45,10 @@ function flattenColumns<T extends TableRecord>(
  * intended — a formatted decimal with its unit, a localized date, a currency
  * amount, a status badge — instead of the raw API string.
  *
- * Without this the card fell straight through to `String(raw)`, so on a phone
- * every one of the ~300 columns that define a `render` leaked the wire value:
- * `"0.000"` for an amount, an ISO `"2026-09-13"` for a date, a bare id for a
- * relation. The fallbacks below (foreign key, select label, checkbox tick) stay
- * as the answer for columns that have no `render`.
+ * Without it the card would fall through to `String(raw)` and show the wire
+ * value — `"0.000"` for an amount, an ISO `"2026-09-13"` for a date, a bare id
+ * for a relation. The fallbacks below (foreign key, select label, checkbox tick)
+ * stay as the answer for columns that have no `render`.
  */
 function resolveDisplay<T extends TableRecord>(
   col: EditableColumnConfig<T>,
@@ -263,7 +262,7 @@ function MobileCardList<T extends TableRecord>({
                 }
               >
                 <div className="mobile-card-title">
-                  {/* A11Y-10: finalized state is otherwise colour-only —
+                  {/* Finalized state is otherwise colour-only —
                       role=img + aria-label exposes it to screen readers with no
                       visual change. */}
                   {isFinalized && (

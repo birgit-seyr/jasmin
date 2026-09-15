@@ -122,8 +122,8 @@ export function comboColumnWidth({
   comboCount,
   fixedWidth,
   flexMinWidth,
-  // A bit wider than the old 52pt: few-combo pages read better and the first
-  // column stays fixed (the slack sits on the right instead of stretching it).
+  // Wide enough that few-combo pages read well; the first column stays fixed
+  // (the slack sits on the right instead of stretching it).
   comboIdeal = 64,
 }: {
   orientation: PdfOrientation;

@@ -107,7 +107,7 @@ class TestMemberSection:
 @pytest.mark.django_db
 class TestBillingProfileSection:
     def test_billing_profile_mandate_in_bundle(self, tenant):
-        """GDPR-SAR-1: the SEPA mandate (reference + signing date) lives only on
+        """The SEPA mandate (reference + signing date) lives only on
         BillingProfile — Art. 15 must surface it, decrypted."""
         from apps.payments.constants import PaymentMethodOptions
         from apps.payments.models import BillingProfile
@@ -143,7 +143,7 @@ class TestBillingProfileSection:
 @pytest.mark.django_db
 class TestUserInvitationSection:
     def test_user_invitation_in_bundle_without_raw_token(self, tenant):
-        """GDPR-SAR-2: an invitation to the subject's email is classified PII
+        """An invitation to the subject's email is classified PII
         that anonymization scrubs, so Art. 15 discloses it — but the raw token
         (a live account-provisioning capability) is surfaced only as a boolean."""
         user = JasminUserFactory(roles=["member"])
@@ -276,8 +276,7 @@ class TestSubscriptionsSection:
     def test_cancellation_reasons_are_surfaced(self, tenant):
         # cancellation_reason is PII_IMMEDIATE (may hold health reasons /
         # complaints), so the Art. 15 bundle must disclose it on member,
-        # subscription AND coop-share — like MemberLoan.cancelled_reason already
-        # is. Regression for the omission that hid it on right-of-access.
+        # subscription AND coop-share — like MemberLoan.cancelled_reason.
         user = JasminUserFactory(roles=["member"])
         member = MemberFactory(user=user, cancellation_reason="health reason")
         SubscriptionFactory(member=member, cancellation_reason="moved away")

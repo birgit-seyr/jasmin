@@ -115,7 +115,7 @@ vi.mock("@features/commissioning/hooks", () => ({
       { title: "amount", dataIndex: "amount", key: "amount" },
     ],
   }),
-  // Column-builder hook extracted from the page (FE-11); the table is stubbed
+  // Column-builder hook for the page; the table is stubbed
   // below, so an empty column set is enough for the render/smoke tests.
   useForecastColumns: () => [],
 }));

@@ -369,14 +369,14 @@ class MyCoopShareSubscribeView(APIView):
 
         settings = TenantSettings.get_current_settings(tenant=connection.tenant)
         value_one = settings.value_one_coop_share if settings else None
-        # MEM-2/6: never persist a 0-valued share — a missing/zero tenant
+        # Never persist a 0-valued share — a missing/zero tenant
         # coop-share value is a configuration error, not a silent default.
         if not value_one:
             raise CoopShareValueNotConfigured(
                 "The cooperative-share value is not configured for this tenant."
             )
 
-        # MEM-8: lock the member row so two concurrent self-subscribes can't both
+        # Lock the member row so two concurrent self-subscribes can't both
         # read has_existing_shares=False and mis-stamp ``is_increase``. The
         # share + the contract ConsentRecord are written in one atomic unit.
         with transaction.atomic():

@@ -49,7 +49,7 @@ i18n
     },
 
     detection: {
-      // ``navigator`` removed on purpose — auto-tracking the browser
+      // ``navigator`` is omitted on purpose — auto-tracking the browser
       // language would show the app in EN to anyone visiting from
       // an English-locale machine on first load, which isn't what
       // we want for a German-first coop product. ``localStorage``

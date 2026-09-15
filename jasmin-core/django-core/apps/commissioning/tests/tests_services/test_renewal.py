@@ -43,8 +43,8 @@ def _renewable_sub(**kwargs) -> Subscription:
         is_trial=False,
         valid_from=_VALID_FROM,
         valid_until=_VALID_UNTIL,
-        # A real subscription carries a price; without one the renewal now
-        # refuses (BIZ-7: a None price would materialise a €0 term). Tests
+        # A real subscription carries a price; without one the renewal
+        # refuses (a None price would materialise a €0 term). Tests
         # exercising the None-price refusal override this explicitly.
         price_per_delivery=Decimal("10.00"),
     )
@@ -52,7 +52,7 @@ def _renewable_sub(**kwargs) -> Subscription:
     subscription = SubscriptionFactory(**defaults)
     # Real data always carries a reference price window (the API refuses
     # subscription creation without an active price), and the renewal price
-    # now ONLY resolves from windows — never from the predecessor's stored
+    # ONLY resolves from windows — never from the predecessor's stored
     # (possibly solidarity/custom) figure. Seed one for the factory-made
     # variation; tests that pass their own variation manage windows themselves.
     if "share_type_variation" not in kwargs:
@@ -269,7 +269,7 @@ class TestRunRenewals:
         assert not Subscription.objects.filter(previous_subscription=sub).exists()
 
     def test_no_price_anywhere_fails_with_no_price_reason(self, tenant):
-        # BIZ-7: no gross-price window at the new start AND the predecessor
+        # No gross-price window at the new start AND the predecessor
         # carried no price → creating the draft would bill a €0 term on
         # confirm. Refuse it (FAIL_NO_PRICE), leave the source renewable.
         from apps.commissioning.services.renewal import FAIL_NO_PRICE
@@ -355,7 +355,7 @@ class TestCreateRenewalDraft:
         assert renewal.admin_confirmed is False
 
     def test_only_one_renewal_per_predecessor(self, tenant):
-        # REN-1: a duplicate/forked renewal is rejected. The normal path catches
+        # A duplicate/forked renewal is rejected. The normal path catches
         # it early via full_clean() (ValidationError); the DB partial-unique
         # index is the race backstop (a concurrent insert slipping past
         # full_clean → IntegrityError), proven here by bypassing full_clean with
@@ -453,7 +453,7 @@ class TestBulkRenew:
 
 
 class TestRenewalFailureDigest:
-    """REN-2: the daily sweep emails the office a digest of who could NOT be
+    """The daily sweep emails the office a digest of who could NOT be
     renewed and why — so failures aren't invisible in a log counter."""
 
     def _tenant_stub(self):

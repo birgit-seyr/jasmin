@@ -1,10 +1,7 @@
-"""Bulk invoice-reminder send, extracted from
-``apps/commissioning/views/reseller_views.py::BulkSendInvoiceReminders
-ViaEmailView.post`` so the Huey task can call it without going through
-the HTTP layer.
+"""Bulk invoice-reminder send, kept out of the view layer so the Huey task can
+call it without going through the HTTP layer.
 
-Same grouped-by-reseller shape that view ships today (one consolidated
-reminder email per reseller, not one per ticked invoice).
+One consolidated reminder email per reseller, not one per ticked invoice.
 """
 
 from __future__ import annotations
@@ -31,7 +28,7 @@ _REMINDER_TD = '<td style="padding: 8px; border: 1px solid #ddd;">'
 
 
 def _build_invoices_table(invoices: list[dict[str, Any]], language: str) -> SafeString:
-    """EML-1: pre-render the overdue-invoice rows as TRUSTED HTML (every cell
+    """Pre-render the overdue-invoice rows as TRUSTED HTML (every cell
     HTML-escaped here in Python) so the template needs no Django ``{% for %}``
     loop — which the safe Mustache renderer used for tenant overrides cannot
     reproduce, silently dropping every row. The rows drop into the template's
@@ -102,8 +99,7 @@ def bulk_send_invoice_reminders(
     """Send a consolidated reminder per reseller covering all of their
     ticked overdue invoices.
 
-    Returns the same response shape ``BulkSendInvoiceRemindersView``
-    used to construct inline: ``{total_processed, successful, failed,
+    Returns the response shape ``{total_processed, successful, failed,
     results, errors}`` — so the React drawer's success handler maps
     over with no per-task knowledge.
 
@@ -221,7 +217,7 @@ def bulk_send_invoice_reminders(
             total=total_buckets,
         )
 
-    # EML-3: idempotency. Resellers already reminded TODAY (e.g. a retry after a
+    # Idempotency. Resellers already reminded TODAY (e.g. a retry after a
     # 'failed' job, or a re-click) are skipped below so they aren't dunned twice.
     # The set is the clean pre-check; the (reseller, sent_on) DB unique catches
     # races / concurrent runs.
@@ -273,7 +269,7 @@ def bulk_send_invoice_reminders(
                 context={
                     "tenant_name": ctx["tenant_name"],
                     "reseller": {"name": reseller_name},
-                    # EML-1: pre-flattened so the template is substitution-only
+                    # Pre-flattened so the template is substitution-only
                     # (no {% for %}) and renders identically under a tenant
                     # override (safe Mustache renderer).
                     "invoices_table": _build_invoices_table(

@@ -1,4 +1,4 @@
-"""MOV-1: the recompute ``SELECT ... FOR UPDATE`` locks rows in deterministic
+"""The recompute ``SELECT ... FOR UPDATE`` locks rows in deterministic
 (id) order so two overlapping recomputes serialise instead of AB/BA-deadlocking.
 
 We assert on the ACTUAL executed SQL (the row-lock query fires before the

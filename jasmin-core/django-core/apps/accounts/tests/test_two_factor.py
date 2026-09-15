@@ -382,14 +382,14 @@ class TestVerifyEndpoint:
 
 
 # --------------------------------------------------------------------------- #
-# COR-23: role-mandated enrolment is not a login deadlock                      #
+# Role-mandated enrolment is not a login deadlock                             #
 # --------------------------------------------------------------------------- #
 
 
 class TestEnrolmentDeadlockFix:
-    """A role-mandated-2FA user with no device used to be permanently locked
-    out: login issued no session, but enroll-start/confirm needed one. Login
-    now hands back a short-lived enrolment token those endpoints accept."""
+    """A role-mandated-2FA user with no device gets no session from login, but
+    enroll-start/confirm need one — so login hands back a short-lived enrolment
+    token those endpoints accept."""
 
     def test_enrolment_token_round_trip(self, tenant):
         user = JasminUserFactory(roles=["admin"], email="gated-rt@example.com")

@@ -35,8 +35,7 @@ const currentDay = dayjs().isoWeekday();
 
 // Derived straight from the generated client — the ``commissioning_lists_resellers``
 // endpoint is fully serializer-typed, so there's no parallel interface to keep
-// in sync (a hand-written one silently drifts: e.g. ``amount`` is ``number``
-// here, and ``unit`` is nullable, both of which the old interface got wrong).
+// in sync (a hand-written one silently drifts).
 type Reseller = CommissioningListResellersEntry;
 type OrderContent = Reseller["order"]["contents"][number];
 

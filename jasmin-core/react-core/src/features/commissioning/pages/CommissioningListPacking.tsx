@@ -124,7 +124,7 @@ function ShareOptionPackingTable({
       // Always a valid number for the type; the query is disabled below when
       // the week is actually cleared, so this fallback never hits the wire.
       delivery_week: week ?? currentWeek,
-      // shareOption prop is a string; the list param is now the generated enum.
+      // shareOption prop is a string; the list param is the generated enum.
       share_option: shareOption as ShareTypeEnum,
       is_past: false,
     }),

@@ -69,7 +69,7 @@ class TestCheckRetentionBlocks:
         assert "GenG" in reasons[0]
 
     def test_cancelled_but_unpaid_coop_share_blocks(self, tenant):
-        """GDPR-DEL-1: a CANCELLED share whose equity was never paid back
+        """A CANCELLED share whose equity was never paid back
         (``paid_back_date`` is None) still blocks anonymisation — the co-op
         still owes the ex-member their Geschäftsanteile (GenG §73 / Art.
         17(3)(b)) and must keep their identity + payout details."""
@@ -196,7 +196,7 @@ class TestCheckRetentionBlocks:
 
     def test_paid_invoice_does_not_block(self, tenant):
         """Already-paid invoice: retention is still active for 10 years,
-        but that's handled by the Step 8 cleanup cron — not by the
+        but that's for a future cleanup cron — not for the
         live pre-flight check, which only refuses on OPEN obligations."""
         from apps.commissioning.tests.factories import (
             InvoiceResellerFactory,

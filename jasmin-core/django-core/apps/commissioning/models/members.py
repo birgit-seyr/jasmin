@@ -60,7 +60,7 @@ class Member(
     # ``commissioning.member_cancelled`` confirmation email was
     # dispatched. Stamped by ``cancel_member_with_coop_shares`` after the
     # send returns ``ok=True``, NEVER inside the cancellation
-    # transaction — see P2-3. NULL means either "no email sent yet"
+    # transaction. NULL means either "no email sent yet"
     # OR "no email could be sent" (member.email empty, GDPR-
     # anonymised path, transport failure).
     cancellation_email_sent_at = models.DateTimeField(blank=True, null=True)
@@ -254,13 +254,13 @@ class Member(
         # uniqueness is already DB-enforced, and a per-save uniqueness query on
         # this frequently-saved model (role syncs re-save on every change) isn't
         # worth it — a duplicate still surfaces as the DB IntegrityError.
-        # ``email`` is deliberately NOT unique any more (shared inboxes), so
+        # ``email`` is deliberately NOT unique (shared inboxes), so
         # there is nothing to validate for it on either side.
         self.full_clean(validate_unique=False)
-        # MEM-7: capture the previously-linked user BEFORE the write so an
-        # unlink (user→None) or relink (A→B) retracts Role.MEMBER from the old
-        # user — the linking invariant is bidirectional. Role grant alone (the
-        # old behaviour) left an offboarded/relinked user still carrying MEMBER.
+        # Capture the previously-linked user BEFORE the write so an unlink
+        # (user→None) or relink (A→B) retracts Role.MEMBER from the old user —
+        # the linking invariant is bidirectional. Granting the role alone would
+        # leave an offboarded/relinked user still carrying MEMBER.
         prev_user_id = (
             Member.objects.filter(pk=self.pk).values_list("user_id", flat=True).first()
             if self.pk
@@ -491,7 +491,7 @@ class CoopShare(JasminModel, PayableMixin, AdminConfirmableMixin, CancellableMix
             exclude_pk=self.pk,
         )
 
-        # MEM-8: a reassignment (member changed on an existing share) must also
+        # A reassignment (member changed on an existing share) must also
         # re-validate the LOSING member — the share leaving could drop their
         # live equity below the GenG minimum, which the new-member check above
         # never sees. exclude_pk so this departing share isn't counted for them.
@@ -609,7 +609,7 @@ class Subscription(
     Represents a specific subscription period (trial, annual term, etc.).
 
     A renewal is a new Subscription whose ``previous_subscription`` points at
-    the prior term; that chain replaces the former SubscriptionGroup.
+    the prior term.
     """
 
     # NOTE: no ``overlap_unique_fields`` — subscriptions are intentionally
@@ -623,8 +623,6 @@ class Subscription(
         "ShareTypeVariation", on_delete=models.PROTECT, null=False
     )
 
-    # The cancellation rationale now lives directly on the subscription it
-    # explains (formerly carried by SubscriptionGroup).
     cancellation_reason = models.TextField(blank=True, null=True)
 
     # Why this subscription is on the waiting list — ``WaitingListMixin`` only
@@ -689,9 +687,8 @@ class Subscription(
     class Meta(TimeBoundMixin.Meta):
         # Inherit base_manager_name + ordering from TimeBoundMixin; the
         # valid-range check is wired explicitly via the shared helper, same as
-        # every other TimeBoundMixin subclass (it is no longer declared on the
-        # abstract Meta). Declaring ``constraints`` here overrides the inherited
-        # (now-empty) one.
+        # every other TimeBoundMixin subclass (the abstract Meta doesn't declare
+        # it).
         constraints = [
             time_bound_valid_range_constraint("subscription_valid_range"),
             # A cancellation can't take effect AFTER the subscription's term
@@ -807,7 +804,7 @@ class Subscription(
     # DSD validity-window check above).
     def save(self, *args, **kwargs) -> None:
         # A subscription must have a finite, billable term. Open-ended subs
-        # materialise no ShareDeliveries and silently never bill (CHG-1). The
+        # materialise no ShareDeliveries and silently never bill. The
         # serializer blocks this on the API; this is the model-level backstop
         # for factories / imports / seed scripts / direct ORM writes — every
         # save path lands here, so an open-ended subscription is not possible.
@@ -934,8 +931,8 @@ class Subscription(
         ``on_date``: admin-confirmed, not cancelled, and not yet ended
         (``valid_until`` IS NULL OR ``>= on_date``).
 
-        The single definition shared by the two cancellation restraints (they
-        were byte-identical). A future-dated confirmed subscription IS included
+        The single definition shared by the two cancellation restraints. A
+        future-dated confirmed subscription IS included
         — it is a live commitment the member can't walk away from — so this is
         deliberately BROADER than ``active_subscriptions_count``'s "active
         today" badge (which additionally requires ``valid_from <= today``).

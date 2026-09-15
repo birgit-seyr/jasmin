@@ -32,8 +32,7 @@ interface ShareArticleExtraPriceModalProps {
  * Price modal for "extra" share articles (``ShareArticle.is_extra=True``).
  *
  * Extras are constrained to ``PCS`` so we only expose the three pieces
- * reseller-tier prices, mirroring the simple structure of the legacy
- * ``ExtraArticlePriceModal`` but backed by ``ShareArticleNetPrice``.
+ * reseller-tier prices, backed by ``ShareArticleNetPrice``.
  */
 export default function ShareArticleExtraPriceModal({
   visible,

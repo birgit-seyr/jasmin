@@ -196,7 +196,7 @@ class TestGetTheoreticalCurrentStock:
         assert result[key]["theoretical_current_stock"] == 10.0
 
     def test_metadata_only_inventory_reads_as_uncounted(self, tenant):
-        """goods-flow audit #2 (read side): a metadata-only INVENTORY row
+        """Read side: a metadata-only INVENTORY row
         (counted_amount IS NULL — flags toggled, no count) reads as UNcounted
         (current_stock_amount=None), NOT a phantom count equal to theoretical.
         The flag stays visible; is_finalized reflects the row (False here)."""

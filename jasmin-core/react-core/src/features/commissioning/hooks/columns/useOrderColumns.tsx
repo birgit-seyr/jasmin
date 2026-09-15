@@ -281,8 +281,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
       // Not required: clearing the field removes the order (see
       // createCustomSaveOffers → __deleteOnSave). A required rule makes
       // ``form.validateFields()`` reject an EMPTY value before the save
-      // handler can route it to delete — that's why typing 0 worked but
-      // simply clearing the field did not.
+      // handler can route it to delete.
       required: false,
       align: "center",
       width: "9em",

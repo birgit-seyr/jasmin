@@ -1,4 +1,4 @@
-// Member-specific modals (moved out of shared/modals).
+// Member-specific modals.
 export { default as MemberBankDetailsModal } from './MemberBankDetailsModal';
 export { CancelMembershipModal } from './CancelMembershipModal';
 export { default as CoopSharesModal } from './CoopSharesModal';

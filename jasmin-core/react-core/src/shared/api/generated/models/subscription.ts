@@ -11,11 +11,10 @@ import type { SubscriptionWaitingListReason } from './subscriptionWaitingListRea
 /**
  * Read/write serializer for `Subscription`.
 
-The read-only ``*_name`` / ``member_*`` fields used to come from
-`.annotate()` calls in the viewset queryset; they're now resolved
-via DRF ``source=`` and ``SerializerMethodField`` so the viewset
-queryset stays lean. Callers must keep the matching ``select_related``
-chain (see ``_build_subscription_queryset``) to avoid N+1.
+The read-only ``*_name`` / ``member_*`` fields are resolved via DRF
+``source=`` and ``SerializerMethodField``, not queryset annotations, so the
+viewset queryset stays lean. Callers must keep the matching
+``select_related`` chain (see ``_build_subscription_queryset``) to avoid N+1.
  */
 export interface Subscription {
   readonly id?: string;
@@ -64,9 +63,8 @@ export interface Subscription {
   /**
    * Cancellation deadline = valid_until - N weeks. None when blank.
 
-The frontend used to compute this per-row per-render via dayjs;
-moving it server-side cuts the render cost on Abos.tsx and
-centralises the "when does this column light up" rule.
+Computed server-side so Abos.tsx doesn't compute it per row per render
+and the "when does this column light up" rule lives in one place.
 
 Skip cases (return None):
   * ``is_trial`` — trial subs don't auto-renew (see TrialPolicy).

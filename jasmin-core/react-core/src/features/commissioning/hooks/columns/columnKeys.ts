@@ -3,11 +3,10 @@
  *
  * The planning + backup grids encode a (delivery-day × share-type-variation)
  * matrix into flat record keys that travel to and from the Django backend
- * verbatim. Historically every builder and reader hand-wrote these template
- * literals (`` `day_${d}_variation_${v}` ``, `` `backup_day_…` ``,
- * `` `amount_day_…` ``) and the parsers hand-rolled `startsWith`/`includes`
- * checks — so the format could (and did) drift between call sites. Build and
- * parse keys ONLY through these helpers.
+ * verbatim. Build and parse keys ONLY through these helpers — hand-written
+ * template literals (`` `day_${d}_variation_${v}` ``, `` `backup_day_…` ``,
+ * `` `amount_day_…` ``) and ad-hoc `startsWith`/`includes` parsers let the
+ * format drift between call sites.
  *
  * Key grammar (day/variation ids are UUIDs → never contain `_`):
  *   [<prefix>]day_<dayId>_variation_<variationId>[ _tour_<n> | _station_<sid> ]

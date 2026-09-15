@@ -70,8 +70,8 @@ class TestGetCratesSummaryForPeriod:
 
     def test_mixed_prices_yield_separate_rows_not_max(self, tenant):
         # Two lines for the SAME crate type at DIFFERENT prices must NOT
-        # collapse to a single row reporting the max price (the old max()
-        # bug); they stay distinct so price / line_netto are exact and match
+        # collapse to a single row reporting the max price; they stay distinct
+        # so price / line_netto are exact and match
         # the delivery-note / invoice crate summary.
         reseller = ResellerFactory()
         order = OrderFactory(
@@ -96,7 +96,7 @@ class TestGetCratesSummaryForPeriod:
         assert by_price["3.00"]["amount"] == 4
         assert by_price["3.00"]["line_netto"] == "12.00"  # 4 * 3.00
         # The grouped nets sum to the true total (24.50), never the
-        # max-inflated 9 * 3.00 = 27.00 the old aggregation produced.
+        # max-inflated 9 * 3.00 = 27.00 a max() aggregation would give.
         total = sum(Decimal(row["line_netto"]) for row in summary)
         assert total == Decimal("24.50")
 
@@ -224,10 +224,10 @@ class TestCreateCrateOrderContent:
         )
 
     def test_explicit_zero_price_is_preserved(self, tenant):
-        """BL-7: an explicit ``price_per_unit=0`` (a legitimate zero-deposit
-        crate) must NOT be overwritten by the crate's dated pricing. The old
-        ``if not price_per_unit`` falsy check treated 0 as unset and silently
-        replaced it; the ``is None`` check honours the explicit 0."""
+        """An explicit ``price_per_unit=0`` (a legitimate zero-deposit
+        crate) must NOT be overwritten by the crate's dated pricing. A falsy
+        ``if not price_per_unit`` check would treat 0 as unset and silently
+        replace it; an ``is None`` check honours the explicit 0."""
         reseller = ResellerFactory()
         crate = CrateFactory()
         CrateNetPriceFactory(crate=crate, price=Decimal("3.00"))

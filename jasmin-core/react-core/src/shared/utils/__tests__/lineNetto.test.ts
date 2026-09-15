@@ -5,8 +5,8 @@ import { computeLineNetto, roundHalfUp } from "../lineNetto";
 describe("computeLineNetto (BL-15: per-line ROUND_HALF_UP)", () => {
   it("quantizes a half-cent line up, matching the backend per-line rounding", () => {
     // 3 * 0.335 = 1.005 → 1.01 (half-up), not the raw 1.005. Summing two such
-    // lines then yields 2.02 (round-each-then-sum, the backend order), not the
-    // old sum-then-round 2.01.
+    // lines then yields 2.02 (round-each-then-sum, the backend order), not
+    // sum-then-round 2.01.
     expect(computeLineNetto({ amount: 3, price_per_unit: 0.335 })).toBe(1.01);
   });
 

@@ -1065,7 +1065,7 @@ class OpenEndedSubscriptionNotAllowed(BadRequestError):
 
     Open-ended subscriptions materialise no ShareDeliveries (the materialiser
     skips a sub with no ``valid_until``) and therefore generate only
-    zero-amount charges — they silently never bill (CHG-1). An end date is
+    zero-amount charges — they silently never bill. An end date is
     required so every billable subscription has a finite, billable term. The
     office UI's date picker already requires it; this is the backstop for
     direct API calls / imports / scripts."""
@@ -1629,8 +1629,7 @@ __all__ = [
     "SharesDeliveryDayShorteningStrandsChildren",
     "SharesDeliveryDaySuccessionCoverageGap",
     "DeliveryStationDayShorteningStrandsChildren",
-    # Membership / coop-share / document errors that were defined but not yet
-    # listed here (explicit imports worked; keep the inventory complete).
+    # Membership / coop-share / document errors.
     "MemberHasActiveSubscriptions",
     "MemberAlreadyCancelled",
     "CoopShareContractAgreementRequired",

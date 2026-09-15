@@ -5,8 +5,7 @@ Two layers:
   * ``TestClassifyBackupsForPruning`` — pure unit tests against
     ``classify_backups_for_pruning``. No filesystem; we synthesise
     ``Path`` objects with the correct filename shape and a fixed
-    ``now``. Asserts the GFS rule documented in
-    docs/gdpr/retention-policy.md:
+    ``now``. Asserts the GFS rule:
 
         - Daily tier (≤ 30 days old): keep every backup
         - Weekly tier (30–365 days old): keep the LATEST backup of

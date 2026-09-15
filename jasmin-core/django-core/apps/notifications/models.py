@@ -166,8 +166,7 @@ class BackgroundJob(models.Model):
     represents. The ``kind`` field tells the polling frontend which
     result shape to expect (e.g. ``"offer.bulk_send"`` produces a
     ``{total_processed, successful, failed, results: [...]}`` payload
-    matching the old synchronous shape of
-    ``OfferService.bulk_send_offers_via_email``).
+    returned by ``OfferService.bulk_send_offers_via_email``).
 
     Why a model rather than relying on Huey's result store directly:
       * Huey's result store TTL is short and not survival-safe across
@@ -189,9 +188,7 @@ class BackgroundJob(models.Model):
     1}``). The polling endpoint surfaces it verbatim so a React drawer
     can render a progress bar without a per-kind serializer.
 
-    ``result`` is the final payload — same shape the synchronous view
-    used to return, so the frontend's success handler maps over with
-    minimal change.
+    ``result`` is the final payload.
     """
 
     import uuid as _uuid

@@ -12,12 +12,11 @@
  *     front-end treat a `null`/`undefined`/`0` line tax as 0 %. The two
  *     sides MUST agree, otherwise the PDF total drifts from the DB total.
  *
- * Notes on `||` vs `??`: the pre-fill defaults read from
- * `getSetting("default_tax_rate_*")` in modals + useOrdersData used to
- * use `|| 7`/`|| 19`, which silently overrides a legitimate `0 %` tenant
- * setting. Those are now `??`. These tests don't exercise the modals
- * directly (that needs full provider plumbing); they pin the
- * computeTaxBreakdown rounding and grouping behaviour the modals feed.
+ * Notes on `||` vs `??`: the tax-rate pre-fill defaults read from
+ * `getSetting("default_tax_rate_*")` use `??` — `|| 7`/`|| 19` would
+ * silently override a legitimate `0 %` tenant setting. These tests don't
+ * exercise the modals directly (that needs full provider plumbing); they pin
+ * the computeTaxBreakdown rounding and grouping behaviour the modals feed.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -150,9 +149,9 @@ describe("computeTaxBreakdown — empty inputs", () => {
 
 describe("tenant-default fallback semantics (regression for `||` → `??`)", () => {
   // These tests document the small util pattern used at every call site
-  // that reads `default_tax_rate_*` from `getSetting`. The old `|| 7`
-  // form silently overrode a legitimate 0 % setting; the new `?? 7` keeps
-  // 0 if the tenant deliberately set it.
+  // that reads `default_tax_rate_*` from `getSetting`. `|| 7` would
+  // silently override a legitimate 0 % setting; `?? 7` keeps 0 if the
+  // tenant deliberately set it.
   const pickArticleDefault = (setting: unknown): number =>
     (setting as number) ?? 7;
   const pickCrateDefault = (setting: unknown): number =>
@@ -164,7 +163,7 @@ describe("tenant-default fallback semantics (regression for `||` → `??`)", () 
   });
 
   it("preserves 0 instead of replacing it with the hardcoded default", () => {
-    // The whole reason we moved off `||`. Tenants on reverse-charge /
+    // Why the defaults use `??`, not `||`: tenants on reverse-charge /
     // charity rates may legitimately want 0.
     expect(pickArticleDefault(0)).toBe(0);
     expect(pickCrateDefault(0)).toBe(0);

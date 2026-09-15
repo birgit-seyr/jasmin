@@ -1,11 +1,9 @@
 """Delivery-cycle cadence — which delivery weeks a ``ShareType.delivery_cycle``
 actually keeps.
 
-Until now ``delivery_cycle`` was descriptive/UI-only: subscriptions materialised
-a ``ShareDelivery`` EVERY delivery week regardless of the configured cycle, so an
-ODD_WEEKS / every-4-weeks share still got a weekly delivery (and weekly billing,
-since billing is delivery-driven). This module is the single place that reduces
-the full weekly cadence to the cycle's real delivery weeks.
+This module is the single place that reduces the full weekly cadence to the
+cycle's real delivery weeks. Billing is delivery-driven, so without it an
+ODD_WEEKS / every-4-weeks share would get a weekly delivery and weekly billing.
 
 Every cycle is **calendar-anchored** on the ISO week NUMBER — ``week % N == R`` —
 so the schedule is identical for every subscription (no per-subscription phase),
@@ -23,8 +21,8 @@ a 53-week year (like odd/even already do), ALL_THREE_WEEKS every year (52 % 3 = 
 so weeks …49, 52 then next year's 1 land one week apart). A *perfectly* regular
 3-week rhythm would need a continuous week count off a fixed epoch, at the cost of
 this intuitive "weeks 1, 4, 7" alignment; the calendar anchoring is the deliberate
-trade-off. (Month-based cycles were dropped — "monthly" needs its own
-day-of-month field to reflect a tenant's business logic; see docs/todos.)
+trade-off. (There are no month-based cycles — "monthly" needs its own
+day-of-month field to reflect a tenant's business logic.)
 """
 
 from apps.commissioning.models.choices import DeliveryCycleOptions
@@ -51,7 +49,7 @@ def filter_weeks_by_delivery_cycle(
     produced by ``SubscriptionService._get_delivery_weeks``.
 
     - ``WEEKLY`` / ``None`` / ``""`` / unknown → every week (safe default; legacy
-      rows without an explicit cycle keep today's weekly behaviour).
+      rows without an explicit cycle deliver every week).
     - ``ODD_WEEKS`` / ``EVEN_WEEKS`` / ``ALL_THREE_WEEKS`` / ``ALL_FOUR_WEEKS`` →
       ``isoweek % N == R`` per ``_WEEK_MODULO`` (weeks 1,3,…/2,4,…/1,4,…/1,5,…).
     """

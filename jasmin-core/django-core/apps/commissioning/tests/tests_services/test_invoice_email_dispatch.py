@@ -25,9 +25,9 @@ Contract:
 
 We patch ``EmailService.send_email`` with ``autospec=True`` so the
 mock keeps the same ``self`` binding as the real method — a plain
-``mock.patch`` would have hidden the P0-1-class bug (see
-``test_reseller_views.py::TestBulkSendInvoiceRemindersViaEmail``)
-and we want the same protection here for these new instance calls.
+``mock.patch`` would hide a call made on the class instead of an
+instance (same protection as
+``test_reseller_views.py::TestBulkSendInvoiceRemindersViaEmail``).
 """
 
 from __future__ import annotations
@@ -112,13 +112,13 @@ def accounting_email_config(tenant):
 
 @pytest.mark.django_db
 class TestInvoiceEmailContextTotal:
-    """Regression: the invoice/reminder email total is the formatted
+    """The invoice/reminder email total is the formatted
     ``sum_brutto`` — never blank.
 
-    ``sum_brutto`` is a @property; it was called as ``sum_brutto()``,
-    raising a ``TypeError`` that the surrounding ``except`` swallowed to an
-    empty string, so every invoice and overdue-reminder email rendered a
-    blank ``Gesamtbetrag``.
+    ``sum_brutto`` is a @property; calling it as ``sum_brutto()`` raises a
+    ``TypeError`` that the surrounding ``except`` swallows to an empty
+    string, rendering a blank ``Gesamtbetrag`` in every invoice and
+    overdue-reminder email.
     """
 
     def test_total_is_formatted_sum_brutto_not_blank(
@@ -148,7 +148,7 @@ class TestSendToReseller:
         assert invoice.has_been_sent_to_reseller_at is None
 
     def test_short_circuits_when_reseller_opted_out_of_email(self, tenant):
-        """EML-2: a reseller with a valid invoice_email but invoice_via_email=
+        """A reseller with a valid invoice_email but invoice_via_email=
         False (paper-only) must NOT be auto-emailed — the gate lives in
         send_to_reseller so every caller (incl. the upload auto-send) honours it."""
         reseller = ResellerFactory(
@@ -187,7 +187,7 @@ class TestSendToReseller:
 
         # autospec keeps ``self`` as the first positional arg →
         # asserts the helper hit the method via an instance, not the
-        # class. Same protection pattern as the P0-1 regression.
+        # class.
         assert send_email.called
         bound_self = send_email.call_args.args[0]
         assert isinstance(bound_self, EmailService)
@@ -392,9 +392,8 @@ class TestUploadPdfAutoSend:
         ``upload_pdf`` calls (e.g. the frontend resubmitting after a
         transient upload error, or an admin replacing the PDF) must
         NOT fire another reseller-email. Same for the accounting
-        side. The boolean ``has_been_sent_to_reseller`` is now a
-        @property derived from the timestamp — setting the timestamp
-        is equivalent to setting the old boolean."""
+        side. ``has_been_sent_to_reseller`` is a @property derived
+        from the timestamp, so setting the timestamp marks it sent."""
         from django.test import TestCase
 
         invoice = InvoiceResellerFactory(

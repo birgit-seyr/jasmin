@@ -3,13 +3,12 @@
 
 Why a baseline
 --------------
-Type-checking was switched on over a codebase that predates it, so the first
-clean run reported hundreds of findings. Two options were available: block every
-pull request until all of them are gone (nothing else ships for weeks), or hold
-the current count still and refuse anything NEW. This is the second.
+The codebase predates type-checking, so it carries findings the gate accepts.
+Rather than block every pull request until all of them are gone, the gate holds
+the current set still and refuses anything NEW.
 
-``mypy-baseline.txt`` records exactly the findings that existed when the gate was
-installed. ``check`` re-runs mypy and compares:
+``mypy-baseline.txt`` records exactly the findings accepted at the last
+``freeze``. ``check`` re-runs mypy and compares:
 
 * a finding that is **not** in the baseline fails the build — that is a type
   error introduced by the change under review;

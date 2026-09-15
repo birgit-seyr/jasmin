@@ -198,18 +198,18 @@ def create_movements(
     stock_map_by_snapshot: dict[tuple[int, int, int], dict] = {}
     stock_cache: dict[int, list[dict[str, Any]]] = {}
     # Remember each source's snapshot key so Phase 2 can scope the shared
-    # per-storage consumption counter to the exact snapshot (goods-flow audit #3).
+    # per-storage consumption counter to the exact snapshot.
     snapshot_key_by_src: dict[int, tuple[int, int, int]] = {}
     all_storage_ids: set[Any] = set()
     snapshot_entity_filter = {"share_article_id": article_ids} if article_ids else None
 
     for src in sources:
-        # As-of alignment (goods-flow audit #8): the movement is DATED at the
+        # As-of alignment: the movement is DATED at the
         # week-rollback week (``_compute_packing_datetime`` → the previous ISO
         # week when ``packing_day > delivery_day``), so its allocation stock
         # must be read as-of that SAME rolled-back week. Reading at the delivery
-        # week (the old behaviour) pulls in 7 extra days of movements and skews
-        # the per-storage allocation.
+        # week would pull in 7 extra days of movements and skew the per-storage
+        # allocation.
         rolled_year, rolled_week = compute_rolled_back_week(
             src.year, src.delivery_week, src.packing_day, src.delivery_day
         )
@@ -252,7 +252,7 @@ def create_movements(
     # read the SAME snapshot AND the same (article, unit, size, storage) draw
     # from the SAME physical stock, so decrement it as each consumes — otherwise
     # every sibling allocates against the FULL amount and parks a phantom deficit
-    # on that storage (goods-flow audit #3). Keyed by the snapshot
+    # on that storage. Keyed by the snapshot
     # (rolled_year, rolled_week, packing_day) + (article, unit, size, storage) so
     # it never bleeds across weeks/snapshots. Sources draw in list order.
     consumed_by_key: dict[tuple, Decimal] = defaultdict(Decimal)

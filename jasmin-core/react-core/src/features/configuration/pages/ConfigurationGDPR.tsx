@@ -9,7 +9,7 @@ import VVTExportCard from "@features/configuration/components/VVTExportCard";
  *  - the public privacy policy (Datenschutzerklärung)
  *  - the Art. 30 VVT records: controller-identity fields + the Verzeichnis export
  *
- * The deletion-request queue (member offboarding) moved to the Members section
+ * The deletion-request queue (member offboarding) lives in the Members section
  * (``GdprDeletionRequests``).
  */
 export default function ConfigurationGDPR() {

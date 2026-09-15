@@ -6,8 +6,7 @@
  * Keep this tight and additive: the values are what we *print* on
  * invoices and customer-facing surfaces. ISO 4217 ALPHA-3 codes that
  * have no widely-recognised one-character symbol fall back to the
- * code itself (e.g. ``"CHF"``), which is what the React UI did
- * historically.
+ * code itself (e.g. ``"CHF"``).
  *
  * Tests live in ``utils/__tests__/currency.test.ts``.
  */

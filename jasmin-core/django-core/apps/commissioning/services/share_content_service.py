@@ -291,11 +291,11 @@ class ShareContentService:
         (new theoreticals, new SHARECONTENT rows, re-derived corrections, and
         the captured OLD movements) is accumulated and cascaded ONCE at the
         end, so the per-entity ``current_balance:*`` advisory locks are
-        acquired in one canonically-sorted pass. The old shape cascaded in
-        three separate passes (theoretical → new → old) whose concatenation
-        was not globally sorted — two concurrent overlapping recomputes (or a
-        recompute vs. a bulk stock write) could acquire the shared locks in
-        opposite orders and AB/BA-deadlock. ``collect_movements`` hands even
+        acquired in one canonically-sorted pass. Cascading in three separate
+        passes (theoretical → new → old) would not be globally sorted — two
+        concurrent overlapping recomputes (or a recompute vs. a bulk stock write)
+        could acquire the shared locks in opposite orders and AB/BA-deadlock.
+        ``collect_movements`` hands even
         the final cascade to an enclosing caller that has more movements to
         fold into the same single pass.
 
@@ -1619,8 +1619,8 @@ class ShareContentService:
         filled scaffold for every tour and station on every row
         regardless of what the user actually touched, and treating
         those zeros as real entries would (a) spawn phantom
-        ``ShareContent`` rows and (b) re-introduce the station-
-        collision symptom this dedupe was added to prevent.
+        ``ShareContent`` rows and (b) cause the station collision this dedupe
+        prevents.
         """
         # Walk once to collect every match. Track per-group whether
         # we saw any station-specific entry and whether we saw any

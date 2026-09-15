@@ -1,11 +1,9 @@
 /**
  * Register the Roboto font family for @react-pdf/renderer, once per app.
  *
- * Previously each PDF entry point registered Roboto from cdnjs.cloudflare.com.
- * That had three problems: (1) GDPR — fetching from a US CDN sends the user's
- * IP to Cloudflare every time a PDF is opened; (2) reliability — PDF rendering
- * fails on network outages; (3) the URL path (`/ajax/libs/ink/3.1.10/`)
- * pinned to an unrelated 2014-era CSS framework's mirror of Roboto.
+ * Don't register Roboto from a CDN such as cdnjs.cloudflare.com: (1) GDPR —
+ * fetching from a US CDN sends the user's IP to Cloudflare every time a PDF is
+ * opened; (2) reliability — PDF rendering fails on network outages.
  *
  * This module imports the .woff files from `@fontsource/roboto` and registers
  * them locally. Vite emits them into `dist/assets/woff/` so they're served

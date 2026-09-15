@@ -50,7 +50,7 @@ class SubscriptionFactory(factory.django.DjangoModelFactory):
     member = factory.SubFactory(MemberFactory)
     share_type_variation = factory.SubFactory(ShareTypeVariationFactory)
     valid_from = factory.LazyFunction(lambda: datetime.date(2026, 1, 5))
-    # A subscription must have a finite term (the model now rejects open-ended
+    # A subscription must have a finite term (the model rejects open-ended
     # ones). Default to a one-year Monday→Sunday span so factory-built subs are
     # valid without every caller spelling it out; tests that need a specific
     # window (or to assert the open-ended rejection) pass their own.

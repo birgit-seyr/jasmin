@@ -281,7 +281,7 @@ class ForecastViewSet(BaseArchivableViewSet):
         # year + delivery_week are REQUIRED (the @extend_schema documents them
         # as such, and the only caller always sends both). Enforcing it keeps
         # every list call on the prefetched ``get_forecasts_with_relations``
-        # path — the previous ``optional`` validation let a no-param request
+        # path — ``optional`` validation would let a no-param request
         # fall through to an unfiltered, unprefetched ``super().list()`` over
         # every forecast row (N+1 on share_article / plot + variation/offer
         # reverse relations).

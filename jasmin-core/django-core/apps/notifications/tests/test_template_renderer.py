@@ -63,7 +63,7 @@ class TestRenderRaw:
         assert out == "<b>hi</b>"
 
     def test_triple_brace_on_non_raw_key_is_escaped(self):
-        # INJ-2: {{{ }}} around a NON-RAW_KEYS field (e.g. a tenant-controlled
+        # {{{ }}} around a NON-RAW_KEYS field (e.g. a tenant-controlled
         # value) is HTML-escaped — the triple-brace syntax can't be turned into
         # an XSS vector in the email body by a tenant admin.
         out = render("{{{html}}}", {"html": "<b>hi</b>"})
@@ -130,7 +130,6 @@ class TestRenderSandboxEscape:
     or render callables."""
 
     def test_globals_secret_key_escape_renders_empty(self):
-        # The exact exploit shape from the audit.
         out = render(
             "[{{x.save.__globals__.settings.SECRET_KEY}}]", {"x": _FakeModel()}
         )
@@ -189,7 +188,7 @@ class TestExtractPlaceholders:
 
 
 class TestFindUndeclaredPlaceholders:
-    """EML-10: a tenant override may only reference variables declared for its
+    """A tenant override may only reference variables declared for its
     slug (plus trusted raw keys). Anything else would render silently empty, so
     the write path rejects it."""
 
@@ -250,8 +249,7 @@ class TestEmailTemplateWriteValidation:
 
     def test_update_serializer_rejects_dunder_in_subject(self):
         # Subject-field coverage of the shared _SafeTemplateFieldsMixin (the
-        # body_html case is covered above). Previously exercised the preview
-        # request serializer, which shared the same mixin and has been removed.
+        # body_html case is covered above).
         from apps.notifications.serializers import EmailTemplateUpdateSerializer
 
         ser = EmailTemplateUpdateSerializer(
@@ -274,7 +272,7 @@ class TestEmailTemplateWriteValidation:
 
 
 class TestEmailTemplateDeclaredVariableValidation:
-    """EML-10: when the slug's spec is supplied in serializer context, the
+    """When the slug's spec is supplied in serializer context, the
     editor must reject any placeholder the spec doesn't declare (it would
     render empty with no warning), while accepting every declared variable and
     the trusted raw keys."""
@@ -333,9 +331,9 @@ class TestEmailTemplateDeclaredVariableValidation:
         assert ser.is_valid(), ser.errors
 
     def test_member_application_templates_pass_after_completeness_pass(self):
-        # Regression for the EML-10 registry-completeness gap: the shipped
-        # application templates reference member.* which the registry now
-        # declares. A tenant override copying the default must validate.
+        # The shipped application templates reference member.*, which the
+        # registry declares, so a tenant override copying the default must
+        # validate.
         ser = self._ser(
             "accounts.application_rejected",
             {

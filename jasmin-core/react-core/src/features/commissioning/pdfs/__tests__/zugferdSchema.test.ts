@@ -321,13 +321,11 @@ describe("ZUGFeRD / EN 16931 structural conformance", () => {
   });
 
   describe("currencyCode parameter", () => {
-    // The generator used to hardcode ``"EUR"`` in 6 places. After the
-    // refactor a ``currencyCode`` parameter threads through to:
+    // A ``currencyCode`` parameter threads through to:
     //   * ``ram:InvoiceCurrencyCode``  (BT-5)
     //   * the ``currencyID`` attribute on ``ram:TaxTotalAmount`` (the ONE
     //     summation amount that carries it, per CII-DT-031)
-    // The default stays ``"EUR"`` so non-migrated callers keep producing
-    // the same payload.
+    // The default is ``"EUR"``.
 
     it("defaults to EUR when no currencyCode is passed (backwards compatibility)", () => {
       const defaultXml = generateZUGFeRDXML(
@@ -741,7 +739,7 @@ describe("ZUGFeRD / EN 16931 structural conformance", () => {
 });
 
 describe("EN 16931 line calculation (FIN-1 / FIN-2)", () => {
-  // A small discounted line where the OLD float-recomputed allowance drifts a
+  // A small discounted line where a float-recomputed allowance would drift a
   // cent from the authoritative net: amount 1 × 0.10, 25% rabatt → gross 0.10,
   // net 0.08 (the backend rounds 0.075 up). Float discount = 0.025 → "0.03",
   // and 0.10 − 0.03 = 0.07 ≠ 0.08; the cent-derived allowance is 0.02.
@@ -790,7 +788,7 @@ describe("EN 16931 line calculation (FIN-1 / FIN-2)", () => {
     // The cent-derived allowance keeps the EN 16931 line identity exact...
     expect(netPrice * billed - allowance).toBeCloseTo(lineTotal, 2);
     // ...at the authoritative values (0.02 allowance, 0.08 net — not the
-    // 0.03/0.07 the old float recompute produced).
+    // 0.03/0.07 a float recompute produces).
     expect(allowance).toBeCloseTo(0.02, 2);
     expect(lineTotal).toBeCloseTo(0.08, 2);
   });

@@ -54,8 +54,7 @@ export async function generateAndUploadInvoicePDF(
       docType: "invoice",
     });
   // ISO currency code for the embedded ZUGFeRD XML (the printed symbol
-  // comes from ``currencySymbol`` above). Default ``"EUR"`` matches the
-  // legacy behavior for callers that never moved off the field default.
+  // comes from ``currencySymbol`` above). Defaults to ``"EUR"``.
   const currencyCode = (getSetting("currency") as string) || "EUR";
   const dateFormat = (getSetting("date_format") as string) || "DD.MM.YYYY";
 

@@ -28,9 +28,9 @@ though the JWT is still tenant-scoped (no cross-tenant leak), the
 operational-internal fields shouldn't ride along on every
 ``useTenant()`` fetch a member or customer makes.
 
-The ``settings`` / ``current_settings`` overlays previously lived on
-``CurrentTenantSerializer``; they were moved here so that anonymous
-callers no longer receive tenant operational config.
+The ``settings`` / ``current_settings`` overlays live here, not on
+``CurrentTenantSerializer``, so anonymous callers don't receive tenant
+operational config.
  */
 export interface Tenant {
   readonly id?: string;

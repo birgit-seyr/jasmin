@@ -196,7 +196,7 @@ class TestConfirmDeletionToken:
         user = JasminUserFactory(roles=["member"])
         member = MemberFactory(user=user)
         deletion_request = GDPRService.request_deletion(user)
-        # Land the request in PENDING_ADMIN (the only path now that
+        # Land the request in PENDING_ADMIN (the only path, since
         # admin approval is mandatory).
         GDPRService.confirm_deletion_token(str(deletion_request.token))
         # Simulate the user acquiring an obligation between confirm
@@ -266,8 +266,7 @@ class TestAdminApproveDeletion:
         ``select_for_update`` before its state check, so the second
         caller — holding a Python reference whose ``state`` attribute
         still says PENDING_ADMIN — sees the post-execute DB state and
-        raises ``DeletionRequestNotPending``. Regression test for the
-        race lock added in the 2026-06 audit.
+        raises ``DeletionRequestNotPending``.
         """
         user = JasminUserFactory(roles=["member"], email="alice@example.com")
         admin_a = JasminUserFactory(roles=["admin"])
@@ -352,9 +351,7 @@ class TestAdminRejectDeletion:
         # itself (NOT by the mixin's ``reject()``). The decided-
         # deletions inbox + the user-facing status banner both use
         # this timestamp as "when did the admin act on this", so
-        # rejected rows must carry it. Regression test for the
-        # 2026-06 fix that surfaced when the inbox view first
-        # tried to display rejected rows.
+        # rejected rows must carry it.
         assert result.admin_confirmed_at is not None
 
         # And the user is untouched.
@@ -377,7 +374,6 @@ class TestAdminRejectDeletion:
         REJECTED-state write with the SECOND admin's reason). The
         service re-fetches under ``select_for_update`` before its
         state check, so the second caller sees REJECTED and raises.
-        Regression test for the race lock added in the 2026-06 audit.
         """
         user = JasminUserFactory(roles=["member"], email="alice@example.com")
         admin_a = JasminUserFactory(roles=["admin"])

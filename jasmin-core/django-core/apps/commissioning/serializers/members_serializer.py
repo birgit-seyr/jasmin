@@ -161,7 +161,7 @@ class MemberSerializer(
             # and NOT office-editable. It is deliberately writable here so the
             # office can hand-set it during MANUAL MEMBER TRANSFER (migrating
             # members from another system with historical admission dates). Two
-            # gates stand in for the removed read-only lock: the office role is
+            # gates stand in for a read-only lock: the office role is
             # required to PATCH a member at all, and the members grid keeps the
             # cell disabled (out of the save payload) unless the operator turns
             # on the explicit "händische Übertragung" toggle.
@@ -171,7 +171,7 @@ class MemberSerializer(
             *CANCELLATION_READONLY_FIELDS,
             *ADMIN_CONFIRMATION_READONLY_FIELDS,
             "trial_converted_at",
-            # MEM-7: the member↔user link is role-bearing — a generic PATCH must
+            # The member↔user link is role-bearing — a generic PATCH must
             # not relink/unlink it (that would strand Role.MEMBER on the old
             # user). Linking is owned by the create-path service; Member.save
             # keeps the role in sync if it ever does change.
@@ -324,7 +324,7 @@ class MemberSelfReadSerializer(MaskedIBANFieldMixin, serializers.ModelSerializer
     self-EDIT still goes through the dedicated ``MyMemberDataView``
     allowlist, so nothing here needs to be writable."""
 
-    # MEM-6: the encrypted SEPA columns (iban / account_owner) decrypt
+    # The encrypted SEPA columns (iban / account_owner) decrypt
     # transparently on access, so a plain ModelSerializer would echo them as
     # PLAINTEXT on self-read. Mirror MyMemberDataReadSerializer: expose only
     # boolean "stored" indicators and exclude the plaintext (+ sepa_consent).
@@ -371,11 +371,10 @@ class SubscriptionSerializer(
 ):
     """Read/write serializer for `Subscription`.
 
-    The read-only ``*_name`` / ``member_*`` fields used to come from
-    `.annotate()` calls in the viewset queryset; they're now resolved
-    via DRF ``source=`` and ``SerializerMethodField`` so the viewset
-    queryset stays lean. Callers must keep the matching ``select_related``
-    chain (see ``_build_subscription_queryset``) to avoid N+1.
+    The read-only ``*_name`` / ``member_*`` fields are resolved via DRF
+    ``source=`` and ``SerializerMethodField``, not queryset annotations, so the
+    viewset queryset stays lean. Callers must keep the matching
+    ``select_related`` chain (see ``_build_subscription_queryset``) to avoid N+1.
     """
 
     display_id = serializers.SerializerMethodField(read_only=True)
@@ -473,8 +472,7 @@ class SubscriptionSerializer(
     # Materialised ShareDelivery count for this subscription, excluding
     # joker-taken weeks. Annotated in ``_build_subscription_queryset`` —
     # rationale + the on-off-opt-out caveat live next to that annotation.
-    # Backs the "Lieferungen" column on Abos.tsx (replaces the prior
-    # frontend calendar-arithmetic count).
+    # Backs the "Lieferungen" column on Abos.tsx.
     deliveries_count = serializers.IntegerField(read_only=True)
 
     # Joker badge "(Jokers taken X / Y)" on the member-detail subscriptions
@@ -517,8 +515,7 @@ class SubscriptionSerializer(
         # ``admin_rejected_at`` / ``admin_rejection_reason`` are
         # stamped by ``SubscriptionViewSet.reject`` — must not be
         # editable via a plain PATCH, same lockdown as the existing
-        # admin-confirm fields. See migration 0023 for the field
-        # addition.
+        # admin-confirm fields.
         read_only_fields = (
             # Server-inferred at enqueue (which capacity gate was full) — never
             # client-set. See ``SubscriptionService._infer_waiting_list_reason``.
@@ -636,7 +633,7 @@ class SubscriptionSerializer(
                         min_weeks=min_weeks,
                     )
 
-        # 4. End-date requirement (CHG-1).
+        # 4. End-date requirement.
         #
         # Forbid open-ended subscriptions. A sub with no ``valid_until``
         # materialises no ShareDeliveries (the materialiser skips it) and so
@@ -661,7 +658,7 @@ class SubscriptionSerializer(
         # with the waiting-list offer).
         #
         # Checked on create, and on an update whenever an input to the floor
-        # changes: the price itself (re-sent at all, as before), the variation
+        # changes: the price itself (whenever it is re-sent), the variation
         # (a different floor), the start date (a different price window) or
         # ``is_trial`` (the trial pair). When the update doesn't re-send the
         # price, the STORED price is checked against the new floor. An update
@@ -711,9 +708,8 @@ class SubscriptionSerializer(
     def get_automatically_renewed_at(self, obj) -> str | None:
         """Cancellation deadline = valid_until - N weeks. None when blank.
 
-        The frontend used to compute this per-row per-render via dayjs;
-        moving it server-side cuts the render cost on Abos.tsx and
-        centralises the "when does this column light up" rule.
+        Computed server-side so Abos.tsx doesn't compute it per row per render
+        and the "when does this column light up" rule lives in one place.
 
         Skip cases (return None):
           * ``is_trial`` — trial subs don't auto-renew (see TrialPolicy).
@@ -751,9 +747,8 @@ class SubscriptionSerializer(
         # Any admin-confirmed subscription is immutable on the delete
         # path — the only legitimate way to end one is the cancel
         # action (see ``SubscriptionService.cancel_subscription``).
-        # This is stricter than the pre-2026-06 rule, which still
-        # allowed deletion of confirmed-but-not-yet-started rows;
-        # office workflow has consolidated on "delete only drafts".
+        # That includes confirmed-but-not-yet-started rows: only drafts
+        # can be deleted.
         if obj.admin_confirmed:
             return False
         return True
@@ -769,8 +764,8 @@ class CoopShareSerializer(
     """``member_string`` is a human-readable label, same contract as
     :class:`MemberLoanSerializer`. It must be a ``SerializerMethodField``:
     a plain ``CharField(read_only=True)`` has no matching model attribute,
-    so DRF silently dropped the key from every payload (SkipField) while
-    the schema declared it present."""
+    so DRF would silently drop the key from every payload (SkipField) while
+    the schema declares it present."""
 
     member_string = serializers.SerializerMethodField(read_only=True)
     USER_NAME_FIELDS = ["admin_confirmed_by_name"]
@@ -778,7 +773,7 @@ class CoopShareSerializer(
     class Meta:
         model = CoopShare
         fields = "__all__"
-        # MEM-8: these are owned by dedicated services (cancel_member_with_coop_shares
+        # These are owned by dedicated services (cancel_member_with_coop_shares
         # / the admin-confirm action) and the GenG §30/§31 audit trail — a generic
         # office PATCH must never set them (would falsify cancelled_by/audit and
         # let admin_confirmed be forged). Mirrors MemberSerializer.read_only_fields.

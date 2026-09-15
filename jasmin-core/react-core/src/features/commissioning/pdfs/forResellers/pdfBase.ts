@@ -300,9 +300,9 @@ export function formatAmount(
  *   3. tax  = round(net * rate / 100, 2)  (ROUND_HALF_UP)
  *   4. brutto = round(net + tax, 2)       (ROUND_HALF_UP)
  *
- * Note: the reseller invoice/delivery-note PDFs no longer call this — they
+ * Note: the reseller invoice/delivery-note PDFs don't call this — they
  * render the backend's authoritative ``tax_breakdown`` directly (see
- * resellerPdfData.ts). It remains the client-side fallback for InvoiceModal and
+ * resellerPdfData.ts). It is the client-side fallback for InvoiceModal and
  * the order-total estimate in useOrdersData.
  *
  * Pass any number of item iterables (article items, crate items, …); they are

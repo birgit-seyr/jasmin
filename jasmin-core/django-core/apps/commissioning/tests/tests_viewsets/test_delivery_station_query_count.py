@@ -1,4 +1,4 @@
-"""Performance regression lock for the delivery-stations list endpoint (PERF-5).
+"""Performance regression lock for the delivery-stations list endpoint.
 
 Mirrors ``apps/payments/tests/test_query_count_locks.py``: it does not measure
 wall-clock latency — it asserts that adding more stations to
@@ -8,11 +8,11 @@ queries.
 The two surfaces this guards:
 
 - ``DeliveryStationSerializer.get_can_be_deleted`` /
-  ``get_linked_reseller_can_be_deleted`` ran ``can_delete_instance`` (R
-  queries) per row — now bulk-precomputed once per page by
-  ``DeliveryStationListSerializer``.
-- ``obj.linked_reseller`` (forward OneToOne) was an extra query per row —
-  now ``select_related`` in the viewset queryset.
+  ``get_linked_reseller_can_be_deleted`` would run ``can_delete_instance``
+  (R queries) per row; ``DeliveryStationListSerializer`` bulk-precomputes
+  them once per page.
+- ``obj.linked_reseller`` (forward OneToOne) would be an extra query per
+  row without the ``select_related`` in the viewset queryset.
 
 A regression that drops either the select_related or the bulk precompute
 shows up as +N queries per station.

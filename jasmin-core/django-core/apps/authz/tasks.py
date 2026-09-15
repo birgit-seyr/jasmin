@@ -1,10 +1,8 @@
 """Huey periodic tasks for the authz app.
 
-Currently a single task: ``flush_expired_jwt_tokens``. See
-``docs/todos/huey-to-do.txt`` for the full backlog.
+Currently a single task: ``flush_expired_jwt_tokens``.
 
-Bootstrap reminder: nothing in this file runs until the ``HUEY`` config
-block in ``config/settings.py`` is uncommented and a worker process
+Bootstrap reminder: nothing in this file runs until a Huey worker process
 starts.
 """
 

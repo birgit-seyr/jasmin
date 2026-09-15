@@ -1,13 +1,11 @@
 """Shared helpers for the per-order bulk operations (delivery-note / invoice
 creation + finalize, invoice reminders).
 
-These were module-private helpers in
-``apps.commissioning.views.reseller_views``, but the ``invoice_reminder``
-service (run from a Huey task) reuses them — importing them from the view
-inverted the service→view dependency direction and pulled the whole DRF
-view module into a worker dispatch. Homing them in this neutral service-layer
-module lets both the view and the service import them without the service
-depending on the view layer.
+They live in this neutral service-layer module, not in
+``apps.commissioning.views.reseller_views``, because the ``invoice_reminder``
+service (run from a Huey task) reuses them — importing them from the view would
+invert the service→view dependency direction and pull the whole DRF view module
+into a worker dispatch.
 """
 
 from __future__ import annotations

@@ -74,7 +74,7 @@ def summarize_crate_items(
     (``sum_netto`` / ``tax_breakdown``) uses, so the per-line display and the
     totals never diverge. Homogeneous groups also avoid the
     ``max(None, Decimal)`` TypeError that a NULL ``price_per_unit`` mixed with
-    a non-null one used to raise (a hard 500 on the detail endpoint).
+    a non-null one would raise.
 
     ``resolve_tax_rate(crate_type) -> rate`` supplies the rate for a group
     whose stored ``tax_rate`` is NULL (e.g. the date-based fallback the

@@ -1,4 +1,4 @@
-"""TXN-1: advisory locks for multi-entity stock operations must be acquired in
+"""Advisory locks for multi-entity stock operations must be acquired in
 one canonical (sorted) order.
 
 The ``current_balance:*`` lock is transaction-scoped and held to the outer
@@ -98,7 +98,7 @@ def _correction_ref(share_article_id, unit, size, storage_id, movement_type):
 
 @pytest.mark.django_db
 def test_recalculate_actual_corrections_locks_theoretical_sum_sorted(tenant):
-    """goods-flow audit #6: ``recalculate_actual_corrections`` must serialize with
+    """``recalculate_actual_corrections`` must serialize with
     the count-entry path by taking the SAME ``theoretical_sum:*`` xact lock, once
     per dimension, in canonical (None-coerced) sorted order — so a recompute and a
     count entry can't net against different theoretical sets (write-skew), and two

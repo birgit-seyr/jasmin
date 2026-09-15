@@ -6,7 +6,7 @@ become breadcrumbs on the next ERROR event (and the event's own message), which
 land in the monitoring store beyond the reach of the GDPR erasure pipeline.
 These hooks scrub email- and IPv4-shaped substrings from breadcrumb + event
 messages — defence-in-depth on top of logging stable PKs (not emails) at the
-call sites (GDPR-MIN-2/3).
+call sites.
 """
 
 from __future__ import annotations

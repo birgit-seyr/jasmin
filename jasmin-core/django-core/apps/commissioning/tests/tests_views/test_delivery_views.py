@@ -151,10 +151,10 @@ class TestDeliveryStationsToursOverviewView:
         assert station_1[key_1] == 1
 
     def test_demand_grid_is_batched_not_per_cell(self, api_client, tenant):
-        """MT-4: the (station_day, variation) demand grid must come from ONE
-        batched ShareDelivery aggregate, not a query per cell. Adding variations
-        must NOT multiply the number of ShareDelivery queries (the old per-cell
-        N+1 ran one aggregate per station_day × variation)."""
+        """The (station_day, variation) demand grid must come from ONE batched
+        ShareDelivery aggregate, not a query per cell. Adding variations must NOT
+        multiply the number of ShareDelivery queries (a per-cell N+1 would run one
+        aggregate per station_day × variation)."""
         table = ShareDelivery._meta.db_table
         dd = SharesDeliveryDayFactory(day_number=1, number_of_tours=1)
         year, week = dd.valid_from.isocalendar()[0], dd.valid_from.isocalendar()[1]
@@ -193,7 +193,7 @@ class TestDeliveryStationsToursOverviewView:
         three_q, three_v = _measure()
 
         # Sanity: the variations really populate the grid (2 station_days each),
-        # so the old per-cell N+1 WOULD manifest — otherwise this is a false pass.
+        # so a per-cell N+1 WOULD manifest — otherwise this is a false pass.
         assert (one_v, three_v) == (1, 3)
         assert three_q - one_q <= 1, (
             f"demand queries scale with variations: 1 var -> {one_q} "

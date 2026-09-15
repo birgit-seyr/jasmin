@@ -6,7 +6,7 @@ each demoting a DIFFERENT admin both read the OTHER as "another active admin"
 (Postgres READ COMMITTED), both pass the guard, and both commit — leaving the
 tenant with ZERO admins and no in-app recovery.
 
-The fix is a transaction-scoped, tenant-local advisory lock
+The guard serialises with a transaction-scoped, tenant-local advisory lock
 (``acquire_advisory_xact_lock("admin_role:mutation")``) around the
 check-and-demote: the second mutation blocks until the first commits, re-reads
 the now-reduced admin set, and is refused.

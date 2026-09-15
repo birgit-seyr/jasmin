@@ -11,10 +11,6 @@ declare ``read_permission = IsStaff`` on a base class, and forget
 and any authenticated user — including a customer- or member-role
 user — can POST / PATCH / DELETE.
 
-This is exactly what slipped past code review on
-``_TheoreticalBaseViewSet`` until an authorization audit caught it.
-This test would have caught it at write time.
-
 How it works
 ------------
 

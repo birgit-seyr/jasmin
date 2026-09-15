@@ -19,8 +19,7 @@ export interface UsePlanningAxesParams {
    * Require each day to have a DeliveryStationDay. When true (the default),
    * ``useShareDeliveryDays`` drops days whose ``delivery_stations`` array is
    * empty AND attaches the stations prefetch. Planning grids want this true so
-   * their day axis is identical everywhere; it is the single knob that used to
-   * be the overloaded ``get_delivery_stations`` flag.
+   * their day axis is identical everywhere.
    */
   requireStations?: boolean;
   /** Attach per-day tour info (``used_tours``) for tour-granularity columns. */
@@ -41,8 +40,6 @@ export interface PlanningAxes {
  * planning / backup grid. Guarantees the base planning page, the backup modal,
  * and any other consumer resolve the SAME day and variation sets — same
  * ``active_at_date``, same station-presence filtering, same variation filter.
- * Before this hook each caller hand-built its filter object and they drifted
- * (the modal-shows-station-less-day bug came from exactly that).
  */
 export function usePlanningAxes({
   year,

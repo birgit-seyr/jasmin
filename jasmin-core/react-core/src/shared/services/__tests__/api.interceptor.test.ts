@@ -1,7 +1,7 @@
 /**
  * Tier-4 runtime test for the silent-refresh response interceptor in
  * ``services/api.ts`` — the security-critical bit that the rest of the suite
- * only ever mocks away (see TEST-6). Covers:
+ * only ever mocks away. Covers:
  *
  *   1. a 401 on a normal endpoint refreshes ONCE and retries the original;
  *   2. concurrent 401s share a single ``/auth/refresh/`` (single-flight);

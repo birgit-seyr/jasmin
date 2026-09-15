@@ -3,7 +3,7 @@
 The contract this test enforces:
 
   1. ORM round-trip is transparent — callers see plaintext on both
-     read and write, with no API changes from the unencrypted era.
+     read and write.
   2. The database column stores ciphertext, not plaintext —
      ``pg_dump`` / raw SQL access yields encrypted bytes only.
   3. Same plaintext re-encrypted yields *different* ciphertext

@@ -83,8 +83,8 @@ export async function performRefresh(): Promise<string> {
 
 // ---- Request interceptor: attach access token -----------------------------
 // No tenant header: the backend resolves the tenant from the subdomain
-// (TenantMainMiddleware) — a client-sent header was never read and only
-// implied a security mechanism that didn't exist.
+// (TenantMainMiddleware) — a client-sent header would never be read and would
+// only imply a security mechanism that doesn't exist.
 axiosInstance.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) {

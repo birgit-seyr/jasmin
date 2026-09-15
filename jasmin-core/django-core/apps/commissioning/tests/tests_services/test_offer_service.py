@@ -154,11 +154,11 @@ class TestCopyOffersToNextWeek:
         assert new_offer.delivery_week == 53
 
     def test_dedups_in_batch_duplicates(self, tenant):
-        """COR-26: two source offers collapsing to the SAME target slot
+        """Two source offers collapsing to the SAME target slot
         (same article/unit/size, same target week) must produce ONE copy,
         not two — the in-memory batch is deduped like the persisted-row
-        check. Before the fix both passed the exists() check (nothing
-        persisted yet) and both got created."""
+        check, since both would pass the exists() check (nothing persisted
+        yet)."""
         article = ShareArticleFactory()
         a = OfferFactory(
             year=2026,
@@ -353,7 +353,7 @@ class TestCreateOffers:
         side_effect=_mock_stock_empty,
     )
     def test_pricing_is_batched_not_per_offer(self, _mock, tenant):
-        # Regression: pricing must be resolved in ONE bulk query, not one
+        # Pricing must be resolved in ONE bulk query, not one
         # get_pricing_on_date lookup per created offer (which scaled O(offers)).
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
@@ -415,7 +415,7 @@ class TestCreateOffers:
         assert offer.unit == "PCS"  # original forecast unit — NOT skipped
         assert offer.amount == Decimal(100) / Decimal("10.000")
 
-    # --- query-count lock (PERF-8) ---
+    # --- query-count lock ---
 
     @mock.patch(
         "apps.commissioning.services.stock_service.StockService.get_theoretical_current_stock",

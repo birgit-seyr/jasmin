@@ -699,10 +699,3 @@ def public_register_view(request):
 
 
 set_throttle_scope(public_register_view, "register")
-
-
-# --------------------------------------------------------------------------- #
-# Admin: list / create / update / resend                                       #
-# --------------------------------------------------------------------------- #
-# These endpoints now live in ``apps.accounts.viewsets.AdminUserViewSet`` —
-# grouped on the standard /admin/users/ resource via DefaultRouter.

@@ -1,5 +1,5 @@
 /**
- * StepUpProvider + runStepUpFlow integration (A22 regression).
+ * StepUpProvider + runStepUpFlow integration.
  *
  * The contract under test: the modal verifies the password BEFORE
  * resolving the prompt promise. A wrong password shows the backend

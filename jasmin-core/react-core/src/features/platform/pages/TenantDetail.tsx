@@ -53,9 +53,7 @@ export default function TenantDetail() {
   // The super-admin endpoints aren't part of the tenant-scoped orval
   // schema, so we hit them through ``axiosService`` directly. TanStack
   // Query handles caching, deduplication, cancellation on ``id``
-  // change, and post-mutation refetch — replacing the previous
-  // ``useEffect`` + ``setLoading`` + ``useCallback`` machinery that
-  // raced the two fetches against each other on rapid navigation.
+  // change, and post-mutation refetch.
   const tenantQuery = useQuery<TenantDetail>({
     queryKey: ["super-admin", "tenant", id],
     enabled: !!id,

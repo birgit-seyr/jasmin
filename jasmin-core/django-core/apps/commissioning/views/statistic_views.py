@@ -304,9 +304,9 @@ def _parse_variation_average_params(request: Request) -> dict:
     Accepts EITHER an explicit ``share_type_variation_ids`` list OR a
     ``share_option`` (+ optional ``active_at_date``) pair that resolves to
     the same set of variation IDs server-side. The latter avoids a frontend
-    waterfall where the planning page had to fetch share-type-variations
-    first and only then fire this endpoint — both queries now run in
-    parallel against the same filter shape.
+    waterfall (fetching share-type-variations first and only then firing this
+    endpoint) — both queries can run in parallel against the same filter
+    shape.
 
     Raises:
         InvalidQueryParam: if a parameter is missing, malformed, out of

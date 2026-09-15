@@ -10,13 +10,6 @@
  *      the modal, the OK button is disabled until a reason is typed,
  *      and submitting hits the ``/api/commissioning/invoices/{id}/
  *      create_storno/`` endpoint with ``{ reason }``.
- *
- * Known gap (intentionally not tested here): when the storno endpoint
- * rejects with a circular-reference error (the plan-item from
- * ``frontend_test_plan.txt``), the page's ``handleCreateStorno`` only
- * ``console.error``s — no toast is surfaced. A useful follow-up would
- * be wiring ``notify.error`` into that catch block so the failure is
- * visible to the user.
  */
 
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -405,9 +398,9 @@ describe("storno flow", () => {
     await waitFor(() => {
       expect(createStornoMutateAsyncMock).toHaveBeenCalledTimes(1);
     });
-    // The component now calls the generated mutation hook
-    // (``useCommissioningInvoicesCreateStornoCreate``) rather than a raw
-    // axios call — assert on the typed ``{ id, data }`` it's invoked with.
+    // The component calls the generated mutation hook
+    // (``useCommissioningInvoicesCreateStornoCreate``) — assert on the typed
+    // ``{ id, data }`` it's invoked with.
     expect(createStornoMutateAsyncMock).toHaveBeenCalledWith({
       id: "inv-42",
       data: { reason: "duplicate charge" },
@@ -442,8 +435,7 @@ describe("storno flow", () => {
     // Modal stays open (success path is what closes it) so the office can
     // correct the reason and retry.
     expect(screen.queryByRole("dialog")).toBeInTheDocument();
-    // The backend's domain error is now surfaced to the office instead of
-    // failing silently.
+    // The backend's domain error is surfaced to the office.
     await waitFor(() => {
       expect(notifyMock.error).toHaveBeenCalled();
     });

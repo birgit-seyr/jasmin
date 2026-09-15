@@ -6,13 +6,13 @@ the single source of truth for "what does the SAR expose for this
 model?" — adding a new column to a SAR-relevant model means adding
 a line here too.
 
-Two side-benefits over the previous ``inline_serializer(... DictField())``:
+Two side-benefits over an ``inline_serializer(... DictField())``:
 
   1. drf-spectacular emits a rich OpenAPI schema; orval generates
      proper TypeScript interfaces for the frontend instead of
      ``Record<string, unknown>``.
   2. The serializer formats native Python types (datetime → ISO 8601,
-     Decimal → string) so the service helpers can stop calling
+     Decimal → string) so the service helpers don't need to call
      ``.isoformat()`` / ``str(...)`` everywhere.
 
 The serializers are deliberately *plain* ``Serializer`` subclasses
@@ -751,7 +751,7 @@ class ProcessingActivitiesSerializer(serializers.Serializer):
 
 
 # ---------------------------------------------------------------------------
-# Deletion preview (dry-run) — Art. 17 roadmap Step 5.
+# Deletion preview (dry-run).
 # ---------------------------------------------------------------------------
 
 

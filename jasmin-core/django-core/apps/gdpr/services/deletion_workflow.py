@@ -304,10 +304,9 @@ class DeletionWorkflowMixin:
         and ``admin_approve_deletion`` — keeps the bookkeeping in
         one place.
 
-        Re-checks retention obligations: the original
-        ``request_deletion`` checked, but the request may have sat
-        in ``PENDING_ADMIN`` for hours / days during which the
-        member could have re-opened a subscription, etc. Better to
+        Checks retention obligations at execution time: the request
+        may have sat in ``PENDING_ADMIN`` for hours / days during which
+        the member could have re-opened a subscription, etc. Better to
         refuse late than to violate Art. 17(3)(b).
         """
         # DeletionRequest.user is SET_NULL (NOT cascade) — this row IS the

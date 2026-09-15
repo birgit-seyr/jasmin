@@ -1,10 +1,10 @@
-"""BIZ-2: ``convert_trial_member_on_first_coop_share`` must re-check
+"""``convert_trial_member_on_first_coop_share`` must re-check
 ``is_trial`` under a row lock so two concurrent first-CoopShare inserts
 can't both convert (which would burn a second member_number from the
 sequence and fire a duplicate welcome email).
 
-The fix re-fetches the member with ``select_for_update()`` inside the
-existing ``transaction.atomic()`` block and bails out (returns ``False``)
+The service re-fetches the member with ``select_for_update()`` inside its
+``transaction.atomic()`` block and bails out (returns ``False``)
 when the reloaded row is no longer a trial.
 
 These are focused unit tests — no real threads. They assert the

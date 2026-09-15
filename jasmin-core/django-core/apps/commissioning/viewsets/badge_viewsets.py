@@ -29,7 +29,7 @@ def pending_admin_confirmation_q() -> Q:
     This is the queryset equivalent of the row-level ``is_pending`` property;
     keep the two in lockstep. The generic badge counters below and the
     members_viewsets coop-share pending subquery both build on it, so the
-    definition of "pending" stays single-sourced (no more silently dropping the
+    definition of "pending" stays single-sourced (including the
     ``admin_confirmed__isnull=True`` branch).
     """
     return (Q(admin_confirmed=False) | Q(admin_confirmed__isnull=True)) & Q(

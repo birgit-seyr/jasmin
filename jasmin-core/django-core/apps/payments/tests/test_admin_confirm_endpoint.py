@@ -11,9 +11,8 @@ Locks in two invariants:
     MUST NOT be a shortcut for confirmation:
        - either the field is rejected / read-only, or
        - the boolean flips but no side-effects fire.
-    The frontend bug we lock in here was: an old admin modal PATCHed the
-    flag directly, which left the subscription "confirmed" in the DB
-    while ChargeSchedules and ShareDeliveries were never created.
+    A direct PATCH of the flag would leave the subscription "confirmed" in
+    the DB while ChargeSchedules and ShareDeliveries are never created.
 """
 
 from __future__ import annotations
@@ -35,8 +34,8 @@ from apps.payments.models import ChargeSchedule
 
 def _make_unconfirmed_subscription(member):
     # The member must hold equity within the GenG min/max window (default 3-100),
-    # else confirming the subscription — which cascades member.confirm — is now
-    # correctly blocked. 3 shares satisfies the default minimum.
+    # else confirming the subscription — which cascades member.confirm — is
+    # blocked. 3 shares satisfies the default minimum.
     CoopShareFactory(member=member, amount_of_coop_shares=Decimal(3))
     sub = SubscriptionFactory(
         member=member,
@@ -107,9 +106,8 @@ class TestAdminConfirmEndpoint:
 
         Whether the framework rejects the field or silently flips it, the
         critical invariant is the same: no side-effect rows are created.
-        Going through this path leaves the subscription in a half-broken
-        state from the billing layer's perspective — which is the bug we
-        documented in the modal refactor.
+        Going through this path would leave the subscription in a half-broken
+        state from the billing layer's perspective.
         """
         sub = _make_unconfirmed_subscription(member)
         url = f"/api/commissioning/abos/{sub.pk}/"

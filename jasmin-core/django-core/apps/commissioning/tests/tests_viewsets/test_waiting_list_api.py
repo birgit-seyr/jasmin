@@ -1,10 +1,9 @@
 """API-level tests for the subscription waiting list — the exact office/member
 HTTP flows, through the real serializers and viewsets.
 
-Covers the reported bug ("a waiting_list create lands in the main Abos list and can
-be admin-confirmed"): flag survival through POST /abos/, the on_waiting_list
-list filter, the confirm-time capacity backstop, promotion after a slot frees,
-PATCH flag-flip coherence, and the by-design additional-share capacity exemption.
+Covers flag survival through POST /abos/, the on_waiting_list list filter, the
+confirm-time capacity backstop, promotion after a slot frees, PATCH flag-flip
+coherence, and the by-design additional-share capacity exemption.
 """
 
 from __future__ import annotations
@@ -166,7 +165,7 @@ class TestWaitingListCreateApi:
         ids_all = {row["id"] for row in listed_all.data}
 
         # The main Abos page filters on_waiting_list=false — a waiting_listed row
-        # must NEVER appear there (the reported bug's first symptom).
+        # must NEVER appear there.
         assert str(waiting_listed.id) not in ids_false
         assert str(normal.id) in ids_false
         assert str(waiting_listed.id) in ids_true

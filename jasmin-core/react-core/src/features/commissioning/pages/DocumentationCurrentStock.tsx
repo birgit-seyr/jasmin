@@ -230,8 +230,7 @@ export default function DocumentationCurrentStock() {
     async (key: Key, transformedRow: Record<string, unknown>) => {
       const compositeId =
         key === -1 ? buildCompositeId(transformedRow) : String(key);
-      // ``composite_id`` is the PATH param — the phantom duplicate
-      // query param was removed from the schema.
+      // ``composite_id`` is the PATH param, not a query param.
       const result = await commissioningCurrentStockComparisonPartialUpdate(
         String(compositeId),
         transformedRow as unknown as CommissioningCurrentStockComparisonPartialUpdateBody,

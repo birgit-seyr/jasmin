@@ -433,8 +433,8 @@ class ShareImportService:
         ShareContent / theoretical / movement.
 
         Without this, a re-import that corrected wrong quantities would
-        silently leave the planning view at the OLD numbers — the gap that
-        motivated this wiring. ``recompute_shares`` is idempotent and
+        silently leave the planning view at the OLD numbers.
+        ``recompute_shares`` is idempotent and
         short-circuits on an empty id set, so weeks with no live Shares
         cost nothing. Called inside ``apply``'s ``@transaction.atomic`` so a
         recompute failure rolls the whole import back rather than leaving a

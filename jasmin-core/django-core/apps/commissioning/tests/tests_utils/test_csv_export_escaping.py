@@ -1,4 +1,4 @@
-"""SEC-16 drift guard: every CSV export site must route rows through
+"""Drift guard: every CSV export site must route rows through
 ``escape_csv_row`` (CSV / spreadsheet-formula injection defense).
 
 Data is stored verbatim (correct — neutralizing on import would corrupt

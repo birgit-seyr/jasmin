@@ -44,8 +44,8 @@ def _make_subscription(
         member=member,
         valid_from=valid_from,
         valid_until=valid_until,
-        # ``regenerate_all`` only bills admin-confirmed, non-waiting-list subs
-        # (COR-13); default to billable so the bulk-path tests below exercise
+        # ``regenerate_all`` only bills admin-confirmed, non-waiting-list subs;
+        # default to billable so the bulk-path tests below exercise
         # real charge generation.
         admin_confirmed=admin_confirmed,
         on_waiting_list=on_waiting_list,
@@ -84,9 +84,9 @@ class TestRegenerateAll:
             )
 
     def test_skips_non_billable_subscriptions(self, tenant, tenant_settings):
-        """COR-13: ``regenerate_all`` gives a ledger ONLY to billable subs.
+        """``regenerate_all`` gives a ledger ONLY to billable subs.
         Unconfirmed and waiting-list subscriptions must get NO PLANNED charges
-        (they used to get 12 each, polluting the ledger and the SEPA run)."""
+        (they would pollute the ledger and the SEPA run)."""
         confirmed = _make_subscription()  # admin_confirmed=True, not waiting
         unconfirmed = _make_subscription(admin_confirmed=False)
         waiting = _make_subscription(on_waiting_list=True)
@@ -193,8 +193,8 @@ class TestRegenerateAll:
 
         Both are invariant across the run (same schema, same active settings
         row), so adding subscriptions must NOT add Tenant / TenantSettings
-        SELECTs. Without the hoist, ``regenerate_for_subscription`` re-queried
-        both per subscription — an N+1 over those tables that this locks.
+        SELECTs. Without the hoist, ``regenerate_for_subscription`` would
+        re-query both per subscription — an N+1 over those tables that this locks.
         """
         from django.db import connection
         from django.test.utils import CaptureQueriesContext

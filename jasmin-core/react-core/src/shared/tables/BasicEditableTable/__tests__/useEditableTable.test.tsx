@@ -213,7 +213,7 @@ describe("useEditableTable", () => {
   });
 
   it("customSave returning the __deleteOnSave sentinel deletes the row instead of updating", async () => {
-    // Regression: clearing an order's amount removes the OrderContent (offers
+    // Clearing an order's amount removes the OrderContent (offers
     // with no order are placeholder stubs, not null-amount rows). The offers
     // customSave returns { __deleteOnSave: true } for a cleared EXISTING row;
     // the save handler must route that to apiFunctions.delete + remove the
@@ -275,8 +275,8 @@ describe("useEditableTable", () => {
     });
 
     expect(apiFunctions.update).not.toHaveBeenCalled();
-    // Unique-check failures now surface in the table banner (saveErrorMessage)
-    // instead of a fleeting toast. The red border still comes from formErrors.
+    // Unique-check failures surface in the table banner (saveErrorMessage),
+    // not a toast. The red border still comes from formErrors.
     await waitFor(() => {
       expect(result.current.saveErrorMessage).toBe("Name must be unique");
     });

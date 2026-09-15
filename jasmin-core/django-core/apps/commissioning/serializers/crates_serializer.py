@@ -137,5 +137,4 @@ class CrateInvoiceContentWriteRequestSerializer(serializers.Serializer):
 # ``CrateContentInvoiceResellerSerializer`` live in ``resellers_serializer.py``
 # — the diff-tracking variants (``DifferenceTrackingMixin``), matching their
 # article-content siblings. They are the ones wired into the viewsets and
-# re-exported from this package; a diff-less copy used to live here and silently
-# shadowed them.
+# re-exported from this package; a second definition here would shadow them.

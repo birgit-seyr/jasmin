@@ -195,9 +195,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // TenantContext (keyed on the tenant id) owns post-refresh enrichment:
         // it runs the full auth-gated fetch exactly once, race-safely, as soon
         // as both the tenant id (anonymous slim fetch) and the access token
-        // (this refresh) are present. Calling refreshTenantFull() here fired
-        // before the slim fetch had resolved on a hard reload, so it only
-        // logged a "no tenant id" warning and bailed — a pure no-op. The
+        // (this refresh) are present. Calling refreshTenantFull() here would
+        // fire before the slim fetch resolves on a hard reload, so it would
+        // only log a "no tenant id" warning and bail — a pure no-op. The
         // explicit login path below keeps its awaited call because navigation
         // needs the full payload synchronously.
       } catch {

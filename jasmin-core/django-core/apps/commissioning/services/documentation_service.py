@@ -138,7 +138,7 @@ class GenericDocumentationService:
         Σtheoretical``), not as a plain add. A ``comes_from_long_term`` line plans
         its harvest onto the LONG-term storage (Storage.select_harvest), so that
         storage carries theoreticals exactly like the short-term one — gating only
-        on short-term double-counts the long-term theoretical (MOV-1)."""
+        on short-term double-counts the long-term theoretical."""
         if not instance.storage_id:
             return False
         storage = instance.storage
@@ -258,9 +258,8 @@ class GenericDocumentationService:
         theoretical_sum, both subtract it from their counted amount,
         and silently double-count the correction.
 
-        The previous implementation chained
-        ``.select_for_update().aggregate(...)``, which Postgres ignores
-        — FOR UPDATE has no effect on aggregate queries.
+        ``.select_for_update().aggregate(...)`` would not serialise them — FOR
+        UPDATE has no effect on aggregate queries.
         """
         from core.db_locks import acquire_advisory_xact_lock
 
@@ -270,7 +269,7 @@ class GenericDocumentationService:
         )
         acquire_advisory_xact_lock(lock_key)
 
-        # Day-scoped (MOV-3): net only the theoretical(s) for the correction's OWN
+        # Day-scoped: net only the theoretical(s) for the correction's OWN
         # harvesting day (``date == up_to``), matching recalculate_actual_corrections.
         # Theoretical + actual movements for a (year, week, day) dimension share
         # the same noon datetime; a cumulative ``date__lte`` re-subtracts an

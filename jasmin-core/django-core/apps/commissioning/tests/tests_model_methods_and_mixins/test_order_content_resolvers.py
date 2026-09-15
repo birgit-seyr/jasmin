@@ -24,14 +24,14 @@ for paranoia (e.g. raw-SQL writes that bypass clean) and are not
 exercised here.
 
 If any of these tests start failing, the regression is almost
-certainly that someone reintroduced an inline
+certainly that someone introduced an inline
 ``offer.X if offer else content.X`` pattern somewhere and the
 resolver's precedence has diverged from it. Fix the caller (route
 it through ``resolve_*``), don't loosen the test — the whole point of
 the resolver is that there is exactly one place to change the
 precedence.
 
-The fallback chain (canonical, as of the audit on 2026-06-06):
+The fallback chain (canonical):
 
   resolve_share_article : content.share_article → offer.share_article → None
   resolve_amount_per_pu : offer.amount_per_pu   → article.get_amount_per_pu_for_reseller(content.unit) → Decimal("1")
@@ -125,8 +125,7 @@ class TestResolveAmountPerPu:
 
     def test_falls_back_to_one_when_article_has_no_value_for_unit(self, tenant):
         """Article exists but has nothing configured for the line's unit
-        — last-resort default is 1 (preserves pre-existing behaviour for
-        unknown units)."""
+        — last-resort default is 1 for unknown units."""
         article = ShareArticleFactory(
             default_movement_unit="KG",
             default_kg_per_pu_reseller=None,
@@ -160,9 +159,8 @@ class TestResolveAmountPerPu:
 # PU conversion used by ``ordered_amount`` / offer-stock debiting. This keeps
 # the order line net equal to the delivery-note and invoice line nets (which
 # inherit the same base ``LinePricingMixin`` formula) and to the frontend
-# ``computeLineNetto`` mirror. Previously OrderContent multiplied by
-# ``amount_per_pu``, over-charging by that factor and diverging from the
-# legally-issued invoice (DOC-1 / DOC-2).
+# ``computeLineNetto`` mirror. Multiplying by ``amount_per_pu`` would
+# over-charge by that factor and diverge from the legally-issued invoice.
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestLineNettoIsUnitBased:

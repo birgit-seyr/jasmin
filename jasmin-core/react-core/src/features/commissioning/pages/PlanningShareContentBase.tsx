@@ -196,8 +196,7 @@ export default function PlanningHarvestSharesBase({
 
   // Single source of truth for the (day × variation) axes. The base grid
   // AND the BackupModal consume this same hook, so their day/variation
-  // sets can never diverge (which is exactly how the
-  // modal-shows-station-less-day bug crept in).
+  // sets can never diverge.
   const {
     shareDeliveryDays: rawShareDeliveryDays,
     shareTypeVariations,
@@ -213,12 +212,9 @@ export default function PlanningHarvestSharesBase({
     needTours: true,
   });
 
-  // Historical-averages used to wait for `shareTypeVariations` to resolve so
-  // it could pass `share_type_variation_ids`. The backend now accepts
-  // `share_option` (+ `active_at_date`) and resolves IDs server-side via the
-  // same filter as ShareTypeVariationViewSet — so both queries fire in
-  // parallel and the planning page renders in roughly half the wall-clock
-  // time it used to.
+  // Historical averages are fetched by `share_option` (+ `active_at_date`);
+  // the backend resolves the variation IDs server-side via the same filter as
+  // ShareTypeVariationViewSet, so no `share_type_variation_ids` are passed.
   const { data: historicalAverages } = useHistoricalShareTypeVariationAverages({
     year: selectedYear,
     delivery_week: selectedWeek ?? nextWeek,
@@ -652,9 +648,8 @@ export default function PlanningHarvestSharesBase({
       //     the old value → the bare fans out to every station on the
       //     day and re-spawns the row the user just cleared.
       //   * Same shape in tours mode.
-      //   * The "Duplicate planning entry" error we patched earlier had
-      //     the same root cause — multiple tiers resolving to the same
-      //     ShareContent key.
+      //   * Multiple tiers resolve to the same ShareContent key
+      //     ("Duplicate planning entry" error).
       //
       // So: drop the keys that don't belong to the active mode. Empty
       // strings on the surviving tier become 0 (the wire signal for

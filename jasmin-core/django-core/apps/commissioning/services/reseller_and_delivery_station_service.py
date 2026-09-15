@@ -266,10 +266,10 @@ class ResellerAndDeliveryStationService:
 
         Deliberately a plain ``create`` — NOT ``get_or_create``. There is no
         unique constraint to make an all-fields ``get_or_create`` race-safe, and
-        the field-value match it did was already broken single-threaded (the
-        lookup included the ``EncryptedCharField`` iban, whose ciphertext is
-        never equal by value, so any populated bank field guaranteed a fresh
-        row anyway). Each reseller / delivery-station therefore gets its own
+        its field-value match can't work single-threaded either (the lookup would
+        include the ``EncryptedCharField`` iban, whose ciphertext is never equal
+        by value, so any populated bank field guarantees a fresh row anyway).
+        Each reseller / delivery-station therefore gets its own
         contact; the supported reseller↔station merge is the within-call
         ``is_also_*`` path (which shares this one contact), not a fragile
         retype-identical-data dedup across separate creates.

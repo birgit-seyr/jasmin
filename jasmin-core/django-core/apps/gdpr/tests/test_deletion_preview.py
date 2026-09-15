@@ -1,4 +1,4 @@
-"""Tests for the Art-17 deletion PREVIEW (dry-run) — roadmap Step 5.
+"""Tests for the Art-17 deletion PREVIEW (dry-run).
 
 Covers persona detection (Member / Customer / Staff), the ``preview_deletion``
 payload shape + fidelity to ``FIELD_CLASSIFICATION`` and the retention check,

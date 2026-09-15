@@ -556,7 +556,7 @@ class BulkSetToPaidDocumentsView(APIViewRolePermissionsMixin, APIView):
         if not orders.exists():
             raise NotFoundError("No valid orders found")
 
-        # DOC-9: a summary invoice spans several orders, so many orders in one
+        # A summary invoice spans several orders, so many orders in one
         # batch resolve to the SAME invoice. Track invoices already acted on so
         # the 2nd..Nth order reports one success no-op instead of a spurious
         # "already paid" / "not paid, cannot undo" failure.
@@ -742,8 +742,8 @@ class CombinedOrderOverviewView(APIViewRolePermissionsMixin, APIView):
             "ordercontent_set",
             "crateordercontent_set",
             # Offer-bound deposits hang off OrderContent (order=NULL); Order's
-            # money totals now include them, so prefetch this edge too to keep
-            # the order list query-free per order (DOC-4).
+            # money totals include them, so prefetch this edge too to keep
+            # the order list query-free per order.
             "ordercontent_set__crateordercontent_set",
         )
 
@@ -771,9 +771,8 @@ class CombinedOrderOverviewView(APIViewRolePermissionsMixin, APIView):
             order.pk: getattr(order, "delivery_note", None) for order in orders
         }
 
-        # Batch the per-order invoice lookup — previously each order ran its
-        # own ``get_invoice_for_delivery_note`` query (plus a
-        # ``cancelled_by_invoice`` fetch). Resolve them all in one query.
+        # Batch the per-order invoice lookup (``get_invoice_for_delivery_note``
+        # plus a ``cancelled_by_invoice`` fetch) into one query.
         invoice_by_delivery_note = self._invoices_by_delivery_note(
             [
                 delivery_note.id
@@ -1117,7 +1116,7 @@ class BulkCreateSummaryInvoiceFromOrdersView(APIViewRolePermissionsMixin, APIVie
             order.id: getattr(order, "delivery_note", None) for order in orders
         }
         # One query for the whole batch: which of these delivery notes already
-        # have content on an invoice (was an ``.exists()`` per order).
+        # have content on an invoice.
         all_delivery_note_ids = [
             delivery_note.id
             for delivery_note in delivery_note_by_order.values()
@@ -1446,7 +1445,7 @@ def offer_sending_status(request: Request) -> Response:
     resellers = offer_group.reseller_set.select_related("contact").all()
 
     # Direct composite-key lookup — no JOIN through Offer needed
-    # since OfferSending now stores the (offer_group, year,
+    # since OfferSending stores the (offer_group, year,
     # delivery_week) tuple explicitly.
     sendings = OfferSending.objects.filter(
         offer_group=offer_group,

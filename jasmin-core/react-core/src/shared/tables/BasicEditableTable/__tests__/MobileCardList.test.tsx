@@ -1,10 +1,9 @@
 /**
  * Mobile cards must honour a column's own `render`.
  *
- * The card view used to fall straight through to `String(raw)`, so on a phone
- * every column that defines a `render` — roughly 300 across the app — leaked
- * the raw API value: "0.000" for a formatted amount, an ISO date, a bare id
- * for a relation. Desktop was unaffected, which is why it went unnoticed.
+ * Otherwise the card view would fall through to `String(raw)`, so on a phone
+ * every column that defines a `render` would show the raw API value: "0.000"
+ * for a formatted amount, an ISO date, a bare id for a relation.
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";

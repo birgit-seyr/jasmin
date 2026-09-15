@@ -5,13 +5,9 @@ member notifications) needs two things off the current tenant: the base URL of
 its React frontend (to build accept/reset/review links) and its human-readable
 name (for the email greeting/footer). Both derive from ``connection.tenant``.
 
-These were previously private helpers (``_frontend_base_url`` / ``_tenant_name``)
-inside ``apps.shared.invitations``, imported cross-app under their underscore
-names — a load-bearing utility with a misleading home, and the base-URL logic
-had already been re-inlined (and drifted) inside
-``apps.shared.tenants.email_service.capture_tenant_email_context``. This module
-is their single public home in the always-shared layer, so any app — including
-``apps.commissioning`` under the one-way isolation rule — can import them.
+This module is the single public home for both, in the always-shared layer,
+so any app — including ``apps.commissioning`` under the one-way isolation
+rule — can import them.
 """
 
 from __future__ import annotations

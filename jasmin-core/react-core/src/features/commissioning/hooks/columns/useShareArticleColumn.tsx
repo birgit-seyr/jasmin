@@ -66,9 +66,7 @@ interface ShareArticleColumnConfig {
    * **Defaults to `[]` (single-tier mode)** — only ``price_1`` is ever
    * picked, regardless of quantity. Pages should pass the tenant's
    * ``used_tiers_for_offers`` setting through (with their own
-   * ``[1]`` fallback when the setting is empty / unset). The old
-   * ``[1, 3, 5]`` default silently bumped non-tier tenants into
-   * 3-tier pricing.
+   * ``[1]`` fallback when the setting is empty / unset).
    */
   finalTiers?: number[];
   disableCondition?: ((record: Record<string, unknown>) => boolean) | null;

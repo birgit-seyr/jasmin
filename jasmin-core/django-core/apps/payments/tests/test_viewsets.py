@@ -84,7 +84,7 @@ class TestBillingProfileViewSet:
     def test_member_self_read_omits_office_notes(
         self, member_api_client, tenant, billing_profile
     ):
-        """SEC-15: a member reading their OWN billing profile must NOT receive
+        """A member reading their OWN billing profile must NOT receive
         the office-internal free-text ``notes``. ``read_only_fields`` guards
         writes, not reads, so the office serializer would otherwise leak it."""
         billing_profile.notes = "internal: flagged for manual review"
@@ -152,8 +152,8 @@ class TestBillingProfileViewSet:
     def test_toggle_is_active_requires_step_up(
         self, api_client, tenant, billing_profile
     ):
-        # TXN-4: deactivating a mandate is payment-relevant (it gates collection
-        # + run eligibility), so a plain office PATCH of ``is_active`` is now
+        # Deactivating a mandate is payment-relevant (it gates collection
+        # + run eligibility), so a plain office PATCH of ``is_active`` is
         # rejected without step-up.
         resp = api_client.patch(
             f"{self.URL}{billing_profile.pk}/",
@@ -219,7 +219,7 @@ class TestBillingProfileViewSet:
         assert str(billing_profile.sepa_mandate_paper_received_at) == "2026-06-30"
 
     def test_list_logs_pii_read(self, api_client, tenant, billing_profile):
-        # SEC-1: the billing-profile list decrypts IBAN / account holder, so a
+        # The billing-profile list decrypts IBAN / account holder, so a
         # bulk read must emit an Art. 5(2) accountability line (unlike the
         # name/number/status lists the mixin deliberately skips).
         from unittest.mock import patch
@@ -235,7 +235,7 @@ class TestBillingProfileViewSet:
     def test_member_fk_is_immutable_on_update(
         self, api_client, tenant, billing_profile
     ):
-        # TEN-3: the owning ``member`` FK is read-only on update — a PATCH that
+        # The owning ``member`` FK is read-only on update — a PATCH that
         # tries to reassign it is silently ignored, so an existing profile can't
         # be pointed at another member. (``member`` stays writable on create.)
         other = MemberFactory()
@@ -289,7 +289,7 @@ class TestChargeScheduleViewSet:
     def test_member_foreign_member_param_is_403(
         self, member_api_client, tenant, member
     ):
-        # TEN-2: a non-privileged caller passing another member's ?member= gets
+        # A non-privileged caller passing another member's ?member= gets
         # a 403, not a silent empty 200.
         other = MemberFactory()
         resp = member_api_client.get(self.URL, {"member": str(other.pk)})
@@ -327,7 +327,7 @@ class TestChargeScheduleViewSet:
     def test_office_can_regenerate(
         self, api_client, tenant, tenant_settings, subscription
     ):
-        # ``regenerate_all`` only bills admin-confirmed subscriptions (COR-13);
+        # ``regenerate_all`` only bills admin-confirmed subscriptions;
         # the shared fixture is unconfirmed, so confirm it for this path.
         subscription.admin_confirmed = True
         subscription.save(update_fields=["admin_confirmed"])
@@ -527,7 +527,7 @@ class TestSepaMandateStatusAction:
         assert resp.status_code == status.HTTP_200_OK
         for row in resp.data:
             # The whole point of this endpoint: never ship IBAN / account holder,
-            # not even masked — that's the SEC-1 bulk-read the profile list logs.
+            # not even masked — that's the bulk-read the profile list logs.
             assert "iban" not in row
             assert "iban_masked" not in row
             assert "account_holder" not in row

@@ -85,11 +85,11 @@ class TestForecastUpdatePerf:
     def test_note_only_update_is_light(self, tenant):
         """Pure note edit → light path. ≤ 80 ms with 3 variations.
 
-        Pre-2026-06-08 (no light-path short-circuit) this measured
-        ~600 ms on the office's setup. The light path now does a
-        single ``Forecast.save(update_fields=["note"])`` plus the
+        The light path does a single
+        ``Forecast.save(update_fields=["note"])`` plus the
         ``_is_light_update`` exists-check per variation/offer-group
-        key (none in this payload).
+        key (none in this payload); without the light-path
+        short-circuit this took ~600 ms on the office's setup.
         """
         forecast, _ = self._make_forecast_with_variations(variation_count=3)
         svc = ForecastService()

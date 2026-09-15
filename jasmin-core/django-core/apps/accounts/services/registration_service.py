@@ -238,7 +238,7 @@ def register_public_applicant(
         # Route through ConsentService.record (not a raw create) so the
         # denormalized Member consent-cache columns are synced and the
         # forensic ip_address / user_agent are captured — the public web signup
-        # is exactly where that provenance matters most (GDPR-CON-3).
+        # is exactly where that provenance matters most.
         from django.db.models import Q
         from django.utils import timezone
 

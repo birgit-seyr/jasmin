@@ -464,8 +464,8 @@ class TestBulkSetAsExpectedNoRelocation:
     """Theoretical objects are short-term-locked (RequiresShortTermStorageMixin)
     and the storage picker is UI-restricted to that storage, so setting
     harvest-as-expected must NOT relocate the TheoreticalHarvest or its movement
-    — only upsert the actual Harvest. The old relocation was a
-    no-op-or-illegal-write."""
+    — only upsert the actual Harvest (relocating would be a no-op or an
+    illegal write)."""
 
     def _item(self, share_article, storage):
         return {
@@ -669,7 +669,7 @@ class TestUpdateModelSpecificFields:
 
 @pytest.mark.django_db
 class TestUpdateAdditionalPurchaseSellerScoping:
-    """MOV-7: update_additional_theoretical_amount must scope the
+    """update_additional_theoretical_amount must scope the
     AdditionalTheoreticalPurchase upsert by seller (matching the add path), else
     a seller-blind update mutates the wrong seller's row or raises
     MultipleObjectsReturned when several sellers share the other dimensions."""
@@ -717,12 +717,12 @@ class TestTheoreticalStockMapWithoutDayNumber:
     """``day_number`` is optional — omitting it asks for the WHOLE delivery week
     (``_build_base_filter`` only constrains the day when one is given).
 
-    That branch used to do ``stock_day = day_number``, i.e. None, and
+    That branch must not set ``stock_day = day_number`` (None):
     ``StockService.get_theoretical_current_stock`` immediately calls
-    ``int(day_number)`` — so the request died with a TypeError (HTTP 500).
+    ``int(day_number)``, so the request would die with a TypeError (HTTP 500).
 
-    NB every other test in this file MOCKS ``_get_theoretical_stock_map``, which
-    is precisely why this never surfaced; these call the real thing.
+    NB every other test in this file MOCKS ``_get_theoretical_stock_map``; these
+    call the real thing.
     """
 
     def test_week_summary_without_day_number_does_not_crash(self, tenant):

@@ -1,4 +1,4 @@
-// Commissioning feature modals barrel (moved out of shared/modals).
+// Commissioning feature modals barrel.
 export { default as ShareArticleModal } from './ShareArticleModal';
 export { default as BackupModal } from './BackupModal';
 export { default as DeliveryStationDetailModal } from './DeliveryStationDetailModal';

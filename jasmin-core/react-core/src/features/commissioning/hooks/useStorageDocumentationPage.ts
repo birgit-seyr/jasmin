@@ -78,7 +78,7 @@ export function useStorageDocumentationPage({
 
   // The whole grid is scoped to one page-level storage; stamp it (and the
   // year/week/[day] context) on every create/update, coercing a blank amount
-  // to 0. Identical payload to what each page previously built inline.
+  // to 0.
   const customSave = useCallback(
     (transformedData: Record<string, unknown>) => ({
       ...transformedData,

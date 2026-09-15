@@ -226,7 +226,7 @@ class DefaultShareArticleInShareBulkUpsertRequestSerializer(serializers.Serializ
     """Payload accepted by ``DefaultShareArticleInShareViewSet.bulk_upsert``."""
 
     share_article = serializers.CharField()
-    # API-5: bound the item list so one authorized request can't stream an
+    # Bound the item list so one authorized request can't stream an
     # unbounded number of update_or_create/delete ops through the single
     # atomic loop (soft DoS). Well above any realistic per-article variation set.
     entries = DefaultShareArticleInShareBulkEntrySerializer(many=True, max_length=2000)

@@ -7,8 +7,7 @@ import { EmptyHint } from "@shared/ui";
 /**
  * Lightweight read-only report table: a thin wrapper over AntD ``Table`` that
  * bakes in the shared ``custom-jasmin-table`` class, ``size="small"`` and the
- * subtle-grey ``EmptyHint`` empty state — the scaffolding that read-only
- * reports across members/abos/gdpr were copy-pasting.
+ * subtle-grey ``EmptyHint`` empty state.
  *
  * This is intentionally NOT ``EditableTable``: server-paginated tables and
  * tables with custom action columns (approve / reject / download) belong here,

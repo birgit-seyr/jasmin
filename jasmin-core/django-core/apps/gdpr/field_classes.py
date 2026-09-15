@@ -12,9 +12,8 @@ Why a dict per model instead of hardcoded ``setattr`` calls:
   which fields hold PII and what happens to them on anonymization.
 - The guard test catches "PII field added but nobody classified it"
   at PR time, before the bug reaches prod.
-- The forthcoming retention cron (Step 8 of
-  ``docs/gdpr/deletion-roadmap.md``) reads the ``PII_RETAINED`` rows
-  to know what to scrub when the statutory window expires.
+- A future retention cron can read the ``PII_RETAINED`` rows to know
+  what to scrub when the statutory window expires.
 
 Replacement value semantics
 ---------------------------
@@ -40,8 +39,8 @@ class FieldClass(StrEnum):
     PII_IMMEDIATE = "pii_immediate"
 
     #: PII covered by a statutory retention obligation (HGB §257,
-    #: UStG §14b, etc.). **Left alone at anonymization time**; the
-    #: Step 8 retention cron scrubs the field once the obligation
+    #: UStG §14b, etc.). **Left alone at anonymization time**; a
+    #: future retention cron will scrub the field once the obligation
     #: window has expired. Documented here so the cron knows what
     #: to scrub when the day comes.
     PII_RETAINED = "pii_retained"
@@ -85,7 +84,7 @@ FIELD_CLASSIFICATION: dict[str, dict[str, tuple[FieldClass, Replacement]]] = {
     # commissioning.Member — co-op member record. ``address`` /
     # ``zip_code`` / ``city`` / ``country`` are arguably PII_RETAINED
     # (10y HGB if the member is on invoices), but the pre-flight
-    # retention check (Step 1) already refuses anonymization while
+    # retention check already refuses anonymization while
     # invoices are open. By the time we reach the scrub, the member
     # has fully exited; address can go.
     # ----------------------------------------------------------------
@@ -127,10 +126,9 @@ FIELD_CLASSIFICATION: dict[str, dict[str, tuple[FieldClass, Replacement]]] = {
     },
     # ----------------------------------------------------------------
     # payments.BillingProfile — SEPA mandate. The encrypted fields
-    # are at-rest-encrypted but the auditlog leak (closed in the
-    # §logging audit) showed: encryption at rest doesn't help if
-    # the Python value is read into a plain string in a diff column.
-    # Scrub on Python-side too.
+    # are at-rest-encrypted, but encryption at rest doesn't help if
+    # the Python value is read into a plain string (e.g. an auditlog
+    # diff column). Scrub on Python-side too.
     # ----------------------------------------------------------------
     "payments.BillingProfile": {
         "iban": (FieldClass.PII_IMMEDIATE, ""),
@@ -217,8 +215,7 @@ FIELD_CLASSIFICATION: dict[str, dict[str, tuple[FieldClass, Replacement]]] = {
     },
     # ----------------------------------------------------------------
     # commissioning.ConsentRecord — one row per consent act with a
-    # forensic IP + user-agent capture. Surfaced as a gap by the
-    # Step 4 guard test: the row STAYS (legal audit trail of
+    # forensic IP + user-agent capture. The row STAYS (legal audit trail of
     # "consent given on <date> for <document>" survives), but the
     # IP + UA are PII linked to the member and get scrubbed.
     # ----------------------------------------------------------------

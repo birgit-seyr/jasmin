@@ -7,15 +7,11 @@ import type {
 /**
  * Checkbox row-selection state + config for an EditableTable.
  *
- * Replaces the ~14-line scaffold (selectedRowKeys state +
- * onSelectedRowsChange handler + a `{ type: "checkbox", getCheckboxProps }`
- * config object) that was copy-pasted into every page with bulk actions.
- *
  * Pass `isRowDisabled` to grey out non-selectable rows — typically the
  * unsaved add-row (`record.key === -1`) and rows that are past / already
  * finalized. Omit it to allow selecting every row.
  *
- * Wire it up by renaming on destructure so existing JSX keeps working:
+ * Wire it up, renaming on destructure to match the page's JSX names:
  *
  * ```ts
  * const {

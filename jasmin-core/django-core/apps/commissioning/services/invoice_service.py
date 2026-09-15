@@ -371,11 +371,10 @@ class InvoiceService:
                 delivery_note_content,
                 # ``InvoiceResellerContent.amount`` is NOT NULL while the upstream
                 # ``DeliveryNoteContent.amount`` is nullable, so an uncoerced None
-                # aborted the whole atomic invoice creation with an IntegrityError.
-                # The SUMMARY invoice path already coerces the same value
-                # (``amount or 0`` when accumulating ``total_amount``), so without
-                # this the identical data invoiced fine as a summary and 500'd as a
-                # single-delivery-note invoice. ``rabatt`` below was already coerced.
+                # would abort the whole atomic invoice creation with an IntegrityError.
+                # The SUMMARY invoice path coerces the same value (``amount or 0``
+                # when accumulating ``total_amount``), so both paths accept the same
+                # data. ``rabatt`` below is coerced too.
                 amount=delivery_note_content.amount or 0,
                 tax_rate=effective_article_tax_rate(
                     delivery_note_content, invoice.date
@@ -468,7 +467,7 @@ class InvoiceService:
         # then can't drift this immutable document. Set before computing the
         # hash so the sealed payload reads the frozen copy.
         #
-        # DOC-1: a document created as a mirror of another (a storno of a
+        # A document created as a mirror of another (a storno of a
         # finalized invoice) may ALREADY carry the recipient block it must
         # legally reproduce. Only freeze from the live row when no snapshot was
         # pre-populated, so a storno keeps the cancelled invoice's §14b recipient
@@ -572,9 +571,7 @@ class InvoiceService:
             )
 
         # A storno is a NEW legal document — date it the day it is issued
-        # (today), not the original invoice's date. Previously this relied
-        # on the now-removed silent today-default in
-        # ``InvoiceReseller.save``.
+        # (today), not the original invoice's date.
         storno = InvoiceReseller.objects.create(
             reseller=invoice.reseller,
             document_type="storno",
@@ -584,7 +581,7 @@ class InvoiceService:
             date=timezone.localdate(),
         )
 
-        # DOC-1: a storno must reproduce the EXACT §14/§14a recipient of the
+        # A storno must reproduce the EXACT §14/§14a recipient of the
         # invoice it cancels (a legally-paired Rechnung/Storno set), NOT a
         # re-resolved live address. resolved_recipient() returns the original's
         # frozen v2 snapshot (or, for a legacy v1 original with no snapshot, a
@@ -960,7 +957,7 @@ class InvoiceService:
         Never raises.
         """
         reseller = invoice.reseller
-        # EML-2: honour the reseller's channel preference. invoice_via_email
+        # Honour the reseller's channel preference. invoice_via_email
         # (default True) is the explicit opt-out for paper-only resellers;
         # gating here protects every caller (auto-send on upload + any future
         # re-send/bulk path), not just upload_pdf.

@@ -107,9 +107,9 @@ class OrderContentService:
 
         Rounds UP: a partial crate still needs a physical crate (and is billed
         as a returnable-deposit unit). ``CrateOrderContent.amount`` is an
-        IntegerField, so the previous bare ``amount / pu_divisor`` assignment
-        relied on implicit ``int()`` truncation, silently dropping the partial
-        crate (2.1 → 2). Inputs are already ``Decimal`` (model fields) so there
+        IntegerField, so a bare ``amount / pu_divisor`` assignment would rely on
+        implicit ``int()`` truncation, silently dropping the partial crate
+        (2.1 → 2). Inputs are already ``Decimal`` (model fields) so there
         is no float drift.
         """
         return math.ceil(Decimal(amount) / Decimal(pu_divisor))
@@ -514,13 +514,13 @@ class OrderContentService:
         #      would be permanently False and ``original_amount`` null — silently
         #      disabling a GoBD audit surface rather than crashing.
         #
-        # Zero is also what the UPDATE path has always persisted for a None
+        # Zero is also what the UPDATE path persists for a None
         # (``update_order_content_and_crates``), and update delegates here when
-        # the row is absent, so create and update now agree.
+        # the row is absent, so create and update agree.
         #
-        # NB the arithmetic below sits behind ``if offer:``, so before this a
-        # share_article line (no offer) stored NULL happily and only detonated
-        # later, at list/invoice time.
+        # NB the arithmetic below sits behind ``if offer:``, so without this a
+        # share_article line (no offer) would store NULL and only fail later,
+        # at list/invoice time.
         if amount is None:
             amount = Decimal("0")
 
@@ -621,7 +621,7 @@ class OrderContentService:
                 pricing_date = date_from_order(order)
                 pricing = crate_type.get_pricing_on_date(pricing_date)
                 CrateOrderContent.objects.filter(order_content=order_content).delete()
-                # BL-6: only spawn a crate row for a non-zero line — mirrors the
+                # Only spawn a crate row for a non-zero line — mirrors the
                 # update path's `if new_amount > 0` guard so create + update leave
                 # identical crate artefacts (a zero-amount line gets no dead
                 # amount-0 crate row + no stray empty VAT bucket downstream).
@@ -777,8 +777,7 @@ class OrderContentService:
 
         # Same canonical entry as the create path. The helper wipes the
         # existing theoreticals + ORDERCONTENT movements before
-        # rebuilding, so the per-OC ``_recreate_*`` helpers we used to
-        # call inline are now superseded.
+        # rebuilding.
         from .recompute import recompute_order_contents
 
         recompute_order_contents([order_content.id])
@@ -974,11 +973,9 @@ class OrderContentService:
                 )
             )
 
-        # Batch the per-line Forecast lookup (was one query per order content).
-        # The per-line filter omitted ``unit`` and used ``.first()`` (which, with
-        # no Meta.ordering on Forecast, orders by pk), so index by the
-        # (year, week, share_article, size) tuple keeping the lowest-pk row —
-        # exactly what ``.filter(...).first()`` returned. ``size`` is only a
+        # Batch the Forecast lookup into one query for all order contents. Index
+        # by the (year, week, share_article, size) tuple — ``unit`` is not part of
+        # the match — keeping the lowest-pk row per tuple. ``size`` is only a
         # dict key here, so NULL sizes match cleanly (no ``size__in`` NULL drop).
         forecast_article_ids: set = set()
         forecast_years: set = set()

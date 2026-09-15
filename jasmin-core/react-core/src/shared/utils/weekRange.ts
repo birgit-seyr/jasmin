@@ -4,11 +4,9 @@ import { toApiDate } from "./apiDate";
 /**
  * Is the selected ISO week more than one week in the past (i.e. read-only)?
  *
- * Mirrors exactly what ``WeekSelector`` used to emit via ``onPastChange``: a
- * week counts as "past" once it is >1 week behind the current week. Consumers
- * derive this directly from the year/week state they already own instead of
- * receiving it back through an effect-driven callback. A ``null`` week is not
- * past (matches the selector's previous no-emit behaviour).
+ * A week counts as "past" once it is >1 week behind the current week.
+ * Consumers derive this directly from the year/week state they already own.
+ * A ``null`` week is not past.
  */
 export function isWeekInPast(
   selectedYear: number | null | undefined,
@@ -20,8 +18,7 @@ export function isWeekInPast(
 }
 
 /**
- * Is the selected year before the current year? Mirrors what ``YearSelector``
- * used to emit via ``onPastChange``.
+ * Is the selected year before the current year?
  */
 export function isYearInPast(
   selectedYear: number | null | undefined,

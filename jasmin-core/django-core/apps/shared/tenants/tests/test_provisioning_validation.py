@@ -74,7 +74,7 @@ class TestValidateAdminPassword:
 
 
 # --------------------------------------------------------------------------- #
-# provision_tenant enforces the guards itself (TEN-2)                          #
+# provision_tenant enforces the guards itself                                  #
 # Each raises in the validation block BEFORE any Tenant/Domain/schema write.   #
 # --------------------------------------------------------------------------- #
 
@@ -109,7 +109,7 @@ class TestProvisionTenantGuards:
 
 
 # --------------------------------------------------------------------------- #
-# TEN-1 (HIGH): a pre-existing schema must be refused up front — never         #
+# A pre-existing schema must be refused up front — never                       #
 # provisioned into, never DROP-CASCADE'd by the self-cleaning failure path.    #
 # --------------------------------------------------------------------------- #
 

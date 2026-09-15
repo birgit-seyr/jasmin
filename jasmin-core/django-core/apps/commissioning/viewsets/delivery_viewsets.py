@@ -389,7 +389,7 @@ class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         station_day = serializer.save()
         DefaultShareContentService.materialize_for_new_station_day(station_day)
 
-        # SUC-2: creating a station-day for an EXISTING (station, day) pair runs
+        # Creating a station-day for an EXISTING (station, day) pair runs
         # TimeBoundMixin.handle_succession, which CLOSES the open predecessor at
         # valid_from-1 — but nothing re-points the future ShareDeliveries /
         # CapacityReservations already materialized against it. Occupancy is
@@ -495,7 +495,8 @@ class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             recompute_shares(affected_share_ids)
 
     def perform_update(self, serializer: DeliveryStationDaySerializer) -> None:
-        # Mirror SUC-5 for station-days: a standalone close/shorten via a direct
+        # Mirror the SharesDeliveryDay guard for station-days: a standalone
+        # close/shorten via a direct
         # PATCH would strand this DSD's future ShareDeliveries / CapacityReservations
         # — the create/succession path migrates them (perform_create above), a bare
         # close does not. Block it; the office should succeed via a NEW station-day.

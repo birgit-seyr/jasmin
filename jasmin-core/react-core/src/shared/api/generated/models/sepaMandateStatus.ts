@@ -11,7 +11,7 @@
 
 Deliberately excludes the bank identifiers (IBAN / account holder) so a
 bulk read neither decrypts nor exposes bank PII, and — unlike the full
-``BillingProfileSerializer`` list — must NOT trip the SEC-1 bank-identifier
+``BillingProfileSerializer`` list — must NOT trip the bank-identifier
 audit trail. ``has_active_sepa_mandate`` mirrors ``is_sepa_ready``; the
 per-subscription "active during the term" refinement is applied by the
 caller (it needs the subscription's dates).

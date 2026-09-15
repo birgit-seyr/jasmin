@@ -193,8 +193,8 @@ class TestCreateMovements:
         """When available stock (3) is LESS than demand (10), the loop deducts
         what's there and the uncovered remainder (7) is recorded against
         short-term storage — total recorded outflow == the full demand (-10).
-        Before the fix the uncovered amount was silently dropped, leaving
-        theoretical_current_stock too high (COR-16)."""
+        Silently dropping the uncovered amount would leave
+        theoretical_current_stock too high."""
         short = StorageFactory(is_short_term_harvest_storage=True)
         s2 = StorageFactory()
         article = ShareArticleFactory()
@@ -229,11 +229,11 @@ class TestCreateMovements:
         return totals
 
     def test_sibling_sources_share_per_storage_stock(self, tenant):
-        """goods-flow audit #3: two sources for the same (article, unit, size) in
+        """Two sources for the same (article, unit, size) in
         the SAME snapshot draw from ONE shared per-storage pool. Storage X holds
         10; two demands of 6 → X depletes to 0 (−10 total, drawn once) and the
-        uncovered 2 spills to short-term (−2). Before the fix each sibling
-        allocated against the full 10 → −6/−6 on X (a phantom −2 parked there)."""
+        uncovered 2 spills to short-term (−2). Allocating each sibling against
+        the full 10 would give −6/−6 on X (a phantom −2 parked there)."""
         short = StorageFactory(is_short_term_harvest_storage=True)
         x = StorageFactory()
         article = ShareArticleFactory()
@@ -295,8 +295,8 @@ class TestCreateMovements:
 
 
 # ---------------------------------------------------------------------------
-# REF-3/4: ShareContent movement-capture helper — single source of truth for the
-# "both movement halves" filter once copy-pasted across 5 delete/replace paths.
+# ShareContent movement-capture helper — single source of truth for the
+# "both movement halves" filter used by the delete/replace paths.
 # ---------------------------------------------------------------------------
 def _q_lookup_paths(node) -> set[str]:
     """Flatten a Q tree to the set of lookup paths (left-hand sides) it uses."""

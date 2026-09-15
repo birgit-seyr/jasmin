@@ -1,4 +1,4 @@
-"""COR-25: a member whose linked user was deactivated (e.g. via
+"""A member whose linked user was deactivated (e.g. via
 ``reject_and_notify``) must be re-invitable through ``send_invitation`` —
 it should resend instead of dead-ending with the misleading
 ``MemberUserAlreadyActive`` ("already has an active user account") for a user
@@ -47,10 +47,10 @@ class TestSendInvitationReinvite:
             MemberService().send_invitation(member, admin_user=office)
 
     def test_unlinked_member_with_email_is_invited(self, tenant):
-        """Regression: send_invitation passed ``language=`` to
-        ``create_user_with_invitation`` (which only accepts ``user_language=``),
-        raising TypeError for any member without a linked user — i.e. every
-        brand-new member invite. It must now provision the user + invitation."""
+        """send_invitation must provision the user + invitation for a member
+        without a linked user (every brand-new member invite).
+        ``create_user_with_invitation`` only accepts ``user_language=`` — passing
+        ``language=`` raises TypeError."""
         member = MemberFactory(user=None, email="newmember@example.com")
         office = JasminUserFactory(roles=["office"])
 

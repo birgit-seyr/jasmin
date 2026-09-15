@@ -69,7 +69,7 @@ export default function ChargesAbos() {
     return p;
   }, [selectedYear, selectedMonth, selectedMember]);
 
-  // UI-3: filter-driven table — use isFetching (not isLoading) so revisiting a
+  // Filter-driven table — use isFetching (not isLoading) so revisiting a
   // previously-loaded year/month (cached, staleTime:0) still shows the spinner
   // while it refetches.
   const { data, isFetching, refetch } = usePaymentsChargeSchedulesList(params);

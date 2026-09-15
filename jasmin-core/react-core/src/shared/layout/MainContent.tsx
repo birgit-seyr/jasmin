@@ -10,7 +10,7 @@ export default function MainContent() {
 
   return (
     <Content
-      // A11Y-27: skip-to-content target. tabIndex={-1} lets the skip link move
+      // Skip-to-content target. tabIndex={-1} lets the skip link move
       // focus here programmatically without adding a Tab stop.
       id="main-content"
       tabIndex={-1}

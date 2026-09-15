@@ -1,14 +1,13 @@
 """Explicit Member ↔ JasminUser.roles synchronisation.
 
-Replaces the former ``post_save`` / ``pre_delete`` signal handlers in
-``apps/commissioning/signals.py`` — project convention is explicit
-service calls over signals. Called from ``Member.save()`` and
+No ``post_save`` / ``pre_delete`` signal handlers — project convention is
+explicit service calls over signals. Called from ``Member.save()`` and
 ``Member.delete()``, the single funnel every instance-level
 create/update/delete path goes through.
 
 Queryset bulk operations (``Member.objects.filter(...).delete()`` /
-``.update(user=...)``) bypass model methods entirely — unlike the old
-``pre_delete`` signal, which also fired on queryset deletes. The only
+``.update(user=...)``) bypass model methods entirely — unlike a ``pre_delete``
+signal, which also fires on queryset deletes. The only
 such call site is the demo-seed ``_clean`` command
 (``seed_user_status_demo``), where the skipped role retraction is moot
 because it deletes the linked JasminUser rows immediately afterwards.

@@ -380,10 +380,9 @@ class TestAxesPurge:
 
     def test_access_log_records_deleted(self, tenant):
         """SUCCESSFUL logins (``AccessLog``) carry the subject's email
-        as ``username`` plus their IP and user-agent in plaintext. They
-        were left behind by the old purge (which only touched the two
-        failed-login tables), so Art. 17 anonymization never removed the
-        login history. Now they go too — but only the subject's rows."""
+        as ``username`` plus their IP and user-agent in plaintext, so Art. 17
+        anonymization must purge them alongside the failed-login tables —
+        but only the subject's rows."""
         user = JasminUserFactory(email="loginhistory@example.com")
         AccessLog.objects.create(
             username="loginhistory@example.com",
@@ -413,7 +412,7 @@ class TestAxesPurge:
         logged in as ``Casey@Example.COM`` lands rows whose ``username``
         is mixed-case. The subject's canonical email is lowercase, so an
         exact ``username__in`` purge would leave those rows behind. The
-        purge matches case-insensitively now — a login-history record
+        purge matches case-insensitively — a login-history record
         can't survive deletion just because of letter-casing."""
         user = JasminUserFactory(email="casey@example.com")
 
@@ -474,7 +473,7 @@ class TestTransactionalAtomicity:
 
 @pytest.mark.django_db
 class TestAvatarAnonymization:
-    """GDPR-3: anonymisation must remove the uploaded avatar FILE from storage,
+    """Anonymisation must remove the uploaded avatar FILE from storage,
     not just NULL the column (the image is a photo of the data subject)."""
 
     def test_avatar_file_deleted_on_anonymize(self, tenant):

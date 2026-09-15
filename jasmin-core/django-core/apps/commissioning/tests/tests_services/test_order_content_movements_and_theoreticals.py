@@ -480,7 +480,7 @@ class TestDeleteCascadesRelatedObjects:
 
     def test_delete_removes_all_related_at_once(self, tenant):
         """Purchased article WITH a forecast → a PURCHASE theoretical only, not a
-        harvest (mutually exclusive — goods-flow audit #4). Deleting the order
+        harvest (mutually exclusive). Deleting the order
         content then cascades to the purchase + movements."""
         storage = StorageFactory(is_short_term_harvest_storage=True)
         reseller = ResellerFactory()

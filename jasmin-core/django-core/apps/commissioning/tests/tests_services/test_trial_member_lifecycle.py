@@ -179,9 +179,8 @@ class TestConvertTrialMemberServiceDirect:
     def test_double_call_is_idempotent(self, tenant):
         member = MemberFactory(member_number=None, is_trial=True)
         assert convert_trial_member_on_first_coop_share(member) is True
-        # The service converts the row in the DB but — since the BIZ-2 row-lock
-        # re-fetch — no longer mutates the passed instance in place; read the
-        # stamp back from the DB.
+        # The service converts a row-locked re-fetch of the member, so it doesn't
+        # mutate the passed instance in place; read the stamp back from the DB.
         member.refresh_from_db()
         first_stamp = member.trial_converted_at
 
@@ -192,8 +191,8 @@ class TestConvertTrialMemberServiceDirect:
 
 @pytest.mark.django_db(transaction=True)
 class TestTrialConvertedEmail:
-    """P2-1 (commissioning.trial_converted): the trial→full transition
-    schedules a welcome email via ``on_commit``. A successful flip
+    """The trial→full transition schedules a welcome email
+    (commissioning.trial_converted) via ``on_commit``. A successful flip
     fires; a no-op call (already full) does not; a rollback discards
     the scheduled dispatch.
     """

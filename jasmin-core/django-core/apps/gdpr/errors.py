@@ -2,8 +2,7 @@
 
 Translated to HTTP responses by ``core.exception_handler`` — views do
 not need to catch them. Use the closest existing class; add new ones
-freely when a new failure mode is introduced (e.g. Step 5's
-``PreviewUnavailable``).
+freely when a new failure mode is introduced.
 """
 
 from __future__ import annotations

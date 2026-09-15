@@ -63,11 +63,10 @@ class TestTenantBinding:
         assert "tenant" in str(exc.value).lower()
 
     def test_unresolvable_schema_fails_closed(self, tenant, rf, auth, monkeypatch):
-        """SEC-13: when the connection schema is falsy (unresolved), the
-        binding check must FAIL CLOSED — reject the token rather than
-        silently skip the check (the old ``if current_schema and ...`` guard
-        let a falsy schema through). Matches the refresh path, which already
-        raises here."""
+        """When the connection schema is falsy (unresolved), the binding check
+        must FAIL CLOSED — reject the token rather than silently skip the check
+        (an ``if current_schema and ...`` guard would let a falsy schema
+        through). Matches the refresh path, which also raises here."""
         u = JasminUserFactory()
         raw = _mint(u, tenant_id=tenant.schema_name)
         # Force an unresolvable (falsy) schema for the duration of the call.

@@ -158,8 +158,8 @@ export function PDFHashBar({
 }: {
   documentHash?: string;
   finalizedAt?: string | null;
-  /** Tenant display date format, threaded from the caller. Default keeps the
-   *  legacy DD.MM.YYYY. The time half stays HH:mm. */
+  /** Tenant display date format, threaded from the caller. Defaults to
+   *  DD.MM.YYYY. The time half stays HH:mm. */
   dateFormat?: string;
   t: TFunction;
 }) {

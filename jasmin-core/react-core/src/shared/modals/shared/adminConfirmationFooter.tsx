@@ -19,9 +19,8 @@ interface AdminConfirmationFooterArgs {
 /**
  * Footer for the admin-confirmation modals (Members / Abos / CoopShares).
  * Terminal rows get a single Close; otherwise Cancel + optional Reject +
- * Confirm. The per-modal shell content/width and the (already shared) status
- * banner / audit / tag stay in each modal — only this 3-state footer was
- * byte-duplicated.
+ * Confirm. The per-modal shell content/width and the (separately shared) status
+ * banner / audit / tag stay in each modal.
  */
 export function adminConfirmationFooter({
   isTerminal,

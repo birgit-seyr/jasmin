@@ -33,10 +33,9 @@ urlpatterns = [
     # CSP violation reports (browsers POST here when a CSP directive fails).
     path("api/csp-report/", csp_report_view, name="csp-report"),
     # Super admin endpoints. Single mount on purpose: a second mount of
-    # the same include (the old ``api/management/``) duplicated every
-    # operation in the public schema with colliding operationIds, and
-    # made ``reverse()`` ambiguous (same ``app_name``, no instance
-    # namespaces). Nothing ever called the alias.
+    # the same include duplicates every operation in the public schema
+    # with colliding operationIds, and makes ``reverse()`` ambiguous
+    # (same ``app_name``, no instance namespaces).
     path("api/super-admin/", include("apps.shared.super_admin.urls")),
     # Super-admin support tickets. Second include under the same prefix (Django
     # falls through to it for /api/super-admin/support-tickets/…); kept in the

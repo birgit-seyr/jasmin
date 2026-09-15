@@ -102,7 +102,7 @@ class TestLoginEndpoint:
         assert cookie["path"] == TENANT_REFRESH_COOKIE_PATH
 
     def test_login_stamps_last_login(self, tenant):
-        # Regression: the custom login flow mints tokens directly instead of
+        # The custom login flow mints tokens directly instead of
         # going through SimpleJWT's TokenObtainPairSerializer, so
         # ``SIMPLE_JWT["UPDATE_LAST_LOGIN"]`` never fires. ``last_login`` must be
         # stamped explicitly on success — otherwise the admin user list shows
@@ -431,7 +431,7 @@ class TestAdminUsersGating:
 
     def test_admin_create_user(self, tenant):
         admin = JasminUserFactory(roles=[Role.ADMIN])
-        # roles in the payload → step-up gated (SEC-2).
+        # roles in the payload → step-up gated.
         client = _step_up_client(admin)
         with patch("apps.shared.invitations._send_invitation_email"):
             resp = client.post(
@@ -576,7 +576,7 @@ class TestEndToEndSelfRegistration:
 class TestEndToEndInvitation:
     def test_full_flow(self, tenant):
         admin = JasminUserFactory(roles=[Role.ADMIN])
-        # roles in the create payload → step-up gated (SEC-2).
+        # roles in the create payload → step-up gated.
         admin_client = _step_up_client(admin)
 
         # 1. Admin creates the user (which mints an invitation).

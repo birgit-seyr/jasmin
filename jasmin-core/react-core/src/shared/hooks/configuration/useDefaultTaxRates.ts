@@ -25,9 +25,7 @@ export interface DefaultTaxRates {
  * Single source for the default tax rates applied to new pricing rows.
  * Resolves the tenant's configured ``default_tax_rate_articles`` /
  * ``default_tax_rate_crates`` settings, falling back to the platform
- * defaults when a setting is unset — replacing the inline ``?? 7`` /
- * ``?? 19`` fallbacks that used to be duplicated across the price modals,
- * the invoice/delivery-note modals and the orders data hook.
+ * defaults when a setting is unset.
  */
 export function useDefaultTaxRates(): DefaultTaxRates {
   const { getSetting } = useTenant();

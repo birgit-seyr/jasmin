@@ -4,12 +4,12 @@ Every commissioning "member state changed → email the member" flow
 (welcome / approval / rejection / cancellation / trial-conversion)
 shares the same plumbing: the recipient is ``member.email``, the
 related object is the member, the log reference is ``member=<id>``, and
-the mail renders in the member's stored language when known (EML-9).
+the mail renders in the member's stored language when known.
 Only the template ``slug``, the context, and the per-site log-event
 names differ.
 
 :func:`schedule_member_email` centralises that plumbing and delegates
-the transaction-aware dispatch (P1-3: fire on ``transaction.on_commit``
+the transaction-aware dispatch (fire on ``transaction.on_commit``
 so a rolled-back state change never emails the member) to
 :func:`apps.shared.deferred_email.schedule_deferred_email`.
 """
@@ -52,7 +52,7 @@ def schedule_member_email(
     only after a genuinely successful send (e.g. stamping a tracker).
     """
     member_id = member.id
-    # EML-9: render in the linked user's stored language when known
+    # Render in the linked user's stored language when known
     # (captured as a plain scalar before the on_commit closure; None →
     # tenant-language fallback inside send_email).
     recipient_language = (

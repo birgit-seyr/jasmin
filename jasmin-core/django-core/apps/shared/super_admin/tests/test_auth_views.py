@@ -276,9 +276,9 @@ class TestRefresh:
 
     def test_inactive_account_refresh_rejected(self, factory, super_admin):
         """A super-admin deactivated AFTER login must not be able to renew
-        their session. The old code trusted only the ``is_super_admin``
-        claim and never loaded the row, so a disabled account kept minting
-        fresh access tokens off its refresh cookie for the token lifetime."""
+        their session: trusting only the ``is_super_admin`` claim without
+        loading the row would let a disabled account keep minting fresh
+        access tokens off its refresh cookie for the token lifetime."""
         refresh = self._build_refresh(super_admin)
         request = factory.post("/auth/refresh/")
         request.COOKIES[SUPER_ADMIN_REFRESH_COOKIE] = str(refresh)
@@ -303,9 +303,9 @@ class TestRefresh:
 @pytest.mark.django_db
 class TestSuperAdminJWTAuthentication:
     """``SuperAdminJWTAuthentication.get_user`` fully overrides the base
-    SimpleJWT ``get_user`` and used to drop its ``is_active`` check, so a
-    super-admin disabled or deleted after login kept full platform access
-    for the token lifetime. The auth class now mirrors the base class."""
+    SimpleJWT ``get_user``, so it must repeat its ``is_active`` check — else a
+    super-admin disabled or deleted after login keeps full platform access
+    for the token lifetime."""
 
     def _token(self, super_admin):
         from rest_framework_simplejwt.tokens import AccessToken
@@ -347,7 +347,7 @@ class TestSuperAdminJWTAuthentication:
 
 
 # ---------------------------------------------------------------------------
-# Rate-limit wiring (SEC-7)
+# Rate-limit wiring
 # ---------------------------------------------------------------------------
 
 
@@ -381,10 +381,9 @@ class TestRateLimitWiring:
 @pytest.mark.django_db
 class TestLoginThrottleFires:
     """End-to-end proof the rate limit engages — stronger than the wiring
-    assertions above. This codebase has a documented history (the 2026-06
-    accounts fix) of the throttle-scope wiring shipping as a
-    SILENT no-op with green CI, so the highest-privilege login gets a real
-    429 test. The autouse ``_clear_throttle_cache`` fixture gives each test
+    assertions above: throttle-scope wiring can ship as a SILENT no-op with
+    green CI, so the highest-privilege login gets a real 429 test. The autouse
+    ``_clear_throttle_cache`` fixture gives each test
     a fresh bucket.
 
     Direct view-function dispatch (not ``reverse()`` + ``APIClient``): the

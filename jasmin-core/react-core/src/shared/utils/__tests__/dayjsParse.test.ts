@@ -3,9 +3,8 @@ import { describe, expect, it } from "vitest";
 import { toValidDayjs } from "../dayjsParse";
 
 /**
- * Regression guard for the intermittent production crash where AntD's
- * DatePicker received a *truthy but invalid* dayjs and blew up inside
- * rc-picker with "can't access property 'date', <x> is null".
+ * Guards against AntD's DatePicker receiving a *truthy but invalid* dayjs,
+ * which crashes rc-picker with "can't access property 'date', <x> is null".
  *
  * The contract: anything that doesn't parse to a valid date must become
  * ``null`` (picker falls back to today) — never a truthy Invalid Date.

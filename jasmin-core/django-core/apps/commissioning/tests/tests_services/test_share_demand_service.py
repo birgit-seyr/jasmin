@@ -301,10 +301,10 @@ class TestSubscriptionDemandBackend:
         variation = ShareTypeVariationFactory(share_type=share_type)
         day = SharesDeliveryDayFactory(day_number=2)
         sd = DeliveryStationDayFactory(delivery_day=day)
-        # Capacity is in SHARES (COR-15): two deliveries from subscriptions of
-        # quantity 3 and 5 occupy 3+5=8 slots — NOT 2 rows. The old method
-        # counted rows, letting a capped station-day overfill with multi-
-        # quantity subscriptions.
+        # Capacity is in SHARES: two deliveries from subscriptions of
+        # quantity 3 and 5 occupy 3+5=8 slots — NOT 2 rows. Counting rows
+        # would let a capped station-day overfill with multi-quantity
+        # subscriptions.
         _make_subscription_delivery(
             variation=variation,
             delivery_day=day,
@@ -449,7 +449,7 @@ class TestShareDemandServiceDispatcher:
             assert ShareDemandService.quantity_for_share(share) == 11
 
     def test_resolve_backend_falls_back_to_schema_name(self, tenant):
-        # TEN-1: on the Huey worker, connection.tenant under schema_context is a
+        # On the Huey worker, connection.tenant under schema_context is a
         # FakeTenant (not a Tenant model), so get_current_settings(FakeTenant)
         # matches nothing and the backend silently wrongly falls back to
         # subscriptions. _resolve_backend must resolve the real Tenant by
@@ -486,9 +486,8 @@ class TestShareDemandServiceDispatcher:
         finally:
             connection.tenant = original
 
-        # With the fix, the real tenant's uploads_weekly_share_amount=True is
-        # found via schema_name → external backend (old code returned the
-        # subscription backend here).
+        # The real tenant's uploads_weekly_share_amount=True is found via
+        # schema_name → external backend (not the subscription backend).
         assert isinstance(backend, ExternalDemandBackend)
 
 

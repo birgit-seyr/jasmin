@@ -83,8 +83,9 @@ def _station_with_deliveries(*, quantity=1, **fees):
 
 @pytest.fixture(autouse=True)
 def _freeze_clock():
-    # Fixed fixture dates predate the materialisation/capacity past-week
-    # clamp; freeze "now" to that week so the clamp is a no-op here.
+    # The fixed fixture dates would count as past weeks, which the
+    # materialisation/capacity past-week clamp skips; freeze "now" to that week so
+    # the clamp is a no-op here.
     with time_machine.travel(datetime.date(2026, 7, 6), tick=False):
         yield
 

@@ -10,8 +10,8 @@
  * ``member_string`` is a human-readable label, same contract as
 :class:`MemberLoanSerializer`. It must be a ``SerializerMethodField``:
 a plain ``CharField(read_only=True)`` has no matching model attribute,
-so DRF silently dropped the key from every payload (SkipField) while
-the schema declared it present.
+so DRF would silently drop the key from every payload (SkipField) while
+the schema declares it present.
  */
 export interface CoopShare {
   readonly id?: string;

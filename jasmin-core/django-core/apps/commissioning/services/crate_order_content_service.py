@@ -117,8 +117,7 @@ class CrateOrderContentService:
             return effective_crate_tax_rate(crate_type, pricing_date)
 
         summary = summarize_crate_items(rows, resolve_tax_rate=_resolve_tax_rate)
-        # Hide fully-returned / net-zero crate groups (mirrors the prior
-        # total-amount > 0 filter).
+        # Hide fully-returned / net-zero crate groups.
         return [row for row in summary if row["amount"] and row["amount"] > 0]
 
     @staticmethod
@@ -159,7 +158,7 @@ class CrateOrderContentService:
                 details={"id": str(crate_type_id)},
             ) from exc
         pricing = crate.get_pricing_on_date(pricing_date)
-        # BL-7: distinguish "not provided" (None) from an explicit 0 — a money
+        # Distinguish "not provided" (None) from an explicit 0 — a money
         # field must not treat a legitimate zero-deposit crate as unset. Mirrors
         # the `is None` tax_rate check below; `not Decimal("0")` is True and would
         # silently overwrite an intentional 0 with the dated pricing.

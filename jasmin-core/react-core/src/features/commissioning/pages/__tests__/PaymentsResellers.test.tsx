@@ -44,8 +44,8 @@ vi.mock("react-i18next", () => ({
 // direct property value inside the BulkActionButton stub below.
 const { notifyMock, isPastFlag } = vi.hoisted(() => ({
   notifyMock: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
-  // The page now derives ``isPast`` from ``isWeekInPast(year, week)`` instead
-  // of a WeekSelector ``onPastChange`` callback. Drive it via this flag.
+  // The page derives ``isPast`` from ``isWeekInPast(year, week)``. Drive it
+  // via this flag.
   isPastFlag: { value: false },
 }));
 vi.mock("@shared/utils", () => ({

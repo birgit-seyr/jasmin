@@ -34,9 +34,7 @@ function getFormatter(locale: string, decimals: number): Intl.NumberFormat {
 /**
  * Format a number for display in the given locale.
  *
- * Returns "" for nullish / empty / NaN input — matches the historical
- * `.toFixed()` call sites which all guard against falsy values with
- * `value ? ... : ""`.
+ * Returns "" for nullish / empty / NaN input.
  */
 export function formatNumber(
   value: number | string | null | undefined,

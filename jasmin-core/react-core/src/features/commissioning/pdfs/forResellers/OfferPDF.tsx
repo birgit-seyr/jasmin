@@ -42,8 +42,7 @@ const styles = {
     // the delivery-note / invoice PDFs' ``marginTop: 40`` so all three
     // reseller documents share the same relative layout below the title —
     // and so a document with EMPTY entry lines (spacer only) still clears
-    // the title instead of riding up under it. (Was 10, which left the
-    // offers table crowding the title's lower edge.)
+    // the title instead of riding up under it.
     entryBlock: {
       width: "100%",
       marginTop: 40,
@@ -124,7 +123,7 @@ interface OfferPDFProps {
   currencySymbol?: string;
   /**
    * Display date format threaded from the caller's ``useDateFormat()``;
-   * default keeps legacy ``DD.MM.YYYY``.
+   * defaults to ``DD.MM.YYYY``.
    */
   dateFormat?: string;
   /**

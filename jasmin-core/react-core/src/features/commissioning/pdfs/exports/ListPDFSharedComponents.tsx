@@ -43,7 +43,7 @@ const headerStyles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   // Empty bordered square for "done"/"✓" columns — something to physically
-  // tick on the printed sheet (the old layout left the cell blank).
+  // tick on the printed sheet.
   tickBox: {
     width: 11,
     height: 11,
@@ -92,13 +92,13 @@ const headerStyles = StyleSheet.create({
   },
 });
 
-// NOTE: ``ListPDFGenerator`` used to live in this file. It got moved
-// to ./ListPDFGenerator.tsx so the click-to-load button doesn't drag
-// ``@react-pdf/renderer`` (eagerly imported in this file for the
-// header/footer helpers) into every page's eager bundle. Header and
-// footer remain here because they're only used INSIDE PDF document
-// components, which are themselves dynamically imported — so their
-// transitive @react-pdf dependency never leaks into the eager bundle.
+// NOTE: ``ListPDFGenerator`` lives in ./ListPDFGenerator.tsx, not here,
+// so the click-to-load button doesn't drag ``@react-pdf/renderer``
+// (eagerly imported in this file for the header/footer helpers) into
+// every page's eager bundle. Header and footer stay here because they're
+// only used INSIDE PDF document components, which are themselves
+// dynamically imported — so their transitive @react-pdf dependency never
+// leaks into the eager bundle.
 
 // ─── PDF Footer with page numbers ──────────────────────────────────────────
 
@@ -188,9 +188,8 @@ export function TickBox() {
 
 // ─── Variations totals card ────────────────────────────────────────────────
 
-/** One row in the ``VariationsTotalsCard``. Previously declared
- * independently in HarvestingListPDF and PackingListPDF; consolidated
- * here so the type and the renderer stay in sync. ``id`` accepts
+/** One row in the ``VariationsTotalsCard``, declared next to its renderer
+ * so the type and the renderer stay in sync. ``id`` accepts
  * ``string | number`` because the upstream ``VariationsTotalEntry``
  * type in the page layer uses numeric ids — used only as a React
  * key in the renderer, where both are valid. */

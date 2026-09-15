@@ -1,4 +1,4 @@
-"""Atomicity contract for member lifecycle emails (P1-3).
+"""Atomicity contract for member lifecycle emails.
 
 `MemberService.confirm_and_notify` / `reject_and_notify` schedule
 their notification email via ``transaction.on_commit``. The contract

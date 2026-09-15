@@ -31,9 +31,7 @@ interface BaseListPDFProps {
  * Built exactly like the hand-rolled list PDFs (WashingListPDF et al.): one
  * ``Page`` with the shared ``ListPDFHeader``/``ListPDFFooter``, a ``fixed``
  * table header that repeats, and rows that flow with react-pdf's natural
- * pagination. (It previously went through a bespoke ``PaginatedDocument``
- * that sliced the data into pages by hand and budgeted vertical space for
- * the first-page content — unnecessary now that the table just wraps.)
+ * pagination.
  */
 const BaseListPDF = ({
   data,

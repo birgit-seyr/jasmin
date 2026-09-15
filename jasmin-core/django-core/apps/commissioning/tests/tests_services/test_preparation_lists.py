@@ -606,7 +606,7 @@ class TestPlanningVariationCountsExcludeJokers:
 class TestPhysicalVariationTotalsQueryCount:
     """``get_physical_share_type_variation_totals`` must aggregate demand in a
     constant number of queries — ONE ShareDelivery scan total, not one scan
-    per physical variation (the old per-variation loop was the N+1)."""
+    per physical variation (a per-variation loop would be N+1)."""
 
     def _seed(self, sdd, station_day, n_variations: int) -> None:
         for _ in range(n_variations):
@@ -668,7 +668,7 @@ class TestPhysicalVariationTotalsQueryCount:
         assert all(r["total_quantity"] == 2 for r in res_large)
 
         # Perf: a single ShareDelivery aggregation regardless of variation
-        # count (was one scan per variation).
+        # count (not one scan per variation).
         assert small == 1, f"expected 1 ShareDelivery scan, got {small}"
         assert large == 1, (
             f"ShareDelivery scanned per variation: {large} scans for 6 "

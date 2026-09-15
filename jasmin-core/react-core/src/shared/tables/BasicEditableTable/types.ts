@@ -227,8 +227,8 @@ export interface EditableTableProps<T extends TableRecord = TableRecord> {
    * Pass `isFetching` for filter-driven tables (a spinner on every
    * week/year/filter change, even when the new key is cached) or `isLoading`
    * for plain lists (a spinner only on the genuine first load). This is the
-   * single supported way to drive the overlay — `loading` is no longer
-   * forwarded to the inner AntD Table via prop spread.
+   * single supported way to drive the overlay — `loading` is not forwarded
+   * to the inner AntD Table via prop spread.
    */
   loading?: boolean;
   onDataChange?: (data: T[]) => void;

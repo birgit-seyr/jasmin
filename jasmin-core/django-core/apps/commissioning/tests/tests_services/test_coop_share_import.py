@@ -99,7 +99,7 @@ class TestCoopShareImportPaymentFields:
         assert timezone.localtime(share.paid_at).date() == datetime.date(2024, 3, 18)
 
     def test_both_stay_optional(self, tenant):
-        """Blank cells keep the pre-existing behaviour — an unpaid share."""
+        """Blank cells keep the default behaviour — an unpaid share."""
         MemberFactory(member_number=556)
 
         result = import_rows_from_csv("coop_share", _pay_csv("556,1,100,false,,,"))

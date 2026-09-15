@@ -722,9 +722,9 @@ export function useAbosColumns({
         // Backend-annotated count of materialised ``ShareDelivery``
         // rows for the subscription, excluding joker-taken weeks
         // (see ``_build_subscription_queryset`` annotation). This is
-        // the source of truth — replaces the prior frontend
-        // calendar count which double-counted fortnightly cycles
-        // (``ODD_WEEKS`` / ``EVEN_WEEKS``) and ignored jokers.
+        // the source of truth — a frontend calendar count would
+        // double-count fortnightly cycles (``ODD_WEEKS`` /
+        // ``EVEN_WEEKS``) and ignore jokers.
         //
         // ``0`` is a meaningful value: a draft (admin_confirmed=False)
         // subscription has not been materialised yet, so the row

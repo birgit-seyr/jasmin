@@ -2,8 +2,8 @@
 
 The mixin adds a dynamic ``storage_<id>`` boolean per active storage to each
 serialized row. It must fetch the active-storage set ONCE per response, not
-once per row — the previous ``build_storage_fields`` → ``_get_active_storages``
-call fired a Storage query for every row in ``to_representation``.
+once per row — calling ``build_storage_fields`` → ``_get_active_storages`` per
+row fires a Storage query for every row in ``to_representation``.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""SEC-14: ``TenantSettings`` and ``TenantEmailConfig`` live in SHARED_APPS
+"""``TenantSettings`` and ``TenantEmailConfig`` live in SHARED_APPS
 (the public schema), so they are NOT protected by django-tenants schema
 isolation — every read MUST carry a tenant scope. These tests assert the
 scoped chokepoints (``get_current_settings`` / ``get_active_for_schema``)
@@ -77,7 +77,7 @@ class TestSharedConfigTenantScoping:
         assert a.id != b.id
 
     def test_get_current_settings_resolves_fake_tenant_by_schema_name(self, tenant):
-        """TEN-2: a schema-bearing stand-in (the django-tenants FakeTenant that
+        """A schema-bearing stand-in (the django-tenants FakeTenant that
         ``schema_context`` puts on a Huey worker / management command) resolves
         to the real Tenant instead of str()-coercing the CharField-PK FK and
         silently returning None — which callers read as 'no settings' and fall
@@ -95,7 +95,7 @@ class TestSharedConfigTenantScoping:
         assert resolved.tenant_id == tenant.id
 
     def test_get_current_settings_rejects_stand_in_without_schema(self, tenant):
-        """TEN-2 fail-closed: a non-Tenant with no ``schema_name`` is a
+        """Fail-closed: a non-Tenant with no ``schema_name`` is a
         programming error, not 'no settings' — raise instead of a misleading
         None."""
         with pytest.raises(TypeError):

@@ -19,8 +19,8 @@ from ..errors import InvalidAmount
 AMOUNT_KEY_PREFIX = "amount_"
 
 # ``day_<day_id>_variation_<variation_id>[_tour_<n>|_station_<id>]`` — harvest
-# share-planning + backup cells. Hyphen-tolerant superset of the historical
-# per-path patterns; the optional tour/station groups make it match the plain
+# share-planning + backup cells. Hyphen-tolerant; the optional tour/station
+# groups make it match the plain
 # day/variation key too (the backup path just ignores groups 3/4).
 DAY_VARIATION_RE = re.compile(
     r"day_([a-zA-Z0-9-]+)_variation_([a-zA-Z0-9-]+)(?:_(tour|station)_([a-zA-Z0-9-]+))?"

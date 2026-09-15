@@ -81,7 +81,7 @@ class TestOfficeCoopShareAmount:
         assert share.amount_of_coop_shares == Decimal("2")
 
     def test_row_stored_before_the_rule_stays_editable(self, api_client, tenant):
-        # A fractional amount the office grid used to accept. Re-sending it
+        # Stored rows may still hold a fractional amount. Re-sending it
         # unchanged with a note edit must not force a rewrite of the amount.
         share = CoopShareFactory(
             admin_confirmed=False, amount_of_coop_shares=Decimal("1.50")

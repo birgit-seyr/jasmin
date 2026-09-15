@@ -1,4 +1,4 @@
-"""OFFER-2: partial unique constraint on the general-offer slot.
+"""Partial unique constraint on the general-offer slot.
 
 ``offer_unique_general_per_slot`` enforces at most one GENERAL offer (reseller
 IS NULL) per (year, delivery_week, share_article, unit, size, offer_group),

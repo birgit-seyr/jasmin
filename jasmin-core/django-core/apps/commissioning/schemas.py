@@ -109,11 +109,6 @@ def get_delivery_day_parameter(**overrides):
     )
 
 
-# SHARE_OPTION_PARAMETER — defined later in this file (line ~543).
-# An earlier copy lived here; Python's def re-binding silently kept the later
-# one so removing this stub is a no-op behaviour-wise.
-
-
 # STORAGE
 def get_storage_parameter(**overrides):
     """

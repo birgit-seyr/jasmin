@@ -167,12 +167,10 @@ describe("contact line", () => {
   });
 });
 
-// ── Removed affordances ─────────────────────────────────────────────────────
+// ── No inline account affordances ────────────────────────────────────────────
 //
-// Both the inline "Edit profile" button and the inline "Logout" button used
-// to live on this header. They have since been consolidated into the
-// top-right ``UserMenu`` (apps/react-core/src/components/layout/UserMenu.tsx)
-// so account-level affordances are consistent with the rest of the app.
+// "Edit profile" and "Logout" live in the top-right ``UserMenu``, not on this
+// header, so account-level affordances are consistent with the rest of the app.
 
 describe("no inline account affordances", () => {
   it("does NOT render an inline Edit button", () => {

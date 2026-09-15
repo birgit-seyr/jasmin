@@ -72,7 +72,7 @@ def authenticate_for_tenant(
     if not user:
         raise InvalidCredentials("Invalid credentials")
 
-    # SCO-1 (accepted tradeoff): the branches below return DISTINCT responses
+    # Accepted tradeoff: the branches below return DISTINCT responses
     # for a correct password — account-status (pending / deactivated / check
     # email), a 2FA challenge, or a 403 carrying a short-lived enrolment token.
     # That is a deliberate account-state / 2FA-state oracle: it is reachable
@@ -195,7 +195,7 @@ def refresh_access_token(
     if token_tenant != tenant_schema:
         raise TenantMismatch("Token does not belong to this tenant")
 
-    # GAP-1 session cut-off: reject any refresh minted before the user last
+    # Session cut-off: reject any refresh minted before the user last
     # revoked their sessions (password reset / logout-everywhere). Compared
     # against the token's ``iat`` — NOT OutstandingToken membership — so a
     # rotated token (whose new JTI was never registered as outstanding) is
@@ -203,7 +203,7 @@ def refresh_access_token(
     if not _refresh_iat_still_valid(refresh):
         raise InvalidToken("Session has been revoked. Please log in again.")
 
-    # AUTH-2: re-validate the account on every refresh. The GAP-1 iat cut-off
+    # Re-validate the account on every refresh. The iat cut-off
     # above only rejects tokens minted before an EXPLICIT revoke (password reset
     # / logout-all, which stamp ``sessions_revoked_at``); a mid-session admin
     # deactivation stamps nothing, so without this a deactivated user could keep
@@ -213,7 +213,7 @@ def refresh_access_token(
         raise InvalidToken("User is no longer active. Please log in again.")
 
     access = refresh.access_token
-    # AUTH-5: the access token minted from the refresh carries only claims that
+    # The access token minted from the refresh carries only claims that
     # live on the REFRESH token (tenant_id). Re-stamp the login-time access
     # claims (tenant_name, user_role) so a refreshed token is claim-identical to
     # a login-minted one — no pre/post-refresh divergence for code reading them.
@@ -285,7 +285,7 @@ def blacklist_refresh(refresh_token: str) -> None:
 
 
 def revoke_all_sessions(user: JasminUser) -> None:
-    """Invalidate every existing refresh token for ``user`` (GAP-1).
+    """Invalidate every existing refresh token for ``user``.
 
     Used on password reset and "log out everywhere". Two layers:
 

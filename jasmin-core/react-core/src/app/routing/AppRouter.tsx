@@ -16,7 +16,7 @@ interface AppRouterProps {
 }
 
 export const AppRouter = ({ defaultRedirect = "/" }: AppRouterProps) => {
-  // No auth checks here - JasminApp handles that now
+  // No auth checks here - JasminApp handles that
   // This component only handles routing for authenticated staff users
 
   useRouteTitle();

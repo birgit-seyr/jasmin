@@ -1,4 +1,4 @@
-"""BL-13: a ShareTypeVariation's validity must stay nested within its parent
+"""A ShareTypeVariation's validity must stay nested within its parent
 ShareType's window. Covers the open-variation-vs-closed-parent gap in the
 model clean(), and a direct shortening of the parent that would strand an
 open / late-ending child (the exploitable office-edit path)."""

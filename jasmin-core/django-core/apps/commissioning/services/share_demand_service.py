@@ -273,9 +273,9 @@ class SubscriptionDemandBackend:
         # Capacity is in SHARES, so weight by subscription quantity (a
         # quantity=3 subscription occupies 3 slots), matching this backend's
         # quantity_for_station_day, the external backend, and the
-        # DeliveryStationDay.capacity docstring. Counting rows under-occupied
+        # DeliveryStationDay.capacity docstring. Counting rows would under-occupy
         # multi-quantity subscriptions and let a capped station-day overfill.
-        # BL-5: occupancy must use the SAME "this delivery actually ships"
+        # Occupancy must use the SAME "this delivery actually ships"
         # predicate as demand — a jokered (joker_taken) or opted-out delivery
         # does not ship that week and must not consume a physical pickup slot,
         # else a capped station-day reports phantom occupancy and falsely
@@ -327,7 +327,7 @@ class SubscriptionDemandBackend:
                 share__delivery_week__in=weeks,
                 share__share_type_variation__share_type__is_additional_share_type=False,
             )
-            # BL-5: jokered/opted-out don't ship — the ONE canonical predicate.
+            # Jokered/opted-out don't ship — the ONE canonical predicate.
             .filter(ShareDelivery.delivery_counts_q())
             .values(
                 "delivery_station_day_id",
@@ -384,7 +384,7 @@ class SubscriptionDemandBackend:
                 share__share_type_variation__share_type__is_additional_share_type=False,
             )
             .filter(future_deliveries)
-            # BL-5: jokered/opted-out don't ship — the ONE canonical predicate.
+            # Jokered/opted-out don't ship — the ONE canonical predicate.
             .filter(ShareDelivery.delivery_counts_q())
             .values("share__year", "share__delivery_week")
             .annotate(count=Sum(Coalesce("subscription__quantity", 1)))

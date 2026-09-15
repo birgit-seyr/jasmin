@@ -183,9 +183,8 @@ class TenantViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     def get_queryset(self) -> QuerySet[Tenant]:
         # Scope to the calling tenant only. ``request.tenant`` is set by
         # ``django_tenants.middleware.TenantMainMiddleware`` from the
-        # subdomain. The previous unfiltered ``Tenant.objects.all()``
-        # crossed over to the public schema and listed every tenant on
-        # the platform — see audit doc referenced in the class docstring.
+        # subdomain. An unfiltered ``Tenant.objects.all()`` would cross
+        # over to the public schema and list every tenant on the platform.
         tenant = getattr(self.request, "tenant", None)
         if tenant is None or getattr(tenant, "schema_name", "") == "public":
             return Tenant.objects.none()
@@ -206,9 +205,9 @@ class TenantSettingsViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
     #
     # GenericViewSet + explicit ``list``: settings versions are written
     # ONLY through ``update_current_settings`` (close current version,
-    # open new one). The previous ModelViewSet exposed detail routes
-    # that 500ed on every call (``get_object`` on a sliced queryset)
-    # and a bare ``create`` that bypassed the versioning logic.
+    # open new one). A ModelViewSet would expose detail routes that
+    # 500 on every call (``get_object`` on a sliced queryset) and a
+    # bare ``create`` that bypasses the versioning logic.
     read_permission = IsOffice
     write_permission = IsOffice
 
@@ -605,10 +604,10 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
 
     The config is a per-tenant singleton, so the surface is deliberately
     collection-level only: ``list`` (returns THE config object, not an
-    array), ``save/`` and ``test/``. A ModelViewSet here previously
-    exposed ``{id}`` detail routes whose pk was ignored and a POST
-    ``create`` that could never succeed (``tenant`` is read-only +
-    NOT NULL → guaranteed IntegrityError).
+    array), ``save/`` and ``test/``. A ModelViewSet would expose
+    ``{id}`` detail routes whose pk is ignored and a POST ``create``
+    that can never succeed (``tenant`` is read-only + NOT NULL →
+    guaranteed IntegrityError).
     """
 
     read_permission = IsOffice

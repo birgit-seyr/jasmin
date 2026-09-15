@@ -1,13 +1,12 @@
 /**
  * Debounce behaviour of the config-page autosave (``useAutoSave``).
  *
- * Regression: rapid typing used to trigger a save ~500ms after the FIRST
- * keystroke instead of after typing PAUSED — because ``markChanged`` set
- * ``hasChanges``/``delay`` to values they already held, React skipped the
- * re-render, and the arming effect's deps never changed, so the timer was
- * never reset. That surfaced as "saves too fast / glitches while typing
- * numbers" and mid-typing validation errors (each save PATCHes the whole
- * settings object). The ``changeTick`` counter fixes it; these tests pin it.
+ * Rapid typing must save ~500ms after typing PAUSES, not after the FIRST
+ * keystroke. ``markChanged`` can set ``hasChanges``/``delay`` to values they
+ * already hold, so React skips the re-render and the arming effect's deps
+ * don't change; the ``changeTick`` counter is what resets the timer. A
+ * premature save means mid-typing validation errors (each save PATCHes the
+ * whole settings object). These tests pin it.
  */
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,13 +24,13 @@ describe("useAutoSave debounce", () => {
 
     // Four "keystrokes" 300ms apart. Each gap (300ms) is < the 500ms window,
     // but the whole span (900ms) exceeds it. A correct debounce fires 0 times
-    // until typing pauses; the OLD bug fired once ~500ms after the FIRST key.
+    // until typing pauses; a broken one fires once ~500ms after the FIRST key.
     act(() => result.current.markChanged("number"));
     for (let i = 0; i < 3; i++) {
       act(() => vi.advanceTimersByTime(300));
       act(() => result.current.markChanged("number"));
     }
-    // Regression guard: the old code would already have saved here.
+    // A debounce anchored on the FIRST keystroke would already have saved here.
     expect(save).not.toHaveBeenCalled();
 
     // Typing pauses → exactly one coalesced save.

@@ -164,7 +164,7 @@ export interface InvoicePDFData {
  * Per-invoice payment terms resolved by the caller (typically via
  * ``Reseller.get_payment_terms_days()`` and the matching Skonto helper
  * on the backend). When the prop is omitted, the PDF falls back to the
- * tenant defaults on ``tenantSettings`` so old callers keep working.
+ * tenant defaults on ``tenantSettings``.
  */
 export interface InvoicePaymentTerms {
   days: number;
@@ -182,15 +182,14 @@ interface InvoicePDFProps {
   tenantSettings: TenantPDFSettings;
   /**
    * Symbol appended after every price/total cell (e.g. ``"€"``,
-   * ``"$"``, ``"CHF"``). The PDF used to hardcode ``"€"``; callers now
-   * thread ``useCurrency().currencySymbol`` so the rendered document
-   * matches the tenant's configured currency. Default ``"€"`` keeps
-   * any non-migrated caller rendering as before.
+   * ``"$"``, ``"CHF"``). Callers thread ``useCurrency().currencySymbol``
+   * so the rendered document matches the tenant's configured currency.
+   * Defaults to ``"€"``.
    */
   currencySymbol?: string;
   /**
    * Display date format threaded from the caller's ``useDateFormat()``;
-   * default keeps legacy ``DD.MM.YYYY``.
+   * defaults to ``DD.MM.YYYY``.
    */
   dateFormat?: string;
   /** Per-invoice resolved payment terms (Reseller override → Tenant default). */

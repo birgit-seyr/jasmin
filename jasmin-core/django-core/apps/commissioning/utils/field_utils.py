@@ -151,8 +151,6 @@ def _get_active_storages() -> QuerySet:
     """
     Get all active storages.
 
-    Extracted to reduce duplication and make testing easier.
-
     Returns:
         QuerySet of active Storage objects
     """

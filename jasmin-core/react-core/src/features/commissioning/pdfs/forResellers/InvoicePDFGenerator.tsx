@@ -20,13 +20,11 @@ import {
   resolvePaymentTerms,
 } from "./resellerPdfData";
 
-// ``generateAndUploadInvoicePDF`` was moved to
-// ``./generateInvoicePDF.tsx`` in the 2026-06 lazy-loading pass. Its
-// file does NOT have a top-level @react-pdf/renderer import, so
-// consumers that only need the upload helper (Invoices.tsx,
-// useOrdersData.ts) keep the ~484 KB gzip PDF chunk out of their
-// eager bundle. The barrel ``components/pdfs/index.ts`` re-exports
-// the helper from its new location.
+// ``generateAndUploadInvoicePDF`` lives in ``./generateInvoicePDF.tsx``,
+// which has NO top-level @react-pdf/renderer import, so consumers that
+// only need the upload helper (Invoices.tsx, useOrdersData.ts) keep the
+// ~484 KB gzip PDF chunk out of their eager bundle. The ``pdfs/index.ts``
+// barrel re-exports it from there.
 //
 // THIS file (InvoicePDFGenerator.tsx) still carries the static
 // @react-pdf import because the React component below renders

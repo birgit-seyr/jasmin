@@ -19,9 +19,8 @@ const { Paragraph, Text } = Typography;
 /**
  * Art. 30 Record-of-Processing-Activities (VVT) export.
  *
- * The auditor question "show me your VVT for tenant X" is now
- * answered by clicking a button here instead of attaching a Word
- * doc. Two affordances:
+ * Answers the auditor question "show me your VVT for tenant X" with a
+ * button click. Two affordances:
  *
  *   - **View** — opens the JSON in a modal, pretty-printed. Useful
  *     for a quick look without leaving the office UI.

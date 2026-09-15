@@ -169,13 +169,13 @@ def parse_bulk_ids(
     list of IDs and raises
     :class:`apps.commissioning.errors.RequiredFieldMissing`
     (HTTP 400, ``field=<field>``) when the value is missing, empty, or not a
-    list, replacing the divergent per-endpoint checks.
+    list.
 
     Every entry must be a non-empty string, otherwise ``invalid_item_error``
     (default :class:`apps.commissioning.errors.BulkIdsInvalid`, HTTP 400,
     ``field=<field>``) is raised. Ids are string primary keys or string
-    composite ids; a number, null, list or object entry used to reach the
-    composite-id parsers, which call ``.split`` on it and returned a 500.
+    composite ids; a number, null, list or object entry would otherwise reach
+    the composite-id parsers, which call ``.split`` on it and fail with a 500.
     """
     ids = body(request).get(field)
     if not ids or not isinstance(ids, list):

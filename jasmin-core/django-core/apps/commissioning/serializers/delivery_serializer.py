@@ -287,8 +287,7 @@ class DeliveryStationDaySerializer(
     def _batched_capacity_counts(self, year_weeks):
         """Occupancy for every station-day in THIS serialization run, in one
         query. Cached on the shared child serializer so the per-row
-        ``get_capacity_by_week`` doesn't re-query (kills the old N+1 where
-        each row ran one ``.count()`` per week).
+        ``get_capacity_by_week`` doesn't run one ``.count()`` per week per row.
         """
         cached = getattr(self, "_capacity_counts_cache", None)
         if cached is not None:

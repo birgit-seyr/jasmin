@@ -33,8 +33,7 @@ class Command(BaseCommand):
                     # The user came back from the backup with PII intact. Re-run
                     # the FULL anonymization (single source of truth: every
                     # per-model helper + FIELD_CLASSIFICATION + the "Gelöscht"
-                    # tombstone) so EVERY PII surface is scrubbed again — not
-                    # just the four JasminUser columns the old code touched.
+                    # tombstone) so EVERY PII surface is scrubbed again.
                     try:
                         GDPRService.anonymize_user(user)
                     except RetentionPeriodActive:

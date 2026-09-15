@@ -60,8 +60,8 @@ export const SAMPLE_OFFER_LINE_SETTINGS = {
     "<p>Alle Preise verstehen sich <em>netto</em>, zzgl. der gesetzlichen Steuer.</p>",
   // Match what ``seed_reseller_doc_text.py`` writes — including the
   // ``<a href="mailto:...">`` link, which has an unbreakable email in
-  // its link text and is what surfaced the
-  // "order-instructions-in-a-column" layout bug in the offer PDF.
+  // its link text — it exercises the order-instructions layout in the offer
+  // PDF.
   order_instructions_offer_reseller:
     "<p><strong>Bestellannahme:</strong> Bitte tragen Sie die gewünschte Menge in der letzten Spalte ein und senden Sie das Angebot ausgefüllt zurück an " +
     '<a href="mailto:bestellungen@marillenhof.example">bestellungen@marillenhof.example</a>.</p>' +

@@ -44,8 +44,8 @@ DAY_NUMBER = 2  # Wednesday — matches SharesDeliveryDayFactory default
 
 @pytest.fixture(autouse=True)
 def _freeze_clock():
-    # These tests use fixed Jan-2026 subscription dates and predate the
-    # materialisation/capacity "no past weeks" clamp. Freeze "now" to that week
+    # These tests use fixed Jan-2026 subscription dates, which the
+    # materialisation/capacity "no past weeks" clamp would drop. Freeze "now" to that week
     # so every fixture term is current/future and the clamp is a no-op — the
     # assertions here are about the full fixture term, not calendar time.
     with time_machine.travel(datetime.date(2026, 1, 5), tick=False):
@@ -245,8 +245,8 @@ class TestReserveForSubscription:
 
     def test_reserve_rejects_multi_quantity_that_overfills(self, tenant):
         # capacity 10, 9 already taken; a quantity=3 sub needs 3 slots, so
-        # 9 + 3 = 12 > 10 — must be refused and reserve nothing (pre-fix the
-        # check was occupied >= capacity, i.e. 9 >= 10 False, so it slipped in).
+        # 9 + 3 = 12 > 10 — must be refused and reserve nothing (an
+        # occupied >= capacity check would admit it: 9 >= 10 is False).
         dsd = _make_dsd(capacity=10)
         sub = _make_subscription(dsd=dsd)
         sub.quantity = 3
@@ -259,7 +259,7 @@ class TestReserveForSubscription:
         assert not CapacityReservation.objects.filter(subscription=sub).exists()
 
     def test_reserves_against_per_week_successor_dsd(self, tenant):
-        # MEM-5: a time-bounded default DSD hands off to a successor mid-term;
+        # A time-bounded default DSD hands off to a successor mid-term;
         # reservations must land on the per-week DSD materialization will write
         # to, not all on the default (so the successor's capacity is enforced).
         from apps.commissioning.tests.factories import DeliveryStationFactory
@@ -293,7 +293,7 @@ class TestReserveForSubscription:
             )
         )
         # Early weeks reserved the default; the handoff weeks reserved the
-        # successor (pre-fix everything was pinned to the default DSD).
+        # successor.
         assert default_dsd.id in dsd_ids
         assert successor_dsd.id in dsd_ids
 
@@ -385,8 +385,8 @@ class TestConfirmBackstop:
 
     def test_confirm_rejects_multi_quantity_when_hold_lapsed(self, tenant):
         # Our reservation lapsed (own=0) and others now fill 9 of 10. A
-        # quantity=3 confirm needs 3 slots → others(9) + 3 = 12 > 10. Pre-fix the
-        # check was (total - own) >= capacity, i.e. 9 >= 10 False → admitted.
+        # quantity=3 confirm needs 3 slots → others(9) + 3 = 12 > 10. A
+        # (total - own) >= capacity check would admit it: 9 >= 10 is False.
         dsd = _make_dsd(capacity=10)
         sub = _make_subscription(dsd=dsd)
         sub.quantity = 3
@@ -481,8 +481,8 @@ class TestAssertShareDeliveryFits:
 
     def test_rejects_multi_quantity_move_that_overfills(self, tenant):
         # Target has 8 occupants (cap 10); moving in a quantity=3 delivery from
-        # another station-day needs 3 slots → 8 + 3 = 11 > 10. Pre-fix the check
-        # was occupied >= capacity (8 >= 10 False) with a flat -1 self-discount.
+        # another station-day needs 3 slots → 8 + 3 = 11 > 10. An occupied >=
+        # capacity check (8 >= 10 is False) with a flat -1 self-discount would admit it.
         target = _make_dsd(capacity=10)
         _occupy(target, 2026, 2, 8)
         source = _make_dsd(capacity=100, day_number=3)
@@ -578,7 +578,7 @@ class TestEndToEnd:
 
 
 # --------------------------------------------------------------------------- #
-# Query-count locks (PERF-3): the confirm/reserve capacity checks must NOT     #
+# Query-count locks: the confirm/reserve capacity checks must NOT              #
 # scale their query count with the number of period weeks — they run inside a #
 # held ``select_for_update`` lock, so a per-week N+1 serializes concurrent    #
 # confirms. The batched ``capacity_counts_by_week`` keeps it constant.        #
@@ -639,7 +639,7 @@ class TestCapacityCheckQueryCounts:
 
 @pytest.mark.django_db
 class TestCapacityExcludesNonShippingDeliveries:
-    """BL-5: capacity occupancy must use the same 'this delivery actually ships'
+    """Capacity occupancy must use the same 'this delivery actually ships'
     predicate as demand — a jokered (joker_taken=True) or opted-out
     (requires_optin + not opted in) delivery does NOT ship that week and must not
     consume a physical pickup slot, else a capped station-day reports phantom
@@ -715,7 +715,7 @@ class TestCapacityExcludesNonShippingDeliveries:
 
 @pytest.mark.django_db
 class TestAssertRestoreFits:
-    """BIZ-6: un-pausing a DeliveryExceptionPeriod re-materialises paused
+    """Un-pausing a DeliveryExceptionPeriod re-materialises paused
     deliveries — but the freed slots may have been taken by new confirmed
     subscriptions while the pause was active, so the restore must not silently
     overbook. ``assert_restore_fits`` raises instead."""

@@ -288,8 +288,7 @@ class DocumentationExportService:
                     # NULL or the PURCHASE_DAY sentinel). Keep them when the
                     # delivery WEEK overlaps the range — anchoring on a single
                     # day would drop them whenever the range doesn't contain that
-                    # exact day (the empty-export bug). Stamp the week's Monday
-                    # as the Date cell.
+                    # exact day. Stamp the week's Monday as the Date cell.
                     week_start = week_day_to_date(
                         instance.year, instance.delivery_week, 0
                     )

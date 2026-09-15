@@ -238,7 +238,7 @@ def test_ops_alert_fires_once_as_weekly_volume_crosses_80_percent(
 def test_ops_alert_fires_even_for_a_cap_of_one(
     tenant, django_capture_on_commit_callbacks
 ):
-    # int(1 * 0.8) == 0 used to floor the threshold to 0 and never alert.
+    # int(1 * 0.8) == 0 would floor the threshold to 0 and never alert.
     _set_override(tenant, weekly=1, per_minute=100)
     with patch("apps.shared.tenants.rate_limits.mail_admins") as mailer:
         with django_capture_on_commit_callbacks(execute=True):

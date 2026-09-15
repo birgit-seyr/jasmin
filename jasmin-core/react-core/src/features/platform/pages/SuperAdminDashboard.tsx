@@ -53,8 +53,7 @@ export default function SuperAdminDashboard() {
   // The super-admin endpoints aren't part of the tenant-scoped orval
   // schema, so we hit them through ``axiosService`` directly while
   // letting TanStack Query handle caching, dedup, and post-mutation
-  // refetch — replacing the previous ``useEffect`` + ``setLoading``
-  // machinery.
+  // refetch.
   const tenantsQuery = useQuery<Tenant[]>({
     queryKey: ["super-admin", "tenants"],
     enabled: authorized,

@@ -2,8 +2,6 @@
 
 These viewsets each override ``list`` / ``create`` / ``update`` / ``destroy``
 with custom logic (aggregation, finalize-rejection, parent-id resolution).
-Existing coverage was 38% — the list/create error paths and CrateNetPrice
-CRUD are the easiest wins.
 """
 
 from __future__ import annotations
@@ -89,10 +87,8 @@ class TestCrateDeliveryNoteContentViewSet:
         assert resp.status_code == status.HTTP_409_CONFLICT
 
     def test_create_valid_crate_persists_resolved_tax_rate(self, api_client, tenant):
-        # Regression: tax_rate is NOT NULL on CrateDeliveryNoteContent but
-        # create() never set it, so adding a crate to a delivery note 500'd on
-        # an IntegrityError. It must now succeed and persist the resolved
-        # (crate-default) tax rate.
+        # tax_rate is NOT NULL on CrateDeliveryNoteContent, so create() must
+        # persist the resolved (crate-default) tax rate.
         from apps.commissioning.models import CrateDeliveryNoteContent
 
         order = OrderFactory(reseller=ResellerFactory())
@@ -113,10 +109,10 @@ class TestCrateDeliveryNoteContentViewSet:
         assert row.tax_rate is not None
 
     def test_summary_groups_mixed_price_rows_not_max(self, api_client, tenant):
-        # Regression (BL-7): the summary aggregated price/rabatt/tax with Max()
-        # over the summed amount, collapsing mixed-price rows of one crate type
-        # into a single wrong row. They must now group by (price, rabatt, tax)
-        # with line_netto = sum of per-row nets, matching the document footer.
+        # Mixed-price rows of one crate type must not collapse into a single row
+        # (as a Max() over price/rabatt/tax would): the summary groups by
+        # (price, rabatt, tax) with line_netto = sum of per-row nets, matching
+        # the document footer.
         from apps.commissioning.models import CrateDeliveryNoteContent
 
         order = OrderFactory(reseller=ResellerFactory())
@@ -331,7 +327,7 @@ def _crate_lines(document):
 @pytest.mark.django_db
 class TestCrateDocumentLineWriteValidation:
     def test_create_rejects_rabatt_over_100(self, api_client, crate_document):
-        # A 150 % discount used to be stored and gave the line a negative net.
+        # A 150 % discount would give the line a negative net.
         resp = api_client.post(
             crate_document.url,
             _crate_body(crate_document, amount=2, price_per_unit="2.50", rabatt=150),
@@ -403,7 +399,7 @@ class TestCrateDocumentLineWriteValidation:
         assert line.rabatt == 10
 
     def test_update_blank_amount_is_amount_invalid(self, api_client, crate_document):
-        # ``int("")`` used to escape from update as an HTTP 500.
+        # A blank amount is a 400, not an ``int("")`` error escaping update as a 500.
         _stored_crate_line(crate_document, amount=3, tax_rate=Decimal("19.00"))
         resp = api_client.patch(
             crate_document.detail_url,

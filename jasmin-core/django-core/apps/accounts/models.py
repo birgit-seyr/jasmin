@@ -41,8 +41,8 @@ class JasminModel(models.Model):
 
         Detects PK collisions specifically by inspecting the failing
         constraint, instead of substring-matching on the error message
-        (which previously could swallow other unique-constraint failures
-        that happened to mention the word "id").
+        (which could swallow other unique-constraint failures that happen to
+        mention the word "id").
         """
         max_retries = 5
         for attempt in range(max_retries):
@@ -194,7 +194,7 @@ class JasminUser(JasminModel, AbstractBaseUser, PermissionsMixin):
     last_login_ip = models.GenericIPAddressField(blank=True, null=True)
 
     # Server-side session cut-off: any refresh token minted before this instant
-    # is rejected by ``refresh_access_token`` (GAP-1). Stamped on password
+    # is rejected by ``refresh_access_token``. Stamped on password
     # reset and "log out everywhere" so a stolen refresh token can't be
     # rotated forward indefinitely past a credential change. NULL = never
     # revoked. Robust against rotation (which mints new JTIs outside

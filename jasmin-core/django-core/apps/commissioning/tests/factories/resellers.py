@@ -73,7 +73,7 @@ class OrderContentFactory(factory.django.DjangoModelFactory):
     amount = Decimal("10.000")
     unit = "KG"
     size = "M"
-    # tax_rate is now non-null on every line item — see
+    # tax_rate is non-null on every line item — see
     # apps/commissioning/utils/tax_rate_utils.py for the canonical
     # resolution chain. Tests that need a specific rate should override.
     tax_rate = Decimal("7.00")
@@ -84,9 +84,9 @@ class DeliveryNoteResellerFactory(factory.django.DjangoModelFactory):
         model = DeliveryNoteReseller
 
     order = factory.SubFactory(OrderFactory)
-    # ``DeliveryNoteReseller.save`` now refuses ``date=None`` (was a
-    # silent today-default — a GoBD audit hazard). Provide a stable
-    # per-call default here so existing tests keep working; pass
+    # ``DeliveryNoteReseller.save`` refuses ``date=None`` (a silent
+    # today-default would be a GoBD audit hazard). Provide a stable
+    # per-call default here so tests needn't pass one; pass
     # ``date=...`` explicitly to test date-resolution behaviour, or
     # ``date=None`` to test the raise.
     date = factory.LazyFunction(datetime.date.today)

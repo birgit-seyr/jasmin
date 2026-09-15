@@ -2,9 +2,9 @@
 HARVEST/PURCHASE/WASH/CLEAN movements must re-cascade snapshots + re-derive
 actual corrections, capturing BOTH the content movements AND the theoretical
 half — else the stock projection is left permanently stale. Locks the service
-delete (MT-1/MT-3 delete_share_planning), the Forecast-delete viewset, the
-wipe-and-rebuild replace_share_planning (MOV-2), the ShareContent DELETE
-endpoint (MOV-3), and the theoretical-object DELETE endpoints (MOV-4).
+delete (delete_share_planning), the Forecast-delete viewset, the
+wipe-and-rebuild replace_share_planning, the ShareContent DELETE
+endpoint, and the theoretical-object DELETE endpoints.
 """
 
 from __future__ import annotations
@@ -180,7 +180,7 @@ class TestDeletePathsRecompute:
     def test_replace_share_planning_nonempty_recalcs_with_theoretical_movement(
         self, tenant
     ):
-        # MOV-2: the wipe-and-rebuild (non-empty) branch of replace_share_planning
+        # The wipe-and-rebuild (non-empty) branch of replace_share_planning
         # must capture the theoretical half + re-derive corrections, like
         # delete_share_planning. The rebuild also recalcs internally, so our
         # capture-driven call is the LAST one (read via call_args).
@@ -213,7 +213,7 @@ class TestDeletePathsRecompute:
     def test_replace_share_planning_empty_clear_recalcs_with_theoretical_movement(
         self, tenant
     ):
-        # MOV-2 (empty-clear branch): clearing every cell rebuilds/drops rows and
+        # Empty-clear branch: clearing every cell rebuilds/drops rows and
         # cascades their theoretical movements; the dropped/cleared dimensions'
         # actual corrections must still be re-derived (not just snapshots).
         article, _forecast, _sc = _build_harvest_share_content()
@@ -238,7 +238,7 @@ class TestDeletePathsRecompute:
     def test_share_content_perform_destroy_recalcs_with_theoretical_movement(
         self, tenant
     ):
-        # MOV-3: ShareContentViewSet.perform_destroy must capture both halves +
+        # ShareContentViewSet.perform_destroy must capture both halves +
         # recalc. The endpoint's queryset is is_finalized-only, so the override is
         # exercised directly (route wiring verified separately via reverse()).
         from apps.commissioning.viewsets.shares_viewsets import ShareContentViewSet
@@ -255,7 +255,7 @@ class TestDeletePathsRecompute:
         assert _captured_includes_theoretical_harvest(recalc)
 
     def test_theoretical_harvest_perform_destroy_recalcs(self, tenant):
-        # MOV-4: the theoretical viewset's perform_destroy (newly added) must
+        # The theoretical viewset's perform_destroy must
         # re-cascade + re-derive — else the cascaded is_theoretical movement
         # strands a stale actual correction (amount = counted - Σtheoretical).
         # The list queryset windows to recent weeks, so call the override directly.

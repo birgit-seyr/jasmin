@@ -30,7 +30,7 @@ EXPECTED = {
 
 def _null_day_share(delivery_day, variation, *, week: int = 15) -> Share:
     """Create a Share with NULL day fields by going through ``bulk_create``
-    (which bypasses ``Share.save()`` — exactly how the bug was introduced)."""
+    (which bypasses ``Share.save()``)."""
     Share.objects.bulk_create(
         [
             Share(
@@ -57,7 +57,7 @@ class TestShareDayFieldDefaulting:
             assert getattr(share, field) == value
 
     def test_bulk_create_leaves_null_days(self, tenant):
-        """Documents the root cause: bulk_create skips save() → NULL days."""
+        """bulk_create skips save() → NULL days."""
         dd = SharesDeliveryDayFactory()
         share = _null_day_share(dd, ShareTypeVariationFactory())
         for field in EXPECTED:
@@ -96,7 +96,7 @@ class TestShareDayFieldDefaulting:
             assert getattr(share, field) == value
 
     def test_get_or_create_for_delivery_heals_reused_null_share(self, tenant):
-        """The bug's exact shape: a NULL-day share exists (old bulk_create),
+        """A NULL-day share exists (from a bulk_create),
         a later get_or_create reuses it — and must heal it, not pass it
         through untouched."""
         dd = SharesDeliveryDayFactory()

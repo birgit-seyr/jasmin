@@ -29,9 +29,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options) -> None:
         # Two independent drifts: the CURRENT balance projection, and the
-        # StockSnapshot baselines that feed historical/cascade recomputes. Repair
-        # only the former (the old behaviour) and a corrupt snapshot is left to
-        # re-drift the balance on the next movement — so check both (audit #7).
+        # StockSnapshot baselines that feed historical/cascade recomputes. Repairing
+        # only the former would leave a corrupt snapshot to re-drift the balance on
+        # the next movement — so check both.
         balance_drift = CurrentBalanceService.get_drift()
         snapshot_drift = CurrentBalanceService.get_snapshot_drift()
 

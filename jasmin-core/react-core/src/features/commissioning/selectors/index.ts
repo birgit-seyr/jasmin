@@ -1,4 +1,4 @@
-// Commissioning-domain selectors (moved out of shared/selectors).
+// Commissioning-domain selectors.
 export { default as DeliveryStationSelector } from './DeliveryStationSelector';
 export { default as DeliveryStationDaySelector } from './DeliveryStationDaySelector';
 export { default as OfferGroupSelector } from './OfferGroupSelector';

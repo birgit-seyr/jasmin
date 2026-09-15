@@ -472,7 +472,7 @@ class TestDeleteShareContentKeepsForecast:
 
 
 # ═══════════════════════════════════════════════════════
-# Regression: duplicate ShareContent when station has multiple DSDs
+# No duplicate ShareContent when a station has multiple DSDs
 # ═══════════════════════════════════════════════════════
 
 
@@ -511,7 +511,7 @@ class TestForecastNoDuplicateShareContents:
         )
 
         # Forecast week 18/2026 falls inside the second DSD's window only,
-        # so the bug only fires if the service ignores active_at_date and
+        # so duplicates only appear if the service ignores active_at_date and
         # picks up both rows. Use a week where ONLY the second DSD is active
         # to confirm the active_at_date filter works first…
         data = _forecast_data(article, stv, year=2026, delivery_week=18)
@@ -533,7 +533,7 @@ class TestForecastNoDuplicateShareContents:
 
     def test_overlapping_active_dsds_does_not_duplicate(self, tenant):
         """Two active DeliveryStationDay rows for the same (station, day) are
-        now forbidden at the DB level by
+        forbidden at the DB level by
         ``deliverystationday_unique_active_per_station_day``. Confirm the
         constraint actually rejects such inserts so the forecast service can
         rely on the invariant.
@@ -705,7 +705,7 @@ class TestDefaultShareArticleInShareDrivesForecastAmount:
 
 
 # ═══════════════════════════════════════════════════════
-# UPDATE recompute discipline (CORR-7)
+# UPDATE recompute discipline
 # ═══════════════════════════════════════════════════════
 
 
@@ -716,8 +716,7 @@ class TestUpdateRecomputesAffectedShares:
     survivors' harvest theoreticals would never be rebuilt. The affected share
     ids are collected before the forecast is mutated. The recompute itself —
     NOT the update — owns deleting + rebuilding the harvest theoreticals and
-    cascading their movements (see the ``does_not_predelete`` test below; the
-    update pre-deleting them was SHR-1)."""
+    cascading their movements (see the ``does_not_predelete`` test below)."""
 
     def test_heavy_update_schedules_recompute_for_surviving_shares(
         self, tenant, django_capture_on_commit_callbacks
@@ -741,7 +740,7 @@ class TestUpdateRecomputesAffectedShares:
 
         # A heavy edit (``amount`` is a ``_FORECAST_FIELDS`` key → full
         # path) that only RE-POINTS the existing ShareContents — no new
-        # rows are created, the create-less branch the bug missed.
+        # rows are created (the create-less branch).
         update_data = _forecast_data(article, stv)
         update_data["amount"] = 200
 
@@ -764,7 +763,7 @@ class TestUpdateRecomputesAffectedShares:
     def test_heavy_update_does_not_predelete_harvest_theoreticals(
         self, tenant, django_capture_on_commit_callbacks
     ):
-        """SHR-1: the update must NOT delete the harvest theoreticals up front.
+        """The update must NOT delete the harvest theoreticals up front.
         The (deferred) recompute captures each share's ``MovementShareArticle``
         rows as ``old_movements`` and cascades them through the stock snapshots
         before rebuilding — so they must still exist when it runs. Pre-deleting
@@ -861,10 +860,10 @@ class TestAdoptedForecastlessSharesAreRecomputed:
     relink inside ``_create_or_update_share_contents`` can only re-point rows
     that already have theoreticals, never create missing ones.
 
-    Regression: both paths used to schedule a recompute only for the
-    genuinely-new (``created``) rows and silently drop the adopted (``updated``)
-    ones, so adopted produce never entered harvest planning until an unrelated
-    later recompute (e.g. a ShareDelivery edit) happened to rebuild the share.
+    Scheduling only for the genuinely-new (``created``) rows would silently drop
+    the adopted (``updated``) ones, so adopted produce would never enter harvest
+    planning until an unrelated later recompute (e.g. a ShareDelivery edit)
+    happened to rebuild the share.
     """
 
     @staticmethod

@@ -18,10 +18,10 @@ from apps.commissioning.tests.factories import (
 # ---------------------------------------------------------------------------
 # DateDocumentMixin   (DeliveryNoteReseller / InvoiceReseller)
 #
-# Used to silently auto-set ``date = today`` on save. That was a GoBD
-# audit hazard for legal documents, so the model now raises
-# ``DocumentDateRequired`` instead. The factory provides a stable
-# default so existing tests don't need to be threaded with ``date=``.
+# Saving without a ``date`` raises ``DocumentDateRequired`` — silently
+# auto-setting ``date = today`` would be a GoBD audit hazard for legal
+# documents. The factory provides a stable default so tests don't need to
+# be threaded with ``date=``.
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestDateDocumentMixin:

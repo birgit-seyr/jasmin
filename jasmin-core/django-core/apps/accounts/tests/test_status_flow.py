@@ -169,7 +169,7 @@ class TestSelfRegistration:
 
     @pytest.fixture(autouse=True)
     def _email_verified(self):
-        # register_public_applicant now requires the address to have passed
+        # register_public_applicant requires the address to have passed
         # the email-ownership code check first. That mechanism has its own
         # tests (TestRegistrationEmailVerification); here we stub it True so
         # these tests exercise the account/member/consent creation logic.
@@ -234,7 +234,7 @@ class TestSelfRegistration:
             register_public_applicant(data={"first_name": "x"}, tenant=tenant)
         assert "missing required" in exc.value.message.lower()
 
-    # ----- extended payload (2026-05-21) ------------------------------------
+    # ----- extended payload -------------------------------------------------
 
     def test_creates_one_coop_share_when_count_provided(self, tenant, payload):
         from apps.commissioning.models import CoopShare
@@ -312,11 +312,10 @@ class TestSelfRegistration:
         assert result["coop_shares_created"] == 1
 
     def test_coop_share_snapshots_configured_value(self, tenant, payload):
-        """With a configured TenantSettings row, the share snapshots the
-        whole-unit ``value_one_coop_share``. Regression: registration used to
-        call ``.quantize()`` on this (now ``PositiveIntegerField``) value and
-        crash whenever a TenantSettings row existed — the common prod case,
-        masked here only because other tests create no settings row."""
+        """With a configured TenantSettings row — the common prod case, which other
+        tests don't create — the share snapshots the whole-unit
+        ``value_one_coop_share``. That value is a ``PositiveIntegerField``, so
+        registration must not treat it as a ``Decimal`` (e.g. call ``.quantize()``)."""
         import datetime
 
         from django.utils import timezone
@@ -412,10 +411,10 @@ class TestSelfRegistration:
     def test_registration_consent_syncs_cache_and_captures_forensics(
         self, tenant, payload
     ):
-        """GDPR-CON-3: registration routes consent through ConsentService.record,
-        so the denormalized Member consent-cache column is synced (was NULL on
-        the old raw-create path) and the forensic ip_address / user_agent are
-        captured — the public web signup is where that provenance matters most."""
+        """Registration routes consent through ConsentService.record, so the
+        denormalized Member consent-cache column is synced and the forensic
+        ip_address / user_agent are captured — the public web signup is where
+        that provenance matters most."""
         import datetime
 
         from apps.commissioning.models import ConsentDocument, ConsentRecord
@@ -437,7 +436,7 @@ class TestSelfRegistration:
             user_agent="UA/1.0",
         )
         member = Member.objects.get(id=result["member_id"])
-        # Cache column synced from the ConsentRecord (was NULL before).
+        # Cache column synced from the ConsentRecord.
         assert member.privacy_consent is not None
         # Forensic provenance captured on the record.
         record = ConsentRecord.objects.get(member=member, document=privacy)
@@ -531,7 +530,7 @@ class TestInvitationAccept:
         assert user.account_status == "active"
 
     def test_accept_schedules_welcome_email(self, tenant):
-        """P2-1: accepting the invitation must schedule an
+        """Accepting the invitation must schedule an
         ``accounts.welcome_user`` dispatch via on_commit. The membership
         side (``application_approved``) is a different event handled
         elsewhere — we only assert the user-account welcome here.
@@ -846,10 +845,10 @@ class TestMemberViewSetCreateEnrol:
 
 @pytest.mark.django_db
 class TestMemberUserLinkRoleSync:
-    """MEM-7: ``Member.save`` keeps ``Role.MEMBER`` in sync BIDIRECTIONALLY.
-    Granting on link was already covered; here we lock the retraction side —
-    unlinking or relinking the member's user strips the role from the user it
-    no longer points at (else an offboarded/relinked user keeps member access).
+    """``Member.save`` keeps ``Role.MEMBER`` in sync BIDIRECTIONALLY: linking
+    grants the role, and unlinking or relinking the member's user strips it from
+    the user it no longer points at (else an offboarded/relinked user keeps
+    member access).
     """
 
     def test_linking_grants_member_role(self, tenant):

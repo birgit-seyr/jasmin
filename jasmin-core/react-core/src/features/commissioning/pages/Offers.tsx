@@ -181,7 +181,7 @@ export default function Offers() {
     async (resellerIds: string[]) => {
       if (!selectedOfferGroup) return;
 
-      // The bulk-send endpoint now enqueues a Huey job and returns
+      // The bulk-send endpoint enqueues a Huey job and returns
       // 202 with ``{job_id, kind, status}``. Open the progress
       // drawer; ``useJob`` (inside the drawer) polls until the job
       // lands in a terminal state, at which point we refresh the

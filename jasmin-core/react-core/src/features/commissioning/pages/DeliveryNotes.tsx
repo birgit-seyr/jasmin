@@ -345,7 +345,7 @@ export default function DeliveryNotes() {
                 )}
                 {record.delivery_note_is_finalized &&
                   !record.delivery_note_has_been_sent_to_reseller && (
-                    // P0-3: manual "Send to reseller" button. Only
+                    // Manual "Send to reseller" button. Only
                     // shows on finalized DNs that haven't been sent
                     // yet — re-send is intentionally NOT a one-click
                     // action (delivery notes are paper-canonical, the
@@ -530,8 +530,7 @@ export default function DeliveryNotes() {
         }}
       >
         {/* Bulk send-email is still a disabled placeholder: its backend route
-            doesn't exist yet (a click used to 404). Re-enable with the real
-            endpoint once it lands. */}
+            doesn't exist yet. Re-enable with the real endpoint once it lands. */}
         <BulkActionButton
           selectedIds={selectedRowKeys}
           buttonText={t("commissioning.send_delivery_notes_bulk_via_email")}

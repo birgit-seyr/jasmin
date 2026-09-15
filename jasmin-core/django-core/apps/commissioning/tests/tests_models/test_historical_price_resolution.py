@@ -1,7 +1,6 @@
 """Pin the time-bounded price-resolution semantics.
 
-The codebase relies on three invariants that, before this suite,
-were enforced only by code review:
+The codebase relies on three invariants:
 
   1. ``PricingMixin.get_pricing_on_date(date)`` returns the
      ``ShareArticleNetPrice`` (or ``CrateNetPrice``) whose
@@ -134,7 +133,7 @@ class TestShareArticlePriceHistoryResolution:
         assert article.get_pricing_on_date(datetime.date(2026, 4, 15)) is None
 
     def test_two_open_windows_rejected_by_db_constraint(self, tenant):
-        # SUC-7: the one-open-per-article partial-unique backstop rejects a
+        # The one-open-per-article partial-unique backstop rejects a
         # SECOND open (valid_until IS NULL) window — even via bulk_create, which
         # bypasses save()/the Python no-overlap guard. This is what keeps the
         # canonical invoice tax/price read unambiguous.
@@ -162,7 +161,7 @@ class TestShareArticlePriceHistoryResolution:
             )
 
     def test_overlapping_windows_resolve_to_newest_deterministically(self, tenant):
-        # Only OPEN-vs-OPEN is DB-blocked (SUC-7); a CLOSED window can still
+        # Only OPEN-vs-OPEN is DB-blocked; a CLOSED window can still
         # overlap a newer OPEN one (closed-range overlap stays Python-only /
         # TOCTOU, and bulk_create bypasses it). When a date falls in both,
         # get_pricing_on_date must pick the newest valid_from deterministically.
@@ -210,8 +209,7 @@ class TestCratePriceHistoryResolution:
     """Mirror of the share-article suite but for ``CrateNetPrice``.
 
     Same mixin, same semantics — separate suite so a regression in
-    crate-pricing alone (which has historically been the more
-    forgotten path) shows up named after the right model in CI.
+    crate-pricing alone shows up named after the right model in CI.
     """
 
     def _two_period_pricing(self):

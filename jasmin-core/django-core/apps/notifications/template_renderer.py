@@ -11,7 +11,7 @@ Supported syntax (intentionally tiny):
     {{ user.email }} -> dotted path lookup (dict keys, attributes).
     {{{ var }}}      -> raw (unescaped) ONLY when ``var`` is a ``RAW_KEYS`` entry
                         (trusted, server-built markup); any other key is
-                        HTML-escaped just like ``{{ var }}`` (INJ-2), so a tenant
+                        HTML-escaped just like ``{{ var }}``, so a tenant
                         admin can't smuggle markup through the triple-brace form.
 
 That's the whole grammar. No conditionals, no loops, no filters. If a
@@ -31,7 +31,7 @@ from typing import Any
 _RAW_RE = re.compile(r"\{\{\{\s*([\w.]+)\s*\}\}\}")
 _ESCAPED_RE = re.compile(r"\{\{\s*([\w.]+)\s*\}\}")
 
-# EML-1: keys whose value is TRUSTED, server-built markup (assembled in Python
+# Keys whose value is TRUSTED, server-built markup (assembled in Python
 # with every cell already HTML-escaped — e.g. the pre-flattened invoice-reminder
 # table/text). Such keys are emitted UNescaped even via ``{{ key }}`` so the same
 # template string renders raw under BOTH Django (the value is mark_safe'd) and
@@ -181,7 +181,7 @@ def render(
     def raw_sub(match: re.Match[str]) -> str:
         key = match.group(1)
         value = _resolve(key, context)
-        # INJ-2: emit unescaped HTML only for trusted server-built markup
+        # Emit unescaped HTML only for trusted server-built markup
         # (``raw_keys``). A tenant admin wrapping a user-controlled field in
         # ``{{{ }}}`` gets it HTML-escaped instead — the safe default — so the
         # triple-brace syntax can't be turned into an XSS vector in the body.

@@ -172,7 +172,7 @@ def create_renewal_draft(
     restart week doesn't drift across 52-/53-week ISO years — see
     ``subscription_term.compute_term_valid_until``. Only when the tenant
     configures neither end rule does it fall back to keeping the predecessor's
-    term length (the historical behaviour). Pass ``new_valid_until`` to override
+    term length. Pass ``new_valid_until`` to override
     entirely — the office bulk-renew modal does this to set one common end date
     for the whole batch. Must be a Sunday on or after ``new_valid_from`` (the
     model's ``clean`` enforces both). ``tenant_settings`` is read once by the

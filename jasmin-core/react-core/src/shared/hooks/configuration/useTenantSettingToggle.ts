@@ -10,12 +10,8 @@ import { useTenant } from "./useTenant";
  * and persists changes (PATCH current settings → refresh the tenant so
  * ``getSetting`` reflects the new value).
  *
- * Replaces the hand-rolled
- * ``tenantsSettingsUpdateCurrentSettingsUpdate({settings:{key}}) +
- * refreshTenant()`` handlers that were copy-pasted across Offers and
- * HarvestingList — and fixes their **silent** ``console.error`` catch:
- * on failure the toggle visually snapped back with no explanation. This
- * surfaces the error via ``notify.error`` instead.
+ * On failure it surfaces the error via ``notify.error`` instead of letting
+ * the toggle silently snap back.
  *
  * Not for the bulk autosave paths (ConfigurationApp / SettingsPage) —
  * those batch many settings through a different debounced flow.

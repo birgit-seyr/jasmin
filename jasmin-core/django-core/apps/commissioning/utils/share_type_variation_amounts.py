@@ -200,9 +200,7 @@ def get_physical_share_type_variation_totals(
 
     # ONE VirtualVariationComponent query + ONE demand-aggregation query for
     # ALL variations at once, then aggregate per physical variation in Python.
-    # (Previously this fired two queries PER physical variation — the full
-    # week's demand was re-scanned for each one.) The day/tour/station filters
-    # are pushed into the single aggregation query.
+    # The day/tour/station filters are pushed into the single aggregation query.
     virtual_map = _build_virtual_map(physical_ids)
     all_variation_ids = physical_ids | set(virtual_map.keys())
 
@@ -288,7 +286,7 @@ def get_variation_quantities_by_station_day(
     """Batch counterpart of :func:`get_variation_quantity_for_station_day`: the
     whole ``(station_day_id, variation_id) -> quantity`` grid in ONE query
     (routed through ``ShareDemandService`` so external-CSV tenants are covered).
-    Replaces the per-cell N+1 in the delivery stations/tours overview.
+    Backs the delivery stations/tours overview grid.
 
     ``variation_ids`` are the PHYSICAL overview columns. A virtual-variation
     subscription's demand is recorded against the VIRTUAL variation, but it packs

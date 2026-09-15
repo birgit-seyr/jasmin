@@ -47,7 +47,7 @@ from apps.shared.super_admin.serializers import (
 )
 
 # A password that satisfies AUTH_PASSWORD_VALIDATORS (12-char min + zxcvbn +
-# common/numeric). TEN-5 enforces that policy on these privileged serializers,
+# common/numeric). That policy is enforced on these privileged serializers,
 # so happy-path fixtures must use a strong value.
 _STRONG_PW = "9xKqP2mwLvZt7Rdn"
 
@@ -104,7 +104,7 @@ class TestCreateTenantRequest:
         "bad_schema", ["public", "pg_catalog", "information_schema"]
     )
     def test_reserved_schema_name_rejected(self, bad_schema):
-        # TEN-6: the validator rejects platform/reserved schemas itself, not
+        # The validator rejects platform/reserved schemas itself, not
         # relying on a 'public' Tenant sentinel row existing. Field validators
         # raise a JasminError (rendered by the global handler), so is_valid()
         # propagates it rather than collecting a DRF field error.
@@ -117,7 +117,7 @@ class TestCreateTenantRequest:
             ser.is_valid()
 
     def test_domain_is_lowercased(self):
-        # TEN-7: routing matches Host case-sensitively, so the domain is
+        # Routing matches Host case-sensitively, so the domain is
         # normalised to lowercase (else the tenant is silently unreachable).
         ser = CreateTenantRequestSerializer(
             data={**self.HAPPY, "domain": "New.Example.COM"}
@@ -126,7 +126,7 @@ class TestCreateTenantRequest:
         assert ser.validated_data["domain"] == "new.example.com"
 
     def test_platform_subdomain_rejected(self):
-        # TEN-7: a tenant must not claim the platform host's first label.
+        # A tenant must not claim the platform host's first label.
         from apps.shared.tenants.errors import ReservedDomain
 
         ser = CreateTenantRequestSerializer(
@@ -320,7 +320,7 @@ class TestResponseSerializerShapes:
         assert out["tenant_language"] == "de"
 
     def test_tenant_user_list_response(self):
-        # TenantUserSerializer is fully typed now — fixtures carry the
+        # TenantUserSerializer is fully typed — fixtures carry the
         # complete row shape the viewset's ``users`` action emits.
         user_row = {
             "id": "aB3xK9mPqR2t",

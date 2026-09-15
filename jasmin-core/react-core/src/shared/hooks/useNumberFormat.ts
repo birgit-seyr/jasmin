@@ -4,8 +4,8 @@
  * Reads `number_locale` from the active tenant's settings (BCP-47 tag,
  * e.g. "de-DE" → "1.234,50") and exposes:
  *
- *   - `format(value, decimals)`  — render-side; replaces every
- *     `value.toFixed(N)` call site in cell renders, summaries, PDFs.
+ *   - `format(value, decimals)`  — render-side; use it instead of
+ *     `value.toFixed(N)` in cell renders, summaries, PDFs.
  *   - `parse(input)`             — input-side; converts a user-typed
  *     string back to a canonical JS number (used by FormInput to keep
  *     the form/wire payload in canonical "." form).

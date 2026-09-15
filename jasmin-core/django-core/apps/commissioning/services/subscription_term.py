@@ -46,7 +46,7 @@ def compute_term_valid_until(
     never trials (``find_renewable_subscriptions`` excludes ``is_trial``).
 
     Returns ``None`` when neither mode is configured; the caller then keeps the
-    predecessor's term length (unchanged legacy behaviour for such tenants).
+    predecessor's term length.
     """
     iso_year, iso_week, _ = valid_from.isocalendar()
 

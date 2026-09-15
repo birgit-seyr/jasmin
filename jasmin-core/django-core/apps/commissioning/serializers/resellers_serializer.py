@@ -438,7 +438,7 @@ class CrateOrderSummarySerializer(serializers.Serializer):
     order_id = serializers.CharField(required=False)
     # ``display_number`` (e.g. "39v"), a STRING — mirrors OrderContentItem so
     # the frontend formats "{prefix}-{display_number}" the same on create and
-    # on reload. Was IntegerField (raw number) and lacked the prefix entirely.
+    # on reload.
     order_number = serializers.CharField(required=False, allow_null=True)
     order_number_prefix = serializers.CharField(required=False, allow_null=True)
 
@@ -606,14 +606,14 @@ class InvoiceResellerSerializer(
     reseller_country = serializers.SerializerMethodField()
     reseller_uid = serializers.SerializerMethodField()
 
-    # DOC-8: resolve the recipient block via the model's resolved_recipient() —
+    # Resolve the recipient block via the model's resolved_recipient() —
     # the FROZEN recipient_snapshot for a finalized invoice (the §14b recipient
     # as of issue, in lock-step with the sealed document_hash), and the LIVE
     # reseller/contact block for drafts. Reading live off a finalized invoice
     # would let a later reseller edit / GDPR anonymization drift the rendered
     # PDF + ZUGFeRD away from the sealed hash. resolved_recipient() returns the
     # {name, name2, address, zip, city, country, uid} dict (its live branch
-    # mirrors the reseller.invoice_* → contact.* fallback this used to do).
+    # applies the reseller.invoice_* → contact.* fallback).
     #
     # Resolve it ONCE per row (cached for the duration of a single row's
     # to_representation) rather than 7× — one per get_reseller_* field. DRF

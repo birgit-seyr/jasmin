@@ -1,4 +1,4 @@
-"""TEN-4: ``TenantScopedRateThrottle`` namespaces each scope's cache bucket by
+"""``TenantScopedRateThrottle`` namespaces each scope's cache bucket by
 schema so a shared egress IP can't burn one tenant's login/register limit and
 429 another tenant's users through the shared Redis cache.
 """

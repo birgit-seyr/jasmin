@@ -143,7 +143,7 @@ export const configurationRoutes: AppRoute[] = [
   },
   {
     // Legacy full view (every category) — kept for bookmarked URLs. The sidebar
-    // now links to the three category-scoped views below.
+    // links to the three category-scoped views below.
     path: "/configuration/email-templates",
     element: (
       <RequireRole flag="isAdmin">

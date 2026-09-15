@@ -462,8 +462,8 @@ describe("PDF generation – write sample files to disk", () => {
   //
   // These tests walk the JSX element tree the PDF component returns
   // (no real PDF rendering — we'd need a PDF parser otherwise) and
-  // verify the per-cell currency text. Catches the regression where
-  // the PDF used to hardcode ``€`` and ignored the tenant currency.
+  // verify the per-cell currency text, so the PDF uses the tenant currency
+  // rather than a hardcoded ``€``.
   describe("currencySymbol prop threading", () => {
     /**
      * Recursively flatten a React element tree to a single string of
@@ -510,7 +510,7 @@ describe("PDF generation – write sample files to disk", () => {
 
       // Concrete cells: per-line price uses ``$``, totals use ``$``.
       expect(txt).toContain("$");
-      // No leftover € from the legacy hardcode.
+      // No hardcoded €.
       expect(txt).not.toContain("€");
     });
 
@@ -528,7 +528,7 @@ describe("PDF generation – write sample files to disk", () => {
           previewMode
         />
       );
-      // Backwards-compatible default keeps the document rendering €.
+      // The default renders €.
       expect(collectText(tree)).toContain("€");
     });
 

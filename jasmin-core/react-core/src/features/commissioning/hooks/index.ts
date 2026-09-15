@@ -1,5 +1,4 @@
-// Commissioning feature hooks barrel. Re-exports the data + column hooks that
-// used to live in shared/hooks and shared/hooks/columns, now owned by the
+// Commissioning feature hooks barrel: the data + column hooks owned by the
 // commissioning bounded context.
 export { useAggregatedVariationsTotals } from './useAggregatedVariationsTotals';
 export { useCrates } from './useCrates';

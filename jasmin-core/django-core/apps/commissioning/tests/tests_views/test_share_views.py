@@ -141,9 +141,7 @@ class TestShareTypeVariationAmountsForPlanningView:
             },
         )
         assert resp.status_code == status.HTTP_200_OK
-        # Bare object, matching the declared schema — the previous
-        # one-element array wrapper was an audit finding (S3) and was
-        # removed from the view.
+        # Bare object matching the declared schema, not a one-element array.
         assert isinstance(resp.data, dict)
 
     def test_missing_year_returns_400(self, api_client, tenant):

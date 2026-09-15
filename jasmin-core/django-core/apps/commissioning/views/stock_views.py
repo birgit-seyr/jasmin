@@ -266,13 +266,12 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
         # NOTE: snapshot invalidation happens INSIDE the mutation branches below
         # (only when something actually changes) — a no-op PATCH (existing row,
         # no amount + no updatable field) must NOT destroy the day's snapshot
-        # baseline without rebuilding it (MOV-7).
+        # baseline without rebuilding it.
 
         if not existing:
             # A metadata-only PATCH (no ``amount``) must NOT write a zeroing
-            # correction against the theoretical balance (goods-flow audit #2):
-            # with ``amount`` absent the old code computed ``0 − running_balance``,
-            # an INVENTORY delta that cancelled the theoretical stock to 0. It
+            # correction against the theoretical balance (``0 − running_balance``,
+            # an INVENTORY delta that cancels the theoretical stock to 0). It
             # only toggles flags/note, so record a ZERO-delta row with
             # ``counted_amount = None`` ("not counted yet") — the balance is
             # preserved and the read path / cascade treat the row as uncounted.
@@ -294,7 +293,7 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
                 counted = amount
 
             try:
-                # Savepoint so a lost race (MOV-6: one_inventory_per_entity_day)
+                # Savepoint so a lost race (one_inventory_per_entity_day)
                 # rolls back ONLY this INSERT, not the whole PATCH transaction.
                 with transaction.atomic():
                     inventory = MovementShareArticle.objects.create(
@@ -314,7 +313,7 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
                         note=body(request).get("note", ""),
                     )
             except (IntegrityError, DjangoValidationError) as exc:
-                # TXN-4: a concurrent writer created this entity-day's INVENTORY
+                # A concurrent writer created this entity-day's INVENTORY
                 # between the ``select_for_update().first()`` miss above and this
                 # INSERT. Re-fetch the winner and fall through to the update
                 # branch below — converging to an update (like the bulk path's
@@ -394,7 +393,7 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
         # amount is the user-supplied absolute value; when absent, derive it from
         # the running balance (which includes the stored correction delta) — but
         # ONLY for a genuinely counted row. A metadata-only row has
-        # ``counted_amount = None`` (goods-flow audit #2) and must report no
+        # ``counted_amount = None`` and must report no
         # counted value, not a phantom count equal to the theoretical balance.
         if amount is not None:
             response_amount = amount
@@ -503,7 +502,7 @@ def _is_empty_stock(theoretical: float | None, current: float | None) -> bool:
 
 def _is_inventory_race(exc: IntegrityError | DjangoValidationError) -> bool:
     """True only for the ``one_inventory_per_entity_day`` unique violation — a
-    concurrent writer created this entity-day's INVENTORY row first (a lost MOV-6
+    concurrent writer created this entity-day's INVENTORY row first (a lost
     race that CONVERGES to an update).
 
     The race surfaces as EITHER exception type: ``MovementShareArticle.save()``
@@ -712,7 +711,7 @@ def _get_or_create_inventory(
     correction = amount - running_balance
 
     try:
-        # Savepoint so a lost race (MOV-6: one_inventory_per_entity_day) rolls
+        # Savepoint so a lost race (one_inventory_per_entity_day) rolls
         # back ONLY this INSERT, not the caller's whole bulk transaction.
         with transaction.atomic():
             inventory = MovementShareArticle.objects.create(
@@ -796,7 +795,7 @@ def _get_or_create_inventory(
 def _build_bulk_inventory_response(
     updated: int, created: int, errors: list[dict[str, str]]
 ) -> Response:
-    # REF-1: 207 on partial failure (some items errored), 200 only when every
+    # 207 on partial failure (some items errored), 200 only when every
     # item succeeded — matching the bulk-endpoint convention used in
     # reseller_views / finalize_views. Covers all three bulk-inventory callers.
     status_code = status.HTTP_207_MULTI_STATUS if errors else status.HTTP_200_OK
@@ -842,7 +841,7 @@ BULK_INVENTORY_RESPONSE = {
 
 
 def _pre_acquire_entity_locks(composite_ids: list[str]) -> None:
-    """TXN-1: take every entity's ``current_balance`` advisory lock up front, in
+    """Take every entity's ``current_balance`` advisory lock up front, in
     one canonical (sorted) order, before the per-item processing loop.
 
     Each bulk view otherwise acquires the per-entity locks incrementally in
@@ -1140,7 +1139,7 @@ class StorageLoggingView(APIViewRolePermissionsMixin, APIView):
         events: list[dict] = []
         storage_name = storage.name
 
-        # All movements (including INVENTORY) come from a single table now
+        # All movements (including INVENTORY) come from a single table
         movement_qs = MovementShareArticle.objects.filter(
             storage=storage,
         ).select_related("share_article")

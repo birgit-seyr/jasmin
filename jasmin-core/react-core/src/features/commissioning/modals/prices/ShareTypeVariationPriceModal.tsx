@@ -44,10 +44,10 @@ export default function ShareTypeVariationPriceModal({
   const { shares: defaultTaxRateShares } = useDefaultTaxRates();
 
   // ``allows_solidarity_pricing`` is a TENANT-WIDE setting, edited right here
-  // (moved out of the payments config page) so the office can flip it while
-  // setting a variation's prices. Local state mirrors the setting for INSTANT
-  // column reveal on toggle; the change is persisted to the tenant and the
-  // context refreshed so every other reader (subscriptions, dashboards) agrees.
+  // so the office can flip it while setting a variation's prices. Local state
+  // mirrors the setting for INSTANT column reveal on toggle; the change is
+  // persisted to the tenant and the context refreshed so every other reader
+  // (subscriptions, dashboards) agrees.
   const [allowsSolidarity, setAllowsSolidarity] = useState(() =>
     Boolean(getSetting("allows_solidarity_pricing", false)),
   );

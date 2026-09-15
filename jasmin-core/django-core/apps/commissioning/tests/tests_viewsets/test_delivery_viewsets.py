@@ -462,11 +462,11 @@ class TestDeliveryToursViewSet:
 class TestUpdateToursCreatesStationDay:
     """The CREATE branch of ``update_tours``' ``update_or_create``.
 
-    Its ``defaults`` used to carry ``is_active: True``, a field
-    ``DeliveryStationDay`` does not have (its sibling ``DeliveryStation`` does —
-    a copy/paste). Django setattrs unknown defaults on the UPDATE branch, so the
-    existing versioning test stayed green; the CREATE branch passes them to the
-    constructor and raises ``TypeError: got unexpected keyword arguments``.
+    ``DeliveryStationDay`` has no ``is_active`` field (its sibling
+    ``DeliveryStation`` does), so ``defaults`` must not carry one. Django
+    setattrs unknown defaults on the UPDATE branch, so only this CREATE branch
+    exposes it: it passes them to the constructor and raises
+    ``TypeError: got unexpected keyword arguments``.
 
     Activeness for this model IS ``valid_until IS NULL``, which the queryset
     filter already expresses.

@@ -133,7 +133,7 @@ class HarvestSharePlanningViewSet(RolePermissionsMixin, viewsets.ViewSet):
         )
         # CREATE with no amounts is a malformed request — the user has to
         # plan at least one cell to create a slot. ``process_share_planning
-        # _data`` itself no longer raises on empty input (UPDATE relies on
+        # _data`` itself doesn't raise on empty input (UPDATE relies on
         # empty meaning "clear this slot"); enforce the create-specific
         # rule here instead.
         if not share_contents:

@@ -1,12 +1,11 @@
 /**
- * Solidarity-pricing gating test for ``NewSubscriptionModal`` (audit SOL-10).
+ * Solidarity-pricing gating test for ``NewSubscriptionModal``.
  *
  * The modal lets a MEMBER set their own ``price_per_delivery`` only when the
  * tenant has ``allows_solidarity_pricing`` on; otherwise the field is disabled
  * and the price is NOT sent (the backend forces the reference price). The OFFICE
- * path always sends the price (and office can always override it). The audit
- * flagged zero coverage for this gate, so a refactor of the
- * ``isMemberOnly && !allowsSolidarity`` condition (or the spread-when-on
+ * path always sends the price (and office can always override it). A refactor
+ * of the ``isMemberOnly && !allowsSolidarity`` condition (or the spread-when-on
  * payload) could silently let a member submit a custom price with solidarity
  * off. These tests pin the user-visible gate.
  *

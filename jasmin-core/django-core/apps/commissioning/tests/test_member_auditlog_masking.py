@@ -3,8 +3,8 @@
 ``Member`` is auditlog-registered with ``mask_fields`` so the raw IBAN,
 email, address etc. never reach ``auditlog_logentry.changes`` (which is
 retained forever). ``birth_date`` is the statutory GenG date-of-birth —
-PII_IMMEDIATE for erasure and special-category-adjacent — and was missing
-from the mask list, so every Member create/edit wrote the plaintext DoB
+PII_IMMEDIATE for erasure and special-category-adjacent — so it must be in
+the mask list too, or every Member create/edit writes the plaintext DoB
 into the audit table. This test pins it masked.
 """
 

@@ -68,6 +68,15 @@ the matching section of Part 1.
   docs get deleted as work lands, and the references rot. If a comment needs
   context, inline the _fact_ itself — not a pointer. `CLAUDE.md` and `README.md`
   at the repo root are the only durable exceptions and may be referenced.
+- **Comments explain the code as it is, not how it got there.** Write a comment
+  only when a reader needs it to understand the current code: a non-obvious
+  reason, constraint, invariant or pitfall, or why an obvious-looking
+  alternative is wrong. Don't narrate history or process — what the code used
+  to do, which bug, incident, review, audit, finding or batch led to it, dates
+  of fixes, ticket or finding IDs (e.g. `SEC-1`), "previously", "no longer",
+  "before the fix". That belongs in the commit message. If a history comment
+  still carries a reason that matters today, rewrite it as a short present-tense
+  statement of that reason. This applies to docstrings and test docstrings too.
 - **Write skill files whenever useful.**
 - **Don't proactively start new feature work in the cultivation / economics /
   staff domains** unless asked. Their frontend pages are, however, **no longer

@@ -50,8 +50,7 @@ def share_delivery_date(share_delivery) -> _dt.date | None:
     ``day_number``, defaulting to Monday. Returns ``None`` for a malformed
     Share row. Duck-typed on ``share_delivery`` so this stays a pure date
     helper with no model import. Single source for the optin, cancellation
-    and billing-regen flows (previously duplicated in optin_service and
-    payments.services).
+    and billing-regen flows.
     """
     share = share_delivery.share
     if share is None:
@@ -91,7 +90,7 @@ def date_from_order(order) -> _dt.date:
 
     Falls back to today when ``order`` is ``None`` or its ``day_number`` is
     missing (treated as Monday). Used by tax-rate resolvers and other
-    Order-keyed lookups that previously inlined this same 3-line pattern.
+    Order-keyed lookups.
     """
     if order is None:
         return timezone.now().date()

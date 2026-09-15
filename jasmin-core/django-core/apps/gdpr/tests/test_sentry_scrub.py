@@ -1,4 +1,4 @@
-"""GDPR-MIN-2: the Sentry/GlitchTip hooks scrub email/IP substrings from
+"""The Sentry/GlitchTip hooks scrub email/IP substrings from
 breadcrumb + event messages so app-authored log PII doesn't accumulate in the
 monitoring store (beyond the reach of the Art. 17 erasure pipeline)."""
 

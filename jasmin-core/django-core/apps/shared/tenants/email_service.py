@@ -96,7 +96,7 @@ def _resolve_template(
 
     spec = get_spec(slug)
 
-    # EML-5: pick the subject in the send language so it matches the (per-language)
+    # Pick the subject in the send language so it matches the (per-language)
     # body. ``default_subject`` is German; ``default_subject_en`` (when set) is the
     # English one. Mirrors the body's language fallback (→ German default).
     default_subject = (
@@ -200,11 +200,11 @@ class EmailService:
     def _get_config(self) -> TenantEmailConfig | None:
         """Get tenant email config from the DB.
 
-        Previously cached for 1 hour, but the cache created a real
-        invalidation hazard (admin updates SMTP creds → emails go to the
-        old SMTP for an hour) for a marginal perf win (~1ms per send).
-        Drop the cache; revisit if a future bulk-send workload makes
-        per-send DB lookup hot.
+        Deliberately not cached: a cache creates a real invalidation
+        hazard (admin updates SMTP creds → emails keep going to the old
+        SMTP until it expires) for a marginal perf win (~1ms per send).
+        Revisit if a future bulk-send workload makes per-send DB lookup
+        hot.
         """
         # Scoped chokepoint (TenantEmailConfig is a SHARED/public-schema table
         # — never read it without a tenant scope).
@@ -286,7 +286,7 @@ class EmailService:
         # recipient. We stamp the same header on every EmailLog row so
         # bounce / DSN handlers can map an inbound complaint back to
         # the full set of intended recipients regardless of which row
-        # the bounce was attributed to. (P1-4)
+        # the bounce was attributed to.
         message_id = _build_message_id(from_email)
 
         return self._build_and_send(
@@ -437,7 +437,7 @@ class EmailService:
         from apps.notifications.models import EmailLog
 
         # Rows are created only AFTER message setup succeeds (just before send),
-        # so a failure in connection / header / attachment setup can no longer
+        # so a failure in connection / header / attachment setup can't
         # leave behind a "pending" EmailLog that never transitions to a final
         # status (the cleanup task keeps pending rows forever). The log lives in
         # the current tenant schema — schema separation enforces isolation.

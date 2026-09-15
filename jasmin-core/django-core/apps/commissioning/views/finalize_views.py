@@ -409,8 +409,8 @@ def _get_finalization_status(composite_ids: list[str]) -> dict[str, bool]:
     Returns a dict of composite_id → bool where True means the group has at
     least one row AND every ShareContent row in it is finalized.
 
-    Runs a SINGLE grouped aggregation rather than two count() queries per ID:
-    the previous per-ID loop was an N+1 (1–2 queries × N composite IDs).
+    Runs a SINGLE grouped aggregation rather than two count() queries per ID
+    (an N+1 over the composite IDs).
     """
     from django.db.models import Count, Q
 

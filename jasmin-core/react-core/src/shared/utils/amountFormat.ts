@@ -24,8 +24,8 @@ export const formatAmountForUnit = (
 
 /**
  * Build a numeric table-cell renderer that blanks null / empty / non-finite
- * values and otherwise formats via `format` at the given precision. Replaces
- * the copy-pasted `value ? format(Number(value), N) : ""` cell bodies.
+ * values and otherwise formats via `format` at the given precision. Use it
+ * instead of an inline `value ? format(Number(value), N) : ""` cell body.
  */
 export const renderNumber =
   (format: NumberFormatter, decimals: number) =>

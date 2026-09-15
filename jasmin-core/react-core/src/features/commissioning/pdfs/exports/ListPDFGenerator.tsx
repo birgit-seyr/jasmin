@@ -7,15 +7,11 @@ import { downloadBlob } from "@shared/utils";
 /**
  * Click-to-load list-PDF download button.
  *
- * Replaces the old ``<PDFDownloadLink>``-based ``ListPDFGenerator``
- * (which lived in ``ListPDFSharedComponents.tsx`` and statically
- * imported ``@react-pdf/renderer``). The whole point of splitting
- * this into its own file is to keep ``@react-pdf/renderer`` out of
- * the eager bundle: the only PDF-library import is INSIDE the click
- * handler.
+ * It lives in its own file to keep ``@react-pdf/renderer`` out of the
+ * eager bundle: the only PDF-library import is INSIDE the click handler.
  *
  * Pages that render this button (e.g. CleaningList, PackingListBoxes,
- * DeliveryStationsOverview, ...) now cost ~0 bytes of PDF library
+ * DeliveryStationsOverview, ...) cost ~0 bytes of PDF library
  * payload at boot. The ~484 KB gzip ``@react-pdf/renderer`` chunk
  * only downloads when the user actually clicks Download.
  *

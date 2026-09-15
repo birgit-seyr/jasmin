@@ -36,10 +36,6 @@ interface UseAdminConfirmationModalOptions<TResp> {
  * server payload so callers can patch e.g. the generated member number); the
  * priority ``getAdminStatus``; and the pinned, ascending-shaped
  * ``getAdminStatusSorter``.
- *
- * Consolidates two byte-identical copies that had already silently DRIFTED —
- * one ran the sorter the other documents as the 2026-06-08 bug, and only one
- * surfaced backend error messages.
  */
 export function useAdminConfirmationModal<
   T extends AdminConfirmableRecord,
@@ -114,8 +110,8 @@ export function useAdminConfirmationModal<
       const statusB = getAdminStatus(b as T);
       // ASCENDING-shaped (A − B): AntD inverts for descend, so a descend-sorted
       // column puts HIGH priority (admin_pending) at the top — the semantic
-      // getAdminStatus documents. Returning B − A is the 2026-06-08 bug that
-      // pushed pending rows to the bottom.
+      // getAdminStatus documents. Returning B − A pushes pending rows to the
+      // bottom.
       return statusA.priority - statusB.priority;
     },
     [getAdminStatus],

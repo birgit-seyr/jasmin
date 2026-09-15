@@ -13,7 +13,7 @@ voluntarily downsized last year.
 
 A successful cancellation also schedules a
 ``commissioning.member_cancelled`` confirmation email via
-``transaction.on_commit`` (P1-3 atomicity policy) and stamps
+``transaction.on_commit`` and stamps
 ``Member.cancellation_email_sent_at`` after a successful send. The
 send is skipped silently when ``member.email`` is unset — most
 importantly for the GDPR anonymisation path
@@ -222,7 +222,7 @@ def _cancel_active_subscriptions(
                 )
             subscriptions_ended.append(subscription.id)
         except SubscriptionCancellationError:
-            # MEM-10: the normal Sunday-aligned cancel can't truncate THIS
+            # The normal Sunday-aligned cancel can't truncate THIS
             # subscription — it hasn't started yet (e.g. a future-dated trial),
             # or no Sunday remains in its term. The member is leaving, so it must
             # NOT survive: end it leniently (stamp cancelled + drop deliveries
@@ -250,7 +250,7 @@ def _cancel_active_subscriptions(
                     exc,
                 )
         except (JasminError, *_NON_CANCELLATION_ERRORS) as exc:
-            # BIZ-1: a genuine per-subscription failure must NOT abort the member
+            # A genuine per-subscription failure must NOT abort the member
             # exit (the savepoint isolates it) — but it must NOT be silent
             # either. Record it so the office knows which subscriptions still
             # hold a live mandate and need manual attention.
@@ -353,7 +353,7 @@ def _force_end_subscription(subscription, *, effective, now, cancelled_by) -> No
 
 def _send_cancellation_email(member: Member) -> None:
     """Schedule the ``commissioning.member_cancelled`` confirmation
-    via ``on_commit`` (P1-3 atomicity policy).
+    via ``on_commit``.
 
     On a successful send (``EmailService.send_email`` returns
     ``True``) the dispatcher stamps

@@ -114,7 +114,7 @@ class SharesDeliveryDayService:
             )
         if copies:
             DeliveryStationDay.objects.bulk_create(copies)
-            # SUC-3: a draft subscription with an OPEN default DSD holds a
+            # A draft subscription with an OPEN default DSD holds a
             # CapacityReservation for EVERY week on that single id. After the
             # copy, post-boundary weeks materialize against the new copy's id —
             # but occupancy is strictly id-keyed, so a stale reservation left on
@@ -290,7 +290,7 @@ class SharesDeliveryDayService:
             station_id = share_delivery.delivery_station_day.delivery_station_id
             resolved = _resolve_new_dsd(station_id, monday)
             if resolved is None:
-                # SUC-4: the station has no station-day covering this week on the
+                # The station has no station-day covering this week on the
                 # new day, so the delivery can't be remapped. Leaving it on the
                 # closed old-day row would violate the Share/ShareDelivery
                 # day-match invariant — refuse the whole succession (the viewset

@@ -82,9 +82,9 @@ class TestIterCyclePeriods:
         assert periods[0].end == datetime.date(2026, 1, 20)
 
     def test_day31_start_recovers_month_end(self):
-        # CHG-3: a day-31 anchor must snap BACK to month-end when the month allows
-        # (Mar/May 31), not ratchet down to the 28th for the rest of the term as
-        # the old incremental-re-add did.
+        # A day-31 anchor must snap BACK to month-end when the month allows
+        # (Mar/May 31), not ratchet down to the 28th for the rest of the term (as
+        # re-adding a month to the previous, clamped start would).
         periods = list(
             _iter_cycle_periods(
                 datetime.date(2026, 1, 31), datetime.date(2026, 5, 31), "MONTHLY"
@@ -94,9 +94,9 @@ class TestIterCyclePeriods:
         assert starts == [
             datetime.date(2026, 1, 31),
             datetime.date(2026, 2, 28),  # Feb has no 31
-            datetime.date(2026, 3, 31),  # recovered (old code: 03-28)
+            datetime.date(2026, 3, 31),  # recovered (not 03-28)
             datetime.date(2026, 4, 30),  # Apr has no 31
-            datetime.date(2026, 5, 31),  # recovered (old code: 05-28)
+            datetime.date(2026, 5, 31),  # recovered (not 05-28)
         ]
         # Contiguous: each period ends the day before the next begins.
         for cur, nxt in zip(periods, periods[1:], strict=False):
@@ -169,7 +169,7 @@ class TestExactStrategy:
     def test_failed_period_under_exact_is_flagged_not_silently_dropped(
         self, tenant, tenant_settings, subscription
     ):
-        """BIZ-4: a FAILED (bank-returned) charge under EXACT is neither
+        """A FAILED (bank-returned) charge under EXACT is neither
         re-billed nor absorbed into other periods, so the owed amount would
         vanish silently. Until the reconciliation endpoint exists, regenerate
         surfaces it as an operator-actionable error and never creates a
@@ -264,8 +264,8 @@ class TestSmoothedStrategy:
 
         # 5 deliveries × 10€ = 50€ smoothed over 12 monthly cycles. 50/12 is
         # inexact, so the per-cycle amounts are allocated (largest remainder)
-        # to sum EXACTLY to 50.00 — no drift over the term. The old uniform
-        # 4.17/cycle over-charged 0.04 (12 × 4.17 = 50.04).
+        # to sum EXACTLY to 50.00 — no drift over the term. A uniform
+        # 4.17/cycle would over-charge 0.04 (12 × 4.17 = 50.04).
         _make_deliveries_for_subscription(
             subscription, [(2026, w) for w in range(2, 7)]
         )
@@ -288,9 +288,9 @@ class TestSmoothedStrategy:
     ):
         """Once some periods are ISSUED, SMOOTHED must split only the REMAINING
         amount over the still-unlocked periods, so sum(all charges) stays equal
-        to the term total. The old code split the FULL recomputed total across
-        ALL periods, so the unlocked share plus the kept locked amounts
-        over-/under-collected the difference."""
+        to the term total. Splitting the FULL recomputed total across ALL
+        periods would make the unlocked share plus the kept locked amounts
+        over-/under-collect the difference."""
         tenant_settings.billing_strategy = TenantSettings.BILLING_STRATEGY_SMOOTHED
         tenant_settings.save()
 
@@ -332,8 +332,8 @@ class TestSmoothedStrategy:
         recomputed term total — later deliveries dropped after early periods
         were issued — the still-unlocked periods bill 0, never a NEGATIVE
         charge (which a SEPA pain.008 can't carry; the bank rejects the batch).
-        The over-collection is a refund owed back out-of-band — and MEM-4
-        requires it to surface as an operator-actionable WARNING, not silently."""
+        The over-collection is a refund owed back out-of-band — and it must
+        surface as an operator-actionable WARNING, not silently."""
         tenant_settings.billing_strategy = TenantSettings.BILLING_STRATEGY_SMOOTHED
         tenant_settings.save()
 
@@ -372,7 +372,7 @@ class TestSmoothedStrategy:
         assert {c.expected_amount for c in planned} == {Decimal("0.00")}
         # Issued amounts untouched; total never goes below what was collected.
         assert sum(c.expected_amount for c in all_charges) == Decimal("20.00")
-        # MEM-4: the over-collection is logged (10€ owed back), not swallowed.
+        # The over-collection is logged (10€ owed back), not swallowed.
         assert any(
             "over-collection" in r.message for r in caplog.records
         ), "expected a SMOOTHED over-collection WARNING"
@@ -533,7 +533,7 @@ class TestEdgeCases:
     def test_waiting_list_subscription_is_not_billed(
         self, tenant, tenant_settings, subscription
     ):
-        # BL-10: a waiting-list subscription must get NO billable charges — the
+        # A waiting-list subscription must get NO billable charges — the
         # single-subscription path (confirm/materialize) must apply the same
         # on_waiting_list=False exclusion the bulk regenerate_all path does, or a
         # not-yet-committed sub silently enters the SEPA run.
@@ -582,7 +582,7 @@ class TestEdgeCases:
 
 
 # ---------------------------------------------------------------------------
-# regenerate_for_subscription — TXN-1: never drop a charge already bundled
+# regenerate_for_subscription — never drop a charge already bundled
 # into a BillingRun.
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
@@ -607,7 +607,7 @@ class TestRegenerateProtectsBundledCharges:
     def test_bundled_planned_charge_survives_regenerate(
         self, tenant, tenant_settings, subscription
     ):
-        # TXN-1: a PLANNED charge already bundled into a DRAFT run must not be
+        # A PLANNED charge already bundled into a DRAFT run must not be
         # deleted + recreated by a later regenerate (which would silently drop
         # the bundled charge and let a fresh PLANNED row be swept into a SECOND
         # run → double-charge).
@@ -640,7 +640,7 @@ class TestRegenerateProtectsBundledCharges:
     def test_smoothed_does_not_rebill_bundled_amount(
         self, tenant, tenant_settings, subscription
     ):
-        # MON-1 / TXN-1: under SMOOTHED, a bundled PLANNED charge counts as
+        # Under SMOOTHED, a bundled PLANNED charge counts as
         # committed — the remaining periods must split the term total MINUS the
         # bundled amount, never re-bill it.
         tenant_settings.billing_strategy = TenantSettings.BILLING_STRATEGY_SMOOTHED
@@ -667,7 +667,7 @@ class TestRegenerateProtectsBundledCharges:
     def test_waived_period_is_forgiven_not_respread(
         self, tenant, tenant_settings, subscription
     ):
-        # MON-1 review fix: a WAIVED period is a deliberate forgiveness. Under
+        # A WAIVED period is a deliberate forgiveness. Under
         # SMOOTHED the remaining periods must keep their normal share and the
         # member's collectable (PLANNED) total must DROP by the waived amount —
         # the waiver must NOT be re-spread across the other periods (which would
@@ -696,8 +696,8 @@ class TestRegenerateProtectsBundledCharges:
             c.expected_amount for c in charges.filter(status=ChargeStatus.WAIVED)
         )
         # Collectable total = term MINUS the waived amount (110€), and every
-        # remaining cycle keeps its normal 10€ — NOT 120/11 ≈ 10.91 (which the
-        # buggy exclusion produced by re-spreading the forgiven 10€).
+        # remaining cycle keeps its normal 10€ — NOT 120/11 ≈ 10.91 (which
+        # re-spreading the forgiven 10€ would produce).
         assert (
             sum(c.expected_amount for c in planned) == Decimal("120.00") - waived_total
         )
@@ -707,11 +707,11 @@ class TestRegenerateProtectsBundledCharges:
     def test_straddling_bundled_charge_unbundled_on_truncation(
         self, tenant, tenant_settings, subscription
     ):
-        # MEM-1: a cancellation can truncate valid_until INSIDE a period whose
+        # A cancellation can truncate valid_until INSIDE a period whose
         # full-period charge was already bundled into a DRAFT run (period_start
         # <= valid_until < period_end). Left bundled it stays "locked" at its
         # FULL amount and would SEPA-debit the now-cancelled tail of the period.
-        # The fix unbundles it so the regen drops + recreates it clamped.
+        # Regenerate unbundles it, then drops + recreates it clamped.
         tenant_settings.billing_strategy = TenantSettings.BILLING_STRATEGY_SMOOTHED
         tenant_settings.save()
         _make_deliveries_for_subscription(
@@ -738,7 +738,7 @@ class TestRegenerateProtectsBundledCharges:
         ChargeScheduleService.regenerate_for_subscription(subscription)
 
         # No charge still bundled into the DRAFT run extends past the cut — the
-        # straddling row was unbundled (pre-fix it stayed locked at full period).
+        # straddling row was unbundled.
         assert not ChargeSchedule.objects.filter(
             billing_run=run, period_end__gt=valid_until
         ).exists()
@@ -754,7 +754,7 @@ class TestRegenerateProtectsBundledCharges:
 
 @pytest.mark.django_db
 class TestStrategyDeliverySetAlignment:
-    """CHG-4: EXACT and SMOOTHED must bill the SAME delivery set — a delivery
+    """EXACT and SMOOTHED must bill the SAME delivery set — a delivery
     dated outside [valid_from, valid_until] is billed by neither."""
 
     def test_smoothed_excludes_out_of_term_delivery(
@@ -773,21 +773,21 @@ class TestStrategyDeliverySetAlignment:
         ChargeScheduleService.regenerate_for_subscription(subscription)
 
         charges = ChargeSchedule.objects.filter(subscription=subscription)
-        # 6 in-term × 10€ = 60€. Before the clamp the stray week-20 delivery
-        # inflated the SMOOTHED term total to 70€.
+        # 6 in-term × 10€ = 60€. Without the clamp the stray week-20 delivery
+        # would inflate the SMOOTHED term total to 70€.
         assert sum(c.expected_amount for c in charges) == Decimal("60.00")
 
 
 # ---------------------------------------------------------------------------
-# On-off opt-out exclusion (TEST-1)
+# On-off opt-out exclusion
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestOptinExclusion:
     """Billing must drop on-off (``requires_optin``) deliveries the member
     opted out of — the ONLY place this happens is the Python property
-    ``ShareDelivery.is_opted_in_for_delivery`` (payments/services.py). No prior
-    test created a ``requires_optin`` variation, so the filter was a silent
-    pass-through; a regression to overbill would have gone unnoticed."""
+    ``ShareDelivery.is_opted_in_for_delivery`` (payments/services.py). Without a
+    ``requires_optin`` variation the filter is a silent pass-through, so an
+    overbilling regression would go unnoticed."""
 
     def _optin_subscription(self, tenant_settings, member):
         # A requires_optin variation can only be saved once the tenant opts in.

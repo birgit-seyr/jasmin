@@ -94,7 +94,7 @@ def convert_trial_member_on_first_coop_share(member: Member) -> bool:
         # only_confirmed: admission counts CONFIRMED equity only — the triggering
         # share is confirmed but sibling pending shares aren't swept in here, so
         # a member must not be converted on pending equity that can later be
-        # rejected/deleted (BIZ-3).
+        # rejected/deleted.
         CoopShareService.assert_member_total_within_bounds(member, only_confirmed=True)
 
         # ``trial_converted_at`` is a DateTimeField — full UTC
@@ -125,7 +125,7 @@ def convert_trial_member_on_first_coop_share(member: Member) -> bool:
 
 def _send_trial_converted_email(member: Member) -> None:
     """Schedule the ``commissioning.trial_converted`` welcome via
-    ``on_commit`` (P1-3 atomicity policy).
+    ``on_commit``.
 
     Conceptually the GenG-membership counterpart of
     ``accounts.welcome_user`` (user-account event). Best-effort: the

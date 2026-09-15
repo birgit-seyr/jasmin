@@ -168,7 +168,7 @@ class TestCurrentStockComparisonPatch:
     def test_lost_inventory_race_converges_to_update(
         self, api_client, tenant, monkeypatch
     ):
-        """TXN-4: when the existing-lookup misses but the INSERT then loses the
+        """When the existing-lookup misses but the INSERT then loses the
         one-inventory-per-entity-day race (a concurrent writer created the row
         first), the PATCH converges to an update of the winner (200 + our count)
         instead of returning a bare 409 that discards the office's count."""
@@ -232,10 +232,10 @@ class TestCurrentStockComparisonPatch:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_metadata_only_patch_preserves_theoretical_stock(self, api_client, tenant):
-        """goods-flow audit #2: a PATCH with only a flag (no ``amount``) on an
-        entity that has theoretical stock and no prior count must NOT zero it.
-        Before the fix it wrote a ``0 − theoretical`` correction → stock read 0.
-        Now it records a metadata-only row (counted_amount=None, zero delta)."""
+        """A PATCH with only a flag (no ``amount``) on an entity that has
+        theoretical stock and no prior count must NOT zero it (a
+        ``0 − theoretical`` correction would make stock read 0). It records a
+        metadata-only row (counted_amount=None, zero delta)."""
         article = ShareArticleFactory()
         storage = StorageFactory()
         _seed_theoretical_stock(article, storage, 50)
@@ -255,7 +255,7 @@ class TestCurrentStockComparisonPatch:
         assert _balance(article, storage) == Decimal("50")
 
     def test_amount_patch_still_corrects_stock(self, api_client, tenant):
-        """Regression: a PATCH WITH an amount still nets counted − theoretical."""
+        """A PATCH WITH an amount still nets counted − theoretical."""
         article = ShareArticleFactory()
         storage = StorageFactory()
         _seed_theoretical_stock(article, storage, 50)
@@ -332,7 +332,7 @@ class TestBulkInventoryRejectsNonStringIds:
     )
     @pytest.mark.parametrize("bad_id", [123, None, "", {"id": "x"}])
     def test_non_string_id_returns_400(self, api_client, tenant, url, bad_id):
-        """A non-string composite id used to reach ``.split`` and return 500."""
+        """A non-string composite id is refused before it reaches ``.split``."""
         article = ShareArticleFactory()
         storage = StorageFactory()
         valid_id = _make_composite_id(article, "KG", "M", storage)
@@ -401,7 +401,7 @@ class TestBulkSetAsExpectedCurrentStock:
 
         resp = api_client.post(URL_BULK_EXPECTED, {"ids": [cid]}, format="json")
 
-        # REF-1: a per-item error escalates the bulk response to 207.
+        # A per-item error escalates the bulk response to 207.
         assert resp.status_code == status.HTTP_207_MULTI_STATUS
         assert resp.data["created"] == 0
         assert resp.data["updated"] == 0
@@ -535,7 +535,7 @@ class TestBulkSetToZeroCurrentStock:
             URL_BULK_ZERO, {"ids": [good, "not-a-valid-id"]}, format="json"
         )
 
-        # REF-1: one valid + one invalid → partial failure → 207.
+        # One valid + one invalid → partial failure → 207.
         assert resp.status_code == status.HTTP_207_MULTI_STATUS
         assert resp.data["created"] == 1  # the good one still went through
         assert len(resp.data["errors"]) == 1

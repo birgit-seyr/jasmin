@@ -47,7 +47,7 @@ class TestMemberViewSet:
         assert row["payback_due_date"] == "2027-06-01"
 
     def test_coop_shares_total_excludes_cancelled(self, api_client, tenant):
-        # MEM-6: coop_shares_total must count only LIVE shares (cancelled /
+        # coop_shares_total must count only LIVE shares (cancelled /
         # divested = 0 equity), matching the enforced min-equity invariant.
         from django.utils import timezone
 
@@ -195,7 +195,7 @@ class TestMemberViewSet:
 
     @time_machine.travel(datetime.date(2026, 3, 30), tick=False)  # Monday
     def test_office_cancel_refused_with_active_subscription(self, api_client, tenant):
-        # MEM-10: by default the office cancel is REFUSED while the member holds
+        # By default the office cancel is REFUSED while the member holds
         # an active subscription — end it first, or force-cancel.
         from apps.commissioning.tests.factories import SubscriptionFactory
 
@@ -355,7 +355,7 @@ class TestSubscriptionViewSet:
             delivery.save()  # full_clean() in save() enforces the invariant
 
     def test_confirm_blocked_for_cancelled_member(self, api_client, tenant):
-        # MEM-1: confirming a pending subscription for a member who has
+        # Confirming a pending subscription for a member who has
         # initiated their exit must be refused — it would materialise deliveries
         # + PLANNED charges and back-cascade member.confirm() onto a departed
         # member.
@@ -374,7 +374,7 @@ class TestSubscriptionViewSet:
         assert not sub.admin_confirmed
 
     def test_reject_releases_capacity_reservation(self, api_client, tenant):
-        # BIZ-5: rejecting a draft must free its held station-day slot. Reject
+        # Rejecting a draft must free its held station-day slot. Reject
         # only stamps flags (no row delete), so the CASCADE never fires — the
         # action must release the reservation explicitly, else the slot stays
         # blocked for the 14-day TTL.

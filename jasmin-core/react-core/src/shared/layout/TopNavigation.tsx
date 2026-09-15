@@ -203,7 +203,7 @@ function SecondaryNavigation() {
       <div className="flex-1"></div> {/* Left spacer */}
       {/* Semantic landmark for the section navigation. display:contents so the
           <nav> generates no box — the Menu stays the flex child between the
-          spacers and the layout is unchanged (A11Y-9). */}
+          spacers and the layout is unchanged. */}
       <nav aria-label={t("nav.main")} style={{ display: "contents" }}>
         <Menu
           mode="horizontal"

@@ -1,5 +1,5 @@
 """Tests for ``SuperAdminIPAllowlistMiddleware`` — the app-layer defense-in-depth
-IP allowlist over ``/api/super-admin/`` (CFG-1).
+IP allowlist over ``/api/super-admin/``.
 
 Pure middleware unit tests: a ``RequestFactory`` request + a sentinel
 ``get_response`` let us assert "passed through" vs "blocked with 403" without

@@ -10,9 +10,8 @@ Covers the full create → finalize → unfinalize → delete cycle and verifies
 - Cascading deletes correctly unfinalize parent + child rows.
 - Crate contents follow the same lifecycle as line items.
 
-These tests were written after a string of production bugs around the
-finalize/unfinalize cascade (see commit history). They are intentionally
-explicit so the contract is unambiguous.
+These tests are intentionally explicit so the finalize/unfinalize cascade
+contract is unambiguous.
 """
 
 from __future__ import annotations
@@ -294,10 +293,10 @@ class TestCascadeFinalize:
             assert child.is_finalized is True
 
     def test_finalize_order_finalizes_order_content_linked_crates(self, tenant):
-        # Regression: crates attached to an order_content (offer-bound lines)
-        # carry order=NULL per the XOR constraint, so they are NOT in
-        # order.crateordercontent_set and slipped the finalize cascade — leaving
-        # a finalized order's crate line mutable/deletable.
+        # Crates attached to an order_content (offer-bound lines) carry
+        # order=NULL per the XOR constraint, so they are NOT in
+        # order.crateordercontent_set — the finalize cascade must still reach
+        # them, or a finalized order's crate line stays mutable/deletable.
         _ensure_settings(connection.tenant)
         order = _make_order_with_content()
         order_content = order.ordercontent_set.first()
@@ -350,10 +349,9 @@ class TestCascadeFinalize:
             assert crate.is_finalized is True
 
     def test_invoice_create_persists_payment_due_date(self, tenant):
-        # Regression: due_date (read by the dunning/reminder builder) was never
-        # set on any real invoice, so reminders showed 0 days overdue and a
-        # blank due date. It must now be issue date + the reseller's payment
-        # terms.
+        # due_date (read by the dunning/reminder builder) must be issue date +
+        # the reseller's payment terms; without it reminders show 0 days
+        # overdue and a blank due date.
         _ensure_settings(connection.tenant)
         order = _make_order_with_content()
         dn = DeliveryNoteService.create_from_order(order=order)
@@ -445,7 +443,7 @@ class TestCascadeDelete:
         assert Order.objects.get(id=order_id).is_finalized is True
 
     def test_dn_unfinalize_raises_so_no_cascade_to_order(self, tenant):
-        """DN.unfinalize() raises, so callers can never reach the old
+        """DN.unfinalize() raises, so callers can never reach a
         cascade-to-order path."""
         _ensure_settings(connection.tenant)
         order = _make_order_with_content()
@@ -465,9 +463,8 @@ class TestCascadeDelete:
 # ===================================================================
 @pytest.mark.django_db
 class TestAssignFinalNumberCollision:
-    """Regression test for the production bug where finalizing an older
-    draft would land on a slot still held by a newer draft, blocking the
-    save with a unique-constraint error."""
+    """Finalizing an older draft must not be blocked by a unique-constraint
+    error when its slot is still held by a newer draft."""
 
     def test_finalize_older_draft_bumps_newer_draft(self, tenant):
         _ensure_settings(connection.tenant)

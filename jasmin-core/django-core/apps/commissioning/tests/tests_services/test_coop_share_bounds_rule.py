@@ -9,8 +9,7 @@ Covers two service-layer entry points:
      enforce once they're admitted as full Mitglieder.
   2. ``MemberService.confirm_and_notify`` — must REFUSE to admit a
      non-trial applicant whose total coop shares don't satisfy the
-     window. Previously silent: a member with zero shares could be
-     confirmed.
+     window — e.g. a member with zero shares must not be confirmed.
 
 Tests deliberately set ``allow_pending_application_email=False``
 where notification side-effects would pollute the assertion. Email
@@ -107,8 +106,8 @@ class TestConfirmTimeBoundsCheck:
     def test_confirm_refuses_member_below_minimum(self, tenant):
         _settings(tenant, min_number_coop_shares=3, max_number_coop_shares=10)
         member = MemberFactory(is_trial=False, admin_confirmed=False)
-        # Bypass clean() — the existing per-share guard would also block
-        # this if we went through model save() under the new rules.
+        # Bypass clean() — the per-share guard would also block
+        # this if we went through model save().
         CoopShare.objects.create(
             member=member,
             amount_of_coop_shares=Decimal(1),
@@ -245,7 +244,7 @@ class TestTrialConversionBoundsCheck:
         assert CoopShare.objects.filter(member=member).count() == 1
 
     def test_pending_sibling_share_does_not_count_toward_conversion(self, tenant):
-        """BIZ-3: confirming a below-minimum share does NOT convert the trial
+        """Confirming a below-minimum share does NOT convert the trial
         member just because a PENDING sibling would top up the total — only
         confirmed equity counts, so the member isn't admitted on shares that can
         later be rejected/deleted (leaving a full member below the minimum)."""
@@ -273,7 +272,7 @@ class TestTrialConversionBoundsCheck:
 
 @pytest.mark.django_db
 class TestCancelledSharesExcludedFromBounds:
-    """BL-11: cancelled (divested) coop shares are not live equity and must
+    """Cancelled (divested) coop shares are not live equity and must
     not count toward the GenG min/max window."""
 
     def _confirmed_member_with_shares(self, count):
@@ -298,8 +297,8 @@ class TestCancelledSharesExcludedFromBounds:
         assert CoopShareService.member_total_shares(member) == Decimal(2)
 
     def test_at_max_cancel_one_then_buy_one_is_allowed(self, tenant):
-        # Previously the cancelled row still counted, so buying after
-        # cancelling tripped the max. Now the cancelled row is excluded.
+        # The cancelled row is excluded, so buying after cancelling doesn't
+        # trip the max.
         _settings(tenant, min_number_coop_shares=1, max_number_coop_shares=3)
         member = self._confirmed_member_with_shares(3)  # at max
 
@@ -324,7 +323,7 @@ class TestCancelledSharesExcludedFromBounds:
 
 @pytest.mark.django_db
 class TestConfirmEnforcesBounds:
-    """BL-21: Member.confirm() itself gates GenG admission on the min/max
+    """Member.confirm() itself gates GenG admission on the min/max
     window, so the cascade entry-points (Subscription-confirm, link_to_user,
     accept_invitation) can't admit an out-of-range member into the
     Mitgliederliste."""

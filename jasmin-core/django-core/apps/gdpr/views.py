@@ -74,7 +74,7 @@ set_throttle_scope(gdpr_my_data_view, "gdpr_sar_export")
 # ---------------------------------------------------------------------------
 # Two-step deletion flow.
 #
-# - ``gdpr_request_deletion_view`` no longer anonymizes directly. It
+# - ``gdpr_request_deletion_view`` never anonymizes directly. It
 #   creates a ``DeletionRequest(PENDING_EMAIL)`` and sends a 24h
 #   confirmation link.
 # - ``gdpr_confirm_deletion_view`` accepts the token. If the request

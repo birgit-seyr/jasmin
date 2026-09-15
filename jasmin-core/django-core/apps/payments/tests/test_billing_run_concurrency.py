@@ -8,7 +8,7 @@ both read the same unassigned charges and bundle them into two different runs
 overwrites the first run's FK pointer while the first run's ``charge_count`` /
 total still counted them).
 
-The fix is ``select_for_update(skip_locked=True, of=("self",))`` on the
+The guard is ``select_for_update(skip_locked=True, of=("self",))`` on the
 eligible queryset: the loser skips already-locked charges and bundles only
 what's left. This test proves it with real threads (a mocked query wouldn't
 reproduce the interleaving), mirroring the invoice/member numbering
@@ -249,7 +249,7 @@ class TestBillingRunConcurrency:
         self, tenant, member, subscription, billing_profile
     ):
         """A single create_run still bundles every eligible charge — catches a
-        concurrency fix that broke the single-writer path."""
+        concurrency guard that breaks the single-writer path."""
         n_charges = 5
         period_start = datetime.date(2026, 2, 1)
         for i in range(n_charges):

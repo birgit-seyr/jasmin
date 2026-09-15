@@ -1,4 +1,4 @@
-"""EML-5: ``user_language`` is constrained to the supported language set at
+"""``user_language`` is constrained to the supported language set at
 every write ingress — the serializer ``ChoiceField`` (backed by the single
 ``apps.shared.languages.LanguageChoices`` source) rejects unsupported codes so
 an unvalidated value can never be persisted."""

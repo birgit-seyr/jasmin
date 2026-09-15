@@ -52,7 +52,7 @@ class DeliveryStationFeeService:
         External-CSV (import) tenants have NO ``ShareDelivery`` rows — box
         demand lives in ``ExternalShareDemand`` — so route to the aggregated
         counterpart there. Without this the per-box fee always counts 0 for a
-        fee-charging import tenant (the box-matrix bug class, but for money)."""
+        fee-charging import tenant."""
         if isinstance(_resolve_backend(), ExternalDemandBackend):
             return DeliveryStationFeeService._delivered_box_lines_external(
                 station, start, end

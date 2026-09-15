@@ -278,11 +278,9 @@ class DocumentationSummaryService:
             # week begins — the same "stock is read from the prior day" rule the
             # two branches above use, applied to Monday instead of a single day.
             #
-            # This previously assigned ``stock_day = day_number`` — i.e. None,
-            # since that is the only way to reach this branch — and
-            # ``StockService.get_theoretical_current_stock`` immediately does
-            # ``int(day_number)``, so the request died with a TypeError (HTTP
-            # 500) rather than returning the week summary.
+            # ``day_number`` is always None on this branch and
+            # ``StockService.get_theoretical_current_stock`` does ``int(day_number)``,
+            # so the stock day must come from the previous-day coordinates below.
             year, stock_week, stock_day = previous_day_stock_coordinates(
                 Week(year, delivery_week).day(0)
             )
@@ -741,10 +739,10 @@ class DocumentationSummaryService:
         The theoretical objects are deliberately NOT touched. They are
         short-term-locked (``RequiresShortTermStorageMixin`` rejects any other
         storage) and the office's storage picker is UI-restricted to that one
-        storage — so there is nothing to relocate. The old relocation was either
-        a no-op or, if a non-short-term storage reached the service, an illegal
-        write of a non-short-term theoretical (it bypassed ``full_clean`` via a
-        raw ``.update()``).
+        storage — so there is nothing to relocate. Relocating would be either a
+        no-op or, if a non-short-term storage reached the service, an illegal
+        write of a non-short-term theoretical (bypassing ``full_clean`` via a raw
+        ``.update()``).
 
         ``day_number_fn`` resolves the slot's day: harvests carry their own
         ``day_number``; purchases are always ``PURCHASE_DAY`` (matching the
@@ -753,7 +751,7 @@ class DocumentationSummaryService:
         if not items:
             return
 
-        # TXN-1: process items in a canonical (sorted) entity order so the
+        # Process items in a canonical (sorted) entity order so the
         # per-item advisory locks — theoretical_sum (via _sum_theoretical) and
         # current_balance (via the movement cascade), both transaction-scoped and
         # held to the outer commit — are acquired in the same order as every
@@ -811,8 +809,8 @@ class DocumentationSummaryService:
     def bulk_set_purchase_as_expected(data: dict[str, Any]) -> None:
         """Record theoretical/expected PURCHASE as actual purchase for the
         selected items (upsert + movement). Purchases always land on
-        ``PURCHASE_DAY`` (matching the ``TheoreticalPurchase``), instead of the
-        old NULL day_number. No-op when ``selectedData`` is empty."""
+        ``PURCHASE_DAY`` (matching the ``TheoreticalPurchase``), never a NULL
+        day_number. No-op when ``selectedData`` is empty."""
         DocumentationSummaryService._bulk_set_actual(
             data.get("selectedData", []),
             model=Purchase,

@@ -5,10 +5,10 @@ rather than shared from one module, so each app stays independently
 extractable (no cross-app model import, and each app's historical migrations
 keep resolving ``apps.<app>.….generate_jasmin_id``).
 
-The cost of that choice is drift, and drift already happened once: four apps
-were missing the PK-collision retry in ``save()``, and three were generating
-IDs from a *different* alphabet that included the visually ambiguous
-``I/l/1/O/0``. This test makes that class of divergence impossible to merge.
+The cost of that choice is drift — e.g. a copy missing the PK-collision retry
+in ``save()``, or generating IDs from a *different* alphabet that includes the
+visually ambiguous ``I/l/1/O/0``. This test makes that class of divergence
+impossible to merge.
 
 Copies are DISCOVERED by scanning ``apps/`` — a new app that adds its own
 ``JasminModel`` is picked up automatically and must match the others.

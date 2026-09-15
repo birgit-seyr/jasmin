@@ -8,14 +8,12 @@ office). This suite covers what's NOT the library's job:
   * the deterministic charge ordering inside the XML (so two
     independent calls with the same input produce byte-identical
     output);
-  * the creditor identity → ``InitgPty`` / ``Cdtr`` mapping
-    (the dormant ``Tenant.sepa_creditor_*`` fields are now load-
-    bearing);
+  * the creditor identity (``Tenant.sepa_creditor_*`` fields) → ``InitgPty`` /
+    ``Cdtr`` mapping;
   * sequence-type derivation: ``FRST`` on the first export of a
     mandate, ``RCUR`` thereafter;
-  * the loud error paths that previously yielded silent
-    half-built files (missing creditor info, missing debtor
-    mandate fields).
+  * the loud error paths that raise instead of producing a half-built
+    file (missing creditor info, missing debtor mandate fields).
 
 If a future tenant wants a different pain.008 minor version (.03,
 .08), keep this suite focused on .02 and add a parallel suite
@@ -41,7 +39,7 @@ from apps.payments.services import BillingRunService
 @pytest.fixture(autouse=True)
 def _frozen_today():
     """Freeze "today" to 2026-02-01 so the ``collection_date >= today`` export
-    guard (RUN-2) sees the suite's fixed 2026 collection dates as still in the
+    guard sees the suite's fixed 2026 collection dates as still in the
     future (they pre-date the real wall clock)."""
     with time_machine.travel("2026-02-01", tick=False):
         yield
@@ -288,7 +286,7 @@ class TestSequenceTypeFrstVsRcur:
     def test_multiple_new_mandate_charges_in_one_run_emit_single_frst(
         self, tenant, tenant_settings, billing_profile, subscription, member
     ):
-        # Regression (CORR-2): a never-used mandate carrying several charges
+        # A never-used mandate carrying several charges
         # in ONE run must produce exactly one FRST (the rest RCUR). SEPA
         # allows only one FRST per mandate; two would get the batch rejected.
         assert billing_profile.sepa_mandate_first_use_at is None
@@ -312,7 +310,7 @@ class TestSequenceTypeFrstVsRcur:
 class TestRequestedCollectionDate:
     """RequestedCollectionDate must be the run's operator-set
     ``collection_date`` (when the bank debits), NOT each charge's
-    ``due_date`` (CORR-3)."""
+    ``due_date``."""
 
     def test_uses_run_collection_date_not_charge_due_date(
         self, tenant, tenant_settings, billing_profile, subscription, member
@@ -333,8 +331,8 @@ class TestRequestedCollectionDate:
 
 @pytest.mark.django_db
 class TestLoudFailures:
-    """The dormant creditor fields are now load-bearing — missing
-    values must raise BEFORE any file hits disk."""
+    """The creditor fields are required — missing values must
+    raise BEFORE any file hits disk."""
 
     def test_missing_creditor_id_raises(
         self, tenant, tenant_settings, billing_profile, subscription, member

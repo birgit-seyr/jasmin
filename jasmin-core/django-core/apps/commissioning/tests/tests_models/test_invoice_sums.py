@@ -23,7 +23,7 @@ def _add_item(
 ):
     """Add an article line item to an invoice.
 
-    ``tax_rate`` is required on the column now, so the helper defaults to
+    ``tax_rate`` is required on the column, so the helper defaults to
     7 % (the canonical article tax rate). Tests that exercise multi-rate
     invoices override it.
     """
@@ -251,9 +251,9 @@ class TestStornoMirrorsOriginal:
     """A storno must be the exact negative of the cancelled invoice — same
     line items, same crate items, same per-line attributes, opposite amounts.
 
-    These tests would fail before the crate_items copy was added to
-    ``InvoiceService.create_storno``: the original invoice had crates but the
-    storno did not, so ``sum_netto`` and ``sum_brutto`` would not cancel out.
+    The original invoice has crates, so ``InvoiceService.create_storno`` must
+    copy ``crate_items`` too — otherwise ``sum_netto`` and ``sum_brutto`` would
+    not cancel out.
     """
 
     def _build_full_invoice(self):

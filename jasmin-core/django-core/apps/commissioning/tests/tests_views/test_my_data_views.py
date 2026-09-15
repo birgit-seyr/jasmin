@@ -149,7 +149,7 @@ class TestMyMemberDataPatch:
         assert member.membership_paper_received_at is None
 
     def test_confirmed_member_cannot_change_birth_date(self, member_user, tenant):
-        # MEM-7: birth_date is GenG-locked once the member is admin-confirmed,
+        # birth_date is GenG-locked once the member is admin-confirmed,
         # on the self-edit surface too (not just the office serializer).
         import datetime
 
@@ -455,7 +455,7 @@ class TestMyCoopShareSubscribe:
         assert CoopShare.objects.filter(member=me).count() == 1
 
     def test_value_not_configured_is_rejected(self, member_user, tenant):
-        # MEM-2/6: no TenantSettings → no per-share value → refuse (never
+        # No TenantSettings → no per-share value → refuse (never
         # persist a 0-valued share).
         MemberFactory(user=member_user, is_trial=False)
         resp = _client_for(member_user).post(
@@ -479,7 +479,7 @@ class TestMyCoopShareSubscribe:
         )
 
     def test_contract_agreement_required_when_doc_published(self, member_user, tenant):
-        # MEM-4: a published coop-share contract requires affirmative consent.
+        # A published coop-share contract requires affirmative consent.
         self._settings(tenant)
         self._coop_contract_doc()
         MemberFactory(user=member_user, is_trial=False)
@@ -511,7 +511,7 @@ class TestMyCoopShareSubscribe:
         self, member_user, tenant
     ):
         # Fail closed: a COOP_CONTRACT published ONLY under a non-de locale must
-        # STILL require agreement. Pre-fix the hardcoded locale="de" lookup found
+        # STILL require agreement. A lookup hardcoded to locale="de" would find
         # nothing and silently let the subscribe through with no consent recorded.
         import datetime
 
@@ -561,7 +561,7 @@ class TestMyCoopShareSubscribe:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_cancelled_member_cannot_subscribe(self, member_user, tenant):
-        # MEM-2: a member who has initiated their exit must not re-introduce
+        # A member who has initiated their exit must not re-introduce
         # live equity by self-subscribing new shares.
         from django.utils import timezone
 
@@ -605,7 +605,7 @@ class TestMySubscriptionSubscribe:
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
     def test_cancelled_member_cannot_subscribe(self, member_user, tenant):
-        # MEM-2: a departing member must not self-subscribe a new abo (which
+        # A departing member must not self-subscribe a new abo (which
         # would reserve capacity + materialise on confirm). The gate fires
         # before serializer validation, so an empty body still 409s.
         from django.utils import timezone
@@ -1124,7 +1124,7 @@ class TestMyMembershipCancel:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_self_cancel_rejects_past_effective_at(self, member_user, tenant):
-        # BIZ-2: a member may not backdate their own exit — that would rewrite
+        # A member may not backdate their own exit — that would rewrite
         # the GenG Austrittsdatum and shrink the coop-share payback window
         # without office review. Backdating stays office-only.
         member = MemberFactory(user=member_user, admin_confirmed=True)

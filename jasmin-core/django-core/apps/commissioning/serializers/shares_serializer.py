@@ -499,9 +499,9 @@ class ShareDeliveryOverviewSerializer(
     READ_ONLY_ON_UPDATE = ("subscription",)
 
     # Queryset annotations of ``ShareDeliveryOverviewViewSet.get_queryset`` —
-    # display-only, not ShareDelivery columns. Declared writable they were
-    # required on every create (which then crashed passing them to the model)
-    # and were setattr'd onto the instance on update without persisting.
+    # display-only, not ShareDelivery columns. Declared writable they would be
+    # required on every create (which then crashes passing them to the model)
+    # and setattr'd onto the instance on update without persisting.
     quantity = serializers.IntegerField(read_only=True)
     share_type_variation_string = serializers.CharField(read_only=True)
     delivery_week = serializers.IntegerField(read_only=True)

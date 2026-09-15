@@ -15,9 +15,6 @@ class OfferSending(JasminModel, CreatedMixin):
     ``(offer_group, year, delivery_week, reseller)`` is the right
     identity for "we sent THIS particular thing to this reseller".
 
-    Previously this model held a single ``offer`` FK populated via
-    ``offers.first()`` in offer_service.py.
-
     The unique constraint enforces idempotency at the DB layer: a
     second send to the same composite key will raise IntegrityError
     instead of silently creating a duplicate audit row. The service
@@ -52,7 +49,7 @@ class ReminderSending(JasminModel, CreatedMixin):
     """Idempotency + audit record: one row per ``(reseller, day)`` that received
     a bulk invoice-payment reminder.
 
-    EML-3: the bulk reminder send is consolidated per reseller (one email listing
+    The bulk reminder send is consolidated per reseller (one email listing
     all their overdue invoices). Without a dedup record, a retry after a 'failed'
     job — or a re-click — re-sends dunning to every reseller already served. The
     composite-unique ``(reseller, sent_on)`` makes a same-day re-run SKIP those

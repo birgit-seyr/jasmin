@@ -380,7 +380,7 @@ export default function LoggingStorage() {
       render: (_: unknown, record: WorkflowEntry) => {
         // The theoretical models carry no ``type`` field — the tag is only
         // derivable from a linked share/order content. Rows without either
-        // link get no tag (previously an empty default Tag).
+        // link get no tag.
         const type = record.share_content
           ? "SHARECONTENT"
           : record.order_content

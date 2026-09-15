@@ -62,7 +62,7 @@ class TestResellerViewSet:
         assert resp.status_code == status.HTTP_200_OK
 
     def test_iban_never_returned_in_plaintext(self, api_client, tenant):
-        # GDPR-MIN-1: ContactEntity.iban is encrypted at rest; the reseller read
+        # ContactEntity.iban is encrypted at rest; the reseller read
         # must NOT echo the decrypted value — only a masked view + a stored flag.
         from apps.commissioning.tests.factories import ContactEntityFactory
 
@@ -557,7 +557,7 @@ class TestCommissioningListResellersViewSet:
 
 
 # ---------------------------------------------------------------------------
-# CrateOrderContentViewSet — write-body validation (OC-1)
+# CrateOrderContentViewSet — write-body validation
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestCrateOrderContentViewSetCreateValidation:

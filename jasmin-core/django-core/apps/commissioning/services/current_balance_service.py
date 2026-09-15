@@ -61,7 +61,7 @@ class CurrentBalanceService:
 
     @staticmethod
     def acquire_locks_for_entities(entity_keys: Iterable[EntityKey]) -> None:
-        """TXN-1: take every entity's ``current_balance`` advisory lock UP FRONT,
+        """Take every entity's ``current_balance`` advisory lock UP FRONT,
         in one canonical (sorted) order, before any cascade / movement work.
 
         The per-entity lock is otherwise acquired incrementally inside
@@ -134,7 +134,7 @@ class CurrentBalanceService:
         corrupt (the exact failure reconciliation exists to catch), repair would
         rewrite the same wrong value and the drift would never clear.
         """
-        # MOV-9: serialize the read-modify-write per entity so concurrent writers
+        # Serialize the read-modify-write per entity so concurrent writers
         # for the same entity (an INVENTORY PATCH + a share/theoretical recompute,
         # which lock disjoint objects) can't lost-update the projection. The lock
         # is transaction-scoped — this method is @transaction.atomic — and keyed
@@ -174,16 +174,14 @@ class CurrentBalanceService:
         with the ledger.
 
         Expected is the full per-entity movement sum, computed in ONE grouped
-        query (rather than a per-row ``compute_balance`` round-trip — that was an
-        N+1 over every CurrentStockBalance). This is the SAME raw-ledger quantity
+        query (rather than a per-row ``compute_balance`` round-trip, an N+1 over
+        every CurrentStockBalance). This is the SAME raw-ledger quantity
         the ``--fix`` repair writes (``recompute_for_entity(from_ledger=True)``),
         so a repaired row matches ``expected`` by construction and the drift
         clears even when an entity's snapshot is itself corrupt.
 
         Also flags entities present in the ledger but MISSING a projection row
-        (``stored=None``) so ``--fix`` seeds them — a movement-bearing entity
-        with no ``CurrentStockBalance`` row was previously invisible to drift
-        detection entirely.
+        (``stored=None``) so ``--fix`` seeds them.
         """
         from decimal import Decimal
 
@@ -220,15 +218,13 @@ class CurrentBalanceService:
     @staticmethod
     def get_snapshot_drift() -> list[dict]:
         """Compare every ``StockSnapshot``'s stored balance against the raw ledger
-        sum up to its ``snapshot_date`` (goods-flow audit #7).
+        sum up to its ``snapshot_date``.
 
         ``get_drift`` only checks the CURRENT total, so a snapshot that is wrong at
         its own date but masked by a correct LATER snapshot (or whose error nets
         out of the current total) is invisible to it — yet it still poisons every
         ``compute_balance(from_ledger=False)`` that baselines off it and every
         historical ``compute_balance(up_to=...)`` between it and the next snapshot.
-        Reconcile was snapshot-blind: ``--fix`` rewrote only ``CurrentStockBalance``
-        and left the corrupt baseline in place to re-drift on the next movement.
 
         Returns one entry per drifted snapshot: ``{"entity", "snapshot_date",
         "stored", "expected"}``. One aggregate per snapshot — fine for an
@@ -273,7 +269,7 @@ class CurrentBalanceService:
         size: str | None,
         storage_id: str | None,
     ) -> None:
-        """Rebuild an entity's snapshots from the ledger (goods-flow audit #7).
+        """Rebuild an entity's snapshots from the ledger.
 
         DROP ALL of the entity's snapshots first — with none present,
         ``compute_balance`` falls back to the full raw-ledger sum and cannot

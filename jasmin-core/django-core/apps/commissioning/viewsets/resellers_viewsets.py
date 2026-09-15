@@ -1132,7 +1132,7 @@ class InvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             InvoiceService as _InvoiceServiceForSend,
         )
 
-        # EML-6/7: lock the invoice row and decide + STAMP the send markers inside
+        # Lock the invoice row and decide + STAMP the send markers inside
         # ONE transaction, so two concurrent upload_pdf calls (double-click / retry
         # storm) can't both observe "not yet sent" and both fire — the second
         # blocks on the lock, then reads the marker as already set and skips. The
@@ -1143,7 +1143,7 @@ class InvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         with transaction.atomic():
             locked = InvoiceReseller.objects.select_for_update().get(pk=invoice.pk)
 
-            # EML-2 interplay: only stamp + schedule the reseller send when the
+            # Only stamp + schedule the reseller send when the
             # reseller actually wants invoice email — else we'd mark a paper-only
             # invoice "sent" without sending. send_to_reseller re-checks the flag.
             channel_on = bool(getattr(locked.reseller, "invoice_via_email", True))
@@ -1197,10 +1197,8 @@ class InvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         reason = serializer.validated_data["reason"]
         # A model ``full_clean()`` failure inside ``create_storno`` raises a
         # Django ``ValidationError``, which ``core.exception_handler`` already
-        # renders as a canonical 400 ``{code, message}``. (The previous manual
-        # ``except`` read ``e.message`` — absent on dict-form ValidationErrors —
-        # and turned that 400 into a 500.) Domain errors (JasminError) keep
-        # propagating with their own status as before.
+        # renders as a canonical 400 ``{code, message}``, so no manual ``except``
+        # is needed here. Domain errors (JasminError) propagate with their own status.
         storno = InvoiceService.create_storno(invoice, reason=reason, user=request.user)
         return Response(
             self.get_serializer(storno).data, status=status.HTTP_201_CREATED

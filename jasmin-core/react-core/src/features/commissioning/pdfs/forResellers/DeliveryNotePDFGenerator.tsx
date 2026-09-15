@@ -10,13 +10,12 @@ import { openStoredPdf } from "./pdfDownload";
 import { useResellerPdfContext } from "./resellerPdfContext";
 import { buildDeliveryNotePdfData } from "./resellerPdfData";
 
-// ``generateAndUploadDeliveryNotePDF`` was moved to
-// ``./generateDeliveryNotePDF.tsx`` in the 2026-06 lazy-loading pass.
-// Its file does NOT have a top-level @react-pdf/renderer import, so
-// consumers that only need the upload helper (Invoices.tsx,
-// DeliveryNotes.tsx, useOrdersData.ts) keep the ~484 KB gzip PDF chunk
-// out of their eager bundle. The barrel ``components/pdfs/index.ts``
-// re-exports the helper from its new location.
+// ``generateAndUploadDeliveryNotePDF`` lives in
+// ``./generateDeliveryNotePDF.tsx``, which has NO top-level
+// @react-pdf/renderer import, so consumers that only need the upload
+// helper (Invoices.tsx, DeliveryNotes.tsx, useOrdersData.ts) keep the
+// ~484 KB gzip PDF chunk out of their eager bundle. The ``pdfs/index.ts``
+// barrel re-exports it from there.
 //
 // THIS file (DeliveryNotePDFGenerator.tsx) still carries the static
 // @react-pdf import because the React component below renders
@@ -56,7 +55,7 @@ export default function DeliveryNotePDFGenerator({
     query: { enabled: !!deliveryNoteId },
   });
 
-  // ``queryError`` is now typed as ``ErrorResponse`` (the canonical
+  // ``queryError`` is typed as ``ErrorResponse`` (the canonical
   // shape injected by ``core.openapi.inject_canonical_error_responses``)
   // rather than ``Error``. ``message`` is on both shapes — read it
   // directly and fall back to the generic copy.

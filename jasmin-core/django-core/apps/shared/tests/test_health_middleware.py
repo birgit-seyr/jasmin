@@ -1,4 +1,4 @@
-"""The /health/ liveness probe answers 200 ahead of tenant resolution (CFG-1).
+"""The /health/ liveness probe answers 200 ahead of tenant resolution.
 
 Tenant resolution is subdomain-only, with no "no-tenant" fallback: an
 unrecognized host has TenantMainMiddleware raise "no tenant for hostname"

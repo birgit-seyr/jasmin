@@ -215,7 +215,7 @@ class TestDeleteDeliveryStation:
         assert not ContactEntity.objects.filter(pk=contact_pk).exists()
 
     def test_delete_refused_when_station_has_deliveries(self, tenant, svc):
-        # DB-1: a station whose pickup days carry ShareDeliveries must NOT be
+        # A station whose pickup days carry ShareDeliveries must NOT be
         # deletable — the CASCADE would silently wipe the billing basis.
         from apps.commissioning.errors import DeliveryStationInUse
         from apps.commissioning.tests.factories import (
@@ -241,14 +241,14 @@ class TestDeleteDeliveryStation:
 
 
 # ---------------------------------------------------------------------------
-# Contact uniqueness (TXN-2)
+# Contact uniqueness
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestContactUniqueness:
     """Reseller / DeliveryStation are 1:1 with a ContactEntity, so the
     ``get_or_create(contact=…)`` / ``.get(contact=…)`` callers can rely on at
     most one row per contact. The partial unique constraint enforces it on
-    non-null contacts — and a concurrent ``get_or_create`` race now becomes a
+    non-null contacts — and a concurrent ``get_or_create`` race becomes a
     catchable IntegrityError (re-fetched) instead of two rows that later blow up
     ``.get(contact=…)`` with MultipleObjectsReturned."""
 

@@ -7,10 +7,6 @@ import { Fragment, type ReactNode } from "react";
  * inline formatting (``<strong>`` / ``<b>``, ``<em>`` / ``<i>``,
  * ``<u>``), paragraph breaks (``<p>``) and soft breaks (``<br>``).
  *
- * Replacement for the regex-based ``stripHtmlToText`` in
- * ``src/utils/pdfUtils.jsx``, which threw away ALL inline styling and
- * collapsed every paragraph into one big run of text.
- *
  * Parsing uses a regex tokenizer rather than ``DOMParser`` because the
  * PDF fixture tests run with ``@vitest-environment node`` where
  * ``DOMParser`` doesn't exist. Quill emits a small, well-formed subset

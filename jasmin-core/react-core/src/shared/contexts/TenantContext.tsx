@@ -282,15 +282,11 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [currentTenant?.id]);
 
-  // Boot-time race fix: ``initTenant`` (anonymous slim fetch) and
-  // ``AuthContext``'s silent refresh run concurrently. AuthContext
-  // calls ``refreshTenantFull()`` as soon as the silent refresh
-  // resolves, but if the slim fetch hasn't returned yet,
-  // ``currentTenant?.id`` is undefined and ``refreshTenantFull``
-  // bails. With no re-trigger, the ``settings`` overlay (footer text,
-  // entry lines, etc.) stayed empty until the user manually saved
-  // something — which is what made hard-reload still produce a PDF
-  // without a footer even though the data was in TenantSettings.
+  // Boot-time race: ``initTenant`` (anonymous slim fetch) and
+  // ``AuthContext``'s silent refresh run concurrently, so the access token
+  // can arrive before ``currentTenant?.id`` is known — and a
+  // ``refreshTenantFull`` without a tenant id bails, leaving the
+  // ``settings`` overlay (footer text, entry lines, etc.) empty.
   //
   // This effect deterministically runs the full fetch once per
   // tenant id, regardless of which boot path won the race. The ref
@@ -343,8 +339,7 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
   // silently wipes the settings overlay, so a subsequent
   // ``getSetting("use_personalized_offers", true)`` (or any other
   // overlay key) would fall back to its hard-coded default and look
-  // like a "save didn't take" bug to office users — see audit playbook
-  // for context.
+  // like a "save didn't take" bug to office users.
   //
   // Pre-id bootstrap (no auth, no tenant resolved yet): fall through to
   // the slim anonymous endpoint just to pull branding for the login
@@ -463,13 +458,8 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
     return `${backendUrl}${bioLogo}`;
   }, [currentTenant?.bio_logo]);
 
-  // NB: we do NOT <link rel="preload"> the logo. The protected-media `?st=`
-  // token is now bucketed (stable within a ~1h window, see
-  // core/protected_media.py), so the slim-fetch and post-``refreshTenantFull``
-  // URLs usually match and a preload would no longer be wasted — but the login
-  // <img> already sets `fetchpriority="high"`, the correct LCP signal, so a
-  // preload adds nothing. (Historically the per-sign token rotated on every
-  // sign and the preloaded link was always superseded.)
+  // NB: we do NOT <link rel="preload"> the logo: the login <img> already sets
+  // `fetchpriority="high"`, the correct LCP signal, so a preload adds nothing.
 
   // The tenant logo doubles as the browser tab icon. Modern browsers
   // accept any image format (PNG, SVG, ...) and scale it down to favicon

@@ -184,7 +184,7 @@ class TestAppIconValidation:
 
     def test_rejects_png_with_a_bad_chunk_checksum(self):
         """``verify()`` reports a corrupt PNG chunk as ``SyntaxError``, which
-        used to escape the validator as a 500."""
+        must not escape the validator as a 500."""
         upload = ContentFile(_bad_checksum_png(), name="icon.png")
 
         with pytest.raises(TenantAppIconInvalid) as excinfo:
@@ -243,7 +243,7 @@ class TestAppIconUploadEndpoint:
     def test_png_with_corrupt_pixel_data_is_refused_with_400(self, tenant):
         """This file gets past DRF's ``ImageField`` (it stops at ``verify()``),
         so ``validate_app_icon``'s decode is the only gate; an uncaught decode
-        error there was a 500."""
+        error there would be a 500."""
         stored_before = self._stored_icon(tenant)
 
         resp = self._patch_icon(tenant, _corrupt_pixel_data_png())

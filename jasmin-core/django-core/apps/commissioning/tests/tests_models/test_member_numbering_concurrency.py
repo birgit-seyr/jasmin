@@ -12,12 +12,11 @@ Like the document numbering covered by
   * gap-free under realistic concurrency (so member #5 isn't followed
     by member #7 because of a wasted retry).
 
-The race-conditions audit pass caught that the previous implementation
-chained ``select_for_update().aggregate(...)``, which Postgres
-silently ignores. The fix replaced it with the canonical
-``pg_advisory_xact_lock`` pattern used by
-``FinalizableDocumentMixin.save_with_number_retry``. This test
-exercises the new path under genuine concurrency.
+Member numbering takes the canonical ``pg_advisory_xact_lock`` pattern used by
+``FinalizableDocumentMixin.save_with_number_retry``; chaining
+``select_for_update().aggregate(...)`` would not serialize writers, because
+Postgres silently ignores it. This test exercises that path under genuine
+concurrency.
 
 Test-DB transaction model
 -------------------------

@@ -56,9 +56,7 @@ def _frozen_today():
     The share-day-change service refuses to modify shares for the past/current
     week; these tests target ``FUTURE_WEEK`` (30), which is only "future" while
     the real clock is before week 30/2026. Freezing here keeps that assumption
-    true forever — the module already documented this frozen date, it just was
-    never actually applied, so the suite detonated once the wall clock reached
-    week 30/2026.
+    true forever.
     """
     with time_machine.travel(datetime(2026, 4, 22, 12, 0), tick=False):
         yield
@@ -1009,13 +1007,13 @@ class TestPostChangeConsistency:
 
 
 # ═══════════════════════════════════════════════════════
-# changed_day_number → re-plan billing (MEM-3)
+# changed_day_number → re-plan billing
 # ═══════════════════════════════════════════════════════
 
 
 @pytest.mark.django_db
 class TestChangedDayNumberNotifiesPayments:
-    """MEM-3: ``changed_day_number`` is the top-priority input to the delivery
+    """``changed_day_number`` is the top-priority input to the delivery
     date the billing regen buckets deliveries by, so editing it must notify
     payments to re-plan — even though it's NOT a recompute-relevant (theoretical)
     field. The informational ``get_current_stock_day`` must NOT trigger a re-plan.
@@ -1072,7 +1070,7 @@ class TestChangedDayNumberNotifiesPayments:
         notify_mock.assert_not_called()
 
     def test_subscription_set_dedups_by_pk(self, tenant):
-        # MEM-3 dedups subscriptions via a Python set: {sd.subscription for ...}.
+        # The re-plan dedups subscriptions via a Python set: {sd.subscription for ...}.
         # select_related yields a DISTINCT Subscription instance per row, so the
         # set only collapses duplicates if Django's Model __hash__/__eq__ are
         # pk-based — they are (hash(self.pk) + pk equality). Re-fetching one row

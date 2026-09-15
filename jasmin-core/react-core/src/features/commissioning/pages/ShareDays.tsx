@@ -39,8 +39,8 @@ export default function ShareDays() {
   );
 
   // Memoize so the same object reference is passed to the query hook and
-  // the invalidator across renders. Previously a fresh object every render
-  // meant the query hook saw a new params identity each cycle.
+  // the invalidator across renders. A fresh object every render would give
+  // the query hook a new params identity each cycle.
   const listParams = useMemo<CommissioningSharesGetDaysListParams>(
     () => ({
       year: selectedYear,

@@ -4,9 +4,7 @@ import { currencyCodeToSymbol } from "../currency";
 describe("currencyCodeToSymbol", () => {
 
   it("returns the input code when it isn't registered", () => {
-    // ``useCurrency().currencySymbol`` did this historically — the
-    // util keeps the same fallback so unregistered tenants render
-    // the bare ISO code instead of a stray ``€``.
+    // Unregistered tenants render the bare ISO code instead of a stray ``€``.
     expect(currencyCodeToSymbol("XYZ")).toBe("XYZ");
     expect(currencyCodeToSymbol("JPY")).toBe("JPY");
   });

@@ -5,11 +5,10 @@ import { describe, expect, it } from "vitest";
 import "../dayjsSetup";
 
 /**
- * Guards the systemic fix: every dayjs plugin the app depends on must be
- * registered on the singleton at boot, so no lazily-loaded chunk can render
- * a date widget before its plugin exists. Dropping a plugin from
- * ``dayjsSetup.ts`` breaks the feature that relied on the old scattered
- * ``dayjs.extend`` — this test turns that into a red build.
+ * Every dayjs plugin the app depends on must be registered on the singleton
+ * at boot, so no lazily-loaded chunk can render a date widget before its
+ * plugin exists. Dropping a plugin from ``dayjsSetup.ts`` breaks the features
+ * that rely on it — this test turns that into a red build.
  */
 describe("dayjsSetup — boot-time dayjs plugins", () => {
   it("registers isoWeek (isoWeekday/isoWeek)", () => {

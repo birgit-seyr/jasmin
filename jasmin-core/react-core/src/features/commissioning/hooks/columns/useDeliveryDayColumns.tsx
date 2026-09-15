@@ -111,9 +111,7 @@ export function useDeliveryDayColumns({
       key: dayVariationKey({ dayId: deliveryDay.id!, variationId: variation.id! }),
       // Same (day, variation) cell as the day-major layout and the tour/station
       // leaves — all `positive_decimal2`. This is the "days together" (variation-
-      // major) rendering of it, so it must accept the same precision; it used to
-      // be `positive_integer`, silently forbidding decimals only in this toggle
-      // state.
+      // major) rendering of it, so it must accept the same precision.
       inputType: "positive_decimal2",
       align: "center",
       width: AMOUNT_COLUMN_WIDTH,

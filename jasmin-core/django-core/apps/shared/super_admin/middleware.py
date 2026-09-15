@@ -5,7 +5,7 @@ the super-admin *host* to an IP allowlist, but that depends on host routing
 staying correct — a routing gap (the apex domain resolving to the public
 schema, which mounts ``/api/super-admin/``) could expose the platform-root API
 off-allowlist. This middleware enforces the same allowlist inside Django over
-the ``/api/super-admin/`` path prefix, so the control no longer depends on
+the ``/api/super-admin/`` path prefix, so the control does not depend on
 nginx host routing alone.
 
 It covers EVERY super-admin endpoint uniformly — login, refresh, and all

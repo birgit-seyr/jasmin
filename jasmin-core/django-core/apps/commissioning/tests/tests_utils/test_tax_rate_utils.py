@@ -204,13 +204,10 @@ class TestTenantDefaults:
         context, no settings row, ...), the helper falls back to
         ``DEFAULT_TAX_RATE``.
 
-        The previous test relied on a bare ``except Exception`` to catch
-        pytest-django's ``RuntimeError`` for un-marked DB access — that
-        was an implementation detail of the test harness, not a
-        production failure mode. After the 2026-05-23 silent-defaults
-        audit narrowed the catch, we mock the inner resolver directly
-        so the test exercises the actual production contract: "if the
-        lookup returns None, fall back to the constant".
+        The inner resolver is mocked directly so the test exercises the
+        actual production contract — "if the lookup returns None, fall back
+        to the constant" — rather than pytest-django's ``RuntimeError`` for
+        un-marked DB access.
         """
         from apps.commissioning import constants
 
@@ -244,8 +241,8 @@ class TestSnapshotPropagation:
         row = OrderContentService._serialize_order_content(oc)
         assert row["tax_rate"] == Decimal("12.50")
 
-    # NOTE: A test for the share_article-pricing fallback used to live here,
-    # but `tax_rate` is now NOT NULL on OrderableItem — every OrderContent
-    # carries an explicit value, so the snapshot path always reads it back
-    # verbatim. The fallback chain remains exercised by the
-    # `resolve_article_tax_rate` tests above (used when *creating* new rows).
+    # NOTE: No share_article-pricing fallback test here: `tax_rate` is NOT NULL
+    # on OrderableItem — every OrderContent carries an explicit value, so the
+    # snapshot path always reads it back verbatim. The fallback chain is
+    # exercised by the `resolve_article_tax_rate` tests above (used when
+    # *creating* new rows).

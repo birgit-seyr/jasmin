@@ -293,7 +293,7 @@ class TestRevoke:
         assert member.privacy_consent is None
 
     def test_revoking_sepa_consent_stops_direct_debit(self, tenant):
-        """GDPR-CON-1 (Art. 7(3)): withdrawing the SEPA mandate consent must
+        """GDPR Art. 7(3): withdrawing the SEPA mandate consent must
         switch the member's BillingProfile off SEPA Direct Debit so no future
         run auto-debits them. Wired via the apps.shared.sepa_mandate_hooks seam
         (payments registers the handler in AppConfig.ready())."""

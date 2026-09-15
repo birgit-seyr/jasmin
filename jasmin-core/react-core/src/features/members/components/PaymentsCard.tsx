@@ -126,9 +126,9 @@ const PaymentsCard = ({ memberId }: PaymentsCardProps) => {
 
   // SOURCE OF TRUTH: the backend ChargeSchedule ledger (same data ChargesAbos
   // shows). ``expected_amount`` already accounts for jokers / opt-outs / the
-  // billing strategy — the previous client-side
-  // ``price_per_delivery * quantity * deliveriesPerCycle`` recompute diverged
-  // from it, which is exactly the bug this card had.
+  // billing strategy — a client-side
+  // ``price_per_delivery * quantity * deliveriesPerCycle`` recompute diverges
+  // from it.
   const { data: chargesData } = usePaymentsChargeSchedulesList(
     { member: memberId },
     { query: { enabled: !!memberId } },

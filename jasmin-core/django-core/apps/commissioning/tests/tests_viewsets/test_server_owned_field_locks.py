@@ -1,9 +1,9 @@
 """Server-owned columns stay out of reach of the generic ModelViewSet writes.
 
-Several ``fields = "__all__"`` serializers left columns that only services
-may write (finalization stamps, GoBD source snapshots, parent-document FKs,
-the frozen invoice recipient, authorship, renewal-chain identity, consent /
-cancellation / waiting-list stamps) writable through a plain POST/PATCH.
+Columns that only services may write (finalization stamps, GoBD source
+snapshots, parent-document FKs, the frozen invoice recipient, authorship,
+renewal-chain identity, consent / cancellation / waiting-list stamps) must not
+be writable through a plain POST/PATCH on a ``fields = "__all__"`` serializer.
 
 DRF drops read-only keys silently, so every test sends the forged keys next
 to one legitimate change and asserts: the request succeeds, the legitimate

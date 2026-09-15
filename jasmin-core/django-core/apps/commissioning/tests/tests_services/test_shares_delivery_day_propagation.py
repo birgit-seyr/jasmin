@@ -259,7 +259,7 @@ class TestSharesDeliveryDayPropagation(_MondayHelpers):
         assert past_share.harvesting_day == 4  # unchanged
 
     def test_inherited_day_field_clears_when_successor_default_is_none(self, tenant):
-        """SUC-6: a Share that INHERITED its harvesting_day from the old day must
+        """A Share that INHERITED its harvesting_day from the old day must
         follow the successor day's default — INCLUDING when the successor clears
         it (None) — not silently retain the predecessor's value."""
         valid_from_new = self._monday_n_weeks_ahead(2)
@@ -300,7 +300,7 @@ class TestSharesDeliveryDayPropagation(_MondayHelpers):
         assert share.packing_day == 0  # default unchanged (0 → 0)
 
     def test_overridden_day_field_survives_when_successor_clears(self, tenant):
-        """SUC-6 counterpart: a deliberate per-week OVERRIDE (differs from the
+        """Counterpart to the inherited case: a deliberate per-week OVERRIDE (differs from the
         old default) survives catalogue succession even if the successor clears
         that default."""
         valid_from_new = self._monday_n_weeks_ahead(2)
@@ -668,14 +668,14 @@ class TestManualValidUntilThenCreateNew(_MondayHelpers):
             default_packing_day=0,
         )
 
-        # Simulate what the fixed viewset should do:
+        # Simulate what the viewset does:
         # Find predecessor even though it already has valid_until
         existing_delivery_day = SharesDeliveryDay.handle_succession(
             {"day_number": 0, "valid_from": new_valid_from}
         )
         # existing_delivery_day is None because old already closed
 
-        # The fix: if handle_succession returns None, look for the most recent
+        # If handle_succession returns None, look for the most recent
         # closed predecessor with the same day_number
         if existing_delivery_day is None:
             predecessor = (
@@ -720,12 +720,12 @@ class TestManualValidUntilThenCreateNew(_MondayHelpers):
 
 @pytest.mark.django_db
 class TestSuccessionEdgeCasePropagation(_MondayHelpers):
-    """SUC-3/5/6/7/8: succession must migrate future-dated + same-boundary
+    """Succession must migrate future-dated + same-boundary
     station days, never strand a future ShareDelivery on the closed old day,
     and never clobber a deliberate per-week day-field override."""
 
     def test_future_dated_station_day_repointed_to_new_day(self, tenant):
-        # SUC-5/6: a future-only DSD on the predecessor (valid_from AFTER the
+        # A future-only DSD on the predecessor (valid_from AFTER the
         # boundary) must be repointed onto the new day, and its future
         # ShareDelivery must resolve under the new day.
         base_monday = self._monday_n_weeks_ahead(0)
@@ -787,7 +787,7 @@ class TestSuccessionEdgeCasePropagation(_MondayHelpers):
         assert sd.delivery_station_day.delivery_day_id == share.delivery_day_id
 
     def test_same_boundary_station_day_no_negative_range(self, tenant):
-        # SUC-7: a child DSD whose valid_from EQUALS the new boundary must not be
+        # A child DSD whose valid_from EQUALS the new boundary must not be
         # closed at boundary-1 (a negative range → IntegrityError); it is
         # repointed onto the new day instead.
         base_monday = self._monday_n_weeks_ahead(0)
@@ -819,7 +819,7 @@ class TestSuccessionEdgeCasePropagation(_MondayHelpers):
         assert boundary_dsd.valid_until is None
 
     def test_delivery_on_pre_closed_dsd_is_remapped_not_stranded(self, tenant):
-        # SUC-3: a future ShareDelivery left on a DSD closed BEFORE the boundary
+        # A future ShareDelivery left on a DSD closed BEFORE the boundary
         # (closed independently, deliveries not remapped) must be re-resolved to
         # the station's new-day DSD — never left on the closed old-day row (which
         # would break the Share/ShareDelivery day-match invariant).
@@ -893,7 +893,7 @@ class TestSuccessionEdgeCasePropagation(_MondayHelpers):
         assert stranded.delivery_station_day.delivery_day_id == share.delivery_day_id
 
     def test_manual_day_override_survives_succession(self, tenant):
-        # SUC-8: a Share whose day field is a deliberate override (differs from
+        # A Share whose day field is a deliberate override (differs from
         # the OLD day's default) keeps it; an inherited field follows the new
         # default.
         base_monday = self._monday_n_weeks_ahead(0)
@@ -936,12 +936,12 @@ class TestSuccessionEdgeCasePropagation(_MondayHelpers):
 
 @pytest.mark.django_db
 class TestSuccessionChildMigration(_MondayHelpers):
-    """SUC-2/3/4/5: child migration + guards around delivery-day / station-day
+    """Child migration + guards around delivery-day / station-day
     succession (capacity reservations, stranded deliveries, coverage gaps,
     standalone closes)."""
 
     def test_dsd_copy_remaps_future_reservations(self, tenant):
-        """SUC-3: closing+copying an open DSD during catalogue succession
+        """Closing+copying an open DSD during catalogue succession
         repoints its post-boundary CapacityReservations onto the copy, so the
         held slot still counts under the id materialization will use."""
         from apps.commissioning.models import CapacityReservation
@@ -982,7 +982,7 @@ class TestSuccessionChildMigration(_MondayHelpers):
         assert res.delivery_station_day_id == copies[0].id
 
     def test_succession_coverage_gap_raises(self, tenant):
-        """SUC-4: if a future ShareDelivery's station has no station-day covering
+        """If a future ShareDelivery's station has no station-day covering
         its week on the new day, the succession is refused (no silent stranding)."""
         from apps.commissioning.errors import SharesDeliveryDaySuccessionCoverageGap
 
@@ -1016,7 +1016,7 @@ class TestSuccessionChildMigration(_MondayHelpers):
             )
 
     def test_dsd_perform_create_migrates_children(self, tenant):
-        """SUC-2: creating a successor DeliveryStationDay migrates the
+        """Creating a successor DeliveryStationDay migrates the
         predecessor's future ShareDeliveries + CapacityReservations onto it."""
         from apps.commissioning.models import CapacityReservation
         from apps.commissioning.viewsets.delivery_viewsets import (
@@ -1068,7 +1068,7 @@ class TestSuccessionChildMigration(_MondayHelpers):
         assert res.delivery_station_day == new_dsd
 
     def test_standalone_close_with_stranded_children_blocked(self, tenant):
-        """SUC-5: a direct PATCH that closes a delivery day with future children
+        """A direct PATCH that closes a delivery day with future children
         is refused (the migration runs only on the create/succession path)."""
         from apps.commissioning.errors import (
             SharesDeliveryDayShorteningStrandsChildren,

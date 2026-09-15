@@ -24,7 +24,7 @@ from apps.commissioning.utils.iso_week_utils import compute_rolled_back_week
 # _AMOUNT_PER_PU_MAP  (pure — no DB)
 # ---------------------------------------------------------------------------
 class TestAmountPerPuMap:
-    """Regression for the BUNCH unit-key mismatch: the map must key on the
+    """The map must key on the
     canonical ``UnitOptions`` values. A non-canonical key (e.g. "BUNCHES") makes
     ``_AMOUNT_PER_PU_MAP.get(src.unit)`` miss, so ``amount_per_pu`` resolves to
     None and BUNCH harvests silently contribute 0 crates to the harvesting-crate
@@ -279,7 +279,7 @@ class TestCreateTheoreticalObjects:
         assert not Harvest.objects.filter(share_article=article, year=2026).exists()
 
     def test_wash_clean_land_in_short_term_storage_for_long_term_line(self, tenant):
-        # MOV-6: a long-term line's wash/clean theoreticals carry
+        # A long-term line's wash/clean theoreticals carry
         # RequiresShortTermStorageMixin, so they must land in the SHORT-term
         # harvest storage — not the long-term storage the line draws from.
         article = ShareArticleFactory()

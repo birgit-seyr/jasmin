@@ -49,9 +49,9 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
       const taxRate = crateData.tax_rate;
 
       // The crate selection changed, so always overwrite price + tax with the
-      // NEW crate's values — clearing them when the new crate has none. The
-      // previous `!record.price_per_unit` guard left a prior crate's price in
-      // place, so switching crates showed a stale / wrong price.
+      // NEW crate's values — clearing them when the new crate has none. Don't
+      // guard on `!record.price_per_unit`: that leaves a prior crate's price in
+      // place, so switching crates would show a stale price.
       form.setFieldsValue({
         price_per_unit: price > 0 ? price : null,
         tax_rate: taxRate !== undefined && taxRate !== null ? taxRate : null,

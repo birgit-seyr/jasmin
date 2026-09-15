@@ -21,10 +21,9 @@ class PaymentsConfig(AppConfig):
         # Commissioning emits a subscription-changed signal (admin-confirm,
         # cancel, opt-in toggle) via apps.shared.subscription_hooks WITHOUT
         # importing payments — payments reacts here by re-planning the charge
-        # schedule. Inverts the old commissioning -> payments import so the
-        # one-way isolation holds. ``ChargeScheduleService`` is captured but
-        # ``.regenerate_for_subscription`` is resolved at call time, so test
-        # mocks on the class attribute are still honoured.
+        # schedule, so the one-way isolation holds. ``ChargeScheduleService`` is
+        # captured but ``.regenerate_for_subscription`` is resolved at call time,
+        # so test mocks on the class attribute are still honoured.
         def _on_subscription_changed(subscription) -> None:
             ChargeScheduleService.regenerate_for_subscription(subscription)
 

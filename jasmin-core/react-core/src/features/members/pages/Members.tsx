@@ -130,8 +130,8 @@ export default function Members() {
   // While ON, the normally server-stamped ``entry_date`` (GenG §30) becomes
   // editable in the grid so the office can hand-set historical admission dates
   // when migrating members from another system. A deliberate, visible toggle
-  // (red while on) so it can't be flipped by accident; the serializer's
-  // read-only lock on entry_date was lifted to match (office-role gated).
+  // (red while on) so it can't be flipped by accident; the serializer accepts
+  // entry_date writes to match (office-role gated).
   const [manualMemberTransfer, setManualMemberTransfer] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [coopShareImportModalOpen, setCoopShareImportModalOpen] =
@@ -148,8 +148,7 @@ export default function Members() {
 
   // Trial-member column visibility is derived: the concept only exists
   // when trial subs are enabled AND trial subs are allowed for trial
-  // members (the only thing a trial member does). The standalone
-  // ``allows_trial_members`` flag was dropped in migration 0020.
+  // members (the only thing a trial member does).
   const allows_trial_members =
     !!getSetting("allows_trial_subscriptions", true) &&
     !!getSetting("allows_trial_subscriptions_for_trial_members", true);

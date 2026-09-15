@@ -207,7 +207,7 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
     def perform_update(self, serializer):
-        # SUC-5: a standalone close/shorten via a direct PATCH would strand this
+        # A standalone close/shorten via a direct PATCH would strand this
         # day's future children — the child-migration services run ONLY on the
         # create (succession) path, not here. Block it so the office succeeds via
         # a NEW SharesDeliveryDay (create), which closes this predecessor AND

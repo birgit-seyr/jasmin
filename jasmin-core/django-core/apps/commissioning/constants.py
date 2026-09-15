@@ -25,11 +25,10 @@ def _resolve_tenant_setting(attr_name: str):
     """Return ``TenantSettings.<attr_name>`` for the active tenant, or
     ``None`` if no tenant context is available.
 
-    Previously a bare ``except Exception: pass`` swallowed every error
-    here, including transient DB errors and code bugs — which silently
-    returned the hardcoded default tax rate for GoBD-relevant
-    computations. We now catch only the small set of exceptions that
-    legitimately mean "no tenant context to read from":
+    Only the small set of exceptions that legitimately mean "no tenant
+    context to read from" is caught — swallowing anything else (transient DB
+    errors, code bugs) would silently return the hardcoded default tax rate
+    for GoBD-relevant computations:
 
     * ``ImproperlyConfigured`` — bound connection has no tenant.
     * ``OperationalError`` / ``ProgrammingError`` — DB unreachable or

@@ -606,9 +606,9 @@ class ShareDeliveryViewSet(
 
     read_permission = IsStaffOrMember
     # Members may ONLY reach the opt-in actions (see get_permissions). All
-    # standard CRUD + the office @actions require IsOffice. Previously
-    # IsOfficeOrMember applied to every write verb, letting a member
-    # POST/PATCH/DELETE arbitrary ShareDelivery rows — bypassing OptinService's
+    # standard CRUD + the office @actions require IsOffice. IsOfficeOrMember on
+    # every write verb would let a member POST/PATCH/DELETE arbitrary
+    # ShareDelivery rows — bypassing OptinService's
     # deadline checks, pointing rows at any tenant subscription, and silently
     # dropping deliveries they're owed (breaking billing materialisation).
     write_permission = IsOffice
@@ -1244,7 +1244,7 @@ class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             fields={
                 # changed_day_number IS honoured by SharesDayChangeService.apply
                 # (it's in SHARE_DAY_FIELDS) and edited via ShareDays.tsx, so it
-                # must be in the documented schema too (MEM-9).
+                # must be in the documented schema too.
                 "changed_day_number": drf_serializers.IntegerField(
                     required=False, allow_null=True
                 ),
@@ -1752,8 +1752,6 @@ class ShareDeliveryOverviewViewSet(
 
         # Filter each param independently so the view works with year alone
         # (all members for that year), year + member (one member), or neither.
-        # The previous ``if year and member`` returned the *whole* table when a
-        # member wasn't supplied — ignoring the year entirely.
         if year:
             queryset = queryset.filter(share__year=year)
         if member:

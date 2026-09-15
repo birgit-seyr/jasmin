@@ -51,7 +51,7 @@ def send_deletion_confirmation_email(
         related_object_type="gdpr.deletion_request",
         related_object_id=str(deletion_request.pk),
         priority="high",
-        # EML-1: render in the recipient's own language (explicit >
+        # Render in the recipient's own language (explicit >
         # tenant-default > DEFAULT_LANGUAGE). None preserves today's default.
         language=getattr(user, "user_language", None) or None,
         logger=logger,
@@ -97,7 +97,7 @@ def send_deletion_approved_email(deletion_request: DeletionRequest) -> None:
         related_object_type="gdpr.deletion_request",
         related_object_id=str(deletion_request.pk),
         priority="high",
-        # EML-1: the recipient's language preference is NOT in the JasminUser
+        # The recipient's language preference is NOT in the JasminUser
         # FIELD_CLASSIFICATION, so it survives the anonymisation that ran
         # before this send — the cached ``user`` still carries it.
         language=getattr(user, "user_language", None) or None,
@@ -217,7 +217,7 @@ def send_deletion_rejected_email(
         related_object_type="gdpr.deletion_request",
         related_object_id=str(deletion_request.pk),
         priority="high",
-        # EML-1: render in the recipient's language. ``user`` may be None on
+        # Render in the recipient's language. ``user`` may be None on
         # the reject path (DeletionRequest.user is SET_NULL) — None-safe.
         language=getattr(user, "user_language", None) or None,
         logger=logger,

@@ -162,7 +162,7 @@ export function usePaymentsBillingProfilesList<TData = Awaited<ReturnType<typeof
 Edits that touch any of the SEPA-mandate fields require step-up
 auth, because rewriting IBAN / mandate-reference could redirect a
 member's direct-debit money to an attacker-controlled account.
-``is_active`` is included too (TXN-4): toggling it has direct payment
+``is_active`` is included too: toggling it has direct payment
 consequences — it gates ``create_run`` eligibility and re-enables /
 disables collection on the mandate — so flipping it must not be a
 silent, un-stepped-up PATCH. Only ``notes`` PATCHes without prompting.
@@ -235,7 +235,7 @@ export const usePaymentsBillingProfilesCreate = <TError = ErrorResponse,
 Edits that touch any of the SEPA-mandate fields require step-up
 auth, because rewriting IBAN / mandate-reference could redirect a
 member's direct-debit money to an attacker-controlled account.
-``is_active`` is included too (TXN-4): toggling it has direct payment
+``is_active`` is included too: toggling it has direct payment
 consequences — it gates ``create_run`` eligibility and re-enables /
 disables collection on the mandate — so flipping it must not be a
 silent, un-stepped-up PATCH. Only ``notes`` PATCHes without prompting.
@@ -336,7 +336,7 @@ export function usePaymentsBillingProfilesRetrieve<TData = Awaited<ReturnType<ty
 Edits that touch any of the SEPA-mandate fields require step-up
 auth, because rewriting IBAN / mandate-reference could redirect a
 member's direct-debit money to an attacker-controlled account.
-``is_active`` is included too (TXN-4): toggling it has direct payment
+``is_active`` is included too: toggling it has direct payment
 consequences — it gates ``create_run`` eligibility and re-enables /
 disables collection on the mandate — so flipping it must not be a
 silent, un-stepped-up PATCH. Only ``notes`` PATCHes without prompting.
@@ -409,7 +409,7 @@ export const usePaymentsBillingProfilesUpdate = <TError = ErrorResponse,
 Edits that touch any of the SEPA-mandate fields require step-up
 auth, because rewriting IBAN / mandate-reference could redirect a
 member's direct-debit money to an attacker-controlled account.
-``is_active`` is included too (TXN-4): toggling it has direct payment
+``is_active`` is included too: toggling it has direct payment
 consequences — it gates ``create_run`` eligibility and re-enables /
 disables collection on the mandate — so flipping it must not be a
 silent, un-stepped-up PATCH. Only ``notes`` PATCHes without prompting.
@@ -482,7 +482,7 @@ export const usePaymentsBillingProfilesPartialUpdate = <TError = ErrorResponse,
 Edits that touch any of the SEPA-mandate fields require step-up
 auth, because rewriting IBAN / mandate-reference could redirect a
 member's direct-debit money to an attacker-controlled account.
-``is_active`` is included too (TXN-4): toggling it has direct payment
+``is_active`` is included too: toggling it has direct payment
 consequences — it gates ``create_run`` eligibility and re-enables /
 disables collection on the mandate — so flipping it must not be a
 silent, un-stepped-up PATCH. Only ``notes`` PATCHes without prompting.

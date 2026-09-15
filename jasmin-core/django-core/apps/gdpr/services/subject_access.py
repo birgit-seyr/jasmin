@@ -80,7 +80,7 @@ class SubjectAccessMixin:
     :class:`apps.gdpr.services.GDPRService`."""
 
     # ---------------------------------------------------------------
-    # Subject Access Request — Art. 15 (Step 7 of the roadmap)
+    # Subject Access Request — Art. 15
     # ---------------------------------------------------------------
     #
     # ``get_subject_access_bundle`` is the single source of truth for
@@ -122,8 +122,7 @@ class SubjectAccessMixin:
         Decimal → string, etc.). Keeping the service-side dict
         un-stringified means each ``_sar_<section>`` helper reads
         like a model→dict projection, and a future caller (e.g.
-        the ZIP-export job in Step 7's roadmap follow-up) can
-        reuse the same data without re-parsing.
+        a ZIP-export job) can reuse the same data without re-parsing.
 
         Top-level shape (all keys always present; lists empty
         rather than omitted so the frontend has a stable contract):
@@ -599,7 +598,7 @@ class SubjectAccessMixin:
                 # File pointers (relative storage paths).
                 "file": str(invoice.file) if invoice.file else None,
                 "xml_file": str(invoice.xml_file) if invoice.xml_file else None,
-                # Dispatch state. The booleans are now derived
+                # Dispatch state. The booleans are derived
                 # @properties on the model (True iff matching
                 # ``*_at`` timestamp is set); kept in the SAR export
                 # for human-readability of the JSON.

@@ -5,8 +5,8 @@
  * Background: the tenant `number_locale` setting drives whether a value
  * displays as `12.34` (en-US) or `12,34` (de-DE) — but only if the cell
  * goes through `useNumberFormat().format(...)` / `formatNumber(...)`.
- * Several cells were caught dropping the raw backend value straight into
- * JSX or a template literal:
+ * Cells must not drop the raw backend value straight into JSX or a
+ * template literal:
  *
  *     {record.tax_rate ? `${record.tax_rate} %` : ""}      // BAD
  *     {`${item.price_per_unit} €/${unit}`}                  // BAD
@@ -260,7 +260,7 @@ describe("no raw decimal interpolation in cell/PDF renders", () => {
     JSX_RE.lastIndex = 0;
     expect(guard.match(JSX_RE)).toBeNull();
 
-    // `return X.field` shape (the DocumentationPurchase bug).
+    // `return X.field` shape.
     const returnBug = "        return record.purchase_amount as ReactNode;";
     RETURN_RE.lastIndex = 0;
     expect(returnBug.match(RETURN_RE)).not.toBeNull();
@@ -276,7 +276,6 @@ describe("no raw decimal interpolation in cell/PDF renders", () => {
     expect(returnPlain.match(RETURN_RE)).not.toBeNull();
 
     // `${var} <unit>` — local-variable interpolation followed by a unit.
-    // This is the HarvestingList / WashingList bug shape.
     const varUnitBug1 = "`${total} ${unitLabel}`";
     VAR_WITH_UNIT_RE.lastIndex = 0;
     expect(varUnitBug1.match(VAR_WITH_UNIT_RE)).not.toBeNull();

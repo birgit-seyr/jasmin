@@ -283,9 +283,9 @@ class TestListPendingForMember:
 @pytest.mark.django_db
 class TestShippableQuerySet:
     """``ShareDelivery.objects.shippable()`` — the single ship predicate as a
-    named queryset (joker not taken AND no-opt-in-required-OR-opted-in). Guards
-    the DRY-1 / API-1 fix: a new aggregation reads ``.shippable()`` instead of
-    re-spelling the rule or forgetting it."""
+    named queryset (joker not taken AND no-opt-in-required-OR-opted-in), so an
+    aggregation reads ``.shippable()`` instead of re-spelling the rule or
+    forgetting it."""
 
     def test_normal_delivery_is_shippable(self, tenant):
         from apps.commissioning.models import ShareDelivery

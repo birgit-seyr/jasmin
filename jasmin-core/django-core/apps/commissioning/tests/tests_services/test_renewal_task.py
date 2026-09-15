@@ -1,4 +1,4 @@
-"""Task-wrapper coverage for ``daily_subscription_renewals`` (TEST-5).
+"""Task-wrapper coverage for ``daily_subscription_renewals``.
 
 ``test_renewal.py`` covers the SERVICE (``run_renewals``) and the digest helper,
 but nothing between them: the Huey task's per-tenant opt-out gate, the settings

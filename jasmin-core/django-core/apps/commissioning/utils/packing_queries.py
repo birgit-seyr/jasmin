@@ -45,8 +45,7 @@ def packing_share_contents(
 
     Callers layer their own ``.filter(...)`` (share_type / variation ids),
     ``.select_related(...)`` / ``.values(...)`` and ordering on top; every one
-    of those composes into the same to-one joins, so the emitted SQL is
-    identical to the hand-built queries this replaces.
+    of those composes into the same to-one joins.
     """
     contents = ShareContent.active.for_period(is_past=is_past).filter(
         share__year=year,

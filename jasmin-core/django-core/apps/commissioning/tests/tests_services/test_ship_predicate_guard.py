@@ -5,7 +5,7 @@
 surfaced as the ``ShareDelivery.objects.shippable()`` queryset. A new
 aggregation that sums ``subscription__quantity`` over ShareDelivery rows
 WITHOUT routing through the predicate silently over-counts (jokered/opted-out
-rows shipped on a pickup sheet — the historical API-1 failure). This test
+rows shipped on a pickup sheet). This test
 AST-scans the app tree: every function that both touches ShareDelivery rows
 and reads ``subscription__quantity`` must reference one of the predicate
 helpers, or be explicitly allow-listed with a reason.

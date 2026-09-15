@@ -167,7 +167,7 @@ class TestEmailDispatch:
         assert ok is False
 
     def test_send_email_stamps_rfc5322_message_id(self, tenant, email_config):
-        """P1-4: every outgoing message must carry a stable Message-ID
+        """Every outgoing message must carry a stable Message-ID
         that's mirrored on every EmailLog row, so a future bounce
         webhook can resolve `provider_message_id` back to the rows.
         """

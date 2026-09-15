@@ -41,8 +41,8 @@ class JasminModel(models.Model):
 
         Detects PK collisions specifically by inspecting the failing
         constraint, instead of substring-matching on the error message
-        (which previously could swallow other unique-constraint failures
-        that happened to mention the word "id").
+        (which could swallow other unique-constraint failures that happen to
+        mention the word "id").
         """
         max_retries = 5
         for attempt in range(max_retries):

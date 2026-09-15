@@ -1,15 +1,13 @@
 """Tests for ``apps.commissioning.services.invoice_reminder``.
 
-The function was extracted out of
-``BulkSendInvoiceRemindersViaEmailView.post`` so the Huey task can
-call it without going through HTTP. The view-level test now only
-checks the 202+job contract; the consolidation + SMTP-mocking
-assertions live here, where they belong.
+The Huey task calls this function without going through HTTP. The
+view-level test for ``BulkSendInvoiceRemindersViaEmailView`` only checks
+the 202+job contract; the consolidation + SMTP-mocking assertions live
+here.
 
 Two contracts pinned down:
   1. ONE consolidated email per reseller, regardless of how many
-     ticked invoices belong to that reseller (the whole point of
-     the grouped-by-reseller reshape).
+     ticked invoices belong to that reseller.
   2. ``related_object_type="reseller"`` on the EmailLog row, since
      the single email covers multiple invoices and singling one
      out would be misleading.
@@ -38,7 +36,7 @@ class TestBulkSendInvoiceReminders:
         """Baseline: one ticked order, one finalized invoice, one
         reseller with an email → one consolidated send. Confirms the
         ``EmailService.send_email`` call uses ``autospec=True``-safe
-        instance-method binding (P0-1 regression).
+        instance-method binding.
         """
         reseller = ResellerFactory(invoice_email="reseller@example.org")
         order = OrderFactory(reseller=reseller)
@@ -88,7 +86,7 @@ class TestBulkSendInvoiceReminders:
         assert ctx["tenant_name"] == "Test Coop"
         assert ctx["tenant"]["bank_details"] == "DE12 3456 / GENODEF1XXX"
         assert isinstance(ctx["reseller"], dict) and "name" in ctx["reseller"]
-        # EML-1: invoices are pre-flattened to substitution-only HTML/text blobs
+        # Invoices are pre-flattened to substitution-only HTML/text blobs
         # (no Django {% for %} loop, which the safe Mustache renderer can't do).
         assert invoice.full_number in ctx["invoices_table"]
         assert invoice.full_number in ctx["invoices_text"]
@@ -190,9 +188,9 @@ class TestBulkSendInvoiceReminders:
     def test_progress_is_bucket_consistent_with_multiple_invoices(self, tenant):
         """A reseller with multiple invoices is ONE bucket → one email → one
         progress increment. ``successful`` / ``failed`` must count BUCKETS, not
-        per-invoice result rows — the old code emitted
+        per-invoice result rows — counting rows would emit
         ``{processed:1, successful:3, failed:-2, total:1}`` (successful > total,
-        negative failed) for this exact shape (COR-21)."""
+        negative failed) for this exact shape."""
         reseller = ResellerFactory(invoice_email="reseller@example.org")
         order_a = OrderFactory(reseller=reseller, delivery_week=15)
         order_b = OrderFactory(reseller=reseller, delivery_week=16)
@@ -241,7 +239,7 @@ class TestBulkSendInvoiceReminders:
         assert snapshots[0]["failed"] >= 0
 
     def test_dedups_same_reseller_same_day(self, tenant):
-        """EML-3: a retry / re-click of the bulk reminder on the same day must
+        """A retry / re-click of the bulk reminder on the same day must
         NOT re-send dunning to a reseller already reminded — the (reseller,
         sent_on) ReminderSending record makes the second run skip it."""
         from apps.commissioning.models import ReminderSending

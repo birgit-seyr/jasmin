@@ -1,4 +1,4 @@
-"""Persona classification + deletion preview (dry-run) — Art. 17 roadmap Step 5.
+"""Persona classification + deletion preview (dry-run) for Art. 17 erasure.
 
 ``preview_deletion`` reports EXACTLY what :meth:`anonymize_user` would scrub —
 the subject's persona, the retention blockers that would currently refuse the

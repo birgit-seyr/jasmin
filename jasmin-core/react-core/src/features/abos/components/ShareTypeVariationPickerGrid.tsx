@@ -29,10 +29,10 @@ interface ShareTypeVariationPickerGridProps {
 /**
  * The share-type-variation picker grid: variations grouped by share type, each
  * a rich card (picture/size, price per delivery, office description, the
- * "already subscribed" badge). Extracted from ``NewSubscriptionModal`` so the
- * public registration wizard reuses the SAME cards + info. The modal advances
- * on select; registration passes ``selectedValue`` to highlight the pick and
- * confirm with a quantity afterwards.
+ * "already subscribed" badge). Shared by ``NewSubscriptionModal`` and the
+ * public registration wizard, so both show the SAME cards + info. The modal
+ * advances on select; registration passes ``selectedValue`` to highlight the
+ * pick and confirm with a quantity afterwards.
  */
 export default function ShareTypeVariationPickerGrid({
   variations,

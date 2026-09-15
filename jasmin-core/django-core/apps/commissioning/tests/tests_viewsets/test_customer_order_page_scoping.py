@@ -108,7 +108,7 @@ class TestCustomerOrderPage_ResellerScoping:
         """A customer may edit display fields on their own reseller row, but
         NOT privileged ones — self-assigning a cheaper offer_group (which drives
         which offers/prices they see and order at) or flipping activation /
-        billing fields is a pricing / privilege hole (SEC-1)."""
+        billing fields is a pricing / privilege hole."""
         _u, my_reseller, _g = customer_caller
         other_group = OfferGroupFactory()
         resp = customer_caller_client.patch(
@@ -238,7 +238,7 @@ class TestCustomerOrderPage_OrderContentScoping:
     def test_customer_cannot_set_price_on_own_oc(
         self, customer_caller_client, customer_caller
     ):
-        # API-1: even on their OWN order content, a customer must not set
+        # Even on their OWN order content, a customer must not set
         # price_per_unit / rabatt / tax_rate — that would self-underbill into
         # the delivery note + invoice. Price is resolved server-side.
         _u, my_reseller, _g = customer_caller
@@ -555,8 +555,8 @@ class TestCustomerOrderPage_OfferAnnotationScoping:
         self, customer_caller_client, customer_caller
     ):
         # With ?reseller= omitted, amount_ordered must reflect ONLY the caller's
-        # own reseller — pre-fix it summed the whole group's orders (a peer's 42
-        # would leak); post-fix the caller's own reseller (0) is forced.
+        # own reseller (0) — summing the whole group's orders would leak a
+        # peer's 42.
         _u, _my_reseller, my_group = customer_caller
         peer = ResellerFactory(offer_group=my_group)
         offer = OfferFactory(offer_group=my_group, year=2026, delivery_week=15)

@@ -257,8 +257,8 @@ class CapacityReservationService:
         must not push it over capacity. While a delivery pause was active the
         freed slots may have been filled by NEW confirmed subscriptions, so
         blindly restoring the paused deliveries can overbook the week — raise
-        :class:`DeliveryStationOverCapacity` instead of silently overfilling
-        (BIZ-6). Locks the station-day for race-safety, mirroring the confirm /
+        :class:`DeliveryStationOverCapacity` instead of silently overfilling.
+        Locks the station-day for race-safety, mirroring the confirm /
         move checks. No-op for additional (packed-along) shares — they take no
         pickup slot.
         """
@@ -358,8 +358,7 @@ class CapacityReservationService:
         """A subscription occupies station-day capacity iff its share_type is a
         standalone (non-additional) share. Add-ons (``is_additional_share_type``)
         ride along in another share's box and take no slot. Unknown share_type
-        (defensive) → False, i.e. reserve nothing — matches the old ``None``
-        share_option skip."""
+        (defensive) → False, i.e. reserve nothing."""
         variation = getattr(subscription, "share_type_variation", None)
         share_type = getattr(variation, "share_type", None)
         if share_type is None:

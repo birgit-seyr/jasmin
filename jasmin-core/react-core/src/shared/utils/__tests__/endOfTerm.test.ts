@@ -93,7 +93,7 @@ describe("computeValidUntil", () => {
     it("keeps the restart week stable across a 53-week ISO year", () => {
       // 2026 is a 53-week ISO year. Starting ISO 2026-W26 (2026-06-22), a
       // fixed +364 days would end in W24 and restart the NEXT term in W25 —
-      // the drift this fix removes. Anchored, it ends 2027-06-27, and the next
+      // a one-week drift. Anchored, it ends 2027-06-27, and the next
       // term restarts 2027-06-28 = ISO 2027-W26 (the SAME week).
       const result = computeValidUntil(MON("2026-06-22"), settings);
       expect(result?.format("YYYY-MM-DD")).toBe("2027-06-27");
@@ -113,17 +113,15 @@ describe("computeValidUntil", () => {
     it("anchors on the ISO week-year, not the calendar year (late-Dec W01 start)", () => {
       // 2025-12-29 is a Monday in ISO 2026-W01 but CALENDAR year 2025. Anchoring
       // on the calendar year lands BEFORE valid_from; the ISO week-year gives
-      // the day before Monday of W01 2027 = 2027-01-03. (Regression guard for
-      // the wall-clock/calendar-year bug the adversarial review found.)
+      // the day before Monday of W01 2027 = 2027-01-03.
       const result = computeValidUntil(MON("2025-12-29"), settings);
       expect(result?.format("YYYY-MM-DD")).toBe("2027-01-03");
       expect(result?.isAfter(MON("2025-12-29"), "day")).toBe(true);
     });
 
     it("is independent of the wall clock (same result at a year-boundary now)", () => {
-      // The old ``dayjs()``-seeded construction leaked "today" into the anchor.
-      // With the deterministic helper the result must not move when the clock
-      // sits on a year boundary.
+      // The anchor must not depend on "today": the result must not move when
+      // the clock sits on a year boundary.
       vi.useFakeTimers();
       try {
         vi.setSystemTime(new Date("2027-12-31T12:00:00Z"));

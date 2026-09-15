@@ -1,4 +1,4 @@
-"""BL-14: assert_delivery_station_day_covers_subscription must verify the default
+"""assert_delivery_station_day_covers_subscription must verify the default
 DeliveryStationDay's successor chain covers the whole subscription window
 CONTIGUOUSLY — not merely that some later DSD exists. A gap, or a successor
 that itself ends before the subscription, must be rejected."""

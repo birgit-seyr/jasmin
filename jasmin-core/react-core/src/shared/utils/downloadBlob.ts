@@ -1,8 +1,7 @@
 /**
  * Trigger a browser "Save As" download for an in-memory Blob.
  *
- * The single home for the create-anchor → objectURL → click → revoke dance that
- * was previously copy-pasted across the PDF / CSV / VVT / MyData download sites.
+ * The single home for the create-anchor → objectURL → click → revoke dance.
  * The anchor is appended to the document before clicking (some browsers, incl.
  * Firefox, ignore synthetic clicks on a detached element) and removed again,
  * and the object URL is revoked afterwards to avoid leaking it.

@@ -1,4 +1,4 @@
-"""BL-12: ``update_current_settings`` must reject an inverted coop-share
+"""``update_current_settings`` must reject an inverted coop-share
 window (``min_number_coop_shares > max_number_coop_shares``) — an
 unsatisfiable range that would soft-brick coop-share saves + admin
 confirmation for the tenant."""

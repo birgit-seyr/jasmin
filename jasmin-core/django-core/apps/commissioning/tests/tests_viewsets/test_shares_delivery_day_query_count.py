@@ -1,7 +1,6 @@
-"""PERF-1: the SharesDeliveryDay list endpoint bulk-precomputes
-``can_be_deleted`` (one batch + one Subscription query for the page) instead of
-the old per-row N+1. This locks the part most likely to regress under the bulk
-refactor: that the bulk path yields the SAME boolean as the per-instance check.
+"""The SharesDeliveryDay list endpoint bulk-precomputes ``can_be_deleted`` (one
+batch + one Subscription query for the page) instead of a per-row N+1. This
+locks that the bulk path yields the SAME boolean as the per-instance check.
 """
 
 from __future__ import annotations

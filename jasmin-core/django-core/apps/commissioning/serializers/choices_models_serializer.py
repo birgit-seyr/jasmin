@@ -26,7 +26,7 @@ class _DeliveryStationEntrySerializer(serializers.Serializer):
 
 
 class SharesDeliveryDayListSerializer(serializers.ListSerializer):
-    """PERF-1: bulk-precomputes ``can_be_deleted`` for the delivery-day list.
+    """Bulk-precomputes ``can_be_deleted`` for the delivery-day list.
 
     The per-instance path runs ``can_delete_instance`` (a reverse-relation walk)
     PLUS one ``Subscription`` 2-hop ``.exists()`` per row — an O(N) N+1 on the
@@ -124,7 +124,7 @@ class SharesDeliveryDaySerializer(serializers.ModelSerializer):
     class Meta:
         model = SharesDeliveryDay
         fields = "__all__"
-        # PERF-1: list path bulk-precomputes deletability (one batch per reverse
+        # List path bulk-precomputes deletability (one batch per reverse
         # relation + one Subscription query) instead of per-row N+1.
         list_serializer_class = SharesDeliveryDayListSerializer
 

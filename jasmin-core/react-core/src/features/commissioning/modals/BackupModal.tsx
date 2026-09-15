@@ -95,10 +95,10 @@ export default function BackupModal({
   // every dependency change. `data` is a frozen snapshot from the parent
   // (setSelectedBackupData) that is never refreshed after a save; the
   // share-day / variation queries refetch under the global staleTime=0 (e.g.
-  // the save invalidates them), which used to re-run this effect and overwrite
-  // the just-saved edit with the stale `data` — so the change only appeared
-  // after reopening. Guarding on data.id keeps the in-table (onDataChange)
-  // values authoritative until the modal is actually reopened.
+  // the save invalidates them), and re-running this effect on those refetches
+  // would overwrite the just-saved edit with the stale `data`. Guarding on
+  // data.id keeps the in-table (onDataChange) values authoritative until the
+  // modal is actually reopened.
   const builtForIdRef = useRef<Key | null>(null);
   useEffect(() => {
     if (!visible) {

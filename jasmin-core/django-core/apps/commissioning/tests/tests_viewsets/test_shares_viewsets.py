@@ -176,7 +176,7 @@ class TestShareTypeViewSet:
     def test_create_same_start_still_conflicts(self, api_client, tenant):
         # A genuine violation — a second OPEN ShareType on the SAME start date,
         # which succession can't resolve — must still be rejected (by the model
-        # full_clean / DB constraint, not the removed serializer validator).
+        # full_clean / DB constraint, not a serializer UniqueValidator).
         ShareTypeFactory(
             share_option="HARVEST_SHARE",
             valid_from=datetime.date(2027, 1, 18),
@@ -469,7 +469,7 @@ class TestShareTypeVariationViewSet:
     def test_filter_physical_false_returns_both(self, api_client, tenant):
         # ``physical`` is a strict bool: ``physical=false`` is present-but-false
         # and must NOT restrict to physical — the filter is opt-in on an explicit
-        # true only. (Regression: keying on ``is not None`` hid virtuals here.)
+        # true only. (Keying on ``is not None`` would hide virtuals here.)
         physical = ShareTypeVariationFactory(variation_type="physical")
         virtual = ShareTypeVariationFactory(variation_type="virtual")
         resp = api_client.get(self.URL, {"physical": "false"})
@@ -772,8 +772,8 @@ class TestDefaultShareContentSubscriberCounts:
 @pytest.mark.django_db
 class TestDefaultShareContentBulkUpdate:
     def test_invalid_composite_id_returns_400(self, api_client, tenant):
-        """Composite ID must split into exactly 4 parts on ``_``. Now a
-        canonical ``CompositeIdInvalid`` body, not a hand-built ``{"error"}``."""
+        """Composite ID must split into exactly 4 parts on ``_``; the error is a
+        canonical ``CompositeIdInvalid`` body."""
         url = reverse("default_share_contents-bulk-update", args=["only-two_parts"])
         resp = api_client.put(url, {}, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -996,8 +996,8 @@ class TestHarvestSharePlanningViewSet:
         assert share_content.delivery_station_id == station.id
 
     def test_create_accepts_null_note(self, api_client, tenant):
-        # Regression guard: the EditableTable sends note=null for un-annotated
-        # rows; the request serializer must allow it (allow_null=True).
+        # The EditableTable sends note=null for un-annotated rows; the request
+        # serializer must allow it (allow_null=True).
         article, day, variation, _station = self._setup()
         payload = {
             "year": 2026,
@@ -1027,7 +1027,7 @@ class TestHarvestSharePlanningViewSet:
 
     def test_create_with_no_amounts_returns_400(self, api_client, tenant):
         # Valid serializer payload but zero plannable cells → the
-        # create-specific "at least one amount" guard (kept after wiring).
+        # create-specific "at least one amount" guard.
         article, _day, _variation, _station = self._setup()
         payload = {
             "year": 2026,
@@ -1091,7 +1091,7 @@ class TestVirtualComponentsViewSet:
 
 # ---------------------------------------------------------------------------
 # ShareDeliveryViewSet / ShareDeliveryOverviewViewSet — joker_taken re-plans
-# billing (BIZ-1). Editing joker_taken must notify payments so a jokered
+# billing. Editing joker_taken must notify payments so a jokered
 # (skipped) week isn't still charged; the recompute alone doesn't touch billing.
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
@@ -1137,7 +1137,7 @@ class TestShareDeliveryJokerBillingNotify:
         notify.assert_called_once_with(share_delivery.subscription)
 
     def test_share_delivery_destroy_notifies_subscription(self, api_client, tenant):
-        # MEM-2: removing a delivery changes the billable set → must notify.
+        # Removing a delivery changes the billable set → must notify.
         share_delivery = self._share_delivery_with_subscription()
         subscription = share_delivery.subscription
         with (
@@ -1233,9 +1233,9 @@ class TestShareDeliveryOverviewFilter:
 
 @pytest.mark.django_db
 class TestShareDeliveryCreateCapacity:
-    """MEM-2: ``perform_create`` must run the same station-day capacity guard as
-    ``perform_update`` — the create path skipped it, so the office could over-fill
-    a station-day by creating deliveries directly. Exercised at the ``perform_create``
+    """``perform_create`` must run the same station-day capacity guard as
+    ``perform_update`` — otherwise the office could over-fill a station-day by
+    creating deliveries directly. Exercised at the ``perform_create``
     boundary with the REAL capacity service (the write serializer's nested-source
     fields make a plain POST payload impractical, but the guard is the unit here).
     """
@@ -1460,7 +1460,7 @@ class TestShareDeliveryExceptionGaps:
 
     def test_member_may_fetch_own_gaps(self, member_user, tenant):
         """A plain member reaches the action for their OWN gaps — the whole
-        point of the self-scoping. Regression: exception_gaps must be in the
+        point of the self-scoping. exception_gaps must be in the
         viewset's member-reachable allowlist, else the member is 403'd by
         write_permission=IsOffice before the self-check runs."""
         member = MemberFactory(user=member_user)

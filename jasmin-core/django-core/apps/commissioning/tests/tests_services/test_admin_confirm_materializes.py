@@ -1,4 +1,4 @@
-"""Regression: admin-confirming a Subscription must materialise charges."""
+"""Admin-confirming a Subscription must materialise charges."""
 
 from __future__ import annotations
 
@@ -21,8 +21,9 @@ from apps.payments.models import ChargeSchedule
 
 @pytest.fixture(autouse=True)
 def _freeze_clock():
-    # Fixed fixture dates predate the materialisation/capacity past-week
-    # clamp; freeze "now" to that week so the clamp is a no-op here.
+    # The fixed fixture dates would count as past weeks, which the
+    # materialisation/capacity past-week clamp skips; freeze "now" to that week so
+    # the clamp is a no-op here.
     with time_machine.travel(datetime.date(2026, 4, 6), tick=False):
         yield
 
@@ -67,10 +68,10 @@ class TestAdminConfirmMaterializes:
             svc.create_bare_subscription(self._validated(valid_until=None))
 
     def test_materialize_stamps_is_opted_in_for_on_by_default_optin(self, tenant):
-        """Regression: bulk_create bypasses ShareDelivery.save(), which stamps
+        """bulk_create bypasses ShareDelivery.save(), which stamps
         is_opted_in from the variation's default_optin_state. An on-by-default
-        opt-in variation was materialised opted-OUT, silently suppressing both
-        its billing and its production demand."""
+        opt-in variation must still materialise opted-IN — opted-OUT would
+        silently suppress both its billing and its production demand."""
         from apps.commissioning.models import ShareDelivery
 
         member = MemberFactory()

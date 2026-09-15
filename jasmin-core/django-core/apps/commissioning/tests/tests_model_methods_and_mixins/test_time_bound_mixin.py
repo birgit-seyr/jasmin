@@ -196,7 +196,7 @@ class TestHandleSuccession:
             )
 
     def test_save_rolls_back_predecessor_close_on_full_clean_failure(self, tenant):
-        """SUC-1: save() closes the predecessor (handle_succession) THEN runs
+        """save() closes the predecessor (handle_succession) THEN runs
         full_clean(). If full_clean fails, the close must roll back — a TimeBound
         slot must never be left with a closed predecessor and no successor."""
         from apps.commissioning.models import SharesDeliveryDay

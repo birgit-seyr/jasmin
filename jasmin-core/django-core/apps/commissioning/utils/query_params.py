@@ -31,8 +31,8 @@ from apps.shared.query_params import (
 from ..models.choices import ShareOptions
 
 # Single source of truth for the documentation model discriminator — the
-# ``documentation_viewsets`` VALID_MODELS derives from this (was a hand-kept
-# duplicate). Public so the viewset imports it instead of re-listing values.
+# ``documentation_viewsets`` VALID_MODELS derives from this. Public so the
+# viewset imports it instead of re-listing values.
 DOCUMENTATION_MODELS = ("harvest", "purchase", "washamount", "cleanamount")
 
 

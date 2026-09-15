@@ -83,7 +83,7 @@ def _apply_classification(instance: Any, model_label: str) -> None:
     ``FIELD_CLASSIFICATION[model_label]`` to ``instance`` (in-memory;
     caller still has to ``.save()``).
 
-    Skips ``PII_RETAINED`` (Step 8's retention cron handles those)
+    Skips ``PII_RETAINED`` (a future retention cron will handle those)
     and ``OPERATIONAL`` (not PII, listed only for guard-test
     completeness). Lives at module level rather than as a static
     method because the helper has no dependency on ``GDPRService``
@@ -288,7 +288,7 @@ class AnonymizationMixin:
         stay inline because they're status transitions, not PII
         scrubs.
         """
-        # GDPR-3: remove the uploaded avatar FILE from storage BEFORE the
+        # Remove the uploaded avatar FILE from storage BEFORE the
         # classification nulls the column — assigning None to an ImageField
         # only clears the path, leaving the image (a photo of the data subject)
         # on disk, which would survive Art. 17 erasure. Mirrors the FileField
@@ -431,7 +431,7 @@ class AnonymizationMixin:
 
         # The reseller's contact name is copied into every offer bulk-send
         # ``BackgroundJob.result`` payload and outlives Huey's TTL there, beyond
-        # the classification walker's reach — scrub those copies (GDPR-DEL-3).
+        # the classification walker's reach — scrub those copies.
         GDPRService._scrub_reseller_name_in_background_jobs(reseller.id)
 
         # Purge the plaintext rendered documents (invoice / delivery-note PDFs +

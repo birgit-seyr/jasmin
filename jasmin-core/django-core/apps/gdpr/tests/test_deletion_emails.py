@@ -362,7 +362,7 @@ class TestAdminViewsRobustToEmailFailure:
 
 @pytest.mark.django_db
 class TestDeletionEmailLanguage:
-    """EML-1: the three user-facing deletion emails render in the recipient's
+    """The three user-facing deletion emails render in the recipient's
     own ``user_language`` (forwarded to EmailService.send_email)."""
 
     def test_confirmation_email_forwards_user_language(self, tenant):

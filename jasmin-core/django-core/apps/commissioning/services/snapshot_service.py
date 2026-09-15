@@ -169,8 +169,8 @@ class SnapshotService:
             # 3. Zero out future deltas so compute_balance returns a clean
             #    balance_before for each INVENTORY. ONLY rows we can recompute
             #    (counted_amount set) are zeroed; a NULL-counted_amount row
-            #    (legacy/imported) is left UNTOUCHED — zeroing it here then
-            #    skipping it in step 4 destroyed its delta forever (MOV-8). One
+            #    (legacy/imported) is left UNTOUCHED — zeroing it here and then
+            #    skipping it in step 4 would destroy its delta forever. One
             #    bulk_update instead of a save() per row (no inter-row dependency).
             recomputable = [
                 m for m in future_inventories if m.counted_amount is not None
@@ -236,7 +236,7 @@ class SnapshotService:
             if key not in entities or movement.date < entities[key]:
                 entities[key] = movement.date
 
-        # TXN-1: cascade in a canonical (sorted) entity order so the per-entity
+        # Cascade in a canonical (sorted) entity order so the per-entity
         # ``current_balance`` advisory locks (taken transaction-scoped inside
         # recompute_for_entity, held to the outer commit) are acquired in the
         # same order as every other caller — an unordered movement list would

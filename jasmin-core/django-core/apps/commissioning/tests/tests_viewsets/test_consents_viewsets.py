@@ -421,7 +421,7 @@ class TestConsentRecordDestroy:
     """Consent records are an append-only legal / GDPR audit trail. Members
     withdraw via the soft ``revoke`` action (preserves the row); only office
     may hard-delete (e.g. an erroneous entry). A member hard-deleting their
-    own record would erase proof-of-consent — SEC-BE-2."""
+    own record would erase proof-of-consent."""
 
     def test_member_cannot_hard_delete_own_consent(self, member_client, tenant):
         own_member: Member = member_client._test_member  # type: ignore[attr-defined]

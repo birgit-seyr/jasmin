@@ -234,8 +234,7 @@ def _decode_csv(file_bytes: bytes) -> str:
         return file_bytes.decode("utf-8-sig")
     except UnicodeDecodeError:
         # Latin-1 maps every byte 0..255 → ``.decode("latin-1")`` cannot
-        # raise UnicodeDecodeError. The previous broad ``except`` was
-        # dead code.
+        # raise UnicodeDecodeError, so it needs no ``except``.
         return file_bytes.decode("latin-1")
 
 
@@ -320,7 +319,7 @@ def _save_imported_member(ser, payload, importing_user):
             service.assert_user_can_be_linked(existing_user)
         except UserAlreadyLinked:
             # The address already belongs to ANOTHER member's login. That is a
-            # legitimate shape now that ``Member.email`` is not unique — two
+            # legitimate shape because ``Member.email`` is not unique — two
             # members share one inbox, and only one of them can hold the login.
             # Import this member anyway, unlinked: failing the row would drop a
             # real Mitglied from the Mitgliederliste over an account they were

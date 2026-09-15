@@ -106,9 +106,9 @@ class EmailTemplateSpec:
     # Example: ``accounts/emails/invitation``.
     default_template: str
     # ``default_subject`` is the German (source-of-truth) subject; the bodies are
-    # per-language files but the subject was single-valued, so an English send
-    # shipped an English body under a German subject (EML-5). ``default_subject_en``
-    # supplies the English subject; _resolve_template picks by send language.
+    # per-language files, so ``default_subject_en`` supplies the English subject
+    # (else an English send gets an English body under a German subject).
+    # _resolve_template picks by send language.
     default_subject: str
     default_subject_en: str | None = None
     # Grouping shown in the admin UI. One of CATEGORY_ORDER below.
@@ -124,8 +124,8 @@ CATEGORY_LABELS: dict[str, str] = {
     "members": "Mitglieder",
     "resellers": "Wiederverkäufer",
     "users": "Konten",
-    # EML-11: the gdpr.deletion_pending_admin_office spec uses category="office";
-    # without this it sorted to the bottom with a raw, untranslated "office" label.
+    # The gdpr.deletion_pending_admin_office spec uses category="office";
+    # without this it sorts to the bottom with a raw, untranslated "office" label.
     "office": "Büro",
 }
 

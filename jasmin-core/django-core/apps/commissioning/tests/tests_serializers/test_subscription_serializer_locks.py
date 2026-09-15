@@ -11,7 +11,7 @@ the service is the ONLY way to get correct side effects:
   * PLANNED ``ChargeSchedule`` rows dropped, ISSUED/PAID preserved
   * ``recompute_shares`` fires for affected weeks
 
-The frontend Abos.tsx no longer lets office users edit
+The frontend Abos.tsx doesn't let office users edit
 ``cancelled_effective_at`` inline — they're routed through a Cancel
 button + modal that hits the action endpoint. This test is the
 server-side belt-and-braces guard against direct API PATCH calls.
@@ -135,7 +135,7 @@ class TestCancellationFieldsAreReadOnly:
         assert subscription.quantity == 3
 
     def test_admin_confirmed_cannot_be_forged_on_draft(self, tenant):
-        """SEC-1: a plain PATCH must not be able to flip a DRAFT to
+        """A plain PATCH must not be able to flip a DRAFT to
         admin_confirmed=True — that would bypass the confirm action's capacity
         backstop + share/delivery/charge materialisation. The field is
         read-only, so DRF drops it silently (the row stays a draft)."""
@@ -164,7 +164,7 @@ class TestCancellationFieldsAreReadOnly:
 
 @pytest.mark.django_db
 class TestOpenEndedSubscriptionForbidden:
-    """CHG-1: a subscription must carry an end date (``valid_until``). An
+    """A subscription must carry an end date (``valid_until``). An
     open-ended sub materialises no deliveries and silently never bills, so the
     serializer rejects creating one or clearing the end date on an existing one.
     """

@@ -38,8 +38,7 @@ def emit_progress(
 
     The payload shape ``{processed, successful, failed, total}`` is
     load-bearing: the React ``JobProgressDrawer`` reads exactly these keys.
-    Synchronous callers (tests, legacy paths) pass ``progress_cb=None`` and
-    this is a no-op, keeping the services identical to their pre-queue shape.
+    Synchronous callers pass ``progress_cb=None`` and this is a no-op.
     """
     if progress_cb is None:
         return

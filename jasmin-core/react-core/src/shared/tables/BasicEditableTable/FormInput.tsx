@@ -85,10 +85,8 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
     const { dateFormat } = useDateFormat();
 
     // Select-all on focus for text-like inputs so clicking a cell with a
-    // value lets the user overwrite it by typing — the previous flow used
-    // a separate `selectOnFocus` flag (hardcoded false everywhere) plus a
-    // duplicate handler in EditableCell, which was fragile under
-    // re-renders. Centralised here so it's reliable for every consumer.
+    // value lets the user overwrite it by typing. Centralised here so it's
+    // reliable for every consumer.
     const TEXT_LIKE_TYPES = new Set([
       "text",
       "date",
@@ -112,9 +110,9 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
     // `e.target` may be a child of the input or the wrapper. We resolve to
     // the nearest <input> instead of capturing `e.currentTarget`, which
     // can go stale if Form.useWatch re-renders the cell between the focus
-    // event and the deferred select (the cause of the
-    // PlanningHarvestShares bug — many-cell forms trigger frequent
-    // re-renders, replacing the input node before RAF fires).
+    // event and the deferred select (many-cell forms such as
+    // PlanningHarvestShares re-render frequently, replacing the input node
+    // before RAF fires).
     const resolveInput = (
       target: EventTarget | null,
     ): HTMLInputElement | null => {
@@ -287,8 +285,7 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
        // present) for any type that isn't explicitly "positive". That
        // covers ``negative_*`` (negative-only) AND the plain signed
        // variants (``integer`` / ``decimal2`` / ``decimal1`` /
-       // ``decimal3``) where the keydown handler used to silently
-       // swallow ``-``. Plain ``decimal2`` is the canonical "signed
+       // ``decimal3``). Plain ``decimal2`` is the canonical "signed
        // money" input — see ``priceColumns.tsx`` (Gutschein/Pauschalen
        // Rabatt) and ``InvoiceModal.price_per_unit``.
        const allowMinus =

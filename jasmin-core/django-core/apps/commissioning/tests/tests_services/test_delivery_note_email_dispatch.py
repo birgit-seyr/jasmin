@@ -22,8 +22,7 @@ via the ``send_to_reseller`` viewset action. There's no
 
 We patch ``EmailService.send_email`` with ``autospec=True`` so the
 mock keeps the same ``self`` binding as the real method — same
-class-vs-instance protection as the P0-1 regression test
-(``test_reseller_views.py``).
+class-vs-instance protection as ``test_reseller_views.py``.
 """
 
 from __future__ import annotations
@@ -115,8 +114,7 @@ class TestSendToReseller:
 
         # ``autospec=True`` keeps ``self`` as the first positional
         # arg → asserts the helper hit the method via an instance,
-        # not the class. Same protection pattern as the P0-1
-        # regression.
+        # not the class.
         assert send_email.called
         bound_self = send_email.call_args.args[0]
         assert isinstance(bound_self, EmailService)

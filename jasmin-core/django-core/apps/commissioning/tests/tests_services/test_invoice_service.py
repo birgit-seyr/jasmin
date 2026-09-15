@@ -140,7 +140,7 @@ class TestFinalizeInvoice:
 
 
 # ---------------------------------------------------------------------------
-# recipient_snapshot (document_hash v2 — DOC-1)
+# recipient_snapshot (document_hash v2)
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestRecipientSnapshot:
@@ -175,7 +175,7 @@ class TestRecipientSnapshot:
 
         # ...but the immutable invoice reads its frozen snapshot, so it does NOT
         # drift — a live read of the now-anonymized recipient WOULD differ, which
-        # is exactly the bug the snapshot prevents (DOC-1).
+        # is exactly the drift the snapshot prevents.
         assert invoice._live_recipient()["name"] != "ACME GmbH"
         assert invoice.resolved_recipient()["name"] == "ACME GmbH"
         assert InvoiceService.find_drifted_invoices() == []
@@ -235,7 +235,7 @@ class TestCreateSummaryInvoice:
 
 
 # ---------------------------------------------------------------------------
-# find_drifted_invoices — POSITIVE tamper detection (TEST-2)
+# find_drifted_invoices — POSITIVE tamper detection
 # ---------------------------------------------------------------------------
 
 
@@ -307,11 +307,10 @@ class TestNullAmountDeliveryNoteLine:
     """``DeliveryNoteContent.amount`` is nullable but
     ``InvoiceResellerContent.amount`` is NOT NULL.
 
-    An uncoerced None therefore aborted the whole atomic
-    ``create_from_delivery_note`` with an IntegrityError — while the SUMMARY
-    invoice path, which already did ``amount or 0``, invoiced the identical
-    data fine. Such lines exist because an order line without an offer used to
-    store NULL happily (the create path only crashed when an offer was set).
+    An uncoerced None would therefore abort the whole atomic
+    ``create_from_delivery_note`` with an IntegrityError, while the SUMMARY
+    invoice path (``amount or 0``) invoices the identical data fine. Existing
+    data can contain such lines, from order lines created without an offer.
     """
 
     @staticmethod

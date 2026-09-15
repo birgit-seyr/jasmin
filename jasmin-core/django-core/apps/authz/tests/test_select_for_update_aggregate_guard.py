@@ -9,16 +9,6 @@ lock is never taken, but the code reads like it is. The canonical
 mixin.py``, lines ~730) explicitly calls this out and prescribes
 ``pg_advisory_xact_lock`` as the alternative.
 
-The race-conditions audit pass found three sites where this pattern
-had crept back in:
-
-  * ``Member._generate_member_number``
-  * ``CrateContentService.apply_total_amount_change``
-  * ``GenericDocumentationService._sum_theoretical``
-
-All three were fixed in the same audit pass. This test exists so the
-fourth one is caught at write time, not by the next audit.
-
 How it works
 ------------
 
@@ -53,8 +43,8 @@ from pathlib import Path
 _DJANGO_CORE_ROOT = Path(__file__).resolve().parents[3]
 _APPS_DIR = _DJANGO_CORE_ROOT / "apps"
 
-# Directories where the pattern is acceptable (audit doc references it,
-# tests may demonstrate it deliberately for documentation purposes).
+# Directories where the pattern is acceptable (tests may demonstrate it
+# deliberately for documentation purposes).
 _SKIP_DIRS: tuple[str, ...] = ("tests", "migrations", "__pycache__")
 
 # Self-exclusion: this file mentions ``select_for_update`` /
@@ -77,8 +67,8 @@ def _mask_comments_and_strings(source: str) -> str:
     Line and column positions are preserved so regex matches against
     the masked output still yield accurate line numbers in error
     messages. Without this, the guard would false-positive on its
-    own explanatory comments (e.g. a fix's docstring that reads
-    "the previous code chained ``select_for_update().aggregate(...)``").
+    own explanatory comments (e.g. a docstring that mentions
+    ``select_for_update().aggregate(...)``).
 
     Falls back to the raw source if the file fails to tokenise
     (syntax error, unfinished edit). A real syntax error will fail
@@ -139,8 +129,7 @@ def test_no_select_for_update_chained_to_aggregate() -> None:
     Postgres silently ignores FOR UPDATE on aggregate queries — the
     lock is never taken. Use ``pg_advisory_xact_lock`` instead (see
     ``FinalizableDocumentMixin.save_with_number_retry`` for the
-    canonical pattern, and the 2026-05-24 race-conditions audit for
-    the backstory).
+    canonical pattern).
     """
     offenders: list[str] = []
     for path in _iter_python_files():

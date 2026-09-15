@@ -443,11 +443,11 @@ class TestSummaryInvoiceFromMultipleDeliveryNotes:
         """Two DN lines with the SAME (article, unit, size, price) but a
         different ``tax_rate`` must stay as SEPARATE invoice lines.
 
-        Regression: ``tax_rate`` was excluded from the grouping key, so a
-        VAT-rate change with the net price held constant (e.g. across a
-        16%/19% reversal) merged both into one line taxed at whichever
-        rate happened to be fetched first — wrong VAT on a finalized,
-        hash-locked UStG §14 document.
+        ``tax_rate`` must be part of the grouping key: otherwise a VAT-rate
+        change with the net price held constant (e.g. across a 16%/19%
+        reversal) merges both into one line taxed at whichever rate happens
+        to be fetched first — wrong VAT on a finalized, hash-locked UStG §14
+        document.
         """
         _ensure_settings(connection.tenant)
         reseller = ResellerFactory()
@@ -554,10 +554,11 @@ class TestSummaryInvoiceFromMultipleDeliveryNotes:
         assert invoice.number is not None
 
     def test_crate_only_dn_is_traceable_and_not_double_billable(self, tenant):
-        """DOC-2: a crate-only delivery note (no article lines) must be uniquely
-        traceable to its invoice and billable at most once. Before the crate
-        provenance M2M, every guard keyed solely on the (empty) article M2M — so
-        a crate-only DN was invisible to lookups AND silently double-billable."""
+        """A crate-only delivery note (no article lines) must be uniquely
+        traceable to its invoice and billable at most once. Its article M2M is
+        empty, so guards keyed solely on it would leave a crate-only DN invisible
+        to lookups AND silently double-billable — the crate provenance M2M
+        carries the link instead."""
         _ensure_settings(connection.tenant)
         reseller = ResellerFactory()
         order = OrderFactory(
@@ -585,11 +586,11 @@ class TestSummaryInvoiceFromMultipleDeliveryNotes:
             )
         ) == [dn.id]
 
-        # (b) The DN now resolves to its invoice (was None → invisible invoice).
+        # (b) The DN resolves to its invoice (not None).
         assert InvoiceService.get_invoice_for_delivery_note(dn) == invoice
 
-        # The serializer's "corresponding delivery notes" (UI + PDF) now lists
-        # the crate-only DN too (was blank — it only walked article lines).
+        # The serializer's "corresponding delivery notes" (UI + PDF) lists
+        # the crate-only DN too, not only DNs reached via article lines.
         from apps.commissioning.serializers.resellers_serializer import (
             InvoiceResellerSerializer,
         )
@@ -599,8 +600,7 @@ class TestSummaryInvoiceFromMultipleDeliveryNotes:
             == dn.full_number
         )
 
-        # (a) A second invoice for the same crate-only DN is refused (was a
-        # silent second full invoice → double-billing).
+        # (a) A second invoice for the same crate-only DN is refused (no double-billing).
         with pytest.raises(JasminError) as exc_info:
             InvoiceService.create_from_delivery_note(delivery_note=dn)
         assert exc_info.value.code == "invoice.already_exists"
@@ -608,7 +608,7 @@ class TestSummaryInvoiceFromMultipleDeliveryNotes:
     def test_crate_only_dn_summary_path_is_traceable_and_not_double_billable(
         self, tenant
     ):
-        """DOC-2 (summary path): a crate-only DN summarized into an invoice is
+        """Summary path: a crate-only DN summarized into an invoice is
         traceable and can't then be re-billed via the summary OR per-DN path."""
         _ensure_settings(connection.tenant)
         reseller = ResellerFactory()
@@ -881,7 +881,7 @@ class TestBatchIntegrity:
 
 
 # ---------------------------------------------------------------------------
-# DOC-1 / DOC-2 regression: amount_per_pu must NOT diverge the legal chain
+# amount_per_pu must NOT diverge the legal chain
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestAmountPerPuChainConsistency:
@@ -889,9 +889,8 @@ class TestAmountPerPuChainConsistency:
         """An offer with ``amount_per_pu != 1`` must NOT scale the line net.
         ``OrderContent.amount`` is in physical units and ``price_per_unit`` is
         €/unit, so the order, delivery-note and invoice line totals all equal
-        ``amount × price_per_unit`` (NOT × amount_per_pu). Pre-fix the order net
-        was multiplied by amount_per_pu and diverged from the legally-issued
-        invoice (DOC-1)."""
+        ``amount × price_per_unit`` (NOT × amount_per_pu). Multiplying the order
+        net by amount_per_pu would diverge it from the legally-issued invoice."""
         reseller = ResellerFactory()
         order = OrderFactory(
             reseller=reseller, year=2026, delivery_week=15, day_number=2

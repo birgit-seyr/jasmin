@@ -2,9 +2,8 @@
  * The list pages' CSV import affordance.
  *
  * What matters here: the button is gated on the tenant setting, and the modal
- * offers a DRY RUN — the five list pages previously rendered a bare template +
- * upload pair with no validate step, so an office user found out about a bad
- * file only by importing it.
+ * offers a DRY RUN, so an office user learns about a bad file before importing
+ * it.
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

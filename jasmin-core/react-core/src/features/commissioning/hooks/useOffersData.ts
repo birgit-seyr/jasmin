@@ -108,9 +108,8 @@ export function useOffersData({
 
   // `offer_group` is required by the type; we placeholder `""` when not
   // picked and rely on `enabled: !!selectedOfferGroup` below to avoid
-  // firing the request. (Previously this used `String(selectedOfferGroup)`
-  // which would serialize `null` to the string "null" — caught by the
-  // listParams audit.)
+  // firing the request. (Not `String(selectedOfferGroup)`: that serializes
+  // `null` to the string "null".)
   const sendingStatusParams =
     useMemo<CommissioningOfferSendingStatusListParams>(
       () => ({

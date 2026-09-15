@@ -109,7 +109,7 @@ const ALLOWED: ReadonlyArray<{ path: string; why: string }> = [
     path: "src/features/platform/pages/SuperAdminSupportTickets.tsx",
     why: "Super-admin support-ticket aggregate; endpoints are public-schema and excluded from the Orval schema (same realm as SuperAdminDashboard).",
   },
-  // Modals extracted out of the super-admin pages above — same realm, same
+  // Modals of the super-admin pages above — same realm, same
   // reason: the super-admin create endpoints aren't routed through orval yet.
   {
     path: "src/features/platform/modals/CreateAdminModal.tsx",

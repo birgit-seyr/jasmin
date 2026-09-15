@@ -44,7 +44,7 @@ class TestFinalize:
         assert result is False
 
     def test_finalize_locks_the_row(self, tenant):
-        """REF-2/REF-5: finalize() must take a SELECT … FOR UPDATE row lock so
+        """finalize() must take a SELECT … FOR UPDATE row lock so
         concurrent finalizes serialise."""
         user = JasminUserFactory()
         offer = OfferFactory(
@@ -102,9 +102,9 @@ class TestUnfinalize:
 
 @pytest.mark.django_db
 class TestOfferFinalizedProtected:
-    """DOC-6: Offer's bases now place FinalizedProtectedMixin before JasminModel,
-    so its per-instance save()/delete() guards fire (previously dead — only the
-    Postgres trigger enforced immutability)."""
+    """Offer's bases place FinalizedProtectedMixin before JasminModel, so its
+    per-instance save()/delete() guards fire (otherwise they are dead and only
+    the Postgres trigger enforces immutability)."""
 
     def test_save_on_finalized_disallowed_field_raises(self, tenant):
         user = JasminUserFactory()

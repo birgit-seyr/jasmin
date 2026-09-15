@@ -5,16 +5,14 @@ backup snapshot and now comes back to life with their PII intact. This
 command walks every tenant's ``DeletionLog`` and re-runs the deletion so
 the right to erasure (Art. 17) survives a restore.
 
-The regression these tests pin: the command used to hand-scrub only four
-``JasminUser`` columns (``is_active``, ``first_name``, ``last_name``,
-``email``), silently leaving the Member row, billing/IBAN, login history
-and every other PII surface untouched. It now delegates to
-``GDPRService.anonymize_user`` — the single source of truth — so a replay
-scrubs exactly what a live deletion does.
+The command delegates to ``GDPRService.anonymize_user`` — the single source
+of truth — so a replay scrubs exactly what a live deletion does: the Member
+row, billing/IBAN, login history and every other PII surface, not just the
+``JasminUser`` columns.
 
 Two behaviours are locked here:
   1. A restored, still-active subject is FULLY re-anonymized (Member
-     tombstone + PII nulled), not just the four user columns.
+     tombstone + PII nulled).
   2. A subject whose statutory retention obligation also came back with
      the restore (an open CoopShare) is SKIPPED, not anonymized — and the
      skip doesn't abort the rest of the replay.
@@ -33,8 +31,8 @@ class TestReplayGdprDeletions:
     def test_reanonymizes_restored_active_user(self, tenant):
         """A DeletionLog whose subject is back with PII intact gets the
         FULL anonymization — Member tombstone + PII scrub — proving the
-        command runs ``anonymize_user``, not the old 4-column hand-scrub
-        (which never touched the Member row at all)."""
+        command runs ``anonymize_user`` rather than scrubbing only the
+        user columns."""
         from apps.commissioning.tests.factories import (
             JasminUserFactory,
             MemberFactory,
@@ -53,10 +51,9 @@ class TestReplayGdprDeletions:
 
         user.refresh_from_db()
         member.refresh_from_db()
-        # User deactivated (the old code did this too)...
+        # User deactivated...
         assert user.is_active is False
-        # ...but the Member row is ALSO scrubbed now — the old hand-scrub
-        # left it fully intact.
+        # ...and the Member row is ALSO scrubbed.
         assert member.first_name == "Gelöscht"
         assert member.address is None
         assert member.city is None
@@ -87,10 +84,8 @@ class TestReplayGdprDeletions:
 
         user.refresh_from_db()
         member.refresh_from_db()
-        # NOT anonymized — the retention block held. The old command had
-        # NO retention check and hand-scrubbed the user's name
-        # ("deleted") unconditionally; the new skip path leaves the
-        # subject completely intact — name included.
+        # NOT anonymized — the retention block held. The skip path leaves
+        # the subject completely intact — name included.
         assert user.is_active is True
         assert user.first_name == "Blocked"
         assert member.first_name == "Blocked"

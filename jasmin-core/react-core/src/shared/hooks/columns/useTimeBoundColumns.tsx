@@ -62,9 +62,9 @@ export const useTimeBoundColumns = (options: TimeBoundColumnOptions = {}) => {
   // valid_from: Mondays only, and — when ``validFromFutureOnly`` — not before
   // the first upcoming Monday. Uses core ``day()`` rather than the ``isoWeek``
   // plugin's ``isoWeekday()``: ``day()`` needs no ``dayjs.extend`` and is
-  // immune to chunk load-order. Relying on the plugin here crashed the picker
-  // in production whenever this column mounted before any module that had
-  // ``dayjs.extend(isoWeek)``'d as a side effect (``isoWeekday`` undefined).
+  // immune to chunk load-order. Relying on the plugin here would crash the
+  // picker if this column mounted before any module had run
+  // ``dayjs.extend(isoWeek)`` (``isoWeekday`` undefined).
   const disabledDateValidFrom = useMemo(
     () => (current: unknown) => {
       const day = current as Dayjs | undefined;

@@ -272,7 +272,7 @@ def accept_invitation(*, token: str, password: str) -> JasminUser:
         status=InvitationStatus.CANCELLED
     )
 
-    # P2-1: account-level welcome. Distinct from
+    # Account-level welcome. Distinct from
     # ``accounts.application_approved`` (which fires on Member admit
     # — "your membership application was accepted"). This one is the
     # USER-account event — "your login is active, here's the portal".
@@ -296,12 +296,11 @@ def _send_invitation_email(*, user: JasminUser, invitation) -> None:
     invitation creation, because a missing SMTP server shouldn't lock
     the admin out of the workflow.
 
-    The send is deferred to ``transaction.on_commit`` (P1-3): the public
+    The send is deferred to ``transaction.on_commit``: the public
     callers (`create_user_with_invitation`, `resend_invitation`) run
     inside ``@transaction.atomic``, and we don't want to mail an accept-
     link for an invitation row that ended up rolled back. When called
-    outside an atomic block, Django fires the callback immediately, so
-    the previous fire-and-forget semantics still hold.
+    outside an atomic block, Django fires the callback immediately.
     """
     from apps.shared.deferred_email import schedule_deferred_email
 
@@ -314,7 +313,7 @@ def _send_invitation_email(*, user: JasminUser, invitation) -> None:
         "tenant_name": tenant_name(),
         "user": {"first_name": user.first_name, "email": user.email},
         "accept_url": accept_url,
-        # EML-4: pre-format to a substitution-safe string (mirrors
+        # Pre-format to a substitution-safe string (mirrors
         # member_cancellation) so the template needs no Django ``|date`` filter
         # and renders identically under the safe Mustache renderer for overrides.
         "expires_at": (
@@ -333,7 +332,7 @@ def _send_invitation_email(*, user: JasminUser, invitation) -> None:
         context=context,
         related_object_type="user",
         related_object_id=str(user.id),
-        language=user.user_language or None,  # EML-9: render in the user's language
+        language=user.user_language or None,  # render in the user's language
         logger=logger,
         log_error_event="invitation.email_failed",
         log_not_sent_event="invitation.email_not_sent",
@@ -369,7 +368,7 @@ def _send_welcome_email(*, user: JasminUser) -> None:
         context=context,
         related_object_type="user",
         related_object_id=str(user.id),
-        language=user.user_language or None,  # EML-9: render in the user's language
+        language=user.user_language or None,  # render in the user's language
         logger=logger,
         log_error_event="welcome.email_failed",
         log_not_sent_event="welcome.email_not_sent",

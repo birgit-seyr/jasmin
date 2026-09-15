@@ -110,7 +110,7 @@ def confirm_password_reset(*, uid: str, token: str, password: str) -> JasminUser
     # has now changed. Single-use is guaranteed.
     user.save(update_fields=["password", "updated_at"])
 
-    # GAP-1: a password reset must kill any live session — a refresh token
+    # A password reset must kill any live session — a refresh token
     # stolen before the reset (the exact scenario a reset defends against)
     # otherwise stays rotatable for its full lifetime. Revoke all of the
     # user's sessions so the attacker's token can't be refreshed forward.
@@ -150,7 +150,7 @@ def _send_password_reset_email(*, user: JasminUser, uid: str, token: str) -> Non
         context=context,
         related_object_type="user",
         related_object_id=str(user.id),
-        language=user.user_language or None,  # EML-9: user's language
+        language=user.user_language or None,  # user's language
         logger=logger,
         log_error_event="password_reset.email_failed",
         log_not_sent_event="password_reset.email_not_sent",

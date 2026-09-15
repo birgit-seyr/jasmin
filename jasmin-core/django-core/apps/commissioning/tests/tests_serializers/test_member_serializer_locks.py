@@ -178,10 +178,10 @@ class TestUnconditionallyReadOnlyFields:
         "field,value",
         [
             ("member_number", 99999),
-            # ``entry_date`` is intentionally NOT here: it was removed from
-            # read_only_fields for the office "manual member transfer" flow
-            # (GenG §30 entry date set by hand when migrating existing members),
-            # so it is now writable and must not be asserted read-only.
+            # ``entry_date`` is intentionally NOT here: the office "manual member
+            # transfer" flow sets it by hand (GenG §30 entry date when migrating
+            # existing members), so it is writable and must not be asserted
+            # read-only.
             ("sepa_consent", timezone.now()),
             ("privacy_consent", timezone.now()),
             ("withdrawal_consent", timezone.now()),
@@ -208,7 +208,7 @@ class TestUnconditionallyReadOnlyFields:
 
 @pytest.mark.django_db
 class TestMemberSelfReadOmitsPlaintextSepa:
-    """MEM-6: a member reading their OWN row must NOT receive plaintext IBAN /
+    """A member reading their OWN row must NOT receive plaintext IBAN /
     account_owner / sepa_consent. The encrypted columns decrypt transparently on
     access, so a plain ModelSerializer would echo them — only boolean ``*_stored``
     indicators are exposed (mirrors ``MyMemberDataReadSerializer``)."""
@@ -274,7 +274,7 @@ class TestOfficeMemberSerializerMasksSepa:
 
 @pytest.mark.django_db
 class TestMemberUserLinkIsReadOnly:
-    """MEM-7: the role-bearing member↔user link must never be set via a generic
+    """The role-bearing member↔user link must never be set via a generic
     PATCH — relinking/unlinking it would strand ``Role.MEMBER`` on the old user.
     Linking is owned by the create-path service; the field is read-only here."""
 
@@ -296,10 +296,9 @@ class TestMemberUserLinkIsReadOnly:
 
 @pytest.mark.django_db
 class TestCoopShareSerializerLocksAuditFields:
-    """MEM-8: ``CoopShareSerializer`` was ``fields="__all__"`` with no
-    ``read_only_fields`` — the GenG §30/§31 audit trail plus the
-    cancellation / confirmation / payment columns were all freely PATCHable.
-    They're owned by dedicated services and must be read-only on the API."""
+    """``CoopShareSerializer``'s GenG §30/§31 audit trail plus its
+    cancellation / confirmation / payment columns are owned by dedicated
+    services and must be read-only on the API (not freely PATCHable)."""
 
     @pytest.mark.parametrize(
         "field",

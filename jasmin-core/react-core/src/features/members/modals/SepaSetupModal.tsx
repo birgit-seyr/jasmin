@@ -45,8 +45,8 @@ interface SepaSetupModalProps {
   /** Office mode: expose the office-only fields — an editable signed date
    *  (default today) and, when the tenant requires a paper signature, a
    *  "paper signature received" checkbox that records
-   *  ``sepa_mandate_paper_received_at``. Off (member self-service) keeps the
-   *  original "sign now" behaviour. */
+   *  ``sepa_mandate_paper_received_at``. Off (member self-service) signs
+   *  "now" (the signed date is today). */
   officeMode?: boolean;
   /** Called after a successful upsert (before ``onClose``). Lets callers that
    *  read a DIFFERENT query than the billing-profiles list — e.g. the Abos SEPA
@@ -119,7 +119,7 @@ export default function SepaSetupModal({
     // error, or office-field edits would carry over — and the affirmative
     // click-consent gate could be silently pre-satisfied for the next member.
     if (!open) return;
-    // The decrypted iban / account_holder are no longer returned by the API
+    // The API doesn't return the decrypted iban / account_holder
     // (they're masked on read). Re-signing a mandate means entering the IBAN
     // again anyway, so the form always starts empty; the current value is shown
     // masked in the existing-profile notice below.

@@ -31,9 +31,9 @@ class IBANValidator:
     """Validates IBAN well-formedness via mod-97 + country-length check.
 
     Raises ``django.core.exceptions.ValidationError`` with the single
-    stable code ``iban_invalid``. Earlier versions of this validator
-    tried to distinguish the four ``python-stdnum`` failure modes
-    (format / length / checksum / component) into separate codes, but
+    stable code ``iban_invalid``. It does not map the four
+    ``python-stdnum`` failure modes (format / length / checksum /
+    component) to separate codes, because
     stdnum 2.x's ordering is conservative — it raises ``InvalidChecksum``
     for several inputs where the actual cause is the length or country.
     A single code + message keeps the validator's contract stable

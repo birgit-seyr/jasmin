@@ -40,9 +40,9 @@ export default function SendOffersModal({
     resellers.filter((r) => !r.sent).map((r) => r.id)
   );
 
-  // UI-1: reset to "all unsent selected" each time the modal OPENS — not on
+  // Reset to "all unsent selected" each time the modal OPENS — not on
   // every ``resellers`` array-identity change. The parent passes a new array
-  // every render, so keying on ``resellers`` wiped the office's manual
+  // every render, so keying on ``resellers`` would wipe the office's manual
   // de-selections mid-session (and setState-in-useMemo is a render-phase
   // anti-pattern). ``resellers`` is intentionally captured as of the open, so
   // it is omitted from the deps.
@@ -74,7 +74,7 @@ export default function SendOffersModal({
     setSending(true);
     try {
       await onSend(selectedIds);
-      // Send is now ASYNC (enqueued as a Huey ``BackgroundJob``) so
+      // Send is ASYNC (enqueued as a Huey ``BackgroundJob``) so
       // this toast must NOT claim the work is done. The real status —
       // per-reseller success / failure / "already sent" — is shown by
       // the JobProgressDrawer that ``Offers.tsx`` opens on the parent

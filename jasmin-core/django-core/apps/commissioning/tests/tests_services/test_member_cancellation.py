@@ -167,7 +167,7 @@ class TestCancelMemberWithShares:
 
 @pytest.mark.django_db
 class TestMemberCancellationEndsSubscriptions:
-    """MEM-10: cancelling a member also ends their active subscriptions
+    """Cancelling a member also ends their active subscriptions
     (truncate term + drop future deliveries), not just the equity records."""
 
     @time_machine.travel(datetime.date(2026, 3, 30), tick=False)  # Monday
@@ -210,7 +210,7 @@ class TestMemberCancellationEndsSubscriptions:
 
     @time_machine.travel(datetime.date(2026, 3, 30), tick=False)  # Monday
     def test_active_subscription_refuses_cancel_without_force(self, tenant):
-        # MEM-10: the default cancel is REFUSED while an active subscription
+        # The default cancel is REFUSED while an active subscription
         # remains — the office must end it first or force-cancel.
         from apps.commissioning.errors import MemberHasActiveSubscriptions
 
@@ -247,7 +247,7 @@ class TestMemberCancellationEndsSubscriptions:
 
     @time_machine.travel(datetime.date(2026, 3, 30), tick=False)  # Monday
     def test_force_ends_subscription_that_has_not_started_yet(self, tenant):
-        # MEM-10: a confirmed subscription whose term begins AFTER the exit date
+        # A confirmed subscription whose term begins AFTER the exit date
         # can't be Sunday-truncated by cancel_subscription (CancellationBefore-
         # ValidFrom, e.g. a future-dated trial). A force-cancel must still END it
         # (lenient fallback), not leave it active / in subscriptions_not_ended.
@@ -322,8 +322,8 @@ class TestMemberCancellationEndsSubscriptions:
         sub.confirm(admin_user=JasminUserFactory(), save=True)
 
         # cancel_subscription can't truncate -> routes to _force_end_subscription,
-        # which raises a JasminError (the DSD re-validation this fix removes; here
-        # we force it to prove the inner handler no longer lets it escape).
+        # which is forced to raise a JasminError here to prove the inner handler
+        # doesn't let it escape.
         with (
             patch.object(
                 SubscriptionService,
@@ -354,7 +354,7 @@ class TestMemberCancellationEndsSubscriptions:
 
     @time_machine.travel(datetime.date(2026, 3, 30), tick=False)  # Monday
     def test_draft_subscription_is_wound_down(self, tenant):
-        # MEM-1: an unconfirmed (draft) subscription has no deliveries/charges
+        # An unconfirmed (draft) subscription has no deliveries/charges
         # but may hold a CapacityReservation. Member exit must stamp it
         # cancelled and release any reservation, so the slot frees and the draft
         # can never be confirmed into live deliveries/charges later.
@@ -415,7 +415,7 @@ class TestMemberCancellationEndsSubscriptions:
         assert not sub.admin_confirmed  # draft
 
         # End-of-year exit notice: the effective date is AFTER the draft's term
-        # end. Pre-fix this raised IntegrityError and rolled back the whole exit.
+        # end. That must not raise IntegrityError and roll back the whole exit.
         cancel_member_with_coop_shares(
             member,
             cancelled_effective_at=datetime.date(2026, 12, 31),
@@ -445,7 +445,7 @@ class TestMemberCancellationEndsSubscriptions:
     )
     @time_machine.travel(datetime.date(2026, 3, 30), tick=False)  # Monday
     def test_subscription_error_does_not_abort_member_exit(self, tenant, error):
-        """MEM-5: a non-JasminError raised while ending ONE subscription must NOT
+        """A non-JasminError raised while ending ONE subscription must NOT
         roll back the whole member exit — neither a DatabaseError nor an
         unexpected logic error (ValueError / IndexError) from the billing regen.
         The per-subscription savepoint isolates it; the Member + CoopShare stamps
@@ -497,14 +497,14 @@ class TestMemberCancellationEndsSubscriptions:
         # but that failure did not poison the member/equity exit.
         sub.refresh_from_db()
         assert sub.cancelled_at is None
-        # BIZ-1: the failure is surfaced, not silent — the office can see this
+        # The failure is surfaced, not silent — the office can see this
         # subscription still holds a live mandate.
         assert sub.id in result.cancellation_result["subscriptions_not_ended"]
 
 
 @pytest.mark.django_db(transaction=True)
 class TestCancellationConfirmationEmail:
-    """P2-3: cancelling a member schedules a
+    """Cancelling a member schedules a
     ``commissioning.member_cancelled`` confirmation email via
     ``on_commit`` and stamps
     ``Member.cancellation_email_sent_at`` after a successful send.

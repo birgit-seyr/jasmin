@@ -126,8 +126,8 @@ export default function InvoiceModal({
   // Invalidate the invoice query on CREATE so the new row lands with its
   // server id. UPDATE deliberately skips invalidation so an edited row doesn't
   // spring to a new sort position mid-flow — the office sees the new values via
-  // local state, and the invoice totals / tax-breakdown now recompute LIVE from
-  // the table rows (see ``taxBreakdown`` above), so they no longer go stale.
+  // local state, and the invoice totals / tax-breakdown recompute LIVE from
+  // the table rows (see ``taxBreakdown`` above), so they stay current.
   // DELETE invalidates so the row vanishes from the table.
   const handleSaveSuccess = useCallback(
     (_record: TableRecord, action: "create" | "update") => {

@@ -57,7 +57,7 @@ class BillingProfileSerializer(
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # TEN-3: the owning ``member`` FK is set ONCE at create (the SEPA-setup
+        # The owning ``member`` FK is set ONCE at create (the SEPA-setup
         # flow POSTs it) and must never be reassigned on update — pointing an
         # existing profile at another member would hand over their SEPA setup.
         # Lock it read-only for updates only (an instance is bound), leaving it
@@ -84,7 +84,7 @@ class SepaMandateStatusSerializer(serializers.Serializer):
 
     Deliberately excludes the bank identifiers (IBAN / account holder) so a
     bulk read neither decrypts nor exposes bank PII, and — unlike the full
-    ``BillingProfileSerializer`` list — must NOT trip the SEC-1 bank-identifier
+    ``BillingProfileSerializer`` list — must NOT trip the bank-identifier
     audit trail. ``has_active_sepa_mandate`` mirrors ``is_sepa_ready``; the
     per-subscription "active during the term" refinement is applied by the
     caller (it needs the subscription's dates).
@@ -98,7 +98,7 @@ class SepaMandateStatusSerializer(serializers.Serializer):
     # ``is_active`` lets the shared status tag distinguish a manually
     # deactivated mandate (inactive) from an incomplete one — the same
     # 4-state tag the SEPA mandates page renders from the full profile.
-    # Still no bank identifiers, so the SEC-1 audit line stays untripped.
+    # Still no bank identifiers, so the PII-read audit line stays untripped.
     is_active = serializers.BooleanField(read_only=True)
     sepa_mandate_reference = serializers.CharField(allow_null=True)
     sepa_mandate_signed_at = serializers.DateField(allow_null=True)

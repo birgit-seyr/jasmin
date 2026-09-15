@@ -159,7 +159,7 @@ class TestGetPackingList:
     def test_all_stations_view_refuses_divergent_amounts(self, tenant):
         # Two stations disagree on the per-share amount for the same cell — the
         # all-stations view (no delivery_station) must refuse rather than keep an
-        # arbitrary one (the pre-fix silent last-wins).
+        # arbitrary one.
         variation, _article, _a, _b = self._two_station_setup(
             Decimal("5"), Decimal("3")
         )
@@ -806,11 +806,10 @@ class TestGetPackingListBulk:
     def test_per_station_amounts_do_not_bleed_across_stations(
         self, mock_variation_totals, tenant
     ):
-        """Regression: previously the global ``get_packing_list`` call
-        collapsed multiple stations' ShareContents via the
-        ``(article, unit, size)`` composite key, so the last station's
-        amount silently overwrote the others. Per-station amounts must
-        stay isolated."""
+        """Per-station amounts must stay isolated: the global ``get_packing_list``
+        must not collapse multiple stations' ShareContents via the
+        ``(article, unit, size)`` composite key, or the last station's
+        amount silently overwrites the others."""
         variation = ShareTypeVariationFactory()
         delivery_day = SharesDeliveryDayFactory(day_number=2, default_packing_day=2)
         station_day_a = DeliveryStationDayFactory(delivery_day=delivery_day)
@@ -873,10 +872,10 @@ class TestGetPackingListBulk:
     def test_articles_only_at_one_station_do_not_leak_into_other(
         self, mock_variation_totals, tenant
     ):
-        """Regression: previously the global ``get_packing_list`` produced
-        a single row per article and that row was multiplied by every
-        station's box counts, so an article unique to one station
-        appeared (with a fake total) at every other station."""
+        """An article unique to one station must not appear (with a fake total)
+        at every other station: the global ``get_packing_list`` must not
+        produce a single row per article and multiply it by every station's
+        box counts."""
         variation = ShareTypeVariationFactory()
         delivery_day = SharesDeliveryDayFactory(day_number=2, default_packing_day=2)
         station_day_a = DeliveryStationDayFactory(delivery_day=delivery_day)
@@ -1304,18 +1303,17 @@ class TestGetPackingListBulk:
 # ---------------------------------------------------------------------------
 # Default-content materialization → packing-list visibility
 #
-# Regression guard for the bug where ShareContent created through
-# ``create_default_share_content`` (long-term planning, e.g. honey shares)
-# never appeared in ANY day-filtered packing list. Root cause: that path
-# builds ``Share`` rows with ``bulk_create``, which bypasses ``Share.save()``
-# where ``packing_day`` / ``harvesting_day`` / ``washing_day`` /
-# ``cleaning_day`` are defaulted from the delivery day. The rows landed with
-# NULL day fields and were silently excluded by the ``share__packing_day=...``
-# filter in ``get_packing_list`` / ``get_packing_list_bulk``.
+# ShareContent created through ``create_default_share_content`` (long-term
+# planning, e.g. honey shares) must appear in the day-filtered packing lists.
+# That path builds ``Share`` rows with ``bulk_create``, which bypasses
+# ``Share.save()`` where ``packing_day`` / ``harvesting_day`` / ``washing_day`` /
+# ``cleaning_day`` are defaulted from the delivery day. Rows with NULL day
+# fields are silently excluded by the ``share__packing_day=...`` filter in
+# ``get_packing_list`` / ``get_packing_list_bulk``.
 #
 # These tests go through the REAL service entry point — NOT the
 # ``share.packing_day = 2; share.save()`` shortcut used elsewhere in this
-# file, which is exactly why the bug went unnoticed for so long.
+# file, which would hide NULL day fields.
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestDefaultContentMaterializationVisibility:
@@ -1329,8 +1327,9 @@ class TestDefaultContentMaterializationVisibility:
     def _frozen_now(self):
         """Pin "now" to 2026-07-20 (ISO week 30) so ``WEEK`` (40) stays future for
         the ``is_past=False`` visibility queries. The ``_make_default_content``
-        inner freeze only wrapped content CREATION, not the query, so a run past
-        week 40 flipped the delivery week to "past" and the content vanished.
+        inner freeze only wraps content CREATION, not the query, so without this
+        a run past week 40 would flip the delivery week to "past" and hide the
+        content.
         """
         with time_machine.travel(datetime(2026, 7, 20, 12, 0), tick=False):
             yield
@@ -1383,7 +1382,7 @@ class TestDefaultContentMaterializationVisibility:
         )
         assert shares.exists(), "default content did not materialize any Share"
         for share in shares:
-            # The bug: these were all NULL because bulk_create skipped save().
+            # bulk_create skips save(), so these must not be left NULL.
             assert share.packing_day == 2
             assert share.harvesting_day == 1
             assert share.washing_day == 3
@@ -1391,7 +1390,7 @@ class TestDefaultContentMaterializationVisibility:
 
     def test_appears_in_boxes_packing_list(self, tenant):
         """The boxes list is the per-box recipe (no demand needed), so it
-        proves the day-field fix makes default content visible without
+        proves the day-field defaulting makes default content visible without
         having to stand up subscriptions/ShareDeliveries."""
         variation, article, _station = self._make_default_content(default_packing_day=2)
 
@@ -1426,10 +1425,10 @@ class TestDefaultContentMaterializationVisibility:
         assert result == []
 
     def test_regeneration_heals_preexisting_null_day_share(self, tenant):
-        """A NULL-day Share left by an earlier bulk_create (e.g. a pre-fix
-        subscription share) must be self-healed when default content reuses
-        it via ``_prefetch_existing_shares`` — otherwise the freshly attached
-        ShareContent inherits the NULL packing_day and stays invisible."""
+        """A NULL-day Share left by an earlier bulk_create must be self-healed
+        when default content reuses it via ``_prefetch_existing_shares`` —
+        otherwise the freshly attached ShareContent inherits the NULL
+        packing_day and stays invisible."""
         monday = Week(self.YEAR, self.WEEK).monday()
 
         variation = ShareTypeVariationFactory()

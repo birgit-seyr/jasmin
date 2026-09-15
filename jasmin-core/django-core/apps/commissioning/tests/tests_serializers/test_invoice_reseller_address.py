@@ -7,10 +7,6 @@ contact — so the serializer must read from ``reseller.invoice_*`` first
 (set explicitly via ``ResellerInvoiceSettingsModal`` when billing
 diverges from the contact) and only fall back to ``reseller.contact.*``
 when the invoice block is blank (legacy rows, fresh imports, etc.).
-
-Was a straight ``source="reseller.contact.*"`` traversal — every issued
-invoice rendered the contact address even when the office had
-customised the invoice block.
 """
 
 from __future__ import annotations
@@ -86,7 +82,7 @@ class TestInvoiceResellerAddressResolution:
         assert data["reseller_city"] == "Munich"
 
     def test_finalized_snapshot_overrides_live_reseller(self, tenant):
-        """DOC-8: when recipient_snapshot is frozen (at finalization) the
+        """When recipient_snapshot is frozen (at finalization) the
         serializer renders IT, not the live reseller — so a later reseller edit
         or GDPR anonymization can't drift the immutable invoice away from its
         sealed document_hash."""
@@ -123,7 +119,7 @@ class TestInvoiceResellerAddressResolution:
         assert data["reseller_name"] != reseller.invoice_name
 
     def test_resolved_recipient_computed_once_per_row(self, tenant):
-        """DOC-3/5: the seven reseller_* fields share ONE resolved_recipient()
+        """The seven reseller_* fields share ONE resolved_recipient()
         call per row (cached in to_representation), not one each."""
         invoice = InvoiceResellerFactory(reseller=ResellerFactory())
 
@@ -145,7 +141,7 @@ class TestInvoiceResellerAddressResolution:
         assert "reseller_name" in data
 
     def test_sum_fields_serialize_as_strings(self, tenant):
-        """DOC-1 regression guard: money goes on the wire as canonical 2dp
+        """Money goes on the wire as canonical 2dp
         STRINGS. DecimalField under DRF's COERCE_DECIMAL_TO_STRING=True default
         already does this — pin it so a future settings change can't silently
         flip sum_netto/sum_brutto to JSON floats."""

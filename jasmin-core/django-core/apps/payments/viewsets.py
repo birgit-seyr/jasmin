@@ -114,7 +114,7 @@ class BillingProfileViewSet(
     Edits that touch any of the SEPA-mandate fields require step-up
     auth, because rewriting IBAN / mandate-reference could redirect a
     member's direct-debit money to an attacker-controlled account.
-    ``is_active`` is included too (TXN-4): toggling it has direct payment
+    ``is_active`` is included too: toggling it has direct payment
     consequences — it gates ``create_run`` eligibility and re-enables /
     disables collection on the mandate — so flipping it must not be a
     silent, un-stepped-up PATCH. Only ``notes`` PATCHes without prompting.
@@ -129,7 +129,7 @@ class BillingProfileViewSet(
         "account_holder",
         "sepa_mandate_reference",
         "sepa_mandate_signed_at",
-        # TXN-4: activating / deactivating a mandate is payment-relevant
+        # Activating / deactivating a mandate is payment-relevant
         # (eligibility + collection), so it requires step-up like the mandate
         # fields — not a benign toggle.
         "is_active",
@@ -182,7 +182,7 @@ class BillingProfileViewSet(
 
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
-        # SEC-1: unlike the name/member_number/status lists that PIIReadLoggingMixin
+        # Unlike the name/member_number/status lists that PIIReadLoggingMixin
         # deliberately skips, the billing-profile list decrypts the IBAN +
         # account holder into the payload. A bulk read of every member's bank
         # identifier must leave an Art. 5(2) accountability trail, so log it
@@ -306,7 +306,7 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
         member_id = params.get("member")
         status_param = params.get("status")
         if member_id:
-            # TEN-2: a non-privileged caller may query only their OWN charges; a
+            # A non-privileged caller may query only their OWN charges; a
             # foreign ``?member=`` is a 403, not a silent empty set. Privileged
             # roles (office/admin/management) bypass. ``scope_to_member`` below
             # is the defense-in-depth backstop.

@@ -1,8 +1,8 @@
-"""Regression tests for the movement-logic audit (MOV-1, MOV-2, MOV-3, MOV-6,
-MOV-8). MOV-4/MOV-5 are covered by test_current_balance_service; MOV-7/MOV-9 are
-concurrency/view-level and exercised by the broader suite.
+"""Movement-logic invariants: the correction gate, wash/clean placeholder
+storage, the day-scoped theoretical sum, per-day INVENTORY uniqueness, and
+future-inventory cascades that must preserve un-counted rows.
 
-The HIGH/MED fixes are tested at the mechanism level (the gate, the day-scoped
+These are tested at the mechanism level (the gate, the day-scoped
 theoretical sum, the DB constraint) rather than through the full theoretical →
 actual → balance chain, whose fixtures (harvest_size, RequiresShortTermStorage,
 date derivation) make an end-to-end assertion brittle.
@@ -68,7 +68,7 @@ def _theoretical_harvest_movement(article, storage, *, amount, day, size="M"):
 @pytest.mark.django_db
 class TestMov1CarriesTheoreticals:
     def test_gate_includes_long_term_harvest_storage(self, tenant):
-        """MOV-1: the correction gate must fire for BOTH short- AND long-term
+        """The correction gate must fire for BOTH short- AND long-term
         harvest storage (a comes_from_long_term line plans its harvest on the
         long-term storage), else the actual double-counts the theoretical."""
         short_term = StorageFactory(is_short_term_harvest_storage=True)
@@ -89,7 +89,7 @@ class TestMov1CarriesTheoreticals:
 @pytest.mark.django_db
 class TestMov2WashCleanPlaceholderStorage:
     def test_placeholders_land_on_short_term_for_long_term_line(self, tenant):
-        """MOV-2: the wash/clean ACTUAL placeholders for a long-term line must
+        """The wash/clean ACTUAL placeholders for a long-term line must
         share their theoretical's SHORT-term storage, not the long-term one."""
         article = ShareArticleFactory()
         short_term = StorageFactory(is_short_term_harvest_storage=True)
@@ -130,10 +130,10 @@ class TestMov2WashCleanPlaceholderStorage:
 @pytest.mark.django_db
 class TestMov3DayScopedTheoreticalSum:
     def test_sum_nets_only_the_corrections_own_day(self, tenant):
-        """MOV-3: _sum_theoretical must net only the theoretical(s) for the
-        correction's OWN harvesting day. A cumulative date<= summed every earlier
-        day's plan too, so a later correction subtracted an already-consumed
-        theoretical (total too low + negative HARVEST rows)."""
+        """_sum_theoretical must net only the theoretical(s) for the
+        correction's OWN harvesting day. A cumulative date<= would sum every
+        earlier day's plan too, so a later correction would subtract an
+        already-consumed theoretical (total too low + negative HARVEST rows)."""
         article = ShareArticleFactory()
         short_term = StorageFactory(is_short_term_harvest_storage=True)
 
@@ -169,7 +169,7 @@ class TestMov3DayScopedTheoreticalSum:
 @pytest.mark.django_db
 class TestMov6InventoryUniqueness:
     def test_duplicate_inventory_per_entity_day_rejected_at_db(self, tenant):
-        """MOV-6: the DB constraint rejects a second INVENTORY for the same
+        """The DB constraint rejects a second INVENTORY for the same
         (entity, day). bulk_create bypasses full_clean so this exercises the
         actual DB-level guard (the concurrency backstop), not just validation."""
         article = ShareArticleFactory()
@@ -206,8 +206,9 @@ class TestMov6InventoryUniqueness:
 @pytest.mark.django_db
 class TestMov8CascadePreservesNullCounted:
     def test_null_counted_inventory_delta_is_preserved(self, tenant):
-        """MOV-8: cascade_future_inventories must NOT zero a future INVENTORY it
-        can't recompute (counted_amount is NULL) — it left it at amount=0 forever."""
+        """cascade_future_inventories must NOT zero a future INVENTORY it
+        can't recompute (counted_amount is NULL) — that would leave it at amount=0 forever.
+        """
         article = ShareArticleFactory()
         storage = StorageFactory(is_short_term_harvest_storage=True)
         dt = timezone.make_aware(_dt.datetime(2026, 4, 8, 23, 0, 0))

@@ -76,9 +76,8 @@ class TestAdminConfirmableProperties:
         # ``is_pending`` is driven by the ``admin_rejected_at``
         # TIMESTAMP, not by ``admin_rejection_reason`` — the reason
         # is optional and shouldn't decide whether the row is still
-        # awaiting an office decision. Earlier versions of this test
-        # set only the reason; that no longer trips the flag (and
-        # the office can reject without typing a reason).
+        # awaiting an office decision (the office can reject without
+        # typing a reason).
         from django.utils import timezone
 
         member = MemberFactory()

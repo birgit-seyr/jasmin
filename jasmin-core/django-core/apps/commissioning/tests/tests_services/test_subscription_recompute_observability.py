@@ -1,5 +1,5 @@
-"""BIZ-4: a recompute failure during subscription materialization must surface
-WHICH subscription failed (it previously bubbled up context-free) while still
+"""A recompute failure during subscription materialization must surface
+WHICH subscription failed (not bubble up context-free) while still
 rolling back the just-created ShareDeliveries."""
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ class TestRecomputeFailureObservability:
         finally:
             service_logger.removeHandler(caplog.handler)
 
-        # (a) the subscription identifier is now in the log …
+        # (a) the subscription identifier is in the log …
         assert any(
             f"recompute failed for subscription={sub.pk}" in r.getMessage()
             for r in caplog.records

@@ -1,11 +1,11 @@
-"""DB-1: Purchase no-seller upsert key must be unique at the DB level.
+"""Purchase no-seller upsert key must be unique at the DB level.
 
 ``bulk_set_purchase_as_expected`` and ``_ensure_purchase_placeholder`` upsert
 Purchase rows on
 ``(year, delivery_week, day_number, share_article, unit, size, storage)`` while
-leaving ``seller`` NULL. The original seller-scoped partial constraint only
+leaving ``seller`` NULL. The seller-scoped partial constraint only
 fires when ``seller IS NOT NULL``, so concurrent no-seller upserts could
-double-insert (MultipleObjectsReturned + double-counted stock). The new
+double-insert (MultipleObjectsReturned + double-counted stock). A separate
 partial UniqueConstraint (condition ``seller IS NULL``, ``nulls_distinct=
 False``) closes that gap while still de-duping the NULL ``day_number`` rows
 that ``bulk_set_purchase_as_expected`` produces.

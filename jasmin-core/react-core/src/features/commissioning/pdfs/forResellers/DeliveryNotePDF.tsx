@@ -87,7 +87,7 @@ interface DeliveryNotePDFProps {
   currencySymbol?: string;
   /**
    * Display date format threaded from the caller's ``useDateFormat()``;
-   * default keeps legacy ``DD.MM.YYYY``.
+   * defaults to ``DD.MM.YYYY``.
    */
   dateFormat?: string;
   /** Render the bordered ``LOGO`` placeholder when the tenant has no

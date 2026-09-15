@@ -328,7 +328,7 @@ def _restore_weeks(subscription: Subscription, weeks: set[YearWeek]) -> set:
         variation and variation.requires_optin and variation.default_optin_state
     )
 
-    # BIZ-6: while the pause was active the freed station-day slots may have been
+    # While the pause was active the freed station-day slots may have been
     # taken by new confirmed subscriptions, so restoring a paused delivery can
     # push the week over capacity. Capacity-check each restore (raises
     # DeliveryStationOverCapacity → the un-pause aborts) instead of silently
@@ -337,7 +337,7 @@ def _restore_weeks(subscription: Subscription, weeks: set[YearWeek]) -> set:
     from .capacity_reservation_service import CapacityReservationService
 
     # Unknown share_type (defensive) → treat as additional so the check is
-    # skipped, matching the old ``share_option is None`` skip.
+    # skipped.
     is_additional_share_type = getattr(
         getattr(variation, "share_type", None), "is_additional_share_type", True
     )

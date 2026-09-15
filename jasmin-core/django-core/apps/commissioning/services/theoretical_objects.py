@@ -113,8 +113,8 @@ class TheoreticalSourceData:
         # A purchased article is supplied via TheoreticalPurchase, never
         # harvested — even if it ALSO carries a Forecast row (planning can
         # attach one). Without the ``not is_purchased`` guard both a harvest AND
-        # a purchase are built for it, supplying the same demand twice
-        # (goods-flow audit #4). ``needs_harvest`` / ``needs_purchase`` are thus
+        # a purchase are built for it, supplying the same demand twice.
+        # ``needs_harvest`` / ``needs_purchase`` are thus
         # mutually exclusive.
         return self.has_forecast and not self.is_purchased
 
@@ -253,7 +253,7 @@ def _processing_storage(
 class _ProcessingSpec(NamedTuple):
     """Wash-vs-Clean parametrization for the theoretical processing paths.
 
-    The two paths were byte-identical bar the models, the day/needs field and the
+    The two paths are identical bar the models, the day/needs field and the
     movement's ``movement_type`` + FK. Capturing that here lets the build,
     placeholder, create-branch and movement loops each exist exactly once, so a
     fix to one can never silently drift from the other.
@@ -333,7 +333,7 @@ def _ensure_processing_placeholder(
     # harvest storage (via _processing_storage), NOT src.storage which is LONG-term
     # for a comes_from_long_term line. Otherwise actual + theoretical land in
     # different storage groups (summary mis-group) and the storage-less unique
-    # constraint makes add_additional_theoretical_amount collide (MOV-2).
+    # constraint makes add_additional_theoretical_amount collide.
     spec.placeholder_model.objects.get_or_create(
         year=processing_year,
         delivery_week=processing_week,
@@ -393,10 +393,8 @@ def create_theoretical_objects(
     # season-wide batch (one source per station × week) would otherwise
     # re-run the same get_or_create dozens of times per week. Each key
     # includes every per-source value the ensure writes, so the first
-    # occurrence of each value-combination wins. When conflicting
-    # combinations recur non-contiguously the surviving values can
-    # differ from the old last-one-wins loop — both pick an arbitrary
-    # winner among conflicting sources, so no canonical result exists.
+    # occurrence of each value-combination wins. Conflicting sources have no
+    # canonical winner, so which one survives is arbitrary.
     ensured_harvests: set[tuple] = set()
     ensured_purchases: set[tuple] = set()
     processing_ensured: dict[str, set[tuple]] = {
@@ -626,7 +624,7 @@ def _create_theoretical_movements(
     # A long-term line transfers stock: a negative movement leaving long-term
     # storage and a positive one arriving in short-term storage; a non-long-term
     # line creates no processing movement. The storage lookups are cached across
-    # BOTH specs (BL-8: the membership guard honours a legitimately cached None so
+    # BOTH specs (the membership guard honours a legitimately cached None so
     # an unconfigured storage isn't re-queried per row).
     storage_cache: dict[str, Storage | None] = {}
 
@@ -770,7 +768,7 @@ def recalculate_actual_corrections(
 
     cascaded_movements: list[MovementShareArticle] = []
 
-    # Serialize per-dimension with the count-entry path (goods-flow audit #6): a
+    # Serialize per-dimension with the count-entry path: a
     # concurrent recompute and an actual-count entry must net against the SAME
     # theoretical set, else write-skew leaves the correction permanently off.
     # Take the same ``theoretical_sum:*`` transaction lock ``_sum_theoretical``
@@ -825,7 +823,7 @@ def recalculate_actual_corrections(
         )
 
         for actual_correction in actual_corrections:
-            # Day-scoped netting (MOV-3): a correction nets ONLY the theoretical(s)
+            # Day-scoped netting: a correction nets ONLY the theoretical(s)
             # for its OWN harvesting day — theoretical and actual movements for a
             # (year, week, day) dimension share the same noon datetime. A
             # cumulative ``date <= actual_correction.date`` would re-subtract an

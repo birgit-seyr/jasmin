@@ -6,9 +6,8 @@ import { useTranslation } from "react-i18next";
 
 /**
  * The shared "prev button · select · next button" arrow-navigation shell used
- * by every date stepper (Year / Week / Month / Day / SharesDeliveryDay). The
- * entity selectors were already collapsed onto ``BaseEntitySelector``; this is
- * the equivalent for the arrow-nav ones.
+ * by every date stepper (Year / Week / Month / Day / SharesDeliveryDay) — the
+ * arrow-nav counterpart of ``BaseEntitySelector``.
  *
  * Typing mirrors AntD's own loose ``Select`` surface (``value`` / ``onChange`` /
  * ``options`` picked straight from ``SelectProps``) so the existing per-selector

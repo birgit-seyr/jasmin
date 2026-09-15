@@ -228,8 +228,7 @@ class OfferService:
         # Preload forecasts per group (2 queries) instead of 2 per group, and
         # the existing offers for the week in one query instead of a per-item
         # ``.exists()``. The set is updated as we create so an intra-run
-        # duplicate is still skipped (matching the old per-item check under the
-        # surrounding ``@transaction.atomic``).
+        # duplicate is still skipped.
         forecasts_by_group = OfferService._collect_forecast_amounts_by_group(
             year, delivery_week, offer_groups
         )
@@ -332,8 +331,7 @@ class OfferService:
                     continue
                 created_count += 1
                 # Keep the idempotency set in sync so a later item in this same
-                # run targeting the identical slot is skipped, as the old
-                # per-item ``.exists()`` would have caught it.
+                # run targeting the identical slot is skipped.
                 existing_offers.add(offer_key)
 
         return {
@@ -834,9 +832,8 @@ class OfferService:
         dict ``{processed, successful, failed, total}`` after every
         per-reseller iteration. Used by the Huey wrapper
         (``apps/commissioning/tasks.py::run_bulk_offer_send``) to drive
-        the polling drawer's progress bar. Synchronous callers (tests,
-        legacy paths) just pass ``None`` and the service stays
-        identical to its pre-queue shape.
+        the polling drawer's progress bar. Synchronous callers just pass
+        ``None``.
         """
         from apps.shared.tenants.email_service import (
             EmailService,
@@ -915,14 +912,11 @@ class OfferService:
                 "results": results,
             }
 
-        # P1-2 idempotency pre-check, batched (2a). The previous
-        # shape ran one ``.exists()`` query per reseller (N+1) — for
-        # a 100-reseller bulk that's 100 extra round-trips before
-        # the SMTP work even starts. One ``.values_list`` over the
-        # whole composite-key bucket gives an in-memory set lookup
-        # per iteration instead. The unique constraint still catches
-        # the race window between this snapshot and the ``.create()``
-        # below — defense-in-depth unchanged.
+        # Idempotency pre-check, batched: one ``.values_list`` over the
+        # whole composite-key bucket gives an in-memory set lookup per
+        # iteration instead of an ``.exists()`` query per reseller. The
+        # unique constraint still catches the race window between this
+        # snapshot and the ``.create()`` below.
         already_sent_reseller_ids: set[str] = set(
             OfferSending.objects.filter(
                 offer_group=offer_group,

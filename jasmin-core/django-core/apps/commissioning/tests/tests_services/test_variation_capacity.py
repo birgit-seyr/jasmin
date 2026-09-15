@@ -104,8 +104,8 @@ class TestVariationCapacity:
     def test_peak_week_counts_concurrency_not_total_overlap(self, tenant, dsd):
         # Two existing subs each overlap the new sub's term but NOT each other
         # (sequential halves). Concurrent occupancy is therefore only 1 in any
-        # single week — the old "sum every overlapping sub" model counted 2 and
-        # wrongly blocked. Peak-week must let this through.
+        # single week — a "sum every overlapping sub" model would count 2 and
+        # wrongly block. Peak-week must let this through.
         variation = ShareTypeVariationFactory(capacity=2)
         _confirmed(
             variation,
@@ -136,7 +136,7 @@ class TestVariationCapacity:
 
     @time_machine.travel(datetime.datetime(2026, 7, 20, 12, 0), tick=False)
     def test_fully_past_occupancy_does_not_block_historical_confirm(self, tenant, dsd):
-        # Scope-A parity: only current/future weeks materialise, so the
+        # Only current/future weeks materialise, so the
         # production cap must ignore a PAST-only occupant when confirming a
         # back-dated onboarding import. Frozen on a Monday so "now" is fixed:
         # cap=1 filled solely in weeks before this Monday still leaves the

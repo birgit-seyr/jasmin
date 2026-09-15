@@ -16,7 +16,7 @@ from core.db_locks import acquire_advisory_xact_lock
 
 def test_advisory_lock_key_is_prefixed_with_schema():
     """The executed key is ``<schema>:<logical key>`` — drop the prefix and
-    this fails, which is the whole point of the namespacing fix."""
+    this fails, which is the whole point of the namespacing."""
     mock_conn = MagicMock()
     mock_conn.schema_name = "tenant_xyz"
     mock_cursor = mock_conn.cursor.return_value.__enter__.return_value

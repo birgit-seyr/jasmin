@@ -292,9 +292,8 @@ class ShareTypeVariation(JasminModel, TimeBoundMixin):
 
             # When the parent share type is CLOSED, the variation must not
             # outlive it: it may neither end after the parent nor stay OPEN
-            # (valid_until=None runs forever). The old guard required
-            # ``self.valid_until`` to be truthy, so an open variation under a
-            # closed parent slipped through.
+            # (valid_until=None runs forever), so the check must not require
+            # ``self.valid_until`` to be truthy.
             if self.share_type.valid_until and (
                 self.valid_until is None
                 or self.valid_until > self.share_type.valid_until
@@ -1018,8 +1017,8 @@ class ShareDelivery(JasminModel):
     objects = ShareDeliveryQuerySet.as_manager()
 
     class Meta:
-        # Replaces the old ``unique_together = (share, subscription, delivery_station_day)``
-        # which was effectively useless when subscription / delivery_station_day are NULL
+        # A plain ``unique_together = (share, subscription, delivery_station_day)``
+        # would be useless when subscription / delivery_station_day are NULL
         # (NULL != NULL in Postgres). The partial constraint applies only when both
         # nullable FKs are set, which is the case we actually want to deduplicate.
         constraints = [

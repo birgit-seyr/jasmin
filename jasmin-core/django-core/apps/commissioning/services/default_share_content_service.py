@@ -105,8 +105,8 @@ class DefaultShareContentService:
             ]
             # ``current`` (not ``objects``) so only ACTIVE station-days are
             # used — matches how the harvest planner resolves stations
-            # (``DeliveryStationDay.current.active_at_date``). With ``objects``
-            # this pulled in closed/historical station-days and materialised
+            # (``DeliveryStationDay.current.active_at_date``). ``objects`` would
+            # pull in closed/historical station-days and materialise
             # ShareContent for stations that no longer deliver.
             station_relations = DeliveryStationDay.current.filter(
                 delivery_day__in=all_delivery_days

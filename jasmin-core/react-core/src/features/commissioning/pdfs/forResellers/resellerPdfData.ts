@@ -35,8 +35,8 @@ type GetSetting = (key: string, defaultValue?: unknown) => unknown;
 
 /** Tenant bank/beneficiary block for the invoice footer + QR + ZUGFeRD XML.
  * The Tenant model has NO plain ``bic`` column — the BIC lives in
- * ``sepa_creditor_bic`` (reading ``tenant.bic`` silently produced an empty
- * BIC in every EPC QR code and dropped the BICID from the ZUGFeRD XML). */
+ * ``sepa_creditor_bic`` (reading ``tenant.bic`` yields an empty BIC in every
+ * EPC QR code and drops the BICID from the ZUGFeRD XML). */
 export function buildBankDetails(
   tenant: Record<string, unknown> | null | undefined,
 ): BankDetails {

@@ -3,11 +3,9 @@
  *
  * Each onboarding modal carries two lists — `columns` (which generates the
  * downloadable template, so its `dataIndex` values ARE the wire schema) and
- * `columnDocRows` (the "which columns are there" help table). They drifted:
- * the coop-share table documented `amount` / `value_one` and the SEPA table
- * `reference` / `signed_at` / `paper_received_at`, none of which the importer
- * accepts. A CSV hand-built from that help text failed on EVERY row with
- * "this field is required" naming columns the user was never shown.
+ * `columnDocRows` (the "which columns are there" help table). If they drift,
+ * a CSV hand-built from the help text fails on EVERY row with "this field is
+ * required", naming columns the user was never shown.
  *
  * Source-scanning rather than render-based on purpose: the two arrays are
  * local to the component, and the invariant is about the source of truth

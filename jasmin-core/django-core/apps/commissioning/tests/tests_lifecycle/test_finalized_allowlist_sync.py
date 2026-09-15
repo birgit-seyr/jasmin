@@ -6,8 +6,7 @@ columns that may still change after ``is_finalized=True``:
   1. Python — ``Model.ALLOWED_FINALIZED_UPDATES`` (checked in ``save()``).
   2. Postgres — a ``BEFORE UPDATE/DELETE`` trigger function installed via
      RunSQL, with its allowed-column array baked into the function body
-     (``apps/commissioning/migrations/0002_finalized_protection_and_reference_data.py``,
-     the post-squash installer that folded in the old 0007/0019/0020/0032 chain).
+     (``apps/commissioning/migrations/0002_finalized_protection_and_reference_data.py``).
 
 CLAUDE.md warns these MUST stay in sync and that ``makemigrations`` is blind
 to RunSQL triggers, so drift is silent: a column Python now allows but the

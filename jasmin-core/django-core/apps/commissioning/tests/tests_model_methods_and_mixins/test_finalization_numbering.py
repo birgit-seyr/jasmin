@@ -408,7 +408,7 @@ class TestYearBasedFinalNumber:
         assert o2026.prefix == "BE-2026"
 
     def test_year_based_empty_prefix_does_not_collide_cross_year(self, tenant):
-        """DOC-1: year-reset with an EMPTY base prefix must still yield a
+        """Year-reset with an EMPTY base prefix must still yield a
         year-distinct prefix (the year itself), so 2026's number=1 doesn't
         collide with 2025's on UNIQUE(prefix, number) at create."""
         _ensure_settings(
@@ -423,7 +423,7 @@ class TestYearBasedFinalNumber:
         assert o2025.prefix == "2025"  # the year IS the prefix
         assert o2025.number == 1
 
-        # Without the fix, this create raised IntegrityError ((prefix='', 1)
+        # An empty prefix here would raise IntegrityError ((prefix='', 1)
         # already exists from 2025).
         o2026 = OrderFactory(year=2026)
         OrderContentFactory(order=o2026)

@@ -192,8 +192,8 @@ class TestCreateOrderWithContentAndCrates:
     def test_zero_amount_creates_no_crate_order_content(
         self, _mock_theo, _mock_mv, tenant
     ):
-        """BL-6: a zero-amount line must NOT spawn a crate row on create — the
-        create path now mirrors the update path's ``amount > 0`` guard, so the
+        """A zero-amount line must NOT spawn a crate row on create — the
+        create path mirrors the update path's ``amount > 0`` guard, so the
         two leave identical crate artefacts (no dead amount-0 crate row + stray
         empty VAT bucket downstream)."""
         reseller = ResellerFactory()
@@ -228,7 +228,7 @@ class TestCreateOrderWithContentAndCrates:
     def test_crate_amount_rounds_up(self, _mock_theo, _mock_mv, tenant):
         """Crate count = ceil(order amount / amount_per_pu): a partial crate
         still needs a whole physical crate (10 / 3 = 3.33 → 4), not the
-        implicit int()-truncation (→ 3) of the old bare division."""
+        implicit int()-truncation (→ 3) of a bare division."""
         reseller = ResellerFactory()
         article = ShareArticleFactory()
         crate = CrateFactory()
@@ -415,10 +415,10 @@ class TestUpdateOrderContent:
     def test_recreates_crate_order_content_with_tax_rate(
         self, _mock_theo, _mock_mv, tenant
     ):
-        """Regression: update_order_content used to recreate the
-        CrateOrderContent without passing tax_rate, which violates the
-        NOT NULL constraint on `commissioning_crateordercontent.tax_rate`
-        and surfaced to the API as a 409 "Database integrity error".
+        """update_order_content must pass tax_rate when it recreates the
+        CrateOrderContent: omitting it violates the NOT NULL constraint on
+        `commissioning_crateordercontent.tax_rate`, which surfaces to the API
+        as a 409 "Database integrity error".
 
         Path: offer has a used_crate → on update, the service deletes the
         existing CrateOrderContent and creates a fresh one for the new
@@ -448,8 +448,6 @@ class TestUpdateOrderContent:
             tax_rate=Decimal("19"),
         )
 
-        # Before the fix: this raised django.db.IntegrityError because the
-        # service's CrateOrderContent.create() call omitted tax_rate.
         OrderContentService.update_order_content(
             order_content_id=oc.pk,
             amount=Decimal("15"),
@@ -678,11 +676,10 @@ class TestGetOffersAndOrderContentOrderBlock:
 class TestCreateWithNullAmount:
     """``OrderContent.amount`` is ``null=True``, so the ModelSerializer marks it
     ``required=False, allow_null=True`` and a create body may legitimately omit
-    it. The create path then divided it by ``pu_divisor`` — ``None / Decimal``
-    — and the request died as an unhandled TypeError (HTTP 500, no error code).
-
-    The UPDATE path has always normalised ``None`` to ``Decimal("0")`` for both
-    its arithmetic and its persisted value; create now matches.
+    it. The create path divides it by ``pu_divisor``, so it must normalise
+    ``None`` to ``Decimal("0")`` for both its arithmetic and its persisted value,
+    as the UPDATE path does — ``None / Decimal`` would kill the request with an
+    unhandled TypeError (HTTP 500, no error code).
     """
 
     @patch.object(OrderContentService, "create_movements", side_effect=_noop_movements)
@@ -785,15 +782,15 @@ class TestLegacyNullAmountRowIsReadable:
 
     ``_serialize_order_content`` divides ``amount`` to derive
     ``ordered_amount`` and runs once per row on the list path, so a single
-    NULL row used to 500 the whole orders grid for that reseller/week/day —
-    not just its own line. The create path no longer writes NULL, but a row
+    NULL row would 500 the whole orders grid for that reseller/week/day —
+    not just its own line. The create path doesn't write NULL, but a row
     from an import, the shell or a migration must still be readable.
     """
 
     def test_serialize_tolerates_a_null_amount(self, tenant):
         reseller = ResellerFactory()
         order = OrderFactory(reseller=reseller, year=2026, delivery_week=18)
-        # Bypass the service to write the state it now refuses to create.
+        # Bypass the service to write the state it refuses to create.
         content = OrderContentFactory(order=order, amount=None)
         assert content.amount is None
 

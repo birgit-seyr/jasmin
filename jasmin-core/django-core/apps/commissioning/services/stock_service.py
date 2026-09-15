@@ -83,8 +83,8 @@ def _days_inventory_map(
             # not just the last. Display fields keep the last row's.
             "amount": prior_amount + (movement.amount or Decimal("0")),
             # ``counted_amount IS NULL`` marks a metadata-only row (flags/note
-            # toggled, no count) — the read path must not treat it as a count
-            # (goods-flow audit #2). Keep the last row's, like the display fields.
+            # toggled, no count) — the read path must not treat it as a count.
+            # Keep the last row's, like the display fields.
             "counted_amount": movement.counted_amount,
             "is_finalized": movement.is_finalized,
             "washed": movement.washed,
@@ -109,7 +109,7 @@ def _build_result_row(
 
     # theoretical = balance without today's INVENTORY correction
     theoretical = running_balance - inv_delta  # Decimal
-    # A metadata-only INVENTORY row (goods-flow audit #2) has ``counted_amount IS
+    # A metadata-only INVENTORY row has ``counted_amount IS
     # NULL``: it toggles flags/note but leaves the stock uncounted, so it must NOT
     # report a phantom count = theoretical. Gate the counted value on an ACTUAL
     # count. ``is_finalized`` and the flags/note stay on row presence
@@ -155,7 +155,7 @@ class StockService:
         back to the snapshot+movements aggregation.
 
         Inventory count = the most recent INVENTORY movement for each entity
-        on the target day_number (equivalent to the old CurrentStock).
+        on the target day_number.
 
         Returns a dict keyed by (share_article_id, unit, size, storage_id) with:
         - theoretical_current_stock: running balance from snapshots + movements
@@ -174,7 +174,7 @@ class StockService:
 
         base_filter = _build_base_filter(storage, entity_filter)
 
-        # ── Step 1: today's INVENTORY movements (replaces stock-0) ─
+        # ── Step 1: today's INVENTORY movements ─
         inventory_map = _days_inventory_map(target_dt_start, target_dt_end, base_filter)
 
         # ── Step 2: compute running balance per entity ─────────────

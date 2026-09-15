@@ -1,4 +1,4 @@
-"""Unit tests for the ISO-week + weekday-alignment helpers (REF-9 / REF-10).
+"""Unit tests for the ISO-week + weekday-alignment helpers.
 
 Pure date math — no DB. The boundary cases that matter are the 52/53→1 ISO
 rollover (2026 is a 53-week ISO year) and the on-target weekday no-ops.

@@ -1,7 +1,7 @@
 """Capability-URL protection for ``/media/``.
 
-nginx no longer serves ``/media/`` directly (it used to — anyone holding
-a URL could fetch tenant documents). Instead:
+nginx does not serve ``/media/`` directly (anyone holding a URL could
+fetch tenant documents). Instead:
 
 1. ``SignedTenantFileSystemStorage.url()`` appends a signed,
    time-limited token (``?st=...``) to every media URL the API hands
@@ -22,7 +22,7 @@ always hold fresh links.
 
 The token is BUCKETED (``_bucket_seconds``, default 1 h) rather than
 per-sign, so the emitted URL string is stable within the bucket window —
-otherwise ``staleTime: 0`` re-signing rotated the ``?st=`` on every
+otherwise ``staleTime: 0`` re-signing would rotate the ``?st=`` on every
 refetch, changing the cache key and forcing a re-download of every image /
 PDF on each mount. With a stable URL the browser's ``private, max-age``
 cache on ``/_protected_media/`` actually applies.
@@ -70,7 +70,7 @@ def _bucket_seconds() -> int:
     stable across the frontend's aggressive API refetches (``staleTime: 0`` +
     refetch-on-focus), so a repeat-viewed image / PDF is served from cache
     instead of re-downloaded on every mount. A per-call ``TimestampSigner``
-    token (the old scheme) rotated on every sign and defeated that entirely."""
+    token (the legacy scheme) rotates on every sign and defeats that entirely."""
     return getattr(settings, "MEDIA_URL_SIGNATURE_BUCKET", 60 * 60)
 
 

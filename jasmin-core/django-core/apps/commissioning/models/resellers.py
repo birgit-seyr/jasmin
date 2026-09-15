@@ -285,8 +285,8 @@ class OrderableItem(LinePricingMixin, JasminModel):
 
 # FinalizedProtectedMixin must precede the concrete JasminModel in the MRO so its
 # save()/delete() intercept (the other 9 protected models do this). With
-# JasminModel first, Offer.save resolved straight to Model.save and the Python
-# immutability layer was dead — leaving only the Postgres trigger.
+# JasminModel first, Offer.save would resolve straight to Model.save and skip the
+# Python immutability layer — leaving only the Postgres trigger.
 class Offer(FinalizableMixin, FinalizedProtectedMixin, JasminModel):
     ALLOWED_FINALIZED_UPDATES = ["amount"]
 
@@ -327,7 +327,7 @@ class Offer(FinalizableMixin, FinalizedProtectedMixin, JasminModel):
             models.Index(fields=["year", "delivery_week"]),
         ]
         constraints = [
-            # OFFER-2: at most ONE auto-created GENERAL offer (reseller IS NULL)
+            # At most ONE auto-created GENERAL offer (reseller IS NULL)
             # per slot. ``create_offers`` dedups in Python on this exact tuple,
             # but a double-click / two concurrent office users both pass the
             # one-shot ``exists()`` snapshot and INSERT → duplicate offers. The
@@ -896,9 +896,8 @@ class DeliveryNoteReseller(
 
     # Single source of truth for the "we sent it" state — the
     # timestamp. ``has_been_sent_to_reseller`` is derived from it
-    # (see property below). A previous schema kept a redundant
-    # boolean column, which created a drift hazard whenever code
-    # forgot to update both fields. Dropped pre-squash.
+    # (see property below). A separate boolean column would be a drift
+    # hazard whenever code forgets to update both fields.
     has_been_sent_to_reseller_at = models.DateTimeField(blank=True, null=True)
 
     is_cancelled = models.BooleanField(default=False)
@@ -989,9 +988,6 @@ class InvoiceReseller(
     DOCUMENT_TYPE = "invoice_reseller"  # this is for the NumberedDocumentMixin
     # Note: ``cancelled_at`` and ``cancelled_by`` are NOT on this model —
     # cancellation is tracked via ``cancelled_by_invoice`` (the storno).
-    # Earlier ALLOWED entries for those two fields were dead refs from a
-    # removed ``CancellableMixin`` inheritance; dropped in the 2026-05-24
-    # state-transition audit.
     ALLOWED_FINALIZED_UPDATES = [
         "has_been_paid",
         "paid_at",
@@ -1040,12 +1036,10 @@ class InvoiceReseller(
     recipient_snapshot = models.JSONField(blank=True, null=True)
 
     # Single source of truth for both "sent" states — just the
-    # timestamps. The previous schema also stored
-    # ``has_been_sent_via_email`` and ``has_been_sent_to_accounting``
-    # booleans, which created a drift hazard whenever code forgot to
-    # update both. ``has_been_sent_to_reseller`` and
+    # timestamps. Separate booleans would be a drift hazard whenever code
+    # forgets to update both. ``has_been_sent_to_reseller`` and
     # ``has_been_sent_to_accounting`` are derived properties on the
-    # model (see below). Dropped pre-squash.
+    # model (see below).
     has_been_sent_to_reseller_at = models.DateTimeField(blank=True, null=True)
     has_been_sent_to_accounting_at = models.DateTimeField(blank=True, null=True)
     has_been_paid = models.BooleanField(default=False)

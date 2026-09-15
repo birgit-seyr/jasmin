@@ -15,8 +15,7 @@ const { Text } = Typography;
 
 interface ActiveSubscriptionsCardProps {
   subscriptions: Subscription[];
-  /** When set, a "+ new subscription" button is shown in the header (the
-   *  standalone SubscriptionsCard was folded into this card). */
+  /** When set, a "+ new subscription" button is shown in the header. */
   onNewSubscription?: () => void;
   /** Hide the new-subscription button (e.g. a cancelled member). */
   canAdd?: boolean;

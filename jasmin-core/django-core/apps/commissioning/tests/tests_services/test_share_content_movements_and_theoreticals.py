@@ -400,7 +400,7 @@ class TestShareContentDeleteCascadesRelatedObjects:
 
     def test_delete_removes_all_related_at_once(self, tenant):
         """Purchased article WITH a forecast → a PURCHASE theoretical only, not a
-        harvest (they are mutually exclusive — goods-flow audit #4). Deleting the
+        harvest (they are mutually exclusive). Deleting the
         ShareContent then cascades to the purchase + movements."""
         article = ShareArticleFactory(is_purchased=True)
         sc, _storage = _setup_share_content(tenant, article=article, forecast=True)
@@ -566,7 +566,7 @@ class TestRecomputeSinglePassCascade:
 
         # First rebuild materialises theoreticals + SHARECONTENT movements so
         # the second run has a non-empty old_movements set — the shape that
-        # historically produced three separate cascade passes.
+        # could otherwise produce three separate cascade passes.
         with _patch_totals(totals):
             svc.recompute_for_shares([sc.share_id])
         assert MovementShareArticle.objects.filter(share_content=sc).exists()

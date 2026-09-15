@@ -7,16 +7,14 @@ import {
 } from "../tenantSettingsMapping";
 
 /**
- * Regression guard for a real production failure: saving ANY scalar on the
- * configuration pages (a checkbox, a phone number) returned
+ * Guards the tenant file columns: the configuration autosave echoes the
+ * fetched tenant back as a JSON PATCH, and a ``FileField`` serializes to a URL
+ * STRING that DRF's ImageField refuses on write — so a file column left in the
+ * payload makes saving ANY scalar on the configuration pages (a checkbox, a
+ * phone number) fail with
  *
  *   400 {"code": "validation_error", "field": "app_icon",
  *        "message": "Die übermittelten Daten stellen keine Datei dar…"}
- *
- * because the autosave echoes the fetched tenant back as a JSON PATCH, and a
- * ``FileField`` serializes to a URL STRING that DRF's ImageField refuses on
- * write. The field list had been duplicated across three places and only one
- * of them knew about each new file column.
  *
  * These tests exist so a future file column fails here rather than in a user's
  * face on an unrelated form.

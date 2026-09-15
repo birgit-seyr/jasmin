@@ -1,14 +1,13 @@
 """Tests for the ``anonymise_long_cancelled_members`` Huey periodic task.
 
-Closes the GenG §31 / HGB §257 / AO §147 10-year clock that the
-audit checklist and the published retention policy advertise. Without
-this task, the retention claim was theoretical: an auditor running
+Enforces the GenG §31 / HGB §257 / AO §147 10-year clock that the
+published retention policy advertises. Without this task,
 
     Member.objects.filter(
         cancelled_effective_at__lt=ten_years_ago,
     ).count()
 
-would have found PII the policy claimed had been erased.
+would find PII the policy claims has been erased.
 
 We exercise ``_run_for_current_schema`` directly (not the
 ``@db_periodic_task`` wrapper) because the wrapper iterates tenants
@@ -126,7 +125,7 @@ class TestSweepCandidateSelection:
         assert (anonymised, blocked) == (0, 0)
 
     def test_manually_deactivated_member_is_still_anonymised(self, tenant):
-        """GDPR-1: the sweep must NOT key on ``user.is_active``. Ordinary
+        """The sweep must NOT key on ``user.is_active``. Ordinary
         office deactivation (``account_status="inactive"``) also clears it, so
         keying on it would skip a cancelled-past-window ex-member who was merely
         deactivated — retaining their PII forever. The tombstone-based filter

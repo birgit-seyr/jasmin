@@ -138,8 +138,7 @@ export function useOrdersData() {
   // ``orderNote`` is seeded from the query (and after a successful
   // autosave). The autosave effect persists only when ``orderNote``
   // diverges from this, so server-originated values never trigger a
-  // write-back. Replaces the old ``noteInitialized`` latch, whose
-  // reset-vs-reseed ordering could swallow a same-tick first edit.
+  // write-back.
   const lastServerNote = useRef("");
 
   const [orderState, setOrderState] = useState<OrderState>({
@@ -291,7 +290,7 @@ export function useOrdersData() {
     dataRef.current = data;
   }, [data]);
 
-  // UI-2: creating the first line/crate for a day creates the Order
+  // Creating the first line/crate for a day creates the Order
   // server-side, so the day-selector dots (a separate DaysWithOrders query) must
   // refresh. The contents/crates lists stay uninvalidated on create per the
   // no-refetch-on-create policy — this only bumps the dots query.
@@ -538,13 +537,11 @@ export function useOrdersData() {
   // Mirror the initial-fetch ``setOrderState`` path: every row the
   // backend returns after a save carries the freshly-assigned order
   // metadata (and, once they exist, delivery-note / invoice ids).
-  // The previous version of ``handleDataChange`` only propagated
-  // ``order_number``, which meant ``orderState.orderId`` stayed null
-  // after the very first save — the OrderInfoPanel's
-  // ``BulkActionButton`` then gated to ``selectedIds=[]`` and the
-  // "create delivery note" button looked disabled even though the
-  // sum and order number had clearly updated. Same row → same sync,
-  // so the offers, articles and crates tables all converge.
+  // Propagating only ``order_number`` would leave ``orderState.orderId``
+  // null after the first save, so the OrderInfoPanel's
+  // ``BulkActionButton`` would gate to ``selectedIds=[]`` and the
+  // "create delivery note" button would look disabled. Same row → same
+  // sync, so the offers, articles and crates tables all converge.
   const syncOrderStateFromRow = useCallback(
     (row: Record<string, unknown>) => {
       setOrderState((prev) => ({
@@ -552,9 +549,8 @@ export function useOrdersData() {
         ...(row.order_id !== undefined
           ? { orderId: (row.order_id as string | number | null) ?? null }
           : {}),
-        // Guarded like the sibling fields below: a row that omits these (e.g.
-        // a crate row before its serializer carried the prefix) must not
-        // clobber a known prefix to ``undefined`` ("undefined-39").
+        // Guarded like the sibling fields below: a row that omits these must
+        // not clobber a known prefix to ``undefined`` ("undefined-39").
         ...(row.order_number !== undefined
           ? { orderNumber: row.order_number as string | number }
           : {}),

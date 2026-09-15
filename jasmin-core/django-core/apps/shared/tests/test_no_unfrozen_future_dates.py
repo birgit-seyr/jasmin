@@ -3,10 +3,8 @@
 A test that hardcodes a date which is in the FUTURE relative to the wall clock,
 exercises a code path that reads ``date.today()`` / ``timezone.now()``, and is
 NOT pinned with ``time_machine`` will silently start failing when real time
-passes that date (this is exactly how ``test_overlapping_period_is_rejected`` in
-``apps/commissioning/tests/tests_services/test_delivery_exceptions.py`` broke on
-2026-07-14: a ``valid_from="2026-07-13"`` aged into the past, so the serializer's
-"valid_from must be in the future" guard fired before the overlap check).
+passes that date (e.g. a ``valid_from`` literal ages into the past, so a
+"valid_from must be in the future" guard fires before the check under test).
 
 This test scans every ``apps/**/test_*.py`` for date literals that are still in
 the future, whose enclosing test method is NOT frozen (no ``time_machine`` /
@@ -62,8 +60,7 @@ _NOW_SIGNALS = (
     "current",
 )
 
-# Reviewed 2026-07-14. Every
-# entry here was confirmed to NOT be a time bomb — the reference date is injected
+# Every entry here was confirmed to NOT be a time bomb — the reference date is injected
 # (``as_of=`` / explicit arg), the literal is inert fixture data / a data-bound
 # assertion, the logic is date-succession rather than wall-clock, or all callers
 # of a helper are individually frozen. Add new SAFE cases here with a reason;

@@ -122,7 +122,7 @@ def update_progress(job_id: str, progress: dict[str, Any]) -> None:
 
 
 def mark_done(job_id: str, result: dict[str, Any] | None) -> None:
-    # EML-8: BackgroundJob.result is JSONField(default=dict) with NO null=True, so
+    # BackgroundJob.result is JSONField(default=dict) with NO null=True, so
     # a task body that completes without setting handle.result (left as None)
     # would write SQL NULL → IntegrityError, flipping a SUCCEEDED job to 'failed'.
     # Coerce to the field's own default.

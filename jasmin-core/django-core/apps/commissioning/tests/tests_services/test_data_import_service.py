@@ -6,9 +6,8 @@ together drive a single orchestrator (``import_rows_from_csv``). The
 orchestrator's most important property is **per-row isolation**: one bad
 row never aborts the import.
 
-Coverage targets the gaps from the §1 test-coverage-priorities audit
-(34% → raise). Crate is the simplest registered model (just ``name`` +
-``number`` required) so it's used for the round-trip happy paths.
+Crate is the simplest registered model (just ``name`` + ``number``
+required) so it's used for the round-trip happy paths.
 """
 
 from __future__ import annotations
@@ -489,7 +488,7 @@ class TestMemberNumberImport:
         assert fresh.member_number == 1002
 
     def test_blank_number_still_imports(self, tenant):
-        """Leaving the column empty keeps the pre-existing behaviour: no number
+        """Leaving the column empty keeps the default behaviour: no number
         until the office confirms the member."""
         result = import_rows_from_csv(
             "member", _member_csv("Grace,Hopper,grace@example.org,,false")
@@ -663,9 +662,9 @@ class TestSharedEmailImport:
         assert Member.objects.filter(email="shared@example.org").count() == 2
 
     def test_dry_run_agrees_with_the_real_run(self, tenant):
-        """The preview must PREDICT the real run. It used to roll every row
-        back individually, so row 2 never saw row 1 and an intra-file collision
-        previewed green then failed for real."""
+        """The preview must PREDICT the real run. Rolling every row back
+        individually would hide row 1 from row 2, so an intra-file collision
+        would preview green then fail for real."""
         csv = self._csv(
             "Anna,Mueller,shared@example.org", "Hans,Mueller,shared@example.org"
         )

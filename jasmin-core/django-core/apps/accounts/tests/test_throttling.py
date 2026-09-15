@@ -3,9 +3,8 @@
 Brute-force defense for login, 2FA-verify, and step-up is wired by three
 separate module-level ``set_throttle_scope(view_fn, "login")`` calls below
 the view definitions — fragile, because nothing but these tests notices if
-one goes missing. The accounts conftest documents that BEFORE the 2026-06
-fix this wiring shipped as a silent no-op — brute-force protection was
-effectively disabled with green CI.
+one goes missing: a missing scope is a silent no-op that disables
+brute-force protection with green CI.
 
 A 6-digit TOTP is brute-forceable, so a dropped scope assignment must fail
 CI, not slip through. These tests POST each endpoint past its rate

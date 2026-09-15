@@ -184,9 +184,9 @@ class ForecastService:
         # variation / offer-group flag, do a single
         # ``Forecast.save(update_fields=...)`` and skip the
         # delete-theoreticals → rewrite-relations → recompute chain.
-        # Note-only edits on a heavy forecast measured ~600 ms before
-        # this short-circuit and drop to <50 ms with it (the
-        # recompute_shares + bulk re-create were ~95% of the cost).
+        # A note-only edit on a heavy forecast takes ~600 ms without
+        # this short-circuit and <50 ms with it (recompute_shares + the
+        # bulk re-create are ~95% of the cost).
         # See ``tests_services/test_forecast_service_perf.py`` for
         # the regression-guarding budgets.
         if self._is_light_update(instance, validated_data):
@@ -278,7 +278,7 @@ class ForecastService:
         """
         # Lazily load the currently-set relation ids ONCE (one query each)
         # instead of a .exists() per variation_/offer_group_ key — the payload
-        # can carry one flag per variation, so the old per-key probe was an N+1.
+        # can carry one flag per variation, so a per-key probe would be an N+1.
         existing_variation_ids: set[str] | None = None
         existing_offer_group_ids: set[str] | None = None
         for key, value in validated_data.items():
@@ -638,7 +638,7 @@ class ForecastService:
             # Resolve amount: the weighted forecast split wins when the tenant
             # opted in and this variation is part of it; otherwise the configured
             # DefaultShareArticleInShare, then a pre-existing DefaultShareContent,
-            # then 0 — the original precedence, untouched.
+            # then 0.
             if share_type_variation_id in weighted_amounts:
                 amount = weighted_amounts[share_type_variation_id]
             else:

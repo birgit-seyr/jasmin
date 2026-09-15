@@ -129,8 +129,8 @@ export default function Invoices() {
 
   // Derive table rows directly from the query result. The table is
   // read-only (READ_ONLY_PERMISSION below), so there's no need to mirror
-  // ordersData into local state — that previously cost an extra render
-  // cycle and created a stale-state timing trap in tests.
+  // ordersData into local state — that would cost an extra render cycle and
+  // create a stale-state timing trap in tests.
   const data = useMemo<InvoiceOverviewRow[]>(
     () =>
       (ordersData ?? []).map((item) => ({
@@ -872,8 +872,7 @@ export default function Invoices() {
         }}
       >
         {/* Bulk send-email is still a disabled placeholder: its backend route
-              doesn't exist yet (a click used to 404). Re-enable with the real
-              endpoint once it lands. */}
+              doesn't exist yet. Re-enable with the real endpoint once it lands. */}
         <BulkActionButton
           selectedIds={selectedRowKeys}
           buttonText={t("resellers.send_via_email_resellers")}

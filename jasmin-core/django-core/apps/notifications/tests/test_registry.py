@@ -117,7 +117,7 @@ def test_all_slugs_are_namespaced():
 
 
 def _declared_allows(path: str, declared_names: set[str]) -> bool:
-    """Mirror the EML-10 write-time validator's accept rule: a placeholder is
+    """Mirror the write-time validator's accept rule: a placeholder is
     declared when its exact path is declared, a declared dotted name shares its
     root (the object is opted-in), or it is a trusted raw key."""
     if path in declared_names or path in RAW_KEYS:
@@ -129,13 +129,13 @@ def _declared_allows(path: str, declared_names: set[str]) -> bool:
 
 @pytest.mark.parametrize("spec", all_specs(), ids=lambda s: s.slug)
 def test_default_template_placeholders_are_declared(spec):
-    """EML-10 completeness invariant: every ``{{ placeholder }}`` used by a
+    """Completeness invariant: every ``{{ placeholder }}`` used by a
     shipped default template (HTML + text, every supported language) MUST be a
     declared spec variable (or a trusted raw key).
 
     Without this, a tenant who copies the shipped default into an override and
-    saves it would be rejected by the strict write-time validator — a worse
-    regression than the silent-empty render the validator fixes. This test is
+    saves it would be rejected by the strict write-time validator — worse than
+    the silent-empty render the validator prevents. This test is
     the durable guard that keeps the registry and the on-disk templates in
     sync, so a future template edit that introduces a new placeholder fails CI
     until the spec declares it."""

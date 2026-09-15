@@ -18,8 +18,6 @@
  * hook against the same endpoint.
  *
  * **This is the single source of truth — add any new Tenant file column here.**
- * It was previously duplicated as three hand-maintained lists that had already
- * drifted apart from each other.
  */
 export const TENANT_FILE_FIELDS = [
   "logo",

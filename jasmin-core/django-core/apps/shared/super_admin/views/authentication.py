@@ -42,7 +42,7 @@ class SuperAdminJWTAuthentication(JWTAuthentication):
         if not user.is_active:
             raise AuthenticationFailed("User account is disabled")
 
-        # TEN-1: derive privilege from the fetched row, not the token claim.
+        # Derive privilege from the fetched row, not the token claim.
         # ``user`` IS a ``SuperAdmin`` (we loaded it from that table), so the
         # answer is unconditionally True — trusting the claim would let any
         # future non-super-admin token-mint path smuggle the flag in.

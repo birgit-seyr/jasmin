@@ -92,7 +92,7 @@ export function MobileCardTitle({
       style={rightSlot ? { justifyContent: "space-between" } : undefined}
     >
       <Flex align="center" gap={6} component="span">
-        {/* A11Y-10: the finalized state is otherwise colour-only — role=img +
+        {/* The finalized state is otherwise colour-only — role=img +
             aria-label exposes it to screen readers without any visual change. */}
         {finalized && (
           <span

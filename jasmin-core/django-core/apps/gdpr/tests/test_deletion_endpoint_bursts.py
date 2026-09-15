@@ -111,7 +111,7 @@ class TestLodgeBurst:
         ) in gdpr_tasks._last_lodge_burst_alerted
 
     def test_null_ip_rows_are_ignored(self, tenant):
-        """Legacy rows pre-0003 have ``requested_ip IS NULL``. They
+        """Legacy rows have ``requested_ip IS NULL``. They
         must not aggregate (would false-positive on a fleet of legacy
         rows that share NULL as a synthetic key)."""
         for _ in range(gdpr_tasks.DELETION_LODGE_BURST_THRESHOLD * 2):

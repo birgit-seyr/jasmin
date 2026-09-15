@@ -45,7 +45,7 @@ def _frozen_today():
 
     The suite pins fixed 2026 dates (e.g. ``collection_date=2026-03-05``) that are
     now in the past relative to the real wall clock. The ``collection_date >=
-    today`` guards in ``create_run`` / ``export`` (RUN-2 / RUN-4) therefore need a
+    today`` guards in ``create_run`` / ``export`` therefore need a
     deterministic "today" earlier than every collection_date used here.
     """
     with time_machine.travel("2026-02-01", tick=False):
@@ -168,8 +168,8 @@ class TestCreateRun:
         ]
         # Only the single eligible select_for_update. The bundling uses
         # bulk_update (not a per-charge save()), so there is no per-charge
-        # immutability reload and no per-charge auditlog old-row fetch — the
-        # old per-row save() path added several SELECTs per bundled charge.
+        # immutability reload and no per-charge auditlog old-row fetch — a
+        # per-row save() would add several SELECTs per bundled charge.
         assert len(charge_selects) == 1, charge_selects
 
     def test_skips_charges_outside_period(
@@ -255,7 +255,7 @@ class TestExport:
         run.refresh_from_db()
         assert run.status == BillingRunStatus.EXPORTED
         assert run.sepa_xml_export.name != ""
-        # The artifact is now ``.xml`` (pain.008.001.02) instead of ``.csv``.
+        # The artifact is ``.xml`` (pain.008.001.02).
         assert run.sepa_xml_export.name.endswith(".xml")
 
         for c in run.charges.all():
@@ -343,13 +343,12 @@ class TestBankTransferRun:
 
 
 # ---------------------------------------------------------------------------
-# Billing-audit fixes: collection-date guards (RUN-2 / RUN-4), export
-# re-validation of mandates (RUN-1 / TXN-2), run-total recompute (TXN-3).
+# Collection-date guards, export re-validation of mandates, run-total recompute.
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestCreateRunCollectionDate:
     def test_rejects_past_collection_date(self, tenant, tenant_settings):
-        # RUN-4: today is frozen at 2026-02-01; a collection_date before today is
+        # Today is frozen at 2026-02-01; a collection_date before today is
         # rejected by the service itself (not only the create view), so a
         # non-view caller can't mint a DRAFT doomed to fail at the bank.
         with pytest.raises(BillingRunInvalidCollectionDate, match="in the past"):
@@ -373,7 +372,7 @@ class TestExportGuards:
     def test_export_rejects_deactivated_mandate(
         self, tenant, tenant_settings, billing_profile, subscription, member
     ):
-        # RUN-1 / TXN-2: the mandate is revoked (is_active=False) AFTER the DRAFT
+        # The mandate is revoked (is_active=False) AFTER the DRAFT
         # run was built. Export must refuse rather than debit a revoked mandate.
         run = self._setup_run(member, subscription)
         billing_profile.is_active = False
@@ -386,7 +385,7 @@ class TestExportGuards:
     def test_export_rejects_switch_to_bank_transfer(
         self, tenant, tenant_settings, billing_profile, subscription, member
     ):
-        # RUN-1 / TXN-2: member switched away from SEPA after create_run.
+        # Member switched away from SEPA after create_run.
         run = self._setup_run(member, subscription)
         billing_profile.payment_method = PaymentMethodOptions.BANK_TRANSFER
         billing_profile.save()
@@ -396,7 +395,7 @@ class TestExportGuards:
     def test_export_rejects_past_collection_date(
         self, tenant, tenant_settings, billing_profile, subscription, member
     ):
-        # RUN-2: collection_date (2026-03-05) was valid at create (today
+        # collection_date (2026-03-05) was valid at create (today
         # 2026-02-01) but the operator exports after it has passed.
         run = self._setup_run(member, subscription)
         with time_machine.travel("2026-04-01", tick=False):
@@ -408,7 +407,7 @@ class TestExportGuards:
     def test_export_recomputes_totals_after_unbundle(
         self, tenant, tenant_settings, billing_profile, subscription, member
     ):
-        # TXN-3: a bundled charge is unbundled before export; the run's snapshot
+        # A bundled charge is unbundled before export; the run's snapshot
         # total/count must be re-derived from the charges actually issued.
         _make_planned_charge(member, subscription, due_date=datetime.date(2026, 2, 5))
         _make_planned_charge(member, subscription, due_date=datetime.date(2026, 2, 15))
@@ -432,12 +431,12 @@ class TestExportGuards:
 
 @pytest.mark.django_db
 class TestLowSeverityAuditFixes:
-    """MON-3 (single-currency runs) + RUN-5 (no future mandate-signed date)."""
+    """Single-currency runs + no future mandate-signed date."""
 
     def test_create_run_rejects_mixed_currency(
         self, tenant, tenant_settings, billing_profile, subscription, member
     ):
-        # MON-3: two eligible charges in different currencies → a meaningless
+        # Two eligible charges in different currencies → a meaningless
         # cross-currency total, rejected before the run is created.
         _make_planned_charge(member, subscription, due_date=datetime.date(2026, 2, 5))
         usd = _make_planned_charge(
@@ -455,7 +454,7 @@ class TestLowSeverityAuditFixes:
     def test_export_rejects_future_mandate_signed_date(
         self, tenant, tenant_settings, billing_profile, subscription, member
     ):
-        # RUN-5: mandate signed in the future (today frozen at 2026-02-01).
+        # Mandate signed in the future (today frozen at 2026-02-01).
         _make_planned_charge(member, subscription, due_date=datetime.date(2026, 2, 5))
         run = BillingRunService.create_run(
             period_start=datetime.date(2026, 2, 1),
@@ -471,7 +470,7 @@ class TestLowSeverityAuditFixes:
 
 
 # ---------------------------------------------------------------------------
-# SEPA-readiness drop in create_run (TEST-3)
+# SEPA-readiness drop in create_run
 # ---------------------------------------------------------------------------
 
 

@@ -1,4 +1,4 @@
-// Commissioning UI widgets moved out of shared/ui (domain-specific).
+// Commissioning-domain UI widgets.
 export { default as AddShareArticleEntry } from './AddShareArticleEntry';
 export { OrderInfoPanel } from './OrderInfoPanel';
 export { default as VariationsTotalsCard } from './VariationsTotalsCard';

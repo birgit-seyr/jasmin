@@ -213,7 +213,7 @@ export default function ConfigurationShareTypeVariations() {
   // per-option ``ShareTypeTable`` children are the sole writers via
   // ``handleActiveStatusChange``. The ref guard stops a background refetch of
   // ``fetchedActiveShareOptions`` from clobbering those live child-driven
-  // toggles (the old two-write-path race).
+  // toggles.
   const [activeShareOptions, setActiveShareOptions] = useState<
     Partial<Record<keyof ActiveShareOptions, boolean>>
   >({});

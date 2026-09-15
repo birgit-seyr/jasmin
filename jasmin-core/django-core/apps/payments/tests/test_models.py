@@ -52,7 +52,7 @@ class TestBillingProfileValidation:
     def test_active_sepa_auto_assigns_reference_but_requires_signed_at(
         self, tenant, member
     ):
-        # The Mandatsreferenz is now auto-generated on save, so it's never a
+        # The Mandatsreferenz is auto-generated on save, so it's never a
         # missing-field error; the office still must record the signed date.
         with pytest.raises(ValidationError) as exc:
             BillingProfile.objects.create(

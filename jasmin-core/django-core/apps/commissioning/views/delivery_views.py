@@ -194,7 +194,7 @@ class DeliveryStationsToursOverviewView(APIViewRolePermissionsMixin, APIView):
         deliveries) is omitted entirely.
         """
         # One batched query for the whole (station_day, variation) grid instead
-        # of a per-cell aggregate (the old S×V N+1).
+        # of a per-cell (S×V) aggregate.
         demand_by_cell = get_variation_quantities_by_station_day(
             year=year,
             delivery_week=delivery_week,
@@ -236,7 +236,7 @@ class DeliveryStationsToursOverviewView(APIViewRolePermissionsMixin, APIView):
             # that carries any per-variation demand, so the flat view renders it.
             # Strict no-op for subscription tenants: ``uses_external_demand`` is
             # False for them, so ``has_variation_demand`` short-circuits to False
-            # and this reduces exactly to the original ``if not tour_columns``.
+            # and this reduces exactly to ``if not tour_columns``.
             if not tour_columns:
                 has_variation_demand = uses_external_demand and any(
                     station.get(f"variation_{variation.id}")

@@ -27,9 +27,9 @@ export const useNoteColumn = ({
 
   // Destructured primitives/refs are individually compared by React, so this
   // memo only re-runs when something the caller actually changed differs.
-  // Previously the entire options object was a dep — and callers like
-  // `useNoteColumn({ inputType: "optional" })` allocated a fresh object
-  // every render, which invalidated the memo every render.
+  // Don't depend on the whole options object: callers like
+  // `useNoteColumn({ inputType: "optional" })` allocate a fresh object
+  // every render, which would invalidate the memo every render.
   const noteColumn = useMemo<EditableColumnConfig<TableRecord>>(
     () => ({
       title: <>{t("commissioning.note")}</>,

@@ -74,8 +74,7 @@ const widthTotalAmount = "10%";
 const currentDay = dayjs().isoWeekday();
 
 // Bulk endpoint accepts ``delivery_station`` and ``is_packed_bulk`` (MIXED-mode
-// split); ``share_type`` is now optional — omitting it sums every share_type.
-// Generated params type lags until ``npm run generate-api`` is rerun.
+// split); ``share_type`` is optional — omitting it sums every share_type.
 type BulkParams = CommissioningPackingListBulkListParams & {
   delivery_station?: string;
   is_packed_bulk?: boolean;

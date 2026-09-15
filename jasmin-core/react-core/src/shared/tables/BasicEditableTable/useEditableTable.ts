@@ -150,9 +150,9 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
           // ``null`` is a valid "clear me" intent (e.g. picking the
           // ``{ value: null, label: "-" }`` placeholder in a select that
           // allows no selection). Pass it through to the FK column so the
-          // backend sets the relation to NULL. The old short-circuit on
-          // ``formValue !== null`` left the FK untouched, which is why
-          // clearing a previously-set crate never actually cleared it.
+          // backend sets the relation to NULL. Short-circuiting on
+          // ``formValue !== null`` would leave the FK untouched, so clearing
+          // a previously-set crate would never clear it.
           transformedData[valueField] = formValue;
 
           if (column.dataIndex !== valueField) {
@@ -347,13 +347,12 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
             if (column.foreignKey) {
               const { valueField } = column.foreignKey;
               // Only the canonical FK locations are valid as an id source.
-              // The third fallback (``currentRecord[dataIndex]``) used to
-              // be here but ``dataIndex`` carries the DISPLAY label string
-              // (rewritten by ``transformDataFROMapi`` to the matching
-              // option's label for select rendering). Using it as an FK
-              // id pushed e.g. ``"-"`` (the label of the null-option) into
-              // the save payload, which the backend then rejected as
-              // "Ungültiger pk".
+              // Don't fall back to ``currentRecord[dataIndex]``: ``dataIndex``
+              // carries the DISPLAY label string (rewritten by
+              // ``transformDataFROMapi`` to the matching option's label for
+              // select rendering), so using it as an FK id would push e.g.
+              // ``"-"`` (the label of the null-option) into the save payload,
+              // which the backend rejects as "Ungültiger pk".
               const valueFieldId = (currentRecord as Record<string, unknown>)[
                 valueField
               ];
@@ -478,8 +477,8 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
 
           if (Object.keys(errors).length > 0) {
             // Both: mark the offending field with a red border via formErrors
-            // AND surface the message in the banner above the table. Toast is
-            // gone — the banner stays until the user fixes the row.
+            // AND surface the message in the banner above the table (no
+            // toast) — the banner stays until the user fixes the row.
             setFormErrors(errors);
             setSaveErrorMessage(Object.values(errors)[0]);
             return;

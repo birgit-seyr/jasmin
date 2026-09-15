@@ -144,7 +144,7 @@ export default function DebitsAbos() {
       title: t("abos.debits_col_files"),
       key: "files",
       render: (_: unknown, r: BillingRun) =>
-        // The export artifact is now a pain.008.001.02 SEPA XML file
+        // The export artifact is a pain.008.001.02 SEPA XML file
         // that the office uploads directly to their bank's portal.
         // ``r.sepa_xml_export_url`` is the FileField download URL on
         // the BillingRun row (see BillingRunSerializer).

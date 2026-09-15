@@ -28,12 +28,10 @@ export default function ConfigurationMembers() {
           },
         ],
       },
-      // The standalone "Probemitglieder erlauben" toggle was dropped
-      // in migration 0020 — whether trial members can exist is
-      // derived from the two trial-subscription settings on
-      // ConfigurationSubscriptions
-      // (``allows_trial_subscriptions`` ∧
-      // ``allows_trial_subscriptions_for_trial_members``). The trial-member
+      // There is no standalone "Probemitglieder erlauben" toggle — whether
+      // trial members can exist is derived from the two trial-subscription
+      // settings on ConfigurationSubscriptions (``allows_trial_subscriptions``
+      // ∧ ``allows_trial_subscriptions_for_trial_members``). The trial-member
       // concept exists solely to enable trial subscriptions, so a
       // separate toggle would only allow inconsistent states.
       {

@@ -64,9 +64,6 @@ class TestExtractDayVariations:
     def test_raises_invalid_amount_on_invalid_decimal(self):
         """Bad amount values surface as an ``InvalidAmount`` (JasminError) whose
         ``field`` names the offending key so the frontend can flag the input.
-
-        Was previously a silent ``continue`` (the row was dropped from
-        the save with no signal to the user).
         """
         from apps.commissioning.errors import InvalidAmount
 
@@ -425,12 +422,11 @@ class TestReplaceSharePlanningEmptyClear:
     def test_empty_clear_runs_real_recompute_over_none_amount_row(
         self, _mock_cascade, tenant
     ):
-        """Regression: clearing every cell sets the spared forecast row's
-        amount to None, then recompute runs FOR REAL (not mocked, unlike the
-        sibling tests — which is why the bug slipped through). create_movements
-        must not choke on ``Decimal(str(None))`` — a None-amount row simply
-        contributes no SHARECONTENT movement. Without the guard this raised
-        decimal.InvalidOperation → HTTP 500 on the PUT.
+        """Clearing every cell sets the spared forecast row's amount to None,
+        then recompute runs FOR REAL (not mocked, unlike the sibling tests).
+        create_movements must not choke on ``Decimal(str(None))`` — a
+        None-amount row simply contributes no SHARECONTENT movement, instead of
+        raising decimal.InvalidOperation → HTTP 500 on the PUT.
         """
         from apps.commissioning.models import MovementShareArticle
         from apps.commissioning.tests.factories import ForecastFactory
@@ -462,7 +458,7 @@ class TestReplaceSharePlanningEmptyClear:
         )
 
         svc = ShareContentService()
-        # Must NOT raise (previously Decimal(str(None)) → InvalidOperation).
+        # Must NOT raise (Decimal(str(None)) → InvalidOperation).
         result = svc.replace_share_planning(
             year=2026,
             delivery_week=15,
@@ -527,7 +523,7 @@ class TestReplaceSharePlanningPreservesBackup:
         row.save()
 
         # Edit the MAIN amount (10 -> 20) for THIS station — the wipe-and-rebuild
-        # that used to drop the backup on the rebuilt (share, station) row.
+        # must keep the backup on the rebuilt (share, station) row.
         ShareContentService().replace_share_planning(
             year=2026,
             delivery_week=15,

@@ -374,8 +374,7 @@ function generateTaxBreakdownXML(
  * Callers usually derive these via
  * ``Reseller.get_payment_terms_days()`` / ``get_early_payment_discount()``
  * on the backend, which already implements the per-reseller → tenant
- * fallback. Defaults below match the historical hardcoded values so
- * old callers keep working.
+ * fallback.
  */
 export interface PaymentTerms {
   days: number;
@@ -394,9 +393,7 @@ export interface PaymentTerms {
  * Defaults to ``"EUR"``.
  *
  * ``paymentTerms`` is the per-invoice resolved payment terms. When
- * omitted, falls back to the tenant default on ``tenantSettings`` —
- * also keeps the legacy single-source-of-truth flow working until
- * every caller passes a resolved object.
+ * omitted, falls back to the tenant default on ``tenantSettings``.
  */
 export function generateZUGFeRDXML(
   invoiceData: ZUGFeRDInput,

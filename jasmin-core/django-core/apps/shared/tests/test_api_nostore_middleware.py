@@ -1,11 +1,10 @@
 """``ApiNoStoreCacheControlMiddleware`` — every ``/api/`` response is uncacheable.
 
-Pins the fix for the 2026-07-10 cross-tenant cache incident: one Bunny pull zone
-fronts all tenant hostnames, Django set no ``Cache-Control`` on the anonymous
-``GET /api/tenants/current/``, so Bunny applied its default caching with a
-host-agnostic key and served ONE tenant's response for every hostname. The
-middleware stamps ``no-store`` so no shared CDN can cache + cross-serve a
-per-tenant API response.
+One Bunny pull zone fronts all tenant hostnames and, for a response without
+``Cache-Control`` (e.g. the anonymous ``GET /api/tenants/current/``), applies
+its default caching with a host-agnostic key — serving ONE tenant's response
+for every hostname. The middleware stamps ``no-store`` so no shared CDN can
+cache + cross-serve a per-tenant API response.
 
 Pure header logic — no DB / tenant setup needed (``RequestFactory`` only builds
 the request; the middleware never resolves a tenant).

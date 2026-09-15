@@ -1,11 +1,11 @@
 """Tiny request-scoped helpers shared across apps.
 
 Exposes :func:`client_ip`, which extracts the originating client IP from a
-DRF / Django ``HttpRequest`` (six identical copies used to live in views /
-signals / permissions), :func:`body`, the typed accessor for an object-shaped
-JSON request body, :func:`auth_user`, the typed accessor for the authenticated
-user behind a permission-gated endpoint, and :func:`request_tenant`, the typed
-accessor for the tenant django-tenants resolved from the subdomain.
+DRF / Django ``HttpRequest``, :func:`body`, the typed accessor for an
+object-shaped JSON request body, :func:`auth_user`, the typed accessor for the
+authenticated user behind a permission-gated endpoint, and
+:func:`request_tenant`, the typed accessor for the tenant django-tenants
+resolved from the subdomain.
 """
 
 from __future__ import annotations

@@ -60,7 +60,7 @@ class TestSeasonViewSet:
 
 @pytest.mark.django_db
 class TestSeasonOneOpenConstraint:
-    """SUC-9: a partial unique index backstops the global one-open invariant.
+    """A partial unique index backstops the global one-open invariant.
     handle_succession closes the predecessor on the normal save() path, so a
     duplicate OPEN season only arises through a bulk path that bypasses it."""
 
@@ -93,7 +93,7 @@ class TestStorageViewSet:
 
     @pytest.fixture(autouse=True)
     def _clear_seeded_storages(self, tenant):
-        # commissioning/migrations/0004 seeds "Kurz" + "Lang" into every
+        # commissioning/migrations/0002 seeds "Kurz" + "Lang" into every
         # tenant schema. These tests assert exact counts, so wipe the
         # seed before each case (rolled back with the test transaction).
         from apps.commissioning.models import Storage

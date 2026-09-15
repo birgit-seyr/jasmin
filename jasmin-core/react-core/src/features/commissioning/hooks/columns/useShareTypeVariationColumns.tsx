@@ -13,8 +13,8 @@ import { useNumberFormat } from "@hooks/useNumberFormat";
 import { useShareTypeVariationSizeOptions } from "@hooks/useShareTypeVariationSizeOptions";
 import { variationColumnKey } from "./columnKeys";
 
-// Re-exported for existing importers (barrel + pages) — the canonical
-// definition now lives in ./columnKeys alongside the day×variation helpers.
+// Re-exported for the barrel + pages; the canonical definition lives in
+// ./columnKeys alongside the day×variation helpers.
 export { variationColumnKey };
 
 export interface ShareTypeVariationGroup {

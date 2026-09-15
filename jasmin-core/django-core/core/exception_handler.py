@@ -116,8 +116,8 @@ def jasmin_exception_handler(
         # validation let through, so a 400 rather than a 500. The database text
         # can quote the value, so it goes to the log only, never the response.
         #
-        # Logged at ERROR with the traceback, as the 500 path did before this
-        # mapping existed: Sentry turns only ERROR records into events, and a
+        # Logged at ERROR with the traceback, like the 500 path: Sentry turns
+        # only ERROR records into events, and a
         # DataError still means a missing serializer bound — or a server-side
         # bug (an over-long generated value, a division by zero in SQL).
         logger.error(

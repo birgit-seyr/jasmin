@@ -223,9 +223,9 @@ class TestCreateDefaultShareContent:
         ).exists()
 
         # The bulk-create path bypasses ``Share.save()``, so it must default
-        # ALL day fields from the delivery day in memory — a NULL one would
-        # silently drop the share from that day-filtered list. SHR-2 caught
-        # ``get_current_stock_day`` being the one left out.
+        # ALL day fields (including ``get_current_stock_day``) from the delivery
+        # day in memory — a NULL one would silently drop the share from that
+        # day-filtered list.
         assert share.harvesting_day == delivery_day.default_harvesting_day
         assert share.packing_day == delivery_day.default_packing_day
         assert share.washing_day == delivery_day.default_washing_day
@@ -366,8 +366,8 @@ class TestUpdateDefaultShareContentCascades:
         assert not ShareContent.objects.filter(pk=share_content.pk).exists()
         assert not MovementShareArticle.objects.filter(pk=movement.pk).exists()
 
-        # Snapshots were cascaded for the removed movement — before the fix
-        # this was never called and downstream balances went stale.
+        # Snapshots were cascaded for the removed movement — otherwise
+        # downstream balances go stale.
         mock_cascade.assert_called_once()
         cascaded_movements = mock_cascade.call_args.args[0]
         assert any(moved.pk == movement.pk for moved in cascaded_movements)
@@ -543,7 +543,7 @@ class TestCalculateNeededAmount:
             )
 
         # "today" is before the cohort starts → 0 active now → forward-scan picks
-        # up the next future cohort (pre-fix this returned 0).
+        # up the next future cohort (not 0).
         with time_machine.travel(datetime.date(2026, 6, 1), tick=False):
             result = DefaultShareContentService._calculate_needed_amount(
                 year=2026,

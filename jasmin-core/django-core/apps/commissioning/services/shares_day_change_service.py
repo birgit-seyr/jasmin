@@ -158,7 +158,7 @@ class SharesDayChangeService:
                 shares
             )
 
-        # MEM-3: changed_day_number is the top-priority input to
+        # changed_day_number is the top-priority input to
         # share_delivery_date(), which the billing-regen uses to bucket
         # deliveries into periods — so a day shift can move/drop a billable
         # delivery. It's NOT in RECOMPUTE_RELEVANT_FIELDS (no theoretical impact),

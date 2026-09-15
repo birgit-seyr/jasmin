@@ -98,7 +98,7 @@ const inferSorterForInputType = <T extends Record<string, unknown>>(
 };
 
 // Pure column transforms — module-scope so they're stable references and can
-// stay out of the enhancedColumns useMemo deps (PERF-19).
+// stay out of the enhancedColumns useMemo deps.
 function getEnhancedColumnWidth<T extends TableRecord>(
   column: EditableColumnConfig<T>,
 ): string | undefined {
@@ -206,12 +206,12 @@ const EditableTable = <T extends TableRecord = TableRecord>({
   className = "custom-jasmin-table",
   ...tableProps
 }: EditableTableProps<T>) => {
-  // Dev-only contract guards. Catch the three EditableTable foot-guns that the
-  // 2026-06 audit found scattered across ~30 call sites: a dead `list` (no
-  // `showSearchBar`, so it never auto-fetches — and becomes a double-fetch the
-  // moment someone adds it), a dead `baseParams` (only the auto-fetch path
-  // reads it), and a `focusIndex` that isn't a real column. Warns once per
-  // mount; stripped from production by `drop_console` + `import.meta.env.DEV`.
+  // Dev-only contract guards. Catch three EditableTable foot-guns: a dead
+  // `list` (no `showSearchBar`, so it never auto-fetches — and becomes a
+  // double-fetch the moment someone adds it), a dead `baseParams` (only the
+  // auto-fetch path reads it), and a `focusIndex` that isn't a real column.
+  // Warns once per mount; stripped from production by `drop_console` +
+  // `import.meta.env.DEV`.
   const contractWarnedRef = useRef(false);
   useEffect(() => {
     if (!import.meta.env.DEV || contractWarnedRef.current) return;
@@ -256,10 +256,9 @@ const EditableTable = <T extends TableRecord = TableRecord>({
   //   restrictive (rare; keeps the door open for legacy callers).
   // - Omitted (the recommended pattern): auto-derive from `permissions`. The
   //   column appears iff *any* action is reachable — table-level canAdd /
-  //   canEdit / canDelete, or per-row canEditRecord / canDeleteRecord. This
-  //   avoids the duplicate-gating pattern where callers passed both
-  //   `permissions={gatedByPermission(...)}` AND `showActions={...}` with
-  //   the same condition.
+  //   canEdit / canDelete, or per-row canEditRecord / canDeleteRecord, so
+  //   callers don't need to pass both `permissions={gatedByPermission(...)}`
+  //   AND `showActions={...}` with the same condition.
   const effectiveShowActions =
     showActions ??
     Boolean(
@@ -665,7 +664,7 @@ const EditableTable = <T extends TableRecord = TableRecord>({
   // update (fired by ``useEditableTable.save`` right after the optimistic
   // ``setData``) does NOT retrigger the effect with a stale ``initialData``
   // — that race would overwrite the just-added row with the pre-refetch
-  // list and the row only reappeared after the parent's query refetched.
+  // list and the row would only reappear after the parent's query refetched.
   // The ref still gives us the latest value when ``initialData`` does
   // legitimately change.
   const recentlyAddedIdsRef = useRef(recentlyAddedIds);

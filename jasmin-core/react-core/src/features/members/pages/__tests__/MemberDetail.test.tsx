@@ -58,8 +58,7 @@ vi.mock("@shared/contexts/AuthContext", () => ({
 
 // Stub every child component & modal — we don't test their internals here.
 vi.mock("@features/members/components/ActiveSubscriptionsCard", () => ({
-  // The "+ new subscription" button was folded into this card (the standalone
-  // SubscriptionsCard was removed in the MemberDetail two-column redesign).
+  // The "+ new subscription" button lives in this card.
   default: ({ onNewSubscription }: { onNewSubscription?: () => void }) => (
     <div data-testid="active-subscriptions-card">
       <button
@@ -93,9 +92,8 @@ vi.mock("@features/members/components/DeliveryStationDaysCard", () => ({
   default: () => <div data-testid="delivery-stations-card" />,
 }));
 
-// MemberEditModal is no longer rendered from MemberDetail — editing
-// lives in the top-right UserMenu → "Meine Daten". Only the delivery
-// modal + coop-shares modal stay here.
+// MemberDetail renders only the delivery modal + coop-shares modal; member
+// editing lives in the top-right UserMenu → "Meine Daten".
 vi.mock("@features/members/modals", () => ({
   MemberDeliveryEditModal: ({ visible }: { visible: boolean }) =>
     visible ? <div data-testid="delivery-edit-modal" /> : null,
@@ -241,11 +239,8 @@ describe("MemberDetail (integration)", () => {
     expect(new URL(abosCall!.url).searchParams.get("is_trial")).toBe("false");
   });
 
-  // The inline "Edit member" button (and the MemberEditModal it opened)
-  // used to live on this header; both have since been moved into the
-  // top-right ``UserMenu`` → "Meine Daten"
-  // (apps/react-core/src/components/layout/MyDataTab/) so account-level
-  // affordances are consistent across the app.
+  // Member editing lives in the top-right ``UserMenu`` → "Meine Daten", not
+  // on this header, so account-level affordances are consistent across the app.
   it("does NOT render an inline Edit button on the member header", async () => {
     server.use(
       http.get(`/api/commissioning/members/${MEMBER_ID}/`, () =>
@@ -266,10 +261,8 @@ describe("MemberDetail (integration)", () => {
     expect(screen.queryByTestId("member-edit-modal")).not.toBeInTheDocument();
   });
 
-  // Logout used to live on the MemberDetail header; it has since
-  // been consolidated into the top-right user dropdown
-  // (apps/react-core/src/components/layout/LoginButton.tsx) so the
-  // logout affordance is consistent across the app.
+  // Logout lives in the top-right user dropdown, not on the MemberDetail
+  // header, so the logout affordance is consistent across the app.
   it("does NOT render an inline Logout button on the member header", async () => {
     server.use(
       http.get(`/api/commissioning/members/${MEMBER_ID}/`, () =>

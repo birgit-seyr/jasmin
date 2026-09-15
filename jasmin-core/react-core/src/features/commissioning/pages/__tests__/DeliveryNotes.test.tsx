@@ -10,7 +10,7 @@
  *   2. The bulk-finalize button wires through to
  *      ``commissioningBulkFinalizeDocumentsCreate`` with the right
  *      ``{ ids, model }`` payload — and when that call rejects with a
- *      409 ``FinalizedError`` (the plan-item we care about), the
+ *      409 ``FinalizedError``, the
  *      shared ``notify.error`` toast fires via ``BulkActionButton``'s
  *      built-in catch path.
  *

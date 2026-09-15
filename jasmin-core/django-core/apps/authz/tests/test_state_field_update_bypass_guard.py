@@ -14,16 +14,15 @@ that get silently skipped when callers use ``.update(...)`` instead:
   and the audit timestamps null.
 * **``Member.admin_confirmed`` / ``Subscription.admin_confirmed``** —
   ``AdminConfirmableMixin.confirm()`` calls ``_post_confirm()``,
-  which for ``Member`` generates the public ``member_number`` (the
-  advisory-locked sequence from pass #7) and for ``Subscription``
+  which for ``Member`` generates the public ``member_number`` (an
+  advisory-locked sequence) and for ``Subscription``
   materialises shares + ShareDeliveries + ChargeSchedule. Bypass
   via ``.update(admin_confirmed=True)`` would leave a "confirmed"
   row with none of the downstream rows.
 
-Greped at audit time and found **zero** active callers. This guard
-exists so the bug can't be re-introduced silently — the bypass shape
-is exactly the literal pattern, so a regex catches the realistic
-risk.
+This guard keeps the bypass from being introduced silently — the
+bypass shape is exactly the literal pattern, so a regex catches the
+realistic risk.
 
 How it works
 ------------

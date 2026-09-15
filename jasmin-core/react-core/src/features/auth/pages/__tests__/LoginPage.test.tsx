@@ -109,10 +109,10 @@ describe("LoginPage (integration)", () => {
   });
 
   it("surfaces a server error message and does NOT navigate on bad credentials", async () => {
-    // Regression test: in the past, a 401 on /auth/login/ chained into the
-    // axios response interceptor's silent-refresh flow and the user saw
-    // "No refresh cookie" instead of the real error. The interceptor now
-    // explicitly excludes /auth/login/, /auth/register/ and /auth/logout/.
+    // A 401 on /auth/login/ must surface the real error — it must not chain
+    // into the axios response interceptor's silent-refresh flow and show
+    // "No refresh cookie" instead. The interceptor explicitly excludes
+    // /auth/login/, /auth/register/ and /auth/logout/.
     let refreshAttempts = 0;
     server.use(
       http.post(/\/auth\/refresh\/?$/, () => {

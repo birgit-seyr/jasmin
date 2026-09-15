@@ -413,7 +413,7 @@ class TestNoInsertIntoFinalizedParent:
 
 @pytest.mark.django_db
 class TestStornoRecipientMirror:
-    """DOC-1: a storno reproduces the cancelled invoice's FROZEN §14b recipient,
+    """A storno reproduces the cancelled invoice's FROZEN §14b recipient,
     not a re-resolved live (possibly edited) reseller billing address."""
 
     def test_storno_mirrors_cancelled_invoice_recipient_after_address_edit(

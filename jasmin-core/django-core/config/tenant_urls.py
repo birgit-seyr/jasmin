@@ -22,8 +22,8 @@ urlpatterns = [
     path("api/support/", include("apps.shared.support.urls")),
     # Browsers POST CSP violation reports here (header set by nginx).
     path("api/csp-report/", csp_report_view, name="csp-report"),
-    # Signed-URL media gate (replaces nginx serving /media/ directly
-    # and the old DEBUG-only ``static()`` helper — same view handles
+    # Signed-URL media gate (instead of nginx serving /media/ directly or
+    # Django's DEBUG-only ``static()`` helper — the same view handles
     # both: X-Accel-Redirect in prod, FileResponse under DEBUG).
     re_path(r"^media/(?P<path>.*)$", protected_media_view, name="protected-media"),
 ]

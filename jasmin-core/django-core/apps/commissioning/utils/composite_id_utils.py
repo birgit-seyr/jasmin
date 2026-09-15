@@ -23,7 +23,7 @@ def parse_composite_pk(
     ("unit", str), ("size", str)]``. The id is split with ``maxsplit`` so a
     trailing field can't swallow earlier parts. Raises ``CompositeIdInvalid``
     (400, with the given ``code``) on a wrong part count or a cast failure —
-    replacing the per-handler ``.split("_")`` unpacks that otherwise 500 on a
+    use it instead of per-handler ``.split("_")`` unpacks, which 500 on a
     malformed id or build divergent error shapes.
     """
     parts = raw.split("_", len(fields) - 1) if raw else []
@@ -51,7 +51,7 @@ def parse_composite_id(
 
     Format: ``share_article_id_unit_size_storage_id_year_week_day``. Raises
     ``CompositeIdInvalid`` (400) on a wrong part count or a bad year/week/day
-    cast — replacing the old bare ``ValueError`` that callers had to wrap.
+    cast.
 
     (The 5-part planning ids use :func:`parse_composite_pk`; this variant stays
     separate because it decodes the CurrentStock ``"None"`` sentinel for the

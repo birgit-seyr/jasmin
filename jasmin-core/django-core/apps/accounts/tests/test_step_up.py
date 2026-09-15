@@ -195,7 +195,7 @@ def test_step_up_correct_password_does_not_feed_axes_signal(
 
 
 def test_step_up_uses_dedicated_throttle_scope():
-    """Step-up no longer shares the generous ``login`` bucket (20/min) — it
+    """Step-up doesn't share the generous ``login`` bucket (20/min) — it
     has its own strict per-user scope so a wrong-password grind is rate-
     capped independently of the login flow."""
     from django.conf import settings
@@ -301,8 +301,8 @@ def test_gdpr_approve_deletion_passes_step_up_with_fresh_token(
 
     # The step-up gate is past. Assert that UNCONDITIONALLY: a broken
     # gate surfaces as a 403 with code ``auth.step_up_required``, so that
-    # exact combination must never occur. The old ``if status == 403``
-    # guard was too weak — an unexpected 200 (gate silently bypassed) or
+    # exact combination must never occur. An ``if status == 403`` guard
+    # would be too weak — an unexpected 200 (gate silently bypassed) or
     # a 403 with a missing/None code would skip the assertion entirely.
     assert not (
         response.status_code == 403
@@ -315,7 +315,7 @@ def test_gdpr_approve_deletion_passes_step_up_with_fresh_token(
 
 
 # --------------------------------------------------------------------- #
-# End-to-end: tenant admin role-grant gate (SEC-2)                      #
+# End-to-end: tenant admin role-grant gate                              #
 # --------------------------------------------------------------------- #
 
 
@@ -330,7 +330,7 @@ def test_admin_user_role_grant_requires_step_up_without_claim(api_client, user, 
     """Granting a role via ``PATCH /admin/users/<pk>/`` is privilege
     escalation — it must be step-up gated. Without a fresh claim the call
     returns the canonical 403 ``auth.step_up_required``, so a stolen session
-    token alone can't escalate. SEC-2."""
+    token alone can't escalate."""
     from django.urls import reverse
 
     _make_admin(user)
@@ -350,7 +350,7 @@ def test_admin_user_role_grant_requires_step_up_without_claim(api_client, user, 
 def test_admin_user_non_role_edit_does_not_require_step_up(api_client, user, tenant):
     """A PATCH that does NOT touch ``roles`` (name, language, …) must pass the
     gate unprompted — the modal fires only on actual role grants, so routine
-    edits aren't friction-walled. SEC-2 (conditional gate)."""
+    edits aren't friction-walled."""
     from django.urls import reverse
 
     _make_admin(user)
@@ -371,7 +371,7 @@ def test_admin_user_non_role_edit_does_not_require_step_up(api_client, user, ten
 def test_admin_user_role_grant_passes_with_fresh_step_up(api_client, user, tenant):
     """With a fresh step-up token the role grant gets PAST the gate (a broken
     gate would surface as 403 ``auth.step_up_required``, which must never
-    happen here). SEC-2."""
+    happen here)."""
     from django.urls import reverse
 
     _make_admin(user)

@@ -15,7 +15,7 @@ def documentation_daily_unique(name: str) -> models.UniqueConstraint:
     five plain documentation daily tables (Waste, WashAmount, CleanAmount and
     the additional-theoretical wash/clean variants). Only enforced when
     ``day_number`` is set. Callers pass their own ``name`` so each constraint
-    keeps its existing DB identity — byte-identical, no migration.
+    keeps its existing DB identity.
     """
     return models.UniqueConstraint(
         fields=[
@@ -36,8 +36,7 @@ def documentation_year_week_indexes() -> list[models.Index]:
     index pair every daily documentation table declares.
 
     Returns FRESH ``Index`` instances per call so each concrete model auto-names
-    them off its own table — keeping the generated index names (and therefore
-    the schema) identical to the previous inline declarations.
+    them off its own table.
     """
     return [
         models.Index(fields=["year", "delivery_week"]),
@@ -56,8 +55,8 @@ class DocumentationMixin(models.Model):
         max_digits=10, decimal_places=2, blank=True, null=True
     )  # this is in kg/pcs/bunch
 
-    # ``max_length=20`` preserves this column's historical width — every other
-    # unit column is 10; normalising it would require a migration (out of scope).
+    # ``max_length=20`` is this column's DB width — every other unit column is
+    # 10; normalising it would require a migration.
     unit = unit_field(max_length=20)
     size = size_vegetable_field()
     storage = models.ForeignKey("Storage", on_delete=models.CASCADE)
@@ -99,9 +98,9 @@ class RequiresHarvestStorageMixin(models.Model):
     unlike the wash/clean theoreticals, which always land short-term via
     ``_processing_storage`` and keep ``RequiresShortTermStorageMixin`` — a harvest
     (or purchase) row must accept EITHER harvest storage. Requiring short-term
-    here made every long-term-line ``TheoreticalHarvest`` violate its own
-    invariant (latent because ``bulk_create`` bypasses ``full_clean``; a later
-    PATCH via the viewset would raise a 500). See goods-flow audit finding #9.
+    here would make every long-term-line ``TheoreticalHarvest`` violate its own
+    invariant (unnoticed on ``bulk_create``, which bypasses ``full_clean``, but a
+    PATCH via the viewset would raise a 500).
     """
 
     class Meta:
@@ -394,8 +393,8 @@ class Purchase(JasminModel, DocumentationMixin, CreatedMixin, ArchivableMixin):
             # leaving ``seller`` NULL, but the seller-scoped constraint above
             # only fires when seller IS NOT NULL — so concurrent upserts could
             # double-insert (MultipleObjectsReturned + double-counted stock).
-            # Both now stamp ``day_number=PURCHASE_DAY``; ``nulls_distinct=False``
-            # (PG15+, Django 5.0+) is kept so any legacy NULL-day rows (never
+            # Both stamp ``day_number=PURCHASE_DAY``; ``nulls_distinct=False``
+            # (PG15+, Django 5.0+) makes any legacy NULL-day rows (never
             # back-filled) still de-dupe under this constraint.
             models.UniqueConstraint(
                 fields=[

@@ -61,8 +61,8 @@ def _build_source_fk_xor_constraint() -> models.CheckConstraint:
 
 
 # Single source of truth for the "capture both movement halves before a
-# ShareContent cascade" filter (was hand-duplicated verbatim across 5
-# delete/replace paths). These are the theoretical source FKs that each carry
+# ShareContent cascade" filter used by the delete/replace paths. These are the
+# theoretical source FKs that each carry
 # their OWN ``share_content`` FK — so they're reachable from a ShareContent and
 # cascade-delete with it. The ``additional_theoretical_*`` sources are
 # deliberately excluded: those models have no ``share_content`` FK (they're
@@ -241,7 +241,7 @@ class MovementShareArticle(JasminModel):
     class Meta:
         constraints = [
             _build_source_fk_xor_constraint(),
-            # MOV-6: INVENTORY is a per-(entity, day) physical count — at most one
+            # INVENTORY is a per-(entity, day) physical count — at most one
             # row. The upsert's empty select_for_update() takes no gap lock under
             # READ COMMITTED, so two concurrent PATCHes could both insert; the read
             # paths then SUM all same-day INVENTORY rows and double-count. ``date``

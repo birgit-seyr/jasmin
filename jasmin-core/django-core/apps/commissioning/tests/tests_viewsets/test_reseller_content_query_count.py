@@ -1,6 +1,6 @@
 """Perf-lock + required-param tests for the reseller *content* list endpoints.
 
-Covers PERF-7: ``InvoiceResellerContentViewSet`` and
+``InvoiceResellerContentViewSet`` and
 ``DeliveryNoteResellerContentViewSet`` must
 
 1. be **scale-invariant** in the number of content rows for a given document

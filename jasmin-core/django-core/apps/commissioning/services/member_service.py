@@ -1,7 +1,7 @@
 """Service layer for the Member resource.
 
-Centralises orchestration logic that was previously inlined in
-`MemberViewSet`: JasminUser lookup/linking on create, status conflict
+Orchestration logic for `MemberViewSet`: JasminUser lookup/linking on
+create, status conflict
 detection, admin confirm/reject with notification side-effects, and
 invitation send/resend.
 
@@ -135,9 +135,8 @@ class MemberService:
         # ``min_number_coop_shares`` / ``max_number_coop_shares``
         # window. Block here BEFORE flipping ``admin_confirmed`` so the
         # office can't promote a non-trial member with zero (or
-        # otherwise out-of-range) coop shares — the previous flow
-        # silently allowed that because the existing CoopShare
-        # validator only fires on CoopShare.save().
+        # otherwise out-of-range) coop shares — the CoopShare validator
+        # only fires on CoopShare.save(), so it doesn't cover this.
         # Trial members are exempt by design (re-checked at trial-
         # conversion time when they acquire their first share).
         from apps.commissioning.services.coop_share_service import (
@@ -191,7 +190,7 @@ class MemberService:
              as the reject stamp — a rolled-back rejection leaves the
              user account untouched.
           3. ``accounts.application_rejected`` email scheduled via
-             on_commit (P1-3 policy).
+             on_commit.
         """
         # ``reject`` is for PENDING applications only. Un-flipping the confirm
         # flag on an ALREADY-CONFIRMED member would leave member_number,
@@ -360,11 +359,11 @@ class MemberService:
         The actual ``EmailService.send_email`` call is scheduled via
         ``transaction.on_commit``. If the caller's atomic block rolls
         back, the email never fires — so we never email an applicant
-        about a state change that did not in fact persist (P1-3).
+        about a state change that did not in fact persist.
 
         When called *outside* an atomic block, Django runs the callback
         immediately, so non-transactional callers (e.g. plain shell
-        scripts) keep the previous fire-and-forget semantics.
+        scripts) get fire-and-forget semantics.
         """
         tenant = getattr(request, "tenant", None) if request is not None else None
         # Flatten to plain scalars — never hand a live ORM instance to the

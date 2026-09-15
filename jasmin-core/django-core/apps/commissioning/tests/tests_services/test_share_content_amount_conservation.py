@@ -1,6 +1,6 @@
 """Amount-conservation tests for ShareContent → Movements / Theoreticals.
 
-These tests fix the formula that turned out to be ambiguous in production:
+These tests pin the formula:
 
     SHARECONTENT movement.amount     = -(sc.amount * total_quantity)
     TheoreticalHarvest.amount        =  sc.amount * total_quantity
@@ -159,9 +159,8 @@ class TestShareContentMovementAmount:
     """The negative SHARECONTENT movement that is created on packing day."""
 
     def test_single_subscription_with_quantity_5(self, tenant):
-        # The exact case the user described: 1 subscription buying 5 shares,
-        # ShareContent amount = 2. The bug would show up as -5 (row count)
-        # instead of -10 (quantity-aware sum).
+        # 1 subscription buying 5 shares, ShareContent amount = 2. Counting rows
+        # would give -5 instead of -10 (quantity-aware sum).
         sc, qty = _build_scenario(sc_amount=Decimal("2"), subscription_quantities=[5])
         ShareContentService().create_movements([sc])
 
@@ -498,7 +497,7 @@ class TestVariationIsolation:
 
 # ── 7) Sanity check on the demand-aggregation function itself ───────────
 #
-# Pinpoints whether the suspected bug is in the SQL aggregation rather than
+# Pinpoints whether a bug is in the SQL aggregation rather than
 # the multiplication. This bypasses ShareContentService entirely.
 @pytest.mark.django_db
 class TestDemandAggregationCountsQuantityNotRows:

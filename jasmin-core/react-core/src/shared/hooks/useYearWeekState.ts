@@ -4,8 +4,8 @@ import { useState } from "react";
 /**
  * Current ISO year / week, computed once at module load — the SSOT for the
  * ``const currentYear = dayjs().year(); const currentWeek = dayjs().isoWeek();``
- * pair that ~18 pages were each declaring at module scope. Mirrors the existing
- * ``currentFiscalYearRange`` export beside ``useFiscalYearRange``.
+ * pair. Mirrors the ``currentFiscalYearRange`` export beside
+ * ``useFiscalYearRange``.
  */
 export const currentYear = dayjs().year();
 export const currentWeek = dayjs().isoWeek();
@@ -32,10 +32,9 @@ export interface UseYearWeekState {
 
 /**
  * The year + week selector state (``selectedYear`` / ``selectedWeek`` plus their
- * setters) shared by the week-scoped report pages, collapsing the copy-pasted
- * ``dayjs().year()`` / ``dayjs().isoWeek()`` consts + two ``useState`` lines
- * into one hook. ``selectedWeek`` is nullable (``null`` = "all weeks"), matching
- * the dominant page shape; pass options for the pages whose defaults diverge.
+ * setters) shared by the week-scoped report pages. ``selectedWeek`` is nullable
+ * (``null`` = "all weeks"), matching the dominant page shape; pass options for
+ * the pages whose defaults diverge.
  *
  * For ``selectedWeek ?? currentWeek`` style fallbacks, import the module-level
  * {@link currentWeek} / {@link currentYear} consts — they stay module-scoped

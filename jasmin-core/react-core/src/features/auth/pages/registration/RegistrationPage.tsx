@@ -12,7 +12,7 @@ import type { RegistrationData } from "./types";
 
 const { Title, Text } = Typography;
 
-// Order (2026-07): coop shares → variation → consents → your details →
+// Order: coop shares → variation → consents → your details →
 // confirm email → done. The account is created (+ set-password link emailed)
 // only at the confirm-email step, once the address is verified.
 const MEMBER_STEPS = [

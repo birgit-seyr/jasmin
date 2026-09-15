@@ -99,7 +99,7 @@ class CoopShareService:
         # until the office confirms it (mirrors the my_data self-subscribe
         # docstring + the GenG §30 register export). The min/max admission bounds
         # count confirmed equity ONLY, so a member can't be admitted on pending
-        # shares that are later rejected/deleted (BIZ-3).
+        # shares that are later rejected/deleted.
         if only_confirmed:
             qs = qs.filter(admin_confirmed=True)
         if exclude_pk is not None:
@@ -235,7 +235,7 @@ class CoopShareService:
         admin-confirmed equity: on that path the triggering share is already
         confirmed but sibling PENDING shares are NOT swept into confirmation, so
         counting them would admit a member on equity that can later be
-        rejected/deleted (BIZ-3). The member-confirm path leaves it False because
+        rejected/deleted. The member-confirm path leaves it False because
         it confirms the member's pending shares in the same action.
 
         Raises :class:`apps.commissioning.errors.MemberCoopSharesOutOfRange`
@@ -274,7 +274,7 @@ class CoopShareService:
                 member_id=str(member.pk),
             )
 
-    # NOTE: a bulk validator (assert_many_within_min_max) was removed as dead
-    # code. If a real bulk coop-share path appears, reintroduce one that
-    # delegates to assert_within_min_max per (member, would-be-amount) pair so
-    # the bounds comparison + trial exemption stay single-sourced.
+    # NOTE: there is no bulk validator. If a real bulk coop-share path appears,
+    # add one that delegates to assert_within_min_max per (member,
+    # would-be-amount) pair so the bounds comparison + trial exemption stay
+    # single-sourced.

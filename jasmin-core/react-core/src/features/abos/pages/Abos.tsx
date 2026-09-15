@@ -263,8 +263,8 @@ export default function Abos() {
     getAdminStatusSorter,
   } = useAdminConfirmationModalAbos();
 
-  // The admin-status column is sortable on click only (the table no longer
-  // auto-sorts — see useAbosColumns, so new rows pin to the top in natural
+  // The admin-status column is sortable on click only (the table doesn't
+  // auto-sort — see useAbosColumns — so new rows pin to the top in natural
   // order). When the office DOES sort by it, wrap the base sorter so
   // freshly-added ids (tracked by ``useInvalidateAfterTableMutation``) stay
   // pinned at the top regardless of sort direction — same shape as the

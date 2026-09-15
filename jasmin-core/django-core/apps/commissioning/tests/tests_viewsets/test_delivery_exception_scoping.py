@@ -1,4 +1,4 @@
-"""SEC-2: the DeliveryExceptionPeriod list is member-readable. A member must
+"""The DeliveryExceptionPeriod list is member-readable. A member must
 see ONLY the pauses on variations they subscribe to, and never the office
 free-text ``note``; staff see every pause with its note.
 """

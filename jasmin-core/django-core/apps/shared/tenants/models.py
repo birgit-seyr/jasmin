@@ -41,8 +41,8 @@ class JasminModel(models.Model):
 
         Detects PK collisions specifically by inspecting the failing
         constraint, instead of substring-matching on the error message
-        (which previously could swallow other unique-constraint failures
-        that happened to mention the word "id").
+        (which could swallow other unique-constraint failures that happen to
+        mention the word "id").
         """
         max_retries = 5
         for attempt in range(max_retries):
@@ -154,7 +154,7 @@ class Tenant(TenantMixin, JasminModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Localization / formatting (formerly under ``static_settings``)
+    # Localization / formatting
     currency = models.CharField(max_length=8, default="EUR")
     timezone = models.CharField(
         max_length=64,
@@ -744,7 +744,7 @@ class TenantSettings(JasminModel):
             elif isinstance(field, models.DecimalField):
                 # The remaining DecimalFields are percentages / tax rates (not
                 # money), so a JSON float is fine. value_one_coop_share is a
-                # PositiveIntegerField now and ships as an int via the else.
+                # PositiveIntegerField and ships as an int via the else.
                 result[field.name] = float(value)
             else:
                 result[field.name] = value

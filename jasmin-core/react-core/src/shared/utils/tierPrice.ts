@@ -1,13 +1,6 @@
 /**
  * Reseller-style tiered price-per-unit picker — single source of truth.
  *
- * Why this exists: the same tier-dispatch was being computed in three
- * places (Orders live + save, InvoiceModal live, CustomerOrderPage
- * mutations) with two subtly different conventions (typed amount in
- * KG/PCS/BUNCH vs already in PU). When the divisor or threshold
- * comparison drifted between sites, prices disagreed depending on
- * which path ran. This module is the canonical implementation.
- *
  * Tier convention (per tenant setting ``used_tiers_for_offers``):
  *   - ``finalTiers`` is the array of tier thresholds (in PU) as
  *     configured by the tenant. May have 1, 2, or 3 entries.
@@ -20,9 +13,8 @@
  * **No hardcoded default thresholds.** If the tenant hasn't configured
  * ``used_tiers_for_offers``, callers should pass ``[1]`` (or just
  * omit / pass ``[]``) — meaning single-tier mode: always ``price_1``,
- * regardless of quantity. Previously this defaulted to ``[1, 3, 5]``,
- * which silently bumped tenants who never set the field into 3-tier
- * pricing. See ``docs/todos/text.txt`` for the discussion.
+ * regardless of quantity. A default like ``[1, 3, 5]`` would silently
+ * put tenants who never set the field on 3-tier pricing.
  *
  * The ``price_X > 0`` fallback is intentional: tenants on multi-tier
  * who leave a higher tier's price empty (0) silently fall back to the

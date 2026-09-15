@@ -15,9 +15,8 @@ export interface CsvImportModalProps {
   /**
    * The SAME column array the page's table uses — it generates the downloadable
    * template, so its `dataIndex` values ARE the wire schema. The docs table
-   * below is derived from this one array on purpose: the older hand-written
-   * `columnDocRows` lists drifted from it and documented column names the
-   * importer rejects.
+   * below is derived from this one array on purpose: a hand-written doc list
+   * drifts from it and documents column names the importer rejects.
    */
   columns: TemplateColumns;
   filename: string;
@@ -36,10 +35,7 @@ export interface CsvImportModalProps {
  * Generic "import this list from CSV" modal: template download → validate
  * (dry run) → upload, plus an optional per-column reference table.
  *
- * Extracted from the onboarding modals (members / coop shares / SEPA mandates /
- * subscriptions) so the plain list pages get the same affordance instead of two
- * bare buttons with no dry run. Lives in `shared/` because several unrelated
- * features use it.
+ * Lives in `shared/` because several unrelated features use it.
  */
 export function CsvImportModal({
   open,
@@ -139,8 +135,7 @@ export interface CsvImportButtonProps extends Omit<
   "open" | "onClose"
 > {
   /**
-   * Tenant `allow_upload_for_data_lists`. False renders nothing at all —
-   * matching what the bare template buttons did on the list pages.
+   * Tenant `allow_upload_for_data_lists`. False renders nothing at all.
    */
   uploadAllowed: boolean;
   /** Button label; defaults to `csv_upload.open`. */

@@ -9,8 +9,8 @@ capacity gate's 409 stands) and no offers can exist.
 Mirrors ``trial_policy`` (function-module, not a ``*Service`` class).
 
 Default (no current TenantSettings overlay row): waiting list ENABLED — a
-freshly-provisioned tenant keeps the historical behaviour before its first
-config save, matching the model default of ``True``.
+freshly-provisioned tenant has it enabled before its first config save,
+matching the model default of ``True``.
 """
 
 from __future__ import annotations

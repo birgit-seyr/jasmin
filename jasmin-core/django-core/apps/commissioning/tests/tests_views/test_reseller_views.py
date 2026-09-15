@@ -295,7 +295,7 @@ class TestBulkDeleteDocumentsView:
 
 
 # ---------------------------------------------------------------------------
-# _run_per_order_bulk savepoint isolation (COR-20)
+# _run_per_order_bulk savepoint isolation
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestRunPerOrderBulkSavepoint:
@@ -377,7 +377,7 @@ class TestBulkSetToPaidDocumentsView:
     def test_summary_invoice_spanning_orders_no_spurious_already_paid(
         self, api_client, tenant
     ):
-        """DOC-9: several orders sharing ONE summary invoice, set-to-paid in one
+        """Several orders sharing ONE summary invoice, set-to-paid in one
         batch, report one success per order — not 1 success + N-1 spurious
         'already paid' failures."""
         from apps.commissioning.services import InvoiceService
@@ -599,9 +599,8 @@ class TestOfferSendingStatus:
     def test_returns_sent_true_when_offersending_row_exists(self, api_client, tenant):
         """When an ``OfferSending`` row exists for a (group, year,
         week, reseller) tuple, the matching response entry has
-        ``sent=True`` and a non-null ``sent_at``. P1-2 schema check:
-        the view filters on the new composite-key columns directly,
-        not via the dropped Offer JOIN."""
+        ``sent=True`` and a non-null ``sent_at``. The view filters on the
+        composite-key columns directly, not via an Offer JOIN."""
         from apps.commissioning.models import OfferSending
 
         offer_group = OfferGroupFactory()
@@ -671,7 +670,7 @@ URL_SEND_REMINDERS = reverse("bulk_send_invoice_reminders_via_email")
 @pytest.mark.django_db
 class TestBulkSendInvoiceRemindersViaEmail:
     """View-layer tests for the enqueue endpoint. The actual SMTP
-    work + grouping logic moved into ``invoice_reminder.
+    work + grouping logic live in ``invoice_reminder.
     bulk_send_invoice_reminders`` and is covered separately under
     ``tests_services/test_invoice_reminder_service.py``.
 
@@ -753,7 +752,7 @@ class TestBulkSendOffersViaEmail:
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
     def test_valid_payload_returns_202_and_creates_job(self, step_up_client, tenant):
-        """Happy-path view contract after the Huey conversion: payload
+        """Happy-path view contract: payload
         validates, ``OfferGroup`` lookup succeeds, a ``BackgroundJob``
         row is created in ``queued`` state, response is 202 with the
         job id. The actual SMTP work happens in the worker (covered
@@ -787,8 +786,8 @@ class TestBulkSendOffersViaEmail:
 
 
 # ---------------------------------------------------------------------------
-# BulkFinalizeDocumentsView happy path  (existing TestBulkFinalizeDocumentsView
-# only covers validation branches — add the success branch here)
+# BulkFinalizeDocumentsView happy path  (TestBulkFinalizeDocumentsView covers
+# the validation branches)
 # ---------------------------------------------------------------------------
 
 

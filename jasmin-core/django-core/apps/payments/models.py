@@ -1,7 +1,5 @@
 """Models for the member-billing subsystem.
 
-See `text/payments_design.md` in the repo root for the full design rationale.
-
 Source-of-truth ledger lives in `ChargeSchedule`. One row per
 (subscription, billing period). The generator (services.py) computes
 `expected_amount` from `ShareDelivery` rows that fall in the period.
@@ -57,8 +55,8 @@ class JasminModel(models.Model):
 
         Detects PK collisions specifically by inspecting the failing
         constraint, instead of substring-matching on the error message
-        (which previously could swallow other unique-constraint failures
-        that happened to mention the word "id").
+        (which could swallow other unique-constraint failures that happen to
+        mention the word "id").
         """
         max_retries = 5
         for attempt in range(max_retries):
@@ -358,7 +356,7 @@ class ChargeSchedule(JasminModel):
         # ``not self._state.adding`` gates this to genuine UPDATEs. JasminModel
         # assigns the CharField PK in Python at construction (default=
         # generate_jasmin_id), so ``self.pk`` is truthy even on a brand-new row
-        # — without the ``adding`` guard, every create() fired a wasted SELECT
+        # — without the ``adding`` guard, every create() would fire a wasted SELECT
         # for a row that doesn't exist yet. Loaded instances (the only update
         # path) have adding=False, so the immutability check still runs there.
         if self.pk and not self._state.adding and not allow_immutable_change:
@@ -402,9 +400,7 @@ class BillingRun(JasminModel):
 
     Once the run is EXPORTED, its charges flip PLANNED→ISSUED and the
     ``sepa_xml_export`` file is an immutable pain.008.001.02 XML
-    artifact ready to upload to any SEPA-zone bank. We used to emit a
-    bank-specific CSV here; the move to pain.008 standardizes the
-    output across banks.
+    artifact ready to upload to any SEPA-zone bank.
     """
 
     created_at = models.DateTimeField(auto_now_add=True)

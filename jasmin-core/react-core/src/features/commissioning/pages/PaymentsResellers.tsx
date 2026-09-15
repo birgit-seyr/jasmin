@@ -349,7 +349,7 @@ export default function PaymentsResellers() {
               )
             }
             onSuccess={(responseData) => {
-              // The endpoint now returns 202 + ``{job_id, kind,
+              // The endpoint returns 202 + ``{job_id, kind,
               // status}``. Open the JobProgressDrawer to poll until
               // the Huey worker finishes the per-reseller dispatch.
               const jobId = (responseData as { job_id?: string })?.job_id;

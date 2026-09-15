@@ -2,7 +2,7 @@ import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 /**
- * A11Y-27: "skip to main content" link. Visually hidden until it receives
+ * "Skip to main content" link. Visually hidden until it receives
  * keyboard focus (first Tab stop), then visible — lets keyboard users jump
  * past the nav straight to the main content. Moves focus to #main-content
  * (which carries tabIndex={-1} so it can receive programmatic focus).

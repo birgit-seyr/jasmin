@@ -89,8 +89,8 @@ describe("BaseEntitySelector — preserveSelection reconciliation", () => {
     );
     await Promise.resolve();
     // value "b" is truthy, so `autoSelectFirst && !value` never fires — the
-    // stale, now-invalid "b" silently persists. This is exactly why the
-    // dependent selectors switched to preserveSelection.
+    // stale, now-invalid "b" silently persists. This is why the dependent
+    // selectors use preserveSelection.
     expect(onValueChange).not.toHaveBeenCalled();
   });
 

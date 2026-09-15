@@ -22,13 +22,13 @@ import { useTimeBoundColumns } from "../useTimeBoundColumns";
 
 /**
  * The valid_from / valid_until columns gate the picker to Mondays / Sundays
- * via a ``disabledDate`` predicate. That predicate crashed the picker in
- * production when it depended on the ``isoWeek`` plugin's ``isoWeekday()``
- * but no chunk had run ``dayjs.extend(isoWeek)`` yet. It must therefore use
- * only *core* dayjs (``day()``) and never call a plugin method.
+ * via a ``disabledDate`` predicate. If that predicate depends on the
+ * ``isoWeek`` plugin's ``isoWeekday()`` it crashes the picker whenever no
+ * chunk has run ``dayjs.extend(isoWeek)`` yet, so it must use only *core*
+ * dayjs (``day()``) and never call a plugin method.
  *
  * The key guard uses a stub that exposes ONLY ``day()`` (no ``isoWeekday``):
- * if the predicate ever reverts to a plugin method it throws on the stub and
+ * if the predicate ever uses a plugin method it throws on the stub and
  * this test goes red — regardless of what plugins the test process loaded.
  */
 describe("useTimeBoundColumns disabledDate — plugin-independent weekday gating", () => {

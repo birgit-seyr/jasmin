@@ -189,9 +189,6 @@ export default function SettingsPage({
   // mounts once at page load with ``value=""``, the state sticks at
   // ``""``, and the first open after that race-conditions a
   // ``setContent`` update against ReactQuill's async mount lifecycle.
-  // Subsequent opens used to "work" only because ReactQuill happened
-  // to be mounted from the previous attempt and picked up the new
-  // value prop the second time around.
   const [richTextModalNonce, setRichTextModalNonce] = useState(0);
 
   const openRichTextEditor = useCallback(
@@ -364,7 +361,7 @@ export default function SettingsPage({
   );
 }
 
-// ---------- Tiers field (extracted from ConfigurationResellerDocuments) ----------
+// ---------- Tiers field ----------
 
 interface TiersFieldProps {
   setting: SettingConfig;
@@ -380,7 +377,7 @@ function TiersField({ setting, value, onChange }: TiersFieldProps) {
   const tierLabel = t("settings.reseller.offer_tier_label");
 
   // Stable React keys, one per tier, kept in a ref so the saved payload
-  // stays a plain ``(number | null)[]``. Index-based keys made a removed
+  // stays a plain ``(number | null)[]``. Index-based keys would make a removed
   // middle tier reuse the wrong DOM node; these ids travel with the tier
   // across add/remove/edit. The ref length is reconciled to the current
   // tiers length on every render (handles external value changes too).

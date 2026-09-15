@@ -3,8 +3,8 @@
  * capacity display (NewSubscriptionModal tag/flag, Abos row greying,
  * WaitingListAbos). All consumers must fetch ``capacity_by_week`` with the
  * SAME wide window (``CAPACITY_WINDOW_PARAMS``) so week keys are always
- * present for any realistic term — a narrower, differently-anchored fetch is
- * exactly what made the modal and the Abos table disagree.
+ * present for any realistic term — a narrower, differently-anchored fetch
+ * makes the modal and the Abos table disagree.
  *
  * Semantics: a station-day is FULL for a term when ANY term week has
  * ``free <= 0``. Weeks missing from the window read as available — the
@@ -20,10 +20,9 @@
 import dayjs from "dayjs";
 import type { CapacityWeekEntry } from "@shared/api/generated/models";
 
-// Re-exported under the historical name: the shape now comes from the
-// generated model (the backend schema types capacity_by_week precisely), so
-// a backend rename of occupied/free breaks compilation here instead of
-// silently zeroing the fullness math.
+// Re-exported from the generated model (the backend schema types
+// capacity_by_week precisely), so a backend rename of occupied/free breaks
+// compilation here instead of silently zeroing the fullness math.
 export type { CapacityWeekEntry };
 
 export interface StationDayTermCapacity {

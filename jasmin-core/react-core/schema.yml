@@ -25856,7 +25856,7 @@ paths:
         Edits that touch any of the SEPA-mandate fields require step-up
         auth, because rewriting IBAN / mandate-reference could redirect a
         member's direct-debit money to an attacker-controlled account.
-        ``is_active`` is included too (TXN-4): toggling it has direct payment
+        ``is_active`` is included too: toggling it has direct payment
         consequences — it gates ``create_run`` eligibility and re-enables /
         disables collection on the mandate — so flipping it must not be a
         silent, un-stepped-up PATCH. Only ``notes`` PATCHes without prompting.
@@ -25911,7 +25911,7 @@ paths:
         Edits that touch any of the SEPA-mandate fields require step-up
         auth, because rewriting IBAN / mandate-reference could redirect a
         member's direct-debit money to an attacker-controlled account.
-        ``is_active`` is included too (TXN-4): toggling it has direct payment
+        ``is_active`` is included too: toggling it has direct payment
         consequences — it gates ``create_run`` eligibility and re-enables /
         disables collection on the mandate — so flipping it must not be a
         silent, un-stepped-up PATCH. Only ``notes`` PATCHes without prompting.
@@ -25954,7 +25954,7 @@ paths:
         Edits that touch any of the SEPA-mandate fields require step-up
         auth, because rewriting IBAN / mandate-reference could redirect a
         member's direct-debit money to an attacker-controlled account.
-        ``is_active`` is included too (TXN-4): toggling it has direct payment
+        ``is_active`` is included too: toggling it has direct payment
         consequences — it gates ``create_run`` eligibility and re-enables /
         disables collection on the mandate — so flipping it must not be a
         silent, un-stepped-up PATCH. Only ``notes`` PATCHes without prompting.
@@ -26021,7 +26021,7 @@ paths:
         Edits that touch any of the SEPA-mandate fields require step-up
         auth, because rewriting IBAN / mandate-reference could redirect a
         member's direct-debit money to an attacker-controlled account.
-        ``is_active`` is included too (TXN-4): toggling it has direct payment
+        ``is_active`` is included too: toggling it has direct payment
         consequences — it gates ``create_run`` eligibility and re-enables /
         disables collection on the mandate — so flipping it must not be a
         silent, un-stepped-up PATCH. Only ``notes`` PATCHes without prompting.
@@ -26088,7 +26088,7 @@ paths:
         Edits that touch any of the SEPA-mandate fields require step-up
         auth, because rewriting IBAN / mandate-reference could redirect a
         member's direct-debit money to an attacker-controlled account.
-        ``is_active`` is included too (TXN-4): toggling it has direct payment
+        ``is_active`` is included too: toggling it has direct payment
         consequences — it gates ``create_run`` eligibility and re-enables /
         disables collection on the mandate — so flipping it must not be a
         silent, un-stepped-up PATCH. Only ``notes`` PATCHes without prompting.
@@ -30340,8 +30340,8 @@ components:
         ``member_string`` is a human-readable label, same contract as
         :class:`MemberLoanSerializer`. It must be a ``SerializerMethodField``:
         a plain ``CharField(read_only=True)`` has no matching model attribute,
-        so DRF silently dropped the key from every payload (SkipField) while
-        the schema declared it present.
+        so DRF would silently drop the key from every payload (SkipField) while
+        the schema declares it present.
       properties:
         id:
           type: string
@@ -38435,7 +38435,7 @@ components:
 
         Deliberately excludes the bank identifiers (IBAN / account holder) so a
         bulk read neither decrypts nor exposes bank PII, and — unlike the full
-        ``BillingProfileSerializer`` list — must NOT trip the SEC-1 bank-identifier
+        ``BillingProfileSerializer`` list — must NOT trip the bank-identifier
         audit trail. ``has_active_sepa_mandate`` mirrors ``is_sepa_ready``; the
         per-subscription "active during the term" refinement is applied by the
         caller (it needs the subscription's dates).
@@ -40352,11 +40352,10 @@ components:
       description: |-
         Read/write serializer for `Subscription`.
 
-        The read-only ``*_name`` / ``member_*`` fields used to come from
-        `.annotate()` calls in the viewset queryset; they're now resolved
-        via DRF ``source=`` and ``SerializerMethodField`` so the viewset
-        queryset stays lean. Callers must keep the matching ``select_related``
-        chain (see ``_build_subscription_queryset``) to avoid N+1.
+        The read-only ``*_name`` / ``member_*`` fields are resolved via DRF
+        ``source=`` and ``SerializerMethodField``, not queryset annotations, so the
+        viewset queryset stays lean. Callers must keep the matching
+        ``select_related`` chain (see ``_build_subscription_queryset``) to avoid N+1.
       properties:
         id:
           type: string
@@ -40468,9 +40467,8 @@ components:
           description: |-
             Cancellation deadline = valid_until - N weeks. None when blank.
 
-            The frontend used to compute this per-row per-render via dayjs;
-            moving it server-side cuts the render cost on Abos.tsx and
-            centralises the "when does this column light up" rule.
+            Computed server-side so Abos.tsx doesn't compute it per row per render
+            and the "when does this column light up" rule lives in one place.
 
             Skip cases (return None):
               * ``is_trial`` — trial subs don't auto-renew (see TrialPolicy).
@@ -40746,9 +40744,9 @@ components:
         operational-internal fields shouldn't ride along on every
         ``useTenant()`` fetch a member or customer makes.
 
-        The ``settings`` / ``current_settings`` overlays previously lived on
-        ``CurrentTenantSerializer``; they were moved here so that anonymous
-        callers no longer receive tenant operational config.
+        The ``settings`` / ``current_settings`` overlays live here, not on
+        ``CurrentTenantSerializer``, so anonymous callers don't receive tenant
+        operational config.
       properties:
         id:
           type: string

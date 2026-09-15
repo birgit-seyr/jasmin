@@ -6,10 +6,7 @@ Two tasks live here:
   - ``clear_expired_sessions`` — daily housekeeping; drops rows from
     ``django_session``.
 
-See ``docs/todos/huey-to-do.txt`` for the full backlog.
-
-Bootstrap reminder: nothing in this file runs until the ``HUEY`` config
-block in ``config/settings.py`` is uncommented and a worker process
+Bootstrap reminder: nothing in this file runs until a Huey worker process
 starts. Decorators register tasks at import time but the scheduler
 needs to be alive to fire them.
 """

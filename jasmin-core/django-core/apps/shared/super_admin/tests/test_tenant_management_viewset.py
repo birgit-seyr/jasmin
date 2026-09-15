@@ -36,8 +36,8 @@ from apps.shared.super_admin.models import SuperAdmin
 from apps.shared.super_admin.viewsets import TenantManagementViewSet
 
 # Satisfies AUTH_PASSWORD_VALIDATORS (12-char min + zxcvbn + common/numeric).
-# The create / create_admin / create_user paths now enforce that policy
-# (TEN-5), so any payload that should reach the action body needs a strong one.
+# The create / create_admin / create_user paths enforce that policy, so any
+# payload that should reach the action body needs a strong one.
 _STRONG_PW = "9xKqP2mwLvZt7Rdn"
 
 
@@ -194,7 +194,7 @@ class TestListRetrieveUpdate:
     def test_partial_update_is_active_requires_step_up(
         self, factory, tenant, super_admin
     ):
-        """TEN-7: flipping the is_active kill-switch needs a fresh step-up claim
+        """Flipping the is_active kill-switch needs a fresh step-up claim
         (a name-only PATCH, above, does not)."""
         request = factory.patch(
             f"/tenants/{tenant.id}/",
@@ -297,7 +297,7 @@ class TestCreateValidation:
         response = _dispatch({"post": "create"}, request)
 
         assert response.status_code == 400
-        # Now a canonical DRF serializer-validation body: the field name lives
+        # A canonical DRF serializer-validation body: the field name lives
         # in ``details`` (and ``field``), not in the generic ``message``.
         assert response.data["code"] == "validation_error"
         assert "schema_name" in response.data["details"]
@@ -373,7 +373,7 @@ class TestCreateValidation:
     def test_duplicate_maps_integrity_error_to_400(
         self, factory, tenant, super_admin, monkeypatch
     ):
-        """TEN-9: a unique-constraint IntegrityError that slips past the
+        """A unique-constraint IntegrityError that slips past the
         pre-check (TOCTOU) is mapped to the precise 400, not a generic 500."""
         from apps.shared.tenants.services import TenantService
 
@@ -406,7 +406,7 @@ class TestCreateValidation:
 
 @pytest.mark.django_db
 def test_tenant_schema_or_409_translates_missing_schema():
-    """TEN-10: a missing/dropped tenant schema (Programming/OperationalError
+    """A missing/dropped tenant schema (Programming/OperationalError
     inside the block) surfaces as a clean 409 TenantSchemaMissing, not a 500.
     A genuine DoesNotExist would still propagate (→ 404)."""
     from apps.shared.super_admin.errors import TenantSchemaMissing
@@ -676,7 +676,7 @@ class TestUpdateUserRoles:
         assert response.status_code == 404
 
     def test_rejects_unknown_role(self, factory, tenant, super_admin):
-        """TEN-3: a typo'd role is a 400 (InvalidRoles), never silently dropped
+        """A typo'd role is a 400 (InvalidRoles), never silently dropped
         into a different effective role set — roles stay unchanged."""
         target = JasminUserFactory(roles=["office"])
         request = factory.patch(
@@ -697,7 +697,7 @@ class TestUpdateUserRoles:
         assert set(target.roles) == {"office"}
 
     def test_last_admin_demotion_refused(self, factory, tenant, super_admin):
-        """TEN-4: demoting the tenant's only active admin is refused."""
+        """Demoting the tenant's only active admin is refused."""
         admin = JasminUserFactory(roles=["admin"])
         request = factory.patch(
             f"/tenants/{tenant.id}/users/{admin.id}/roles/",
@@ -717,7 +717,7 @@ class TestUpdateUserRoles:
         assert "admin" in admin.roles
 
     def test_last_admin_demotion_allowed_with_force(self, factory, tenant, super_admin):
-        """TEN-4: force=true is the explicit recovery escape hatch."""
+        """``force=true`` is the explicit recovery escape hatch."""
         admin = JasminUserFactory(roles=["admin"])
         request = factory.patch(
             f"/tenants/{tenant.id}/users/{admin.id}/roles/",
@@ -738,7 +738,7 @@ class TestUpdateUserRoles:
     def test_demote_admin_allowed_when_another_admin_exists(
         self, factory, tenant, super_admin
     ):
-        """TEN-4: with another active admin present, demotion is allowed."""
+        """With another active admin present, demotion is allowed."""
         JasminUserFactory(roles=["admin"])  # another active admin
         admin = JasminUserFactory(roles=["admin"])
         request = factory.patch(

@@ -241,7 +241,7 @@ class TestRefreshAfterLogout:
 
 
 # --------------------------------------------------------------------------- #
-# GAP-1: session revocation on password reset + logout-everywhere              #
+# Session revocation on password reset + logout-everywhere                    #
 # --------------------------------------------------------------------------- #
 
 
@@ -256,7 +256,7 @@ def _extract_reset_uid_token(user):
 
 class TestPasswordResetRevokesSessions:
     def test_refresh_token_from_before_reset_is_dead_after_reset(self, tenant):
-        # The exact GAP-1 scenario: an attacker holds a refresh token minted
+        # The scenario: an attacker holds a refresh token minted
         # before the victim resets their password. After the reset it must no
         # longer be rotatable — a rotating token otherwise survives the reset
         # for its full lifetime.
@@ -362,13 +362,13 @@ class TestLogoutEverywhere:
 
 
 # --------------------------------------------------------------------------- #
-# AUTH-2 / AUTH-5: /refresh/ re-validates the account and re-stamps claims      #
+# /refresh/ re-validates the account and re-stamps claims                     #
 # --------------------------------------------------------------------------- #
 
 
 class TestRefreshRevalidatesAccount:
     def test_deactivated_user_cannot_refresh(self, tenant):
-        # AUTH-2: a mid-session deactivation stamps no revoke marker, so GAP-1's
+        # A mid-session deactivation stamps no revoke marker, so the revocation
         # iat cut-off doesn't fire — the per-refresh is_active re-check is what
         # kills the still-warm session (the minted access is DOA at endpoints,
         # but the refresh itself must stop rotating).
@@ -394,7 +394,7 @@ class TestRefreshRevalidatesAccount:
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_refreshed_access_re_stamps_login_claims(self, tenant):
-        # AUTH-5: a refreshed access token must carry the same login-time claims
+        # A refreshed access token must carry the same login-time claims
         # (user_role, tenant_id, tenant_name) — the raw refresh-minted token
         # drops user_role/tenant_name, which any code trusting them would notice.
         from rest_framework_simplejwt.tokens import AccessToken
@@ -413,7 +413,7 @@ class TestRefreshRevalidatesAccount:
         assert "user_role" in payload
 
     def test_login_email_is_normalized(self, tenant):
-        # AUTH-3: the login email is lowercased before authenticate(), so a
+        # The login email is lowercased before authenticate(), so a
         # mixed-case login resolves the same account (and django-axes keys ONE
         # lockout bucket rather than one per case-variation).
         user = JasminUserFactory(email="mixed@example.com")

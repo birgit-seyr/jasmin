@@ -29,24 +29,14 @@ interface ShareTypeRef {
  * Fetch the merged variation list across one or more share types,
  * deduped by id.
  *
- * Pre-2026-06 this was a hand-rolled ``useEffect`` + ``async for``
- * loop that fired requests serially, kept its own ``loading`` /
- * ``error`` state, and didn't cache anything. ``useQueries`` from
- * TanStack Query replaces all of that:
+ * Uses TanStack ``useQueries``:
  *
- *   * Fires the per-shareType requests IN PARALLEL — share types
- *     with N items used to take N × roundtrip; now they take 1 ×
- *     roundtrip (whichever is slowest).
+ *   * Fires the per-shareType requests IN PARALLEL.
  *   * Caches each per-shareType list under its own queryKey, so
  *     two pages that show the same share types share results.
- *   * Cancels in-flight requests when ``shareTypes`` changes (e.g.
- *     a tenant-settings flip mid-render no longer triggers a stale
- *     state write).
- *
- * Public return shape kept identical to the old hook
- * (``shareTypeVariations`` / ``loading`` / ``error`` / ``refetch``)
- * so consumers in ``Abos.tsx`` and ``WaitingListAbos.tsx`` don't
- * need to change.
+ *   * Cancels in-flight requests when ``shareTypes`` changes (so a
+ *     tenant-settings flip mid-render doesn't trigger a stale state
+ *     write).
  */
 export const useAllShareTypeVariations = (
   shareTypes: ShareTypeRef[] | undefined,
@@ -122,10 +112,8 @@ export const useAllShareTypeVariations = (
   const loading = queries.some((q) => q.isPending);
   const error = queries.find((q) => q.error)?.error ?? null;
 
-  // Equivalent of the previous manual ``refetch``: invalidate every
-  // per-shareType list and let TanStack re-pull them in parallel.
-  // Returning a Promise mirrors the old async signature for any
-  // caller that ``await``-ed it.
+  // Invalidate every per-shareType list and let TanStack re-pull them in
+  // parallel. Returns a Promise so callers can ``await`` it.
   const refetch = useCallback(async () => {
     await Promise.all(
       sortedShareTypeIds.map((id) =>

@@ -134,10 +134,10 @@ class TestBulkFinalizeView:
         """A single bad item (an empty, item-less invoice raising a
         commissioning ``JasminError``) must NOT abort the whole batch: the
         valid invoice still finalizes and the empty one is reported in
-        ``errors[]``. Before the fix the domain error escaped the per-item
-        loop, propagated out of the view's ``@transaction.atomic`` and rolled
-        back every already-finalized item, breaking the partial-success
-        contract. A partial failure now also surfaces as HTTP 207."""
+        ``errors[]``. A domain error escaping the per-item loop would propagate
+        out of the view's ``@transaction.atomic`` and roll back every
+        already-finalized item, breaking the partial-success contract. A
+        partial failure surfaces as HTTP 207."""
         from apps.commissioning.models import InvoiceReseller
 
         valid = _finalizable_invoice(tenant)
@@ -377,8 +377,8 @@ class TestBulkFinalizeModelGate:
     )
     def test_invalid_model_returns_400(self, api_client, tenant, url, model):
         """An unknown name, a real model without finalization, and a non-string
-        used to raise LookupError / ValueError / AttributeError (the last two a
-        500)."""
+        are all refused as ``finalize.model_invalid`` (400) instead of escaping
+        as LookupError / ValueError / AttributeError."""
         resp = api_client.post(url, {"model": model, "ids": ["x"]}, format="json")
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -390,7 +390,8 @@ class TestBulkFinalizeModelGate:
     def test_app_label_other_than_commissioning_returns_400(
         self, api_client, tenant, url, app_label
     ):
-        """An unhashable app_label used to raise TypeError (a 500)."""
+        """Any app_label other than "commissioning" is a 400 — an unhashable one
+        must not escape as a TypeError (a 500)."""
         resp = api_client.post(
             url,
             {"model": "offer", "app_label": app_label, "ids": ["x"]},
@@ -467,7 +468,7 @@ class TestBulkFinalizeShareContentView:
 
     @pytest.mark.parametrize("bad_id", [123, None, {"id": "x"}])
     def test_non_string_id_returns_400(self, api_client, tenant, bad_id):
-        """A non-string composite id used to reach ``.split`` and return 500."""
+        """A non-string composite id is refused before it reaches ``.split``."""
         resp = api_client.post(
             URL_FINALIZE_SC, {"ids": ["2026_15_abc_KG_M", bad_id]}, format="json"
         )
@@ -515,7 +516,7 @@ class TestBulkFinalizeShareContentView:
         assert sc.is_finalized is True
 
     def test_db_error_in_one_item_does_not_abort_batch(self, api_client, tenant):
-        """REF-3 non-vacuous savepoint guard: one item hits a REAL
+        """Non-vacuous savepoint guard: one item hits a REAL
         transaction-aborting DB error (not a mocked raise). Without the
         per-item ``with transaction.atomic()`` savepoint the outer atomic is
         poisoned and the whole batch (incl. the final finalization_status
@@ -607,7 +608,7 @@ class TestBulkUnfinalizeShareContentView:
 
     @pytest.mark.parametrize("bad_id", [123, None, {"id": "x"}])
     def test_non_string_id_returns_400(self, api_client, tenant, bad_id):
-        """A non-string composite id used to reach ``.split`` and return 500."""
+        """A non-string composite id is refused before it reaches ``.split``."""
         resp = api_client.post(
             URL_UNFINALIZE_SC, {"ids": ["2026_15_abc_KG_M", bad_id]}, format="json"
         )
@@ -642,7 +643,7 @@ class TestBulkUnfinalizeShareContentView:
 
 
 # ---------------------------------------------------------------------------
-# _get_finalization_status (REF-10 batched aggregation / REF-12 empty group)
+# _get_finalization_status (batched aggregation / empty group)
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestGetFinalizationStatus:
@@ -688,7 +689,7 @@ class TestGetFinalizationStatus:
         assert _get_finalization_status([cid]) == {cid: False}
 
     def test_unknown_group_is_false(self, tenant):
-        # Well-formed composite id, zero matching rows (REF-12 empty group).
+        # Well-formed composite id, zero matching rows (empty group).
         assert _get_finalization_status(["2026_52_nope_KG_M"]) == {
             "2026_52_nope_KG_M": False
         }
@@ -718,7 +719,7 @@ class TestGetFinalizationStatus:
         assert result[variant] is True
 
     def test_single_query_regardless_of_id_count(self, tenant):
-        # REF-10 regression guard: a batched aggregation, not 1-2 queries per id.
+        # A batched aggregation, not 1-2 queries per id.
         # Six distinct composite groups off one Share (distinct articles).
         share = self._share()
         scs = [
@@ -735,5 +736,5 @@ class TestGetFinalizationStatus:
             result = _get_finalization_status(ids)
         assert all(result[cid] for cid in ids)
         # One aggregation query (allow a tiny margin for any savepoint noise);
-        # the old per-id version would issue ~2 × len(ids).
+        # a per-id lookup would issue ~2 × len(ids).
         assert len(ctx.captured_queries) <= 2

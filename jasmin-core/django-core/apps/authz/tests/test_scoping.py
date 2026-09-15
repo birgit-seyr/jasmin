@@ -58,7 +58,7 @@ class TestPrivilegedBypass:
             path="id",
             privileged_roles=[Role.STAFF],
         )
-        # OFFICE is no longer privileged AND has no linked_reseller → none.
+        # OFFICE isn't privileged here AND has no linked_reseller → none.
         assert qs.count() == 0
 
 

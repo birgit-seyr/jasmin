@@ -81,7 +81,7 @@ class TestWasteViewSet:
 
     def test_create_with_page_level_storage(self, api_client, tenant):
         """A waste create carries the page-level storage as the plain `storage`
-        FK (the shape DocumentationWaste sends after the mirror). The row lands
+        FK (the shape DocumentationWaste sends). The row lands
         on that storage."""
         storage = StorageFactory(is_short_term_harvest_storage=True)
         article = ShareArticleFactory()
@@ -104,9 +104,8 @@ class TestWasteViewSet:
         assert waste.storage_id == storage.id
 
     def test_create_without_plain_storage_is_rejected(self, api_client, tenant):
-        """Regression: the ``storage_<id>`` flag alone does NOT satisfy the
-        required ``storage`` FK — the client must send the resolved plain
-        ``storage``. This is the latent create bug the page-level mirror fixes."""
+        """The ``storage_<id>`` flag alone does NOT satisfy the required
+        ``storage`` FK — the client must send the resolved plain ``storage``."""
         storage = StorageFactory(is_short_term_harvest_storage=True)
         article = ShareArticleFactory()
         resp = api_client.post(
@@ -162,7 +161,7 @@ class TestPurchaseViewSet:
 
     def test_create_with_page_level_storage(self, api_client, tenant):
         """A new-row create carries the page-level storage as the plain `storage`
-        FK (the shape DocumentationPurchase now sends, mirroring
+        FK (the shape DocumentationPurchase sends, mirroring
         DocumentationHarvest). The row lands on that storage."""
         storage = StorageFactory(is_short_term_harvest_storage=True)
         article = ShareArticleFactory(is_purchased=True)
@@ -193,7 +192,7 @@ class TestForecastViewSet:
 
     def test_list_requires_year_and_week(self, api_client, tenant):
         # year + delivery_week are required query params (matches the schema);
-        # omitting them no longer falls through to an unprefetched list of all
+        # omitting them must not fall through to an unprefetched list of all
         # forecasts.
         resp = api_client.get(self.URL)
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -221,9 +220,7 @@ class TestForecastViewSet:
 @pytest.mark.django_db
 class TestForecastInvalidVariation:
     """A non-existent ``variation_<id>`` key must surface as a stable 404
-    (``share_type_variation.not_found``), not an opaque 500. The service used
-    to raise a bare ValueError mid-transaction, which the global handler
-    rendered as a generic internal error."""
+    (``share_type_variation.not_found``), not an opaque 500."""
 
     URL = reverse("forecast-list")
 
@@ -323,7 +320,7 @@ class TestPurchaseExportCsv:
     ):
         """A week-scoped purchase (no day_number) must appear whenever its
         delivery WEEK overlaps the range — not only when the week's Monday sits
-        inside it (the empty-export bug) — and the unit/size codes render as
+        inside it — and the unit/size codes render as
         localized labels, not raw ``PCS`` / ``M``."""
         from decimal import Decimal
 
@@ -334,8 +331,8 @@ class TestPurchaseExportCsv:
 
         article = ShareArticleFactory(is_purchased=True, name="Möhren")
         storage = StorageFactory(is_short_term_harvest_storage=True)
-        # A seller is the path that used to crash the export (Reseller has no
-        # ``.name`` — it's on ``seller.contact``), leaving only the header.
+        # A seller exercises the seller-name path (Reseller has no ``.name`` —
+        # it's on ``seller.contact``).
         seller = ResellerFactory()
         PurchaseFactory(
             year=2026,
@@ -350,7 +347,7 @@ class TestPurchaseExportCsv:
             organic_status="organic",
         )
         # ISO week 15/2026 = Mon 2026-04-06 .. Sun 2026-04-12; start on Tuesday so
-        # the old Monday-anchored filter would have dropped the row.
+        # a Monday-anchored filter would drop the row.
         resp = api_client.get(
             URL_PURCHASE_EXPORT_CSV,
             {"date_from": "2026-04-07", "date_to": "2026-04-12"},
@@ -412,7 +409,7 @@ class TestHarvestExportCsv:
         lang = DocumentationExportService._resolve_csv_language()
         if lang == "de":
             assert "Montag" in body
-            assert "Monday" not in body  # the old English weekday is gone
+            assert "Monday" not in body  # no untranslated English weekday
             assert "Stk" in body
         else:
             assert "Monday" in body
@@ -493,7 +490,7 @@ class TestBulkSetAsExpected:
         assert float(purchase.amount) == 8.0
 
     def test_harvest_malformed_item_returns_400(self, api_client, tenant):
-        # Non-numeric amount → the now-wired serializer.is_valid rejects the
+        # Non-numeric amount → serializer.is_valid rejects the
         # request before the service runs.
         bad = {
             "selectedData": [
@@ -580,7 +577,7 @@ _CASCADE = (
 
 @pytest.mark.django_db
 class TestMovementSourceDeleteRecascades:
-    """MOV-5: deleting a Harvest/Purchase/Waste cascade-deletes its movement, so
+    """Deleting a Harvest/Purchase/Waste cascade-deletes its movement, so
     perform_destroy must re-cascade stock snapshots for the affected entity (the
     plain DRF destroy never recomputes)."""
 

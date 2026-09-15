@@ -1,7 +1,6 @@
 // ActiveSubscriptionsCard buckets a member's subscriptions into active /
 // coming / pending (not-yet-confirmed) / past and shows an empty state when
-// there are none. These tests lock that bucketing + the empty-state
-// (regression of MEM-3).
+// there are none. These tests lock that bucketing + the empty-state.
 
 import React from "react";
 import { describe, it, expect, vi } from "vitest";

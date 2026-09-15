@@ -427,7 +427,7 @@ class StorageFieldsMixin:
 
         DRF's list serializer reuses ONE child instance for every row, so
         memoizing here evaluates ``Storage.objects.filter(is_active=True)``
-        once per response instead of once per row (the previous N+1).
+        once per response instead of once per row.
         Tenant-safe: a serializer instance only ever serves one request /
         schema.
 

@@ -12,8 +12,7 @@ Tests insert ``LogEntry`` rows directly rather than driving real
 deletes through the ORM. django-auditlog needs middleware to set
 ``actor`` from a request, which doesn't exist in a Huey-task unit
 test context. Going through the model layer is the right shape for
-end-to-end tests of the audit pipeline (covered in
-``apps/payments/tests/test_auditlog.py``); here we just need rows
+end-to-end tests of the audit pipeline; here we just need rows
 in the shape the alert will read.
 """
 

@@ -4,10 +4,8 @@ Contract:
 
   * The action MUST route through ``EmailService.send_email`` with
     ``slug="tenants.smtp_test"`` and ``purpose="test:smtp"`` so the
-    send lands in EmailLog like every other send. The previous
-    direct-``EmailMessage`` path was the only send in the codebase
-    that bypassed EmailLog.
-  * Recipient allowlist (audit A6): ``to_email`` must be the
+    send lands in EmailLog like every other send.
+  * Recipient allowlist: ``to_email`` must be the
     requesting user's own email or the (admin-controlled) tenant
     contact email — a compromised office account must not be able to
     use the tenant's SMTP as a spam relay. The office-writable
@@ -22,8 +20,8 @@ Contract:
   * Errors are JasminErrors — canonical ``{code, message}`` body.
 
 We patch ``EmailService.send_email`` with ``autospec=True`` so the
-mock keeps the same ``self`` binding as the real method — same
-class-vs-instance protection as the P0-1 regression test.
+mock keeps the same ``self`` binding as the real method, letting the
+tests assert it is called via an instance, not the class.
 """
 
 from __future__ import annotations
@@ -154,7 +152,7 @@ class TestTenantSmtpTestSend:
         assert send_email.called
         # autospec keeps ``self`` as the first positional arg —
         # asserts the helper hit the method via an instance, not the
-        # class. Same protection pattern as the P0-1 regression.
+        # class.
         bound_self = send_email.call_args.args[0]
         assert isinstance(bound_self, EmailService)
         kwargs = send_email.call_args.kwargs

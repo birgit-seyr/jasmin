@@ -145,9 +145,8 @@ const MemberDetail = () => {
 
   // Confirmed subscriptions whose term hasn't ended — INCLUDING ones that
   // haven't started yet. Their FUTURE deliveries / payments / jokers must show
-  // on the member's detail; the old `valid_from <= today` gate hid every
-  // not-yet-started membership (and everything derived from it). ActiveSubscriptions
-  // Card recomputes its own "currently active" set, so this rename doesn't affect it.
+  // on the member's detail, so don't gate on `valid_from <= today`.
+  // ActiveSubscriptionsCard recomputes its own "currently active" set.
   const confirmedSubscriptions = useMemo(() => {
     if (!subscriptions?.length) return [];
     const today = dayjs().format("YYYY-MM-DD");
@@ -224,10 +223,10 @@ const MemberDetail = () => {
   // full profile because they're the ones reviewing the application.
   //
   // We don't actually leak any sensitive data by skipping this gate
-  // for office viewers — the security audit confirmed every endpoint
-  // is own-data-scoped — but the member-facing UX is the point: a
-  // half-rendered dashboard with empty cards reads as broken; a clear
-  // "your application is being reviewed" page reads as expected.
+  // for office viewers — every endpoint is own-data-scoped — but the
+  // member-facing UX is the point: a half-rendered dashboard with empty
+  // cards reads as broken; a clear "your application is being reviewed"
+  // page reads as expected.
   //
   // Logo above the gate's icon — visual continuity with the rest of
   // the tenant's branding so the page doesn't look like a generic

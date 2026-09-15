@@ -206,7 +206,7 @@ class TestWashingCleaningMutuallyExclusive:
     The planning/offers/orders grid already clears one flag when the other is set;
     these constraints mirror that at the DB so the API / imports / bulk paths can't
     write the both-true state that double-transfers a long-term line long→short in
-    the goods-flow (goods-flow-audit finding #1). ``.update()`` bypasses save()/
+    the goods-flow. ``.update()`` bypasses save()/
     full_clean() — the DB guard must still fire.
     """
 
@@ -238,12 +238,12 @@ class TestWashingCleaningMutuallyExclusive:
         assert content.cleaning is True
 
 
-# ───────── Harvest/purchase theoretical storage invariant (finding #9) ─────────
+# ───────── Harvest/purchase theoretical storage invariant ─────────
 @pytest.mark.django_db
 class TestHarvestStorageInvariant:
     """Harvest & purchase theoreticals accept EITHER harvest storage (short- OR
     long-term): a ``comes_from_long_term`` line is deposited in long-term storage
-    at harvest (``Storage.select_harvest``), so requiring short-term made every
+    at harvest (``Storage.select_harvest``), so requiring short-term would make every
     such ``TheoreticalHarvest`` violate its own invariant (latent under
     bulk_create, a 500 on a later PATCH). Wash/clean theoreticals still lock to
     short-term. The factories call ``save()`` → ``full_clean()``, so a rejected
@@ -274,7 +274,7 @@ class TestHarvestStorageInvariant:
         assert tp.storage.is_long_term_harvest_storage
 
     def test_wash_still_rejects_long_term_storage(self, tenant):
-        # Regression: wash/clean theoreticals must stay short-term-locked.
+        # Wash/clean theoreticals must stay short-term-locked.
         long_term = StorageFactory(is_long_term_harvest_storage=True)
         with pytest.raises(ValidationError):
             TheoreticalWashAmountFactory(storage=long_term)

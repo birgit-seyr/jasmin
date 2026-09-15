@@ -15,11 +15,6 @@ The decision tree locked here:
                   reject (trial member can't hold trial sub).
                 else allow.
 
-``Subscription.member`` is structurally NOT NULL — the old
-``only_members_can_have_subscriptions`` flag was a no-op and got
-dropped pre-squash. ``allows_trial_members`` was likewise dropped
-(pre-squash) because it was fully derivable from the surviving pair.
-
 Settings missing entirely (no current overlay row) defaults to
 "allow" — a freshly-provisioned tenant must remain usable before
 the first configuration save.

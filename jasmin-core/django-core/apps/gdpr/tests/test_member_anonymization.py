@@ -8,12 +8,6 @@ member-scrub-completeness check: one explicit assertion per
 PII-bearing field, so any future column added to ``Member`` lands
 either in this test (✓ classified) or in the
 ``test_field_classification_guard`` (✗ unclassified → CI fails).
-
-Regression context: ``birth_date`` was added to ``Member`` in
-2026-06 (GenG §30 audit). It was surfaced in the SAR bundle but
-NOT registered in ``FIELD_CLASSIFICATION``, so anonymization
-silently left the real date of birth on the row. The classification
-guard didn't catch it because it only walked text-typed fields.
 """
 
 from __future__ import annotations
@@ -36,8 +30,7 @@ from apps.gdpr.services import GDPRService
 class TestMemberAnonymization:
     def test_birth_date_is_scrubbed(self, tenant):
         """DoB is directly-identifying PII — must be NULLed on
-        anonymization. Regression test for the 2026-06 gap where the
-        field shipped without a classification entry."""
+        anonymization."""
         user = JasminUserFactory()
         member = MemberFactory(
             user=user,
@@ -106,7 +99,7 @@ class TestMemberAnonymization:
         """Production flow: admin cancels the member via
         ``cancel_member_with_coop_shares`` (stamping member + cascading
         the shares' cancellation timestamps), THEN runs the GDPR
-        anonymisation. Locks the Bug A regression end-to-end:
+        anonymisation. Locks end-to-end:
 
         - ``_anonymize_member`` scrubs PII columns + sets
           ``is_active=False`` and persists with ``member.save()`` —
@@ -156,7 +149,7 @@ class TestMemberAnonymization:
         share_a.refresh_from_db()
         share_b.refresh_from_db()
 
-        # (1) Scrub committed — the bug was here.
+        # (1) Scrub committed.
         assert member.first_name == "Gelöscht"
         assert member.email is None
         assert member.birth_date is None
@@ -186,9 +179,9 @@ class TestMemberAnonymization:
         assert member.cancelled_effective_at is not None
 
     def test_cancellation_reasons_scrubbed_on_anonymize(self, tenant):
-        """GDPR-DEL-2: free-text cancellation reasons on the Member AND its
+        """Free-text cancellation reasons on the Member AND its
         Subscription / MemberLoan rows are scrubbed on erasure (they routinely
-        hold PII and previously survived anonymization)."""
+        hold PII)."""
         from apps.commissioning.models import MemberLoan, Subscription
         from apps.commissioning.tests.factories import SubscriptionFactory
 
@@ -228,7 +221,7 @@ class TestMemberAnonymization:
         assert loan.cancelled_reason is None
 
     def test_reseller_name_scrubbed_in_background_job_results(self, tenant):
-        """GDPR-DEL-3: the anonymized reseller's name, copied into offer
+        """The anonymized reseller's name, copied into offer
         bulk-send ``BackgroundJob.result`` payloads, is blanked while the
         ``reseller_id`` (a non-PII correlator) is preserved."""
         from apps.commissioning.tests.factories import ResellerFactory
@@ -286,8 +279,7 @@ class TestMemberAnonymization:
     def test_auditlog_scrub_covers_member_linked_models(self, tenant):
         """The scrub must reach every auditlog-registered model whose
         ``object_repr`` names the member, not just the Member row — a
-        CoopShare's repr is ``"CoopShare N for <member>"``. Regression
-        guard for the 2026-06-12 completeness gap."""
+        CoopShare's repr is ``"CoopShare N for <member>"``."""
         from auditlog.models import LogEntry
 
         from apps.commissioning.services.member_cancellation import (
@@ -322,7 +314,7 @@ class TestMemberAnonymization:
 
 @pytest.mark.django_db
 class TestSepaExportPurge:
-    """GDPR-2: a billing run's pain.008 file embeds the debtor name + IBAN in
+    """A billing run's pain.008 file embeds the debtor name + IBAN in
     cleartext. When a member is anonymised (10y post-exit) every run that
     debited them is itself past retention, so anonymisation must erase the
     on-disk file while keeping the BillingRun row (the financial record)."""
