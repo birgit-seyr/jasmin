@@ -168,28 +168,43 @@ class PreviewMixin:
 
         ``row_count`` is the number of rows that would actually change; for the
         Subscription / CoopShare / MemberLoan reasons the executor's bulk
-        ``.update`` skips null reasons, so only rows carrying a reason count.
+        ``.update`` skips null reasons, so only rows carrying a reason count. For
+        CoopShareTransfer it counts the transfers with a note plus the coop share
+        rows those transfers created with a note, the other member's rows included.
         """
 
-        def count(model: type, **flt: Any) -> tuple[bool, int]:
-            c = model.objects.filter(**flt).count()
-            return (c > 0, c)
+        def presence_and_row_count(model: type, **filters: Any) -> tuple[bool, int]:
+            row_count = model.objects.filter(**filters).count()
+            return (row_count > 0, row_count)
 
         presence: dict[str, tuple[bool, int]] = {"accounts.JasminUser": (True, 1)}
 
         if member is not None:
             presence["commissioning.Member"] = (True, 1)
-            presence["commissioning.Subscription"] = count(
+            presence["commissioning.Subscription"] = presence_and_row_count(
                 Subscription, member=member, cancellation_reason__isnull=False
             )
-            presence["commissioning.CoopShare"] = count(
+            presence["commissioning.CoopShare"] = presence_and_row_count(
                 CoopShare, member=member, cancellation_reason__isnull=False
             )
-            presence["commissioning.MemberLoan"] = count(
+            presence["commissioning.MemberLoan"] = presence_and_row_count(
                 MemberLoan, member=member, cancelled_reason__isnull=False
             )
-            presence["payments.BillingProfile"] = count(BillingProfile, member=member)
-            presence["commissioning.ConsentRecord"] = count(
+            transfers = GDPRService._coop_share_transfers_of(member)
+            transfer_notes = (
+                transfers.exclude(note__isnull=True).count()
+                + CoopShare.objects.filter(transfer__in=transfers)
+                .exclude(note__isnull=True)
+                .count()
+            )
+            presence["commissioning.CoopShareTransfer"] = (
+                transfer_notes > 0,
+                transfer_notes,
+            )
+            presence["payments.BillingProfile"] = presence_and_row_count(
+                BillingProfile, member=member
+            )
+            presence["commissioning.ConsentRecord"] = presence_and_row_count(
                 ConsentRecord, member=member
             )
 
@@ -200,7 +215,9 @@ class PreviewMixin:
                 1,
             )
 
-        presence["commissioning.UserInvitation"] = count(UserInvitation, user=user)
+        presence["commissioning.UserInvitation"] = presence_and_row_count(
+            UserInvitation, user=user
+        )
 
         # ``_ci_recipient_q`` on an EMPTY set is an empty ``Q()`` that matches
         # every row — guard it so an emailless user doesn't "match all".

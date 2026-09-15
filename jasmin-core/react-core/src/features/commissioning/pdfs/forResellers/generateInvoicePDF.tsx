@@ -43,7 +43,7 @@ export async function generateAndUploadInvoicePDF(
   }
 
   const bankDetails = buildBankDetails(tenant);
-  const pdfDataObj = buildInvoicePdfData(invoiceData, bankDetails);
+  const invoicePdfData = buildInvoicePdfData(invoiceData, bankDetails);
 
   const { tenantSettings, footerSettings, currencySymbol, lineSettings } =
     await buildResellerPdfContext({
@@ -63,9 +63,9 @@ export async function generateAndUploadInvoicePDF(
 
   const qrCode = await generatePaymentQRCode(
     {
-      prefix: pdfDataObj.invoice.prefix,
-      invoice_number: pdfDataObj.invoice.invoice_number,
-      total_brutto: pdfDataObj.totals.brutto,
+      prefix: invoicePdfData.invoice.prefix,
+      invoice_number: invoicePdfData.invoice.invoice_number,
+      total_brutto: invoicePdfData.totals.brutto,
     },
     bankDetails,
     t,
@@ -81,7 +81,7 @@ export async function generateAndUploadInvoicePDF(
 
   const pdfDocument = (
     <InvoicePDF
-      data={pdfDataObj}
+      data={invoicePdfData}
       t={t}
       qrCodeDataUrl={qrCode}
       bankDetails={bankDetails}
@@ -97,16 +97,16 @@ export async function generateAndUploadInvoicePDF(
   // A storno / correction is stored (and emailed) as "Storno-Rechnung-…",
   // not "Rechnung-…", so the reseller's cancellation attachment isn't named
   // like a regular invoice.
-  const docLabel = isCreditNote(pdfDataObj.invoice.document_type)
+  const docLabel = isCreditNote(invoicePdfData.invoice.document_type)
     ? t("commissioning.storno_invoice_title")
     : t("commissioning.invoice");
-  const fileName = `${docLabel}-${pdfDataObj.invoice.prefix}-${pdfDataObj.invoice.invoice_number}.pdf`;
-  const xmlFileName = `${docLabel}-${pdfDataObj.invoice.prefix}-${pdfDataObj.invoice.invoice_number}.xml`;
+  const fileName = `${docLabel}-${invoicePdfData.invoice.prefix}-${invoicePdfData.invoice.invoice_number}.pdf`;
+  const xmlFileName = `${docLabel}-${invoicePdfData.invoice.prefix}-${invoicePdfData.invoice.invoice_number}.xml`;
 
   // Generate PDF blob and XML string
   const pdfBlob = await pdf(pdfDocument).toBlob();
   const xmlString = generateZUGFeRDXML(
-    pdfDataObj,
+    invoicePdfData,
     bankDetails,
     tenantSettings,
     t,

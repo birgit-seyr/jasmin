@@ -603,6 +603,7 @@ export default function Members() {
               variant="emails"
               onClick={() => setEmailsRecord(record)}
               tooltip={t("members.sent_emails")}
+              showTooltip
             />
           );
         },
@@ -625,6 +626,7 @@ export default function Members() {
                 setLoggingModalOpen(true);
               }}
               tooltip={t("logging.title")}
+              showTooltip
             />
           );
         },
@@ -648,6 +650,7 @@ export default function Members() {
               variant="bankDetails"
               onClick={() => setBankRecord(record)}
               tooltip={t("members.edit_bank_details")}
+              showTooltip
             />
           );
         },
@@ -672,6 +675,7 @@ export default function Members() {
               variant="cancel"
               onClick={() => setCancelRecord(record)}
               tooltip={t("members.cancel_membership_button_tooltip")}
+              showTooltip
             />
           );
         },
@@ -694,7 +698,7 @@ export default function Members() {
     ],
   );
 
-  const handleDataChange = useCallback(() => {
+  const invalidateMembersList = useCallback(() => {
     // exact:true — this page mounts only the paramless members-list key.
     // Without it, prefix-matching also invalidates the params-bearing
     // useMembers() variants other screens use (member dropdowns/selectors),
@@ -706,11 +710,11 @@ export default function Members() {
   }, [queryClient]);
 
   // Stop reorder-on-save — see ``useInvalidateAfterTableMutation``
-  // docstring. ``handleDataChange`` is still used as the CSV upload's
-  // ``onUploadSuccess`` (line ~604) where a refetch IS wanted; this
-  // hook only swaps it out for the inline-edit save path.
+  // docstring. ``invalidateMembersList`` stays the CSV upload's
+  // ``onUploadSuccess``, where a refetch IS wanted; this hook only swaps it
+  // out for the inline-edit save path.
   const { onSaveSuccess, onDeleteSuccess } =
-    useInvalidateAfterTableMutation(handleDataChange);
+    useInvalidateAfterTableMutation(invalidateMembersList);
 
   // Patch a single row in the cached list. Avoids re-fetching (which
   // would re-sort/re-page the table). ``patch`` is shallow-merged into
@@ -884,7 +888,7 @@ export default function Members() {
         loading={rejectModalLoading}
         onReject={async () => {
           const targetId = selectedMemberForRejection?.id;
-          const data = await rejectMember();
+          const rejectedMember = await rejectMember();
           // Patch the row with whatever fields the backend touched
           // (admin_confirmed stays false, cancelled_at gets stamped,
           // rejected_at if the model has it). Falls back to a minimal
@@ -893,7 +897,9 @@ export default function Members() {
           if (targetId !== undefined) {
             patchRowById(
               targetId,
-              data ? { ...data } : { admin_confirmed: false },
+              rejectedMember
+                ? { ...rejectedMember }
+                : { admin_confirmed: false },
             );
           }
         }}
@@ -972,7 +978,7 @@ export default function Members() {
           patchRowById(cancelRecord?.id, {
             cancelled_at: new Date().toISOString(),
           });
-          handleDataChange();
+          invalidateMembersList();
         }}
       />
 
@@ -982,7 +988,7 @@ export default function Members() {
         ibanMasked={bankRecord?.iban_masked}
         accountOwnerMasked={bankRecord?.account_owner_masked}
         onClose={() => setBankRecord(null)}
-        onSaved={handleDataChange}
+        onSaved={invalidateMembersList}
       />
 
       <ExplainerText title={t("common.info")}>
@@ -1020,7 +1026,7 @@ export default function Members() {
         columns={columns}
         filename={t("commissioning.members_template.csv")}
         uploadAllowed={uploadAllowed}
-        onUploadSuccess={handleDataChange}
+        onUploadSuccess={invalidateMembersList}
         manualTransferActive={manualMemberTransfer}
         onToggleManualTransfer={() => setManualMemberTransfer((v) => !v)}
       />
@@ -1029,7 +1035,7 @@ export default function Members() {
         open={coopShareImportModalOpen}
         onClose={() => setCoopShareImportModalOpen(false)}
         uploadAllowed={uploadAllowed}
-        onUploadSuccess={handleDataChange}
+        onUploadSuccess={invalidateMembersList}
       />
 
       <InviteUserModal
@@ -1052,7 +1058,7 @@ export default function Members() {
         }}
         onCreated={() => {
           notify.success(t("members.invitation_sent"));
-          // exact:true — scope to this page's key (see handleDataChange above).
+          // exact:true — scope to this page's key (see invalidateMembersList above).
           queryClient.invalidateQueries({
             queryKey: getCommissioningMembersListQueryKey(),
             exact: true,

@@ -5,8 +5,9 @@ this is to confirm your withdrawal from {{ tenant_name }}.
 {% if cancelled_effective_at %}Date of withdrawal (GenG §30): {{ cancelled_effective_at }}.{% endif %}
 {% if member.member_number %}Your former member number is #{{ member.member_number }}. We retain it for the statutory record-keeping period.{% endif %}
 
-We will contact you separately about the payout of your
-cooperative share balance.
+{% if shares_transferred %}Your cooperative shares were transferred to another member, so there
+is no payout of your cooperative share balance.{% else %}We will contact you separately about the payout of your
+cooperative share balance.{% endif %}
 
 If you have any questions, please reply to this email.
 

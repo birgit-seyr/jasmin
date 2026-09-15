@@ -46,12 +46,12 @@ export default function DeliveryNotePDFButtons({
     if (!deliveryNoteId) return;
     setLoading(true);
     try {
-      const dn = await commissioningDeliveryNotesRetrieve(deliveryNoteId);
-      if (!dn.file) {
+      const deliveryNote = await commissioningDeliveryNotesRetrieve(deliveryNoteId);
+      if (!deliveryNote.file) {
         notify.error(t("commissioning.pdf_not_available"));
         return;
       }
-      openStoredPdf(dn.file);
+      openStoredPdf(deliveryNote.file);
     } catch (err) {
       console.error("Failed to load delivery note for PDF download:", err);
       notify.error(t("common.error_loading_data"));

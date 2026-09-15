@@ -3706,6 +3706,67 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/commissioning/coop_shares/transfer/:
+    post:
+      operationId: commissioning_coop_shares_transfer_create
+      description: |-
+        Transfer confirmed, paid coop shares from one member to another (GenG §76).
+
+        Existing coop share rows stay unchanged: the giving member gets a negative
+        row and the receiving member a positive row per share value, both
+        confirmed and paid on the transfer date. The min/max window is checked on
+        the final state of both members: a giving member left above 0 but below
+        the minimum is refused (``member.coop_shares_out_of_range``). A giving
+        member left without confirmed shares has those rows closed without a
+        payback date and is cancelled effective on the transfer date, which the
+        request has to confirm with ``confirm_member_cancellation``.
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoopShareTransferRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CoopShareTransferRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CoopShareTransferRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoopShareTransfer'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/commissioning/crate_contents/:
     get:
       operationId: commissioning_crate_contents_list
@@ -30420,6 +30481,14 @@ components:
           nullable: true
         member:
           type: string
+        transfer:
+          type: string
+          readOnly: true
+          nullable: true
+        settled_by_transfer:
+          type: string
+          readOnly: true
+          nullable: true
         admin_confirmed_by_name:
           type: string
           readOnly: true
@@ -30428,6 +30497,84 @@ components:
       - amount_of_coop_shares
       - member
       - value_one_coop_share
+    CoopShareTransfer:
+      type: object
+      description: |-
+        A recorded coop share transfer. ``from_member_cancelled`` (passed in the
+        serializer context by the transfer action) is true when the transfer left the
+        giving member without shares and cancelled the membership.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        from_member:
+          type: string
+          readOnly: true
+        to_member:
+          type: string
+          readOnly: true
+        amount_of_coop_shares:
+          type: integer
+          readOnly: true
+        transfer_date:
+          type: string
+          format: date
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        from_member_cancelled:
+          type: boolean
+          readOnly: true
+    CoopShareTransferRequest:
+      type: object
+      description: |-
+        Body of ``POST /api/commissioning/coop_shares/transfer/``. ``note`` is kept
+        on the transfer record; ``from_member_note`` / ``to_member_note`` become the
+        notes of the negative row created for the giving member and the positive row
+        created for the receiving member. ``confirm_member_cancellation`` must be true
+        when the transfer leaves the giving member without shares, which cancels the
+        membership.
+      properties:
+        from_member:
+          type: string
+        to_member:
+          type: string
+        amount_of_coop_shares:
+          type: integer
+          minimum: 1
+        transfer_date:
+          type: string
+          format: date
+        note:
+          type: string
+          nullable: true
+          maxLength: 2000
+        from_member_note:
+          type: string
+          nullable: true
+          maxLength: 2000
+        to_member_note:
+          type: string
+          nullable: true
+          maxLength: 2000
+        confirm_member_cancellation:
+          type: boolean
+          default: false
+      required:
+      - amount_of_coop_shares
+      - from_member
+      - to_member
+      - transfer_date
     Crate:
       type: object
       description: |-
@@ -32564,6 +32711,14 @@ components:
       required:
       - delivery_day
       - tours
+    DirectionEnum:
+      enum:
+      - given
+      - received
+      type: string
+      description: |-
+        * `given` - given
+        * `received` - received
     DocumentTypeEnum:
       enum:
       - invoice
@@ -37610,6 +37765,34 @@ components:
       - is_increase
       - note
       - paid_at
+    SarCoopShareTransfer:
+      type: object
+      description: |-
+        ``CoopShareTransfer`` the subject took part in. The other member is left
+        out (third-party data); ``direction`` says which side the subject was on.
+      properties:
+        id:
+          type: string
+        direction:
+          $ref: '#/components/schemas/DirectionEnum'
+        amount_of_coop_shares:
+          type: integer
+        transfer_date:
+          type: string
+          format: date
+        note:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - amount_of_coop_shares
+      - created_at
+      - direction
+      - id
+      - note
+      - transfer_date
     SarDeletionRequestSummary:
       type: object
       description: |-
@@ -40296,6 +40479,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SarCoopShare'
+        coop_share_transfers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SarCoopShareTransfer'
         subscriptions:
           type: array
           items:
@@ -40333,6 +40520,7 @@ components:
       - billing_profile
       - charge_schedules
       - consents
+      - coop_share_transfers
       - coop_shares
       - deletion_requests
       - email_log

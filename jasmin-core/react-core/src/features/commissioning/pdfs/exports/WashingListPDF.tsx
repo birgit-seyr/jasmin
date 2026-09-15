@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next";
 import ArticleAmountTickListPDF, {
-  WASHING_LIST_PILL_KEY,
   washAmountAccessor,
   type ArticleAmountTickItem,
 } from "./ArticleAmountTickListPDF";
@@ -20,7 +19,7 @@ export interface WashingListPDFProps {
 const WashingListPDF = (props: WashingListPDFProps) => (
   <ArticleAmountTickListPDF
     {...props}
-    pillKey={WASHING_LIST_PILL_KEY}
+    pillKey="commissioning.washing_list"
     amountAccessor={washAmountAccessor}
   />
 );

@@ -1,6 +1,6 @@
 import { MoonOutlined, SunOutlined } from "@ant-design/icons";
 import { Switch } from "antd";
-import { useLocale } from "@shared/contexts/LocalContext";
+import { useLocale } from "@shared/contexts/LocaleContext";
 
 // not used right now, but will be wired in the future
 

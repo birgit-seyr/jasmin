@@ -101,9 +101,9 @@ class SupportTicketAdminViewSet(ViewSet):
     )
     @action(detail=True, methods=["post"])
     def reply(self, request, pk=None):
-        req = SupportTicketReplyRequestSerializer(data=request.data)
-        req.is_valid(raise_exception=True)
-        body = req.validated_data["body"].strip()
+        serializer = SupportTicketReplyRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        body = serializer.validated_data["body"].strip()
         if not body:
             raise TicketReplyEmpty("Reply body must not be empty.")
         with schema_context("public"):
@@ -140,9 +140,9 @@ class SupportTicketAdminViewSet(ViewSet):
     )
     @action(detail=True, methods=["post"], url_path="set-status")
     def set_status(self, request, pk=None):
-        req = SupportTicketSetStatusRequestSerializer(data=request.data)
-        req.is_valid(raise_exception=True)
-        new_status = req.validated_data["status"]
+        serializer = SupportTicketSetStatusRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_status = serializer.validated_data["status"]
         with schema_context("public"):
             ticket = self._get_ticket(pk)
             old_status = ticket.status

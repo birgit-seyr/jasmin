@@ -14,8 +14,6 @@ import type { StepProps } from "../types";
 
 const { Paragraph, Text } = Typography;
 
-const LANGS = ["de", "en", "fr", "it"];
-
 /**
  * Step 5 — confirm the email address. On entering we email a code; the
  * applicant enters it, and on success we submit the full registration (which
@@ -92,7 +90,7 @@ export default function StepConfirmEmail({ data, update, next, back }: StepProps
       accepted_consent_documents: Object.keys(consents).length
         ? consents
         : undefined,
-      user_language: (LANGS.includes(langBase)
+      user_language: (["de", "en", "fr", "it"].includes(langBase)
         ? langBase
         : "en") as UserLanguageEnum,
     };

@@ -19,7 +19,7 @@ export {
 export { decimalsForUnit, formatAmountForUnit, renderNumber } from './amountFormat';
 export { getShareOptionLabel } from './shareOptionLabel';
 
-export { getDayName } from './dayNamesUtil';
+export { getDayName } from './weekdayNames';
 export { generatePdfFilename, formatWeekLabel, formatDayLabel } from './filenameUtils';
 // NB: pdfUtils (extractPdfColumns / stripHtmlToText) is intentionally NOT
 // re-exported here. It statically imports @react-pdf/renderer (~484KB gzip),

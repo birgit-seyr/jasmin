@@ -9,7 +9,6 @@ import {
   MobileCardNote,
   MobileCardTitle,
   getSizeLabelOrEmpty,
-  stopPropagation,
 } from "./primitives";
 import "./HarvestingMobileCard.css";
 
@@ -147,7 +146,7 @@ export function HarvestingMobileCard({
           // the action button inside is activated — it is not itself a control.
           // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- propagation boundary around interactive children
           <div
-            onClick={stopPropagation}
+            onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
             style={{
               display: "flex",

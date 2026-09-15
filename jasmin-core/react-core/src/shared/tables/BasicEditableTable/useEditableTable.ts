@@ -133,7 +133,7 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
   const getUpdateUrl = useCallback((id: Key) => `${apiEndpoints?.update}${id}/`, [apiEndpoints?.update]);
   const getDeleteUrl = useCallback((id: Key) => `${apiEndpoints?.delete}${id}/`, [apiEndpoints?.delete]);
 
-  const transformDataFORapi = useCallback(
+  const transformRowForApi = useCallback(
     (formData: Record<string, unknown>): Record<string, unknown> => {
       const transformedData = { ...formData };
 
@@ -170,7 +170,7 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
     [columns],
   );
 
-  const transformDataFROMapi = useCallback(
+  const transformRowsFromApi = useCallback(
     (apiData: unknown[]): T[] => {
       if (!Array.isArray(apiData)) return [];
 
@@ -349,7 +349,7 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
               // Only the canonical FK locations are valid as an id source.
               // Don't fall back to ``currentRecord[dataIndex]``: ``dataIndex``
               // carries the DISPLAY label string (rewritten by
-              // ``transformDataFROMapi`` to the matching option's label for
+              // ``transformRowsFromApi`` to the matching option's label for
               // select rendering), so using it as an FK id would push e.g.
               // ``"-"`` (the label of the null-option) into the save payload,
               // which the backend rejects as "Ungültiger pk".
@@ -386,7 +386,7 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
           });
         }
 
-        let transformedRow = transformDataFORapi(processedRow);
+        let transformedRow = transformRowForApi(processedRow);
 
         if (customSave) {
           try {
@@ -524,7 +524,7 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
         setSaveErrorMessage(null);
 
         if (key === -1) {
-          const newRecord = { ...transformDataFROMapi([savedRecord])[0], key: (savedRecord as T).id };
+          const newRecord = { ...transformRowsFromApi([savedRecord])[0], key: (savedRecord as T).id };
           const newDataWithRecord = [newRecord, ...data.filter((item) => item.key !== -1)];
           setData(newDataWithRecord);
           const newId = (savedRecord as T).id;
@@ -548,7 +548,7 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
           // columns survive.
           const updatedRecord = {
             ...currentRecord,
-            ...transformDataFROMapi([savedRecord])[0],
+            ...transformRowsFromApi([savedRecord])[0],
             key,
           };
           const newData = data.map((item) => (item.key === key ? updatedRecord : item));
@@ -635,8 +635,8 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
       form,
       createUrl,
       getUpdateUrl,
-      transformDataFORapi,
-      transformDataFROMapi,
+      transformRowForApi,
+      transformRowsFromApi,
       customSave,
       customUpdate,
       autoHandleDates,
@@ -656,8 +656,8 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
   );
 
   const add = useCallback(async (): Promise<T | undefined> => {
-    const addRecord = data.findIndex((item) => item.key === -1);
-    if (addRecord > -1) return data[addRecord];
+    const draftRowIndex = data.findIndex((item) => item.key === -1);
+    if (draftRowIndex > -1) return data[draftRowIndex];
 
     await save(editingKey);
 
@@ -747,13 +747,13 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
       if (typeof newData === "function") {
         setData((currentData) => {
           const result = newData(currentData);
-          return Array.isArray(result) ? transformDataFROMapi(result) : result;
+          return Array.isArray(result) ? transformRowsFromApi(result) : result;
         });
       } else {
-        setData(Array.isArray(newData) ? transformDataFROMapi(newData) : newData);
+        setData(Array.isArray(newData) ? transformRowsFromApi(newData) : newData);
       }
     },
-    [transformDataFROMapi],
+    [transformRowsFromApi],
   );
 
   return {

@@ -15,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { useCommissioningMembersRetrieve } from "@shared/api/generated/commissioning/commissioning";
 import { useRoles } from "@shared/auth/useRoles";
 import { useAuth } from "@shared/contexts/AuthContext";
-import { useLocale } from "@shared/contexts/LocalContext";
+import { useLocale } from "@shared/contexts/LocaleContext";
 import { useIsMobile } from "@hooks/index";
 import UserProfileModal, { type UserProfileTab } from "./UserProfileModal";
 
@@ -62,7 +62,7 @@ export default function UserMenu() {
     );
   }
 
-  const u = user as {
+  const currentUser = user as {
     first_name?: string;
     firstName?: string;
     last_name?: string;
@@ -72,14 +72,14 @@ export default function UserMenu() {
   } | null;
 
   const displayName =
-    u?.first_name || u?.firstName || u?.username || u?.email || "";
+    currentUser?.first_name || currentUser?.firstName || currentUser?.username || currentUser?.email || "";
   const initials = displayName
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((s) => s[0]?.toUpperCase() ?? "")
     .join("") || <UserOutlined />;
-  const memberId = u?.member_id;
+  const memberId = currentUser?.member_id;
 
   const openProfile = (tab: UserProfileTab) => {
     setProfileTab(tab);

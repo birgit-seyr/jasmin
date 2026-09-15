@@ -677,18 +677,20 @@ class ForecastService:
                     existing_shares[share_key] = share
 
                 for station_day in share_delivery_list:
-                    station_obj = station_day.delivery_station
+                    delivery_station = station_day.delivery_station
 
                     # A station may have multiple DeliveryStationDay rows for
                     # the same (station, delivery_day) — different tours, or
                     # historical/overlapping rows. We still want exactly one
                     # ShareContent per (share, share_article, station, unit, size).
-                    share_station_key = (share.id, station_obj.id)
+                    share_station_key = (share.id, delivery_station.id)
                     if share_station_key in seen_share_station_keys:
                         continue
                     seen_share_station_keys.add(share_station_key)
 
-                    existing = existing_contents_by_key.get((share.id, station_obj.id))
+                    existing = existing_contents_by_key.get(
+                        (share.id, delivery_station.id)
+                    )
 
                     if existing:
                         for share_content in existing:
@@ -699,7 +701,7 @@ class ForecastService:
                             ShareContent(
                                 share=share,
                                 share_article=share_article,
-                                delivery_station=station_obj,
+                                delivery_station=delivery_station,
                                 forecast=forecast,
                                 amount=amount,
                                 unit=unit,

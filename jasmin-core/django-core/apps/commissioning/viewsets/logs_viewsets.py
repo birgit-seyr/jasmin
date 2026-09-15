@@ -25,11 +25,6 @@ from ..serializers import (
 from ..utils.query_params import validate_query_params
 from .base_viewsets import serializer_model
 
-_LIST_PARAMETERS = [
-    get_year_parameter(required=False),
-    get_share_article_parameter(required=False),
-]
-
 _DEFAULT_WEEKS_BACK = 2
 
 
@@ -75,7 +70,12 @@ class _TheoreticalBaseViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             "year", "delivery_week", "day_number", "id"
         )
 
-    @extend_schema(parameters=_LIST_PARAMETERS)
+    @extend_schema(
+        parameters=[
+            get_year_parameter(required=False),
+            get_share_article_parameter(required=False),
+        ]
+    )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return super().list(request, *args, **kwargs)
 

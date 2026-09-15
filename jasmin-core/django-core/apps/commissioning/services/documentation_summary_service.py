@@ -666,14 +666,14 @@ class DocumentationSummaryService:
 
             # Get note from theoretical entries (all share the same note)
             theoretical_note = ""
-            for te in data["theoretical_entries"]:
-                if te.note:
-                    theoretical_note = te.note
+            for theoretical_entry in data["theoretical_entries"]:
+                if theoretical_entry.note:
+                    theoretical_note = theoretical_entry.note
                     break
             if not theoretical_note:
-                for ae in data["additional_entries"]:
-                    if ae.note:
-                        theoretical_note = ae.note
+                for additional_entry in data["additional_entries"]:
+                    if additional_entry.note:
+                        theoretical_note = additional_entry.note
                         break
 
             (
@@ -829,7 +829,7 @@ class DocumentationSummaryService:
 
         model_key = model.lower()
         models = DocumentationSummaryService.MODEL_MAPPING[model_key]
-        share_article_obj = ShareArticle.objects.get(id=data.get("share_article"))
+        share_article = ShareArticle.objects.get(id=data.get("share_article"))
         short_term_storage = DocumentationSummaryService._get_short_term_storage()
 
         common_fields = {
@@ -838,7 +838,7 @@ class DocumentationSummaryService:
             "day_number": (
                 data.get("day_number") if model_key != "purchase" else PURCHASE_DAY
             ),
-            "share_article": share_article_obj,
+            "share_article": share_article,
             "unit": data.get("unit"),
             "size": data.get("size"),
             "storage": short_term_storage,
@@ -854,17 +854,17 @@ class DocumentationSummaryService:
             )
 
         fk_field = DocumentationSummaryService._ADDITIONAL_FK_FIELD[model_key]
-        mtype = DocumentationSummaryService._MOVEMENT_TYPE[model_key]
+        movement_type = DocumentationSummaryService._MOVEMENT_TYPE[model_key]
 
         DocumentationSummaryService._upsert_additional_and_movement(
             models=models,
             common_fields=common_fields,
             data=data,
             model_key=model_key,
-            share_article=share_article_obj,
+            share_article=share_article,
             storage=short_term_storage,
             fk_field=fk_field,
-            mtype=mtype,
+            movement_type=movement_type,
             partial=False,
         )
 
@@ -887,13 +887,13 @@ class DocumentationSummaryService:
 
     @staticmethod
     def _sync_additional_movement(
-        additional_obj: Any,
+        additional_entry: Any,
         amount: Any,
         common_fields: dict[str, Any],
-        share_article_obj: Any,
+        share_article: Any,
         storage: Any,
         fk_field: str,
-        mtype: str,
+        movement_type: str,
     ) -> None:
         """Sync the movement for an additional theoretical entry."""
         from decimal import Decimal
@@ -905,9 +905,9 @@ class DocumentationSummaryService:
         _movement_datetime = GenericDocumentationService._movement_datetime
 
         old_movements = list(
-            MovementShareArticle.objects.filter(**{fk_field: additional_obj})
+            MovementShareArticle.objects.filter(**{fk_field: additional_entry})
         )
-        MovementShareArticle.objects.filter(**{fk_field: additional_obj}).delete()
+        MovementShareArticle.objects.filter(**{fk_field: additional_entry}).delete()
 
         new_movement = None
         # NOTE: ``amount`` may be a Decimal (DocumentationMixin.amount is a
@@ -920,9 +920,9 @@ class DocumentationSummaryService:
                     common_fields["delivery_week"],
                     common_fields["day_number"] or 0,
                 ),
-                movement_type=mtype,
-                **{fk_field: additional_obj},
-                share_article=share_article_obj,
+                movement_type=movement_type,
+                **{fk_field: additional_entry},
+                share_article=share_article,
                 unit=common_fields["unit"],
                 size=common_fields["size"],
                 amount=Decimal(str(amount)),
@@ -933,7 +933,7 @@ class DocumentationSummaryService:
         affected = old_movements + ([new_movement] if new_movement else [])
         if affected:
             SnapshotService.cascade_for_movements(affected)
-            recalculate_actual_corrections(affected, {mtype})
+            recalculate_actual_corrections(affected, {movement_type})
 
     @staticmethod
     def _upsert_additional_and_movement(
@@ -945,7 +945,7 @@ class DocumentationSummaryService:
         share_article: Any,
         storage: Any,
         fk_field: str,
-        mtype: str,
+        movement_type: str,
         partial: bool,
     ) -> None:
         """Upsert the additional-theoretical row(s) for this grouping and resync
@@ -965,17 +965,17 @@ class DocumentationSummaryService:
         """
 
         def _upsert(amount: Any, flags: dict[str, bool] | None = None) -> None:
-            additional_obj, _ = models["additional"].objects.update_or_create(
+            additional_entry, _ = models["additional"].objects.update_or_create(
                 **common_fields, **(flags or {}), defaults={"amount": amount}
             )
             DocumentationSummaryService._sync_additional_movement(
-                additional_obj,
+                additional_entry,
                 amount,
                 common_fields,
                 share_article,
                 storage,
                 fk_field,
-                mtype,
+                movement_type,
             )
 
         if model_key == "harvest":
@@ -1076,7 +1076,7 @@ class DocumentationSummaryService:
         )
 
         fk_field = DocumentationSummaryService._ADDITIONAL_FK_FIELD[model_key]
-        mtype = DocumentationSummaryService._MOVEMENT_TYPE[model_key]
+        movement_type = DocumentationSummaryService._MOVEMENT_TYPE[model_key]
 
         DocumentationSummaryService._upsert_additional_and_movement(
             models=models,
@@ -1086,7 +1086,7 @@ class DocumentationSummaryService:
             share_article=instance.share_article,
             storage=instance.storage,
             fk_field=fk_field,
-            mtype=mtype,
+            movement_type=movement_type,
             partial=True,
         )
 

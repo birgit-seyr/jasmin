@@ -125,7 +125,7 @@ class VariationCapacityService:
 
         paused = paused_weeks_by_variation(ids, [(b[0], b[1]) for b in bounds])
 
-        subs = (
+        subscription_terms = (
             _occupying_qs(ids)
             .filter(valid_from__lte=window_end)
             .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=window_start))
@@ -134,18 +134,18 @@ class VariationCapacityService:
             )
         )
         out: dict[tuple[str, int, int], int] = defaultdict(int)
-        for var_id, vfrom, vuntil, qty in subs:
+        for variation_id, valid_from, valid_until, qty in subscription_terms:
             qty = qty or 1
-            paused_for_var = paused.get(var_id, frozenset())
+            paused_weeks = paused.get(variation_id, frozenset())
             for year, week, monday, sunday in bounds:
-                if (year, week) in paused_for_var:
+                if (year, week) in paused_weeks:
                     continue
                 # Sub active in this week iff its term intersects [Mon, Sun].
-                if vfrom > sunday:
+                if valid_from > sunday:
                     continue
-                if vuntil is not None and vuntil < monday:
+                if valid_until is not None and valid_until < monday:
                     continue
-                out[(var_id, year, week)] += qty
+                out[(variation_id, year, week)] += qty
         return dict(out)
 
     @classmethod

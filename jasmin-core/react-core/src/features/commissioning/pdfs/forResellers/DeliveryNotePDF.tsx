@@ -34,12 +34,12 @@ const styles = {
       width: "100%",
       marginTop: 40,
     },
-    dnCol1: { width: "24%" },
-    dnColSort: { width: "21%", paddingLeft: 5 },
-    dnCol2: { width: "10%", textAlign: "right", paddingRight: 5 },
-    dnCol3: { width: "10%", textAlign: "left", paddingLeft: 5 },
-    dnCol5: { width: "10%", textAlign: "center", paddingRight: 5 },
-    dnCol4: { width: "25%", textAlign: "right", paddingRight: 5 },
+    articleColumn: { width: "24%" },
+    sortColumn: { width: "21%", paddingLeft: 5 },
+    amountColumn: { width: "10%", textAlign: "right", paddingRight: 5 },
+    unitColumn: { width: "10%", textAlign: "left", paddingLeft: 5 },
+    sizeColumn: { width: "10%", textAlign: "center", paddingRight: 5 },
+    priceColumn: { width: "25%", textAlign: "right", paddingRight: 5 },
   }),
 };
 
@@ -149,37 +149,37 @@ export default function DeliveryNotePDF({
         {/* Line Items Table */}
         <View style={styles.table}>
           <View style={styles.tableHeader} fixed>
-            <Text style={styles.dnCol1}>
+            <Text style={styles.articleColumn}>
               {t("commissioning.share_article_name")}
             </Text>
-            <Text style={styles.dnColSort}>{t("commissioning.sort")}</Text>
-            <Text style={styles.dnCol5}>{t("commissioning.size")}</Text>
-            <Text style={styles.dnCol2}>{t("commissioning.amount")}</Text>
-            <Text style={styles.dnCol3}>{t("commissioning.unit")}</Text>
-            <Text style={styles.dnCol4}>
+            <Text style={styles.sortColumn}>{t("commissioning.sort")}</Text>
+            <Text style={styles.sizeColumn}>{t("commissioning.size")}</Text>
+            <Text style={styles.amountColumn}>{t("commissioning.amount")}</Text>
+            <Text style={styles.unitColumn}>{t("commissioning.unit")}</Text>
+            <Text style={styles.priceColumn}>
               {t("commissioning.price_per_unit_invoice_pdf")}
             </Text>
           </View>
 
           {lineItems.map((item, index) => (
             <View key={index} style={styles.tableRow} wrap={false}>
-              <Text style={styles.dnCol1}>
+              <Text style={styles.articleColumn}>
                 {item.share_article_name}
                 {tenantSettings.organic_control_number
                   ? organicMarker(item.organic_status)
                   : ""}
               </Text>
-              <Text style={styles.dnColSort}>{item.sort || "-"}</Text>
-              <Text style={styles.dnCol5}>
+              <Text style={styles.sortColumn}>{item.sort || "-"}</Text>
+              <Text style={styles.sizeColumn}>
                 {item.size && item.size !== "M"
                   ? getVegetableSizeLabel(item.size)
                   : "-"}
               </Text>
-              <Text style={styles.dnCol2}>
+              <Text style={styles.amountColumn}>
                 {formatAmount(item.amount, item.unit, locale)}
               </Text>
-              <Text style={styles.dnCol3}>{getUnitLabel(item.unit ?? "")}</Text>
-              <Text style={styles.dnCol4}>
+              <Text style={styles.unitColumn}>{getUnitLabel(item.unit ?? "")}</Text>
+              <Text style={styles.priceColumn}>
                 {item.price_per_unit
                   ? `${formatCurrency(formatNumber(item.price_per_unit, 2, locale), currencySymbol)}/${getUnitLabel(item.unit ?? "")}`
                   : "-"}
@@ -194,16 +194,16 @@ export default function DeliveryNotePDF({
               total, incl. finalized/immutable ones. */}
           {crateItems.map((item, index) => (
             <View key={index} style={styles.tableRow} wrap={false}>
-              <Text style={styles.dnCol1}>{item.crate_type_name}</Text>
-              <Text style={styles.dnColSort}>-</Text>
-              <Text style={styles.dnCol5}>-</Text>
-              <Text style={styles.dnCol2}>
+              <Text style={styles.articleColumn}>{item.crate_type_name}</Text>
+              <Text style={styles.sortColumn}>-</Text>
+              <Text style={styles.sizeColumn}>-</Text>
+              <Text style={styles.amountColumn}>
                 {formatNumber(item.amount, 0, locale)}
               </Text>
               {/* Crates are always counted in pieces — matches the "/piece"
                   price denominator below. ``item.unit`` is empty for crates. */}
-              <Text style={styles.dnCol3}>{t("commissioning.piece_short")}</Text>
-              <Text style={styles.dnCol4}>
+              <Text style={styles.unitColumn}>{t("commissioning.piece_short")}</Text>
+              <Text style={styles.priceColumn}>
                 {item.price_per_unit ? `${formatCurrency(formatNumber(item.price_per_unit, 2, locale), currencySymbol)}/${t("commissioning.piece_short")}` : "-"}
               </Text>
             </View>

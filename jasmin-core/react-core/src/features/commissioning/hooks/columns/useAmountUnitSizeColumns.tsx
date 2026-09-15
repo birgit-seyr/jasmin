@@ -86,12 +86,12 @@ export const useAmountUnitSizeColumns = (config: AmountUnitSizeConfig = {}) => {
         ...overrides.amount,
       };
       if (!merged.render) {
-        const it = merged.inputType ?? "positive_integer";
-        const defaultDecimals = it.includes("decimal3")
+        const inputType = merged.inputType ?? "positive_integer";
+        const defaultDecimals = inputType.includes("decimal3")
           ? 3
-          : it.includes("decimal2")
+          : inputType.includes("decimal2")
             ? 2
-            : it.includes("decimal1")
+            : inputType.includes("decimal1")
               ? 1
               : 0;
         merged.render = renderNumber(format, defaultDecimals);

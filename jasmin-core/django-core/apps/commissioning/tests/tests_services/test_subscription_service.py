@@ -176,7 +176,6 @@ class TestCreateSubscriptionWithRelatedObjects:
 
 
 _FROZEN_TODAY = datetime.date(2026, 3, 30)  # Monday
-_NEXT_SUNDAY = datetime.date(2026, 4, 5)  # ``today + 6 days``
 
 
 @pytest.fixture

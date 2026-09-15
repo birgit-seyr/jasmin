@@ -50,9 +50,6 @@ export interface ArticleAmountTickListPDFProps {
 
 // ─── Variant configuration (reused by the thin public wrappers) ─────────────
 
-export const CLEANING_LIST_PILL_KEY = "commissioning.cleaning_list";
-export const WASHING_LIST_PILL_KEY = "commissioning.washing_list";
-
 export const cleanAmountAccessor = (item: ArticleAmountTickItem) =>
   item.computed_total_clean_amount_text;
 export const washAmountAccessor = (item: ArticleAmountTickItem) =>

@@ -264,8 +264,8 @@ def _make_stock_mock(stock_entries: dict[tuple, Decimal]):
 
     def _mock(year, delivery_week, day_number, storage=None):
         result = {}
-        for (sa_id, unit, size), amount in stock_entries.items():
-            key = (sa_id, unit, size, None)
+        for (share_article_id, unit, size), amount in stock_entries.items():
+            key = (share_article_id, unit, size, None)
             result[key] = {
                 "theoretical_current_stock": amount,
                 "for_resellers": True,

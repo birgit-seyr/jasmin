@@ -30,21 +30,6 @@ from .serializers_mixin import (
 # DELIVERY STATION SERIALIZERS
 # ========================================
 
-# Reverse relations excluded when deciding whether a DeliveryStation /
-# linked Reseller can be deleted. Kept in module scope so the bulk list
-# serializer and the per-row fallback use the SAME exclude sets.
-#
-# ``DeliveryStationDay`` is deliberately NOT excluded: its FK to the station
-# is CASCADE, but the days themselves are PROTECTed downstream (import demand
-# rows, share content, a member's default station-day — see the FKs to
-# ``DeliveryStationDay``), so deleting a station that has days would raise
-# ProtectedError mid-cascade. A configured station is therefore effectively
-# undeletable, and the office must not be shown a delete button that 500s.
-# Only ``Reseller`` is excluded (its unlink is handled separately via
-# ``linked_reseller_can_be_deleted``).
-_STATION_DELETE_EXCLUDE = ["Reseller"]
-_RESELLER_DELETE_EXCLUDE = ["DeliveryStation"]
-
 
 class CapacityWeekEntrySerializer(serializers.Serializer):
     """One "<year>-<week>" entry of ``capacity_by_week``. Schema-only — the
@@ -87,9 +72,21 @@ class DeliveryStationListSerializer(serializers.ListSerializer):
     def _compute_bulk_deletable(self, instances: list) -> None:
         from ..models import Reseller
 
+        # Reverse relations excluded when deciding whether a station / its
+        # linked reseller can be deleted. The single-instance fallbacks further
+        # down exclude the same relations.
+        #
+        # ``DeliveryStationDay`` is deliberately NOT excluded: its FK to the station
+        # is CASCADE, but the days themselves are PROTECTed downstream (import demand
+        # rows, share content, a member's default station-day — see the FKs to
+        # ``DeliveryStationDay``), so deleting a station that has days would raise
+        # ProtectedError mid-cascade. A configured station is therefore effectively
+        # undeletable, and the office must not be shown a delete button that 500s.
+        # Only ``Reseller`` is excluded (its unlink is handled separately via
+        # ``linked_reseller_can_be_deleted``).
         station_pks = [obj.pk for obj in instances]
         deletable, failed = bulk_deletable_pks(
-            DeliveryStation, station_pks, exclude_models=_STATION_DELETE_EXCLUDE
+            DeliveryStation, station_pks, exclude_models=["Reseller"]
         )
         self._station_deletable_pks = deletable
         self._station_failed = failed
@@ -105,7 +102,7 @@ class DeliveryStationListSerializer(serializers.ListSerializer):
             self._linked_reseller_deletable_pks = set()
             return
         deletable, failed = bulk_deletable_pks(
-            Reseller, reseller_pks, exclude_models=_RESELLER_DELETE_EXCLUDE
+            Reseller, reseller_pks, exclude_models=["DeliveryStation"]
         )
         self._linked_reseller_deletable_pks = deletable
         self._linked_reseller_failed = failed
@@ -160,7 +157,7 @@ class DeliveryStationSerializer(
         ):
             return obj.pk in parent._station_deletable_pks
         # Detail / create / update path — single instance, single check.
-        can_delete, _ = can_delete_instance(obj, exclude_models=_STATION_DELETE_EXCLUDE)
+        can_delete, _ = can_delete_instance(obj, exclude_models=["Reseller"])
         return can_delete
 
     def get_linked_reseller_can_be_deleted(self, obj) -> bool:
@@ -178,7 +175,7 @@ class DeliveryStationSerializer(
             return reseller.pk in parent._linked_reseller_deletable_pks
         # Detail / create / update path — single instance, single check.
         can_delete, _ = can_delete_instance(
-            reseller, exclude_models=_RESELLER_DELETE_EXCLUDE
+            reseller, exclude_models=["DeliveryStation"]
         )
         return can_delete
 

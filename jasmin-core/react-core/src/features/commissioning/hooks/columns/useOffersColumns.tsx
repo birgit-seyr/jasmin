@@ -120,7 +120,7 @@ export function useOffersColumns({
               let defaultPrice = 0;
               if (shareArticle && record.unit) {
                 const unitUpper = (record.unit as string).toUpperCase();
-                const saAny = shareArticle as unknown as Record<
+                const shareArticleFields = shareArticle as unknown as Record<
                   string,
                   unknown
                 >;
@@ -128,20 +128,20 @@ export function useOffersColumns({
                 switch (unitUpper) {
                   case "KG":
                     defaultPrice =
-                      (saAny[
+                      (shareArticleFields[
                         `net_price_for_orders_kg_${index + 1}`
                       ] as number) || 0;
                     break;
                   case "PCS":
                   case "PIECES":
                     defaultPrice =
-                      (saAny[
+                      (shareArticleFields[
                         `net_price_for_orders_pieces_${index + 1}`
                       ] as number) || 0;
                     break;
                   case "BUNCH":
                     defaultPrice =
-                      (saAny[
+                      (shareArticleFields[
                         `net_price_for_orders_bunch_${index + 1}`
                       ] as number) || 0;
                     break;

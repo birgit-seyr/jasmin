@@ -45,14 +45,14 @@ export interface StepUpPromptArgs {
  *  rejects when the user cancels the modal. */
 export type StepUpPrompt = (args: StepUpPromptArgs) => Promise<void>;
 
-let promptImpl: StepUpPrompt | null = null;
+let registeredPrompt: StepUpPrompt | null = null;
 
 /**
  * Called once by ``StepUpProvider`` on mount. The provider unregisters
  * (passes ``null``) on unmount so we don't hold a stale callback.
  */
 export function registerStepUpPrompt(fn: StepUpPrompt | null): void {
-  promptImpl = fn;
+  registeredPrompt = fn;
 }
 
 /**
@@ -83,7 +83,7 @@ export async function runStepUpFlow(args: {
   ttlSeconds: number;
 }): Promise<string> {
   if (inFlight) return inFlight;
-  if (!promptImpl) {
+  if (!registeredPrompt) {
     // No provider mounted → we can't recover. Surface the original
     // 403 unchanged so the caller can decide what to do.
     return Promise.reject(
@@ -93,11 +93,11 @@ export async function runStepUpFlow(args: {
 
   inFlight = (async () => {
     try {
-      // ``promptImpl`` is non-null here (checked above) but TS narrows
+      // ``registeredPrompt`` is non-null here (checked above) but TS narrows
       // through closures conservatively — re-check + rethrow if it
       // raced. The provider only unregisters on unmount so this is
       // effectively never hit at runtime.
-      const prompt = promptImpl;
+      const prompt = registeredPrompt;
       if (!prompt) {
         throw new Error("Step-up prompt was unregistered mid-flow.");
       }

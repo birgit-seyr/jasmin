@@ -11,7 +11,7 @@ summary row), trigger the real ``ShareContentService`` pipeline to produce
 ``DocumentationSummaryService.get_summary`` and assert the totals are correct.
 
 In addition we add one regression test for the variation-count endpoint used
-by ``PlanningHarvestSharesBase`` to make sure that joker deliveries are
+by ``PlanningShareContentBase`` to make sure that joker deliveries are
 **excluded** from the count (only "real" deliveries count).
 
 The subscription-totals helper ``batch_get_physical_variation_totals_for_week``
@@ -533,13 +533,13 @@ class TestCleaningListAggregation:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PlanningHarvestSharesBase variation counts must EXCLUDE jokers
+# PlanningShareContentBase variation counts must EXCLUDE jokers
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 @pytest.mark.django_db
 class TestPlanningVariationCountsExcludeJokers:
-    """The frontend ``PlanningHarvestSharesBase`` page reads variation totals
+    """The frontend ``PlanningShareContentBase`` page reads variation totals
     from ``ShareTypeVariationAmountsForPlanningView``, which delegates to
     ``batch_get_physical_variation_totals_for_week``. That helper filters
     ``ShareDelivery.objects.filter(joker_taken=False, ...)`` so the displayed

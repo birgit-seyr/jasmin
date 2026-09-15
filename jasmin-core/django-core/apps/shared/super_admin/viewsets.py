@@ -464,24 +464,28 @@ class TenantManagementViewSet(ViewSet):
 
                 users = JasminUser.objects.all().order_by("last_name", "first_name")
 
-                def serialize_user(u: Any) -> dict[str, Any]:
+                def serialize_user(user: Any) -> dict[str, Any]:
                     return {
-                        "id": u.id,
-                        "first_name": u.first_name,
-                        "last_name": u.last_name,
-                        "email": u.email,
-                        "roles": u.roles or [],
-                        "is_active": u.is_active,
-                        "account_status": u.account_status,
-                        "date_joined": u.date_joined,
-                        "last_login": u.last_login,
+                        "id": user.id,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name,
+                        "email": user.email,
+                        "roles": user.roles or [],
+                        "is_active": user.is_active,
+                        "account_status": user.account_status,
+                        "date_joined": user.date_joined,
+                        "last_login": user.last_login,
                     }
 
                 admin_users = [
-                    serialize_user(u) for u in users if "admin" in (u.roles or [])
+                    serialize_user(user)
+                    for user in users
+                    if "admin" in (user.roles or [])
                 ]
                 other_users = [
-                    serialize_user(u) for u in users if "admin" not in (u.roles or [])
+                    serialize_user(user)
+                    for user in users
+                    if "admin" not in (user.roles or [])
                 ]
 
                 return Response(
@@ -519,19 +523,21 @@ class TenantManagementViewSet(ViewSet):
                 ).order_by("name_for_member_pages", "customer_number")
                 data = [
                     {
-                        "id": str(r.id),
-                        "customer_number": r.customer_number,
-                        "filial_number": r.filial_number,
-                        "name_for_member_pages": r.name_for_member_pages,
+                        "id": str(reseller.id),
+                        "customer_number": reseller.customer_number,
+                        "filial_number": reseller.filial_number,
+                        "name_for_member_pages": reseller.name_for_member_pages,
                         "linked_user_id": (
-                            str(r.linked_user_id) if r.linked_user_id else None
+                            str(reseller.linked_user_id)
+                            if reseller.linked_user_id
+                            else None
                         ),
                         "display": (
-                            r.name_for_member_pages
-                            or f"Reseller #{r.customer_number or r.id}"
+                            reseller.name_for_member_pages
+                            or f"Reseller #{reseller.customer_number or reseller.id}"
                         ),
                     }
-                    for r in resellers
+                    for reseller in resellers
                 ]
                 return Response(data, status=status.HTTP_200_OK)
         except Tenant.DoesNotExist:

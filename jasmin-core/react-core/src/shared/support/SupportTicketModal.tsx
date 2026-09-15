@@ -81,12 +81,12 @@ export default function SupportTicketModal({
       loading={createMutation.isPending}
       onCancel={onClose}
       onSubmit={(values) => {
-        const v = values as unknown as TicketFormValues;
+        const ticketValues = values as unknown as TicketFormValues;
         return createMutation.mutateAsync({
           data: {
-            subject: v.subject,
-            priority: v.priority,
-            description: v.description,
+            subject: ticketValues.subject,
+            priority: ticketValues.priority,
+            description: ticketValues.description,
             context: captureSupportContext(),
           } as SupportTicketCreate,
         });

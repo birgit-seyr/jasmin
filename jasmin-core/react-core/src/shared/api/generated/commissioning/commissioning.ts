@@ -162,6 +162,8 @@ import type {
   ConsentRecordCreate,
   ConsentRecordRevoke,
   CoopShare,
+  CoopShareTransfer,
+  CoopShareTransferRequest,
   Crate,
   CrateContentInvoiceReseller,
   CrateDeliveryNoteContent,
@@ -3851,6 +3853,76 @@ const {mutation: mutationOptions} = options ?
       > => {
 
       const mutationOptions = getCommissioningCoopSharesConfirmCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Transfer confirmed, paid coop shares from one member to another (GenG §76).
+
+Existing coop share rows stay unchanged: the giving member gets a negative
+row and the receiving member a positive row per share value, both
+confirmed and paid on the transfer date. The min/max window is checked on
+the final state of both members: a giving member left above 0 but below
+the minimum is refused (``member.coop_shares_out_of_range``). A giving
+member left without confirmed shares has those rows closed without a
+payback date and is cancelled effective on the transfer date, which the
+request has to confirm with ``confirm_member_cancellation``.
+ */
+export const commissioningCoopSharesTransferCreate = (
+    coopShareTransferRequest: CoopShareTransferRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<CoopShareTransfer>(
+      {url: `/api/commissioning/coop_shares/transfer/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: coopShareTransferRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getCommissioningCoopSharesTransferCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesTransferCreate>>, TError,{data: CoopShareTransferRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesTransferCreate>>, TError,{data: CoopShareTransferRequest}, TContext> => {
+
+const mutationKey = ['commissioningCoopSharesTransferCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCoopSharesTransferCreate>>, {data: CoopShareTransferRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  commissioningCoopSharesTransferCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningCoopSharesTransferCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningCoopSharesTransferCreate>>>
+    export type CommissioningCoopSharesTransferCreateMutationBody = CoopShareTransferRequest
+    export type CommissioningCoopSharesTransferCreateMutationError = ErrorResponse
+
+    export const useCommissioningCoopSharesTransferCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesTransferCreate>>, TError,{data: CoopShareTransferRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningCoopSharesTransferCreate>>,
+        TError,
+        {data: CoopShareTransferRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningCoopSharesTransferCreateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

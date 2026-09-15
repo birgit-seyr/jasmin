@@ -559,7 +559,7 @@ class EmailService:
 
         from apps.shared.smtp_host_validator import smtp_host_is_blocked
 
-        s = self.config.get_backend_settings()
+        backend_settings = self.config.get_backend_settings()
 
         # No platform fallback. Django's ``get_connection(host=None, …)`` would
         # silently fall back to ``settings.EMAIL_HOST`` (the platform account,
@@ -567,7 +567,7 @@ class EmailService:
         # guards on ``has_smtp_configured`` before reaching here; this is the
         # authoritative backstop so no internal caller can reintroduce the
         # fallback. Caught by the send paths' except blocks → logged, False.
-        if not (s["EMAIL_HOST"] or "").strip():
+        if not (backend_settings["EMAIL_HOST"] or "").strip():
             raise ValueError(
                 "No SMTP host configured for this tenant; refusing to fall "
                 "back to the platform email account."
@@ -579,20 +579,20 @@ class EmailService:
         # validated. A ``ValueError`` here is caught by ``send_email``'s
         # except block, so a blocked host fails gracefully (logged, send
         # returns False) exactly like an unreachable host, on every send path.
-        if smtp_host_is_blocked(s["EMAIL_HOST"]):
+        if smtp_host_is_blocked(backend_settings["EMAIL_HOST"]):
             raise ValueError(
-                f"SMTP host {s['EMAIL_HOST']!r} resolves to a private or "
+                f"SMTP host {backend_settings['EMAIL_HOST']!r} resolves to a private or "
                 f"otherwise disallowed address; refusing to connect."
             )
 
         return get_connection(
-            backend=s["EMAIL_BACKEND"],
-            host=s["EMAIL_HOST"],
-            port=s["EMAIL_PORT"],
-            username=s["EMAIL_HOST_USER"],
-            password=s["EMAIL_HOST_PASSWORD"],
-            use_tls=s["EMAIL_USE_TLS"],
-            use_ssl=s["EMAIL_USE_SSL"],
+            backend=backend_settings["EMAIL_BACKEND"],
+            host=backend_settings["EMAIL_HOST"],
+            port=backend_settings["EMAIL_PORT"],
+            username=backend_settings["EMAIL_HOST_USER"],
+            password=backend_settings["EMAIL_HOST_PASSWORD"],
+            use_tls=backend_settings["EMAIL_USE_TLS"],
+            use_ssl=backend_settings["EMAIL_USE_SSL"],
             # Cap the connect/handshake so a slow/unreachable host can't
             # hang the worker (no timeout = block forever).
             timeout=getattr(settings, "EMAIL_TIMEOUT", 10),

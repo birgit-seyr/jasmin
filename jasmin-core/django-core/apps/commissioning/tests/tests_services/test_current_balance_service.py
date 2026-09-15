@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import datetime
+import io
 from decimal import Decimal
 
 import pytest
+from django.core.management import call_command
 from django.utils import timezone
 
 from apps.commissioning.models import CurrentStockBalance, StockSnapshot
@@ -16,6 +18,7 @@ from apps.commissioning.tests.factories import (
     ShareArticleFactory,
     StorageFactory,
 )
+from apps.commissioning.utils.deletion_utils import can_delete_instance
 
 
 def _ts(year, month, day, hour=12):
@@ -69,6 +72,51 @@ class TestRecomputeForEntity:
         assert CurrentStockBalance.objects.count() == 1
         row = CurrentStockBalance.objects.get()
         assert row.balance == Decimal("7.000")
+
+    def test_removes_the_row_once_the_entity_has_no_movements(self, tenant):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        movement = MovementShareArticleFactory(
+            share_article=article,
+            storage=storage,
+            unit="KG",
+            size="M",
+            amount=Decimal("4.000"),
+            date=_ts(2026, 5, 1),
+            movement_type="INVENTORY",
+        )
+        CurrentBalanceService.recompute_for_entity(article.id, "KG", "M", storage.id)
+        assert CurrentStockBalance.objects.filter(share_article=article).exists()
+
+        movement.delete()
+        row = CurrentBalanceService.recompute_for_entity(
+            article.id, "KG", "M", storage.id
+        )
+
+        assert row is None
+        assert not CurrentStockBalance.objects.filter(share_article=article).exists()
+        assert can_delete_instance(article)[0] is True
+
+    def test_keeps_a_zero_row_while_movements_exist(self, tenant):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        for day, amount in ((1, "5.000"), (2, "-5.000")):
+            MovementShareArticleFactory(
+                share_article=article,
+                storage=storage,
+                unit="KG",
+                size="M",
+                amount=Decimal(amount),
+                date=_ts(2026, 5, day),
+                movement_type="INVENTORY",
+            )
+
+        row = CurrentBalanceService.recompute_for_entity(
+            article.id, "KG", "M", storage.id
+        )
+
+        assert row is not None
+        assert row.balance == Decimal("0.000")
 
     def test_null_storage_treated_as_unique(self, tenant):
         """nulls_distinct=False — two rows with storage=NULL would collide."""
@@ -139,6 +187,44 @@ class TestGetDrift:
         assert drift[0]["stored"] == Decimal("999.000")
         assert drift[0]["expected"] == Decimal("10.000")
 
+    def test_flags_a_row_without_movements_and_the_repair_removes_it(self, tenant):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        CurrentStockBalanceFactory(
+            share_article=article,
+            storage=storage,
+            unit="KG",
+            size="M",
+            balance=Decimal("0.000"),
+        )
+
+        drift = CurrentBalanceService.get_drift()
+
+        assert len(drift) == 1
+        assert drift[0]["has_movements"] is False
+        CurrentBalanceService.recompute_for_entity(
+            *drift[0]["entity"], from_ledger=True
+        )
+        assert not CurrentStockBalance.objects.exists()
+        assert CurrentBalanceService.get_drift() == []
+
+    def test_reconcile_fix_removes_rows_without_movements(self, tenant):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        CurrentStockBalanceFactory(
+            share_article=article,
+            storage=storage,
+            unit="KG",
+            size="M",
+            balance=Decimal("0.000"),
+        )
+        out = io.StringIO()
+
+        call_command("reconcile_current_stock", "--fix", stdout=out)
+
+        assert "(no movements)" in out.getvalue()
+        assert not CurrentStockBalance.objects.exists()
+
 
 @pytest.mark.django_db
 class TestReconcilerSelfConsistency:
@@ -178,6 +264,7 @@ class TestReconcilerSelfConsistency:
         row = CurrentBalanceService.recompute_for_entity(
             article.id, "KG", "M", storage.id, from_ledger=True
         )
+        assert row is not None
         assert row.balance == Decimal("15.000")
         # ...and get_drift (also raw-ledger) now agrees → loop converged.
         assert CurrentBalanceService.get_drift() == []

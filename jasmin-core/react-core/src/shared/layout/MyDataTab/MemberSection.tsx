@@ -40,8 +40,6 @@ const MEMBER_EDITABLE_FIELDS = [
   "country",
 ] as const satisfies readonly (keyof MyMemberDataRead)[];
 
-const DATE_FORMAT_WIRE = "YYYY-MM-DD";
-
 /**
  * Member-self-edit surface backed by ``commissioning/my_member_data/``.
  *
@@ -56,7 +54,8 @@ const DATE_FORMAT_WIRE = "YYYY-MM-DD";
  */
 export default function MemberSection({ onSaved }: { onSaved: () => void }) {
   const { t } = useTranslation();
-  const { dateFormat, formatDateWithFallback } = useDateFormat();
+  const { dateFormat, formatDateWithFallback, formatDateForAPI } =
+    useDateFormat();
   const [form] = Form.useForm();
   const [editingIban, setEditingIban] = useState(false);
   const [editingAccountOwner, setEditingAccountOwner] = useState(false);
@@ -102,9 +101,9 @@ export default function MemberSection({ onSaved }: { onSaved: () => void }) {
     const payload: Record<string, unknown> = { ...values };
     if (!editingIban) delete payload.iban;
     if (!editingAccountOwner) delete payload.account_owner;
-    payload.birth_date = values.birth_date
-      ? (values.birth_date as dayjs.Dayjs).format(DATE_FORMAT_WIRE)
-      : null;
+    payload.birth_date = formatDateForAPI(
+      values.birth_date as dayjs.Dayjs | null,
+    );
     mutate({ data: payload as never });
   };
 

@@ -247,18 +247,18 @@ export function useHarvestingListData({
           ? `${format(amountPerPu, 1)} ${unitLabel}/${puLabel}`
           : "";
 
-      const noteInfo: string[] = [];
-      if (record.note) noteInfo.push(record.note as string);
-      if (record.forecast_note) noteInfo.push(record.forecast_note as string);
+      const noteParts: string[] = [];
+      if (record.note) noteParts.push(record.note as string);
+      if (record.forecast_note) noteParts.push(record.forecast_note as string);
 
-      const plotInfo: string[] = [];
+      const plotParts: string[] = [];
       if (record.forecast_plot_name) {
-        plotInfo.push(
+        plotParts.push(
           `${t("commissioning.plot")}: ${record.forecast_plot_name}`,
         );
       }
       if (record.forecast_bed_number) {
-        plotInfo.push(
+        plotParts.push(
           `${t("commissioning.bed_number")}: ${record.forecast_bed_number}`,
         );
       }
@@ -274,8 +274,8 @@ export function useHarvestingListData({
         computed_amount_per_pu: amountPerPu,
         computed_amount_per_pu_text: amountPerPuText,
         computed_article_with_size: `${record.share_article_name}${sizeLabel}`,
-        computed_note_line: noteInfo.join(", "),
-        computed_plot_line: plotInfo.join(", "),
+        computed_note_line: noteParts.join(", "),
+        computed_plot_line: plotParts.join(", "),
         computed_unit_label: unitLabel,
       } as TableRecord;
     });

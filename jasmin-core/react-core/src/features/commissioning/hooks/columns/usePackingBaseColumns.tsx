@@ -12,9 +12,6 @@ import { editableOnlyOnCreate } from "@shared/utils";
 import { useAmountUnitSizeColumns } from "./useAmountUnitSizeColumns";
 import { useShareArticleColumn } from "./useShareArticleColumn";
 
-const WIDTH_ARTICLE = "30%";
-const WIDTH_AMOUNT_UNIT_SIZE = "10%";
-
 // A packing-list row can carry a BACKUP article (the substitute veg planned in
 // the BackupModal). When present we render its name / unit / size as a second,
 // GREY line inside the SAME cell — so the backup reads as a sub-line of the
@@ -89,7 +86,7 @@ export function usePackingBaseColumns(
         },
         pdf: {
           include: true,
-          width: WIDTH_ARTICLE,
+          width: "30%",
           dataKey: "share_article_name",
           align: "left",
           title: t("commissioning.vegetables_and_fruits"),
@@ -120,7 +117,7 @@ export function usePackingBaseColumns(
           },
           pdf: {
             include: true,
-            width: WIDTH_AMOUNT_UNIT_SIZE,
+            width: "10%",
             align: "center",
             dataKey:
               col.dataIndex === "unit"

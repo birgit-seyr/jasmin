@@ -286,6 +286,18 @@ def calculate_member_dashboard_statistics() -> dict:
     def _shares(qs) -> float:
         return float(qs.aggregate(s=Sum("amount_of_coop_shares"))["s"] or 0)
 
+    def _payback_due_shares() -> float:
+        # Per member: a negative transfer row nets against the rows its shares
+        # came from, and a member whose due rows sum to zero or below owes nothing.
+        due_by_member = (
+            CoopShare.objects.filter(
+                payback_due_date__isnull=False, paid_back_date__isnull=True
+            )
+            .values("member_id")
+            .annotate(total=Sum("amount_of_coop_shares"))
+        )
+        return float(sum(max(row["total"], 0) for row in due_by_member))
+
     live = CoopShare.objects.filter(cancelled_at__isnull=True)
     return {
         "total_members": total_members,
@@ -299,9 +311,5 @@ def calculate_member_dashboard_statistics() -> dict:
         "pending_coop_shares": _shares(live.filter(admin_confirmed=False)),
         "paid_coop_shares": _shares(live.filter(paid_at__isnull=False)),
         "unpaid_coop_shares": _shares(live.filter(paid_at__isnull=True)),
-        "payback_due_coop_shares": _shares(
-            CoopShare.objects.filter(
-                payback_due_date__isnull=False, paid_back_date__isnull=True
-            )
-        ),
+        "payback_due_coop_shares": _payback_due_shares(),
     }

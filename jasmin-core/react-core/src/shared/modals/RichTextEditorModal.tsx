@@ -28,29 +28,28 @@ const formats = [
   "link",
 ];
 
-const getPlainTextLength = (html: string): number => {
-  const tmp = document.createElement("div");
-  tmp.innerHTML = html;
-  return tmp.textContent?.length || 0;
+const htmlToPlainText = (html: string): string => {
+  const container = document.createElement("div");
+  container.innerHTML = html;
+  return container.textContent ?? "";
 };
+
+const getPlainTextLength = (html: string): number =>
+  htmlToPlainText(html).length;
 
 const countLines = (html: string): number => {
   if (!html) return 0;
-  const lines = html.split(/<\/p>|<br>/gi).filter((line) => {
-    const tmp = document.createElement("div");
-    tmp.innerHTML = line;
-    return (tmp.textContent?.trim().length || 0) > 0;
-  });
+  const lines = html
+    .split(/<\/p>|<br>/gi)
+    .filter((line) => htmlToPlainText(line).trim().length > 0);
   return lines.length;
 };
 
 const getMaxCharsPerLine = (html: string): number => {
   if (!html) return 0;
-  const lines = html.split(/<\/p>|<br>/gi).map((line) => {
-    const tmp = document.createElement("div");
-    tmp.innerHTML = line;
-    return tmp.textContent?.trim().length || 0;
-  });
+  const lines = html
+    .split(/<\/p>|<br>/gi)
+    .map((line) => htmlToPlainText(line).trim().length);
   return Math.max(...lines, 0);
 };
 

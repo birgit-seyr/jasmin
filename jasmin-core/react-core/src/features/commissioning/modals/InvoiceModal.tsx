@@ -22,7 +22,7 @@ import {
   type LineNettoInput,
 } from "@shared/utils/lineNetto";
 import { formatAmountForUnit } from "@shared/utils";
-import { makeContentCustomEdit, makeFkCustomSave } from "./contentTableHelpers";
+import { makeContentCustomEdit, makeFkCustomSave } from "./resellerContentTableCallbacks";
 import { useCurrency, useDateFormat, useDefaultTaxRates, useNumberFormat, useTenant, useTimeFormat, useUnitOptions } from '@hooks/index';
 import { useAmountUnitSizeColumns, useCratesColumns, useOfferTiers, useShareArticleColumn } from '@features/commissioning/hooks';
 import { FinalizedNotice } from '@features/commissioning/components';
@@ -403,7 +403,6 @@ export default function InvoiceModal({
     ],
   );
 
-  const invoiceAny = invoiceData as Record<string, unknown> | undefined;
   // Finalized invoices are read-only legal documents → show the backend's
   // authoritative netto/USt/brutto verbatim. Editable invoices derive the
   // summary from the LIVE rows, recomputing each line's net from its current
@@ -411,7 +410,7 @@ export default function InvoiceModal({
   // edit), so the totals stay in sync without invalidating + re-sorting.
   const taxBreakdown = useMemo<TaxBreakdownItem[]>(() => {
     if (isFinalized) {
-      return taxBreakdownFromBackend(invoiceAny?.tax_breakdown) ?? [];
+      return taxBreakdownFromBackend(invoiceData?.tax_breakdown) ?? [];
     }
     const withFreshNetto = (rows: TableRecord[]) =>
       rows.map((row) => ({
@@ -422,16 +421,16 @@ export default function InvoiceModal({
       withFreshNetto(liveLineItems) as unknown as LineItemBase[],
       withFreshNetto(liveCrateItems) as unknown as LineItemBase[],
     );
-  }, [isFinalized, invoiceAny?.tax_breakdown, liveLineItems, liveCrateItems]);
+  }, [isFinalized, invoiceData?.tax_breakdown, liveLineItems, liveCrateItems]);
   const liveTotals = useMemo(
     () => totalsFromBreakdown(taxBreakdown),
     [taxBreakdown],
   );
   const totalNetto = isFinalized
-    ? Number(invoiceAny?.sum_netto ?? 0)
+    ? Number(invoiceData?.sum_netto ?? 0)
     : liveTotals.netto;
   const totalBrutto = isFinalized
-    ? Number(invoiceAny?.sum_brutto ?? 0)
+    ? Number(invoiceData?.sum_brutto ?? 0)
     : liveTotals.brutto;
 
   return (

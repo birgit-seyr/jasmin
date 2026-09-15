@@ -5,7 +5,7 @@ import { FC, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useDeliveryStationDays,
-  useModalMemberDeliveryEdit,
+  useMemberDeliveryEditModal,
   useTenant,
 } from "@hooks/index";
 import { useEnterToSubmit } from "@shared/modals/shared";
@@ -36,9 +36,10 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
     openModal,
     closeModal,
     saveDelivery,
-  } = useModalMemberDeliveryEdit();
+  } = useMemberDeliveryEditModal();
 
-  // Compute the delivery date from year + week + day_number to filter active DSDs
+  // Compute the delivery date from year + week + day_number to filter the
+  // active delivery station days
   const deliveryDate = useMemo(() => {
     if (!delivery?.year || !delivery?.delivery_week) return undefined;
     const d = dayjs()
@@ -53,7 +54,7 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
   // exactly the week we look up below (``num_weeks: 1``). Without this the
   // window defaults to the current week and the lookup misses → capacity
   // filtering silently no-ops.
-  const dsdParams = useMemo<{
+  const deliveryStationDayParams = useMemo<{
     active_at_date?: string;
     year?: number;
     delivery_week?: number;
@@ -74,8 +75,8 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
     return params;
   }, [deliveryDate, delivery?.year, delivery?.delivery_week]);
 
-  const { deliveryStationDays, loading: dsdLoading } =
-    useDeliveryStationDays(dsdParams);
+  const { deliveryStationDays, loading: deliveryStationDaysLoading } =
+    useDeliveryStationDays(deliveryStationDayParams);
 
   // Build week key for capacity lookup
   const weekKey =
@@ -91,20 +92,20 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
 
   // Build select options, with a fallback for the current value while loading
   const selectOptions = useMemo(() => {
-    const mapped = filteredOptions.map((dsd) => {
-      const cap = weekKey ? dsd.capacity_by_week?.[weekKey] : undefined;
+    const mapped = filteredOptions.map((stationDay) => {
+      const cap = weekKey ? stationDay.capacity_by_week?.[weekKey] : undefined;
       const isFull = cap != null && cap.free !== null && cap.free <= 0;
       return {
-        value: dsd.value,
-        label: dsd.label,
+        value: stationDay.value,
+        label: stationDay.label,
         free: cap?.free,
         // Grey out full station-days — but never the one already assigned.
-        disabled: isFull && dsd.value !== delivery?.delivery_station_day,
+        disabled: isFull && stationDay.value !== delivery?.delivery_station_day,
       };
     });
     // If loading and current value isn't in options yet, add a placeholder option
     if (
-      dsdLoading &&
+      deliveryStationDaysLoading &&
       delivery?.delivery_station_day &&
       !mapped.some((o) => o.value === delivery.delivery_station_day)
     ) {
@@ -118,7 +119,7 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
     return mapped;
   }, [
     filteredOptions,
-    dsdLoading,
+    deliveryStationDaysLoading,
     delivery?.delivery_station_day,
     delivery?.delivery_station_name,
     weekKey,
@@ -183,7 +184,7 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
       >
         <Form.Item name="delivery_station_day" label={t("delivery.station")}>
           <Select
-            loading={dsdLoading}
+            loading={deliveryStationDaysLoading}
             options={selectOptions}
             optionRender={(option) => (
               <div>

@@ -61,9 +61,6 @@ from ..utils.query_params import DOCUMENTATION_MODELS, validate_query_params
 from ..utils.validation_utils import parse_bulk_ids
 from .base_viewsets import BaseArchivableViewSet
 
-# Single source: the query-param catalogue owns the documentation model keys.
-VALID_MODELS = list(DOCUMENTATION_MODELS)
-
 _EXPORT_DATE_PARAMETERS = [
     *EXPORT_DATE_RANGE_PARAMETERS,
     catalogue_param(
@@ -99,7 +96,7 @@ _ADDITIONAL_THEORETICAL_REQUEST = {
         "properties": {
             "model": {
                 "type": "string",
-                "enum": VALID_MODELS,
+                "enum": list(DOCUMENTATION_MODELS),
                 "description": "Documentation model the row belongs to.",
             },
         },
@@ -132,13 +129,13 @@ def _validated_model(request: Request) -> str:
     """Return the lowercased ``model`` discriminator from the request body.
 
     Raises :class:`CommissioningError` (rendered as 400) when it isn't one of
-    :data:`VALID_MODELS`. Used by the two additional-theoretical-amount
+    :data:`DOCUMENTATION_MODELS`. Used by the two additional-theoretical-amount
     actions, whose body uses ``model`` to pick the documentation model.
     """
     model = str(body(request).get("model") or "").lower()
-    if model not in VALID_MODELS:
+    if model not in DOCUMENTATION_MODELS:
         raise CommissioningError(
-            f"Invalid model '{model}'. Must be one of: {VALID_MODELS}",
+            f"Invalid model '{model}'. Must be one of: {list(DOCUMENTATION_MODELS)}",
             field="model",
             code="documentation.invalid_model",
         )

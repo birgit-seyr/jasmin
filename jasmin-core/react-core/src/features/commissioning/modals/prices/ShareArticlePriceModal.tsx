@@ -52,10 +52,10 @@ export default function ShareArticlePriceModal({
   // Single-tier mode when the tenant hasn't configured tier thresholds:
   // one column per unit using ``price_1`` only. No silent default to
   // [1, 3, 5] — that bumped non-tier tenants into multi-tier pricing.
-  const tiersList = useOfferTiers();
+  const offerTiers = useOfferTiers();
 
   const columns = useMemo<EditableColumnConfig[]>(() => {
-    const tiers: Array<{ tier: number; idx: 1 | 2 | 3 }> = tiersList.map(
+    const tiers: Array<{ tier: number; idx: 1 | 2 | 3 }> = offerTiers.map(
       (tier, i) => ({ tier, idx: (i + 1) as 1 | 2 | 3 }),
     );
 
@@ -117,7 +117,7 @@ export default function ShareArticlePriceModal({
     t,
     currencySymbol,
     locale,
-    tiersList,
+    offerTiers,
     activeStatusColumn,
     validFromColumn,
     validUntilColumn,

@@ -90,6 +90,14 @@ the matching section of Part 1.
 - **English only.** No German in code, names, or anywhere else.
 - **No hard-to-read abbreviations.** Not `dsd` for DeliveryStationDay, not `oc`
   for OrderContent. Longer but readable wins.
+- **Names say what a thing is; no needless constants.** Don't give a trivial
+  value used in a couple of places its own constant — write
+  `classNames={{ root: "custom-tooltip" }}`, not a `LIGHT_TOOLTIP_CLASS_NAMES`
+  alias. Name a value only when the name adds meaning (a tunable, a domain value,
+  something many modules share) or its identity must stay stable.
+  `SCREAMING_SNAKE_CASE` is for true module-level constants only, never for
+  functions or values built per render. Avoid vague names (`data`, `info`,
+  `item`, `temp`) and noise words (`Helper`, `Wrapper`, `Data`, doubled words).
 - **`Share` and `CoopShare` are fundamentally different models — never conflate
   them.** Use `share` in function names only where shares are meant, and
   `coop_share` where coop shares are meant. See
@@ -230,11 +238,11 @@ Three rules:
      coercer (uses the `Decimal(str(value))` pattern).
    - `_calc_line_netto(...)` / `_calc_line_brutto(...)` / `sum_netto(...)` /
      `sum_brutto(...)` / `tax_breakdown(...)` — the canonical money math, all
-     using `_PRICE_QUANTIZE = Decimal("0.01")` with `ROUND_HALF_UP`. Every
-     `LinePricingMixin` subclass goes through these.
+     quantizing to `apps.shared.money.CENT` (`Decimal("0.01")`) with
+     `ROUND_HALF_UP`. Every `LinePricingMixin` subclass goes through these.
 
 3. **Send money as STRING on the wire, not float.** The frontend gets canonical
-   2dp strings (e.g. `str(line.quantize(_CENT))`), not JSON numbers — full
+   2dp strings (e.g. `str(line.quantize(CENT))`), not JSON numbers — full
    precision survives the API boundary. Float in JSON responses is OK only for
    non-money values (quantities sent for display, percentages like `rabatt` /
    `tax_rate` that get re-coerced via `_to_decimal()` on any downstream

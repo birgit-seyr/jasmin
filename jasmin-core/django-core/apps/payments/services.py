@@ -78,17 +78,17 @@ class _BillingConfig:
 
     @classmethod
     def for_tenant(cls, tenant: Tenant) -> _BillingConfig:
-        ts = TenantSettings.get_current_settings(tenant)
-        if ts is None:
+        tenant_settings = TenantSettings.get_current_settings(tenant)
+        if tenant_settings is None:
             return cls(
                 strategy=TenantSettings.BILLING_STRATEGY_EXACT,
                 bills_joker_deliveries=False,
                 due_day=1,
             )
         return cls(
-            strategy=ts.billing_strategy,
-            bills_joker_deliveries=ts.bills_joker_deliveries,
-            due_day=ts.billing_due_day_of_month,
+            strategy=tenant_settings.billing_strategy,
+            bills_joker_deliveries=tenant_settings.bills_joker_deliveries,
+            due_day=tenant_settings.billing_due_day_of_month,
         )
 
 
@@ -820,8 +820,8 @@ class BillingRunService:
                 member__billing_profile__payment_method=PaymentMethodOptions.BANK_TRANSFER,
             )
 
-        eligible_list = list(eligible)
-        if not eligible_list:
+        eligible_charges = list(eligible)
+        if not eligible_charges:
             # Diagnose the empty result so the operator isn't misled into
             # thinking the PERIOD is wrong: the common cause is members without
             # an active billing profile / mandate, not an empty period.
@@ -846,17 +846,19 @@ class BillingRunService:
 
         # Filter out anything where the profile isn't actually SEPA-ready.
         if payment_method == PaymentMethodOptions.SEPA_DIRECT_DEBIT:
-            eligible_list = [
-                c for c in eligible_list if c.member.billing_profile.is_sepa_ready
+            eligible_charges = [
+                charge
+                for charge in eligible_charges
+                if charge.member.billing_profile.is_sepa_ready
             ]
-        if not eligible_list:
+        if not eligible_charges:
             raise NoValidSepaMandates("No charges with valid SEPA mandates.")
 
         # ``total_amount`` below sums ``expected_amount`` across the
         # eligible charges. A mixed-currency set would yield a meaningless
         # cross-currency total (for SEPA the per-charge EUR guard fires at export,
         # but a BANK_TRANSFER run never hits it). Require a single currency.
-        currencies = {(c.currency or "EUR") for c in eligible_list}
+        currencies = {(charge.currency or "EUR") for charge in eligible_charges}
         if len(currencies) > 1:
             raise BillingRunMixedCurrency(
                 "Eligible charges span multiple currencies "
@@ -871,19 +873,21 @@ class BillingRunService:
             collection_date=collection_date,
             payment_method=payment_method,
             status=BillingRunStatus.DRAFT,
-            total_amount=sum((c.expected_amount for c in eligible_list), Decimal("0")),
-            charge_count=len(eligible_list),
+            total_amount=sum(
+                (charge.expected_amount for charge in eligible_charges), Decimal("0")
+            ),
+            charge_count=len(eligible_charges),
             msg_id=f"BR-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}",
         )
 
-        for c in eligible_list:
-            c.billing_run = run
+        for charge in eligible_charges:
+            charge.billing_run = run
             # EndToEndId is the per-transaction reconciliation key (matched back
             # from bank-statement lines to a ChargeSchedule). msg_id is constant
             # within a run, so uniqueness rests on the charge pk — carry the FULL
             # 12-char pk (``msg_id[:22] + "-" + 12 == 35``, the EndToEndId max)
             # rather than truncating it to 9 and discarding reconciliation keyspace.
-            c.end_to_end_id = f"{run.msg_id[:22]}-{c.pk}"[:35]
+            charge.end_to_end_id = f"{run.msg_id[:22]}-{charge.pk}"[:35]
         # One UPDATE for the whole batch instead of a per-charge save(). A
         # save() on each freshly-locked PLANNED row would fire its immutability
         # reload SELECT *and* (ChargeSchedule is auditlog-registered) an
@@ -896,7 +900,7 @@ class BillingRunService:
         # and the audited money-event is the export → ISSUED status flip, which
         # still goes through save().)
         ChargeSchedule.objects.bulk_update(
-            eligible_list, ["billing_run", "end_to_end_id"]
+            eligible_charges, ["billing_run", "end_to_end_id"]
         )
         return run
 
@@ -964,21 +968,23 @@ class BillingRunService:
             # the lock. The second concurrent export blocks here until the first
             # commits its first-use stamp, then reads non-NULL and emits RCUR.
             locked_profiles = {
-                bp.pk: bp
-                for bp in BillingProfile.objects.select_for_update()
+                profile.pk: profile
+                for profile in BillingProfile.objects.select_for_update()
                 .filter(
                     pk__in={
-                        c.member.billing_profile.pk
-                        for c in charges
-                        if getattr(c.member, "billing_profile", None) is not None
+                        charge.member.billing_profile.pk
+                        for charge in charges
+                        if getattr(charge.member, "billing_profile", None) is not None
                     }
                 )
                 .order_by("pk")
             }
-            for c in charges:
-                profile = getattr(c.member, "billing_profile", None)
+            for charge in charges:
+                profile = getattr(charge.member, "billing_profile", None)
                 if profile is not None:
-                    c.member.billing_profile = locked_profiles.get(profile.pk, profile)
+                    charge.member.billing_profile = locked_profiles.get(
+                        profile.pk, profile
+                    )
 
             # Eligibility (is_active / payment_method / mandate
             # completeness — all folded into ``is_sepa_ready``) was checked at
@@ -990,10 +996,10 @@ class BillingRunService:
             # freshly-locked profiles and refuse the whole export if any charge's
             # mandate is no longer collectable (the run stays DRAFT for rebuild).
             not_ready = [
-                c
-                for c in charges
+                charge
+                for charge in charges
                 if not getattr(
-                    getattr(c.member, "billing_profile", None),
+                    getattr(charge.member, "billing_profile", None),
                     "is_sepa_ready",
                     False,
                 )
@@ -1005,8 +1011,10 @@ class BillingRunService:
                     "switched to bank transfer, or missing IBAN/mandate). Rebuild "
                     "the run so these charges are re-evaluated.",
                     details={
-                        "charges": [c.pk for c in not_ready],
-                        "members": sorted({str(c.member_id) for c in not_ready}),
+                        "charges": [charge.pk for charge in not_ready],
+                        "members": sorted(
+                            {str(charge.member_id) for charge in not_ready}
+                        ),
                     },
                 )
 
@@ -1016,12 +1024,12 @@ class BillingRunService:
             )
 
         # Mark charges as ISSUED + bump first-use date for SEPA mandates only.
-        for c in charges:
-            c.status = ChargeStatus.ISSUED
-            c.save(allow_immutable_change=True)
+        for charge in charges:
+            charge.status = ChargeStatus.ISSUED
+            charge.save(allow_immutable_change=True)
 
             if is_sepa:
-                billing_profile = c.member.billing_profile
+                billing_profile = charge.member.billing_profile
                 if billing_profile.sepa_mandate_first_use_at is None:
                     billing_profile.sepa_mandate_first_use_at = today
                     billing_profile.save()
@@ -1031,7 +1039,9 @@ class BillingRunService:
         # charges actually issued so the operator's confirmation and the
         # DebitsAbos list reflect what really went into the file.
         run.charge_count = len(charges)
-        run.total_amount = sum((c.expected_amount for c in charges), Decimal("0"))
+        run.total_amount = sum(
+            (charge.expected_amount for charge in charges), Decimal("0")
+        )
 
         run.status = BillingRunStatus.EXPORTED
         run.save()
@@ -1104,7 +1114,11 @@ class BillingRunService:
 
         ordered = sorted(
             charges,
-            key=lambda c: (c.member_id, c.due_date, c.end_to_end_id or c.pk),
+            key=lambda charge: (
+                charge.member_id,
+                charge.due_date,
+                charge.end_to_end_id or charge.pk,
+            ),
         )
         # Mandates already assigned their single FRST in THIS file. SEPA
         # allows only one FRST per mandate, so a never-used mandate with
@@ -1112,13 +1126,13 @@ class BillingRunService:
         # RCUR on the rest (see the per-mandate sequence logic below).
         frst_assigned: set = set()
         today = timezone.localdate()
-        for c in ordered:
-            billing_profile = getattr(c.member, "billing_profile", None)
+        for charge in ordered:
+            billing_profile = getattr(charge.member, "billing_profile", None)
             if billing_profile is None:
                 raise SepaExportInvalid(
-                    f"Charge {c.pk}: member has no billing_profile; "
+                    f"Charge {charge.pk}: member has no billing_profile; "
                     "cannot include in SEPA XML.",
-                    details={"charge": str(c.pk)},
+                    details={"charge": str(charge.pk)},
                 )
             mandate_ref = (billing_profile.sepa_mandate_reference or "").strip()
             mandate_signed = billing_profile.sepa_mandate_signed_at
@@ -1126,10 +1140,10 @@ class BillingRunService:
             debtor_name = (billing_profile.account_holder or "").strip()
             if not (mandate_ref and mandate_signed and debtor_iban and debtor_name):
                 raise SepaExportInvalid(
-                    f"Charge {c.pk}: debtor missing mandate fields "
+                    f"Charge {charge.pk}: debtor missing mandate fields "
                     "(mandate_reference, mandate_signed_at, IBAN, "
                     "account_holder are all required).",
-                    details={"charge": str(c.pk)},
+                    details={"charge": str(charge.pk)},
                 )
 
             # A mandate signed in the FUTURE (DtOfSgntr) is logically
@@ -1137,10 +1151,10 @@ class BillingRunService:
             # date instance, so guard it here before it reaches the file.
             if mandate_signed > today:
                 raise SepaExportInvalid(
-                    f"Charge {c.pk}: sepa_mandate_signed_at {mandate_signed} is in "
+                    f"Charge {charge.pk}: sepa_mandate_signed_at {mandate_signed} is in "
                     "the future; a SEPA mandate cannot be dated after today.",
                     details={
-                        "charge": str(c.pk),
+                        "charge": str(charge.pk),
                         "mandate_signed_at": str(mandate_signed),
                     },
                 )
@@ -1150,11 +1164,11 @@ class BillingRunService:
             # free CharField) would otherwise be silently direct-debited as the
             # same numeric amount in EUR. Fail loudly instead of emitting a
             # wrong-currency debit.
-            if (c.currency or "EUR") != "EUR":
+            if (charge.currency or "EUR") != "EUR":
                 raise SepaExportInvalid(
-                    f"Charge {c.pk}: currency {c.currency} is not EUR; "
+                    f"Charge {charge.pk}: currency {charge.currency} is not EUR; "
                     "SEPA pain.008 is EUR-only.",
-                    details={"charge": str(c.pk), "currency": c.currency},
+                    details={"charge": str(charge.pk), "currency": charge.currency},
                 )
 
             # FRST only for a mandate's very first-ever collection; RCUR
@@ -1177,7 +1191,7 @@ class BillingRunService:
                     "IBAN": debtor_iban,
                     # ``amount`` is in CENTS (integer) per sepaxml's API.
                     "amount": int(
-                        (c.expected_amount * 100).quantize(
+                        (charge.expected_amount * 100).quantize(
                             Decimal("1"), rounding=ROUND_HALF_UP
                         )
                     ),
@@ -1197,12 +1211,14 @@ class BillingRunService:
                         remittance_template,
                         creditor=creditor_name,
                         member=debtor_name,
-                        period_start=c.period_start,
-                        period_end=c.period_end,
-                        amount=c.expected_amount,
+                        period_start=charge.period_start,
+                        period_end=charge.period_end,
+                        amount=charge.expected_amount,
                     )
-                    or (c.description or f"Subscription {c.subscription_id}")[:140],
-                    "endtoend_id": str(c.end_to_end_id or c.pk)[:35],
+                    or (charge.description or f"Subscription {charge.subscription_id}")[
+                        :140
+                    ],
+                    "endtoend_id": str(charge.end_to_end_id or charge.pk)[:35],
                 }
             )
 

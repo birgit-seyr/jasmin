@@ -12,7 +12,7 @@ from django.db import models, transaction
 from django.utils import timezone
 
 from apps.accounts.models import JasminUser
-from apps.shared.money import round_money, to_decimal
+from apps.shared.money import CENT, round_money, to_decimal
 from core.db_locks import acquire_advisory_xact_lock
 
 from .managers import (
@@ -399,13 +399,6 @@ class PricingMixin:
 # ---------------------------------------------------------------------------
 
 _PRICE_ZERO = Decimal("0.00")
-_PRICE_ONE = Decimal("1")
-_PRICE_HUNDRED = Decimal("100")
-_PRICE_QUANTIZE = Decimal("0.01")
-# Public alias for cross-module reuse (e.g. crate_summary, member_register_export)
-# so other commissioning modules don't redeclare the cent constant or import the
-# underscore-private name.
-PRICE_QUANTIZE = _PRICE_QUANTIZE
 
 
 # Float-safe coercer — the shared primitive (apps.shared.money.to_decimal),
@@ -428,15 +421,13 @@ def _calc_line_netto(*, amount, price_per_unit, rabatt=None) -> Decimal:
     amount_dec = _to_decimal(amount)
     price_dec = _to_decimal(price_per_unit)
     rabatt_dec = _to_decimal(rabatt)
-    return round_money(
-        amount_dec * price_dec * (_PRICE_ONE - rabatt_dec / _PRICE_HUNDRED)
-    )
+    return round_money(amount_dec * price_dec * (1 - rabatt_dec / 100))
 
 
 def _calc_line_brutto(netto: Decimal, *, tax_rate=None) -> Decimal:
     """Gross = ``netto * (1 + tax_rate/100)``."""
     tax_rate_dec = _to_decimal(tax_rate)
-    return round_money(netto * (_PRICE_ONE + tax_rate_dec / _PRICE_HUNDRED))
+    return round_money(netto * (1 + tax_rate_dec / 100))
 
 
 # Public aliases — same names used on serializers/properties for consistency.
@@ -446,7 +437,7 @@ line_brutto = _calc_line_brutto
 
 def sum_netto(items) -> Decimal:
     return sum((item.line_netto for item in items), _PRICE_ZERO).quantize(
-        _PRICE_QUANTIZE, rounding=ROUND_HALF_UP
+        CENT, rounding=ROUND_HALF_UP
     )
 
 
@@ -455,7 +446,7 @@ def sum_brutto(items) -> Decimal:
     legally consistent (one tax rounding per VAT rate, not per line)."""
     return sum(
         (group["brutto"] for group in tax_breakdown(items)), _PRICE_ZERO
-    ).quantize(_PRICE_QUANTIZE, rounding=ROUND_HALF_UP)
+    ).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
 def tax_breakdown(*item_iterables) -> list[dict]:
@@ -474,18 +465,14 @@ def tax_breakdown(*item_iterables) -> list[dict]:
 
     breakdown = []
     for rate in sorted(buckets):
-        netto = buckets[rate].quantize(_PRICE_QUANTIZE, rounding=ROUND_HALF_UP)
-        tax = (netto * rate / _PRICE_HUNDRED).quantize(
-            _PRICE_QUANTIZE, rounding=ROUND_HALF_UP
-        )
+        netto = buckets[rate].quantize(CENT, rounding=ROUND_HALF_UP)
+        tax = (netto * rate / 100).quantize(CENT, rounding=ROUND_HALF_UP)
         breakdown.append(
             {
                 "rate": rate,
                 "netto": netto,
                 "tax": tax,
-                "brutto": (netto + tax).quantize(
-                    _PRICE_QUANTIZE, rounding=ROUND_HALF_UP
-                ),
+                "brutto": (netto + tax).quantize(CENT, rounding=ROUND_HALF_UP),
             }
         )
     return breakdown

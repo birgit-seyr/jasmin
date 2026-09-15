@@ -32,8 +32,11 @@ from ..models import (
     Subscription,
     VirtualVariationComponent,
 )
-from ..utils.basic_utils import extract_amounts_from_keys
-from ..utils.dynamic_keys import SCAFFOLD_VALUES, parse_amount_cell
+from ..utils.dynamic_keys import (
+    SCAFFOLD_VALUES,
+    extract_amounts_from_keys,
+    parse_amount_cell,
+)
 
 # Share lookup key: (year, delivery_week, delivery_day_id, share_type_variation_id)
 _ShareKey = tuple[int, int, int, str]

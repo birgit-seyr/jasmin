@@ -31,7 +31,6 @@ interface ModalContextValue {
   toggleEditMode: () => void;
   isModalMode: boolean;
   isInlineMode: boolean;
-  EDIT_MODES: typeof EDIT_MODES;
 }
 
 const ModalContext = createContext<ModalContextValue | undefined>(undefined);
@@ -135,7 +134,6 @@ export function ModalProvider({ children }: { children: ReactNode }) {
       toggleEditMode,
       isModalMode: editMode === EDIT_MODES.MODAL,
       isInlineMode: editMode === EDIT_MODES.INLINE,
-      EDIT_MODES,
     }),
     [editMode, loading, error, saveEditMode, savePreferences, toggleEditMode],
   );

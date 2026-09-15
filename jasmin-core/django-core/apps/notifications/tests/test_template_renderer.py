@@ -277,7 +277,7 @@ class TestEmailTemplateDeclaredVariableValidation:
     render empty with no warning), while accepting every declared variable and
     the trusted raw keys."""
 
-    def _ser(self, slug, data):
+    def _update_serializer(self, slug, data):
         from apps.notifications.registry import get_spec
         from apps.notifications.serializers import EmailTemplateUpdateSerializer
 
@@ -288,7 +288,7 @@ class TestEmailTemplateDeclaredVariableValidation:
     def test_template_using_every_declared_var_passes(self):
         # invitation declares tenant_name, user.first_name, user.email,
         # accept_url, expires_at.
-        ser = self._ser(
+        ser = self._update_serializer(
             "accounts.invitation",
             {
                 "subject": "{{ tenant_name }}",
@@ -304,7 +304,7 @@ class TestEmailTemplateDeclaredVariableValidation:
     def test_undeclared_placeholder_rejected_with_code_and_details(self):
         from apps.notifications.errors import UndeclaredPlaceholders
 
-        ser = self._ser(
+        ser = self._update_serializer(
             "accounts.invitation",
             {"body_html": "Hi {{ user.first_name }} {{ foo.bar }}"},
         )
@@ -317,7 +317,7 @@ class TestEmailTemplateDeclaredVariableValidation:
     def test_raw_keys_allowed_under_strict_mode(self):
         # invoice_reminder declares the raw keys; even independent of that the
         # validator always permits RAW_KEYS.
-        ser = self._ser(
+        ser = self._update_serializer(
             "commissioning.invoice_reminder",
             {
                 "body_html": (
@@ -334,7 +334,7 @@ class TestEmailTemplateDeclaredVariableValidation:
         # The shipped application templates reference member.*, which the
         # registry declares, so a tenant override copying the default must
         # validate.
-        ser = self._ser(
+        ser = self._update_serializer(
             "accounts.application_rejected",
             {
                 "subject": "{{ tenant_name }}",

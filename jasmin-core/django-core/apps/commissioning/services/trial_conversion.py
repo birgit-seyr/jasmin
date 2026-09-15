@@ -33,6 +33,7 @@ transaction so the trial flip and the share insert commit together.
 from __future__ import annotations
 
 import logging
+from datetime import date
 
 from django.db import transaction
 from django.utils import timezone
@@ -42,11 +43,16 @@ from ..models import Member
 logger = logging.getLogger(__name__)
 
 
-def convert_trial_member_on_first_coop_share(member: Member) -> bool:
+def convert_trial_member_on_first_coop_share(
+    member: Member, *, entry_date: date | None = None
+) -> bool:
     """Convert ``member`` from trial → full when they acquire equity.
 
     Returns ``True`` if a conversion actually happened (state changed),
     ``False`` if the member was already a full member.
+
+    ``entry_date`` becomes the entry date of a member who has none yet (a coop
+    share transfer passes its transfer date); without it that is today.
 
     Caller is expected to be inside a transaction that ALSO inserts the
     triggering ``CoopShare``. The current ``transaction.atomic`` wrapper
@@ -109,7 +115,7 @@ def convert_trial_member_on_first_coop_share(member: Member) -> bool:
             # Berlin in winter / summer, anywhere east). Matches the
             # local-date stamp ``Member._post_confirm`` uses for the
             # non-trial admit path so the two flows agree.
-            member.entry_date = timezone.localdate()
+            member.entry_date = entry_date or timezone.localdate()
             update_fields.append("entry_date")
         if not member.member_number:
             # Mutates ``member.member_number`` AND issues its own save

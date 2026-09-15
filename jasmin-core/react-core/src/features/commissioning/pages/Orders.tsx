@@ -41,7 +41,6 @@ export default function Orders() {
     getSetting("crates_should_be_on_documents", true),
   );
 
-  const orderData = useOrdersData();
   const {
     selectedYear,
     setSelectedYear,
@@ -77,7 +76,7 @@ export default function Orders() {
     handleCratesDataChange,
     handleSaveSuccess,
     handleFinalizeInvoicesSuccess,
-    handleFinalizeDNSuccess,
+    handleFinalizeDeliveryNotesSuccess,
     handleCreateInvoiceSuccess,
     calculatePricePerUnit,
     data,
@@ -87,7 +86,7 @@ export default function Orders() {
     summaryDataArticles,
     summaryDataCrates,
     defaultTaxRateArticles,
-  } = orderData;
+  } = useOrdersData();
 
   const {
     columnsOffers,
@@ -104,9 +103,9 @@ export default function Orders() {
   });
 
   // Modal state
-  const [modalVisibleDeliveryNote, setModalVisibleDeliveryNote] =
+  const [deliveryNoteModalVisible, setDeliveryNoteModalVisible] =
     useState(false);
-  const [modalVisibleInvoice, setModalVisibleInvoice] = useState(false);
+  const [invoiceModalVisible, setInvoiceModalVisible] = useState(false);
 
   const formattedOrderNumber = useMemo(() => {
     if (!orderState.orderNumber) return "---";
@@ -507,11 +506,11 @@ export default function Orders() {
         formattedOrderNumber={formattedOrderNumber}
         totalSum={totalSum}
         fetchData={fetchData}
-        handleFinalizeDNSuccess={handleFinalizeDNSuccess}
+        handleFinalizeDeliveryNotesSuccess={handleFinalizeDeliveryNotesSuccess}
         handleFinalizeInvoicesSuccess={handleFinalizeInvoicesSuccess}
         handleCreateInvoiceSuccess={handleCreateInvoiceSuccess}
-        onOpenDeliveryNoteModal={() => setModalVisibleDeliveryNote(true)}
-        onOpenInvoiceModal={() => setModalVisibleInvoice(true)}
+        onOpenDeliveryNoteModal={() => setDeliveryNoteModalVisible(true)}
+        onOpenInvoiceModal={() => setInvoiceModalVisible(true)}
         orderNote={orderNote}
         onOrderNoteChange={setOrderNote}
       />
@@ -532,17 +531,17 @@ export default function Orders() {
       </ExplainerText>
 
       <DeliveryNoteModal
-        visible={modalVisibleDeliveryNote}
+        visible={deliveryNoteModalVisible}
         onClose={() => {
-          setModalVisibleDeliveryNote(false);
+          setDeliveryNoteModalVisible(false);
           fetchData();
         }}
         deliveryNoteId={orderState.deliveryNoteId}
       />
       <InvoiceModal
-        visible={modalVisibleInvoice}
+        visible={invoiceModalVisible}
         onClose={() => {
-          setModalVisibleInvoice(false);
+          setInvoiceModalVisible(false);
           fetchData();
         }}
         invoiceId={orderState.invoiceId}

@@ -30,7 +30,8 @@ const SetPasswordPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [info, setInfo] = useState<InvitationVerifyResponse | null>(null);
+  const [invitation, setInvitation] =
+    useState<InvitationVerifyResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [password, setPassword] = useState("");
@@ -50,7 +51,7 @@ const SetPasswordPage = () => {
       return;
     }
     authInvitationsRetrieve(token)
-      .then(setInfo)
+      .then(setInvitation)
       .catch(() => setError(t("auth.set_password.invalid_link")))
       .finally(() => setLoading(false));
   }, [token, t]);
@@ -95,12 +96,12 @@ const SetPasswordPage = () => {
           <div className="text-center">
             <Title level={3} style={{ marginBottom: 4 }}>
               {t("auth.set_password.welcome")}
-              {info?.first_name ? `, ${info.first_name}` : ""}!
+              {invitation?.first_name ? `, ${invitation.first_name}` : ""}!
             </Title>
-            {info?.tenant_name && (
+            {invitation?.tenant_name && (
               <Text type="secondary">
                 {t("auth.set_password.invited_to", {
-                  tenant: info.tenant_name,
+                  tenant: invitation.tenant_name,
                 })}
               </Text>
             )}
@@ -114,7 +115,7 @@ const SetPasswordPage = () => {
               showIcon
               message={t("auth.set_password.success")}
             />
-          ) : info ? (
+          ) : invitation ? (
             <Form
               form={form}
               layout="vertical"
@@ -123,7 +124,7 @@ const SetPasswordPage = () => {
             >
               <Form.Item label={t("auth.set_password.email")}>
                 <Input
-                  value={info.email}
+                  value={invitation.email}
                   disabled
                   aria-label={t("auth.set_password.email")}
                 />

@@ -30,7 +30,7 @@ const { Text } = Typography;
 interface ResellerDocPreviewButtonsProps {
   /**
    * Read the user's *live* (unsaved) edits to the reseller-doc text
-   * settings. Backed by ``useSettingsManager``'s in-memory state via
+   * settings. Backed by ``useAutoSavedSettings``'s in-memory state via
    * ``SettingsPage``'s ``extraBefore`` render-prop, so the preview
    * reflects exactly what's in the form right now — saved or not.
    */

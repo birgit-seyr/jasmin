@@ -84,11 +84,9 @@ function decodeEntities(s: string): string {
  * doesn't need it and we don't want to over-process every run.
  */
 function softenLongTokens(text: string): string {
-  const TRIGGER_LEN = 30;
-  return text.replace(/\S{30,}/g, (token) => {
-    if (token.length < TRIGGER_LEN) return token;
-    return token.replace(/([@/._\-])/g, "$1​");
-  });
+  return text.replace(/\S{30,}/g, (token) =>
+    token.replace(/([@/._\-])/g, "$1​"),
+  );
 }
 
 function tokenize(html: string): Token[] {

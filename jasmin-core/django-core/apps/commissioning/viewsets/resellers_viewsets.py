@@ -110,8 +110,8 @@ from ..services import (
 from ..services.order_content_service import AMOUNT_NOT_SENT
 from ..utils import get_contact_annotations
 from ..utils.lookup import get_or_404
+from ..utils.optional_filters import apply_optional_filters
 from ..utils.query_params import validate_query_params
-from ..utils.queryset_helpers import apply_optional_filters
 
 logger = logging.getLogger(__name__)
 

@@ -49,6 +49,7 @@ def cancel_member_with_coop_shares(
     cancelled_by=None,
     reason: str | None = None,
     force: bool = False,
+    shares_transferred: bool = False,
 ) -> Member:
     """Stamp cancellation timestamps on ``member`` and cascade to every
     still-open ``CoopShare`` for that member.
@@ -70,6 +71,9 @@ def cancel_member_with_coop_shares(
     stays in the cooperative for the retention period after exit, then
     becomes due to be paid back. Frozen per-share so a later retention change
     doesn't move already-cancelled members' due dates.
+
+    ``shares_transferred`` tells the cancellation email that the member's shares
+    went to another member, so no settlement of their share balance follows.
 
     Returns ``member`` with a transient ``cancellation_result`` attribute —
     ``{"subscriptions_ended": [...], "subscriptions_not_ended": [...]}`` — so the
@@ -113,7 +117,7 @@ def cancel_member_with_coop_shares(
     )
 
     if member.email:
-        _send_cancellation_email(member)
+        _send_cancellation_email(member, shares_transferred=shares_transferred)
 
     # Transient (not persisted) report for the caller — which subscriptions the
     # cancellation ended vs. could not end (the latter keep a live mandate).
@@ -351,7 +355,7 @@ def _force_end_subscription(subscription, *, effective, now, cancelled_by) -> No
     truncate_future_deliveries(subscription, cutoff_date=effective)
 
 
-def _send_cancellation_email(member: Member) -> None:
+def _send_cancellation_email(member: Member, *, shares_transferred: bool) -> None:
     """Schedule the ``commissioning.member_cancelled`` confirmation
     via ``on_commit``.
 
@@ -385,6 +389,7 @@ def _send_cancellation_email(member: Member) -> None:
             if member.cancelled_effective_at
             else ""
         ),
+        "shares_transferred": shares_transferred,
     }
 
     def _stamp_email_sent() -> None:

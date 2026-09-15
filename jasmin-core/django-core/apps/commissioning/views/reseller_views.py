@@ -579,8 +579,8 @@ class BulkSetToPaidDocumentsView(APIViewRolePermissionsMixin, APIView):
                 )
                 return
 
-            inv_id = str(invoice.id)
-            if inv_id in processed_invoices:
+            invoice_id = str(invoice.id)
+            if invoice_id in processed_invoices:
                 # Another order in this batch already acted on this same
                 # (summary) invoice — report one outcome per invoice, not a
                 # spurious already-paid / not-paid failure for the siblings.
@@ -590,9 +590,9 @@ class BulkSetToPaidDocumentsView(APIViewRolePermissionsMixin, APIView):
                         "order_number": order.full_number,
                         "delivery_note_id": str(delivery_note.id),
                         "delivery_note_number": delivery_note.full_number,
-                        "invoice_id": inv_id,
+                        "invoice_id": invoice_id,
                         "invoice_number": invoice.full_number,
-                        "action": processed_invoices[inv_id],
+                        "action": processed_invoices[invoice_id],
                         "success": True,
                     }
                 )
@@ -625,7 +625,7 @@ class BulkSetToPaidDocumentsView(APIViewRolePermissionsMixin, APIView):
                     return
 
                 invoice.mark_as_unpaid()
-                processed_invoices[inv_id] = "unpaid"
+                processed_invoices[invoice_id] = "unpaid"
                 results.append(
                     {
                         "order_id": str(order.id),
@@ -652,7 +652,7 @@ class BulkSetToPaidDocumentsView(APIViewRolePermissionsMixin, APIView):
                     return
 
                 invoice.mark_as_paid(user=request.user)
-                processed_invoices[inv_id] = "paid"
+                processed_invoices[invoice_id] = "paid"
                 results.append(
                     {
                         "order_id": str(order.id),

@@ -124,13 +124,13 @@ export default function DeliveryNotes() {
     rowSelection: rowSelectionConfig,
   } = useTableRowSelection();
 
-  const handleFinalizeDNSuccess = useCallback(
+  const handleFinalizeDeliveryNotesSuccess = useCallback(
     async (responseData: BulkOperationResponse) => {
-      const dnIds = (responseData?.results ?? [])
+      const deliveryNoteIds = (responseData?.results ?? [])
         .filter((r) => r.success && r.delivery_note_id)
         .map((r) => r.delivery_note_id);
 
-      for (const id of dnIds) {
+      for (const id of deliveryNoteIds) {
         try {
           await generateAndUploadDeliveryNotePDF(
             id,
@@ -391,7 +391,7 @@ export default function DeliveryNotes() {
                       apiFunction={bulkFinalizeDocuments}
                       buttonText={t("commissioning.finalize_delivery_note")}
                       buttonProps={{ type: "primary" }}
-                      onSuccess={handleFinalizeDNSuccess}
+                      onSuccess={handleFinalizeDeliveryNotesSuccess}
                       payload={{ model: "delivery_note" }}
                       style={{ marginTop: "0em" }}
                     />
@@ -445,7 +445,7 @@ export default function DeliveryNotes() {
       bulkFinalizeDocuments,
       data.length,
       formatDate,
-      handleFinalizeDNSuccess,
+      handleFinalizeDeliveryNotesSuccess,
       handleOpenModal,
       handleSendDeliveryNoteToReseller,
       refetchOrders,
@@ -516,7 +516,7 @@ export default function DeliveryNotes() {
                 item.delivery_note_is_finalized,
             )
           }
-          onSuccess={handleFinalizeDNSuccess}
+          onSuccess={handleFinalizeDeliveryNotesSuccess}
           payload={{ model: "delivery_note" }}
         />
       </div>

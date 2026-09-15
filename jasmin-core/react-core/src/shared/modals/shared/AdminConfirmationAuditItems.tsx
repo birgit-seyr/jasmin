@@ -5,8 +5,6 @@ import type { AdminConfirmableRecord } from "./adminConfirmation";
 
 const { Text } = Typography;
 
-const muted = { fontSize: "0.85em", color: "var(--color-text-muted)" } as const;
-
 /**
  * Returns the two trailing "audit" Description.Items shared by the admin
  * confirmation modals (who confirmed, when). Returned as an array so antd's
@@ -31,9 +29,10 @@ export function adminConfirmationAuditItems(
           {t("members.admin_confirmed_by")}
         </Text>
       }
-      contentStyle={muted}
     >
-      {record.admin_confirmed_by_name || "-"}
+      <span className="text-secondary">
+        {record.admin_confirmed_by_name || "-"}
+      </span>
     </Descriptions.Item>,
     <Descriptions.Item
       key="admin_confirmed_at"
@@ -42,11 +41,12 @@ export function adminConfirmationAuditItems(
           {t("members.admin_confirmed_at")}
         </Text>
       }
-      contentStyle={muted}
     >
-      {record.admin_confirmed_at
-        ? formatDateTime(record.admin_confirmed_at)
-        : "-"}
+      <span className="text-secondary">
+        {record.admin_confirmed_at
+          ? formatDateTime(record.admin_confirmed_at)
+          : "-"}
+      </span>
     </Descriptions.Item>,
   ];
 }

@@ -6,7 +6,6 @@ export type { ModalStatusBannerKind } from "./ModalStatusBanner";
 export { useEnterToSubmit } from "./useEnterToSubmit";
 export { useModalMutation } from "./useModalMutation";
 export type { ModalMutationOptions } from "./useModalMutation";
-export { greenInputStyle } from "./styles";
 export {
   getAdminConfirmationStatus,
   type AdminConfirmationStatus,

@@ -29,7 +29,6 @@ export type DeliveryDay = Omit<ShareDeliveryDayOption, "delivery_stations"> & {
 };
 
 const AMOUNT_COLUMN_WIDTH = "5.5em";
-const STATIONS_COLUMN_WIDTH = "8em";
 
 interface UseDeliveryDayColumnsParams {
   shareDeliveryDays: DeliveryDay[];
@@ -167,7 +166,7 @@ export function useDeliveryDayColumns({
           key: stationKey,
           inputType: "positive_decimal2",
           align: "center",
-          width: STATIONS_COLUMN_WIDTH,
+          width: "8em",
           render: (value: unknown, record: TableRecord) =>
             renderVariationCell(value, record, variation.id as string),
         };

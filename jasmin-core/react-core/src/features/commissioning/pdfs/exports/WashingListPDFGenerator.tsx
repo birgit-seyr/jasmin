@@ -1,10 +1,7 @@
 import type { TFunction } from "i18next";
 import type { WashingListPDFProps } from "./WashingListPDF";
 import ArticleAmountTickListPDFGenerator from "./ArticleAmountTickListPDFGenerator";
-import {
-  WASHING_LIST_PILL_KEY,
-  washAmountAccessor,
-} from "./ArticleAmountTickListPDF";
+import { washAmountAccessor } from "./ArticleAmountTickListPDF";
 
 interface WashingListPDFGeneratorProps {
   data: WashingListPDFProps["data"] | null;
@@ -22,7 +19,7 @@ export default function WashingListPDFGenerator(
   return (
     <ArticleAmountTickListPDFGenerator
       {...props}
-      pillKey={WASHING_LIST_PILL_KEY}
+      pillKey="commissioning.washing_list"
       amountAccessor={washAmountAccessor}
     />
   );

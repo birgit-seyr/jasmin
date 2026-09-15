@@ -8,7 +8,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Suspense, lazy } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@shared/contexts/AuthContext";
-import { LocaleProvider } from "@shared/contexts/LocalContext";
+import { LocaleProvider } from "@shared/contexts/LocaleContext";
 import { TenantProvider, isPlatformDomain } from "@shared/contexts/TenantContext";
 import ErrorBoundary from "@shared/ui/ErrorBoundary";
 import { StepUpProvider } from "@shared/auth/StepUpProvider";

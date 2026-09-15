@@ -7,7 +7,7 @@ import { useCurrentConsentDoc } from "@shared/consent/useCurrentConsentDoc";
 
 const { Paragraph } = Typography;
 
-const KINDS = ["privacy", "withdrawal"] as const;
+const REGISTRATION_CONSENT_KINDS = ["privacy", "withdrawal"] as const;
 
 /**
  * Step 3 — privacy + withdrawal consents. A checkbox is shown (and required)
@@ -37,14 +37,16 @@ export default function StepConsents({ data, update, next, back }: StepProps) {
 
   const handleNext = () => {
     if (loading) return;
-    const missing = KINDS.filter((k) => docs[k] && !accepted[k]);
+    const missing = REGISTRATION_CONSENT_KINDS.filter(
+      (k) => docs[k] && !accepted[k],
+    );
     if (missing.length > 0) {
       setError(t("auth.registration.consents.must_accept_all"));
       return;
     }
     setError("");
     const kept: Record<string, string> = {};
-    for (const k of KINDS) {
+    for (const k of REGISTRATION_CONSENT_KINDS) {
       const id = accepted[k];
       if (docs[k] && id) kept[k] = id;
     }

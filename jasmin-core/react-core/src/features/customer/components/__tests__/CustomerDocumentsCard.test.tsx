@@ -29,17 +29,17 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
-type RetrieveOpts = { query?: { enabled?: boolean } };
+type RetrieveOptions = { query?: { enabled?: boolean } };
 type RetrieveResult = { data?: { file?: string } | undefined };
 
-const dnRetrieveMock = vi.fn<(id: string, opts: RetrieveOpts) => RetrieveResult>();
-const invRetrieveMock = vi.fn<(id: string, opts: RetrieveOpts) => RetrieveResult>();
+const deliveryNoteRetrieveMock = vi.fn<(id: string, opts: RetrieveOptions) => RetrieveResult>();
+const invoiceRetrieveMock = vi.fn<(id: string, opts: RetrieveOptions) => RetrieveResult>();
 
 vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
-  useCommissioningDeliveryNotesRetrieve: (id: string, opts: RetrieveOpts) =>
-    dnRetrieveMock(id, opts),
-  useCommissioningInvoicesRetrieve: (id: string, opts: RetrieveOpts) =>
-    invRetrieveMock(id, opts),
+  useCommissioningDeliveryNotesRetrieve: (id: string, opts: RetrieveOptions) =>
+    deliveryNoteRetrieveMock(id, opts),
+  useCommissioningInvoicesRetrieve: (id: string, opts: RetrieveOptions) =>
+    invoiceRetrieveMock(id, opts),
 }));
 
 import CustomerDocumentsCard from "../CustomerDocumentsCard";
@@ -55,8 +55,8 @@ const originalOpen = window.open;
 let windowOpenSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
-  dnRetrieveMock.mockReset().mockReturnValue({ data: undefined });
-  invRetrieveMock.mockReset().mockReturnValue({ data: undefined });
+  deliveryNoteRetrieveMock.mockReset().mockReturnValue({ data: undefined });
+  invoiceRetrieveMock.mockReset().mockReturnValue({ data: undefined });
   windowOpenSpy = vi.fn();
   window.open = windowOpenSpy as unknown as typeof window.open;
 });
@@ -68,8 +68,8 @@ afterEach(() => {
 // Source uses regex-y i18n keys: t("customer.delivery_note") and
 // t("customer.invoice"). With the canonical mock (no fallback supplied)
 // these return the key verbatim — so we match on the key as button name.
-const DN_BUTTON = /customer\.delivery_note/;
-const INV_BUTTON = /customer\.invoice/;
+const DELIVERY_NOTE_BUTTON = /customer\.delivery_note/;
+const INVOICE_BUTTON = /customer\.invoice/;
 
 // ── Empty input ─────────────────────────────────────────────────────────────
 
@@ -77,17 +77,17 @@ describe("with no order contents", () => {
   it("calls all query hooks with enabled:false and disables both buttons", () => {
     render(<CustomerDocumentsCard orderContents={[]} />);
 
-    expect(dnRetrieveMock).toHaveBeenCalledTimes(1);
+    expect(deliveryNoteRetrieveMock).toHaveBeenCalledTimes(1);
     // invoice retrieve + storno retrieve both route through this hook.
-    expect(invRetrieveMock).toHaveBeenCalledTimes(2);
+    expect(invoiceRetrieveMock).toHaveBeenCalledTimes(2);
     // enabled must be false because no id was discovered (invoice → call 0,
     // storno → call 1, gated off because the invoice isn't cancelled).
-    expect(dnRetrieveMock.mock.calls[0][1].query?.enabled).toBe(false);
-    expect(invRetrieveMock.mock.calls[0][1].query?.enabled).toBe(false);
-    expect(invRetrieveMock.mock.calls[1][1].query?.enabled).toBe(false);
+    expect(deliveryNoteRetrieveMock.mock.calls[0][1].query?.enabled).toBe(false);
+    expect(invoiceRetrieveMock.mock.calls[0][1].query?.enabled).toBe(false);
+    expect(invoiceRetrieveMock.mock.calls[1][1].query?.enabled).toBe(false);
 
-    expect(screen.getByRole("button", { name: DN_BUTTON })).toBeDisabled();
-    expect(screen.getByRole("button", { name: INV_BUTTON })).toBeDisabled();
+    expect(screen.getByRole("button", { name: DELIVERY_NOTE_BUTTON })).toBeDisabled();
+    expect(screen.getByRole("button", { name: INVOICE_BUTTON })).toBeDisabled();
   });
 });
 
@@ -106,8 +106,8 @@ describe("delivery note", () => {
         orderContents={[makeItem({ ...baseRow, delivery_note_is_finalized: false })]}
       />,
     );
-    expect(dnRetrieveMock.mock.calls[0][1].query?.enabled).toBe(false);
-    expect(screen.getByRole("button", { name: DN_BUTTON })).toBeDisabled();
+    expect(deliveryNoteRetrieveMock.mock.calls[0][1].query?.enabled).toBe(false);
+    expect(screen.getByRole("button", { name: DELIVERY_NOTE_BUTTON })).toBeDisabled();
   });
 
   it("enables the query when at least one row is finalized; button disabled until file lands", () => {
@@ -117,14 +117,14 @@ describe("delivery note", () => {
       />,
     );
     // enabled flips true once id + finalized are both satisfied.
-    expect(dnRetrieveMock.mock.calls[0][0]).toBe("dn-123");
-    expect(dnRetrieveMock.mock.calls[0][1].query?.enabled).toBe(true);
+    expect(deliveryNoteRetrieveMock.mock.calls[0][0]).toBe("dn-123");
+    expect(deliveryNoteRetrieveMock.mock.calls[0][1].query?.enabled).toBe(true);
     // No file yet → still disabled.
-    expect(screen.getByRole("button", { name: DN_BUTTON })).toBeDisabled();
+    expect(screen.getByRole("button", { name: DELIVERY_NOTE_BUTTON })).toBeDisabled();
   });
 
   it("enables the button and opens the file in a new tab when the query resolves", async () => {
-    dnRetrieveMock.mockReturnValue({
+    deliveryNoteRetrieveMock.mockReturnValue({
       data: { file: "https://files.test/dn-123.pdf" },
     });
 
@@ -134,7 +134,7 @@ describe("delivery note", () => {
       />,
     );
 
-    const btn = screen.getByRole("button", { name: DN_BUTTON });
+    const btn = screen.getByRole("button", { name: DELIVERY_NOTE_BUTTON });
     expect(btn).not.toBeDisabled();
     await userEvent.click(btn);
     expect(windowOpenSpy).toHaveBeenCalledWith(
@@ -170,8 +170,8 @@ describe("invoice", () => {
         orderContents={[makeItem({ ...baseRow, has_finalized_invoice: false })]}
       />,
     );
-    expect(invRetrieveMock.mock.calls[0][1].query?.enabled).toBe(false);
-    expect(screen.getByRole("button", { name: INV_BUTTON })).toBeDisabled();
+    expect(invoiceRetrieveMock.mock.calls[0][1].query?.enabled).toBe(false);
+    expect(screen.getByRole("button", { name: INVOICE_BUTTON })).toBeDisabled();
   });
 
   it("enables the query when at least one row is finalized", () => {
@@ -180,12 +180,12 @@ describe("invoice", () => {
         orderContents={[makeItem({ ...baseRow, has_finalized_invoice: true })]}
       />,
     );
-    expect(invRetrieveMock.mock.calls[0][0]).toBe("inv-555");
-    expect(invRetrieveMock.mock.calls[0][1].query?.enabled).toBe(true);
+    expect(invoiceRetrieveMock.mock.calls[0][0]).toBe("inv-555");
+    expect(invoiceRetrieveMock.mock.calls[0][1].query?.enabled).toBe(true);
   });
 
   it("opens the invoice file in a new tab when click and file present", async () => {
-    invRetrieveMock.mockReturnValue({
+    invoiceRetrieveMock.mockReturnValue({
       data: { file: "https://files.test/inv-555.pdf" },
     });
 
@@ -195,7 +195,7 @@ describe("invoice", () => {
       />,
     );
 
-    const btn = screen.getByRole("button", { name: INV_BUTTON });
+    const btn = screen.getByRole("button", { name: INVOICE_BUTTON });
     expect(btn).not.toBeDisabled();
     await userEvent.click(btn);
     expect(windowOpenSpy).toHaveBeenCalledWith(
@@ -240,10 +240,10 @@ describe("first-match discovery across rows", () => {
       />,
     );
 
-    expect(dnRetrieveMock.mock.calls[0][0]).toBe("dn-A");
-    expect(invRetrieveMock.mock.calls[0][0]).toBe("inv-B");
-    expect(dnRetrieveMock.mock.calls[0][1].query?.enabled).toBe(true);
-    expect(invRetrieveMock.mock.calls[0][1].query?.enabled).toBe(true);
+    expect(deliveryNoteRetrieveMock.mock.calls[0][0]).toBe("dn-A");
+    expect(invoiceRetrieveMock.mock.calls[0][0]).toBe("inv-B");
+    expect(deliveryNoteRetrieveMock.mock.calls[0][1].query?.enabled).toBe(true);
+    expect(invoiceRetrieveMock.mock.calls[0][1].query?.enabled).toBe(true);
 
     expect(screen.getByText("#LS1")).toBeInTheDocument();
     expect(screen.getByText("#RE2")).toBeInTheDocument();

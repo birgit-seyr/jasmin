@@ -266,18 +266,18 @@ class SharesDeliveryDayService:
         # New-day station-days grouped by station, so each future delivery
         # resolves to the one active at its OWN week — the new day may now hold a
         # chain per station (a copy of the closed row + repointed future rows).
-        new_day_dsds_by_station: dict[str, list[DeliveryStationDay]] = {}
+        new_day_station_days_by_station: dict[str, list[DeliveryStationDay]] = {}
         for delivery_station_day in DeliveryStationDay.objects.filter(
             delivery_day=new_delivery_day
         ):
-            new_day_dsds_by_station.setdefault(
+            new_day_station_days_by_station.setdefault(
                 delivery_station_day.delivery_station_id, []
             ).append(delivery_station_day)
 
-        def _resolve_new_dsd(
+        def _resolve_new_station_day(
             station_id: str, active_at: datetime.date
         ) -> DeliveryStationDay | None:
-            for candidate in new_day_dsds_by_station.get(station_id, ()):
+            for candidate in new_day_station_days_by_station.get(station_id, ()):
                 if candidate.is_active_at(active_at):
                     return candidate
             return None
@@ -288,7 +288,7 @@ class SharesDeliveryDayService:
                 share_delivery.share.year, share_delivery.share.delivery_week
             ).monday()
             station_id = share_delivery.delivery_station_day.delivery_station_id
-            resolved = _resolve_new_dsd(station_id, monday)
+            resolved = _resolve_new_station_day(station_id, monday)
             if resolved is None:
                 # The station has no station-day covering this week on the
                 # new day, so the delivery can't be remapped. Leaving it on the

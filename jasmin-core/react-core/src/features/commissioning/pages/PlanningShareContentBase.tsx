@@ -99,7 +99,7 @@ const KG_WEIGHT_ARTICLE_BASE: Record<string, string | null> = {
   BUNCH: "kg_per_bunch",
 };
 
-interface PlanningHarvestSharesBaseProps {
+interface PlanningShareContentBaseProps {
   shareOption: ShareTypeEnum;
   shareArticleFilters: Record<string, boolean>;
   pageTitle: string;
@@ -114,13 +114,13 @@ interface PlanningHarvestSharesBaseProps {
   allowTotalMode?: boolean;
 }
 
-export default function PlanningHarvestSharesBase({
+export default function PlanningShareContentBase({
   shareOption,
   shareArticleFilters,
   pageTitle,
   explainerKey,
   genericArticleColumn = false,
-}: PlanningHarvestSharesBaseProps) {
+}: PlanningShareContentBaseProps) {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedWeek, setSelectedWeek] = useState<number | null>(nextWeek);
   const isPast = useMemo(

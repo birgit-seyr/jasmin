@@ -39,11 +39,6 @@ import {
 } from "@hooks/index";
 import { getDateRangeStatus, isFieldDisabled, notify } from "@shared/utils";
 
-// Single source of truth for the share-option codes is the generated
-// ``ShareTypeEnum`` (mirrors the backend ShareType.share_option choices) —
-// keep the on-screen accordion order matching the enum declaration order.
-const SHARE_OPTIONS = Object.values(ShareTypeEnum);
-
 type ShareOption = ShareTypeEnum;
 
 type ShareTypeRecord = ShareType & TableRecord;
@@ -100,14 +95,14 @@ function ShareTypeTable({
     [],
   );
 
-  const handleDataChange = useCallback(() => {
+  const invalidateShareTypesList = useCallback(() => {
     queryClient.invalidateQueries({
       queryKey: getCommissioningShareTypesListQueryKey(listParams),
     });
   }, [queryClient, listParams]);
 
   const { onSaveSuccess: trackAddedRow, onDeleteSuccess } =
-    useInvalidateAfterTableMutation(handleDataChange);
+    useInvalidateAfterTableMutation(invalidateShareTypesList);
 
   // Reload the WHOLE table on save (not just the optimistic add): creating a
   // ShareType auto-closes the open predecessor in the same share_option (sets
@@ -118,9 +113,9 @@ function ShareTypeTable({
   const onSaveSuccess = useCallback(
     (record: TableRecord, action: "create" | "update") => {
       trackAddedRow(record, action);
-      handleDataChange();
+      invalidateShareTypesList();
     },
-    [trackAddedRow, handleDataChange],
+    [trackAddedRow, invalidateShareTypesList],
   );
 
   const customSave = useCallback(
@@ -475,9 +470,12 @@ export default function ConfigurationShareTypeVariations() {
     ],
   );
 
+  // Single source of truth for the share-option codes is the generated
+  // ``ShareTypeEnum`` (mirrors the backend ShareType.share_option choices) —
+  // keep the on-screen accordion order matching the enum declaration order.
   const shareOptionCollapseItems = useMemo(
     () =>
-      SHARE_OPTIONS.map((option) => {
+      Object.values(ShareTypeEnum).map((option) => {
         const isActive = activeShareOptions[option];
         return {
           key: option,

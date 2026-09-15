@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState } from "react";
 import type { ComponentType, LazyExoticComponent } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocale } from "@shared/contexts/LocalContext";
+import { useLocale } from "@shared/contexts/LocaleContext";
 import { useNavigation } from "@shared/contexts/NavigationContext";
 import { useIsMobile } from "@hooks/index";
 

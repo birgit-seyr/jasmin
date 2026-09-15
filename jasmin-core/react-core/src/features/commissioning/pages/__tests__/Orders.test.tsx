@@ -121,7 +121,7 @@ vi.mock("@features/commissioning/hooks/useOrdersData", () => ({
     handleCratesDataChange: vi.fn(),
     handleSaveSuccess: vi.fn(),
     handleFinalizeInvoicesSuccess: vi.fn(),
-    handleFinalizeDNSuccess: vi.fn(),
+    handleFinalizeDeliveryNotesSuccess: vi.fn(),
     handleCreateInvoiceSuccess: vi.fn(),
     calculatePricePerUnit: vi.fn(),
 

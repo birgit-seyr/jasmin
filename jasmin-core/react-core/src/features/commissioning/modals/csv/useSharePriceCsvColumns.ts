@@ -27,11 +27,11 @@ import type { PriceColumn } from "./ExportCsvAtDateModal";
 export function useSharePriceCsvColumns(): PriceColumn[] {
   const { t } = useTranslation();
   const { currencySymbol } = useCurrency();
-  const tiersList = useOfferTiers();
+  const offerTiers = useOfferTiers();
 
   return useMemo(() => {
     const units: Array<"kg" | "pieces" | "bunch"> = ["kg", "pieces", "bunch"];
-    const tiers: Array<{ tier: number; idx: 1 | 2 | 3 }> = tiersList.map(
+    const tiers: Array<{ tier: number; idx: 1 | 2 | 3 }> = offerTiers.map(
       (tier, i) => ({ tier, idx: (i + 1) as 1 | 2 | 3 }),
     );
     const cols: PriceColumn[] = [
@@ -55,5 +55,5 @@ export function useSharePriceCsvColumns(): PriceColumn[] {
       }
     }
     return cols;
-  }, [t, currencySymbol, tiersList]);
+  }, [t, currencySymbol, offerTiers]);
 }

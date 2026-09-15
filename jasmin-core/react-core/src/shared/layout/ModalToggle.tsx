@@ -5,10 +5,8 @@ import { useModal } from "@shared/contexts/ModalContext";
 import { ToolTipIcon } from "../ui";
 
 export default function ModalToggle() {
-  const { editMode, toggleEditMode, loading, EDIT_MODES } = useModal();
+  const { isModalMode, toggleEditMode, loading } = useModal();
   const { t } = useTranslation();
-
-  const isModalMode = editMode === EDIT_MODES.MODAL;
   const { token } = theme.useToken();
 
 

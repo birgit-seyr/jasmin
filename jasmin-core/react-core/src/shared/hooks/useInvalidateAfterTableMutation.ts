@@ -59,7 +59,7 @@ import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
  * sibling query that this list doesn't cover, or deliberately
  * SKIP invalidation for an interactive grid where mid-flow
  * reordering would break the planner's flow), provide a custom
- * ``onSaveSuccess`` — see ``PlanningHarvestSharesBase`` for an
+ * ``onSaveSuccess`` — see ``PlanningShareContentBase`` for an
  * example that does NOT invalidate on normal saves (only on the
  * cleared-placeholder edge case).
  */

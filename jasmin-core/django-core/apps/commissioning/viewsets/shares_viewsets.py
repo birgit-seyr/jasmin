@@ -108,11 +108,11 @@ from ..services import (
     ShareDeliveryService,
     SharesDayChangeService,
 )
-from ..utils.basic_utils import size_order_annotation
 from ..utils.composite_id_utils import parse_composite_pk
 from ..utils.iso_week_utils import week_day_to_date
 from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
+from ..utils.sort_order import size_order_annotation
 from ..utils.weight import quantize_weight
 from .base_viewsets import BaseArchivableViewSet, CanBeDeletedDestroyMixin
 
@@ -1024,19 +1024,20 @@ class ShareDeliveryViewSet(
             # every future delivery resolves within ONE (station, target-day)
             # succession chain. Fetch it once and resolve each delivery's week in
             # Python — mirrors delivery_viewsets._migrate_succession_children.
-            dsd_chain = list(
+            station_day_chain = list(
                 DeliveryStationDay.objects.filter(
                     delivery_station=new_delivery_station_day.delivery_station,
                     delivery_day=target_delivery_day,
                 ).order_by("-valid_from")
             )
 
-            def _resolve_dsd(on_date):
-                for dsd in dsd_chain:
-                    if dsd.valid_from <= on_date and (
-                        dsd.valid_until is None or dsd.valid_until >= on_date
+            def _resolve_station_day(on_date):
+                for station_day in station_day_chain:
+                    if station_day.valid_from <= on_date and (
+                        station_day.valid_until is None
+                        or station_day.valid_until >= on_date
                     ):
-                        return dsd
+                        return station_day
                 return None
 
             for delivery in future_deliveries:
@@ -1046,7 +1047,7 @@ class ShareDeliveryViewSet(
                     delivery.share.delivery_day.day_number,
                 )
 
-                matching_delivery_station_day = _resolve_dsd(delivery_date)
+                matching_delivery_station_day = _resolve_station_day(delivery_date)
                 if matching_delivery_station_day:
                     if (
                         matching_delivery_station_day.id
@@ -1357,58 +1358,61 @@ class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
         # Filter to exact week range
         filtered = []
-        for s in shares:
+        for share in shares:
             try:
-                week_start = week_day_to_date(s.year, s.delivery_week, 0)
+                week_start = week_day_to_date(share.year, share.delivery_week, 0)
                 if start <= week_start <= end:
-                    filtered.append(s)
+                    filtered.append(share)
             except (ValueError, TypeError):
                 continue
 
         # Collect all unique variations (sorted)
         variations: dict[str, dict] = {}
-        for s in filtered:
-            v = s.share_type_variation
-            key = f"{v.share_type.name} {v.get_size_display()}"
+        for share in filtered:
+            variation = share.share_type_variation
+            key = f"{variation.share_type.name} {variation.get_size_display()}"
             if key not in variations:
                 variations[key] = {
                     "label": key,
-                    # Keep the target as Decimal (it's a DecimalField); the
-                    # CSV formatter quantizes it. Casting to float here and
-                    # round-tripping through ``Decimal(f"{t:.3f}")`` below
-                    # was the money/quantity-rule violation.
-                    "target": v.average_weight or None,
+                    # Kept as Decimal (it's a DecimalField) and quantized by
+                    # the CSV formatter; a float cast would introduce binary
+                    # floating-point drift.
+                    "target": variation.average_weight or None,
                 }
 
         sorted_variations = sorted(variations.keys())
 
         # Collect all unique weeks (sorted)
         weeks: list[tuple[int, int]] = sorted(
-            {(s.year, s.delivery_week) for s in filtered}
+            {(share.year, share.delivery_week) for share in filtered}
         )
 
         # Build averages: (year, week, variation_key) -> avg
-        avg_data: dict[tuple[int, int, str], list[float]] = {}
-        for s in filtered:
-            v = s.share_type_variation
-            key = f"{v.share_type.name} {v.get_size_display()}"
+        average_weights_by_week_and_variation: dict[
+            tuple[int, int, str], list[float]
+        ] = {}
+        for share in filtered:
+            variation = share.share_type_variation
+            key = f"{variation.share_type.name} {variation.get_size_display()}"
             weights = [
                 w
-                for w in [s.weight1, s.weight2, s.weight3, s.weight4]
+                for w in [share.weight1, share.weight2, share.weight3, share.weight4]
                 if w is not None and w > 0
             ]
             if weights:
                 avg = sum(weights) / len(weights)
-                avg_data.setdefault((s.year, s.delivery_week, key), []).append(avg)
+                average_weights_by_week_and_variation.setdefault(
+                    (share.year, share.delivery_week, key), []
+                ).append(avg)
 
         from ..utils.csv_format import get_csv_dialect
 
         dialect = get_csv_dialect()
         writer = csv.writer(CsvEchoBuffer(), delimiter=dialect.delimiter)
 
-        # ``variations`` / ``weeks`` / ``avg_data`` are already materialized
-        # above, so the generator streams the output rows without touching the
-        # DB after the view returns.
+        # ``variations``, ``weeks`` and ``average_weights_by_week_and_variation``
+        # are already materialized above, so the generator streams the output
+        # rows without touching the DB after the view returns.
         def rows() -> Iterator[str]:
             yield "\ufeff"  # BOM first so Excel opens UTF-8 correctly.
 
@@ -1421,17 +1425,23 @@ class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             # Target weight row
             target_row = ["Soll"]
             for variation in sorted_variations:
-                t = variations[variation]["target"]
-                target_row.append(dialect.format(quantize_weight(t)) if t else "")
+                target_weight = variations[variation]["target"]
+                target_row.append(
+                    dialect.format(quantize_weight(target_weight))
+                    if target_weight
+                    else ""
+                )
             yield writer.writerow(escape_csv_row(target_row))
 
             # Data rows per week
             for year, week in weeks:
                 row = [f"KW {week}/{year}"]
                 for variation in sorted_variations:
-                    avgs = avg_data.get((year, week, variation), [])
-                    if avgs:
-                        overall = sum(avgs) / len(avgs)
+                    average_weights = average_weights_by_week_and_variation.get(
+                        (year, week, variation), []
+                    )
+                    if average_weights:
+                        overall = sum(average_weights) / len(average_weights)
                         row.append(dialect.format(quantize_weight(overall)))
                     else:
                         row.append("")

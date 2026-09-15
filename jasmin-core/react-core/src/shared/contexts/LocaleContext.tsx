@@ -64,7 +64,7 @@ interface UserPreferences {
   sidebar_collapsed?: boolean;
 }
 
-interface LocalContextValue {
+interface LocaleContextValue {
   language: string;
   theme: string;
   sidebarCollapsed: boolean;
@@ -81,10 +81,10 @@ interface LocalContextValue {
   getBrowserLanguage: () => string;
 }
 
-const LocalContext = createContext<LocalContextValue | undefined>(undefined);
+const LocaleContext = createContext<LocaleContextValue | undefined>(undefined);
 
 export function useLocale() {
-  const context = useContext(LocalContext);
+  const context = useContext(LocaleContext);
   if (!context) {
     throw new Error("useLocale must be used within a LocaleProvider");
   }
@@ -322,7 +322,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     }
   }, [sidebarCollapsed, user, saveSidebarCollapsed]);
 
-  const value = useMemo<LocalContextValue>(
+  const value = useMemo<LocaleContextValue>(
     () => ({
       language,
       theme,
@@ -358,6 +358,6 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <LocalContext.Provider value={value}>{children}</LocalContext.Provider>
+    <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
   );
 }

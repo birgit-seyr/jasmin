@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, Modal } from "antd";
+import { SwapOutlined } from "@ant-design/icons";
+import { Alert, Button, Modal, Tooltip } from "antd";
 import ModalCloseFooter from "@shared/modals/ModalCloseFooter";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +16,7 @@ import {
 import type {
   CommissioningCoopSharesListParams,
   CoopShare,
+  CoopShareTransfer,
 } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import {
@@ -28,6 +30,7 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import AdminConfirmationModalCoopShares from "./AdminConfirmationModalCoopShares";
+import CoopShareTransferModal from "./CoopShareTransferModal";
 import {
   useCurrency,
   useDateFormat,
@@ -421,6 +424,54 @@ export default function CoopSharesModal({
     [data],
   );
 
+  // Confirmed, paid, uncancelled shares (negative transfer rows included): the
+  // most a transfer can give away. The backend also requires payment by the
+  // transfer date.
+  const transferableTotal = useMemo(
+    () =>
+      data
+        .filter(
+          (row) => row.admin_confirmed && row.paid_at && !row.cancelled_at,
+        )
+        .reduce(
+          (sum, row) => sum + (Number(row.amount_of_coop_shares) || 0),
+          0,
+        ),
+    [data],
+  );
+  // What the member keeps after a transfer is counted from confirmed rows only,
+  // paid or not, as the backend does.
+  const confirmedTotal = useMemo(
+    () =>
+      data
+        .filter((row) => row.admin_confirmed && !row.cancelled_at)
+        .reduce(
+          (sum, row) => sum + (Number(row.amount_of_coop_shares) || 0),
+          0,
+        ),
+    [data],
+  );
+  // The transfer button stays visible; when it can't be used, a tooltip and a
+  // short text next to it say why.
+  const transferDisabledReason = !isOffice
+    ? t("members.transfer_disabled_office_only")
+    : memberCancelled
+      ? t("members.transfer_disabled_cancelled")
+      : !adminConfirmed || isTrial
+        ? t("members.transfer_disabled_not_admitted")
+        : transferableTotal === 0
+          ? t("members.transfer_disabled_no_paid_shares")
+          : null;
+  const [transferOpen, setTransferOpen] = useState(false);
+  // The lists refresh inside the transfer modal. A transfer that cancelled this
+  // member makes the props of this modal (exit date, bounds) stale, so close it.
+  const handleTransferred = useCallback(
+    (transfer: CoopShareTransfer) => {
+      if (transfer.from_member_cancelled) onClose();
+    },
+    [onClose],
+  );
+
   const rangeAlertType: "success" | "warning" | "error" = boundsApply
     ? minShares != null && currentTotal < minShares
       ? "warning"
@@ -487,6 +538,37 @@ export default function CoopSharesModal({
         />
       )}
 
+      <div className="coop-shares-modal-actions">
+        {transferDisabledReason && (
+          <span
+            id="coop-share-transfer-disabled-reason"
+            className="coop-shares-modal-actions-reason"
+          >
+            {transferDisabledReason}
+          </span>
+        )}
+        <Tooltip
+          title={transferDisabledReason ?? t("members.transfer_button_help")}
+          classNames={{ root: "custom-tooltip" }}
+        >
+          {/* A disabled button fires no mouse events, so the span takes the hover. */}
+          <span>
+            <Button
+              icon={<SwapOutlined />}
+              onClick={() => setTransferOpen(true)}
+              disabled={transferDisabledReason != null}
+              aria-describedby={
+                transferDisabledReason
+                  ? "coop-share-transfer-disabled-reason"
+                  : undefined
+              }
+            >
+              {t("members.transfer_coop_shares")}
+            </Button>
+          </span>
+        </Tooltip>
+      </div>
+
       <EditableTable
         columns={columns}
         // No ``list``: the modal owns the data via
@@ -521,6 +603,19 @@ export default function CoopSharesModal({
         onConfirm={handleConfirm}
         loading={confirming}
       />
+
+      {memberId != null && (
+        <CoopShareTransferModal
+          open={transferOpen}
+          onClose={() => setTransferOpen(false)}
+          memberId={memberId}
+          memberName={memberName}
+          availableShares={transferableTotal}
+          confirmedTotal={confirmedTotal}
+          minShares={minShares != null ? Number(minShares) : null}
+          onTransferred={handleTransferred}
+        />
+      )}
     </Modal>
   );
 }

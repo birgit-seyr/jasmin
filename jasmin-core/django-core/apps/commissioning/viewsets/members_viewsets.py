@@ -72,6 +72,8 @@ from ..schemas import (
 from ..scoping import enforce_privileged, scope_to_member
 from ..serializers import (
     CoopShareSerializer,
+    CoopShareTransferRequestSerializer,
+    CoopShareTransferSerializer,
     MemberCreateRequestSerializer,
     MemberEmailLogSerializer,
     MemberLoanSerializer,
@@ -80,8 +82,8 @@ from ..serializers import (
     SubscriptionSerializer,
 )
 from ..services import MemberService, SubscriptionService
+from ..utils.optional_filters import apply_optional_filters
 from ..utils.query_params import validate_query_params
-from ..utils.queryset_helpers import apply_optional_filters
 from ..utils.validation_utils import parse_body_date
 from .badge_viewsets import pending_admin_confirmation_q
 
@@ -1373,6 +1375,48 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                         pass
 
         return Response(self.get_serializer(coop_share).data)
+
+    @extend_schema(
+        request=CoopShareTransferRequestSerializer,
+        responses={
+            201: CoopShareTransferSerializer,
+            400: ErrorResponseSerializer,
+            409: ErrorResponseSerializer,
+        },
+    )
+    @action(detail=False, methods=["post"], url_path="transfer")
+    def transfer(self, request: Request) -> Response:
+        """Transfer confirmed, paid coop shares from one member to another (GenG §76).
+
+        Existing coop share rows stay unchanged: the giving member gets a negative
+        row and the receiving member a positive row per share value, both
+        confirmed and paid on the transfer date. The min/max window is checked on
+        the final state of both members: a giving member left above 0 but below
+        the minimum is refused (``member.coop_shares_out_of_range``). A giving
+        member left without confirmed shares has those rows closed without a
+        payback date and is cancelled effective on the transfer date, which the
+        request has to confirm with ``confirm_member_cancellation``."""
+        from ..services.coop_share_service import CoopShareService
+
+        serializer = CoopShareTransferRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        result = CoopShareService.transfer(
+            from_member=data["from_member"],
+            to_member=data["to_member"],
+            amount=data["amount_of_coop_shares"],
+            transfer_date=data["transfer_date"],
+            note=data.get("note") or None,
+            from_member_note=data.get("from_member_note") or None,
+            to_member_note=data.get("to_member_note") or None,
+            confirm_member_cancellation=data["confirm_member_cancellation"],
+            actor=auth_user(request),
+        )
+        response_serializer = CoopShareTransferSerializer(
+            result.transfer,
+            context={"from_member_cancelled": result.from_member_cancelled},
+        )
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
 # Stock DRF CRUD: ``retrieve`` / ``create`` / ``update`` / ``partial_update``

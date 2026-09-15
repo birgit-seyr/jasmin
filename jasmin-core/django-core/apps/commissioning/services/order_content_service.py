@@ -331,18 +331,35 @@ class OrderContentService:
         )
 
         # Look up OrdersDeliveryDay defaults for comparison in frontend
-        odd = OrdersDeliveryDay.objects.filter(day_number=day_number).first()
-        odd_defaults = {
-            "default_harvesting_day": odd.default_harvesting_day if odd else None,
-            "default_packing_day": odd.default_packing_day if odd else None,
-            "default_washing_day": odd.default_washing_day if odd else None,
-            "default_cleaning_day": odd.default_cleaning_day if odd else None,
+        orders_delivery_day = OrdersDeliveryDay.objects.filter(
+            day_number=day_number
+        ).first()
+        orders_delivery_day_defaults = {
+            "default_harvesting_day": (
+                orders_delivery_day.default_harvesting_day
+                if orders_delivery_day
+                else None
+            ),
+            "default_packing_day": (
+                orders_delivery_day.default_packing_day if orders_delivery_day else None
+            ),
+            "default_washing_day": (
+                orders_delivery_day.default_washing_day if orders_delivery_day else None
+            ),
+            "default_cleaning_day": (
+                orders_delivery_day.default_cleaning_day
+                if orders_delivery_day
+                else None
+            ),
             "default_last_possible_ordering_day": (
-                odd.default_last_possible_ordering_day if odd else None
+                orders_delivery_day.default_last_possible_ordering_day
+                if orders_delivery_day
+                else None
             ),
             "default_last_possible_ordering_time": (
-                odd.default_last_possible_ordering_time.isoformat()
-                if odd and odd.default_last_possible_ordering_time
+                orders_delivery_day.default_last_possible_ordering_time.isoformat()
+                if orders_delivery_day
+                and orders_delivery_day.default_last_possible_ordering_time
                 else None
             ),
         }
@@ -467,7 +484,7 @@ class OrderContentService:
         return {
             "items": result,
             "order": order_block,
-            "orders_delivery_day_defaults": odd_defaults,
+            "orders_delivery_day_defaults": orders_delivery_day_defaults,
         }
 
     @staticmethod
@@ -563,16 +580,18 @@ class OrderContentService:
             "last_possible_ordering_day",
         ]
         if created:
-            odd = OrdersDeliveryDay.objects.filter(day_number=day_number).first()
+            orders_delivery_day = OrdersDeliveryDay.objects.filter(
+                day_number=day_number
+            ).first()
             for field in day_fields:
                 value = kwargs.pop(field, None)
-                if value is None and odd:
+                if value is None and orders_delivery_day:
                     # OrdersDeliveryDay carries a ``default_<field>``
                     # column for every entry in ``day_fields``; no
                     # safety default — a typo in ``day_fields`` should
                     # crash here rather than silently fall through
                     # with ``None``.
-                    value = getattr(odd, f"default_{field}")
+                    value = getattr(orders_delivery_day, f"default_{field}")
                 setattr(order, field, value)
             order.save()
         else:

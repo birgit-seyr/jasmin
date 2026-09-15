@@ -2,7 +2,7 @@
 through ``update_user_admin``.
 
 Locks the policy documented in ``apps/accounts/services/user_admin_service.py``
-(``_ALLOWED_STATUS_TRANSITIONS`` + the explicit pending-status guard):
+(``_ADMIN_SETTABLE_STATUSES`` + the explicit pending-status guard):
 
   from \\ to        active   inactive   pending_invitation   pending_approval
   active             OK       OK         REJECT (not allowed)  REJECT
@@ -26,12 +26,9 @@ from apps.commissioning.tests.factories import JasminUserFactory
 pytestmark = pytest.mark.django_db
 
 
-_ACTOR_ROLES = [Role.ADMIN]
-
-
 @pytest.fixture()
 def actor(tenant):
-    return JasminUserFactory(roles=_ACTOR_ROLES)
+    return JasminUserFactory(roles=[Role.ADMIN])
 
 
 # (current_status, new_status, allowed?)

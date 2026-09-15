@@ -29,7 +29,7 @@ interface SettingsManagerConfig {
   onSaved?: () => void | Promise<void>;
 }
 
-export const useSettingsManager = ({
+export const useAutoSavedSettings = ({
   tenant,
   fetchSettings: fetchSettingsFn,
   saveSettings: saveSettingsFn,

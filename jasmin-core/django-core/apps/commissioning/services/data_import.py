@@ -293,7 +293,7 @@ def get_serializer_for_model(model_name: str) -> type[drf_serializers.BaseSerial
     return serializer_cls
 
 
-def _save_imported_member(ser, payload, importing_user):
+def _save_imported_member(serializer, payload, importing_user):
     """Save an imported Member row and preserve the Member↔JasminUser link.
 
     Mirrors ``MemberViewSet.create``: an email that already belongs to a user is
@@ -327,7 +327,7 @@ def _save_imported_member(ser, payload, importing_user):
             # that one means the address is mid-flow in another application.
             existing_user = None
 
-    member = ser.save()
+    member = serializer.save()
 
     if existing_user is not None:
         service.link_to_user(
@@ -340,18 +340,18 @@ def _save_imported_member(ser, payload, importing_user):
     return member
 
 
-def _persist_import_row(ser, model_name, payload, importing_user):
+def _persist_import_row(serializer, model_name, payload, importing_user):
     """Persist one validated row via the model-appropriate path.
 
     ``member`` rows go through ``_save_imported_member`` (which preserves the
     Member↔JasminUser link + conflict guard); every other model is a plain
-    ``ser.save()``. Shared by the real import AND the dry-run preview (the
+    ``serializer.save()``. Shared by the real import AND the dry-run preview (the
     latter calls this inside a rolled-back savepoint), so both exercise
     identical model-level validation.
     """
     if model_name == "member":
-        return _save_imported_member(ser, payload, importing_user)
-    return ser.save()
+        return _save_imported_member(serializer, payload, importing_user)
+    return serializer.save()
 
 
 @contextlib.contextmanager
@@ -434,9 +434,9 @@ def import_rows_from_csv(
             if not payload:
                 # Blank line in the middle of the file — silently skip.
                 continue
-            ser = serializer_cls(data=payload)
+            serializer = serializer_cls(data=payload)
             try:
-                if ser.is_valid():
+                if serializer.is_valid():
                     if dry_run:
                         # Faithful preview: run the SAME persistence path (model
                         # full_clean via save(), member↔user linking, DB
@@ -457,12 +457,12 @@ def import_rows_from_csv(
                         # then collided for real.
                         with transaction.atomic():
                             _persist_import_row(
-                                ser, model_name, payload, importing_user
+                                serializer, model_name, payload, importing_user
                             )
                         result.results.append({"row": row_number, "id": None})
                     else:
                         # One transaction PER ROW (requests run in autocommit). The
-                        # member path is multi-step — ``ser.save()`` then
+                        # member path is multi-step — ``serializer.save()`` then
                         # ``link_to_user`` → ``Member.confirm`` (which can raise
                         # e.g. ``MemberCoopSharesOutOfRange``) — so without this the
                         # member would commit on save() and a later link/confirm
@@ -472,7 +472,7 @@ def import_rows_from_csv(
                         # back, leaving a clean per-row error and nothing persisted.
                         with transaction.atomic():
                             instance = _persist_import_row(
-                                ser, model_name, payload, importing_user
+                                serializer, model_name, payload, importing_user
                             )
                         result.results.append(
                             {"row": row_number, "id": getattr(instance, "id", None)}
@@ -481,7 +481,7 @@ def import_rows_from_csv(
                     result.errors.append(
                         {
                             "row": row_number,
-                            "error": _flatten_drf_errors(ser.errors),
+                            "error": _flatten_drf_errors(serializer.errors),
                             "data": payload,
                         }
                     )

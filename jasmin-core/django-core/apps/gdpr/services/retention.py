@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 
 from apps.accounts.models import JasminUser
@@ -71,11 +72,12 @@ class RetentionChecksMixin:
             # Block while equity is live (open) OR cancelled-but-not-yet-paid-
             # back: the co-op still owes the ex-member their Geschäftsanteile
             # (GenG §73 Auseinandersetzung, Art. 17(3)(b)) and must keep their
-            # identity + payout details until ``paid_back_date`` is stamped.
-            coop_count = CoopShare.objects.filter(
-                Q(cancelled_at__isnull=True) | Q(paid_back_date__isnull=True),
-                member=member,
-            ).count()
+            # identity + payout details until ``paid_back_date`` is stamped. Rows a
+            # coop share transfer settled owe nothing: the equity moved to another
+            # member.
+            coop_count = GDPRService._open_coop_share_counts([member.pk]).get(
+                member.pk, 0
+            )
             active_sub_count = (
                 Subscription.objects.filter(member=member)
                 .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
@@ -100,6 +102,45 @@ class RetentionChecksMixin:
             open_charge_count=open_charge_count,
             open_invoice_count=open_invoice_count,
         )
+
+    @staticmethod
+    def _open_coop_share_counts(member_ids: list[Any]) -> dict[Any, int]:
+        """Coop share rows that still block anonymisation, per member.
+
+        Live (uncancelled) equity blocks. Cancelled rows block while their equity
+        isn't paid back: rows without ``paid_back_date`` that no transfer settled
+        count as long as their amounts sum above zero, because a negative
+        transfer row nets against the rows its shares came from.
+        """
+        if not member_ids:
+            return {}
+        counts: dict[Any, int] = defaultdict(int)
+        live = (
+            CoopShare.objects.filter(
+                member_id__in=member_ids, cancelled_at__isnull=True
+            )
+            .values("member_id")
+            .annotate(rows=Count("id"))
+        )
+        for row in live:
+            counts[row["member_id"]] += row["rows"]
+        not_paid_back = (
+            CoopShare.objects.filter(
+                member_id__in=member_ids,
+                cancelled_at__isnull=False,
+                paid_back_date__isnull=True,
+                settled_by_transfer__isnull=True,
+            )
+            .values("member_id")
+            .annotate(
+                total=Sum("amount_of_coop_shares"),
+                rows=Count("id", filter=Q(amount_of_coop_shares__gt=0)),
+            )
+        )
+        for row in not_paid_back:
+            if row["total"] > 0:
+                counts[row["member_id"]] += row["rows"]
+        return dict(counts)
 
     @staticmethod
     def _retention_reasons(
@@ -170,13 +211,7 @@ class RetentionChecksMixin:
         sub_by_member: dict[Any, int] = {}
         charge_by_member: dict[Any, int] = {}
         if member_ids:
-            coop_by_member = _grouped(
-                CoopShare.objects.filter(
-                    Q(cancelled_at__isnull=True) | Q(paid_back_date__isnull=True),
-                    member_id__in=member_ids,
-                ),
-                "member_id",
-            )
+            coop_by_member = GDPRService._open_coop_share_counts(member_ids)
             sub_by_member = _grouped(
                 Subscription.objects.filter(member_id__in=member_ids).filter(
                     Q(valid_until__isnull=True) | Q(valid_until__gte=today)

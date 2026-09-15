@@ -35,13 +35,13 @@ export { useLogoShape } from './useLogoShape';
 export { useMembers } from './useMembers';
 export { useJob } from './useJob';
 export type { BackgroundJob } from './useJob';
-export { useModalMemberDeliveryEdit } from './modals/useModalMemberDeliveryEdit';
+export { useMemberDeliveryEditModal } from './modals/useMemberDeliveryEditModal';
 export { useUserInfoModal } from './modals/useUserInfoModal';
 export { useVegetableSizeOptions } from './useVegetableSizeOptions';
 export { useUnitOptions } from './useUnitOptions';
 export { usePaymentCycles } from './usePaymentCycles';
 export { useNumberFormat } from './useNumberFormat';
-export { useSettingsManager } from './configuration/useSettingsManager';
+export { useAutoSavedSettings } from './configuration/useAutoSavedSettings';
 export { useShareTypes } from './useShareTypes';
 export {
   useShareTypeVariationSizeOptions,

@@ -50,15 +50,14 @@ from apps.commissioning.tests.factories import (
     ResellerFactory,
     ShareArticleFactory,
 )
+from apps.shared.money import CENT
 from apps.shared.tenants.models import TenantSettings
 from core.errors import JasminError
+
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-PRICE_QUANTIZE = Decimal("0.01")
-
-
 def _ensure_settings(tenant):
     TenantSettings.objects.get_or_create(
         tenant=tenant,
@@ -72,7 +71,7 @@ def _ensure_settings(tenant):
 
 
 def _quant(value: Decimal) -> Decimal:
-    return Decimal(value).quantize(PRICE_QUANTIZE)
+    return Decimal(value).quantize(CENT)
 
 
 def _line_netto(amount, price, rabatt=0, tax=Decimal("7")) -> Decimal:

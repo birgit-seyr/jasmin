@@ -79,11 +79,11 @@ export default function ChargesAbos() {
   const statusTotals = useMemo(() => {
     const map = new Map<string, { total: number; count: number }>();
     for (const r of rows) {
-      const st = r.status ?? "?";
-      const agg = map.get(st) ?? { total: 0, count: 0 };
-      agg.total += Number.parseFloat(r.expected_amount ?? "0");
-      agg.count += 1;
-      map.set(st, agg);
+      const status = r.status ?? "?";
+      const statusTotal = map.get(status) ?? { total: 0, count: 0 };
+      statusTotal.total += Number.parseFloat(r.expected_amount ?? "0");
+      statusTotal.count += 1;
+      map.set(status, statusTotal);
     }
     return [...map.entries()].sort(
       (a, b) => STATUS_ORDER.indexOf(a[0]) - STATUS_ORDER.indexOf(b[0]),
@@ -101,8 +101,12 @@ export default function ChargesAbos() {
     const map = new Map<string, MemberGroup>();
     for (const r of filteredRows) {
       const key = r.member ?? "?";
-      const num = r.member_number ? `#${r.member_number} ` : "";
-      const label = r.member_name ? `${num}${r.member_name}` : key;
+      const memberNumberPrefix = r.member_number
+        ? `#${r.member_number} `
+        : "";
+      const label = r.member_name
+        ? `${memberNumberPrefix}${r.member_name}`
+        : key;
       if (!map.has(key)) {
         map.set(key, {
           memberId: key,

@@ -119,33 +119,32 @@ export function useAbosData() {
   const { onSaveSuccess, onDeleteSuccess, recentlyAddedIds } =
     useInvalidateAfterTableMutation(invalidateData);
 
-  // Pre-parse DSD validity windows ONCE per change of
-  // ``allDeliveryStationDays`` (instead of re-parsing every dsd
-  // ``valid_from`` / ``valid_until`` string per row, per render).
-  // 4 dayjs parses per DSD × O(rows) per render is wasted work
-  // because the DSD list rarely changes inside an edit flow.
-  // We keep the original DSD object as ``ref`` so the consumer
-  // (``EditableTable``'s select column) still gets the unmodified
-  // SelectOption shape (``label`` / ``value`` + window fields).
-  type DSDOption = (typeof allDeliveryStationDays)[number];
+  // Parse the station days' validity windows once per change of
+  // ``allDeliveryStationDays`` rather than per row, per render: the list
+  // rarely changes inside an edit flow, so re-parsing the ``valid_from`` /
+  // ``valid_until`` strings for every row is wasted work. The original option
+  // object is kept as ``ref`` so the consumer (``EditableTable``'s select
+  // column) still gets the unmodified SelectOption shape (``label`` /
+  // ``value`` + window fields).
+  type DeliveryStationDayOption = (typeof allDeliveryStationDays)[number];
   const parsedDeliveryStationDays = useMemo(() => {
-    interface ParsedDSD {
-      ref: DSDOption;
+    interface ParsedDeliveryStationDay {
+      ref: DeliveryStationDayOption;
       from: number;
       // ``Number.POSITIVE_INFINITY`` when valid_until is null —
       // turns the upper-bound check into a single ``rowMs <= until``
       // numeric compare instead of a null-guard branch.
       until: number;
     }
-    const out: ParsedDSD[] = [];
-    for (const dsd of allDeliveryStationDays) {
-      const fromDay = dayjs(dsd.valid_from);
+    const out: ParsedDeliveryStationDay[] = [];
+    for (const stationDay of allDeliveryStationDays) {
+      const fromDay = dayjs(stationDay.valid_from);
       if (!fromDay.isValid()) continue;
       out.push({
-        ref: dsd,
+        ref: stationDay,
         from: fromDay.startOf("day").valueOf(),
-        until: dsd.valid_until
-          ? dayjs(dsd.valid_until).endOf("day").valueOf()
+        until: stationDay.valid_until
+          ? dayjs(stationDay.valid_until).endOf("day").valueOf()
           : Number.POSITIVE_INFINITY,
       });
     }
@@ -159,11 +158,10 @@ export function useAbosData() {
       const rowDate = parseDateLoose(record.valid_from, dateFormat);
       if (!rowDate) return allDeliveryStationDays;
 
-      // Single numeric comparison per DSD against the pre-parsed
-      // window. ~1 µs per row vs ~50 µs with the previous
-      // 4-dayjs-parses-per-DSD shape.
+      // Single numeric comparison per station day against its pre-parsed
+      // window (~1 µs per row, against ~50 µs for parsing the dates here).
       const rowMs = rowDate.startOf("day").valueOf();
-      const result: DSDOption[] = [];
+      const result: DeliveryStationDayOption[] = [];
       for (const p of parsedDeliveryStationDays) {
         if (rowMs >= p.from && rowMs <= p.until) {
           result.push(p.ref);
@@ -178,26 +176,28 @@ export function useAbosData() {
       const endDate = parseDateLoose(record.valid_until, dateFormat);
       const periodWeekKeys = termWeekKeys(rowDate, endDate);
 
-      return result.map((dsd) => {
+      return result.map((stationDay) => {
         const isAssigned =
-          dsd.value === record.default_delivery_station_day;
+          stationDay.value === record.default_delivery_station_day;
         // Peak occupancy across the row's period — the binding constraint and
         // what the greying (full in ANY week) keys off. Shown as (peak/total),
         // mirroring the per-week (occupied/total) label in ShareDeliveries.
         // SAME evaluator as the NewSubscriptionModal tag/waiting_list flag — one
         // source of truth for "full for this term".
         const { total, peakOccupied, isFull } = stationDayTermCapacity(
-          dsd.capacity,
-          dsd.capacity_by_week,
+          stationDay.capacity,
+          stationDay.capacity_by_week,
           periodWeekKeys,
           Number(record.quantity) || 1,
         );
 
         const label =
-          total != null ? `${dsd.label} (${peakOccupied}/${total})` : dsd.label;
+          total != null
+            ? `${stationDay.label} (${peakOccupied}/${total})`
+            : stationDay.label;
 
         return {
-          ...dsd,
+          ...stationDay,
           label,
           // The currently-assigned station-day stays selectable even when full
           // so editing other fields on the row isn't blocked.

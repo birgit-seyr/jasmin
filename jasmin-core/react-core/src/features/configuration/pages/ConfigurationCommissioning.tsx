@@ -93,7 +93,7 @@ export default function ConfigurationCommissioning() {
             defaultValue: true,
           },
           {
-            // Wired into ``PlanningHarvestSharesBase.tsx`` as the initial
+            // Wired into ``PlanningShareContentBase.tsx`` as the initial
             // value of ``planningMode`` (lazy useState seed). The
             // ``PlanningModeSelector`` lets the office override per week,
             // matching the description copy below.

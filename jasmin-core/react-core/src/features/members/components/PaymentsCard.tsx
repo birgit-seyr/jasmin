@@ -53,12 +53,12 @@ interface Recap {
   windowTotals: Map<number, number>;
   /** windowIndex → index (within futureGroups) of its LAST group, so the
    *  subtotal renders right after that group is fully loaded. */
-  lastIdxByWindow: Map<number, number>;
+  lastGroupIndexByWindow: Map<number, number>;
   /** the window of the next upcoming charge — carries the "next payment" tag. */
   nextBatchWindowIndex: number | undefined;
 }
 
-type CanonCycle =
+type BillingCycle =
   | "weekly"
   | "biweekly"
   | "monthly"
@@ -69,7 +69,7 @@ type CanonCycle =
 // Classify a billing-period length (in days) into a canonical cycle. The ledger
 // carries period_start/period_end per charge, so the cycle is inferred without
 // a backend field. Missing dates → weekly (legacy/period-less data).
-function cycleOf(days: number): CanonCycle {
+function cycleOf(days: number): BillingCycle {
   if (days <= 8) return "weekly";
   if (days <= 20) return "biweekly";
   if (days <= 45) return "monthly";
@@ -79,7 +79,7 @@ function cycleOf(days: number): CanonCycle {
 }
 
 // Months per recap window; 0 = day-stepped (biweekly).
-const CYCLE_MONTHS: Record<CanonCycle, number> = {
+const CYCLE_MONTHS: Record<BillingCycle, number> = {
   weekly: 0,
   biweekly: 0,
   monthly: 1,
@@ -91,8 +91,8 @@ const CYCLE_MONTHS: Record<CanonCycle, number> = {
 // The recap subtotal only appears when EVERY charge shares the same non-weekly
 // cycle: mixed cycles keep the plain per-charge timeline (a weekly+monthly mash
 // is confusing), and pure-weekly needs no batching (each week is a payment).
-function sharedRecapCycle(rows: ChargeSchedule[]): CanonCycle | null {
-  const cycles = new Set<CanonCycle>();
+function sharedRecapCycle(rows: ChargeSchedule[]): BillingCycle | null {
+  const cycles = new Set<BillingCycle>();
   for (const c of rows) {
     const days =
       c.period_start && c.period_end
@@ -199,18 +199,21 @@ const PaymentsCard = ({ memberId }: PaymentsCardProps) => {
             };
 
       const windowTotals = new Map<number, number>();
-      const lastIdxByWindow = new Map<number, number>();
+      const lastGroupIndexByWindow = new Map<number, number>();
       future.forEach((group, index) => {
-        const wi = windowIndexFor(group.date);
-        group.windowIndex = wi;
-        windowTotals.set(wi, (windowTotals.get(wi) ?? 0) + group.total);
-        lastIdxByWindow.set(wi, index);
+        const windowIndex = windowIndexFor(group.date);
+        group.windowIndex = windowIndex;
+        windowTotals.set(
+          windowIndex,
+          (windowTotals.get(windowIndex) ?? 0) + group.total,
+        );
+        lastGroupIndexByWindow.set(windowIndex, index);
       });
       recap = {
         isMonthly: recapCycle === "monthly",
         windowRange,
         windowTotals,
-        lastIdxByWindow,
+        lastGroupIndexByWindow,
         nextBatchWindowIndex: future[0]?.windowIndex,
       };
     }
@@ -338,7 +341,7 @@ const PaymentsCard = ({ memberId }: PaymentsCardProps) => {
       if (
         recap &&
         group.windowIndex !== undefined &&
-        recap.lastIdxByWindow.get(group.windowIndex) === futureIndex
+        recap.lastGroupIndexByWindow.get(group.windowIndex) === futureIndex
       ) {
         items.push(
           renderBatchSubtotal(

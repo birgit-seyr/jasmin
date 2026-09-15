@@ -106,8 +106,8 @@ def calculate_current_stock_for_allocation(
         )
 
     available_stocks: list[dict[str, Any]] = []
-    for (sa_id, s_unit, s_size, storage_id), stock_data in stock_map.items():
-        if sa_id == share_article.id and s_unit == unit and s_size == size:
+    for (share_article_id, s_unit, s_size, storage_id), stock_data in stock_map.items():
+        if share_article_id == share_article.id and s_unit == unit and s_size == size:
             current_amount = stock_data.get("current_stock_amount")
             if current_amount is None:
                 current_amount = stock_data.get("theoretical_current_stock", 0)

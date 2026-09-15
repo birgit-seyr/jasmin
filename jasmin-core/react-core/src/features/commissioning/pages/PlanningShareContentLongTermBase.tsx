@@ -58,10 +58,10 @@ const currentYear = dayjs().year();
  *  get a suggested per-share split (``total``, the reverse view). */
 type PlanningMode = "per_share" | "total";
 
-interface PlanningLongTermHarvestSharesBaseProps {
+interface PlanningShareContentLongTermBaseProps {
   shareOption: ShareTypeEnum;
   // Boolean article-list flags (e.g. ``is_active``, ``get_price_info``), typed
-  // like ``PlanningHarvestSharesBase`` so both can share a dispatcher.
+  // like ``PlanningShareContentBase`` so both can share a dispatcher.
   shareArticleFilters: Record<string, boolean>;
   pageTitle: string;
   explainerKey: string;
@@ -76,14 +76,14 @@ interface PlanningLongTermHarvestSharesBaseProps {
   allowTotalMode?: boolean;
 }
 
-export default function PlanningLongTermHarvestSharesBase({
+export default function PlanningShareContentLongTermBase({
   shareOption,
   shareArticleFilters,
   pageTitle,
   explainerKey,
   genericArticleColumn = false,
   allowTotalMode = false,
-}: PlanningLongTermHarvestSharesBaseProps) {
+}: PlanningShareContentLongTermBaseProps) {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [mode, setMode] = useState<PlanningMode>("per_share");
   // The toggle can be hidden (simple share types); force per-share then, so a

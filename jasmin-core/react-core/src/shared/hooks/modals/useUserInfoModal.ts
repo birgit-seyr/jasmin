@@ -45,7 +45,7 @@ interface UserStatus {
   isInvitationExpired?: boolean;
 }
 
-const ACCOUNT_STATUS_TO_STATUS: Record<AccountStatus, UserStatus> = {
+const USER_STATUS_BY_ACCOUNT_STATUS: Record<AccountStatus, UserStatus> = {
   active: { variant: 'userActive', key: 'status_active', priority: 4 },
   pending_approval: {
     variant: 'userPendingApproval',
@@ -77,7 +77,7 @@ export const useUserInfoModal = () => {
   const getUserStatus = useCallback((record: UserRecord): UserStatus => {
     const info = record.linked_user_info;
     if (info && info.account_status) {
-      const base = ACCOUNT_STATUS_TO_STATUS[info.account_status];
+      const base = USER_STATUS_BY_ACCOUNT_STATUS[info.account_status];
       // For pending_invitation, swap to the "expired" variant when the
       // invitation token is past its expires_at — same icon, red color.
       if (

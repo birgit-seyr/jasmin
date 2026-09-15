@@ -20,10 +20,18 @@
         sie für die gesetzliche Aufbewahrungsfrist auf.
       </p>
     {% endif %}
-    <p>
-      Über die Auseinandersetzung deines Geschäftsguthabens
-      melden wir uns gesondert.
-    </p>
+    {% if shares_transferred %}
+      <p>
+        Deine Genossenschaftsanteile wurden an ein anderes Mitglied
+        übertragen. Eine Auseinandersetzung deines Geschäftsguthabens
+        findet daher nicht statt.
+      </p>
+    {% else %}
+      <p>
+        Über die Auseinandersetzung deines Geschäftsguthabens
+        melden wir uns gesondert.
+      </p>
+    {% endif %}
     <p style="color: #666; font-size: 12px; margin-top: 32px;">
       Solltest du Fragen haben, antworte gerne direkt auf diese
       E-Mail.

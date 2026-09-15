@@ -14,7 +14,8 @@ from collections.abc import Callable, Iterable
 from decimal import Decimal
 from typing import Any
 
-from ..models.mixin import PRICE_QUANTIZE as _CENT
+from apps.shared.money import CENT
+
 from ..models.mixin import line_netto
 
 
@@ -51,7 +52,7 @@ def build_crate_summary_row(
         "amount": amount_v,
         "price_per_unit": str(price_d),
         "rabatt": float(rabatt_d),
-        "line_netto": str(line.quantize(_CENT)),
+        "line_netto": str(line.quantize(CENT)),
         "tax_rate": float(tax_rate or 0),
     }
     if extras:

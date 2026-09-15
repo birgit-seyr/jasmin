@@ -18,7 +18,7 @@ type ShareDeliveryPatch = Partial<
   >
 >;
 
-export const useModalMemberDeliveryEdit = () => {
+export const useMemberDeliveryEditModal = () => {
   const { t } = useTranslation();
   const [form] = Form.useForm();
   const [isVisible, setIsVisible] = useState(false);

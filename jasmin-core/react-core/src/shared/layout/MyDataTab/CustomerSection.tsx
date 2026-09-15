@@ -79,11 +79,10 @@ export default function CustomerSection({ onSaved }: { onSaved: () => void }) {
     );
   }
 
-  const c = data;
   const initialValues = Object.fromEntries(
     CUSTOMER_EDITABLE_FIELDS.map((field: keyof MyCustomerDataRead) => [
       field,
-      (c[field] ?? "") as string,
+      (data[field] ?? "") as string,
     ]),
   );
 
@@ -200,7 +199,7 @@ export default function CustomerSection({ onSaved }: { onSaved: () => void }) {
         <StoredOrEditField
           name="iban"
           label="IBAN"
-          stored={Boolean(c.iban_stored)}
+          stored={Boolean(data.iban_stored)}
           editing={editingIban}
           onStartEdit={() => setEditingIban(true)}
           onCancelEdit={() => {
@@ -225,7 +224,7 @@ export default function CustomerSection({ onSaved }: { onSaved: () => void }) {
       <Title level={5}>{t("profile.customer_facts")}</Title>
       <Descriptions column={1} bordered size="small">
         <Descriptions.Item label={t("gdpr.customer_number")}>
-          {c.customer_number ?? "-"}
+          {data.customer_number ?? "-"}
         </Descriptions.Item>
       </Descriptions>
     </div>

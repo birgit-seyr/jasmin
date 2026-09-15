@@ -19,14 +19,14 @@ export default function LoginButton() {
   const { t } = useTranslation();
   const { member } = useRoles();
   const [profileOpen, setProfileOpen] = useState(false);
-  const u = user as {
+  const currentUser = user as {
     first_name?: string;
     firstName?: string;
     username?: string;
     member_id?: string | number | null;
   } | null;
-  const displayName = u?.first_name || u?.firstName || u?.username;
-  const memberId = u?.member_id;
+  const displayName = currentUser?.first_name || currentUser?.firstName || currentUser?.username;
+  const memberId = currentUser?.member_id;
 
   const items = [
     {

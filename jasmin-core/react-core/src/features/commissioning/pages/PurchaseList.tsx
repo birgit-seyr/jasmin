@@ -57,12 +57,6 @@ const shareArticleFilters = {
   is_purchased: true,
 };
 
-// PDF column widths
-const widthShareArticle = "30%";
-const widthAmountPerPu = "15%";
-const widthTotalAmount = "15%";
-const widthNote = "40%";
-
 export default function PurchaseList() {
   const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
     useYearWeekState();
@@ -183,28 +177,28 @@ export default function PurchaseList() {
 
       for (const item of filteredData) {
         const key = `${item.share_article}_${item.unit}_${item.size}`;
-        const nw = nextWeekMap.get(key);
-        item.next_week_theoretical = nw
-          ? (nw.theoretical_purchase_amount ?? 0)
+        const nextWeekItem = nextWeekMap.get(key);
+        item.next_week_theoretical = nextWeekItem
+          ? (nextWeekItem.theoretical_purchase_amount ?? 0)
           : 0;
       }
 
-      for (const [key, nwItem] of nextWeekMap) {
-        const nwTheoretical = nwItem.theoretical_purchase_amount ?? 0;
+      for (const [key, nextWeekItem] of nextWeekMap) {
+        const nextWeekTheoretical = nextWeekItem.theoretical_purchase_amount ?? 0;
         if (
-          nwTheoretical &&
+          nextWeekTheoretical &&
           !filteredData.some(
             (item) => `${item.share_article}_${item.unit}_${item.size}` === key,
           )
         ) {
           filteredData.push({
-            ...nwItem,
+            ...nextWeekItem,
             theoretical_purchase_amount: 0,
             additional_theoretical_purchase_amount: 0,
             // Synthesised next-week-only placeholder: no actual purchase
             // documented for the current week yet.
             purchase_amount: null,
-            next_week_theoretical: nwTheoretical,
+            next_week_theoretical: nextWeekTheoretical,
           });
         }
       }
@@ -403,7 +397,7 @@ export default function PurchaseList() {
       disabled: (record: Record<string, unknown>) => record.key != -1,
       pdf: {
         include: true,
-        width: widthShareArticle,
+        width: "30%",
         align: "left",
         dataKey: "computed_article_with_size",
         title: t("commissioning.vegetables_and_fruits"),
@@ -426,14 +420,14 @@ export default function PurchaseList() {
       pdf: { include: false },
       render: (_: unknown, record: Record<string, unknown>) => {
         const current = parseNumber(record.theoretical_purchase_amount);
-        const nw = parseNumber(record.computed_next_week_theoretical);
-        if (!current && !nw) return "";
+        const nextWeekAmount = parseNumber(record.computed_next_week_theoretical);
+        if (!current && !nextWeekAmount) return "";
         return (
           <span>
             {current || ""}
-            {nw > 0 && (
+            {nextWeekAmount > 0 && (
               <span className="text-purple-accent">
-                {current ? ` + ${nw}` : nw}
+                {current ? ` + ${nextWeekAmount}` : nextWeekAmount}
               </span>
             )}
           </span>
@@ -470,8 +464,8 @@ export default function PurchaseList() {
       readOnly: true,
       pdf: { include: false },
       render: (_: unknown, record: Record<string, unknown>) => {
-        const nw = parseNumber(record.computed_next_week_theoretical);
-        if (nw > 0) {
+        const nextWeekAmount = parseNumber(record.computed_next_week_theoretical);
+        if (nextWeekAmount > 0) {
           const combined = record.computed_to_purchase_combined as number;
           if (!combined) return "";
           return <span className="text-purple-accent">{combined}</span>;
@@ -492,7 +486,7 @@ export default function PurchaseList() {
         record.computed_amount_per_pu_text as ReactNode,
       pdf: {
         include: true,
-        width: widthAmountPerPu,
+        width: "15%",
         align: "center",
         title: t("commissioning.amount_per_pu"),
         dataKey: "computed_amount_per_pu_text",
@@ -536,7 +530,7 @@ export default function PurchaseList() {
       disabled: true,
       pdf: {
         include: true,
-        width: widthTotalAmount,
+        width: "15%",
         align: "center",
         title: t("commissioning.ordered_amount_purchasing_list"),
         dataKey: "computed_total_purchase_list_amount_text",
@@ -547,7 +541,7 @@ export default function PurchaseList() {
       inputType: "optional",
       pdf: {
         include: true,
-        width: widthNote,
+        width: "40%",
         align: "left",
         title: t("commissioning.note"),
         dataKey: "note",

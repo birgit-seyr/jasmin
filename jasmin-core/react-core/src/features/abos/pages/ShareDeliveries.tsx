@@ -282,28 +282,31 @@ export default function ShareDeliveries() {
           const weekEnd = weekStart.endOf("isoWeek");
           const weekKey = `${year}-${week}`;
           return deliveryStationDays
-            .filter((dsd) => {
-              const from = dayjs(dsd.valid_from);
-              const until = dsd.valid_until ? dayjs(dsd.valid_until) : null;
+            .filter((stationDay) => {
+              const from = dayjs(stationDay.valid_from);
+              const until = stationDay.valid_until
+                ? dayjs(stationDay.valid_until)
+                : null;
               return (
                 from.isSameOrBefore(weekEnd, "day") &&
                 (!until || until.isSameOrAfter(weekStart, "day"))
               );
             })
-            .map((dsd) => {
-              const cap = dsd.capacity_by_week?.[weekKey];
+            .map((stationDay) => {
+              const cap = stationDay.capacity_by_week?.[weekKey];
               const capacityLabel =
-                cap && dsd.capacity != null
-                  ? ` (${cap.occupied}/${dsd.capacity})`
+                cap && stationDay.capacity != null
+                  ? ` (${cap.occupied}/${stationDay.capacity})`
                   : "";
               // Grey out (disable) a full station-day for this week, but keep
               // the row's currently-assigned one selectable so an edit isn't
               // blocked. ``free === null`` = no capacity limit → always free.
               const isFull = cap != null && cap.free !== null && cap.free <= 0;
-              const isCurrent = dsd.value === record.delivery_station_day;
+              const isCurrent =
+                stationDay.value === record.delivery_station_day;
               return {
-                ...dsd,
-                label: `${dsd.label}${capacityLabel}`,
+                ...stationDay,
+                label: `${stationDay.label}${capacityLabel}`,
                 disabled: isFull && !isCurrent,
               };
             });

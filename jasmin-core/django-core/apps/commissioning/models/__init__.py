@@ -52,6 +52,7 @@ from .logs import OfferSending, ReminderSending
 from .markets import Market
 from .members import (
     CoopShare,
+    CoopShareTransfer,
     Member,
     MemberLoan,
     Subscription,

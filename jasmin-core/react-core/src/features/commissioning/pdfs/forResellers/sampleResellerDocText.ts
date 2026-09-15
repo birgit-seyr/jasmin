@@ -12,7 +12,7 @@
  *   - The ``ConfigurationResellerDocuments`` preview buttons can
  *     optionally reuse these defaults when the tenant has nothing
  *     configured yet (currently they pull from
- *     ``useSettingsManager`` so live RTE edits already preview
+ *     ``useAutoSavedSettings`` so live RTE edits already preview
  *     correctly).
  *
  * Keep this file and the Python seed in sync. If you change one,

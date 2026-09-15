@@ -31,7 +31,7 @@ import { Suspense, type ReactElement } from "react";
 import { server } from "./msw/server";
 import { profileRenders } from "./profileRenders";
 import { AuthProvider } from "@shared/contexts/AuthContext";
-import { LocaleProvider } from "@shared/contexts/LocalContext";
+import { LocaleProvider } from "@shared/contexts/LocaleContext";
 import { TenantProvider } from "@shared/contexts/TenantContext";
 import { ModalProvider } from "@shared/contexts/ModalContext";
 import { MenuProvider } from "@shared/contexts/MenuContext";

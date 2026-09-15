@@ -140,9 +140,9 @@ class SupportTicketViewSet(
         # get_object() filters through get_queryset() → cross-tenant / not-mine
         # pk yields 404, never 403 (no existence disclosure).
         ticket = self.get_object()
-        req = SupportTicketReplyRequestSerializer(data=request.data)
-        req.is_valid(raise_exception=True)
-        body = req.validated_data["body"].strip()
+        serializer = SupportTicketReplyRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        body = serializer.validated_data["body"].strip()
         if not body:
             raise TicketReplyEmpty("Reply body must not be empty.")
         with transaction.atomic():

@@ -341,7 +341,7 @@ const MemberDetail = () => {
     );
   }
 
-  const sizeLogo = 120;
+  const logoSize = 120;
 
   return (
     <div style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto" }}>
@@ -363,12 +363,12 @@ const MemberDetail = () => {
                   style={{
                     width:
                       logoShape === "rectangle-wide"
-                        ? `${sizeLogo * logoAspectRatio}px`
-                        : `${sizeLogo}px`,
+                        ? `${logoSize * logoAspectRatio}px`
+                        : `${logoSize}px`,
                     height:
                       logoShape === "rectangle-wide"
-                        ? `${sizeLogo}px`
-                        : `${sizeLogo / logoAspectRatio}px`,
+                        ? `${logoSize}px`
+                        : `${logoSize / logoAspectRatio}px`,
 
                     borderRadius: "8px",
                     backgroundColor: "var(--color-bg-base)",

@@ -22,7 +22,7 @@ import {
   useCommissioningConsentsRevokeCreate,
 } from "@shared/api/generated/commissioning/commissioning";
 import { CommissioningConsentDocumentsCurrentRetrieveKind } from "@shared/api/generated/models";
-import { useLocale } from "@shared/contexts/LocalContext";
+import { useLocale } from "@shared/contexts/LocaleContext";
 import { useDateFormat } from "@hooks/index";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
@@ -56,8 +56,8 @@ export default function ConsentsSection() {
   const { language } = useLocale();
   const { formatDateWithFallback } = useDateFormat();
   const queryClient = useQueryClient();
-  const { data: sar } = useGdprMyDataRetrieve();
-  const consents = sar?.consents ?? [];
+  const { data: myData } = useGdprMyDataRetrieve();
+  const consents = myData?.consents ?? [];
 
   const [viewingKind, setViewingKind] = useState<string | null>(null);
   // Art. 7(3): a member must be able to withdraw consent as easily as giving

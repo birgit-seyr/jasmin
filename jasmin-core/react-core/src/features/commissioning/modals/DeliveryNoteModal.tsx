@@ -21,7 +21,7 @@ import type { DeliveryNoteResellerContent } from "@shared/api/generated/models/d
 import { useRoles } from "@shared/auth";
 import { useDateFormat, useDefaultTaxRates, useNoteColumn, useNumberFormat, useTenant } from '@hooks/index';
 import { formatAmountForUnit } from "@shared/utils";
-import { makeContentCustomEdit, makeFkCustomSave } from "./contentTableHelpers";
+import { makeContentCustomEdit, makeFkCustomSave } from "./resellerContentTableCallbacks";
 import { useAmountUnitSizeColumns, useCratesColumns, useShareArticleColumn } from '@features/commissioning/hooks';
 import { FinalizedNotice } from '@features/commissioning/components';
 import { EditableTable, gatedByPermission, wrapApiFunctions } from "@shared/tables";

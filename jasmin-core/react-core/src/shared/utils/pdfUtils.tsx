@@ -136,11 +136,11 @@ export const extractPdfColumns = (rawColumns: readonly unknown[]) => {
                 .filter((child) => child.pdf?.include)
                 .reduce((total, child) => {
                   // Parse the width properly
-                  const widthStr = child.pdf?.width;
+                  const rawWidth = child.pdf?.width;
                   const width =
-                    typeof widthStr === "string"
-                      ? parseFloat(widthStr.replace("%", ""))
-                      : (widthStr ?? 0);
+                    typeof rawWidth === "string"
+                      ? parseFloat(rawWidth.replace("%", ""))
+                      : (rawWidth ?? 0);
                   return total + (isNaN(width) ? 0 : width);
                 }, 0);
 

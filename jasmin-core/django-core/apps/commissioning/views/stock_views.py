@@ -123,8 +123,8 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
         )
         share_article_ids = {key[0] for key in stock_map}
         share_articles = {
-            str(sa.id): sa
-            for sa in ShareArticle.objects.filter(id__in=share_article_ids)
+            str(share_article.id): share_article
+            for share_article in ShareArticle.objects.filter(id__in=share_article_ids)
         }
 
         results: list[dict] = []
@@ -446,11 +446,11 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
         # code="stock.invalid_composite_id") — let it propagate, no re-wrap.
         parsed = parse_composite_id(composite_id)
 
-        inv_date = _ywd_to_datetime(
+        inventory_date = _ywd_to_datetime(
             parsed["year"], parsed["delivery_week"], parsed["day_number"]
         )
-        inv_start = inv_date.replace(hour=0, minute=0, second=0)
-        inv_end = inv_date.replace(hour=23, minute=59, second=59)
+        inventory_start = inventory_date.replace(hour=0, minute=0, second=0)
+        inventory_end = inventory_date.replace(hour=23, minute=59, second=59)
 
         deleted_count, _ = MovementShareArticle.objects.filter(
             movement_type=MovementTypeOptions.INVENTORY,
@@ -458,8 +458,8 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
             unit=parsed["unit"],
             size=parsed["size"],
             storage_id=parsed["storage_id"],
-            date__gte=inv_start,
-            date__lte=inv_end,
+            date__gte=inventory_start,
+            date__lte=inventory_end,
         ).delete()
 
         if deleted_count == 0:
@@ -472,8 +472,8 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
             parsed["unit"],
             parsed["size"],
             parsed["storage_id"],
-            date_from=inv_start,
-            date_to=inv_end,
+            date_from=inventory_start,
+            date_to=inventory_end,
         )
 
         # Cascade: recompute future INVENTORY deltas and snapshots
@@ -482,7 +482,7 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
             parsed["unit"],
             parsed["size"],
             parsed["storage_id"],
-            after_date=inv_start,
+            after_date=inventory_start,
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -661,11 +661,11 @@ def _get_or_create_inventory(
     parsed: dict, defaults: dict
 ) -> tuple[MovementShareArticle, bool]:
     """Find an existing INVENTORY movement for the day_number or create one."""
-    inv_date = _ywd_to_datetime(
+    inventory_date = _ywd_to_datetime(
         parsed["year"], parsed["delivery_week"], parsed["day_number"]
     )
-    inv_start = inv_date.replace(hour=0, minute=0, second=0)
-    inv_end = inv_date.replace(hour=23, minute=59, second=59)
+    inventory_start = inventory_date.replace(hour=0, minute=0, second=0)
+    inventory_end = inventory_date.replace(hour=23, minute=59, second=59)
 
     existing = (
         MovementShareArticle.objects.select_for_update()
@@ -675,8 +675,8 @@ def _get_or_create_inventory(
             unit=parsed["unit"],
             size=parsed["size"],
             storage_id=parsed["storage_id"],
-            date__gte=inv_start,
-            date__lte=inv_end,
+            date__gte=inventory_start,
+            date__lte=inventory_end,
         )
         .order_by("-date")
         .first()
@@ -692,8 +692,8 @@ def _get_or_create_inventory(
         parsed["unit"],
         parsed["size"],
         storage_str,
-        date_from=inv_start,
-        date_to=inv_end,
+        date_from=inventory_start,
+        date_to=inventory_end,
     )
 
     # Compute correction delta
@@ -702,7 +702,7 @@ def _get_or_create_inventory(
         parsed["unit"],
         parsed["size"],
         storage_str,
-        up_to=inv_end,
+        up_to=inventory_end,
     )
     # Defensive coercion: callers may pass int / float / str — go through
     # ``str()`` to absorb any float input without binary-fp drift.
@@ -715,7 +715,7 @@ def _get_or_create_inventory(
         # back ONLY this INSERT, not the caller's whole bulk transaction.
         with transaction.atomic():
             inventory = MovementShareArticle.objects.create(
-                date=inv_date,
+                date=inventory_date,
                 movement_type=MovementTypeOptions.INVENTORY,
                 share_article_id=parsed["share_article_id"],
                 unit=parsed["unit"],
@@ -752,8 +752,8 @@ def _get_or_create_inventory(
                 unit=parsed["unit"],
                 size=parsed["size"],
                 storage_id=parsed["storage_id"],
-                date__gte=inv_start,
-                date__lte=inv_end,
+                date__gte=inventory_start,
+                date__lte=inventory_end,
             )
             .order_by("-date")
             .first()
@@ -770,7 +770,7 @@ def _get_or_create_inventory(
         parsed["unit"],
         parsed["size"],
         storage_str,
-        snapshot_date=inv_date,
+        snapshot_date=inventory_date,
     )
 
     # Cascade like the single-entry PATCH path: re-derive every LATER INVENTORY's
@@ -786,7 +786,7 @@ def _get_or_create_inventory(
         parsed["unit"],
         parsed["size"],
         storage_str,
-        after_date=inv_date,
+        after_date=inventory_date,
     )
 
     return inventory, True
@@ -986,18 +986,20 @@ def bulk_set_to_zero_current_stock(request: Request) -> Response:
                         # "Set to zero" means counted = 0. Compute running
                         # balance to derive the correction delta:
                         # 0 − running_balance.
-                        inv_date = _ywd_to_datetime(
+                        inventory_date = _ywd_to_datetime(
                             parsed["year"],
                             parsed["delivery_week"],
                             parsed["day_number"],
                         )
-                        inv_end = inv_date.replace(hour=23, minute=59, second=59)
+                        inventory_end = inventory_date.replace(
+                            hour=23, minute=59, second=59
+                        )
                         running_balance = SnapshotService.compute_balance(
                             str(parsed["share_article_id"]),
                             parsed["unit"],
                             parsed["size"],
                             str(parsed["storage_id"]) if parsed["storage_id"] else None,
-                            up_to=inv_end,
+                            up_to=inventory_end,
                         )
                         # ``running_balance`` is already Decimal — keep the
                         # subtraction Decimal so ``inventory.amount`` lands in

@@ -6,11 +6,6 @@ from ..models import OrdersDeliveryDay, PaymentCycle, SharesDeliveryDay, Subscri
 from ..utils.deletion_utils import bulk_deletable_pks, can_delete_instance
 from .serializers_mixin import DeletableMixin
 
-# Reverse relation excluded when deciding whether a SharesDeliveryDay can be
-# deleted (its own delivery-station-day children cascade away with it). Kept in
-# lock-step between the per-instance fallback and the bulk pass below.
-_SHARES_DELIVERY_DAY_DELETE_EXCLUDE = ["DeliveryStationDay"]
-
 
 class _DeliveryStationEntrySerializer(serializers.Serializer):
     """Shape of one entry in `SharesDeliveryDaySerializer.delivery_stations`.
@@ -48,10 +43,13 @@ class SharesDeliveryDayListSerializer(serializers.ListSerializer):
 
     def _compute_bulk(self, instances: list) -> None:
         pks = [obj.pk for obj in instances]
+        # A SharesDeliveryDay's own delivery-station-day children cascade away
+        # with it, so that relation doesn't block deletion. The per-instance
+        # fallback further down excludes the same relation.
         deletable, failed = bulk_deletable_pks(
             SharesDeliveryDay,
             pks,
-            exclude_models=_SHARES_DELIVERY_DAY_DELETE_EXCLUDE,
+            exclude_models=["DeliveryStationDay"],
         )
         self._bulk_failed = failed
         if not failed:
@@ -108,9 +106,7 @@ class SharesDeliveryDaySerializer(serializers.ModelSerializer):
                 and obj.pk not in parent._subscription_in_use_day_ids
             )
 
-        can_delete, _ = can_delete_instance(
-            obj, exclude_models=_SHARES_DELIVERY_DAY_DELETE_EXCLUDE
-        )
+        can_delete, _ = can_delete_instance(obj, exclude_models=["DeliveryStationDay"])
         if not can_delete:
             return False
 

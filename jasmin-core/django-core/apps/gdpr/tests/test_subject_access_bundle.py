@@ -27,6 +27,7 @@ from axes.models import AccessFailureLog, AccessLog
 from apps.commissioning.models import (
     ConsentDocument,
     ConsentRecord,
+    CoopShareTransfer,
     MemberLoan,
     UserInvitation,
 )
@@ -41,6 +42,7 @@ from apps.commissioning.tests.factories import (
     ResellerFactory,
     SubscriptionFactory,
 )
+from apps.gdpr.serializers import SubjectAccessBundleSerializer
 from apps.gdpr.services import GDPRService
 from apps.notifications.models import EmailLog
 from apps.payments.constants import ChargeStatus
@@ -256,6 +258,42 @@ class TestCoopSharesSection:
         assert shares[0]["id"] == str(share.pk)
         # Service returns native Decimal; serializer formats to string.
         assert shares[0]["amount_of_coop_shares"] == Decimal("3")
+
+
+@pytest.mark.django_db
+class TestCoopShareTransfersSection:
+    def test_transfers_listed_with_direction_and_without_the_other_member(self, tenant):
+        user = JasminUserFactory(roles=["member"])
+        member = MemberFactory(user=user)
+        other = MemberFactory()
+        given = CoopShareTransfer.objects.create(
+            from_member=member,
+            to_member=other,
+            amount_of_coop_shares=2,
+            transfer_date=datetime.date(2026, 3, 2),
+            note="sold",
+        )
+        received = CoopShareTransfer.objects.create(
+            from_member=other,
+            to_member=member,
+            amount_of_coop_shares=1,
+            transfer_date=datetime.date(2026, 4, 6),
+        )
+
+        bundle = GDPRService.get_subject_access_bundle(user)
+        transfers = bundle["coop_share_transfers"]
+
+        assert [
+            (row["id"], row["direction"], row["amount_of_coop_shares"])
+            for row in transfers
+        ] == [(str(given.pk), "given", 2), (str(received.pk), "received", 1)]
+        assert transfers[0]["note"] == "sold"
+        assert all(
+            str(other.pk) not in [str(value) for value in row.values()]
+            for row in transfers
+        )
+        serialized = SubjectAccessBundleSerializer(bundle).data["coop_share_transfers"]
+        assert serialized[0]["transfer_date"] == "2026-03-02"
 
 
 @pytest.mark.django_db
@@ -560,6 +598,7 @@ class TestBundleShapeContract:
         "reseller",
         "consents",
         "coop_shares",
+        "coop_share_transfers",
         "subscriptions",
         "member_loans",
         "charge_schedules",

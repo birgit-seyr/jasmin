@@ -60,10 +60,6 @@ import {
 
 const currentWeek = dayjs().isoWeek();
 
-const widthShareArticle = "35%";
-const widthTotalAmountText = "30%";
-const widthNote = "35%";
-
 const shareArticleFilters = {
   is_harvest_share_article: true,
   is_active: true,
@@ -272,7 +268,7 @@ export default function AdditionalTheoreticalSummaryList(
         disabled: (record: TableRecord) => record.key != -1,
         pdf: {
           include: true,
-          width: widthShareArticle,
+          width: "35%",
           align: "left",
           dataKey: "computed_article_with_size",
           title: t("commissioning.vegetables_and_fruits"),
@@ -353,7 +349,7 @@ export default function AdditionalTheoreticalSummaryList(
         readOnly: true,
         pdf: {
           include: true,
-          width: widthTotalAmountText,
+          width: "30%",
           align: "center",
           title: t("commissioning.amount"),
         },
@@ -363,7 +359,7 @@ export default function AdditionalTheoreticalSummaryList(
         disabled: isMobile || isGardenerView,
         pdf: {
           include: true,
-          width: widthNote,
+          width: "35%",
           align: "left",
           title: t("commissioning.note"),
         },

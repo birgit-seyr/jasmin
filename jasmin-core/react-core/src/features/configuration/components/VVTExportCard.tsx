@@ -92,7 +92,7 @@ export default function VVTExportCard() {
         </span>
       }
       // Light-blue header — reuses the existing ``--color-info-bg``
-      // token already applied to ``PlanningHarvestSharesBase`` info
+      // token already applied to ``PlanningShareContentBase`` info
       // strips and the email-template editor banner, so this card
       // stays visually consistent with the rest of the office UI.
       className="settings-card-header"

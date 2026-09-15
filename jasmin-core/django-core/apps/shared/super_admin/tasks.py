@@ -36,7 +36,7 @@ def email_overdue_ops_items() -> None:
     from .models import OpsChecklistItem
 
     items = OpsChecklistItem.objects.filter(is_active=True).prefetch_related("runs")
-    overdue = [i for i in items if i.is_overdue]
+    overdue = [item for item in items if item.is_overdue]
     if not overdue:
         log.info("ops.checklist.digest no_overdue")
         return
@@ -45,21 +45,23 @@ def email_overdue_ops_items() -> None:
         f"{len(overdue)} operational checklist item(s) are overdue.",
         "",
     ]
-    for i in overdue:
-        last = i.last_run
-        last_str = last.completed_at.strftime("%Y-%m-%d") if last else "never"
+    for item in overdue:
+        last_run = item.last_run
+        last_run_date = (
+            last_run.completed_at.strftime("%Y-%m-%d") if last_run else "never"
+        )
         body_lines.append(
-            f"- {i.title}"
-            f"\n    last run: {last_str}"
-            f"\n    due:      {i.next_due_at:%Y-%m-%d}"
-            f"\n    interval: every {i.interval_days} days"
-            f"\n    runbook:  {i.description.splitlines()[0] if i.description else '-'}"
+            f"- {item.title}"
+            f"\n    last run: {last_run_date}"
+            f"\n    due:      {item.next_due_at:%Y-%m-%d}"
+            f"\n    interval: every {item.interval_days} days"
+            f"\n    runbook:  {item.description.splitlines()[0] if item.description else '-'}"
         )
         log.info(
             "ops.checklist.overdue kind=%s next_due=%s last_run=%s",
-            i.kind,
-            i.next_due_at.isoformat(),
-            last_str,
+            item.kind,
+            item.next_due_at.isoformat(),
+            last_run_date,
         )
     body_lines.append("")
     body_lines.append("Mark items done in the SuperAdmin → Ops Checklist UI.")

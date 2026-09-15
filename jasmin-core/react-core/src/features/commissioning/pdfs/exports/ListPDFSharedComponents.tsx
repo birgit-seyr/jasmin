@@ -20,8 +20,6 @@ export interface TenantInfo {
   phone?: string;
 }
 
-const PRIMARY_COLOR = pdfTheme.colors.brand;
-
 const headerStyles = StyleSheet.create({
   // Category chip rendered above the title — a green-outlined pill that
   // names the document type (e.g. "WASCH-LISTE") so the kind of sheet is
@@ -29,7 +27,7 @@ const headerStyles = StyleSheet.create({
   pill: {
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: PRIMARY_COLOR,
+    borderColor: pdfTheme.colors.brand,
     borderRadius: 3,
     paddingVertical: 2,
     paddingHorizontal: 6,
@@ -38,7 +36,7 @@ const headerStyles = StyleSheet.create({
   pillText: {
     fontSize: 8,
     fontWeight: 700,
-    color: PRIMARY_COLOR,
+    color: pdfTheme.colors.brand,
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
@@ -82,7 +80,7 @@ const headerStyles = StyleSheet.create({
   tenantName: {
     fontSize: 10,
     fontWeight: 700,
-    color: PRIMARY_COLOR,
+    color: pdfTheme.colors.brand,
     textAlign: "right",
   },
   tenantContact: {

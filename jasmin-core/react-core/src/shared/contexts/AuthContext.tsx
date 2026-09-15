@@ -436,9 +436,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasRole = useCallback(
     (role: string | string[]) => {
-      const u = getUser();
-      if (Array.isArray(role)) return role.some((r) => u?.roles?.includes(r));
-      return u?.roles?.includes(role);
+      const currentUser = getUser();
+      if (Array.isArray(role))
+        return role.some((r) => currentUser?.roles?.includes(r));
+      return currentUser?.roles?.includes(role);
     },
     [getUser],
   );

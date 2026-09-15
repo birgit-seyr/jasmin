@@ -18,6 +18,27 @@ import { toValidDayjs } from "@shared/utils/dayjsParse";
 import { withClearOption } from "./selectOptions";
 import type { FormInputProps, SelectOption } from "./types";
 
+// Select-all on focus for text-like inputs so clicking a cell with a
+// value lets the user overwrite it by typing. Centralised here so it's
+// reliable for every consumer.
+const TEXT_LIKE_TYPES = new Set([
+  "text",
+  "date",
+  "number",
+  "kw",
+  "integer",
+  "negative_integer",
+  "positive_integer",
+  "decimal1",
+  "decimal2",
+  "decimal3",
+  "positive_decimal2",
+  "negative_decimal2",
+  "positive_decimal3",
+  "negative_decimal3",
+  "percentage",
+]);
+
 const FormInput = forwardRef<InputRef, FormInputProps>(
   (
     {
@@ -83,27 +104,6 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
     // ``format`` / ``placeholder`` don't blank out during the window before the
     // tenant settings have loaded.
     const { dateFormat } = useDateFormat();
-
-    // Select-all on focus for text-like inputs so clicking a cell with a
-    // value lets the user overwrite it by typing. Centralised here so it's
-    // reliable for every consumer.
-    const TEXT_LIKE_TYPES = new Set([
-      "text",
-      "date",
-      "number",
-      "kw",
-      "integer",
-      "negative_integer",
-      "positive_integer",
-      "decimal1",
-      "decimal2",
-      "decimal3",
-      "positive_decimal2",
-      "negative_decimal2",
-      "positive_decimal3",
-      "negative_decimal3",
-      "percentage",
-    ]);
 
     // Find the actual <input> from a synthetic event. Ant Design's Input
     // sometimes wraps in <span class="ant-input-affix-wrapper">, so

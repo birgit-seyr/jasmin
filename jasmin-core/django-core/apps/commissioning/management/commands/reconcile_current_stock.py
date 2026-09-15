@@ -44,9 +44,10 @@ class Command(BaseCommand):
                 self.style.WARNING(f"Found {len(balance_drift)} drifted balance(s):")
             )
             for row in balance_drift:
+                no_movements = "" if row["has_movements"] else "  (no movements)"
                 self.stdout.write(
                     f"  {row['entity']}  stored={row['stored']}  "
-                    f"expected={row['expected']}"
+                    f"expected={row['expected']}{no_movements}"
                 )
 
         snapshot_entities = {row["entity"] for row in snapshot_drift}
@@ -70,18 +71,18 @@ class Command(BaseCommand):
             return
 
         for row in balance_drift:
-            sa_id, unit, size, storage_id = row["entity"]
+            share_article_id, unit, size, storage_id = row["entity"]
             # Repair from the raw ledger (not the snapshot baseline) so repair
             # converges even when the entity's snapshot is itself corrupt.
             CurrentBalanceService.recompute_for_entity(
-                sa_id, unit, size, storage_id, from_ledger=True
+                share_article_id, unit, size, storage_id, from_ledger=True
             )
         for entity in snapshot_entities:
-            sa_id, unit, size, storage_id = entity
+            share_article_id, unit, size, storage_id = entity
             # Drop-all + reseed the entity's snapshots from the ledger so no corrupt
             # baseline survives to re-drift a future recompute or a historical query.
             CurrentBalanceService.repair_snapshots_for_entity(
-                sa_id, unit, size, storage_id
+                share_article_id, unit, size, storage_id
             )
         self.stdout.write(
             self.style.SUCCESS(

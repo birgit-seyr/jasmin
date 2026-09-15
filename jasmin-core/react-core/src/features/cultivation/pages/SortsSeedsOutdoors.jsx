@@ -1,10 +1,10 @@
-const SortsSeedsIndoors = () => {
+const SortsSeedsOutdoors = () => {
   return (
     <div>
-      <h1>SortsSeedsIndoors</h1>
-      <p>SortsSeedsIndoors page content coming soon...</p>
+      <h1>SortsSeedsOutdoors</h1>
+      <p>SortsSeedsOutdoors page content coming soon...</p>
     </div>
   );
 };
 
-export default SortsSeedsIndoors;
+export default SortsSeedsOutdoors;

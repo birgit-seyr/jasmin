@@ -1,5 +1,5 @@
 import { Flex, Tag } from "antd";
-import type { CSSProperties, MouseEvent, ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 /**
@@ -181,12 +181,6 @@ export function MobileCardTags({ tags }: { tags: string[] }) {
 /** Wraps content with the standard `.mobile-card-content.flex-min` shell. */
 export function MobileCardContent({ children }: { children: ReactNode }) {
   return <div className="mobile-card-content flex-min">{children}</div>;
-}
-
-/** Stop click propagation so an inner action button does not also trigger
- *  the card's onClick (used e.g. for the harvest confirm button). */
-export function stopPropagation(e: MouseEvent) {
-  e.stopPropagation();
 }
 
 /** Convenience helper used by several pages for the size label suffix. */

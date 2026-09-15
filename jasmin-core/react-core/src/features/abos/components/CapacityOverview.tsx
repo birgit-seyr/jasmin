@@ -132,13 +132,13 @@ export function CapacityOverview({
     });
 
   const variationRows = useMemo(
-    () => buildRows("var", variations),
+    () => buildRows("variation", variations),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [variations, weekKeys],
   );
 
   const stationRows = useMemo(
-    () => buildRows("dsd", stationDays),
+    () => buildRows("station_day", stationDays),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [stationDays, weekKeys],
   );

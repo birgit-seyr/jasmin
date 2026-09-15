@@ -570,7 +570,7 @@ export function useAbosColumns({
       // opens the confirmation modal). Same factory as the members table + the
       // coop-shares modal. ``adminStatusSorter`` still floats pending
       // applications to the top on demand (see ``getAdminStatus`` in
-      // ``useModalAdminConfirmationAbos.ts`` for the ordering).
+      // ``useAdminConfirmationModalAbos.ts`` for the ordering).
       adminConfirmationColumn<AboRecord>({
         t,
         getAdminStatus: (record) => getAdminStatus(record as never),

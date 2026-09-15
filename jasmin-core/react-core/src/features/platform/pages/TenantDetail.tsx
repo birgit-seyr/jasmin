@@ -9,7 +9,7 @@ import { SUPER_ADMIN_ENDPOINTS } from "@features/platform/services/superAdmin";
 import CreateAdminModal from "@features/platform/modals/CreateAdminModal";
 import CreateUserModal from "@features/platform/modals/CreateUserModal";
 import RoleChipSelector from "@features/platform/components/RoleChipSelector";
-import { STATUS_COLORS } from "@features/platform/userManagement";
+import { ACCOUNT_STATUS_COLORS } from "@features/platform/userManagement";
 
 interface Domain {
   domain: string;
@@ -332,7 +332,8 @@ function UserTable({
         <tbody>
           {users.map((user) => {
             const statusStyle =
-              STATUS_COLORS[user.account_status] || STATUS_COLORS.inactive;
+              ACCOUNT_STATUS_COLORS[user.account_status] ||
+              ACCOUNT_STATUS_COLORS.inactive;
             return (
               <tr key={user.id}>
                 <td>

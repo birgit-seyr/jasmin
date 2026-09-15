@@ -217,11 +217,11 @@ export default function DocumentationCurrentStock() {
 
   const buildCompositeId = useCallback(
     (row: Record<string, unknown>) => {
-      const saId = row.share_article;
+      const shareArticleId = row.share_article;
       const unit = row.unit ?? "None";
       const size = row.size ?? "None";
       const storageId = row.storage ?? selectedStorage ?? "None";
-      return `${saId}_${unit}_${size}_${storageId}_${selectedYear}_${selectedWeek ?? currentWeek}_${selectedDay ?? 0}`;
+      return `${shareArticleId}_${unit}_${size}_${storageId}_${selectedYear}_${selectedWeek ?? currentWeek}_${selectedDay ?? 0}`;
     },
     [selectedYear, selectedWeek, selectedDay, selectedStorage],
   );

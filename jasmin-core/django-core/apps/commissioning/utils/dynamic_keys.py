@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import re
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from ..errors import InvalidAmount
 
@@ -55,3 +56,33 @@ def parse_amount_cell(value: object, *, field: str) -> Decimal:
             field=field,
         )
     return amount
+
+
+def extract_amounts_from_keys(
+    data: dict[str, Any], prefix: str = AMOUNT_KEY_PREFIX
+) -> dict[str, Any]:
+    """
+    Extract IDs and amounts from data keys with a specific prefix pattern.
+
+    Args:
+        data: Dictionary containing keys like 'amount_<id>'
+        prefix: The prefix to look for (default: ``AMOUNT_KEY_PREFIX``)
+
+    Returns:
+        Dictionary mapping IDs to their amounts
+
+    Example:
+        >>> data = {'amount_V9uWuNNgV0h6': '10.5', 'amount_UJVEq_SRG4RY': '20.0'}
+        >>> extract_amounts_from_keys(data)
+        {'V9uWuNNgV0h6': '10.5', 'UJVEq_SRG4RY': '20.0'}
+    """
+    amounts = {}
+    prefix_len = len(prefix)
+
+    for key, value in data.items():
+        if key.startswith(prefix) and len(key) > prefix_len:
+            # Extract ID by removing prefix
+            extracted_id = key[prefix_len:]
+            amounts[extracted_id] = value
+
+    return amounts

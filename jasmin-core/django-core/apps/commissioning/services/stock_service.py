@@ -100,15 +100,15 @@ def _days_inventory_map(
 
 def _build_result_row(
     running_balance: Decimal,
-    inv_data: dict,
+    inventory_row: dict,
     has_inventory: bool,
 ) -> dict:
     """Assemble one result-dict entry from the entity's running balance and
     its (possibly empty) day-INVENTORY data."""
-    inv_delta = inv_data.get("amount") or Decimal("0")  # Decimal
+    inventory_delta = inventory_row.get("amount") or Decimal("0")  # Decimal
 
     # theoretical = balance without today's INVENTORY correction
-    theoretical = running_balance - inv_delta  # Decimal
+    theoretical = running_balance - inventory_delta  # Decimal
     # A metadata-only INVENTORY row has ``counted_amount IS
     # NULL``: it toggles flags/note but leaves the stock uncounted, so it must NOT
     # report a phantom count = theoretical. Gate the counted value on an ACTUAL
@@ -116,7 +116,7 @@ def _build_result_row(
     # (``has_inventory``) so a finalized-but-uncounted row still reports its real
     # finalized state and a fresh flags-only row reads False (entry, not counted),
     # not None (no entry). ``counted`` = balance including the correction.
-    has_count = has_inventory and inv_data.get("counted_amount") is not None
+    has_count = has_inventory and inventory_row.get("counted_amount") is not None
     counted = running_balance if has_count else None  # Decimal | None
 
     return {
@@ -125,13 +125,13 @@ def _build_result_row(
         # break the frontend's number-typed parsing).
         "theoretical_current_stock": float(theoretical),
         "current_stock_amount": float(counted) if counted is not None else None,
-        "is_finalized": inv_data.get("is_finalized") if has_inventory else None,
-        "washed": inv_data.get("washed") if has_inventory else None,
-        "cleaned": inv_data.get("cleaned") if has_inventory else None,
-        "for_shares": inv_data.get("for_shares") if has_inventory else None,
-        "for_resellers": inv_data.get("for_resellers") if has_inventory else None,
-        "for_markets": inv_data.get("for_markets") if has_inventory else None,
-        "note": inv_data.get("note", "") if has_inventory else "",
+        "is_finalized": inventory_row.get("is_finalized") if has_inventory else None,
+        "washed": inventory_row.get("washed") if has_inventory else None,
+        "cleaned": inventory_row.get("cleaned") if has_inventory else None,
+        "for_shares": inventory_row.get("for_shares") if has_inventory else None,
+        "for_resellers": inventory_row.get("for_resellers") if has_inventory else None,
+        "for_markets": inventory_row.get("for_markets") if has_inventory else None,
+        "note": inventory_row.get("note", "") if has_inventory else "",
     }
 
 
@@ -204,17 +204,24 @@ class StockService:
 
         # Collect all entity keys
         all_entity_keys: set[tuple] = set(inventory_map) | set(snapshot_baselines)
-        for sa_id, unit, size, stor_id, _, _ in all_movements:
-            all_entity_keys.add(_entity_key(sa_id, unit, size, stor_id))
+        for share_article_id, unit, size, storage_id, _, _ in all_movements:
+            all_entity_keys.add(_entity_key(share_article_id, unit, size, storage_id))
 
         # Sum movements per entity
         movement_sums: dict[tuple, Decimal] = {}
-        for sa_id, unit, size, stor_id, movement_date, amount in all_movements:
+        for (
+            share_article_id,
+            unit,
+            size,
+            storage_id,
+            movement_date,
+            amount,
+        ) in all_movements:
             movement_amount = amount or Decimal("0")
             if movement_amount == 0:
                 continue
 
-            key = _entity_key(sa_id, unit, size, stor_id)
+            key = _entity_key(share_article_id, unit, size, storage_id)
 
             # Skip movements that predate this entity's snapshot
             if key in snapshot_baselines:
@@ -279,8 +286,8 @@ class StockService:
             .filter(base_filter)
             .values_list("share_article_id", "unit", "size", "storage_id", "amount")
         )
-        for sa_id, unit, size, stor_id, amount in future_qs:
-            key = _entity_key(sa_id, unit, size, stor_id)
+        for share_article_id, unit, size, storage_id, amount in future_qs:
+            key = _entity_key(share_article_id, unit, size, storage_id)
             future_sums[key] = future_sums.get(key, Decimal("0")) + (
                 amount or Decimal("0")
             )

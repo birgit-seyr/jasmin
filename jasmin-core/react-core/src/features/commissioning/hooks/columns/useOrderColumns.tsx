@@ -105,7 +105,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
   // amount_per_pu via handleAmountChange). The offer stays fixed per row; the
   // amount drives the re-pick. price_per_unit stays locked (disabled) in offer
   // mode — the offer's price is authoritative.
-  const handleOfferPrice = useCallback(
+  const applyOfferTierPrice = useCallback(
     (
       offerValue: unknown,
       orderedAmountPu: unknown,
@@ -233,7 +233,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
           getFieldValue: (name: string) => unknown;
           setFieldValue: (name: string, value: unknown) => void;
         },
-      ) => handleOfferPrice(value, form.getFieldValue("ordered_amount"), form),
+      ) => applyOfferTierPrice(value, form.getFieldValue("ordered_amount"), form),
 
       render: (value: unknown, record: Record<string, unknown>) => {
         const hasAmount = record.amount && (record.amount as number) > 0;
@@ -294,7 +294,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
           getFieldValue: (name: string) => unknown;
           setFieldValue: (name: string, value: unknown) => void;
         },
-      ) => handleOfferPrice(form.getFieldValue("offer"), value, form),
+      ) => applyOfferTierPrice(form.getFieldValue("offer"), value, form),
       render: (value: unknown) => {
         const numValue = Number(value);
         if (isNaN(numValue) || numValue === 0) return "";

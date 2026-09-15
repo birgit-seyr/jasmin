@@ -416,6 +416,8 @@ class CoopShare(JasminModel, PayableMixin, AdminConfirmableMixin, CancellableMix
     # under German GenG. A Member.delete() must not silently wipe equity
     # history — block at the ORM layer instead.
     member = models.ForeignKey("Member", on_delete=models.PROTECT, related_name="+")
+    # Negative only on the giving side of a coop share transfer; a member's
+    # holding is the sum of their uncancelled rows.
     amount_of_coop_shares = models.DecimalField(max_digits=10, decimal_places=2)
     value_one_coop_share = models.PositiveIntegerField()
 
@@ -430,6 +432,24 @@ class CoopShare(JasminModel, PayableMixin, AdminConfirmableMixin, CancellableMix
     # office stamps ``paid_back_date`` when the share value is actually returned.
     payback_due_date = models.DateField(blank=True, null=True)
     paid_back_date = models.DateField(blank=True, null=True)
+    # The transfer that created this row: the giving member's negative row or the
+    # receiving member's positive row.
+    transfer = models.ForeignKey(
+        "CoopShareTransfer",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="coop_shares",
+    )
+    # Set when a transfer left the member without shares: the row is cancelled
+    # without a payback date because the equity moved to another member.
+    settled_by_transfer = models.ForeignKey(
+        "CoopShareTransfer",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="settled_coop_shares",
+    )
 
     class Meta:
         constraints = [
@@ -549,6 +569,41 @@ class CoopShare(JasminModel, PayableMixin, AdminConfirmableMixin, CancellableMix
                 )
 
                 convert_trial_member_on_first_coop_share(self.member)
+
+
+class CoopShareTransfer(JasminModel, CreatedMixin):
+    """Coop shares (Geschäftsanteile) moved from one member to another (GenG §76).
+
+    Written only by ``CoopShareService.transfer``. The
+    rows it created point back here through ``CoopShare.transfer``, the rows it
+    closed through ``CoopShare.settled_by_transfer``.
+    """
+
+    from_member = models.ForeignKey(
+        "Member", on_delete=models.PROTECT, related_name="+"
+    )
+    to_member = models.ForeignKey("Member", on_delete=models.PROTECT, related_name="+")
+    amount_of_coop_shares = models.PositiveIntegerField()
+    transfer_date = models.DateField()
+    note = models.TextField(blank=True, null=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(from_member=F("to_member")),
+                name="coopsharetransfer_distinct_members",
+            ),
+            models.CheckConstraint(
+                condition=Q(amount_of_coop_shares__gt=0),
+                name="coopsharetransfer_amount_positive",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"CoopShareTransfer {self.amount_of_coop_shares} "
+            f"from {self.from_member_id} to {self.to_member_id}"
+        )
 
 
 class UserInvitation(JasminModel, CreatedMixin):

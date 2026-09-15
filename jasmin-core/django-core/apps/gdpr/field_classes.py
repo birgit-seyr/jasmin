@@ -120,6 +120,12 @@ FIELD_CLASSIFICATION: dict[str, dict[str, tuple[FieldClass, Replacement]]] = {
         # pass.
         "cancellation_reason": (FieldClass.PII_IMMEDIATE, None),
     },
+    "commissioning.CoopShareTransfer": {
+        # Free text on a transfer between two members; the notes of the coop share
+        # rows the transfer created on both sides carry the same kind of text and
+        # are scrubbed with it.
+        "note": (FieldClass.PII_IMMEDIATE, None),
+    },
     "commissioning.MemberLoan": {
         # Free-text cancellation reason (also echoed into the SAR bundle).
         "cancelled_reason": (FieldClass.PII_IMMEDIATE, None),

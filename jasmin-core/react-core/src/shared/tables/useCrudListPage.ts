@@ -78,7 +78,7 @@ export interface CrudListPageApi<TRow extends TableRecord> {
   setHideInactive: (value: boolean) => void;
 }
 
-const DEFAULT_NEW_ROW_DEFAULTS: Record<string, unknown> = { is_active: true };
+const NEW_ROW_DEFAULTS: Record<string, unknown> = { is_active: true };
 
 /**
  * Owns the boilerplate every commissioning `List*` page repeats verbatim:
@@ -96,7 +96,7 @@ export function useCrudListPage<TRow extends TableRecord>({
   permissions,
   withHideInactive = true,
   activeField = "is_active",
-  newRowDefaults = DEFAULT_NEW_ROW_DEFAULTS,
+  newRowDefaults = NEW_ROW_DEFAULTS,
   listParams,
 }: UseCrudListPageOptions<TRow>): CrudListPageApi<TRow> {
   const queryClient = useQueryClient();

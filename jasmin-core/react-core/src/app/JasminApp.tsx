@@ -10,7 +10,7 @@ import TopNavigation from "@shared/layout/TopNavigation";
 import UserMenu from "@shared/layout/UserMenu";
 import ErrorBoundary from "@shared/ui/ErrorBoundary";
 import { useAuth } from "@shared/contexts/AuthContext";
-import { useLocale } from "@shared/contexts/LocalContext";
+import { useLocale } from "@shared/contexts/LocaleContext";
 import { ModalProvider } from "@shared/contexts/ModalContext";
 import { NavigationProvider } from "@shared/contexts/NavigationContext";
 import { PermissionProvider } from "@shared/contexts/PermissionContext";

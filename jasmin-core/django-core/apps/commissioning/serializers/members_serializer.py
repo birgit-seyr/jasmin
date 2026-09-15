@@ -5,7 +5,7 @@ from rest_framework import serializers
 
 from apps.shared.pii_masking import MaskedIBANFieldMixin
 
-from ..models import CoopShare, Member, Subscription
+from ..models import CoopShare, CoopShareTransfer, Member, Subscription
 from .serializers_mixin import (
     AUDIT_READONLY_FIELDS,
     DeletableMixin,
@@ -785,6 +785,9 @@ class CoopShareSerializer(
             # is intentionally NOT here — the office stamps it when the share is
             # returned.
             "payback_due_date",
+            # Written only by the transfer service.
+            "transfer",
+            "settled_by_transfer",
         )
 
     def validate_amount_of_coop_shares(self, value):
@@ -806,6 +809,67 @@ class CoopShareSerializer(
         if self.instance is not None:
             CoopShareService.apply_confirmed_share_edit_lock(self.instance, attrs)
         return super().validate(attrs)
+
+
+class CoopShareTransferRequestSerializer(serializers.Serializer):
+    """Body of ``POST /api/commissioning/coop_shares/transfer/``. ``note`` is kept
+    on the transfer record; ``from_member_note`` / ``to_member_note`` become the
+    notes of the negative row created for the giving member and the positive row
+    created for the receiving member. ``confirm_member_cancellation`` must be true
+    when the transfer leaves the giving member without shares, which cancels the
+    membership."""
+
+    from_member = serializers.PrimaryKeyRelatedField(queryset=Member.objects.all())
+    to_member = serializers.PrimaryKeyRelatedField(queryset=Member.objects.all())
+    amount_of_coop_shares = serializers.IntegerField(min_value=1)
+    transfer_date = serializers.DateField()
+    note = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, max_length=2000
+    )
+    from_member_note = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, max_length=2000
+    )
+    to_member_note = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, max_length=2000
+    )
+    confirm_member_cancellation = serializers.BooleanField(
+        required=False, default=False
+    )
+
+
+class CoopShareTransferSerializer(serializers.ModelSerializer):
+    """A recorded coop share transfer. ``from_member_cancelled`` (passed in the
+    serializer context by the transfer action) is true when the transfer left the
+    giving member without shares and cancelled the membership."""
+
+    from_member_cancelled = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CoopShareTransfer
+        fields = [
+            "id",
+            "from_member",
+            "to_member",
+            "amount_of_coop_shares",
+            "transfer_date",
+            "note",
+            "created_at",
+            "created_by",
+            "from_member_cancelled",
+        ]
+        read_only_fields = [
+            "id",
+            "from_member",
+            "to_member",
+            "amount_of_coop_shares",
+            "transfer_date",
+            "note",
+            "created_at",
+            "created_by",
+        ]
+
+    def get_from_member_cancelled(self, obj: CoopShareTransfer) -> bool:
+        return bool(self.context.get("from_member_cancelled", False))
 
 
 class MemberLoanSerializer(MemberStringFieldMixin, serializers.ModelSerializer):

@@ -77,6 +77,8 @@ from .logs_serializer import (
 )
 from .members_serializer import (
     CoopShareSerializer,
+    CoopShareTransferRequestSerializer,
+    CoopShareTransferSerializer,
     MemberCreateRequestSerializer,
     MemberEmailLogSerializer,
     MemberEmailSerializer,

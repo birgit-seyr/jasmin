@@ -50,8 +50,8 @@ export const TICKET_STATUSES = [
   "closed",
 ] as const;
 
-// Mirrors the userManagement.ts STATUS_COLORS pattern (inline bg/color on a
-// sa-badge-style pill), so the platform page needs no new CSS class.
+// Mirrors the userManagement.ts ACCOUNT_STATUS_COLORS pattern (inline bg/color
+// on a sa-badge-style pill), so the platform page needs no new CSS class.
 export const SUPPORT_STATUS_COLORS: Record<string, { bg: string; color: string }> =
   {
     open: { bg: "#e3f2fd", color: "#1565c0" },

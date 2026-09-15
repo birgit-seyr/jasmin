@@ -23,9 +23,9 @@ from django.db.models import Q
 from django.http import StreamingHttpResponse
 
 from apps.shared.csv_safety import CsvEchoBuffer, escape_csv_row
+from apps.shared.money import CENT
 
 from ..models import CoopShare, Member
-from ..models.mixin import PRICE_QUANTIZE as _CENT
 from ..utils.csv_format import get_csv_dialect
 
 _HEADERS = [
@@ -55,7 +55,8 @@ def build_member_register_csv_response(
     A member is in the window if they were admitted by its end (``entry_date``
     set and ``<= date_to``) and had not yet left at its start (no exit date, or
     exit on/after ``date_from``). Holdings are reported AS OF ``date_to`` (a
-    share counts unless it was cancelled on or before that day).
+    share counts unless it was cancelled on or before that day, and a row created
+    by a coop share transfer counts from the transfer date).
     """
     members = list(
         Member.objects.filter(
@@ -78,17 +79,23 @@ def build_member_register_csv_response(
         lambda: [Decimal("0"), Decimal("0")]  # [share count, paid-in capital]
     )
     if member_ids:
-        coop_shares = CoopShare.objects.filter(
-            member_id__in=member_ids, admin_confirmed=True
-        ).only(
-            "member_id",
-            "amount_of_coop_shares",
-            "value_one_coop_share",
-            "cancelled_at",
+        coop_shares = (
+            CoopShare.objects.filter(member_id__in=member_ids, admin_confirmed=True)
+            .select_related("transfer")
+            .only(
+                "member_id",
+                "amount_of_coop_shares",
+                "value_one_coop_share",
+                "cancelled_at",
+                "transfer",
+                "transfer__transfer_date",
+            )
         )
         for share in coop_shares:
             # As-of-date_to: skip shares already divested by the window end.
             if share.cancelled_at is not None and share.cancelled_at.date() <= date_to:
+                continue
+            if share.transfer is not None and share.transfer.transfer_date > date_to:
                 continue
             amount = share.amount_of_coop_shares or Decimal("0")
             bucket = holdings[share.member_id]
@@ -118,7 +125,7 @@ def build_member_register_csv_response(
                         dialect.format(member.entry_date),
                         dialect.format(member.cancelled_effective_at),
                         dialect.format(count),
-                        dialect.format(capital.quantize(_CENT)),
+                        dialect.format(capital.quantize(CENT)),
                     ]
                 )
             )

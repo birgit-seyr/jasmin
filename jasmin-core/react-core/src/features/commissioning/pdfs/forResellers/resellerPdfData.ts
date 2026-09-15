@@ -151,25 +151,25 @@ export function buildInvoicePdfData(
  * its ``DeliveryNotePDFData``. Delivery notes carry no totals / tax.
  */
 export function buildDeliveryNotePdfData(
-  dnData: DeliveryNoteReseller,
+  deliveryNoteData: DeliveryNoteReseller,
 ): DeliveryNotePDFData {
   return {
     deliveryNote: {
-      prefix: dnData.prefix ?? undefined,
-      delivery_note_number: dnData.number ?? undefined,
-      delivery_note_date: dnData.date ?? undefined,
-      reseller_name: dnData.reseller_name,
-      reseller_address: dnData.reseller_address,
-      reseller_zip: dnData.reseller_zip,
-      reseller_city: dnData.reseller_city,
-      reseller_country: dnData.reseller_country,
+      prefix: deliveryNoteData.prefix ?? undefined,
+      delivery_note_number: deliveryNoteData.number ?? undefined,
+      delivery_note_date: deliveryNoteData.date ?? undefined,
+      reseller_name: deliveryNoteData.reseller_name,
+      reseller_address: deliveryNoteData.reseller_address,
+      reseller_zip: deliveryNoteData.reseller_zip,
+      reseller_city: deliveryNoteData.reseller_city,
+      reseller_country: deliveryNoteData.reseller_country,
       reseller_uid: undefined,
-      is_finalized: dnData.is_finalized,
-      finalized_at: dnData.finalized_at,
+      is_finalized: deliveryNoteData.is_finalized,
+      finalized_at: deliveryNoteData.finalized_at,
       document_hash:
-        (dnData as { document_hash?: string | null }).document_hash ?? "",
+        (deliveryNoteData as { document_hash?: string | null }).document_hash ?? "",
     },
-    lineItems: (dnData.line_items as unknown as LineItemBase[]) || [],
-    crateItems: (dnData.crate_items as unknown as LineItemBase[]) || [],
+    lineItems: (deliveryNoteData.line_items as unknown as LineItemBase[]) || [],
+    crateItems: (deliveryNoteData.crate_items as unknown as LineItemBase[]) || [],
   };
 }

@@ -227,7 +227,12 @@ export const StatusButton = ({
   );
 
   return showTooltip && (tooltip || configLabel) ? (
-    <Tooltip title={tooltip || configLabel}>{button}</Tooltip>
+    <Tooltip
+      title={tooltip || configLabel}
+      classNames={{ root: "custom-tooltip" }}
+    >
+      {button}
+    </Tooltip>
   ) : (
     button
   );
@@ -274,7 +279,12 @@ export const LinkButton = ({
   );
 
   return showTooltip && (tooltip || configLabel) ? (
-    <Tooltip title={tooltip || configLabel}>{button}</Tooltip>
+    <Tooltip
+      title={tooltip || configLabel}
+      classNames={{ root: "custom-tooltip" }}
+    >
+      {button}
+    </Tooltip>
   ) : (
     button
   );

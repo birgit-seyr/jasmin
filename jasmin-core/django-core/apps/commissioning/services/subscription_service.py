@@ -470,17 +470,17 @@ class SubscriptionService:
         pickup_name = validated_data.pop("pickup_name", None)
 
         # Fetch both FKs in a single round-trip where possible
-        member_obj = Member.objects.get(id=member_id)
-        share_type_variation_obj = ShareTypeVariation.objects.get(
+        member = Member.objects.get(id=member_id)
+        share_type_variation = ShareTypeVariation.objects.get(
             id=share_type_variation_id
         )
 
         if pickup_name is not None:
-            member_obj.pickup_name = pickup_name
-            member_obj.save(update_fields=["pickup_name"])
+            member.pickup_name = pickup_name
+            member.save(update_fields=["pickup_name"])
 
-        validated_data["member"] = member_obj
-        validated_data["share_type_variation"] = share_type_variation_obj
+        validated_data["member"] = member
+        validated_data["share_type_variation"] = share_type_variation
         return Subscription.objects.create(**validated_data)
 
     @staticmethod
@@ -670,7 +670,7 @@ class SubscriptionService:
 
     @transaction.atomic
     def _create_shares(self, subscription: Subscription) -> list[Share]:
-        delivery_day_obj = subscription.default_delivery_station_day.delivery_day
+        delivery_day = subscription.default_delivery_station_day.delivery_day
         share_type_variation = subscription.share_type_variation
 
         # Same week set the capacity paths + resolve_station_days_by_week use —
@@ -691,15 +691,15 @@ class SubscriptionService:
             ).select_related("delivery_day")
         }
 
-        delivery_day_stays_the_same = delivery_day_obj.valid_until is None
+        delivery_day_stays_the_same = delivery_day.valid_until is None
 
         if delivery_day_stays_the_same:
             return self._create_shares_static_day(
-                delivery_weeks, delivery_day_obj, share_type_variation, existing_shares
+                delivery_weeks, delivery_day, share_type_variation, existing_shares
             )
         return self._create_shares_dynamic_day(
             delivery_weeks,
-            delivery_day_obj,
+            delivery_day,
             subscription,
             share_type_variation,
             existing_shares,
@@ -708,20 +708,20 @@ class SubscriptionService:
     def _create_shares_static_day(
         self,
         delivery_weeks: list[tuple[int, int]],
-        delivery_day_obj: SharesDeliveryDay,
+        delivery_day: SharesDeliveryDay,
         share_type_variation: ShareTypeVariation,
         existing_shares: dict[tuple[int, int, str], Share],
     ) -> list[Share]:
         shares: list[Share] = []
         for year, week in delivery_weeks:
-            key = (year, week, delivery_day_obj.id)
+            key = (year, week, delivery_day.id)
             if key in existing_shares:
                 shares.append(existing_shares[key])
             else:
                 share, _ = Share.get_or_create_for_delivery(
                     year=year,
                     delivery_week=week,
-                    delivery_day=delivery_day_obj,
+                    delivery_day=delivery_day,
                     share_type_variation=share_type_variation,
                 )
                 shares.append(share)
@@ -730,12 +730,12 @@ class SubscriptionService:
     def _create_shares_dynamic_day(
         self,
         delivery_weeks: list[tuple[int, int]],
-        delivery_day_obj: SharesDeliveryDay,
+        delivery_day: SharesDeliveryDay,
         subscription: Subscription,
         share_type_variation: ShareTypeVariation,
         existing_shares: dict[tuple[int, int, str], Share],
     ) -> list[Share]:
-        day_number = delivery_day_obj.day_number
+        day_number = delivery_day.day_number
 
         # Resolve the active SharesDeliveryDay per week (shared batch-fetch +
         # is_active_at scan). No select_related — SharesDeliveryDay has no chained

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { useLocale } from '@shared/contexts/LocalContext';
-import { getCSSVariable, getCSSVariableAsNumber } from '@shared/utils/helpers';
+import { useLocale } from '@shared/contexts/LocaleContext';
+import { getCSSVariable, getCSSVariableAsNumber } from '@shared/utils/cssVariables';
 
 export const useTheme = () => {
   const { theme } = useLocale();

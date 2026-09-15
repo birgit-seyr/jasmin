@@ -47,12 +47,10 @@ const styles = {
       width: "100%",
       marginTop: 40,
     },
-    col1: { ...cellBase, width: "18%", textAlign: "left" },
-    col2: { ...cellBase, width: "19%", textAlign: "left" },
-    col3: { ...cellBase, width: "15%", textAlign: "right" },
-    col5: { ...cellBase, width: "10%", textAlign: "right" },
-    col6: { ...cellBase, width: "10%", textAlign: "right" },
-    col7: { ...cellBase, width: "10%", textAlign: "right" },
+    amountPerPuColumn: { ...cellBase, width: "15%", textAlign: "right" },
+    tier1PriceColumn: { ...cellBase, width: "10%", textAlign: "right" },
+    tier2PriceColumn: { ...cellBase, width: "10%", textAlign: "right" },
+    tier3PriceColumn: { ...cellBase, width: "10%", textAlign: "right" },
     // Visual affordance: this is the column where the customer fills
     // in their order quantity by hand on the printed offer. The gray
     // fill makes it pop as "write here", and it's the one place we
@@ -60,7 +58,7 @@ const styles = {
     // style. The 5pt left margin pushes it off its neighbor so the
     // gray block reads as a distinct input box, not as a stretched
     // last column.
-    col8: {
+    orderQuantityColumn: {
       ...cellBase,
       width: "18%",
       textAlign: "center",
@@ -208,16 +206,16 @@ function OfferPage({
   // Redistribute width from hidden tier columns
   // With all 3 tiers: 18+19+15+10+10+10+18 = 100%
   const extraWidth = (3 - visibleTiers) * 10;
-  const col1Width = 18 + Math.floor(extraWidth / 2);
-  const col2Width = 19 + Math.ceil(extraWidth / 2);
+  const articleColumnWidth = 18 + Math.floor(extraWidth / 2);
+  const descriptionColumnWidth = 19 + Math.ceil(extraWidth / 2);
 
-  const dynStyles = StyleSheet.create({
-    dynCol1: {
+  const widenedColumnStyles = StyleSheet.create({
+    articleColumn: {
       ...cellBase,
-      width: `${col1Width}%`,
+      width: `${articleColumnWidth}%`,
       textAlign: "left" as const,
     },
-    dynCol2: { ...cellBase, width: `${col2Width}%`, paddingLeft: 3 },
+    descriptionColumn: { ...cellBase, width: `${descriptionColumnWidth}%`, paddingLeft: 3 },
   });
 
   const priceHeaderUnit = pricesPerPU
@@ -268,15 +266,15 @@ function OfferPage({
       {/* Offers Table */}
       <View style={styles.table}>
         <View style={styles.tableHeader} fixed>
-          <Text style={dynStyles.dynCol1}>
+          <Text style={widenedColumnStyles.articleColumn}>
             {t("commissioning.share_article_name")}
           </Text>
-          <Text style={dynStyles.dynCol2}>
+          <Text style={widenedColumnStyles.descriptionColumn}>
             {t("commissioning.description")}
           </Text>
-          <Text style={styles.col3}>{t("commissioning.amount_per_pu")}</Text>
+          <Text style={styles.amountPerPuColumn}>{t("commissioning.amount_per_pu")}</Text>
           {hasPrice1 && (
-            <Text style={styles.col5}>
+            <Text style={styles.tier1PriceColumn}>
               {tierLabels[0]}
               <Text style={styles.unitLabel}>
                 {"\n"}
@@ -285,7 +283,7 @@ function OfferPage({
             </Text>
           )}
           {hasPrice2 && (
-            <Text style={styles.col6}>
+            <Text style={styles.tier2PriceColumn}>
               {tierLabels[1]}
               <Text style={styles.unitLabel}>
                 {"\n"}
@@ -294,7 +292,7 @@ function OfferPage({
             </Text>
           )}
           {hasPrice3 && (
-            <Text style={styles.col7}>
+            <Text style={styles.tier3PriceColumn}>
               {tierLabels[2]}
               <Text style={styles.unitLabel}>
                 {"\n"}
@@ -302,31 +300,31 @@ function OfferPage({
               </Text>
             </Text>
           )}
-          <Text style={styles.col8}>
+          <Text style={styles.orderQuantityColumn}>
             {t("commissioning.ordering_amount_in_pu")}
           </Text>
         </View>
 
         {filteredOffers?.map((offer, index) => (
           <View key={index} style={styles.tableRow} wrap={false}>
-            <Text style={dynStyles.dynCol1}>
+            <Text style={widenedColumnStyles.articleColumn}>
               {offer.share_article_name}
               {offer.size !== "M" ? ", " + getVegetableSizeLabel(offer.size ?? "") : ""}
               {tenantSettings.organic_control_number
                 ? organicMarker(offer.organic_status)
                 : ""}
             </Text>
-            <Text style={dynStyles.dynCol2}>
+            <Text style={widenedColumnStyles.descriptionColumn}>
               {offer.sort} {offer.description}
             </Text>
-            <Text style={styles.col3}>
+            <Text style={styles.amountPerPuColumn}>
               {formatNumber(offer.amount_per_pu, 2, locale)}{" "}
               <Text style={styles.unitLabel}>
                 {getUnitLabel(offer.unit ?? "")}/{t("commissioning.pu")}
               </Text>
             </Text>
             {hasPrice1 && (
-              <Text style={styles.col5}>
+              <Text style={styles.tier1PriceColumn}>
                 {formatPrice(offer.price_1, offer.amount_per_pu)}
                 {!pricesPerPU &&
                 formatPrice(offer.price_1, offer.amount_per_pu) ? (
@@ -337,7 +335,7 @@ function OfferPage({
               </Text>
             )}
             {hasPrice2 && (
-              <Text style={styles.col6}>
+              <Text style={styles.tier2PriceColumn}>
                 {formatPrice(offer.price_2, offer.amount_per_pu)}
                 {!pricesPerPU &&
                 formatPrice(offer.price_2, offer.amount_per_pu) ? (
@@ -348,7 +346,7 @@ function OfferPage({
               </Text>
             )}
             {hasPrice3 && (
-              <Text style={styles.col7}>
+              <Text style={styles.tier3PriceColumn}>
                 {formatPrice(offer.price_3, offer.amount_per_pu)}
                 {!pricesPerPU &&
                 formatPrice(offer.price_3, offer.amount_per_pu) ? (
@@ -358,7 +356,7 @@ function OfferPage({
                 ) : null}
               </Text>
             )}
-            <Text style={styles.col8}></Text>
+            <Text style={styles.orderQuantityColumn}></Text>
           </View>
         ))}
       </View>

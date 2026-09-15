@@ -135,23 +135,29 @@ class OfferService:
             return Week(offer.year, offer.delivery_week) + 1
 
         def key_fn(offer):
-            nw = _next_week(offer)
-            return (nw.year, nw.week, offer.share_article_id, offer.unit, offer.size)
+            next_week = _next_week(offer)
+            return (
+                next_week.year,
+                next_week.week,
+                offer.share_article_id,
+                offer.unit,
+                offer.size,
+            )
 
         def exists_filter(offer):
-            nw = _next_week(offer)
+            next_week = _next_week(offer)
             return {
-                "year": nw.year,
-                "delivery_week": nw.week,
+                "year": next_week.year,
+                "delivery_week": next_week.week,
                 "share_article_id": offer.share_article_id,
                 "unit": offer.unit,
                 "size": offer.size,
             }
 
         def mutate_fn(offer):
-            nw = _next_week(offer)
-            offer.year = nw.year
-            offer.delivery_week = nw.week
+            next_week = _next_week(offer)
+            offer.year = next_week.year
+            offer.delivery_week = next_week.week
 
         return OfferService._copy_offers(
             offer_ids,
@@ -357,10 +363,15 @@ class OfferService:
         )
 
         stock_amounts: dict[tuple, Decimal] = {}
-        for (sa_id, unit, size, _storage_id), stock_data in stock_map.items():
+        for (
+            share_article_id,
+            unit,
+            size,
+            _storage_id,
+        ), stock_data in stock_map.items():
             if not stock_data.get("for_resellers", False):
                 continue
-            key = (sa_id, unit, size)
+            key = (share_article_id, unit, size)
             amount = stock_data.get("theoretical_current_stock") or Decimal("0")
             stock_amounts[key] = stock_amounts.get(key, Decimal("0")) + amount
         return stock_amounts

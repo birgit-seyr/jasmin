@@ -25,10 +25,9 @@ import { useShareArticleColumn } from "./useShareArticleColumn";
 
 const widthShareArticle = "24%";
 const widthAmountCombined = "15%";
-const amountPerPuWidth = "10%";
+const widthAmountPerPu = "10%";
 const widthHarvestingCrate = "8%";
 const widthNote = "22%";
-const widthDone = "6%";
 
 /** Pulls the two computed note pieces (free-form + plot/bed line) off a row.
  *  Returned as an array so callers can render them as separate <div>s or join
@@ -423,7 +422,7 @@ export function useHarvestingListColumns({
         // EditableColumnPdfConfig — the cast keeps the extra key.
         pdf: {
           include: true,
-          width: amountPerPuWidth,
+          width: widthAmountPerPu,
           align: "center",
           dataKey: "computed_amount_per_pu_text",
           style: {
@@ -524,7 +523,7 @@ export function useHarvestingListColumns({
         key: "amount_per_pu_pdf",
         pdf: {
           include: true,
-          width: amountPerPuWidth,
+          width: widthAmountPerPu,
           align: "center",
           dataKey: "computed_amount_per_pu_text",
           title: t("commissioning.per_pu"),
@@ -563,7 +562,7 @@ export function useHarvestingListColumns({
         key: "done_pdf",
         pdf: {
           include: true,
-          width: widthDone,
+          width: "6%",
           align: "center",
           title: "✓",
           tickBox: true,

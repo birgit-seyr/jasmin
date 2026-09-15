@@ -775,18 +775,18 @@ def recalculate_actual_corrections(
     # takes, in canonical sorted dimension order so two acquirers can't deadlock
     # (AB/BA). Held to the outer commit and acquired BEFORE the current_balance
     # cascade below, preserving the global theoretical_sum → current_balance order.
-    for sa_id, unit, size, storage_id, mtype in sorted(
+    for share_article_id, unit, size, storage_id, movement_type in sorted(
         dimension_keys,
         key=lambda k: (k[0], k[1] or "", k[2] or "", k[3] or "", k[4]),
     ):
         acquire_advisory_xact_lock(
-            f"theoretical_sum:{sa_id}:{unit or ''}:{size or ''}"
-            f":{storage_id or ''}:{mtype}"
+            f"theoretical_sum:{share_article_id}:{unit or ''}:{size or ''}"
+            f":{storage_id or ''}:{movement_type}"
         )
         # Find actual correction movements for this dimension
         q = Q(
-            share_article_id=sa_id,
-            movement_type=mtype,
+            share_article_id=share_article_id,
+            movement_type=movement_type,
             is_theoretical=False,
             counted_amount__isnull=False,
         )
@@ -805,8 +805,8 @@ def recalculate_actual_corrections(
 
         # Batch-fetch all theoretical movements for this dimension (one query)
         tq_base = Q(
-            share_article_id=sa_id,
-            movement_type=mtype,
+            share_article_id=share_article_id,
+            movement_type=movement_type,
             is_theoretical=True,
         )
         tq_base &= Q(unit=unit) if unit else Q(unit__isnull=True)

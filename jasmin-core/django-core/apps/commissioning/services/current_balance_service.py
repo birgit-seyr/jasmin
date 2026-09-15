@@ -10,7 +10,8 @@ Write path: ``CurrentBalanceService.recompute_for_entity(...)`` is called from
 every movement-mutating chokepoint (snapshot cascades, inventory-create
 helpers). Each call recomputes the entity's balance via
 ``SnapshotService.compute_balance`` (which itself uses the latest snapshot as
-a baseline) and upserts the row. Idempotent.
+a baseline) and upserts the row, or removes it once the entity has no movements
+left. Idempotent.
 
 Reconciliation: ``get_drift()`` compares every stored balance against a fresh
 recompute and returns the drifted rows. Used by the
@@ -120,8 +121,13 @@ class CurrentBalanceService:
         storage_id: str | None,
         *,
         from_ledger: bool = False,
-    ) -> CurrentStockBalance:
+    ) -> CurrentStockBalance | None:
         """Recompute the balance for one entity and upsert. Idempotent.
+
+        An entity without movements and with a zero balance has no stock: its row
+        is removed and ``None`` returned. A leftover zero row would still count as
+        a use of the share article (the foreign key is PROTECT) and block deleting
+        the article.
 
         ``from_ledger=False`` (default, the hot cascade path): uses
         ``compute_balance``, which short-circuits via the most recent
@@ -154,6 +160,17 @@ class CurrentBalanceService:
             balance = SnapshotService.compute_balance(
                 share_article_id, unit, size, storage_id
             )
+        from ..models import MovementShareArticle
+
+        entity = {
+            "share_article_id": share_article_id,
+            "unit": unit,
+            "size": size,
+            "storage_id": storage_id,
+        }
+        if balance == 0 and not MovementShareArticle.objects.filter(**entity).exists():
+            CurrentStockBalance.objects.filter(**entity).delete()
+            return None
         # update_or_create is safe under our partial unique index because
         # nulls_distinct=False (PG15+) treats two NULL storages as equal.
         obj, _ = CurrentStockBalance.objects.update_or_create(
@@ -181,7 +198,8 @@ class CurrentBalanceService:
         clears even when an entity's snapshot is itself corrupt.
 
         Also flags entities present in the ledger but MISSING a projection row
-        (``stored=None``) so ``--fix`` seeds them.
+        (``stored=None``) so ``--fix`` seeds them, and rows for entities without
+        any movements (``has_movements=False``) so ``--fix`` removes them.
         """
         from decimal import Decimal
 
@@ -203,16 +221,29 @@ class CurrentBalanceService:
         for row in CurrentStockBalance.objects.iterator():
             key = _normalize(row.share_article_id, row.unit, row.size, row.storage_id)
             seen.add(key)
+            has_movements = key in ledger_sums
             expected = ledger_sums.get(key, Decimal("0"))
-            if expected != row.balance:
+            if expected != row.balance or not has_movements:
                 drift.append(
-                    {"entity": key, "stored": row.balance, "expected": expected}
+                    {
+                        "entity": key,
+                        "stored": row.balance,
+                        "expected": expected,
+                        "has_movements": has_movements,
+                    }
                 )
         # Ledger entities with no projection row at all — invisible to the loop
         # above. A non-zero ledger sum with no row is a missing projection.
         for key, expected in ledger_sums.items():
             if key not in seen and expected != Decimal("0"):
-                drift.append({"entity": key, "stored": None, "expected": expected})
+                drift.append(
+                    {
+                        "entity": key,
+                        "stored": None,
+                        "expected": expected,
+                        "has_movements": True,
+                    }
+                )
         return drift
 
     @staticmethod

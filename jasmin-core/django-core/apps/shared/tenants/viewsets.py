@@ -348,7 +348,7 @@ class TenantSettingsViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
         TenantSettings is deliberately not auditlog-registered.
         """
 
-        def _norm(val: object) -> str:
+        def _normalized_text(val: object) -> str:
             return str(val).strip() if val is not None else ""
 
         changed_sensitive: dict[str, tuple[str, str]] = {}
@@ -362,10 +362,10 @@ class TenantSettingsViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
                     sensitive_field
                 ).get_default()
             new_value = new_settings_data[sensitive_field]
-            if _norm(new_value) != _norm(old_value):
+            if _normalized_text(new_value) != _normalized_text(old_value):
                 changed_sensitive[sensitive_field] = (
-                    _norm(old_value),
-                    _norm(new_value),
+                    _normalized_text(old_value),
+                    _normalized_text(new_value),
                 )
 
         if changed_sensitive:

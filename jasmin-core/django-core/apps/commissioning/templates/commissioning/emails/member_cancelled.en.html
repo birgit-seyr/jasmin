@@ -20,10 +20,17 @@
         for the statutory record-keeping period.
       </p>
     {% endif %}
-    <p>
-      We will contact you separately about the payout of your
-      cooperative share balance.
-    </p>
+    {% if shares_transferred %}
+      <p>
+        Your cooperative shares were transferred to another member, so
+        there is no payout of your cooperative share balance.
+      </p>
+    {% else %}
+      <p>
+        We will contact you separately about the payout of your
+        cooperative share balance.
+      </p>
+    {% endif %}
     <p style="color: #666; font-size: 12px; margin-top: 32px;">
       If you have any questions, please reply to this email.
     </p>

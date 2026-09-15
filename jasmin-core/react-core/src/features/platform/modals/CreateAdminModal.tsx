@@ -22,13 +22,13 @@ export default function CreateAdminModal({
     password: "",
   });
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
+    setSuccessMessage("");
     setLoading(true);
 
     try {
@@ -36,7 +36,7 @@ export default function CreateAdminModal({
         SUPER_ADMIN_ENDPOINTS.tenantCreateAdmin(tenantId),
         formData,
       );
-      setSuccess(response.data.message);
+      setSuccessMessage(response.data.message);
       setTimeout(onSuccess, 1500);
     } catch (err) {
       setError(getErrorMessage(err, "Failed to create admin user"));
@@ -124,9 +124,9 @@ export default function CreateAdminModal({
             </div>
           )}
 
-          {success && (
+          {successMessage && (
             <div className="alert-success" style={{ marginBottom: 20 }}>
-              {success}
+              {successMessage}
             </div>
           )}
 

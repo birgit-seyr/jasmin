@@ -22,20 +22,26 @@ vi.mock("@app/UnauthorizedPage", () => ({
 
 import { ProtectedRoute } from "../ProtectedRoute";
 
-const PROTECTED = <div data-testid="protected">PROTECTED</div>;
-const LOGIN = <div data-testid="login">LOGIN</div>;
-const UNAUTH = <div data-testid="unauth-route">UNAUTH</div>;
-
 function renderAt(path: string, meta?: Record<string, unknown>) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route
           path="/private"
-          element={<ProtectedRoute meta={meta}>{PROTECTED}</ProtectedRoute>}
+          element={
+            <ProtectedRoute meta={meta}>
+              <div data-testid="protected">PROTECTED</div>
+            </ProtectedRoute>
+          }
         />
-        <Route path="/login" element={LOGIN} />
-        <Route path="/unauthorized" element={UNAUTH} />
+        <Route
+          path="/login"
+          element={<div data-testid="login">LOGIN</div>}
+        />
+        <Route
+          path="/unauthorized"
+          element={<div data-testid="unauth-route">UNAUTH</div>}
+        />
       </Routes>
     </MemoryRouter>,
   );

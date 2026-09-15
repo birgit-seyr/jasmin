@@ -12,7 +12,6 @@ from ..models import (
     ShareTypeVariation,
 )
 from ..utils import sort_share_articles
-from ..utils.basic_utils import size_order_annotation
 from ..utils.delivery_utils import tour_station_ids
 from ..utils.iso_week_utils import saturday_of_iso_week
 from ..utils.packing_divergence import record_amount
@@ -20,6 +19,7 @@ from ..utils.packing_queries import packing_share_contents
 from ..utils.share_type_variation_amounts import (
     batch_get_physical_variation_totals_for_week,
 )
+from ..utils.sort_order import size_order_annotation
 from ..utils.weight import quantize_weight
 
 _UNSET = object()  # sentinel: "not hoisted" vs a legitimately None delivery_day

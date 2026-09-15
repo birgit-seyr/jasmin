@@ -514,6 +514,16 @@ REGISTRY: dict[str, EmailTemplateSpec] = {
         variables=[
             _TENANT_NAME,
             EmailVariable(
+                name="shares_transferred",
+                label="Anteile übertragen",
+                description=(
+                    "Wahr, wenn das Mitglied ausgetreten ist, weil es alle "
+                    "Genossenschaftsanteile an ein anderes Mitglied übertragen "
+                    "hat. Dann findet keine Auseinandersetzung des "
+                    "Geschäftsguthabens statt."
+                ),
+            ),
+            EmailVariable(
                 name="member.first_name",
                 label="Vorname Mitglied",
                 description="Vorname der austretenden Person.",

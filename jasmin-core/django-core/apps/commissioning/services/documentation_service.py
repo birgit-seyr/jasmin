@@ -27,7 +27,7 @@ from .snapshot_service import SnapshotService
 logger = logging.getLogger(__name__)
 
 DocumentationModel = Harvest | Purchase | Waste
-_DM = TypeVar("_DM", Harvest, Purchase, Waste)
+_DocumentationModelT = TypeVar("_DocumentationModelT", Harvest, Purchase, Waste)
 
 # Maps model class → the FK field name on MovementShareArticle that points to it,
 # and the callable that creates the movement for that type.
@@ -48,8 +48,8 @@ class GenericDocumentationService:
     @staticmethod
     @transaction.atomic
     def create_with_related_objects(
-        model_class: type[_DM], validated_data: dict[str, Any]
-    ) -> _DM:
+        model_class: type[_DocumentationModelT], validated_data: dict[str, Any]
+    ) -> _DocumentationModelT:
         storage_id = extract_selected_storage_id(validated_data)
         clean_storage_fields(validated_data)
         if storage_id:
@@ -62,8 +62,8 @@ class GenericDocumentationService:
     @staticmethod
     @transaction.atomic
     def update_with_related_objects(
-        instance: _DM, validated_data: dict[str, Any]
-    ) -> _DM:
+        instance: _DocumentationModelT, validated_data: dict[str, Any]
+    ) -> _DocumentationModelT:
         storage_id = extract_selected_storage_id(validated_data)
         clean_storage_fields(validated_data)
         if storage_id:

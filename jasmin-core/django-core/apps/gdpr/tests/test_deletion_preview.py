@@ -7,10 +7,13 @@ the "writes nothing" guarantee, and the admin-only endpoint (200 / 403 / 404).
 
 from __future__ import annotations
 
+import datetime
+
 import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
+from apps.commissioning.models import CoopShareTransfer
 from apps.commissioning.tests.factories import (
     CoopShareFactory,
     JasminUserFactory,
@@ -87,6 +90,31 @@ class TestPreviewDeletionShape:
         }
         assert member_fields.get("first_name") == "tombstone"
         assert member_fields.get("email") == "pii_immediate"
+
+    def test_member_preview_counts_transfer_notes_on_both_sides(self, tenant):
+        user = JasminUserFactory(roles=["member"])
+        member = MemberFactory(user=user)
+        other = MemberFactory()
+        transfer = CoopShareTransfer.objects.create(
+            from_member=member,
+            to_member=other,
+            amount_of_coop_shares=1,
+            transfer_date=datetime.date(2026, 3, 2),
+            note="sold",
+        )
+        CoopShareFactory(
+            member=member, amount_of_coop_shares=-1, transfer=transfer, note="to other"
+        )
+        CoopShareFactory(
+            member=other, amount_of_coop_shares=1, transfer=transfer, note="from member"
+        )
+
+        entry = _models_by_label(GDPRService.preview_deletion(user))[
+            "commissioning.CoopShareTransfer"
+        ]
+
+        assert entry["row_count"] == 3
+        assert [field["field"] for field in entry["scrubbed_fields"]] == ["note"]
 
     def test_customer_preview_includes_reseller_model(self, tenant):
         user = JasminUserFactory(roles=["member"])

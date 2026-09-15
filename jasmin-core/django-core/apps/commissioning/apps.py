@@ -20,6 +20,7 @@ class CommissioningConfig(AppConfig):
             ConsentRecord,
             ContactEntity,
             CoopShare,
+            CoopShareTransfer,
             DeliveryNoteContent,
             DeliveryNoteReseller,
             InvoiceReseller,
@@ -91,6 +92,7 @@ class CommissioningConfig(AppConfig):
         )
 
         auditlog.register(CoopShare)
+        auditlog.register(CoopShareTransfer)
         auditlog.register(Subscription)
         auditlog.register(ShareDelivery)  # joker_taken changes etc.
         auditlog.register(PaymentCycle)

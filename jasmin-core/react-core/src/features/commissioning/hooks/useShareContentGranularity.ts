@@ -11,7 +11,7 @@ type GranularityParams = Partial<CommissioningGranularityRetrieveParams> & {
   share_type?: string;
   share_option?: string;
   // Optional: scope the check to a single delivery day (weekday 0-6). Omit for
-  // the across-all-delivery-days result (PlanningHarvestSharesBase); the packing
+  // the across-all-delivery-days result (PlanningShareContentBase); the packing
   // list passes the selected delivery day for per-day granularity.
   day_number?: number;
 };

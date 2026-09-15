@@ -17,7 +17,7 @@ import datetime
 import pytest
 from django.db.models import F
 
-from apps.commissioning.models import CoopShare
+from apps.commissioning.models import CoopShare, CoopShareTransfer
 from apps.commissioning.tests.factories import (
     CoopShareFactory,
     JasminUserFactory,
@@ -310,6 +310,72 @@ class TestMemberAnonymization:
                 "_scrub_auditlog_entries coverage drifted from "
                 "auditlog.register(...) in commissioning/apps.py"
             )
+
+
+@pytest.mark.django_db
+class TestCoopShareTransferAnonymization:
+    def test_transfer_notes_naming_the_member_are_scrubbed_on_both_sides(self, tenant):
+        """A transfer's note and the notes of the rows it created name both
+        members, so anonymising either one scrubs them on both sides. In the audit
+        log the member's own rows are scrubbed whole; the transfer and the other
+        member's row only lose the note. Amounts and dates stay."""
+        from auditlog.models import LogEntry
+
+        from apps.commissioning.services.member_cancellation import (
+            cancel_member_with_coop_shares,
+        )
+
+        user = JasminUserFactory(email="erik@example.com")
+        member = MemberFactory(user=user, first_name="Erik", last_name="Beispiel")
+        other = MemberFactory(first_name="Olga", last_name="Other")
+        transfer = CoopShareTransfer.objects.create(
+            from_member=member,
+            to_member=other,
+            amount_of_coop_shares=2,
+            transfer_date=datetime.date(2026, 3, 2),
+            note="sold to Olga",
+        )
+        given = CoopShareFactory(
+            member=member,
+            amount_of_coop_shares=-2,
+            transfer=transfer,
+            note="Transfer to Olga Other",
+        )
+        received = CoopShareFactory(
+            member=other,
+            amount_of_coop_shares=2,
+            transfer=transfer,
+            note="Transfer from Erik Beispiel",
+        )
+        unrelated = CoopShareFactory(
+            member=other, amount_of_coop_shares=3, note="paid in cash"
+        )
+        assert LogEntry.objects.get_for_object(transfer).exists()
+        assert LogEntry.objects.get_for_object(received).exists()
+
+        cancel_member_with_coop_shares(member)
+        CoopShare.objects.filter(member=member).update(
+            paid_back_date=F("payback_due_date")
+        )
+        GDPRService.anonymize_user(user)
+
+        for row in (transfer, given, received, unrelated):
+            row.refresh_from_db()
+        assert transfer.note is None
+        assert given.note is None
+        assert received.note is None
+        assert transfer.amount_of_coop_shares == 2
+        assert received.amount_of_coop_shares == 2
+        assert unrelated.note == "paid in cash"
+        for entry in LogEntry.objects.get_for_object(given):
+            assert entry.changes is None
+            assert entry.object_repr == "[anonymised]"
+        for obj in (transfer, received):
+            entries = LogEntry.objects.get_for_object(obj)
+            assert entries.exists()
+            for entry in entries:
+                assert entry.object_repr != "[anonymised]"
+                assert "note" not in (entry.changes or {})
 
 
 @pytest.mark.django_db

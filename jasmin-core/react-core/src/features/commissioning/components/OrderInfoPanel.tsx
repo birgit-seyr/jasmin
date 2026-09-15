@@ -16,7 +16,7 @@ interface OrderInfoPanelProps {
   formattedOrderNumber: string;
   totalSum: string;
   fetchData: () => void;
-  handleFinalizeDNSuccess: (data: unknown) => void;
+  handleFinalizeDeliveryNotesSuccess: (data: unknown) => void;
   handleFinalizeInvoicesSuccess: (data: unknown) => void;
   handleCreateInvoiceSuccess: (data: unknown) => void;
   onOpenDeliveryNoteModal: () => void;
@@ -30,7 +30,7 @@ export function OrderInfoPanel({
   formattedOrderNumber,
   totalSum,
   fetchData,
-  handleFinalizeDNSuccess,
+  handleFinalizeDeliveryNotesSuccess,
   handleFinalizeInvoicesSuccess,
   handleCreateInvoiceSuccess,
   onOpenDeliveryNoteModal,
@@ -201,7 +201,7 @@ export function OrderInfoPanel({
               }
               buttonText={t("commissioning.finalize_delivery_note")}
               buttonProps={{ type: "primary" }}
-              onSuccess={handleFinalizeDNSuccess}
+              onSuccess={handleFinalizeDeliveryNotesSuccess}
               payload={{ model: "delivery_note" }}
               style={{ marginTop: "0em" }}
             />

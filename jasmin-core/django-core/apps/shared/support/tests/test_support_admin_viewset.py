@@ -13,7 +13,7 @@ from apps.commissioning.tests.factories import JasminUserFactory
 from apps.shared.support.admin_viewsets import SupportTicketAdminViewSet
 
 
-def _mk(tenant_schema, subject="t"):
+def _make_ticket(tenant_schema, subject="t"):
     with schema_context("public"):
         from apps.shared.support.models import SupportTicket
 
@@ -34,8 +34,8 @@ def _dispatch(actions, request, **kwargs):
 @pytest.mark.django_db
 class TestAdminList:
     def test_aggregates_across_tenants_with_names(self, factory, super_admin):
-        a = _mk("test_pytest", "alpha")
-        b = _mk("zzz_unknown_tenant", "beta")
+        a = _make_ticket("test_pytest", "alpha")
+        b = _make_ticket("zzz_unknown_tenant", "beta")
         request = factory.get("/api/super-admin/support-tickets/")
         force_authenticate(request, user=super_admin)
         resp = _dispatch({"get": "list"}, request)
@@ -49,7 +49,7 @@ class TestAdminList:
         assert by_id[b.id]["tenant_name"] == "zzz_unknown_tenant"
 
     def test_status_filter(self, factory, super_admin):
-        _mk("test_pytest")  # status defaults to open
+        _make_ticket("test_pytest")  # status defaults to open
         request = factory.get("/api/super-admin/support-tickets/?status=closed")
         force_authenticate(request, user=super_admin)
         resp = _dispatch({"get": "list"}, request)
@@ -82,7 +82,7 @@ class TestAdminAuth:
 @pytest.mark.django_db
 class TestAdminReplyAndStatus:
     def test_super_admin_reply_appends_message(self, factory, super_admin):
-        ticket = _mk("test_pytest")
+        ticket = _make_ticket("test_pytest")
         request = factory.post(
             f"/api/super-admin/support-tickets/{ticket.id}/reply/",
             {"body": "we are on it"},
@@ -96,7 +96,7 @@ class TestAdminReplyAndStatus:
         assert last["body"] == "we are on it"
 
     def test_set_status_resolved_stamps_resolved_at(self, factory, super_admin):
-        ticket = _mk("test_pytest")
+        ticket = _make_ticket("test_pytest")
         request = factory.post(
             f"/api/super-admin/support-tickets/{ticket.id}/set-status/",
             {"status": "resolved"},

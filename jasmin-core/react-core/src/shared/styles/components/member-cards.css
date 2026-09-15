@@ -89,3 +89,24 @@
     margin-inline-start: 0;
   }
 }
+
+/* Action row above the coop shares table in CoopSharesModal. */
+.coop-shares-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Why the transfer button is disabled, next to it. */
+.coop-shares-modal-actions-reason {
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+}
+
+/* How many shares a transfer can give, above the transfer form. */
+.coop-share-transfer-available {
+  margin-bottom: 16px;
+  color: var(--color-text-muted);
+}

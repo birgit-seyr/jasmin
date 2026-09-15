@@ -21,6 +21,9 @@ const SUPER_ADMIN_SUBDOMAIN: string =
  * already lowercased, but a differently-cased env var must still match. */
 export function isSuperAdminHostname(host: string): boolean {
   const normalizedHost = host.toLowerCase();
-  const sub = SUPER_ADMIN_SUBDOMAIN.toLowerCase();
-  return normalizedHost === sub || normalizedHost.startsWith(sub + ".");
+  const normalizedSubdomain = SUPER_ADMIN_SUBDOMAIN.toLowerCase();
+  return (
+    normalizedHost === normalizedSubdomain ||
+    normalizedHost.startsWith(normalizedSubdomain + ".")
+  );
 }

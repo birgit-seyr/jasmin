@@ -84,6 +84,18 @@
     "confirmed_immutable": "A confirmed cooperative share can’t be deleted — cancel the share (or the member) instead.",
     "confirmed_fields_locked": "The amount, member, due date and increase flag of a confirmed cooperative share can no longer be changed — cancel the share and record a new one instead."
   },
+  "coop_share_transfer": {
+    "same_member": "Cooperative shares can't be transferred to the same member.",
+    "giver_not_admitted": "Shares can only be transferred from an admitted member (not a trial member).",
+    "receiver_not_admitted": "Shares can only be transferred to an admitted member or trial member.",
+    "receiver_cancelled": "The receiving member is already cancelled.",
+    "exceeds_held": "The member only holds {{available}} confirmed, paid cooperative shares.",
+    "date_in_future": "The transfer date can't be in the future.",
+    "date_before_entry": "The transfer date is before the member's entry date ({{entry_date}}).",
+    "date_before_entry_from_member": "The transfer date is before the giving member's entry date ({{entry_date}}).",
+    "date_before_entry_to_member": "The transfer date is before the receiving member's entry date ({{entry_date}}).",
+    "cancellation_not_confirmed": "This transfer leaves the member without shares, which cancels the membership. Please confirm the cancellation."
+  },
   "share": {
     "not_found": "Share not found."
   },

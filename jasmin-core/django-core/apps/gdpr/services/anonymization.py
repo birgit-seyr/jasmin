@@ -7,13 +7,14 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 
 from apps.accounts.models import JasminUser
 from apps.commissioning.models import (
     ConsentRecord,
     ContactEntity,
     CoopShare,
+    CoopShareTransfer,
     DeliveryNoteContent,
     DeliveryNoteReseller,
     DeliveryStation,
@@ -335,6 +336,25 @@ class AnonymizationMixin:
             cancelled_reason__isnull=True
         ).update(cancelled_reason=None)
 
+        # Coop share transfers keep amounts and dates (GenG equity history), but
+        # their notes name both members: the transfer's own note and the notes of
+        # the rows it created, on this member's side AND the other member's.
+        _, note_replacement = get_classification("commissioning.CoopShareTransfer")[
+            "note"
+        ]
+        transfers = GDPRService._coop_share_transfers_of(member)
+        transfers.exclude(note__isnull=True).update(note=note_replacement)
+        CoopShare.objects.filter(transfer__in=transfers).exclude(
+            note__isnull=True
+        ).update(note=note_replacement)
+
+    @staticmethod
+    def _coop_share_transfers_of(member: Member) -> QuerySet[CoopShareTransfer]:
+        """Transfers the member gave or received coop shares in."""
+        return CoopShareTransfer.objects.filter(
+            Q(from_member=member) | Q(to_member=member)
+        )
+
     @staticmethod
     def _anonymize_billing_profile(member: Member) -> None:
         """Scrub the SEPA mandate fields on the member's BillingProfile.
@@ -519,6 +539,23 @@ class AnonymizationMixin:
         ).update(changes=None, object_repr="[anonymised]")
 
     @staticmethod
+    def _remove_note_from_logentries(model: type, pks: Any) -> None:
+        """Drop the ``note`` key from the auditlog diffs of the ``model`` rows in
+        ``pks``; the rest of each diff and ``object_repr`` stay."""
+        from auditlog.models import LogEntry
+        from django.contrib.contenttypes.models import ContentType
+        from django.db.models.expressions import RawSQL
+
+        pk_strs = [str(pk) for pk in pks]
+        if not pk_strs:
+            return
+        LogEntry.objects.filter(
+            content_type=ContentType.objects.get_for_model(model),
+            object_pk__in=pk_strs,
+            changes__has_key="note",
+        ).update(changes=RawSQL("changes - 'note'", []))
+
+    @staticmethod
     def _scrub_auditlog_entries(
         user: JasminUser,
         member: Member | None,
@@ -569,6 +606,18 @@ class AnonymizationMixin:
             scrub(
                 CoopShare,
                 CoopShare.objects.filter(member=member).values_list("pk", flat=True),
+            )
+            # A transfer's note and the notes of the other member's rows it created
+            # name this member; the rest of those records is the other member's
+            # history, so only the note leaves their diffs.
+            transfers = GDPRService._coop_share_transfers_of(member)
+            remove_note = GDPRService._remove_note_from_logentries
+            remove_note(CoopShareTransfer, transfers.values_list("pk", flat=True))
+            remove_note(
+                CoopShare,
+                CoopShare.objects.filter(transfer__in=transfers)
+                .exclude(member=member)
+                .values_list("pk", flat=True),
             )
             scrub(
                 Subscription,

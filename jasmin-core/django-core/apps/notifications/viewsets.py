@@ -192,8 +192,12 @@ def _serialize_detail(
         "is_customized": is_customized,
         "updated_at": override.updated_at if override else None,
         "variables": [
-            {"name": v.name, "label": v.label, "description": v.description}
-            for v in spec.variables
+            {
+                "name": variable.name,
+                "label": variable.label,
+                "description": variable.description,
+            }
+            for variable in spec.variables
         ],
     }
 
@@ -225,12 +229,12 @@ class EmailTemplateViewSet(RolePermissionsMixin, viewsets.ViewSet):
         # Group customized languages per slug.
         custom_by_slug: dict[str, list[str]] = {}
         latest_update: dict[str, Any] = {}
-        for ov in overrides:
-            if ov.is_customized:
-                custom_by_slug.setdefault(ov.slug, []).append(ov.language)
-            prev = latest_update.get(ov.slug)
-            if prev is None or (ov.updated_at and ov.updated_at > prev):
-                latest_update[ov.slug] = ov.updated_at
+        for override in overrides:
+            if override.is_customized:
+                custom_by_slug.setdefault(override.slug, []).append(override.language)
+            prev = latest_update.get(override.slug)
+            if prev is None or (override.updated_at and override.updated_at > prev):
+                latest_update[override.slug] = override.updated_at
         items = []
         for spec in all_specs():
             slug = spec.slug
@@ -289,11 +293,11 @@ class EmailTemplateViewSet(RolePermissionsMixin, viewsets.ViewSet):
             raise EmailTemplateNotFound(
                 f"Email template '{slug}' does not exist."
             ) from exc
-        ser = EmailTemplateUpdateSerializer(
+        serializer = EmailTemplateUpdateSerializer(
             data=request.data, partial=True, context={"spec": spec}
         )
-        ser.is_valid(raise_exception=True)
-        data = ser.validated_data
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
         language = _resolve_language(request)
 
         override, _ = EmailTemplate.objects.get_or_create(slug=slug, language=language)
@@ -363,9 +367,11 @@ class EmailTemplateViewSet(RolePermissionsMixin, viewsets.ViewSet):
                 f"Email template '{slug}' does not exist."
             ) from exc
 
-        ser = TestSendSerializer(data=request.data)
-        ser.is_valid(raise_exception=True)
-        recipient = ser.validated_data.get("recipient") or auth_user(request).email
+        serializer = TestSendSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        recipient = (
+            serializer.validated_data.get("recipient") or auth_user(request).email
+        )
         if not recipient:
             raise TestSendNoRecipient("No recipient available.")
 

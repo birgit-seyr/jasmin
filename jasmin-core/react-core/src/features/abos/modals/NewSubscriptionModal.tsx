@@ -302,7 +302,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // realistic term's week keys are present and the fullness evaluation is
   // always term-relative instead of anchored to whichever week the modal
   // happened to fetch first.
-  const dsdParams = useMemo(() => {
+  const deliveryStationDayParams = useMemo(() => {
     const start = (validFrom ?? dayjs()).startOf("isoWeek");
     return {
       active_at_date: formatDateForAPI(start)!,
@@ -312,7 +312,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   }, [validFromMs]);
 
   const { deliveryStationDays, loading: stationsLoading } =
-    useDeliveryStationDays(dsdParams);
+    useDeliveryStationDays(deliveryStationDayParams);
 
   // ── End-of-term ──────────────────────────────────────────────────
   // The picked variation's ``ShareType.delivery_cycle`` drives the
@@ -465,8 +465,8 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // list (and map) to a single day.
   const availableDays = useMemo(() => {
     const set = new Set<number>();
-    for (const dsd of deliveryStationDays) {
-      const n = Number(dsd.delivery_day_number);
+    for (const stationDay of deliveryStationDays) {
+      const n = Number(stationDay.delivery_day_number);
       if (Number.isFinite(n)) set.add(n);
     }
     return [...set].sort((a, b) => a - b);
@@ -487,21 +487,22 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   const stationOptions = useMemo(() => {
     const options = deliveryStationDays
       .filter(
-        (dsd) =>
-          dayFilter === "all" || Number(dsd.delivery_day_number) === dayFilter,
+        (stationDay) =>
+          dayFilter === "all" ||
+          Number(stationDay.delivery_day_number) === dayFilter,
       )
-      .map((dsd) => {
+      .map((stationDay) => {
         const { total, minFree, isFull } = showCapacity
           ? stationDayTermCapacity(
-              dsd.capacity,
-              dsd.capacity_by_week,
+              stationDay.capacity,
+              stationDay.capacity_by_week,
               periodWeekKeys,
               quantity,
             )
           : { total: null, minFree: null, isFull: false };
         return {
-          value: dsd.value,
-          label: dsd.label,
+          value: stationDay.value,
+          label: stationDay.label,
           total,
           free: minFree,
           isFull,
@@ -540,16 +541,16 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     // ``stationOptions``) so a full day the Select hides can't reappear on the
     // map reading as available.
     const capacityByDay = new Map(
-      deliveryStationDays.map((dsd) => {
+      deliveryStationDays.map((stationDay) => {
         const { total, minFree, isFull } = showCapacity
           ? stationDayTermCapacity(
-              dsd.capacity,
-              dsd.capacity_by_week,
+              stationDay.capacity,
+              stationDay.capacity_by_week,
               periodWeekKeys,
               quantity,
             )
           : { total: null, minFree: null, isFull: false };
-        return [dsd.value, { total, free: minFree, isFull }];
+        return [stationDay.value, { total, free: minFree, isFull }];
       }),
     );
     const byStation = new Map<
@@ -569,21 +570,23 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       }
     >();
 
-    for (const dsd of deliveryStationDays) {
+    for (const stationDay of deliveryStationDays) {
       // Mirror the Select's day filter so the map shows the same stations.
       if (
         dayFilter !== "all" &&
-        Number(dsd.delivery_day_number) !== dayFilter
+        Number(stationDay.delivery_day_number) !== dayFilter
       ) {
         continue;
       }
-      const lat = dsd.coords_lat != null ? Number(dsd.coords_lat) : NaN;
-      const lon = dsd.coords_lon != null ? Number(dsd.coords_lon) : NaN;
+      const lat =
+        stationDay.coords_lat != null ? Number(stationDay.coords_lat) : NaN;
+      const lon =
+        stationDay.coords_lon != null ? Number(stationDay.coords_lon) : NaN;
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
 
-      const stationId = String(dsd.delivery_station ?? "");
+      const stationId = String(stationDay.delivery_station ?? "");
       if (!stationId) continue;
-      const capacity = capacityByDay.get(dsd.value);
+      const capacity = capacityByDay.get(stationDay.value);
       // Members / public don't see full stations at all when the list is off.
       if (simplified && !allowsWaitingList && capacity?.isFull) continue;
       const entry = byStation.get(stationId) ?? {
@@ -591,12 +594,14 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         lat,
         lon,
         name:
-          dsd.delivery_station_name ?? dsd.delivery_station_short_name ?? "",
+          stationDay.delivery_station_name ??
+          stationDay.delivery_station_short_name ??
+          "",
         days: [],
       };
       entry.days.push({
-        value: dsd.value,
-        label: dsd.label,
+        value: stationDay.value,
+        label: stationDay.label,
         free: capacity?.free ?? null,
         total: capacity?.total ?? null,
         isFull: capacity?.isFull ?? false,
@@ -1168,7 +1173,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                     // with no matching (visible) option.
                     if (next !== "all" && selectedStationDay) {
                       const selected = deliveryStationDays.find(
-                        (dsd) => dsd.value === selectedStationDay,
+                        (stationDay) => stationDay.value === selectedStationDay,
                       );
                       if (
                         selected &&

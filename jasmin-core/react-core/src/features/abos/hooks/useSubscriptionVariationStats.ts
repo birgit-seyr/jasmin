@@ -163,7 +163,7 @@ export function buildMonthlyActiveByVariation(
   );
 
   const data: Array<Record<string, number | string>> = [];
-  const usedVarIds = new Set<string>();
+  const usedVariationIds = new Set<string>();
   for (const cursor of months) {
     const monthStart = cursor.startOf("month");
     const monthEnd = cursor.endOf("month");
@@ -176,11 +176,13 @@ export function buildMonthlyActiveByVariation(
       if (dayjs(s.valid_from as string).isAfter(monthEnd)) continue; // not yet
       if (s.valid_until && dayjs(s.valid_until).isBefore(monthStart)) continue; // ended
       point[id] = ((point[id] as number) ?? 0) + (s.quantity || 0);
-      usedVarIds.add(id);
+      usedVariationIds.add(id);
     }
     data.push(point);
   }
 
-  const series = [...variationInfo.values()].filter((v) => usedVarIds.has(v.id));
+  const series = [...variationInfo.values()].filter((v) =>
+    usedVariationIds.has(v.id),
+  );
   return { data, series };
 }

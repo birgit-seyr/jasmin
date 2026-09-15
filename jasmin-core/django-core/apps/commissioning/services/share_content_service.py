@@ -121,7 +121,7 @@ class ShareContentService:
             return []
 
         share_article = self._get_share_article(share_article_id)
-        seller_obj: Reseller | None = (
+        seller: Reseller | None = (
             Reseller.objects.get(id=seller_id) if seller_id is not None else None
         )
 
@@ -199,15 +199,15 @@ class ShareContentService:
                     )
                 ]
 
-            for station_obj in resolved_stations:
-                if station_obj is None:
+            for delivery_station in resolved_stations:
+                if delivery_station is None:
                     continue
-                key = (share.id, station_obj.id)
+                key = (share.id, delivery_station.id)
                 if key in seen_share_station:
                     raise ShareContentError(
                         f"Duplicate planning entry: share_article={share_article.id} "
                         f"unit={unit} size={size} resolves to the same delivery "
-                        f"station ({station_obj.id}) for share {share.id} more than "
+                        f"station ({delivery_station.id}) for share {share.id} more than "
                         f"once. Check for overlapping tour/station selections on "
                         f"day {day_id} / variation {variation_id}."
                     )
@@ -220,11 +220,11 @@ class ShareContentService:
                         unit=unit,
                         size=size,
                         note=note,
-                        seller=seller_obj,
+                        seller=seller,
                         cleaning=cleaning,
                         washing=washing,
                         forecast=forecast,
-                        delivery_station=station_obj,
+                        delivery_station=delivery_station,
                         kg_per_piece=(
                             Decimal(str(kg_per_piece)) if kg_per_piece else None
                         ),
@@ -764,9 +764,9 @@ class ShareContentService:
                 if counted is not None:
                     any_counted = True
                     total_counted += Decimal(str(counted))
-                    inv_note = (values.get("note") or "").strip()
-                    if inv_note:
-                        collected_notes.append(inv_note)
+                    inventory_note = (values.get("note") or "").strip()
+                    if inventory_note:
+                        collected_notes.append(inventory_note)
                 total_theoretical += Decimal(str(theoretical))
 
         if any_counted:
@@ -956,18 +956,18 @@ class ShareContentService:
         # that already has a real row is skipped — its stock fields
         # were filled in by ``_get_stock_fields`` on that row.
         aggregates: dict[tuple[str, str, str], dict[str, Any]] = {}
-        for (sa_id, unit, size, _storage), values in stock_data.items():
-            key = (str(sa_id), unit, size)
+        for (share_article_id, unit, size, _storage), values in stock_data.items():
+            key = (str(share_article_id), unit, size)
             if key in seen_keys:
                 continue
             counted = values.get("current_stock_amount")
             theoretical = values.get("theoretical_current_stock") or 0
             if counted is not None:
                 stock_value = Decimal(str(counted))
-                inv_note = (values.get("note") or "").strip()
+                inventory_note = (values.get("note") or "").strip()
             else:
                 stock_value = Decimal(str(theoretical))
-                inv_note = ""
+                inventory_note = ""
             if stock_value <= 0:
                 continue
             agg = aggregates.setdefault(
@@ -977,8 +977,8 @@ class ShareContentService:
             agg["stock_value"] += stock_value
             if counted is not None:
                 agg["any_counted"] = True
-                if inv_note:
-                    agg["notes"].append(inv_note)
+                if inventory_note:
+                    agg["notes"].append(inventory_note)
 
         if not aggregates:
             return []
@@ -987,11 +987,11 @@ class ShareContentService:
         # share option (``share_option`` / ``share_option2`` / ``share_option3``
         # on ShareArticle). Otherwise leftover stock of e.g. broccoli would
         # surface as a row when planning honey shares. Articles not in this set
-        # are dropped by the ``sa is None`` guard below.
+        # are dropped by the ``share_article is None`` guard below.
         from django.db.models import Q
 
         article_qs = ShareArticle.objects.filter(
-            id__in={sa_id for (sa_id, _, _) in aggregates}
+            id__in={share_article_id for (share_article_id, _, _) in aggregates}
         )
         if share_option:
             article_qs = article_qs.filter(
@@ -999,12 +999,14 @@ class ShareContentService:
                 | Q(share_option2=share_option)
                 | Q(share_option3=share_option)
             )
-        share_articles_by_id = {str(sa.id): sa for sa in article_qs}
+        share_articles_by_id = {
+            str(share_article.id): share_article for share_article in article_qs
+        }
 
         rows: list[dict[str, Any]] = []
-        for (sa_id, unit, size), agg in aggregates.items():
-            sa = share_articles_by_id.get(sa_id)
-            if sa is None:
+        for (share_article_id, unit, size), agg in aggregates.items():
+            share_article = share_articles_by_id.get(share_article_id)
+            if share_article is None:
                 continue
             # Float only at the boundary — accumulated in Decimal above.
             stock_value = float(max(agg["stock_value"], Decimal("0")))
@@ -1015,17 +1017,17 @@ class ShareContentService:
                 stock_note = "errechnet"
             rows.append(
                 {
-                    "id": f"{year}_{delivery_week}_{sa.id}_{unit}_{size}",
+                    "id": f"{year}_{delivery_week}_{share_article.id}_{unit}_{size}",
                     "year": year,
                     "delivery_week": delivery_week,
-                    "share_article": sa.id,
-                    "share_article_name": sa.name,
-                    "kg_per_piece_S": sa.kg_per_piece_S,
-                    "kg_per_piece_M": sa.kg_per_piece_M,
-                    "kg_per_piece_L": sa.kg_per_piece_L,
-                    "kg_per_bunch_S": sa.kg_per_bunch_S,
-                    "kg_per_bunch_M": sa.kg_per_bunch_M,
-                    "kg_per_bunch_L": sa.kg_per_bunch_L,
+                    "share_article": share_article.id,
+                    "share_article_name": share_article.name,
+                    "kg_per_piece_S": share_article.kg_per_piece_S,
+                    "kg_per_piece_M": share_article.kg_per_piece_M,
+                    "kg_per_piece_L": share_article.kg_per_piece_L,
+                    "kg_per_bunch_S": share_article.kg_per_bunch_S,
+                    "kg_per_bunch_M": share_article.kg_per_bunch_M,
+                    "kg_per_bunch_L": share_article.kg_per_bunch_L,
                     "kg_per_piece": None,
                     "price_per_unit": None,
                     "packing_station": 1,
@@ -1188,17 +1190,19 @@ class ShareContentService:
         # Re-stamp each rebuilt row from its matching (share, delivery_station).
         if preserved_backup:
             to_restamp = []
-            for sc in share_contents:
-                backup = preserved_backup.get((sc.share_id, sc.delivery_station_id))
+            for share_content in share_contents:
+                backup = preserved_backup.get(
+                    (share_content.share_id, share_content.delivery_station_id)
+                )
                 if backup is None:
                     continue
                 (
-                    sc.backup_share_article_id,
-                    sc.backup_unit,
-                    sc.backup_size,
-                    sc.backup_amount,
+                    share_content.backup_share_article_id,
+                    share_content.backup_unit,
+                    share_content.backup_size,
+                    share_content.backup_amount,
                 ) = backup
-                to_restamp.append(sc)
+                to_restamp.append(share_content)
             if to_restamp:
                 ShareContent.objects.bulk_update(
                     to_restamp,

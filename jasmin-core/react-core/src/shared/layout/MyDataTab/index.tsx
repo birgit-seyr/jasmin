@@ -114,7 +114,7 @@ function AdvancedRightsFooter({
   // deletion: an accidental click would lock them out of their own tenant
   // mid-shift. They ask the administration directly instead.
   const { isStaff } = useRoles();
-  const { data: sar } = useGdprMyDataRetrieve();
+  const { data: myData } = useGdprMyDataRetrieve();
   // Latest deletion-request status for THIS user. Surfaces above the
   // Request-Deletion button so a previously rejected request — and
   // the office's reason — is the first thing the user sees, instead
@@ -122,8 +122,8 @@ function AdvancedRightsFooter({
   const { data: deletionStatus } = useGdprMyDeletionStatusRetrieve();
 
   const handleExport = () => {
-    if (!sar) return;
-    const blob = new Blob([JSON.stringify(sar, null, 2)], {
+    if (!myData) return;
+    const blob = new Blob([JSON.stringify(myData, null, 2)], {
       type: "application/json",
     });
     downloadBlob(blob, "my-personal-data.json");

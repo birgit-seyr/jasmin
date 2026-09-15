@@ -92,7 +92,7 @@ class ShareContentGranularityView(APIViewRolePermissionsMixin, APIView):
                 share_option=params["share_option"],
                 # Optional: scope the consistency check to a SINGLE delivery day
                 # (the packing list passes this so it gets per-delivery-day
-                # granularity). Omitted by PlanningHarvestSharesBase, which wants
+                # granularity). Omitted by PlanningShareContentBase, which wants
                 # the across-all-delivery-days result.
                 delivery_day=params["day_number"],
             )

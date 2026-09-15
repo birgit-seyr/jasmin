@@ -1,26 +1,46 @@
 from __future__ import annotations
 
-from decimal import Decimal
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import date, datetime, time
+from decimal import ROUND_FLOOR, Decimal
 from typing import TYPE_CHECKING, Any
 
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Sum
+from django.utils import timezone
 
+from core.db_locks import acquire_advisory_xact_lock
 from core.tenant_db import connection
 
 from ..errors import (
     CoopShareConfirmedFieldsLocked,
     CoopShareInvalidAmount,
+    CoopShareTransferCancellationNotConfirmed,
+    CoopShareTransferDateBeforeEntry,
+    CoopShareTransferDateInFuture,
+    CoopShareTransferExceedsHeld,
+    CoopShareTransferGiverNotAdmitted,
+    CoopShareTransferReceiverCancelled,
+    CoopShareTransferReceiverNotAdmitted,
+    CoopShareTransferSameMember,
+    MemberAlreadyCancelled,
     MemberCoopSharesOutOfRange,
 )
 
 if TYPE_CHECKING:
-    from apps.commissioning.models import CoopShare, Member
+    from apps.commissioning.models import CoopShare, CoopShareTransfer, Member
+
+
+@dataclass(frozen=True)
+class CoopShareTransferResult:
+    transfer: CoopShareTransfer
+    from_member_cancelled: bool
 
 
 class CoopShareService:
-    """Business logic for ``CoopShare`` that needs to be reusable by both
-    ``CoopShare.clean()`` and any path that ``clean()`` cannot guard.
+    """Business logic for ``CoopShare``: the rules ``CoopShare.clean()`` shares
+    with the paths it can't guard, and transfers of shares between members.
     """
 
     # What the office still maintains on an admin-confirmed share: the payment
@@ -219,6 +239,38 @@ class CoopShareService:
             )
 
     @staticmethod
+    def assert_not_below_minimum(
+        member: Member, *, only_confirmed: bool = False
+    ) -> None:
+        """Raise ``MemberCoopSharesOutOfRange`` if ``member``'s live total is below
+        the tenant minimum.
+
+        The lower bound only: used after shares leave a member, which can't make
+        a total above the maximum worse. Same scope as
+        :meth:`assert_within_min_max` (trial members and not-yet-confirmed
+        applicants are exempt).
+        """
+        if not CoopShareService._bounds_apply_to(member):
+            return
+
+        from apps.shared.tenants.models import TenantSettings
+
+        current_settings = TenantSettings.get_current_settings(connection.tenant)
+        if not current_settings or current_settings.min_number_coop_shares is None:
+            return
+
+        total = CoopShareService.member_total_shares(
+            member, only_confirmed=only_confirmed
+        )
+        if total < current_settings.min_number_coop_shares:
+            raise MemberCoopSharesOutOfRange(
+                total=total,
+                minimum=current_settings.min_number_coop_shares,
+                maximum=current_settings.max_number_coop_shares,
+                member_id=str(member.pk),
+            )
+
+    @staticmethod
     def assert_member_total_within_bounds(
         member: Member, *, only_confirmed: bool = False
     ) -> None:
@@ -273,6 +325,235 @@ class CoopShareService:
                 maximum=max_coop_shares,
                 member_id=str(member.pk),
             )
+
+    @staticmethod
+    @transaction.atomic
+    def transfer(
+        *,
+        from_member: Member,
+        to_member: Member,
+        amount: int,
+        transfer_date: date,
+        actor,
+        note: str | None = None,
+        from_member_note: str | None = None,
+        to_member_note: str | None = None,
+        confirm_member_cancellation: bool = False,
+    ) -> CoopShareTransferResult:
+        """Move ``amount`` coop shares (Geschäftsanteile, GenG §76) from
+        ``from_member`` to ``to_member`` as ledger rows: existing rows stay
+        unchanged, the giving member gets a negative row and the receiving member a
+        positive row per share value.
+
+        - The giver must be an admitted, non-trial member; the receiver an admitted
+          (full or trial) member; neither may be cancelled, and the transfer date
+          may not be before either entry date.
+        - Only confirmed, uncancelled shares paid by the transfer date can be
+          given, in whole shares, share value with the most recent payment first.
+        - New rows are confirmed, paid on the transfer date and linked to the
+          transfer; ``from_member_note`` / ``to_member_note`` become their notes.
+        - The min/max window is checked once on the final state of both members:
+          the receiver against the whole window, the giver's confirmed shares
+          against the minimum (``member.coop_shares_out_of_range``).
+        - A giver whose confirmed shares sum to zero is cancelled, which
+          ``confirm_member_cancellation`` has to confirm: those rows are closed
+          (cancelled without a payback date, linked through
+          ``settled_by_transfer``) and ``cancel_member_with_coop_shares`` cancels
+          the member effective on the transfer date. It refuses a member with
+          active subscriptions and sends the cancellation email, which then says
+          no settlement follows.
+        - A trial receiver is converted to a full member, with the transfer date as
+          entry date.
+        """
+        from apps.commissioning.models import CoopShare, CoopShareTransfer, Member
+        from apps.commissioning.services.member_cancellation import (
+            cancel_member_with_coop_shares,
+        )
+        from apps.commissioning.services.trial_conversion import (
+            convert_trial_member_on_first_coop_share,
+        )
+
+        CoopShareService.assert_valid_amount(amount)
+        if from_member.pk == to_member.pk:
+            raise CoopShareTransferSameMember()
+        if transfer_date > timezone.localdate():
+            raise CoopShareTransferDateInFuture()
+
+        # Same per-member lock as CoopShareViewSet create/update (the bounds check
+        # is check-then-act), taken in sorted order so opposite transfers can't
+        # deadlock.
+        for member_id in sorted({str(from_member.pk), str(to_member.pk)}):
+            acquire_advisory_xact_lock(f"coop_share_bounds:{member_id}")
+        locked = {
+            member.pk: member
+            for member in Member.objects.select_for_update()
+            .filter(pk__in=[from_member.pk, to_member.pk])
+            .order_by("pk")
+        }
+        from_member = locked[from_member.pk]
+        to_member = locked[to_member.pk]
+
+        if from_member.cancelled_at is not None:
+            raise MemberAlreadyCancelled("The giving member is already cancelled.")
+        if not from_member.admin_confirmed or from_member.is_trial:
+            raise CoopShareTransferGiverNotAdmitted()
+        if to_member.cancelled_at is not None:
+            raise CoopShareTransferReceiverCancelled()
+        if not to_member.admin_confirmed or to_member.admin_rejected_at is not None:
+            raise CoopShareTransferReceiverNotAdmitted()
+        for side, member in (("from_member", from_member), ("to_member", to_member)):
+            if member.entry_date is not None and transfer_date < member.entry_date:
+                raise CoopShareTransferDateBeforeEntry(
+                    entry_date=member.entry_date.isoformat(), member=side
+                )
+
+        given_by_value = CoopShareService._allocate_paid_shares(
+            from_member, amount, transfer_date
+        )
+
+        receiver_had_shares = CoopShareService.member_total_shares(to_member) > 0
+        now = timezone.now()
+        coop_share_transfer = CoopShareTransfer.objects.create(
+            from_member=from_member,
+            to_member=to_member,
+            amount_of_coop_shares=amount,
+            transfer_date=transfer_date,
+            note=note,
+            created_by=actor,
+        )
+        paid_at = timezone.make_aware(datetime.combine(transfer_date, time.min))
+        for value_one_coop_share, taken in given_by_value.items():
+            for member, signed_amount, row_note, is_increase in (
+                (from_member, -taken, from_member_note, False),
+                (to_member, taken, to_member_note, receiver_had_shares),
+            ):
+                CoopShareService._save_without_bounds_check(
+                    CoopShare(
+                        member=member,
+                        amount_of_coop_shares=signed_amount,
+                        value_one_coop_share=value_one_coop_share,
+                        paid_at=paid_at,
+                        is_increase=is_increase,
+                        note=row_note,
+                        admin_confirmed=True,
+                        admin_confirmed_by=actor,
+                        admin_confirmed_at=now,
+                        transfer=coop_share_transfer,
+                    )
+                )
+
+        CoopShareService.assert_within_min_max(member=to_member, new_amount=Decimal(0))
+        from_member_cancelled = (
+            CoopShareService.member_total_shares(from_member, only_confirmed=True) == 0
+        )
+        if from_member_cancelled:
+            if not confirm_member_cancellation:
+                raise CoopShareTransferCancellationNotConfirmed()
+            for row in CoopShare.objects.filter(
+                member=from_member, admin_confirmed=True, cancelled_at__isnull=True
+            ):
+                row.cancelled_at = now
+                row.cancelled_effective_at = transfer_date
+                row.cancelled_by = actor
+                row.payback_due_date = None
+                row.settled_by_transfer = coop_share_transfer
+                CoopShareService._save_without_bounds_check(
+                    row,
+                    update_fields=[
+                        "cancelled_at",
+                        "cancelled_effective_at",
+                        "cancelled_by",
+                        "payback_due_date",
+                        "settled_by_transfer",
+                    ],
+                )
+            cancel_member_with_coop_shares(
+                from_member,
+                cancelled_effective_at=transfer_date,
+                cancelled_by=actor,
+                shares_transferred=True,
+            )
+        else:
+            CoopShareService.assert_not_below_minimum(from_member, only_confirmed=True)
+
+        if to_member.is_trial:
+            convert_trial_member_on_first_coop_share(
+                to_member, entry_date=transfer_date
+            )
+
+        return CoopShareTransferResult(
+            transfer=coop_share_transfer, from_member_cancelled=from_member_cancelled
+        )
+
+    @staticmethod
+    def _allocate_paid_shares(
+        member: Member, amount: int, transfer_date: date
+    ) -> dict[int, Decimal]:
+        """Split ``amount`` over the member's share values, in whole shares.
+
+        Per share value, counts confirmed, uncancelled rows paid by the transfer
+        date (negative rows of earlier transfers included), capped by what the
+        member holds of that value today, so a backdated transfer can't give shares
+        a transfer dated later already gave away. Share values with the most
+        recent payment are used first. Raises ``CoopShareTransferExceedsHeld`` when
+        the whole shares don't cover ``amount``.
+        """
+        from apps.commissioning.models import CoopShare
+
+        rows = list(
+            CoopShare.objects.select_for_update().filter(
+                member=member,
+                admin_confirmed=True,
+                paid_at__isnull=False,
+                cancelled_at__isnull=True,
+            )
+        )
+        held_today: defaultdict[int, Decimal] = defaultdict(Decimal)
+        held_on_transfer_date: defaultdict[int, Decimal] = defaultdict(Decimal)
+        latest_payment: dict[int, datetime] = {}
+        for row in rows:
+            value = row.value_one_coop_share
+            held_today[value] += row.amount_of_coop_shares
+            if (
+                row.paid_at is None
+                or timezone.localtime(row.paid_at).date() > transfer_date
+            ):
+                continue
+            held_on_transfer_date[value] += row.amount_of_coop_shares
+            latest_payment[value] = max(
+                latest_payment.get(value, row.paid_at), row.paid_at
+            )
+
+        whole_by_value: dict[int, Decimal] = {}
+        for value, held in held_on_transfer_date.items():
+            whole = min(held, held_today[value]).to_integral_value(rounding=ROUND_FLOOR)
+            if whole >= 1:
+                whole_by_value[value] = whole
+        available = sum(whole_by_value.values(), Decimal(0))
+        if amount > available:
+            raise CoopShareTransferExceedsHeld(available=int(available))
+
+        still_needed = Decimal(amount)
+        given_by_value: dict[int, Decimal] = {}
+        for value in sorted(
+            whole_by_value, key=latest_payment.__getitem__, reverse=True
+        ):
+            if still_needed <= 0:
+                break
+            taken = min(whole_by_value[value], still_needed)
+            given_by_value[value] = taken
+            still_needed -= taken
+        return given_by_value
+
+    @staticmethod
+    def _save_without_bounds_check(share: CoopShare, **kwargs: Any) -> None:
+        """Save through ``JasminModel.save`` (the audit log still records the
+        change) but skip ``CoopShare.save``'s ``full_clean()``: its min/max check
+        would see a half-applied transfer. ``transfer`` checks the window on the
+        final state instead."""
+        from apps.commissioning.models import CoopShare
+
+        super(CoopShare, share).save(**kwargs)
 
     # NOTE: there is no bulk validator. If a real bulk coop-share path appears,
     # add one that delegates to assert_within_min_max per (member,

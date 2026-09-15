@@ -34,35 +34,35 @@ logger = logging.getLogger("authentication")
 # --------------------------------------------------------------------------- #
 
 
-def serialize_user_row(u: JasminUser) -> dict:
+def serialize_user_row(user: JasminUser) -> dict:
     from apps.commissioning.models.choices import InvitationStatus
 
     # If callers prefetched the relevant invitations under
     # ``_prefetched_sent_invitations`` (see MemberViewSet.get_queryset),
     # use that to avoid an N+1; otherwise fall back to a query.
-    prefetched = getattr(u, "_prefetched_sent_invitations", None)
+    prefetched = getattr(user, "_prefetched_sent_invitations", None)
     if prefetched is not None:
         invitation = prefetched[0] if prefetched else None
     else:
         invitation = (
-            u.invitations.filter(status=InvitationStatus.SENT)
+            user.invitations.filter(status=InvitationStatus.SENT)
             .order_by("-created_at")
             .first()
         )
-    linked_reseller = getattr(u, "linked_reseller", None)
+    linked_reseller = getattr(user, "linked_reseller", None)
     return {
-        "id": u.id,
-        "email": u.email,
-        "first_name": u.first_name,
-        "last_name": u.last_name,
-        "roles": u.roles or [],
-        "user_language": u.user_language,
-        "account_status": u.account_status,
-        "is_active": u.is_active,
-        "date_joined": u.date_joined,
-        "last_login": u.last_login,
-        "activated_at": u.activated_at,
-        "inactivated_at": u.inactivated_at,
+        "id": user.id,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "roles": user.roles or [],
+        "user_language": user.user_language,
+        "account_status": user.account_status,
+        "is_active": user.is_active,
+        "date_joined": user.date_joined,
+        "last_login": user.last_login,
+        "activated_at": user.activated_at,
+        "inactivated_at": user.inactivated_at,
         "invitation_expires_at": invitation.expires_at if invitation else None,
         "is_invitation_expired": bool(invitation and invitation.is_expired),
         "reseller_id": str(linked_reseller.id) if linked_reseller else None,
@@ -95,7 +95,7 @@ def list_active_users() -> list[dict]:
         )
         .order_by("first_name", "last_name")
     )
-    return [serialize_user_row(u) for u in qs]
+    return [serialize_user_row(user) for user in qs]
 
 
 # --------------------------------------------------------------------------- #
@@ -198,7 +198,7 @@ def create_user_with_invite(*, data: dict[str, Any], created_by: JasminUser) -> 
 # --------------------------------------------------------------------------- #
 
 
-_ALLOWED_STATUS_TRANSITIONS = {"active", "inactive"}
+_ADMIN_SETTABLE_STATUSES = {"active", "inactive"}
 
 
 @transaction.atomic
@@ -273,7 +273,7 @@ def update_user_admin(
 
     if "account_status" in data:
         new_status = data.get("account_status")
-        if new_status not in _ALLOWED_STATUS_TRANSITIONS:
+        if new_status not in _ADMIN_SETTABLE_STATUSES:
             raise AdminUserError("account_status must be 'active' or 'inactive'")
         if user.account_status in {"pending_invitation", "pending_approval"}:
             raise AdminUserError(

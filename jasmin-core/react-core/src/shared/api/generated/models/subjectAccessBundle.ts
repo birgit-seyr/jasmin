@@ -12,6 +12,7 @@ import type { SubjectAccessBundleBillingProfile } from './subjectAccessBundleBil
 import type { SubjectAccessBundleReseller } from './subjectAccessBundleReseller';
 import type { SarConsentRecord } from './sarConsentRecord';
 import type { SarCoopShare } from './sarCoopShare';
+import type { SarCoopShareTransfer } from './sarCoopShareTransfer';
 import type { SarSubscription } from './sarSubscription';
 import type { SarMemberLoan } from './sarMemberLoan';
 import type { SarChargeSchedule } from './sarChargeSchedule';
@@ -41,6 +42,7 @@ export interface SubjectAccessBundle {
   reseller: SubjectAccessBundleReseller;
   consents: SarConsentRecord[];
   coop_shares: SarCoopShare[];
+  coop_share_transfers: SarCoopShareTransfer[];
   subscriptions: SarSubscription[];
   member_loans: SarMemberLoan[];
   charge_schedules: SarChargeSchedule[];

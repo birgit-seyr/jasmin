@@ -53,7 +53,7 @@ class TestShareContentGranularityView:
         # day_number scopes the consistency check to a single delivery day: a day
         # whose stations agree reads days_ok=True even when ANOTHER delivery day
         # the same week diverges (which makes the global, unscoped check False).
-        # The global result (no day_number) is kept for PlanningHarvestSharesBase.
+        # The global result (no day_number) is kept for PlanningShareContentBase.
         variation = ShareTypeVariationFactory()
         article = ShareArticleFactory()
 

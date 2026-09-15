@@ -30,7 +30,7 @@ export default function CustomerOrderHeader({ reseller, logoUrl }: Props) {
   const { t } = useTranslation();
   const { tenantName } = useTenant();
   const { user } = useAuth();
-  const u = user as {
+  const currentUser = user as {
     first_name?: string;
     last_name?: string;
     email?: string;
@@ -42,8 +42,10 @@ export default function CustomerOrderHeader({ reseller, logoUrl }: Props) {
   const displayName =
     reseller?.company_name ||
     [reseller?.first_name, reseller?.last_name].filter(Boolean).join(" ") ||
-    [u?.first_name, u?.last_name].filter(Boolean).join(" ") ||
-    u?.email ||
+    [currentUser?.first_name, currentUser?.last_name]
+      .filter(Boolean)
+      .join(" ") ||
+    currentUser?.email ||
     "";
 
   // The CUSTOMER's email — the reseller's own contact email, else its linked

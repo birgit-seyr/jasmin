@@ -53,5 +53,9 @@ export interface CoopShare {
   readonly cancelled_by?: string | null;
   member: string;
   /** @nullable */
+  readonly transfer?: string | null;
+  /** @nullable */
+  readonly settled_by_transfer?: string | null;
+  /** @nullable */
   readonly admin_confirmed_by_name?: string | null;
 }

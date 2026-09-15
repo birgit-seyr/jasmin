@@ -24,7 +24,7 @@ import { blockNonNumericKeys } from "@shared/utils/numberFormat";
 import {
   useDateFormat,
   useNumberFormat,
-  useSettingsManager,
+  useAutoSavedSettings,
   useTenant,
 } from "@hooks/index";
 import {
@@ -85,7 +85,7 @@ interface SettingsPageProps {
 export interface SettingsHelpers {
   getSettingValue: (key: string, defaultValue?: unknown) => unknown;
   /**
-   * Push a change into ``useSettingsManager``. ``fieldType`` is the
+   * Push a change into ``useAutoSavedSettings``. ``fieldType`` is the
    * renderer's ``type`` string — passing it lets the autosave hook
    * choose between immediate (``select`` / ``checkbox`` / ``switch`` /
    * ``file``) and debounced (text input) PATCHes.
@@ -104,7 +104,7 @@ export interface SettingsHelpers {
  * over a `settingsConfig`. Handles `richtext`, `tiers`, plain inputs,
  * description-below-input, and optional locked settings.
  *
- * Pages that just render a `useSettingsManager`-backed list of settings
+ * Pages that just render a `useAutoSavedSettings`-backed list of settings
  * should use this. Use `extraBefore` / `extraAfter` for custom blocks.
  */
 export default function SettingsPage({
@@ -128,7 +128,7 @@ export default function SettingsPage({
     hasChanges,
     handleSettingChange: rawHandleSettingChange,
     getSettingValue,
-  } = useSettingsManager({
+  } = useAutoSavedSettings({
     tenant: tenant as { id: string; [key: string]: unknown } | null,
     fetchSettings: () => tenantsSettingsList(),
     saveSettings: (data) => tenantsSettingsUpdateCurrentSettingsUpdate(data),

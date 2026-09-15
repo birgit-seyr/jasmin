@@ -26,7 +26,7 @@ export default function CreateUserModal({
   });
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   const toggleRole = (role: string) => {
@@ -38,7 +38,7 @@ export default function CreateUserModal({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
+    setSuccessMessage("");
     setLoading(true);
 
     try {
@@ -46,7 +46,7 @@ export default function CreateUserModal({
         SUPER_ADMIN_ENDPOINTS.tenantCreateUser(tenantId),
         { ...formData, roles: selectedRoles },
       );
-      setSuccess(response.data.message);
+      setSuccessMessage(response.data.message);
       setTimeout(onSuccess, 1500);
     } catch (err) {
       setError(getErrorMessage(err, "Failed to create user"));
@@ -144,9 +144,9 @@ export default function CreateUserModal({
             </div>
           )}
 
-          {success && (
+          {successMessage && (
             <div className="alert-success" style={{ marginBottom: 20 }}>
-              {success}
+              {successMessage}
             </div>
           )}
 

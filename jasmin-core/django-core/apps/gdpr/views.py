@@ -446,18 +446,28 @@ def gdpr_admin_pending_deletions_view(request: Request) -> Response:
     # Compute retention blockers for every pending user in a constant number
     # of queries (one grouped COUNT per obligation), not ~5 per request.
     blockers_by_user = GDPRService.check_retention_blocks_bulk(
-        [req.user for req in pending_requests if req.user_id]
+        [
+            deletion_request.user
+            for deletion_request in pending_requests
+            if deletion_request.user_id
+        ]
     )
     pending = [
         {
-            "id": req.id,
-            "requested_email": req.requested_email,
-            "requested_at": req.requested_at,
-            "email_confirmed_at": req.email_confirmed_at,
-            "current_user_email": req.user.email if req.user_id else None,
-            "blockers": blockers_by_user.get(req.user_id, []) if req.user_id else [],
+            "id": deletion_request.id,
+            "requested_email": deletion_request.requested_email,
+            "requested_at": deletion_request.requested_at,
+            "email_confirmed_at": deletion_request.email_confirmed_at,
+            "current_user_email": (
+                deletion_request.user.email if deletion_request.user_id else None
+            ),
+            "blockers": (
+                blockers_by_user.get(deletion_request.user_id, [])
+                if deletion_request.user_id
+                else []
+            ),
         }
-        for req in pending_requests
+        for deletion_request in pending_requests
     ]
     return Response({"pending": pending})
 
@@ -516,35 +526,41 @@ def gdpr_admin_decided_deletions_view(request: Request) -> Response:
         .order_by("-requested_at")
     )
 
-    def serialize(r: DeletionRequest) -> dict:
+    def serialize(deletion_request: DeletionRequest) -> dict:
         # For executions ``admin_confirmed_at`` is also stamped (the
         # approve step set it), but ``executed_at`` is the more
         # meaningful "decided" moment. For rejections only
         # ``admin_confirmed_at`` is set. Cancelled/expired never go
         # through admin — ``decided_at`` is None there.
-        if r.state == DeletionRequestState.EXECUTED:
-            decided_at = r.executed_at or r.admin_confirmed_at
-        elif r.state == DeletionRequestState.REJECTED:
-            decided_at = r.admin_confirmed_at
+        if deletion_request.state == DeletionRequestState.EXECUTED:
+            decided_at = (
+                deletion_request.executed_at or deletion_request.admin_confirmed_at
+            )
+        elif deletion_request.state == DeletionRequestState.REJECTED:
+            decided_at = deletion_request.admin_confirmed_at
         else:
             decided_at = None
         return {
-            "id": r.id,
-            "state": str(r.state),
-            "requested_email": r.requested_email,
-            "requested_at": r.requested_at,
+            "id": deletion_request.id,
+            "state": str(deletion_request.state),
+            "requested_email": deletion_request.requested_email,
+            "requested_at": deletion_request.requested_at,
             "decided_at": decided_at,
             "decided_by_email": (
-                r.admin_confirmed_by.email if r.admin_confirmed_by_id else None
+                deletion_request.admin_confirmed_by.email
+                if deletion_request.admin_confirmed_by_id
+                else None
             ),
-            "rejection_reason": r.admin_rejection_reason or None,
+            "rejection_reason": deletion_request.admin_rejection_reason or None,
         }
 
     paginator = OptionalLimitOffsetPagination()
     page = paginator.paginate_queryset(qs, request)
     if page is None:
-        return Response([serialize(r) for r in qs])
-    return paginator.get_paginated_response([serialize(r) for r in page])
+        return Response([serialize(deletion_request) for deletion_request in qs])
+    return paginator.get_paginated_response(
+        [serialize(deletion_request) for deletion_request in page]
+    )
 
 
 @extend_schema(

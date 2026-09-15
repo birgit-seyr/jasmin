@@ -46,7 +46,7 @@ export interface BaseEntitySelectorProps<V> {
   preserveSelection?: boolean;
 }
 
-const DEFAULT_FILTER_OPTION = (
+const matchesOptionLabel = (
   input: string,
   option?: DefaultOptionType,
 ): boolean =>
@@ -107,7 +107,7 @@ export default function BaseEntitySelector<V extends string | number | null>({
 
   const effectiveFilterOption = useMemo(() => {
     if (!showSearch) return undefined;
-    return filterOption ?? DEFAULT_FILTER_OPTION;
+    return filterOption ?? matchesOptionLabel;
   }, [showSearch, filterOption]);
 
   return (

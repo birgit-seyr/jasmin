@@ -1007,6 +1007,112 @@ class CoopShareInvalidAmount(BadRequestError):
         super().__init__(message, field="amount_of_coop_shares")
 
 
+class CoopShareTransferSameMember(BadRequestError):
+    """A coop share transfer names the same member as giver and receiver."""
+
+    code = "coop_share_transfer.same_member"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Coop shares can't be transferred to the same member.", field="to_member"
+        )
+
+
+class CoopShareTransferGiverNotAdmitted(BadRequestError):
+    """Only an admitted, non-trial member holds Geschäftsanteile that can be
+    transferred."""
+
+    code = "coop_share_transfer.giver_not_admitted"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Coop shares can only be transferred from an admitted member.",
+            field="from_member",
+        )
+
+
+class CoopShareTransferReceiverNotAdmitted(BadRequestError):
+    """The receiving member of a coop share transfer must be admitted (full or
+    trial member); a pending or rejected applicant can't hold equity."""
+
+    code = "coop_share_transfer.receiver_not_admitted"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Coop shares can only be transferred to an admitted member.",
+            field="to_member",
+        )
+
+
+class CoopShareTransferReceiverCancelled(BadRequestError):
+    """The receiving member of a coop share transfer has already left the
+    cooperative; a departed member can't acquire new Geschäftsanteile."""
+
+    code = "coop_share_transfer.receiver_cancelled"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "The receiving member is already cancelled.", field="to_member"
+        )
+
+
+class CoopShareTransferExceedsHeld(BadRequestError):
+    """A coop share transfer asks for more shares than the giving member holds as
+    confirmed, uncancelled shares paid by the transfer date. Pending and unpaid
+    shares are not transferable."""
+
+    code = "coop_share_transfer.exceeds_held"
+
+    def __init__(self, *, available: int | float) -> None:
+        super().__init__(
+            f"The member only holds {available} confirmed, paid coop shares.",
+            field="amount_of_coop_shares",
+            details={"available": available},
+        )
+
+
+class CoopShareTransferDateInFuture(BadRequestError):
+    """A coop share transfer is dated in the future; a transfer is recorded when
+    it has happened."""
+
+    code = "coop_share_transfer.date_in_future"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "The transfer date can't be in the future.", field="transfer_date"
+        )
+
+
+class CoopShareTransferDateBeforeEntry(BadRequestError):
+    """A coop share transfer is dated before the giving or the receiving member's
+    entry date: nobody gives or receives Geschäftsanteile before joining.
+    ``details.context`` names the side (``from_member`` / ``to_member``)."""
+
+    code = "coop_share_transfer.date_before_entry"
+
+    def __init__(self, *, entry_date: str, member: str) -> None:
+        side = "giving" if member == "from_member" else "receiving"
+        super().__init__(
+            f"The transfer date is before the {side} member's entry date ({entry_date}).",
+            field="transfer_date",
+            details={"entry_date": entry_date, "context": member},
+        )
+
+
+class CoopShareTransferCancellationNotConfirmed(BadRequestError):
+    """The transfer leaves the giving member without confirmed shares, which
+    cancels the membership, and the request didn't confirm that."""
+
+    code = "coop_share_transfer.cancellation_not_confirmed"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This transfer leaves the giving member without shares and cancels the "
+            "membership; confirm it with confirm_member_cancellation.",
+            field="confirm_member_cancellation",
+        )
+
+
 class SubscriptionPriceInvalid(BadRequestError):
     """``price_per_delivery`` is not a valid non-negative amount on a path that
     takes it outside a serializer (the waiting-list offer). A negative price

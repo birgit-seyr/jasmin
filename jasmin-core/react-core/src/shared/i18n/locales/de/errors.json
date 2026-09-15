@@ -84,6 +84,18 @@
     "confirmed_immutable": "Ein bestätigter Geschäftsanteil kann nicht gelöscht werden — stattdessen den Anteil (oder das Mitglied) kündigen.",
     "confirmed_fields_locked": "Bei einem bestätigten Geschäftsanteil können Anzahl, Mitglied, Fälligkeitsdatum und Aufstockung nicht mehr geändert werden — stattdessen den Anteil kündigen und einen neuen erfassen."
   },
+  "coop_share_transfer": {
+    "same_member": "Genossenschaftsanteile können nicht an dasselbe Mitglied übertragen werden.",
+    "giver_not_admitted": "Anteile können nur von einem aufgenommenen Mitglied (kein Probemitglied) übertragen werden.",
+    "receiver_not_admitted": "Anteile können nur an ein aufgenommenes Mitglied oder Probemitglied übertragen werden.",
+    "receiver_cancelled": "Das empfangende Mitglied ist bereits gekündigt.",
+    "exceeds_held": "Das Mitglied hält nur {{available}} bestätigte, bezahlte Genossenschaftsanteile.",
+    "date_in_future": "Das Übertragungsdatum darf nicht in der Zukunft liegen.",
+    "date_before_entry": "Das Übertragungsdatum liegt vor dem Eintrittsdatum des Mitglieds ({{entry_date}}).",
+    "date_before_entry_from_member": "Das Übertragungsdatum liegt vor dem Eintrittsdatum des abgebenden Mitglieds ({{entry_date}}).",
+    "date_before_entry_to_member": "Das Übertragungsdatum liegt vor dem Eintrittsdatum des empfangenden Mitglieds ({{entry_date}}).",
+    "cancellation_not_confirmed": "Durch diese Übertragung behält das Mitglied keine Anteile und wird gekündigt. Bitte bestätige die Kündigung."
+  },
   "share": {
     "not_found": "Anteil nicht gefunden."
   },

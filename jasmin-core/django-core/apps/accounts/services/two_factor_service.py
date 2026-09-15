@@ -52,7 +52,6 @@ from ..models import JasminUser
 logger = logging.getLogger("authentication")
 
 
-_DEVICE_NAME = "default"
 _RECOVERY_CODE_COUNT = 10
 _RECOVERY_CODE_BYTES = 5  # 8 base32 chars per code, 10 codes = 80 chars
 
@@ -139,7 +138,7 @@ def start_enrollment(*, user: JasminUser, issuer: str) -> EnrolmentStart:
     else:
         device = TOTPDevice.objects.create(
             user=user,
-            name=_DEVICE_NAME,
+            name="default",
             confirmed=False,
             key=secret_hex,
             step=30,

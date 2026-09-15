@@ -146,9 +146,9 @@ def member_exception_gaps(member_id: str, years: set[int]) -> list[dict]:
     gaps: list[dict] = []
     for subscription in subscriptions:
         variation = subscription.share_type_variation
-        default_dsd = subscription.default_delivery_station_day
+        default_station_day = subscription.default_delivery_station_day
         if (
-            not default_dsd
+            not default_station_day
             or not subscription.valid_from
             or not subscription.valid_until
         ):
@@ -161,7 +161,7 @@ def member_exception_gaps(member_id: str, years: set[int]) -> list[dict]:
         if not periods:
             continue
 
-        day_number = default_dsd.delivery_day.day_number
+        day_number = default_station_day.delivery_day.day_number
         candidate_weeks = SubscriptionService._get_delivery_weeks(
             subscription.valid_from,
             subscription.valid_until,

@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { WEEKDAY_KEYS } from "./dayNamesUtil";
+import { WEEKDAY_KEYS } from "./weekdayNames";
 
 /** Localized full weekday name for a 0=Monday..6=Sunday day_number. */
 export function weekdayLabel(

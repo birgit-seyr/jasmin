@@ -29,11 +29,10 @@ from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
-from django.core.validators import EmailValidator
+from django.core.validators import validate_email
 
 from apps.shared.super_admin.models import SuperAdmin
 
-_EMAIL_VALIDATOR = EmailValidator()
 _MIN_PASSWORD_LENGTH = 10
 
 
@@ -72,7 +71,7 @@ class Command(BaseCommand):
         update_if_exists = options["update_if_exists"]
 
         try:
-            _EMAIL_VALIDATOR(email)
+            validate_email(email)
         except ValidationError as exc:
             raise CommandError(f"Invalid email '{email}': {exc.messages[0]}") from exc
 
@@ -81,13 +80,15 @@ class Command(BaseCommand):
 
         existing = SuperAdmin.objects.filter(email=email).first()
         if existing is None:
-            sa = SuperAdmin.objects.create_user(
+            super_admin = SuperAdmin.objects.create_user(
                 email=email,
                 password=password,
                 first_name=first_name,
                 last_name=last_name,
             )
-            self.stdout.write(self.style.SUCCESS(f"Created SuperAdmin {sa.email}"))
+            self.stdout.write(
+                self.style.SUCCESS(f"Created SuperAdmin {super_admin.email}")
+            )
             return
 
         if not update_if_exists:

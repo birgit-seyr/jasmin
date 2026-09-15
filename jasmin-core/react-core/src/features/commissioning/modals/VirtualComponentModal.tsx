@@ -64,15 +64,13 @@ export default function VirtualComponentModal({
       { query: { enabled: queryEnabled } },
     );
 
-  const { data: rawComponentsData, isLoading: componentsLoading } =
+  const { data: existingComponents, isLoading: componentsLoading } =
     useCommissioningVirtualVariationComponentsList(
       queryEnabled
         ? { virtual_variation: String(share_type_variation) }
         : undefined,
       { query: { enabled: queryEnabled } },
     );
-
-  const componentsData = rawComponentsData;
 
   const loading = variationsLoading || componentsLoading;
 
@@ -85,19 +83,19 @@ export default function VirtualComponentModal({
   );
 
   // Seed selectedVariations ONCE per open, when the components data first
-  // arrives. The ref guard stops a background refetch (componentsData getting
+  // arrives. The ref guard stops a background refetch (existingComponents getting
   // a new reference) from re-seeding and clobbering the user's in-progress
   // checkbox / quantity edits. Reset on close so the next open re-seeds.
   const seededRef = useRef(false);
   useEffect(() => {
-    if (!visible || seededRef.current || !componentsData) return;
+    if (!visible || seededRef.current || !existingComponents) return;
     const selections: Record<string, number> = {};
-    componentsData.forEach((component) => {
+    existingComponents.forEach((component) => {
       selections[component.physical_variation] = component.quantity || 1;
     });
     setSelectedVariations(selections);
     seededRef.current = true;
-  }, [visible, componentsData]);
+  }, [visible, existingComponents]);
 
   // Reset state when modal closes
   useEffect(() => {

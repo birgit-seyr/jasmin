@@ -114,9 +114,9 @@ export const useCurrentDays = (delivery_week?: number, year?: number) => {
   const uniqueShareTypeVariations = useMemo(() => {
     const variationsMap = new Map<string, unknown>();
     currentDays.forEach(share => {
-      const stv = share.share_type_variation;
-      if (stv && typeof stv === 'object' && 'id' in stv) {
-        variationsMap.set(stv.id, stv);
+      const variation = share.share_type_variation;
+      if (variation && typeof variation === 'object' && 'id' in variation) {
+        variationsMap.set(variation.id, variation);
       }
     });
     return Array.from(variationsMap.values());

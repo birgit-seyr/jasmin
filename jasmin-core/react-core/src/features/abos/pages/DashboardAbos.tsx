@@ -99,7 +99,7 @@ export default function DashboardAbos() {
     });
   }, [incomeData, range, t]);
   // Solidarity: prices actually paid per variation for subs STARTED in range.
-  const paidByVar = useMemo(() => {
+  const paidPricesByVariation = useMemo(() => {
     const rows = subscriptions ?? [];
     const from = range ? range[0].startOf("day") : null;
     const to = range ? range[1].endOf("day") : null;
@@ -125,7 +125,7 @@ export default function DashboardAbos() {
   const priceRows = useMemo<PriceRow[]>(() => {
     if (!allowsSolidarity) return [];
     return (variations ?? []).map((v) => {
-      const prices = paidByVar.get(v.id ?? "") ?? [];
+      const prices = paidPricesByVariation.get(v.id ?? "") ?? [];
       const avg = prices.length
         ? prices.reduce((a, b) => a + b, 0) / prices.length
         : null;
@@ -139,7 +139,12 @@ export default function DashboardAbos() {
         count: prices.length,
       };
     });
-  }, [allowsSolidarity, variations, paidByVar, getShareTypeVariationSizeLabel]);
+  }, [
+    allowsSolidarity,
+    variations,
+    paidPricesByVariation,
+    getShareTypeVariationSizeLabel,
+  ]);
 
   const priceColumns = useMemo(
     () => [

@@ -23,7 +23,7 @@ from . import email_verification_service
 logger = logging.getLogger("authentication")
 
 
-_REQUIRED = ("first_name", "last_name", "email")
+_REQUIRED_FIELDS = ("first_name", "last_name", "email")
 
 
 def _assert_required_consents(accepted: dict, *, coop_shares_count: int, as_of) -> None:
@@ -88,7 +88,7 @@ def register_public_applicant(
             "coop_shares_created": 0,
         }
 
-    missing = [f for f in _REQUIRED if not str(data.get(f, "")).strip()]
+    missing = [f for f in _REQUIRED_FIELDS if not str(data.get(f, "")).strip()]
     if missing:
         raise RegistrationError(f"Missing required fields: {', '.join(missing)}")
 

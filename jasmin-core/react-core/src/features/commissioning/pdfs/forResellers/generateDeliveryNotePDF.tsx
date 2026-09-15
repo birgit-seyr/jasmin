@@ -23,10 +23,10 @@ export async function generateAndUploadDeliveryNotePDF(
   logoUrl: string | null | undefined,
   bioLogoUrl?: string | null,
 ): Promise<void> {
-  const dnData = await commissioningDeliveryNotesRetrieve(deliveryNoteId);
+  const deliveryNoteData = await commissioningDeliveryNotesRetrieve(deliveryNoteId);
 
   // Skip if already has stored file
-  if (dnData.file) return;
+  if (deliveryNoteData.file) return;
 
   const { tenantSettings, footerSettings, currencySymbol, lineSettings } =
     await buildResellerPdfContext({
@@ -37,7 +37,7 @@ export async function generateAndUploadDeliveryNotePDF(
       docType: "delivery_note",
     });
 
-  const pdfDataObj = buildDeliveryNotePdfData(dnData);
+  const deliveryNotePdfData = buildDeliveryNotePdfData(deliveryNoteData);
   const dateFormat = (getSetting("date_format") as string) || "DD.MM.YYYY";
 
   // LAZY IMPORTS — see generateInvoicePDF.tsx docstring for rationale.
@@ -48,7 +48,7 @@ export async function generateAndUploadDeliveryNotePDF(
 
   const pdfDocument = (
     <DeliveryNotePDF
-      data={pdfDataObj}
+      data={deliveryNotePdfData}
       t={t}
       footerSettings={footerSettings}
       lineSettings={lineSettings}
@@ -58,7 +58,7 @@ export async function generateAndUploadDeliveryNotePDF(
     />
   );
 
-  const fileName = `${t("commissioning.delivery_note")}-${pdfDataObj.deliveryNote.prefix}-${pdfDataObj.deliveryNote.delivery_note_number}.pdf`;
+  const fileName = `${t("commissioning.delivery_note")}-${deliveryNotePdfData.deliveryNote.prefix}-${deliveryNotePdfData.deliveryNote.delivery_note_number}.pdf`;
 
   const pdfBlob = await pdf(pdfDocument).toBlob();
 

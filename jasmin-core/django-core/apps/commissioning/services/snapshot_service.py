@@ -243,12 +243,12 @@ class SnapshotService:
         # otherwise let two overlapping recomputes/bulk-writes deadlock (AB/BA).
         # None-coerced sort key mirrors CurrentBalanceService's lock ordering.
         total = 0
-        for (sa_id, unit, size, storage_id), date in sorted(
+        for (share_article_id, unit, size, storage_id), date in sorted(
             entities.items(),
             key=lambda item: tuple(part or "" for part in item[0]),
         ):
             total += SnapshotService.cascade_future_inventories(
-                share_article_id=sa_id,
+                share_article_id=share_article_id,
                 unit=unit,
                 size=size,
                 storage_id=storage_id,

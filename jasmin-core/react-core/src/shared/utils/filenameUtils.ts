@@ -1,4 +1,4 @@
-import { getDayName } from "./dayNamesUtil";
+import { getDayName } from "./weekdayNames";
 
 type TranslateFn = (key: string) => string;
 

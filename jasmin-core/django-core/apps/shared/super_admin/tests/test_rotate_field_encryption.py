@@ -52,7 +52,6 @@ from apps.payments.models import BillingProfile
 # Valid German IBAN from the SEPA spec's worked example — synthetic,
 # not a real account.
 SAMPLE_IBAN = "DE89370400440532013000"
-SAMPLE_BIC = "COBADEFFXXX"
 SAMPLE_OWNER = "Alice Schmidt"
 
 

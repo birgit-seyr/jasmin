@@ -290,6 +290,18 @@ class SarCoopShareSerializer(serializers.Serializer):
     admin_rejection_reason = serializers.CharField(allow_blank=True, allow_null=True)
 
 
+class SarCoopShareTransferSerializer(serializers.Serializer):
+    """``CoopShareTransfer`` the subject took part in. The other member is left
+    out (third-party data); ``direction`` says which side the subject was on."""
+
+    id = serializers.CharField()
+    direction = serializers.ChoiceField(choices=["given", "received"])
+    amount_of_coop_shares = serializers.IntegerField()
+    transfer_date = serializers.DateField()
+    note = serializers.CharField(allow_blank=True, allow_null=True)
+    created_at = serializers.DateTimeField()
+
+
 class SarSubscriptionSerializer(serializers.Serializer):
     """``Subscription`` row + TimeBoundMixin + AdminConfirmableMixin
     + CreatedMixin + CancellableMixin + WaitingListMixin.
@@ -580,6 +592,7 @@ class SubjectAccessBundleSerializer(serializers.Serializer):
 
     consents = SarConsentRecordSerializer(many=True)
     coop_shares = SarCoopShareSerializer(many=True)
+    coop_share_transfers = SarCoopShareTransferSerializer(many=True)
     subscriptions = SarSubscriptionSerializer(many=True)
     member_loans = SarMemberLoanSerializer(many=True)
     charge_schedules = SarChargeScheduleSerializer(many=True)

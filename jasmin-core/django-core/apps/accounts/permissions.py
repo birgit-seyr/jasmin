@@ -182,7 +182,7 @@ def requires_step_up_for_fields(*field_names: str) -> type[BasePermission]:
                 return True
             data = getattr(request, "data", None) or {}
 
-            def _norm(val: object) -> str:
+            def _normalized_text(val: object) -> str:
                 return str(val).strip() if val is not None else ""
 
             # Only trigger step-up when a sensitive field is actually
@@ -191,7 +191,9 @@ def requires_step_up_for_fields(*field_names: str) -> type[BasePermission]:
             # all form fields (including unchanged iban/account_owner) in a
             # PATCH that only touched name/address.
             changing = any(
-                field in data and _norm(data[field]) != _norm(getattr(obj, field, None))
+                field in data
+                and _normalized_text(data[field])
+                != _normalized_text(getattr(obj, field, None))
                 for field in sensitive
             )
             if not changing:

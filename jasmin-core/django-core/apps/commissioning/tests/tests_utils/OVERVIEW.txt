@@ -1,15 +1,10 @@
 tests_utils/ — Test Coverage Overview
 =====================================
 
-test_basic_utils.py
--------------------
-Source: apps/commissioning/utils/basic_utils.py
+test_dynamic_keys.py
+--------------------
+Source: apps/commissioning/utils/dynamic_keys.py
 DB required: No
-
-  TestStrToBool
-    - truthy values ("true", "True", "TRUE", "1", "yes", "Yes", "YES")
-    - falsy values ("false", "0", "no", "", "anything", "nope", "2")
-    - None input returns None
 
   TestExtractAmountsFromKeys
     - basic key extraction (amount_<id> → {id: value})
@@ -18,6 +13,12 @@ DB required: No
     - ignores bare prefix (amount_ with nothing after)
     - empty dict
     - nanoid-style IDs with underscores
+
+
+test_sort_order.py
+------------------
+Source: apps/commissioning/utils/sort_order.py
+DB required: No
 
   TestSizeOrderAnnotation
     - returns Django Case expression with IntegerField output

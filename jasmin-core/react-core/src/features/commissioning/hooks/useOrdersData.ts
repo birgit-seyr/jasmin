@@ -508,11 +508,11 @@ export function useOrdersData() {
     // ``line_netto`` as a 2dp Decimal string, while ``CrateOrderContentRow``
     // carries the locally-computed number (see the type's docstring).
     // ``withLineTotals`` below parses the string into that number field.
-    const responseData = rawCratesData as unknown as CrateOrderContentRow[];
+    const crateRows = rawCratesData as unknown as CrateOrderContentRow[];
     // Fetched rows carry a backend-computed Decimal ``line_netto`` string —
     // display it as-is instead of recomputing in JS float.
     setDataCrates(
-      responseData.map((item) =>
+      crateRows.map((item) =>
         withLineTotals(item, defaultTaxRateCrates, true),
       ),
     );
@@ -690,15 +690,15 @@ export function useOrdersData() {
     [t, tenant, getSetting, logoUrl, bioLogoUrl, invalidateData, queryClient],
   );
 
-  const handleFinalizeDNSuccess = useCallback(
+  const handleFinalizeDeliveryNotesSuccess = useCallback(
     async (responseData: unknown) => {
       // Same ``unknown``-param + single directional cast as
       // ``handleFinalizeInvoicesSuccess`` above.
       const body = responseData as BulkOperationResponse | undefined;
-      const dnIds = (body?.results ?? [])
+      const deliveryNoteIds = (body?.results ?? [])
         .filter((r) => r.success && r.delivery_note_id)
         .map((r) => r.delivery_note_id);
-      for (const id of dnIds) {
+      for (const id of deliveryNoteIds) {
         try {
           await generateAndUploadDeliveryNotePDF(id, t, tenant as Record<string, unknown>, getSetting, logoUrl, bioLogoUrl);
         } catch (err) {
@@ -707,7 +707,7 @@ export function useOrdersData() {
       }
       // Invalidate detail queries so PDF buttons pick up uploaded files
       await Promise.all(
-        dnIds.map((id) => queryClient.invalidateQueries({
+        deliveryNoteIds.map((id) => queryClient.invalidateQueries({
           queryKey: getCommissioningDeliveryNotesRetrieveQueryKey(id),
         })),
       );
@@ -721,10 +721,10 @@ export function useOrdersData() {
       // Same ``unknown``-param + single directional cast as
       // ``handleFinalizeInvoicesSuccess`` above.
       const body = responseData as BulkOperationResponse | undefined;
-      const dnIds = (body?.results ?? [])
+      const deliveryNoteIds = (body?.results ?? [])
         .filter((r) => r.success && r.delivery_note_id)
         .map((r) => r.delivery_note_id);
-      for (const id of dnIds) {
+      for (const id of deliveryNoteIds) {
         try {
           await generateAndUploadDeliveryNotePDF(id, t, tenant as Record<string, unknown>, getSetting, logoUrl, bioLogoUrl);
         } catch (err) {
@@ -732,7 +732,7 @@ export function useOrdersData() {
         }
       }
       await Promise.all(
-        dnIds.map((id) => queryClient.invalidateQueries({
+        deliveryNoteIds.map((id) => queryClient.invalidateQueries({
           queryKey: getCommissioningDeliveryNotesRetrieveQueryKey(id),
         })),
       );
@@ -945,7 +945,7 @@ export function useOrdersData() {
     handleCratesDataChange,
     handleSaveSuccess,
     handleFinalizeInvoicesSuccess,
-    handleFinalizeDNSuccess,
+    handleFinalizeDeliveryNotesSuccess,
     handleCreateInvoiceSuccess,
     calculatePricePerUnit,
     calculateLineNetto,

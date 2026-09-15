@@ -78,9 +78,6 @@ DEFAULT_ACTION_RATE_LIMITS: dict[str, dict[str, int]] = {
 # starts biting legitimate year-end batches.
 _ALERT_FRACTION = 0.8
 
-_WEEK = timedelta(days=7)
-_MINUTE = timedelta(seconds=60)
-
 
 def resolve_action_rate_limit(tenant: Any, action: str) -> tuple[int, int]:
     """Return ``(weekly_cap, per_minute_cap)`` for ``action`` on ``tenant``.
@@ -135,11 +132,11 @@ def enforce_action_quota(
 
     actor_pk = getattr(actor, "pk", actor)
 
-    weekly_count = recent.filter(created_at__gte=now - _WEEK).count()
+    weekly_count = recent.filter(created_at__gte=now - timedelta(days=7)).count()
     if weekly_count >= weekly_cap:
         _raise_blocked(schema, action, _WEEKLY, weekly_cap, actor_pk)
 
-    minute_count = recent.filter(created_at__gte=now - _MINUTE).count()
+    minute_count = recent.filter(created_at__gte=now - timedelta(minutes=1)).count()
     if minute_count >= per_minute_cap:
         _raise_blocked(schema, action, _PER_MINUTE, per_minute_cap, actor_pk)
 
@@ -180,7 +177,7 @@ def enforce_action_quota_batch(
     weekly_cap, _ = resolve_action_rate_limit(tenant, action)
     now = timezone.now()
     weekly_count = ActionRateLog.objects.filter(
-        tenant_schema=schema, action=action, created_at__gte=now - _WEEK
+        tenant_schema=schema, action=action, created_at__gte=now - timedelta(days=7)
     ).count()
     actor_pk = getattr(actor, "pk", actor)
     if weekly_count + count > weekly_cap:

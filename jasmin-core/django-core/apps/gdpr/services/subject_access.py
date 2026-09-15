@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.accounts.models import JasminUser
@@ -11,6 +12,7 @@ from apps.commissioning.models import (
     ConsentRecord,
     ContactEntity,
     CoopShare,
+    CoopShareTransfer,
     InvoiceReseller,
     Member,
     MemberLoan,
@@ -137,6 +139,8 @@ class SubjectAccessMixin:
         - ``consents`` — every ConsentRecord with the document
           version it was given against.
         - ``coop_shares`` — GenG cooperative-share holdings.
+        - ``coop_share_transfers`` — coop shares the member gave to or received
+          from another member. The other member is left out (third-party data).
         - ``subscriptions`` — active + historical service contracts.
         - ``member_loans`` — loans the member extended to the co-op.
         - ``charge_schedules`` — billing rows (the member's ledger).
@@ -184,6 +188,7 @@ class SubjectAccessMixin:
             "reseller": GDPRService._sar_reseller(reseller),
             "consents": GDPRService._sar_consents(member),
             "coop_shares": GDPRService._sar_coop_shares(member),
+            "coop_share_transfers": GDPRService._sar_coop_share_transfers(member),
             "subscriptions": GDPRService._sar_subscriptions(member),
             "member_loans": GDPRService._sar_member_loans(member),
             "charge_schedules": GDPRService._sar_charge_schedules(member),
@@ -435,6 +440,27 @@ class SubjectAccessMixin:
                 "admin_rejection_reason": share.admin_rejection_reason,
             }
             for share in rows
+        ]
+
+    @staticmethod
+    def _sar_coop_share_transfers(member: Member | None) -> list[dict]:
+        if member is None:
+            return []
+        rows = CoopShareTransfer.objects.filter(
+            Q(from_member=member) | Q(to_member=member)
+        ).order_by("transfer_date", "created_at")
+        return [
+            {
+                "id": str(transfer.pk),
+                "direction": (
+                    "given" if transfer.from_member_id == member.pk else "received"
+                ),
+                "amount_of_coop_shares": transfer.amount_of_coop_shares,
+                "transfer_date": transfer.transfer_date,
+                "note": transfer.note,
+                "created_at": transfer.created_at,
+            }
+            for transfer in rows
         ]
 
     @staticmethod

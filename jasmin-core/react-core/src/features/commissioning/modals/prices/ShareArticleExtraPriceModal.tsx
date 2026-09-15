@@ -55,7 +55,7 @@ export default function ShareArticleExtraPriceModal({
   // Single-tier mode when the tenant hasn't configured tier thresholds:
   // one price column using ``price_1`` only. No silent default to
   // [1, 3, 5] — that bumped non-tier tenants into multi-tier pricing.
-  const tiersList = useOfferTiers();
+  const offerTiers = useOfferTiers();
 
   const columns = useMemo<EditableColumnConfig[]>(
     () =>
@@ -63,7 +63,7 @@ export default function ShareArticleExtraPriceModal({
         activeStatusColumn,
         validFromColumn,
         validUntilColumn,
-        ...tiersList.map((tier, i) =>
+        ...offerTiers.map((tier, i) =>
           buildCurrencyPriceColumn({
             title: (
               <span className="text-preline">
@@ -85,7 +85,7 @@ export default function ShareArticleExtraPriceModal({
       t,
       currencySymbol,
       locale,
-      tiersList,
+      offerTiers,
       activeStatusColumn,
       validFromColumn,
       validUntilColumn,
