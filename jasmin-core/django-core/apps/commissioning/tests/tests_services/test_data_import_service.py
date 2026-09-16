@@ -12,6 +12,7 @@ required) so it's used for the round-trip happy paths.
 
 from __future__ import annotations
 
+import csv
 import datetime
 from unittest.mock import patch
 
@@ -20,15 +21,18 @@ from django.db import DatabaseError
 from django.utils import timezone
 
 from apps.commissioning.errors import DataImportInvalid
-from apps.commissioning.models import Crate, Member
+from apps.commissioning.models import Crate, DeliveryStation, Member, Reseller
 from apps.commissioning.serializers import CrateSerializer, ShareArticleSerializer
 from apps.commissioning.services.data_import import (
+    _MAX_IMPORT_ROWS,
     DataImportResult,
     _collect_bool_fields,
+    _CsvLine,
     _decode_csv,
     _flatten_drf_errors,
     _normalize_cell,
     _parse_bool_cell,
+    _read_csv_rows,
     _row_to_payload,
     _split_template_rows,
     get_serializer_for_model,
@@ -195,26 +199,38 @@ class TestSplitTemplateRows:
         """The downloadable template is title / dataIndex / type-hint, then
         data rows. ``_split_template_rows`` must pick row 1 (the dataIndex
         row) as the schema and skip the type-hint row at index 2."""
-        all_rows = [
-            ["Name", "Number"],  # row 0: human title
-            ["name", "number"],  # row 1: dataIndex (the schema)
-            ["text", "int"],  # row 2: type hint
-            ["EuroBox", "42"],  # data row
+        all_lines = [
+            _CsvLine(["Name", "Number"]),  # row 0: human title
+            _CsvLine(["name", "number"]),  # row 1: dataIndex (the schema)
+            _CsvLine(["text", "int"]),  # row 2: type hint
+            _CsvLine(["EuroBox", "42"]),  # data row
         ]
-        headers, data_rows, first_data_row_number = _split_template_rows(all_rows)
+        headers, data_lines, first_data_row_number = _split_template_rows(all_lines)
         assert headers == ["name", "number"]
-        assert data_rows == [["EuroBox", "42"]]
+        assert [line.cells for line in data_lines] == [["EuroBox", "42"]]
         assert first_data_row_number == 4
 
     def test_two_row_hand_rolled_csv_uses_row0_as_headers(self):
-        all_rows = [
-            ["name", "number"],
-            ["EuroBox", "42"],
+        all_lines = [
+            _CsvLine(["name", "number"]),
+            _CsvLine(["EuroBox", "42"]),
         ]
-        headers, data_rows, first_data_row_number = _split_template_rows(all_rows)
+        headers, data_lines, first_data_row_number = _split_template_rows(all_lines)
         assert headers == ["name", "number"]
-        assert data_rows == [["EuroBox", "42"]]
+        assert [line.cells for line in data_lines] == [["EuroBox", "42"]]
         assert first_data_row_number == 2
+
+    def test_unreadable_schema_row_is_a_whole_file_failure(self):
+        """No field names means no schema to validate the data rows against."""
+        all_lines = [
+            _CsvLine(["Name", "Number"]),
+            _CsvLine(parse_error="field larger than field limit (131072)"),
+            _CsvLine(["text", "int"]),
+            _CsvLine(["EuroBox", "42"]),
+        ]
+        with pytest.raises(DataImportInvalid) as exc_info:
+            _split_template_rows(all_lines)
+        assert "header row could not be read" in str(exc_info.value)
 
 
 class TestGetSerializerForModel:
@@ -795,3 +811,210 @@ class TestInviteOnASharedEmail:
 
         holder.refresh_from_db()
         assert holder.user is not None
+
+
+# ---------------------------------------------------------------------------
+# Lines the CSV parser itself refuses, and the row cap
+# ---------------------------------------------------------------------------
+
+
+def _oversized_quoted_cell() -> bytes:
+    """A quoted cell ``csv`` refuses: longer than its field-size limit.
+
+    The office's version of this is a stray quote that swallows the rest of a
+    big file into one field. Either way the parser gives up on that line and
+    reads on at the next one.
+    """
+    return b'"' + b"x" * (csv.field_size_limit() + 10) + b'"'
+
+
+class TestReadCsvRows:
+    def test_reading_stops_at_max_lines(self):
+        """The row cap is enforced while reading — an oversized upload is never
+        parsed in full just to be refused afterwards."""
+        lines = _read_csv_rows(b"a,b\n" * 50, max_lines=5)
+        assert len(lines) == 5
+
+    def test_blank_lines_are_dropped(self):
+        lines = _read_csv_rows(b"a,b\n \n,\nc,d\n", max_lines=10)
+        assert [line.cells for line in lines] == [["a", "b"], ["c", "d"]]
+
+    def test_unreadable_line_is_kept_with_its_reason(self):
+        lines = _read_csv_rows(
+            b"".join(
+                [
+                    b"name,number\n",
+                    b"Good,1\n",
+                    _oversized_quoted_cell() + b",2\n",
+                    b"Good2,3\n",
+                ]
+            ),
+            max_lines=10,
+        )
+        assert [line.parse_error is None for line in lines] == [
+            True,
+            True,
+            False,
+            True,
+        ]
+        assert "field larger than field limit" in lines[2].parse_error
+
+
+@pytest.mark.django_db
+class TestUnreadableRowsAreReported:
+    def test_malformed_cell_is_one_failed_row_not_a_crash(self, tenant):
+        csv_bytes = b"".join(
+            [
+                b"Name,Number\n",  # row 0: titles
+                b"name,number\n",  # row 1: dataIndex
+                b"text,int\n",  # row 2: type hints
+                b"GoodOne,1\n",  # row 3 → row_number 4
+                _oversized_quoted_cell() + b",2\n",  # row 4 → row_number 5
+                b"GoodTwo,3\n",  # row 5 → row_number 6
+            ]
+        )
+
+        result = import_rows_from_csv("crate", csv_bytes)
+
+        assert result.successful == 2
+        assert result.failed == 1
+        assert Crate.objects.filter(name__in=["GoodOne", "GoodTwo"]).count() == 2
+        bad_row = result.errors[0]
+        assert bad_row["row"] == 5
+        assert "could not be read" in bad_row["error"]
+        assert bad_row["data"] == {}
+
+    def test_unreadable_schema_row_fails_the_whole_file(self, tenant):
+        csv_bytes = b"".join(
+            [
+                b"Name,Number\n",
+                _oversized_quoted_cell() + b",number\n",
+                b"text,int\n",
+                b"GoodOne,1\n",
+            ]
+        )
+
+        with pytest.raises(DataImportInvalid) as exc_info:
+            import_rows_from_csv("crate", csv_bytes)
+
+        assert "header row could not be read" in str(exc_info.value)
+        assert not Crate.objects.exists()
+
+
+@pytest.mark.django_db
+class TestRowCap:
+    def test_over_cap_file_is_refused_before_anything_is_written(self, tenant):
+        csv_bytes = b"".join(
+            [b"Name,Number\n", b"name,number\n", b"text,int\n"]
+            + [f"Crate{i},{i}\n".encode() for i in range(_MAX_IMPORT_ROWS + 1)]
+        )
+
+        with pytest.raises(DataImportInvalid) as exc_info:
+            import_rows_from_csv("crate", csv_bytes)
+
+        assert str(_MAX_IMPORT_ROWS) in str(exc_info.value)
+        assert not Crate.objects.exists()
+
+
+# ---------------------------------------------------------------------------
+# Models whose address block lives on a linked ContactEntity
+# ---------------------------------------------------------------------------
+
+_RESELLER_CSV = b"".join(
+    [
+        b"Company,First name,Last name,Email,Address,ZIP,City,Country,"
+        b"Reseller,Also delivery station,Customer number\n",
+        b"company_name,first_name,last_name,email,address,zip_code,city,country,"
+        b"is_reseller,is_also_delivery_station,customer_number\n",
+        b"string,string,string,string,string,string,string,string,"
+        b"true|false,true|false,integer\n",
+        b"Kern Farm Shop,Anna,Kern,shop@example.org,4 Market Lane,8010,Graz,AT,"
+        b"true,false,4711\n",
+        b"Valley Grocers,Bruno,Vale,valley@example.org,9 Hill Road,8020,Graz,AT,"
+        b"true,true,4712\n",
+    ]
+)
+
+_DELIVERY_STATION_CSV = b"".join(
+    [
+        b"Active,Also reseller,#,Short name,Company,Address,ZIP,City,Email,Info\n",
+        b"is_active,is_also_reseller,number,short_name,company_name,address,"
+        b"zip_code,city,email,info\n",
+        b"true|false,true|false,integer,string,string,string,string,string,"
+        b"string,string\n",
+        b"true,false,7,CENTER,Community Center,12 Main Street,8020,Graz,"
+        b"center@example.org,Pickup in the back yard\n",
+        b"true,true,8,FARMSHOP,Kern Farm Shop,4 Market Lane,8010,Graz,"
+        b"shop@example.org,Pickup during shop hours\n",
+    ]
+)
+
+
+@pytest.mark.django_db
+class TestResellerAndDeliveryStationImport:
+    """Both serializers flatten the linked ``ContactEntity``'s columns onto
+    themselves, so these two models persist through
+    ``ResellerAndDeliveryStationService`` — the path the office create endpoints
+    use, and the only one that splits the contact block back off.
+    """
+
+    def test_reseller_rows_create_the_reseller_and_its_contact(self, tenant):
+        result = import_rows_from_csv("reseller", _RESELLER_CSV)
+
+        assert result.failed == 0, result.errors
+        assert result.successful == 2
+        shop = Reseller.objects.get(customer_number=4711)
+        assert shop.is_reseller is True
+        assert shop.contact.company_name == "Kern Farm Shop"
+        assert shop.contact.address == "4 Market Lane"
+        assert shop.contact.zip_code == "8010"
+        # The service pre-fills the invoice block from the contact.
+        assert shop.invoice_name == "Kern Farm Shop"
+        assert shop.invoice_city == "Graz"
+
+    def test_is_also_delivery_station_links_a_station(self, tenant):
+        import_rows_from_csv("reseller", _RESELLER_CSV)
+
+        linked = Reseller.objects.get(customer_number=4712)
+        station = DeliveryStation.objects.get(linked_reseller=linked)
+        assert station.contact_id == linked.contact_id
+        assert not DeliveryStation.objects.filter(
+            linked_reseller__customer_number=4711
+        ).exists()
+
+    def test_delivery_station_rows_create_the_station_and_its_contact(self, tenant):
+        result = import_rows_from_csv("delivery_station", _DELIVERY_STATION_CSV)
+
+        assert result.failed == 0, result.errors
+        assert result.successful == 2
+        center = DeliveryStation.objects.get(short_name="CENTER")
+        assert center.contact.company_name == "Community Center"
+        assert center.contact.city == "Graz"
+        assert center.info == "Pickup in the back yard"
+        assert center.linked_reseller is None
+
+    def test_is_also_reseller_links_a_reseller(self, tenant):
+        import_rows_from_csv("delivery_station", _DELIVERY_STATION_CSV)
+
+        shop = DeliveryStation.objects.get(short_name="FARMSHOP")
+        assert shop.linked_reseller is not None
+        assert shop.linked_reseller.contact_id == shop.contact_id
+
+    def test_a_row_missing_a_required_contact_column_fails_alone(self, tenant):
+        csv_bytes = b"".join(
+            [
+                b"Short name,Company,Address,ZIP,City\n",
+                b"short_name,company_name,address,zip_code,city\n",
+                b"string,string,string,string,string\n",
+                b"NOCITY,Nowhere Depot,1 Empty Street,8030,\n",
+                b"CENTER,Community Center,12 Main Street,8020,Graz\n",
+            ]
+        )
+
+        result = import_rows_from_csv("delivery_station", csv_bytes)
+
+        assert result.successful == 1
+        assert result.failed == 1
+        assert result.errors[0]["row"] == 4
+        assert "city" in result.errors[0]["error"]
+        assert not DeliveryStation.objects.filter(short_name="NOCITY").exists()

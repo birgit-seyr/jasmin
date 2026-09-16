@@ -140,7 +140,8 @@
     "not_found": "Eintrag nicht gefunden.",
     "invalid_composite_id": "Ungültige Kennung für den Anteilsinhalt.",
     "invalid_pk": "Ungültige Kennung für den Anteilsinhalt.",
-    "missing_required": "Pflichtfelder fehlen: Jahr, Lieferwoche oder Anteilsartikel."
+    "missing_required": "Pflichtfelder fehlen: Jahr, Lieferwoche oder Anteilsartikel.",
+    "washing_cleaning_mutually_exclusive": "Waschen und Putzen schließen sich gegenseitig aus — bitte nur eines von beiden wählen."
   },
   "delivery_note": {
     "finalize_failed": "Lieferschein konnte vor der Rechnungserstellung nicht finalisiert werden.",
@@ -283,11 +284,13 @@
     "not_found": "Für den angegebenen Tag wurde kein aktiver Liefertag gefunden.",
     "tours_reduced_while_in_use": "Dieser Liefertag wird bereits verwendet – die Anzahl der Touren kann nur erhöht, nicht verringert werden. Eine Verringerung würde Lieferungen auf den entfernten Touren verwaisen lassen.",
     "shortening_strands_children": "Dieser Liefertag kann nicht zu diesem Datum beendet werden: Zukünftige Stationstage oder Anteile würden danach noch bestehen und verwaisen. Lege stattdessen über eine Nachfolge (neuen Liefertag anlegen) einen Nachfolger an oder wähle ein späteres Enddatum.",
+    "start_move_strands_children": "Der Beginn dieses Liefertags kann nicht auf dieses Datum verschoben werden: Bestehende Stationstage oder Anteile liegen davor und wären dann nicht mehr abgedeckt. Wähle ein früheres Startdatum oder verschiebe diese Objekte zuerst.",
     "succession_coverage_gap": "Die Liefertag-Nachfolge konnte nicht abgeschlossen werden: Für eine Station fehlt am neuen Tag ein Stationstag, der die betroffene Woche abdeckt. Richte diesen Stationstag zuerst ein und versuche es erneut.",
     "in_use": "Dieser Liefertag kann nicht gelöscht werden, weil er bereits von Anteilen verwendet wird. Einmal verwendet, kann er nicht mehr entfernt werden."
   },
   "delivery_station_day": {
     "shortening_strands_children": "Dieser Stationstag kann nicht zu diesem Datum beendet werden: Zukünftige Lieferungen oder Kapazitätsreservierungen würden danach noch bestehen und verwaisen. Lege stattdessen einen Nachfolge-Stationstag an (der sie überträgt) oder wähle ein späteres Enddatum.",
+    "start_move_strands_children": "Der Beginn dieses Stationstags kann nicht auf dieses Datum verschoben werden: Bestehende Lieferungen oder Kapazitätsreservierungen liegen davor und wären dann nicht mehr abgedeckt. Wähle ein früheres Startdatum oder verschiebe sie zuerst.",
     "in_use": "Dieser Abholtag kann nicht gelöscht werden, weil noch Lieferungen darauf verweisen. Bitte zuerst die Lieferungen verschieben oder beenden."
   },
   "inventory_entry": {
@@ -300,7 +303,8 @@
     "profile_not_linked": "Mit diesem Benutzerkonto ist kein Kundenprofil verknüpft."
   },
   "bulk_documents": {
-    "model_invalid": "Ungültiger Dokumenttyp — muss Lieferschein oder Rechnung sein."
+    "model_invalid": "Ungültiger Dokumenttyp — muss Lieferschein oder Rechnung sein.",
+    "date_format": "Ungültiges Belegdatum — bitte im Format JJJJ-MM-TT angeben."
   },
   "billing_run": {
     "invalid_period": "Das End-Datum muss nach dem Start-Datum liegen.",
@@ -430,6 +434,8 @@
   },
   "share_import": {
     "apply_failed": "Der Import konnte nicht angewendet werden.",
+    "batch_in_terminal_status": "Dieser Import wurde bereits angewendet oder durch einen neueren ersetzt und kann nicht erneut geprüft oder angewendet werden. Bitte eine neue Datei hochladen.",
+    "file_already_used": "Diese Datei wurde für diese Woche bereits importiert (Status: {{status}}) und kann nicht erneut angewendet werden. Für eine Korrektur bitte eine geänderte oder neu exportierte Datei hochladen.",
     "invalid_status": "Der Import-Batch ist in einem Status, der nicht angewendet werden kann (benötigt „preview_ready“ oder „validated“)."
   },
   "shares_day_change": {

@@ -8,6 +8,7 @@
   "upload_btn": "Upload & validate",
   "uploaded": "Uploaded. Status: {{status}}",
   "upload_failed": "Upload failed.",
+  "action_failed": "Action failed.",
   "preview_btn": "2. Build preview",
   "apply_btn": "3. Apply to database",
   "batch": "Batch",

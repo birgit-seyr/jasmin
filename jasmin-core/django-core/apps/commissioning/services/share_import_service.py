@@ -51,7 +51,11 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 
-from ..errors import CommissioningError
+from ..errors import (
+    CommissioningError,
+    ShareImportBatchInTerminalStatus,
+    ShareImportFileAlreadyUsed,
+)
 from ..models import (
     DeliveryStationDay,
     ExternalCodeMapping,
@@ -70,6 +74,11 @@ REQUIRED_COLUMNS = {
     "variation_code",
     "quantity",
 }
+
+# Where ``csv.DictReader`` parks the cells of a row that is longer than the
+# header. Its default would file them under the key ``None``, which is not a
+# column name and blows up the row normalisation in ``parse_and_validate``.
+_EXTRA_CELLS_KEY = "__extra_cells__"
 
 
 # --- DTOs -------------------------------------------------------------------
@@ -122,6 +131,36 @@ class DiffReport:
 class ShareImportService:
     """Stateless façade. Each method advances one batch by one stage."""
 
+    # A batch in one of these statuses has already had its effect on the week:
+    # an ``applied`` batch's rows ARE the live demand, a ``superseded`` one's
+    # were replaced by a later batch. Running another stage on either would
+    # rewrite the week from a file the office has moved past.
+    TERMINAL_STATUSES = frozenset(
+        {ShareImportBatch.STATUS_APPLIED, ShareImportBatch.STATUS_SUPERSEDED}
+    )
+
+    @classmethod
+    def assert_batch_not_terminal(cls, batch: ShareImportBatch) -> None:
+        """Refuse a stage that would re-decide an already-decided batch."""
+        if batch.status in cls.TERMINAL_STATUSES:
+            raise ShareImportBatchInTerminalStatus(
+                f"Import batch {batch.id} is {batch.status} and cannot be "
+                "validated, previewed or applied again. Upload a new file "
+                "to change this week's demand.",
+                details={"batch_id": batch.id, "status": batch.status},
+            )
+
+    @classmethod
+    def assert_file_not_already_used(cls, batch: ShareImportBatch) -> None:
+        """Refuse an upload whose bytes belong to an already-decided batch."""
+        if batch.status in cls.TERMINAL_STATUSES:
+            raise ShareImportFileAlreadyUsed(
+                f"This file was already imported for {batch.year} week "
+                f"{batch.delivery_week} and is {batch.status}. Upload a changed "
+                "or newly exported file to correct the week.",
+                details={"batch_id": batch.id, "status": batch.status},
+            )
+
     # ---- 1. ingest --------------------------------------------------------
 
     @classmethod
@@ -140,7 +179,12 @@ class ShareImportService:
             year=year, delivery_week=delivery_week, file_checksum=checksum
         ).first()
         if existing is not None:
-            return existing  # idempotent: same bytes -> same batch
+            # Idempotent: the same bytes for the same week are the same batch.
+            # Once that batch has decided the week, though, handing it back
+            # reads as a fresh upload while every later stage refuses it — a
+            # green toast in front of a dead Apply button. Say so instead.
+            cls.assert_file_not_already_used(existing)
+            return existing
 
         batch = ShareImportBatch(
             year=year,
@@ -158,6 +202,12 @@ class ShareImportService:
 
     @classmethod
     def parse_and_validate(cls, batch: ShareImportBatch) -> ValidationOutcome:
+        # The stored status decides, before anything re-reads the file: this
+        # method overwrites ``status`` with validated/failed, so a terminal batch
+        # allowed through here would come out re-appliable and the later
+        # ``apply`` guard would see the fresh status instead of the stored one.
+        cls.assert_batch_not_terminal(batch)
+
         outcome = ValidationOutcome()
 
         # Malformed file → single top-level error. Catch the realistic
@@ -197,6 +247,20 @@ class ShareImportService:
         }
 
         for line_no, raw in enumerate(raw_rows, start=1):
+            extra_cells = raw.pop(_EXTRA_CELLS_KEY, None)
+            # A data line that merely ends in a separator parks one BLANK cell
+            # here while the named columns all parsed — that is padding, not a
+            # ragged row, and rejecting it would fail a whole file line by line.
+            surplus = [cell for cell in (extra_cells or []) if (cell or "").strip()]
+            if surplus:
+                # More cells than the header has columns: the surplus has no
+                # field name, so the row cannot be read. Report it and move on.
+                outcome.errors[str(line_no)] = [
+                    f"row has more cells than the header ({len(surplus)} "
+                    "extra) — check for a stray comma or an unquoted separator"
+                ]
+                continue
+
             row_errors: list[str] = []
             data = {k.strip().lower(): (v or "").strip() for k, v in raw.items()}
 
@@ -515,7 +579,7 @@ class ShareImportService:
         extend with openpyxl for .xlsx as needed."""
         with batch.file.open("rb") as fh:
             text = io.TextIOWrapper(fh, encoding="utf-8-sig", newline="")
-            reader = csv.DictReader(text)
+            reader = csv.DictReader(text, restkey=_EXTRA_CELLS_KEY)
             yield from reader
 
     @staticmethod

@@ -6,7 +6,17 @@
  * OpenAPI spec version: 1.0.0
  */
 
+/**
+ * Request body for ``PATCH set_invoice_note/<pk>/``.
+
+``max_length`` mirrors ``InvoiceReseller.note`` (``CharField(max_length=500)``
+— an internal office annotation, which is why it stays writable on a
+finalized invoice). See ``SetOrderNoteRequestSerializer``.
+ */
 export interface SetInvoiceNoteRequest {
-  /** @nullable */
+  /**
+   * @maxLength 500
+   * @nullable
+   */
   note?: string | null;
 }

@@ -6,7 +6,12 @@ from rest_framework.validators import UniqueValidator
 
 from apps.shared.image_upload import normalize_uploaded_picture
 
-from ..errors import PictureInvalid, ShareTypeVariationOutsideShareTypeRange
+from ..errors import (
+    PictureInvalid,
+    RequiredFieldMissing,
+    ShareTypeVariationOutsideShareTypeRange,
+    WashingAndCleaningMutuallyExclusive,
+)
 from ..models import (
     Share,
     ShareContent,
@@ -577,6 +582,46 @@ class ShareSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class _ShareDayNumberField(serializers.IntegerField):
+    """A weekday slot on ``Share`` — Monday (0) … Sunday (6), or cleared.
+
+    Accepts the string ``"undefined"`` as a clear alongside ``null``: the office
+    grid has always sent that sentinel for a blanked cell and
+    ``SharesDayChangeService.apply`` still normalises it, so rejecting it would
+    break a browser running an older bundle.
+    """
+
+    def validate_empty_values(self, data):
+        if data == "undefined":
+            return (True, None)
+        return super().validate_empty_values(data)
+
+
+def _share_day_field() -> _ShareDayNumberField:
+    return _ShareDayNumberField(
+        required=False, allow_null=True, min_value=0, max_value=6
+    )
+
+
+class ShareBulkDayUpdateRequestSerializer(serializers.Serializer):
+    """Body of ``ShareViewSet.bulk_update`` — the editable day-level fields, any
+    subset of them.
+
+    Mirrors ``SHARE_DAY_FIELDS`` in ``shares_day_change_service`` (keep in
+    sync). The service assigns each value straight to a ``Share`` weekday
+    column, so the integer coercion and the Monday..Sunday bounds have to happen
+    here. ``changed_day_number`` is honoured by the service and edited in the
+    office grid, so it belongs in the body too.
+    """
+
+    changed_day_number = _share_day_field()
+    harvesting_day = _share_day_field()
+    packing_day = _share_day_field()
+    washing_day = _share_day_field()
+    cleaning_day = _share_day_field()
+    get_current_stock_day = _share_day_field()
+
+
 class ShareDayPlanningRowSerializer(serializers.Serializer):
     """Response row of ``ShareViewSet.get_days`` / ``bulk_update``.
 
@@ -649,6 +694,20 @@ class DefaultShareContentRequestSerializer(
     def _is_dynamic_amount_key(self, key: str) -> bool:
         return key.startswith(AMOUNT_KEY_PREFIX) and len(key) > len(AMOUNT_KEY_PREFIX)
 
+    def validate(self, attrs: dict) -> dict:
+        # ``range_1``/``range_2`` pin the week window the slot materialises
+        # into, and the service indexes both unconditionally. They are declared
+        # required, so only the composite-id update path — which validates
+        # partially, because the id already supplies the slot identity — can
+        # omit them. Name the missing field instead of letting the service
+        # raise a KeyError.
+        for field in ("range_1", "range_2"):
+            if field not in attrs:
+                raise RequiredFieldMissing(
+                    f"Missing required field: {field}", field=field
+                )
+        return attrs
+
 
 class DefaultShareContentResponseSerializer(serializers.Serializer):
     """Schema doc for the bulk-list / bulk-create / bulk-update payload.
@@ -713,6 +772,17 @@ class _DayVariationAmountSerializer(DynamicAmountKeysMixin, serializers.Serializ
         return bool(DAY_VARIATION_RE.match(key))
 
 
+def _refuse_washing_and_cleaning_together(attrs: dict) -> None:
+    """``ShareContent`` holds at most one of the two flags, so a payload
+    carrying both is refused naming them — the rebuild would otherwise hit the
+    check constraint with a bulk INSERT and report a bare integrity error."""
+    if attrs.get("cleaning") and attrs.get("washing"):
+        raise WashingAndCleaningMutuallyExclusive(
+            "A planning slot is either washed or cleaned, not both.",
+            details={"fields": ["washing", "cleaning"]},
+        )
+
+
 class HarvestSharePlanningCreateRequestSerializer(_DayVariationAmountSerializer):
     year = serializers.IntegerField()
     delivery_week = serializers.IntegerField()
@@ -723,13 +793,20 @@ class HarvestSharePlanningCreateRequestSerializer(_DayVariationAmountSerializer)
     seller = serializers.CharField(required=False, allow_null=True)
     cleaning = serializers.BooleanField(required=False, default=False)
     washing = serializers.BooleanField(required=False, default=False)
+    # Widths mirror the ShareContent columns — kg_per_piece is numeric(5,3) and
+    # price_per_unit numeric(6,2) — so an over-wide value is a 400 naming the
+    # field here instead of a DataError raised by the INSERT.
     kg_per_piece = serializers.DecimalField(
-        max_digits=10, decimal_places=3, required=False, allow_null=True
+        max_digits=5, decimal_places=3, required=False, allow_null=True
     )
     price_per_unit = serializers.DecimalField(
-        max_digits=10, decimal_places=2, required=False, allow_null=True
+        max_digits=6, decimal_places=2, required=False, allow_null=True
     )
     packing_station = serializers.IntegerField(required=False, default=1)
+
+    def validate(self, attrs: dict) -> dict:
+        _refuse_washing_and_cleaning_together(attrs)
+        return attrs
 
 
 class HarvestSharePlanningUpdateRequestSerializer(_DayVariationAmountSerializer):
@@ -739,13 +816,20 @@ class HarvestSharePlanningUpdateRequestSerializer(_DayVariationAmountSerializer)
     seller = serializers.CharField(required=False, allow_null=True)
     cleaning = serializers.BooleanField(required=False, default=False)
     washing = serializers.BooleanField(required=False, default=False)
+    # Widths mirror the ShareContent columns — kg_per_piece is numeric(5,3) and
+    # price_per_unit numeric(6,2) — so an over-wide value is a 400 naming the
+    # field here instead of a DataError raised by the INSERT.
     kg_per_piece = serializers.DecimalField(
-        max_digits=10, decimal_places=3, required=False, allow_null=True
+        max_digits=5, decimal_places=3, required=False, allow_null=True
     )
     price_per_unit = serializers.DecimalField(
-        max_digits=10, decimal_places=2, required=False, allow_null=True
+        max_digits=6, decimal_places=2, required=False, allow_null=True
     )
     packing_station = serializers.IntegerField(required=False, default=1)
+
+    def validate(self, attrs: dict) -> dict:
+        _refuse_washing_and_cleaning_together(attrs)
+        return attrs
 
 
 class HarvestSharePlanningBackupRequestSerializer(_DayVariationAmountSerializer):

@@ -27,8 +27,8 @@ export const useSubscriptionTerm = ({
   // null), so fall back to the top-level scalars the anonymous
   // ``/tenants/current/`` payload carries (CurrentTenantSerializer).
   const read = (key: string): unknown => {
-    const v = getSetting(key);
-    if (v !== null && v !== undefined) return v;
+    const value = getSetting(key);
+    if (value !== null && value !== undefined) return value;
     return (tenant as Record<string, unknown> | null | undefined)?.[key];
   };
 

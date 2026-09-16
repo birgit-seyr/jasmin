@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Callable
 from typing import Any
 
@@ -64,6 +65,8 @@ from ..serializers.resellers_serializer import (
     CreateOffersRequestSerializer,
     CreateOffersResponseSerializer,
     OfferSendingStatusSerializer,
+    SetInvoiceNoteRequestSerializer,
+    SetOrderNoteRequestSerializer,
 )
 from ..services import DeliveryNoteService, InvoiceService, OfferService
 from ..services.bulk_operations import bulk_with_savepoints
@@ -286,7 +289,7 @@ class BulkCreateDocumentsFromOrdersView(APIViewRolePermissionsMixin, APIView):
         )
 
     def _create_delivery_note(
-        self, order: Order, date: str | None, user: Any = None
+        self, order: Order, date: datetime.date | str | None, user: Any = None
     ) -> dict[str, Any]:
         """Create delivery note from order."""
         delivery_note = DeliveryNoteService.create_from_order(
@@ -296,7 +299,7 @@ class BulkCreateDocumentsFromOrdersView(APIViewRolePermissionsMixin, APIView):
         return _delivery_note_result(order, delivery_note)
 
     def _create_invoice(
-        self, order: Order, date: str | None, user: Any
+        self, order: Order, date: datetime.date | str | None, user: Any
     ) -> dict[str, Any]:
         """Create invoice from order (via delivery note)."""
         # Get or create delivery note
@@ -1310,14 +1313,7 @@ class SetInvoiceNoteView(APIViewRolePermissionsMixin, APIView):
     @extend_schema(
         summary="Set Invoice Note",
         description="Update the note on an invoice by order ID.",
-        request=inline_serializer(
-            name="SetInvoiceNoteRequest",
-            fields={
-                "note": drf_serializers.CharField(
-                    allow_blank=True, required=False, allow_null=True
-                ),
-            },
-        ),
+        request=SetInvoiceNoteRequestSerializer,
         responses={
             200: inline_serializer(
                 name="SetInvoiceNoteResponse",
@@ -1346,7 +1342,9 @@ class SetInvoiceNoteView(APIViewRolePermissionsMixin, APIView):
 
             raise InvoiceNotFound("No invoice found for this order")
 
-        invoice.note = body(request).get("note", "")
+        serializer = SetInvoiceNoteRequestSerializer(data=body(request))
+        serializer.is_valid(raise_exception=True)
+        invoice.note = serializer.validated_data.get("note", "")
         invoice.save(update_fields=["note"])
         return Response({"note": invoice.note})
 
@@ -1358,14 +1356,7 @@ class SetOrderNoteView(APIViewRolePermissionsMixin, APIView):
     @extend_schema(
         summary="Set Order Note",
         description="Update the note on an order.",
-        request=inline_serializer(
-            name="SetOrderNoteRequest",
-            fields={
-                "note": drf_serializers.CharField(
-                    allow_blank=True, required=False, allow_null=True
-                ),
-            },
-        ),
+        request=SetOrderNoteRequestSerializer,
         responses={
             200: inline_serializer(
                 name="SetOrderNoteResponse",
@@ -1380,7 +1371,9 @@ class SetOrderNoteView(APIViewRolePermissionsMixin, APIView):
     def patch(self, request: Request, pk: str) -> Response:
         order = get_or_404(Order, pk, "Order", error_cls=OrderNotFound)
 
-        order.note = body(request).get("note", "")
+        serializer = SetOrderNoteRequestSerializer(data=body(request))
+        serializer.is_valid(raise_exception=True)
+        order.note = serializer.validated_data.get("note", "")
         order.save(update_fields=["note"])
         return Response({"note": order.note})
 

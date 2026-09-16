@@ -14,6 +14,14 @@ DB required: No
     - empty dict
     - nanoid-style IDs with underscores
 
+  TestParseAmountCell
+    - returns the value rounded to the column scale (numeric(5,3))
+    - accepts the largest value the column holds (99.999)
+    - rejects a value that rounds up past the column (99.9995 -> 100.000)
+    - rejects a value over the column (100)
+    - rejects a magnitude the decimal context cannot quantize (1e30)
+    - rejects non-numbers: abc / None / NaN / Infinity
+
 
 test_sort_order.py
 ------------------
@@ -107,11 +115,14 @@ DB required: No
 
   TestValidateBulkDocumentRequest
     - valid delivery_note request
-    - valid invoice with date
+    - valid invoice with date (parsed to a date, not passed through as a string)
     - empty ids → raises RequiredFieldMissing
     - ids not a list → raises RequiredFieldMissing
     - invalid model name → raises CommissioningError (bulk_documents.model_invalid)
     - missing ids → raises RequiredFieldMissing
+    - malformed date → raises CommissioningError (bulk_documents.date_format)
+    - wrong-typed date → raises CommissioningError on field "date"
+    - empty / absent date still means "derive it" (None)
 
 
 test_delivery_utils.py

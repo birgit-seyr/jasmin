@@ -29,6 +29,7 @@ import {
 } from "@shared/api/generated/commissioning/commissioning";
 import type { ShareImportUpload } from "@shared/api/generated/models";
 import { notify } from "@shared/utils";
+import { getErrorMessage } from "@shared/utils/apiError";
 
 type ImportBatchStatus =
   | "uploaded"
@@ -135,25 +136,10 @@ export default function ImportShares() {
         }),
       );
     } catch (err: unknown) {
-      const data = (err as { response?: { data?: unknown } })?.response?.data;
-      let msg: string;
-      if (data && typeof data === "object") {
-        const errorBody = data as Record<string, unknown>;
-        if (typeof errorBody.detail === "string") {
-          msg = errorBody.detail;
-        } else {
-          // DRF field-level validation errors: { field: ["msg", ...], ... }
-          msg = Object.entries(errorBody)
-            .map(([field, errs]) => {
-              const list = Array.isArray(errs) ? errs.join(", ") : String(errs);
-              return `${field}: ${list}`;
-            })
-            .join(" | ");
-        }
-      } else {
-        msg = t("import_shares.upload_failed");
-      }
-      notify.error(msg);
+      // Routed through the shared extractor so a coded refusal — a file whose
+      // batch already decided this week, say — reaches the office as its
+      // localized text rather than a generic "upload failed".
+      notify.error(getErrorMessage(err, t("import_shares.upload_failed")));
     } finally {
       setBusy(false);
     }
@@ -172,10 +158,11 @@ export default function ImportShares() {
         `${action}: ${(data as unknown as ShareImportBatch).status}`,
       );
     } catch (err: unknown) {
-      notify.error(
-        (err as { response?: { data?: { detail?: string } } })?.response?.data
-          ?.detail || `${action} failed`,
-      );
+      // The canonical error envelope carries `message` / `code`, not `detail`,
+      // so reading `detail` alone leaves every JasminError on the untranslated
+      // fallback. The apply endpoint's validation-failed body does use
+      // `detail`, which the shared extractor covers too.
+      notify.error(getErrorMessage(err, t("import_shares.action_failed")));
     } finally {
       setBusy(false);
     }
@@ -310,7 +297,13 @@ export default function ImportShares() {
                 type="primary"
                 danger
                 onClick={() => runAction(activeBatch.id, "apply")}
-                disabled={activeBatch.error_count > 0}
+                // An applied or superseded batch is refused by the backend —
+                // the same statuses that grey out Preview.
+                disabled={
+                  activeBatch.status === "applied" ||
+                  activeBatch.status === "superseded" ||
+                  activeBatch.error_count > 0
+                }
                 loading={busy}
               >
                 {t("import_shares.apply_btn")}

@@ -232,6 +232,55 @@ class TestShareArticleViewSet:
         article.refresh_from_db()
         assert article.name == "NewName"
 
+    def test_patch_without_share_option_list_keeps_the_options(
+        self, api_client, tenant
+    ):
+        """The option assignment blanks all three columns before writing the
+        list back, so a PATCH that never mentions ``share_option_list`` must
+        leave the stored options alone."""
+        article = ShareArticleFactory(
+            share_option="HARVEST_SHARE", share_option2="HONEY_SHARE"
+        )
+        url = reverse("share_article-detail", kwargs={"pk": article.pk})
+
+        resp = api_client.patch(url, {"name": "Renamed"}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        article.refresh_from_db()
+        assert article.name == "Renamed"
+        assert article.share_option == "HARVEST_SHARE"
+        assert article.share_option2 == "HONEY_SHARE"
+
+    def test_patch_with_share_option_list_replaces_the_options(
+        self, api_client, tenant
+    ):
+        article = ShareArticleFactory(
+            share_option="HARVEST_SHARE", share_option2="HONEY_SHARE"
+        )
+        url = reverse("share_article-detail", kwargs={"pk": article.pk})
+
+        resp = api_client.patch(
+            url, {"share_option_list": ["CHICKEN_SHARE"]}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        article.refresh_from_db()
+        assert article.share_option == "CHICKEN_SHARE"
+        assert article.share_option2 is None
+
+    def test_patch_with_empty_share_option_list_clears_the_options(
+        self, api_client, tenant
+    ):
+        """An explicit empty list still clears — only an ABSENT key is spared."""
+        article = ShareArticleFactory(share_option="HARVEST_SHARE")
+        url = reverse("share_article-detail", kwargs={"pk": article.pk})
+
+        resp = api_client.patch(url, {"share_option_list": []}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        article.refresh_from_db()
+        assert article.share_option is None
+
     def test_create_article(self, api_client, tenant):
         """Custom ``create`` writes the row + reads it back through the
         get_queryset-annotated form — exercises the round-trip."""

@@ -447,6 +447,28 @@ class TestAdminUsersGating:
         assert resp.status_code == status.HTTP_201_CREATED, resp.data
         assert resp.data["account_status"] == "pending_invitation"
 
+    def test_admin_create_coerces_non_string_name(self, tenant):
+        """``create`` hands the service ``validated_data``, not the raw body.
+
+        The service calls ``.strip()`` on the name fields, so a JSON number
+        reached str-only code uncoerced; DRF's CharField now coerces it first.
+        """
+        admin = JasminUserFactory(roles=[Role.ADMIN])
+        client = _step_up_client(admin)
+        with patch("apps.shared.invitations._send_invitation_email"):
+            resp = client.post(
+                "/api/auth/admin/users/",
+                data={
+                    "first_name": 5,
+                    "last_name": "Numeric",
+                    "email": "numeric-name@example.com",
+                    "roles": [Role.STAFF],
+                },
+                format="json",
+            )
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert resp.data["first_name"] == "5"
+
     def test_admin_create_missing_email_returns_400(self, tenant):
         admin = JasminUserFactory(roles=[Role.ADMIN])
         client = APIClient()

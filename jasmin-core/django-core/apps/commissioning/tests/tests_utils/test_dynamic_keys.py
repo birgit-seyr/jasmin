@@ -2,7 +2,50 @@
 
 from __future__ import annotations
 
-from apps.commissioning.utils.dynamic_keys import extract_amounts_from_keys
+from decimal import Decimal
+
+import pytest
+
+from apps.commissioning.errors import InvalidAmount
+from apps.commissioning.utils.dynamic_keys import (
+    extract_amounts_from_keys,
+    parse_amount_cell,
+)
+
+
+# ---------------------------------------------------------------------------
+# parse_amount_cell
+# ---------------------------------------------------------------------------
+class TestParseAmountCell:
+    """The cells land in ``numeric(5,3)`` columns through ``bulk_create``, so
+    this is the only place a value the column cannot hold gets named."""
+
+    def test_returns_the_value_rounded_to_the_column_scale(self):
+        assert parse_amount_cell("1.23456", field="cell") == Decimal("1.235")
+
+    def test_accepts_the_largest_value_the_column_holds(self):
+        assert parse_amount_cell("99.999", field="cell") == Decimal("99.999")
+
+    def test_rejects_a_value_that_rounds_up_past_the_column(self):
+        # Postgres rounds to the scale BEFORE checking the precision, so
+        # 99.9995 becomes 100.000 and overflows numeric(5,3) — the raw value
+        # being under 100 is not enough.
+        with pytest.raises(InvalidAmount) as exc_info:
+            parse_amount_cell("99.9995", field="day_1_variation_2")
+        assert exc_info.value.field == "day_1_variation_2"
+
+    def test_rejects_a_value_over_the_column(self):
+        with pytest.raises(InvalidAmount):
+            parse_amount_cell("100", field="cell")
+
+    def test_rejects_a_magnitude_the_decimal_context_cannot_quantize(self):
+        with pytest.raises(InvalidAmount):
+            parse_amount_cell("1e30", field="cell")
+
+    @pytest.mark.parametrize("bad", ["abc", None, "NaN", "Infinity"])
+    def test_rejects_non_numbers(self, bad):
+        with pytest.raises(InvalidAmount):
+            parse_amount_cell(bad, field="cell")
 
 
 # ---------------------------------------------------------------------------

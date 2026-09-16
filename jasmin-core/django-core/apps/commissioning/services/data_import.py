@@ -21,8 +21,8 @@ Per-row isolation
 -----------------
 One bad row never aborts the import: each row goes through its own
 ``try/except`` and lands in either ``results`` (success) or ``errors``
-(validation or unexpected exception). The response always lists every
-processed row.
+(validation, an unexpected exception, or a line the CSV parser itself
+could not read). The response always lists every processed row.
 """
 
 from __future__ import annotations
@@ -238,9 +238,23 @@ def _decode_csv(file_bytes: bytes) -> str:
         return file_bytes.decode("latin-1")
 
 
+@dataclass
+class _CsvLine:
+    """One non-blank line of the upload: its cells, or why they are unreadable.
+
+    ``csv`` refuses a line whose quoting is broken — a stray quote swallowing
+    the rest of the file into one oversized field, say — but goes on reading at
+    the next one, so an unreadable line stays a single reported row instead of
+    killing the whole upload.
+    """
+
+    cells: list[str] = field(default_factory=list)
+    parse_error: str | None = None
+
+
 def _split_template_rows(
-    all_rows: list[list[str]],
-) -> tuple[list[str], list[list[str]], int]:
+    all_lines: list[_CsvLine],
+) -> tuple[list[str], list[_CsvLine], int]:
     """Pick the header row + data rows out of the parsed CSV.
 
     Three-row download template (titles / dataIndex / type hints): row 1 is
@@ -248,22 +262,49 @@ def _split_template_rows(
     human-friendly error messages).
 
     Two-row hand-rolled CSV (header + data): row 0 is the schema.
+
+    Raises :class:`~apps.commissioning.errors.DataImportInvalid` when the schema
+    row itself is unreadable — with no field names there is nothing to validate
+    the data rows against, so that one is a whole-file failure.
     """
-    if len(all_rows) >= 3:
-        headers = [h.strip() for h in all_rows[1]]
-        data_rows = all_rows[3:]
+    if len(all_lines) >= 3:
+        header_line = all_lines[1]
+        data_lines = all_lines[3:]
         first_data_row_number = 4
     else:
-        headers = [h.strip() for h in all_rows[0]]
-        data_rows = all_rows[1:]
+        header_line = all_lines[0]
+        data_lines = all_lines[1:]
         first_data_row_number = 2
-    return headers, data_rows, first_data_row_number
+    if header_line.parse_error:
+        raise DataImportInvalid(
+            f"The CSV header row could not be read: {header_line.parse_error}",
+            field="file",
+        )
+    headers = [h.strip() for h in header_line.cells]
+    return headers, data_lines, first_data_row_number
 
 
-def _read_csv_rows(file_bytes: bytes) -> list[list[str]]:
-    """Decode the upload and return its rows, dropping blank lines."""
+def _read_csv_rows(file_bytes: bytes, *, max_lines: int) -> list[_CsvLine]:
+    """Decode the upload and return its lines, dropping blank ones.
+
+    Reading stops at ``max_lines``, so a runaway file costs one pass over its
+    first ``max_lines`` lines instead of a full parse. Memory is bounded by the
+    byte cap the view applies before calling in — the decode here materialises
+    whatever bytes it is handed.
+    """
     reader = csv.reader(io.StringIO(_decode_csv(file_bytes)))
-    return [row for row in reader if any(cell.strip() for cell in row)]
+    lines: list[_CsvLine] = []
+    while len(lines) < max_lines:
+        try:
+            cells = next(reader)
+        except StopIteration:
+            break
+        except csv.Error as exc:
+            lines.append(_CsvLine(parse_error=str(exc)))
+            continue
+        if any(cell.strip() for cell in cells):
+            lines.append(_CsvLine(cells=cells))
+    return lines
 
 
 def bank_data_columns_in_csv(file_bytes: bytes) -> set[str]:
@@ -272,12 +313,15 @@ def bank_data_columns_in_csv(file_bytes: bytes) -> set[str]:
     Reads the header exactly as :func:`import_rows_from_csv` does (same
     decoding, same template-vs-hand-rolled row pick), so the result matches
     the field names the import hands to the serializer. A file too short to
-    import reports nothing; the import itself rejects it.
+    import reports nothing; the import itself rejects it. An unreadable schema
+    row raises ``DataImportInvalid``, as the import would a moment later.
     """
-    all_rows = _read_csv_rows(file_bytes)
-    if len(all_rows) < 2:
+    # The schema row is the second line at the latest, so three lines settle
+    # both the template-vs-hand-rolled pick and the header itself.
+    all_lines = _read_csv_rows(file_bytes, max_lines=3)
+    if len(all_lines) < 2:
         return set()
-    headers, _data_rows, _first_data_row_number = _split_template_rows(all_rows)
+    headers, _data_lines, _first_data_row_number = _split_template_rows(all_lines)
     return set(BANK_DATA_IMPORT_COLUMNS.intersection(headers))
 
 
@@ -350,10 +394,15 @@ def _persist_import_row(
     """Persist one validated row via the model-appropriate path.
 
     ``member`` rows go through ``_save_imported_member`` (which preserves the
-    Member↔JasminUser link + conflict guard); every other model is a plain
-    ``serializer.save()``. Shared by the real import AND the dry-run preview (the
-    latter calls this inside a rolled-back savepoint), so both exercise
-    identical model-level validation.
+    Member↔JasminUser link + conflict guard). ``reseller`` / ``delivery_station``
+    rows go through ``ResellerAndDeliveryStationService``, the path their office
+    create endpoints use: both serializers flatten the linked ``ContactEntity``'s
+    columns (address, zip_code, city, …) onto themselves, and only the service
+    splits that block back off — a plain ``serializer.save()`` hands those names
+    to ``Model.objects.create()`` and fails every row. Every other model is a
+    plain ``serializer.save()``. Shared by the real import AND the dry-run
+    preview (the latter calls this inside a rolled-back savepoint), so both
+    exercise identical model-level validation.
     """
     if model_name == "member":
         return _save_imported_member(
@@ -362,6 +411,19 @@ def _persist_import_row(
             importing_user,
             confirm_active_users=confirm_active_users,
         )
+    if model_name in {"reseller", "delivery_station"}:
+        from .reseller_and_delivery_station_service import (
+            ResellerAndDeliveryStationService,
+        )
+
+        service = ResellerAndDeliveryStationService()
+        # The service consumes what it is handed (it pops the contact columns
+        # and the transient ``is_also_delivery_station`` flag out), so give it a
+        # copy and leave the serializer's own validated_data intact.
+        validated_data = dict(serializer.validated_data)
+        if model_name == "reseller":
+            return service.create_reseller(validated_data)
+        return service.create_delivery_station(validated_data)
     return serializer.save()
 
 
@@ -416,17 +478,20 @@ def import_rows_from_csv(
     saved, no member↔user links are made, and no rate-limit quota is consumed.
     """
     serializer_cls = get_serializer_for_model(model_name)
-    all_rows = _read_csv_rows(file_bytes)
-    if len(all_rows) < 2:
+    # One line past what a full-size upload needs (the three template rows plus
+    # the cap): enough to tell "at the cap" from "over it", and it keeps the
+    # parse off the rest of a runaway file (whose bytes the view caps first).
+    all_lines = _read_csv_rows(file_bytes, max_lines=_MAX_IMPORT_ROWS + 4)
+    if len(all_lines) < 2:
         raise DataImportInvalid(
             "CSV must contain at least a header row and one data row."
         )
 
-    headers, data_rows, first_data_row_number = _split_template_rows(all_rows)
-    if len(data_rows) > _MAX_IMPORT_ROWS:
+    headers, data_lines, first_data_row_number = _split_template_rows(all_lines)
+    if len(data_lines) > _MAX_IMPORT_ROWS:
         raise DataImportInvalid(
-            f"CSV has {len(data_rows)} data rows; imports are capped at "
-            f"{_MAX_IMPORT_ROWS} rows per upload. Split the file."
+            f"CSV has more than {_MAX_IMPORT_ROWS} data rows; imports are "
+            f"capped at {_MAX_IMPORT_ROWS} rows per upload. Split the file."
         )
     reserved_member_quota_ids: list[str] = []
     if model_name == "member" and not dry_run:
@@ -442,16 +507,28 @@ def import_rows_from_csv(
 
         reserved_member_quota_ids = enforce_action_quota_batch(
             RateLimitedAction.MEMBER_CREATION,
-            count=len(data_rows),
+            count=len(data_lines),
             actor=importing_user,
         )
     bool_fields = _collect_bool_fields(serializer_cls)
     result = DataImportResult(model_name=model_name)
 
     with _dry_run_scope(dry_run):
-        for offset, cells in enumerate(data_rows):
+        for offset, line in enumerate(data_lines):
             row_number = first_data_row_number + offset
-            payload = _row_to_payload(headers, cells, bool_fields)
+            if line.parse_error:
+                # The CSV parser itself refused this line (broken quoting, a
+                # field past csv's size limit). Report it like any other bad
+                # row — the office fixes that line and re-uploads.
+                result.errors.append(
+                    {
+                        "row": row_number,
+                        "error": f"Row could not be read: {line.parse_error}",
+                        "data": {},
+                    }
+                )
+                continue
+            payload = _row_to_payload(headers, line.cells, bool_fields)
             if not payload:
                 # Blank line in the middle of the file — silently skip.
                 continue

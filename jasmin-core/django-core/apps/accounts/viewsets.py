@@ -90,11 +90,14 @@ class AdminUserViewSet(RolePermissionsMixin, ViewSet):
     def create(self, request: Request) -> Response:
         serializer = AdminUserCreateRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # Pass raw data: the service owns the business rules (role-combination
-        # checks, member-role guard, reseller/customer coupling) and reads by
-        # key; validated_data offers no benefit here.
+        # Hand the service validated_data, as partial_update does: the service
+        # reads by key and calls ``.strip()`` on the name fields, so a raw
+        # ``{"first_name": 5}`` would reach str-only code uncoerced. The
+        # business rules (role combinations, member-role guard,
+        # reseller/customer coupling) stay in the service; this only guarantees
+        # the values it reads are the coerced ones.
         payload = create_user_with_invite(
-            data=request.data, created_by=auth_user(request)
+            data=serializer.validated_data, created_by=auth_user(request)
         )
         return Response(payload, status=status.HTTP_201_CREATED)
 

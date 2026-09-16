@@ -140,7 +140,8 @@
     "not_found": "Share content not found.",
     "invalid_composite_id": "Invalid share content id.",
     "invalid_pk": "Invalid share content id.",
-    "missing_required": "Missing required fields: year, delivery week, or share article."
+    "missing_required": "Missing required fields: year, delivery week, or share article.",
+    "washing_cleaning_mutually_exclusive": "Washing and cleaning are mutually exclusive — please pick only one."
   },
   "delivery_note": {
     "finalize_failed": "Could not finalize the delivery note before creating the invoice.",
@@ -283,11 +284,13 @@
     "not_found": "No active delivery day found for the given day.",
     "tours_reduced_while_in_use": "This delivery day is already in use — the number of tours can only be increased, not reduced. Lowering it would strand deliveries on the removed tours.",
     "shortening_strands_children": "This delivery day can't end on that date: future station-days or shares would outlive it and be stranded. Create a successor instead (add a new delivery day), or pick a later end date.",
+    "start_move_strands_children": "This delivery day can't start on that date: existing station-days or shares fall before it and would no longer be covered. Pick an earlier start date, or move them first.",
     "succession_coverage_gap": "Couldn't complete the delivery-day succession: a station has no station-day covering the affected week on the new day. Set up that station-day first, then retry.",
     "in_use": "This delivery day cannot be deleted because shares already reference it. Once used, it can no longer be removed."
   },
   "delivery_station_day": {
     "shortening_strands_children": "This station-day can't end on that date: future deliveries or capacity reservations would outlive it and be stranded. Create a successor station-day (which migrates them), or pick a later end date.",
+    "start_move_strands_children": "This station-day can't start on that date: existing deliveries or capacity reservations fall before it and would no longer be covered. Pick an earlier start date, or move them first.",
     "in_use": "This pickup day cannot be deleted while deliveries still reference it. Move or end those deliveries first."
   },
   "inventory_entry": {
@@ -300,7 +303,8 @@
     "profile_not_linked": "No customer profile is linked to this user account."
   },
   "bulk_documents": {
-    "model_invalid": "Invalid document type — must be a delivery note or an invoice."
+    "model_invalid": "Invalid document type — must be a delivery note or an invoice.",
+    "date_format": "Invalid document date — please use the YYYY-MM-DD format."
   },
   "billing_run": {
     "invalid_period": "The end date must be on or after the start date.",
@@ -430,6 +434,8 @@
   },
   "share_import": {
     "apply_failed": "The import could not be applied.",
+    "batch_in_terminal_status": "This import has already been applied, or replaced by a newer one, and cannot be validated or applied again. Upload a new file instead.",
+    "file_already_used": "This file has already been imported for this week (status: {{status}}) and cannot be applied again. Upload a changed or newly exported file to correct the week.",
     "invalid_status": "The import batch is in a status that cannot be applied (needs preview_ready or validated)."
   },
   "shares_day_change": {

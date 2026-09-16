@@ -355,3 +355,141 @@ class TestExternalShareDemandViewSet:
         assert resp.status_code == status.HTTP_200_OK
         assert len(resp.data) == 1
         assert resp.data[0]["quantity"] == 3
+
+
+# ---------------------------------------------------------------------------
+# ShareImportBatchViewSet — the stored status decides
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestShareImportBatchTerminalStatus:
+    """Preview and apply re-validate the file first, and validating rewrites the
+    batch's status. The stored status therefore has to be checked before that
+    happens, or an applied batch is one POST away from overwriting the week."""
+
+    UPLOAD_URL = reverse("share_import_batch-upload")
+
+    def _upload(self, api_client, *, name: str, quantity: int) -> str:
+        resp = api_client.post(
+            self.UPLOAD_URL,
+            {
+                "file": _uploaded(name, _csv([f"2026,15,STN-1,WED,VEG-M,{quantity}"])),
+                "year": 2026,
+                "delivery_week": 15,
+            },
+            format="multipart",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        return resp.data["id"]
+
+    @staticmethod
+    def _preview(api_client, batch_id: str):
+        return api_client.post(
+            reverse("share_import_batch-preview", kwargs={"pk": batch_id})
+        )
+
+    @staticmethod
+    def _apply(api_client, batch_id: str):
+        return api_client.post(
+            reverse("share_import_batch-apply", kwargs={"pk": batch_id})
+        )
+
+    def _preview_and_apply(self, api_client, batch_id: str):
+        self._preview(api_client, batch_id)
+        return self._apply(api_client, batch_id)
+
+    def test_applying_the_same_batch_twice_is_refused(self, api_client, world):
+        batch_id = self._upload(api_client, name="ok.csv", quantity=7)
+        assert (
+            self._preview_and_apply(api_client, batch_id).status_code
+            == status.HTTP_200_OK
+        )
+
+        resp = self._apply(api_client, batch_id)
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "share_import.batch_in_terminal_status"
+        assert resp.data["details"]["status"] == ShareImportBatch.STATUS_APPLIED
+        # The week still holds exactly what the first apply wrote.
+        demand = ExternalShareDemand.objects.get(
+            year=2026, delivery_week=15, is_estimate=False
+        )
+        assert demand.quantity == 7
+
+    def test_previewing_an_applied_batch_is_refused(self, api_client, world):
+        batch_id = self._upload(api_client, name="ok.csv", quantity=7)
+        self._preview_and_apply(api_client, batch_id)
+
+        resp = self._preview(api_client, batch_id)
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "share_import.batch_in_terminal_status"
+
+    def test_reuploading_an_applied_file_is_refused(self, api_client, world):
+        """Ingest is idempotent, so the same bytes hand back the stored batch.
+        Returning that as a fresh upload would put a success in front of a
+        preview and an apply that both refuse it, so the upload names the batch
+        and its status instead."""
+        batch_id = self._upload(api_client, name="ok.csv", quantity=7)
+        self._preview_and_apply(api_client, batch_id)
+
+        resp = api_client.post(
+            self.UPLOAD_URL,
+            {
+                "file": _uploaded("ok.csv", _csv(["2026,15,STN-1,WED,VEG-M,7"])),
+                "year": 2026,
+                "delivery_week": 15,
+            },
+            format="multipart",
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "share_import.file_already_used"
+        assert resp.data["details"] == {
+            "batch_id": batch_id,
+            "status": ShareImportBatch.STATUS_APPLIED,
+        }
+        stored = ShareImportBatch.objects.get(pk=batch_id)
+        assert stored.status == ShareImportBatch.STATUS_APPLIED
+        assert ShareImportBatch.objects.count() == 1
+
+    def test_a_changed_file_for_the_same_week_still_uploads(self, api_client, world):
+        """The way back after a wrong apply: a file whose bytes differ is a new
+        batch, validated and appliable, and its apply supersedes the old one."""
+        first_id = self._upload(api_client, name="ok.csv", quantity=7)
+        self._preview_and_apply(api_client, first_id)
+
+        second_id = self._upload(api_client, name="fix.csv", quantity=9)
+
+        assert second_id != first_id
+        assert (
+            ShareImportBatch.objects.get(pk=second_id).status
+            == ShareImportBatch.STATUS_VALIDATED
+        )
+        assert (
+            self._preview_and_apply(api_client, second_id).status_code
+            == status.HTTP_200_OK
+        )
+        assert (
+            ExternalShareDemand.objects.get(
+                year=2026, delivery_week=15, is_estimate=False
+            ).quantity
+            == 9
+        )
+
+    def test_a_superseded_batch_cannot_be_reapplied(self, api_client, world):
+        first_id = self._upload(api_client, name="first.csv", quantity=7)
+        self._preview_and_apply(api_client, first_id)
+        second_id = self._upload(api_client, name="second.csv", quantity=12)
+        assert (
+            self._preview_and_apply(api_client, second_id).status_code
+            == status.HTTP_200_OK
+        )
+
+        resp = self._apply(api_client, first_id)
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["details"]["status"] == ShareImportBatch.STATUS_SUPERSEDED
+        demand = ExternalShareDemand.objects.get(
+            year=2026, delivery_week=15, is_estimate=False
+        )
+        assert demand.quantity == 12

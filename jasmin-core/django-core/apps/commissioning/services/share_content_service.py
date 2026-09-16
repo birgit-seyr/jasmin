@@ -50,6 +50,55 @@ from .stock_service import StockService
 
 logger = logging.getLogger(__name__)
 
+# Row-level attributes a planning payload carries once for the whole slot. The
+# rebuild stamps them onto every recreated ShareContent, so on a partial update
+# a field the caller never sent has to be read back from the stored rows —
+# otherwise it silently reverts to the column default (packing_station 1,
+# washing / cleaning False, the rest NULL).
+_SLOT_LEVEL_FIELDS = (
+    "note",
+    "seller",
+    "kg_per_piece",
+    "price_per_unit",
+    "cleaning",
+    "washing",
+    "packing_station",
+)
+
+# ``ShareContent`` holds at most one of washing / cleaning
+# (``sharecontent_washing_cleaning_mutually_exclusive``), so a payload that
+# switches one on must not have the other carried over from storage — the
+# rebuild would insert the pair the database refuses.
+_EXCLUSIVE_SLOT_FLAGS = {"washing": "cleaning", "cleaning": "washing"}
+
+
+def _merge_stored_slot_fields(
+    data: dict[str, Any], stored_rows: QuerySet[ShareContent]
+) -> dict[str, Any]:
+    """Fill the slot-level fields *data* does not mention from the stored rows.
+
+    Every row of a slot holds the same value for these — the rebuild writes one
+    payload value to all of them — so the lowest-id row is representative.
+    Switching washing or cleaning on clears the other instead of carrying it
+    over, mirroring what the planning grid does when one is ticked.
+    """
+    stored = stored_rows.order_by("id").first()
+    if stored is None:
+        return data
+
+    merged = dict(data)
+    for field in _SLOT_LEVEL_FIELDS:
+        if field in merged:
+            continue
+        opposite_flag = _EXCLUSIVE_SLOT_FLAGS.get(field)
+        if opposite_flag is not None and merged.get(opposite_flag):
+            merged[field] = False
+            continue
+        merged[field] = (
+            stored.seller_id if field == "seller" else getattr(stored, field)
+        )
+    return merged
+
 
 class ShareContentService:
     """Service for processing harvest share planning data from frontend."""
@@ -1079,10 +1128,16 @@ class ShareContentService:
         unit: str,
         size: str,
         data: dict[str, Any],
+        carry_over_unset_fields: bool = False,
     ) -> list[ShareContent]:
         """Replace existing ShareContent rows for the (year, week, article, unit, size)
         slot with freshly-created rows from `data`, then cascade snapshots for any
         movements affected by the deletion.
+
+        With ``carry_over_unset_fields`` (the PATCH path) a slot-level field the
+        payload omits — washing, cleaning, packing_station, note, seller,
+        kg_per_piece, price_per_unit — is taken from the stored rows instead of
+        falling back to the column default. A full replace leaves it off.
 
         Empty payloads (``data`` carrying no usable day-variation cells —
         the user cleared every amount on the row) split into two cases:
@@ -1100,7 +1155,17 @@ class ShareContentService:
         from .snapshot_service import SnapshotService
         from .theoretical_objects import recalculate_actual_corrections
 
-        data = {**data, "share_article": share_article_id, "unit": unit, "size": size}
+        # The slot coordinates come from the caller (the composite pk), not the
+        # body: a partial update needn't repeat them, and a body that disagreed
+        # would rebuild into a different week than the one the wipe cleared.
+        data = {
+            **data,
+            "year": year,
+            "delivery_week": delivery_week,
+            "share_article": share_article_id,
+            "unit": unit,
+            "size": size,
+        }
 
         existing_shares = Share.objects.filter(year=year, delivery_week=delivery_week)
         slot_filter = {
@@ -1110,6 +1175,10 @@ class ShareContentService:
             "unit": unit,
         }
         old_share_contents = ShareContent.objects.filter(**slot_filter)
+
+        if carry_over_unset_fields:
+            data = _merge_stored_slot_fields(data, old_share_contents)
+
         # Capture BOTH movement halves before the delete: the SHARECONTENT rows
         # AND the theoretical HARVEST/PURCHASE/WASH/CLEAN movements (these carry
         # share_content=NULL, reached via their Theoretical* parent's

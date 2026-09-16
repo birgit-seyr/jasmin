@@ -193,11 +193,12 @@ def validate_bulk_document_request(request: Request) -> dict[str, Any]:
     Validate request for bulk document operations (create/finalize/delete).
 
     Returns:
-        Dict: {"order_ids": list, "model": str, "date": str|None}
+        Dict: {"order_ids": list, "model": str, "date": datetime.date|None}
 
     Raises:
         RequiredFieldMissing: if ``ids`` is missing or not a non-empty list.
-        CommissioningError: if ``model`` is not a known document model.
+        CommissioningError: if ``model`` is not a known document model, or
+            ``date`` is present but not ``YYYY-MM-DD``.
 
     Example:
         >>> params = validate_bulk_document_request(request)
@@ -206,7 +207,17 @@ def validate_bulk_document_request(request: Request) -> dict[str, Any]:
     """
     order_ids = parse_bulk_ids(request)
     model = body(request).get("model")
-    date = body(request).get("date", None)
+    # A malformed non-empty ``date`` must not reach ``coerce_document_date``:
+    # that helper falls back to the order's ISO-week date, so a typo used to
+    # issue a delivery note or invoice carrying a date nobody asked for — on a
+    # document that is legally immutable once finalized. Absent / empty still
+    # means "derive it", which is what the office UI sends.
+    date = parse_body_date(
+        request,
+        "date",
+        required=False,
+        code_prefix="bulk_documents",
+    )
 
     if model not in ["delivery_note", "invoice"]:
         raise CommissioningError(

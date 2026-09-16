@@ -15,7 +15,9 @@ from django_tenants.utils import schema_context
 
 from .models import Tenant
 
-_default_logger = logging.getLogger("tasks")
+# Named apart from the ``logger`` parameter below so the caller-facing keyword
+# matches the ``logger=`` spelling the other apps.shared helpers take.
+_TASKS_LOGGER = logging.getLogger("tasks")
 
 
 def for_each_tenant(
@@ -38,10 +40,10 @@ def for_each_tenant(
     tenant) — make that a visible, deliberate choice at the call site.
 
     ``label`` sets the failure-log prefix (keep the per-task string so log
-    greps stay stable); ``logger`` overrides the destination (defaults to the
-    ``"tasks"`` logger — pass the security logger for audit sweeps).
+    greps stay stable); ``logger`` redirects the failure log away from the
+    module's ``"tasks"`` logger (pass the security logger for audit sweeps).
     """
-    log = logger or _default_logger
+    log = logger or _TASKS_LOGGER
     failures = 0
     qs = Tenant.objects.exclude(schema_name="public")
     if not include_inactive:

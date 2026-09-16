@@ -24,12 +24,12 @@ export interface HarvestSharePlanningCreateRequest {
   washing?: boolean;
   /**
    * @nullable
-   * @pattern ^-?\d{0,7}(?:\.\d{0,3})?$
+   * @pattern ^-?\d{0,2}(?:\.\d{0,3})?$
    */
   kg_per_piece?: string | null;
   /**
    * @nullable
-   * @pattern ^-?\d{0,8}(?:\.\d{0,2})?$
+   * @pattern ^-?\d{0,4}(?:\.\d{0,2})?$
    */
   price_per_unit?: string | null;
   packing_station?: number;

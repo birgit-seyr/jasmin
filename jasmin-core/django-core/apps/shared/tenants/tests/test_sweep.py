@@ -7,6 +7,9 @@ must skip it by default (offboarding / non-payment / breach), while an explicit
 
 from __future__ import annotations
 
+import logging
+from unittest import mock
+
 import pytest
 
 from apps.shared.tenants.models import Tenant
@@ -33,3 +36,20 @@ def test_for_each_tenant_visits_active(tenant):
     visited: list[str] = []
     for_each_tenant(lambda t: visited.append(t.schema_name))
     assert tenant.schema_name in visited
+
+
+@pytest.mark.django_db
+def test_for_each_tenant_isolates_failures_to_the_caller_logger(tenant):
+    """A raising ``work`` is counted and logged to ``logger``, never re-raised."""
+    caller_log = logging.getLogger("apps.shared.tenants.tests.sweep")
+
+    def boom(_tenant):
+        raise RuntimeError("tenant work failed")
+
+    with mock.patch.object(caller_log, "exception") as logged:
+        failures = for_each_tenant(boom, label="test.sweep", logger=caller_log)
+
+    assert failures >= 1
+    assert logged.call_count == failures
+    assert logged.call_args.args[0] == "%s.tenant_failed tenant=%s"
+    assert logged.call_args.args[1] == "test.sweep"

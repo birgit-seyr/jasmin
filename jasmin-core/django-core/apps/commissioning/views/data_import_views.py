@@ -44,6 +44,17 @@ from ..services.data_import import (
 )
 from ..services.onboarding_policy import onboarding_mode_enabled
 
+# Cap the upload before a byte of it is read. The import's row cap bounds
+# PARSING, not memory: by the time it applies, the whole file plus its decoded
+# copy are resident. A 5000-row data list is well under a megabyte, so this
+# only ever catches a runaway export (nginx's 50 MB body limit is far too
+# coarse for a worker handling several uploads at once).
+_MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+_UPLOAD_TOO_LARGE = (
+    f"file exceeds the {_MAX_UPLOAD_BYTES // (1024 * 1024)} MB upload limit — "
+    "split the list into smaller files."
+)
+
 
 class DataImportView(APIViewRolePermissionsMixin, APIView):
     """POST a CSV → run it through the registered serializer row by row."""
@@ -111,7 +122,14 @@ class DataImportView(APIViewRolePermissionsMixin, APIView):
         # arrives as a string); absent means a real run.
         dry_run = parse_body_bool(body(request), "dry_run")
 
-        file_bytes = upload.read()
+        # ``size`` is what the multipart parser recorded; the bounded read is
+        # what actually holds, for an upload whose size is unknown or wrong.
+        if (upload.size or 0) > _MAX_UPLOAD_BYTES:
+            raise DataImportInvalid(_UPLOAD_TOO_LARGE, field="file")
+        file_bytes = upload.read(_MAX_UPLOAD_BYTES + 1)
+        if len(file_bytes) > _MAX_UPLOAD_BYTES:
+            raise DataImportInvalid(_UPLOAD_TOO_LARGE, field="file")
+
         if not dry_run:
             self._require_step_up_for_bank_columns(request, model_name, file_bytes)
 

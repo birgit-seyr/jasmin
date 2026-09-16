@@ -7,6 +7,8 @@ type, ``http_status``, ``field`` and message.
 
 from __future__ import annotations
 
+import datetime
+
 import pytest
 from rest_framework import status
 from rest_framework.test import APIRequestFactory
@@ -139,7 +141,38 @@ class TestValidateBulkDocumentRequest:
         )
         params = validate_bulk_document_request(request)
         assert params["model"] == "invoice"
-        assert params["date"] == "2026-04-10"
+        # Parsed, not passed through as a string: the document services take a
+        # real date so a malformed one can't reach them.
+        assert params["date"] == datetime.date(2026, 4, 10)
+
+    def test_malformed_date_raises(self):
+        """A typo'd date must not fall through to ``coerce_document_date``,
+        which would silently date the document to the order's ISO week."""
+        request = _make_post_request(
+            {"ids": ["id1"], "model": "invoice", "date": "10.04.2026"}
+        )
+        with pytest.raises(CommissioningError) as excinfo:
+            validate_bulk_document_request(request)
+        assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
+        assert excinfo.value.field == "date"
+        assert excinfo.value.code == "bulk_documents.date_format"
+
+    def test_non_date_typed_date_raises(self):
+        request = _make_post_request(
+            {"ids": ["id1"], "model": "invoice", "date": {"year": 2026}}
+        )
+        with pytest.raises(CommissioningError) as excinfo:
+            validate_bulk_document_request(request)
+        assert excinfo.value.field == "date"
+
+    def test_empty_date_still_means_derive_it(self):
+        """Empty / absent is the office UI's "derive the date from the order"
+        signal — it must stay a pass-through, not become a 400."""
+        for raw in ("", None):
+            request = _make_post_request(
+                {"ids": ["id1"], "model": "invoice", "date": raw}
+            )
+            assert validate_bulk_document_request(request)["date"] is None
 
     def test_empty_ids_raises(self):
         request = _make_post_request({"ids": [], "model": "delivery_note"})

@@ -2,8 +2,28 @@ import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Button } from "antd";
 import axiosService from "@shared/services/api";
+import i18n from "@shared/i18n";
 import { notify } from '@shared/utils';
 import { getErrorMessage } from '@shared/utils/apiError';
+
+interface BulkItemFailure {
+  id?: string | number;
+  error?: string;
+}
+
+/**
+ * Per-item failures a bulk endpoint reports next to what it did write.
+ *
+ * A partial-success body (HTTP 207) resolves exactly like a 200, so without
+ * reading this the ids the endpoint refused — an inventory row that already
+ * carries a count, an order that could not be finalized — vanish behind a
+ * plain success.
+ */
+const partialFailures = (data: unknown): BulkItemFailure[] => {
+  if (!data || typeof data !== "object") return [];
+  const { errors } = data as { errors?: unknown };
+  return Array.isArray(errors) ? (errors as BulkItemFailure[]) : [];
+};
 
 // Generic over the response body: ``TResponse`` infers from the
 // ``apiFunction`` return type, so ``onSuccess`` receives the typed body
@@ -109,7 +129,16 @@ const BulkActionButton = <TResponse = unknown,>({
         onClearSelection();
       }
 
-      if (successMessage) {
+      const skipped = partialFailures(responseData);
+      if (skipped.length > 0) {
+        notify.warning(
+          i18n.t("table.bulk_partial_skipped", {
+            skipped: skipped.length,
+            total: selectedIds.length,
+            reason: skipped[0]?.error ?? "",
+          }),
+        );
+      } else if (successMessage) {
         notify.success(successMessage);
       }
 

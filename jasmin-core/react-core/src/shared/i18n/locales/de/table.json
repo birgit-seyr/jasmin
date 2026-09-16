@@ -23,6 +23,7 @@
     "save_failed_generic": "Beim Speichern ist ein Fehler aufgetreten.",
     "load_failed_title": "Laden fehlgeschlagen",
     "load_failed_hint": "Bitte erneut versuchen.",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "bulk_partial_skipped": "{{skipped}} von {{total}} Zeile(n) übersprungen: {{reason}}"
 
   }

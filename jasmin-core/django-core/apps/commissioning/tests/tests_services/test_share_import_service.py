@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 
+from apps.commissioning.errors import ShareImportBatchInTerminalStatus
 from apps.commissioning.models import (
     ExternalCodeMapping,
     ExternalShareDemand,
@@ -976,3 +977,128 @@ class TestReimportPropagatesIntoTheoreticals:
             f"ShareImportService.apply() that calls recompute_shares "
             f"has regressed."
         )
+
+
+@pytest.mark.django_db
+class TestRaggedRows:
+    """A row longer than the header leaves its surplus cells without a column
+    name. They are reported on that row; the rest of the file still parses."""
+
+    def test_row_with_extra_cells_is_reported(self, import_world):
+        user = JasminUserFactory(roles=["office"])
+        data = (
+            b"year,delivery_week,delivery_station_code,delivery_day_code,"
+            b"variation_code,quantity\n"
+            b"2026,15,STN-1,WED,VEG-M,4,stray\n"
+            b"2026,15,STN-1,WED,VEG-M,4\n"
+        )
+        batch = ShareImportService.ingest_upload(
+            file_bytes=data,
+            original_filename="ragged.csv",
+            year=2026,
+            delivery_week=15,
+            uploaded_by=user,
+        )
+
+        outcome = ShareImportService.parse_and_validate(batch)
+
+        assert "more cells than the header" in outcome.errors["1"][0]
+        assert [row.row_number for row in outcome.rows] == [2]
+        batch.refresh_from_db()
+        assert batch.status == ShareImportBatch.STATUS_FAILED
+
+    def test_a_trailing_separator_is_not_a_ragged_row(self, import_world):
+        """A data line that merely ends in a separator parks one EMPTY surplus
+        cell. Every named column parsed, so the row imports — treating that
+        padding as fatal would fail such a file line by line."""
+        user = JasminUserFactory(roles=["office"])
+        data = (
+            b"year,delivery_week,delivery_station_code,delivery_day_code,"
+            b"variation_code,quantity\n"
+            b"2026,15,STN-1,WED,VEG-M,4,\n"
+        )
+        batch = ShareImportService.ingest_upload(
+            file_bytes=data,
+            original_filename="trailing_comma.csv",
+            year=2026,
+            delivery_week=15,
+            uploaded_by=user,
+        )
+
+        outcome = ShareImportService.parse_and_validate(batch)
+
+        assert outcome.errors == {}
+        assert [row.row_number for row in outcome.rows] == [1]
+        batch.refresh_from_db()
+        assert batch.status == ShareImportBatch.STATUS_VALIDATED
+
+
+@pytest.mark.django_db
+class TestTerminalBatchStatus:
+    """An applied batch's rows ARE the week's demand; a superseded batch's were
+    replaced by a later one. Re-running a stage on either would rewrite the week
+    from a file the office has already moved past."""
+
+    @staticmethod
+    def _batch(user, *, quantity: int, filename: str) -> ShareImportBatch:
+        return ShareImportService.ingest_upload(
+            file_bytes=_csv_bytes(
+                [
+                    {
+                        "year": 2026,
+                        "delivery_week": 15,
+                        "delivery_station_code": "STN-1",
+                        "delivery_day_code": "WED",
+                        "variation_code": "VEG-M",
+                        "quantity": quantity,
+                    }
+                ]
+            ),
+            original_filename=filename,
+            year=2026,
+            delivery_week=15,
+            uploaded_by=user,
+        )
+
+    def _applied(self, user, *, quantity: int, filename: str) -> ShareImportBatch:
+        batch = self._batch(user, quantity=quantity, filename=filename)
+        outcome = ShareImportService.parse_and_validate(batch)
+        ShareImportService.apply(batch, outcome.rows, applied_by=user)
+        return batch
+
+    def test_applied_batch_refuses_a_second_validate(self, import_world):
+        user = JasminUserFactory(roles=["office"])
+        batch = self._applied(user, quantity=4, filename="first.csv")
+        assert batch.status == ShareImportBatch.STATUS_APPLIED
+
+        with pytest.raises(ShareImportBatchInTerminalStatus) as exc_info:
+            ShareImportService.parse_and_validate(batch)
+
+        assert exc_info.value.details["status"] == ShareImportBatch.STATUS_APPLIED
+        assert exc_info.value.details["batch_id"] == batch.id
+        batch.refresh_from_db()
+        assert batch.status == ShareImportBatch.STATUS_APPLIED
+
+    def test_superseded_batch_refuses_a_second_validate(self, import_world):
+        user = JasminUserFactory(roles=["office"])
+        first = self._applied(user, quantity=4, filename="first.csv")
+        self._applied(user, quantity=9, filename="second.csv")
+        first.refresh_from_db()
+        assert first.status == ShareImportBatch.STATUS_SUPERSEDED
+
+        with pytest.raises(ShareImportBatchInTerminalStatus) as exc_info:
+            ShareImportService.parse_and_validate(first)
+
+        assert exc_info.value.details["status"] == ShareImportBatch.STATUS_SUPERSEDED
+
+    def test_the_weeks_demand_survives_a_refused_reapply(self, import_world):
+        user = JasminUserFactory(roles=["office"])
+        batch = self._applied(user, quantity=4, filename="first.csv")
+
+        with pytest.raises(JasminError):
+            ShareImportService.apply(batch, [], applied_by=user)
+
+        demand = ExternalShareDemand.objects.get(
+            year=2026, delivery_week=15, is_estimate=False
+        )
+        assert demand.quantity == 4

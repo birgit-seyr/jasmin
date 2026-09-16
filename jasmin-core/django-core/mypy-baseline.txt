@@ -2,14 +2,13 @@
 # Managed by scripts/mypy_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/mypy_baseline.py freeze
-# 362 finding(s).
+# 354 finding(s).
 
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
 apps/accounts/services/auth_service.py: Argument 1 to "update_last_login" has incompatible type "None"; expected "type[JasminUser]"  [arg-type]
 apps/accounts/services/two_factor_service.py: Argument 1 to "_ChallengeToken" has incompatible type "str"; expected "Token | None"  [arg-type]
 apps/accounts/services/two_factor_service.py: Argument 1 to "_EnrolmentToken" has incompatible type "str"; expected "Token | None"  [arg-type]
-apps/accounts/viewsets.py: Argument "data" to "create_user_with_invite" has incompatible type "dict[str, Any] | list[Any]"; expected "dict[str, Any]"  [arg-type]
 apps/commissioning/management/commands/seed_test_users.py: Argument 1 to "_seed_one" of "Command" has incompatible type "object"; expected "dict[str, Any]"  [arg-type]
 apps/commissioning/management/commands/seed_test_users.py: Incompatible types in assignment (expression has type "Reseller", variable has type "Member")  [assignment]
 apps/commissioning/management/commands/seed_user_status_demo.py: Argument 1 to "_create_invitation" of "Command" has incompatible type "JasminUser | None"; expected "JasminUser"  [arg-type]
@@ -268,6 +267,7 @@ apps/commissioning/viewsets/delivery_viewsets.py: Argument 1 of "perform_update"
 apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "has_started"  [union-attr]
 apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "share_type_variation_id"  [union-attr]
 apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "valid_from"  [union-attr]
+apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "valid_from"  [union-attr]
 apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "valid_until"  [union-attr]
 apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "valid_until"  [union-attr]
 apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "valid_until"  [union-attr]
@@ -299,7 +299,6 @@ apps/commissioning/viewsets/share_content_viewsets.py: Argument 1 to "parse_comp
 apps/commissioning/viewsets/shares_viewsets.py: "ShareDelivery" has no attribute "name"  [attr-defined]
 apps/commissioning/viewsets/shares_viewsets.py: "ShareDelivery" has no attribute "quantity"  [attr-defined]
 apps/commissioning/viewsets/shares_viewsets.py: "ShareDelivery" has no attribute "share_type_variation_id"  [attr-defined]
-apps/commissioning/viewsets/shares_viewsets.py: Argument "data" to "apply" of "SharesDayChangeService" has incompatible type "dict[str, Any] | list[Any]"; expected "dict[str, Any]"  [arg-type]
 apps/commissioning/viewsets/shares_viewsets.py: Argument "fields" to "parse_composite_pk" has incompatible type "list[tuple[str, type]]"; expected "list[tuple[str, Callable[[str], Any]]]"  [arg-type]
 apps/commissioning/viewsets/shares_viewsets.py: Argument "fields" to "parse_composite_pk" has incompatible type "list[tuple[str, type]]"; expected "list[tuple[str, Callable[[str], Any]]]"  [arg-type]
 apps/commissioning/viewsets/shares_viewsets.py: Argument 1 to "active_at_date" of "CurrentActiveManagerMixin" has incompatible type "Any | str"; expected "date"  [arg-type]
@@ -315,17 +314,10 @@ apps/commissioning/viewsets/shares_viewsets.py: Argument 1 to "parse_composite_p
 apps/commissioning/viewsets/shares_viewsets.py: Incompatible return value type (got "ShareDeliveryQuerySet[Model, Any]", expected "QuerySet[ShareDelivery, ShareDelivery]")  [return-value]
 apps/commissioning/viewsets/shares_viewsets.py: Incompatible types in assignment (expression has type "Share | None", variable has type "Share")  [assignment]
 apps/commissioning/viewsets/shares_viewsets.py: Missing positional argument "request" in call to "get_days" of "ShareViewSet"  [call-arg]
-apps/commissioning/viewsets/shares_viewsets.py: No overload variant of "__getitem__" of "list" matches argument type "str"  [call-overload]
-apps/commissioning/viewsets/shares_viewsets.py: No overload variant of "__getitem__" of "list" matches argument type "str"  [call-overload]
-apps/commissioning/viewsets/shares_viewsets.py: No overload variant of "__getitem__" of "list" matches argument type "str"  [call-overload]
-apps/commissioning/viewsets/shares_viewsets.py: No overload variant of "__getitem__" of "list" matches argument type "str"  [call-overload]
-apps/commissioning/viewsets/shares_viewsets.py: No overload variant of "__getitem__" of "list" matches argument type "str"  [call-overload]
-apps/commissioning/viewsets/shares_viewsets.py: No overload variant of "__getitem__" of "list" matches argument type "str"  [call-overload]
 apps/commissioning/viewsets/shares_viewsets.py: No overload variant of "__setitem__" of "list" matches argument types "str", "Any"  [call-overload]
 apps/commissioning/viewsets/shares_viewsets.py: No overload variant of "__setitem__" of "list" matches argument types "str", "Any"  [call-overload]
 apps/commissioning/viewsets/shares_viewsets.py: No overload variant of "__setitem__" of "list" matches argument types "str", "Any"  [call-overload]
 apps/commissioning/viewsets/shares_viewsets.py: No overload variant of "__setitem__" of "list" matches argument types "str", "Any"  [call-overload]
-apps/commissioning/viewsets/shares_viewsets.py: No overload variant of "__setitem__" of "list" matches argument types "str", "str"  [call-overload]
 apps/commissioning/viewsets/shares_viewsets.py: No overload variant of "__setitem__" of "list" matches argument types "str", "str"  [call-overload]
 apps/gdpr/serializers.py: Incompatible types in assignment (expression has type "CharField", base class "Field" defined the type as "str | None")  [assignment]
 apps/gdpr/serializers.py: Incompatible types in assignment (expression has type "CharField", base class "Field" defined the type as "str | _StrPromise | None")  [assignment]

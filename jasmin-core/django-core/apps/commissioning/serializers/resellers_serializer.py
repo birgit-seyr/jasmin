@@ -946,6 +946,33 @@ class DeliveryNoteResellerSerializer(
 # --- Shared Bulk Operation Serializers ---
 
 
+class SetOrderNoteRequestSerializer(serializers.Serializer):
+    """Request body for ``PATCH set_order_note/<pk>/``.
+
+    ``max_length`` mirrors ``Order.note`` (``CharField(max_length=500)``), so an
+    over-long note is a 400 naming the field rather than a ``DataError`` raised
+    by the UPDATE. ``note`` stays optional and nullable: an absent key means
+    "clear it", which is what the office autosave sends for an emptied box.
+    """
+
+    note = serializers.CharField(
+        max_length=500, allow_blank=True, required=False, allow_null=True
+    )
+
+
+class SetInvoiceNoteRequestSerializer(serializers.Serializer):
+    """Request body for ``PATCH set_invoice_note/<pk>/``.
+
+    ``max_length`` mirrors ``InvoiceReseller.note`` (``CharField(max_length=500)``
+    — an internal office annotation, which is why it stays writable on a
+    finalized invoice). See ``SetOrderNoteRequestSerializer``.
+    """
+
+    note = serializers.CharField(
+        max_length=500, allow_blank=True, required=False, allow_null=True
+    )
+
+
 class BulkDocumentRequestSerializer(serializers.Serializer):
     """Shared request for bulk operations on orders: {ids, model}."""
 

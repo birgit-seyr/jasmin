@@ -130,6 +130,7 @@ from .shares_serializer import (
     HarvestSharePlanningBackupRequestSerializer,
     HarvestSharePlanningCreateRequestSerializer,
     HarvestSharePlanningUpdateRequestSerializer,
+    ShareBulkDayUpdateRequestSerializer,
     ShareContentSerializer,
     ShareDayPlanningRowSerializer,
     ShareDeliveryOverviewSerializer,

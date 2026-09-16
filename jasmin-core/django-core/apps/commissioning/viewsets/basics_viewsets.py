@@ -227,9 +227,16 @@ class ShareArticleViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
         validated_data = serializer.validated_data
 
+        # ``_assign_share_options`` blanks all three option columns before
+        # writing the list back, so a PATCH that never mentions
+        # ``share_option_list`` would erase the article's options. Only a body
+        # carrying the key — or a PUT, which replaces the whole row — may
+        # rewrite them; an explicit empty list still clears.
+        rewrites_share_options = "share_option_list" in validated_data or not partial
         share_option_list = validated_data.pop("share_option_list", [])
-        share_option_values = self._validate_share_options(share_option_list)
-        self._assign_share_options(validated_data, share_option_values)
+        if rewrites_share_options:
+            share_option_values = self._validate_share_options(share_option_list)
+            self._assign_share_options(validated_data, share_option_values)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

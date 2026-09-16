@@ -802,6 +802,100 @@ def _get_or_create_inventory(
     return inventory, True
 
 
+class _InventoryAlreadyCounted(ValueError):
+    """An existing INVENTORY row a bulk count must not overwrite — it already
+    carries a physical count, or it is finalized.
+
+    A ``ValueError`` so the bulk loops' per-item handlers report it as a per-id
+    entry, instead of the action silently returning updated=0 / created=0.
+    """
+
+
+def _refuse_recount(inventory: MovementShareArticle) -> None:
+    """Raise unless *inventory* is an uncounted row a bulk count may fill in."""
+    if inventory.is_finalized:
+        raise _InventoryAlreadyCounted(
+            "Inventory entry is finalized — unfinalize it before recounting."
+        )
+    if inventory.counted_amount is not None:
+        raise _InventoryAlreadyCounted(
+            f"Inventory entry already counted ({inventory.counted_amount}) — "
+            "left unchanged; clear the count first to overwrite it."
+        )
+
+
+def _record_counted_amount(
+    inventory: MovementShareArticle, parsed: dict, counted
+) -> None:
+    """Write an absolute counted value onto an EXISTING INVENTORY row.
+
+    Mirrors the single-entry PATCH: ``amount`` holds the correction delta
+    against the balance BEFORE this row, so this row's own stored correction is
+    taken back out of the running balance before the new delta is derived. The
+    day's snapshot baseline is then rebuilt and the later INVENTORY deltas
+    re-cascaded, or every downstream balance keeps reflecting the old count.
+    """
+    counted = counted if isinstance(counted, Decimal) else Decimal(str(counted))
+
+    inventory_date = _ywd_to_datetime(
+        parsed["year"], parsed["delivery_week"], parsed["day_number"]
+    )
+    day_start = inventory_date.replace(hour=0, minute=0, second=0)
+    day_end = inventory_date.replace(hour=23, minute=59, second=59)
+    storage_str = str(parsed["storage_id"]) if parsed["storage_id"] else None
+
+    running_balance = SnapshotService.compute_balance(
+        str(parsed["share_article_id"]),
+        parsed["unit"],
+        parsed["size"],
+        storage_str,
+        up_to=day_end,
+    )
+    # All Decimal so the value stored back to the DecimalField carries no
+    # binary-fp drift.
+    balance_before = running_balance - (inventory.amount or Decimal("0"))
+    inventory.amount = counted - balance_before
+    inventory.counted_amount = counted
+    inventory.save()
+
+    SnapshotService.rebuild_entity_day(
+        str(parsed["share_article_id"]),
+        parsed["unit"],
+        parsed["size"],
+        storage_str,
+        day_start=day_start,
+        day_end=day_end,
+        snapshot_date=inventory_date,
+    )
+
+
+def _stamp_finalized_count(inventory: MovementShareArticle, parsed: dict) -> None:
+    """Finalize an EXISTING uncounted INVENTORY row at the stock it reports.
+
+    ``counted_amount`` becomes the entity's balance INCLUDING this row's own
+    correction — the value the office reads as current stock — and ``amount``
+    is left exactly as it stands, so locking the day moves no balance and needs
+    no snapshot rebuild. Deriving a fresh delta here instead would discard
+    whatever correction a NULL-counted row stores (the cascade refuses to touch
+    those for that reason) and, when the balance is negative, would stamp a
+    count nobody took.
+    """
+    inventory_date = _ywd_to_datetime(
+        parsed["year"], parsed["delivery_week"], parsed["day_number"]
+    )
+    day_end = inventory_date.replace(hour=23, minute=59, second=59)
+
+    inventory.counted_amount = SnapshotService.compute_balance(
+        str(parsed["share_article_id"]),
+        parsed["unit"],
+        parsed["size"],
+        str(parsed["storage_id"]) if parsed["storage_id"] else None,
+        up_to=day_end,
+    )
+    inventory.is_finalized = True
+    inventory.save()
+
+
 def _build_bulk_inventory_response(
     updated: int, created: int, errors: list[dict[str, str]]
 ) -> Response:
@@ -884,7 +978,10 @@ def _pre_acquire_entity_locks(composite_ids: list[str]) -> None:
     summary="Bulk finalize inventory entries",
     description="""
     Finalize multiple INVENTORY entries by setting is_finalized=True.
-    Sets amount to theoretical_current_stock ONLY if amount is null/None.
+    An entry nobody has counted yet is finalized AT the stock it reports
+    (counted == the entity's current balance) with its stored correction left
+    alone, so finalizing never moves a balance. An entry that is already
+    finalized is left untouched and reported under ``errors`` for that id.
     """,
     request=BulkIdsRequestSerializer,
     responses=BULK_INVENTORY_RESPONSE,
@@ -900,18 +997,27 @@ def bulk_finalize_current_stock(request: Request) -> Response:
     grouped, errors = _group_composite_ids(composite_ids)
 
     def _process(parsed: dict, theoretical_amount) -> tuple[int, int]:
-        clamped_amount = max(theoretical_amount, 0)
         inventory, created = _get_or_create_inventory(
-            parsed, defaults={"amount": clamped_amount, "is_finalized": True}
+            parsed, defaults={"amount": theoretical_amount, "is_finalized": True}
         )
-        if not created:
-            if inventory.amount is None:
-                # "Assume counted == theoretical" means zero correction delta
-                inventory.amount = 0
+        if created:
+            return 0, 1
+
+        if inventory.is_finalized:
+            # A closed day stays closed: re-finalizing must not re-derive the
+            # row's correction behind the office's back.
+            raise _InventoryAlreadyCounted(
+                "Inventory entry is already finalized — left unchanged."
+            )
+        if inventory.counted_amount is None:
+            # Finalizing a row nobody counted records the stock it reports as
+            # the count, so the entry is finalized WITH a count rather than as
+            # a permanent blank. This saves the row.
+            _stamp_finalized_count(inventory, parsed)
+        else:
             inventory.is_finalized = True
             inventory.save()
-            return 1, 0
-        return 0, 1
+        return 1, 0
 
     updated, created = _process_grouped_stock_with_theoretical(
         grouped, errors, process_item=_process
@@ -922,8 +1028,11 @@ def bulk_finalize_current_stock(request: Request) -> Response:
 @extend_schema(
     summary="Bulk set inventory to expected values",
     description="""
-    Set amount to theoretical_current_stock for multiple INVENTORY entries.
-    ONLY updates entries where amount is null/None.
+    Record theoretical_current_stock as the physical count for multiple
+    INVENTORY entries — including a negative one, which is what an
+    over-allocated article really holds. An entry that already carries a count,
+    or is finalized, is left untouched and reported under ``errors`` for that
+    id.
     """,
     request=BulkIdsRequestSerializer,
     responses=BULK_INVENTORY_RESPONSE,
@@ -932,25 +1041,28 @@ def bulk_finalize_current_stock(request: Request) -> Response:
 @permission_classes([IsStaff])
 @transaction.atomic
 def bulk_set_as_expected_current_stock(request: Request) -> Response:
-    """Set amount to theoretical_current_stock where amount is null/None."""
+    """Record theoretical_current_stock as the count where none was taken yet."""
     composite_ids = parse_bulk_ids(request)
     _pre_acquire_entity_locks(composite_ids)
 
     grouped, errors = _group_composite_ids(composite_ids)
 
     def _process(parsed: dict, theoretical_amount) -> tuple[int, int]:
-        clamped_amount = max(theoretical_amount, 0)
+        # The theoretical value is recorded as it stands, negative included: an
+        # over-allocated article genuinely holds less than nothing, and lifting
+        # it to 0 would write a count nobody took and force the ledger to zero.
         inventory, created = _get_or_create_inventory(
-            parsed, defaults={"amount": clamped_amount}
+            parsed, defaults={"amount": theoretical_amount}
         )
-        if not created:
-            if inventory.amount is None:
-                # "Set as expected" means counted == theoretical → zero delta
-                inventory.amount = 0
-                inventory.save()
-                return 1, 0
-            return 0, 0
-        return 0, 1
+        if created:
+            return 0, 1
+
+        # "Not counted yet" is ``counted_amount IS NULL`` — ``amount`` is the
+        # correction delta and is never NULL, so keying on it skipped every
+        # existing row. Confirm the theoretical amount as this row's count.
+        _refuse_recount(inventory)
+        _record_counted_amount(inventory, parsed, theoretical_amount)
+        return 1, 0
 
     updated, created = _process_grouped_stock_with_theoretical(
         grouped, errors, process_item=_process
@@ -961,9 +1073,9 @@ def bulk_set_as_expected_current_stock(request: Request) -> Response:
 @extend_schema(
     summary="Bulk set inventory to zero",
     description="""
-    Set amount to 0 for multiple INVENTORY entries.
-    ONLY creates entries where none exist yet.
-    Useful for marking items as counted but found to be zero.
+    Record a physical count of 0 for multiple INVENTORY entries — the item was
+    looked for and none was there. An entry that already carries a count, or is
+    finalized, is left untouched and reported under ``errors`` for that id.
     """,
     request=BulkIdsRequestSerializer,
     responses=BULK_INVENTORY_RESPONSE,
@@ -972,7 +1084,7 @@ def bulk_set_as_expected_current_stock(request: Request) -> Response:
 @permission_classes([IsStaff])
 @transaction.atomic
 def bulk_set_to_zero_current_stock(request: Request) -> Response:
-    """Set amount to 0 for entries where amount is null/None."""
+    """Record a count of 0 for entries where no count was taken yet."""
     composite_ids = parse_bulk_ids(request)
     _pre_acquire_entity_locks(composite_ids)
 
@@ -991,35 +1103,21 @@ def bulk_set_to_zero_current_stock(request: Request) -> Response:
                     parsed, defaults={"amount": 0}
                 )
 
-                if not created:
-                    if inventory.amount is None:
-                        # "Set to zero" means counted = 0. Compute running
-                        # balance to derive the correction delta:
-                        # 0 − running_balance.
-                        inventory_date = _ywd_to_datetime(
-                            parsed["year"],
-                            parsed["delivery_week"],
-                            parsed["day_number"],
-                        )
-                        inventory_end = inventory_date.replace(
-                            hour=23, minute=59, second=59
-                        )
-                        running_balance = SnapshotService.compute_balance(
-                            str(parsed["share_article_id"]),
-                            parsed["unit"],
-                            parsed["size"],
-                            str(parsed["storage_id"]) if parsed["storage_id"] else None,
-                            up_to=inventory_end,
-                        )
-                        # ``running_balance`` is already Decimal — keep the
-                        # subtraction Decimal so ``inventory.amount`` lands in
-                        # the DecimalField without binary-fp drift.
-                        inventory.amount = Decimal("0") - running_balance
-                        inventory.save()
-                        updated_count += 1
-                else:
+                if created:
                     created_count += 1
+                else:
+                    # "Set to zero" is a count of 0 on a row nobody has counted
+                    # yet ("not counted yet" is ``counted_amount IS NULL``, not
+                    # ``amount``, which is the never-NULL correction delta). The
+                    # delta 0 − balance_before is derived in the helper.
+                    _refuse_recount(inventory)
+                    _record_counted_amount(inventory, parsed, Decimal("0"))
+                    updated_count += 1
 
+        except _InventoryAlreadyCounted as exc:
+            # Ahead of the ValueError clause below, which would label this a
+            # malformed composite id.
+            errors.append({"id": composite_id, "error": str(exc)})
         except (ValueError, CompositeIdInvalid) as exc:
             errors.append({"id": composite_id, "error": f"Invalid composite ID: {exc}"})
         except (

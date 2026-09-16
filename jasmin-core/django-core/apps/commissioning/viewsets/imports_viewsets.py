@@ -16,6 +16,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.authz.permissions import IsOffice, RolePermissionsMixin
+from core.serializers import ErrorResponseSerializer
 
 from ..errors import CommissioningError
 from ..models import (
@@ -104,7 +105,14 @@ class ShareImportBatchViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSe
 
     @extend_schema(
         request=ShareImportUploadSerializer,
-        responses={201: ShareImportBatchSerializer},
+        responses={
+            201: ShareImportBatchSerializer,
+            # Ingest is idempotent on (year, week, bytes), so a file whose
+            # batch has already decided that week is refused here — with the
+            # batch id and status in ``details`` — instead of coming back as a
+            # success whose preview and apply both answer 400.
+            409: ErrorResponseSerializer,
+        },
     )
     @action(
         detail=False,
@@ -127,7 +135,9 @@ class ShareImportBatchViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSe
             uploaded_by=request.user,
         )
         # Run parse+validate synchronously so the user gets immediate
-        # feedback. Heavy files can be moved to a Celery task later.
+        # feedback. Heavy files can be moved to a Celery task later. A batch
+        # whose status already decided the week never reaches this point —
+        # ``ingest_upload`` refuses those bytes with a 409.
         ShareImportService.parse_and_validate(batch)
         batch.refresh_from_db()
         return Response(

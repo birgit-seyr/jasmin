@@ -6,17 +6,51 @@
  * OpenAPI spec version: 1.0.0
  */
 
+/**
+ * Body of ``ShareViewSet.bulk_update`` — the editable day-level fields, any
+subset of them.
+
+Mirrors ``SHARE_DAY_FIELDS`` in ``shares_day_change_service`` (keep in
+sync). The service assigns each value straight to a ``Share`` weekday
+column, so the integer coercion and the Monday..Sunday bounds have to happen
+here. ``changed_day_number`` is honoured by the service and edited in the
+office grid, so it belongs in the body too.
+ */
 export interface ShareBulkDayUpdateRequest {
-  /** @nullable */
+  /**
+   * @minimum 0
+   * @maximum 6
+   * @nullable
+   */
   changed_day_number?: number | null;
-  /** @nullable */
+  /**
+   * @minimum 0
+   * @maximum 6
+   * @nullable
+   */
   harvesting_day?: number | null;
-  /** @nullable */
+  /**
+   * @minimum 0
+   * @maximum 6
+   * @nullable
+   */
   packing_day?: number | null;
-  /** @nullable */
+  /**
+   * @minimum 0
+   * @maximum 6
+   * @nullable
+   */
   washing_day?: number | null;
-  /** @nullable */
+  /**
+   * @minimum 0
+   * @maximum 6
+   * @nullable
+   */
   cleaning_day?: number | null;
-  /** @nullable */
+  /**
+   * @minimum 0
+   * @maximum 6
+   * @nullable
+   */
   get_current_stock_day?: number | null;
 }

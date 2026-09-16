@@ -6,7 +6,18 @@
  * OpenAPI spec version: 1.0.0
  */
 
+/**
+ * Request body for ``PATCH set_order_note/<pk>/``.
+
+``max_length`` mirrors ``Order.note`` (``CharField(max_length=500)``), so an
+over-long note is a 400 naming the field rather than a ``DataError`` raised
+by the UPDATE. ``note`` stays optional and nullable: an absent key means
+"clear it", which is what the office autosave sends for an emptied box.
+ */
 export interface SetOrderNoteRequest {
-  /** @nullable */
+  /**
+   * @maxLength 500
+   * @nullable
+   */
   note?: string | null;
 }

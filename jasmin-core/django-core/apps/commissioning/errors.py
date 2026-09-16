@@ -582,6 +582,15 @@ class ShareContentNotFound(NotFoundError):
     code = "share_content.not_found"
 
 
+class WashingAndCleaningMutuallyExclusive(BadRequestError):
+    """A planning slot was asked to carry both ``washing`` and ``cleaning``.
+    ``ShareContent`` holds at most one of the two
+    (``sharecontent_washing_cleaning_mutually_exclusive``), so the pair is
+    refused here, naming both fields, rather than by the INSERT."""
+
+    code = "share_content.washing_cleaning_mutually_exclusive"
+
+
 class InvalidAmount(BadRequestError):
     """A submitted amount could not be parsed as a number. ``field`` names the
     offending key (e.g. a ``day_{day}_variation_{var}`` planning cell or an
@@ -627,6 +636,31 @@ class DataImportInvalid(BadRequestError):
     are reported in the import result instead — they don't raise."""
 
     code = "data_import.invalid"
+
+
+# --------------------------------------------------------------------------- #
+# Weekly share-demand imports                                                 #
+# --------------------------------------------------------------------------- #
+
+
+class ShareImportBatchInTerminalStatus(BadRequestError):
+    """A share-import batch whose stored status already records what it did to
+    the week's demand was asked to run another stage: ``applied`` means its rows
+    ARE the live demand, ``superseded`` means a later batch replaced them.
+    Either way the week must not be rewritten from that file again — the office
+    uploads a new one. ``details`` carries ``batch_id`` and ``status``."""
+
+    code = "share_import.batch_in_terminal_status"
+
+
+class ShareImportFileAlreadyUsed(ConflictError):
+    """The uploaded bytes belong to a batch for that week whose status already
+    records what it did to the demand (``applied`` / ``superseded``). Ingest is
+    idempotent on (year, week, checksum), so handing that batch back would read
+    as a fresh upload while preview and apply both refuse it. ``details``
+    carries ``batch_id`` and ``status``."""
+
+    code = "share_import.file_already_used"
 
 
 # --------------------------------------------------------------------------- #
@@ -1631,6 +1665,29 @@ class SharesDeliveryDayShorteningStrandsChildren(ConflictError):
         )
 
 
+class SharesDeliveryDayStartMoveStrandsChildren(ConflictError):
+    """Moving a delivery day's ``valid_from`` LATER would leave children before
+    the new start with no day covering them — DeliveryStationDays that begin
+    earlier, or Shares whose delivery week falls before it. The children stay
+    pointed at this day, so nothing re-homes them; pick an earlier start or
+    migrate them first."""
+
+    code = "shares_delivery_day.start_move_strands_children"
+
+    def __init__(self, *, delivery_day, new_valid_from, stranded_count) -> None:
+        super().__init__(
+            f"Cannot start delivery day '{delivery_day}' on {new_valid_from}: "
+            f"{stranded_count} existing child object(s) (station-days or shares) "
+            "fall before that date and would be left uncovered. Pick an earlier "
+            "start date, or move those children first.",
+            details={
+                "delivery_day": delivery_day,
+                "new_valid_from": str(new_valid_from),
+                "stranded_count": stranded_count,
+            },
+        )
+
+
 class SharesDeliveryDaySuccessionCoverageGap(ConflictError):
     """A delivery-day succession can't remap a future ShareDelivery because the
     station has no DeliveryStationDay covering that week on the new day. Leaving
@@ -1670,6 +1727,28 @@ class DeliveryStationDayShorteningStrandsChildren(ConflictError):
             details={
                 "station_day": station_day,
                 "new_valid_until": str(new_valid_until),
+                "stranded_count": stranded_count,
+            },
+        )
+
+
+class DeliveryStationDayStartMoveStrandsChildren(ConflictError):
+    """Moving a station-day's ``valid_from`` LATER would leave children before
+    the new start with no station-day covering them — ShareDeliveries or
+    CapacityReservations whose delivery week falls before it. They keep pointing
+    at this row, so nothing re-homes them; pick an earlier start date."""
+
+    code = "delivery_station_day.start_move_strands_children"
+
+    def __init__(self, *, station_day, new_valid_from, stranded_count) -> None:
+        super().__init__(
+            f"Cannot start station-day '{station_day}' on {new_valid_from}: "
+            f"{stranded_count} existing delivery/reservation(s) fall before that "
+            "date and would be left uncovered. Pick an earlier start date, or "
+            "move them first.",
+            details={
+                "station_day": station_day,
+                "new_valid_from": str(new_valid_from),
                 "stranded_count": stranded_count,
             },
         )
@@ -1786,6 +1865,7 @@ __all__ = [
     "ForecastNotFound",
     "InvalidExportDates",
     "DataImportInvalid",
+    "ShareImportBatchInTerminalStatus",
     "MemberNotFound",
     "MemberProfileNotLinked",
     "CustomerProfileNotLinked",
@@ -1834,8 +1914,10 @@ __all__ = [
     "ShareTypeVariationOutsideShareTypeRange",
     "SharesDeliveryDayToursReducedWhileInUse",
     "SharesDeliveryDayShorteningStrandsChildren",
+    "SharesDeliveryDayStartMoveStrandsChildren",
     "SharesDeliveryDaySuccessionCoverageGap",
     "DeliveryStationDayShorteningStrandsChildren",
+    "DeliveryStationDayStartMoveStrandsChildren",
     # Membership / coop-share / document errors.
     "MemberHasActiveSubscriptions",
     "MemberAlreadyCancelled",

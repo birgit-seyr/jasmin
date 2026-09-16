@@ -23,5 +23,6 @@
   "save_failed_generic": "Something went wrong while saving.",
   "load_failed_title": "Loading failed",
   "load_failed_hint": "Please try again.",
-  "retry": "Try again"
+  "retry": "Try again",
+  "bulk_partial_skipped": "{{skipped}} of {{total}} row(s) skipped: {{reason}}"
 }

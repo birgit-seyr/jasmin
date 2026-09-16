@@ -6062,7 +6062,10 @@ export const useCommissioningCreateOffersCreate = <TError = ErrorResponse,
     /**
  * 
     Finalize multiple INVENTORY entries by setting is_finalized=True.
-    Sets amount to theoretical_current_stock ONLY if amount is null/None.
+    An entry nobody has counted yet is finalized AT the stock it reports
+    (counted == the entity's current balance) with its stored correction left
+    alone, so finalizing never moves a balance. An entry that is already
+    finalized is left untouched and reported under ``errors`` for that id.
     
  * @summary Bulk finalize inventory entries
  */
@@ -6129,8 +6132,11 @@ export const useCommissioningCurrentStockBulkFinalizeCreate = <TError = ErrorRes
     }
     /**
  * 
-    Set amount to theoretical_current_stock for multiple INVENTORY entries.
-    ONLY updates entries where amount is null/None.
+    Record theoretical_current_stock as the physical count for multiple
+    INVENTORY entries — including a negative one, which is what an
+    over-allocated article really holds. An entry that already carries a count,
+    or is finalized, is left untouched and reported under ``errors`` for that
+    id.
     
  * @summary Bulk set inventory to expected values
  */
@@ -6197,9 +6203,9 @@ export const useCommissioningCurrentStockBulkSetAsExpectedCreate = <TError = Err
     }
     /**
  * 
-    Set amount to 0 for multiple INVENTORY entries.
-    ONLY creates entries where none exist yet.
-    Useful for marking items as counted but found to be zero.
+    Record a physical count of 0 for multiple INVENTORY entries — the item was
+    looked for and none was there. An entry that already carries a count, or is
+    finalized, is left untouched and reported under ``errors`` for that id.
     
  * @summary Bulk set inventory to zero
  */
@@ -13126,7 +13132,7 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Partially update share content (same behaviour as PUT). PK format: {year}_{delivery_week}_{share_article}_{unit}_{size}
+ * Partially update share content: the slot is rebuilt from the cells in the body, and a row-level field the body omits (washing, cleaning, packing_station, note, seller, kg_per_piece, price_per_unit) keeps its stored value. PK format: {year}_{delivery_week}_{share_article}_{unit}_{size}
  */
 export const commissioningHarvestSharePlanningPartialUpdate = (
     id: string,

@@ -24,6 +24,7 @@ from ..errors import (
     DeliveryDayValidFromInPast,
     InvalidQueryParam,
     SharesDeliveryDayShorteningStrandsChildren,
+    SharesDeliveryDayStartMoveStrandsChildren,
 )
 from ..models import (
     DeliveryStationDay,
@@ -257,6 +258,34 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 raise SharesDeliveryDayShorteningStrandsChildren(
                     delivery_day=str(instance),
                     new_valid_until=new_valid_until,
+                    stranded_count=stranded,
+                )
+
+        # The mirror case at the other end of the window: moving valid_from
+        # LATER leaves everything before the new start with no day covering it.
+        # The children keep pointing at this row — the child-migration services
+        # run only on the create (succession) path — so they are silently
+        # orphaned rather than re-homed. A start moved EARLIER only widens the
+        # window and strands nothing. A start in the past is deliberately NOT
+        # refused here; only the move past existing children is.
+        new_valid_from = serializer.validated_data.get(
+            "valid_from", instance.valid_from
+        )
+        if new_valid_from > instance.valid_from:
+            stranded = instance.deliverystationday_set.filter(
+                valid_from__lt=new_valid_from
+            ).count()
+            # Shares store (iso year, week), not a date — a share is uncovered
+            # if its week starts before the new start. Compare iso tuples.
+            vf_week = Week.withdate(new_valid_from)
+            stranded += instance.share_set.filter(
+                Q(year__lt=vf_week.year)
+                | Q(year=vf_week.year, delivery_week__lt=vf_week.week)
+            ).count()
+            if stranded:
+                raise SharesDeliveryDayStartMoveStrandsChildren(
+                    delivery_day=str(instance),
+                    new_valid_from=new_valid_from,
                     stranded_count=stranded,
                 )
         serializer.save()

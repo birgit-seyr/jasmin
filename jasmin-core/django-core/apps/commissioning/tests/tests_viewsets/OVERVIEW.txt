@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-795 tests | 162 test classes | 31 files
+827 tests | 165 test classes | 31 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 Counts are collected cases, so a parametrized method counts once per case.
@@ -14,14 +14,16 @@ test_badge_viewsets.py (16 tests)
   TestUnconfirmedMembersViewSet            4   unconfirmed_members badge count
   TestUnconfirmedCoopSharesViewSet         4   unconfirmed_coop_shares badge count
 
-test_basics_viewsets.py (51 tests)
+test_basics_viewsets.py (54 tests)
 ──────────────────────────────────
   TestSeasonViewSet                        3   list, create (with valid_from/valid_until)
   TestSeasonOneOpenConstraint              2   DB refuses a second open season; open + closed allowed
   TestStorageViewSet                       5   list, is_active filter, ordering
-  TestShareArticleViewSet                 10   list, is_active filter, the is_harvest_share_article /
+  TestShareArticleViewSet                 13   list, is_active filter, the is_harvest_share_article /
                                                get_price_info / is_data_list flags read one-armed,
-                                               retrieve, create, patch, delete
+                                               retrieve, create, patch, delete, a PATCH without
+                                               share_option_list keeps the options (an explicit list
+                                               rewrites them, an empty one clears)
   TestStorageViewSetEditDelete             3   retrieve, partial_update, delete
   TestCrateViewSet                         4   list, partial_update, delete
   TestDefaultShareArticleInShareViewSet   19   list/filter (article/variation/type), CRUD,
@@ -34,11 +36,15 @@ test_basics_viewsets.py (51 tests)
                                                in-use article → 409 + row kept; unused → 204;
                                                future price of in-use article → 204
 
-test_choices_viewsets.py (15 tests)
+test_choices_viewsets.py (19 tests)
 ───────────────────────────────────
   TestSharesDeliveryDayViewSet            10   list, retrieve, tour count raise/reduce rules,
                                                get_delivery_stations flag (false omits the prefetch;
                                                without active_at_date → 400)
+  TestSharesDeliveryDayValidFromMove       4   moving valid_from later past existing shares or
+                                               station-days → 409 and the row is untouched; moving it
+                                               earlier (incl. into the past) stays allowed, as does
+                                               moving it later with nothing before it
   TestOrdersDeliveryDayViewSet             2   list
   TestPaymentCycleViewSet                  3   list, is_active filter
 
@@ -125,12 +131,14 @@ test_delivery_station_query_count.py (1 test)
 ─────────────────────────────────────────────
   (module-level)                           1   delivery-station list is scale-invariant
 
-test_delivery_viewsets.py (28 tests)
+test_delivery_viewsets.py (31 tests)
 ────────────────────────────────────
   TestDeliveryStationViewSet               8   list, is_active filter, retrieve, can_be_deleted, filter by
                                                member (confirmed subscriptions only), member-role read
-  TestDeliveryStationDayViewSet           16   list, filter by station / day / member, capacity by week,
-                                               a member cannot query another member's station-days
+  TestDeliveryStationDayViewSet           19   list, filter by station / day / member, capacity by week,
+                                               a member cannot query another member's station-days;
+                                               moving valid_from later past existing deliveries → 409 with
+                                               the row untouched, earlier or with nothing before it → 200
   TestDeliveryToursViewSet                 3   requires delivery_day, list with day, update_tours targets the
                                                open row on a versioned station-day
   TestUpdateToursCreatesStationDay         1   assigning a station without a station-day creates one
@@ -155,13 +163,17 @@ test_documentation_viewsets.py (49 tests)
   TestUpdateAdditionalTheoreticalAmount    1   invalid model → 400
   TestMovementSourceDeleteRecascades       3   deleting a movement source re-cascades the stock snapshots
 
-test_imports_viewsets.py (17 tests)
+test_imports_viewsets.py (22 tests)
 ───────────────────────────────────
   TestExternalCodeMappingViewSet           6   list, filter by kind, create, duplicate code refused, delete
   TestShareImportBatchViewSet              9   upload → preview-ready (or failed on invalid CSV), missing file
                                                → 400, idempotent for the same bytes, preview action,
                                                full upload → preview → apply round trip
   TestExternalShareDemandViewSet           2   list, demand visible after apply
+  TestShareImportBatchTerminalStatus       5   an applied or superseded batch refuses preview and apply, the
+                                               stored status named in the error details; re-uploading the
+                                               same file is a 409 naming that batch, while a changed file
+                                               for the same week still uploads and applies
 
 test_logs_viewsets.py (16 tests) — theoretical harvest/purchase/wash/clean recency window (frozen clock)
 ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -346,17 +358,22 @@ test_shares_delivery_day_query_count.py (1 test)
 ────────────────────────────────────────────────
   (module-level)                           1   list can_be_deleted matches the per-instance answer
 
-test_shares_viewsets.py (101 tests)
+test_shares_viewsets.py (118 tests)
 ───────────────────────────────────
-  TestShareTypeViewSet                    13   list, include_future (current + upcoming, not past), variation
+  TestShareTypeViewSet                    15   list, include_future (current + upcoming, not past), variation
                                                sizes and validity bounds, deletability, filter share_option,
-                                               create/update uppercase, invalid 400
+                                               create/update uppercase, invalid 400, non-string
+                                               share_option 400 on create and update
   TestShareTypeVariationViewSet           17   list, active trial price, subscription validity bounds,
                                                include_future, create inside / outside the share type's range,
                                                filters (share_type, physical, internal_name)
   TestShareTypeVariationGrossPriceViewSet  4   list, filter by variation, not deletable when subscribed
   TestShareViewSet                         4   list, filter year/week, get_days action
   TestShareBulkUpdateAction                2   missing year → 400; an empty week succeeds
+  TestShareBulkUpdateDayValidation         4   the day body runs its request serializer: "abc" and an
+                                               out-of-range day → 400 with the field, a valid day is
+                                               applied while omitted fields survive, the "undefined"
+                                               sentinel still clears (clock frozen, week 30/2026)
   TestShareExportCsvAction                 4   missing / malformed dates → 400; empty range → header-only CSV;
                                                range filters to the ISO-week window
   TestDefaultShareContentBulkList          2   invalid year → 400; filters to the requested share option
@@ -365,11 +382,20 @@ test_shares_viewsets.py (101 tests)
   TestDefaultShareContentBulkDelete        2   invalid composite id → 400; unknown share_article → 404
   TestShareDeliveryMemberPermissions       4   member cannot create or delete; pending_optin still reachable;
                                                office passes the permission layer
-  TestDefaultShareContentBulkCreateValidation 3 valid amount_<var> cell persists; missing field 400;
-                                               NaN/non-finite 400
-  TestDefaultShareContentBulkUpdateValidation 2 composite-id PUT replaces the slot amount; bad-typed field 400
-  TestHarvestSharePlanningViewSet          4   create persists ShareContent + station; null note ok;
-                                               missing field 400; no-amounts 400
+  TestDefaultShareContentBulkCreateValidation 4 valid amount_<var> cell persists; missing field 400;
+                                               NaN/non-finite 400; an amount wider than the numeric(5,3)
+                                               column → 400 amount.invalid naming the cell
+  TestDefaultShareContentBulkUpdateValidation 4 composite-id PUT replaces the slot amount; bad-typed field 400;
+                                               a PATCH without range_1 → 400 required_field.missing and no
+                                               row written; a PATCH carrying the ranges rewrites the slot
+  TestHarvestSharePlanningViewSet         12   create persists ShareContent + station; null note ok;
+                                               missing field 400; no-amounts 400; a PATCH of one cell
+                                               keeps washing / packing_station / note, while PUT still
+                                               replaces them; kg_per_piece / price_per_unit / an amount
+                                               cell wider than their columns → 400 naming the field,
+                                               while a cell at the column limit still persists;
+                                               switching a slot to cleaning clears the stored washing
+                                               flag, and a payload carrying both is a 400
   TestVirtualComponentsViewSet             3   create 201 + persisted component; missing virtual_variation 400;
                                                non-physical component 400
   TestShareDeliveryJokerBillingNotify      4   update/destroy on both viewsets notify the subscription

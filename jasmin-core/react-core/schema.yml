@@ -5406,7 +5406,10 @@ paths:
     post:
       operationId: commissioning_current_stock_bulk_finalize_create
       description: "\n    Finalize multiple INVENTORY entries by setting is_finalized=True.\n
-        \   Sets amount to theoretical_current_stock ONLY if amount is null/None.\n
+        \   An entry nobody has counted yet is finalized AT the stock it reports\n
+        \   (counted == the entity's current balance) with its stored correction left\n
+        \   alone, so finalizing never moves a balance. An entry that is already\n
+        \   finalized is left untouched and reported under ``errors`` for that id.\n
         \   "
       summary: Bulk finalize inventory entries
       tags:
@@ -5487,8 +5490,11 @@ paths:
   /api/commissioning/current_stock_bulk_set_as_expected/:
     post:
       operationId: commissioning_current_stock_bulk_set_as_expected_create
-      description: "\n    Set amount to theoretical_current_stock for multiple INVENTORY
-        entries.\n    ONLY updates entries where amount is null/None.\n    "
+      description: "\n    Record theoretical_current_stock as the physical count for
+        multiple\n    INVENTORY entries — including a negative one, which is what
+        an\n    over-allocated article really holds. An entry that already carries
+        a count,\n    or is finalized, is left untouched and reported under ``errors``
+        for that\n    id.\n    "
       summary: Bulk set inventory to expected values
       tags:
       - commissioning
@@ -5568,9 +5574,10 @@ paths:
   /api/commissioning/current_stock_bulk_set_to_zero/:
     post:
       operationId: commissioning_current_stock_bulk_set_to_zero_create
-      description: "\n    Set amount to 0 for multiple INVENTORY entries.\n    ONLY
-        creates entries where none exist yet.\n    Useful for marking items as counted
-        but found to be zero.\n    "
+      description: "\n    Record a physical count of 0 for multiple INVENTORY entries
+        — the item was\n    looked for and none was there. An entry that already carries
+        a count, or is\n    finalized, is left untouched and reported under ``errors``
+        for that id.\n    "
       summary: Bulk set inventory to zero
       tags:
       - commissioning
@@ -10658,7 +10665,9 @@ paths:
           description: Error response.
     patch:
       operationId: commissioning_harvest_share_planning_partial_update
-      description: 'Partially update share content (same behaviour as PUT). PK format:
+      description: 'Partially update share content: the slot is rebuilt from the cells
+        in the body, and a row-level field the body omits (washing, cleaning, packing_station,
+        note, seller, kg_per_piece, price_per_unit) keeps its stored value. PK format:
         {year}_{delivery_week}_{share_article}_{unit}_{size}'
       parameters:
       - in: path
@@ -19921,6 +19930,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ShareImportBatch'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '401':
           content:
@@ -33839,12 +33854,12 @@ components:
         kg_per_piece:
           type: string
           format: decimal
-          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
           nullable: true
         price_per_unit:
           type: string
           format: decimal
-          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
           nullable: true
         packing_station:
           type: integer
@@ -34035,12 +34050,12 @@ components:
         kg_per_piece:
           type: string
           format: decimal
-          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
           nullable: true
         price_per_unit:
           type: string
           format: decimal
-          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
           nullable: true
         packing_station:
           type: integer
@@ -38906,10 +38921,17 @@ components:
       - sepa_mandate_signed_at
     SetInvoiceNoteRequest:
       type: object
+      description: |-
+        Request body for ``PATCH set_invoice_note/<pk>/``.
+
+        ``max_length`` mirrors ``InvoiceReseller.note`` (``CharField(max_length=500)``
+        — an internal office annotation, which is why it stays writable on a
+        finalized invoice). See ``SetOrderNoteRequestSerializer``.
       properties:
         note:
           type: string
           nullable: true
+          maxLength: 500
     SetInvoiceNoteResponse:
       type: object
       properties:
@@ -38920,10 +38942,18 @@ components:
       - note
     SetOrderNoteRequest:
       type: object
+      description: |-
+        Request body for ``PATCH set_order_note/<pk>/``.
+
+        ``max_length`` mirrors ``Order.note`` (``CharField(max_length=500)``), so an
+        over-long note is a 400 naming the field rather than a ``DataError`` raised
+        by the UPDATE. ``note`` stays optional and nullable: an absent key means
+        "clear it", which is what the office autosave sends for an emptied box.
       properties:
         note:
           type: string
           nullable: true
+          maxLength: 500
     SetOrderNoteResponse:
       type: object
       properties:
@@ -39467,24 +39497,45 @@ components:
       - valid_from
     ShareBulkDayUpdateRequest:
       type: object
+      description: |-
+        Body of ``ShareViewSet.bulk_update`` — the editable day-level fields, any
+        subset of them.
+
+        Mirrors ``SHARE_DAY_FIELDS`` in ``shares_day_change_service`` (keep in
+        sync). The service assigns each value straight to a ``Share`` weekday
+        column, so the integer coercion and the Monday..Sunday bounds have to happen
+        here. ``changed_day_number`` is honoured by the service and edited in the
+        office grid, so it belongs in the body too.
       properties:
         changed_day_number:
           type: integer
+          maximum: 6
+          minimum: 0
           nullable: true
         harvesting_day:
           type: integer
+          maximum: 6
+          minimum: 0
           nullable: true
         packing_day:
           type: integer
+          maximum: 6
+          minimum: 0
           nullable: true
         washing_day:
           type: integer
+          maximum: 6
+          minimum: 0
           nullable: true
         cleaning_day:
           type: integer
+          maximum: 6
+          minimum: 0
           nullable: true
         get_current_stock_day:
           type: integer
+          maximum: 6
+          minimum: 0
           nullable: true
     ShareContent:
       type: object

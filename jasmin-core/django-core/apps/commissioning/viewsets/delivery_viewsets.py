@@ -33,6 +33,7 @@ from ..errors import (
     DeliveryDayValidFromInPast,
     DeliveryExceptionPeriodLocked,
     DeliveryStationDayShorteningStrandsChildren,
+    DeliveryStationDayStartMoveStrandsChildren,
 )
 from ..models import (
     CapacityReservation,
@@ -535,6 +536,42 @@ class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 raise DeliveryStationDayShorteningStrandsChildren(
                     station_day=str(instance),
                     new_valid_until=new_valid_until,
+                    stranded_count=stranded,
+                )
+
+        # Mirror at the other end of the window: moving valid_from LATER leaves
+        # the deliveries/reservations before the new start with no station-day
+        # covering them. They keep pointing at this row (the migration runs only
+        # on the create/succession path), so they are orphaned rather than
+        # re-homed. Moving the start EARLIER only widens the window. A start in
+        # the past is deliberately NOT refused here.
+        current_valid_from = instance.valid_from
+        new_valid_from = serializer.validated_data.get("valid_from", current_valid_from)
+        if new_valid_from > current_valid_from:
+            vf_week = Week.withdate(new_valid_from)
+            stranded = (
+                ShareDelivery.objects.filter(delivery_station_day=instance)
+                .filter(
+                    Q(share__year__lt=vf_week.year)
+                    | Q(
+                        share__year=vf_week.year,
+                        share__delivery_week__lt=vf_week.week,
+                    )
+                )
+                .count()
+            )
+            stranded += (
+                CapacityReservation.objects.filter(delivery_station_day=instance)
+                .filter(
+                    Q(year__lt=vf_week.year)
+                    | Q(year=vf_week.year, week__lt=vf_week.week)
+                )
+                .count()
+            )
+            if stranded:
+                raise DeliveryStationDayStartMoveStrandsChildren(
+                    station_day=str(instance),
+                    new_valid_from=new_valid_from,
                     stranded_count=stranded,
                 )
         serializer.save()

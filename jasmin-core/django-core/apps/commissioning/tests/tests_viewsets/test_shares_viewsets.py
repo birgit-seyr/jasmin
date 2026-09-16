@@ -149,6 +149,29 @@ class TestShareTypeViewSet:
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["share_option"] == "HONEY_SHARE"
 
+    def test_create_non_string_share_option_returns_400(self, api_client, tenant):
+        """A non-string option is the same field-level 400 as an unknown one —
+        the case pre-check used to call ``.upper()`` on it and 500."""
+        resp = api_client.post(
+            self.URL,
+            {"name": "Bad", "share_option": 5, "valid_from": "2028-01-03"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "share_type.invalid_share_option"
+        assert resp.data["field"] == "share_option"
+
+    def test_update_non_string_share_option_returns_400(self, api_client, tenant):
+        st = ShareTypeFactory(share_option="HARVEST_SHARE")
+        url = reverse("share_type-detail", kwargs={"pk": st.pk})
+
+        resp = api_client.patch(url, {"share_option": ["HONEY_SHARE"]}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "share_type.invalid_share_option"
+        st.refresh_from_db()
+        assert st.share_option == "HARVEST_SHARE"
+
     def test_create_succeeds_open_predecessor(self, api_client, tenant):
         # Creating a new ShareType for a share_option whose open predecessor has
         # no active variations must SUCCEED and close the predecessor. The DRF
@@ -617,6 +640,83 @@ class TestShareBulkUpdateAction:
 
 
 @pytest.mark.django_db
+class TestShareBulkUpdateDayValidation:
+    """The body is written straight onto ``Share`` weekday columns by
+    ``SharesDayChangeService``, so the request serializer coerces and bounds it
+    before the service runs."""
+
+    @pytest.fixture(autouse=True)
+    def _frozen_today(self):
+        """Pin "today" to 2026-04-22 (ISO week 17).
+
+        ``bulk_update`` refuses a past/current week, so these tests target week
+        30 of 2026 — frozen here, that stays in the future forever.
+        """
+        with time_machine.travel(datetime.datetime(2026, 4, 22, 12, 0), tick=False):
+            yield
+
+    @staticmethod
+    def _put(api_client, body):
+        return api_client.put(
+            URL_SHARE_BULK_UPDATE,
+            body,
+            format="json",
+            QUERY_STRING="year=2026&delivery_week=30",
+        )
+
+    def test_non_numeric_day_returns_400(self, api_client, tenant):
+        share = ShareFactory(year=2026, delivery_week=30)
+        stored_day = share.harvesting_day
+
+        resp = self._put(api_client, {"harvesting_day": "abc"})
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["field"] == "harvesting_day"
+        share.refresh_from_db()
+        assert share.harvesting_day == stored_day
+
+    def test_day_outside_the_week_returns_400(self, api_client, tenant):
+        share = ShareFactory(year=2026, delivery_week=30)
+        stored_day = share.packing_day
+
+        resp = self._put(api_client, {"packing_day": 9})
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["field"] == "packing_day"
+        share.refresh_from_db()
+        assert share.packing_day == stored_day
+
+    def test_valid_day_is_applied_and_omitted_fields_survive(self, api_client, tenant):
+        share = ShareFactory(year=2026, delivery_week=30)
+        stored_packing_day = share.packing_day
+
+        resp = self._put(api_client, {"harvesting_day": 3})
+
+        assert resp.status_code == status.HTTP_200_OK
+        share.refresh_from_db()
+        assert share.harvesting_day == 3
+        assert share.packing_day == stored_packing_day
+
+    def test_undefined_sentinel_is_accepted_as_a_cleared_day(self, api_client, tenant):
+        # The office grid has always sent this string for a blanked cell, so the
+        # serializer has to keep taking it as "no day" instead of rejecting it.
+        # A cleared day then falls back to the delivery day's default in
+        # ``Share.save`` — a NULL would drop the share out of every day-filtered
+        # list.
+        share = ShareFactory(year=2026, delivery_week=30)
+        assert (
+            self._put(api_client, {"washing_day": 4}).status_code == status.HTTP_200_OK
+        )
+
+        resp = self._put(api_client, {"washing_day": "undefined"})
+
+        assert resp.status_code == status.HTTP_200_OK
+        share.refresh_from_db()
+        assert share.washing_day == share.delivery_day.default_washing_day
+        assert share.washing_day != 4
+
+
+@pytest.mark.django_db
 class TestShareExportCsvAction:
     def test_missing_dates_returns_400(self, api_client, tenant):
         resp = api_client.get(URL_SHARE_EXPORT_CSV)
@@ -910,6 +1010,29 @@ class TestDefaultShareContentBulkCreateValidation:
         resp = api_client.post(URL_DSC_BULK_CREATE, bad, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_amount_wider_than_the_column_returns_400(self, api_client, tenant):
+        """``DefaultShareContent.amount`` is numeric(5,3) — 100 overflows it.
+        The cell is named here instead of the INSERT failing."""
+        variation = ShareTypeVariationFactory()
+        article = ShareArticleFactory()
+        bad = {
+            "year": 2099,
+            "share_article": str(article.id),
+            "share_option": "HARVEST_SHARE",
+            "unit": "KG",
+            "size": "M",
+            "range_1": 10,
+            "range_2": 10,
+            f"amount_{variation.id}": "100",
+        }
+
+        resp = api_client.post(URL_DSC_BULK_CREATE, bad, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "amount.invalid"
+        assert resp.data["field"] == f"amount_{variation.id}"
+        assert not DefaultShareContent.objects.filter(share_article=article).exists()
+
 
 @pytest.mark.django_db
 class TestDefaultShareContentBulkUpdateValidation:
@@ -946,6 +1069,56 @@ class TestDefaultShareContentBulkUpdateValidation:
         body = {"range_1": "abc", f"amount_{variation.id}": "1"}
         resp = api_client.put(url, body, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_patch_without_range_1_returns_400(self, api_client, tenant):
+        """The service indexes ``range_1``/``range_2`` unconditionally, so on
+        this partially-validated path an omitted range reached it as a
+        KeyError. It is a named field error now."""
+        variation = ShareTypeVariationFactory()
+        article = ShareArticleFactory()
+        composite_id = f"2099_{article.id}_KG_M"
+        url = reverse("default_share_contents-bulk-update", args=[composite_id])
+
+        resp = api_client.patch(
+            url,
+            {"share_option": "HARVEST_SHARE", f"amount_{variation.id}": "2.0"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "required_field.missing"
+        assert resp.data["field"] == "range_1"
+        assert not DefaultShareContent.objects.filter(share_article=article).exists()
+
+    def test_patch_with_ranges_rewrites_the_slot(self, api_client, tenant):
+        """A partial body that carries the ranges still works — the rest of the
+        slot identity comes from the composite id."""
+        variation = ShareTypeVariationFactory()
+        article = ShareArticleFactory()
+        composite_id = f"2099_{article.id}_KG_M"
+        url = reverse("default_share_contents-bulk-update", args=[composite_id])
+
+        resp = api_client.patch(
+            url,
+            {
+                "share_option": "HARVEST_SHARE",
+                "range_1": 14,
+                "range_2": 14,
+                f"amount_{variation.id}": "2.5",
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        row = DefaultShareContent.objects.get(
+            year=2099,
+            share_article=article,
+            delivery_week=14,
+            share_type_variation=variation,
+            unit="KG",
+            size="M",
+        )
+        assert row.amount == Decimal("2.5")
 
 
 # ---------------------------------------------------------------------------
@@ -1041,6 +1214,196 @@ class TestHarvestSharePlanningViewSet:
             reverse("harvest_share_planning-list"), payload, format="json"
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_kg_per_piece_wider_than_the_column_returns_400(self, api_client, tenant):
+        """``ShareContent.kg_per_piece`` is numeric(5,3). A wider value used to
+        pass the serializer and fail at the INSERT as a generic data error; the
+        serializer width now names the field."""
+        article, day, variation, _station = self._setup()
+        payload = {
+            "year": 2026,
+            "delivery_week": 15,
+            "share_article": str(article.id),
+            "unit": "KG",
+            "size": "M",
+            "kg_per_piece": "1234.567",
+            f"day_{day.id}_variation_{variation.id}": "3.5",
+        }
+
+        resp = api_client.post(
+            reverse("harvest_share_planning-list"), payload, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert "kg_per_piece" in resp.data["details"]
+        assert not ShareContent.objects.filter(share_article=article).exists()
+
+    def test_price_per_unit_wider_than_the_column_returns_400(self, api_client, tenant):
+        """``ShareContent.price_per_unit`` is numeric(6,2)."""
+        article, day, variation, _station = self._setup()
+        payload = {
+            "year": 2026,
+            "delivery_week": 15,
+            "share_article": str(article.id),
+            "unit": "KG",
+            "size": "M",
+            "price_per_unit": "12345.67",
+            f"day_{day.id}_variation_{variation.id}": "3.5",
+        }
+
+        resp = api_client.post(
+            reverse("harvest_share_planning-list"), payload, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert "price_per_unit" in resp.data["details"]
+        assert not ShareContent.objects.filter(share_article=article).exists()
+
+    def test_amount_cell_wider_than_the_column_returns_400(self, api_client, tenant):
+        """The dynamic cells land in numeric(5,3), so 100 is one integral digit
+        too many. The offending cell key is named rather than the whole row
+        failing at the database."""
+        article, day, variation, _station = self._setup()
+        cell = f"day_{day.id}_variation_{variation.id}"
+        payload = {
+            "year": 2026,
+            "delivery_week": 15,
+            "share_article": str(article.id),
+            "unit": "KG",
+            "size": "M",
+            cell: "100.5",
+        }
+
+        resp = api_client.post(
+            reverse("harvest_share_planning-list"), payload, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "amount.invalid"
+        assert resp.data["field"] == cell
+        assert not ShareContent.objects.filter(share_article=article).exists()
+
+    def test_amount_cell_at_the_column_limit_is_accepted(self, api_client, tenant):
+        article, day, variation, _station = self._setup()
+        payload = {
+            "year": 2026,
+            "delivery_week": 15,
+            "share_article": str(article.id),
+            "unit": "KG",
+            "size": "M",
+            f"day_{day.id}_variation_{variation.id}": "99.999",
+        }
+
+        resp = api_client.post(
+            reverse("harvest_share_planning-list"), payload, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        share_content = ShareContent.objects.filter(share_article=article).first()
+        assert share_content.amount == Decimal("99.999")
+
+    @staticmethod
+    def _create_slot(api_client, article, day, variation, **extra):
+        payload = {
+            "year": 2026,
+            "delivery_week": 15,
+            "share_article": str(article.id),
+            "unit": "KG",
+            "size": "M",
+            f"day_{day.id}_variation_{variation.id}": "3.5",
+            **extra,
+        }
+        return api_client.post(
+            reverse("harvest_share_planning-list"), payload, format="json"
+        )
+
+    @staticmethod
+    def _slot_url(article):
+        return reverse(
+            "harvest_share_planning-detail", args=[f"2026_15_{article.id}_KG_M"]
+        )
+
+    def test_patch_keeps_the_stored_row_level_fields(self, api_client, tenant):
+        """Editing one cell must not reset the slot's washing / cleaning /
+        packing-station flags: the rebuild stamps them onto every recreated
+        row, so an omitted flag used to come back as the column default."""
+        article, day, variation, _station = self._setup()
+        created = self._create_slot(
+            api_client,
+            article,
+            day,
+            variation,
+            washing=True,
+            packing_station=2,
+            note="keep me",
+        )
+        assert created.status_code == status.HTTP_200_OK
+
+        resp = api_client.patch(
+            self._slot_url(article),
+            {f"day_{day.id}_variation_{variation.id}": "4"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        row = ShareContent.objects.get(share_article=article, unit="KG", size="M")
+        assert row.amount == Decimal("4")
+        assert row.washing is True
+        assert row.packing_station == 2
+        assert row.note == "keep me"
+
+    def test_patch_switching_to_cleaning_clears_the_stored_washing_flag(
+        self, api_client, tenant
+    ):
+        """``ShareContent`` holds at most one of the two flags, so carrying the
+        stored ``washing`` over onto a body that sets ``cleaning`` would rebuild
+        the slot into the pair the database refuses."""
+        article, day, variation, _station = self._setup()
+        created = self._create_slot(api_client, article, day, variation, washing=True)
+        assert created.status_code == status.HTTP_200_OK
+
+        resp = api_client.patch(
+            self._slot_url(article),
+            {"cleaning": True, f"day_{day.id}_variation_{variation.id}": "5"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        row = ShareContent.objects.get(share_article=article, unit="KG", size="M")
+        assert row.cleaning is True
+        assert row.washing is False
+        assert row.amount == Decimal("5")
+
+    def test_a_payload_carrying_both_flags_is_refused(self, api_client, tenant):
+        article, day, variation, _station = self._setup()
+
+        resp = self._create_slot(
+            api_client, article, day, variation, washing=True, cleaning=True
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "share_content.washing_cleaning_mutually_exclusive"
+        assert not ShareContent.objects.filter(share_article=article).exists()
+
+    def test_put_still_replaces_the_row_level_fields(self, api_client, tenant):
+        """PUT stays a full replace: a flag the body omits falls back to the
+        serializer default."""
+        article, day, variation, _station = self._setup()
+        created = self._create_slot(
+            api_client, article, day, variation, washing=True, packing_station=2
+        )
+        assert created.status_code == status.HTTP_200_OK
+
+        resp = api_client.put(
+            self._slot_url(article),
+            {f"day_{day.id}_variation_{variation.id}": "4"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        row = ShareContent.objects.get(share_article=article, unit="KG", size="M")
+        assert row.washing is False
+        assert row.packing_station == 1
 
 
 # ---------------------------------------------------------------------------

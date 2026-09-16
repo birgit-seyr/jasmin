@@ -385,6 +385,103 @@ class TestBulkFinalizeCurrentStock:
         assert resp.data["errors"] == []
         assert "updated" in resp.data or "created" in resp.data
 
+    def test_finalizing_an_uncounted_entry_records_the_theoretical_count(
+        self, api_client, tenant
+    ):
+        # Finalizing a metadata-only row means "the theoretical amount IS the
+        # count" — it is finalized WITH that count, not as a permanent blank.
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        _seed_theoretical_stock(article, storage, 50)
+        cid = _make_composite_id(article, "KG", "M", storage)
+        detail_url = reverse("current_stock_comparison_detail", args=[cid])
+        api_client.patch(detail_url, {"washed": True}, format="json")
+
+        resp = api_client.post(URL_BULK_FINALIZE, {"ids": [cid]}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data == {"updated": 1, "created": 0, "errors": []}
+        inventory = _inventory_for(article, storage)
+        assert inventory.is_finalized is True
+        assert inventory.counted_amount == Decimal("50.000")
+        assert inventory.amount == Decimal("0.000")
+        assert _balance(article, storage) == Decimal("50")
+
+    def test_finalizing_a_negative_stock_keeps_it_negative(self, api_client, tenant):
+        """An over-allocated article really holds less than nothing. Lifting the
+        count to 0 would write a correction that forces the ledger to zero and
+        erase the over-allocation the office needs to see."""
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        _seed_theoretical_stock(article, storage, -12.5)
+        cid = _make_composite_id(article, "KG", "M", storage)
+        detail_url = reverse("current_stock_comparison_detail", args=[cid])
+        api_client.patch(detail_url, {"washed": True}, format="json")
+
+        resp = api_client.post(URL_BULK_FINALIZE, {"ids": [cid]}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data == {"updated": 1, "created": 0, "errors": []}
+        inventory = _inventory_for(article, storage)
+        assert inventory.is_finalized is True
+        assert inventory.counted_amount == Decimal("-12.500")
+        assert inventory.amount == Decimal("0.000")
+        assert _balance(article, storage) == Decimal("-12.5")
+
+    def test_finalizing_keeps_the_correction_an_uncounted_row_stores(
+        self, api_client, tenant
+    ):
+        """A NULL-counted row can carry a correction of its own — the cascade
+        refuses to touch those. Finalizing records the stock the row reports as
+        its count and leaves the delta alone, so no balance moves."""
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        _seed_theoretical_stock(article, storage, 50)
+        cid = _make_composite_id(article, "KG", "M", storage)
+        detail_url = reverse("current_stock_comparison_detail", args=[cid])
+        api_client.patch(detail_url, {"washed": True}, format="json")
+        inventory = _inventory_for(article, storage)
+        # A legacy correction: a stored delta with no count beside it.
+        MovementShareArticle.objects.filter(pk=inventory.pk).update(
+            amount=Decimal("-20")
+        )
+        SnapshotService.delete_snapshots_for_entity(
+            str(article.id), "KG", "M", str(storage.id)
+        )
+        assert _balance(article, storage) == Decimal("30")
+
+        resp = api_client.post(URL_BULK_FINALIZE, {"ids": [cid]}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        inventory.refresh_from_db()
+        assert inventory.is_finalized is True
+        assert inventory.amount == Decimal("-20.000")
+        assert inventory.counted_amount == Decimal("30.000")
+        assert _balance(article, storage) == Decimal("30")
+
+    def test_refinalizing_an_entry_is_reported_not_rewritten(self, api_client, tenant):
+        """A second click on an already-locked day must not re-derive the row's
+        correction behind the office's back — the skip comes back per id."""
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        _seed_theoretical_stock(article, storage, 50)
+        cid = _make_composite_id(article, "KG", "M", storage)
+        detail_url = reverse("current_stock_comparison_detail", args=[cid])
+        api_client.patch(detail_url, {"washed": True}, format="json")
+        first = api_client.post(URL_BULK_FINALIZE, {"ids": [cid]}, format="json")
+        assert first.status_code == status.HTTP_200_OK
+
+        resp = api_client.post(URL_BULK_FINALIZE, {"ids": [cid]}, format="json")
+
+        assert resp.status_code == status.HTTP_207_MULTI_STATUS
+        assert resp.data["updated"] == 0
+        assert resp.data["created"] == 0
+        assert "already finalized" in resp.data["errors"][0]["error"]
+        inventory = _inventory_for(article, storage)
+        assert inventory.counted_amount == Decimal("50.000")
+        assert inventory.amount == Decimal("0.000")
+        assert _balance(article, storage) == Decimal("50")
+
 
 @pytest.mark.django_db
 class TestBulkSetAsExpectedCurrentStock:
@@ -411,6 +508,26 @@ class TestBulkSetAsExpectedCurrentStock:
         assert inv.amount == Decimal("0.000")  # counted == theoretical -> no delta
         assert _balance(article, storage) == Decimal("50")
 
+    def test_a_negative_expected_stock_is_recorded_as_it_stands(
+        self, api_client, tenant
+    ):
+        """The expected value is what the grid shows, negative included — an
+        over-allocated article is below zero, and recording 0 instead would be a
+        count nobody took plus a correction lifting the ledger."""
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        _seed_theoretical_stock(article, storage, -12.5)
+        cid = _make_composite_id(article, "KG", "M", storage)
+
+        resp = api_client.post(URL_BULK_EXPECTED, {"ids": [cid]}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data == {"updated": 0, "created": 1, "errors": []}
+        inv = _inventory_for(article, storage)
+        assert inv.counted_amount == Decimal("-12.500")
+        assert inv.amount == Decimal("0.000")
+        assert _balance(article, storage) == Decimal("-12.5")
+
     def test_missing_theoretical_stock_is_per_item_error(self, api_client, tenant):
         # Unlike set-to-zero, set-as-expected needs a theoretical value; an item
         # with no movements isn't in the theoretical map -> a per-item error.
@@ -430,9 +547,10 @@ class TestBulkSetAsExpectedCurrentStock:
             movement_type=MovementTypeOptions.INVENTORY, share_article=article
         ).exists()
 
-    def test_existing_real_inventory_is_left_untouched(self, api_client, tenant):
-        # set-as-expected only fills entries with a null amount; a real prior
-        # count (70) must survive unchanged.
+    def test_existing_real_count_is_reported_not_overwritten(self, api_client, tenant):
+        # set-as-expected fills entries nobody counted; a real prior count (70)
+        # survives, and the skip comes back per id instead of as a silent
+        # updated=0/created=0 success.
         article = ShareArticleFactory()
         storage = StorageFactory()
         _seed_theoretical_stock(article, storage, 50)
@@ -442,9 +560,52 @@ class TestBulkSetAsExpectedCurrentStock:
 
         resp = api_client.post(URL_BULK_EXPECTED, {"ids": [cid]}, format="json")
 
-        assert resp.data == {"updated": 0, "created": 0, "errors": []}
+        assert resp.status_code == status.HTTP_207_MULTI_STATUS
+        assert resp.data["updated"] == 0
+        assert resp.data["created"] == 0
+        assert resp.data["errors"][0]["id"] == cid
+        assert "already counted" in resp.data["errors"][0]["error"]
         assert _inventory_for(article, storage).counted_amount == Decimal("70.000")
         assert _balance(article, storage) == Decimal("70")
+
+    def test_uncounted_existing_entry_is_set_to_theoretical(self, api_client, tenant):
+        # A metadata-only row (a flag PATCH: counted_amount NULL, zero delta) is
+        # the "not counted yet" case this action exists for. Keying the branch
+        # on ``amount`` — never NULL — made it skip every existing row.
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        _seed_theoretical_stock(article, storage, 50)
+        cid = _make_composite_id(article, "KG", "M", storage)
+        detail_url = reverse("current_stock_comparison_detail", args=[cid])
+        api_client.patch(detail_url, {"washed": True}, format="json")
+
+        resp = api_client.post(URL_BULK_EXPECTED, {"ids": [cid]}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data == {"updated": 1, "created": 0, "errors": []}
+        inventory = _inventory_for(article, storage)
+        assert inventory.counted_amount == Decimal("50.000")
+        assert inventory.amount == Decimal("0.000")  # counted == theoretical
+        assert inventory.washed is True  # the flag it was created with survives
+        assert _balance(article, storage) == Decimal("50")
+
+    def test_finalized_entry_is_refused(self, api_client, tenant):
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        _seed_theoretical_stock(article, storage, 50)
+        cid = _make_composite_id(article, "KG", "M", storage)
+        detail_url = reverse("current_stock_comparison_detail", args=[cid])
+        api_client.patch(detail_url, {"washed": True}, format="json")
+        MovementShareArticle.objects.filter(
+            pk=_inventory_for(article, storage).pk
+        ).update(is_finalized=True)
+
+        resp = api_client.post(URL_BULK_EXPECTED, {"ids": [cid]}, format="json")
+
+        assert resp.status_code == status.HTTP_207_MULTI_STATUS
+        assert resp.data["updated"] == 0
+        assert "finalized" in resp.data["errors"][0]["error"]
+        assert _inventory_for(article, storage).counted_amount is None
 
     def test_multiple_entities_each_set_to_its_own_theoretical(
         self, api_client, tenant
@@ -523,7 +684,7 @@ class TestBulkSetToZeroCurrentStock:
         assert _balance(art1, storage) == Decimal("0")
         assert _balance(art2, storage) == Decimal("0")
 
-    def test_rerun_is_a_noop_no_duplicate_inventory(self, api_client, tenant):
+    def test_rerun_reports_the_existing_count_and_adds_no_row(self, api_client, tenant):
         article = ShareArticleFactory()
         storage = StorageFactory()
         _seed_theoretical_stock(article, storage, 40)
@@ -533,15 +694,38 @@ class TestBulkSetToZeroCurrentStock:
         assert first.data["created"] == 1
         second = api_client.post(URL_BULK_ZERO, {"ids": [cid]}, format="json")
 
-        # The day's inventory already exists with a real (non-null) amount, so the
-        # second call neither creates nor updates — and there's still just one row.
-        assert second.data == {"updated": 0, "created": 0, "errors": []}
+        # The day's inventory already carries a count, so the second call
+        # neither creates nor updates — and says so per id instead of
+        # reporting an all-clear. Still just the one row.
+        assert second.status_code == status.HTTP_207_MULTI_STATUS
+        assert second.data["updated"] == 0
+        assert second.data["created"] == 0
+        assert "already counted" in second.data["errors"][0]["error"]
         assert (
             MovementShareArticle.objects.filter(
                 movement_type=MovementTypeOptions.INVENTORY, share_article=article
             ).count()
             == 1
         )
+        assert _balance(article, storage) == Decimal("0")
+
+    def test_uncounted_existing_entry_is_zeroed(self, api_client, tenant):
+        # A metadata-only row (flag PATCH) is the "not counted yet" case: the
+        # count becomes 0 and the correction delta cancels the theoretical 50.
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        _seed_theoretical_stock(article, storage, 50)
+        cid = _make_composite_id(article, "KG", "M", storage)
+        detail_url = reverse("current_stock_comparison_detail", args=[cid])
+        api_client.patch(detail_url, {"washed": True}, format="json")
+
+        resp = api_client.post(URL_BULK_ZERO, {"ids": [cid]}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data == {"updated": 1, "created": 0, "errors": []}
+        inventory = _inventory_for(article, storage)
+        assert inventory.counted_amount == Decimal("0")
+        assert inventory.amount == Decimal("-50.000")
         assert _balance(article, storage) == Decimal("0")
 
     def test_invalid_id_collected_in_errors_others_succeed(self, api_client, tenant):

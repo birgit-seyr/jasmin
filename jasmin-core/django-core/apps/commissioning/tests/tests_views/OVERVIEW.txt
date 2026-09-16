@@ -4,7 +4,7 @@ COMMISSIONING APP — VIEW TESTS OVERVIEW
 
 Directory: apps/commissioning/tests/tests_views/
 Total files: 11
-Total tests: 346
+Total tests: 363
 Run: poetry run pytest apps/commissioning/tests/tests_views/ -q
 
 Counts are collected cases, so a parametrized method counts once per case and a
@@ -12,7 +12,7 @@ class total can exceed the number of method names listed under it. Files are in
 alphabetical order.
 
 ================================================================================
-1. test_data_import_view.py  (15 tests)
+1. test_data_import_view.py  (19 tests)
    View: data_import_views — CSV sample upload / dry-run import per model
 --------------------------------------------------------------------------------
    TestMemberSampleUpload  (7 cases)
@@ -35,6 +35,16 @@ alphabetical order.
 
    TestCoopShareSampleUpload
      - test_office_uploads_coop_share_sample
+
+   TestResellerAndDeliveryStationUpload
+     - test_office_uploads_resellers
+     - test_office_uploads_delivery_stations
+
+   TestOversizedUpload
+     - test_a_file_past_the_byte_cap_is_refused_naming_the_field
+
+   TestUnreadableRowUpload
+     - test_a_cell_the_parser_refuses_is_a_reported_row_not_a_500
 
 ================================================================================
 2. test_delivery_views.py  (9 tests)
@@ -231,7 +241,7 @@ alphabetical order.
      - test_self_cancel_already_cancelled_returns_409
 
 ================================================================================
-7. test_reseller_views.py  (72 tests)
+7. test_reseller_views.py  (77 tests)
    Views: DaysWithOrdersView, CombinedOrderOverviewView, CreateOffersView,
           BulkCopyOffersToNextWeekView, BulkCopyOffersToOfferGroupView,
           SetInvoiceNoteView, SetOrderNoteView, BulkFinalizeDocumentsView,
@@ -267,8 +277,10 @@ alphabetical order.
      - test_unusable_week_scope_returns_400
      - test_unusable_ids_returns_400
 
-   TestSetInvoiceNoteView
+   TestSetInvoiceNoteView  (3 cases)
      - test_sets_note
+     - test_note_longer_than_the_column_returns_400
+     - test_note_at_the_column_limit_is_accepted
 
    TestBulkFinalizeDocumentsView
      - test_missing_model_returns_400
@@ -302,6 +314,9 @@ alphabetical order.
    TestSetOrderNoteView
      - test_sets_note
      - test_unknown_order_returns_404
+     - test_note_longer_than_the_column_returns_400
+     - test_note_at_the_column_limit_is_accepted
+     - test_blank_note_still_clears_it
 
    TestCreateOffersView
      - test_missing_params_returns_400
@@ -384,7 +399,7 @@ alphabetical order.
      - test_empty_for_no_data
 
 ================================================================================
-11. test_stock_views.py  (50 tests)
+11. test_stock_views.py  (58 tests)
     Views: CurrentStockComparisonView (GET/PATCH/DELETE),
            bulk_finalize_current_stock, bulk_set_as_expected_current_stock,
            bulk_set_to_zero_current_stock, StorageLoggingView
@@ -414,23 +429,31 @@ alphabetical order.
    endpoints)
      - test_non_string_id_returns_400
 
-   TestBulkFinalizeCurrentStock
+   TestBulkFinalizeCurrentStock  (6 cases)
      - test_no_ids_returns_400
      - test_finalizes_stock
+     - test_finalizing_an_uncounted_entry_records_the_theoretical_count
+     - test_finalizing_a_negative_stock_keeps_it_negative
+     - test_finalizing_keeps_the_correction_an_uncounted_row_stores
+     - test_refinalizing_an_entry_is_reported_not_rewritten
 
-   TestBulkSetAsExpectedCurrentStock  (5 cases)
+   TestBulkSetAsExpectedCurrentStock  (8 cases)
      - test_no_ids_returns_400
      - test_creates_inventory_at_theoretical_and_balance_holds
+     - test_a_negative_expected_stock_is_recorded_as_it_stands
      - test_missing_theoretical_stock_is_per_item_error
-     - test_existing_real_inventory_is_left_untouched
+     - test_existing_real_count_is_reported_not_overwritten
+     - test_uncounted_existing_entry_is_set_to_theoretical
+     - test_finalized_entry_is_refused
      - test_multiple_entities_each_set_to_its_own_theoretical
 
-   TestBulkSetToZeroCurrentStock  (6 cases)
+   TestBulkSetToZeroCurrentStock  (7 cases)
      - test_no_ids_returns_400
      - test_creates_zero_inventory_and_balance_drops_to_zero
      - test_works_without_theoretical_stock
      - test_multiple_entities_all_zeroed
-     - test_rerun_is_a_noop_no_duplicate_inventory
+     - test_rerun_reports_the_existing_count_and_adds_no_row
+     - test_uncounted_existing_entry_is_zeroed
      - test_invalid_id_collected_in_errors_others_succeed
 
    TestStorageLoggingView  (7 cases)

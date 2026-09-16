@@ -248,6 +248,65 @@ class TestDeliveryStationDayViewSet:
         assert str(dsd_a.id) in ids
         assert str(dsd_b.id) not in ids
 
+    def test_moving_start_later_past_existing_deliveries_returns_409(
+        self, api_client, tenant
+    ):
+        """Moving the START of a station-day's window later leaves the
+        deliveries before the new date with no station-day covering them.
+
+        They keep pointing at this row — the migration runs only on the
+        create/succession path — so nothing re-homes them. All dates sit in the
+        past, so the assertion never depends on the wall clock.
+        """
+        station_day = DeliveryStationDayFactory(valid_from=datetime.date(2026, 1, 5))
+        # ISO week 15/2026 starts 2026-04-06 — before the proposed new start.
+        share = ShareFactory(
+            delivery_day=station_day.delivery_day, year=2026, delivery_week=15
+        )
+        ShareDeliveryFactory(share=share, delivery_station_day=station_day)
+
+        url = reverse("delivery_station_day-detail", kwargs={"pk": station_day.pk})
+        resp = api_client.patch(url, {"valid_from": "2026-06-01"}, format="json")
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "delivery_station_day.start_move_strands_children"
+        assert resp.data["details"]["stranded_count"] == 1
+        station_day.refresh_from_db()
+        assert station_day.valid_from == datetime.date(2026, 1, 5)
+
+    def test_moving_start_earlier_into_the_past_is_allowed(self, api_client, tenant):
+        """Widening the window backwards strands nothing, and a start in the
+        past stays permitted — onboarding backfills a running schedule."""
+        station_day = DeliveryStationDayFactory(valid_from=datetime.date(2026, 1, 5))
+        share = ShareFactory(
+            delivery_day=station_day.delivery_day, year=2026, delivery_week=15
+        )
+        ShareDeliveryFactory(share=share, delivery_station_day=station_day)
+
+        url = reverse("delivery_station_day-detail", kwargs={"pk": station_day.pk})
+        resp = api_client.patch(url, {"valid_from": "2025-11-03"}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        station_day.refresh_from_db()
+        assert station_day.valid_from == datetime.date(2025, 11, 3)
+
+    def test_moving_start_later_with_nothing_before_it_is_allowed(
+        self, api_client, tenant
+    ):
+        station_day = DeliveryStationDayFactory(valid_from=datetime.date(2026, 1, 5))
+        # Week 40/2026 starts 2026-09-28 — after the proposed new start.
+        share = ShareFactory(
+            delivery_day=station_day.delivery_day, year=2026, delivery_week=40
+        )
+        ShareDeliveryFactory(share=share, delivery_station_day=station_day)
+
+        url = reverse("delivery_station_day-detail", kwargs={"pk": station_day.pk})
+        resp = api_client.patch(url, {"valid_from": "2026-06-01"}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        station_day.refresh_from_db()
+        assert station_day.valid_from == datetime.date(2026, 6, 1)
+
     def test_capacity_without_year_week_returns_null(self, api_client, tenant):
         DeliveryStationDayFactory(capacity=10)
         resp = api_client.get(self.URL)

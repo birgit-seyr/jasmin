@@ -8,6 +8,7 @@
   "upload_btn": "Hochladen & prüfen",
   "uploaded": "Hochgeladen. Status: {{status}}",
   "upload_failed": "Hochladen fehlgeschlagen.",
+  "action_failed": "Aktion fehlgeschlagen.",
   "preview_btn": "2. Vorschau erstellen",
   "apply_btn": "3. In Datenbank übernehmen",
   "batch": "Stapel",

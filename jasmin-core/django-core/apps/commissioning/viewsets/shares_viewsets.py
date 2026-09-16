@@ -84,6 +84,7 @@ from ..scoping import enforce_privileged, is_privileged, scope_to_member
 from ..serializers import (
     DefaultShareContentRequestSerializer,
     DefaultShareContentResponseSerializer,
+    ShareBulkDayUpdateRequestSerializer,
     ShareContentSerializer,
     ShareDayPlanningRowSerializer,
     ShareDeliveryOverviewSerializer,
@@ -117,11 +118,47 @@ from ..utils.weight import quantize_weight
 from .base_viewsets import BaseArchivableViewSet, CanBeDeletedDestroyMixin
 
 
-def _validate_share_option(value: str) -> str | None:
-    """Uppercase and validate a share_option value. Returns None if invalid."""
-    upper = value.upper()
+def _normalize_share_option(value: object) -> str | None:
+    """Upper-case a ``share_option`` and check it against ``ShareOptions``.
+
+    Returns ``None`` for anything the choices don't cover — a non-string (JSON
+    number, list, object) included, so it lands as the same field-level 400 as
+    an unknown option instead of an ``AttributeError`` on ``.upper()``.
+    """
+    if not isinstance(value, str):
+        return None
     valid = {v for v, _l in ShareOptions.choices}
+    upper = value.upper()
     return upper if upper in valid else None
+
+
+def _body_with_normalized_share_option(request: Request) -> Any:
+    """A mutable copy of the body whose ``share_option`` is upper-cased.
+
+    The office table sends the option in whatever case the picker produced,
+    while the ModelSerializer's ``ChoiceField`` is case-sensitive — hence this
+    pre-pass. A value outside the choices is a field-level 400 raised here,
+    before the serializer runs.
+    """
+    data = request.data.copy()
+    if not hasattr(data, "get"):
+        # Not a mapping (a list body) — let the serializer raise its canonical
+        # "expected a dictionary" 400.
+        return data
+
+    raw_share_option = data.get("share_option")
+    if not raw_share_option:
+        return data
+
+    normalized = _normalize_share_option(raw_share_option)
+    if normalized is None:
+        raise CommissioningError(
+            f"ShareOption '{raw_share_option}' is not a valid choice.",
+            field="share_option",
+            code="share_type.invalid_share_option",
+        )
+    data["share_option"] = normalized
+    return data
 
 
 class ShareTypeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
@@ -239,17 +276,7 @@ class ShareTypeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         return queryset
 
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        data = request.data.copy()
-
-        if "share_option" in data and data["share_option"]:
-            validated = _validate_share_option(data["share_option"])
-            if validated is None:
-                raise CommissioningError(
-                    f"ShareOption '{data['share_option'].upper()}' is not a valid choice.",
-                    field="share_option",
-                    code="share_type.invalid_share_option",
-                )
-            data["share_option"] = validated
+        data = _body_with_normalized_share_option(request)
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -260,17 +287,7 @@ class ShareTypeViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         )
 
     def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        data = request.data.copy()
-
-        if "share_option" in data and data["share_option"]:
-            validated = _validate_share_option(data["share_option"])
-            if validated is None:
-                raise CommissioningError(
-                    f"ShareOption '{data['share_option'].upper()}' is not a valid choice.",
-                    field="share_option",
-                    code="share_type.invalid_share_option",
-                )
-            data["share_option"] = validated
+        data = _body_with_normalized_share_option(request)
 
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
@@ -1269,34 +1286,8 @@ class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         # The body carries the editable day-level fields (any subset); the
-        # service merges only the keys present. Mirrors ``SHARE_DAY_FIELDS`` in
-        # ``shares_day_change_service`` — keep in sync.
-        request=inline_serializer(
-            name="ShareBulkDayUpdateRequest",
-            fields={
-                # changed_day_number IS honoured by SharesDayChangeService.apply
-                # (it's in SHARE_DAY_FIELDS) and edited via ShareDays.tsx, so it
-                # must be in the documented schema too.
-                "changed_day_number": drf_serializers.IntegerField(
-                    required=False, allow_null=True
-                ),
-                "harvesting_day": drf_serializers.IntegerField(
-                    required=False, allow_null=True
-                ),
-                "packing_day": drf_serializers.IntegerField(
-                    required=False, allow_null=True
-                ),
-                "washing_day": drf_serializers.IntegerField(
-                    required=False, allow_null=True
-                ),
-                "cleaning_day": drf_serializers.IntegerField(
-                    required=False, allow_null=True
-                ),
-                "get_current_stock_day": drf_serializers.IntegerField(
-                    required=False, allow_null=True
-                ),
-            },
-        ),
+        # service merges only the keys present.
+        request=ShareBulkDayUpdateRequestSerializer,
         parameters=[
             get_year_parameter(),
             get_delivery_week_parameter(),
@@ -1332,12 +1323,19 @@ class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         delivery_day = params["day_number"]
         force = params["force"]
 
+        # The service assigns each value straight to a ``Share`` weekday column,
+        # so the body has to be coerced and bounded first: "abc" would reach the
+        # ORM as a ValueError (not a DataError the handler maps to a 400), and a
+        # day outside Monday..Sunday would only be refused by Postgres.
+        payload = ShareBulkDayUpdateRequestSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+
         # ``PastWeekError`` (409) propagates to the exception handler.
         SharesDayChangeService.apply(
             year=year,
             delivery_week=delivery_week,
             day_number=delivery_day,
-            data=request.data,
+            data=payload.validated_data,
             force=force,
         )
 

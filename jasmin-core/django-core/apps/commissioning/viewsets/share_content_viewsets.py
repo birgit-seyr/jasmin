@@ -146,7 +146,9 @@ class HarvestSharePlanningViewSet(RolePermissionsMixin, viewsets.ViewSet):
         responses={200: HarvestSharePlanningRowSerializer},
         description="Update share content. PK format: {year}_{delivery_week}_{share_article}_{unit}_{size}",
     )
-    def update(self, request: Request, pk: str | None = None) -> Response:
+    def update(
+        self, request: Request, pk: str | None = None, *, partial: bool = False
+    ) -> Response:
         parsed = parse_composite_pk(
             pk, fields=_PLANNING_PK_FIELDS, code="share_content.invalid_pk"
         )
@@ -155,12 +157,19 @@ class HarvestSharePlanningViewSet(RolePermissionsMixin, viewsets.ViewSet):
         share_article = parsed["share_article"]
         unit = parsed["unit"]
         size = parsed["size"]
-        serializer = HarvestSharePlanningUpdateRequestSerializer(data=request.data)
+        serializer = HarvestSharePlanningUpdateRequestSerializer(
+            data=request.data, partial=partial
+        )
         serializer.is_valid(raise_exception=True)
         # ``validated_data`` carries the dynamic ``day_<id>_variation_<id>`` cells
         # (merged by ``DynamicAmountKeysMixin``). The empty-clear semantics still
         # hold: a slot the user cleared has no usable cells, so the extraction is
         # empty and ``replace_share_planning`` takes its clear path.
+        #
+        # ``carry_over_unset_fields`` on the PATCH path: the rebuild stamps the
+        # row-level attributes (washing, cleaning, packing_station, …) onto every
+        # recreated row, so a field the caller never sent must come from the
+        # stored rows rather than the column default. A PUT replaces them.
         share_contents = self.service.replace_share_planning(
             year=int(year),
             delivery_week=int(delivery_week),
@@ -168,6 +177,7 @@ class HarvestSharePlanningViewSet(RolePermissionsMixin, viewsets.ViewSet):
             unit=unit,
             size=size,
             data=serializer.validated_data,
+            carry_over_unset_fields=partial,
         )
         group_data = self.service.get_group_data(share_contents)
         if group_data is None:
@@ -195,12 +205,15 @@ class HarvestSharePlanningViewSet(RolePermissionsMixin, viewsets.ViewSet):
         request=HarvestSharePlanningUpdateRequestSerializer,
         responses={200: HarvestSharePlanningRowSerializer},
         description=(
-            "Partially update share content (same behaviour as PUT). "
+            "Partially update share content: the slot is rebuilt from the cells "
+            "in the body, and a row-level field the body omits (washing, "
+            "cleaning, packing_station, note, seller, kg_per_piece, "
+            "price_per_unit) keeps its stored value. "
             "PK format: {year}_{delivery_week}_{share_article}_{unit}_{size}"
         ),
     )
     def partial_update(self, request: Request, pk: str | None = None) -> Response:
-        return self.update(request, pk)
+        return self.update(request, pk, partial=True)
 
     @extend_schema(
         # Returns 200 with a message body, not the usual destroy 204.

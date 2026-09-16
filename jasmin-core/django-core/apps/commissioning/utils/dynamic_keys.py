@@ -11,7 +11,7 @@ value-coercion can't drift.
 from __future__ import annotations
 
 import re
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
 from ..errors import InvalidAmount
@@ -33,8 +33,21 @@ DAY_VARIATION_RE = re.compile(
 SCAFFOLD_VALUES = (None, "", "undefined")
 
 
-def parse_amount_cell(value: object, *, field: str) -> Decimal:
-    """Coerce a dynamic amount cell to a FINITE ``Decimal`` or raise
+# Every dynamic amount cell lands in a ``numeric(5,3)`` column —
+# ``ShareContent.amount`` / ``.backup_amount`` and ``DefaultShareContent.amount``
+# — so two integral digits is all the column holds.
+AMOUNT_MAX_DIGITS = 5
+AMOUNT_DECIMAL_PLACES = 3
+
+
+def parse_amount_cell(
+    value: object,
+    *,
+    field: str,
+    max_digits: int = AMOUNT_MAX_DIGITS,
+    decimal_places: int = AMOUNT_DECIMAL_PLACES,
+) -> Decimal:
+    """Coerce a dynamic amount cell to a FINITE, in-range ``Decimal`` or raise
     ``InvalidAmount`` (400) naming the offending key.
 
     Rejects non-numeric input AND the well-formed-but-not-a-real-number Decimals
@@ -42,6 +55,14 @@ def parse_amount_cell(value: object, *, field: str) -> Decimal:
     finiteness guard a ``"NaN"`` cell either 500s on a later comparison or is
     silently stored. Does NOT reject negatives; callers that forbid them (e.g.
     the request serializer) check ``< 0`` separately on the finite result.
+
+    The magnitude bound mirrors the target column's precision: a value the
+    column cannot hold is refused here, naming the cell, instead of reaching
+    Postgres as a generic ``DataError``. The bound is checked on the value
+    ROUNDED to the column's scale, because Postgres rounds to scale first and
+    only then applies the precision — ``99.9995`` becomes ``100.000`` in a
+    ``numeric(5,3)`` and overflows even though the raw value is under 100. The
+    rounded value is what comes back, so what was validated is what is stored.
     """
     try:
         amount = Decimal(str(value))
@@ -53,6 +74,18 @@ def parse_amount_cell(value: object, *, field: str) -> Decimal:
     if not amount.is_finite():
         raise InvalidAmount(
             f"Invalid amount {value!r} for {field} — expected a finite number.",
+            field=field,
+        )
+    limit = Decimal(10) ** (max_digits - decimal_places)
+    # Bound the raw value first: quantizing a huge one would need more digits
+    # than the decimal context carries and raise on its own.
+    if amount.copy_abs() < limit:
+        amount = amount.quantize(
+            Decimal(1).scaleb(-decimal_places), rounding=ROUND_HALF_UP
+        )
+    if amount.copy_abs() >= limit:
+        raise InvalidAmount(
+            f"Invalid amount {value!r} for {field} — must be less than {limit}.",
             field=field,
         )
     return amount

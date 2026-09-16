@@ -82,6 +82,36 @@ describe("BulkActionButton", () => {
     expect(refreshData).toHaveBeenCalledTimes(1);
   });
 
+  it("warns about the ids a partial-success body reports under `errors`", async () => {
+    // A 207 resolves exactly like a 200, so the skipped ids only reach the
+    // user if the resolved body is inspected.
+    const apiFunction = vi.fn().mockResolvedValue({
+      updated: 1,
+      created: 0,
+      errors: [{ id: "a", error: "Inventory entry already counted (70)" }],
+    });
+    const onSuccess = vi.fn();
+
+    render(
+      <BulkActionButton
+        selectedIds={["a", "b"]}
+        apiFunction={apiFunction}
+        buttonText="Finalize"
+        successMessage="Done!"
+        onSuccess={onSuccess}
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /finalize/i }));
+
+    expect(notify.warning).toHaveBeenCalledTimes(1);
+    expect(notify.warning.mock.calls[0][0]).toContain("already counted");
+    // The warning replaces the green toast; the caller still refreshes.
+    expect(notify.success).not.toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
   it("warns and does not hit the API when selection is empty even if it could click", async () => {
     // selectedIds=[] makes the button disabled, so we test the early-return
     // branch via direct re-render with at least 1, then 0. Easier: enable it

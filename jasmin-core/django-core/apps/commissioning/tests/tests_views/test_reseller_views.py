@@ -6,7 +6,12 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from apps.commissioning.models import DeliveryNoteReseller, Order
+from apps.commissioning.models import (
+    DeliveryNoteReseller,
+    InvoiceReseller,
+    InvoiceResellerContent,
+    Order,
+)
 from apps.commissioning.tests.factories import (
     DeliveryNoteContentFactory,
     DeliveryNoteResellerFactory,
@@ -257,21 +262,64 @@ class TestBulkCopyOffersToOfferGroupView:
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestSetInvoiceNoteView:
-    def test_sets_note(self, api_client, tenant):
+    @staticmethod
+    def _order_with_invoice(note: str = "") -> tuple[Order, InvoiceReseller]:
+        """An order carried all the way to an invoice. The view resolves the
+        invoice through order → delivery_note → the invoice line's provenance
+        link, so a standalone invoice is never found and every request 404s
+        before the body is even looked at."""
         reseller = ResellerFactory()
         order = OrderFactory(reseller=reseller)
-        dn = DeliveryNoteResellerFactory(order=order)
-        DeliveryNoteContentFactory(delivery_note=dn)
-        _invoice = InvoiceResellerFactory(reseller=reseller)
+        delivery_note_line = DeliveryNoteContentFactory(
+            delivery_note=DeliveryNoteResellerFactory(order=order)
+        )
+        invoice = InvoiceResellerFactory(reseller=reseller, note=note)
+        invoice_line = InvoiceResellerContent.objects.create(
+            invoice=invoice,
+            share_article=delivery_note_line.share_article,
+            amount=delivery_note_line.amount,
+            unit=delivery_note_line.unit,
+            size=delivery_note_line.size,
+            tax_rate=delivery_note_line.tax_rate,
+        )
+        invoice_line.delivery_note_contents.add(delivery_note_line)
+        return order, invoice
+
+    def test_sets_note(self, api_client, tenant):
+        order, invoice = self._order_with_invoice()
 
         url = reverse("set_invoice_note", args=[str(order.id)])
         resp = api_client.patch(url, {"note": "Test note"}, format="json")
-        # The view looks up the invoice via order → delivery_note; may return 200 or 404
-        # depending on the invoice linkage
-        assert resp.status_code in (
-            status.HTTP_200_OK,
-            status.HTTP_404_NOT_FOUND,
-        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["note"] == "Test note"
+        invoice.refresh_from_db()
+        assert invoice.note == "Test note"
+
+    def test_note_longer_than_the_column_returns_400(self, api_client, tenant):
+        """``InvoiceReseller.note`` is CharField(max_length=500), and the
+        request serializer mirrors that width: an over-long note is a 400
+        naming the field, never a generic data error from Postgres."""
+        order, invoice = self._order_with_invoice(note="keep me")
+
+        url = reverse("set_invoice_note", args=[str(order.id)])
+        resp = api_client.patch(url, {"note": "x" * 501}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "validation_error"
+        assert "note" in resp.data["details"]
+        invoice.refresh_from_db()
+        assert invoice.note == "keep me"
+
+    def test_note_at_the_column_limit_is_accepted(self, api_client, tenant):
+        order, invoice = self._order_with_invoice()
+
+        url = reverse("set_invoice_note", args=[str(order.id)])
+        resp = api_client.patch(url, {"note": "x" * 500}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        invoice.refresh_from_db()
+        assert invoice.note == "x" * 500
 
 
 # ---------------------------------------------------------------------------
@@ -580,6 +628,40 @@ class TestSetOrderNoteView:
         url = reverse("set_order_note", args=["00000000-0000-0000-0000-000000000000"])
         resp = api_client.patch(url, {"note": "anything"}, format="json")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_note_longer_than_the_column_returns_400(self, api_client, tenant):
+        """``Order.note`` is CharField(max_length=500). An over-long note used
+        to reach Postgres and come back as a generic data error; the request
+        serializer now names the field and nothing is written."""
+        order = OrderFactory(reseller=ResellerFactory(), note="keep me")
+
+        url = reverse("set_order_note", args=[str(order.id)])
+        resp = api_client.patch(url, {"note": "x" * 501}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "validation_error"
+        assert "note" in resp.data["details"]
+        assert Order.objects.get(pk=order.pk).note == "keep me"
+
+    def test_note_at_the_column_limit_is_accepted(self, api_client, tenant):
+        order = OrderFactory(reseller=ResellerFactory())
+
+        url = reverse("set_order_note", args=[str(order.id)])
+        resp = api_client.patch(url, {"note": "x" * 500}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert Order.objects.get(pk=order.pk).note == "x" * 500
+
+    def test_blank_note_still_clears_it(self, api_client, tenant):
+        """The office autosave sends an empty string for an emptied box —
+        adding the serializer must not turn that into a 400."""
+        order = OrderFactory(reseller=ResellerFactory(), note="previous")
+
+        url = reverse("set_order_note", args=[str(order.id)])
+        resp = api_client.patch(url, {"note": ""}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert Order.objects.get(pk=order.pk).note == ""
 
 
 # ---------------------------------------------------------------------------

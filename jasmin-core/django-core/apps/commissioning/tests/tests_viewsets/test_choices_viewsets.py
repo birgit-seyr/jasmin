@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import datetime
+
 import pytest
 from django.urls import reverse
 from rest_framework import status
@@ -10,6 +12,7 @@ from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
     OrdersDeliveryDayFactory,
     PaymentCycleFactory,
+    ShareFactory,
     SharesDeliveryDayFactory,
     SubscriptionFactory,
 )
@@ -127,6 +130,89 @@ class TestSharesDeliveryDayViewSet:
         )
         row = next(d for d in resp.data if d["id"] == day.id)
         assert row["used_tours"] == [2]
+
+
+# ---------------------------------------------------------------------------
+# SharesDeliveryDayViewSet — moving valid_from
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestSharesDeliveryDayValidFromMove:
+    """Moving the START of a delivery day's window later leaves its existing
+    children before the new date uncovered.
+
+    Nothing re-homes them — the child-migration services run only on the
+    create/succession path — so the row silently stops covering rows that still
+    point at it. All dates here sit in the past so the assertions never depend
+    on the wall clock.
+    """
+
+    @staticmethod
+    def _url(day):
+        return reverse("share_delivery_day-detail", kwargs={"pk": day.pk})
+
+    def test_moving_start_later_past_existing_shares_returns_409(
+        self, api_client, tenant
+    ):
+        day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 1, 5))
+        # ISO week 15/2026 starts 2026-04-06 — before the proposed new start.
+        ShareFactory(delivery_day=day, year=2026, delivery_week=15)
+
+        resp = api_client.patch(
+            self._url(day), {"valid_from": "2026-06-01"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "shares_delivery_day.start_move_strands_children"
+        assert resp.data["details"]["stranded_count"] == 1
+        day.refresh_from_db()
+        assert day.valid_from == datetime.date(2026, 1, 5)
+
+    def test_moving_start_later_past_existing_station_days_returns_409(
+        self, api_client, tenant
+    ):
+        day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 1, 5))
+        DeliveryStationDayFactory(
+            delivery_day=day, valid_from=datetime.date(2026, 1, 5)
+        )
+
+        resp = api_client.patch(
+            self._url(day), {"valid_from": "2026-06-01"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "shares_delivery_day.start_move_strands_children"
+        day.refresh_from_db()
+        assert day.valid_from == datetime.date(2026, 1, 5)
+
+    def test_moving_start_earlier_into_the_past_is_allowed(self, api_client, tenant):
+        """Widening the window backwards strands nothing, and a start in the
+        past is deliberately permitted — onboarding backfills a schedule that
+        has been running for a while."""
+        day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 1, 5))
+        ShareFactory(delivery_day=day, year=2026, delivery_week=15)
+
+        resp = api_client.patch(
+            self._url(day), {"valid_from": "2025-11-03"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        day.refresh_from_db()
+        assert day.valid_from == datetime.date(2025, 11, 3)
+
+    def test_moving_start_later_with_nothing_before_it_is_allowed(
+        self, api_client, tenant
+    ):
+        day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 1, 5))
+        # Week 40/2026 starts 2026-09-28 — after the proposed new start.
+        ShareFactory(delivery_day=day, year=2026, delivery_week=40)
+
+        resp = api_client.patch(
+            self._url(day), {"valid_from": "2026-06-01"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        day.refresh_from_db()
+        assert day.valid_from == datetime.date(2026, 6, 1)
 
 
 # ---------------------------------------------------------------------------

@@ -15,6 +15,7 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import type { AboRecord } from "@features/abos/pages/types";
 import { useTenant, useVariationLabel } from "@hooks/index";
+import { DELIVERY_DAY_SHORT_KEYS } from "@shared/utils/weekdayNames";
 
 type AboColumn = EditableColumnConfig<AboRecord>;
 
@@ -209,17 +210,9 @@ export function useSharedAboColumns({
           return value as string;
         }
 
-        const dayMapping: Record<number, string> = {
-          0: t("delivery.mo"),
-          1: t("delivery.di"),
-          2: t("delivery.mi"),
-          3: t("delivery.do"),
-          4: t("delivery.fr"),
-          5: t("delivery.sa"),
-          6: t("delivery.su"),
-        };
-
-        const translatedDay = dayMapping[Number(record.delivery_day_number)];
+        const dayKey =
+          DELIVERY_DAY_SHORT_KEYS[Number(record.delivery_day_number)];
+        const translatedDay = dayKey ? t(dayKey) : undefined;
         return translatedDay && record.delivery_station_name
           ? `${translatedDay} - ${record.delivery_station_name}`
           : (value as string);

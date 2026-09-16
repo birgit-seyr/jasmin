@@ -12,6 +12,7 @@ expectations in sync.
 
 from __future__ import annotations
 
+import csv
 import datetime
 from pathlib import Path
 
@@ -23,8 +24,11 @@ from rest_framework.test import APIClient
 
 from apps.commissioning.models import (
     CoopShare,
+    Crate,
+    DeliveryStation,
     Member,
     PaymentCycle,
+    Reseller,
     Subscription,
 )
 from apps.commissioning.models.choices import PaymentCycleOptions
@@ -298,3 +302,115 @@ class TestCoopShareSampleUpload:
         assert share.is_increase is True
         # Unconfirmed — the office confirms through the normal (GenG) flow.
         assert share.admin_confirmed is False
+
+
+_RESELLER_CSV = (
+    "Company,Address,ZIP,City,Reseller,Customer number\n"
+    "company_name,address,zip_code,city,is_reseller,customer_number\n"
+    "string,string,string,string,true|false,integer\n"
+    "Kern Farm Shop,4 Market Lane,8010,Graz,true,4711\n"
+)
+
+_DELIVERY_STATION_CSV = (
+    "Short name,Company,Address,ZIP,City\n"
+    "short_name,company_name,address,zip_code,city\n"
+    "string,string,string,string,string\n"
+    "CENTER,Community Center,12 Main Street,8020,Graz\n"
+)
+
+
+def _inline_upload(name: str, content: str) -> SimpleUploadedFile:
+    return SimpleUploadedFile(name, content.encode(), content_type="text/csv")
+
+
+@pytest.mark.django_db
+class TestResellerAndDeliveryStationUpload:
+    """Both models keep their address block on a linked ``ContactEntity``, which
+    only the create service knows how to split off. The upload must land the
+    same rows the office create form does."""
+
+    def test_office_uploads_resellers(self, api_client):
+        resp = api_client.post(
+            URL,
+            {
+                "model_name": "reseller",
+                "file": _inline_upload("resellers.csv", _RESELLER_CSV),
+            },
+            format="multipart",
+        )
+
+        assert resp.status_code == 200, resp.content
+        body = resp.json()
+        assert body["successful"] == 1, body["errors"]
+        assert body["failed"] == 0
+        reseller = Reseller.objects.get(customer_number=4711)
+        assert reseller.contact.company_name == "Kern Farm Shop"
+        assert reseller.contact.city == "Graz"
+
+    def test_office_uploads_delivery_stations(self, api_client):
+        resp = api_client.post(
+            URL,
+            {
+                "model_name": "delivery_station",
+                "file": _inline_upload("stations.csv", _DELIVERY_STATION_CSV),
+            },
+            format="multipart",
+        )
+
+        assert resp.status_code == 200, resp.content
+        body = resp.json()
+        assert body["successful"] == 1, body["errors"]
+        assert body["failed"] == 0
+        station = DeliveryStation.objects.get(short_name="CENTER")
+        assert station.contact.address == "12 Main Street"
+
+
+@pytest.mark.django_db
+class TestOversizedUpload:
+    def test_a_file_past_the_byte_cap_is_refused_naming_the_field(self, api_client):
+        """The row cap bounds parsing, not memory — the bytes and their decoded
+        copy are already resident by the time it applies. An export nobody
+        meant to upload has to be refused on its size first."""
+        over_the_cap = "A" * (10 * 1024 * 1024 + 1024)
+        content = f"Name,Number\nname,number\ntext,int\n{over_the_cap},1\n"
+
+        resp = api_client.post(
+            URL,
+            {"model_name": "crate", "file": _inline_upload("crates.csv", content)},
+            format="multipart",
+        )
+
+        assert resp.status_code == 400
+        body = resp.json()
+        assert body["code"] == "data_import.invalid"
+        assert body["field"] == "file"
+        assert not Crate.objects.exists()
+
+
+@pytest.mark.django_db
+class TestUnreadableRowUpload:
+    def test_a_cell_the_parser_refuses_is_a_reported_row_not_a_500(self, api_client):
+        """A stray quote running past csv's field limit used to escape the
+        per-row handling; the office must get the row number back instead."""
+        oversized = '"' + "x" * (csv.field_size_limit() + 10) + '"'
+        content = (
+            "Name,Number\n"
+            "name,number\n"
+            "text,int\n"
+            "GoodOne,1\n"
+            f"{oversized},2\n"
+            "GoodTwo,3\n"
+        )
+
+        resp = api_client.post(
+            URL,
+            {"model_name": "crate", "file": _inline_upload("crates.csv", content)},
+            format="multipart",
+        )
+
+        assert resp.status_code == 200, resp.content
+        body = resp.json()
+        assert body["successful"] == 2, body["errors"]
+        assert body["failed"] == 1
+        assert body["errors"][0]["row"] == 5
+        assert Crate.objects.filter(name__in=["GoodOne", "GoodTwo"]).count() == 2
