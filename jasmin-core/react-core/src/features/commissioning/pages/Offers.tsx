@@ -53,7 +53,7 @@ import { getErrorMessage } from "@shared/utils/apiError";
 import OfferSendingStatusTable from "@features/commissioning/components/OfferSendingStatusTable";
 import OffersBulkActions from "@features/commissioning/components/OffersBulkActions";
 
-const currentYear = dayjs().year();
+const currentYear = dayjs().isoWeekYear();
 const nextWeek = dayjs().isoWeek();
 
 export default function Offers() {

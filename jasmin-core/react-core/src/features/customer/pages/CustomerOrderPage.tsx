@@ -135,7 +135,7 @@ export default function CustomerOrderPage() {
     // only inputs are the selection (deps below), with no reliance on the
     // module-level current* snapshot taken once at import time.
     const now = dayjs();
-    const nowYear = now.year();
+    const nowYear = now.isoWeekYear();
     const nowWeek = now.isoWeek();
     const week = selectedWeek ?? nowWeek;
     return (

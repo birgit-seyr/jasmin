@@ -318,9 +318,6 @@ def calculate_member_dashboard_statistics() -> dict:
     }
 
 
-MEMBER_GROWTH_PERIODS = ("month", "week", "year")
-
-
 def calculate_member_growth_statistics(
     *, period: str, year: int | None = None, start_date: date | None = None
 ) -> list[dict]:
@@ -336,6 +333,8 @@ def calculate_member_growth_statistics(
     periods returned; ``total_members`` still starts from everyone who joined
     before the window and hadn't left before it.
     """
+    # One entry per catalogued ``period`` value (MEMBER_GROWTH_PERIODS); the
+    # query-param catalogue refuses anything else before it reaches here.
     trunc = {"month": TruncMonth, "week": TruncWeek, "year": TruncYear}[period]
     members = Member.objects.filter(
         admin_confirmed=True, is_trial=False, entry_date__isnull=False

@@ -155,6 +155,9 @@ class TestPurchaseCostByWeekEndpoint:
             URL, {"start_date": "2026-04-12", "end_date": "2026-04-06"}
         )
         assert response.status_code == 400
+        # The same code and field every date-pair endpoint answers with.
+        assert response.json()["code"] == "query.invalid_param"
+        assert response.json()["field"] == "start_date"
 
     def test_returns_weekly_points(self, api_client):
         week_key, station_key = _make_purchased_content(

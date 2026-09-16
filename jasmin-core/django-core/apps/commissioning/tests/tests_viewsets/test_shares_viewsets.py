@@ -731,6 +731,18 @@ class TestShareExportCsvAction:
         assert resp.data["code"] == "query.invalid_param"
         assert resp.data["field"] == "date_from"
 
+    def test_inverted_range_returns_400(self, api_client, tenant):
+        """An end before the start would stream an empty CSV that reads as "no
+        shares in that window"; the sibling exports refuse it, so this one does
+        too, naming the parameter to fix."""
+        resp = api_client.get(
+            URL_SHARE_EXPORT_CSV,
+            {"date_from": "2099-01-31", "date_to": "2099-01-01"},
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "date_from"
+
     def test_empty_range_returns_csv_with_header_only(self, api_client, tenant):
         """Valid dates with no shares in the range → CSV with just the
         header row + a Soll target row (no data rows)."""
@@ -798,6 +810,20 @@ class TestDefaultShareContentBulkList:
     def test_invalid_year_returns_400(self, api_client, tenant):
         resp = api_client.get(URL_DSC_BULK_LIST, {"year": "not-a-number"})
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_missing_year_returns_400(self, api_client, tenant):
+        resp = api_client.get(URL_DSC_BULK_LIST, {"share_option": "HARVEST_SHARE"})
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "year"
+
+    def test_missing_share_option_returns_400(self, api_client, tenant):
+        """The rows are the planning slots of ONE share option, so without it
+        the endpoint could only answer with an empty list."""
+        resp = api_client.get(URL_DSC_BULK_LIST, {"year": 2099})
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "share_option"
 
     def test_filters_to_requested_share_option(self, api_client, tenant):
         """The view filters service results to entries where

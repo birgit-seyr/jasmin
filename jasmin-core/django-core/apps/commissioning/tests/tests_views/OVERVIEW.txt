@@ -4,7 +4,7 @@ COMMISSIONING APP — VIEW TESTS OVERVIEW
 
 Directory: apps/commissioning/tests/tests_views/
 Total files: 11
-Total tests: 363
+Total tests: 368
 Run: poetry run pytest apps/commissioning/tests/tests_views/ -q
 
 Counts are collected cases, so a parametrized method counts once per case and a
@@ -62,7 +62,7 @@ alphabetical order.
      - test_demand_grid_is_batched_not_per_cell
 
 ================================================================================
-3. test_documentation_overview_views.py  (13 tests)
+3. test_documentation_overview_views.py  (15 tests)
    View: DocumentationOverviewView (GET)
 --------------------------------------------------------------------------------
    TestDocumentationOverviewGet
@@ -78,10 +78,12 @@ alphabetical order.
      - test_the_day_filter_leaves_week_scoped_purchases_alone
      - test_missing_share_article_returns_400
      - test_invalid_source_returns_400
+     - test_lowercase_source_is_accepted
+     - test_empty_source_falls_back_to_harvest
      - test_missing_year_returns_400
 
 ================================================================================
-4. test_email_distribution_views.py  (15 tests)
+4. test_email_distribution_views.py  (16 tests)
    View: subscription_member_emails (AbosEmails distribution list)
 --------------------------------------------------------------------------------
    TestSubscriptionMemberEmails
@@ -101,6 +103,7 @@ alphabetical order.
      - test_date_from_alone_leaves_the_end_open
      - test_date_to_alone_leaves_the_start_open
      - test_both_bounds_match_the_overlap
+     - test_a_backwards_window_is_refused
      - test_date_to_alone_keeps_a_since_cancelled_subscription
      - test_date_from_moves_the_cancellation_cutoff_to_the_window_start
 
@@ -377,7 +380,7 @@ alphabetical order.
      - test_missing_year_returns_400
 
 ================================================================================
-10. test_statistic_views.py  (12 tests)
+10. test_statistic_views.py  (13 tests)
     Views: member_growth_statistics, historical_share_variation_averages
     (purchase_cost_by_week is covered in
      tests_services/test_purchase_cost_by_week.py)
@@ -391,6 +394,7 @@ alphabetical order.
      - test_start_date_starts_from_the_members_before_it
      - test_week_periods_start_on_monday
      - test_invalid_period_returns_400
+     - test_empty_period_falls_back_to_month
      - test_empty_when_no_members
 
    TestHistoricalShareTypeVariationAverages
@@ -399,7 +403,7 @@ alphabetical order.
      - test_empty_for_no_data
 
 ================================================================================
-11. test_stock_views.py  (58 tests)
+11. test_stock_views.py  (59 tests)
     Views: CurrentStockComparisonView (GET/PATCH/DELETE),
            bulk_finalize_current_stock, bulk_set_as_expected_current_stock,
            bulk_set_to_zero_current_stock, StorageLoggingView
@@ -456,12 +460,13 @@ alphabetical order.
      - test_uncounted_existing_entry_is_zeroed
      - test_invalid_id_collected_in_errors_others_succeed
 
-   TestStorageLoggingView  (7 cases)
+   TestStorageLoggingView  (8 cases)
      - test_returns_events
      - test_missing_storage_returns_error
      - test_filters_by_share_article
      - test_filters_by_date_range
      - test_invalid_date_returns_400
+     - test_inverted_date_range_returns_400
      - test_nonexistent_storage_returns_404
      - test_running_balance_accumulates_exactly
 

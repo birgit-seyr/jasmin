@@ -1,0 +1,207 @@
+# ruff baseline — hygiene findings that predate the naming/complexity gate.
+# Managed by scripts/ruff_baseline.py; do not hand-edit.
+# Regenerate after fixing findings:
+#     poetry run python scripts/ruff_baseline.py freeze
+# 201 finding(s).
+
+apps/accounts/backends.py: N806 Variable `UserModel` in function should be lowercase
+apps/accounts/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
+apps/accounts/services/auth_service.py: C901 `refresh_access_token` is too complex (11 > 10)
+apps/accounts/services/registration_service.py: C901 `register_public_applicant` is too complex (13 > 10)
+apps/accounts/services/registration_service.py: PLR0915 Too many statements (57 > 50)
+apps/accounts/services/user_admin_service.py: C901 `update_user_admin` is too complex (19 > 10)
+apps/accounts/tests/test_onboarding_member_invitations.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/authz/scoping.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/models/base.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
+apps/commissioning/models/basics.py: N815 Variable `kg_per_bunch_L` in class scope should not be mixedCase
+apps/commissioning/models/basics.py: N815 Variable `kg_per_bunch_M` in class scope should not be mixedCase
+apps/commissioning/models/basics.py: N815 Variable `kg_per_bunch_S` in class scope should not be mixedCase
+apps/commissioning/models/basics.py: N815 Variable `kg_per_piece_L` in class scope should not be mixedCase
+apps/commissioning/models/basics.py: N815 Variable `kg_per_piece_M` in class scope should not be mixedCase
+apps/commissioning/models/basics.py: N815 Variable `kg_per_piece_S` in class scope should not be mixedCase
+apps/commissioning/models/basics.py: N815 Variable `pieces_per_bunch_L` in class scope should not be mixedCase
+apps/commissioning/models/basics.py: N815 Variable `pieces_per_bunch_M` in class scope should not be mixedCase
+apps/commissioning/models/basics.py: N815 Variable `pieces_per_bunch_S` in class scope should not be mixedCase
+apps/commissioning/models/basics.py: N815 Variable `pieces_per_kg_L` in class scope should not be mixedCase
+apps/commissioning/models/basics.py: N815 Variable `pieces_per_kg_M` in class scope should not be mixedCase
+apps/commissioning/models/basics.py: N815 Variable `pieces_per_kg_S` in class scope should not be mixedCase
+apps/commissioning/models/days.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/commissioning/models/mixin.py: C901 `save` is too complex (11 > 10)
+apps/commissioning/models/shares.py: C901 `clean` is too complex (11 > 10)
+apps/commissioning/serializers/documentation_serializer.py: N815 Variable `selectedData` in class scope should not be mixedCase
+apps/commissioning/serializers/documentation_serializer.py: N815 Variable `selectedData` in class scope should not be mixedCase
+apps/commissioning/serializers/shares_serializer.py: N815 Variable `kg_per_bunch_L` in class scope should not be mixedCase
+apps/commissioning/serializers/shares_serializer.py: N815 Variable `kg_per_bunch_M` in class scope should not be mixedCase
+apps/commissioning/serializers/shares_serializer.py: N815 Variable `kg_per_bunch_S` in class scope should not be mixedCase
+apps/commissioning/serializers/shares_serializer.py: N815 Variable `kg_per_piece_L` in class scope should not be mixedCase
+apps/commissioning/serializers/shares_serializer.py: N815 Variable `kg_per_piece_M` in class scope should not be mixedCase
+apps/commissioning/serializers/shares_serializer.py: N815 Variable `kg_per_piece_S` in class scope should not be mixedCase
+apps/commissioning/services/coop_share_service.py: C901 `transfer` is too complex (16 > 10)
+apps/commissioning/services/coop_share_service.py: PLR0913 Too many arguments in function definition (9 > 5)
+apps/commissioning/services/crate_content_service.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/services/crate_order_content_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/crate_order_content_service.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/services/crate_order_content_service.py: PLR0913 Too many arguments in function definition (9 > 5)
+apps/commissioning/services/crate_summary.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/commissioning/services/data_import.py: C901 `import_rows_from_csv` is too complex (11 > 10)
+apps/commissioning/services/default_share_content_service.py: C901 `delete_default_share_content_bulk` is too complex (11 > 10)
+apps/commissioning/services/default_share_content_service.py: C901 `materialize_for_new_station_day` is too complex (14 > 10)
+apps/commissioning/services/default_share_content_service.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/commissioning/services/documentation_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/documentation_summary_service.py: C901 `get_summary` is too complex (11 > 10)
+apps/commissioning/services/documentation_summary_service.py: PLR0913 Too many arguments in function definition (15 > 5)
+apps/commissioning/services/documentation_summary_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/documentation_summary_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/documentation_summary_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/documentation_summary_service.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/services/documentation_summary_service.py: PLR0913 Too many arguments in function definition (9 > 5)
+apps/commissioning/services/documentation_summary_service.py: PLR0913 Too many arguments in function definition (9 > 5)
+apps/commissioning/services/email_dispatch.py: PLR0913 Too many arguments in function definition (9 > 5)
+apps/commissioning/services/forecast_service.py: C901 `_build_share_content_changes` is too complex (11 > 10)
+apps/commissioning/services/forecast_service.py: PLR0913 Too many arguments in function definition (13 > 5)
+apps/commissioning/services/forecast_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/invoice_reminder.py: C901 `bulk_send_invoice_reminders` is too complex (21 > 10)
+apps/commissioning/services/invoice_reminder.py: PLR0915 Too many statements (81 > 50)
+apps/commissioning/services/invoice_service.py: C901 `finalize_invoice` is too complex (16 > 10)
+apps/commissioning/services/invoice_service.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/services/invoice_service.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/commissioning/services/member_cancellation.py: N806 Variable `_NON_CANCELLATION_ERRORS` in function should be lowercase
+apps/commissioning/services/member_cancellation.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/commissioning/services/member_email.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/commissioning/services/member_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/member_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/movements.py: C901 `create_movements` is too complex (15 > 10)
+apps/commissioning/services/movements.py: PLR0913 Too many arguments in function definition (11 > 5)
+apps/commissioning/services/movements.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/services/movements.py: PLR0915 Too many statements (55 > 50)
+apps/commissioning/services/offer_service.py: C901 `_convert_amount` is too complex (16 > 10)
+apps/commissioning/services/offer_service.py: C901 `bulk_send_offers_via_email` is too complex (14 > 10)
+apps/commissioning/services/offer_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/offer_service.py: PLR0913 Too many arguments in function definition (9 > 5)
+apps/commissioning/services/order_content_service.py: C901 `create_order_with_content_and_crates` is too complex (18 > 10)
+apps/commissioning/services/order_content_service.py: C901 `get_offers_and_order_content` is too complex (12 > 10)
+apps/commissioning/services/order_content_service.py: C901 `update_order_content` is too complex (11 > 10)
+apps/commissioning/services/order_content_service.py: PLR0913 Too many arguments in function definition (12 > 5)
+apps/commissioning/services/packing_list_boxes_matrix_service.py: C901 `get_weekly_combination_matrix` is too complex (12 > 10)
+apps/commissioning/services/packing_list_boxes_matrix_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/packing_list_boxes_matrix_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/packing_list_boxes_matrix_service.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/services/packing_list_boxes_matrix_service.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/commissioning/services/packing_list_boxes_matrix_service.py: PLR0913 Too many arguments in function definition (9 > 5)
+apps/commissioning/services/packing_list_service.py: C901 `_bulk_rows_for_share_type` is too complex (11 > 10)
+apps/commissioning/services/packing_list_service.py: C901 `get_packing_list` is too complex (14 > 10)
+apps/commissioning/services/packing_list_service.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/services/packing_list_service.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/services/packing_list_service.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/services/packing_list_service.py: PLR0913 Too many arguments in function definition (9 > 5)
+apps/commissioning/services/share_content_service.py: C901 `_build_stock_only_rows` is too complex (12 > 10)
+apps/commissioning/services/share_content_service.py: C901 `_extract_day_variations` is too complex (12 > 10)
+apps/commissioning/services/share_content_service.py: C901 `process_share_planning_data` is too complex (14 > 10)
+apps/commissioning/services/share_content_service.py: C901 `replace_share_planning` is too complex (14 > 10)
+apps/commissioning/services/share_content_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/share_content_service.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/services/share_content_service.py: PLR0915 Too many statements (62 > 50)
+apps/commissioning/services/share_delivery_service.py: C901 `get_weekly_variation_count_matrix` is too complex (12 > 10)
+apps/commissioning/services/share_demand_service.py: C901 `aggregated_rows` is too complex (11 > 10)
+apps/commissioning/services/share_demand_service.py: C901 `aggregated_rows` is too complex (14 > 10)
+apps/commissioning/services/share_demand_service.py: PLR0913 Too many arguments in function definition (11 > 5)
+apps/commissioning/services/share_demand_service.py: PLR0913 Too many arguments in function definition (11 > 5)
+apps/commissioning/services/share_demand_service.py: PLR0913 Too many arguments in function definition (11 > 5)
+apps/commissioning/services/share_demand_service.py: PLR0913 Too many arguments in function definition (11 > 5)
+apps/commissioning/services/share_import_service.py: C901 `parse_and_validate` is too complex (16 > 10)
+apps/commissioning/services/share_import_service.py: PLR0915 Too many statements (58 > 50)
+apps/commissioning/services/shares_day_change_service.py: C901 `apply` is too complex (17 > 10)
+apps/commissioning/services/shares_delivery_day_service.py: C901 `update_share_deliveries_for_delivery_day` is too complex (12 > 10)
+apps/commissioning/services/snapshot_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/services/snapshot_service.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/commissioning/services/statistics.py: C901 `_compute_variation_averages` is too complex (15 > 10)
+apps/commissioning/services/statistics.py: PLR0915 Too many statements (63 > 50)
+apps/commissioning/services/stock_service.py: C901 `get_theoretical_current_stock` is too complex (11 > 10)
+apps/commissioning/services/theoretical_objects.py: C901 `_create_theoretical_movements` is too complex (16 > 10)
+apps/commissioning/services/theoretical_objects.py: C901 `create_theoretical_objects` is too complex (21 > 10)
+apps/commissioning/services/theoretical_objects.py: C901 `recalculate_actual_corrections` is too complex (11 > 10)
+apps/commissioning/services/theoretical_objects.py: PLR0913 Too many arguments in function definition (22 > 5)
+apps/commissioning/services/theoretical_objects.py: PLR0915 Too many statements (56 > 50)
+apps/commissioning/tasks.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/tests/tests_lifecycle/test_lifecycle_multi_dn_invoice.py: N806 Variable `N_ORDERS_PER_RESELLER` in function should be lowercase
+apps/commissioning/tests/tests_lifecycle/test_lifecycle_multi_dn_invoice.py: N806 Variable `N_RESELLERS` in function should be lowercase
+apps/commissioning/tests/tests_services/test_consent_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/tests/tests_services/test_delivery_cycle.py: N814 Camelcase `DeliveryCycleOptions` imported as constant `DC`
+apps/commissioning/tests/tests_services/test_documentation_summary_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/tests/tests_services/test_forecast_share_content_integration.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/tests/tests_services/test_preparation_lists.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/commissioning/tests/tests_services/test_recompute_under_mutations.py: PLR0915 Too many statements (69 > 50)
+apps/commissioning/tests/tests_services/test_share_content_amount_conservation.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/commissioning/tests/tests_services/test_share_demand_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/tests/tests_services/test_share_demand_service.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/commissioning/tests/tests_services/test_shares_day_change_service.py: PLR0913 Too many arguments in function definition (10 > 5)
+apps/commissioning/tests/tests_services/test_shares_day_change_service.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/commissioning/tests/tests_views/test_stock_views.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/tests/tests_viewsets/test_customer_order_page_scoping.py: N801 Class name `TestCustomerOrderPage_CrateScoping` should use CapWords convention
+apps/commissioning/tests/tests_viewsets/test_customer_order_page_scoping.py: N801 Class name `TestCustomerOrderPage_DocumentsScoping` should use CapWords convention
+apps/commissioning/tests/tests_viewsets/test_customer_order_page_scoping.py: N801 Class name `TestCustomerOrderPage_OfferAnnotationScoping` should use CapWords convention
+apps/commissioning/tests/tests_viewsets/test_customer_order_page_scoping.py: N801 Class name `TestCustomerOrderPage_OfferScoping` should use CapWords convention
+apps/commissioning/tests/tests_viewsets/test_customer_order_page_scoping.py: N801 Class name `TestCustomerOrderPage_OrderContentOfferScoping` should use CapWords convention
+apps/commissioning/tests/tests_viewsets/test_customer_order_page_scoping.py: N801 Class name `TestCustomerOrderPage_OrderContentScoping` should use CapWords convention
+apps/commissioning/tests/tests_viewsets/test_customer_order_page_scoping.py: N801 Class name `TestCustomerOrderPage_ResellerScoping` should use CapWords convention
+apps/commissioning/tests/tests_viewsets/test_customer_order_page_scoping.py: N801 Class name `TestCustomer_CannotAccessMemberEndpoints` should use CapWords convention
+apps/commissioning/tests/tests_viewsets/test_member_detail_scoping.py: N801 Class name `TestAbos_MemberRoleScoping` should use CapWords convention
+apps/commissioning/tests/tests_viewsets/test_member_detail_scoping.py: N801 Class name `TestMemberDetail_MemberRoleScoping` should use CapWords convention
+apps/commissioning/tests/tests_viewsets/test_member_detail_scoping.py: N801 Class name `TestMember_CannotAccessResellerEndpoints` should use CapWords convention
+apps/commissioning/tests/tests_viewsets/test_member_detail_scoping.py: N801 Class name `TestShareDelivery_MemberRoleScoping` should use CapWords convention
+apps/commissioning/utils/composite_id_utils.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/utils/deletion_utils.py: C901 `can_delete_instance` is too complex (11 > 10)
+apps/commissioning/utils/lookup.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/utils/packing_divergence.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/utils/packing_queries.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/utils/share_type_variation_amounts.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/utils/share_type_variation_amounts.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/utils/share_type_variation_amounts.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/utils/validation_utils.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/commissioning/views/delivery_views.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/commissioning/views/email_distribution_views.py: C901 `subscription_member_emails` is too complex (11 > 10)
+apps/commissioning/views/reseller_views.py: C901 `post` is too complex (11 > 10)
+apps/commissioning/views/reseller_views.py: C901 `post` is too complex (11 > 10)
+apps/commissioning/views/reseller_views.py: C901 `post` is too complex (12 > 10)
+apps/commissioning/views/stock_views.py: C901 `patch` is too complex (17 > 10)
+apps/commissioning/views/stock_views.py: PLR0915 Too many statements (61 > 50)
+apps/commissioning/viewsets/basics_viewsets.py: C901 `get_queryset` is too complex (11 > 10)
+apps/commissioning/viewsets/delivery_viewsets.py: C901 `_migrate_succession_children` is too complex (16 > 10)
+apps/commissioning/viewsets/resellers_viewsets.py: C901 `_verify_einvoice_xml_matches` is too complex (15 > 10)
+apps/commissioning/viewsets/resellers_viewsets.py: N817 CamelCase `ElementTree` imported as acronym `ET`
+apps/commissioning/viewsets/shares_viewsets.py: C901 `export_csv` is too complex (15 > 10)
+apps/commissioning/viewsets/shares_viewsets.py: C901 `perform_update` is too complex (14 > 10)
+apps/commissioning/viewsets/shares_viewsets.py: PLR0915 Too many statements (54 > 50)
+apps/cultivation/models/basics.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
+apps/gdpr/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
+apps/gdpr/services/anonymization.py: C901 `_collect_known_emails` is too complex (13 > 10)
+apps/gdpr/tests/test_field_classification_guard.py: C901 `_gather_pii_field_violations` is too complex (11 > 10)
+apps/payments/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
+apps/payments/services.py: C901 `_build_pain008_xml` is too complex (12 > 10)
+apps/payments/services.py: C901 `create_run` is too complex (12 > 10)
+apps/payments/services.py: C901 `export` is too complex (11 > 10)
+apps/payments/services.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/payments/services.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/payments/tests/test_cancel_subscription.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/payments/tests/test_cancel_subscription.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/payments/tests/test_pii_encryption_at_rest.py: N802 Function name `test_sepa_mandate_reference_is_NOT_encrypted` should be lowercase
+apps/payments/tests/test_viewsets.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/payments/tests/test_viewsets.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/payments/tests/test_viewsets.py: PLR0913 Too many arguments in function definition (7 > 5)
+apps/shared/deferred_email.py: PLR0913 Too many arguments in function definition (12 > 5)
+apps/shared/deferred_email.py: PLR0913 Too many arguments in function definition (14 > 5)
+apps/shared/image_upload.py: C901 `normalize_uploaded_picture` is too complex (13 > 10)
+apps/shared/invitations.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/shared/query_params.py: C901 `coerce_param` is too complex (11 > 10)
+apps/shared/tenants/email_service.py: PLR0913 Too many arguments in function definition (16 > 5)
+apps/shared/tenants/email_service.py: PLR0913 Too many arguments in function definition (16 > 5)
+apps/shared/tenants/email_service.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/shared/tenants/management/commands/run_periodic_tasks_now.py: C901 `handle` is too complex (11 > 10)
+apps/shared/tenants/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
+apps/shared/tenants/rate_limits.py: PLR0913 Too many arguments in function definition (6 > 5)
+apps/shared/tenants/services.py: PLR0913 Too many arguments in function definition (8 > 5)
+apps/shared/tests/test_int_params.py: N811 Constant `PARAM_CATALOGUE` imported as non-constant `commissioning`
+apps/shared/tests/test_int_params.py: N811 Constant `PARAM_CATALOGUE` imported as non-constant `payments`
+apps/shared/tests/test_int_params.py: N811 Constant `STAFF_PARAM_CATALOGUE` imported as non-constant `staff`
+apps/staff/models/basics.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
+core/exception_handler.py: PLR0913 Too many arguments in function definition (6 > 5)

@@ -22,7 +22,7 @@ import {
 import type {
   BulkOperationResponse,
   CommissioningCrateContentsDestroyParams,
-  CommissioningOrderContentsListParams,
+  CommissioningCrateContentsListParams,
   CrateOrderContentCreateRequest,
   CrateOrderSummary,
   OrderContent,
@@ -121,7 +121,7 @@ export function useOrdersData() {
   // Computed at hook-run time (lazy initialisers), not at module load, so a
   // long-lived tab open across a day/week/year boundary still starts on the
   // correct current period rather than a value frozen at bundle load.
-  const [selectedYear, setSelectedYear] = useState(() => dayjs().year());
+  const [selectedYear, setSelectedYear] = useState(() => dayjs().isoWeekYear());
   const [selectedWeek, setSelectedWeek] = useState(() => dayjs().isoWeek());
   const [selectedDay, setSelectedDay] = useState(() => {
     const currentIsoWeekday = dayjs().isoWeekday();
@@ -181,7 +181,11 @@ export function useOrdersData() {
     useDefaultTaxRates();
   const finalTiers = useOfferTiers();
 
-  const listParams = useMemo<CommissioningOrderContentsListParams>(
+  // One scope object feeds three endpoints — order contents, days-with-orders
+  // and crate contents. Crate contents has the strictest contract (all four
+  // required), so typing the scope by it keeps the page honest about what it
+  // must have selected before fetching, and stays assignable to the other two.
+  const listParams = useMemo<CommissioningCrateContentsListParams>(
     () => ({
       year: selectedYear,
       delivery_week: selectedWeek,

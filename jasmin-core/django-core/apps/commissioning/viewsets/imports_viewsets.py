@@ -50,7 +50,9 @@ class ExternalCodeMappingViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     @extend_schema(
         parameters=[
             catalogue_param(
-                "kind", required=False, description="variation | station | day"
+                "mapping_kind",
+                required=False,
+                description="Which reference table the external code maps into",
             ),
         ],
     )
@@ -59,8 +61,8 @@ class ExternalCodeMappingViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
     def get_queryset(self) -> QuerySet[ExternalCodeMapping]:
         qs = super().get_queryset()
-        params = validate_query_params(self.request, optional=["kind"])
-        if kind := params["kind"]:
+        params = validate_query_params(self.request, optional=["mapping_kind"])
+        if kind := params["mapping_kind"]:
             qs = qs.filter(kind=kind)
         return qs
 
@@ -82,7 +84,7 @@ class ShareImportBatchViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSe
         parameters=[
             catalogue_param("year", required=False),
             catalogue_param("delivery_week", required=False),
-            catalogue_param("status", required=False),
+            catalogue_param("import_batch_status", required=False),
         ],
     )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -91,13 +93,13 @@ class ShareImportBatchViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSe
     def get_queryset(self) -> QuerySet[ShareImportBatch]:
         qs = super().get_queryset()
         params = validate_query_params(
-            self.request, optional=["year", "delivery_week", "status"]
+            self.request, optional=["year", "delivery_week", "import_batch_status"]
         )
         if (year := params["year"]) is not None:
             qs = qs.filter(year=year)
         if (week := params["delivery_week"]) is not None:
             qs = qs.filter(delivery_week=week)
-        if status_value := params["status"]:
+        if status_value := params["import_batch_status"]:
             qs = qs.filter(status=status_value)
         return qs
 
@@ -237,8 +239,9 @@ class ExternalShareDemandViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelVie
 
     @extend_schema(
         parameters=[
-            get_year_parameter(required=True),
-            get_delivery_week_parameter(required=True),
+            # Optional filters: the list is "all demands", narrowable by week.
+            get_year_parameter(required=False),
+            get_delivery_week_parameter(required=False),
         ],
     )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:

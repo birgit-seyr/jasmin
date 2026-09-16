@@ -1126,7 +1126,9 @@ class ShareContentViewSet(BaseArchivableViewSet):
     serializer_class = ShareContentSerializer
     queryset = ShareContent.objects.filter(is_finalized=True)
 
-    def apply_filters(self, queryset: QuerySet) -> QuerySet:
+    def scope_queryset(self, queryset: QuerySet) -> QuerySet:
+        # A permanent scope, not a list filter: this viewset serves finalized
+        # share contents on every action, detail routes included.
         return queryset.filter(is_finalized=True)
 
     def perform_create(self, serializer):
@@ -1502,19 +1504,24 @@ class DefaultShareContentViewSet(RolePermissionsMixin, viewsets.ViewSet):
 
     @extend_schema(
         parameters=[
-            get_year_parameter(),
-            get_share_option_parameter(),
+            get_year_parameter(required=True),
+            get_share_option_parameter(required=True),
         ],
-        description="List default share content grouped by article/unit/size.",
+        description=(
+            "List default share content grouped by article/unit/size. Both "
+            "parameters are required: the rows are the planning slots of one "
+            "year and one share option, so an unscoped call could only answer "
+            "with an empty list."
+        ),
         responses={
             200: DefaultShareContentResponseSerializer(many=True),
-            # Non-integer ``year`` query param.
+            # Missing or non-integer ``year`` / missing ``share_option``.
             400: ErrorResponseSerializer,
         },
     )
     @action(detail=False, methods=["get"])
     def bulk_list(self, request: Request) -> Response:
-        params = validate_query_params(request, optional=["year", "share_option"])
+        params = validate_query_params(request, required=["year", "share_option"])
         year = params["year"]
         share_option = params["share_option"]
 

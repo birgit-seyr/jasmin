@@ -827,6 +827,22 @@ class TestStorageLoggingView:
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_inverted_date_range_returns_400(self, api_client, tenant):
+        """The ledger filters ``>= start`` AND ``<= end``, so a swapped pair can
+        only return an empty ledger — indistinguishable from a quiet storage."""
+        storage = StorageFactory()
+        resp = api_client.get(
+            URL_STORAGE_LOGGING,
+            {
+                "storage": str(storage.id),
+                "start_date": "2026-12-31",
+                "end_date": "2026-01-01",
+            },
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "start_date"
+
     def test_nonexistent_storage_returns_404(self, api_client, tenant):
         resp = api_client.get(
             URL_STORAGE_LOGGING,

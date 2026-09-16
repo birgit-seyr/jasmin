@@ -139,6 +139,16 @@ class TestMemberGrowthStatistics:
     def test_invalid_period_returns_400(self, api_client, tenant):
         resp = api_client.get(URL_MEMBER_GROWTH, {"period": "invalid"})
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "period"
+
+    def test_empty_period_falls_back_to_month(self, api_client, tenant):
+        _admitted(datetime.date(2025, 3, 10))
+
+        resp = api_client.get(URL_MEMBER_GROWTH, {"period": ""})
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert [row["period"] for row in resp.data] == ["2025-03-01"]
 
     def test_empty_when_no_members(self, api_client, tenant):
         resp = api_client.get(URL_MEMBER_GROWTH)

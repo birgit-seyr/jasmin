@@ -45,7 +45,7 @@ from ..errors import (
     ConsentTargetMemberUnresolved,
     MemberNotFound,
 )
-from ..models import ConsentDocument, ConsentKind, ConsentRecord, Member
+from ..models import ConsentDocument, ConsentRecord, Member
 from ..schemas import catalogue_param
 from ..scoping import enforce_privileged, own_member_id, scope_to_member
 from ..serializers import (
@@ -216,10 +216,9 @@ class ConsentDocumentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     @extend_schema(
         parameters=[
             catalogue_param(
-                "kind",
+                "consent_kind",
                 description="Filter by ConsentKind",
                 required=False,
-                enum=[c[0] for c in ConsentKind.choices],
             ),
             catalogue_param(
                 "locale",
@@ -233,8 +232,10 @@ class ConsentDocumentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = ConsentDocument.objects.all()
-        params = validate_query_params(self.request, optional=["kind", "locale"])
-        kind = params["kind"]
+        params = validate_query_params(
+            self.request, optional=["consent_kind", "locale"]
+        )
+        kind = params["consent_kind"]
         locale = params["locale"]
         if kind:
             qs = qs.filter(kind=kind)
@@ -245,10 +246,9 @@ class ConsentDocumentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     @extend_schema(
         parameters=[
             catalogue_param(
-                "kind",
+                "consent_kind",
                 description="ConsentKind to look up (required)",
                 required=True,
-                enum=[c[0] for c in ConsentKind.choices],
             ),
             catalogue_param(
                 "locale", description="Locale (default 'de')", required=False

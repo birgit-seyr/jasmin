@@ -13,6 +13,8 @@ export type CommissioningMemberLoansListParams = {
 member?: string;
 /**
  * Year (YYYY format)
+ * @minimum 1900
+ * @maximum 2100
  */
 year?: number;
 };

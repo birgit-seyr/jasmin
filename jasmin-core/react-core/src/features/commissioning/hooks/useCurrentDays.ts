@@ -55,7 +55,10 @@ export const useCurrentDays = (delivery_week?: number, year?: number) => {
   const { nextWeek, nextYear } = useMemo(() => {
     if (!delivery_week || !year) return { nextWeek: 0, nextYear: 0 };
     const nextWeekDate = dayjs().year(year).isoWeek(delivery_week).add(1, 'week');
-    return { nextWeek: nextWeekDate.isoWeek(), nextYear: nextWeekDate.year() };
+    // ``isoWeekYear()`` so the pair stays one ISO coordinate: stepping out of
+    // week 52 lands on a January date whose calendar year is already the next
+    // one while its ISO week still belongs to the old year.
+    return { nextWeek: nextWeekDate.isoWeek(), nextYear: nextWeekDate.isoWeekYear() };
   }, [delivery_week, year]);
 
   // Fetch current week shares

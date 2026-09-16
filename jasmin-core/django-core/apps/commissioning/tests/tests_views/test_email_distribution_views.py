@@ -256,6 +256,20 @@ class TestSubscriptionMemberEmailsDateWindow:
         assert _emails(resp) == {"current@x.de"}
 
     @time_machine.travel(FROZEN_NOW, tick=False)
+    def test_a_backwards_window_is_refused(self, api_client, catalogue, terms):
+        """Each bound narrows the term overlap on its own, so a backwards pair
+        still matches — everything running across both dates, a large and
+        plausible-looking list for a question nobody asked. It is refused
+        instead of served."""
+        resp = self._request(
+            api_client, catalogue, date_from="2026-06-01", date_to="2026-01-01"
+        )
+
+        assert resp.status_code == 400
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "date_from"
+
+    @time_machine.travel(FROZEN_NOW, tick=False)
     def test_date_to_alone_keeps_a_since_cancelled_subscription(
         self, api_client, catalogue
     ):

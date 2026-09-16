@@ -117,18 +117,32 @@ class BaseArchivableViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet:
-        params = validate_query_params(self.request, optional=["is_past"])
-        is_past = params["is_past"]
+        is_list = getattr(self, "action", None) == "list"
 
-        if self.action == "list":
+        if is_list:
+            is_past = validate_query_params(self.request, optional=["is_past"])[
+                "is_past"
+            ]
             queryset = self.model.active.for_period(is_past=is_past)
         else:
+            # A detail route addresses ONE row by id, so it reaches the whole
+            # archive and reads no list parameter: a filter left on the URL (a
+            # page that keeps its week selector in the query string, a stale
+            # bookmark) must not turn an existing row into a 404, nor a valid
+            # PATCH into a 400 over a parameter the write ignores.
             queryset = self.model.active.for_period(is_past=True)
 
-        return self.apply_filters(queryset)
+        queryset = self.scope_queryset(queryset)
+        return self.apply_list_filters(queryset) if is_list else queryset
 
-    def apply_filters(self, queryset: QuerySet) -> QuerySet:
-        """Override in subclasses to apply specific filters."""
+    def scope_queryset(self, queryset: QuerySet) -> QuerySet:
+        """Override to narrow or annotate on EVERY action — a permanent scope
+        (what this viewset serves at all) plus the joins its serializer walks."""
+        return queryset
+
+    def apply_list_filters(self, queryset: QuerySet) -> QuerySet:
+        """Override to apply the query-param filters of the LIST route. Only
+        the list action calls this; see ``get_queryset``."""
         return queryset
 
     @property

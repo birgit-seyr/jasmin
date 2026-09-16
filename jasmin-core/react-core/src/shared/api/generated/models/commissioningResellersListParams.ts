@@ -9,14 +9,20 @@
 export type CommissioningResellersListParams = {
 /**
  * Day of the week (0=Monday, 6=Sunday) the `has_orders` annotation is scoped to. Send it together with `year` and `delivery_week`.
+ * @minimum 0
+ * @maximum 6
  */
 day_number?: number;
 /**
  * Deprecated alias of `day_number` for this endpoint: the value is matched against the order's day index (0-6), never against a SharesDeliveryDay id. Send `day_number` instead; when both are present `day_number` wins.
+ * @minimum 0
+ * @maximum 6
  */
 delivery_day?: number;
 /**
- * ISO week number (1-53)
+ * ISO week number (1-53). Week 53 is accepted only for a year that has one; sent with a 52-week year it is refused.
+ * @minimum 1
+ * @maximum 53
  */
 delivery_week?: number;
 /**
@@ -67,6 +73,8 @@ limit?: number;
 offset?: number;
 /**
  * Year (YYYY format)
+ * @minimum 1900
+ * @maximum 2100
  */
 year?: number;
 };

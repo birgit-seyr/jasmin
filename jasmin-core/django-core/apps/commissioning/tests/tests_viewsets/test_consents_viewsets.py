@@ -137,6 +137,22 @@ class TestConsentDocumentReadAccess:
         resp = member_client.get(self.URL_LIST)
         assert resp.status_code == status.HTTP_200_OK
 
+    def test_list_filters_by_kind(self, anon_client, tenant):
+        _make_doc(kind=ConsentKind.PRIVACY)
+        _make_doc(kind=ConsentKind.SEPA)
+
+        resp = anon_client.get(self.URL_LIST, {"kind": ConsentKind.SEPA})
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert [doc["kind"] for doc in resp.data] == [ConsentKind.SEPA]
+
+    def test_list_with_an_unknown_kind_is_refused(self, anon_client, tenant):
+        resp = anon_client.get(self.URL_LIST, {"kind": "privicy"})
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "kind"
+
 
 # --------------------------------------------------------------------------- #
 # ConsentDocument — write access (office only)                                #

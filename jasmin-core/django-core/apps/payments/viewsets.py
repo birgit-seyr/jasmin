@@ -25,11 +25,7 @@ from apps.authz.scoping import enforce_owner
 from apps.shared.money import round_money
 from apps.shared.openapi_params import catalogue_parameter
 from apps.shared.pii_logging import PIIReadLoggingMixin
-from apps.shared.query_params import (
-    ParamSpec,
-    validate_choice_param,
-    validate_query_params,
-)
+from apps.shared.query_params import YEAR_PARAM, ParamSpec, validate_query_params
 from core.errors import InvalidQueryParam
 from core.pagination import OptionalLimitOffsetPagination
 from core.serializers import ErrorResponseSerializer
@@ -52,14 +48,14 @@ from .services import BillingRunService, ChargeScheduleService
 # The typed query params the payments read endpoints accept (validated via
 # the shared catalogue machinery; a bad or out-of-range value 400s).
 PARAM_CATALOGUE: dict[str, ParamSpec] = {
-    "year": ParamSpec("int", min_value=1900, max_value=2100),
+    "year": YEAR_PARAM,
     "month": ParamSpec("int", min_value=1, max_value=12),
     "date_from": ParamSpec("date"),
     "date_to": ParamSpec("date"),
     # Filter-only params: declared so the OpenAPI schema derives from this
     # catalogue too, rather than being re-typed inline at each endpoint.
     "member": ParamSpec("str"),
-    "status": ParamSpec("str"),
+    "status": ParamSpec("choice", choices=tuple(ChargeStatus.values)),
 }
 
 # "Billed" income = every charge that represents owed revenue not written off:
@@ -304,7 +300,6 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
         ).all()
         params = self.request.query_params
         member_id = params.get("member")
-        status_param = params.get("status")
         if member_id:
             # A non-privileged caller may query only their OWN charges; a
             # foreign ``?member=`` is a 403, not a silent empty set. Privileged
@@ -312,9 +307,6 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
             # is the defense-in-depth backstop.
             enforce_owner(self.request, member_id, user_attr="member_profile")
             qs = qs.filter(member_id=member_id)
-        if status_param:
-            validate_choice_param(status_param, ChargeStatus.values, "status")
-            qs = qs.filter(status=status_param)
         # ``month`` alone is meaningless (it would match that month across ALL
         # years); the documented contract is "month requires year" — enforce it.
         if params.get("month") and not params.get("year"):
@@ -323,11 +315,14 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
                 field="month",
                 details={"month": params.get("month"), "year": params.get("year")},
             )
-        # Catalogue-validated ints: a bad or out-of-range ``year``/``month``
-        # 400s instead of silently returning every charge ever.
+        # Catalogue-validated: an unknown ``status`` or an out-of-range
+        # ``year``/``month`` 400s instead of quietly returning every charge
+        # ever — or, for a mistyped status, none at all.
         validated = validate_query_params(
-            self.request, PARAM_CATALOGUE, optional=["year", "month"]
+            self.request, PARAM_CATALOGUE, optional=["status", "year", "month"]
         )
+        if validated["status"]:
+            qs = qs.filter(status=validated["status"])
         if validated["year"] is not None:
             qs = qs.filter(due_date__year=validated["year"])
         if validated["month"] is not None:
@@ -410,12 +405,6 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
         )
         date_from = params["date_from"]
         date_to = params["date_to"]
-        if date_from > date_to:
-            raise InvalidQueryParam(
-                "`date_from` must be on or before `date_to`.",
-                field="date_from",
-                details={"date_from": str(date_from), "date_to": str(date_to)},
-            )
         # One GROUP BY over the ledger — no N+1. Money stays Decimal end to end
         # (Sum of a DecimalField is Decimal); quantized to 2dp and sent as a
         # STRING so full precision survives the wire.
@@ -491,6 +480,11 @@ class BillingRunViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = BillingRun.objects.all()
+        if getattr(self, "action", None) != "list":
+            # ``?year=`` scopes the list. retrieve / destroy / export each
+            # address one run by id through ``get_object``, where a stray year
+            # would 404 a run that exists.
+            return qs
         year = validate_query_params(self.request, PARAM_CATALOGUE, optional=["year"])[
             "year"
         ]

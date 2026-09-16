@@ -19,6 +19,7 @@ the matching section of Part 1.
   - [ORM & data hygiene](#orm--data-hygiene)
   - [Migrations](#migrations)
   - [Typing (mypy)](#typing-mypy)
+  - [Hygiene gates](#hygiene-gates)
   - [Commissioning isolation](#commissioning-isolation)
 - [Frontend rules](#frontend-rules)
   - [Reuse the building blocks](#reuse-the-building-blocks)
@@ -355,6 +356,32 @@ time.
   the untyped read happens once, with the reason written down.
 - **Widening a type to silence mypy is a defect.** If the checker is right that
   a value can be `None`, handle the `None`.
+
+### Hygiene gates
+
+Three more CI gates hold size, naming and layering still, and all three ratchet
+in BOTH directions like the mypy baseline above: a finding the change introduces
+fails, and so does a register entry that no longer occurs. The register can only
+shrink.
+
+| Gate | Command | Register |
+| ---- | ------- | -------- |
+| ruff hygiene rules (`N`, `C901`, `PLR0913`, `PLR0915`) | `poetry run python scripts/ruff_baseline.py check` / `make ruff` | `jasmin-core/django-core/ruff-baseline.txt` |
+| Backend import layering (commissioning one-way, shared is the bottom layer) | `poetry run python scripts/import_contracts.py` / `make import-contracts` | `EXEMPTIONS` in the script |
+| Frontend size & complexity (`max-lines`, `max-lines-per-function`, `complexity`) | `npm run lint` **and** `npm run lint:pins` / `make lint-pins` | `jasmin-core/react-core/eslint.hygiene-pins.js` |
+
+- **Never hand-edit a baseline.** Re-freeze it: `poetry run python
+  scripts/ruff_baseline.py freeze` (or `make ruff-freeze`) and commit the result.
+- **A pin may only go DOWN.** Split the function or the file, then lower the
+  number to whatever `npm run lint:pins` reports — or delete the entry once the
+  file is under the global threshold. `npm run lint` alone can't see below a
+  pin, which is why `lint:pins` re-measures; raising a pin is how a gate quietly
+  stops gating.
+- **An exemption is a documented extraction blocker, not a permission slip.** A
+  new one carries its unwind plan; one that stops matching a real import is an
+  error and has to be deleted rather than left standing.
+- **A new gate never fails on existing code.** Grandfather what's there into a
+  register that fails in both directions, then ratchet it down.
 
 ### Commissioning isolation
 

@@ -186,13 +186,31 @@ black:
 black-fix:
 	$(COMPOSE_DEV) exec backend black apps core config
 
+# ruff runs against a frozen baseline, same shape as mypy below: the strict
+# rules (E,F,B,BLE,UP,I) have no baseline entries so they still fail hard, while
+# the hygiene rules (N naming, C901 complexity, PLR0913/PLR0915 size) are held at
+# the 201 findings that predate them. Fix findings, then `make ruff-freeze` and
+# commit the smaller baseline. This is exactly what CI runs.
 .PHONY: ruff
 ruff:
-	$(COMPOSE_DEV) exec backend ruff check apps core config
+	$(COMPOSE_DEV) exec backend python scripts/ruff_baseline.py check
 
+.PHONY: ruff-freeze
+ruff-freeze:
+	$(COMPOSE_DEV) exec backend python scripts/ruff_baseline.py freeze
+
+# Autofix pass. Only the fixable rules move; the baselined naming/complexity
+# findings have no autofix and are left for a human.
 .PHONY: ruff-fix
 ruff-fix:
 	$(COMPOSE_DEV) exec backend ruff check apps core config --fix
+
+# One-way import layering: apps/commissioning must stay extractable, apps/shared
+# must stay the bottom layer. Known extraction blockers are named exemptions
+# inside the script, and an exemption that no longer matches is an error too.
+.PHONY: import-contracts
+import-contracts:
+	$(COMPOSE_DEV) exec backend python scripts/import_contracts.py
 
 # mypy runs against a frozen baseline: only findings that are NOT in
 # jasmin-core/django-core/mypy-baseline.txt fail. Fix findings, then
@@ -216,6 +234,14 @@ lint:
 lint-fix:
 	$(COMPOSE_DEV) exec frontend npm run lint:fix
 
+# The per-file pins in eslint.hygiene-pins.js are ceilings, and `npm run lint`
+# cannot see below one: a file that improves keeps its old pin and is free to
+# grow back. This re-measures every pinned file and fails on a pin above the
+# value the file now reports — the ruff/mypy ratchet, applied to the pins.
+.PHONY: lint-pins
+lint-pins:
+	$(COMPOSE_DEV) exec frontend npm run lint:pins
+
 .PHONY: type-check
 type-check:
 	$(COMPOSE_DEV) exec frontend npm run type-check
@@ -226,4 +252,4 @@ test-frontend:
 
 # --- Run the whole CI gate in one shot ---------------------------------------
 .PHONY: check
-check: black ruff mypy pytest type-check lint test-frontend
+check: black ruff import-contracts mypy pytest type-check lint lint-pins test-frontend

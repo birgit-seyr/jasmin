@@ -71,11 +71,26 @@ class TestValidateAndParseIntParams:
         assert "integer" in excinfo.value.message
 
     def test_year_out_of_range(self):
-        request = _make_get_request({"year": "1900"})
+        request = _make_get_request({"year": "1899"})
         with pytest.raises(InvalidQueryParam) as excinfo:
             validate_and_parse_int_params(request, ["year"])
         assert excinfo.value.field == "year"
-        assert "2000" in excinfo.value.message
+        assert "1900" in excinfo.value.message
+
+    def test_year_range_matches_the_query_catalogue(self):
+        """Body and query share one range, so a year cannot be legal in a query
+        string and refused in a body."""
+        request = _make_get_request({"year": "1900"})
+        assert validate_and_parse_int_params(request, ["year"]) == [1900]
+
+    @pytest.mark.parametrize("raw", ["20_26", "2026.0", "2e3", "٢٠٢٦"])
+    def test_exotic_int_spellings_are_refused(self, raw):
+        """The same parser as a catalogued query param: ``int()`` reads these,
+        the API does not."""
+        request = _make_get_request({"year": raw})
+        with pytest.raises(InvalidQueryParam) as excinfo:
+            validate_and_parse_int_params(request, ["year"])
+        assert excinfo.value.field == "year"
 
     def test_week_out_of_range_high(self):
         request = _make_get_request({"delivery_week": "54"})

@@ -35,7 +35,6 @@ from apps.shared.tenants.views import FALLBACK_APP_ICON_PATH, _tenant_from_schem
 
 MANIFEST_URL = "/api/tenants/manifest.webmanifest"
 APP_ICON_URL = "/api/tenants/app-icon.png"
-TENANT_HOST = "tenants-pytest.localhost"
 
 
 def _image_bytes(width: int, height: int, image_format: str = "PNG") -> bytes:
@@ -95,13 +94,13 @@ def _validate(upload):
 
 
 @pytest.fixture()
-def anon_client():
+def anon_client(tenant_host):
     """Unauthenticated client on the tenant host.
 
     The launcher fetching a manifest or icon has no session, so every test
     that exercises those routes must use this and never ``api_client``.
     """
-    return APIClient(HTTP_HOST=TENANT_HOST)
+    return APIClient(HTTP_HOST=tenant_host)
 
 
 @pytest.fixture()
@@ -218,9 +217,9 @@ class TestAppIconUploadEndpoint:
         return Tenant.objects.values_list("app_icon", flat=True).get(pk=tenant.pk)
 
     @staticmethod
-    def _patch_icon(tenant, payload: bytes):
+    def _patch_icon(tenant, host, payload: bytes):
         admin = JasminUserFactory(roles=["admin"])
-        client = APIClient(HTTP_HOST=TENANT_HOST)
+        client = APIClient(HTTP_HOST=host)
         client.force_authenticate(user=admin)
         upload = SimpleUploadedFile("icon.png", payload, content_type="image/png")
         return client.patch(
@@ -229,24 +228,26 @@ class TestAppIconUploadEndpoint:
             format="multipart",
         )
 
-    def test_png_with_a_bad_chunk_checksum_is_refused_with_400(self, tenant):
+    def test_png_with_a_bad_chunk_checksum_is_refused_with_400(
+        self, tenant, tenant_host
+    ):
         """DRF's ``ImageField`` already runs ``verify()`` and refuses this file
         before ``validate_app_icon`` sees it."""
         stored_before = self._stored_icon(tenant)
 
-        resp = self._patch_icon(tenant, _bad_checksum_png())
+        resp = self._patch_icon(tenant, tenant_host, _bad_checksum_png())
 
         assert resp.status_code == 400, resp.content
         assert resp.data["field"] == "app_icon"
         assert self._stored_icon(tenant) == stored_before
 
-    def test_png_with_corrupt_pixel_data_is_refused_with_400(self, tenant):
+    def test_png_with_corrupt_pixel_data_is_refused_with_400(self, tenant, tenant_host):
         """This file gets past DRF's ``ImageField`` (it stops at ``verify()``),
         so ``validate_app_icon``'s decode is the only gate; an uncaught decode
         error there would be a 500."""
         stored_before = self._stored_icon(tenant)
 
-        resp = self._patch_icon(tenant, _corrupt_pixel_data_png())
+        resp = self._patch_icon(tenant, tenant_host, _corrupt_pixel_data_png())
 
         assert resp.status_code == 400, resp.content
         assert resp.data["code"] == "tenant.app_icon_invalid"

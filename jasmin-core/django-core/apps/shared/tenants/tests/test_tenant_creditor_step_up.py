@@ -41,15 +41,15 @@ def admin(tenant):
 
 
 @pytest.fixture()
-def admin_client(admin):
-    client = APIClient(HTTP_HOST="tenants-pytest.localhost")
+def admin_client(admin, tenant_host):
+    client = APIClient(HTTP_HOST=tenant_host)
     client.force_authenticate(user=admin)
     return client
 
 
 @pytest.fixture()
-def admin_step_up_client(admin):
-    client = APIClient(HTTP_HOST="tenants-pytest.localhost")
+def admin_step_up_client(admin, tenant_host):
+    client = APIClient(HTTP_HOST=tenant_host)
     client.force_authenticate(user=admin, token=make_step_up_token(admin))
     return client
 

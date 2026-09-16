@@ -22,17 +22,28 @@ from typing import Any
 from rest_framework.request import Request
 
 from apps.shared.query_params import (
+    ISO_WEEK_PARAM,
+    YEAR_PARAM,
     ParamSpec,
 )
 from apps.shared.query_params import (
     validate_query_params as _validate_against_catalogue,
 )
 
-from ..models.choices import ShareOptions
+from ..models.choices import ConsentKind, ShareOptions
+from ..models.imports import ExternalCodeMapping, ShareImportBatch
 
 # Single source of truth for the documentation model discriminator. Public so
 # ``documentation_viewsets`` imports it instead of re-listing values.
 DOCUMENTATION_MODELS = ("harvest", "purchase", "washamount", "cleanamount")
+
+# The sources the documentation overview aggregates over. ``documentation_views``
+# keys its source-to-model map by these, so both ends stay one list.
+DOCUMENTATION_SOURCES = ("HARVEST", "PURCHASE", "WASTE")
+
+# The groupings ``calculate_member_growth_statistics`` can truncate by — one
+# per truncation it knows how to apply.
+MEMBER_GROWTH_PERIODS = ("month", "week", "year")
 
 
 # Strict bool params (absent → ``None``, i.e. "not filtered").
@@ -96,22 +107,18 @@ _STR_PARAMS = (
     "order_id",
     "seller",
     "locale",
-    "status",  # e.g. import-batch status — free string filter
     "virtual_variation",
     "physical_variation",
     "crate",
     "crate_type",  # FK to Crate — a STR id, not an enum
-    "source",  # uppercased + looked up in a model map at the call site
-    "period",
-    "kind",  # read raw in more than one context — keep as passthrough
 )
 
 PARAM_CATALOGUE: dict[str, ParamSpec] = {
     # ---- week scope (int + range) ----
-    # ``year`` spans delivery years AND entry/birth-year filters (statistics),
-    # hence the wide lower bound rather than 2000.
-    "year": ParamSpec("int", min_value=1900, max_value=2100),
-    "delivery_week": ParamSpec("int", min_value=1, max_value=53),
+    # ``year`` and the ISO week come from the shared specs, so every app's
+    # catalogue accepts the same values.
+    "year": YEAR_PARAM,
+    "delivery_week": ISO_WEEK_PARAM,
     "day_number": ParamSpec("int", min_value=0, max_value=6),
     "num_weeks": ParamSpec("int", min_value=1, max_value=104, default=52),
     "years_back": ParamSpec("int", min_value=0, max_value=50, default=2),
@@ -132,6 +139,32 @@ PARAM_CATALOGUE: dict[str, ParamSpec] = {
     # branches on exactly these two values and does nothing for anything else,
     # so an unlisted value must be refused rather than silently no-op.
     "delete_context": ParamSpec("choice", choices=("sellers", "resellers")),
+    # Enums sent under a generic wire name: the catalogue key says whose enum
+    # it is, ``wire_name`` is what the client sends. Two endpoints can then
+    # each close their own value set instead of sharing a free string.
+    "consent_kind": ParamSpec(
+        "choice", choices=tuple(ConsentKind.values), wire_name="kind"
+    ),
+    "mapping_kind": ParamSpec(
+        "choice",
+        choices=tuple(value for value, _label in ExternalCodeMapping.KIND_CHOICES),
+        wire_name="kind",
+    ),
+    "import_batch_status": ParamSpec(
+        "choice",
+        choices=tuple(value for value, _label in ShareImportBatch.STATUS_CHOICES),
+        wire_name="status",
+    ),
+    # Callers have always been free to send either case here, so the match
+    # stays case-insensitive; the default lives here rather than at the call
+    # site, so an absent AND an empty value land on the same documented value.
+    "source": ParamSpec(
+        "choice",
+        choices=DOCUMENTATION_SOURCES,
+        default="HARVEST",
+        case_insensitive=True,
+    ),
+    "period": ParamSpec("choice", choices=MEMBER_GROWTH_PERIODS, default="month"),
     # ---- booleans (strict) ----
     # Action-style flags: absent means OFF, so the default lives here instead
     # of being re-derived as ``bool(params[...])`` at each call site.

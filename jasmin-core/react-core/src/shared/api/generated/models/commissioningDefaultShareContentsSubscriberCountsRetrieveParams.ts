@@ -14,6 +14,8 @@ export type CommissioningDefaultShareContentsSubscriberCountsRetrieveParams = {
 share_option?: CommissioningDefaultShareContentsSubscriberCountsRetrieveShareOption;
 /**
  * Year (YYYY format)
+ * @minimum 1900
+ * @maximum 2100
  */
 year: number;
 };

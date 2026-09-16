@@ -7,9 +7,7 @@ from typing import Any
 from django.contrib.postgres.aggregates import StringAgg
 from django.db.models import Count, F, Prefetch, QuerySet
 from django.db.models.expressions import Exists, OuterRef
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
-    OpenApiParameter,
     OpenApiResponse,
     PolymorphicProxySerializer,
     extend_schema,
@@ -29,6 +27,7 @@ from apps.authz.permissions import (
     IsStaffOrCustomer,
     RolePermissionsMixin,
 )
+from apps.shared.openapi_params import param_schema
 from apps.shared.pii_logging import PIIReadLoggingMixin
 from apps.shared.query_params import coerce_param
 from core.errors import ForbiddenError, NotFoundError
@@ -117,10 +116,8 @@ from ..utils.query_params import PARAM_CATALOGUE, validate_query_params
 logger = logging.getLogger(__name__)
 
 _BOOL_RESELLER_PARAMS = [
-    OpenApiParameter(
-        name=name, type=OpenApiTypes.BOOL, required=False, description=desc
-    )
-    for name, desc in [
+    catalogue_param(name, description=description)
+    for name, description in [
         ("is_active_reseller", "Filter by active reseller status"),
         ("is_active_seller", "Filter by active seller status"),
         ("is_active_donation_recipient", "Filter by active donation recipient status"),
@@ -392,10 +389,11 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
                 "delivery_day",
                 required=False,
                 # The catalogue types this name as a SharesDeliveryDay id,
-                # which is what it means on every other endpoint. Here it is
-                # matched against ``Order.day_number``, so the documented type
-                # is the enforced one: the day index, not an id.
-                type=OpenApiTypes.INT,
+                # which is what it means on every other endpoint. Here the
+                # value is coerced against the ``day_number`` spec instead, so
+                # the documented schema is that spec's: the bounded day index,
+                # not an id.
+                type=param_schema(PARAM_CATALOGUE["day_number"]),
                 description=(
                     "Deprecated alias of `day_number` for this endpoint: the "
                     "value is matched against the order's day index (0-6), "
@@ -487,14 +485,19 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
         # ``delivery_day`` is the legacy spelling of ``day_number`` here: the
         # value is compared against ``Order.day_number``, an integer 0-6, not
         # against a SharesDeliveryDay id as the catalogue's STR typing of that
-        # name suggests. Coerce the alias against the ``day_number`` spec, so
-        # an id-shaped value is a 400 naming the parameter rather than a
-        # ValueError out of the ORM, and let an explicit ``day_number`` win.
-        day_number = params["day_number"]
-        if day_number is None and params["delivery_day"] is not None:
-            day_number = coerce_param(
-                params["delivery_day"], "delivery_day", PARAM_CATALOGUE["day_number"]
+        # name suggests. Coerce it whenever it is present — not only when it is
+        # the value that ends up used — so the 0-6 range the schema publishes
+        # for it is the one the server enforces, and an id-shaped value is a
+        # 400 naming the parameter rather than a ValueError out of the ORM.
+        delivery_day = params["delivery_day"]
+        if delivery_day is not None:
+            delivery_day = coerce_param(
+                delivery_day, "delivery_day", PARAM_CATALOGUE["day_number"]
             )
+        # An explicit ``day_number`` wins over the alias.
+        day_number = params["day_number"]
+        if day_number is None:
+            day_number = delivery_day
 
         queryset = apply_optional_filters(
             queryset,
@@ -636,10 +639,12 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         parameters=[
-            get_reseller_parameter(required=True),
-            get_year_parameter(required=True),
-            get_delivery_week_parameter(required=True),
-            get_day_number_parameter(required=True),
+            # Optional, as ``list`` treats them: each narrows the scope the
+            # service answers for, and an unscoped call returns an empty one.
+            get_reseller_parameter(required=False),
+            get_year_parameter(required=False),
+            get_delivery_week_parameter(required=False),
+            get_day_number_parameter(required=False),
         ],
         description="List offers and order contents for a reseller/week/day_number.",
         responses={200: OpenApiResponse(response=OrderContentListResponseSerializer)},

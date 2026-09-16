@@ -320,6 +320,16 @@ class TestChargeScheduleViewSet:
         statuses = {row["status"] for row in resp.data}
         assert statuses == {"PAID"}
 
+    def test_unknown_status_is_refused(self, api_client, tenant, member, subscription):
+        # SETTLED is a BillingRunStatus, not a ChargeStatus.
+        _make_charge(member, subscription)
+
+        resp = api_client.get(self.URL, {"status": "SETTLED"})
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "status"
+
     def test_member_cannot_regenerate(self, member_api_client, tenant, tenant_settings):
         resp = member_api_client.post(self.URL + "regenerate/")
         assert resp.status_code == status.HTTP_403_FORBIDDEN
@@ -374,6 +384,23 @@ class TestBillingRunViewSet:
     def test_list_invalid_year_returns_400(self, api_client, tenant):
         resp = api_client.get(self.URL, {"year": "not-a-year"})
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_detail_reaches_a_run_outside_the_list_year(self, api_client, tenant):
+        """``?year=`` scopes the list; retrieve addresses one run by id, so the
+        parameter left on the URL must not 404 a run that exists."""
+        run = BillingRun.objects.create(
+            period_start=datetime.date(2026, 6, 1),
+            period_end=datetime.date(2026, 6, 30),
+            collection_date=datetime.date(2026, 7, 5),
+            payment_method=PaymentMethodOptions.SEPA_DIRECT_DEBIT,
+            status=BillingRunStatus.DRAFT,
+            total_amount=Decimal("0"),
+            charge_count=0,
+            msg_id="BR-DETAIL-2026",
+        )
+        resp = api_client.get(f"{self.URL}{run.pk}/", {"year": 1999})
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["id"] == run.id
 
     # Freeze "today" before collection_date so the past-date guard
     # (BillingRunViewSet.create) doesn't reject this otherwise-valid run.

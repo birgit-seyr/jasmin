@@ -11,9 +11,11 @@ export type CommissioningDefaultShareContentsBulkListListParams = {
 /**
  * Share option (e.g. GEMUESE, OBST)
  */
-share_option?: CommissioningDefaultShareContentsBulkListListShareOption;
+share_option: CommissioningDefaultShareContentsBulkListListShareOption;
 /**
  * Year (YYYY format)
+ * @minimum 1900
+ * @maximum 2100
  */
 year: number;
 };

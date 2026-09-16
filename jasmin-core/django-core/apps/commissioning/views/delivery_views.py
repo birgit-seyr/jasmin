@@ -11,7 +11,6 @@ from rest_framework.views import APIView
 from apps.authz.permissions import APIViewRolePermissionsMixin, IsOffice, IsStaff
 from core.serializers import ErrorResponseSerializer
 
-from ..errors import CommissioningError
 from ..models import (
     DeliveryStationDay,
     ShareTypeVariation,
@@ -305,11 +304,6 @@ class DeliveryStationFeesView(APIViewRolePermissionsMixin, APIView):
         )
         start = params["start_date"]
         end = params["end_date"]
-        if start > end:
-            raise CommissioningError(
-                "start_date must be on or before end_date.",
-                code="delivery_station_fee.invalid_range",
-            )
         data = DeliveryStationFeeService.compute_all(
             start, end, station_id=params["delivery_station"]
         )

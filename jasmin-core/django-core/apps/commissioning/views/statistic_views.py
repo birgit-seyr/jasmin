@@ -29,7 +29,6 @@ from ..serializers import (
     PurchaseCostByWeekSerializer,
 )
 from ..services import (
-    MEMBER_GROWTH_PERIODS,
     ShareContentService,
     calculate_historical_share_type_variation_averages,
     calculate_member_dashboard_statistics,
@@ -58,8 +57,6 @@ _MAX_PURCHASE_COST_SPAN_DAYS = _MAX_PURCHASE_COST_SPAN_YEARS * 366
             "period",
             required=False,
             description="Time period for grouping statistics",
-            enum=["month", "week", "year"],
-            default="month",
         ),
         catalogue_param(
             "start_date",
@@ -77,20 +74,10 @@ _MAX_PURCHASE_COST_SPAN_DAYS = _MAX_PURCHASE_COST_SPAN_YEARS * 366
 @permission_classes([IsOffice])
 def member_growth_statistics(request: Request) -> Response:
     """Confirmed member entries, exits and counts per month, week or year."""
-    params = validate_query_params(request, optional=["start_date", "year"])
+    params = validate_query_params(request, optional=["period", "start_date", "year"])
     start_date: date | None = params["start_date"]
     year: int | None = params["year"]
-
-    # period stays a raw read: the catalogue lists it as a free str, but this
-    # endpoint enforces its own {month, week, year} enum (with a "month"
-    # default the str-default of None would mask).
-    period: str = request.query_params.get("period", "month")
-    if period not in MEMBER_GROWTH_PERIODS:
-        raise InvalidQueryParam(
-            f"Invalid period '{period}'. Must be one of: "
-            f"{', '.join(MEMBER_GROWTH_PERIODS)}",
-            field="period",
-        )
+    period: str = params["period"]
 
     result = calculate_member_growth_statistics(
         period=period, year=year, start_date=start_date
@@ -132,11 +119,8 @@ def purchase_cost_by_week(request: Request) -> Response:
     params = validate_query_params(request, required=["start_date", "end_date"])
     start_date: date = params["start_date"]
     end_date: date = params["end_date"]
-    if start_date > end_date:
-        raise InvalidQueryParam(
-            "`start_date` must be on or before `end_date`.",
-            field="start_date",
-        )
+    # The order of the pair is the catalogue's rule; the SPAN is this
+    # endpoint's, because the week walk below is what the cap protects.
     if (end_date - start_date).days > _MAX_PURCHASE_COST_SPAN_DAYS:
         raise InvalidQueryParam(
             f"The range must not exceed {_MAX_PURCHASE_COST_SPAN_YEARS} years.",

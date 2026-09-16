@@ -182,14 +182,15 @@ class TestListRetrieveUpdate:
         assert response.data["id"] == tenant.id
         assert response.data["schema_name"] == tenant.schema_name
         # ``domains`` is serialized as a list of {domain, is_primary} dicts.
-        # Both ``pytest.localhost`` and ``testserver`` are seeded in
-        # conftest; which one ends up ``is_primary=True`` depends on
-        # django-tenants' DomainMixin auto-promotion (it defaults to
-        # True and demotes the previous primary on save), so just check
-        # the domain is present and exactly one row is marked primary.
+        # The commissioning conftest seeds both ``pytest.localhost`` and
+        # ``testserver`` with ``is_primary`` stated explicitly, so the winner
+        # is deterministic: ``testserver`` is the primary (it is what
+        # ``frontend_base_url()`` renders into invitation / GDPR /
+        # password-reset links).
+        primary = {d["domain"] for d in response.data["domains"] if d["is_primary"]}
         domain_names = {d["domain"] for d in response.data["domains"]}
-        assert "pytest.localhost" in domain_names
-        assert sum(1 for d in response.data["domains"] if d["is_primary"]) == 1
+        assert {"pytest.localhost", "testserver"} <= domain_names
+        assert primary == {"testserver"}
 
     def test_retrieve_unknown_tenant_returns_404(self, factory, tenant, super_admin):
         request = factory.get("/tenants/nonexistent99/")

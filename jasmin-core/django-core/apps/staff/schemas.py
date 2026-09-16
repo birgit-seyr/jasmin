@@ -36,5 +36,11 @@ def get_year_parameter(**overrides):
 def get_week_parameter(**overrides):
     required = overrides.pop("required", True)
     return catalogue_param(
-        "week", description="ISO week number (1–53)", required=required, **overrides
+        "week",
+        description=(
+            "ISO week number (1-53). Week 53 is accepted only for a year that "
+            "has one; sent with a 52-week year it is refused."
+        ),
+        required=required,
+        **overrides,
     )

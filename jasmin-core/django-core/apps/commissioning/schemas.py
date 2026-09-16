@@ -1,4 +1,4 @@
-from drf_spectacular.utils import OpenApiExample, OpenApiParameter
+from drf_spectacular.utils import OpenApiExample
 
 from apps.shared.openapi_params import catalogue_parameter
 
@@ -60,7 +60,10 @@ def get_delivery_week_parameter(**overrides):
 
     return catalogue_param(
         "delivery_week",
-        description="ISO week number (1-53)",
+        description=(
+            "ISO week number (1-53). Week 53 is accepted only for a year that "
+            "has one; sent with a 52-week year it is refused."
+        ),
         required=required,
         examples=[
             OpenApiExample("Week 1", value=1),
@@ -234,18 +237,16 @@ def get_end_date_parameter(**overrides):
 
 
 # DATE_FROM / DATE_TO — the required date-range pair shared by the CSV export
-# endpoints. Declared as plain strings (not the catalogue's ``date`` kind):
-# some consumers read the raw values straight off the query params.
+# endpoints. Derived from the catalogue that validates them, so the documented
+# type is the enforced one: a ``date``, parsed from YYYY-MM-DD.
 EXPORT_DATE_RANGE_PARAMETERS = [
-    OpenApiParameter(
-        name="date_from",
-        type=str,
+    catalogue_param(
+        "date_from",
         required=True,
         description="Start date (YYYY-MM-DD)",
     ),
-    OpenApiParameter(
-        name="date_to",
-        type=str,
+    catalogue_param(
+        "date_to",
         required=True,
         description="End date (YYYY-MM-DD)",
     ),

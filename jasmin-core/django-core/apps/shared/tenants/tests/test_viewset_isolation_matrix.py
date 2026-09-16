@@ -8,14 +8,17 @@ can't silently disable it on one viewset.
 
 Setup: we mint an access token with a ``tenant_id`` claim that does NOT
 match the schema the request will resolve to. Every endpoint must
-respond non-2xx (the JWT layer raises ``InvalidToken`` -> 401).
+respond 401/403 (the JWT layer raises ``InvalidToken`` -> 401).
 
-Note: we don't include a "matching-tenant" sanity check here because
-APIClient requests pass through ``TenantMainMiddleware``, which resolves
-the tenant from ``HTTP_HOST`` (defaults to ``testserver`` in the test
-client → public schema), not from the test fixture's schema switch. The
-happy-path matching case is covered by ``test_integration_http.py`` and
-the per-app integration suites that use ``force_authenticate``.
+Every request names its host. ``TenantMainMiddleware`` resolves the schema
+from ``HTTP_HOST``, not from the test fixture's schema switch, so a request
+that does not name this package's tenant 404s in the middleware and never
+reaches the JWT guard at all. ``tenant_host`` pins it there, which keeps the
+file exercising the guard when this package runs on its own and makes the
+rejection attributable to the token rather than to routing.
+
+The happy-path matching case is covered by the per-app integration suites
+that use ``force_authenticate``.
 """
 
 from __future__ import annotations
@@ -30,7 +33,7 @@ pytestmark = pytest.mark.django_db
 
 
 # Representative tenant-scoped endpoints from each major app. Each must
-# return non-2xx when the JWT carries a foreign or missing ``tenant_id``.
+# return 401/403 when the JWT carries a foreign or missing ``tenant_id``.
 # URLs verified against the actual routers — note underscores on payments
 # and the ``email-templates/`` path on notifications.
 PROTECTED_ENDPOINTS = [
@@ -50,12 +53,12 @@ def _mint(user, *, tenant_id: str) -> str:
 
 
 @pytest.mark.parametrize("url", PROTECTED_ENDPOINTS)
-def test_foreign_tenant_token_is_rejected(tenant, url):
+def test_foreign_tenant_token_is_rejected(tenant, tenant_host, url):
     """Token claims tenant_id='some_other_tenant' — must NEVER return 200."""
     user = JasminUserFactory(roles=["office", "admin"])
     foreign_token = _mint(user, tenant_id="some_other_tenant")
 
-    client = APIClient()
+    client = APIClient(HTTP_HOST=tenant_host)
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {foreign_token}")
     resp = client.get(url)
 
@@ -66,13 +69,13 @@ def test_foreign_tenant_token_is_rejected(tenant, url):
 
 
 @pytest.mark.parametrize("url", PROTECTED_ENDPOINTS)
-def test_token_without_tenant_claim_is_rejected(tenant, url):
+def test_token_without_tenant_claim_is_rejected(tenant, tenant_host, url):
     """SimpleJWT default tokens have NO tenant_id. They must also be
     rejected — defense in depth against a downgrade attack."""
     user = JasminUserFactory(roles=["office", "admin"])
     bare_token = str(AccessToken.for_user(user))  # no tenant_id
 
-    client = APIClient()
+    client = APIClient(HTTP_HOST=tenant_host)
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {bare_token}")
     resp = client.get(url)
 

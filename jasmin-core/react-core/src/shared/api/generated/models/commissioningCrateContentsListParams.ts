@@ -9,10 +9,14 @@
 export type CommissioningCrateContentsListParams = {
 /**
  * Day of the week (0=Monday, 6=Sunday)
+ * @minimum 0
+ * @maximum 6
  */
 day_number: number;
 /**
- * ISO week number (1-53)
+ * ISO week number (1-53). Week 53 is accepted only for a year that has one; sent with a 52-week year it is refused.
+ * @minimum 1
+ * @maximum 53
  */
 delivery_week: number;
 /**
@@ -21,6 +25,8 @@ delivery_week: number;
 reseller: string;
 /**
  * Year (YYYY format)
+ * @minimum 1900
+ * @maximum 2100
  */
 year: number;
 };

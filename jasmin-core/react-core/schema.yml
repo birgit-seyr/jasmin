@@ -2414,6 +2414,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         required: true
         examples:
@@ -2427,7 +2429,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -2443,6 +2448,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -3306,11 +3313,12 @@ paths:
         schema:
           type: string
         description: Member ID (Jasmin ID format)
-        required: true
       - in: query
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         examples:
           '2024':
@@ -3823,6 +3831,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         required: true
         examples:
@@ -3836,7 +3846,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -3858,6 +3871,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -3999,6 +4014,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         required: true
         examples:
@@ -4012,7 +4029,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -4045,6 +4065,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -5666,6 +5688,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         required: true
         examples:
@@ -5679,7 +5703,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -5700,6 +5727,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -5921,7 +5950,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -5937,6 +5969,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -6431,7 +6465,9 @@ paths:
   /api/commissioning/default_share_contents/bulk_list/:
     get:
       operationId: commissioning_default_share_contents_bulk_list_list
-      description: List default share content grouped by article/unit/size.
+      description: 'List default share content grouped by article/unit/size. Both
+        parameters are required: the rows are the planning slots of one year and one
+        share option, so an unscoped call could only answer with an empty list.'
       parameters:
       - in: query
         name: share_option
@@ -6446,10 +6482,13 @@ paths:
           - HONEY_SHARE
           - OIL_SHARE
         description: Share option (e.g. GEMUESE, OBST)
+        required: true
       - in: query
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -6624,6 +6663,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -7959,6 +8000,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         required: true
         examples:
@@ -7972,7 +8015,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -7988,6 +8034,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -8415,7 +8463,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         examples:
           Week1:
             value: 1
@@ -8435,12 +8486,16 @@ paths:
         name: num_weeks
         schema:
           type: integer
+          minimum: 1
+          maximum: 104
           default: 52
         description: 'Number of weeks to return capacity for (default: 52)'
       - in: query
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         examples:
           '2024':
@@ -8913,6 +8968,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         examples:
           Monday:
@@ -8932,7 +8989,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         examples:
           Week1:
             value: 1
@@ -8957,11 +9017,14 @@ paths:
           - HARVEST
           - PURCHASE
           - WASTE
+          default: HARVEST
         description: Documentation source type (defaults to HARVEST)
       - in: query
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -9062,6 +9125,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         examples:
           Monday:
@@ -9074,7 +9139,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -9123,6 +9191,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -9295,7 +9365,11 @@ paths:
         name: kind
         schema:
           type: string
-        description: variation | station | day
+          enum:
+          - day
+          - station
+          - variation
+        description: Which reference table the external code maps into
       tags:
       - commissioning
       security:
@@ -9571,8 +9645,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
-        required: true
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         examples:
           Week1:
             value: 1
@@ -9587,8 +9663,9 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
-        required: true
         examples:
           '2024':
             value: 2024
@@ -9657,7 +9734,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -9697,6 +9777,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -10016,6 +10098,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         examples:
           Monday:
@@ -10028,7 +10112,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -10057,6 +10144,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -10448,12 +10537,14 @@ paths:
         name: date_from
         schema:
           type: string
+          format: date
         description: Start date (YYYY-MM-DD)
         required: true
       - in: query
         name: date_to
         schema:
           type: string
+          format: date
         description: End date (YYYY-MM-DD)
         required: true
       - in: query
@@ -10495,7 +10586,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -10537,6 +10631,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -10836,7 +10932,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -10876,6 +10975,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -10887,6 +10988,8 @@ paths:
         name: years_back
         schema:
           type: integer
+          minimum: 0
+          maximum: 50
           default: 2
       tags:
       - commissioning
@@ -11942,6 +12045,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         examples:
           '2024':
@@ -11995,6 +12100,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         examples:
           '2024':
@@ -12921,12 +13028,14 @@ paths:
         name: date_from
         schema:
           type: string
+          format: date
         description: Start date (YYYY-MM-DD)
         required: true
       - in: query
         name: date_to
         schema:
           type: string
+          format: date
         description: End date (YYYY-MM-DD)
         required: true
       tags:
@@ -13741,7 +13850,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -13763,6 +13875,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -13834,7 +13948,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -13877,6 +13994,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -14257,8 +14376,9 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
-        required: true
         examples:
           Monday:
             value: 0
@@ -14270,8 +14390,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
-        required: true
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         examples:
           Week1:
             value: 1
@@ -14287,13 +14409,13 @@ paths:
         schema:
           type: string
         description: Reseller ID (Jasmin ID format)
-        required: true
       - in: query
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
-        required: true
         examples:
           '2024':
             value: 2024
@@ -14974,6 +15096,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         examples:
           Monday:
@@ -14986,7 +15110,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         examples:
           Week1:
             value: 1
@@ -15006,7 +15133,10 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
+        required: true
         examples:
           '2024':
             value: 2024
@@ -15314,6 +15444,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         required: true
         examples:
@@ -15332,7 +15464,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -15362,6 +15497,7 @@ paths:
         name: packing_station
         schema:
           type: integer
+          minimum: 0
         description: Packing station number
       - in: query
         name: share_type
@@ -15373,11 +15509,14 @@ paths:
         name: tour
         schema:
           type: integer
+          minimum: 0
         description: Tour number
       - in: query
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -15417,6 +15556,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         required: true
         examples:
@@ -15435,7 +15576,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -15465,11 +15609,14 @@ paths:
         name: tour
         schema:
           type: integer
+          minimum: 0
         description: Tour number
       - in: query
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -15508,6 +15655,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         required: true
         examples:
@@ -15526,7 +15675,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -15555,11 +15707,14 @@ paths:
         name: tour
         schema:
           type: integer
+          minimum: 0
         description: Tour number
       - in: query
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -15600,6 +15755,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         required: true
         examples:
@@ -15618,7 +15775,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -15653,6 +15813,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -16841,12 +17003,14 @@ paths:
         name: date_from
         schema:
           type: string
+          format: date
         description: Start date (YYYY-MM-DD)
         required: true
       - in: query
         name: date_to
         schema:
           type: string
+          format: date
         description: End date (YYYY-MM-DD)
         required: true
       - in: query
@@ -16950,12 +17114,16 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday) the `has_orders` annotation
           is scoped to. Send it together with `year` and `delivery_week`.
       - in: query
         name: delivery_day
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: 'Deprecated alias of `day_number` for this endpoint: the value
           is matched against the order''s day index (0-6), never against a SharesDeliveryDay
           id. Send `day_number` instead; when both are present `day_number` wins.'
@@ -16963,7 +17131,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         examples:
           Week1:
             value: 1
@@ -17042,6 +17213,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         examples:
           '2024':
@@ -18637,7 +18810,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         examples:
           Week1:
             value: 1
@@ -18679,6 +18855,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -19028,7 +19206,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -19066,6 +19247,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -19114,6 +19297,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -19232,6 +19417,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         required: true
         examples:
@@ -19250,7 +19437,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -19283,6 +19473,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -19377,6 +19569,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         required: true
         examples:
@@ -19396,7 +19590,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -19412,6 +19609,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -19458,6 +19657,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         examples:
           '2024':
@@ -19738,14 +19939,25 @@ paths:
         name: delivery_week
         schema:
           type: integer
+          minimum: 1
+          maximum: 53
       - in: query
         name: status
         schema:
           type: string
+          enum:
+          - applied
+          - failed
+          - preview_ready
+          - superseded
+          - uploaded
+          - validated
       - in: query
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
       tags:
       - commissioning
       security:
@@ -20020,7 +20232,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -20050,6 +20265,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -20534,7 +20751,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         examples:
           Week1:
             value: 1
@@ -20562,6 +20782,8 @@ paths:
         name: num_weeks
         schema:
           type: integer
+          minimum: 1
+          maximum: 104
           default: 52
         description: 'Number of weeks of per-variation capacity_by_week to return
           (default: 52). Needs year + delivery_week.'
@@ -20597,6 +20819,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         examples:
           '2024':
@@ -20994,7 +21218,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -21034,10 +21261,13 @@ paths:
         name: tour
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -21528,7 +21758,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         examples:
           Week1:
             value: 1
@@ -21553,6 +21786,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         examples:
           '2024':
@@ -21935,6 +22170,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         examples:
           Monday:
@@ -21947,7 +22184,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -21969,6 +22209,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -22034,12 +22276,14 @@ paths:
         name: date_from
         schema:
           type: string
+          format: date
         description: Start date (YYYY-MM-DD)
         required: true
       - in: query
         name: date_to
         schema:
           type: string
+          format: date
         description: End date (YYYY-MM-DD)
         required: true
       tags:
@@ -22075,6 +22319,8 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
         examples:
           Monday:
@@ -22087,7 +22333,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
         examples:
           Week1:
@@ -22103,6 +22352,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         required: true
         examples:
@@ -22850,7 +23101,7 @@ paths:
       description: |-
         Distinct e-mail addresses of members holding a confirmed, non-waiting-list subscription that matches the filter — a copyable e-mail distribution list for the AbosEmails page.
 
-        Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and — where the window has a start — not cancelled effective before that start. Each bound of the active window applies on its own: ``date_from`` alone means 'still running on or after that date', ``date_to`` alone 'already started by that date', both together the overlap with ``[date_from, date_to]``, and neither collapses the window to today. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Each member's primary and secondary addresses (``email`` / ``email_2`` / ``email_3``) are all included; blanks, non-address junk, and duplicates are dropped.
+        Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and — where the window has a start — not cancelled effective before that start. Each bound of the active window applies on its own: ``date_from`` alone means 'still running on or after that date', ``date_to`` alone 'already started by that date', both together the overlap with ``[date_from, date_to]``, and neither collapses the window to today. Sending ``date_from`` after ``date_to`` is refused (400) rather than served as a backwards window. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Each member's primary and secondary addresses (``email`` / ``email_2`` / ``email_3``) are all included; blanks, non-address junk, and duplicates are dropped.
       summary: Member e-mails for a subscription filter (distribution list)
       parameters:
       - in: query
@@ -22955,6 +23206,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         examples:
           '2024':
@@ -23380,6 +23633,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         examples:
           '2024':
@@ -23805,6 +24060,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         examples:
           '2024':
@@ -24230,6 +24487,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
         examples:
           '2024':
@@ -24936,8 +25195,9 @@ paths:
         name: day_number
         schema:
           type: integer
+          minimum: 0
+          maximum: 6
         description: Day of the week (0=Monday, 6=Sunday)
-        required: true
         examples:
           Monday:
             value: 0
@@ -24949,8 +25209,10 @@ paths:
         name: delivery_week
         schema:
           type: integer
-        description: ISO week number (1-53)
-        required: true
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         examples:
           Week1:
             value: 1
@@ -24989,8 +25251,9 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Year (YYYY format)
-        required: true
         examples:
           '2024':
             value: 2024
@@ -25767,14 +26030,27 @@ paths:
         name: purpose
         schema:
           type: string
+        description: Exact purpose slug (e.g. commissioning.invoice).
       - in: query
         name: recipient
         schema:
           type: string
+        description: Case-insensitive partial match on the recipient address.
       - in: query
         name: status
         schema:
           type: string
+          enum:
+          - bounced
+          - complained
+          - deferred
+          - delivered
+          - failed
+          - pending
+          - rejected
+          - sent
+          - suppressed
+        description: Exact delivery status.
       tags:
       - notifications
       security:
@@ -26476,6 +26752,8 @@ paths:
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Filter to runs whose period falls in this year (matched on period_start's
           year).
       tags:
@@ -26720,6 +26998,8 @@ paths:
         name: month
         schema:
           type: integer
+          minimum: 1
+          maximum: 12
         description: Filter by due_date month (1–12). Requires `year`.
       - name: offset
         required: false
@@ -26733,11 +27013,20 @@ paths:
         name: status
         schema:
           type: string
+          enum:
+          - FAILED
+          - ISSUED
+          - PAID
+          - PARTIAL
+          - PLANNED
+          - WAIVED
         description: Filter by ChargeStatus value (PLANNED, ISSUED, ...).
       - in: query
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Filter by due_date year.
       tags:
       - Payments — Charge schedule
@@ -27806,12 +28095,17 @@ paths:
         name: week
         schema:
           type: integer
-        description: ISO week number (1–53)
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
         required: true
       - in: query
         name: year
         schema:
           type: integer
+          minimum: 1900
+          maximum: 2100
         description: Calendar year
         required: true
       tags:

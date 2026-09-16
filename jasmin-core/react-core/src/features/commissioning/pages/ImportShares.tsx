@@ -82,7 +82,7 @@ export default function ImportShares() {
   const { getSetting } = useTenant();
 
   const now = dayjs();
-  const [selectedYear, setSelectedYear] = useState<number>(now.year());
+  const [selectedYear, setSelectedYear] = useState<number>(now.isoWeekYear());
   const [selectedWeek, setSelectedWeek] = useState<number | null>(
     now.isoWeek(),
   );

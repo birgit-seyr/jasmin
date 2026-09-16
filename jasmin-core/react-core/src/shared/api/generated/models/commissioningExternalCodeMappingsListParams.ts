@@ -5,10 +5,11 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { CommissioningExternalCodeMappingsListKind } from './commissioningExternalCodeMappingsListKind';
 
 export type CommissioningExternalCodeMappingsListParams = {
 /**
- * variation | station | day
+ * Which reference table the external code maps into
  */
-kind?: string;
+kind?: CommissioningExternalCodeMappingsListKind;
 };

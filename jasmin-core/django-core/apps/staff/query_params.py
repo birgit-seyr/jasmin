@@ -12,14 +12,14 @@ from typing import Any
 
 from rest_framework.request import Request
 
-from apps.shared.query_params import ParamSpec
+from apps.shared.query_params import ISO_WEEK_PARAM, YEAR_PARAM, ParamSpec
 from apps.shared.query_params import validate_query_params as _validate
 
 STAFF_PARAM_CATALOGUE: dict[str, ParamSpec] = {
-    "year": ParamSpec("int", min_value=2000, max_value=2100),
-    "week": ParamSpec("int", min_value=1, max_value=53),
-    "from_week": ParamSpec("int", min_value=1, max_value=53),
-    "to_week": ParamSpec("int", min_value=1, max_value=53),
+    "year": YEAR_PARAM,
+    "week": ISO_WEEK_PARAM,
+    "from_week": ISO_WEEK_PARAM,
+    "to_week": ISO_WEEK_PARAM,
 }
 
 

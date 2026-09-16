@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-827 tests | 165 test classes | 31 files
+867 tests | 168 test classes | 32 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 Counts are collected cases, so a parametrized method counts once per case.
@@ -48,9 +48,10 @@ test_choices_viewsets.py (19 tests)
   TestOrdersDeliveryDayViewSet             2   list
   TestPaymentCycleViewSet                  3   list, is_active filter
 
-test_consents_viewsets.py (45 tests) — DSGVO-critical access matrix
+test_consents_viewsets.py (47 tests) — DSGVO-critical access matrix
 ───────────────────────────────────────────────────────────────────
-  TestConsentDocumentReadAccess            6   anon + member + office all 200; current/ 200 + clean 404
+  TestConsentDocumentReadAccess            8   anon + member + office all 200; current/ 200 + clean 404;
+                                               ?kind= filters the list, an unknown kind → 400
   TestConsentDocumentWriteAccess           6   anon 401/403, member 403; office 201; PROTECTed delete → 409
   TestConsentRecordCreate                  7   member pinned to self; spoof attempt → 403; office can act
                                                on behalf; IP from X-Forwarded-For; UA captured; unknown
@@ -143,7 +144,7 @@ test_delivery_viewsets.py (31 tests)
                                                open row on a versioned station-day
   TestUpdateToursCreatesStationDay         1   assigning a station without a station-day creates one
 
-test_documentation_viewsets.py (49 tests)
+test_documentation_viewsets.py (56 tests)
 ─────────────────────────────────────────
   TestPlotViewSet                          6   list, is_active filter, create, retrieve, delete
   TestWasteViewSet                         4   list; create with a page-level storage; plain storage required
@@ -152,9 +153,11 @@ test_documentation_viewsets.py (49 tests)
   TestForecastViewSet                      4   week scope required, list, filter by year/week
   TestForecastInvalidVariation             2   unknown variation on create / update → 404
   TestForecastBulkCopyToNextWeek           3   empty ids → 400, unknown ids → 404, copy
-  TestPurchaseExportCsv                    3   missing dates → 400; empty range still a CSV; week-scoped
-                                               purchase included with localized labels
-  TestHarvestExportCsv                     2   empty range still a CSV; day + labels localized
+  TestPurchaseExportCsv                    4   missing dates → 400 naming date_from; a non-YYYY-MM-DD date
+                                               → 400 before the export runs; empty range still a CSV;
+                                               week-scoped purchase included with localized labels
+  TestHarvestExportCsv                     2   empty range still a CSV (filename carries the range);
+                                               day + labels localized
   TestBulkSetAsExpected                    6   harvest/purchase set-as-expected valid (204);
                                                empty body does not 500; malformed item 400
   TestDocumentationSummaryAction           1   empty summary for an unused week
@@ -162,13 +165,21 @@ test_documentation_viewsets.py (49 tests)
                                                unknown share_article → 404; valid payload creates the row
   TestUpdateAdditionalTheoreticalAmount    1   invalid model → 400
   TestMovementSourceDeleteRecascades       3   deleting a movement source re-cascades the stock snapshots
+  TestListFiltersDoNotScopeDetailRoutes    3   a forecast / waste detail route reaches a row outside
+                                               the list window, and a stale week filter on the URL does
+                                               not refuse the PATCH
+  TestExportDateRangeOrder                 3   harvest + purchase exports refuse an inverted range
+                                               (query.invalid_param naming date_from); a single-day
+                                               range still exports
 
-test_imports_viewsets.py (22 tests)
+test_imports_viewsets.py (25 tests)
 ───────────────────────────────────
-  TestExternalCodeMappingViewSet           6   list, filter by kind, create, duplicate code refused, delete
-  TestShareImportBatchViewSet              9   upload → preview-ready (or failed on invalid CSV), missing file
+  TestExternalCodeMappingViewSet           7   list, filter by kind, unknown kind → 400, create, duplicate
+                                               code refused, delete
+  TestShareImportBatchViewSet             11   upload → preview-ready (or failed on invalid CSV), missing file
                                                → 400, idempotent for the same bytes, preview action,
-                                               full upload → preview → apply round trip
+                                               full upload → preview → apply round trip, ?status= filters
+                                               and an unknown status → 400
   TestExternalShareDemandViewSet           2   list, demand visible after apply
   TestShareImportBatchTerminalStatus       5   an applied or superseded batch refuses preview and apply, the
                                                stored status named in the error details; re-uploading the
@@ -201,7 +212,7 @@ test_member_onboarding_fields.py (23 tests) — onboarding mode: member_number /
                                                existing or new trial member → member.number_not_allowed_for_trial;
                                                trial row without a number still saves
 
-test_members_viewsets.py (43 tests)
+test_members_viewsets.py (49 tests)
 ───────────────────────────────────
   TestMemberViewSet                       24   list, payback-due and coop-share totals, filters (is_active,
                                                is_trial, exclude_trial_members incl. its =false case), confirm,
@@ -211,6 +222,10 @@ test_members_viewsets.py (43 tests)
   TestCoopShareViewSet                     7   list, filter by member, office create auto-confirms, confirm action
                                                (admits an unconfirmed member, blocked for a cancelled one)
   TestConfirmedImmutableDeletion           4   confirmed member / coop share cannot be deleted; unconfirmed can
+  TestListFiltersDoNotScopeDetailRoutes    5   member / abos / coop share / member loan detail routes
+                                               reach a row the list filter excludes; a PATCH carrying
+                                               that filter still returns the updated row
+  TestMemberRegisterExportDateRange        1   inverted range → 400 query.invalid_param naming date_from
 
 test_offer_group_default.py (7 tests)
 ─────────────────────────────────────
@@ -296,19 +311,29 @@ test_picture_upload_validation.py (37 tests) — picture uploads must be raster 
                                                unconverted keeps it; EXIF orientation applied + EXIF dropped;
                                                P-mode PNG/GIF transparency kept; 16-bit PNG kept
 
+test_query_param_contract.py (17 tests) — documented required vs. what the server needs
+───────────────────────────────────────────────────────────────────────────────────────
+  TestDocumentedQueryParamContract        17   the six scoped operations (orders_overview, default share
+                                               content bulk_list, the four CSV exports) document their
+                                               scope required AND 400 a bare call; the four filter lists
+                                               (waste, coop_shares, order_contents, external_share_demand)
+                                               document theirs optional AND serve a bare call; the export
+                                               date pair is documented as a date, not a free string
+
 test_reseller_content_query_count.py (4 tests)
 ──────────────────────────────────────────────
   TestInvoiceResellerContentQueryCount     2   list is scale-invariant; missing invoice_id refused
   TestDeliveryNoteResellerContentQueryCount 2  list is scale-invariant; missing delivery_note_id refused
 
-test_resellers_viewsets.py (71 tests)
+test_resellers_viewsets.py (73 tests)
 ─────────────────────────────────────
   TestResellerViewSet                     10   list, filter is_reseller / is_active_reseller, retrieve, IBAN never
                                                returned in plaintext, delete (delete_context required: a bare or
                                                unknown context → 400 and the row is kept)
-  TestResellerHasOrdersAnnotation          4   day_number scopes the has_orders annotation (Monday like any other
-                                               day); the deprecated delivery_day alias is accepted; an id-shaped
-                                               alias value → 400 naming delivery_day
+  TestResellerHasOrdersAnnotation          6   day_number scopes the has_orders annotation (Monday like any other
+                                               day); the deprecated delivery_day alias is accepted and held to the
+                                               same 0-6 range even beside an explicit day_number, which wins; an
+                                               id-shaped or out-of-range alias value → 400 naming delivery_day
   TestResellerHasOrdersWithoutInvoiceFilter 8  has_orders_without_invoice=true keeps only resellers with an order
                                                no invoice covers (an uninvoiced delivery note still counts, a
                                                crate-only invoice settles its order); false keeps the settled +
@@ -358,7 +383,7 @@ test_shares_delivery_day_query_count.py (1 test)
 ────────────────────────────────────────────────
   (module-level)                           1   list can_be_deleted matches the per-instance answer
 
-test_shares_viewsets.py (118 tests)
+test_shares_viewsets.py (121 tests)
 ───────────────────────────────────
   TestShareTypeViewSet                    15   list, include_future (current + upcoming, not past), variation
                                                sizes and validity bounds, deletability, filter share_option,
@@ -374,9 +399,11 @@ test_shares_viewsets.py (118 tests)
                                                out-of-range day → 400 with the field, a valid day is
                                                applied while omitted fields survive, the "undefined"
                                                sentinel still clears (clock frozen, week 30/2026)
-  TestShareExportCsvAction                 4   missing / malformed dates → 400; empty range → header-only CSV;
-                                               range filters to the ISO-week window
-  TestDefaultShareContentBulkList          2   invalid year → 400; filters to the requested share option
+  TestShareExportCsvAction                 5   missing / malformed / inverted dates → 400; empty range →
+                                               header-only CSV; range filters to the ISO-week window
+  TestDefaultShareContentBulkList          4   invalid year → 400; year and share_option are both required
+                                               (each missing one → 400 naming it); filters to the
+                                               requested share option
   TestDefaultShareContentSubscriberCounts  3   count per variation, other share options excluded, invalid year 400
   TestDefaultShareContentBulkUpdate        1   invalid composite id → 400
   TestDefaultShareContentBulkDelete        2   invalid composite id → 400; unknown share_article → 404

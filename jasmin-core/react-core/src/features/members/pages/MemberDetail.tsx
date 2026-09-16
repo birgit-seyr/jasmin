@@ -75,7 +75,7 @@ const MemberDetail = () => {
   const { logoShape, logoAspectRatio } = useLogoShape(displayLogoUrl);
 
   const currentWeek = dayjs().isoWeek();
-  const currentYear = dayjs().year();
+  const currentYear = dayjs().isoWeekYear();
 
   const { data: member, isLoading: memberLoading } =
     useCommissioningMembersRetrieve(id!, {

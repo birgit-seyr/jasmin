@@ -5,6 +5,16 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
+// Per-file pins for the size/complexity gates at the bottom of this file: the
+// files that already exceed the thresholds, each frozen at its current worst
+// value so it cannot grow. A visible, shrinkable debt register — see the header
+// of that file for how to retire an entry.
+import {
+  complexityPins,
+  functionLengthPins,
+  fileLengthPins,
+} from './eslint.hygiene-pins.js'
+
 const browserWithProcess = {
   ...globals.browser,
   // Vite injects `process.env.NODE_ENV` at build time via the `define` option,
@@ -246,4 +256,67 @@ export default [
       ],
     },
   },
+  // Size & complexity. The thresholds come from the MEASURED distribution, not
+  // from taste: of 666 source files, 4 exceed 1000 lines and the next one down
+  // is at 970, so this fires on the very next file that grows. Files over a
+  // threshold are pinned individually in eslint.hygiene-pins.js rather than
+  // exempted, so they are capped where they stand instead of being blinded —
+  // the difference between a debt register and a hole: a pinned file still
+  // fails when a NEW oversized function is added to it. `npm run lint:pins`
+  // closes the other direction, failing on a pin that sits above the value its
+  // file now measures, so the register can only shrink.
+  {
+    files: ['src/**/*.{ts,tsx,js,jsx}'],
+    rules: {
+      complexity: ['error', 25],
+      'max-lines-per-function': [
+        'error',
+        { max: 400, skipBlankLines: true, skipComments: true },
+      ],
+      'max-lines': [
+        'error',
+        { max: 1000, skipBlankLines: false, skipComments: false },
+      ],
+    },
+  },
+  // Tests: a `describe` / `it` callback is a suite, not a function, so its length
+  // measures how many cases the file covers rather than how complex any code is —
+  // the longest is a 479-line table of e-invoice fixtures. Hence a generous
+  // ceiling rather than no ceiling: a data-builder helper that runs away inside a
+  // test file is a real function and still gets caught. File length and
+  // per-function complexity keep the global numbers and are comfortably green
+  // (worst test file 831 lines, worst test complexity 11).
+  {
+    files: ['**/__tests__/**', '**/*.test.{ts,tsx}', 'src/test/**'],
+    rules: {
+      'max-lines-per-function': [
+        'error',
+        { max: 600, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
+  // The pins themselves. Spread last so they override the global thresholds for
+  // exactly the listed files.
+  ...Object.entries(complexityPins).map(([file, max]) => ({
+    files: [file],
+    rules: { complexity: ['error', max] },
+  })),
+  ...Object.entries(functionLengthPins).map(([file, max]) => ({
+    files: [file],
+    rules: {
+      'max-lines-per-function': [
+        'error',
+        { max, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  })),
+  ...Object.entries(fileLengthPins).map(([file, max]) => ({
+    files: [file],
+    rules: {
+      'max-lines': [
+        'error',
+        { max, skipBlankLines: false, skipComments: false },
+      ],
+    },
+  })),
 ]

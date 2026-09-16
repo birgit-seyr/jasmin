@@ -32,7 +32,18 @@ repos:
     rev: v0.15.13
     hooks:
       - id: ruff
-        args: [--fix]
+        # The hygiene rules (naming, complexity, argument/statement counts) are
+        # gated in CI through a frozen baseline (scripts/ruff_baseline.py), not
+        # at commit time. ruff reports every finding in a file you touch, not just
+        # the lines you changed, so leaving them on here would block a commit on
+        # pre-existing findings elsewhere in the same file -- several of which
+        # (the kg_per_piece_S / _M / _L model fields, say) cannot be renamed
+        # without a migration, which would make those files permanently
+        # uncommittable. Every other rule still blocks the commit exactly as
+        # before. N818 needs no entry: it is ignored project-wide in pyproject.
+        args:
+          - --fix
+          - --extend-ignore=N801,N802,N806,N811,N814,N815,N817,C901,PLR0913,PLR0915
         files: ^jasmin-core/django-core/(apps|config|core)/.*\.py$
 
   # ── Backend format ──────────────────────────────────────────

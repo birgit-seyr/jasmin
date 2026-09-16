@@ -110,8 +110,14 @@ class RefetchForResponseMixin:
         return self.get_queryset().filter(id=instance.id).first()
 
 
-def _build_member_queryset(request: Request) -> QuerySet[Member]:
-    """Return the annotated/filtered Member queryset for list/retrieve.
+def _build_member_queryset(request: Request, *, filtered: bool) -> QuerySet[Member]:
+    """Return the annotated Member queryset, narrowed by the list filters when
+    ``filtered`` is set.
+
+    Only the list route passes ``filtered=True``. A detail route addresses one
+    member by id — and ``refetch_for_response`` re-reads the row a write just
+    saved — so a list filter applied there would 404 a member who exists, or
+    drop the very row a successful PATCH has to return.
 
     Kept outside `MemberViewSet.get_queryset` to keep the viewset thin.
     The N+1 lock note (see joins/prefetch below) is enforced by
@@ -130,23 +136,27 @@ def _build_member_queryset(request: Request) -> QuerySet[Member]:
         )
     )
 
-    params = validate_query_params(
-        request,
-        optional=[
-            "is_active",
-            "is_trial",
-            "only_with_subscriptions",
-            "exclude_trial_members",
-        ],
+    filters = (
+        validate_query_params(
+            request,
+            optional=[
+                "is_active",
+                "is_trial",
+                "only_with_subscriptions",
+                "exclude_trial_members",
+            ],
+        )
+        if filtered
+        else {}
     )
-    queryset = apply_optional_filters(queryset, params, ["is_active", "is_trial"])
+    queryset = apply_optional_filters(queryset, filters, ["is_active", "is_trial"])
     # One-armed, unlike the two filters above: ``?exclude_trial_members=true``
     # drops the trial members, ``=false`` (or absent) means "don't exclude".
     # Running it as a value filter would turn an explicit false into
     # ``is_trial=True`` — the exact inverse of what the name promises.
-    if params["exclude_trial_members"]:
+    if filters.get("exclude_trial_members"):
         queryset = queryset.filter(is_trial=False)
-    if params["only_with_subscriptions"]:
+    if filters.get("only_with_subscriptions"):
         queryset = queryset.filter(subscriptions__isnull=False).distinct()
 
     today = timezone.now().date()
@@ -364,7 +374,9 @@ class MemberViewSet(
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[Member]:
-        return _build_member_queryset(self.request)
+        return _build_member_queryset(
+            self.request, filtered=getattr(self, "action", None) == "list"
+        )
 
     @extend_schema(
         description=(
@@ -718,31 +730,42 @@ class MemberViewSet(
         )
 
 
-def _build_subscription_queryset(request: Request) -> QuerySet[Subscription]:
-    """Return the filtered Subscription queryset.
+def _build_subscription_queryset(
+    request: Request, *, filtered: bool
+) -> QuerySet[Subscription]:
+    """Return the annotated Subscription queryset, narrowed by the list filters
+    when ``filtered`` is set.
+
+    Only the list route passes ``filtered=True`` — a detail route addresses one
+    subscription by id, and ``refetch_for_response`` re-reads the row a write
+    just saved, so a list filter there would 404 a row that exists.
 
     Read-only display fields (member name, share type strings, payment-
     cycle name, etc.) are resolved by `SubscriptionSerializer` via
     `source=` / `SerializerMethodField`. The select_related chain below
     must cover every relation the serializer touches to avoid N+1.
     """
-    params = validate_query_params(
-        request,
-        optional=[
-            "member",
-            "share_type_variation",
-            "is_trial",
-            "share_option",
-            "active_at_date",
-            "on_waiting_list",
-        ],
+    filters = (
+        validate_query_params(
+            request,
+            optional=[
+                "member",
+                "share_type_variation",
+                "is_trial",
+                "share_option",
+                "active_at_date",
+                "on_waiting_list",
+            ],
+        )
+        if filtered
+        else {}
     )
-    member = params["member"]
-    share_type_variation = params["share_type_variation"]
-    is_trial = params["is_trial"]
-    share_option = params["share_option"]
-    active_at_date = params["active_at_date"]
-    on_waiting_list = params["on_waiting_list"]
+    member = filters.get("member")
+    share_type_variation = filters.get("share_type_variation")
+    is_trial = filters.get("is_trial")
+    share_option = filters.get("share_option")
+    active_at_date = filters.get("active_at_date")
+    on_waiting_list = filters.get("on_waiting_list")
 
     if active_at_date is not None:
         queryset: QuerySet[Subscription] = Subscription.current.active_at_date(
@@ -897,7 +920,9 @@ class SubscriptionViewSet(
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[Subscription]:
-        return _build_subscription_queryset(self.request)
+        return _build_subscription_queryset(
+            self.request, filtered=getattr(self, "action", None) == "list"
+        )
 
     @extend_schema(
         description="Create a draft (unconfirmed) subscription.",
@@ -1324,10 +1349,11 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         parameters=[
-            get_member_parameter(required=True),
-            # ``year`` is optional at runtime — see ``get_queryset`` below,
-            # which only filters when present. Optional so the per-member
-            # CoopSharesModal can ask for "all years" by omitting the param.
+            # Both are optional filters — see ``get_queryset`` below, which
+            # only narrows when they are present: the per-member CoopSharesModal
+            # sends ``member`` and omits ``year`` to ask for all of its years,
+            # while a bare call is the tenant-wide office list.
+            get_member_parameter(required=False),
             get_year_parameter(required=False),
         ],
         responses={200: CoopShareSerializer(many=True)},
@@ -1343,14 +1369,14 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             "member", "admin_confirmed_by"
         )
 
-        params = validate_query_params(self.request, optional=["member", "year"])
-        member = params["member"]
-        year = params["year"]
-
-        if member:
-            queryset = queryset.filter(member=member)
-        if year:
-            queryset = queryset.filter(due_date__year=year)
+        # List-only: a detail route reaches one share by id, where the office
+        # page's member/year filters would 404 a share that exists.
+        if getattr(self, "action", None) == "list":
+            params = validate_query_params(self.request, optional=["member", "year"])
+            if params["member"]:
+                queryset = queryset.filter(member=params["member"])
+            if params["year"]:
+                queryset = queryset.filter(due_date__year=params["year"])
 
         return queryset.order_by("-paid_at")
 
@@ -1626,13 +1652,13 @@ class MemberLoanViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     def get_queryset(self) -> QuerySet[MemberLoan]:
         queryset = MemberLoan.objects.all().select_related("member")
 
-        params = validate_query_params(self.request, optional=["member", "year"])
-        member = params["member"]
-        year = params["year"]
-
-        if member:
-            queryset = queryset.filter(member=member)
-        if year:
-            queryset = queryset.filter(start_date__year=year)
+        # List-only, as on the sibling coop-share list: the detail route
+        # addresses one loan by id and reads neither filter.
+        if getattr(self, "action", None) == "list":
+            params = validate_query_params(self.request, optional=["member", "year"])
+            if params["member"]:
+                queryset = queryset.filter(member=params["member"])
+            if params["year"]:
+                queryset = queryset.filter(start_date__year=params["year"])
 
         return queryset.order_by("-start_date")

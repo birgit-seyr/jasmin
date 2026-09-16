@@ -194,6 +194,38 @@ class TestResellerHasOrdersAnnotation:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.data["field"] == "delivery_day"
 
+    def test_an_out_of_range_delivery_day_is_refused_beside_a_day_number(
+        self, api_client, tenant
+    ):
+        """The schema publishes the 0-6 day range for the alias, so the server
+        holds the value to it whenever it is sent — not only when it is the one
+        that ends up filtering."""
+        self._reseller_with_order(2)
+
+        resp = api_client.get(
+            self.URL,
+            {
+                "year": 2026,
+                "delivery_week": 15,
+                "day_number": 2,
+                "delivery_day": "99",
+            },
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["field"] == "delivery_day"
+
+    def test_an_explicit_day_number_wins_over_the_alias(self, api_client, tenant):
+        reseller = self._reseller_with_order(2)
+
+        resp = api_client.get(
+            self.URL,
+            {"year": 2026, "delivery_week": 15, "day_number": 2, "delivery_day": "3"},
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert self._row(resp, reseller)["has_orders"] is True
+
 
 @pytest.mark.django_db
 class TestResellerHasOrdersWithoutInvoiceFilter:

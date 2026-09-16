@@ -129,11 +129,20 @@
     "gross_price_in_use": "Dieser Preis kann nicht gelöscht werden, weil für diese Anteilsvariation bereits Abos bestehen."
   },
   "tenant": {
-    "app_icon_invalid": "Das App-Symbol muss ein quadratisches PNG-, JPEG- oder WEBP-Bild mit mindestens 512x512 Pixeln und höchstens 2 MB sein."
+    "app_icon_invalid": "Das App-Symbol muss ein quadratisches PNG-, JPEG- oder WEBP-Bild mit mindestens 512x512 Pixeln und höchstens 2 MB sein.",
+    "invalid_schema_name": "Der Schema-Name ist ungültig oder reserviert — bitte einen anderen Namen wählen.",
+    "schema_already_exists": "Ein Datenbank-Schema mit diesem Namen existiert bereits — bitte einen anderen Schema-Namen wählen.",
+    "invalid_domain": "Die Domain ist ungültig — bitte eine gültige Domain angeben.",
+    "reserved_domain": "Diese Subdomain ist für die Plattform reserviert — bitte eine andere Domain wählen.",
+    "weak_password": "Das Passwort ist zu schwach — bitte ein sichereres Passwort wählen.",
+    "no_context": "Diese Anfrage enthält keinen Mandanten-Kontext. Bitte die Seite über die Adresse des Mandanten erneut aufrufen."
   },
   "tenant_settings": {
     "coop_shares_bounds_inverted": "Die Mindestanzahl an Geschäftsanteilen darf die Höchstanzahl nicht überschreiten.",
-    "invalid_payload": "Die übermittelten Einstellungen haben ein ungültiges Format."
+    "invalid_payload": "Die übermittelten Einstellungen haben ein ungültiges Format.",
+    "year_numbering_locked": "Diese Einstellung zur Jahres-Nummerierung kann nicht mehr geändert werden, weil bereits Dokumente dieses Typs existieren.",
+    "empty_numbering_prefix": "Das Nummern-Präfix darf nicht leer sein — Dokumentnummern brauchen ein Präfix. Bitte einen Wert eintragen.",
+    "invalid_value": "Ungültiger Wert für diese Einstellung. Bitte den erlaubten Wertebereich beachten (z. B. Tag des Monats 1–28, Kalenderwoche 1–53)."
   },
   "share_content": {
     "invalid": "Eintrag ungültig — bitte die Daten prüfen.",
@@ -416,9 +425,6 @@
     "invalid_composite_id": "Ungültige Kennung für die Standard-Anteilsinhalte.",
     "no_amounts": "Es wurden keine Mengen für Anteilsvarianten angegeben."
   },
-  "delivery_station_fee": {
-    "invalid_range": "Das Startdatum muss am oder vor dem Enddatum liegen."
-  },
   "documentation": {
     "invalid_model": "Ungültiger Modelltyp für die Dokumentation."
   },
@@ -469,5 +475,38 @@
     "employee_in_use": "Diese MitarbeiterIn kann nicht gelöscht werden, weil noch Wochenplan-Einträge, Abwesenheiten oder Anstellungen auf sie verweisen. Stattdessen deaktivieren.",
     "weekly_plan_category_in_use": "Diese Wochenplan-Kategorie kann nicht gelöscht werden, weil sie im Wochenplan verwendet wird. Stattdessen deaktivieren.",
     "absence_category_in_use": "Diese Abwesenheits-Kategorie kann nicht gelöscht werden, weil noch Abwesenheiten auf sie verweisen. Stattdessen deaktivieren."
+  },
+  "email_config": {
+    "test_recipient_missing": "Bitte eine Empfängeradresse für die Test-E-Mail angeben.",
+    "not_set_up": "Der E-Mail-Versand ist noch nicht eingerichtet. Bitte zuerst SMTP-Host und Absenderadresse hinterlegen und speichern, dann die Test-E-Mail senden.",
+    "test_recipient_not_allowed": "Test-E-Mails gehen nur an die eigene Konto-Adresse oder an die Kontaktadresse der Organisation. Bitte eine dieser Adressen eintragen.",
+    "test_send_failed": "Die Test-E-Mail konnte nicht gesendet werden. Bitte SMTP-Host, Port und Zugangsdaten prüfen und erneut versuchen."
+  },
+  "support": {
+    "ticket_not_found": "Support-Anfrage nicht gefunden.",
+    "reply_empty": "Die Antwort darf nicht leer sein — bitte einen Text eingeben.",
+    "invalid_status": "Ungültiger Status für diese Support-Anfrage."
+  },
+  "super_admin": {
+    "tenant_not_found": "Mandant nicht gefunden.",
+    "user_not_found": "Benutzerkonto nicht gefunden.",
+    "tenant_schema_missing": "Zu diesem Mandanten existiert kein Datenbank-Schema mehr. Der Mandant ist in einem inkonsistenten Zustand und muss geprüft werden, bevor weitere Aktionen möglich sind.",
+    "domain_in_use": "Diese Domain ist bereits vergeben — bitte eine andere Domain wählen.",
+    "tenant_provisioning_failed": "Das Anlegen des Mandanten ist fehlgeschlagen und wurde abgebrochen. Bitte das Server-Log prüfen und den Vorgang erneut starten.",
+    "user_email_exists": "Diese E-Mail-Adresse wird bereits von einem Benutzerkonto verwendet — bitte eine andere Adresse wählen.",
+    "invalid_roles": "Die gewählten Rollen sind ungültig oder nicht miteinander kombinierbar. Bitte die Rollenauswahl korrigieren.",
+    "last_admin": "Diese Änderung würde dem Mandanten die letzte aktive Admin-Rolle entziehen. Bitte zuerst eine andere Person als Admin einsetzen oder die Änderung ausdrücklich erzwingen.",
+    "reseller_not_found": "Wiederverkäufer nicht gefunden — bitte die Auswahl prüfen.",
+    "reseller_already_linked": "Dieser Wiederverkäufer ist bereits mit einem anderen User verknüpft.",
+    "missing_credentials": "Bitte E-Mail-Adresse und Passwort eingeben.",
+    "invalid_credentials": "Login fehlgeschlagen — E-Mail oder Passwort stimmt nicht.",
+    "account_disabled": "Dieser Plattform-Account ist deaktiviert.",
+    "account_locked": "Zu viele fehlgeschlagene Login-Versuche — dieser Account ist vorübergehend gesperrt. Bitte später erneut versuchen.",
+    "refresh_token_missing": "Sitzung abgelaufen — bitte erneut anmelden.",
+    "refresh_token_invalid": "Sitzung ungültig oder abgelaufen — bitte erneut anmelden.",
+    "not_super_admin_token": "Diese Sitzung hat keine Plattform-Berechtigung — bitte als Plattform-Administrator:in anmelden.",
+    "backup_script_missing": "Das Backup-Skript wurde auf dem Server nicht gefunden. Bitte die Server-Konfiguration prüfen.",
+    "backup_failed": "Das Backup ist fehlgeschlagen. Bitte das Server-Log prüfen und erneut versuchen.",
+    "backup_timed_out": "Das Backup hat zu lange gedauert und wurde abgebrochen. Bitte es später erneut versuchen."
   }
 }

@@ -14,6 +14,7 @@ from typing import Any
 
 from rest_framework.request import Request
 
+from apps.shared.query_params import ParamSpec, coerce_param
 from apps.shared.request_utils import body
 
 from ..errors import (
@@ -22,6 +23,19 @@ from ..errors import (
     InvalidQueryParam,
     RequiredFieldMissing,
 )
+from .query_params import PARAM_CATALOGUE
+
+# The body ints this helper parses take the query catalogue's bounds, so a year
+# means the same thing in a POST body as in a query string. ``week`` is the
+# body spelling of ``delivery_week``.
+_BODY_INT_SPECS = {
+    "year": PARAM_CATALOGUE["year"],
+    "delivery_week": PARAM_CATALOGUE["delivery_week"],
+    "week": PARAM_CATALOGUE["delivery_week"],
+}
+
+#: A name with no catalogued range: still parsed as an integer, just unbounded.
+_UNBOUNDED_INT = ParamSpec("int")
 
 
 def validate_and_parse_int_params(
@@ -33,8 +47,11 @@ def validate_and_parse_int_params(
     """
     Validate and parse integer parameters from request with automatic range checks.
 
-    Automatically validates common ranges:
-    - year: 2000-2100
+    Parsing and the 400 shape come from ``coerce_param``, the same parser the
+    catalogued query parameters use, so an integer means one thing everywhere.
+
+    Automatically validates common ranges, taken from the query catalogue:
+    - year: 1900-2100
     - delivery_week/week: 1-53
 
     Args:
@@ -66,18 +83,14 @@ def validate_and_parse_int_params(
         ...     request, ["year"], ranges={"year": (1900, 2200)}
         ... )
     """
-    # Default ranges for common parameters
-    DEFAULT_RANGES = {
-        "year": (2000, 2100),
-        "delivery_week": (1, 53),
-        "week": (1, 53),
-    }
-
-    # Merge custom ranges with defaults
+    effective_specs = dict(_BODY_INT_SPECS)
     if ranges:
-        effective_ranges = {**DEFAULT_RANGES, **ranges}
-    else:
-        effective_ranges = DEFAULT_RANGES
+        effective_specs.update(
+            {
+                name: ParamSpec("int", min_value=low, max_value=high)
+                for name, (low, high) in ranges.items()
+            }
+        )
 
     parsed_values = []
     params_source = request.query_params if source == "query" else request.data
@@ -92,27 +105,15 @@ def validate_and_parse_int_params(
                 field=param_name,
             )
 
-        # Parse integer
-        try:
-            parsed_value = int(value)
-        except (ValueError, TypeError) as exc:
-            raise InvalidQueryParam(
-                f"{param_name} must be an integer",
-                field=param_name,
-            ) from exc
-
-        # Check range if defined
-        if param_name in effective_ranges:
-            min_val, max_val = effective_ranges[param_name]
-            if not min_val <= parsed_value <= max_val:
-                raise InvalidQueryParam(
-                    f"{param_name} must be between {min_val} and {max_val}, "
-                    f"got {parsed_value}",
-                    field=param_name,
-                    details={"min": min_val, "max": max_val, "got": parsed_value},
-                )
-
-        parsed_values.append(parsed_value)
+        # ``str`` because a JSON body carries real ints, while the shared
+        # parser reads the wire spelling.
+        parsed_values.append(
+            coerce_param(
+                str(value),
+                param_name,
+                effective_specs.get(param_name, _UNBOUNDED_INT),
+            )
+        )
 
     return parsed_values
 

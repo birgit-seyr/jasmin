@@ -216,18 +216,11 @@ class DocumentationExportService:
         cls,
         *,
         model: ExportModel,
-        date_from: str | None,
-        date_to: str | None,
+        date_from: dt_date,
+        date_to: dt_date,
         summed: bool,
     ) -> StreamingHttpResponse:
-        if not date_from or not date_to:
-            raise InvalidExportDates("date_from and date_to are required")
-
-        try:
-            start = dt_date.fromisoformat(date_from)
-            end = dt_date.fromisoformat(date_to)
-        except ValueError as exc:
-            raise InvalidExportDates("Invalid date format. Use YYYY-MM-DD.") from exc
+        start, end = date_from, date_to
 
         if model not in cls._CONFIG:
             raise InvalidExportDates(f"Unsupported export model: {model!r}")
@@ -258,7 +251,7 @@ class DocumentationExportService:
                         )
                     )
 
-        filename = f"{labels['filename_prefix']}_{date_from}_{date_to}"
+        filename = f"{labels['filename_prefix']}_{start.isoformat()}_{end.isoformat()}"
         if summed:
             filename += f"_{cls._SUMMED_LABELS[language]['suffix']}"
 

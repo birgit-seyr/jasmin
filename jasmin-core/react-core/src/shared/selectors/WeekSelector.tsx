@@ -5,6 +5,13 @@ import { useTranslation } from "react-i18next";
 import { useTenantYearOptions } from "@hooks/index";
 import SteppedSelect from "./SteppedSelect";
 
+/** 52 or 53: December 31 sits in the year's last ISO week unless that week
+ * already belongs to the next year. */
+const getWeeksInYear = (year: number) => {
+  const lastWeek = dayjs(`${year}-12-31`).isoWeek();
+  return lastWeek === 1 ? 52 : lastWeek;
+};
+
 interface WeekSelectorProps {
   selectedYear: number;
   setSelectedYear: (value: number) => void;
@@ -26,8 +33,15 @@ const WeekSelector = ({
   const handleYearChange = useCallback(
     (value: number) => {
       setSelectedYear(value);
+      // Week 53 exists only in a 53-week year. Without this the selection
+      // survives the year change and the page asks the API for a week the new
+      // year does not have, which the backend refuses.
+      const weeksInNewYear = getWeeksInYear(value);
+      if (selectedWeek !== null && selectedWeek > weeksInNewYear) {
+        setSelectedWeek(weeksInNewYear);
+      }
     },
-    [setSelectedYear],
+    [selectedWeek, setSelectedYear, setSelectedWeek],
   );
 
   const handleWeekChange = useCallback(
@@ -36,12 +50,6 @@ const WeekSelector = ({
     },
     [setSelectedWeek],
   );
-
-  const getWeeksInYear = (year: number) => {
-    const lastDayOfYear = dayjs(`${year}-12-31`);
-    const lastWeek = lastDayOfYear.isoWeek();
-    return lastWeek === 1 ? 52 : lastWeek;
-  };
 
   const nextWeek = useCallback(() => {
     if (selectedWeek === null) {

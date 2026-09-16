@@ -24,10 +24,64 @@ import pytest
 # the repo root keeps these paths correct if the tree is relocated.
 DJANGO_CORE = Path(__file__).resolve().parents[4]
 REACT_CORE = DJANGO_CORE.parent / "react-core"
-ERRORS_FILES = [
-    DJANGO_CORE / "core" / "errors.py",
-    *sorted((DJANGO_CORE / "apps").glob("*/errors.py")),
+APPS_DIR = DJANGO_CORE / "apps"
+
+
+def _relative(path: Path) -> str:
+    return path.relative_to(DJANGO_CORE).as_posix()
+
+
+def _discover_errors_modules() -> list[Path]:
+    """Every ``errors.py`` under ``apps/``, at ANY depth.
+
+    Apps are not all one level deep: ``apps/shared/tenants``,
+    ``apps/shared/super_admin`` and ``apps/shared/support`` are nested, so a
+    one-level ``apps/*/errors.py`` scan covers neither them nor any future
+    nested app. Test and migration trees are skipped — an ``errors.py`` there
+    would be fixture code, not a wire contract.
+    """
+    return sorted(
+        path
+        for path in APPS_DIR.rglob("errors.py")
+        if not {"tests", "migrations"} & set(path.relative_to(APPS_DIR).parts)
+    )
+
+
+ERRORS_FILES = [DJANGO_CORE / "core" / "errors.py", *_discover_errors_modules()]
+
+# Every errors.py that exists today. Discovery must keep finding all of them:
+# the scope of this guard can otherwise shrink in silence — a renamed app, a
+# moved module, a re-narrowed glob — and the codes it stops covering reach
+# users as raw English without any test turning red.
+EXPECTED_ERRORS_MODULES = frozenset(
+    {
+        "core/errors.py",
+        "apps/accounts/errors.py",
+        "apps/authz/errors.py",
+        "apps/commissioning/errors.py",
+        "apps/gdpr/errors.py",
+        "apps/notifications/errors.py",
+        "apps/payments/errors.py",
+        "apps/shared/super_admin/errors.py",
+        "apps/shared/support/errors.py",
+        "apps/shared/tenants/errors.py",
+        "apps/staff/errors.py",
+    }
+)
+
+# Discovered errors.py modules deliberately held out of the i18n requirement,
+# each mapped to the reason. A module whose codes never reach a user still has
+# to be DISCOVERED and then listed here — being missed by the scan is the
+# failure mode this guard exists to prevent, so "no user-facing codes" is a
+# statement someone writes down, not something a glob decides. Exemptions for
+# individual codes go in SERVER_TRANSLATED_CODES instead.
+EXEMPT_ERRORS_MODULES: dict[str, str] = {}
+
+# The modules whose codes must have i18n entries.
+COVERED_ERRORS_FILES = [
+    path for path in ERRORS_FILES if _relative(path) not in EXEMPT_ERRORS_MODULES
 ]
+
 I18N_LOCALES_DIR = REACT_CORE / "src" / "shared" / "i18n" / "locales"
 REQUIRED_LANGS = ("de", "en")
 
@@ -54,7 +108,7 @@ SERVER_TRANSLATED_CODES = frozenset(
 def _collect_backend_codes() -> set[str]:
     """Parse every errors.py and return the union of `code = "..."` literals."""
     codes: set[str] = set()
-    for path in ERRORS_FILES:
+    for path in COVERED_ERRORS_FILES:
         if not path.exists():
             continue
         tree = ast.parse(path.read_text())
@@ -89,7 +143,7 @@ def _jasmin_error_callees() -> set[str]:
     scanning by callee (not just "any ``code=``") avoids demanding i18n for
     field-validation codes that the frontend can't key on."""
     names = set(_CODE_FORWARDING_HELPERS)
-    for path in ERRORS_FILES:
+    for path in COVERED_ERRORS_FILES:
         if not path.exists():
             continue
         for node in ast.walk(ast.parse(path.read_text())):
@@ -197,6 +251,29 @@ def test_every_backend_error_code_has_i18n_entry(lang: str) -> None:
         + "\n".join(f"  - {c}" for c in missing)
         + "\nAdd them so users see authored, localized error text instead of "
         "the raw backend message."
+    )
+
+
+def test_discovery_finds_every_known_errors_module() -> None:
+    """Scope guard for the guard: the scan must still reach every errors.py.
+
+    The coverage test above can only be as wide as this discovery. When a scan
+    narrows — a module moves a directory deeper, an app is renamed — the codes
+    it drops stop being checked and nothing else notices.
+    """
+    discovered = {_relative(path) for path in ERRORS_FILES}
+    missing = sorted(EXPECTED_ERRORS_MODULES - discovered)
+    assert not missing, (
+        f"{len(missing)} known errors.py module(s) no longer discovered:\n"
+        + "\n".join(f"  - {m}" for m in missing)
+        + "\nThe i18n coverage guard has stopped checking their codes. Widen "
+        "the discovery, or update EXPECTED_ERRORS_MODULES if the module moved."
+    )
+    unlisted_exemptions = sorted(set(EXEMPT_ERRORS_MODULES) - discovered)
+    assert not unlisted_exemptions, (
+        "EXEMPT_ERRORS_MODULES names module(s) the scan doesn't find: "
+        f"{unlisted_exemptions}. An exemption for a path that isn't discovered "
+        "hides nothing and rots — drop it, or fix the path."
     )
 
 

@@ -14,8 +14,8 @@ import {
   useUnitOptions,
 } from "@hooks/index";
 import type {
+  CommissioningCrateContentsListParams,
   CommissioningOffersListParams,
-  CommissioningOrderContentsListParams,
 } from "@shared/api/generated/models";
 import type {
   EditableColumnConfig,
@@ -31,7 +31,8 @@ import { pickTierPrice } from "@shared/utils/tierPrice";
 import { useAmountUnitSizeColumns } from "./useAmountUnitSizeColumns";
 
 interface UseOrderColumnsParams {
-  params: CommissioningOrderContentsListParams;
+  /** The Orders page scope (``useOrdersData``'s ``listParams``). */
+  params: CommissioningCrateContentsListParams;
   dataCrates: Record<string, unknown>[];
 }
 

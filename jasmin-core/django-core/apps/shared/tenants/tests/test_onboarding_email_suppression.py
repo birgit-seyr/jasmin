@@ -487,10 +487,10 @@ class TestTestSendsWhileOn:
         assert (row.status, row.purpose) == ("sent", "test:smtp")
 
     def test_a_template_test_send_of_a_member_email_is_sent(
-        self, tenant, onboarding_mode, email_config, smtp_connection
+        self, tenant, tenant_host, onboarding_mode, email_config, smtp_connection
     ):
         admin = JasminUserFactory(roles=["admin"])
-        client = APIClient(HTTP_HOST="tenants-pytest.localhost")
+        client = APIClient(HTTP_HOST=tenant_host)
         client.force_authenticate(user=admin)
 
         resp = client.post(

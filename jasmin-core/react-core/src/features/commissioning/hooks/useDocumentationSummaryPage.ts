@@ -40,7 +40,7 @@ import { useInvalidateAfterTableMutation } from "@hooks/useInvalidateAfterTableM
 export type DocumentationSummaryRecord = DocumentationSummaryRow &
   TableRecord & { next_week_theoretical?: number };
 
-const currentYear = dayjs().year();
+const currentYear = dayjs().isoWeekYear();
 const currentWeek = dayjs().isoWeek();
 const currentDay = dayjs().isoWeekday();
 

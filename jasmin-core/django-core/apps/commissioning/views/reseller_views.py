@@ -707,7 +707,7 @@ class CombinedOrderOverviewView(APIViewRolePermissionsMixin, APIView):
         Results can be filtered by year, week, day_number, and reseller.
         """,
         parameters=[
-            get_year_parameter(required=False),
+            get_year_parameter(required=True),
             get_delivery_week_parameter(required=False),
             get_day_number_parameter(required=False),
             get_reseller_parameter(required=False),
@@ -718,11 +718,8 @@ class CombinedOrderOverviewView(APIViewRolePermissionsMixin, APIView):
     )
     def get(self, request: Request) -> Response:
         """Get combined overview of orders with delivery notes and invoices."""
-        # year is required at runtime: without it this office endpoint would
-        # materialize every order across all years with no pagination. All real
-        # callers (DeliveryNotes / Invoices / PaymentsResellers) always send it.
-        # (The @extend_schema marks year optional only for doc back-compat, the
-        # same split ShareView uses — runtime validation is the real gate.)
+        # year is required: without it this office endpoint would materialize
+        # every order across all years with no pagination.
         params = validate_query_params(
             request,
             required=["year"],

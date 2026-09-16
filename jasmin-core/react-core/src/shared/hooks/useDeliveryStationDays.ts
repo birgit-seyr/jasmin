@@ -30,7 +30,7 @@ export const useDeliveryStationDays = (params: DeliveryStationDayParams = {}) =>
   const { t } = useTranslation();
 
   const mergedParams = useMemo(() => ({
-    year: dayjs().year(),
+    year: dayjs().isoWeekYear(),
     delivery_week: dayjs().isoWeek(),
     ...params,
   }), [params]);

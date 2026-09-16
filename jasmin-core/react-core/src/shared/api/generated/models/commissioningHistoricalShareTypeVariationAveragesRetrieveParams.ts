@@ -13,7 +13,9 @@ export type CommissioningHistoricalShareTypeVariationAveragesRetrieveParams = {
  */
 active_at_date?: string;
 /**
- * ISO week number (1-53)
+ * ISO week number (1-53). Week 53 is accepted only for a year that has one; sent with a 52-week year it is refused.
+ * @minimum 1
+ * @maximum 53
  */
 delivery_week: number;
 /**
@@ -26,7 +28,13 @@ share_option?: CommissioningHistoricalShareTypeVariationAveragesRetrieveShareOpt
 share_type_variation_ids?: string;
 /**
  * Year (YYYY format)
+ * @minimum 1900
+ * @maximum 2100
  */
 year: number;
+/**
+ * @minimum 0
+ * @maximum 50
+ */
 years_back?: number;
 };

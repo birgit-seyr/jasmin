@@ -25,14 +25,14 @@ from typing import Any
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.template.loader import render_to_string
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.authz.permissions import IsAdmin, IsOffice, RolePermissionsMixin
-from apps.shared.query_params import validate_choice_param
+from apps.shared.openapi_params import catalogue_parameter
 from apps.shared.request_utils import auth_user
 from core.errors import NotFoundError
 from core.pagination import OptionalLimitOffsetPagination
@@ -45,6 +45,7 @@ from .errors import (
     TestSendNoRecipient,
 )
 from .models import BackgroundJob, EmailLog, EmailTemplate
+from .query_params import PARAM_CATALOGUE, validate_query_params
 from .registry import (
     DEFAULT_LANGUAGE,
     SUPPORTED_LANGUAGES,
@@ -84,10 +85,9 @@ class EmailTestSendThrottle(TenantScopedRateThrottle):
 # Shared OpenAPI parameter for the ``?language=`` query string. Declared
 # here so drf-spectacular surfaces it on every endpoint and orval bakes it
 # into the generated client signature.
-LANGUAGE_PARAM = OpenApiParameter(
-    name="language",
-    type=str,
-    required=False,
+LANGUAGE_PARAM = catalogue_parameter(
+    "language",
+    PARAM_CATALOGUE,
     description="Two-letter language code. Defaults to 'en'.",
 )
 
@@ -447,9 +447,21 @@ class EmailLogViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet):
     @extend_schema(
         tags=["notifications"],
         parameters=[
-            OpenApiParameter(name="recipient", type=str, required=False),
-            OpenApiParameter(name="purpose", type=str, required=False),
-            OpenApiParameter(name="status", type=str, required=False),
+            catalogue_parameter(
+                "recipient",
+                PARAM_CATALOGUE,
+                description="Case-insensitive partial match on the recipient address.",
+            ),
+            catalogue_parameter(
+                "purpose",
+                PARAM_CATALOGUE,
+                description="Exact purpose slug (e.g. commissioning.invoice).",
+            ),
+            catalogue_parameter(
+                "status",
+                PARAM_CATALOGUE,
+                description="Exact delivery status.",
+            ),
         ],
         responses={200: EmailLogSerializer(many=True)},
     )
@@ -462,18 +474,22 @@ class EmailLogViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet):
 
         queryset = EmailLog.objects.all()
 
-        recipient = self.request.query_params.get("recipient")
-        purpose = self.request.query_params.get("purpose")
-        status_param = self.request.query_params.get("status")
+        if getattr(self, "action", None) != "list":
+            # The three filters below scope the LIST. The detail route addresses
+            # one log row by id, so applying them there would 404 a row that
+            # exists (or 400 the call) over a parameter it never reads.
+            return queryset
 
-        if recipient:
+        params = validate_query_params(
+            self.request, optional=["recipient", "purpose", "status"]
+        )
+
+        if recipient := params["recipient"]:
             queryset = queryset.filter(recipient__icontains=recipient)
-        if purpose:
+        if purpose := params["purpose"]:
             # ``purpose`` is a free-form CharField (no choices) — passthrough.
             queryset = queryset.filter(purpose=purpose)
-        if status_param:
-            valid_statuses = {value for value, _label in EmailLog.STATUS_CHOICES}
-            validate_choice_param(status_param, valid_statuses, "status")
-            queryset = queryset.filter(status=status_param)
+        if status_value := params["status"]:
+            queryset = queryset.filter(status=status_value)
 
         return queryset

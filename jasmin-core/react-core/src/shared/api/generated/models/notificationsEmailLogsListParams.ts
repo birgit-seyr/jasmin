@@ -5,6 +5,7 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { NotificationsEmailLogsListStatus } from './notificationsEmailLogsListStatus';
 
 export type NotificationsEmailLogsListParams = {
 /**
@@ -17,7 +18,16 @@ limit?: number;
  * @minimum 0
  */
 offset?: number;
+/**
+ * Exact purpose slug (e.g. commissioning.invoice).
+ */
 purpose?: string;
+/**
+ * Case-insensitive partial match on the recipient address.
+ */
 recipient?: string;
-status?: string;
+/**
+ * Exact delivery status.
+ */
+status?: NotificationsEmailLogsListStatus;
 };

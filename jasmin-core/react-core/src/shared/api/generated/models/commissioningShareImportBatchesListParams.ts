@@ -5,9 +5,18 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { CommissioningShareImportBatchesListStatus } from './commissioningShareImportBatchesListStatus';
 
 export type CommissioningShareImportBatchesListParams = {
+/**
+ * @minimum 1
+ * @maximum 53
+ */
 delivery_week?: number;
-status?: string;
+status?: CommissioningShareImportBatchesListStatus;
+/**
+ * @minimum 1900
+ * @maximum 2100
+ */
 year?: number;
 };

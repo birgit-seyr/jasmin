@@ -10,9 +10,11 @@ export type CommissioningCoopSharesListParams = {
 /**
  * Member ID (Jasmin ID format)
  */
-member: string;
+member?: string;
 /**
  * Year (YYYY format)
+ * @minimum 1900
+ * @maximum 2100
  */
 year?: number;
 };

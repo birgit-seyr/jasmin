@@ -73,8 +73,8 @@ def catalogue_parameter(
 ) -> OpenApiParameter:
     """Return an ``OpenApiParameter`` derived from ``catalogue[name]``.
 
-    Type, ``enum`` (for ``choice`` params) and ``default`` come from the
-    catalogue entry, so they cannot drift from what the validator enforces.
+    Type, bounds, ``enum`` (for ``choice`` params) and ``default`` come from
+    the catalogue entry, so they cannot drift from what the validator enforces.
     ``description`` and ``required`` are per-endpoint and passed in; anything
     in ``overrides`` wins over the derived values for genuine special cases.
 
@@ -91,13 +91,21 @@ def catalogue_parameter(
         ) from None
 
     kwargs: dict[str, Any] = {
-        "name": name,
-        "type": CATALOGUE_OPENAPI_TYPE[spec.kind],
+        # A spec with a ``wire_name`` is catalogued under a logical key but
+        # documented under the name the client actually sends.
+        "name": spec.wire_name or name,
+        # The whole schema object rather than the bare type: ``minimum`` /
+        # ``maximum`` are the range ``coerce_param`` enforces, and
+        # ``OpenApiParameter`` has no keyword for them. drf-spectacular takes a
+        # raw schema dict here.
+        "type": param_schema(spec),
         "location": OpenApiParameter.QUERY,
         "required": required,
         "description": description,
     }
     if spec.kind == "choice" and spec.choices:
+        # Also in the schema dict above, but passing it here keeps
+        # drf-spectacular's own sorting of the emitted values.
         kwargs["enum"] = list(spec.choices)
     if spec.default is not None:
         kwargs["default"] = spec.default

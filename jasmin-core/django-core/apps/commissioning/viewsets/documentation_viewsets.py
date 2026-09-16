@@ -118,18 +118,17 @@ _ADDITIONAL_THEORETICAL_REQUEST = {
 def _csv_export_response(request: Request, model: str) -> HttpResponse:
     """Thin wrapper that delegates to :class:`DocumentationExportService`.
 
-    ``InvalidExportDates`` (a ``BadRequestError`` subclass) is translated to
-    a 400 by ``core.exception_handler``.
+    The date pair is required and goes through the catalogue's ``date`` kind,
+    so the service receives ``date`` objects and a missing or malformed value
+    is a 400 naming the parameter before any row is read.
     """
-    # ``date_from``/``date_to`` are read raw: the export service consumes them
-    # as strings (its own ``date.fromisoformat`` range check → InvalidExportDates
-    # 400, plus the literal strings in the download filename). The catalogue's
-    # ``date`` kind returns ``date`` objects, which would break ``fromisoformat``.
-    params = validate_query_params(request, optional=["summed"])
+    params = validate_query_params(
+        request, required=["date_from", "date_to"], optional=["summed"]
+    )
     return DocumentationExportService.export_csv(
         model=model,
-        date_from=request.query_params.get("date_from"),
-        date_to=request.query_params.get("date_to"),
+        date_from=params["date_from"],
+        date_to=params["date_to"],
         summed=bool(params["summed"]),
     )
 
@@ -289,22 +288,15 @@ class ForecastViewSet(BaseArchivableViewSet):
             SnapshotService.cascade_for_movements(affected_movements)
             recalculate_actual_corrections(affected_movements)
 
-    def apply_filters(self, queryset: QuerySet[Forecast]) -> QuerySet[Forecast]:
-        params = validate_query_params(self.request, optional=["year", "delivery_week"])
-        year = params["year"]
-        delivery_week = params["delivery_week"]
-
-        if year is not None and delivery_week is not None:
-            queryset = (
-                queryset.filter(year=year, delivery_week=delivery_week)
-                .select_related("share_article", "plot")
-                .prefetch_related(
-                    "forecastsharetypevariation_set__share_type_variation",
-                    "forecastoffergroup_set__offer_group",
-                )
-            )
-
-        return queryset
+    def scope_queryset(self, queryset: QuerySet[Forecast]) -> QuerySet[Forecast]:
+        # Joins only, no filters: ``list`` below answers from the service and
+        # never reaches this queryset, so a year/week filter here could only
+        # narrow a DETAIL route — turning a row that exists into a 404 and a
+        # valid PATCH into a 400 over the page's own week parameters.
+        return queryset.select_related("share_article", "plot").prefetch_related(
+            "forecastsharetypevariation_set__share_type_variation",
+            "forecastoffergroup_set__offer_group",
+        )
 
     @extend_schema(
         parameters=[
@@ -435,7 +427,12 @@ class WasteViewSet(_MovementSourceDestroyMixin, BaseArchivableViewSet):
     movement_source_fk = "waste"
     serializer_class = WasteSerializer
 
-    def apply_filters(self, queryset: QuerySet) -> QuerySet:
+    def scope_queryset(self, queryset: QuerySet) -> QuerySet:
+        return queryset.select_related("share_article").annotate(
+            share_article_name=F("share_article__name")
+        )
+
+    def apply_list_filters(self, queryset: QuerySet) -> QuerySet:
         params = validate_query_params(
             self.request, optional=["year", "delivery_week", "day_number"]
         )
@@ -450,17 +447,16 @@ class WasteViewSet(_MovementSourceDestroyMixin, BaseArchivableViewSet):
         if day_number is not None:
             queryset = queryset.filter(day_number=day_number)
 
-        queryset = queryset.select_related("share_article").annotate(
-            share_article_name=F("share_article__name")
-        )
-
         return queryset
 
     @extend_schema(
         parameters=[
-            get_year_parameter(required=True),
-            get_delivery_week_parameter(required=True),
-            get_day_number_parameter(required=True),
+            # Optional filters, exactly as ``apply_list_filters`` treats them: each
+            # narrows the list when present, and a bare call returns the
+            # unfiltered set.
+            get_year_parameter(required=False),
+            get_delivery_week_parameter(required=False),
+            get_day_number_parameter(required=False),
             get_is_past_parameter(),
         ],
     )

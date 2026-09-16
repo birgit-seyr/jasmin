@@ -3260,7 +3260,7 @@ Public actions:
         public_read_actions = {"list", "retrieve", "current"}
  */
 export const commissioningCoopSharesList = (
-    params: CommissioningCoopSharesListParams,
+    params?: CommissioningCoopSharesListParams,
  signal?: AbortSignal
 ) => {
       
@@ -3282,7 +3282,7 @@ export const getCommissioningCoopSharesListQueryKey = (params?: CommissioningCoo
     }
 
     
-export const getCommissioningCoopSharesListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError = ErrorResponse>(params: CommissioningCoopSharesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError, TData>>, }
+export const getCommissioningCoopSharesListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError = ErrorResponse>(params?: CommissioningCoopSharesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -3305,7 +3305,7 @@ export type CommissioningCoopSharesListQueryError = ErrorResponse
 
 
 export function useCommissioningCoopSharesList<TData = Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError = ErrorResponse>(
- params: CommissioningCoopSharesListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError, TData>> & Pick<
+ params: undefined |  CommissioningCoopSharesListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof commissioningCoopSharesList>>,
           TError,
@@ -3315,7 +3315,7 @@ export function useCommissioningCoopSharesList<TData = Awaited<ReturnType<typeof
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useCommissioningCoopSharesList<TData = Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError = ErrorResponse>(
- params: CommissioningCoopSharesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError, TData>> & Pick<
+ params?: CommissioningCoopSharesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof commissioningCoopSharesList>>,
           TError,
@@ -3325,12 +3325,12 @@ export function useCommissioningCoopSharesList<TData = Awaited<ReturnType<typeof
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useCommissioningCoopSharesList<TData = Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError = ErrorResponse>(
- params: CommissioningCoopSharesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError, TData>>, }
+ params?: CommissioningCoopSharesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useCommissioningCoopSharesList<TData = Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError = ErrorResponse>(
- params: CommissioningCoopSharesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError, TData>>, }
+ params?: CommissioningCoopSharesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningCoopSharesList>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -7306,7 +7306,7 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * List default share content grouped by article/unit/size.
+ * List default share content grouped by article/unit/size. Both parameters are required: the rows are the planning slots of one year and one share option, so an unscoped call could only answer with an empty list.
  */
 export const commissioningDefaultShareContentsBulkListList = (
     params: CommissioningDefaultShareContentsBulkListListParams,
@@ -11561,7 +11561,7 @@ const {mutation: mutationOptions} = options ?
  * Read-only access to the applied weekly demand.
  */
 export const commissioningExternalShareDemandList = (
-    params: CommissioningExternalShareDemandListParams,
+    params?: CommissioningExternalShareDemandListParams,
  signal?: AbortSignal
 ) => {
       
@@ -11583,7 +11583,7 @@ export const getCommissioningExternalShareDemandListQueryKey = (params?: Commiss
     }
 
     
-export const getCommissioningExternalShareDemandListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError = ErrorResponse>(params: CommissioningExternalShareDemandListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError, TData>>, }
+export const getCommissioningExternalShareDemandListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError = ErrorResponse>(params?: CommissioningExternalShareDemandListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -11606,7 +11606,7 @@ export type CommissioningExternalShareDemandListQueryError = ErrorResponse
 
 
 export function useCommissioningExternalShareDemandList<TData = Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError = ErrorResponse>(
- params: CommissioningExternalShareDemandListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError, TData>> & Pick<
+ params: undefined |  CommissioningExternalShareDemandListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof commissioningExternalShareDemandList>>,
           TError,
@@ -11616,7 +11616,7 @@ export function useCommissioningExternalShareDemandList<TData = Awaited<ReturnTy
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useCommissioningExternalShareDemandList<TData = Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError = ErrorResponse>(
- params: CommissioningExternalShareDemandListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError, TData>> & Pick<
+ params?: CommissioningExternalShareDemandListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof commissioningExternalShareDemandList>>,
           TError,
@@ -11626,12 +11626,12 @@ export function useCommissioningExternalShareDemandList<TData = Awaited<ReturnTy
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useCommissioningExternalShareDemandList<TData = Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError = ErrorResponse>(
- params: CommissioningExternalShareDemandListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError, TData>>, }
+ params?: CommissioningExternalShareDemandListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useCommissioningExternalShareDemandList<TData = Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError = ErrorResponse>(
- params: CommissioningExternalShareDemandListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError, TData>>, }
+ params?: CommissioningExternalShareDemandListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningExternalShareDemandList>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -17996,7 +17996,7 @@ const {mutation: mutationOptions} = options ?
  * List offers and order contents for a reseller/week/day_number.
  */
 export const commissioningOrderContentsList = (
-    params: CommissioningOrderContentsListParams,
+    params?: CommissioningOrderContentsListParams,
  signal?: AbortSignal
 ) => {
       
@@ -18018,7 +18018,7 @@ export const getCommissioningOrderContentsListQueryKey = (params?: Commissioning
     }
 
     
-export const getCommissioningOrderContentsListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError = ErrorResponse>(params: CommissioningOrderContentsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError, TData>>, }
+export const getCommissioningOrderContentsListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError = ErrorResponse>(params?: CommissioningOrderContentsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -18041,7 +18041,7 @@ export type CommissioningOrderContentsListQueryError = ErrorResponse
 
 
 export function useCommissioningOrderContentsList<TData = Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError = ErrorResponse>(
- params: CommissioningOrderContentsListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError, TData>> & Pick<
+ params: undefined |  CommissioningOrderContentsListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof commissioningOrderContentsList>>,
           TError,
@@ -18051,7 +18051,7 @@ export function useCommissioningOrderContentsList<TData = Awaited<ReturnType<typ
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useCommissioningOrderContentsList<TData = Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError = ErrorResponse>(
- params: CommissioningOrderContentsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError, TData>> & Pick<
+ params?: CommissioningOrderContentsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof commissioningOrderContentsList>>,
           TError,
@@ -18061,12 +18061,12 @@ export function useCommissioningOrderContentsList<TData = Awaited<ReturnType<typ
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useCommissioningOrderContentsList<TData = Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError = ErrorResponse>(
- params: CommissioningOrderContentsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError, TData>>, }
+ params?: CommissioningOrderContentsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useCommissioningOrderContentsList<TData = Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError = ErrorResponse>(
- params: CommissioningOrderContentsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError, TData>>, }
+ params?: CommissioningOrderContentsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrderContentsList>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -18983,7 +18983,7 @@ const {mutation: mutationOptions} = options ?
  * @summary Get Combined Order Overview
  */
 export const commissioningOrdersOverviewList = (
-    params?: CommissioningOrdersOverviewListParams,
+    params: CommissioningOrdersOverviewListParams,
  signal?: AbortSignal
 ) => {
       
@@ -19005,7 +19005,7 @@ export const getCommissioningOrdersOverviewListQueryKey = (params?: Commissionin
     }
 
     
-export const getCommissioningOrdersOverviewListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError = ErrorResponse>(params?: CommissioningOrdersOverviewListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError, TData>>, }
+export const getCommissioningOrdersOverviewListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError = ErrorResponse>(params: CommissioningOrdersOverviewListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -19028,7 +19028,7 @@ export type CommissioningOrdersOverviewListQueryError = ErrorResponse
 
 
 export function useCommissioningOrdersOverviewList<TData = Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError = ErrorResponse>(
- params: undefined |  CommissioningOrdersOverviewListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError, TData>> & Pick<
+ params: CommissioningOrdersOverviewListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof commissioningOrdersOverviewList>>,
           TError,
@@ -19038,7 +19038,7 @@ export function useCommissioningOrdersOverviewList<TData = Awaited<ReturnType<ty
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useCommissioningOrdersOverviewList<TData = Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError = ErrorResponse>(
- params?: CommissioningOrdersOverviewListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError, TData>> & Pick<
+ params: CommissioningOrdersOverviewListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof commissioningOrdersOverviewList>>,
           TError,
@@ -19048,7 +19048,7 @@ export function useCommissioningOrdersOverviewList<TData = Awaited<ReturnType<ty
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useCommissioningOrdersOverviewList<TData = Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError = ErrorResponse>(
- params?: CommissioningOrdersOverviewListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError, TData>>, }
+ params: CommissioningOrdersOverviewListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
@@ -19056,7 +19056,7 @@ export function useCommissioningOrdersOverviewList<TData = Awaited<ReturnType<ty
  */
 
 export function useCommissioningOrdersOverviewList<TData = Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError = ErrorResponse>(
- params?: CommissioningOrdersOverviewListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError, TData>>, }
+ params: CommissioningOrdersOverviewListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningOrdersOverviewList>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -29805,7 +29805,7 @@ const {mutation: mutationOptions} = options ?
     /**
  * Distinct e-mail addresses of members holding a confirmed, non-waiting-list subscription that matches the filter — a copyable e-mail distribution list for the AbosEmails page.
 
-Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and — where the window has a start — not cancelled effective before that start. Each bound of the active window applies on its own: ``date_from`` alone means 'still running on or after that date', ``date_to`` alone 'already started by that date', both together the overlap with ``[date_from, date_to]``, and neither collapses the window to today. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Each member's primary and secondary addresses (``email`` / ``email_2`` / ``email_3``) are all included; blanks, non-address junk, and duplicates are dropped.
+Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and — where the window has a start — not cancelled effective before that start. Each bound of the active window applies on its own: ``date_from`` alone means 'still running on or after that date', ``date_to`` alone 'already started by that date', both together the overlap with ``[date_from, date_to]``, and neither collapses the window to today. Sending ``date_from`` after ``date_to`` is refused (400) rather than served as a backwards window. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Each member's primary and secondary addresses (``email`` / ``email_2`` / ``email_3``) are all included; blanks, non-address junk, and duplicates are dropped.
  * @summary Member e-mails for a subscription filter (distribution list)
  */
 export const commissioningSubscriptionMemberEmailsRetrieve = (
@@ -32880,7 +32880,7 @@ the movement BEFORE the delete and re-cascade the affected entity. Mirrors
 is needed because the deleted movement IS the actual correction.
  */
 export const commissioningWasteList = (
-    params: CommissioningWasteListParams,
+    params?: CommissioningWasteListParams,
  signal?: AbortSignal
 ) => {
       
@@ -32902,7 +32902,7 @@ export const getCommissioningWasteListQueryKey = (params?: CommissioningWasteLis
     }
 
     
-export const getCommissioningWasteListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningWasteList>>, TError = ErrorResponse>(params: CommissioningWasteListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWasteList>>, TError, TData>>, }
+export const getCommissioningWasteListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningWasteList>>, TError = ErrorResponse>(params?: CommissioningWasteListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWasteList>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -32925,7 +32925,7 @@ export type CommissioningWasteListQueryError = ErrorResponse
 
 
 export function useCommissioningWasteList<TData = Awaited<ReturnType<typeof commissioningWasteList>>, TError = ErrorResponse>(
- params: CommissioningWasteListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWasteList>>, TError, TData>> & Pick<
+ params: undefined |  CommissioningWasteListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWasteList>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof commissioningWasteList>>,
           TError,
@@ -32935,7 +32935,7 @@ export function useCommissioningWasteList<TData = Awaited<ReturnType<typeof comm
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useCommissioningWasteList<TData = Awaited<ReturnType<typeof commissioningWasteList>>, TError = ErrorResponse>(
- params: CommissioningWasteListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWasteList>>, TError, TData>> & Pick<
+ params?: CommissioningWasteListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWasteList>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof commissioningWasteList>>,
           TError,
@@ -32945,12 +32945,12 @@ export function useCommissioningWasteList<TData = Awaited<ReturnType<typeof comm
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useCommissioningWasteList<TData = Awaited<ReturnType<typeof commissioningWasteList>>, TError = ErrorResponse>(
- params: CommissioningWasteListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWasteList>>, TError, TData>>, }
+ params?: CommissioningWasteListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWasteList>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useCommissioningWasteList<TData = Awaited<ReturnType<typeof commissioningWasteList>>, TError = ErrorResponse>(
- params: CommissioningWasteListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWasteList>>, TError, TData>>, }
+ params?: CommissioningWasteListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningWasteList>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 

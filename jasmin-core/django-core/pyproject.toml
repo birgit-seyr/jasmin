@@ -209,10 +209,31 @@ extend-exclude = ["migrations", "venv", "staticfiles", "media"]
 #        bug or leaks a 500.
 # UP   = pyupgrade (Py 3.11+ syntax)
 # I    = isort (import order)
-select = ["E", "F", "B", "BLE", "UP", "I"]
+#
+# The rules below are the HYGIENE set. They carry accepted findings, held still
+# by a frozen baseline (scripts/ruff_baseline.py + ruff-baseline.txt) instead of
+# blocking on the whole backlog — same machinery, and same both-directions
+# ratchet, as mypy.
+# N       = pep8-naming (see the N818 note in `ignore`)
+# C901    = mccabe cyclomatic complexity
+# PLR0913 = too many arguments — the signature that should be a dataclass
+# PLR0915 = too many statements — the function that should be several
+select = ["E", "F", "B", "BLE", "UP", "I", "N", "C901", "PLR0913", "PLR0915"]
 ignore = [
     "E501",  # line-too-long — handled by black
     "B008",  # function call in default arg — common in Django (e.g. `models.SET_NULL`)
+    # N818 wants every exception class to end in `Error`. The JasminError
+    # hierarchy deliberately does the opposite for its LEAF errors: the bases
+    # carry the suffix (JasminError, BadRequestError, NotFoundError, AuthError)
+    # and each leaf is a noun-phrase naming the condition — `InvalidCredentials`,
+    # `AccountBlocked` — which reads correctly at the raise site and in
+    # `except NotFoundError` broad catches. Renaming the 235 leaves is not a
+    # formatting change: each one is paired with a stable wire `code` and
+    # matching de/en entries in the locale errors.json files, and the classes are
+    # caught by name across apps. Rule-level ignore, one reason, one place —
+    # baselining 235 findings nobody intends to fix would be dead weight that
+    # churns the ratchet on every touch.
+    "N818",
 ]
 
 [tool.ruff.lint.per-file-ignores]

@@ -9,6 +9,8 @@
 export type PaymentsBillingRunsListParams = {
 /**
  * Filter to runs whose period falls in this year (matched on period_start's year).
+ * @minimum 1900
+ * @maximum 2100
  */
 year?: number;
 };

@@ -89,7 +89,10 @@ DB required: No
     - valid params return parsed int list
     - missing param → raises InvalidQueryParam (400, field set)
     - non-integer value → raises InvalidQueryParam
-    - year out of range (1900 < 2000) → raises InvalidQueryParam
+    - exotic int spellings (20_26, 2026.0, 2e3, non-ASCII digits) → raises
+      InvalidQueryParam (same parser as a catalogued query param)
+    - year out of range (1899 < 1900) → raises InvalidQueryParam
+    - year range matches the query catalogue (1900 accepted)
     - week out of range high (54 > 53) → raises InvalidQueryParam
     - week out of range low (0 < 1) → raises InvalidQueryParam
     - "week" alias also validated (same range as delivery_week)

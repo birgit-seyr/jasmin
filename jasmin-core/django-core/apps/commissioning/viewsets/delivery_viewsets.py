@@ -627,6 +627,16 @@ class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         delivery_station = params["delivery_station"]
         delivery_day = params["delivery_day"]
         member = params["member"]
+
+        if getattr(self, "action", None) == "list":
+            # The capacity window (year / delivery_week / num_weeks) is read by
+            # the SERIALIZER, once per row. On a week with no rows nothing ever
+            # looks at it, so a malformed value passes silently there while the
+            # same call against a populated week 400s. Validate it here, where
+            # the answer doesn't depend on how many rows come back.
+            validate_query_params(
+                self.request, optional=["year", "delivery_week", "num_weeks"]
+            )
         # A non-staff member may only scope to their OWN station-days — reject a
         # crafted ?member=<other id>. Staff bypass. ``member is None`` (the
         # subscription-selector's "list all station-days" call) is allowed.

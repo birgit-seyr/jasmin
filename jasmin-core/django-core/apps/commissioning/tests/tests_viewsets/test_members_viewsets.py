@@ -10,7 +10,7 @@ import time_machine
 from django.urls import reverse
 from rest_framework import status
 
-from apps.commissioning.models import CoopShare
+from apps.commissioning.models import CoopShare, MemberLoan
 from apps.commissioning.tests.factories import (
     CoopShareFactory,
     DeliveryStationDayFactory,
@@ -594,3 +594,72 @@ class TestConfirmedImmutableDeletion:
         share = CoopShareFactory(admin_confirmed=False)
         resp = api_client.delete(reverse("coop_shares-detail", kwargs={"pk": share.pk}))
         assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+
+# ---------------------------------------------------------------------------
+# List filters stop at the list route
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestListFiltersDoNotScopeDetailRoutes:
+    """Every one of these viewsets narrows its LIST by query params. A detail
+    route addresses one row by id, so the same parameter left on the URL must
+    not 404 a row that exists — nor drop the row a successful write returns."""
+
+    def test_member_detail_ignores_a_list_filter(self, api_client, tenant):
+        member = MemberFactory(is_trial=False)
+        resp = api_client.get(
+            reverse("member-detail", kwargs={"pk": member.pk}), {"is_trial": "true"}
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["id"] == member.id
+
+    def test_member_patch_is_not_refused_by_a_list_filter(self, api_client, tenant):
+        member = MemberFactory(is_trial=False)
+        resp = api_client.patch(
+            reverse("member-detail", kwargs={"pk": member.pk}) + "?is_trial=true",
+            {"note": "reachable"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["note"] == "reachable"
+
+    def test_subscription_detail_ignores_a_list_filter(self, api_client, tenant):
+        subscription = SubscriptionFactory(is_trial=False)
+        resp = api_client.get(
+            reverse("abos-detail", kwargs={"pk": subscription.pk}), {"is_trial": "true"}
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["id"] == subscription.id
+
+    def test_coop_share_detail_ignores_the_year_filter(self, api_client, tenant):
+        share = CoopShareFactory()
+        resp = api_client.get(
+            reverse("coop_shares-detail", kwargs={"pk": share.pk}), {"year": 1999}
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["id"] == share.id
+
+    def test_member_loan_detail_ignores_the_year_filter(self, api_client, tenant):
+        loan = MemberLoan.objects.create(
+            member=MemberFactory(),
+            amount=500,
+            interest_rate=Decimal("1.50"),
+            start_date=datetime.date(2026, 1, 5),
+        )
+        resp = api_client.get(
+            reverse("member_loans-detail", kwargs={"pk": loan.pk}), {"year": 1999}
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["id"] == loan.id
+
+
+@pytest.mark.django_db
+class TestMemberRegisterExportDateRange:
+    def test_inverted_range_is_refused(self, api_client, tenant):
+        resp = api_client.get(
+            reverse("member-export-csv"),
+            {"date_from": "2026-02-01", "date_to": "2026-01-01"},
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "date_from"

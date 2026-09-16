@@ -26,6 +26,9 @@ from ..utils.query_params import PARAM_CATALOGUE, validate_query_params
 
 logger = logging.getLogger(__name__)
 
+# One entry per catalogued ``source`` value (DOCUMENTATION_SOURCES): the
+# catalogue validates the parameter against that same tuple, so every value
+# that reaches here has a model.
 SOURCE_MODEL_MAP = {
     "HARVEST": Harvest,
     "PURCHASE": Purchase,
@@ -103,7 +106,6 @@ class DocumentationOverviewView(APIViewRolePermissionsMixin, APIView):
                 "source",
                 required=False,
                 description="Documentation source type (defaults to HARVEST)",
-                enum=list(SOURCE_MODEL_MAP.keys()),
             ),
         ],
         responses={
@@ -117,27 +119,21 @@ class DocumentationOverviewView(APIViewRolePermissionsMixin, APIView):
         ``delivery_day`` is accepted as an alias for ``day_number`` so clients
         built against the earlier spelling keep filtering by weekday.
         """
-        # Validate year (required) + optional week/day_number + required
-        # share_article through the central catalogue.
+        # Validate year + share_article (required) and the optional
+        # week / day_number / source filters through the central catalogue.
         params = validate_query_params(
             request,
             required=["year", "share_article"],
-            optional=["delivery_week", "day_number", "delivery_day"],
+            optional=["delivery_week", "day_number", "delivery_day", "source"],
         )
 
         year = params["year"]
         delivery_week = params["delivery_week"]
         day_number = self._resolve_day_number(params)
         share_article = params["share_article"]
-
-        source = request.query_params.get("source", "HARVEST")
-
-        model = SOURCE_MODEL_MAP.get(source.upper())
-        if not model:
-            raise InvalidQueryParam(
-                f"Invalid source. Must be one of: {', '.join(SOURCE_MODEL_MAP.keys())}",
-                field="source",
-            )
+        # The catalogue matches ``source`` case-insensitively and hands back
+        # its own spelling, so this lookup always hits.
+        model = SOURCE_MODEL_MAP[params["source"]]
 
         # Build query filters
         filters = Q(year=year, share_article=share_article)

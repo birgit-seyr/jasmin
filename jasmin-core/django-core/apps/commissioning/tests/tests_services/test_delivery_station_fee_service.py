@@ -294,3 +294,6 @@ class TestBillingEndpoint:
             self.URL, {"start_date": "2026-08-02", "end_date": "2026-07-06"}
         )
         assert response.status_code == 400
+        # One code for an inverted range, whichever endpoint takes the pair.
+        assert response.json()["code"] == "query.invalid_param"
+        assert response.json()["field"] == "start_date"

@@ -31,7 +31,7 @@ import { ExplainerText, PastWarningMessage } from "@shared/ui";
 import { useInvalidateAfterTableMutation } from "@hooks/index";
 
 export default function ShareDays() {
-  const [selectedYear, setSelectedYear] = useState(dayjs().year());
+  const [selectedYear, setSelectedYear] = useState(dayjs().isoWeekYear());
   const [selectedWeek, setSelectedWeek] = useState(dayjs().isoWeek());
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),

@@ -306,6 +306,20 @@ class TestPurchaseExportCsv:
         """``_csv_export_response`` validates date_from / date_to params."""
         resp = api_client.get(URL_PURCHASE_EXPORT_CSV)
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "date_from"
+
+    def test_malformed_date_returns_400(self, api_client, tenant):
+        """The pair is parsed by the catalogue's ``date`` kind, which takes
+        YYYY-MM-DD only — a compact or week-date spelling is refused, naming
+        the parameter, instead of reaching the export."""
+        resp = api_client.get(
+            URL_PURCHASE_EXPORT_CSV,
+            {"date_from": "20990101", "date_to": "2099-01-31"},
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "date_from"
 
     def test_empty_range_returns_csv(self, api_client, tenant):
         resp = api_client.get(
@@ -376,6 +390,9 @@ class TestHarvestExportCsv:
         )
         assert resp.status_code == status.HTTP_200_OK
         assert "text/csv" in resp["Content-Type"]
+        # The download name still carries the requested range, now rendered
+        # from the parsed dates.
+        assert "2099-01-01_2099-01-31" in resp["Content-Disposition"]
 
     def test_harvest_export_localizes_day_and_labels(self, api_client, tenant):
         """Harvest rows render the weekday + unit/size in the tenant CSV
@@ -683,3 +700,76 @@ class TestMovementSourceDeleteRecascades:
         cascade.assert_called_once()
         captured = list(cascade.call_args[0][0])
         assert any(m.id == movement.id for m in captured)
+
+
+# ---------------------------------------------------------------------------
+# List filters stop at the list route
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestListFiltersDoNotScopeDetailRoutes:
+    """A detail route addresses one row by id. The week filters belong to the
+    list, so a page that keeps its selectors in the query string (or a stale
+    bookmark) must still reach — and be able to edit — the addressed row."""
+
+    def test_forecast_detail_reaches_a_row_outside_the_list_window(
+        self, api_client, tenant
+    ):
+        forecast = ForecastFactory(year=2026, delivery_week=15)
+        resp = api_client.get(
+            reverse("forecast-detail", kwargs={"pk": forecast.pk}),
+            {"year": 2099, "delivery_week": 1},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["id"] == forecast.id
+
+    def test_waste_detail_reaches_a_row_outside_the_list_window(
+        self, api_client, tenant
+    ):
+        waste = WasteFactory(year=2026, delivery_week=15, day_number=1)
+        resp = api_client.get(
+            reverse("waste-detail", kwargs={"pk": waste.pk}),
+            {"year": 2099, "delivery_week": 1, "day_number": 4},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["id"] == waste.id
+
+    def test_waste_patch_is_not_refused_by_a_stale_list_filter(
+        self, api_client, tenant
+    ):
+        waste = WasteFactory(year=2026, delivery_week=15, day_number=1, amount=3)
+        resp = api_client.patch(
+            reverse("waste-detail", kwargs={"pk": waste.pk}) + "?year=2099",
+            {"amount": 7},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        waste.refresh_from_db()
+        assert waste.amount == 7
+
+
+# ---------------------------------------------------------------------------
+# Export date range: one rule, one code
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestExportDateRangeOrder:
+    @pytest.mark.parametrize("url_name", ["purchase-export-csv", "harvest-export-csv"])
+    def test_inverted_range_is_refused(self, api_client, tenant, url_name):
+        """An end before the start can only produce an empty CSV, which reads
+        as "no data" rather than "the dates are swapped"."""
+        resp = api_client.get(
+            reverse(url_name), {"date_from": "2026-02-01", "date_to": "2026-01-01"}
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "date_from"
+        assert resp.data["details"] == {
+            "date_from": "2026-02-01",
+            "date_to": "2026-01-01",
+        }
+
+    def test_a_single_day_range_still_exports(self, api_client, tenant):
+        resp = api_client.get(
+            reverse("purchase-export-csv"),
+            {"date_from": "2026-01-15", "date_to": "2026-01-15"},
+        )
+        assert resp.status_code == status.HTTP_200_OK

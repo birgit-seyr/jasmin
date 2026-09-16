@@ -117,6 +117,13 @@ class TestExternalCodeMappingViewSet:
         assert {m["external_code"] for m in resp.data} == {"STN-1"}
         assert all(m["kind"] == ExternalCodeMapping.KIND_STATION for m in resp.data)
 
+    def test_list_with_an_unknown_kind_is_refused(self, api_client, world):
+        resp = api_client.get(self.URL, {"kind": "stations"})
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "kind"
+
     def test_create_mapping(self, api_client, world):
         # Add a second station mapping pointing at a freshly-created station.
         station2 = DeliveryStationFactory()
@@ -171,6 +178,37 @@ class TestShareImportBatchViewSet:
         # in VALIDATED (preview_ready is reached only after /preview/).
         assert resp.data["status"] == ShareImportBatch.STATUS_VALIDATED
         assert ShareImportBatch.objects.count() == 1
+
+    def test_list_filtered_by_status(self, api_client, world):
+        f = _uploaded("ok.csv", _csv(["2026,15,STN-1,WED,VEG-M,4"]))
+        api_client.post(
+            self.UPLOAD_URL,
+            {"file": f, "year": 2026, "delivery_week": 15},
+            format="multipart",
+        )
+
+        matching = api_client.get(
+            self.LIST_URL, {"status": ShareImportBatch.STATUS_VALIDATED}
+        )
+        assert matching.status_code == status.HTTP_200_OK
+        assert [b["status"] for b in matching.data] == [
+            ShareImportBatch.STATUS_VALIDATED
+        ]
+
+        other = api_client.get(
+            self.LIST_URL, {"status": ShareImportBatch.STATUS_APPLIED}
+        )
+        assert other.status_code == status.HTTP_200_OK
+        assert other.data == []
+
+    def test_list_with_an_unknown_status_is_refused(self, api_client, world):
+        # The stored choices are lowercase, so a wrong-case value is a typo,
+        # not a filter.
+        resp = api_client.get(self.LIST_URL, {"status": "APPLIED"})
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "status"
 
     def test_upload_with_invalid_csv_returns_201_but_failed_status(
         self, api_client, world

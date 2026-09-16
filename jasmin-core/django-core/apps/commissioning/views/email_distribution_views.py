@@ -38,6 +38,8 @@ from ..utils.query_params import validate_query_params
         "means 'still running on or after that date', ``date_to`` alone "
         "'already started by that date', both together the overlap with "
         "``[date_from, date_to]``, and neither collapses the window to today. "
+        "Sending ``date_from`` after ``date_to`` is refused (400) rather than "
+        "served as a backwards window. "
         "``delivery_station_day`` and ``share_type`` narrow "
         "it further; combine freely. Each member's primary and secondary "
         "addresses (``email`` / ``email_2`` / ``email_3``) are all included; "

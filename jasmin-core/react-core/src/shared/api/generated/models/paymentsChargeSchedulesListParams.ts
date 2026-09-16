@@ -5,6 +5,7 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { PaymentsChargeSchedulesListStatus } from './paymentsChargeSchedulesListStatus';
 
 export type PaymentsChargeSchedulesListParams = {
 /**
@@ -18,6 +19,8 @@ limit?: number;
 member?: string;
 /**
  * Filter by due_date month (1–12). Requires `year`.
+ * @minimum 1
+ * @maximum 12
  */
 month?: number;
 /**
@@ -28,9 +31,11 @@ offset?: number;
 /**
  * Filter by ChargeStatus value (PLANNED, ISSUED, ...).
  */
-status?: string;
+status?: PaymentsChargeSchedulesListStatus;
 /**
  * Filter by due_date year.
+ * @minimum 1900
+ * @maximum 2100
  */
 year?: number;
 };

@@ -13,7 +13,9 @@ export type CommissioningShareTypeVariationsListParams = {
  */
 active_at_date?: string;
 /**
- * ISO week number (1-53)
+ * ISO week number (1-53). Week 53 is accepted only for a year that has one; sent with a 52-week year it is refused.
+ * @minimum 1
+ * @maximum 53
  */
 delivery_week?: number;
 /**
@@ -26,6 +28,8 @@ include_future?: boolean;
 is_packed_bulk?: boolean;
 /**
  * Number of weeks of per-variation capacity_by_week to return (default: 52). Needs year + delivery_week.
+ * @minimum 1
+ * @maximum 104
  */
 num_weeks?: number;
 /**
@@ -46,6 +50,8 @@ share_type?: string;
 virtual?: boolean;
 /**
  * Year (YYYY format)
+ * @minimum 1900
+ * @maximum 2100
  */
 year?: number;
 };

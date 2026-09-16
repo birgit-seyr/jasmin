@@ -86,11 +86,30 @@ def _tenant_schema(django_db_setup, django_db_blocker):
                 interactive=False,
                 verbosity=0,
             )
-        if not Domain.objects.filter(domain="pytest.localhost").exists():
-            Domain.objects.create(tenant=t, domain="pytest.localhost", is_primary=True)
-        if not Domain.objects.filter(domain="testserver").exists():
-            # "testserver" is Django's default test-client hostname
-            Domain.objects.create(tenant=t, domain="testserver")
+        # ``testserver`` is Django's default test-client hostname, and this
+        # tenant owns it for the whole suite: a routed request built with a
+        # bare ``APIClient()`` resolves here. Exactly one ``Domain`` row can
+        # hold a given hostname, so no other conftest may seed ``testserver``
+        # — a second seeder would win or lose by load order and route those
+        # requests into a different schema. Tests for another tenant address
+        # it by its own host instead.
+        #
+        # update_or_create, not get-or-skip: the schema outlives a pytest
+        # session, so a stale row left pointing at another tenant must be
+        # repointed rather than silently accepted.
+        #
+        # ``is_primary`` is stated on both rows because ``DomainMixin.save``
+        # force-promotes whichever row it writes while the tenant has no
+        # primary yet — leaving it implicit makes the winner depend on whether
+        # the rows already existed. ``testserver`` is the primary, so
+        # ``frontend_base_url()`` (invitation / GDPR / password-reset links)
+        # renders the same host a bare ``APIClient()`` request arrives on.
+        Domain.objects.update_or_create(
+            domain="pytest.localhost", defaults={"tenant": t, "is_primary": False}
+        )
+        Domain.objects.update_or_create(
+            domain="testserver", defaults={"tenant": t, "is_primary": True}
+        )
         connection.set_schema_to_public()
     yield t
     with django_db_blocker.unblock():

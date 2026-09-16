@@ -58,7 +58,7 @@ export default function WeeklyStaffPlan() {
   const queryClient = useQueryClient();
 
   const [selectedYear, setSelectedYear] = useState<number>(() =>
-    dayjs().year(),
+    dayjs().isoWeekYear(),
   );
   const [selectedWeek, setSelectedWeek] = useState<number | null>(() =>
     dayjs().isoWeek(),

@@ -37,7 +37,22 @@ jobs:
         run: npm run type-check
 
       - name: Lint
+        # Includes the size/complexity ratchet (max-lines, max-lines-per-function,
+        # complexity). Files that already exceed a threshold are pinned
+        # individually in eslint.hygiene-pins.js at their current worst value, so
+        # they cannot grow and a new oversized function inside one still fails.
         run: npm run lint
+
+      - name: Hygiene pins are exact
+        # The step above enforces each pin as a ceiling but cannot see below one:
+        # ESLint reports only what exceeds the configured number, so a file that
+        # improves keeps its old pin and stays free to grow back to it. This
+        # re-measures every pinned file with the rule floored and fails on a pin
+        # above the value the file now reports, which makes the register ratchet
+        # in both directions like the ruff and mypy baselines. It also names a pin
+        # whose file is gone: pins are keyed by path, so a rename drops one
+        # silently. See scripts/check-hygiene-pins.mjs.
+        run: npm run lint:pins
 
       - name: Tests
         run: npm run test:run
@@ -153,8 +168,20 @@ jobs:
       - name: Format check (black)
         run: poetry run black --check apps config core scripts
 
-      - name: Lint (ruff)
-        run: poetry run ruff check apps config core scripts
+      - name: Lint (ruff, frozen baseline)
+        # Runs the FULL rule set from pyproject.toml and fails on any finding not
+        # already in jasmin-core/django-core/ruff-baseline.txt.
+        #
+        # The strict rules (E,F,B,BLE,UP,I) contribute ZERO baseline entries, so
+        # anything they report is a hard failure. The hygiene rules (N naming,
+        # C901 complexity, PLR0913/PLR0915 signature and function size) carry 201
+        # accepted findings, held still by the baseline: blocking every PR on all
+        # of them would stop delivery, refusing new ones does not.
+        #
+        # It also fails when the baseline lists a finding ruff no longer reports,
+        # so the file can only shrink: fix findings, then run
+        # ``poetry run python scripts/ruff_baseline.py freeze`` and commit it.
+        run: poetry run python scripts/ruff_baseline.py check
 
       - name: Type check (mypy, frozen baseline)
         # Fails ONLY on findings that are not already in
@@ -168,6 +195,24 @@ jobs:
         # findings. Blocking every PR on all of them would have stopped delivery;
         # holding the count still and refusing new ones does not.
         run: poetry run python scripts/mypy_baseline.py check
+
+      - name: Import contracts (backend layering)
+        # CLAUDE.md's two one-way layering rules, enforced rather than assumed:
+        # apps/commissioning must not import the feature apps (it is meant to be
+        # extractable into its own project), and apps/shared must not reach back
+        # up into them. ESLint's no-restricted-imports enforces the frontend half
+        # of the same idea; this script is the backend half.
+        #
+        # The known extraction blockers -- the apps.notifications.jobs background
+        # job infra and the read-only EmailLog query in members_viewsets -- are
+        # named exemptions inside the script, each carrying its unwind plan. An
+        # exemption that stops matching any real import is itself an error, so the
+        # list ratchets down like the baselines above instead of lingering as
+        # standing permission for the import to come back.
+        #
+        # Pure stdlib ast, no new dependency: import-linter would mean re-locking
+        # the dependency graph for a gate this size.
+        run: poetry run python scripts/import_contracts.py
 
       - name: Migrations are in sync with models
         # Catches a model field added/changed/removed without the matching

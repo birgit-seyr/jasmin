@@ -2,12 +2,16 @@ import dayjs from "dayjs";
 import { useState } from "react";
 
 /**
- * Current ISO year / week, computed once at module load — the SSOT for the
- * ``const currentYear = dayjs().year(); const currentWeek = dayjs().isoWeek();``
- * pair. Mirrors the ``currentFiscalYearRange`` export beside
- * ``useFiscalYearRange``.
+ * Current ISO week-year / week, computed once at module load — the SSOT every
+ * week-scoped page seeds its selector from. Mirrors the
+ * ``currentFiscalYearRange`` export beside ``useFiscalYearRange``.
+ *
+ * ``isoWeekYear()``, never the calendar ``year()``: the two disagree across
+ * New Year, and the pair is sent to the API as one ISO coordinate. On
+ * 2027-01-01 the calendar year is 2027 while the ISO week is 53 — a week ISO
+ * 2027 does not have, which the backend refuses.
  */
-export const currentYear = dayjs().year();
+export const currentYear = dayjs().isoWeekYear();
 export const currentWeek = dayjs().isoWeek();
 
 export interface UseYearWeekStateOptions {

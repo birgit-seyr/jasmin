@@ -79,17 +79,17 @@ def _detail_url(tenant) -> str:
     return f"/api/tenants/tenants/{tenant.id}/"
 
 
-def _as_client(user) -> APIClient:
-    client = APIClient(HTTP_HOST="tenants-pytest.localhost")
+def _as_client(user, host: str) -> APIClient:
+    client = APIClient(HTTP_HOST=host)
     client.force_authenticate(user=user)
     return client
 
 
 @pytest.mark.django_db
 class TestTenantSerializerRoleRouting:
-    def test_member_does_not_receive_office_only_fields(self, tenant):
+    def test_member_does_not_receive_office_only_fields(self, tenant, tenant_host):
         member = JasminUserFactory(roles=["member"])
-        client = _as_client(member)
+        client = _as_client(member, tenant_host)
 
         response = client.get(_detail_url(tenant))
 
@@ -102,10 +102,10 @@ class TestTenantSerializerRoleRouting:
                 f"TenantNonStaffReadSerializer for non-staff."
             )
 
-    def test_customer_does_not_receive_office_only_fields(self, tenant):
+    def test_customer_does_not_receive_office_only_fields(self, tenant, tenant_host):
         """Customer is the other non-staff role — same expectation."""
         customer = JasminUserFactory(roles=["customer"])
-        client = _as_client(customer)
+        client = _as_client(customer, tenant_host)
 
         response = client.get(_detail_url(tenant))
 
@@ -116,9 +116,9 @@ class TestTenantSerializerRoleRouting:
                 f"Customer-role caller received office-only field " f"{field!r}."
             )
 
-    def test_office_receives_office_only_fields(self, tenant):
+    def test_office_receives_office_only_fields(self, tenant, tenant_host):
         office = JasminUserFactory(roles=["office"])
-        client = _as_client(office)
+        client = _as_client(office, tenant_host)
 
         response = client.get(_detail_url(tenant))
 
@@ -131,12 +131,12 @@ class TestTenantSerializerRoleRouting:
                 f"it. TenantViewSet.get_serializer_class regression."
             )
 
-    def test_staff_receives_office_only_fields(self, tenant):
+    def test_staff_receives_office_only_fields(self, tenant, tenant_host):
         """``staff`` is in IsStaff alongside office/admin — they generate
         reseller PDFs that bake ``iban`` / ``sepa_*`` / ``uid`` into the
         header, so they also need the full payload."""
         staff = JasminUserFactory(roles=["staff"])
-        client = _as_client(staff)
+        client = _as_client(staff, tenant_host)
 
         response = client.get(_detail_url(tenant))
 
@@ -147,12 +147,12 @@ class TestTenantSerializerRoleRouting:
                 field in body
             ), f"Staff-role caller did NOT receive office field {field!r}."
 
-    def test_admin_receives_office_only_fields(self, tenant):
+    def test_admin_receives_office_only_fields(self, tenant, tenant_host):
         """Admin is the role gated by ``write_permission`` — they patch
         these fields via ConfigurationGeneral and must also be able to
         read them back to populate the form."""
         admin = JasminUserFactory(roles=["admin"])
-        client = _as_client(admin)
+        client = _as_client(admin, tenant_host)
 
         response = client.get(_detail_url(tenant))
 
@@ -164,13 +164,13 @@ class TestTenantSerializerRoleRouting:
             ), f"Admin-role caller did NOT receive office field {field!r}."
 
     @pytest.mark.parametrize("roles", [["member"], ["office"]])
-    def test_shared_fields_present_for_every_role(self, tenant, roles):
+    def test_shared_fields_present_for_every_role(self, tenant, tenant_host, roles):
         """Settings overlay + branding + GDPR impressum must come back
         for staff and non-staff alike — the post-login
         ``useTenant().getSetting(...)`` flow on members and the
         ConfigurationGeneral form on admins both depend on it."""
         caller = JasminUserFactory(roles=roles)
-        client = _as_client(caller)
+        client = _as_client(caller, tenant_host)
 
         response = client.get(_detail_url(tenant))
 

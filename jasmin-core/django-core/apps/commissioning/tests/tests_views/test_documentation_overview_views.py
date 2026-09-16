@@ -325,6 +325,59 @@ class TestDocumentationOverviewGet:
             },
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "source"
+
+    def test_lowercase_source_is_accepted(self, api_client, tenant):
+        """Any casing is accepted — the catalogue normalises to its own."""
+        article = ShareArticleFactory()
+        HarvestFactory(
+            share_article=article,
+            year=2026,
+            delivery_week=15,
+            day_number=1,
+            unit="KG",
+            size="M",
+            amount=Decimal("10"),
+        )
+
+        resp = api_client.get(
+            URL,
+            {
+                "year": 2026,
+                "delivery_week": 15,
+                "share_article": str(article.id),
+                "source": "harvest",
+            },
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert [row["amount"] for row in resp.data] == ["10.000"]
+
+    def test_empty_source_falls_back_to_harvest(self, api_client, tenant):
+        article = ShareArticleFactory()
+        HarvestFactory(
+            share_article=article,
+            year=2026,
+            delivery_week=15,
+            day_number=1,
+            unit="KG",
+            size="M",
+            amount=Decimal("10"),
+        )
+
+        resp = api_client.get(
+            URL,
+            {
+                "year": 2026,
+                "delivery_week": 15,
+                "share_article": str(article.id),
+                "source": "",
+            },
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert [row["amount"] for row in resp.data] == ["10.000"]
 
     def test_missing_year_returns_400(self, api_client, tenant):
         article = ShareArticleFactory()

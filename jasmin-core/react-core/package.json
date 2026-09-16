@@ -13,6 +13,7 @@
     "build:dev": "vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "lint:pins": "node scripts/check-hygiene-pins.mjs",
     "preview": "vite preview",
     "preview:prod": "vite preview --config vite.config.production.js",
     "pretest": "pkill -f 'node \\(vitest' || true",

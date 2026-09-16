@@ -4,12 +4,18 @@ import { ExplainerText } from "@shared/ui";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { EmailLog } from "@shared/api/generated/models";
+import type {
+  EmailLog,
+  NotificationsEmailLogsListParams,
+  NotificationsEmailLogsListStatus,
+} from "@shared/api/generated/models";
 import { useNotificationsEmailLogsList } from "@shared/api/generated/notifications/notifications";
 import { useTimeFormat } from "@hooks/index";
 import EmailStatusTag from "../components/EmailStatusTag";
 
-const ALL_STATUSES = [
+// The API closes this set: typing the list against the generated enum keeps a
+// status the server no longer accepts from lingering in the filter.
+const ALL_STATUSES: readonly NotificationsEmailLogsListStatus[] = [
   "pending",
   "sent",
   "delivered",
@@ -50,12 +56,12 @@ export default function EmailLog() {
   const [purposeFilter, setPurposeFilter] = useState<string | undefined>(
     undefined,
   );
-  const [statusFilter, setStatusFilter] = useState<string | undefined>(
-    undefined,
-  );
+  const [statusFilter, setStatusFilter] = useState<
+    NotificationsEmailLogsListStatus | undefined
+  >(undefined);
 
-  const params = useMemo(() => {
-    const p: Record<string, string> = {};
+  const params = useMemo<NotificationsEmailLogsListParams>(() => {
+    const p: NotificationsEmailLogsListParams = {};
     if (recipientFilter.trim()) p.recipient = recipientFilter.trim();
     if (purposeFilter) p.purpose = purposeFilter;
     if (statusFilter) p.status = statusFilter;

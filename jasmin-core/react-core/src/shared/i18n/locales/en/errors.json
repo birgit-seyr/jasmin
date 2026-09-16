@@ -129,11 +129,20 @@
     "gross_price_in_use": "This price can't be deleted because the share type variation already has subscriptions."
   },
   "tenant": {
-    "app_icon_invalid": "The app icon must be a square PNG, JPEG or WEBP image of at least 512x512 pixels and at most 2 MB."
+    "app_icon_invalid": "The app icon must be a square PNG, JPEG or WEBP image of at least 512x512 pixels and at most 2 MB.",
+    "invalid_schema_name": "The schema name is invalid or reserved — please choose a different one.",
+    "schema_already_exists": "A database schema with this name already exists — please choose a different schema name.",
+    "invalid_domain": "The domain is invalid — please enter a valid domain.",
+    "reserved_domain": "This subdomain is reserved for the platform — please choose a different domain.",
+    "weak_password": "The password is too weak — please choose a stronger one.",
+    "no_context": "This request carries no tenant context. Please open the page via the tenant's own address."
   },
   "tenant_settings": {
     "coop_shares_bounds_inverted": "The minimum number of coop shares cannot exceed the maximum.",
-    "invalid_payload": "The submitted settings have an invalid format."
+    "invalid_payload": "The submitted settings have an invalid format.",
+    "year_numbering_locked": "This year-based numbering setting can no longer be changed because documents of this type already exist.",
+    "empty_numbering_prefix": "The number prefix must not be empty — document numbers need a prefix. Please enter a value.",
+    "invalid_value": "Invalid value for this setting. Please stay within the allowed range (e.g. day of month 1-28, calendar week 1-53)."
   },
   "share_content": {
     "invalid": "Invalid share content input — please check the data.",
@@ -416,9 +425,6 @@
     "invalid_composite_id": "Invalid default share content id.",
     "no_amounts": "No share type variation amounts were provided."
   },
-  "delivery_station_fee": {
-    "invalid_range": "Start date must be on or before the end date."
-  },
   "documentation": {
     "invalid_model": "Invalid documentation model."
   },
@@ -469,5 +475,38 @@
     "employee_in_use": "This staff member can't be deleted because weekly plan entries, absences or employments still reference them. Deactivate them instead.",
     "weekly_plan_category_in_use": "This weekly plan category can't be deleted because it is used in the weekly plan. Deactivate it instead.",
     "absence_category_in_use": "This absence category can't be deleted because absences still reference it. Deactivate it instead."
+  },
+  "email_config": {
+    "test_recipient_missing": "Please enter a recipient address for the test email.",
+    "not_set_up": "Email sending is not set up yet. Please save an SMTP host and a from-address first, then send the test email.",
+    "test_recipient_not_allowed": "Test emails only go to your own account address or the organisation's contact address. Please enter one of those.",
+    "test_send_failed": "The test email could not be sent. Please check the SMTP host, port and credentials, then try again."
+  },
+  "support": {
+    "ticket_not_found": "Support ticket not found.",
+    "reply_empty": "The reply must not be empty — please enter some text.",
+    "invalid_status": "Invalid status for this support ticket."
+  },
+  "super_admin": {
+    "tenant_not_found": "Tenant not found.",
+    "user_not_found": "User account not found.",
+    "tenant_schema_missing": "This tenant no longer has a database schema. The tenant is in an inconsistent state and needs checking before any further action is possible.",
+    "domain_in_use": "This domain is already taken — please choose a different one.",
+    "tenant_provisioning_failed": "Creating the tenant failed and was rolled back. Please check the server log and start the process again.",
+    "user_email_exists": "This email address is already used by a user account — please choose a different address.",
+    "invalid_roles": "The selected roles are invalid or cannot be combined. Please correct the role selection.",
+    "last_admin": "This change would remove the tenant's last active admin role. Please make someone else an admin first, or force the change explicitly.",
+    "reseller_not_found": "Reseller not found — please check the selection.",
+    "reseller_already_linked": "This reseller is already linked to a different user.",
+    "missing_credentials": "Please enter your email address and password.",
+    "invalid_credentials": "Login failed — email or password is incorrect.",
+    "account_disabled": "This platform account is disabled.",
+    "account_locked": "Too many failed login attempts — this account is temporarily locked. Please try again later.",
+    "refresh_token_missing": "Session expired — please sign in again.",
+    "refresh_token_invalid": "Session invalid or expired — please sign in again.",
+    "not_super_admin_token": "This session has no platform permission — please sign in as a platform administrator.",
+    "backup_script_missing": "The backup script was not found on the server. Please check the server configuration.",
+    "backup_failed": "The backup failed. Please check the server log and try again.",
+    "backup_timed_out": "The backup took too long and was aborted. Please try again later."
   }
 }

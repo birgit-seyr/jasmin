@@ -74,7 +74,7 @@ import type { Key } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-const currentYear = dayjs().year();
+const currentYear = dayjs().isoWeekYear();
 const nextWeek = dayjs().isoWeek();
 
 // The article's net box price field for each unit — the source of a planning
