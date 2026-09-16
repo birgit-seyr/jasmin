@@ -1,32 +1,35 @@
+export { calculateTableScrollWidth } from './tableScrollWidth';
 export {
-    calculateTableScrollWidth,
     createStringSorter,
     createNumberSorter,
     createDateSorter,
     createBooleanSorter,
-} from './tableUtils'
+} from './tableSorters';
 
 export {
     getDateRangeStatus,
     createDateRangeStatusSorter,
     createDateRangeStatusRenderer,
+    DATE_RANGE_STATUS_COLOR
+} from './dateRangeStatus';
+
+export {
     isFieldDisabled,
     editableOnlyOnCreate,
     getStatusColor,
-    DATE_RANGE_STATUS_COLOR
-} from './columnUtils';
+} from './columnEditability';
 
 export { decimalsForUnit, formatAmountForUnit, renderNumber } from './amountFormat';
 export { getShareOptionLabel } from './shareOptionLabel';
 
 export { getDayName } from './weekdayNames';
-export { generatePdfFilename, formatWeekLabel, formatDayLabel } from './filenameUtils';
-// NB: pdfUtils (extractPdfColumns / stripHtmlToText) is intentionally NOT
-// re-exported here. It statically imports @react-pdf/renderer (~484KB gzip),
-// and re-exporting through this barrel pulled that library into the entry
-// chunk for every page (the barrel is imported app-wide). PDF-only consumers
-// import from "@shared/utils/pdfUtils" directly so the lib stays in the lazy
-// PDF chunks.
+export { generatePdfFilename } from './pdfFilename';
+export { formatWeekLabel, formatDayLabel } from './weekLabels';
+// NB: pdfColumns (extractPdfColumns) is intentionally NOT re-exported here.
+// It statically imports @react-pdf/renderer (~484KB gzip), and re-exporting
+// through this barrel pulls that library into the entry chunk for every page
+// (the barrel is imported app-wide). PDF-only consumers import from
+// "@shared/utils/pdfColumns" directly so the lib stays in the lazy PDF chunks.
 export {
     hasPurchasedSuffix,
     removePurchasedSuffix,

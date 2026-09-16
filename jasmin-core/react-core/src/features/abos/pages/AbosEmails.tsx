@@ -65,7 +65,7 @@ export default function AbosEmails() {
               setSelectedDeliveryStationDay={setSelectedDeliveryStationDay}
             />
             <CopyableEmailList
-              data={byStationDay.data}
+              recipients={byStationDay.data}
               loading={byStationDay.isFetching}
               enabled={!!selectedDeliveryStationDay}
             />
@@ -85,7 +85,7 @@ export default function AbosEmails() {
               style={{ marginLeft: "-1em" }}
             />
             <CopyableEmailList
-              data={byShareType.data}
+              recipients={byShareType.data}
               loading={byShareType.isFetching}
               enabled={!!selectedShareType}
             />
@@ -108,7 +108,7 @@ export default function AbosEmails() {
               format={dateFormat}
             />
             <CopyableEmailList
-              data={byDateRange.data}
+              recipients={byDateRange.data}
               loading={byDateRange.isFetching}
               enabled={!!range}
             />

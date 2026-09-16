@@ -135,9 +135,9 @@ DB required: Yes (all functions query models)
     - returns distinct variations
 
 
-test_field_utils.py
--------------------
-Source: apps/commissioning/utils/field_utils.py
+test_storage_fields.py
+----------------------
+Source: apps/commissioning/utils/storage_fields.py
 DB required: Partially (build_storage_fields / extract_storage_fields need DB)
 
   TestExtractSelectedStorageId (no DB)

@@ -6,14 +6,10 @@ import {
   VariationsTotalsCard,
   type VariationTotal,
 } from "./ListPDFSharedComponents";
-
-interface CrateData {
-  crate_name?: string;
-  quantity?: number;
-}
+import type { CrateQuantity } from "./crateQuantity";
 
 interface FirstPageOnlyTableProps {
-  dataFirstPageOnly: CrateData[];
+  dataFirstPageOnly: CrateQuantity[];
   t: (key: string) => string;
   styles: typeof baseStyles;
 }
@@ -69,7 +65,7 @@ const FirstPageOnlyTable = ({
 
 interface HarvestingListPDFProps {
   data: Record<string, unknown>[];
-  dataFirstPageOnly?: CrateData[];
+  dataFirstPageOnly?: CrateQuantity[];
   variationsTotals?: VariationTotal[];
   title: string;
   subtitle: string;

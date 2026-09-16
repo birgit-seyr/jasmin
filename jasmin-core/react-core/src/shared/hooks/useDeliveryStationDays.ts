@@ -5,14 +5,13 @@ import type { TFunction } from 'i18next';
 import { useCommissioningDeliveryStationsDaysList } from '@shared/api/generated/commissioning/commissioning';
 import type { DeliveryStationDay, CommissioningDeliveryStationsDaysListParams } from '@shared/api/generated/models';
 import { toOptions, type Option } from './internal/toOptions';
+import { DELIVERY_DAY_SHORT_KEYS } from '@shared/utils/weekdayNames';
 
 // ``capacity_by_week`` is fully typed on the generated model
 // (Record<string, CapacityWeekEntry> | null), so no local shape is needed.
 export type DeliveryStationDayOption = Option<DeliveryStationDay>;
 
 type DeliveryStationDayParams = Partial<CommissioningDeliveryStationsDaysListParams>;
-
-const DAY_KEYS = ['delivery.mo', 'delivery.di', 'delivery.mi', 'delivery.do', 'delivery.fr', 'delivery.sa', 'delivery.su'] as const;
 
 /**
  * Localized weekday name for a delivery ``day_number`` (0=Mon … 6=Sun). Falls
@@ -23,7 +22,7 @@ export function deliveryDayLabel(
   t: TFunction,
   dayNumber: number | string | null | undefined,
 ): string {
-  const key = DAY_KEYS[Number(dayNumber)];
+  const key = DELIVERY_DAY_SHORT_KEYS[Number(dayNumber)];
   return key ? t(key) : String(dayNumber ?? '');
 }
 

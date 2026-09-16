@@ -1229,10 +1229,10 @@ class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 shares_by_day.setdefault(share.delivery_day.day_number, share)
 
         result = []
-        for day_num in days_to_process:
-            share = shares_by_day.get(day_num)
+        for day_number in days_to_process:
+            share = shares_by_day.get(day_number)
             if share is not None:
-                result.append(_build_day_data(share, day_num))
+                result.append(_build_day_data(share, day_number))
 
         return Response(result)
 
@@ -2159,21 +2159,21 @@ _DAY_CHANGE_DEFAULTS = {
 }
 
 
-def _build_day_data(share: Share, day_num: int) -> dict[str, Any]:
+def _build_day_data(share: Share, day_number: int) -> dict[str, Any]:
     """Build day-level planning data dict from a Share instance."""
     delivery_day = share.delivery_day
 
-    data: dict[str, Any] = {
-        "id": day_num + 1,
-        "delivery_day": day_num,
+    row: dict[str, Any] = {
+        "id": day_number + 1,
+        "delivery_day": day_number,
         "changed_day_number": share.changed_day_number,
     }
 
     for field, default_attr in _DAY_CHANGE_DEFAULTS.items():
         value = getattr(share, field)
-        data[field] = value
-        data[f"{field}_changed"] = (
+        row[field] = value
+        row[f"{field}_changed"] = (
             value != getattr(delivery_day, default_attr) if value is not None else False
         )
 
-    return data
+    return row

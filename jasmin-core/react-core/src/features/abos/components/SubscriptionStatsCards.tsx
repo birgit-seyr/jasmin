@@ -35,14 +35,14 @@ export default function SubscriptionStatsCards() {
     physical: true,
     include_future: true,
   });
-  const { variationInfo, snapshot } = useSubscriptionVariationStats(
+  const { variationLegendById, snapshot } = useSubscriptionVariationStats(
     subscriptions,
     variations,
   );
 
   const subscriptionTiles = useMemo<SummaryStat[]>(() => {
     const breakdown = (summary: StatusSummary) => {
-      const rows = [...variationInfo.values()]
+      const rows = [...variationLegendById.values()]
         .map((info) => ({ info, qty: summary.byVariation.get(info.id) ?? 0 }))
         .filter((r) => r.qty > 0);
       if (rows.length === 0) return null;
@@ -117,9 +117,9 @@ export default function SubscriptionStatsCards() {
           ]
         : []),
     ];
-  }, [snapshot, variationInfo, t, allowsWaitingList]);
+  }, [snapshot, variationLegendById, t, allowsWaitingList]);
 
-  if (variationInfo.size === 0) return null;
+  if (variationLegendById.size === 0) return null;
 
   return (
     <div style={{ marginBottom: 12 }}>

@@ -485,12 +485,12 @@ describe("ZUGFeRD / EN 16931 structural conformance", () => {
     // (the backend serializer resolves the per-reseller → tenant
     // fallback, so the generator passes concrete numbers).
     it("paymentTerms override wins over tenant default for the days value", () => {
-      const I18N_TEMPLATES_LOCAL: Record<string, string> = {
+      const templates: Record<string, string> = {
         "commissioning.payment_terms_invoice_pdf":
           "payment terms: payment within {{days}} days without deduction.",
       };
       const tLocal = ((key: string, vars?: Record<string, unknown>) => {
-        const template = I18N_TEMPLATES_LOCAL[key] ?? key;
+        const template = templates[key] ?? key;
         if (!vars) return template;
         return template.replace(/\{\{(\w+)\}\}/g, (_, name) =>
           vars[name] === undefined ? `{{${name}}}` : String(vars[name]),
@@ -519,14 +519,14 @@ describe("ZUGFeRD / EN 16931 structural conformance", () => {
     });
 
     it("appends Skonto sentence when paymentTerms carries both discount fields", () => {
-      const I18N_TEMPLATES_LOCAL: Record<string, string> = {
+      const templates: Record<string, string> = {
         "commissioning.payment_terms_invoice_pdf":
           "payment terms: payment within {{days}} days without deduction.",
         "commissioning.early_payment_discount_invoice_pdf":
           "{{percent}}% Skonto bei Zahlung innerhalb {{days}} Tagen.",
       };
       const tLocal = ((key: string, vars?: Record<string, unknown>) => {
-        const template = I18N_TEMPLATES_LOCAL[key] ?? key;
+        const template = templates[key] ?? key;
         if (!vars) return template;
         return template.replace(/\{\{(\w+)\}\}/g, (_, name) =>
           vars[name] === undefined ? `{{${name}}}` : String(vars[name]),
@@ -554,14 +554,14 @@ describe("ZUGFeRD / EN 16931 structural conformance", () => {
     });
 
     it("omits Skonto sentence when only one of the discount fields is set", () => {
-      const I18N_TEMPLATES_LOCAL: Record<string, string> = {
+      const templates: Record<string, string> = {
         "commissioning.payment_terms_invoice_pdf":
           "payment terms: payment within {{days}} days without deduction.",
         "commissioning.early_payment_discount_invoice_pdf":
           "{{percent}}% Skonto bei Zahlung innerhalb {{days}} Tagen.",
       };
       const tLocal = ((key: string, vars?: Record<string, unknown>) => {
-        const template = I18N_TEMPLATES_LOCAL[key] ?? key;
+        const template = templates[key] ?? key;
         if (!vars) return template;
         return template.replace(/\{\{(\w+)\}\}/g, (_, name) =>
           vars[name] === undefined ? `{{${name}}}` : String(vars[name]),
@@ -587,14 +587,14 @@ describe("ZUGFeRD / EN 16931 structural conformance", () => {
     });
 
     it("omits Skonto sentence when percent is 0 (treated as 'no discount offered')", () => {
-      const I18N_TEMPLATES_LOCAL: Record<string, string> = {
+      const templates: Record<string, string> = {
         "commissioning.payment_terms_invoice_pdf":
           "payment terms: payment within {{days}} days without deduction.",
         "commissioning.early_payment_discount_invoice_pdf":
           "{{percent}}% Skonto bei Zahlung innerhalb {{days}} Tagen.",
       };
       const tLocal = ((key: string, vars?: Record<string, unknown>) => {
-        const template = I18N_TEMPLATES_LOCAL[key] ?? key;
+        const template = templates[key] ?? key;
         if (!vars) return template;
         return template.replace(/\{\{(\w+)\}\}/g, (_, name) =>
           vars[name] === undefined ? `{{${name}}}` : String(vars[name]),

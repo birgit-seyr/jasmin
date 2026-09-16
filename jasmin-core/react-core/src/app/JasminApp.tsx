@@ -13,8 +13,7 @@ import { useAuth } from "@shared/contexts/AuthContext";
 import { useLocale } from "@shared/contexts/LocaleContext";
 import { ModalProvider } from "@shared/contexts/ModalContext";
 import { NavigationProvider } from "@shared/contexts/NavigationContext";
-import { PermissionProvider } from "@shared/contexts/PermissionContext";
-import { useTenant, useTheme } from "@hooks/index";
+import { useTheme } from "@hooks/index";
 import LoginPage from "@features/auth/pages/LoginPage";
 import RegistrationPage from "@features/auth/pages/registration/RegistrationPage";
 import SetPasswordPage from "@features/auth/pages/SetPasswordPage";
@@ -39,7 +38,6 @@ const ANTD_LOCALES = { en: enUS, de: deDE, it: itIT, fr: frFR };
 export default function JasminApp() {
   const themeTokens = useTheme();
   const { language, theme: userTheme } = useLocale();
-  const { tenant } = useTenant();
   const { user, isAuthenticated, bootstrapping } = useAuth();
   const { i18n } = useTranslation();
 
@@ -150,49 +148,47 @@ export default function JasminApp() {
     const memberPath = memberId ? `/members/members/${memberId}` : "/login";
     return (
       <ConfigProvider theme={antdTheme} locale={antdLocale}>
-        <PermissionProvider user={user} tenant={tenant}>
-          <Layout style={{ minHeight: "100vh" }}>
-            <Layout.Header
-              className="flex-end"
-              style={{
-                alignItems: "center",
-                padding: "0 16px",
-                background: "var(--color-bg-container)",
-                borderBottom: "1px solid var(--color-border)",
-              }}
-            >
-              <UserMenu />
-            </Layout.Header>
-            <Layout.Content
-              style={{
-                padding: "24px",
-                background: "var(--color-bg-base)",
-                minHeight: "100vh",
-              }}
-            >
-              <ErrorBoundary>
-                <Suspense
-                  fallback={
-                    <div role="status" aria-live="polite">
-                      Loading...
-                    </div>
-                  }
-                >
-                  <Routes>
-                    <Route
-                      path="/members/members/:id"
-                      element={<MemberDetail />}
-                    />
-                    <Route
-                      path="*"
-                      element={<Navigate to={memberPath} replace />}
-                    />
-                  </Routes>
-                </Suspense>
-              </ErrorBoundary>
-            </Layout.Content>
-          </Layout>
-        </PermissionProvider>
+        <Layout style={{ minHeight: "100vh" }}>
+          <Layout.Header
+            className="flex-end"
+            style={{
+              alignItems: "center",
+              padding: "0 16px",
+              background: "var(--color-bg-container)",
+              borderBottom: "1px solid var(--color-border)",
+            }}
+          >
+            <UserMenu />
+          </Layout.Header>
+          <Layout.Content
+            style={{
+              padding: "24px",
+              background: "var(--color-bg-base)",
+              minHeight: "100vh",
+            }}
+          >
+            <ErrorBoundary>
+              <Suspense
+                fallback={
+                  <div role="status" aria-live="polite">
+                    Loading...
+                  </div>
+                }
+              >
+                <Routes>
+                  <Route
+                    path="/members/members/:id"
+                    element={<MemberDetail />}
+                  />
+                  <Route
+                    path="*"
+                    element={<Navigate to={memberPath} replace />}
+                  />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
+          </Layout.Content>
+        </Layout>
       </ConfigProvider>
     );
   }
@@ -203,46 +199,44 @@ export default function JasminApp() {
   if (hasOnlyRole("customer")) {
     return (
       <ConfigProvider theme={antdTheme} locale={antdLocale}>
-        <PermissionProvider user={user} tenant={tenant}>
-          <Layout style={{ minHeight: "100vh" }}>
-            <Layout.Header
-              className="flex-end"
-              style={{
-                alignItems: "center",
-                padding: "0 16px",
-                background: "var(--color-bg-container)",
-                borderBottom: "1px solid var(--color-border)",
-              }}
-            >
-              <UserMenu />
-            </Layout.Header>
-            <Layout.Content
-              style={{
-                padding: "24px",
-                background: "var(--color-bg-base)",
-                minHeight: "100vh",
-              }}
-            >
-              <ErrorBoundary>
-                <Suspense
-                  fallback={
-                    <div role="status" aria-live="polite">
-                      Loading...
-                    </div>
-                  }
-                >
-                  <Routes>
-                    <Route path="/customer" element={<CustomerOrderPage />} />
-                    <Route
-                      path="*"
-                      element={<Navigate to="/customer" replace />}
-                    />
-                  </Routes>
-                </Suspense>
-              </ErrorBoundary>
-            </Layout.Content>
-          </Layout>
-        </PermissionProvider>
+        <Layout style={{ minHeight: "100vh" }}>
+          <Layout.Header
+            className="flex-end"
+            style={{
+              alignItems: "center",
+              padding: "0 16px",
+              background: "var(--color-bg-container)",
+              borderBottom: "1px solid var(--color-border)",
+            }}
+          >
+            <UserMenu />
+          </Layout.Header>
+          <Layout.Content
+            style={{
+              padding: "24px",
+              background: "var(--color-bg-base)",
+              minHeight: "100vh",
+            }}
+          >
+            <ErrorBoundary>
+              <Suspense
+                fallback={
+                  <div role="status" aria-live="polite">
+                    Loading...
+                  </div>
+                }
+              >
+                <Routes>
+                  <Route path="/customer" element={<CustomerOrderPage />} />
+                  <Route
+                    path="*"
+                    element={<Navigate to="/customer" replace />}
+                  />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
+          </Layout.Content>
+        </Layout>
       </ConfigProvider>
     );
   }
@@ -250,21 +244,19 @@ export default function JasminApp() {
   // Render full app with layout for authenticated staff users
   return (
     <ConfigProvider theme={antdTheme} locale={antdLocale}>
-      <PermissionProvider user={user} tenant={tenant}>
-        <NavigationProvider>
-          <ModalProvider>
-            <Layout style={{ minHeight: "100vh" }}>
-              <SkipToMainLink />
-              <TopNavigation />
-              <Layout>
-                <DynamicSidebar />
-                <MainContent />
-              </Layout>
-              <Footer />
+      <NavigationProvider>
+        <ModalProvider>
+          <Layout style={{ minHeight: "100vh" }}>
+            <SkipToMainLink />
+            <TopNavigation />
+            <Layout>
+              <DynamicSidebar />
+              <MainContent />
             </Layout>
-          </ModalProvider>
-        </NavigationProvider>
-      </PermissionProvider>
+            <Footer />
+          </Layout>
+        </ModalProvider>
+      </NavigationProvider>
     </ConfigProvider>
   );
 }

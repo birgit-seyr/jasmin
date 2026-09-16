@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useNoteColumn, useVegetableSizeOptions, useUnitOptions } from "@hooks/index";
@@ -16,12 +16,6 @@ import { useShareArticleColumn } from "./useShareArticleColumn";
 // the BackupModal). When present we render its name / unit / size as a second,
 // GREY line inside the SAME cell — so the backup reads as a sub-line of the
 // vegetable it backs up, in the right columns.
-const BACKUP_SUBLINE_STYLE: CSSProperties = {
-  color: "var(--color-text-secondary)",
-  fontSize: "0.85em",
-  lineHeight: 1.2,
-};
-
 export function withBackupSubline(
   main: ReactNode,
   backup: ReactNode,
@@ -31,7 +25,7 @@ export function withBackupSubline(
   return (
     <>
       <div>{main}</div>
-      <div style={BACKUP_SUBLINE_STYLE}>{backup}</div>
+      <div className="text-subline">{backup}</div>
     </>
   );
 }

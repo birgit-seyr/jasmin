@@ -42,7 +42,7 @@ import {
   getDayName,
 } from "@shared/utils";
 
-export default function DeliveryStationDetails() {
+export default function DeliveryStationsDetails() {
   const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
     useYearWeekState();
   const [selectedDeliveryDay, setSelectedDeliveryDay] = useState<number | null>(

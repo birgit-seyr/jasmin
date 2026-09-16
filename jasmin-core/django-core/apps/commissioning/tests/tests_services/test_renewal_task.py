@@ -24,10 +24,9 @@ import pytest
 
 pytestmark = pytest.mark.django_db
 
-_TASKS = "apps.commissioning.tasks"
 _RUN_RENEWALS = "apps.commissioning.services.renewal.run_renewals"
 _GET_SETTINGS = "apps.shared.tenants.models.TenantSettings.get_current_settings"
-_NOTIFY = f"{_TASKS}._notify_office_of_renewal_failures"
+_NOTIFY = "apps.commissioning.tasks._notify_office_of_renewal_failures"
 
 
 def _settings(*, auto_renew: bool, min_weeks: int = 6) -> Mock:

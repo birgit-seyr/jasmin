@@ -54,7 +54,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/dashboard",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <DashboardCultivation />
       </RequireRole>
     ),
@@ -62,7 +62,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/documentation-pesticides",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <DocumentationPesticides />
       </RequireRole>
     ),
@@ -70,7 +70,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/documentation-fertilizers",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <DocumentationFertilizers />
       </RequireRole>
     ),
@@ -78,7 +78,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/list-plant-families",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <ListPlantFamilies />
       </RequireRole>
     ),
@@ -86,7 +86,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/amounts-for-cultivation",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <AmountsForCultivation />
       </RequireRole>
     ),
@@ -94,7 +94,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/list-vegetable-families",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <ListVegetableFamilies />
       </RequireRole>
     ),
@@ -102,7 +102,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/planting-list",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <PlantingList />
       </RequireRole>
     ),
@@ -110,7 +110,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/sowing-list",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <SowingList />
       </RequireRole>
     ),
@@ -118,7 +118,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/order-seedlings",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <OrderSeedlings />
       </RequireRole>
     ),
@@ -126,7 +126,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/order-seeds",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <OrderSeeds />
       </RequireRole>
     ),
@@ -134,7 +134,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/planting-scheme-outdoors",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <PlantingSchemeOutdoors />
       </RequireRole>
     ),
@@ -142,7 +142,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/list-sellers-seedlings",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <ListSellersSeedlings />
       </RequireRole>
     ),
@@ -150,7 +150,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/list-sellers-seeds",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <ListSellersSeeds />
       </RequireRole>
     ),
@@ -158,7 +158,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/sets-indoors",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <SetsIndoors />
       </RequireRole>
     ),
@@ -166,7 +166,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/sets-outdoors",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <SetsOutdoors />
       </RequireRole>
     ),
@@ -174,7 +174,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/sorts-seedlings-outdoors",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <SortsSeedlingsOutdoors />
       </RequireRole>
     ),
@@ -182,7 +182,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/sorts-seeds-outdoors",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <SortsSeedsOutdoors />
       </RequireRole>
     ),
@@ -190,7 +190,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/sorts-seedlings-indoors",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <SortsSeedlingsIndoors />
       </RequireRole>
     ),
@@ -198,7 +198,7 @@ export const cultivationRoutes: AppRoute[] = [
   {
     path: "/cultivation/sorts-seeds-indoors",
     element: (
-      <RequireRole flag="isGardener">
+      <RequireRole flag="canEditCultivation">
         <SortsSeedsIndoors />
       </RequireRole>
     ),

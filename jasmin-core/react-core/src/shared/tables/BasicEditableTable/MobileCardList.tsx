@@ -16,7 +16,7 @@ import type {
 } from "./types";
 
 /** Shown when a column has no value for a record; the caller drops such fields. */
-const EMPTY_DISPLAY = "–";
+export const EMPTY_DISPLAY = "–";
 
 /** Columns whose dataIndex starts with one of these prefixes are shown as tags. */
 const TAG_PREFIXES = ["variation_", "offer_group_", "for_all_"];

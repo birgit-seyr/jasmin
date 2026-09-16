@@ -17,7 +17,7 @@ export default function LoginButton() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { t } = useTranslation();
-  const { member } = useRoles();
+  const { hasMemberRole } = useRoles();
   const [profileOpen, setProfileOpen] = useState(false);
   const currentUser = user as {
     first_name?: string;
@@ -35,7 +35,7 @@ export default function LoginButton() {
       label: t("profile.title"),
       onClick: () => setProfileOpen(true),
     },
-    ...(member && memberId
+    ...(hasMemberRole && memberId
       ? [
           {
             key: "member-page",

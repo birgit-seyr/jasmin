@@ -7,7 +7,7 @@ export { useDeliveryStations } from './useDeliveryStations';
 export { useDocumentationSummaryPage } from './useDocumentationSummaryPage';
 export { useStorageDocumentationPage } from './useStorageDocumentationPage';
 export { useHarvestingListData } from './useHarvestingListData';
-export { useHistoricalShareTypeVariationAverages } from './useHistoricalShareTypeVariationAverage';
+export { useHistoricalShareTypeVariationAverages } from './useHistoricalShareTypeVariationAverages';
 export { useOfferGroups } from './useOfferGroups';
 export { useOfferOptions } from './useOfferOptions';
 export { useOfferTiers, resolveOfferTiers } from './useOfferTiers';

@@ -5,7 +5,7 @@ import "../registerRoboto";
 import { baseStyles } from "./baseStyles";
 import { listStyles } from "./listPdfBase";
 import { ListPDFFooter, ListPDFHeader } from "./ListPDFSharedComponents";
-import { extractPdfColumns } from "@shared/utils/pdfUtils";
+import { extractPdfColumns } from "@shared/utils/pdfColumns";
 
 interface BaseListPDFProps {
   data: Record<string, unknown>[];

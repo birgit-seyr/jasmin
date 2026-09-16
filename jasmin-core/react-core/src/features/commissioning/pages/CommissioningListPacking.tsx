@@ -192,7 +192,7 @@ export default function CommissioningListPacking() {
   const { shareArticleColumn } = useShareArticleColumn({
     filters: shareArticleFilters,
     showFruitsAndVegs: true,
-    articleDefaults: "harvest",
+    autofillContext: "harvest",
   });
 
   const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
@@ -238,7 +238,7 @@ export default function CommissioningListPacking() {
   );
 
   // Each table owns its own fetch, so collect their rows here to build the
-  // PDF. ``handleRows`` is stable and bails when a table reports the same
+  // PDF. ``handleRowsChange`` is stable and bails when a table reports the same
   // (memoised) rows reference, so it can't loop.
   const isMobile = useIsMobile();
   const { getUnitLabel } = useUnitOptions();
@@ -250,7 +250,7 @@ export default function CommissioningListPacking() {
   const [rowsByOption, setRowsByOption] = useState<
     Record<string, PackingRow[]>
   >({});
-  const handleRows = useCallback((shareOption: string, rows: PackingRow[]) => {
+  const handleRowsChange = useCallback((shareOption: string, rows: PackingRow[]) => {
     setRowsByOption((prev) =>
       prev[shareOption] === rows ? prev : { ...prev, [shareOption]: rows },
     );
@@ -329,7 +329,7 @@ export default function CommissioningListPacking() {
           year={selectedYear}
           week={selectedWeek}
           deliveryDayId={selectedDeliveryDayId}
-          onRowsChange={handleRows}
+          onRowsChange={handleRowsChange}
         />
       ))}
       <ExplainerText title={t("common.info")}>

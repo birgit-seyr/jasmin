@@ -125,7 +125,7 @@ export default function DocumentationPurchase() {
   const { shareArticleColumn } = useShareArticleColumn({
     filters: shareArticleFilters,
     showFruitsAndVegs: true,
-    articleDefaults: "purchase",
+    autofillContext: "purchase",
   });
 
   const { getUnitLabel } = useUnitOptions();

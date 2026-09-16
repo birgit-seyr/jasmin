@@ -102,7 +102,7 @@ const MemberDetail = () => {
   const {
     mutate: toggleOptin,
     isPending: isTogglingOptin,
-    variables: togglingOptinVars,
+    variables: togglingOptinVariables,
   } = useCommissioningShareDeliveryToggleOptinCreate({
     mutation: {
       onSuccess: () => {
@@ -445,7 +445,7 @@ const MemberDetail = () => {
             onEditDelivery={handleDeliveryEdit}
             onToggleOptin={handleToggleOptin}
             togglingOptinId={
-              isTogglingOptin ? (togglingOptinVars?.id ?? null) : null
+              isTogglingOptin ? (togglingOptinVariables?.id ?? null) : null
             }
           />
         </Col>

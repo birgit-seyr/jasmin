@@ -18,6 +18,7 @@ from django.db.models import QuerySet
 from django.http import StreamingHttpResponse
 
 from apps.shared.csv_safety import CsvEchoBuffer, escape_csv_row
+from apps.shared.languages import SUPPORTED_LANGUAGE_CODES
 
 from ..errors import InvalidExportDates  # re-exported for back-compat
 from ..models import Harvest, Purchase
@@ -36,7 +37,7 @@ class DocumentationExportService:
     # filename tokens are served when the tenant ``csv_format`` selects the
     # ``en`` CSV dialect, mirroring the de/en switch :mod:`csv_format` already
     # applies to the machine formatting. fr/it are deferred and degrade to de.
-    _SUPPORTED_LANGUAGES: tuple[str, ...] = ("de", "en")
+    _SUPPORTED_LANGUAGES: tuple[str, ...] = SUPPORTED_LANGUAGE_CODES
 
     _CONFIG: dict[str, dict[str, Any]] = {
         "harvest": {
@@ -205,6 +206,8 @@ class DocumentationExportService:
         if tenant is None:
             tenant = getattr(connection, "tenant", None)
         key = str(getattr(tenant, "csv_format", None) or "de").lower()
+        # German, not the platform-wide ``DEFAULT_LANGUAGE_CODE``: these labels
+        # pair with the ``csv_format`` dialect, whose own default preset is German.
         return key if key in cls._SUPPORTED_LANGUAGES else "de"
 
     @classmethod

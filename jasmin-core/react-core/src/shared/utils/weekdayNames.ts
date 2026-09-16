@@ -13,6 +13,19 @@ export const WEEKDAY_KEYS = [
   "common.weekday_sunday",
 ] as const;
 
+// Short delivery-day i18n keys, same 0 = Monday … 6 = Sunday indexing as
+// ``WEEKDAY_KEYS``. These render the abbreviated label the delivery UIs show;
+// ``WEEKDAY_KEYS`` renders the full weekday name.
+export const DELIVERY_DAY_SHORT_KEYS = [
+  "delivery.mo",
+  "delivery.di",
+  "delivery.mi",
+  "delivery.do",
+  "delivery.fr",
+  "delivery.sa",
+  "delivery.su",
+] as const;
+
 /**
  * Uppercase localized weekday name for a 0=Monday..6=Sunday day index. Used by
  * the PDF / filename helpers that want the ALL-CAPS day token. Falls back to the

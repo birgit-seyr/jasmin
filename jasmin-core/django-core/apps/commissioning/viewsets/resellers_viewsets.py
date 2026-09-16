@@ -620,12 +620,12 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
         # Non-privileged callers may only create order content for their own
         # linked reseller.
-        reseller_obj = serializer.validated_data.get("reseller")
-        reseller_id = getattr(reseller_obj, "pk", reseller_obj)
+        reseller = serializer.validated_data.get("reseller")
+        reseller_id = getattr(reseller, "pk", reseller)
         enforce_own_reseller(request, reseller_id)
         self._reject_office_only_pricing(request, serializer.validated_data)
         self._require_own_offer_group_offer(
-            request, serializer.validated_data, reseller_obj
+            request, serializer.validated_data, reseller
         )
 
         result = OrderContentService.create_order_with_content_and_crates(
@@ -798,10 +798,10 @@ class OfferViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
         if reseller_id is not None:
 
-            reseller_obj = get_or_404(
+            reseller = get_or_404(
                 Reseller, reseller_id, "Reseller", error_cls=ResellerNotFound
             )
-            offer_group = reseller_obj.offer_group
+            offer_group = reseller.offer_group
             if offer_group is not None:
                 queryset = queryset.filter(offer_group=offer_group)
             else:

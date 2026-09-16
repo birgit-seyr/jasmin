@@ -23,7 +23,7 @@
 
 import type { ShareArticle } from "@shared/api/generated/models";
 
-export type ArticleDefaults =
+export type ArticleAutofillContext =
   | "harvest"
   | "purchase"
   | "reseller"
@@ -68,7 +68,7 @@ interface TaxRateBinding {
   target: string;
 }
 
-interface ArticleDefaultsDef {
+interface ArticleAutofillBindings {
   /** ShareArticle field carrying the amount-per-PU default for each unit. */
   amountPerPu: Record<UnitKey, string>;
   /** Form field that should receive the amount-per-PU value. */
@@ -116,8 +116,8 @@ const RESELLER_ORDER_PRICE_SUFFIX: Record<UnitKey, string> = {
 // ``longtermplanning`` is intentionally absent — it autofills nothing, handled
 // by an early return in the functions below.
 const CONTEXTS: Record<
-  Exclude<ArticleDefaults, "longtermplanning">,
-  ArticleDefaultsDef
+  Exclude<ArticleAutofillContext, "longtermplanning">,
+  ArticleAutofillBindings
 > = {
   harvest: {
     amountPerPu: PER_PU_HARVEST,
@@ -168,38 +168,38 @@ const normaliseUnit = (raw: unknown): UnitKey | null => {
 };
 
 function buildAmountPatch(
-  def: ArticleDefaultsDef,
+  bindings: ArticleAutofillBindings,
   article: ShareArticle,
   unitKey: UnitKey | null,
 ): Record<string, unknown> {
   if (!unitKey) return {};
-  const field = def.amountPerPu[unitKey];
+  const field = bindings.amountPerPu[unitKey];
   if (!field) return {};
   const value = readField(article, field);
   if (value == null || value === "") return {};
-  return { [def.amountPerPuFormKey]: value };
+  return { [bindings.amountPerPuFormKey]: value };
 }
 
 function buildPricePatch(
-  def: ArticleDefaultsDef,
+  bindings: ArticleAutofillBindings,
   article: ShareArticle,
   unitKey: UnitKey | null,
 ): Record<string, unknown> {
-  if (!def.prices || !unitKey) return {};
+  if (!bindings.prices || !unitKey) return {};
   const patch: Record<string, unknown> = {};
-  for (let tier = 1; tier <= def.prices.tiers; tier++) {
-    const value = readField(article, def.prices.source(unitKey, tier));
-    patch[def.prices.target(tier)] = value ?? 0;
+  for (let tier = 1; tier <= bindings.prices.tiers; tier++) {
+    const value = readField(article, bindings.prices.source(unitKey, tier));
+    patch[bindings.prices.target(tier)] = value ?? 0;
   }
   return patch;
 }
 
 function buildCratePatch(
-  def: ArticleDefaultsDef,
+  bindings: ArticleAutofillBindings,
   article: ShareArticle,
 ): Record<string, unknown> {
-  if (!def.crate) return {};
-  const id = readField(article, def.crate.sourceValue);
+  if (!bindings.crate) return {};
+  const id = readField(article, bindings.crate.sourceValue);
   if (!id) return {};
   // BOTH keys get the same id — that's the convention the EditableTable
   // foreignKey select expects. The select's options are
@@ -208,24 +208,24 @@ function buildCratePatch(
   // match the option and render the right label. Setting it to the raw
   // name string would not match any option and the cell stays empty.
   return {
-    [def.crate.targetValue]: id,
-    [def.crate.targetDisplay]: id,
+    [bindings.crate.targetValue]: id,
+    [bindings.crate.targetDisplay]: id,
   };
 }
 
 function buildTaxRatePatch(
-  def: ArticleDefaultsDef,
+  bindings: ArticleAutofillBindings,
   article: ShareArticle,
 ): Record<string, unknown> {
-  if (!def.taxRate) return {};
-  const value = readField(article, def.taxRate.source);
+  if (!bindings.taxRate) return {};
+  const value = readField(article, bindings.taxRate.source);
   // Only overwrite when the article actually carries a tax rate. An
   // article without a current ``ShareArticleNetPrice`` row leaves
   // ``tax_rate`` as null — in that case keep whatever the caller
   // already seeded (typically the ``default_tax_rate_articles`` tenant
   // setting from ``customEdit``).
   if (value == null || value === "") return {};
-  return { [def.taxRate.target]: value };
+  return { [bindings.taxRate.target]: value };
 }
 
 /**
@@ -237,18 +237,18 @@ function buildTaxRatePatch(
  * other side effects).
  */
 export function computeShareArticlePatch(
-  ctx: ArticleDefaults,
+  context: ArticleAutofillContext,
   article: ShareArticle,
   unit: string | null | undefined,
 ): Record<string, unknown> {
-  if (ctx === "longtermplanning") return {};
-  const def = CONTEXTS[ctx];
+  if (context === "longtermplanning") return {};
+  const bindings = CONTEXTS[context];
   const unitKey = normaliseUnit(unit);
   return {
-    ...buildAmountPatch(def, article, unitKey),
-    ...buildCratePatch(def, article),
-    ...buildPricePatch(def, article, unitKey),
-    ...buildTaxRatePatch(def, article),
+    ...buildAmountPatch(bindings, article, unitKey),
+    ...buildCratePatch(bindings, article),
+    ...buildPricePatch(bindings, article, unitKey),
+    ...buildTaxRatePatch(bindings, article),
     description: article.description ?? "",
   };
 }
@@ -260,15 +260,15 @@ export function computeShareArticlePatch(
  * the description.
  */
 export function computeUnitChangePatch(
-  ctx: ArticleDefaults,
+  context: ArticleAutofillContext,
   article: ShareArticle,
   newUnit: string | null | undefined,
 ): Record<string, unknown> {
-  if (ctx === "longtermplanning") return {};
-  const def = CONTEXTS[ctx];
+  if (context === "longtermplanning") return {};
+  const bindings = CONTEXTS[context];
   const unitKey = normaliseUnit(newUnit);
   return {
-    ...buildAmountPatch(def, article, unitKey),
-    ...buildPricePatch(def, article, unitKey),
+    ...buildAmountPatch(bindings, article, unitKey),
+    ...buildPricePatch(bindings, article, unitKey),
   };
 }

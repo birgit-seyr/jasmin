@@ -22,43 +22,43 @@ import {
 
 // UUID-shaped ids, exactly as the backend emits them.
 const DAY = "3f2504e0-4f89-11d3-9a0c-0305e82c3301";
-const VAR = "9c858901-8a57-4791-81fe-4c455b099bc9";
+const VARIATION = "9c858901-8a57-4791-81fe-4c455b099bc9";
 const STATION = "b1e0a1c2-0000-4000-8000-000000000abc";
 
 describe("dayVariationKey", () => {
   it("builds the bare (basic) leaf", () => {
-    expect(dayVariationKey({ dayId: DAY, variationId: VAR })).toBe(
-      `day_${DAY}_variation_${VAR}`,
+    expect(dayVariationKey({ dayId: DAY, variationId: VARIATION })).toBe(
+      `day_${DAY}_variation_${VARIATION}`,
     );
   });
 
   it("builds the tour leaf", () => {
-    expect(dayVariationKey({ dayId: DAY, variationId: VAR, tour: 2 })).toBe(
-      `day_${DAY}_variation_${VAR}_tour_2`,
+    expect(dayVariationKey({ dayId: DAY, variationId: VARIATION, tour: 2 })).toBe(
+      `day_${DAY}_variation_${VARIATION}_tour_2`,
     );
   });
 
   it("builds the station leaf", () => {
     expect(
-      dayVariationKey({ dayId: DAY, variationId: VAR, station: STATION }),
-    ).toBe(`day_${DAY}_variation_${VAR}_station_${STATION}`);
+      dayVariationKey({ dayId: DAY, variationId: VARIATION, station: STATION }),
+    ).toBe(`day_${DAY}_variation_${VARIATION}_station_${STATION}`);
   });
 
   it("applies a prefix", () => {
     expect(
-      dayVariationKey({ dayId: DAY, variationId: VAR, prefix: "backup_" }),
-    ).toBe(`backup_day_${DAY}_variation_${VAR}`);
+      dayVariationKey({ dayId: DAY, variationId: VARIATION, prefix: "backup_" }),
+    ).toBe(`backup_day_${DAY}_variation_${VARIATION}`);
   });
 
   it("treats null/undefined tour & station as absent", () => {
     expect(
       dayVariationKey({
         dayId: DAY,
-        variationId: VAR,
+        variationId: VARIATION,
         tour: null,
         station: undefined,
       }),
-    ).toBe(`day_${DAY}_variation_${VAR}`);
+    ).toBe(`day_${DAY}_variation_${VARIATION}`);
   });
 });
 
@@ -77,14 +77,14 @@ describe("trailer + transposed + day-less keys", () => {
   });
 
   it("variationColumnKey", () => {
-    expect(variationColumnKey(VAR)).toBe(`variation_${VAR}`);
-    expect(variationColumnKey(VAR, "backup_")).toBe(`backup_variation_${VAR}`);
+    expect(variationColumnKey(VARIATION)).toBe(`variation_${VARIATION}`);
+    expect(variationColumnKey(VARIATION, "backup_")).toBe(`backup_variation_${VARIATION}`);
   });
 
   it("variationAmountKey (long-term planner, distinct from dayAmountKey)", () => {
-    expect(variationAmountKey(VAR)).toBe(`amount_${VAR}`);
+    expect(variationAmountKey(VARIATION)).toBe(`amount_${VARIATION}`);
     // Must NOT collide with the transposed AmountShareTypeVariations day key.
-    expect(variationAmountKey(VAR)).not.toBe(dayAmountKey({ dayId: VAR }));
+    expect(variationAmountKey(VARIATION)).not.toBe(dayAmountKey({ dayId: VARIATION }));
   });
 });
 
@@ -97,13 +97,13 @@ describe("planningModeTier", () => {
   });
 
   it("agrees with the tier a dayVariationKey built for that mode parses to", () => {
-    expect(parseDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VAR }))!.tier).toBe(
+    expect(parseDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VARIATION }))!.tier).toBe(
       planningModeTier("basic"),
     );
-    expect(parseDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VAR, tour: 1 }))!.tier).toBe(
+    expect(parseDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VARIATION, tour: 1 }))!.tier).toBe(
       planningModeTier("tours"),
     );
-    expect(parseDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VAR, station: STATION }))!.tier).toBe(
+    expect(parseDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VARIATION, station: STATION }))!.tier).toBe(
       planningModeTier("stations"),
     );
   });
@@ -112,16 +112,16 @@ describe("planningModeTier", () => {
 describe("parseDayVariationKey", () => {
   it("round-trips every tier and prefix", () => {
     for (const parts of [
-      { dayId: DAY, variationId: VAR },
-      { dayId: DAY, variationId: VAR, tour: 2 },
-      { dayId: DAY, variationId: VAR, station: STATION },
-      { dayId: DAY, variationId: VAR, prefix: "backup_" },
+      { dayId: DAY, variationId: VARIATION },
+      { dayId: DAY, variationId: VARIATION, tour: 2 },
+      { dayId: DAY, variationId: VARIATION, station: STATION },
+      { dayId: DAY, variationId: VARIATION, prefix: "backup_" },
     ]) {
       const key = dayVariationKey(parts);
       const parsed = parseDayVariationKey(key);
       expect(parsed).not.toBeNull();
       expect(parsed!.dayId).toBe(DAY);
-      expect(parsed!.variationId).toBe(VAR);
+      expect(parsed!.variationId).toBe(VARIATION);
       expect(parsed!.prefix).toBe(parts.prefix ?? "");
       if (parts.tour !== undefined) expect(parsed!.tour).toBe(String(parts.tour));
       if (parts.station !== undefined) expect(parsed!.station).toBe(STATION);
@@ -129,15 +129,15 @@ describe("parseDayVariationKey", () => {
   });
 
   it("classifies the tier", () => {
-    expect(parseDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VAR }))!.tier).toBe("bare");
-    expect(parseDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VAR, tour: 1 }))!.tier).toBe("tour");
-    expect(parseDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VAR, station: STATION }))!.tier).toBe("station");
+    expect(parseDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VARIATION }))!.tier).toBe("bare");
+    expect(parseDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VARIATION, tour: 1 }))!.tier).toBe("tour");
+    expect(parseDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VARIATION, station: STATION }))!.tier).toBe("station");
   });
 
   it("rejects non-variation keys (trailers, day-less, unrelated)", () => {
     expect(parseDayVariationKey(dayPlannedAmountKey(DAY))).toBeNull();
     expect(parseDayVariationKey(dayHarvestedKey(DAY))).toBeNull();
-    expect(parseDayVariationKey(variationColumnKey(VAR))).toBeNull();
+    expect(parseDayVariationKey(variationColumnKey(VARIATION))).toBeNull();
     expect(parseDayVariationKey("share_article")).toBeNull();
     expect(parseDayVariationKey("day_only_no_variation")).toBeNull();
   });
@@ -145,14 +145,14 @@ describe("parseDayVariationKey", () => {
 
 describe("predicates", () => {
   it("isDayVariationKey matches only variation cells", () => {
-    expect(isDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VAR }))).toBe(true);
-    expect(isDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VAR, prefix: "backup_" }))).toBe(true);
+    expect(isDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VARIATION }))).toBe(true);
+    expect(isDayVariationKey(dayVariationKey({ dayId: DAY, variationId: VARIATION, prefix: "backup_" }))).toBe(true);
     expect(isDayVariationKey(dayPlannedAmountKey(DAY))).toBe(false);
     expect(isDayVariationKey("size")).toBe(false);
   });
 
   it("dayVariationTier returns null for non-variation keys", () => {
-    expect(dayVariationTier(dayVariationKey({ dayId: DAY, variationId: VAR, tour: 1 }))).toBe("tour");
+    expect(dayVariationTier(dayVariationKey({ dayId: DAY, variationId: VARIATION, tour: 1 }))).toBe("tour");
     expect(dayVariationTier(dayPlannedAmountKey(DAY))).toBeNull();
   });
 });

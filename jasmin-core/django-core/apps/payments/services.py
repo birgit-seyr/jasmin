@@ -362,14 +362,19 @@ class ChargeScheduleService:
             .filter(Q(billing_run__isnull=False) | ~Q(status=ChargeStatus.PLANNED))
             .values_list("period_start", "expected_amount", "status", "billing_run_id")
         )
-        locked = {period_start for period_start, _amount, _st, _br in locked_rows}
+        locked = {
+            period_start
+            for period_start, _amount, _status, _billing_run_id in locked_rows
+        }
         # Periods whose charge FAILED (bank-returned) — the money is still
         # owed. Under SMOOTHED it stays in ``remaining`` and is re-spread; under
         # EXACT each period is independent, so a FAILED period is neither
         # recreated nor absorbed and would be silently written off. Surfaced in
         # the loop below.
         failed_periods = {
-            ps for ps, _amt, st, _br in locked_rows if st == ChargeStatus.FAILED
+            period_start
+            for period_start, _amount, status, _billing_run_id in locked_rows
+            if status == ChargeStatus.FAILED
         }
         # ``locked_total`` is subtracted from the term total before the SMOOTHED
         # split re-distributes the REMAINING amount over the still-unlocked
@@ -395,7 +400,7 @@ class ChargeScheduleService:
         locked_total = sum(
             (
                 amount
-                for _ps, amount, status, billing_run_id in locked_rows
+                for _period_start, amount, status, billing_run_id in locked_rows
                 if status in _SETTLED_STATUSES
                 or (status == ChargeStatus.PLANNED and billing_run_id is not None)
             ),
@@ -616,7 +621,7 @@ class ChargeScheduleService:
     @classmethod
     @transaction.atomic
     def regenerate_all(cls) -> dict[str, int]:
-        subs = list(
+        subscriptions = list(
             # Only BILLABLE subscriptions get a ledger. ``admin_confirmed=True``
             # excludes both unconfirmed and admin-rejected subs (reject clears
             # the flag); ``on_waiting_list=False`` excludes waiting-list subs.
@@ -641,7 +646,7 @@ class ChargeScheduleService:
         # Batch every subscription's ShareDeliveries into one query instead of a
         # ``filter(subscription=...)`` per subscription inside the loop.
         deliveries_by_subscription: dict[str, list[ShareDelivery]] = {}
-        subscription_ids = [sub.pk for sub in subs]
+        subscription_ids = [subscription.pk for subscription in subscriptions]
         if subscription_ids:
             for delivery in ShareDelivery.objects.filter(
                 subscription_id__in=subscription_ids
@@ -650,15 +655,17 @@ class ChargeScheduleService:
                     delivery.subscription_id, []
                 ).append(delivery)
 
-        per_sub: dict[str, int] = {}
-        for sub in subs:
-            per_sub[str(sub.pk)] = cls.regenerate_for_subscription(
-                sub,
-                deliveries=deliveries_by_subscription.get(sub.pk, []),
-                tenant=tenant,
-                billing=billing,
+        created_per_subscription: dict[str, int] = {}
+        for subscription in subscriptions:
+            created_per_subscription[str(subscription.pk)] = (
+                cls.regenerate_for_subscription(
+                    subscription,
+                    deliveries=deliveries_by_subscription.get(subscription.pk, []),
+                    tenant=tenant,
+                    billing=billing,
+                )
             )
-        return per_sub
+        return created_per_subscription
 
 
 # --------------------------------------------------------------------------- #

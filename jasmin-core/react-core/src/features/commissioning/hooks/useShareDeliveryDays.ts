@@ -3,10 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useCommissioningSharesDeliveryDaysList } from '@shared/api/generated/commissioning/commissioning';
 import type { SharesDeliveryDay, CommissioningSharesDeliveryDaysListParams } from '@shared/api/generated/models';
 import { toOptions, type Option } from '@hooks/internal/toOptions';
+import { DELIVERY_DAY_SHORT_KEYS } from '@shared/utils/weekdayNames';
 
 export type ShareDeliveryDayOption = Option<SharesDeliveryDay>;
-
-const DAY_KEYS = ['delivery.mo', 'delivery.di', 'delivery.mi', 'delivery.do', 'delivery.fr', 'delivery.sa', 'delivery.su'] as const;
 
 // currently and future available delivery_days
 export const useShareDeliveryDays = (params: CommissioningSharesDeliveryDaysListParams = {}) => {
@@ -27,8 +26,8 @@ export const useShareDeliveryDays = (params: CommissioningSharesDeliveryDaysList
     }
 
     return toOptions(filteredData, (day) =>
-      DAY_KEYS[day.day_number as number]
-        ? t(DAY_KEYS[day.day_number as number])
+      DELIVERY_DAY_SHORT_KEYS[day.day_number as number]
+        ? t(DELIVERY_DAY_SHORT_KEYS[day.day_number as number])
         : String(day.day_number),
     );
   }, [data, params.get_delivery_stations, t]);

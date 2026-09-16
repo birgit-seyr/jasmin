@@ -317,41 +317,6 @@ export const SettingsRenderer = {
     }
   },
 
-  // Get nested value helper
-  getNestedValue: (
-    obj: Record<string, unknown>,
-    path: string,
-    defaultValue?: unknown,
-  ): unknown => {
-    const keys = path.split(".");
-    let value: unknown = obj;
-
-    for (const k of keys) {
-      value = (value as Record<string, unknown>)?.[k];
-    }
-
-    return value !== undefined ? value : defaultValue;
-  },
-
-  // Set nested value helper
-  setNestedValue: (
-    obj: Record<string, unknown>,
-    path: string,
-    value: unknown,
-  ): Record<string, unknown> => {
-    const newObj = { ...obj };
-    const keys = path.split(".");
-
-    if (keys.length === 1) {
-      newObj[keys[0]] = value;
-    } else if (keys.length === 2) {
-      if (!newObj[keys[0]]) newObj[keys[0]] = {};
-      (newObj[keys[0]] as Record<string, unknown>)[keys[1]] = value;
-    }
-
-    return newObj;
-  },
-
   // Get column span based on setting type
   getColumnSpan: (setting: SettingConfig): number => {
     const fullWidthTypes = [

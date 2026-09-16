@@ -165,7 +165,7 @@ export default function AdditionalTheoreticalSummaryList(
   const { shareArticleColumn } = useShareArticleColumn({
     filters: shareArticleFilters,
     showFruitsAndVegs: true,
-    articleDefaults: "harvest",
+    autofillContext: "harvest",
   });
   const { getUnitLabel } = useUnitOptions();
   const { getVegetableSizeLabel } = useVegetableSizeOptions();

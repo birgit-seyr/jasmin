@@ -71,7 +71,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
         // verbatim and never recomputes).
         price_date: activeAtDateForWeek(params.year, params.delivery_week),
       },
-      articleDefaults: "reseller",
+      autofillContext: "reseller",
       finalTiers,
     });
 

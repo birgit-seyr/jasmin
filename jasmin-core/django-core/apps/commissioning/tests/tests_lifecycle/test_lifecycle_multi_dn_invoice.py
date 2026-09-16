@@ -70,13 +70,13 @@ def _ensure_settings(tenant):
     )
 
 
-def _quant(value: Decimal) -> Decimal:
+def _round_money(value: Decimal) -> Decimal:
     return Decimal(value).quantize(CENT)
 
 
 def _line_netto(amount, price, rabatt=0, tax=Decimal("7")) -> Decimal:
     """Mirror of models.mixin._calc_line_netto for assertion math."""
-    return _quant(
+    return _round_money(
         Decimal(amount)
         * Decimal(price)
         * (Decimal("1") - Decimal(rabatt) / Decimal("100"))
@@ -135,36 +135,36 @@ def _expected_doc_totals(article_lines, crate_lines) -> dict:
     sum_netto = Decimal("0")
     sum_brutto = Decimal("0")
     for rate in sorted(buckets):
-        netto = _quant(buckets[rate])
-        tax = _quant(netto * rate / Decimal("100"))
-        brutto = _quant(netto + tax)
+        netto = _round_money(buckets[rate])
+        tax = _round_money(netto * rate / Decimal("100"))
+        brutto = _round_money(netto + tax)
         breakdown.append({"rate": rate, "netto": netto, "tax": tax, "brutto": brutto})
         sum_netto += netto
         sum_brutto += brutto
 
     return {
-        "sum_netto": _quant(sum_netto),
-        "sum_brutto": _quant(sum_brutto),
+        "sum_netto": _round_money(sum_netto),
+        "sum_brutto": _round_money(sum_brutto),
         "tax_breakdown": breakdown,
     }
 
 
 def _assert_totals(doc, expected):
     """Compare a Order/DN/Invoice's computed totals against expected."""
-    assert _quant(doc.sum_netto) == expected["sum_netto"], (
+    assert _round_money(doc.sum_netto) == expected["sum_netto"], (
         f"sum_netto mismatch on {type(doc).__name__} {doc.pk}: "
         f"{doc.sum_netto} != {expected['sum_netto']}"
     )
-    assert _quant(doc.sum_brutto) == expected["sum_brutto"], (
+    assert _round_money(doc.sum_brutto) == expected["sum_brutto"], (
         f"sum_brutto mismatch on {type(doc).__name__} {doc.pk}: "
         f"{doc.sum_brutto} != {expected['sum_brutto']}"
     )
     actual_breakdown = [
         {
             "rate": Decimal(g["rate"]),
-            "netto": _quant(g["netto"]),
-            "tax": _quant(g["tax"]),
-            "brutto": _quant(g["brutto"]),
+            "netto": _round_money(g["netto"]),
+            "tax": _round_money(g["tax"]),
+            "brutto": _round_money(g["brutto"]),
         }
         for g in doc.tax_breakdown
     ]
@@ -436,7 +436,7 @@ class TestSummaryInvoiceFromMultipleDeliveryNotes:
         # diverge by one cent on per-rate aggregates, so we compare on
         # netto only).
         dn_sum_netto = sum((dn.sum_netto for dn in delivery_notes), Decimal("0"))
-        assert _quant(invoice.sum_netto) == _quant(dn_sum_netto)
+        assert _round_money(invoice.sum_netto) == _round_money(dn_sum_netto)
 
     def test_divergent_tax_rate_lines_are_not_merged(self, tenant):
         """Two DN lines with the SAME (article, unit, size, price) but a
@@ -756,8 +756,8 @@ class TestStornoMirrorsInvoice:
             assert st_by_crate[crate_id] == -inv_amount
 
         # Sums net to zero (within rounding).
-        assert _quant(invoice.sum_netto + storno.sum_netto) == Decimal("0.00")
-        assert _quant(invoice.sum_brutto + storno.sum_brutto) == Decimal("0.00")
+        assert _round_money(invoice.sum_netto + storno.sum_netto) == Decimal("0.00")
+        assert _round_money(invoice.sum_brutto + storno.sum_brutto) == Decimal("0.00")
 
     def test_double_storno_is_refused(self, tenant):
         _ensure_settings(connection.tenant)
@@ -914,6 +914,6 @@ class TestAmountPerPuChainConsistency:
         invoice = InvoiceService.create_from_delivery_note(delivery_note=dn)
 
         expected_netto = Decimal("12.00")  # 3 units × 4 €/unit, NOT × 5
-        assert _quant(order.sum_netto) == expected_netto
-        assert _quant(dn.sum_netto) == expected_netto
-        assert _quant(invoice.sum_netto) == expected_netto
+        assert _round_money(order.sum_netto) == expected_netto
+        assert _round_money(dn.sum_netto) == expected_netto
+        assert _round_money(invoice.sum_netto) == expected_netto

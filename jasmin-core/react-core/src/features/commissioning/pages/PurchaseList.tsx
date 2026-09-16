@@ -90,7 +90,7 @@ export default function PurchaseList() {
   const { shareArticleColumn, handleUnitChange } = useShareArticleColumn({
     filters: shareArticleFilters,
     showFruitsAndVegs: true,
-    articleDefaults: "purchase",
+    autofillContext: "purchase",
   });
 
   const { refetch: refetchShareArticles } =

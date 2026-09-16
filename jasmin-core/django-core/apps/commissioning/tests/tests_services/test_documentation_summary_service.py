@@ -93,11 +93,15 @@ class TestCalculateSums:
 
 
 # ---------------------------------------------------------------------------
-# _get_forecast_info
+# _get_forecast_fields
 # ---------------------------------------------------------------------------
 class TestGetForecastInfo:
     def test_returns_none_for_empty(self):
-        assert DocumentationSummaryService._get_forecast_info([]) == (None, None, None)
+        assert DocumentationSummaryService._get_forecast_fields([]) == (
+            None,
+            None,
+            None,
+        )
 
     def test_extracts_from_first_entry(self):
         from unittest.mock import MagicMock
@@ -106,7 +110,7 @@ class TestGetForecastInfo:
         entry.forecast.bed_number = "B1"
         entry.forecast.note = "test note"
         entry.forecast.plot.name = "Field A"
-        result = DocumentationSummaryService._get_forecast_info([entry])
+        result = DocumentationSummaryService._get_forecast_fields([entry])
         assert result == ("B1", "test note", "Field A")
 
 

@@ -104,7 +104,7 @@ export interface EditableColumnConfig<T extends Record<string, unknown> = Record
   defaultSortOrder?: "ascend" | "descend";
   onCell?: (record: T, index?: number) => Record<string, unknown>;
   children?: EditableColumnConfig<T>[];
-  /** Optional per-column PDF export config consumed by `utils/pdfUtils.jsx`. */
+  /** Optional per-column PDF export config consumed by `utils/pdfColumns.tsx`. */
   pdf?: EditableColumnPdfConfig;
 }
 

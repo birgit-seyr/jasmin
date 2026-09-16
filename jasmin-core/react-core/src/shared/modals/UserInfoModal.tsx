@@ -58,24 +58,24 @@ const UserInfoModal: FC<UserInfoModalProps> = ({
 
   if (!record) return null;
 
-  const info = record.linked_user_info;
+  const linkedUser = record.linked_user_info;
 
   const accountStatus: AccountStatus | "no_user" =
-    info?.account_status ?? "no_user";
+    linkedUser?.account_status ?? "no_user";
 
-  const isInvitationExpired = !!info?.is_invitation_expired;
+  const isInvitationExpired = !!linkedUser?.is_invitation_expired;
   const statusKey =
     accountStatus === "no_user" ? "status_no_user" : `status_${accountStatus}`;
   const descriptionKey = `${statusKey}_description`;
 
   // ---- Display fields ---------------------------------------------------
-  const firstName = info?.first_name || record.first_name || "";
-  const lastName = info?.last_name || record.last_name || "";
-  const email = info?.email || record.email || "";
-  const lastLogin = info?.last_login || record.last_login || null;
-  const activatedAt = info?.activated_at || null;
-  const inactivatedAt = info?.inactivated_at || null;
-  const invitationExpiresAt = info?.invitation_expires_at || null;
+  const firstName = linkedUser?.first_name || record.first_name || "";
+  const lastName = linkedUser?.last_name || record.last_name || "";
+  const email = linkedUser?.email || record.email || "";
+  const lastLogin = linkedUser?.last_login || record.last_login || null;
+  const activatedAt = linkedUser?.activated_at || null;
+  const inactivatedAt = linkedUser?.inactivated_at || null;
+  const invitationExpiresAt = linkedUser?.invitation_expires_at || null;
 
   const handleSendInvitation = () => onSendInvitation?.(record);
   const handleResendInvitation = () => onResendInvitation?.(record);

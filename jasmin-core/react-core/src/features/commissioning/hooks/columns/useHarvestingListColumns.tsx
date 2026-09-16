@@ -62,7 +62,7 @@ export function useHarvestingListColumns({
   const { shareArticleColumn, handleUnitChange } = useShareArticleColumn({
     filters: shareArticleFilters,
     showFruitsAndVegs: true,
-    articleDefaults: "harvest",
+    autofillContext: "harvest",
     overrides: {
       ...(isGardenerView && {
         render: (text: unknown, record: Record<string, unknown>) => {

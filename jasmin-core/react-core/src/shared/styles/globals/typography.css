@@ -76,11 +76,25 @@ h5 {
   font-size: 0.85em;
 }
 
+/* Same size step as .text-secondary but without a color, for labels that take
+   their color from the component (e.g. AntD <Text type="secondary">). */
+.text-label-sm {
+  font-size: 0.85em;
+}
+
 /* Slightly larger / darker meta hint, used for inline secondary info that
    should sit closer to body text (e.g. note column rows, plot/bed lines). */
 .text-hint-md {
   font-size: 0.9em;
   color: var(--color-text-secondary);
+}
+
+/* Secondary line rendered under a value inside the SAME table cell (e.g. the
+   backup article on a packing row). */
+.text-subline {
+  color: var(--color-text-secondary);
+  font-size: 0.85em;
+  line-height: 1.2;
 }
 
 /* Semantic colors for the share-content vs order-content distinction

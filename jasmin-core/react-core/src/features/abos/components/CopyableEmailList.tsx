@@ -7,7 +7,7 @@ import { notify } from "@shared/utils";
 const { Text } = Typography;
 
 interface CopyableEmailListProps {
-  data: SubscriptionMemberEmailsResponse | undefined;
+  recipients: SubscriptionMemberEmailsResponse | undefined;
   loading: boolean;
   /** Whether a filter is selected — otherwise we prompt the office to pick one. */
   enabled: boolean;
@@ -19,7 +19,7 @@ interface CopyableEmailListProps {
  * ``subscription_member_emails`` endpoint on the AbosEmails page.
  */
 export default function CopyableEmailList({
-  data,
+  recipients,
   loading,
   enabled,
 }: CopyableEmailListProps) {
@@ -37,7 +37,7 @@ export default function CopyableEmailList({
     return <Spin size="small" />;
   }
 
-  const emails = (data?.members ?? []).map((m) => m.email);
+  const emails = (recipients?.members ?? []).map((m) => m.email);
 
   if (emails.length === 0) {
     return (

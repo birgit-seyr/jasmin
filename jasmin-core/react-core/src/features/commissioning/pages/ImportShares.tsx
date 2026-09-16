@@ -138,12 +138,12 @@ export default function ImportShares() {
       const data = (err as { response?: { data?: unknown } })?.response?.data;
       let msg: string;
       if (data && typeof data === "object") {
-        const d = data as Record<string, unknown>;
-        if (typeof d.detail === "string") {
-          msg = d.detail;
+        const errorBody = data as Record<string, unknown>;
+        if (typeof errorBody.detail === "string") {
+          msg = errorBody.detail;
         } else {
           // DRF field-level validation errors: { field: ["msg", ...], ... }
-          msg = Object.entries(d)
+          msg = Object.entries(errorBody)
             .map(([field, errs]) => {
               const list = Array.isArray(errs) ? errs.join(", ") : String(errs);
               return `${field}: ${list}`;

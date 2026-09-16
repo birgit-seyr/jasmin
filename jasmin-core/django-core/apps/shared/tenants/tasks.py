@@ -117,7 +117,7 @@ _BACKUP_FILENAME_RE = re.compile(
     # ``jasmin_20260603_020000.sql.gz.gpg`` (DB dump) and
     # ``jasmin_media_20260603_020000.tar.gz.gpg`` (media archive) per
     # backups/backup.sh. ``kind`` keeps the two retained INDEPENDENTLY.
-    r"^.+?_(?P<ts>\d{8}_\d{6})\.(?P<kind>sql|tar)\.gz\.gpg$"
+    r"^.+?_(?P<timestamp>\d{8}_\d{6})\.(?P<kind>sql|tar)\.gz\.gpg$"
 )
 
 
@@ -142,10 +142,12 @@ def _parse_backup(name: str) -> tuple[datetime.datetime, str] | None:
     if match is None:
         return None
     try:
-        ts = datetime.datetime.strptime(match.group("ts"), "%Y%m%d_%H%M%S")
+        timestamp = datetime.datetime.strptime(
+            match.group("timestamp"), "%Y%m%d_%H%M%S"
+        )
     except ValueError:
         return None
-    return ts, match.group("kind")
+    return timestamp, match.group("kind")
 
 
 def _parse_timestamp(name: str) -> datetime.datetime | None:
@@ -179,12 +181,12 @@ def classify_backups_for_pruning(
     parsed: list[tuple[Path, datetime.datetime, str]] = []
     keep: list[Path] = []
     for path in paths:
-        info = _parse_backup(path.name)
-        if info is None:
+        parsed_backup = _parse_backup(path.name)
+        if parsed_backup is None:
             keep.append(path)
             continue
-        ts, kind = info
-        parsed.append((path, ts, kind))
+        timestamp, kind = parsed_backup
+        parsed.append((path, timestamp, kind))
 
     daily_cutoff = now - datetime.timedelta(days=30)
     weekly_cutoff = now - datetime.timedelta(days=365)
@@ -199,13 +201,13 @@ def classify_backups_for_pruning(
     seen_week: set[tuple[str, int, int]] = set()
     seen_month: set[tuple[str, int, int]] = set()
 
-    for path, ts, kind in parsed:
-        if ts >= daily_cutoff:
+    for path, timestamp, kind in parsed:
+        if timestamp >= daily_cutoff:
             # Daily tier — keep every backup.
             keep.append(path)
             continue
-        if ts >= weekly_cutoff:
-            iso_year, iso_week, _ = ts.isocalendar()
+        if timestamp >= weekly_cutoff:
+            iso_year, iso_week, _ = timestamp.isocalendar()
             key = (kind, iso_year, iso_week)
             if key in seen_week:
                 delete.append(path)
@@ -214,7 +216,7 @@ def classify_backups_for_pruning(
                 keep.append(path)
             continue
         # Monthly tier — kept forever, one per calendar month.
-        key = (kind, ts.year, ts.month)
+        key = (kind, timestamp.year, timestamp.month)
         if key in seen_month:
             delete.append(path)
         else:

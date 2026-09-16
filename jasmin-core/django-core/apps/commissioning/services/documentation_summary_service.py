@@ -173,7 +173,7 @@ class DocumentationSummaryService:
         )
 
     @staticmethod
-    def _fetch_data(
+    def _fetch_entry_querysets(
         managers: ModelManagers,
         base_filter: Q,
         single_id: str | None = None,
@@ -383,7 +383,7 @@ class DocumentationSummaryService:
         return theoretical_sum, additional_sum, None, None, None, None
 
     @staticmethod
-    def _get_forecast_info(
+    def _get_forecast_fields(
         theoretical_entries: list[Any],
     ) -> tuple[str | None, str | None, str | None]:
         """Extract forecast information from theoretical entries."""
@@ -612,7 +612,7 @@ class DocumentationSummaryService:
             theoretical_data,
             additional_data,
             actual_data,
-        ) = DocumentationSummaryService._fetch_data(
+        ) = DocumentationSummaryService._fetch_entry_querysets(
             managers, base_filter, single_id, model
         )
 
@@ -660,7 +660,7 @@ class DocumentationSummaryService:
             additional_id = (
                 data["additional_entries"][0].id if data["additional_entries"] else None
             )
-            forecast_info = DocumentationSummaryService._get_forecast_info(
+            forecast_info = DocumentationSummaryService._get_forecast_fields(
                 data["theoretical_entries"]
             )
 

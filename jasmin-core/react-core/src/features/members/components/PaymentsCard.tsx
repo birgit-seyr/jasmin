@@ -14,7 +14,7 @@ import { usePaymentsChargeSchedulesList } from "@shared/api/generated/payments-â
 import type { ChargeSchedule } from "@shared/api/generated/models";
 import { useCurrency, useDateFormat } from "@hooks/index";
 import { useRoles } from "@shared/auth";
-import { CHARGE_STATUS_COLOR as STATUS_COLOR } from "@shared/utils/chargeStatusColors";
+import { CHARGE_STATUS_COLOR } from "@shared/utils/chargeStatusColors";
 import { unwrapList } from "@shared/utils";
 import SepaSetupModal from "@features/members/modals/SepaSetupModal";
 

@@ -225,7 +225,7 @@ export default function Members() {
         .length,
     [data],
   );
-  const displayData = useMemo(() => {
+  const attentionFilteredRows = useMemo(() => {
     if (attentionFilter === "members") {
       return data.filter(
         (record) => !record.admin_confirmed && !record.admin_rejected_at,
@@ -838,7 +838,7 @@ export default function Members() {
         columns={columns}
         apiFunctions={apiFunctions}
         focusIndex="first_name"
-        initialData={displayData}
+        initialData={attentionFilteredRows}
         loading={isLoading}
         onSaveSuccess={onSaveSuccess}
         onDeleteSuccess={onDeleteSuccess}

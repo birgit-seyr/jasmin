@@ -62,15 +62,15 @@ export default function DashboardAbos() {
     include_future: true,
   });
 
-  const { variationInfo } = useSubscriptionVariationStats(
+  const { variationLegendById } = useSubscriptionVariationStats(
     subscriptions,
     variations,
   );
 
   // One line per variation: active subscription quantity per month.
   const { data: chartData, series } = useMemo(
-    () => buildMonthlyActiveByVariation(subscriptions, variationInfo, range),
-    [subscriptions, variationInfo, range],
+    () => buildMonthlyActiveByVariation(subscriptions, variationLegendById, range),
+    [subscriptions, variationLegendById, range],
   );
 
   // Billed income (sum of due amounts) per month, over the same range — the

@@ -69,10 +69,11 @@ interface PlanningShareContentLongTermBaseProps {
    *  "Gemüse / Obst" — used by the additional-share planners (honey, etc.),
    *  where the harvest framing doesn't fit. */
   genericArticleColumn?: boolean;
-  /** Whether the "Gesamtmenge" reverse-input mode (target total → suggested
-   *  per-share split) is offered. Only share types that plan complexly
-   *  (``needs_complex_planning``) get the toggle; simple ones show the classic
-   *  per-share view only. Defaults to off. */
+  /** Whether the reverse total-amount input mode
+   *  (``commissioning.planning_long_term.mode_total``) — target total →
+   *  suggested per-share split — is offered. Only share types that plan
+   *  complexly (``needs_complex_planning``) get the toggle; simple ones show
+   *  the classic per-share view only. Defaults to off. */
   allowTotalMode?: boolean;
 }
 
@@ -109,7 +110,7 @@ export default function PlanningShareContentLongTermBase({
     // Seed only the unit on article select — no crate / amount_per_pu, which
     // would otherwise leak into the default-content payload (the backend reads
     // every ``amount_*`` key as a share_type_variation id).
-    articleDefaults: "longtermplanning",
+    autofillContext: "longtermplanning",
   });
 
   const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
@@ -172,10 +173,11 @@ export default function PlanningShareContentLongTermBase({
 
   const customSave = useCallback(
     (transformedData: Record<string, unknown>) => {
-      // ``_target_total`` is a UI-only field driving the "Gesamtmenge" mode's
-      // suggestion — never persisted. The backend keys amounts by variation id
-      // (``amount_<id>``), so strip it from the payload rather than let it ride
-      // along. (The resulting total is derived for display only, not stored.)
+      // ``_target_total`` is a UI-only field driving the total-amount mode's
+      // (``commissioning.planning_long_term.mode_total``) suggestion — never
+      // persisted. The backend keys amounts by variation id (``amount_<id>``),
+      // so strip it from the payload rather than let it ride along. (The
+      // resulting total is derived for display only, not stored.)
       const { _target_total, ...rest } = transformedData;
       void _target_total;
 
@@ -217,9 +219,10 @@ export default function PlanningShareContentLongTermBase({
     shareTypeVariationFilters,
   );
 
-  // Reverse ("Gesamtmenge") mode only: the per-variation active-subscriber
-  // snapshot the forward ``needed_amount`` uses, fetched once so the split can
-  // run entirely client-side. Skipped in the forward view.
+  // Reverse total-amount mode
+  // (``commissioning.planning_long_term.mode_total``) only: the per-variation
+  // active-subscriber snapshot the forward ``needed_amount`` uses, fetched once
+  // so the split can run entirely client-side. Skipped in the forward view.
   const { data: subscriberCounts } =
     useCommissioningDefaultShareContentsSubscriberCountsRetrieve(
       {

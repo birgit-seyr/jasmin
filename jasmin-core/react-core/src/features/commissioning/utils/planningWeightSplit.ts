@@ -2,7 +2,9 @@
  * Client-side mirror of
  * ``apps/commissioning/utils/forecast_distribution.py::split_forecast_amount_by_weight``,
  * plus the week division from ``_calculate_needed_amount`` — powers the reverse
- * "Gesamtmenge → pro Anteil" suggestion on the long-term planning page.
+ * total-amount input mode (``commissioning.planning_long_term.mode_total``) on
+ * the long-term planning page, which suggests a per-share amount from a target
+ * total.
  *
  * KEEP IN SYNC with the Python source: the floor step (0.10 by default), the
  * 99.99 cap, and the "skip missing / ≤ 0 average_weight" rule are duplicated

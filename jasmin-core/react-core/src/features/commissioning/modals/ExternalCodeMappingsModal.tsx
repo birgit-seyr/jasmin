@@ -25,6 +25,7 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText } from "@shared/ui";
+import { DELIVERY_DAY_SHORT_KEYS } from "@shared/utils/weekdayNames";
 import { useNoteColumn } from "@hooks/index";
 
 type Mapping = TableRecord & ExternalCodeMapping & { id: string };
@@ -38,16 +39,6 @@ interface ExternalCodeMappingsModalProps {
   open: boolean;
   onClose: () => void;
 }
-
-const DAY_KEYS = [
-  "delivery.mo",
-  "delivery.di",
-  "delivery.mi",
-  "delivery.do",
-  "delivery.fr",
-  "delivery.sa",
-  "delivery.su",
-] as const;
 
 export default function ExternalCodeMappingsModal({
   open,
@@ -129,7 +120,7 @@ export default function ExternalCodeMappingsModal({
       (daysData ?? [])
         .filter((d) => !!d.id)
         .map((d) => {
-          const dayKey = DAY_KEYS[Number(d.day_number)];
+          const dayKey = DELIVERY_DAY_SHORT_KEYS[Number(d.day_number)];
           const dayShort = dayKey ? t(dayKey) : String(d.day_number);
           const validity = [formatDate(d.valid_from), formatDate(d.valid_until)]
             .filter(Boolean)

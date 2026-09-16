@@ -46,13 +46,13 @@ export type MyDataTabProps = {
 export default function MyDataTab({ onRequestDeletion }: MyDataTabProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { member, customer, isStaff } = useRoles();
+  const { hasMemberRole, hasCustomerRole, isStaff } = useRoles();
 
   // ``isStaff`` users who are ALSO members still get the member form
   // (their member identity is what's editable here). Staff-only users
   // have no editable self-profile.
-  const showMember = member;
-  const showCustomer = !showMember && customer;
+  const showMember = hasMemberRole;
+  const showCustomer = !showMember && hasCustomerRole;
 
   return (
     <Space

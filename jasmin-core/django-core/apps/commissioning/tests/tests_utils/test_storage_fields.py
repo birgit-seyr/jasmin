@@ -1,10 +1,10 @@
-"""Tests for apps.commissioning.utils.field_utils."""
+"""Tests for apps.commissioning.utils.storage_fields."""
 
 from __future__ import annotations
 
 import pytest
 
-from apps.commissioning.utils.field_utils import (
+from apps.commissioning.utils.storage_fields import (
     build_storage_fields,
     clean_storage_fields,
     extract_selected_storage_id,

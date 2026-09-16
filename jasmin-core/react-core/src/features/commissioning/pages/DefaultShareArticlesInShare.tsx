@@ -72,7 +72,7 @@ export default function DefaultShareArticlesInShare() {
     isLoading: shareArticleColumnLoading,
   } = useShareArticleColumn({
     filters: { is_data_list: true, is_active: true } as Record<string, unknown>,
-    // No articleDefaults on purpose: the row IS the article in this view;
+    // No autofillContext on purpose: the row IS the article in this view;
     // we don't want any autofill side effects on selection.
     disableCondition: () => true,
     overrides: {

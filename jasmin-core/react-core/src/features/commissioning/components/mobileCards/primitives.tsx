@@ -1,6 +1,7 @@
 import { Flex, Tag } from "antd";
 import type { CSSProperties, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { EMPTY_DISPLAY } from "@shared/tables/BasicEditableTable/MobileCardList";
 
 /**
  * Shared building blocks for mobile-card variants used by EditableTable's
@@ -14,7 +15,9 @@ import { useTranslation } from "react-i18next";
  * `flex-baseline`, `text-secondary`).
  */
 
-export const MOBILE_CARD_PLACEHOLDER = "\u2013"; // en-dash
+/** Placeholder for a missing value, the same en-dash the table's own
+ *  mobile cards show. */
+export const MOBILE_CARD_PLACEHOLDER = EMPTY_DISPLAY;
 
 interface MobileCardProps {
   onClick?: () => void;

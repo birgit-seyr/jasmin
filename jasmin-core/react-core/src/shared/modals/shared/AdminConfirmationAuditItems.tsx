@@ -25,7 +25,7 @@ export function adminConfirmationAuditItems(
     <Descriptions.Item
       key="admin_confirmed_by"
       label={
-        <Text type="secondary" style={{ fontSize: "0.85em" }}>
+        <Text type="secondary" className="text-label-sm">
           {t("members.admin_confirmed_by")}
         </Text>
       }
@@ -37,7 +37,7 @@ export function adminConfirmationAuditItems(
     <Descriptions.Item
       key="admin_confirmed_at"
       label={
-        <Text type="secondary" style={{ fontSize: "0.85em" }}>
+        <Text type="secondary" className="text-label-sm">
           {t("members.admin_confirmed_at")}
         </Text>
       }

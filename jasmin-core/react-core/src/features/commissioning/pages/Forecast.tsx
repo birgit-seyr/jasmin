@@ -155,7 +155,7 @@ export default function Forecast() {
     // Forecast has no amount_per_pu / crate / description columns, so the
     // other patch fields written by the "harvest" context are ignored by
     // DRF's ``ForecastSerializer`` (unknown keys are silently dropped).
-    articleDefaults: "harvest",
+    autofillContext: "harvest",
   });
 
   const isResellerDisabled = useCallback(

@@ -285,30 +285,3 @@ export const extractPdfColumns = (rawColumns: readonly unknown[]) => {
     hasNestedColumns: headerStructure.some((col) => col.hasChildren),
   };
 };
-
-export const stripHtmlToText = (html: string | null | undefined): string => {
-  if (!html) return "";
-  let text = html.replace(/<br\s*\/?>/gi, "\n");
-  text = text.replace(/<\/p>/gi, "\n");
-  text = text.replace(/<[^>]*>/g, "");
-  // Decode HTML entities without using DOM
-  text = text
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&nbsp;/g, " ");
-  // Collapse whitespace introduced by HTML that's pretty-printed across
-  // source lines: a literal newline between two ``<p>`` tags (or before
-  // a ``<br/>``) survives the tag strip and stacks with the ``\n`` we
-  // emitted for ``</p>`` / ``<br/>``, producing a blank line in the
-  // rendered PDF for every wrapped paragraph. Normalise:
-  //   - strip trailing spaces/tabs at end of each line
-  //   - collapse runs of two-or-more newlines (mixed with whitespace)
-  //     down to a single newline so paragraphs render flush
-  text = text
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/(?:[ \t]*\n[ \t]*){2,}/g, "\n");
-  return text.trim();
-};

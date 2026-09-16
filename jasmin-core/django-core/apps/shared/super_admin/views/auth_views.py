@@ -112,10 +112,10 @@ def _build_super_admin_session_response(user: SuperAdmin) -> Response:
     # Prefetch domains in one query instead of an exists()+first() pair per
     # tenant (mirrors the already-correct TenantManagementViewSet.list).
     tenants = Tenant.objects.prefetch_related("domains")
-    tenant_list = []
+    tenant_rows = []
     for tenant in tenants:
         domains = list(tenant.domains.all())
-        tenant_list.append(
+        tenant_rows.append(
             {
                 "id": tenant.id,
                 "name": tenant.name,
@@ -136,7 +136,7 @@ def _build_super_admin_session_response(user: SuperAdmin) -> Response:
                 "is_staff": user.is_staff,
                 "permissions": ["super_admin"],
             },
-            "tenants": tenant_list,
+            "tenants": tenant_rows,
             "is_super_admin": True,
         },
         status=status.HTTP_200_OK,

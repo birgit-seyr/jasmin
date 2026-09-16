@@ -16,13 +16,17 @@ import { ROLES, type Role } from "./roles";
  *
  * Reminder: this is UX gating only. Backend must enforce the same rules.
  */
-export type RoleFlags = Record<Role, boolean> & {
+export type RoleFlags = Omit<Record<Role, boolean>, "member" | "customer"> & {
+  /** holds the member role, whether or not it is the only one */
+  hasMemberRole: boolean;
+  /** holds the customer role */
+  hasCustomerRole: boolean;
   /** gardener OR office OR admin — “can edit operational data” */
   canEdit: boolean;
   /** office OR admin — administrative actions (exports, prices, finalize…) */
   isOffice: boolean;
-  /** gardener OR admin — cultivation/field work */
-  isGardener: boolean;
+  /** gardener OR office OR admin — cultivation pages */
+  canEditCultivation: boolean;
   /** management OR admin — high-level oversight */
   isManagement: boolean;
   /** admin only */
@@ -31,8 +35,6 @@ export type RoleFlags = Record<Role, boolean> & {
   isStaff: boolean;
   /** member only, no other role */
   isMemberOnly: boolean;
-  /** customer OR office */
-  isCustomer: boolean;
   /** raw list, e.g. for sending to backend or debugging */
   roles: readonly Role[];
 };
@@ -40,15 +42,15 @@ export type RoleFlags = Record<Role, boolean> & {
 export function useRoles(): RoleFlags {
   const { user } = useAuth();
   const roles = (user?.roles ?? []) as readonly Role[];
-  const set = new Set(roles);
+  const roleSet = new Set(roles);
 
-  const gardener = set.has(ROLES.GARDENER);
-  const office = set.has(ROLES.OFFICE);
-  const staff = set.has(ROLES.STAFF);
-  const management = set.has(ROLES.MANAGEMENT);
-  const member = set.has(ROLES.MEMBER);
-  const admin = set.has(ROLES.ADMIN);
-  const customer = set.has(ROLES.CUSTOMER);
+  const gardener = roleSet.has(ROLES.GARDENER);
+  const office = roleSet.has(ROLES.OFFICE);
+  const staff = roleSet.has(ROLES.STAFF);
+  const management = roleSet.has(ROLES.MANAGEMENT);
+  const hasMemberRole = roleSet.has(ROLES.MEMBER);
+  const admin = roleSet.has(ROLES.ADMIN);
+  const hasCustomerRole = roleSet.has(ROLES.CUSTOMER);
 
   return {
     // raw role flags
@@ -56,18 +58,17 @@ export function useRoles(): RoleFlags {
     office,
     staff,
     management,
-    member,
+    hasMemberRole,
     admin,
-    customer,
+    hasCustomerRole,
     // grouped flags
     canEdit: gardener || staff || office || admin,
     isOffice: office || admin,
-    isGardener: gardener || office|| admin,
+    canEditCultivation: gardener || office || admin,
     isManagement: management || admin,
     isAdmin: admin,
     isStaff: gardener || staff || office || management || admin,
-    isCustomer: customer || office || admin, 
-    isMemberOnly: roles.length === 1 && member,
+    isMemberOnly: roles.length === 1 && hasMemberRole,
     // raw access
     roles,
   };

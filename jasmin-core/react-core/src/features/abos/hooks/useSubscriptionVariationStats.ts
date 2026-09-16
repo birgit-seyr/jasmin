@@ -20,7 +20,7 @@ export const VARIATION_PALETTE = [
   "#000000", // black
 ];
 
-export interface VariationInfo {
+export interface VariationLegendEntry {
   id: string;
   label: string;
   color: string;
@@ -81,8 +81,8 @@ export function useSubscriptionVariationStats(
   // so ordering + colour stay stable regardless of which subs exist. The
   // backend ``share_type_variation_string`` bakes in the raw size enum ("FULL")
   // and can't be localized client-side, hence rebuilding the label here.
-  const variationInfo = useMemo(() => {
-    const map = new Map<string, VariationInfo>();
+  const variationLegendById = useMemo(() => {
+    const map = new Map<string, VariationLegendEntry>();
     // Assign palette colours by the stable id order (not the array order), so
     // the abos stats strip and the dashboard graph agree on every variation's
     // colour even though each page fetches the catalogue through a different
@@ -136,7 +136,7 @@ export function useSubscriptionVariationStats(
     };
   }, [subscriptions]);
 
-  return { variationInfo, snapshot };
+  return { variationLegendById, snapshot };
 }
 
 /**
@@ -147,7 +147,7 @@ export function useSubscriptionVariationStats(
  */
 export function buildMonthlyActiveByVariation(
   subscriptions: SubRow[] | undefined,
-  variationInfo: Map<string, VariationInfo>,
+  variationLegendById: Map<string, VariationLegendEntry>,
   range: [Dayjs, Dayjs] | null,
 ) {
   const rows = subscriptions ?? [];
@@ -181,7 +181,7 @@ export function buildMonthlyActiveByVariation(
     data.push(point);
   }
 
-  const series = [...variationInfo.values()].filter((v) =>
+  const series = [...variationLegendById.values()].filter((v) =>
     usedVariationIds.has(v.id),
   );
   return { data, series };

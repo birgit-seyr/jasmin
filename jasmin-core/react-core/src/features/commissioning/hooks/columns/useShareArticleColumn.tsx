@@ -14,7 +14,7 @@ import { useShareArticles } from "../useShareArticles";
 import {
   computeShareArticlePatch,
   computeUnitChangePatch,
-  type ArticleDefaults,
+  type ArticleAutofillContext,
 } from "./articleDefaults";
 
 interface FormInstance {
@@ -28,7 +28,7 @@ interface ShareArticleColumnConfig {
   overrides?: Record<string, unknown>;
   /**
    * Custom share_article-change handler. If set, overrides the
-   * default autofill from ``articleDefaults``.
+   * default autofill from ``autofillContext``.
    */
   onFieldChange?: ((...args: unknown[]) => unknown) | null;
   showFruitsOnly?: boolean;
@@ -41,12 +41,12 @@ interface ShareArticleColumnConfig {
    * ``hooks/columns/articleDefaults.ts`` for the dispatch table.
    * Omit to disable autofill entirely.
    */
-  articleDefaults?: ArticleDefaults;
+  autofillContext?: ArticleAutofillContext;
   /**
    * Side-effect run AFTER the built-in article/unit autofill patches are
    * written. Lets a page layer on context-specific autofill (e.g. the planning
    * grid's per-variation default amounts from ``DefaultShareArticleInShare``)
-   * WITHOUT discarding the pricing / PU / crate patch that ``articleDefaults``
+   * WITHOUT discarding the pricing / PU / crate patch that ``autofillContext``
    * produces. Invoked on article change (with the freshly-seeded default unit)
    * and on unit change (with the new unit), each with the resolved article id +
    * unit + form. No-op if omitted.
@@ -92,7 +92,7 @@ export const useShareArticleColumn = (config: ShareArticleColumnConfig = {}) => 
     showFruitsOnly = false,
     showVegsOnly = false,
     showFruitsAndVegs = false,
-    articleDefaults,
+    autofillContext,
     onDefaultsApplied,
     finalTiers,
     disableCondition = null,
@@ -119,7 +119,7 @@ export const useShareArticleColumn = (config: ShareArticleColumnConfig = {}) => 
       _record: Record<string, unknown>,
       form: FormInstance,
     ) => {
-      if (!articleDefaults) return {};
+      if (!autofillContext) return {};
       const selected = shareArticles.find((a) => a.value === shareArticleValue);
       if (!selected) return {};
       const article = asShareArticle(selected);
@@ -129,12 +129,12 @@ export const useShareArticleColumn = (config: ShareArticleColumnConfig = {}) => 
 
       form.setFieldsValue({ unit: defaultUnit });
       form.setFieldsValue(
-        computeShareArticlePatch(articleDefaults, article, defaultUnit),
+        computeShareArticlePatch(autofillContext, article, defaultUnit),
       );
       onDefaultsApplied?.(shareArticleValue, defaultUnit, form);
       return {};
     },
-    [articleDefaults, shareArticles, unitOptions, onDefaultsApplied],
+    [autofillContext, shareArticles, unitOptions, onDefaultsApplied],
   );
 
   /**
@@ -149,7 +149,7 @@ export const useShareArticleColumn = (config: ShareArticleColumnConfig = {}) => 
       _record: Record<string, unknown>,
       form: FormInstance,
     ) => {
-      if (!articleDefaults) return {};
+      if (!autofillContext) return {};
       const articleId =
         (form.getFieldValue("share_article") as string | undefined) ??
         (form.getFieldValue("share_article_name") as string | undefined);
@@ -157,11 +157,11 @@ export const useShareArticleColumn = (config: ShareArticleColumnConfig = {}) => 
       const selected = shareArticles.find((a) => a.value === articleId);
       if (!selected) return {};
       const article = asShareArticle(selected);
-      form.setFieldsValue(computeUnitChangePatch(articleDefaults, article, newUnit));
+      form.setFieldsValue(computeUnitChangePatch(autofillContext, article, newUnit));
       onDefaultsApplied?.(articleId, newUnit, form);
       return {};
     },
-    [articleDefaults, shareArticles, onDefaultsApplied],
+    [autofillContext, shareArticles, onDefaultsApplied],
   );
 
   /**
@@ -182,7 +182,7 @@ export const useShareArticleColumn = (config: ShareArticleColumnConfig = {}) => 
       _record: Record<string, unknown>,
       form: FormInstance,
     ) => {
-      if (articleDefaults !== "reseller") return {};
+      if (autofillContext !== "reseller") return {};
       const pricePerUnit = pickTierPriceFromAmount(
         newAmount as number | string | null | undefined,
         form.getFieldValue("amount_per_pu") as number | string | null,
@@ -196,14 +196,14 @@ export const useShareArticleColumn = (config: ShareArticleColumnConfig = {}) => 
       form.setFieldsValue({ price_per_unit: pricePerUnit });
       return {};
     },
-    [articleDefaults, finalTiers],
+    [autofillContext, finalTiers],
   );
 
   const fieldChangeHandler = useMemo(() => {
     if (onFieldChange) return onFieldChange;
-    if (articleDefaults) return handleShareArticleChange;
+    if (autofillContext) return handleShareArticleChange;
     return undefined;
-  }, [onFieldChange, articleDefaults, handleShareArticleChange]);
+  }, [onFieldChange, autofillContext, handleShareArticleChange]);
 
   const columnTitle = useMemo(() => {
     const titleText = t(

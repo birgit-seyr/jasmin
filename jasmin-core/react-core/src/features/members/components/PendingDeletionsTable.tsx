@@ -44,7 +44,7 @@ export default function PendingDeletionsTable({
   const { data, isFetching } = useGdprAdminPendingDeletionsRetrieve();
   const pending: AdminPendingDeletion[] = data?.pending ?? [];
 
-  const { mutate: approveMutate, variables: approvingVars } =
+  const { mutate: approveMutate, variables: approvingVariables } =
     useGdprAdminApproveDeletionCreate({
       mutation: {
         onSuccess: () => {
@@ -63,7 +63,7 @@ export default function PendingDeletionsTable({
         },
       },
     });
-  const approvingId = approvingVars?.requestId;
+  const approvingId = approvingVariables?.requestId;
 
   const columns = useMemo(
     () => [

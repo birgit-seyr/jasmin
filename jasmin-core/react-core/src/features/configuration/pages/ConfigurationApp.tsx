@@ -336,9 +336,15 @@ export default function ConfigurationApp() {
     [markChanged],
   );
 
+  // Settings keys are dotted paths (at most one level of nesting, mirroring
+  // ``handleSettingChange``), so resolve them segment by segment.
   const getSettingValue = useCallback(
     (key: string, defaultValue?: unknown) => {
-      return SettingsRenderer.getNestedValue(settings, key, defaultValue);
+      let value: unknown = settings;
+      for (const segment of key.split(".")) {
+        value = (value as Record<string, unknown>)?.[segment];
+      }
+      return value !== undefined ? value : defaultValue;
     },
     [settings],
   );

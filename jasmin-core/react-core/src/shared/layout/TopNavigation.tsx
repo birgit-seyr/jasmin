@@ -172,7 +172,7 @@ function SecondaryNavigation() {
         icon: <GrassIcon />,
         label: <Link to="/cultivation/dashboard">{t("nav.cultivation")}</Link>,
         show: navigationSettings.cultivation,
-        requireRole: "isGardener",
+        requireRole: "canEditCultivation",
       },
       {
         key: NAVIGATION_SECTIONS.CONFIGURATION,

@@ -28,7 +28,7 @@ export default function CultivationSidebar({
     {
       key: "cultivation-amounts-for-cultivation",
 
-      requireRole: "isGardener",
+      requireRole: "canEditCultivation",
       icon: <LineWeightIcon />,
       label: (
         <Link to="/cultivation/amounts-for-cultivation">
@@ -39,7 +39,7 @@ export default function CultivationSidebar({
     {
       key: "cultivation-outdoors-cultivation",
 
-      requireRole: "isGardener",
+      requireRole: "canEditCultivation",
       icon: <CloudySnowingIcon />,
       label: (
         <div className="sidebar-section-header">
@@ -50,7 +50,7 @@ export default function CultivationSidebar({
         {
           key: "cultivation-sets-outdoors",
 
-          requireRole: "isGardener",
+          requireRole: "canEditCultivation",
           label: (
             <Link to="/cultivation/sets-outdoors">
               {t("cultivation.sets_outdoors")}
@@ -60,7 +60,7 @@ export default function CultivationSidebar({
         {
           key: "cultivation-sorts-seedlings-outdoors",
 
-          requireRole: "isGardener",
+          requireRole: "canEditCultivation",
           label: (
             <Link to="/cultivation/sorts-seedlings-outdoors">
               {t("cultivation.sorts_seedlings_outdoors")}
@@ -70,7 +70,7 @@ export default function CultivationSidebar({
         {
           key: "cultivation-sorts-seeds-outdoors",
 
-          requireRole: "isGardener",
+          requireRole: "canEditCultivation",
           label: (
             <Link to="/cultivation/sorts-seeds-outdoors">
               {t("cultivation.sorts_seeds_outdoors")}
@@ -82,7 +82,7 @@ export default function CultivationSidebar({
     {
       key: "cultivation-indoors-cultivation",
 
-      requireRole: "isGardener",
+      requireRole: "canEditCultivation",
       icon: <LightModeIcon />,
       label: (
         <div className="sidebar-section-header">
@@ -93,7 +93,7 @@ export default function CultivationSidebar({
         {
           key: "cultivation-sets-indoors",
 
-          requireRole: "isGardener",
+          requireRole: "canEditCultivation",
           label: (
             <Link to="/cultivation/sets-indoors">
               {t("cultivation.sets_indoors")}
@@ -103,7 +103,7 @@ export default function CultivationSidebar({
         {
           key: "cultivation-sorts-seedlings-indoors",
 
-          requireRole: "isGardener",
+          requireRole: "canEditCultivation",
           label: (
             <Link to="/cultivation/sorts-seedlings-indoors">
               {t("cultivation.sorts_seedlings_indoors")}
@@ -113,7 +113,7 @@ export default function CultivationSidebar({
         {
           key: "cultivation-sorts-seeds-indoors",
 
-          requireRole: "isGardener",
+          requireRole: "canEditCultivation",
           label: (
             <Link to="/cultivation/sorts-seeds-indoors">
               {t("cultivation.sorts_seeds_indoors")}
@@ -125,7 +125,7 @@ export default function CultivationSidebar({
     {
       key: "cultivation-list-planting",
 
-      requireRole: "isGardener",
+      requireRole: "canEditCultivation",
       icon: <EmojiNatureIcon />,
       label: (
         <Link to="/cultivation/list-planting">
@@ -136,7 +136,7 @@ export default function CultivationSidebar({
     {
       key: "cultivation-list-sowing",
 
-      requireRole: "isGardener",
+      requireRole: "canEditCultivation",
       icon: <BlurOnIcon />,
       label: (
         <Link to="/cultivation/list-sowing">
@@ -147,7 +147,7 @@ export default function CultivationSidebar({
     {
       key: "cultivation-fertilizer",
 
-      requireRole: "isGardener",
+      requireRole: "canEditCultivation",
       icon: <LocalFloristIcon />,
       label: (
         <Link to="/cultivation/documentation-fertilizers">
@@ -158,7 +158,7 @@ export default function CultivationSidebar({
     {
       key: "cultivation-pesticides",
 
-      requireRole: "isGardener",
+      requireRole: "canEditCultivation",
       icon: <FilterVintageIcon />,
       label: (
         <Link to="/cultivation/documentation-pesticides">
@@ -169,7 +169,7 @@ export default function CultivationSidebar({
     {
       key: "cultivation-data",
 
-      requireRole: "isGardener",
+      requireRole: "canEditCultivation",
       icon: <BubbleChartIcon />,
       label: (
         <div className="sidebar-section-header">{t("cultivation.data")}</div>
@@ -178,7 +178,7 @@ export default function CultivationSidebar({
         {
           key: "cultivation-vegetable-families",
 
-          requireRole: "isGardener",
+          requireRole: "canEditCultivation",
           label: (
             <Link to="/cultivation/vegetable-families">
               {t("cultivation.vegetable_families")}
@@ -188,7 +188,7 @@ export default function CultivationSidebar({
         {
           key: "cultivation-plant-families",
 
-          requireRole: "isGardener",
+          requireRole: "canEditCultivation",
           label: (
             <Link to="/cultivation/plant-families">
               {t("cultivation.plant_families")}
@@ -198,7 +198,7 @@ export default function CultivationSidebar({
         {
           key: "cultivation-seller-seedlings",
 
-          requireRole: "isGardener",
+          requireRole: "canEditCultivation",
           label: (
             <Link to="/cultivation/seller-seedlings">
               {t("cultivation.seller_seedlings")}
@@ -208,7 +208,7 @@ export default function CultivationSidebar({
         {
           key: "cultivation-seller-seeds",
 
-          requireRole: "isGardener",
+          requireRole: "canEditCultivation",
           label: (
             <Link to="/cultivation/seller-seeds">
               {t("cultivation.seller_seeds")}

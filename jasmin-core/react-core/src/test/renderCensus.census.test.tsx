@@ -36,7 +36,6 @@ import { TenantProvider } from "@shared/contexts/TenantContext";
 import { ModalProvider } from "@shared/contexts/ModalContext";
 import { MenuProvider } from "@shared/contexts/MenuContext";
 import { NavigationProvider } from "@shared/contexts/NavigationContext";
-import { PermissionProvider } from "@shared/contexts/PermissionContext";
 
 // Loose bound per page. A normal heavy page commits 5-30 times. Anything
 // over 200 is almost certainly a setState-in-render loop.
@@ -75,15 +74,13 @@ function makeShell(children: ReactElement) {
         <TenantProvider>
           <AuthProvider>
             <LocaleProvider>
-              <PermissionProvider user={null} tenant={null}>
-                <NavigationProvider>
-                  <MenuProvider>
-                    <ModalProvider>
-                      <Suspense fallback={null}>{children}</Suspense>
-                    </ModalProvider>
-                  </MenuProvider>
-                </NavigationProvider>
-              </PermissionProvider>
+              <NavigationProvider>
+                <MenuProvider>
+                  <ModalProvider>
+                    <Suspense fallback={null}>{children}</Suspense>
+                  </ModalProvider>
+                </MenuProvider>
+              </NavigationProvider>
             </LocaleProvider>
           </AuthProvider>
         </TenantProvider>

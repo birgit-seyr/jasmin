@@ -158,12 +158,12 @@ export default function ListResellers() {
 
   const handleResendInvitation = useCallback(
     async (record: Record<string, unknown>) => {
-      const info = (record as TableRecord).linked_user_info as
+      const linkedUser = (record as TableRecord).linked_user_info as
         | { id?: string }
         | undefined;
-      if (!info?.id) return;
+      if (!linkedUser?.id) return;
       try {
-        const updatedUser = await authAdminUsersResendInvitationCreate(info.id);
+        const updatedUser = await authAdminUsersResendInvitationCreate(linkedUser.id);
         notify.success(t("users.invitation_resent"));
         handleCloseUserInfoModal();
         // Patch only this row so we don't lose sort/scroll position.
@@ -182,12 +182,12 @@ export default function ListResellers() {
 
   const setActive = useCallback(
     async (record: Record<string, unknown>, next: "active" | "inactive") => {
-      const info = (record as TableRecord).linked_user_info as
+      const linkedUser = (record as TableRecord).linked_user_info as
         | { id?: string }
         | undefined;
-      if (!info?.id) return;
+      if (!linkedUser?.id) return;
       try {
-        const updatedUser = await authAdminUsersPartialUpdate(info.id, {
+        const updatedUser = await authAdminUsersPartialUpdate(linkedUser.id, {
           account_status: next,
         });
         notify.success(

@@ -2,7 +2,7 @@ import { message } from "antd";
 import { createElement } from "react";
 import i18n from "@shared/i18n";
 
-const DURATION = 4; // seconds
+const TOAST_DURATION_SECONDS = 4;
 
 let validationErrorCounter = 0;
 
@@ -39,22 +39,23 @@ export const announcePolite = (content: string) => announce(content, "polite");
 
 const notify = {
   success: (content: string, key?: string) => {
-    message.success({ content, duration: DURATION, key });
+    message.success({ content, duration: TOAST_DURATION_SECONDS, key });
     announce(content, "polite");
   },
   error: (content: string, key?: string) => {
-    message.error({ content, duration: DURATION, key });
+    message.error({ content, duration: TOAST_DURATION_SECONDS, key });
     announce(content, "assertive");
   },
   warning: (content: string, key?: string) => {
-    message.warning({ content, duration: DURATION, key });
+    message.warning({ content, duration: TOAST_DURATION_SECONDS, key });
     announce(content, "polite");
   },
   info: (content: string, key?: string) => {
-    message.info({ content, duration: DURATION, key });
+    message.info({ content, duration: TOAST_DURATION_SECONDS, key });
     announce(content, "polite");
   },
   loading: (content: string, key?: string) => {
+    // 0 keeps the spinner up until the caller closes it by key.
     message.loading({ content, duration: 0, key });
     announce(content, "polite");
   },
@@ -79,6 +80,8 @@ const notify = {
           createElement("span", { "aria-hidden": true }, "\u00D7"),
         ),
       ),
+      // Longer than the standard toast: the text is a form error the user
+      // has to read and act on, and it carries its own dismiss button.
       duration: 6,
       className: "custom-error-message",
       style: { marginTop: "25vh" },

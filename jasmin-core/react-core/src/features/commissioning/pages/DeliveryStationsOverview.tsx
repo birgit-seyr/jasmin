@@ -126,7 +126,7 @@ function TourTable({
   );
 }
 
-export default function DeliveryStationOverview() {
+export default function DeliveryStationsOverview() {
   const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
     useYearWeekState();
   const [selectedDeliveryDay, setSelectedDeliveryDay] = useState<number | null>(

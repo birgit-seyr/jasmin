@@ -1,18 +1,14 @@
 import ListPDFGenerator from "./ListPDFGenerator";
 import type { VariationTotal } from "./ListPDFSharedComponents";
+import type { CrateQuantity } from "./crateQuantity";
 
 // ``HarvestingListPDF`` is NOT statically imported — see
 // ListPDFGenerator's docstring. The lazy factory keeps
 // @react-pdf/renderer + the PDF template out of the eager bundle.
 
-interface CrateData {
-  crate_name?: string;
-  quantity?: number;
-}
-
 interface HarvestingListPDFGeneratorProps {
   data: Record<string, unknown>[] | null;
-  dataFirstPageOnly?: CrateData[] | null;
+  dataFirstPageOnly?: CrateQuantity[] | null;
   variationsTotals?: VariationTotal[];
   title: string;
   subtitle: string;

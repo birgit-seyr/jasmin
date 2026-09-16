@@ -23,7 +23,7 @@ export default function UserMenu() {
   const { t } = useTranslation();
   const { user, isAuthenticated, logout } = useAuth();
   const { language, saveLanguage } = useLocale();
-  const { member, isStaff, isMemberOnly } = useRoles();
+  const { hasMemberRole, isStaff, isMemberOnly } = useRoles();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -141,7 +141,7 @@ export default function UserMenu() {
             },
           })),
         },
-        ...(isStaff && member && memberId
+        ...(isStaff && hasMemberRole && memberId
           ? [
               {
                 key: "member-page",

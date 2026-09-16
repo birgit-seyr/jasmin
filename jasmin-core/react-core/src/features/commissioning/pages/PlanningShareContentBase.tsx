@@ -483,7 +483,7 @@ export default function PlanningShareContentBase({
     filters: { ...shareArticleFilters, share_option: shareOption },
     showFruitsAndVegs: !genericArticleColumn,
     tooltip: true,
-    articleDefaults: "harvest",
+    autofillContext: "harvest",
     // After the built-in article/unit autofill, set the article-derived
     // kg/piece + price_per_unit and prefill the per-variation default amounts.
     onDefaultsApplied: applyRowDefaults,

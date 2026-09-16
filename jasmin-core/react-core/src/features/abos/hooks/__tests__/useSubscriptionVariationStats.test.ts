@@ -57,10 +57,10 @@ describe("useSubscriptionVariationStats", () => {
   it("gives each variation a stable colour regardless of catalogue order", () => {
     const forward = renderHook(() =>
       useSubscriptionVariationStats([], variations),
-    ).result.current.variationInfo;
+    ).result.current.variationLegendById;
     const reversed = renderHook(() =>
       useSubscriptionVariationStats([], [...variations].reverse()),
-    ).result.current.variationInfo;
+    ).result.current.variationLegendById;
 
     for (const id of ["1", "2", "10"]) {
       expect(forward.get(id)?.color).toBe(reversed.get(id)?.color);

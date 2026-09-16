@@ -51,7 +51,7 @@ const isHarvestDisabled = (record: TableRecord) => record.is_purchased === true;
 const isPurchaseDisabled = (record: TableRecord) =>
   record.is_purchased === false;
 
-const DATA_LIST_PARAMS: CommissioningShareArticlesListParams = {
+const SHARE_ARTICLE_LIST_PARAMS: CommissioningShareArticlesListParams = {
   is_data_list: true,
 };
 
@@ -110,7 +110,7 @@ export default function ListShareArticles() {
   const list = useCrudListPage<TableRecord>({
     resource: shareArticlesResource,
     permissions,
-    listParams: DATA_LIST_PARAMS,
+    listParams: SHARE_ARTICLE_LIST_PARAMS,
   });
 
   const has_markets = getSetting("has_markets", true) as boolean;

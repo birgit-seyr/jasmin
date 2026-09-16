@@ -29,12 +29,12 @@ def frontend_base_url() -> str:
     domains = getattr(tenant, "domains", None) if tenant is not None else None
     if domains is not None:
         try:
-            domain_obj = domains.filter(is_primary=True).first() or domains.first()
+            primary_domain = domains.filter(is_primary=True).first() or domains.first()
         except (AttributeError, TypeError):
-            domain_obj = None
-        if domain_obj:
+            primary_domain = None
+        if primary_domain:
             scheme = "http" if settings.DEBUG else "https"
-            return f"{scheme}://{domain_obj.domain}"
+            return f"{scheme}://{primary_domain.domain}"
     return getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000")
 
 

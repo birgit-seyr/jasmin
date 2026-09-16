@@ -85,8 +85,8 @@ class ShareContentGranularityView(APIViewRolePermissionsMixin, APIView):
             optional=["share_option", "day_number"],
         )
 
-        content_data = list(
-            self._get_content_data(
+        content_rows = list(
+            self._share_content_rows(
                 params["year"],
                 params["delivery_week"],
                 share_option=params["share_option"],
@@ -98,15 +98,15 @@ class ShareContentGranularityView(APIViewRolePermissionsMixin, APIView):
             )
         )
 
-        if not content_data:
+        if not content_rows:
             return Response({"days_ok": True, "tours_ok": True})
 
-        days_ok, tours_ok = self._check_granularity(content_data)
+        days_ok, tours_ok = self._check_granularity(content_rows)
 
         return Response({"days_ok": days_ok, "tours_ok": tours_ok})
 
     @staticmethod
-    def _get_content_data(
+    def _share_content_rows(
         year: int,
         delivery_week: int,
         share_option: str | None = None,
@@ -138,12 +138,12 @@ class ShareContentGranularityView(APIViewRolePermissionsMixin, APIView):
 
     @staticmethod
     def _build_tour_number_map(
-        content_data: list[dict],
+        content_rows: list[dict],
     ) -> dict[tuple[str, str], int | None]:
         """Prefetch all tour numbers in one query instead of N+1."""
         pairs = {
             (item["delivery_station_id"], item["share__delivery_day_id"])
-            for item in content_data
+            for item in content_rows
             if item["delivery_station_id"]
         }
         if not pairs:
@@ -163,11 +163,11 @@ class ShareContentGranularityView(APIViewRolePermissionsMixin, APIView):
             for delivery_station_day in DeliveryStationDay.objects.filter(q)
         }
 
-    def _check_granularity(self, content_data: list[dict]) -> tuple[bool, bool]:
-        tour_map = self._build_tour_number_map(content_data)
+    def _check_granularity(self, content_rows: list[dict]) -> tuple[bool, bool]:
+        tour_map = self._build_tour_number_map(content_rows)
 
-        day_grouped = self._group_by_day(content_data)
-        tour_grouped = self._group_by_tour(content_data, tour_map)
+        day_grouped = self._group_by_day(content_rows)
+        tour_grouped = self._group_by_tour(content_rows, tour_map)
 
         days_ok = self._check_amounts_consistency(day_grouped)
         tours_ok = self._check_amounts_consistency(tour_grouped)
@@ -176,11 +176,11 @@ class ShareContentGranularityView(APIViewRolePermissionsMixin, APIView):
 
     @staticmethod
     def _group_by_day(
-        content_data: list[dict],
+        content_rows: list[dict],
     ) -> dict[tuple, list[dict]]:
         grouped: dict[tuple, list[dict]] = defaultdict(list)
 
-        for item in content_data:
+        for item in content_rows:
             key = (
                 item["share_article_id"],
                 item["share__share_type_variation_id"],
@@ -194,12 +194,12 @@ class ShareContentGranularityView(APIViewRolePermissionsMixin, APIView):
 
     @staticmethod
     def _group_by_tour(
-        content_data: list[dict],
+        content_rows: list[dict],
         tour_map: dict[tuple[str, str], int | None],
     ) -> dict[tuple, list[dict]]:
         grouped: dict[tuple, list[dict]] = defaultdict(list)
 
-        for item in content_data:
+        for item in content_rows:
             station_id = item["delivery_station_id"]
             day_id = item["share__delivery_day_id"]
             tour_number = tour_map.get((station_id, day_id)) if station_id else None
@@ -390,7 +390,7 @@ class ShareTypeVariationAmountsForPlanningView(APIViewRolePermissionsMixin, APIV
             week_saturday, params["share_option"]
         )
 
-        result = self._generate_planning_data(
+        result = self._build_variation_totals_by_key(
             active_delivery_station_days,
             physical_variations,
             params["year"],
@@ -429,14 +429,14 @@ class ShareTypeVariationAmountsForPlanningView(APIViewRolePermissionsMixin, APIV
             .order_by("size")
         )
 
-    def _generate_planning_data(
+    def _build_variation_totals_by_key(
         self,
         active_delivery_station_days: QuerySet,
         physical_variations: QuerySet,
         year: int,
         delivery_week: int,
     ) -> dict[str, int]:
-        result: dict[str, int] = {}
+        counts_by_key: dict[str, int] = {}
 
         # Batch-compute ALL variation totals in 2-3 queries
         totals = batch_get_physical_variation_totals_for_week(
@@ -464,25 +464,25 @@ class ShareTypeVariationAmountsForPlanningView(APIViewRolePermissionsMixin, APIV
             for physical_variation in physical_variations:
                 # Basic key - lookup from batch results
                 basic_key = f"day_{day_id}_variation_{physical_variation.id}"
-                result[basic_key] = totals["basic"].get(
+                counts_by_key[basic_key] = totals["basic"].get(
                     (delivery_day.id, physical_variation.id), 0
                 )
 
                 # Tour keys
                 for tour_number in used_tours:
                     tour_key = f"day_{day_id}_variation_{physical_variation.id}_tour_{tour_number}"
-                    result[tour_key] = totals["tour"].get(
+                    counts_by_key[tour_key] = totals["tour"].get(
                         (delivery_day.id, physical_variation.id, tour_number), 0
                     )
 
                 # Station keys
                 for station in delivery_stations:
                     station_key = f"day_{day_id}_variation_{physical_variation.id}_station_{station.id}"
-                    result[station_key] = totals["station"].get(
+                    counts_by_key[station_key] = totals["station"].get(
                         (delivery_day.id, physical_variation.id, station.id), 0
                     )
 
-        return result
+        return counts_by_key
 
     @staticmethod
     def _group_by_delivery_day(

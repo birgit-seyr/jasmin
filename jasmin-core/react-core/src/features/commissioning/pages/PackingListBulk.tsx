@@ -243,7 +243,7 @@ export default function PackingListBulk() {
   const { shareArticleColumn } = useShareArticleColumn({
     filters: shareArticleFilters,
     showFruitsAndVegs: true,
-    articleDefaults: "harvest",
+    autofillContext: "harvest",
   });
 
   const { amountUnitSizeColumns } = useAmountUnitSizeColumns({

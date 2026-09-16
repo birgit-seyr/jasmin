@@ -11,6 +11,9 @@ from ..models.choices import (
     VegetableSizeOptions,
 )
 
+# Units and sizes outside the known choices sort after every known one.
+UNKNOWN_SORT_ORDER = 999
+
 
 def size_order_annotation():
     """Build a Case/When annotation that maps ShareTypeVariationSizeOptions to their enum index."""
@@ -18,7 +21,7 @@ def size_order_annotation():
         When(size=choice[0], then=Value(idx))
         for idx, choice in enumerate(ShareTypeVariationSizeOptions.choices)
     ]
-    return Case(*whens, default=Value(999), output_field=IntegerField())
+    return Case(*whens, default=Value(UNKNOWN_SORT_ORDER), output_field=IntegerField())
 
 
 def create_share_article_sorter(
@@ -48,9 +51,6 @@ def create_share_article_sorter(
     unit_order = {choice[0]: idx for idx, choice in enumerate(unit_choices.choices, 1)}
     size_order = {choice[0]: idx for idx, choice in enumerate(size_choices.choices, 1)}
 
-    # Default value for unknown choices
-    UNKNOWN_ORDER = 999
-
     def get_sort_key(item: dict[str, Any]) -> tuple[str, int, int]:
         """
         Custom sorting function for share articles.
@@ -62,8 +62,8 @@ def create_share_article_sorter(
         size = item.get("size") or ""
 
         # Get numeric order for unit and size
-        unit_order_value = unit_order.get(unit, UNKNOWN_ORDER)
-        size_order_value = size_order.get(size, UNKNOWN_ORDER)
+        unit_order_value = unit_order.get(unit, UNKNOWN_SORT_ORDER)
+        size_order_value = size_order.get(size, UNKNOWN_SORT_ORDER)
 
         return (share_article_name, unit_order_value, size_order_value)
 

@@ -18,7 +18,7 @@ import { ExplainerText } from "@shared/ui";
 import { useCurrency, useDateFormat } from "@hooks/index";
 import { notify } from "@shared/utils";
 import {
-  CHARGE_STATUS_COLOR as STATUS_COLOR,
+  CHARGE_STATUS_COLOR,
   CHARGE_STATUS_ORDER as STATUS_ORDER,
 } from "@shared/utils/chargeStatusColors";
 
@@ -237,7 +237,7 @@ export default function ChargesAbos() {
         render: (_v: unknown, r: DisplayRow) =>
           r.charge?.status ? (
             <Tag
-              color={STATUS_COLOR[r.charge.status] ?? "default"}
+              color={CHARGE_STATUS_COLOR[r.charge.status] ?? "default"}
               // AntD Tag is a plain span; these props make the status filter
               // toggle operable by keyboard/SR. aria-pressed reflects the
               // active filter (otherwise signalled only visually).
@@ -321,7 +321,7 @@ export default function ChargesAbos() {
             {statusTotals.map(([st, agg]) => (
               <Tag
                 key={st}
-                color={STATUS_COLOR[st] ?? "default"}
+                color={CHARGE_STATUS_COLOR[st] ?? "default"}
                 // Keyboard/SR-operable filter chip; aria-pressed conveys the
                 // active filter (otherwise only the bold font-weight does).
                 role="button"

@@ -195,7 +195,7 @@ class TenantManagementViewSet(ViewSet):
                 .order_by("-created_at")
             )
 
-            tenant_list = []
+            tenant_rows = []
             for tenant in tenants:
                 domains = list(tenant.domains.all())
                 domain = domains[0].domain if domains else None
@@ -217,7 +217,7 @@ class TenantManagementViewSet(ViewSet):
                         # — leave ``user_count`` at 0 and continue.
                         pass
 
-                tenant_list.append(
+                tenant_rows.append(
                     {
                         "id": tenant.id,
                         "schema_name": tenant.schema_name,
@@ -229,7 +229,7 @@ class TenantManagementViewSet(ViewSet):
                     }
                 )
 
-            return Response(tenant_list, status=status.HTTP_200_OK)
+            return Response(tenant_rows, status=status.HTTP_200_OK)
 
     @extend_schema(
         tags=["super-admin"],

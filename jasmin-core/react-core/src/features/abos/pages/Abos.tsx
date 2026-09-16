@@ -45,7 +45,7 @@ import {
 } from "@hooks/index";
 import { notify } from "@shared/utils";
 import type { AboRecord } from "./types";
-import { validateCancelledDate as validateCancelledDatePure } from "./validation";
+import { validateCancelledDate } from "./validation";
 
 export default function Abos() {
   const { t } = useTranslation();
@@ -164,9 +164,9 @@ export default function Abos() {
   // Thin i18n wrapper over the pure validation in
   // ``pages/abos/validation.ts``. Pulled out so the date math is
   // unit-tested independently from React / i18n.
-  const validateCancelledDate = useCallback(
+  const validateCancelledDateWithMessage = useCallback(
     (record: AboRecord) => {
-      const result = validateCancelledDatePure(record, dateFormat);
+      const result = validateCancelledDate(record, dateFormat);
       if (result.isValid) return { isValid: true };
       const message =
         result.messageKey ===
@@ -225,7 +225,7 @@ export default function Abos() {
 
   const customSave = useCallback(
     (transformedData: Record<string, unknown>) => {
-      const validation = validateCancelledDate(transformedData as AboRecord);
+      const validation = validateCancelledDateWithMessage(transformedData as AboRecord);
       if (!validation.isValid) {
         // Show error message
         notify.validationError(
@@ -241,7 +241,7 @@ export default function Abos() {
         is_trial: (transformedData as AboRecord).is_trial ?? false,
       };
     },
-    [validateCancelledDate, t],
+    [validateCancelledDateWithMessage, t],
   );
 
   const {
@@ -335,7 +335,7 @@ export default function Abos() {
       ).length,
     [data],
   );
-  const displayData = useMemo(() => {
+  const attentionFilteredRows = useMemo(() => {
     if (!attentionActive) return data;
     return data.filter(
       (row) =>
@@ -379,7 +379,7 @@ export default function Abos() {
         columns={columns}
         apiFunctions={apiFunctions}
         focusIndex="member_string"
-        initialData={displayData}
+        initialData={attentionFilteredRows}
         loading={isFetching}
         onSaveSuccess={onSaveSuccess}
         onDeleteSuccess={onDeleteSuccess}

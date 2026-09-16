@@ -672,7 +672,7 @@ level:
 
 - Super-admin platform: `marillen.localhost` (or `PLATFORM_SUBDOMAIN` in prod) →
   serves SuperAdminApp (tenant management, dashboards)
-- Tenant subdomains: `tenant-name.localhost` → serves TapirApp with that tenant's
+- Tenant subdomains: `tenant-name.localhost` → serves JasminApp with that tenant's
   data
 - Backend detects the tenant via subdomain using `TenantMainMiddleware`
 
@@ -733,7 +733,7 @@ anymore.
 
 ```
 src/
-  ├── app/                # bootstrap & shell: App, main, TapirApp, SuperAdminApp,
+  ├── app/                # bootstrap & shell: App, main, JasminApp, SuperAdminApp,
   │                       #   UnauthorizedPage, routing/ (AppRouter, ProtectedRoute, routes/)
   ├── shared/             # the COMMON layer — importable by any feature
   │   ├── ui/             # design-system primitives  ├── tables/  EditableTable & friends
@@ -757,7 +757,7 @@ Import and boundary rules are in [Structure & imports](#structure--imports).
 
 - Single codebase with runtime tenant detection (`TenantContext.isPlatformDomain()`)
 - `src/app/App.tsx` / `src/app/routing/AppRouter.tsx` dispatch to `SuperAdminApp`
-  (platform) or `TapirApp` (tenant) via `isPlatformDomain()`
+  (platform) or `JasminApp` (tenant) via `isPlatformDomain()`
 - Tenant resolution is subdomain-only (backend `TenantMainMiddleware`); the
   frontend sends no tenant header
 - React Query is configured (in `src/app/App.tsx`) with `staleTime=0` and

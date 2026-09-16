@@ -151,7 +151,7 @@ export default function InvoiceModal({
   const { shareArticleColumn, handleUnitChange, handleAmountChange } =
     useShareArticleColumn({
       filters: { get_price_info: true, include_extra: true },
-      articleDefaults: "reseller",
+      autofillContext: "reseller",
       finalTiers,
     });
   const { currencySymbol, formatCurrency } = useCurrency();

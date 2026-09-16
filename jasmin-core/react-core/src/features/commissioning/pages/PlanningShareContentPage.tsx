@@ -102,8 +102,9 @@ export default function PlanningShareContentPage({
       pageTitle={t(pageTitleKey)}
       explainerKey={explainerKey}
       genericArticleColumn={isAdditional}
-      // Only complex-planning share types offer the reverse "Gesamtmenge"
-      // input mode; simple ones show the classic per-share view only.
+      // Only complex-planning share types offer the reverse total-amount input
+      // mode (``commissioning.planning_long_term.mode_total``); simple ones
+      // show the classic per-share view only.
       allowTotalMode={needsComplexPlanning}
     />
   );

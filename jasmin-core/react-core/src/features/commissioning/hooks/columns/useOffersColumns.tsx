@@ -52,7 +52,7 @@ export function useOffersColumns({
   const { shareArticleColumn, handleUnitChange } = useShareArticleColumn({
     filters: shareArticleFilters,
     showFruitsAndVegs: true,
-    articleDefaults: "reseller",
+    autofillContext: "reseller",
     overrides: {
       render: (text: string, record: TableRecord) => {
         if (record.forecast_exists) {

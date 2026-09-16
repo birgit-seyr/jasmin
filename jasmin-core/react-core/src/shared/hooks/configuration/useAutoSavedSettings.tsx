@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAutoSave } from "./useAutoSave";
 
-interface SettingsManagerConfig {
+interface AutoSavedSettingsConfig {
   // The hook keys its fetch effect on ``tenant?.id`` so a tenant switch
   // triggers a re-fetch. The backend itself derives the tenant from the
   // request (subdomain → ``request.tenant``); the id here is only a
@@ -31,23 +31,23 @@ interface SettingsManagerConfig {
 
 export const useAutoSavedSettings = ({
   tenant,
-  fetchSettings: fetchSettingsFn,
-  saveSettings: saveSettingsFn,
+  fetchSettings,
+  saveSettings,
   initialSettings = {},
   autoSave = true,
   autoSaveDelay = 500,
   onSaved,
-}: SettingsManagerConfig) => {
+}: AutoSavedSettingsConfig) => {
   const [settings, setSettings] = useState<Record<string, unknown>>(
     initialSettings,
   );
   const [loading, setLoading] = useState(true);
 
   // Stable refs for callback props to avoid re-render loops
-  const fetchSettingsFnRef = useRef(fetchSettingsFn);
-  fetchSettingsFnRef.current = fetchSettingsFn;
-  const saveSettingsFnRef = useRef(saveSettingsFn);
-  saveSettingsFnRef.current = saveSettingsFn;
+  const fetchSettingsRef = useRef(fetchSettings);
+  fetchSettingsRef.current = fetchSettings;
+  const saveSettingsRef = useRef(saveSettings);
+  saveSettingsRef.current = saveSettings;
   const onSavedRef = useRef(onSaved);
   onSavedRef.current = onSaved;
   const settingsRef = useRef(settings);
@@ -55,12 +55,12 @@ export const useAutoSavedSettings = ({
   const tenantRef = useRef(tenant);
   tenantRef.current = tenant;
   // `initialSettings` defaults to `{}` — a fresh object identity every render.
-  // Reading via ref keeps `fetchSettings` identity tied to `tenant?.id` only;
+  // Reading via ref keeps `loadSettings` identity tied to `tenant?.id` only;
   // listing it directly would invalidate the callback on every parent render.
   const initialSettingsRef = useRef(initialSettings);
   initialSettingsRef.current = initialSettings;
 
-  // Save settings — uses refs to avoid depending on settings/saveSettingsFn.
+  // Save settings — uses refs to avoid depending on settings/saveSettings.
   // ``useAutoSave`` owns the ``saving`` / ``hasChanges`` flags around its
   // own ``flush`` call; this body only does the actual PATCH.
   const handleSave = useCallback(async (onSuccess?: () => void) => {
@@ -83,7 +83,7 @@ export const useAutoSavedSettings = ({
     );
 
     try {
-      await saveSettingsFnRef.current({ settings: settingsToSend });
+      await saveSettingsRef.current({ settings: settingsToSend });
       // Let app-wide readers (TenantContext.getSetting()) refresh before we
       // signal success, so a subsequent navigation sees the new values.
       await onSavedRef.current?.();
@@ -101,7 +101,7 @@ export const useAutoSavedSettings = ({
   });
 
   // Fetch settings — only depends on tenant?.id (stable primitive)
-  const fetchSettings = useCallback(async () => {
+  const loadSettings = useCallback(async () => {
     const currentTenant = tenantRef.current;
     if (!currentTenant?.id) {
       setLoading(false);
@@ -110,7 +110,7 @@ export const useAutoSavedSettings = ({
 
     setLoading(true);
     try {
-      const response = await fetchSettingsFnRef.current();
+      const response = await fetchSettingsRef.current();
 
       let fetchedSettings: Record<string, unknown> = {};
 
@@ -159,8 +159,8 @@ export const useAutoSavedSettings = ({
 
   // Reset settings
   const handleReset = useCallback(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    loadSettings();
+  }, [loadSettings]);
 
   // Get setting value
   const getSettingValue = useCallback(
@@ -179,8 +179,8 @@ export const useAutoSavedSettings = ({
 
   // Load settings on mount and when tenant changes
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    loadSettings();
+  }, [loadSettings]);
 
   return {
     settings,
@@ -191,6 +191,6 @@ export const useAutoSavedSettings = ({
     handleSave,
     handleReset,
     getSettingValue,
-    fetchSettings,
+    fetchSettings: loadSettings,
   };
 };

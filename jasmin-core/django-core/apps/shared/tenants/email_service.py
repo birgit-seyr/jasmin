@@ -13,9 +13,6 @@ from .onboarding_emails import EmailCategory, suppressed_by_onboarding_mode
 
 logger = logging.getLogger(__name__)
 
-# ``EmailLog.error`` of a send suppressed by onboarding mode.
-SUPPRESSED_BY_ONBOARDING_MODE = "onboarding_mode"
-
 # Mirrors EmailLog.subject / EmailTemplate.subject CharField max_length — the
 # rendered subject is truncated to this before logging so the DB never silently
 # cuts it.
@@ -382,7 +379,8 @@ class EmailService:
                         related_object_type=related_object_type,
                         related_object_id=related_object_id,
                         status="suppressed",
-                        error=SUPPRESSED_BY_ONBOARDING_MODE,
+                        # Why the row carries no sent_at.
+                        error="onboarding_mode",
                     )
                     for address in to_emails
                 ]
