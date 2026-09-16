@@ -712,10 +712,14 @@ export default function Invoices() {
       />
 
       <div style={{ marginBottom: "1em", marginTop: "1em" }}>
+        {/* Every active reseller stays selectable: this page is also where an
+            already-invoiced reseller's invoice gets cancelled (storno),
+            re-downloaded or re-sent, and the orders table below only loads
+            once a reseller is picked. The dropdown marks the ones with open
+            orders instead of hiding the rest. */}
         <ResellerSelector
           selectedReseller={selectedReseller}
           setSelectedReseller={setSelectedReseller}
-          has_orders_without_invoice={true}
         />
       </div>
 

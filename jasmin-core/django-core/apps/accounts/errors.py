@@ -121,6 +121,18 @@ class AdminUserError(BadRequestError):
     code = "admin_user.invalid"
 
 
+class AdminUserRolesRequired(BadRequestError):
+    """A Configuration → Users create arrived with no role.
+
+    What the new login may do is the whole point of the payload, so it has to
+    be an explicit choice. An empty list would otherwise fall through to the
+    invitation helper's member default and mint a member login from a surface
+    that never creates members.
+    """
+
+    code = "admin_user.roles_required"
+
+
 class UserNotFound(NotFoundError):
     code = "admin_user.not_found"
 
@@ -248,6 +260,7 @@ __all__ = [
     "InvitationInvalid",
     "RegistrationError",
     "AdminUserError",
+    "AdminUserRolesRequired",
     "UserNotFound",
     "UserNotPendingInvitation",
     "InvalidResetLink",

@@ -34,14 +34,8 @@ const ResellerSelector = ({
 }: ResellerSelectorProps) => {
   const { t } = useTranslation();
 
-  // `has_orders_without_invoice` is supported by the backend but missing
-  // from the Orval-generated type — extend it locally.
-  type Params = CommissioningResellersListParams & {
-    has_orders_without_invoice?: boolean;
-  };
-
-  const queryParams = useMemo<Params>(() => {
-    const params: Params = {};
+  const queryParams = useMemo<CommissioningResellersListParams>(() => {
+    const params: CommissioningResellersListParams = {};
     if (year) params.year = year;
     if (delivery_week) params.delivery_week = delivery_week;
     if (delivery_day) params.delivery_day = delivery_day;

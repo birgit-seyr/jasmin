@@ -119,6 +119,36 @@ class TestLogin:
         assert response.status_code == 400
         assert response.data["message"] == "Invalid credentials"
 
+    @pytest.mark.parametrize(
+        "email", [{"$ne": None}, ["a@b.example"], 42, True], ids=repr
+    )
+    def test_non_string_email_returns_400(self, factory, super_admin, email):
+        """Anonymous endpoint: a non-string email must not reach the lockout
+        key or the ORM lookup, neither of which can take a dict or a list."""
+        response = _login(factory, email=email, password=SUPER_ADMIN_PASSWORD)
+        assert response.status_code == 400
+        assert response.data["code"] == "super_admin.missing_credentials"
+
+    @pytest.mark.parametrize(
+        "password", [{"$ne": None}, ["hunter2"], 42, True], ids=repr
+    )
+    def test_non_string_password_returns_400(self, factory, super_admin, password):
+        response = _login(factory, email=SUPER_ADMIN_EMAIL, password=password)
+        assert response.status_code == 400
+        assert response.data["code"] == "super_admin.missing_credentials"
+
+    def test_malformed_body_reveals_nothing_about_the_account(
+        self, factory, super_admin
+    ):
+        """The refusal is identical for a real and an unknown account, so a
+        malformed body is not an enumeration oracle."""
+        known = _login(factory, email=SUPER_ADMIN_EMAIL, password={"a": 1})
+        unknown = _login(factory, email="nobody@example.com", password={"a": 1})
+
+        assert known.status_code == unknown.status_code == 400
+        assert known.data["code"] == unknown.data["code"]
+        assert known.data["message"] == unknown.data["message"]
+
     def test_inactive_account_returns_403(self, factory, super_admin):
         with schema_context("public"):
             super_admin.is_active = False

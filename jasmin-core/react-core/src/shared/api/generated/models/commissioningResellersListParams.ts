@@ -16,6 +16,10 @@ delivery_day?: string;
  */
 delivery_week?: number;
 /**
+ * Keep only resellers that still have at least one order no invoice covers (false keeps only those with none). Scoped to the order year when `year` is also sent
+ */
+has_orders_without_invoice?: boolean;
+/**
  * Filter by active donation recipient status
  */
 is_active_donation_recipient?: boolean;

@@ -3,7 +3,9 @@
  *
  * Three things this test owns:
  *   1. Mount + query wiring — ``useCommissioningOrdersOverviewList`` is
- *      called with the right ``year/reseller`` params.
+ *      called with the right ``year/reseller`` params, and the reseller
+ *      dropdown lists every active reseller (this page also owns storno /
+ *      PDF / re-send for already-invoiced ones).
  *   2. Bulk finalize wiring — same shape as DeliveryNotes but with
  *      ``model: "invoice"`` in the payload.
  *   3. Storno happy path — clicking the per-row Storno button opens
@@ -125,9 +127,16 @@ vi.mock("@features/commissioning/pdfs/forResellers/generateInvoicePDF", () => ({
   generateAndUploadInvoicePDF: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Read lazily (inside the component body), so a plain module-scope const is
+// safe here — no vi.hoisted needed.
+const resellerSelectorPropsMock = vi.fn();
+
 vi.mock("@shared/selectors", () => ({
   YearSelector: () => <div data-testid="year-selector" />,
-  ResellerSelector: () => <div data-testid="reseller-selector" />,
+  ResellerSelector: (props: Record<string, unknown>) => {
+    resellerSelectorPropsMock(props);
+    return <div data-testid="reseller-selector" />;
+  },
 }));
 
 vi.mock("@shared/ui", () => ({
@@ -286,6 +295,7 @@ beforeEach(() => {
   bulkCreateSummaryMock.mockReset().mockResolvedValue({ results: [] });
   bulkDeleteDocsMock.mockReset().mockResolvedValue({ results: [] });
   axiosServiceMock.mockReset();
+  resellerSelectorPropsMock.mockReset();
   createStornoMutateAsyncMock.mockReset().mockResolvedValue({ id: "storno-1" });
   notifyMock.success.mockReset();
   notifyMock.error.mockReset();
@@ -327,6 +337,18 @@ describe("Invoices mount", () => {
     expect(screen.getByTestId("year-selector")).toBeInTheDocument();
     expect(screen.getByTestId("reseller-selector")).toBeInTheDocument();
     expect(screen.getByTestId("editable-table")).toBeInTheDocument();
+  });
+
+  it("leaves the reseller dropdown unfiltered so invoiced resellers stay reachable", () => {
+    renderPage();
+    expect(resellerSelectorPropsMock).toHaveBeenCalled();
+    const props = resellerSelectorPropsMock.mock.calls[0][0] as {
+      has_orders_without_invoice?: boolean;
+    };
+    // Narrowing the dropdown to resellers with an OPEN order would strand a
+    // fully-invoiced one: the orders table only loads for a selected reseller,
+    // and storno / invoice PDF / re-send live nowhere else.
+    expect(props.has_orders_without_invoice).toBeUndefined();
   });
 
   it("passes the orders list to the table as initialData", () => {

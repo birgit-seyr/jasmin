@@ -62,10 +62,39 @@ def _tenant_default_language(default: str = "en") -> str:
 
 
 def _normalize_roles(roles: Iterable[str] | None) -> list[str]:
+    """Keep the known roles; fall back to the member role when none survive.
+
+    The fallback serves the member-linked callers (member send-invitation,
+    public self-registration), which pass ``[Role.MEMBER]`` explicitly anyway.
+    The admin create surface must never reach it — a login created from
+    Configuration → Users with no role would silently become a member — so
+    ``create_user_with_invite`` requires a non-empty role list of its own.
+    """
     if not roles:
         return [Role.MEMBER]
     out = [r for r in roles if r in VALID_ROLES]
     return out or [Role.MEMBER]
+
+
+def _has_member_row(user: JasminUser) -> bool:
+    from apps.commissioning.models import Member
+
+    return Member.objects.filter(user=user).exists()
+
+
+def _roles_for_reinvite(user: JasminUser, roles: Iterable[str] | None) -> list[str]:
+    """The role set to write when re-inviting an account that already exists.
+
+    A re-invitation rolls the caller's roles forward, but the member role
+    belongs to the Member link rather than to the invitation payload: while the
+    Member row stands, the user keeps it, so re-inviting them with a staff-only
+    set cannot strip the membership that row implies. Same invariant
+    ``update_user_admin`` enforces by refusing the removal outright.
+    """
+    new_roles = _normalize_roles(roles)
+    if Role.MEMBER in new_roles or not _has_member_row(user):
+        return new_roles
+    return [*new_roles, Role.MEMBER]
 
 
 # --------------------------------------------------------------------------- #
@@ -140,7 +169,7 @@ def create_user_with_invitation(
         user.user_language = (
             user_language or user.user_language or _tenant_default_language()
         )
-        user.roles = _normalize_roles(roles)
+        user.roles = _roles_for_reinvite(user, roles)
         user.account_status = "pending_invitation"
         user.is_active = False
         user.set_unusable_password()

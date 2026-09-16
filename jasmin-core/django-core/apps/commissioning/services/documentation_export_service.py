@@ -18,7 +18,6 @@ from django.db.models import QuerySet
 from django.http import StreamingHttpResponse
 
 from apps.shared.csv_safety import CsvEchoBuffer, escape_csv_row
-from apps.shared.languages import SUPPORTED_LANGUAGE_CODES
 
 from ..errors import InvalidExportDates  # re-exported for back-compat
 from ..models import Harvest, Purchase
@@ -37,7 +36,9 @@ class DocumentationExportService:
     # filename tokens are served when the tenant ``csv_format`` selects the
     # ``en`` CSV dialect, mirroring the de/en switch :mod:`csv_format` already
     # applies to the machine formatting. fr/it are deferred and degrade to de.
-    _SUPPORTED_LANGUAGES: tuple[str, ...] = SUPPORTED_LANGUAGE_CODES
+    # ``_CONFIG[...]["labels"]`` and ``_SUMMED_LABELS`` are indexed directly by
+    # this value, so it may only list codes those dicts key.
+    _SUPPORTED_LANGUAGES: tuple[str, ...] = ("de", "en")
 
     _CONFIG: dict[str, dict[str, Any]] = {
         "harvest": {

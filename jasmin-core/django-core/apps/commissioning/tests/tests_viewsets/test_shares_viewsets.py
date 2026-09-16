@@ -18,6 +18,7 @@ from apps.commissioning.models import (
     DeliveryExceptionPeriod,
     Share,
     ShareContent,
+    ShareDelivery,
     ShareTypeVariationGrossPrice,
     VirtualVariationComponent,
 )
@@ -1510,3 +1511,175 @@ class TestShareTypeVariationGrossPriceDestroyGuard:
 
         assert resp.status_code == status.HTTP_204_NO_CONTENT
         assert not ShareTypeVariationGrossPrice.objects.filter(pk=price.pk).exists()
+
+
+# ---------------------------------------------------------------------------
+# ShareDeliveryOverviewViewSet — re-pointing a delivery to another week
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestShareDeliveryShareOnlyRepointCapacity:
+    """``share`` stays writable on the office grid, so a delivery can be moved
+    to another week without touching its station-day. That re-point lands on a
+    different (station-day, week) slot and must clear the same capacity gate as
+    a station-day move."""
+
+    @staticmethod
+    def _url(delivery) -> str:
+        return reverse("share_delivery_overview-detail", args=[delivery.id])
+
+    @staticmethod
+    def _week_shares(day):
+        """Two Shares one week apart, same weekday and variation — the before
+        and after of a week re-point."""
+        variation = ShareTypeVariationFactory(
+            share_type=ShareTypeFactory(share_option="HARVEST_SHARE")
+        )
+        return [
+            ShareFactory(
+                year=2026,
+                delivery_week=week,
+                delivery_day=day,
+                share_type_variation=variation,
+            )
+            for week in (15, 16)
+        ]
+
+    def test_repointing_into_a_full_week_is_rejected(self, api_client, tenant):
+        day = SharesDeliveryDayFactory()
+        station_day = DeliveryStationDayFactory(delivery_day=day, capacity=1)
+        share_week_15, share_week_16 = self._week_shares(day)
+        moving = ShareDeliveryFactory(
+            share=share_week_15, delivery_station_day=station_day
+        )
+        # Week 16's single slot at this station-day is already taken.
+        ShareDeliveryFactory(share=share_week_16, delivery_station_day=station_day)
+
+        resp = api_client.patch(
+            self._url(moving), {"share": share_week_16.id}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT, resp.data
+        assert resp.data["code"] == "delivery_station.over_capacity"
+        moving.refresh_from_db()
+        assert moving.share_id == share_week_15.id
+
+    def test_repointing_into_a_week_with_room_succeeds(self, api_client, tenant):
+        day = SharesDeliveryDayFactory()
+        station_day = DeliveryStationDayFactory(delivery_day=day, capacity=5)
+        share_week_15, share_week_16 = self._week_shares(day)
+        moving = ShareDeliveryFactory(
+            share=share_week_15, delivery_station_day=station_day
+        )
+        ShareDeliveryFactory(share=share_week_16, delivery_station_day=station_day)
+
+        resp = api_client.patch(
+            self._url(moving), {"share": share_week_16.id}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        moving.refresh_from_db()
+        assert moving.share_id == share_week_16.id
+
+
+# ---------------------------------------------------------------------------
+# ShareDeliveryViewSet — one PATCH that reassigns the week AND crosses weekdays
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestShareDeliveryCombinedShareAndCrossDayMove:
+    """Both ``share`` and ``delivery_station_day`` are writable, so a single
+    PATCH can move a delivery to another week AND to a station-day on another
+    weekday. The weekday re-point must carry the REQUESTED week — and the
+    capacity gate must judge the slot the save actually writes."""
+
+    @staticmethod
+    def _url(delivery) -> str:
+        return reverse("share_delivery-detail", args=[delivery.pk])
+
+    @staticmethod
+    def _week_shares(variation, day):
+        """The week-15 and week-16 Shares for one weekday + variation."""
+        return {
+            week: ShareFactory(
+                year=2026,
+                delivery_week=week,
+                delivery_day=day,
+                share_type_variation=variation,
+            )
+            for week in (15, 16)
+        }
+
+    def test_the_requested_week_is_written_not_the_original_one(
+        self, api_client, tenant
+    ):
+        friday = SharesDeliveryDayFactory(day_number=4)
+        monday = SharesDeliveryDayFactory(day_number=0)
+        variation = ShareTypeVariationFactory(
+            share_type=ShareTypeFactory(share_option="HARVEST_SHARE")
+        )
+        origin_station_day = DeliveryStationDayFactory(delivery_day=friday, capacity=5)
+        target_station_day = DeliveryStationDayFactory(delivery_day=monday, capacity=1)
+        friday_shares = self._week_shares(variation, friday)
+        monday_shares = self._week_shares(variation, monday)
+        moving = ShareDeliveryFactory(
+            share=friday_shares[15], delivery_station_day=origin_station_day
+        )
+        # The target station-day's only week-15 slot is taken; week 16 is free.
+        ShareDeliveryFactory(
+            share=monday_shares[15], delivery_station_day=target_station_day
+        )
+
+        resp = api_client.patch(
+            self._url(moving),
+            {
+                "share": friday_shares[16].id,
+                "delivery_station_day": target_station_day.id,
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        moving.refresh_from_db()
+        assert moving.delivery_station_day_id == target_station_day.id
+        # The requested week survives the weekday re-point…
+        assert moving.share.delivery_week == 16
+        assert moving.share.delivery_day_id == monday.id
+        # …so the full week-15 slot at the target station-day is untouched.
+        assert (
+            ShareDelivery.objects.filter(
+                delivery_station_day=target_station_day, share__delivery_week=15
+            ).count()
+            == 1
+        )
+
+    def test_a_full_requested_week_is_rejected(self, api_client, tenant):
+        friday = SharesDeliveryDayFactory(day_number=4)
+        monday = SharesDeliveryDayFactory(day_number=0)
+        variation = ShareTypeVariationFactory(
+            share_type=ShareTypeFactory(share_option="HARVEST_SHARE")
+        )
+        origin_station_day = DeliveryStationDayFactory(delivery_day=friday, capacity=5)
+        target_station_day = DeliveryStationDayFactory(delivery_day=monday, capacity=1)
+        friday_shares = self._week_shares(variation, friday)
+        monday_shares = self._week_shares(variation, monday)
+        moving = ShareDeliveryFactory(
+            share=friday_shares[15], delivery_station_day=origin_station_day
+        )
+        # Week 16 is the one being asked for, and it is full at the target.
+        ShareDeliveryFactory(
+            share=monday_shares[16], delivery_station_day=target_station_day
+        )
+
+        resp = api_client.patch(
+            self._url(moving),
+            {
+                "share": friday_shares[16].id,
+                "delivery_station_day": target_station_day.id,
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT, resp.data
+        assert resp.data["code"] == "delivery_station.over_capacity"
+        moving.refresh_from_db()
+        assert moving.share_id == friday_shares[15].id
+        assert moving.delivery_station_day_id == origin_station_day.id

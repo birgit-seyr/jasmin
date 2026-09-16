@@ -99,6 +99,16 @@ class CoopSharesBoundsInverted(BadRequestError):
     code = "tenant_settings.coop_shares_bounds_inverted"
 
 
+class InvalidSettingsPayload(BadRequestError):
+    """The ``settings`` member of the request body is not an object.
+
+    ``update_current_settings`` reads the payload raw (no input serializer) and
+    walks it as a mapping, so a string / list / number there would raise before
+    a single setting name is looked at."""
+
+    code = "tenant_settings.invalid_payload"
+
+
 class InvalidSettingsValue(BadRequestError):
     """A settings value fails the model field validators (e.g.
     ``billing_due_day_of_month`` / ``sepa_collection_day_of_month`` outside

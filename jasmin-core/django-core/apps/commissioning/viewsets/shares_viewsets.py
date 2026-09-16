@@ -541,30 +541,49 @@ class _ShareDeliveryWriteChoreographyMixin:
             )
 
     @staticmethod
-    def _assert_capacity_for_station_day_move(
-        instance, target_delivery_station_day
+    def _assert_capacity_for_delivery_move(
+        instance, target_delivery_station_day, target_share=None
     ) -> None:
-        """Block moving an existing delivery onto a full station-day
-        (race-safe, harvest only). No-op when the station-day is unchanged or
-        unset, or when the row has no share to derive year/week/option from.
-        Call BEFORE ``serializer.save()`` — it reads the pre-save instance.
+        """Block moving an existing delivery into a full station-day/week slot
+        (race-safe, harvest only).
+
+        A delivery occupies one slot of (station-day, year, week), and the
+        office grid can re-point either half: ``delivery_station_day`` moves it
+        to another station-day, ``share`` moves it to another week. Both land on
+        a different slot, so both have to clear the capacity gate — a re-point
+        to another week alone would otherwise walk straight into a full week.
+
+        ``target_share`` is the Share the save will write (``None`` → the row
+        keeps its current one). No-op when neither half changes, when the
+        station-day is unset, or when the row has no share to derive
+        year/week/option from. Call BEFORE ``serializer.save()`` — it reads the
+        pre-save instance.
         """
         from ..services import CapacityReservationService
 
-        if (
-            target_delivery_station_day is not None
-            and target_delivery_station_day.id != instance.delivery_station_day_id
-            and instance.share_id
-        ):
-            CapacityReservationService.assert_share_delivery_fits(
-                delivery_station_day_id=target_delivery_station_day.id,
-                year=instance.share.year,
-                week=instance.share.delivery_week,
-                is_additional_share_type=(
-                    instance.share.share_type_variation.share_type.is_additional_share_type
-                ),
-                moving_delivery_id=instance.pk,
-            )
+        if target_delivery_station_day is None or not instance.share_id:
+            return
+
+        share = target_share or instance.share
+        station_day_changed = (
+            target_delivery_station_day.id != instance.delivery_station_day_id
+        )
+        week_changed = (share.year, share.delivery_week) != (
+            instance.share.year,
+            instance.share.delivery_week,
+        )
+        if not (station_day_changed or week_changed):
+            return
+
+        CapacityReservationService.assert_share_delivery_fits(
+            delivery_station_day_id=target_delivery_station_day.id,
+            year=share.year,
+            week=share.delivery_week,
+            is_additional_share_type=(
+                share.share_type_variation.share_type.is_additional_share_type
+            ),
+            moving_delivery_id=instance.pk,
+        )
 
     @staticmethod
     def _notify_subscription_changed_for(instance) -> None:
@@ -957,36 +976,44 @@ class ShareDeliveryViewSet(
         apply_to_future = body(self.request).get("apply_to_future", False)
 
         with transaction.atomic():
-            self._assert_capacity_for_station_day_move(
-                instance, target_delivery_station_day
-            )
-
             # The delivery's ORIGINAL day/week — captured before we re-point the
             # Share, so the apply-to-future scan still finds this member's other
             # deliveries on their existing weekday.
             original_share = instance.share if instance.share_id else None
             affected_share_ids: set = set()
 
+            # The Share the save will write: an explicit reassignment in the
+            # body wins, otherwise the row keeps its current one.
+            target_share = serializer.validated_data.get("share") or original_share
+
             # Cross-day move: the target station-day is on another weekday, so
             # re-point THIS delivery's Share to that day's planning unit BEFORE
             # saving — otherwise ``ShareDelivery.clean`` refuses the mismatch.
+            # The re-point derives from ``target_share``, so a body that ALSO
+            # reassigns the week lands in the week it asked for, and the
+            # capacity gate below sees the slot the save actually writes.
             if (
                 target_delivery_station_day
-                and original_share
+                and target_share
                 and target_delivery_station_day.delivery_day_id
-                != original_share.delivery_day_id
+                != target_share.delivery_day_id
             ):
-                affected_share_ids.add(original_share.id)
-                repointed_share = self._share_for_delivery_day(
-                    original_share, target_delivery_station_day.delivery_day
+                if original_share:
+                    affected_share_ids.add(original_share.id)
+                target_share = self._share_for_delivery_day(
+                    target_share, target_delivery_station_day.delivery_day
                 )
-                instance.share = repointed_share
+                instance.share = target_share
                 # The client round-trips the ORIGINAL ``share`` id back in the
                 # PATCH body, so ``serializer.save()`` would re-set instance.share
                 # to the old day's Share (via update()) and ShareDelivery.clean
                 # would then reject the day mismatch. Force the re-pointed Share
                 # into validated_data so the save persists the move, not the echo.
-                serializer.validated_data["share"] = repointed_share
+                serializer.validated_data["share"] = target_share
+
+            self._assert_capacity_for_delivery_move(
+                instance, target_delivery_station_day, target_share
+            )
 
             instance = serializer.save()
             if instance.share_id:
@@ -1735,12 +1762,13 @@ class ShareDeliveryOverviewViewSet(
             and target_delivery_station_day.delivery_day_id
             != effective_share.delivery_day_id
         ):
-            serializer.validated_data["share"] = self._share_for_delivery_day(
+            effective_share = self._share_for_delivery_day(
                 effective_share, target_delivery_station_day.delivery_day
             )
+            serializer.validated_data["share"] = effective_share
         with transaction.atomic():
-            self._assert_capacity_for_station_day_move(
-                instance, target_delivery_station_day
+            self._assert_capacity_for_delivery_move(
+                instance, target_delivery_station_day, effective_share
             )
             instance = serializer.save()
             self._notify_subscription_changed_for(instance)

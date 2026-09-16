@@ -8890,15 +8890,33 @@ paths:
       description: "\n        Aggregates documentation data (harvest, purchase, or
         waste) by share article.\n        \n        Returns sum of amounts grouped
         by:\n        - Share article name\n        - Unit (kg, pieces, etc.)\n        -
-        Size specification\n        \n        Can be filtered by year, week, and day_number.\n
-        \       "
+        Size specification\n        \n        Can be filtered by year, week, and day_number.\n\n
+        \       ``delivery_day`` is accepted as an alias for ``day_number``, carrying\n
+        \       the same 0-6 weekday number, for clients built against the earlier\n
+        \       spelling.\n\n        The weekday filter applies to HARVEST and WASTE
+        only: PURCHASE rows are\n        week-scoped and carry no meaningful weekday,
+        so they are aggregated over\n        the whole week.\n        "
       summary: Documentation Aggregation Overview
       parameters:
+      - in: query
+        name: day_number
+        schema:
+          type: integer
+        description: Day of the week (0=Monday, 6=Sunday)
+        examples:
+          Monday:
+            value: 0
+          Wednesday:
+            value: 2
+          Sunday:
+            value: 6
       - in: query
         name: delivery_day
         schema:
           type: string
-        description: sharesdeliveryday ID (Jasmin ID format)
+        description: Alias for day_number (0=Monday, 6=Sunday), kept for older clients.
+          Ignored when day_number is also sent, and ignored when the value is not
+          a 0-6 weekday.
       - in: query
         name: delivery_week
         schema:
@@ -16895,6 +16913,13 @@ paths:
           Week52:
             value: 52
             summary: Week 52
+      - in: query
+        name: has_orders_without_invoice
+        schema:
+          type: boolean
+        description: Keep only resellers that still have at least one order no invoice
+          covers (false keeps only those with none). Scoped to the order year when
+          `year` is also sent
       - in: query
         name: is_active_donation_recipient
         schema:

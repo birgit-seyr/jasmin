@@ -4,7 +4,7 @@ import datetime
 from typing import Any
 
 from django.db import transaction
-from django.db.models import F, QuerySet
+from django.db.models import F, Q, QuerySet
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
@@ -45,21 +45,31 @@ class _TheoreticalBaseViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
         if year is not None:
             queryset = queryset.filter(year=year)
-        else:
-            # Default: only return data from the last N weeks
-            cutoff = timezone.localdate() - datetime.timedelta(
-                weeks=_DEFAULT_WEEKS_BACK
-            )
-            iso = cutoff.isocalendar()
-            queryset = queryset.filter(year=iso[0], delivery_week__gte=iso[1])
 
-        # Always limit to last N weeks for the current year to keep payloads small
-        today = timezone.localdate()
-        current_iso = today.isocalendar()
-        if year is not None and year == current_iso[0]:
-            min_week = current_iso[1] - _DEFAULT_WEEKS_BACK
-            if min_week > 0:
-                queryset = queryset.filter(delivery_week__gte=min_week)
+        # The recency window trims the LIST payload only — a detail route must
+        # still reach a row outside it, or editing/deleting an older entry 404s.
+        if getattr(self, "action", None) == "list":
+            today = timezone.localdate()
+            current_year, current_week = today.isocalendar()[:2]
+            if year is None:
+                # Default: only return data from the last N weeks. The cutoff
+                # falls in the PREVIOUS ISO year during weeks 1-N, so the window
+                # has to span the year boundary — pinning it to the cutoff year
+                # alone would hide every current-year row each January. It stops
+                # at the current year: planning rows exist for future years and
+                # this list is unpaginated unless the caller asks for a limit.
+                cutoff = today - datetime.timedelta(weeks=_DEFAULT_WEEKS_BACK)
+                cutoff_year, cutoff_week = cutoff.isocalendar()[:2]
+                queryset = queryset.filter(
+                    Q(year=current_year)
+                    | Q(year=cutoff_year, delivery_week__gte=cutoff_week)
+                )
+            elif year == current_year:
+                # Same N-week floor for an explicitly requested current year,
+                # to keep payloads small.
+                min_week = current_week - _DEFAULT_WEEKS_BACK
+                if min_week > 0:
+                    queryset = queryset.filter(delivery_week__gte=min_week)
 
         if share_article is not None:
             queryset = queryset.filter(share_article__id=share_article)

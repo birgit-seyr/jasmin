@@ -132,7 +132,8 @@
     "app_icon_invalid": "Das App-Symbol muss ein quadratisches PNG-, JPEG- oder WEBP-Bild mit mindestens 512x512 Pixeln und höchstens 2 MB sein."
   },
   "tenant_settings": {
-    "coop_shares_bounds_inverted": "Die Mindestanzahl an Geschäftsanteilen darf die Höchstanzahl nicht überschreiten."
+    "coop_shares_bounds_inverted": "Die Mindestanzahl an Geschäftsanteilen darf die Höchstanzahl nicht überschreiten.",
+    "invalid_payload": "Die übermittelten Einstellungen haben ein ungültiges Format."
   },
   "share_content": {
     "invalid": "Eintrag ungültig — bitte die Daten prüfen.",
@@ -217,7 +218,8 @@
   "admin_user": {
     "not_found": "Admin-User nicht gefunden.",
     "invalid": "Admin-User-Eingabe ungültig.",
-    "not_pending_invitation": "Für diesen User gibt es keine ausstehende Einladung."
+    "not_pending_invitation": "Für diesen User gibt es keine ausstehende Einladung.",
+    "roles_required": "Bitte mindestens eine Rolle für den neuen User auswählen."
   },
   "auth": {
     "error": "Authentifizierung fehlgeschlagen.",

@@ -458,6 +458,27 @@ class TestEnrolmentDeadlockFix:
             status.HTTP_403_FORBIDDEN,
         )
 
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/api/auth/two-factor/enroll-start/",
+            "/api/auth/two-factor/enroll-confirm/",
+        ],
+    )
+    @pytest.mark.parametrize(
+        "bad_token", [{"nested": "object"}, ["a", "list"], 42, True], ids=repr
+    )
+    def test_non_string_enrolment_token_is_a_400(self, tenant, path, bad_token):
+        """An anonymous endpoint reading the token straight off the body: a
+        non-string is refused as invalid rather than raising on ``.strip()``."""
+        resp = APIClient().post(
+            path,
+            data={"enrolment_token": bad_token, "code": "123456"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST, resp.data
+        assert resp.data["code"] == "auth.two_factor.challenge_invalid"
+
     def test_voluntary_enrolment_with_session_still_works(self, tenant):
         """AllowAny didn't break the logged-in path: a user enrolling
         voluntarily from their profile (session, NO enrolment_token) still

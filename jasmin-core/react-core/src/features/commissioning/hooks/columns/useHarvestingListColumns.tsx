@@ -418,7 +418,7 @@ export function useHarvestingListColumns({
               {record.computed_amount_per_pu_text as string}
             </div>
           ) : null,
-        // ``style`` is consumed by pdfUtils' PdfColumn but isn't declared on
+        // ``style`` is consumed by pdfColumns' PdfColumn but isn't declared on
         // EditableColumnPdfConfig — the cast keeps the extra key.
         pdf: {
           include: true,
@@ -476,7 +476,7 @@ export function useHarvestingListColumns({
             ))}
           </div>
         ),
-        // ``render`` is consumed by pdfUtils' PdfColumn but isn't declared on
+        // ``render`` is consumed by pdfColumns' PdfColumn but isn't declared on
         // EditableColumnPdfConfig — the cast keeps the extra key.
         pdf: {
           include: true,
@@ -546,7 +546,7 @@ export function useHarvestingListColumns({
         title: null,
         dataIndex: "",
         key: "note_pdf",
-        // ``render`` is consumed by pdfUtils' PdfColumn but isn't declared on
+        // ``render`` is consumed by pdfColumns' PdfColumn but isn't declared on
         // EditableColumnPdfConfig — the cast keeps the extra key.
         pdf: {
           include: true,

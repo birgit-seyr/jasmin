@@ -42,12 +42,18 @@ export default function DocumentationOverview() {
 
   const { t } = useTranslation();
 
+  // Purchases are week-scoped on the backend — an office-entered purchase has
+  // no weekday at all — so the day filter is offered, and sent, only for the
+  // sources that actually have a day dimension.
+  const supportsDayFilter = selectedSource !== "PURCHASE";
+  const dayFilter = supportsDayFilter ? selectedDay : null;
+
   const params: CommissioningDocumentationOverviewListParams = {
     year: selectedYear,
     delivery_week: selectedWeek ?? undefined,
     share_article: selectedShareArticle ?? "",
     source: selectedSource,
-    ...(selectedDay != null ? { delivery_day: String(selectedDay) } : {}),
+    ...(dayFilter != null ? { day_number: dayFilter } : {}),
   };
 
   const { data: rawData, isFetching } =
@@ -90,14 +96,16 @@ export default function DocumentationOverview() {
         setSelectedWeek={setSelectedWeek}
         include_null_option={true}
       />
-      <DaySelector
-        selectedDay={selectedDay}
-        setSelectedDay={setSelectedDay}
-        selectedWeek={selectedWeek ?? currentWeek}
-        selectedYear={selectedYear}
-        days={[0, 1, 2, 3, 4, 5, 6]}
-        include_null_option={true}
-      />
+      {supportsDayFilter && (
+        <DaySelector
+          selectedDay={selectedDay}
+          setSelectedDay={setSelectedDay}
+          selectedWeek={selectedWeek ?? currentWeek}
+          selectedYear={selectedYear}
+          days={[0, 1, 2, 3, 4, 5, 6]}
+          include_null_option={true}
+        />
+      )}
       <div style={{ marginTop: "1em", marginBottom: "1em" }}>
         <ShareArticleSelector
           selectedShareArticle={selectedShareArticle}

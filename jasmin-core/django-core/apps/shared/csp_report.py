@@ -24,13 +24,31 @@ logger = logging.getLogger("django.security")
 
 # Cap on body size we're willing to read into memory (defence against junk
 # POSTs to the unauthenticated endpoint). 64 KB is generous for a report.
+# Reached via ``request.read(...)``, never ``request.body``: the latter
+# materialises the WHOLE upload first (DATA_UPLOAD_MAX_MEMORY_SIZE is 50 MB
+# here), which would make this cap decorative. Nothing else on this path
+# touches ``request.body``, so the stream is still ours to read.
 _MAX_REPORT_BYTES = 64 * 1024
+
+# A browser posts ONE violation per request, so a longer array is not a real
+# user agent. Without a cap, one anonymous POST of a 64 KB `[{},{},…]` body
+# writes ~20k warning lines and rolls the container's whole log-retention
+# window — evicting the auth / lockout / authz records an incident responder
+# needs, from an endpoint that requires no credentials.
+_MAX_REPORTS_PER_POST = 10
 
 
 @csrf_exempt
 @require_POST
 def csp_report_view(request: HttpRequest) -> HttpResponse:
-    raw = request.body[:_MAX_REPORT_BYTES]
+    try:
+        declared_length = int(request.META.get("CONTENT_LENGTH") or 0)
+    except ValueError:
+        declared_length = 0  # unparseable header: the bounded read below still caps us
+    if declared_length > _MAX_REPORT_BYTES:
+        return HttpResponse(status=204)
+
+    raw = request.read(_MAX_REPORT_BYTES)
     try:
         payload = json.loads(raw.decode("utf-8", errors="replace"))
     except (ValueError, UnicodeDecodeError):
@@ -44,11 +62,27 @@ def csp_report_view(request: HttpRequest) -> HttpResponse:
 
     # Browsers may send either the legacy {"csp-report": {...}} envelope or
     # the new Reporting API array. Normalise to a list of dicts.
+    # Every entry has to be an object before the reads below: this endpoint is
+    # unauthenticated, so a body like {"csp-report": "x"} is one hand-crafted
+    # POST away and must not become a 500.
     reports: list[dict] = []
-    if isinstance(payload, dict) and "csp-report" in payload:
+    if isinstance(payload, dict) and isinstance(payload.get("csp-report"), dict):
         reports = [payload["csp-report"]]
     elif isinstance(payload, list):
-        reports = [r.get("body", r) for r in payload if isinstance(r, dict)]
+        reports = [
+            report
+            for report in (r.get("body", r) for r in payload if isinstance(r, dict))
+            if isinstance(report, dict)
+        ]
+
+    if len(reports) > _MAX_REPORTS_PER_POST:
+        logger.warning(
+            "csp.violation.truncated count=%d kept=%d ip=%s",
+            len(reports),
+            _MAX_REPORTS_PER_POST,
+            request.META.get("REMOTE_ADDR", "?"),
+        )
+        reports = reports[:_MAX_REPORTS_PER_POST]
 
     for r in reports:
         logger.warning(

@@ -58,6 +58,15 @@ _CYCLE_TO_RELATIVEDELTA: dict[str, relativedelta] = {
     PaymentCycleOptions.ANNUALLY: relativedelta(years=1),
 }
 
+# Charge statuses whose amount is already committed, collected or deliberately
+# forgiven, so the term no longer needs to collect it from the unlocked periods.
+_SETTLED_STATUSES = {
+    ChargeStatus.ISSUED,
+    ChargeStatus.PAID,
+    ChargeStatus.PARTIAL,
+    ChargeStatus.WAIVED,
+}
+
 
 def _current_tenant() -> Tenant:
     """Resolve the active django-tenants tenant from the connection."""
@@ -391,12 +400,6 @@ class ChargeScheduleService:
         # FAILED is the ONE status left out on purpose: bank-returned money is
         # still owed, so excluding it keeps that amount in ``remaining`` and
         # re-bills it across the unlocked periods instead of writing it off.
-        _SETTLED_STATUSES = {
-            ChargeStatus.ISSUED,
-            ChargeStatus.PAID,
-            ChargeStatus.PARTIAL,
-            ChargeStatus.WAIVED,
-        }
         locked_total = sum(
             (
                 amount

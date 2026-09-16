@@ -95,7 +95,7 @@ class TestCalculateSums:
 # ---------------------------------------------------------------------------
 # _get_forecast_fields
 # ---------------------------------------------------------------------------
-class TestGetForecastInfo:
+class TestGetForecastFields:
     def test_returns_none_for_empty(self):
         assert DocumentationSummaryService._get_forecast_fields([]) == (
             None,

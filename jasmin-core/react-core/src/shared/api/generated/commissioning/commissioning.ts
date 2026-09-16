@@ -10738,6 +10738,14 @@ const {mutation: mutationOptions} = options ?
         - Size specification
         
         Can be filtered by year, week, and day_number.
+
+        ``delivery_day`` is accepted as an alias for ``day_number``, carrying
+        the same 0-6 weekday number, for clients built against the earlier
+        spelling.
+
+        The weekday filter applies to HARVEST and WASTE only: PURCHASE rows are
+        week-scoped and carry no meaningful weekday, so they are aggregated over
+        the whole week.
         
  * @summary Documentation Aggregation Overview
  */

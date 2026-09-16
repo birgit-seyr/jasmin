@@ -47,6 +47,7 @@ from ..errors import (
     ResellerNotFound,
 )
 from ..models import (
+    CrateContentInvoiceReseller,
     DeliveryNoteContent,
     DeliveryNoteReseller,
     Forecast,
@@ -330,6 +331,39 @@ _ORDER_CONTENT_OFFICE_ONLY_FIELDS = frozenset(
 )
 
 
+def uninvoiced_orders_of_outer_reseller(year: int | None = None) -> QuerySet[Order]:
+    """Orders of the enclosing query's Reseller that no invoice covers yet.
+
+    An order reaches its invoice through its delivery note: the invoice lines
+    carry a provenance link back to the delivery-note lines — article lines via
+    ``InvoiceResellerContent.delivery_note_contents``, crate lines via
+    ``CrateContentInvoiceReseller.crate_delivery_note_contents`` (a crate-only
+    delivery note has no article lines, so the article path alone would miss
+    it). Same two paths as ``InvoiceService.get_invoice_for_delivery_note``.
+    An order with no delivery note satisfies neither, and so counts as
+    uninvoiced — which is most of what the invoices page is looking for.
+
+    ``year`` narrows the verdict to one order year, so a caller whose own view
+    is year-scoped doesn't get resellers whose only open order is from another
+    year.
+    """
+    orders = Order.objects.filter(reseller=OuterRef("pk"))
+    if year is not None:
+        orders = orders.filter(year=year)
+    return orders.filter(
+        ~Exists(
+            InvoiceResellerContent.objects.filter(
+                delivery_note_contents__delivery_note__order=OuterRef("pk")
+            )
+        ),
+        ~Exists(
+            CrateContentInvoiceReseller.objects.filter(
+                crate_delivery_note_contents__delivery_note__order=OuterRef("pk")
+            )
+        ),
+    )
+
+
 class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaffOrCustomer
     write_permission = IsOfficeOrCustomer
@@ -346,6 +380,14 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
             get_year_parameter(required=False),
             get_delivery_week_parameter(required=False),
             get_delivery_day_parameter(required=False),
+            catalogue_param(
+                "has_orders_without_invoice",
+                description=(
+                    "Keep only resellers that still have at least one order no "
+                    "invoice covers (false keeps only those with none). Scoped "
+                    "to the order year when `year` is also sent"
+                ),
+            ),
         ],
     )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -413,6 +455,7 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
                 "year",
                 "delivery_week",
                 "delivery_day",
+                "has_orders_without_invoice",
             ],
         )
         year = params["year"]
@@ -445,6 +488,16 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
                     )
                 ),
             )
+
+        # Narrows the invoices page's reseller dropdown to the resellers that
+        # actually still have something to invoice. Annotated only when asked
+        # for, so the plain reseller list doesn't pay for the subquery.
+        if params["has_orders_without_invoice"] is not None:
+            queryset = queryset.annotate(
+                has_orders_without_invoice=Exists(
+                    uninvoiced_orders_of_outer_reseller(year)
+                )
+            ).filter(has_orders_without_invoice=params["has_orders_without_invoice"])
 
         contact_annotations = get_contact_annotations()
         queryset = queryset.annotate(**contact_annotations)

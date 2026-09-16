@@ -174,10 +174,15 @@ def _build_super_admin_session_response(user: SuperAdmin) -> Response:
 @permission_classes([AllowAny])
 def super_admin_login_view(request: Request) -> Response:
     """Authenticate super admin user and return JWT tokens."""
-    email: str | None = body(request).get("email")
-    password: str | None = body(request).get("password")
+    email = body(request).get("email")
+    password = body(request).get("password")
 
-    if not email or not password:
+    # Anything but a non-empty string is a hand-crafted body on an anonymous
+    # endpoint. Refuse it here so it never reaches the per-account lockout key
+    # or the ORM lookup, neither of which can take a dict or a list.
+    if not (
+        isinstance(email, str) and email and isinstance(password, str) and password
+    ):
         raise SuperAdminMissingCredentials("Email and password are required")
 
     # Per-account brute-force lock (checked before any DB/password work so a

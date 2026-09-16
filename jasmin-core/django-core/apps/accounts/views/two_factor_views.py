@@ -42,7 +42,7 @@ from apps.shared.request_utils import body, client_ip
 from core.serializers import ErrorResponseSerializer
 from core.throttling import set_throttle_scope
 
-from ..errors import AuthError, TenantMissing
+from ..errors import AuthError, TenantMissing, TwoFactorChallengeInvalid
 from ..serializers import (
     LoginResponseSerializer,
     MessageResponseSerializer,
@@ -66,7 +66,13 @@ def _resolve_enrolling_user(request):
     yet). Raises ``AuthError`` when neither is present."""
     if getattr(request, "user", None) and request.user.is_authenticated:
         return request.user
-    token = (body(request).get("enrolment_token") or "").strip()
+    raw_token = body(request).get("enrolment_token")
+    if raw_token is not None and not isinstance(raw_token, str):
+        # Anonymous endpoint: a non-string token is a hand-crafted body, and
+        # refusing it as invalid keeps it away from ``.strip()``, which would
+        # answer with a 500 instead.
+        raise TwoFactorChallengeInvalid("Enrolment token is not valid.")
+    token = (raw_token or "").strip()
     if not token:
         raise AuthError("Authentication or an enrolment token is required.")
     tenant = getattr(request, "tenant", None)

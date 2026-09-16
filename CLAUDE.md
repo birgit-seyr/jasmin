@@ -184,7 +184,7 @@ their catalogue defaults.
 
 **How:** prefer an existing `get_*_parameter()` helper in
 `apps/commissioning/schemas.py` when one already exists; otherwise derive from
-the catalogue via that module's `_catalogue_parameter(name, description=...,
+the catalogue via that module's `catalogue_param(name, description=...,
 required=...)`. Type / `enum` / `default` are derived — pass only `description`,
 `required`, and genuine per-endpoint overrides. **If a param isn't catalogued,
 add a `ParamSpec` for it** rather than declaring it inline. The only legitimate

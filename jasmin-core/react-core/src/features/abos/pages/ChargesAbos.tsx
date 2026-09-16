@@ -19,7 +19,7 @@ import { useCurrency, useDateFormat } from "@hooks/index";
 import { notify } from "@shared/utils";
 import {
   CHARGE_STATUS_COLOR,
-  CHARGE_STATUS_ORDER as STATUS_ORDER,
+  CHARGE_STATUS_ORDER,
 } from "@shared/utils/chargeStatusColors";
 
 interface ChargeRow extends ChargeSchedule {
@@ -86,7 +86,8 @@ export default function ChargesAbos() {
       map.set(status, statusTotal);
     }
     return [...map.entries()].sort(
-      (a, b) => STATUS_ORDER.indexOf(a[0]) - STATUS_ORDER.indexOf(b[0]),
+      (a, b) =>
+        CHARGE_STATUS_ORDER.indexOf(a[0]) - CHARGE_STATUS_ORDER.indexOf(b[0]),
     );
   }, [rows]);
 

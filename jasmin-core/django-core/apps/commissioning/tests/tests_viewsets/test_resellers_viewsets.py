@@ -10,10 +10,18 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from apps.commissioning.models import CrateOrderContent, Order, OrganicCertificate
+from apps.commissioning.models import (
+    CrateContentInvoiceReseller,
+    CrateDeliveryNoteContent,
+    CrateOrderContent,
+    InvoiceResellerContent,
+    Order,
+    OrganicCertificate,
+)
 from apps.commissioning.tests.factories import (
     CrateFactory,
     CrateNetPriceFactory,
+    DeliveryNoteContentFactory,
     DeliveryNoteResellerFactory,
     InvoiceResellerFactory,
     OfferFactory,
@@ -84,6 +92,169 @@ class TestResellerViewSet:
         url = reverse("reseller-detail", kwargs={"pk": r.pk})
         resp = api_client.delete(url)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+
+@pytest.mark.django_db
+class TestResellerHasOrdersWithoutInvoiceFilter:
+    """The invoices page's reseller dropdown asks for the resellers that still
+    have something to invoice."""
+
+    URL = reverse("reseller-list")
+
+    @staticmethod
+    def _ids(resp) -> set[str]:
+        rows = resp.json()
+        if isinstance(rows, dict):
+            rows = rows.get("results", [])
+        return {row["id"] for row in rows}
+
+    @staticmethod
+    def _invoiced_order(reseller) -> Order:
+        """An order carried all the way to an invoice: the invoice line keeps
+        the provenance link back to the delivery-note line, which is how the
+        backend recognises an order as invoiced."""
+        order = OrderFactory(reseller=reseller)
+        delivery_note_line = DeliveryNoteContentFactory(
+            delivery_note=DeliveryNoteResellerFactory(order=order)
+        )
+        invoice_line = InvoiceResellerContent.objects.create(
+            invoice=InvoiceResellerFactory(reseller=reseller),
+            share_article=delivery_note_line.share_article,
+            amount=delivery_note_line.amount,
+            unit=delivery_note_line.unit,
+            size=delivery_note_line.size,
+            tax_rate=delivery_note_line.tax_rate,
+        )
+        invoice_line.delivery_note_contents.add(delivery_note_line)
+        return order
+
+    @staticmethod
+    def _crate_delivery_note_line(order) -> CrateDeliveryNoteContent:
+        """A crate-ONLY delivery note for ``order``: no article lines at all,
+        so only the crate half of the predicate can see it."""
+        return CrateDeliveryNoteContent.objects.create(
+            delivery_note=DeliveryNoteResellerFactory(order=order),
+            crate_type=CrateFactory(),
+            amount=3,
+            price_per_unit=Decimal("1.50"),
+            tax_rate=Decimal("19.00"),
+        )
+
+    @classmethod
+    def _crate_invoiced_order(cls, reseller) -> Order:
+        """A crate-only delivery note carried to an invoice, linked through
+        ``CrateContentInvoiceReseller.crate_delivery_note_contents``."""
+        order = OrderFactory(reseller=reseller)
+        crate_delivery_note_line = cls._crate_delivery_note_line(order)
+        crate_invoice_line = CrateContentInvoiceReseller.objects.create(
+            invoice=InvoiceResellerFactory(reseller=reseller),
+            crate_type=crate_delivery_note_line.crate_type,
+            amount=crate_delivery_note_line.amount,
+            price_per_unit=crate_delivery_note_line.price_per_unit,
+            tax_rate=crate_delivery_note_line.tax_rate,
+        )
+        crate_invoice_line.crate_delivery_note_contents.add(crate_delivery_note_line)
+        return order
+
+    def test_true_keeps_only_resellers_with_an_uninvoiced_order(
+        self, api_client, tenant
+    ):
+        waiting = ResellerFactory()
+        OrderFactory(reseller=waiting)
+        settled = ResellerFactory()
+        self._invoiced_order(settled)
+        without_orders = ResellerFactory()
+
+        resp = api_client.get(self.URL, {"has_orders_without_invoice": "true"})
+
+        assert resp.status_code == status.HTTP_200_OK
+        ids = self._ids(resp)
+        assert waiting.id in ids
+        assert settled.id not in ids
+        assert without_orders.id not in ids
+
+    def test_an_order_whose_delivery_note_is_not_invoiced_still_counts(
+        self, api_client, tenant
+    ):
+        """A delivery note is not an invoice — the present-delivery-note branch
+        must not be mistaken for "already invoiced"."""
+        waiting = ResellerFactory()
+        DeliveryNoteResellerFactory(order=OrderFactory(reseller=waiting))
+
+        resp = api_client.get(self.URL, {"has_orders_without_invoice": "true"})
+
+        assert waiting.id in self._ids(resp)
+
+    def test_false_keeps_only_resellers_with_nothing_left_to_invoice(
+        self, api_client, tenant
+    ):
+        waiting = ResellerFactory()
+        OrderFactory(reseller=waiting)
+        settled = ResellerFactory()
+        self._invoiced_order(settled)
+        without_orders = ResellerFactory()
+
+        resp = api_client.get(self.URL, {"has_orders_without_invoice": "false"})
+
+        assert resp.status_code == status.HTTP_200_OK
+        ids = self._ids(resp)
+        assert settled.id in ids
+        assert without_orders.id in ids
+        assert waiting.id not in ids
+
+    def test_absent_filter_returns_every_reseller(self, api_client, tenant):
+        waiting = ResellerFactory()
+        OrderFactory(reseller=waiting)
+        settled = ResellerFactory()
+        self._invoiced_order(settled)
+
+        resp = api_client.get(self.URL)
+
+        assert resp.status_code == status.HTTP_200_OK
+        ids = self._ids(resp)
+        assert {waiting.id, settled.id} <= ids
+
+    def test_a_crate_only_invoice_settles_its_order(self, api_client, tenant):
+        """A crate-only delivery note has no article lines, so the article
+        provenance path can't see its invoice — the crate path is the only
+        thing keeping the reseller out of the "still to invoice" list."""
+        settled = ResellerFactory()
+        self._crate_invoiced_order(settled)
+
+        resp = api_client.get(self.URL, {"has_orders_without_invoice": "true"})
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert settled.id not in self._ids(resp)
+
+    def test_an_uninvoiced_crate_only_delivery_note_still_counts(
+        self, api_client, tenant
+    ):
+        waiting = ResellerFactory()
+        self._crate_delivery_note_line(OrderFactory(reseller=waiting))
+
+        resp = api_client.get(self.URL, {"has_orders_without_invoice": "true"})
+
+        assert waiting.id in self._ids(resp)
+
+    def test_the_verdict_is_scoped_to_the_requested_year(self, api_client, tenant):
+        """The page driving this filter shows one year of orders, so a
+        reseller whose only open order is from another year has nothing to
+        invoice there."""
+        earlier_year_only = ResellerFactory()
+        OrderFactory(reseller=earlier_year_only, year=2025)
+
+        scoped = api_client.get(
+            self.URL, {"has_orders_without_invoice": "true", "year": 2026}
+        )
+        unscoped = api_client.get(self.URL, {"has_orders_without_invoice": "true"})
+
+        assert earlier_year_only.id not in self._ids(scoped)
+        assert earlier_year_only.id in self._ids(unscoped)
+
+    def test_non_boolean_value_returns_400(self, api_client, tenant):
+        resp = api_client.get(self.URL, {"has_orders_without_invoice": "ture"})
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
 # ---------------------------------------------------------------------------

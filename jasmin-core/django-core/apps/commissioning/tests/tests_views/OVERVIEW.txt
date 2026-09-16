@@ -3,8 +3,8 @@ COMMISSIONING APP — VIEW TESTS OVERVIEW
 ================================================================================
 
 Directory: apps/commissioning/tests/tests_views/
-Total files: 9
-Total tests: 110
+Total files: 11
+Total tests: 325
 
 ================================================================================
 1. test_share_options_views.py  (5 tests)
@@ -20,7 +20,7 @@ Total tests: 110
      - test_fruit_and_veg_separate
 
 ================================================================================
-2. test_documentation_overview_view.py  (8 tests)
+2. test_documentation_overview_views.py  (13 tests)
    View: DocumentationOverviewView (GET)
 --------------------------------------------------------------------------------
    TestDocumentationOverviewGet
@@ -29,6 +29,11 @@ Total tests: 110
      - test_waste_aggregation
      - test_empty_when_no_data
      - test_filters_by_day
+     - test_filters_by_the_delivery_day_alias
+     - test_day_number_wins_over_the_delivery_day_alias
+     - test_an_id_shaped_delivery_day_alias_is_ignored_not_rejected
+     - test_out_of_range_delivery_day_alias_is_ignored
+     - test_the_day_filter_leaves_week_scoped_purchases_alone
      - test_missing_share_article_returns_400
      - test_invalid_source_returns_400
      - test_missing_year_returns_400

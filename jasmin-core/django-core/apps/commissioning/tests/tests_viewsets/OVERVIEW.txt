@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-145 tests | 36 test classes | 8 files
+749 tests | 157 test classes | 31 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 
@@ -129,7 +129,7 @@ test_subscription_onboarding_start.py (18 tests) — onboarding mode: subscripti
   TestSubscriptionViewSetContext          9 tests   create/update/partial_update carry the flag (off / on); list, retrieve,
                                                     confirm and schema generation leave it out
 
-test_shares_viewsets.py (32 tests)
+test_shares_viewsets.py (89 tests)
 ──────────────────────────────────
   TestShareTypeViewSet                    7 tests   list, filter share_option, create/update uppercase, invalid 400
   TestShareTypeVariationViewSet           5 tests   list, filter by share_type/physical/internal_name
@@ -143,10 +143,28 @@ test_shares_viewsets.py (32 tests)
                                                     missing field 400; no-amounts 400
   TestVirtualComponentsViewSet            3 tests   create 201 + persisted component; missing virtual_variation 400;
                                                     non-physical component 400
+  TestShareDeliveryShareOnlyRepointCapacity 2 tests re-pointing a delivery to ANOTHER WEEK (station-day untouched)
+                                                    runs the capacity gate: full week → 409 + row unmoved; room → 200
+  TestShareDeliveryCombinedShareAndCrossDayMove 2 tests one PATCH carrying BOTH a new share and a station-day on
+                                                    another weekday writes the REQUESTED week (not the original),
+                                                    and the capacity gate judges that same week (full → 409)
 
-test_resellers_viewsets.py (20 tests)
+test_logs_viewsets.py (16 tests) — theoretical harvest/purchase/wash/clean recency window (frozen clock)
+────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestTheoreticalListRecencyWindow       16 tests   parametrized over the four lists: in ISO week 1 the current-year
+                                                    rows survive the default two-week window (its cutoff sits in the
+                                                    PREVIOUS year); a future year stays out of it; the detail route
+                                                    still reaches a row outside the window; an explicitly requested
+                                                    past ?year= is not narrowed
+
+test_resellers_viewsets.py (57 tests)
 ─────────────────────────────────────
   TestResellerViewSet                     6 tests   list, filter is_reseller/is_active_reseller, retrieve, delete
+  TestResellerHasOrdersWithoutInvoiceFilter 8 tests has_orders_without_invoice=true keeps only resellers with an
+                                                    order no invoice covers (an uninvoiced delivery note still
+                                                    counts, a crate-only invoice settles its order); false keeps
+                                                    the settled + the order-less; absent filters nothing; the
+                                                    verdict is scoped to ?year=; non-boolean → 400
   TestOfferGroupViewSet                   2 tests   list
   TestOfferViewSet                        3 tests   list, filter by year/week
   TestOrderContentViewSet                 6 tests   list, create derives tax_rate, Orders page offer/article row

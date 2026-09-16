@@ -31,8 +31,13 @@ _FAIL_COUNT_KEY = "super_admin:login:failcount:{email}"
 _LOCK_KEY = "super_admin:login:lockuntil:{email}"
 
 
-def _normalise(email: str | None) -> str:
-    return (email or "").strip().lower()
+def _normalise(email: object) -> str:
+    """The cache-key form of the submitted account name.
+
+    Takes any payload value, not just a string: the caller is an anonymous
+    endpoint, so a malformed submission has to key a bucket rather than raise.
+    """
+    return str(email or "").strip().lower()
 
 
 def is_locked(email: str | None) -> bool:

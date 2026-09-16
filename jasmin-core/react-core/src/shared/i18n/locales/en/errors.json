@@ -132,7 +132,8 @@
     "app_icon_invalid": "The app icon must be a square PNG, JPEG or WEBP image of at least 512x512 pixels and at most 2 MB."
   },
   "tenant_settings": {
-    "coop_shares_bounds_inverted": "The minimum number of coop shares cannot exceed the maximum."
+    "coop_shares_bounds_inverted": "The minimum number of coop shares cannot exceed the maximum.",
+    "invalid_payload": "The submitted settings have an invalid format."
   },
   "share_content": {
     "invalid": "Invalid share content input — please check the data.",
@@ -217,7 +218,8 @@
   "admin_user": {
     "not_found": "Admin user not found.",
     "invalid": "Invalid admin user input.",
-    "not_pending_invitation": "No pending invitation exists for this user."
+    "not_pending_invitation": "No pending invitation exists for this user.",
+    "roles_required": "Select at least one role for the new user."
   },
   "auth": {
     "error": "Authentication failed.",

@@ -75,6 +75,7 @@ _BOOL_PARAMS = (
     "is_active_seller",
     "is_active_reseller",
     "is_active_donation_recipient",
+    "has_orders_without_invoice",
     "physical_share_type_variations",
 )
 

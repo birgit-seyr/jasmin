@@ -28,6 +28,7 @@ from core.throttling import TenantScopedRateThrottle
 from .errors import (
     CoopSharesBoundsInverted,
     EmptyNumberingPrefix,
+    InvalidSettingsPayload,
     InvalidSettingsValue,
     NoTenantContext,
     YearNumberingLocked,
@@ -58,6 +59,29 @@ YEAR_BASED_SETTING_TO_MODEL: dict[str, tuple[str, str]] = {
         "invoices",
     ),
 }
+
+# Concrete TenantSettings columns the versioning machinery owns — a request
+# payload never assigns them.
+_SYSTEM_SETTINGS_FIELDS = frozenset(
+    {"id", "tenant", "valid_from", "valid_until", "created_at"}
+)
+
+
+def _writable_setting_names() -> frozenset[str]:
+    """The setting names ``update_current_settings`` may assign.
+
+    Concrete editable model fields only. ``setattr`` takes any attribute name
+    the instance happens to carry, so a mere ``hasattr`` test also passes for
+    the FK attname (``tenant_id``) and for every method on the model (``save``,
+    ``copy``, ``full_clean``) — shadowing one of those with a payload value
+    turns the ``save()`` that follows into a TypeError, i.e. a 500 for what is
+    really bad input.
+    """
+    return frozenset(
+        field.name
+        for field in TenantSettings._meta.fields
+        if field.editable and field.name not in _SYSTEM_SETTINGS_FIELDS
+    )
 
 
 # ``get_serializer_class`` branches per caller role (see its docstring) —
@@ -285,9 +309,14 @@ class TenantSettingsViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
 
         now = timezone.now()
 
-        # Apply received data (excluding system fields)
-        new_settings_data: dict[str, Any] = body(request).get("settings", {})
-        system_fields = {"id", "tenant", "valid_from", "valid_until", "created_at"}
+        settings_payload = body(request).get("settings", {})
+        if not isinstance(settings_payload, dict):
+            raise InvalidSettingsPayload(
+                "'settings' must be an object of setting name to value.",
+                field="settings",
+            )
+        new_settings_data: dict[str, Any] = settings_payload
+        writable_fields = _writable_setting_names()
 
         # Serialize concurrent PUTs: read the open row UNDER A LOCK inside one
         # transaction and run EVERY validation below against that locked row —
@@ -315,7 +344,7 @@ class TenantSettingsViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
             # Close the current version and create the new one — still under
             # the same lock the validations above ran against.
             new_settings = self._version_and_save_settings(
-                tenant, current_settings, new_settings_data, now, system_fields
+                tenant, current_settings, new_settings_data, now, writable_fields
             )
 
         if changed_sensitive:
@@ -470,12 +499,14 @@ class TenantSettingsViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
         current_settings: TenantSettings | None,
         new_settings_data: dict[str, Any],
         now: Any,
-        system_fields: set[str],
+        writable_fields: frozenset[str],
     ) -> TenantSettings:
         """Close the open version, apply the changes, validate, and persist.
 
         Must run under the same lock / transaction the validations above ran
-        against.
+        against. A key outside ``writable_fields`` is logged and skipped rather
+        than refused, so a stale key from an older client still saves the
+        settings the caller did change.
         """
         if current_settings:
             current_settings.valid_until = now
@@ -492,10 +523,21 @@ class TenantSettingsViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
             )
 
         changed_fields = set()
+        ignored_keys: list[str] = []
         for key, value in new_settings_data.items():
-            if key not in system_fields and hasattr(new_settings, key):
+            if key in writable_fields:
                 setattr(new_settings, key, value)
                 changed_fields.add(key)
+            else:
+                ignored_keys.append(str(key))
+
+        if ignored_keys:
+            logger.warning(
+                "tenant_settings.ignored_keys tenant=%s count=%d sample=%s",
+                tenant.schema_name,
+                len(ignored_keys),
+                sorted(ignored_keys)[:10],
+            )
 
         # This is the ONLY write path for TenantSettings and it setattr's
         # raw values (the serializer never validates them), so enforce the

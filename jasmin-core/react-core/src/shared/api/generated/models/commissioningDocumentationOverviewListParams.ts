@@ -9,7 +9,11 @@ import type { CommissioningDocumentationOverviewListSource } from './commissioni
 
 export type CommissioningDocumentationOverviewListParams = {
 /**
- * sharesdeliveryday ID (Jasmin ID format)
+ * Day of the week (0=Monday, 6=Sunday)
+ */
+day_number?: number;
+/**
+ * Alias for day_number (0=Monday, 6=Sunday), kept for older clients. Ignored when day_number is also sent, and ignored when the value is not a 0-6 weekday.
  */
 delivery_day?: string;
 /**

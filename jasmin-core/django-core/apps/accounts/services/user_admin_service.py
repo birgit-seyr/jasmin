@@ -1,6 +1,8 @@
 """Admin user management service used by the Configuration → Users page.
 
 Business rules enforced here:
+- A created user must carry at least one explicit role — this surface never
+  defaults one in.
 - Roles must be in VALID_ROLES.
 - Role combinations must satisfy ``validate_role_combination``.
 - The "member" role can only be granted via the membership flow (a Member
@@ -23,7 +25,7 @@ from django.db.models import Prefetch
 from apps.authz.roles import VALID_ROLES, Role, validate_role_combination
 from core.db_locks import acquire_advisory_xact_lock
 
-from ..errors import AdminUserError
+from ..errors import AdminUserError, AdminUserRolesRequired
 from ..models import JasminUser
 
 logger = logging.getLogger("authentication")
@@ -161,6 +163,13 @@ def create_user_with_invite(*, data: dict[str, Any], created_by: JasminUser) -> 
         raise AdminUserError(f"Missing required fields: {', '.join(missing)}")
 
     roles = list(data.get("roles") or [])
+    if not roles:
+        # Never fall through to the invitation helper's member default: this
+        # surface does not create members, so an empty list here would mint a
+        # member login nobody asked for.
+        raise AdminUserRolesRequired(
+            "Select at least one role for the new user.", field="roles"
+        )
     _validate_roles(roles)
     _ensure_no_member_role(roles)
 
