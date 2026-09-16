@@ -87,6 +87,11 @@ vi.mock("@shared/utils/apiError", () => ({
 // ── Tenant settings toggle ─────────────────────────────────────────────────
 const getSettingMock = vi.fn();
 
+// The options the modal passes to ``useSubscriptionTerm`` on its last render.
+const subscriptionTerm = vi.hoisted(() => ({
+  lastOptions: undefined as { allowPastStart?: boolean } | undefined,
+}));
+
 // ── Data hooks ──────────────────────────────────────────────────────────────
 // One variation carrying a reference price + an explicit solidarity floor; the
 // "min" assertion checks the floor is preferred over the reference.
@@ -135,20 +140,23 @@ vi.mock("@hooks/index", () => ({
     getShareTypeVariationSizeLabel: (s: string) => s,
   }),
   useTenant: () => ({ getSetting: getSettingMock }),
-  useSubscriptionTerm: () => ({
-    allowsTrial: false,
-    endOfSeason: false,
-    endAfterOneYear: false,
-    computeValidUntil: () => null,
-    isValidUntilAuto: () => false,
-    // The earliest sellable start — the modal reads this for the default
-    // pricing date (before valid_from is picked). A fixed future Monday.
-    earliestValidFrom: dayjs().startOf("isoWeek").add(2, "week"),
-    // Permit any Monday on/after a fixed past date so the test's chosen
-    // valid_from validates regardless of when the suite runs.
-    disabledValidFromDate: (current: unknown) =>
-      !!current && (current as dayjs.Dayjs).day() !== 1,
-  }),
+  useSubscriptionTerm: (options?: { allowPastStart?: boolean }) => {
+    subscriptionTerm.lastOptions = options;
+    return {
+      allowsTrial: false,
+      endOfSeason: false,
+      endAfterOneYear: false,
+      computeValidUntil: () => null,
+      isValidUntilAuto: () => false,
+      // The earliest sellable start — the modal reads this for the default
+      // pricing date (before valid_from is picked). A fixed future Monday.
+      earliestValidFrom: dayjs().startOf("isoWeek").add(2, "week"),
+      // Permit any Monday on/after a fixed past date so the test's chosen
+      // valid_from validates regardless of when the suite runs.
+      disabledValidFromDate: (current: unknown) =>
+        !!current && (current as dayjs.Dayjs).day() !== 1,
+    };
+  },
 }));
 
 // ── AntD InputNumber / DatePicker stubs ────────────────────────────────────
@@ -277,6 +285,7 @@ function fillRequiredFields(price?: string) {
 beforeEach(() => {
   rolesMock.mockReset();
   getSettingMock.mockReset();
+  subscriptionTerm.lastOptions = undefined;
   subscribeCreateMock.mockReset().mockResolvedValue(undefined);
   abosCreateMock.mockReset().mockResolvedValue(undefined);
   notifySuccessMock.mockReset();
@@ -405,5 +414,46 @@ describe("NewSubscriptionModal — solidarity price gating", () => {
     const priceInput = priceField();
     expect(priceInput).toHaveAttribute("data-disabled", "false");
     expect(priceInput).toHaveAttribute("data-min", "5");
+  });
+});
+
+describe("NewSubscriptionModal — onboarding-mode start date", () => {
+  const onboardingSetting = (on: boolean) => (key: string, fallback?: unknown) =>
+    key === "onboarding_mode" ? on : fallback;
+
+  it("office + onboarding mode on: any Monday may be the start", () => {
+    rolesMock.mockReturnValue({ isMemberOnly: false });
+    getSettingMock.mockImplementation(onboardingSetting(true));
+
+    renderModal();
+
+    expect(subscriptionTerm.lastOptions).toEqual({ allowPastStart: true });
+  });
+
+  it("office + onboarding mode off: the lead time applies", () => {
+    rolesMock.mockReturnValue({ isMemberOnly: false });
+    getSettingMock.mockImplementation(onboardingSetting(false));
+
+    renderModal();
+
+    expect(subscriptionTerm.lastOptions).toEqual({ allowPastStart: false });
+  });
+
+  it("member self-service keeps the lead time while onboarding mode is on", () => {
+    rolesMock.mockReturnValue({ isMemberOnly: true });
+    getSettingMock.mockImplementation(onboardingSetting(true));
+
+    renderModal();
+
+    expect(subscriptionTerm.lastOptions).toEqual({ allowPastStart: false });
+  });
+
+  it("public registration keeps the lead time while onboarding mode is on", () => {
+    rolesMock.mockReturnValue({ isMemberOnly: false });
+    getSettingMock.mockImplementation(onboardingSetting(true));
+
+    renderModal({ mode: "public", forceTrial: true, onIntent: vi.fn() });
+
+    expect(subscriptionTerm.lastOptions).toEqual({ allowPastStart: false });
   });
 });

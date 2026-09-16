@@ -674,6 +674,62 @@ class MemberAlreadyCancelled(ConflictError):
     code = "member.already_cancelled"
 
 
+class ConfirmationDateRequiresOnboardingMode(BadRequestError):
+    """A member or coop share confirm request carried ``confirmed_at`` while the
+    tenant's onboarding mode is off. Outside onboarding a confirmation is dated
+    when it happens."""
+
+    code = "member.confirmation_date_requires_onboarding_mode"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "A confirmation date can only be set while onboarding mode is on.",
+            field="confirmed_at",
+        )
+
+
+class ConfirmationDateInFuture(BadRequestError):
+    """A manual confirmation date lies after today."""
+
+    code = "member.confirmation_date_in_future"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "The confirmation date can't be in the future.", field="confirmed_at"
+        )
+
+
+class ConfirmationDateAfterExit(BadRequestError):
+    """A departed member is confirmed on a date after their exit date
+    (``cancelled_effective_at``). Without a manual date the confirmation is
+    dated today, so this is also raised when the exit date has already passed.
+    ``details.exit_date`` carries the exit date."""
+
+    code = "member.confirmation_date_after_exit"
+
+    def __init__(self, exit_date) -> None:
+        super().__init__(
+            "The confirmation date can't be after the member's exit date.",
+            field="confirmed_at",
+            details={"exit_date": exit_date.isoformat()},
+        )
+
+
+class EmailActionBlockedInOnboardingMode(ConflictError):
+    """An office action whose whole purpose is an email to a member (a portal
+    invitation, a waiting-list spot offer) while the tenant's onboarding mode is
+    on. No member emails go out in onboarding mode, so the action is refused
+    before it creates a login or invitation, holds capacity or uses quota."""
+
+    code = "onboarding_mode.email_action_blocked"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This action emails the member, and no member emails are sent while "
+            "onboarding mode is on. Turn off onboarding mode first."
+        )
+
+
 class CoopShareContractAgreementRequired(BadRequestError):
     """The tenant published a coop-share contract ("Zeichnungsvertrag") but the
     member tried to self-subscribe without affirming agreement to it."""
@@ -952,6 +1008,37 @@ class SubscriptionAlreadyConfirmed(ConflictError):
     code = "subscription.already_confirmed"
 
 
+class SubscriptionMemberNotAdmitted(BadRequestError):
+    """In onboarding mode, a subscription of a member who has already left is
+    confirmed before the member. Confirming a subscription doesn't admit a
+    departed member, so the member is confirmed first with their own date."""
+
+    code = "subscription.member_not_admitted"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Confirm the member first: a member who has left isn't admitted "
+            "through a subscription.",
+            field="member",
+        )
+
+
+class SubscriptionEndsAfterMemberExit(BadRequestError):
+    """In onboarding mode, a subscription of a member who has already left ends
+    after the member's exit date (or the member has no exit date), so it would
+    deliver and bill after the exit. ``details.exit_date`` carries the exit
+    date when there is one."""
+
+    code = "subscription.ends_after_member_exit"
+
+    def __init__(self, exit_date) -> None:
+        super().__init__(
+            "The subscription ends after the member's exit date.",
+            field="valid_until",
+            details={"exit_date": exit_date.isoformat() if exit_date else None},
+        )
+
+
 class SubscriptionConfirmedImmutable(ConflictError):
     """Edit/delete attempted on an admin-confirmed subscription. Confirmed
     subscriptions are immutable through CRUD — end them early via the
@@ -992,6 +1079,20 @@ class CoopShareConfirmedFieldsLocked(ConflictError):
             + " on a confirmed coop share. Cancel it and record a new share instead.",
             field=field_names[0] if field_names else None,
             details={"fields": field_names},
+        )
+
+
+class CoopShareNotPending(ConflictError):
+    """An onboarding-mode confirm of a coop share that is already confirmed or
+    cancelled. A manual confirmation date may only date a pending share, so an
+    existing confirmation or cancellation is never re-stamped."""
+
+    code = "coop_share.not_pending"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Only a pending coop share (not confirmed, not cancelled) can be "
+            "confirmed."
         )
 
 

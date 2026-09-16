@@ -27,6 +27,7 @@ from django.utils.crypto import get_random_string
 from apps.accounts.models import JasminUser
 from apps.authz.roles import VALID_ROLES, Role
 from apps.shared.tenant_urls import frontend_base_url, tenant_name
+from apps.shared.tenants.onboarding_emails import EmailCategory
 
 logger = logging.getLogger("authentication")
 
@@ -82,11 +83,16 @@ def create_user_with_invitation(
     user_language: str | None = None,
     member=None,
     created_by: JasminUser | None = None,
+    email_category: EmailCategory = EmailCategory.GENERAL,
 ):
     """Create a `pending_invitation` user + UserInvitation, send email.
 
     Returns ``(user, invitation)``. Raises ``ValidationError`` if the email
     is already taken by an active user.
+
+    ``email_category`` is ``EmailCategory.MEMBER_LIFECYCLE`` when the office
+    invites a member to the portal, so onboarding mode suppresses that
+    invitation while login invitations still go out.
     """
     from apps.commissioning.models import UserInvitation
     from apps.commissioning.models.choices import InvitationStatus
@@ -158,7 +164,9 @@ def create_user_with_invitation(
         created_by=created_by,
     )
 
-    _send_invitation_email(user=user, invitation=invitation)
+    _send_invitation_email(
+        user=user, invitation=invitation, email_category=email_category
+    )
 
     logger.info(
         "invitation.created user=%s by=%s member=%s",
@@ -170,8 +178,16 @@ def create_user_with_invitation(
 
 
 @transaction.atomic
-def resend_invitation(*, user: JasminUser, created_by: JasminUser | None = None):
-    """Cancel any open invitation, mint a new one, send email."""
+def resend_invitation(
+    *,
+    user: JasminUser,
+    created_by: JasminUser | None = None,
+    email_category: EmailCategory = EmailCategory.GENERAL,
+):
+    """Cancel any open invitation, mint a new one, send email.
+
+    ``email_category`` works as in :func:`create_user_with_invitation`.
+    """
     from apps.commissioning.models import UserInvitation
     from apps.commissioning.models.choices import InvitationStatus
 
@@ -199,7 +215,9 @@ def resend_invitation(*, user: JasminUser, created_by: JasminUser | None = None)
         user.account_status = "pending_invitation"
         user.is_active = False
         user.save(update_fields=["account_status", "is_active"])
-    _send_invitation_email(user=user, invitation=invitation)
+    _send_invitation_email(
+        user=user, invitation=invitation, email_category=email_category
+    )
     logger.info(
         "invitation.resent user=%s by=%s",
         user.email,
@@ -278,10 +296,30 @@ def accept_invitation(*, token: str, password: str) -> JasminUser:
     # USER-account event — "your login is active, here's the portal".
     # Deferred to on_commit so it never fires for an invitation accept
     # that ends up rolled back.
-    _send_welcome_email(user=user)
+    _send_welcome_email(
+        user=user, email_category=_welcome_email_category(invitation, user)
+    )
 
     logger.info("invitation.accepted user=%s", user.pk)
     return user
+
+
+def _welcome_email_category(invitation, user: JasminUser) -> EmailCategory:
+    """The category of the welcome sent when ``invitation`` is accepted.
+
+    An invitation the office made for a member's portal login (it names the
+    member or the inviter) makes the welcome a member email. Public
+    self-registration creates its invitation with neither, so that welcome, like
+    the welcome for a staff or customer login, is a login email.
+    """
+    from apps.authz.roles import is_member_portal_login
+
+    made_by_the_office = (
+        invitation.member_id is not None or invitation.created_by_id is not None
+    )
+    if made_by_the_office and is_member_portal_login(user.roles):
+        return EmailCategory.MEMBER_LIFECYCLE
+    return EmailCategory.GENERAL
 
 
 # --------------------------------------------------------------------------- #
@@ -289,7 +327,9 @@ def accept_invitation(*, token: str, password: str) -> JasminUser:
 # --------------------------------------------------------------------------- #
 
 
-def _send_invitation_email(*, user: JasminUser, invitation) -> None:
+def _send_invitation_email(
+    *, user: JasminUser, invitation, email_category: EmailCategory
+) -> None:
     """Render and dispatch the invitation email.
 
     Best-effort — failures are logged but do NOT roll back the
@@ -333,6 +373,7 @@ def _send_invitation_email(*, user: JasminUser, invitation) -> None:
         related_object_type="user",
         related_object_id=str(user.id),
         language=user.user_language or None,  # render in the user's language
+        category=email_category,
         logger=logger,
         log_error_event="invitation.email_failed",
         log_not_sent_event="invitation.email_not_sent",
@@ -340,7 +381,7 @@ def _send_invitation_email(*, user: JasminUser, invitation) -> None:
     )
 
 
-def _send_welcome_email(*, user: JasminUser) -> None:
+def _send_welcome_email(*, user: JasminUser, email_category: EmailCategory) -> None:
     """Dispatch the ``accounts.welcome_user`` email when a user account
     transitions to ``active``.
 
@@ -350,6 +391,9 @@ def _send_welcome_email(*, user: JasminUser) -> None:
     the password is set and the portal becomes usable. Best-effort,
     deferred via ``on_commit`` so a rolled-back invitation-accept
     never produces a ghost welcome.
+
+    ``email_category`` is ``EmailCategory.MEMBER_LIFECYCLE`` for a member's
+    portal login the office invited, so onboarding mode suppresses it.
     """
     from apps.shared.deferred_email import schedule_deferred_email
 
@@ -369,6 +413,7 @@ def _send_welcome_email(*, user: JasminUser) -> None:
         related_object_type="user",
         related_object_id=str(user.id),
         language=user.user_language or None,  # render in the user's language
+        category=email_category,
         logger=logger,
         log_error_event="welcome.email_failed",
         log_not_sent_event="welcome.email_not_sent",

@@ -20,6 +20,8 @@
     "additional_requires_base": "Dies ist ein Zusatz-Anteil und kann nur hinzugefügt werden, wenn das Mitglied im selben Zeitraum bereits einen Basis-Anteil hat.",
     "additional_exceeds_base": "Ein Zusatz-Anteil kann nicht länger laufen als der Basis-Anteil, in den er gepackt wird. Bitte das Enddatum auf {{suggested_valid_until}} (Ende des Basis-Anteils) setzen.",
     "already_confirmed": "Dieses Abo ist bereits bestätigt.",
+    "member_not_admitted": "Bitte zuerst das Mitglied bestätigen: Ein bereits ausgetretenes Mitglied wird nicht über ein Abo aufgenommen.",
+    "ends_after_member_exit": "Das Abo endet nach dem Austrittsdatum des Mitglieds. Bitte das Abo-Ende auf spätestens das Austrittsdatum setzen.",
     "confirmed_immutable": "Ein bestätigtes Abo kann nicht mehr geändert oder gelöscht werden — stattdessen über die Kündigung beenden.",
     "variation_locked": "Die Anteilsvariante eines bestätigten Abos kann nicht mehr geändert werden — bitte ein neues Abo anlegen.",
     "renewal_variation_unavailable": "Für die automatische Verlängerung gibt es keine Anteilsvariante derselben Größe, die den gesamten neuen Zeitraum abdeckt. Bitte eine passende Variante anlegen oder verlängern.",
@@ -68,6 +70,9 @@
     "locked_after_admin_confirmation": "Dieses Feld ist nach der Bestätigung des Mitglieds gesetzlich fixiert und kann nicht mehr geändert werden.",
     "number_not_allowed_for_trial": "Probemitglieder erhalten keine Mitgliedsnummer — bitte die Spalte für Probemitglieder leer lassen.",
     "already_cancelled": "Diese Mitgliedschaft ist bereits gekündigt.",
+    "confirmation_date_requires_onboarding_mode": "Ein Bestätigungsdatum kann nur gesetzt werden, solange der Onboarding-Modus aktiv ist.",
+    "confirmation_date_in_future": "Das Bestätigungsdatum darf nicht in der Zukunft liegen.",
+    "confirmation_date_after_exit": "Das Bestätigungsdatum darf nicht nach dem Austrittsdatum des Mitglieds liegen. Bitte ein Datum bis zum Austrittsdatum wählen.",
     "has_active_subscriptions": "Eine Kündigung ist nur möglich, wenn keine aktiven Abos mehr bestehen. Bitte zuerst die Abos kündigen oder auslaufen lassen.",
     "not_found": "Mitglied nicht gefunden.",
     "cancel": {
@@ -82,7 +87,8 @@
     "value_not_configured": "Der Wert eines Genossenschaftsanteils ist nicht konfiguriert. Bitte wende dich an das Büro.",
     "invalid_amount": "Die Anzahl der Genossenschaftsanteile muss eine ganze Zahl größer als 0 sein.",
     "confirmed_immutable": "Ein bestätigter Geschäftsanteil kann nicht gelöscht werden — stattdessen den Anteil (oder das Mitglied) kündigen.",
-    "confirmed_fields_locked": "Bei einem bestätigten Geschäftsanteil können Anzahl, Mitglied, Fälligkeitsdatum und Aufstockung nicht mehr geändert werden — stattdessen den Anteil kündigen und einen neuen erfassen."
+    "confirmed_fields_locked": "Bei einem bestätigten Geschäftsanteil können Anzahl, Mitglied, Fälligkeitsdatum und Aufstockung nicht mehr geändert werden — stattdessen den Anteil kündigen und einen neuen erfassen.",
+    "not_pending": "Nur ein offener Genossenschaftsanteil (nicht bestätigt, nicht gekündigt) kann bestätigt werden."
   },
   "coop_share_transfer": {
     "same_member": "Genossenschaftsanteile können nicht an dasselbe Mitglied übertragen werden.",
@@ -433,6 +439,9 @@
     "expired": "Dieses Angebot ist abgelaufen. Bitte kontaktiere das Büro.",
     "invalid": "Dieser Angebots-Link ist ungültig oder wurde bereits verwendet.",
     "not_available": "Dieses Abo ist kein offener Wartelisten-Eintrag und kann nicht angeboten werden."
+  },
+  "onboarding_mode": {
+    "email_action_blocked": "Diese Aktion schickt dem Mitglied eine E-Mail, und solange der Onboarding-Modus aktiv ist, werden keine E-Mails an Mitglieder verschickt. Bitte zuerst den Onboarding-Modus ausschalten."
   },
   "boundary": {
     "title": "Etwas ist schiefgelaufen",

@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import type { FC } from "react";
-import { Checkbox, Descriptions, Modal, Tag } from "antd";
+import { Alert, Checkbox, Descriptions, Modal, Tag } from "antd";
 import { usePaperReceivedToggle } from "@hooks/usePaperReceivedToggle";
 import {
   CheckCircleOutlined,
@@ -57,6 +57,7 @@ export const AdminConfirmationModalAbos: FC<
   const requiresSepaPaper = Boolean(
     getSetting("requires_paper_signature_for_sepa_mandate", false),
   );
+  const onboardingMode = getSetting("onboarding_mode", false) === true;
 
   // SEPA mandate status for the abo's member — confirming an abo for a member
   // without a usable mandate is a red flag the office should see right here.
@@ -172,6 +173,16 @@ export const AdminConfirmationModalAbos: FC<
             kind="rejected"
             at={abo.admin_rejected_at}
             reason={abo.admin_rejection_reason}
+          />
+        )}
+        {/* The subscription confirm admits a not-yet-confirmed member with
+            today's date; only the member confirm takes a manual date. */}
+        {onboardingMode && !abo.admin_confirmed && !isRejected && (
+          <Alert
+            type="info"
+            showIcon
+            className="onboarding-subscription-confirm-hint"
+            message={t("onboarding.mode.subscription_confirm_hint")}
           />
         )}
         <Descriptions

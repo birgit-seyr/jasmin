@@ -32,14 +32,16 @@ log = logging.getLogger("tasks")
 # bloat the per-tenant table.
 RETENTION_DAYS = 90
 
-# EmailLog statuses we DELETE after the retention window. Statuses we
-# KEEP regardless of age (because they're still actionable from an ops
-# / forensic angle) are everything else, i.e. ``pending`` (still in
-# flight), ``deferred`` (provider will retry), ``failed`` (network /
-# unknown error worth investigating), ``rejected`` (permanent config
-# issue worth keeping until fixed), ``complained`` (recipient marked
-# as spam — kept for the suppression-list audit trail).
-DELETABLE_STATUSES = ("sent", "delivered", "bounced")
+# EmailLog statuses we DELETE after the retention window: healthy traffic
+# and ``suppressed`` (not sent because the tenant was in onboarding mode,
+# nothing to investigate). Statuses we KEEP regardless of age (because
+# they're still actionable from an ops / forensic angle) are everything
+# else, i.e. ``pending`` (still in flight), ``deferred`` (provider will
+# retry), ``failed`` (network / unknown error worth investigating),
+# ``rejected`` (permanent config issue worth keeping until fixed),
+# ``complained`` (recipient marked as spam — kept for the suppression-list
+# audit trail).
+DELETABLE_STATUSES = ("sent", "delivered", "bounced", "suppressed")
 
 
 @db_periodic_task(crontab(hour="2", minute="15"), retries=2, retry_delay=300)

@@ -12,6 +12,7 @@ failures are logged and swallowed.
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Any
 
 from django.db import transaction
@@ -71,17 +72,21 @@ class MemberService:
         admin_user: JasminUser | None,
         notify_user: bool,
         request: Any | None = None,
+        confirm_active_user: bool = True,
     ) -> Member:
         """Link `member` to an existing `user` and apply status side-effects.
 
         For an `active` user: auto-confirms the Member and (when
         `notify_user` is true) sends a welcome email. For other statuses
         the link is set but no further action is taken.
+
+        ``confirm_active_user=False`` (the CSV import in onboarding mode) only
+        links: the office confirms the member later with its historical date.
         """
         member.user = user
         member.save(update_fields=["user"])
 
-        if user.account_status == "active":
+        if confirm_active_user and user.account_status == "active":
             member.confirm(admin_user=admin_user, save=True)
             if notify_user and member.email:
                 # ``accounts.welcome_user`` is a USER-account event — the
@@ -113,6 +118,9 @@ class MemberService:
         *,
         admin_user: JasminUser,
         request: Any | None = None,
+        confirmed_at: datetime | None = None,
+        notify: bool = True,
+        allow_cancelled: bool = False,
     ) -> Member:
         """Confirm `member` and best-effort notify the applicant by email.
 
@@ -120,6 +128,18 @@ class MemberService:
         ``_send_email`` so a rollback elsewhere in the request cycle
         cannot leave the applicant with a confirmation email for a
         non-confirmed Member.
+
+        Onboarding mode passes the other three arguments:
+
+        * ``confirmed_at`` dates the confirmation, the entry date and the
+          confirmation of the member's pending coop shares.
+        * ``notify=False`` sends neither ``accounts.application_approved`` nor
+          ``commissioning.trial_converted``.
+        * ``allow_cancelled=True`` admits a member who has already left (admit
+          and exit): the member is confirmed on a day no later than the exit
+          date, then every open coop share is cancelled with the member's
+          existing exit stamps and the normal payback due date. The member row
+          keeps its cancellation and no cancellation email is sent.
         """
         if member.admin_confirmed:
             raise MemberAlreadyConfirmed("Member is already confirmed")
@@ -128,7 +148,11 @@ class MemberService:
         # Defense-in-depth for every confirm caller (the coop-share and
         # subscription confirm endpoints already block this upstream).
         if member.cancelled_at is not None:
-            raise MemberAlreadyCancelled("Cannot confirm a cancelled member.")
+            if not allow_cancelled:
+                raise MemberAlreadyCancelled("Cannot confirm a cancelled member.")
+            from .onboarding_policy import assert_confirmation_not_after_exit
+
+            assert_confirmation_not_after_exit(member, confirmed_at=confirmed_at)
 
         # GenG: a full member admitted into the Mitgliederliste must
         # hold an equity position inside the tenant's
@@ -145,15 +169,24 @@ class MemberService:
 
         CoopShareService.assert_member_total_within_bounds(member)
 
-        member.confirm(admin_user=admin_user, save=True)
+        member.confirm(admin_user=admin_user, save=True, confirmed_at=confirmed_at)
 
         # Admitting the member admits their pending (self-subscribed) coop
         # shares in lock-step — the office reviews person + equity together.
         # Shares subscribed AFTER admission stay pending until confirmed
         # separately (CoopShareViewSet.confirm).
-        CoopShareService.confirm_pending_for_member(member, admin_user=admin_user)
+        CoopShareService.confirm_pending_for_member(
+            member, admin_user=admin_user, confirmed_at=confirmed_at, notify=notify
+        )
 
-        if member.email:
+        if member.cancelled_at is not None:
+            # Admit and exit: the membership ended before it was recorded, so
+            # the equity confirmed just now is already on its way back.
+            from .member_cancellation import cancel_coop_shares_of_departed_member
+
+            cancel_coop_shares_of_departed_member(member)
+
+        if notify and member.email:
             self._send_email(
                 member,
                 slug="accounts.application_approved",
@@ -296,6 +329,7 @@ class MemberService:
             create_user_with_invitation,
             resend_invitation,
         )
+        from apps.shared.tenants.onboarding_emails import EmailCategory
 
         if not member.email:
             raise MemberHasNoEmail("Member has no email address.")
@@ -311,7 +345,11 @@ class MemberService:
             # manual DB edit. Only a genuinely active (or pending-approval)
             # account is a real conflict.
             if member.user.account_status in {"pending_invitation", "inactive"}:
-                resend_invitation(user=member.user, created_by=admin_user)
+                resend_invitation(
+                    user=member.user,
+                    created_by=admin_user,
+                    email_category=EmailCategory.MEMBER_LIFECYCLE,
+                )
                 return member
             raise MemberUserAlreadyActive("Member already has an active user account.")
 
@@ -337,6 +375,7 @@ class MemberService:
             user_language=getattr(member, "preferred_language", None),
             member=member,
             created_by=admin_user,
+            email_category=EmailCategory.MEMBER_LIFECYCLE,
         )
         member.user = user
         member.save(update_fields=["user"])

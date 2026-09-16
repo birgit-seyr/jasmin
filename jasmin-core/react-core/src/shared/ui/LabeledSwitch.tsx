@@ -16,6 +16,8 @@ export interface LabeledSwitchProps {
   disabled?: boolean;
   loading?: boolean;
   id?: string;
+  /** Id of an element that describes the switch (``aria-describedby``). */
+  describedBy?: string;
   /** Spacing between switch and label. */
   gap?: number | string;
 }
@@ -30,6 +32,7 @@ export default function LabeledSwitch({
   disabled,
   loading,
   id,
+  describedBy,
   gap = 8,
 }: LabeledSwitchProps) {
   const generatedId = useId();
@@ -44,6 +47,7 @@ export default function LabeledSwitch({
         size={size}
         disabled={disabled}
         loading={loading}
+        aria-describedby={describedBy}
         checkedChildren={withEyeIcons ? <EyeOutlined /> : undefined}
         unCheckedChildren={withEyeIcons ? <EyeInvisibleOutlined /> : undefined}
       />

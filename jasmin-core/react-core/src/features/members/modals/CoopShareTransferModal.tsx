@@ -11,6 +11,7 @@ import {
 import type { CoopShareTransfer } from "@shared/api/generated/models";
 import { ModalCancelSaveFooter } from "@shared/modals/shared";
 import MemberSelector from "@shared/selectors/MemberSelector";
+import OnboardingNoEmailHint from "@shared/ui/OnboardingNoEmailHint";
 import { notify } from "@shared/utils";
 import { getErrorCode, getErrorMessage } from "@shared/utils/apiError";
 import { useDateFormat, useMembers } from "@hooks/index";
@@ -300,6 +301,7 @@ export default function CoopShareTransferModal({
           />
         )}
       </Form>
+      <OnboardingNoEmailHint />
     </Modal>
   );
 }

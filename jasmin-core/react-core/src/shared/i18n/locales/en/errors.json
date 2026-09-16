@@ -20,6 +20,8 @@
     "additional_requires_base": "This is an additional share and can only be added when the member already has a base share active for the same period.",
     "additional_exceeds_base": "An additional share cannot run longer than the base share it is packed into. Set the end date to {{suggested_valid_until}} (the base share's end) to continue.",
     "already_confirmed": "This subscription is already confirmed.",
+    "member_not_admitted": "Confirm the member first: a member who has already left isn't admitted through a subscription.",
+    "ends_after_member_exit": "The subscription ends after the member's exit date. Please set its end to the exit date or earlier.",
     "confirmed_immutable": "A confirmed subscription can no longer be edited or deleted — end it via cancellation instead.",
     "variation_locked": "A confirmed subscription's share-type variation can no longer be changed — create a new subscription instead.",
     "renewal_variation_unavailable": "Auto-renewal found no share-type variation of the same size covering the whole new term. Add or extend a matching variation.",
@@ -68,6 +70,9 @@
     "locked_after_admin_confirmation": "This field is legally fixed once the member is confirmed and can no longer be changed.",
     "number_not_allowed_for_trial": "Trial members do not get a member number — leave the column blank for trial rows.",
     "already_cancelled": "This membership is already cancelled.",
+    "confirmation_date_requires_onboarding_mode": "A confirmation date can only be set while onboarding mode is on.",
+    "confirmation_date_in_future": "The confirmation date can't be in the future.",
+    "confirmation_date_after_exit": "The confirmation date can't be after the member's exit date. Please pick a date up to the exit date.",
     "has_active_subscriptions": "You can only cancel once you have no active subscriptions. Please cancel or let your subscriptions expire first.",
     "not_found": "Member not found.",
     "cancel": {
@@ -82,7 +87,8 @@
     "value_not_configured": "The value of one cooperative share is not configured. Please contact the office.",
     "invalid_amount": "The number of coop shares must be a whole number greater than 0.",
     "confirmed_immutable": "A confirmed cooperative share can’t be deleted — cancel the share (or the member) instead.",
-    "confirmed_fields_locked": "The amount, member, due date and increase flag of a confirmed cooperative share can no longer be changed — cancel the share and record a new one instead."
+    "confirmed_fields_locked": "The amount, member, due date and increase flag of a confirmed cooperative share can no longer be changed — cancel the share and record a new one instead.",
+    "not_pending": "Only a pending cooperative share (not confirmed, not cancelled) can be confirmed."
   },
   "coop_share_transfer": {
     "same_member": "Cooperative shares can't be transferred to the same member.",
@@ -433,6 +439,9 @@
     "expired": "This offer has expired. Please contact the office.",
     "invalid": "This offer link is invalid or has already been used.",
     "not_available": "This subscription is not a pending waiting-list entry."
+  },
+  "onboarding_mode": {
+    "email_action_blocked": "This action emails the member, and no member emails are sent while onboarding mode is on. Turn off onboarding mode first."
   },
   "boundary": {
     "title": "Something went wrong",

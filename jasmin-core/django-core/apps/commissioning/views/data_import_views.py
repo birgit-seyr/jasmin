@@ -41,6 +41,7 @@ from ..services.data_import import (
     get_serializer_for_model,
     import_rows_from_csv,
 )
+from ..services.onboarding_policy import onboarding_mode_enabled
 
 
 class DataImportView(APIViewRolePermissionsMixin, APIView):
@@ -120,7 +121,13 @@ class DataImportView(APIViewRolePermissionsMixin, APIView):
         # whole-file problems; the global handler renders it. Per-row failures
         # come back on ``result`` and never raise.
         result = import_rows_from_csv(
-            model_name, file_bytes, importing_user=request.user, dry_run=dry_run
+            model_name,
+            file_bytes,
+            importing_user=request.user,
+            dry_run=dry_run,
+            # In onboarding mode a linked member stays unconfirmed so the office
+            # can confirm it with its historical date and without an email.
+            confirm_active_users=not onboarding_mode_enabled(),
         )
 
         return Response(result.to_dict(), status=status.HTTP_200_OK)

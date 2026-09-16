@@ -1,4 +1,4 @@
-import { Input, Select, Tag } from "antd";
+import { Input, Select } from "antd";
 import { ReadOnlyReportTable } from "@shared/tables";
 import { ExplainerText } from "@shared/ui";
 import type { ColumnsType } from "antd/es/table";
@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import type { EmailLog } from "@shared/api/generated/models";
 import { useNotificationsEmailLogsList } from "@shared/api/generated/notifications/notifications";
 import { useTimeFormat } from "@hooks/index";
-import { getEmailStatusColor } from "@shared/utils/emailStatusColors";
+import EmailStatusTag from "../components/EmailStatusTag";
 
 const ALL_STATUSES = [
   "pending",
@@ -18,6 +18,7 @@ const ALL_STATUSES = [
   "complained",
   "rejected",
   "failed",
+  "suppressed",
 ] as const;
 
 const ALL_PURPOSES = [
@@ -33,6 +34,9 @@ const ALL_PURPOSES = [
   "commissioning.invoice",
   "commissioning.delivery_note",
   "commissioning.invoice_reminder",
+  "commissioning.waiting_list_offer",
+  "commissioning.member_self_cancelled_office",
+  "commissioning.subscription_renewal_failures_office",
   "gdpr.deletion_confirm",
   "gdpr.deletion_approved",
   "gdpr.deletion_rejected",
@@ -104,11 +108,7 @@ export default function EmailLog() {
         dataIndex: "status",
         key: "status",
         width: "9em",
-        render: (value: string) => (
-          <Tag color={getEmailStatusColor(value)}>
-            {t(`email_matrix.status.${value}`)}
-          </Tag>
-        ),
+        render: (value: string) => <EmailStatusTag status={value} />,
       },
       {
         title: t("email_matrix.sent_at"),

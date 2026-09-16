@@ -74,6 +74,8 @@ class CapacityReservationService:
         when it is open-ended, else the per-week successor for a time-bounded
         default — matching what ``_create_share_deliveries`` materializes, so a
         mid-term handoff can't slip a delivery onto an over-full successor DSD.
+        Only current and future weeks are reserved: the past weeks an onboarding
+        confirm backfills are materialised without a capacity hold or check.
         """
         delivery_station_day_id = subscription.default_delivery_station_day_id
         if (
@@ -171,6 +173,10 @@ class CapacityReservationService:
         still active it reserved the slot and the check passes; if it lapsed
         and someone else took the slot, raises
         :class:`DeliveryStationOverCapacity`.
+
+        Checks current and future weeks only, also for an onboarding confirm
+        that backfills past weeks: a week that has passed can't be made to fit
+        any more, so its occupancy never blocks the confirm.
         """
         delivery_station_day_id = subscription.default_delivery_station_day_id
         if (

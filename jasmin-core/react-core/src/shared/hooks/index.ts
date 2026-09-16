@@ -52,6 +52,7 @@ export { useSubscriptionTerm } from './useSubscriptionTerm';
 export { useTableRowSelection } from './useTableRowSelection';
 export { useSepaMandateStatus } from './useSepaMandateStatus';
 export { useTenant } from './configuration/useTenant';
+export { useOnboardingMode } from './configuration/useOnboardingMode';
 export { useTenantSettingToggle } from './configuration/useTenantSettingToggle';
 export {
   useOrganicGate,

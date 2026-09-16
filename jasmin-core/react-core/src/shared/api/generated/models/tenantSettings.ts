@@ -103,6 +103,7 @@ export interface TenantSettings {
   show_seller_name_of_share_article_in_share_for_member_on_page?: boolean;
   round_up_to_full_pu_harvesting?: boolean;
   allows_self_registration?: boolean;
+  onboarding_mode?: boolean;
   has_markets?: boolean;
   sells_to_resellers?: boolean;
   crates_should_be_on_documents?: boolean;

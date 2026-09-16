@@ -7,13 +7,15 @@
  */
 
 /**
- * Serializer for member growth statistics.
+ * Admitted members per period: entries, exits and the count at its end.
  */
 export interface MemberGrowthStatistic {
   /** Period date (start of month/week/year) */
   period: string;
-  /** Number of new members in this period */
+  /** Confirmed members whose entry date falls in this period */
   new_members: number;
-  /** Cumulative total members up to this period */
+  /** Confirmed members whose exit date falls in this period */
+  exited_members: number;
+  /** Members at the end of this period: every entry up to it minus every exit up to it, including those before the filtered window */
   total_members: number;
 }

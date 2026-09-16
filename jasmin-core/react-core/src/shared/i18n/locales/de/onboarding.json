@@ -2,13 +2,11 @@
   "title": "Bestehende Abos importieren",
   "abos_link": "Bestehende Abos importieren (Onboarding)",
   "members_title": "Bestehende Mitglieder importieren",
-  "members_intro": "Zwei Wege, bestehende Mitglieder zu übernehmen: per CSV-Import oder händisch (mit editierbarem Eintrittsdatum).",
+  "members_intro": "Bestehende Mitglieder per CSV-Import übernehmen. Für die händische Erfassung den Onboarding-Modus unten auf der Mitglieder-Seite einschalten.",
   "members_csv_title": "Per CSV importieren",
   "members_upload_disabled": "Der CSV-Upload ist für diesen Tenant deaktiviert (Einstellung „Upload für Datenlisten erlauben“).",
-  "members_manual_title": "Händisch erfassen",
-  "members_manual_explain": "Aktiviere die händische Übertragung, um Mitglieder von Hand zu erfassen oder zu bearbeiten. Dann wird das sonst automatisch gesetzte Eintrittsdatum (GenG §30) in der Tabelle editierbar – so kannst du das historische Eintrittsdatum bestehender Mitglieder eintragen. Danach dieses Fenster schließen und in der Tabelle bearbeiten.",
+  "members_manual_hint": "Händisch erfassen: Schalte unten auf der Mitglieder-Seite den Onboarding-Modus ein. Dann sind Mitgliedsnummer und Eintrittsdatum in der Tabelle editierbar.",
   "members_link": "Bestehende Mitglieder importieren (Onboarding)",
-  "members_manual_active": "händische Übertragung aktiv",
   "intro": "Bestehende Mitglieder und Abos können mit dieser Anleitung importiert werden: zuerst die Stammdaten, dann die Mitglieder, dann die Abos. Abos verweisen per Klartext-Schlüssel (Mitgliedsnummer, Variantenname …) auf die zuvor angelegten Daten.",
   "stage1": {
     "title": "1. Stammdaten anlegen",
@@ -97,5 +95,33 @@
     "due_date": "Optional – Zahlungsfrist für die Anteile (JJJJ-MM-TT).",
     "paid_at": "Optional – Datum, an dem das Mitglied tatsächlich bezahlt hat (JJJJ-MM-TT). Leer lassen, wenn noch offen.",
     "note": "Freitext-Notiz (optional)."
+  },
+  "mode": {
+    "switch_label": "Onboarding-Modus",
+    "switch_hint": "Für die Übernahme bestehender Mitglieder, Genossenschaftsanteile und Abos aus einem anderen System. Nach der Übernahme wieder ausschalten. Das Umschalten erfordert eine erneute Passwortbestätigung.",
+    "banner_title": "Onboarding-Modus ist aktiv",
+    "banner_intro": "Solange der Onboarding-Modus aktiv ist, gilt für den ganzen Tenant:",
+    "effects": {
+      "no_emails": "Es werden keine E-Mails verschickt außer Anmelde-, Wiederverkäufer- und DSGVO-E-Mails. Nicht verschickt werden: E-Mails an Mitglieder zu Aufnahme, Ablehnung, Kündigung und Umwandlung einer Probemitgliedschaft, Einladungen ins Mitgliederportal, Wartelisten-Angebote sowie Hinweise ans Büro zu Selbstkündigungen und fehlgeschlagenen Abo-Verlängerungen. Mitglieder einladen und Wartelistenplätze anbieten ist nicht möglich. Weiterhin verschickt werden: Passwort-Zurücksetzen, E-Mail-Bestätigungscodes, Einladungen und Willkommens-E-Mails für Zugänge von Büro, GärtnerInnen und Wiederverkäufern sowie für die Selbstregistrierung; Angebote, Rechnungen (auch an die Buchhaltungs-E-Mail), Lieferscheine und Zahlungserinnerungen an Wiederverkäufer; DSGVO-Lösch-E-Mails; und Test-E-Mails an die eigene Adresse.",
+      "confirmation_dates": "Das Bestätigungsdatum kann händisch gesetzt werden.",
+      "member_fields": "Mitgliedsnummer und Eintrittsdatum sind in der Mitglieder-Tabelle editierbar.",
+      "past_start": "Abos dürfen in der Vergangenheit beginnen.",
+      "backfill": "Beim Bestätigen eines Abos werden Lieferungen bis zu 6 Wochen rückwirkend angelegt.",
+      "departed_members": "Abos von bereits ausgetretenen Mitgliedern können bestätigt werden, wenn das Mitglied bestätigt ist und das Abo spätestens am Austrittsdatum endet.",
+      "confirm_members_first": "Mitglieder zuerst auf der Mitglieder-Seite mit ihrem Bestätigungsdatum bestätigen. Wird ein Mitglied stattdessen über ein Abo, eine angenommene Einladung oder als Probemitglied über einen neuen Genossenschaftsanteil aufgenommen, erhält es das heutige Bestätigungs- und Eintrittsdatum."
+    },
+    "banner_outro": "Schalte den Modus nach der Übernahme unten auf der Seite wieder aus.",
+    "subscription_confirm_hint": "Onboarding-Modus: Ist das Mitglied noch nicht bestätigt, nimmt die Bestätigung dieses Abos es mit dem heutigen Datum auf. Bestätige das Mitglied vorher auf der Mitglieder-Seite, um das tatsächliche Bestätigungsdatum einzutragen.",
+    "no_email_hint": "Der Onboarding-Modus ist aktiv, daher wird keine E-Mail verschickt.",
+    "invitation_disabled": "Der Onboarding-Modus ist aktiv, solange werden keine Einladungen an Mitglieder verschickt. Zum Einladen den Onboarding-Modus ausschalten.",
+    "offer_spot_disabled": "Der Onboarding-Modus ist aktiv, solange werden keine Wartelisten-Angebote verschickt. Zum Anbieten des Platzes den Onboarding-Modus ausschalten.",
+    "reject_warning_title": "Onboarding-Modus ist aktiv: Es wird keine Ablehnungs-E-Mail verschickt.",
+    "reject_warning_body": "Die antragstellende Person wird nicht benachrichtigt. Die Ablehnung wird sofort gespeichert und kann über diese Oberfläche nicht rückgängig gemacht werden.",
+    "reject_reason_label": "Begründung (wird gespeichert, nicht verschickt)"
+  },
+  "confirmation_date": {
+    "label": "Bestätigungsdatum",
+    "hint": "Onboarding-Modus: das Datum, an dem die Bestätigung tatsächlich erfolgt ist. Es wird keine E-Mail verschickt.",
+    "hint_departed": "Onboarding-Modus: Das Mitglied ist zum {{date}} ausgetreten. Das Bestätigungsdatum darf nicht danach liegen. Offene Genossenschaftsanteile werden anschließend zum Austrittsdatum gekündigt. Es wird keine E-Mail verschickt."
   }
 }

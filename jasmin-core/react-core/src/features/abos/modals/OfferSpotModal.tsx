@@ -1,7 +1,12 @@
-import { Descriptions, InputNumber, Modal } from "antd";
-import { useEffect, useState } from "react";
+import { Descriptions, InputNumber, Modal, Typography } from "antd";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useCurrency, useDateFormat, useVariationLabel } from "@hooks/index";
+import {
+  useCurrency,
+  useDateFormat,
+  useOnboardingMode,
+  useVariationLabel,
+} from "@hooks/index";
 import type { AboRecord } from "@features/abos/pages/types";
 
 interface OfferSpotModalProps {
@@ -21,6 +26,9 @@ interface OfferSpotModalProps {
  * old, so the price field is pre-filled with the variation's CURRENT active
  * price; the office can override it (e.g. to keep a loyalty price). The member
  * then sees exactly this price on their accept page.
+ *
+ * Sending is disabled while the tenant's onboarding mode is on, which can be
+ * switched on while the modal is open: the server refuses the offer then.
  */
 export function OfferSpotModal({
   open,
@@ -35,6 +43,8 @@ export function OfferSpotModal({
   const { formatDate } = useDateFormat();
   const variationLabel = useVariationLabel();
   const [price, setPrice] = useState<number | null>(null);
+  const onboardingMode = useOnboardingMode();
+  const blockedReasonId = useId();
 
   // Re-seed the price each time the modal opens for a row: prefer the current
   // active price, else the row's stored (possibly stale) price.
@@ -61,10 +71,23 @@ export function OfferSpotModal({
       okText={t("abos.notify_member")}
       cancelText={t("common.cancel")}
       confirmLoading={loading}
+      okButtonProps={{
+        disabled: onboardingMode,
+        "aria-describedby": onboardingMode ? blockedReasonId : undefined,
+      }}
       onOk={() => onConfirm(price)}
       onCancel={onCancel}
       destroyOnClose
     >
+      {onboardingMode && (
+        <Typography.Paragraph
+          id={blockedReasonId}
+          type="secondary"
+          className="onboarding-offer-spot-blocked"
+        >
+          {t("onboarding.mode.offer_spot_disabled")}
+        </Typography.Paragraph>
+      )}
       <Descriptions column={1} size="small" bordered>
         <Descriptions.Item label={t("members.member")}>
           {record?.member_string}

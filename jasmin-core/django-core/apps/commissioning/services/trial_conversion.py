@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 def convert_trial_member_on_first_coop_share(
-    member: Member, *, entry_date: date | None = None
+    member: Member, *, entry_date: date | None = None, notify: bool = True
 ) -> bool:
     """Convert ``member`` from trial → full when they acquire equity.
 
@@ -52,7 +52,11 @@ def convert_trial_member_on_first_coop_share(
     ``False`` if the member was already a full member.
 
     ``entry_date`` becomes the entry date of a member who has none yet (a coop
-    share transfer passes its transfer date); without it that is today.
+    share transfer passes its transfer date, an onboarding-mode confirm its
+    confirmation date); without it that is today.
+
+    ``notify=False`` (onboarding mode) converts without scheduling the
+    ``commissioning.trial_converted`` email.
 
     Caller is expected to be inside a transaction that ALSO inserts the
     triggering ``CoopShare``. The current ``transaction.atomic`` wrapper
@@ -123,7 +127,7 @@ def convert_trial_member_on_first_coop_share(
             member._generate_member_number()
         member.save(update_fields=update_fields)
 
-    if member.email:
+    if notify and member.email:
         _send_trial_converted_email(member)
 
     return True

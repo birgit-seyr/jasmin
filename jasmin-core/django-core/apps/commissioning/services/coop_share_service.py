@@ -127,7 +127,13 @@ class CoopShareService:
         return qs.aggregate(total=Sum("amount_of_coop_shares"))["total"] or Decimal(0)
 
     @staticmethod
-    def confirm_pending_for_member(member: Member, *, admin_user) -> int:
+    def confirm_pending_for_member(
+        member: Member,
+        *,
+        admin_user,
+        confirmed_at: datetime | None = None,
+        notify: bool = True,
+    ) -> int:
         """Confirm all of ``member``'s pending (unconfirmed, non-cancelled) coop
         shares and return how many were confirmed.
 
@@ -137,6 +143,10 @@ class CoopShareService:
         until confirmed separately. The shares are already part of the member's
         live total (which was bounds-checked at member confirmation), so no
         re-validation is needed here.
+
+        ``confirmed_at`` (onboarding mode) dates the shares' confirmation and a
+        trial member's entry date; ``notify=False`` suppresses the trial
+        conversion email.
         """
         from django.db import transaction
         from django.utils import timezone
@@ -165,10 +175,20 @@ class CoopShareService:
             CoopShare.objects.filter(pk__in=[share.pk for share in pending]).update(
                 admin_confirmed=True,
                 admin_confirmed_by=admin_user,
-                admin_confirmed_at=timezone.now(),
+                admin_confirmed_at=(
+                    confirmed_at if confirmed_at is not None else timezone.now()
+                ),
                 admin_rejection_reason=None,
             )
-            convert_trial_member_on_first_coop_share(member)
+            convert_trial_member_on_first_coop_share(
+                member,
+                entry_date=(
+                    timezone.localdate(confirmed_at)
+                    if confirmed_at is not None
+                    else None
+                ),
+                notify=notify,
+            )
         return len(pending)
 
     @staticmethod

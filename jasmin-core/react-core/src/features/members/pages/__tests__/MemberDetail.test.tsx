@@ -25,6 +25,9 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
+// Whether the tenant's onboarding mode is on, per test.
+const onboardingState = vi.hoisted(() => ({ onboardingMode: false }));
+
 vi.mock("@hooks/index", async () => {
   const { makeUseTenantMock } = await import("@/test/tenantMock");
   // Build once so the returned object is reference-stable across
@@ -34,6 +37,7 @@ vi.mock("@hooks/index", async () => {
     useTenant: () => tenant,
     useShareTypes: () => ({ shareTypes: [] }),
     useLogoShape: () => ({ logoShape: "circle", logoAspectRatio: 1 }),
+    useOnboardingMode: () => onboardingState.onboardingMode,
     // ``MemberConsentsCard`` (a child of MemberDetail) calls
     // ``useTimeFormat().formatDateTimeWithFallback`` to render the
     // ``consented_at`` / ``revoked_at`` timestamps. We stub it
@@ -52,8 +56,12 @@ vi.mock("@hooks/index", async () => {
 });
 
 const logoutMock = vi.fn();
+// The logged-in user; ``useRoles`` reads its roles. No user means no roles.
+const authState = vi.hoisted(() => ({
+  user: null as { roles: string[] } | null,
+}));
 vi.mock("@shared/contexts/AuthContext", () => ({
-  useAuth: () => ({ logout: logoutMock }),
+  useAuth: () => ({ logout: logoutMock, user: authState.user }),
 }));
 
 // Stub every child component & modal — we don't test their internals here.
@@ -94,11 +102,18 @@ vi.mock("@features/members/components/DeliveryStationDaysCard", () => ({
 
 // MemberDetail renders only the delivery modal + coop-shares modal; member
 // editing lives in the top-right UserMenu → "Meine Daten".
+// The props the office coop shares modal received on its last render.
+const coopSharesModal = vi.hoisted(() => ({
+  lastProps: null as Record<string, unknown> | null,
+}));
+
 vi.mock("@features/members/modals", () => ({
   MemberDeliveryEditModal: ({ visible }: { visible: boolean }) =>
     visible ? <div data-testid="delivery-edit-modal" /> : null,
-  CoopSharesModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="coop-shares-modal" /> : null,
+  CoopSharesModal: (props: { isOpen: boolean }) => {
+    coopSharesModal.lastProps = props;
+    return props.isOpen ? <div data-testid="coop-shares-modal" /> : null;
+  },
   MemberCoopSharesModal: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="member-coop-shares-modal" /> : null,
   CancelMembershipModal: ({ isOpen }: { isOpen: boolean }) =>
@@ -146,6 +161,9 @@ function renderPage(client = makeQueryClient()) {
 
 beforeEach(() => {
   logoutMock.mockReset();
+  coopSharesModal.lastProps = null;
+  onboardingState.onboardingMode = false;
+  authState.user = null;
   // MemberConsentsCard (mounted inside MemberDetail) lists consents on
   // mount. Default to an empty list so every test doesn't have to
   // re-register the handler. Tests that exercise consent UI explicitly
@@ -184,6 +202,30 @@ describe("MemberDetail (integration)", () => {
     expect(screen.getByTestId("upcoming-deliveries-card")).toBeInTheDocument();
     expect(screen.getByTestId("active-subscriptions-card")).toBeInTheDocument();
     expect(screen.getByTestId("payments-card")).toBeInTheDocument();
+  });
+
+  it("passes the member's entry and exit dates to the coop shares modal", async () => {
+    server.use(
+      http.get(`/api/commissioning/members/${MEMBER_ID}/`, () =>
+        HttpResponse.json({
+          ...baseMember,
+          entry_date: "2019-04-01",
+          cancelled_effective_at: "2024-12-31",
+        }),
+      ),
+      http.get("/api/commissioning/share_delivery/", () =>
+        HttpResponse.json([]),
+      ),
+      http.get("/api/commissioning/abos/", () => HttpResponse.json([])),
+    );
+
+    renderPage();
+    await screen.findByText("Alice Acres");
+
+    expect(coopSharesModal.lastProps).toMatchObject({
+      memberEntryDate: "2019-04-01",
+      memberCancelledEffectiveAt: "2024-12-31",
+    });
   });
 
   it("shows the 'member not found' branch + go-back button when the API returns 404", async () => {
@@ -391,5 +433,45 @@ describe("MemberDetail (integration)", () => {
     // Healthy baseline: ~5 commits. Bound is loose so legitimate refactors
     // don't trip it — a real loop would be in the thousands.
     expect(profiler.onRender.mock.calls.length).toBeLessThan(80);
+  });
+  describe("pending application page", () => {
+    beforeEach(() => {
+      authState.user = { roles: ["member"] };
+      server.use(
+        http.get(`/api/commissioning/members/${MEMBER_ID}/`, () =>
+          HttpResponse.json({ ...baseMember, admin_confirmed: false }),
+        ),
+        http.get("/api/commissioning/share_delivery/", () =>
+          HttpResponse.json([]),
+        ),
+        http.get("/api/commissioning/abos/", () => HttpResponse.json([])),
+      );
+    });
+
+    it("says an email follows the approval while onboarding mode is off", async () => {
+      renderPage();
+
+      expect(
+        await screen.findAllByText("members.application_pending_subtitle"),
+      ).toHaveLength(2);
+      expect(
+        screen.queryByText("members.application_pending_subtitle_no_email"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("promises no email while onboarding mode is on", async () => {
+      onboardingState.onboardingMode = true;
+
+      renderPage();
+
+      expect(
+        await screen.findAllByText(
+          "members.application_pending_subtitle_no_email",
+        ),
+      ).toHaveLength(2);
+      expect(
+        screen.queryByText("members.application_pending_subtitle"),
+      ).not.toBeInTheDocument();
+    });
   });
 });

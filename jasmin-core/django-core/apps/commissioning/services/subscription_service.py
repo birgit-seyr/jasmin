@@ -275,7 +275,11 @@ class SubscriptionService:
 
     @transaction.atomic
     def materialize_confirmed_subscription(
-        self, subscription: Subscription, *, actor: Any = None
+        self,
+        subscription: Subscription,
+        *,
+        actor: Any = None,
+        earliest_monday: datetime.date | None = None,
     ) -> Subscription:
         """Create Shares + ShareDeliveries + ChargeSchedule for a freshly
         confirmed subscription.
@@ -287,6 +291,13 @@ class SubscriptionService:
 
         ``actor`` (the confirming user) is recorded on the rate-limit ledger
         when this is a fresh confirmation.
+
+        ``earliest_monday`` lets a fresh confirm materialise delivery weeks
+        before the current week, back to that Monday (onboarding backfill; see
+        ``_delivery_weeks_excluding_paused``). Only the Share / ShareDelivery
+        writes use it: the capacity gates keep checking current and future
+        weeks, so past occupancy the office can no longer change never blocks
+        the confirm. Past deliveries are billed like any other delivery.
         """
         if not subscription.valid_from or not subscription.valid_until:
             logger.info(
@@ -337,8 +348,10 @@ class SubscriptionService:
             CapacityReservationService.assert_capacity_available_for_confirm(
                 subscription
             )
-            shares = self._create_shares(subscription)
-            self._create_share_deliveries(subscription, shares)
+            shares = self._create_shares(subscription, earliest_monday=earliest_monday)
+            self._create_share_deliveries(
+                subscription, shares, earliest_monday=earliest_monday
+            )
             CapacityReservationService.release_for_subscription(subscription)
 
         if subscription.on_waiting_list:
@@ -520,10 +533,12 @@ class SubscriptionService:
     @staticmethod
     def _delivery_weeks_excluding_paused(
         subscription: Subscription,
+        *,
+        earliest_monday: datetime.date | None = None,
     ) -> list[tuple[int, int]]:
         """The subscription's ``(year, isoweek)`` delivery weeks with
-        DeliveryExceptionPeriod ("Lieferpause") weeks removed — the single week
-        list that Share / ShareDelivery materialisation AND the capacity paths
+        DeliveryExceptionPeriod ("Lieferpause") weeks removed — the week list
+        that Share / ShareDelivery materialisation AND the capacity paths
         iterate.
 
         A paused week materialises no Share/ShareDelivery, so it consumes no
@@ -532,6 +547,13 @@ class SubscriptionService:
         would reserve/count phantom occupancy for weeks that are never delivered,
         and resync's restore would re-create a still-paused week. Returns ``[]``
         when the subscription has no delivery weeks (or every week is paused).
+
+        ``earliest_monday`` moves the past-week floor back to that date's ISO
+        week (never later than the current week, never before ``valid_from``).
+        It is the one exception to the shared week set: only the onboarding
+        backfill of a fresh confirm passes it, so those past weeks are
+        materialised while capacity checks, reservations and pause resync keep
+        the default set of current and future weeks.
         """
         day_number = subscription.default_delivery_station_day.delivery_day.day_number
         year_weeks = SubscriptionService._get_delivery_weeks(
@@ -543,26 +565,31 @@ class SubscriptionService:
         if not year_weeks:
             return []
 
-        # Never materialise (or reserve capacity for) delivery weeks already in
-        # the PAST. In normal use ``valid_from`` is a future Monday, so every
-        # week is current/future and this is a no-op. It only bites when
+        # By default, never materialise (or reserve capacity for) delivery weeks
+        # already in the PAST. In normal use ``valid_from`` is a future Monday,
+        # so every week is current/future and this is a no-op. It only bites when
         # confirming a subscription whose ``valid_from`` is historical (e.g. an
-        # onboarding import of an existing member's subscription): back-dated
-        # ShareDeliveries must not be created for weeks that have already passed.
+        # import of an existing member's subscription).
         #
         # Granularity is the ISO WEEK: the current week is kept even if its
         # delivery day already passed this week (a box "for this week"), and only
-        # strictly-earlier weeks are dropped. Because the variation cap gate is
+        # weeks before the floor are dropped. Because the variation cap gate is
         # clamped the same way (see ``VariationCapacityService``), materialisation
-        # and ALL capacity paths stay on one week set (the invariant this method
-        # protects). Charge impact: EXACT billing is delivery-driven, so past
-        # weeks bill €0 automatically; SMOOTHED still enumerates its own periods
-        # over the full term (dormant PLANNED past-period rows) — see apps.payments.
+        # and all capacity paths share this week set, except for the onboarding
+        # backfill (``earliest_monday``), which only materialisation uses.
+        # Charge impact: EXACT billing is delivery-driven, so it bills exactly
+        # the materialised weeks; SMOOTHED still enumerates its own periods over
+        # the full term (dormant PLANNED past-period rows) — see apps.payments.
         current_monday = Week.withdate(timezone.localdate()).monday()
+        floor = (
+            current_monday
+            if earliest_monday is None
+            else min(Week.withdate(earliest_monday).monday(), current_monday)
+        )
         year_weeks = [
             year_week
             for year_week in year_weeks
-            if Week(year_week[0], year_week[1]).monday() >= current_monday
+            if Week(year_week[0], year_week[1]).monday() >= floor
         ]
         if not year_weeks:
             return []
@@ -622,6 +649,8 @@ class SubscriptionService:
     @staticmethod
     def resolve_station_days_by_week(
         subscription: Subscription,
+        *,
+        earliest_monday: datetime.date | None = None,
     ) -> dict[tuple[int, int], DeliveryStationDay]:
         """Map each delivery week of *subscription* to the DeliveryStationDay
         that will actually hold its ShareDelivery: the default DSD when it is
@@ -631,7 +660,10 @@ class SubscriptionService:
         station-day (no default DSD or missing dates).
 
         Capacity enforcement uses this so it reserves/checks the SAME DSD that
-        materialization will write to, not just the default DSD.
+        materialization will write to, not just the default DSD. Capacity
+        callers never pass ``earliest_monday``; the onboarding backfill passes
+        it so past weeks resolve to the station day active at the time (see
+        ``_delivery_weeks_excluding_paused``).
         """
         default_delivery_station_day = subscription.default_delivery_station_day
         if (
@@ -641,7 +673,9 @@ class SubscriptionService:
         ):
             return {}
 
-        year_weeks = SubscriptionService._delivery_weeks_excluding_paused(subscription)
+        year_weeks = SubscriptionService._delivery_weeks_excluding_paused(
+            subscription, earliest_monday=earliest_monday
+        )
         if not year_weeks:
             return {}
 
@@ -669,15 +703,23 @@ class SubscriptionService:
         }
 
     @transaction.atomic
-    def _create_shares(self, subscription: Subscription) -> list[Share]:
+    def _create_shares(
+        self,
+        subscription: Subscription,
+        *,
+        earliest_monday: datetime.date | None = None,
+    ) -> list[Share]:
         delivery_day = subscription.default_delivery_station_day.delivery_day
         share_type_variation = subscription.share_type_variation
 
-        # Same week set the capacity paths + resolve_station_days_by_week use —
+        # Same week set resolve_station_days_by_week uses in
+        # _create_share_deliveries (the same ``earliest_monday``) —
         # DeliveryExceptionPeriod ("Lieferpause") weeks excluded, so no Share /
         # ShareDelivery (and, billing being delivery-driven, no charge) is
         # materialised for a paused week.
-        delivery_weeks = self._delivery_weeks_excluding_paused(subscription)
+        delivery_weeks = self._delivery_weeks_excluding_paused(
+            subscription, earliest_monday=earliest_monday
+        )
         if not delivery_weeks:
             return []
 
@@ -771,7 +813,10 @@ class SubscriptionService:
     @staticmethod
     @transaction.atomic
     def _create_share_deliveries(
-        subscription: Subscription, shares: list[Share]
+        subscription: Subscription,
+        shares: list[Share],
+        *,
+        earliest_monday: datetime.date | None = None,
     ) -> list[ShareDelivery]:
         default_delivery_station_day = subscription.default_delivery_station_day
 
@@ -788,11 +833,13 @@ class SubscriptionService:
         # resolver the capacity paths reserve/check against, so materialisation
         # writes to the SAME station-day capacity reserved. It handles the
         # open-ended default (every week on the default) and the time-bounded
-        # default (per-week successor, falling back to the default) itself. Any
-        # share whose week the resolver doesn't cover (defensive; e.g. a paused
-        # week) lands on the default DSD with a logged warning.
+        # default (per-week successor, falling back to the default) itself. It
+        # must get the same ``earliest_monday`` as ``_create_shares``, or the
+        # backfilled past weeks are missing from the map. Any share whose week
+        # the resolver doesn't cover (defensive; e.g. a paused week) lands on the
+        # default DSD with a logged warning.
         delivery_station_day_by_week = SubscriptionService.resolve_station_days_by_week(
-            subscription
+            subscription, earliest_monday=earliest_monday
         )
 
         share_deliveries: list[ShareDelivery] = []

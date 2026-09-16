@@ -499,6 +499,15 @@ class TenantSettings(JasminModel):
     # explicitly opts in.
     allows_self_registration = models.BooleanField(default=False)
 
+    # Onboarding mode: the office enters members, coop shares and subscriptions
+    # that already exist outside Jasmin. While True, commissioning unlocks
+    # historical data entry (editable member numbers and entry dates, manual
+    # confirmation dates, past subscription starts, back-filled deliveries),
+    # read through ``apps.commissioning.services.onboarding_policy``, and
+    # ``EmailService`` suppresses every email not listed as still sent in
+    # ``apps.shared.tenants.onboarding_emails``.
+    onboarding_mode = models.BooleanField(default=False)
+
     # Sales channels
     has_markets = models.BooleanField(default=False)
     sells_to_resellers = models.BooleanField(default=True)

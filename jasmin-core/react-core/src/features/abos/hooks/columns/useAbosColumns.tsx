@@ -130,12 +130,14 @@ export function useAbosColumns({
   // span, season/one-year math) live in one shared hook so the abos table
   // and the NewSubscriptionModal can't drift apart. ``min_weeks_to_cancel_
   // before_ending`` is consumed server-side; the auto-renewal column shows
-  // the backend-computed deadline directly.
+  // the backend-computed deadline directly. Rows are edited by the office
+  // only, so in onboarding mode any Monday may be the start date.
+  const onboardingMode = getSetting("onboarding_mode", false) === true;
   const {
     allowsTrial: allows_trial_subscriptions,
     computeValidUntil,
     disabledValidFromDate,
-  } = useSubscriptionTerm();
+  } = useSubscriptionTerm({ allowPastStart: onboardingMode });
 
   // future → active → past (blue-green-grey), consistent with the other
   // status-column tables. ``pinnedIds`` keeps a freshly-added row on TOP despite

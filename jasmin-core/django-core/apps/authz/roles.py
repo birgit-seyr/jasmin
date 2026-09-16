@@ -36,6 +36,19 @@ VALID_ROLES = frozenset(key for key, _ in ROLE_CHOICES)
 # "customer" is rejected. Keep in sync with `src/shared/auth/roles.ts`.
 CUSTOMER_COMPATIBLE_ROLES = frozenset({Role.CUSTOMER, Role.MEMBER})
 
+# The internal roles. Keep in sync with ``STAFF_ROLES`` in the frontend's
+# Configuration > Users page, which groups logins the same way.
+STAFF_ROLES = frozenset(
+    {Role.ADMIN, Role.MANAGEMENT, Role.OFFICE, Role.STAFF, Role.GARDENER}
+)
+
+
+def is_member_portal_login(roles) -> bool:
+    """Whether a login with these roles is a member's portal login: it holds the
+    member role and no internal or customer role."""
+    role_set = set(roles or [])
+    return Role.MEMBER in role_set and not role_set & (STAFF_ROLES | {Role.CUSTOMER})
+
 
 def validate_role_combination(roles):
     """Return an error message string if the role set is invalid, else None."""

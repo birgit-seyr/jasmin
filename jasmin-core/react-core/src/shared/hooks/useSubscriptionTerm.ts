@@ -12,8 +12,15 @@ import { useTenant } from "./configuration/useTenant";
  * NewSubscriptionModal. Reads the tenant flags once and wraps the pure
  * {@link computeTermValidUntil} math so callers never re-derive the settings
  * → ``valid_until`` mapping (or drift out of sync) themselves.
+ *
+ * ``allowPastStart`` is for office callers while the tenant is in onboarding
+ * mode: ``valid_from`` then only has to be a Monday, in the past too, matching
+ * the backend, which skips the lead-time check for office writes in that mode.
+ * Registration and member self-service never pass it.
  */
-export const useSubscriptionTerm = () => {
+export const useSubscriptionTerm = ({
+  allowPastStart = false,
+}: { allowPastStart?: boolean } = {}) => {
   const { getSetting, tenant } = useTenant();
 
   // The anonymous registration page has no settings overlay (getSetting →
@@ -106,17 +113,17 @@ export const useSubscriptionTerm = () => {
   );
 
   /** ``disabledDate`` for ``valid_from``: Mondays only, no earlier than
-   *  {@link earliestValidFrom}. Typed ``(current: unknown)`` so it satisfies
-   *  both AntD's ``DatePicker`` (modal) and ``EditableColumnConfig`` (abos
-   *  table) — one rule, no drift. */
+   *  {@link earliestValidFrom} unless ``allowPastStart``. Typed
+   *  ``(current: unknown)`` so it satisfies both AntD's ``DatePicker`` (modal)
+   *  and ``EditableColumnConfig`` (abos table) — one rule, no drift. */
   const disabledValidFromDate = useCallback(
     (current: unknown): boolean => {
       const date = current as Dayjs;
-      return (
-        !!date && (date.day() !== 1 || date.isBefore(earliestValidFrom, "day"))
-      );
+      if (!date) return false;
+      if (date.day() !== 1) return true;
+      return !allowPastStart && date.isBefore(earliestValidFrom, "day");
     },
-    [earliestValidFrom],
+    [earliestValidFrom, allowPastStart],
   );
 
   return {

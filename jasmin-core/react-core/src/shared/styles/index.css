@@ -33,6 +33,7 @@
 @import './components/member-cards.css';
 @import './components/menu.css';
 @import './components/new-subscription-modal.css';
+@import './components/onboarding-mode.css';
 @import './components/step-up-modal.css';
 @import './components/packing-list.css';
 @import './components/packing-list-boxes-matrix.css';

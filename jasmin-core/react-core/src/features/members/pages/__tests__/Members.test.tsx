@@ -13,7 +13,7 @@
 // @features/members/modals + the two source-module modals, @shared/ui
 // SummaryStatsCard, and the two app modal hooks. The page imported AFTER mocks.
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -30,12 +30,23 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
+// Tenant onboarding mode per test, and the columns the page hands to the
+// EditableTable stub.
+const pageState = vi.hoisted(() => ({
+  onboardingMode: false,
+  columns: [] as Array<Record<string, unknown>>,
+  invitationDisabledReason: undefined as string | null | undefined,
+}));
+
 // ── @hooks/index barrel — every hook the page destructures from it ────────────
 vi.mock("@hooks/index", async () => {
   const { makeUseTenantMock } = await import("@/test/tenantMock");
   // Built once → reference-stable across renders, so the page's column useMemo
   // (which depends on these) doesn't rebuild every commit.
-  const tenant = makeUseTenantMock();
+  const tenant = makeUseTenantMock({
+    getSetting: (key: string, defaultValue?: unknown) =>
+      key === "onboarding_mode" ? pageState.onboardingMode : defaultValue,
+  });
   const noop = () => {};
   const activeStatusColumn = {
     title: "active",
@@ -87,6 +98,11 @@ vi.mock("@hooks/index", async () => {
       formatCurrency: (v: unknown) => String(v ?? ""),
     }),
     useTableRowSelection: () => rowSelection,
+    useTenantSettingToggle: () => ({
+      value: false,
+      onChange: noop,
+      saving: false,
+    }),
     useUserInfoModal: () => userInfoModal,
     useInvalidateAfterTableMutation: () => ({
       onSaveSuccess: vi.fn(),
@@ -134,7 +150,10 @@ vi.mock("@shared/api/generated/auth/auth", () => ({
 // wrapApiFunctions inside a useMemo — both must be callable, so we return plain
 // functions rather than testid stubs.
 vi.mock("@shared/tables", () => ({
-  EditableTable: () => <div data-testid="editable-table" />,
+  EditableTable: ({ columns }: { columns: Array<Record<string, unknown>> }) => {
+    pageState.columns = columns;
+    return <div data-testid="editable-table" />;
+  },
   gatedByPermission: () => ({}),
   gatedByPermissionOnlyEdit: () => ({}),
   wrapApiFunctions: (fns: unknown) => fns,
@@ -151,8 +170,16 @@ vi.mock("@shared/modals", () => ({
     open ? <div data-testid="invite-user-modal" /> : null,
   LoggingModal: ({ isOpen }: { isOpen?: boolean }) =>
     isOpen ? <div data-testid="logging-modal" /> : null,
-  UserInfoModal: ({ isOpen }: { isOpen?: boolean }) =>
-    isOpen ? <div data-testid="user-info-modal" /> : null,
+  UserInfoModal: ({
+    isOpen,
+    invitationDisabledReason,
+  }: {
+    isOpen?: boolean;
+    invitationDisabledReason?: string | null;
+  }) => {
+    pageState.invitationDisabledReason = invitationDisabledReason;
+    return isOpen ? <div data-testid="user-info-modal" /> : null;
+  },
 }));
 vi.mock("@features/members/modals", () => ({
   CoopSharesModal: ({ isOpen }: { isOpen?: boolean }) =>
@@ -232,7 +259,93 @@ function makeQueryClient() {
   });
 }
 
+function renderMembers() {
+  render(
+    <QueryClientProvider client={makeQueryClient()}>
+      <Members />
+    </QueryClientProvider>,
+  );
+}
+
+function column(key: string): Record<string, unknown> {
+  const found = pageState.columns.find((col) => col.key === key);
+  if (!found) throw new Error(`column ${key} not found`);
+  return found;
+}
+
+type FieldChange = (
+  value: unknown,
+  record: Record<string, unknown>,
+  form: unknown,
+  dataIndex: string,
+) => Record<string, unknown> | undefined;
+
+beforeEach(() => {
+  pageState.onboardingMode = false;
+  pageState.columns = [];
+  pageState.invitationDisabledReason = undefined;
+});
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
+describe("Members onboarding-mode columns", () => {
+  it("keeps member_number read-only and entry_date disabled while off", async () => {
+    renderMembers();
+    await screen.findByTestId("editable-table");
+
+    expect(column("member_number").readOnly).toBe(true);
+    expect(column("member_number").disabled).toBeUndefined();
+    expect(column("entry_date").disabled).toBe(true);
+    const onTrialChange = column("is_trial").onFieldChange as FieldChange;
+    expect(
+      onTrialChange(true, { key: "m-1" }, null, "is_trial"),
+    ).toBeUndefined();
+  });
+
+  it("makes member_number and entry_date editable while on, trial rows included", async () => {
+    pageState.onboardingMode = true;
+    renderMembers();
+    await screen.findByTestId("editable-table");
+
+    expect(column("member_number").readOnly).toBe(false);
+    // A disabled cell would save the stored number, so a numbered row could
+    // never become a trial row.
+    expect(column("member_number").disabled).toBeUndefined();
+    expect(column("entry_date").disabled).toBe(false);
+  });
+
+  it("clears a typed member number when is_trial is ticked while on", async () => {
+    pageState.onboardingMode = true;
+    renderMembers();
+    await screen.findByTestId("editable-table");
+
+    const onTrialChange = column("is_trial").onFieldChange as FieldChange;
+    const record = { key: "m-1", member_number: 17 };
+    expect(onTrialChange(true, record, null, "is_trial")).toEqual({
+      member_number: null,
+    });
+    expect(onTrialChange(false, record, null, "is_trial")).toBeUndefined();
+  });
+});
+
+describe("Members invitation in onboarding mode", () => {
+  it("lets the office invite members while onboarding mode is off", async () => {
+    renderMembers();
+    await screen.findByTestId("editable-table");
+
+    expect(pageState.invitationDisabledReason).toBeNull();
+  });
+
+  it("disables member invitations with a reason while onboarding mode is on", async () => {
+    pageState.onboardingMode = true;
+    renderMembers();
+    await screen.findByTestId("editable-table");
+
+    expect(pageState.invitationDisabledReason).toBe(
+      "onboarding.mode.invitation_disabled",
+    );
+  });
+});
+
 describe("Members (render-loop smoke test)", () => {
   it("renders without crashing", async () => {
     const client = makeQueryClient();

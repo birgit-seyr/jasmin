@@ -1,17 +1,25 @@
 import { commissioningMembersConfirmCreate } from "@shared/api/generated/commissioning/commissioning";
-import type { Member } from "@shared/api/generated/models";
+import type {
+  AdminConfirmationRequest,
+  Member,
+} from "@shared/api/generated/models";
 import { useAdminConfirmationModal } from "@hooks/useAdminConfirmationModal";
 import type { MemberRecord } from "@features/members/pages/types";
 
 /**
  * Members admin-confirmation modal — a thin domain wrapper over the shared
- * ``useAdminConfirmationModal`` hook. Injects the Members confirm call (no
- * request body) + i18n keys and re-exports the generic surface under the
- * Member-specific names the page/tests already consume.
+ * ``useAdminConfirmationModal`` hook. Injects the Members confirm call + i18n
+ * keys and re-exports the generic surface under the Member-specific names the
+ * page/tests already consume. The confirm body carries ``confirmed_at`` only
+ * while the tenant's onboarding mode is on; otherwise it is empty.
  */
 export const useAdminConfirmationModalMembers = () => {
-  const modal = useAdminConfirmationModal<MemberRecord, Member>({
-    confirmFn: (id) => commissioningMembersConfirmCreate(id),
+  const modal = useAdminConfirmationModal<
+    MemberRecord,
+    Member,
+    AdminConfirmationRequest
+  >({
+    confirmFn: (id, body) => commissioningMembersConfirmCreate(id, body ?? {}),
     successKey: "members.admin_confirmation_success",
     errorKey: "members.admin_confirmation_error",
   });

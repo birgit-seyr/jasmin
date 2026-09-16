@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from datetime import date
 
-from django.db.models import Count, QuerySet
-from django.db.models.functions import TruncMonth, TruncWeek, TruncYear
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiResponse,
@@ -19,7 +16,6 @@ from apps.authz.permissions import IsOffice, IsStaff
 from core.serializers import ErrorResponseSerializer
 
 from ..errors import InvalidQueryParam
-from ..models import Member
 from ..schemas import (
     catalogue_param,
     get_delivery_week_parameter,
@@ -33,9 +29,11 @@ from ..serializers import (
     PurchaseCostByWeekSerializer,
 )
 from ..services import (
+    MEMBER_GROWTH_PERIODS,
     ShareContentService,
     calculate_historical_share_type_variation_averages,
     calculate_member_dashboard_statistics,
+    calculate_member_growth_statistics,
 )
 from ..utils.query_params import validate_query_params
 
@@ -43,8 +41,10 @@ from ..utils.query_params import validate_query_params
 @extend_schema(
     summary="Get member growth statistics",
     description="""
-    Returns member growth statistics over time, showing new members per period
-    and cumulative total. Can be filtered by time period and date range.
+    Returns confirmed members per period: entries (by entry date), exits (by
+    exit date, once it has passed) and the member count at the end of each
+    period. Can be filtered by year or start date; the count still includes
+    members who joined before the window and hadn't left by then.
     """,
     parameters=[
         catalogue_param(
@@ -69,13 +69,7 @@ from ..utils.query_params import validate_query_params
 @api_view(["GET"])
 @permission_classes([IsOffice])
 def member_growth_statistics(request: Request) -> Response:
-    """
-    Returns member growth statistics over time.
-
-    Shows new members per period and cumulative totals.
-    Can be grouped by month, week, or year.
-    """
-    # Extract and validate parameters
+    """Confirmed member entries, exits and counts per month, week or year."""
     params = validate_query_params(request, optional=["start_date", "year"])
     start_date: date | None = params["start_date"]
     year: int | None = params["year"]
@@ -84,40 +78,16 @@ def member_growth_statistics(request: Request) -> Response:
     # endpoint enforces its own {month, week, year} enum (with a "month"
     # default the str-default of None would mask).
     period: str = request.query_params.get("period", "month")
-
-    # Validate period parameter
-    valid_periods = ["month", "week", "year"]
-    if period not in valid_periods:
+    if period not in MEMBER_GROWTH_PERIODS:
         raise InvalidQueryParam(
-            f"Invalid period '{period}'. Must be one of: {', '.join(valid_periods)}",
+            f"Invalid period '{period}'. Must be one of: "
+            f"{', '.join(MEMBER_GROWTH_PERIODS)}",
             field="period",
         )
 
-    # Choose truncation function based on period
-    trunc_func: Callable = {
-        "month": TruncMonth,
-        "week": TruncWeek,
-        "year": TruncYear,
-    }[period]
-
-    # Base queryset
-    queryset: QuerySet[Member] = Member.objects.filter(entry_date__isnull=False)
-
-    # Apply filters
-    queryset = _apply_date_filters(queryset, year, start_date)
-
-    # Group by period and count
-    stats = (
-        queryset.annotate(period=trunc_func("entry_date"))
-        .values("period")
-        .annotate(new_members=Count("id"))
-        .order_by("period")
+    result = calculate_member_growth_statistics(
+        period=period, year=year, start_date=start_date
     )
-
-    # Calculate cumulative totals
-    result: list[dict] = _calculate_cumulative_statistics(stats)
-
-    # Serialize and return
     serializer = MemberGrowthStatisticSerializer(result, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -247,55 +217,6 @@ def historical_share_type_variation_averages(request: Request) -> Response:
 
     # Serialize and return
     return Response(averages, status=status.HTTP_200_OK)
-
-
-def _apply_date_filters(
-    queryset: QuerySet[Member],
-    year: int | None,
-    start_date: date | None,
-) -> QuerySet[Member]:
-    """
-    Apply year or start_date filters to the queryset.
-
-    Year filter takes precedence over start_date filter.
-
-    Args:
-        queryset: Base queryset to filter
-        year: Catalogue-parsed year (YYYY) or None
-        start_date: Catalogue-parsed start date or None
-
-    Returns:
-        The filtered queryset.
-    """
-    # Apply year filter if provided (takes precedence)
-    if year is not None:
-        return queryset.filter(entry_date__year=year)
-
-    # Apply start_date filter if provided and no year filter
-    if start_date is not None:
-        return queryset.filter(entry_date__gte=start_date)
-
-    return queryset
-
-
-def _calculate_cumulative_statistics(
-    stats: QuerySet,
-) -> list[dict]:
-    """Calculate cumulative totals from period statistics."""
-    cumulative: int = 0
-    result: list[dict] = []
-
-    for item in stats:
-        cumulative += item["new_members"]
-        result.append(
-            {
-                "period": item["period"].strftime("%Y-%m-%d"),
-                "new_members": item["new_members"],
-                "total_members": cumulative,
-            }
-        )
-
-    return result
 
 
 def _parse_variation_average_params(request: Request) -> dict:

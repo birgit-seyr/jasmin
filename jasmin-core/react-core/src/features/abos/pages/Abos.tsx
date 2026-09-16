@@ -12,30 +12,21 @@ import SepaSetupModal from "@features/members/modals/SepaSetupModal";
 import { getPaymentsBillingProfilesMandateStatusListQueryKey } from "@shared/api/generated/payments/payments";
 import { isSepaMandateActiveForTerm } from "@shared/utils";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  commissioningAbosCreate,
-  commissioningAbosDestroy,
-  commissioningAbosPartialUpdate,
-} from "@shared/api/generated/commissioning/commissioning";
-import type { Subscription } from "@shared/api/generated/models";
 import { PaymentCycleEnum } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { LoggingModal, SepaMandateDetailsModal } from "@shared/modals";
 import type { SepaMandateStatus } from "@shared/api/generated/models";
-import {
-  EditableTable,
-  gatedByPermission,
-  wrapApiFunctions,
-} from "@shared/tables";
-import type {
-  ApiFunctions,
-  TableRecord,
-} from "@shared/tables/BasicEditableTable/types";
+import { EditableTable, gatedByPermission } from "@shared/tables";
+import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import { DateRangeStatusLegend, ExplainerText } from "@shared/ui";
 import { Badge, Button } from "antd";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ExistingSubscriptionImportModal from "@features/abos/modals/ExistingSubscriptionImportModal";
+import {
+  OnboardingModeBanner,
+  OnboardingModeSwitch,
+} from "@features/members/components/OnboardingMode";
 // Imported directly from the source module (not the ``hooks`` barrel) to
 // avoid a Rollup chunk cycle: the barrel re-exports ``useAbosColumns`` while
 // that module transitively depends back on the barrel (via the ``ui`` barrel).
@@ -43,6 +34,7 @@ import AbosBulkActions from "@features/abos/components/AbosBulkActions";
 import { useAbosColumns } from "@features/abos/hooks/columns/useAbosColumns";
 import { useAdminConfirmationModalAbos } from "@features/abos/hooks/modals/useAdminConfirmationModalAbos";
 import { useRejectAboModal } from "@features/abos/hooks/modals/useRejectAboModal";
+import { useAbosApiFunctions } from "@features/abos/hooks/useAbosApiFunctions";
 import { useAbosData } from "@features/abos/hooks/useAbosData";
 import SubscriptionStatsCards from "@features/abos/components/SubscriptionStatsCards";
 import {
@@ -52,7 +44,6 @@ import {
   useTenant,
 } from "@hooks/index";
 import { notify } from "@shared/utils";
-import { getErrorCode } from "@shared/utils/apiError";
 import type { AboRecord } from "./types";
 import { validateCancelledDate as validateCancelledDatePure } from "./validation";
 
@@ -64,6 +55,7 @@ export default function Abos() {
   const allowsWaitingList = Boolean(
     getSetting("allows_waiting_list_for_subscriptions", true),
   );
+  const onboardingMode = getSetting("onboarding_mode", false) === true;
   const uploadAllowed =
     getSetting("allow_upload_for_data_lists", false) === true;
   const permissions = useMemo(
@@ -318,69 +310,16 @@ export default function Abos() {
     onShowSepaDetails: handleShowSepaDetails,
   });
 
-  // No ``list``: this page owns the data via ``useCommissioningAbosList``
-  // (passed as ``initialData``). Supplying ``list`` would make EditableTable
-  // double-fetch the same endpoint (it auto-fetches when ``showSearchBar`` +
-  // ``apiFunctions.list`` are both set). Search filters client-side; mutations
-  // refresh through the ``onSaveSuccess``/``onDeleteSuccess`` invalidation.
-  const apiFunctions = useMemo<ApiFunctions>(() => {
-    // A sold-out variation / full station-day 409s a normal save. Don't
-    // dead-end the office — redo the save as a waiting-list entry (same as the
-    // member subscribe modal; the backend records WHY on the waiting-list
-    // page), then invalidate so the now-waiting-listed row LEAVES this
-    // (on_waiting_list=false) grid instead of lingering as a phantom draft that
-    // inflates the pending-confirmation count.
-    const overCapacityCode = (error: unknown): string | null => {
-      const code = getErrorCode(error);
-      return code === "share_type_variation.over_capacity" ||
-        code === "delivery_station.over_capacity"
-        ? code
-        : null;
-    };
-    const notifyWaitingListed = (code: string) =>
-      notify.info(
-        t(
-          code === "share_type_variation.over_capacity"
-            ? "abos.waiting_listed_variation_full"
-            : "abos.waiting_listed_station_full",
-        ),
-      );
-    return wrapApiFunctions<Subscription & TableRecord>({
-      create: async (data) => {
-        try {
-          return await commissioningAbosCreate(data);
-        } catch (error) {
-          const code = overCapacityCode(error);
-          // Waiting list off → no retry: surface the 409 as a plain error.
-          if (!code || !allowsWaitingList) throw error;
-          const created = await commissioningAbosCreate({
-            ...data,
-            on_waiting_list: true,
-          });
-          notifyWaitingListed(code);
-          invalidateData();
-          return created;
-        }
-      },
-      update: async (id, data) => {
-        try {
-          return await commissioningAbosPartialUpdate(id, data);
-        } catch (error) {
-          const code = overCapacityCode(error);
-          // Waiting list off → no retry: surface the 409 as a plain error.
-          if (!code || !allowsWaitingList) throw error;
-          const updated = await commissioningAbosPartialUpdate(id, {
-            ...data,
-            on_waiting_list: true,
-          });
-          notifyWaitingListed(code);
-          invalidateData();
-          return updated;
-        }
-      },
-      delete: (id) => commissioningAbosDestroy(id),
-    });
-  }, [t, invalidateData, allowsWaitingList]);
+  // This page owns the data (``initialData``), so the api functions carry no
+  // ``list``. Search filters client-side; mutations refresh through the
+  // ``onSaveSuccess``/``onDeleteSuccess`` invalidation. An over-capacity save
+  // is retried as a waiting-list entry unless the waiting list is off or the
+  // tenant is in onboarding mode.
+  const apiFunctions = useAbosApiFunctions({
+    invalidateData,
+    allowsWaitingList,
+    onboardingMode,
+  });
 
   // "Needs attention" quick filter toggled by the page badge below: the
   // subscriptions still awaiting admin confirmation (unconfirmed, not rejected,
@@ -409,6 +348,8 @@ export default function Abos() {
   return (
     <div>
       <h1>{t("abos.abos")}</h1>
+
+      <OnboardingModeBanner />
 
       <SubscriptionStatsCards />
 
@@ -534,10 +475,11 @@ export default function Abos() {
       />
 
       {isOffice && (
-        <div style={{ marginTop: 24 }}>
+        <div className="onboarding-block">
           <Button size="small" onClick={() => setImportModalOpen(true)}>
             {t("onboarding.abos_link")}
           </Button>
+          <OnboardingModeSwitch />
         </div>
       )}
 

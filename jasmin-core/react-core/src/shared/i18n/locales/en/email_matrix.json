@@ -19,7 +19,10 @@
         "offer": "Offer",
         "invoice": "Invoice",
         "delivery_note": "Delivery note",
-        "invoice_reminder": "Invoice reminder"
+        "invoice_reminder": "Invoice reminder",
+        "waiting_list_offer": "Waiting-list offer",
+        "member_self_cancelled_office": "Self-cancellation (office notice)",
+        "subscription_renewal_failures_office": "Failed renewals (office notice)"
     },
     "gdpr": {
         "deletion_confirm": "Deletion confirm",
@@ -34,6 +37,10 @@
         "deferred": "Deferred",
         "complained": "Marked as spam",
         "rejected": "Provider rejected",
-        "failed": "Send failed"
+        "failed": "Send failed",
+        "suppressed": "Not sent"
+    },
+    "status_hint": {
+        "suppressed": "Not sent because onboarding mode was on."
     }
 }

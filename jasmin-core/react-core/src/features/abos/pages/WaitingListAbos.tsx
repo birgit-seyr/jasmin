@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Space, Tag } from "antd";
+import { Space, Tag } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,6 +19,7 @@ import { useRoles } from "@shared/auth";
 import { AdminConfirmationModalAbos } from "@features/abos/modals/AdminConfirmationModalAbos";
 import { CapacityOverview } from "@features/abos/components/CapacityOverview";
 import { OfferSpotModal } from "@features/abos/modals/OfferSpotModal";
+import { WaitingListOfferButton } from "@features/abos/components/WaitingListOfferButton";
 import {
   capacityWindowParams,
   termCapacity,
@@ -46,7 +47,7 @@ import { useAdminConfirmationModalAbos } from "@features/abos/hooks/modals/useAd
 import { useSharedAboColumns } from "@features/abos/hooks/columns/useSharedAboColumns";
 import { notify, toApiDate } from "@shared/utils";
 import { parseDateLoose } from "@shared/utils/endOfTerm";
-import { getErrorCode } from "@shared/utils/apiError";
+import { getErrorCode, getErrorMessage } from "@shared/utils/apiError";
 import type { AboRecord } from "./types";
 
 export default function WaitingListAbos() {
@@ -378,7 +379,9 @@ export default function WaitingListAbos() {
                 ? t("abos.offer_variation_full")
                 : code === "delivery_station.over_capacity"
                   ? t("abos.offer_station_full")
-                  : t("abos.offer_failed"),
+                  : code === "onboarding_mode.email_action_blocked"
+                    ? getErrorMessage(error, t("abos.offer_failed"))
+                    : t("abos.offer_failed"),
             );
           },
         },
@@ -486,13 +489,9 @@ export default function WaitingListAbos() {
             <Space>
               <Tag color="green">{t("abos.available_now")}</Tag>
               {isOffice && allowsWaitingList && (
-                <Button
-                  size="small"
-                  type="primary"
+                <WaitingListOfferButton
                   onClick={() => setOfferRecord(record)}
-                >
-                  {t("abos.notify_member")}
-                </Button>
+                />
               )}
             </Space>
           );

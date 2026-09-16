@@ -3,10 +3,10 @@
  *
  * Boundary mocked: the generated transfer mutation hook, ``MemberSelector``
  * (a plain select that applies ``filterMember``), ``ModalCancelSaveFooter``
- * (plain buttons), ``notify``, the api error helpers, ``useDateFormat`` and
- * ``useMembers``. The real AntD ``Form`` runs, so validation, the payload
- * (including both transfer notes) and the cancel / below-minimum hints are
- * exercised for real. The ``t`` mock appends its interpolation values so the
+ * (plain buttons), ``notify``, the api error helpers, ``useDateFormat``,
+ * ``useMembers`` and ``useOnboardingMode``. The real AntD ``Form`` runs, so
+ * validation, the payload (including both transfer notes), the cancel /
+ * below-minimum hints and the onboarding-mode note are exercised for real. The ``t`` mock appends its interpolation values so the
  * notes' member labels can be asserted.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -128,7 +128,10 @@ vi.mock("@shared/utils/apiError", () => ({
   getErrorCode: (err: unknown) => (err as { code?: string })?.code,
 }));
 
+const onboardingState = vi.hoisted(() => ({ onboardingMode: false }));
+
 vi.mock("@hooks/index", () => ({
+  useOnboardingMode: () => onboardingState.onboardingMode,
   useDateFormat: () => ({
     dateFormat: "DD.MM.YYYY",
     formatDate: (value: unknown) => dayjs(value as string).format("DD.MM.YYYY"),
@@ -199,6 +202,7 @@ beforeEach(() => {
   mutateMock.mockReset();
   notifyErrorMock.mockReset();
   nextError = null;
+  onboardingState.onboardingMode = false;
 });
 
 describe("CoopShareTransferModal", () => {
@@ -350,5 +354,22 @@ describe("CoopShareTransferModal", () => {
     expect(
       screen.queryByText(/members\.transfer_below_minimum/),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows no onboarding note while onboarding mode is off", () => {
+    renderModal();
+
+    expect(
+      screen.queryByText("onboarding.mode.no_email_hint"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("notes that no email is sent while onboarding mode is on", () => {
+    onboardingState.onboardingMode = true;
+    renderModal();
+
+    expect(
+      screen.getByText("onboarding.mode.no_email_hint"),
+    ).toBeInTheDocument();
   });
 });

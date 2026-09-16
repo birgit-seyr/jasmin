@@ -26,6 +26,7 @@ import type {
 
 import type {
   ActiveShareOptions,
+  AdminConfirmationRequest,
   BackgroundJobEnqueueResponse,
   BulkCopyOffersResponse,
   BulkCopyOffersToOfferGroupRequest,
@@ -832,7 +833,7 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Admin-confirm a subscription. Materialises Shares, ShareDeliveries and the PLANNED ChargeSchedule for the term. Idempotent: re-running only fills missing rows; ISSUED/PAID/FAILED/WAIVED charges are never touched.
+ * Admin-confirm a subscription. Materialises Shares, ShareDeliveries and the PLANNED ChargeSchedule for the term. Idempotent: re-running only fills missing rows; ISSUED/PAID/FAILED/WAIVED charges are never touched. A subscription of a member who has left is refused; in onboarding mode it is confirmed when the member is already confirmed and the subscription ends by the exit date.
  */
 export const commissioningAbosConfirmCreate = (
     id: string,
@@ -891,7 +892,7 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Offer a freed spot to a queued waiting-list member: holds both capacity axes (station-day reservation + status-counted variation hold) for the response window and emails the member a magic link to accept/decline without logging in. Optional ``price_per_delivery`` lets the office set the price at offer time (a waiting_list entry may be a year old). Only a PENDING waiting-list entry can be offered; a capacity 409 means the slot filled up between the office's view and the click.
+ * Offer a freed spot to a queued waiting-list member: holds both capacity axes (station-day reservation + status-counted variation hold) for the response window and emails the member a magic link to accept/decline without logging in. Optional ``price_per_delivery`` lets the office set the price at offer time (a waiting_list entry may be a year old). Only a PENDING waiting-list entry can be offered; a capacity 409 means the slot filled up between the office's view and the click. Refused with 409 while the tenant's onboarding mode is on, because no member emails are sent then: no capacity is held and no magic link is minted.
  */
 export const commissioningAbosOfferSpotCreate = (
     id: string,
@@ -3790,24 +3791,19 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Office-confirm a pending (e.g. member-self-subscribed) coop share.
-
-Vice-versa cascade: if the share belongs to a not-yet-admitted member,
-confirming the share admits the member too (initial admission from the
-equity side) — which in turn confirms the member's other pending shares
-and sends the admission email. This is best-effort: if the member is not
-yet eligible for admission (e.g. below the min-shares window), the share
-is still confirmed and the member stays pending (admit later via
-member-confirm). Members admitted earlier skip this entirely.
+ * Office-confirm a pending coop share. The body is optional. While the tenant's onboarding mode is on, ``confirmed_at`` (YYYY-MM-DD, not in the future) dates the confirmation; no email is sent; and a share of a member who has already left can be confirmed on a day up to the exit date, after which it is cancelled with that exit date. In onboarding mode only a pending share can be confirmed, and a departed member's share is refused when the member can't be admitted (coop shares out of range). Sending ``confirmed_at`` while the mode is off is refused (400).
  */
 export const commissioningCoopSharesConfirmCreate = (
     id: string,
+    adminConfirmationRequest: AdminConfirmationRequest,
  signal?: AbortSignal
 ) => {
       
       
       return axiosService<CoopShare>(
-      {url: `/api/commissioning/coop_shares/${id}/confirm/`, method: 'POST', signal
+      {url: `/api/commissioning/coop_shares/${id}/confirm/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: adminConfirmationRequest, signal
     },
       );
     }
@@ -3815,8 +3811,8 @@ export const commissioningCoopSharesConfirmCreate = (
 
 
 export const getCommissioningCoopSharesConfirmCreateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesConfirmCreate>>, TError,{id: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesConfirmCreate>>, TError,{id: string}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesConfirmCreate>>, TError,{id: string;data: AdminConfirmationRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesConfirmCreate>>, TError,{id: string;data: AdminConfirmationRequest}, TContext> => {
 
 const mutationKey = ['commissioningCoopSharesConfirmCreate'];
 const {mutation: mutationOptions} = options ?
@@ -3828,10 +3824,10 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCoopSharesConfirmCreate>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCoopSharesConfirmCreate>>, {id: string;data: AdminConfirmationRequest}> = (props) => {
+          const {id,data} = props ?? {};
 
-          return  commissioningCoopSharesConfirmCreate(id,)
+          return  commissioningCoopSharesConfirmCreate(id,data,)
         }
 
         
@@ -3840,15 +3836,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningCoopSharesConfirmCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningCoopSharesConfirmCreate>>>
-    
+    export type CommissioningCoopSharesConfirmCreateMutationBody = AdminConfirmationRequest
     export type CommissioningCoopSharesConfirmCreateMutationError = ErrorResponse
 
     export const useCommissioningCoopSharesConfirmCreate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesConfirmCreate>>, TError,{id: string}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesConfirmCreate>>, TError,{id: string;data: AdminConfirmationRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningCoopSharesConfirmCreate>>,
         TError,
-        {id: string},
+        {id: string;data: AdminConfirmationRequest},
         TContext
       > => {
 
@@ -14790,8 +14786,10 @@ export function useCommissioningMemberDashboardStatisticsRetrieve<TData = Awaite
 
 /**
  * 
-    Returns member growth statistics over time, showing new members per period
-    and cumulative total. Can be filtered by time period and date range.
+    Returns confirmed members per period: entries (by entry date), exits (by
+    exit date, once it has passed) and the member count at the end of each
+    period. Can be filtered by year or start date; the count still includes
+    members who joined before the window and hadn't left by then.
     
  * @summary Get member growth statistics
  */
@@ -15850,16 +15848,19 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Confirm a pending member.
+ * Confirm a pending member. The body is optional. While the tenant's onboarding mode is on, ``confirmed_at`` (YYYY-MM-DD, not in the future) dates the confirmation, the entry date and the confirmation of the member's pending coop shares; no email is sent; and a member who has already left can be confirmed on a day up to their exit date, after which their open coop shares are cancelled with that exit date. Sending ``confirmed_at`` while the mode is off is refused (400).
  */
 export const commissioningMembersConfirmCreate = (
     id: string,
+    adminConfirmationRequest: AdminConfirmationRequest,
  signal?: AbortSignal
 ) => {
       
       
       return axiosService<Member>(
-      {url: `/api/commissioning/members/${id}/confirm/`, method: 'POST', signal
+      {url: `/api/commissioning/members/${id}/confirm/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: adminConfirmationRequest, signal
     },
       );
     }
@@ -15867,8 +15868,8 @@ export const commissioningMembersConfirmCreate = (
 
 
 export const getCommissioningMembersConfirmCreateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMembersConfirmCreate>>, TError,{id: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningMembersConfirmCreate>>, TError,{id: string}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMembersConfirmCreate>>, TError,{id: string;data: AdminConfirmationRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMembersConfirmCreate>>, TError,{id: string;data: AdminConfirmationRequest}, TContext> => {
 
 const mutationKey = ['commissioningMembersConfirmCreate'];
 const {mutation: mutationOptions} = options ?
@@ -15880,10 +15881,10 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMembersConfirmCreate>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMembersConfirmCreate>>, {id: string;data: AdminConfirmationRequest}> = (props) => {
+          const {id,data} = props ?? {};
 
-          return  commissioningMembersConfirmCreate(id,)
+          return  commissioningMembersConfirmCreate(id,data,)
         }
 
         
@@ -15892,15 +15893,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningMembersConfirmCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMembersConfirmCreate>>>
-    
+    export type CommissioningMembersConfirmCreateMutationBody = AdminConfirmationRequest
     export type CommissioningMembersConfirmCreateMutationError = ErrorResponse
 
     export const useCommissioningMembersConfirmCreate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMembersConfirmCreate>>, TError,{id: string}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMembersConfirmCreate>>, TError,{id: string;data: AdminConfirmationRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningMembersConfirmCreate>>,
         TError,
-        {id: string},
+        {id: string;data: AdminConfirmationRequest},
         TContext
       > => {
 
@@ -16068,7 +16069,7 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Send (or re-send) a JasminUser invitation email to this member. Creates a JasminUser in pending_invitation status linked to the member if one does not already exist.
+ * Send (or re-send) a JasminUser invitation email to this member. Creates a JasminUser in pending_invitation status linked to the member if one does not already exist. Refused while the tenant's onboarding mode is on, because no member emails are sent then: no user or invitation is created and no quota is used.
  */
 export const commissioningMembersSendInvitationCreate = (
     id: string,

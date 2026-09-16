@@ -351,10 +351,7 @@ export const useAuthAdminUsersPartialUpdate = <TError = ErrorResponse,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Admin endpoints for managing tenant users.
-
-All operations require the ``admin`` role. Wired into ``/admin/users/``
-by ``apps.accounts.urls`` via ``DefaultRouter``.
+ * Cancels the user's open invitation, creates a new one and emails it. For a member's portal login (no internal and no customer role) the invitation is a member email: refused with 409 while the tenant's onboarding mode is on, before any invitation is created or quota is used, as members/{id}/send_invitation is.
  * @summary Re-send invitation email to a user still in pending_invitation
  */
 export const authAdminUsersResendInvitationCreate = (

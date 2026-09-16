@@ -19,7 +19,10 @@
         "offer": "Angebot",
         "invoice": "Rechnung",
         "delivery_note": "Lieferschein",
-        "invoice_reminder": "Zahlungserinnerung"
+        "invoice_reminder": "Zahlungserinnerung",
+        "waiting_list_offer": "Wartelisten-Angebot",
+        "member_self_cancelled_office": "Selbstkündigung (Hinweis ans Büro)",
+        "subscription_renewal_failures_office": "Fehlgeschlagene Verlängerungen (Hinweis ans Büro)"
     },
     "gdpr": {
         "deletion_confirm": "Lösch-Bestätigung",
@@ -34,6 +37,10 @@
         "deferred": "Verzögert",
         "complained": "Als Spam markiert",
         "rejected": "Provider-Ablehnung",
-        "failed": "Versand-Fehler"
+        "failed": "Versand-Fehler",
+        "suppressed": "Nicht verschickt"
+    },
+    "status_hint": {
+        "suppressed": "Nicht verschickt, weil der Onboarding-Modus aktiv war."
     }
 }

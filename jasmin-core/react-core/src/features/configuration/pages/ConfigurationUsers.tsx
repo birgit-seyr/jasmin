@@ -13,9 +13,13 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { ExplainerText, PastWarningMessage } from "@shared/ui";
+import {
+  DisabledReasonTooltip,
+  ExplainerText,
+  PastWarningMessage,
+} from "@shared/ui";
 import { getErrorMessage } from "@shared/utils/apiError";
-import { useDateFormat } from "@hooks/index";
+import { useDateFormat, useOnboardingMode } from "@hooks/index";
 import {
   authAdminUsersPartialUpdate,
   authAdminUsersResendInvitationCreate,
@@ -47,6 +51,17 @@ const STAFF_ROLES: Role[] = [
   ROLES.STAFF,
   ROLES.GARDENER,
 ];
+
+/** A member's portal login: the member role and no internal or customer role.
+ *  Matches ``is_member_portal_login`` in ``apps/authz/roles.py``. */
+function isMemberPortalLogin(roles: readonly string[] | null | undefined) {
+  const own = roles ?? [];
+  return (
+    own.includes(ROLES.MEMBER) &&
+    !own.some((r) => (STAFF_ROLES as string[]).includes(r)) &&
+    !own.includes(ROLES.CUSTOMER)
+  );
+}
 
 const STATUS_BADGE_COLOR: Record<UserRow["account_status"], string> = {
   active: "success",
@@ -110,6 +125,8 @@ export default function ConfigurationUsers() {
   const [createOpen, setCreateOpen] = useState(false);
 
   const [resendingId, setResendingId] = useState<string | null>(null);
+  // A member's portal invitation is not re-sent while onboarding mode is on.
+  const onboardingMode = useOnboardingMode();
 
   const [roleEditUser, setRoleEditUser] = useState<UserRow | null>(null);
 
@@ -148,8 +165,7 @@ export default function ConfigurationUsers() {
       notify.success(t("users.invitation_resent"));
       fetchUsers();
     } catch (error) {
-      console.error("Operation failed:", error);
-      notify.error(t("users.resend_failed"));
+      notify.error(getErrorMessage(error, t("users.resend_failed")));
     } finally {
       setResendingId(null);
     }
@@ -190,11 +206,10 @@ export default function ConfigurationUsers() {
       const roles = u.roles || [];
       const isStaff = roles.some((r) => (STAFF_ROLES as string[]).includes(r));
       const isCustomer = roles.includes(ROLES.CUSTOMER);
-      const isMember = roles.includes(ROLES.MEMBER);
 
       if (isStaff) staff.push(u);
       if (isCustomer) customers.push(u);
-      if (isMember && !isStaff && !isCustomer) memberOnly.push(u);
+      if (isMemberPortalLogin(roles)) memberOnly.push(u);
     }
     // Sort each bucket so rows that need attention (pending) come first
     // and active/inactive rows (no work needed) come last. Within the same
@@ -362,21 +377,30 @@ export default function ConfigurationUsers() {
           const expiryDate = u.invitation_expires_at
             ? formatDate(u.invitation_expires_at)
             : null;
+          const resendDisabledReason =
+            onboardingMode && isMemberPortalLogin(u.roles)
+              ? t("onboarding.mode.invitation_disabled")
+              : null;
           return (
             <Space size={4} wrap>
               {isPendingInvite &&
                 t("users.invitation_expires_on") +
                   ` ${expiryDate}`}
               {isPendingInvite && (
-                <Button
-                  size="small"
-                  icon={<MailOutlined />}
-                  loading={resendingId === u.id}
-                  disabled={invitationExpired}
-                  onClick={() => handleResend(u.id)}
-                >
-                  {t("users.resend_invitation")}
-                </Button>
+                <DisabledReasonTooltip reason={resendDisabledReason}>
+                  {(reasonId) => (
+                    <Button
+                      size="small"
+                      icon={<MailOutlined />}
+                      loading={resendingId === u.id}
+                      disabled={invitationExpired || !!resendDisabledReason}
+                      aria-describedby={reasonId}
+                      onClick={() => handleResend(u.id)}
+                    >
+                      {t("users.resend_invitation")}
+                    </Button>
+                  )}
+                </DisabledReasonTooltip>
               )}
               {(isActive || isInactive) && (
                 <Button
@@ -395,7 +419,7 @@ export default function ConfigurationUsers() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, formatDate, resendingId],
+    [t, formatDate, resendingId, onboardingMode],
   );
 
   const columns = useMemo(() => buildColumns(), [buildColumns]);

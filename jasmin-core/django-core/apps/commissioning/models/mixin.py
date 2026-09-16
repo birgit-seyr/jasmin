@@ -40,16 +40,28 @@ class AdminConfirmableMixin(models.Model):
     class Meta:
         abstract = True
 
-    def confirm(self, admin_user: JasminUser, *, save: bool = True) -> None:
+    def confirm(
+        self,
+        admin_user: JasminUser,
+        *,
+        save: bool = True,
+        confirmed_at: datetime.datetime | None = None,
+    ) -> None:
         """Mark this row as admin-confirmed and run post-confirm side-effects.
 
         Subclasses opt in to side-effects by overriding ``_post_confirm()``
         (e.g. ``Member`` generates a member-number, ``Subscription``
         materialises shares + deliveries + charge schedule).
+
+        ``confirmed_at`` dates a confirmation that happened earlier (onboarding
+        mode); without it the confirmation is stamped now. ``_post_confirm``
+        overrides read the stamp from ``self.admin_confirmed_at``.
         """
         self.admin_confirmed = True
         self.admin_confirmed_by = admin_user
-        self.admin_confirmed_at = timezone.now()
+        self.admin_confirmed_at = (
+            confirmed_at if confirmed_at is not None else timezone.now()
+        )
         self.admin_rejection_reason = None
         if save:
             self.save()

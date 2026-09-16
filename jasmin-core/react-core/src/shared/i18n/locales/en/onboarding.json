@@ -2,13 +2,11 @@
   "title": "Import existing subscriptions",
   "abos_link": "Import existing subscriptions (onboarding)",
   "members_title": "Import existing members",
-  "members_intro": "Two ways to bring in existing members: import via CSV, or enter them by hand (with an editable entry date).",
+  "members_intro": "Bring in existing members via CSV import. To enter them by hand, turn on onboarding mode at the bottom of the members page.",
   "members_csv_title": "Import via CSV",
   "members_upload_disabled": "CSV upload is disabled for this tenant (the \"allow upload for data lists\" setting).",
-  "members_manual_title": "Manual entry",
-  "members_manual_explain": "Turn on manual transfer to add or edit members by hand. The normally server-stamped entry date (GenG §30 Eintrittsdatum) then becomes editable in the grid, so you can set the historical admission date of existing members. Close this dialog and edit in the grid.",
+  "members_manual_hint": "Manual entry: turn on onboarding mode at the bottom of the members page. Member number and entry date then become editable in the grid.",
   "members_link": "Import existing members (onboarding)",
-  "members_manual_active": "manual transfer active",
   "intro": "A tenant's existing members and subscriptions are imported in a fixed order: reference data first, then members, then subscriptions. Subscriptions reference the earlier data by human-readable natural keys (member number, variation name, …).",
   "stage1": {
     "title": "1. Set up reference data",
@@ -97,5 +95,33 @@
     "due_date": "Optional — payment deadline for the shares (YYYY-MM-DD).",
     "paid_at": "Optional — the date the member actually paid (YYYY-MM-DD). Leave blank if still outstanding.",
     "note": "Free-text note (optional)."
+  },
+  "mode": {
+    "switch_label": "Onboarding mode",
+    "switch_hint": "For transferring existing members, cooperative shares and subscriptions from another system. Turn it off again once the transfer is done. Changing it asks for your password again.",
+    "banner_title": "Onboarding mode is on",
+    "banner_intro": "While onboarding mode is on, the whole tenant behaves like this:",
+    "effects": {
+      "no_emails": "No emails are sent except login, reseller and GDPR emails. Not sent: admission, rejection, cancellation and trial conversion emails to members, member portal invitations, waiting-list offers, and office notices about self-cancellations and failed subscription renewals. Sending a member invitation and offering a waiting-list spot are unavailable. Still sent: password resets, email verification codes, invitations and welcome emails for staff, gardener and reseller logins and for self-registration; offers, invoices (also to the accounting email), delivery notes and payment reminders to resellers; GDPR deletion emails; and test emails to your own address.",
+      "confirmation_dates": "The confirmation date can be set by hand.",
+      "member_fields": "Member number and entry date are editable in the members grid.",
+      "past_start": "Subscriptions may start in the past.",
+      "backfill": "Confirming a subscription creates deliveries back to 6 weeks in the past.",
+      "departed_members": "Subscriptions of members who have already left can be confirmed once the member is confirmed, if the subscription ends by the exit date.",
+      "confirm_members_first": "Confirm members on the members page with their confirmation date first. A member admitted instead through a subscription, an accepted invitation or, as a trial member, a new cooperative share gets today's confirmation and entry date."
+    },
+    "banner_outro": "Turn the mode off again at the bottom of the page once the transfer is done.",
+    "subscription_confirm_hint": "Onboarding mode: if the member isn't confirmed yet, confirming this subscription admits them with today's date. Confirm the member on the members page first to enter the actual confirmation date.",
+    "no_email_hint": "Onboarding mode is on, so no email is sent.",
+    "invitation_disabled": "Onboarding mode is on, and no member invitations are sent while it is. Turn it off to invite the member.",
+    "offer_spot_disabled": "Onboarding mode is on, and no waiting-list offers are sent while it is. Turn it off to offer the spot.",
+    "reject_warning_title": "Onboarding mode is on: no rejection email is sent.",
+    "reject_warning_body": "The applicant is not notified. The rejection is recorded immediately and cannot be undone from this screen.",
+    "reject_reason_label": "Reason (stored, not sent)"
+  },
+  "confirmation_date": {
+    "label": "Confirmation date",
+    "hint": "Onboarding mode: the date the confirmation actually happened. No email is sent.",
+    "hint_departed": "Onboarding mode: the member left on {{date}}. The confirmation date can't be later. Open cooperative shares are then cancelled on the exit date. No email is sent."
   }
 }

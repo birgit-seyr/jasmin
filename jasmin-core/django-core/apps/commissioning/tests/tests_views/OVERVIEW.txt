@@ -34,13 +34,17 @@ Total tests: 110
      - test_missing_year_returns_400
 
 ================================================================================
-3. test_statistic_views.py  (8 tests)
+3. test_statistic_views.py  (12 tests)
    Views: member_growth_statistics, historical_share_variation_averages
 --------------------------------------------------------------------------------
-   TestMemberGrowthStatistics
-     - test_returns_data_grouped_by_month
-     - test_filter_by_year
-     - test_cumulative_total
+   TestMemberGrowthStatistics (frozen clock)
+     - test_returns_entries_exits_and_totals_per_month
+     - test_unconfirmed_and_trial_members_are_left_out
+     - test_exits_are_subtracted_in_the_exit_period
+     - test_exit_after_today_is_not_counted_yet
+     - test_filter_by_year_starts_from_the_members_before_it
+     - test_start_date_starts_from_the_members_before_it
+     - test_week_periods_start_on_monday
      - test_invalid_period_returns_400
      - test_empty_when_no_members
 

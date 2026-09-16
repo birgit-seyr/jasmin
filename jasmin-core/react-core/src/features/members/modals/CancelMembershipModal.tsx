@@ -21,6 +21,7 @@ import {
 import { notify, toApiDate } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { ModalCancelSaveFooter } from "@shared/modals/shared";
+import OnboardingNoEmailHint from "@shared/ui/OnboardingNoEmailHint";
 import { useDateFormat } from "@hooks/index";
 
 const { Title, Paragraph, Text } = Typography;
@@ -219,6 +220,10 @@ export const CancelMembershipModal: FC<CancelMembershipModalProps> = ({
             </Form.Item>
           )}
         </Form>
+
+        {/* Office only: onboarding mode is an office setting, and the member
+            self-service page doesn't talk about it. */}
+        {!self && <OnboardingNoEmailHint />}
 
         <Paragraph type="secondary" style={{ marginBottom: 0, fontSize: 12 }}>
           {t("members.cancel_membership_footnote")}

@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from apps.authz.permissions import IsOffice, has_any_role
 from apps.shared.pii_masking import MaskedIBANFieldMixin
 
 from ..models import CoopShare, CoopShareTransfer, Member, Subscription
@@ -53,7 +54,11 @@ WAITING_LIST_READONLY_FIELDS = (
 # See ``MemberImportSerializer``. ``cancelled_by`` deliberately stays locked:
 # it is an FK to the staff user who performed the cancellation, which has no
 # meaning for a migrated row.
-IMPORT_WRITABLE_FIELDS = ("member_number", "cancelled_effective_at")
+IMPORT_WRITABLE_FIELDS = ("member_number", "entry_date", "cancelled_effective_at")
+
+# Locks the office grid lifts while the tenant's onboarding mode is on. See
+# ``MemberOnboardingSerializer``.
+ONBOARDING_WRITABLE_FIELDS = ("member_number", "entry_date")
 
 
 class MemberEmailLogSerializer(serializers.Serializer):
@@ -156,15 +161,11 @@ class MemberSerializer(
         # Annotated as a variable-length tuple so ``MemberImportSerializer``
         # can narrow it with a filtered ``tuple(...)``.
         read_only_fields: tuple[str, ...] = (
+            # Historical values for these two are entered through
+            # ``MemberOnboardingSerializer`` (tenant onboarding mode) or
+            # ``MemberImportSerializer`` (CSV import).
             "member_number",
-            # ``entry_date`` (GenG §30 Eintrittsdatum) is normally server-stamped
-            # and NOT office-editable. It is deliberately writable here so the
-            # office can hand-set it during MANUAL MEMBER TRANSFER (migrating
-            # members from another system with historical admission dates). Two
-            # gates stand in for a read-only lock: the office role is
-            # required to PATCH a member at all, and the members grid keeps the
-            # cell disabled (out of the save payload) unless the operator turns
-            # on the explicit "händische Übertragung" toggle.
+            "entry_date",
             "sepa_consent",
             "privacy_consent",
             "withdrawal_consent",
@@ -306,6 +307,44 @@ class MemberImportSerializer(MemberSerializer):
             attrs["cancelled_at"] = timezone.make_aware(
                 datetime.combine(effective, time.min),
                 timezone.get_current_timezone(),
+            )
+        return super().validate(attrs)
+
+
+class MemberOnboardingSerializer(MemberSerializer):
+    """``MemberSerializer`` for office writes while the tenant's onboarding mode
+    is on — ``member_number`` and ``entry_date`` writable.
+
+    During onboarding the office types in members that already exist on paper,
+    with the Mitgliedsnummer and Eintrittsdatum (GenG §30) they already carry.
+    Outside onboarding both stay server-stamped by ``Member._post_confirm`` /
+    the trial-conversion hook, because renumbering a live member or rewriting
+    an admission date falsifies the Mitgliederliste.
+
+    ``MemberViewSet.get_serializer_class`` returns this class for
+    create/update/partial_update only when the flag is on; the schema keeps
+    documenting ``MemberSerializer``. Writable ``member_number`` makes DRF
+    attach the model's ``unique=True`` validator, so a duplicate number is a
+    clean 400 instead of an ``IntegrityError``.
+    """
+
+    class Meta(MemberSerializer.Meta):
+        read_only_fields = tuple(
+            field_name
+            for field_name in MemberSerializer.Meta.read_only_fields
+            if field_name not in ONBOARDING_WRITABLE_FIELDS
+        )
+
+    def validate(self, attrs):
+        from apps.commissioning.errors import MemberNumberNotAllowedForTrial
+
+        # Trial members are not Mitglieder under GenG and hold no
+        # Mitgliedsnummer (see ``MemberImportSerializer.validate``). A PATCH may
+        # omit ``is_trial``, so fall back to the stored flag.
+        is_trial = attrs.get("is_trial", getattr(self.instance, "is_trial", False))
+        if attrs.get("member_number") is not None and is_trial:
+            raise MemberNumberNotAllowedForTrial(
+                "A trial member cannot carry a member number."
             )
         return super().validate(attrs)
 
@@ -607,10 +646,14 @@ class SubscriptionSerializer(
         # valid_from is being set or changed — re-saving an existing draft
         # whose (once-valid) start has since slipped into the lead window
         # shouldn't be blocked. Mirrors the office UI date-picker floor
-        # (``useSubscriptionTerm`` on the frontend).
+        # (``useSubscriptionTerm`` on the frontend). Skipped for an office write
+        # while the tenant is in onboarding mode (see
+        # ``_skips_start_lead_time``); the other checks still apply.
         valid_from = attrs.get("valid_from")
-        if valid_from is not None and (
-            self.instance is None or self.instance.valid_from != valid_from
+        if (
+            valid_from is not None
+            and (self.instance is None or self.instance.valid_from != valid_from)
+            and not self._skips_start_lead_time()
         ):
             from datetime import timedelta
 
@@ -695,6 +738,19 @@ class SubscriptionSerializer(
 
         return super().validate(attrs)
 
+    def _skips_start_lead_time(self) -> bool:
+        """Whether this write may start before the lead time, in the past too.
+
+        Only for an office user while the tenant is in onboarding mode, where
+        the office enters subscriptions that are already running.
+        ``SubscriptionViewSet`` puts ``onboarding_mode`` into the context from
+        the tenant flag; member self-service builds this serializer without it,
+        and the role check keeps the skip office-only for any other caller.
+        """
+        if not self.context.get("onboarding_mode"):
+            return False
+        return has_any_role(self.context.get("request"), *IsOffice.required_roles)
+
     def to_representation(self, instance):
         # ``member`` / ``share_type_variation`` are declared as plain writable
         # ``CharField()`` (the write API expects flat ids). On output emit their
@@ -777,9 +833,13 @@ class CoopShareSerializer(
         # / the admin-confirm action) and the GenG §30/§31 audit trail — a generic
         # office PATCH must never set them (would falsify cancelled_by/audit and
         # let admin_confirmed be forged). Mirrors MemberSerializer.read_only_fields.
-        read_only_fields = (
+        # Annotated as a variable-length tuple so ``CoopShareOnboardingSerializer``
+        # can narrow it with a filtered ``tuple(...)``.
+        read_only_fields: tuple[str, ...] = (
             *CANCELLATION_READONLY_FIELDS,
             *ADMIN_CONFIRMATION_READONLY_FIELDS,
+            # Historical payment dates are entered through
+            # ``CoopShareOnboardingSerializer`` (tenant onboarding mode).
             "paid_at",
             # Snapshotted server-side at member cancellation. ``paid_back_date``
             # is intentionally NOT here — the office stamps it when the share is
@@ -809,6 +869,43 @@ class CoopShareSerializer(
         if self.instance is not None:
             CoopShareService.apply_confirmed_share_edit_lock(self.instance, attrs)
         return super().validate(attrs)
+
+
+class CoopShareOnboardingSerializer(CoopShareSerializer):
+    """``CoopShareSerializer`` for office writes while the tenant's onboarding
+    mode is on — ``paid_at`` writable, so shares paid in before Jasmin carry
+    their payment date.
+
+    ``CoopShareViewSet.get_serializer_class`` returns this class for
+    create/update/partial_update only when the flag is on; the schema keeps
+    documenting ``CoopShareSerializer``. ``paid_at`` is a DateTimeField but
+    the grid sends a calendar date: it is stored as local midnight of that day,
+    the same shape the transfer service writes.
+    """
+
+    class Meta(CoopShareSerializer.Meta):
+        read_only_fields = tuple(
+            field_name
+            for field_name in CoopShareSerializer.Meta.read_only_fields
+            if field_name != "paid_at"
+        )
+
+    def validate_paid_at(self, value: datetime | None) -> datetime | None:
+        from django.utils import timezone
+
+        if value is None:
+            return None
+        paid_on = timezone.localtime(value).date()
+        return timezone.make_aware(datetime.combine(paid_on, time.min))
+
+
+class AdminConfirmationRequestSerializer(serializers.Serializer):
+    """Optional body of ``POST members/{id}/confirm/`` and
+    ``POST coop_shares/{id}/confirm/``. ``confirmed_at`` dates a confirmation
+    that happened before the tenant used Jasmin; the viewsets accept it only
+    while the tenant's onboarding mode is on."""
+
+    confirmed_at = serializers.DateField(required=False, allow_null=True)
 
 
 class CoopShareTransferRequestSerializer(serializers.Serializer):

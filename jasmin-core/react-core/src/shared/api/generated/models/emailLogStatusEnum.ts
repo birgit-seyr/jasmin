@@ -15,6 +15,7 @@
 * `complained` - Complained
 * `rejected` - Rejected
 * `failed` - Failed
+* `suppressed` - Suppressed
  */
 export type EmailLogStatusEnum = typeof EmailLogStatusEnum[keyof typeof EmailLogStatusEnum];
 
@@ -29,4 +30,5 @@ export const EmailLogStatusEnum = {
   complained: 'complained',
   rejected: 'rejected',
   failed: 'failed',
+  suppressed: 'suppressed',
 } as const;

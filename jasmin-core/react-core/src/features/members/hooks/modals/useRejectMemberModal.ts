@@ -12,7 +12,8 @@ import type { MemberRecord } from "@features/members/pages/types";
  * Backend (``MembersViewSet.reject``) forwards the ``reason`` to
  * ``MemberService.reject_and_notify`` which puts it into the
  * ``accounts.application_rejected`` email context. Empty string is allowed by
- * the serializer — the email still goes out, just without a stated reason. The
+ * the serializer — the email still goes out, just without a stated reason (no
+ * email goes out while the tenant's onboarding mode is on). The
  * resolved payload (incl. any stamped fields) flows back so the caller can patch
  * the table row.
  */

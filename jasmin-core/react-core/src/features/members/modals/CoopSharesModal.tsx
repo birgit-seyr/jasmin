@@ -14,6 +14,7 @@ import {
   useCommissioningCoopSharesList,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
+  AdminConfirmationRequest,
   CommissioningCoopSharesListParams,
   CoopShare,
   CoopShareTransfer,
@@ -65,6 +66,9 @@ interface CoopSharesModalProps {
    *  Non-null ⇒ the member has left: no new shares may be subscribed and the
    *  min/max range banner is replaced with the exit-date notice. */
   memberCancelledEffectiveAt?: string | null;
+  /** The member's entry date — the default confirmation date of a share
+   *  confirmed in onboarding mode. */
+  memberEntryDate?: string | null;
 }
 
 export default function CoopSharesModal({
@@ -75,6 +79,7 @@ export default function CoopSharesModal({
   isTrial = false,
   adminConfirmed = false,
   memberCancelledEffectiveAt = null,
+  memberEntryDate = null,
 }: CoopSharesModalProps) {
   const queryClient = useQueryClient();
 
@@ -82,6 +87,10 @@ export default function CoopSharesModal({
   const { isOffice } = useRoles();
   const memberCancelled = !!memberCancelledEffectiveAt;
   const { getSetting } = useTenant();
+  // Tenant onboarding mode: ``paid_at`` becomes editable so shares paid in
+  // before Jasmin carry their payment date. Read as a primitive for the
+  // columns memo.
+  const onboardingMode = getSetting("onboarding_mode", false) === true;
 
   // Whole-unit tenant setting (number on the wire). Coerce defensively for
   // the arithmetic below and the numeric create payload. ``undefined`` = the
@@ -189,9 +198,9 @@ export default function CoopSharesModal({
   );
 
   // Office admin-confirmation of a coop share goes through the same status
-  // column + confirmation modal as members/abos. The confirm action ignores
-  // the request body — it just flips admin_confirmed server-side (and admits
-  // the member if they weren't yet).
+  // column + confirmation modal as members/abos. Confirming flips
+  // admin_confirmed server-side (and admits the member if they weren't yet);
+  // the body carries the confirmation date only in onboarding mode.
   const [confirmRecord, setConfirmRecord] = useState<CoopShareRecord | null>(
     null,
   );
@@ -204,10 +213,13 @@ export default function CoopSharesModal({
         },
       },
     });
-  const handleConfirm = useCallback(() => {
-    if (!confirmRecord) return;
-    confirmShare({ id: String(confirmRecord.id) });
-  }, [confirmShare, confirmRecord]);
+  const handleConfirm = useCallback(
+    (body: AdminConfirmationRequest) => {
+      if (!confirmRecord) return;
+      confirmShare({ id: String(confirmRecord.id), data: body });
+    },
+    [confirmShare, confirmRecord],
+  );
 
   const columns: EditableColumnConfig<CoopShareRecord>[] = useMemo(
     () => [
@@ -287,6 +299,9 @@ export default function CoopSharesModal({
         align: "center",
         required: false,
         sortable: true,
+        // The server accepts ``paid_at`` from the grid only while the tenant is
+        // in onboarding mode (``CoopShareOnboardingSerializer``).
+        disabled: !onboardingMode,
         render: (value: unknown) => formatDate(value as string | null),
       },
       {
@@ -345,7 +360,19 @@ export default function CoopSharesModal({
       currencySymbol,
       value_one_coop_share,
       noteColumn,
+      onboardingMode,
     ],
+  );
+
+  // ``paid_at`` is a datetime on the wire, but its cell edits a calendar day:
+  // seed it in the display format, which the save converts back to
+  // ``YYYY-MM-DD``.
+  const customEdit = useCallback(
+    (record: CoopShareRecord): CoopShareRecord =>
+      record.paid_at
+        ? { ...record, paid_at: formatDate(record.paid_at) }
+        : record,
+    [formatDate],
   );
 
   // ``customSave`` runs once per save. We use it both for the payload
@@ -588,6 +615,7 @@ export default function CoopSharesModal({
         onSaveSuccess={onSaveSuccess}
         onDeleteSuccess={onDeleteSuccess}
         loading={isFetching}
+        customEdit={customEdit}
         customSave={customSave}
         permissions={permissions}
       />
@@ -602,6 +630,8 @@ export default function CoopSharesModal({
         onClose={() => setConfirmRecord(null)}
         onConfirm={handleConfirm}
         loading={confirming}
+        memberEntryDate={memberEntryDate}
+        memberExitDate={memberCancelledEffectiveAt}
       />
 
       {memberId != null && (

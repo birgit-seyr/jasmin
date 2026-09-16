@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useOnboardingMode } from "@hooks/index";
 import { AdminRejectionModal } from "@shared/modals/AdminRejectionModal";
 import type { MemberRecord } from "@features/members/pages/types";
 
@@ -21,6 +22,8 @@ interface RejectMemberModalProps {
  *
  * The reason is forwarded to the ``accounts.application_rejected`` email
  * so the applicant sees it verbatim — keep that in mind when writing it.
+ * While the tenant's onboarding mode is on that email is not sent, and the
+ * copy says so.
  * Triggered from the StatusButton in the Members table; the action is
  * irreversible from the UI.
  */
@@ -34,6 +37,7 @@ export const RejectMemberModal: FC<RejectMemberModalProps> = ({
   loading = false,
 }) => {
   const { t } = useTranslation();
+  const onboardingMode = useOnboardingMode();
 
   if (!member) return null;
 
@@ -52,8 +56,19 @@ export const RejectMemberModal: FC<RejectMemberModalProps> = ({
           {member.member_number ? ` (#${member.member_number})` : ""}
         </>
       }
-      warningTitle={t("members.reject_warning_title")}
-      warningBody={t("members.reject_warning_body")}
+      warningTitle={
+        onboardingMode
+          ? t("onboarding.mode.reject_warning_title")
+          : t("members.reject_warning_title")
+      }
+      warningBody={
+        onboardingMode
+          ? t("onboarding.mode.reject_warning_body")
+          : t("members.reject_warning_body")
+      }
+      reasonLabel={
+        onboardingMode ? t("onboarding.mode.reject_reason_label") : undefined
+      }
       reasonPlaceholder={t("members.reject_reason_placeholder")}
     />
   );

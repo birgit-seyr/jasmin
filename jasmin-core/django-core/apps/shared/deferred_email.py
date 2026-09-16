@@ -39,6 +39,8 @@ from typing import Any
 
 from django.db import transaction
 
+from apps.shared.tenants.onboarding_emails import EmailCategory
+
 
 def send_email_best_effort(
     *,
@@ -49,6 +51,7 @@ def send_email_best_effort(
     related_object_id: str = "",
     language: str | None = None,
     priority: str = "normal",
+    category: EmailCategory = EmailCategory.GENERAL,
     logger: logging.Logger,
     log_error_event: str,
     log_not_sent_event: str,
@@ -66,6 +69,11 @@ def send_email_best_effort(
     unsent mail (``send_email`` returned ``False``) logs
     ``"<log_not_sent_event> <log_ref>"`` and returns ``False``. Anything
     outside that except set is a real bug and propagates.
+
+    A send that onboarding mode suppressed is expected, not a failure: it logs
+    ``"<log_not_sent_event> <log_ref> reason=onboarding_mode"`` at INFO and
+    returns ``False``. ``category`` is passed to ``EmailService.send_email``
+    (see ``apps.shared.tenants.onboarding_emails``).
 
     ``log_level`` selects the severity of both failure lines: ``"error"``
     (the default — preserves the historic ERROR behaviour) or ``"warning"``
@@ -88,7 +96,8 @@ def send_email_best_effort(
 
     emit_log = logger.warning if log_level == "warning" else logger.error
     try:
-        ok = EmailService().send_email(
+        service = EmailService()
+        ok = service.send_email(
             slug=slug,
             to_emails=to_emails,
             context=context,
@@ -96,11 +105,15 @@ def send_email_best_effort(
             related_object_id=related_object_id,
             language=language,
             priority=priority,
+            category=category,
         )
     except (ValueError, TypeError, AttributeError, OSError) as exc:
         emit_log("%s %s error=%s", log_error_event, log_ref, exc)
         return False
     if not ok:
+        if service.last_send_suppressed:
+            logger.info("%s %s reason=onboarding_mode", log_not_sent_event, log_ref)
+            return False
         emit_log("%s %s", log_not_sent_event, log_ref)
         return False
     if post_send_callback is not None:
@@ -116,6 +129,7 @@ def schedule_deferred_email(
     related_object_type: str,
     related_object_id: str,
     language: str | None = None,
+    category: EmailCategory = EmailCategory.GENERAL,
     logger: logging.Logger,
     log_error_event: str,
     log_not_sent_event: str,
@@ -133,8 +147,12 @@ def schedule_deferred_email(
     a crashed send logs ``"<log_error_event> <log_ref> error=<exc>"``
     and an unsent mail (``send_email`` returned ``False``) logs
     ``"<log_not_sent_event> <log_ref>"``, both at ERROR level on the
-    caller's logger. ``log_ref`` is the pre-formatted identity of the
-    recipient/subject, e.g. ``f"member={member_id}"``.
+    caller's logger. A send that onboarding mode suppressed logs
+    ``"<log_not_sent_event> <log_ref> reason=onboarding_mode"`` at INFO.
+    ``log_ref`` is the pre-formatted identity of the recipient/subject,
+    e.g. ``f"member={member_id}"``. ``category`` is passed to
+    ``EmailService.send_email`` when the callback runs, and the onboarding
+    flag is read then, not when the send is scheduled.
 
     ``post_send_callback`` runs only after a genuinely successful send
     (``send_email`` returned ``True``) — e.g. stamping a "confirmation
@@ -149,6 +167,7 @@ def schedule_deferred_email(
             related_object_type=related_object_type,
             related_object_id=related_object_id,
             language=language,
+            category=category,
             logger=logger,
             log_error_event=log_error_event,
             log_not_sent_event=log_not_sent_event,

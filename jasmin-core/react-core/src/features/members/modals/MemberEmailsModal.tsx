@@ -1,6 +1,6 @@
 import type { FC } from "react";
 import { useMemo } from "react";
-import { Modal, Tag, Tooltip } from "antd";
+import { Modal, Tooltip } from "antd";
 import ModalCloseFooter from "@shared/modals/ModalCloseFooter";
 import { ReadOnlyReportTable } from "@shared/tables";
 import type { ColumnsType } from "antd/es/table";
@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useCommissioningMembersEmailsList } from "@shared/api/generated/commissioning/commissioning";
 import type { MemberEmailLog } from "@shared/api/generated/models";
 import { useTimeFormat } from "@hooks/index";
-import { getEmailStatusColor } from "@shared/utils/emailStatusColors";
+import EmailStatusTag from "../components/EmailStatusTag";
 
 interface MemberEmailsModalProps {
   isOpen: boolean;
@@ -76,11 +76,7 @@ const MemberEmailsModal: FC<MemberEmailsModalProps> = ({
         dataIndex: "status",
         key: "status",
         width: "8em",
-        render: (value: string) => (
-          <Tag color={getEmailStatusColor(value)}>
-            {t(`email_matrix.status.${value}`)}
-          </Tag>
-        ),
+        render: (value: string) => <EmailStatusTag status={value} />,
       },
       {
         title: t("email_matrix.sent_at"),

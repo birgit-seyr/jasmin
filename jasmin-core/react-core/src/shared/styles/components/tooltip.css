@@ -16,6 +16,12 @@
   border: 1px solid var(--color-border-soft) !important;
 }
 
+/* Hover target around an action that DisabledReasonTooltip explains. */
+.disabled-reason-tooltip {
+  display: inline-block;
+  cursor: not-allowed;
+}
+
 /* A ToolTipIcon nudged to sit beside a bulk-action button in an action row.
    ``margin-left`` needs ``!important`` to beat the icon's default inline
    ``marginLeft`` from the component. */

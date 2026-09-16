@@ -13,7 +13,7 @@ import {
 } from "@features/members/modals";
 import SuccessModal from "@shared/modals/SuccessModal";
 import { ExplainerText } from "@shared/ui";
-import { useLogoShape, useTenant } from "@hooks/index";
+import { useLogoShape, useOnboardingMode, useTenant } from "@hooks/index";
 import {
   getCommissioningAbosListQueryKey,
   getCommissioningMembersRetrieveQueryKey,
@@ -60,6 +60,9 @@ const MemberDetail = () => {
   const { t } = useTranslation();
   const { logoUrl, displayLogoUrl, tenantName } = useTenant();
   const { isMemberOnly } = useRoles();
+  // The office's approval email is not sent while onboarding mode is on, so the
+  // pending page doesn't promise one then.
+  const onboardingMode = useOnboardingMode();
   const queryClient = useQueryClient();
   const [deliveryModalVisible, setDeliveryModalVisible] = useState(false);
   const [newSubscriptionModalVisible, setNewSubscriptionModalVisible] =
@@ -262,7 +265,7 @@ const MemberDetail = () => {
   // call without touching the global i18next state — so the rest of
   // the page (when it becomes visible after confirmation) still
   // honours whatever language they've picked.
-  const bilingual = (deKey: string, enFallback: string) => (
+  const bilingual = (deKey: string, enFallback?: string) => (
     <>
       <div>{t(deKey, { lng: "de" })}</div>
       <div
@@ -332,10 +335,14 @@ const MemberDetail = () => {
             "members.application_pending_title",
             "Your application is being reviewed.",
           )}
-          subTitle={bilingual(
-            "members.application_pending_subtitle",
-            "Thanks for signing up. The office hasn't confirmed your membership yet — once they do, your portal will unlock with your subscriptions, deliveries, and payments. We'll email you the moment it's done.",
-          )}
+          subTitle={
+            onboardingMode
+              ? bilingual("members.application_pending_subtitle_no_email")
+              : bilingual(
+                  "members.application_pending_subtitle",
+                  "Thanks for signing up. The office hasn't confirmed your membership yet — once they do, your portal will unlock with your subscriptions, deliveries, and payments. We'll email you the moment it's done.",
+                )
+          }
         />
       </div>
     );
@@ -542,6 +549,7 @@ const MemberDetail = () => {
           isTrial={member.is_trial ?? false}
           adminConfirmed={member.admin_confirmed ?? false}
           memberCancelledEffectiveAt={member.cancelled_effective_at ?? null}
+          memberEntryDate={member.entry_date ?? null}
           onClose={() => {
             setCoopSharesModalVisible(false);
             // Refresh the member detail so the card's coop_shares_total reflects

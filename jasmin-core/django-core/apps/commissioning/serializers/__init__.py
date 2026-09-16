@@ -76,6 +76,8 @@ from .logs_serializer import (
     TheoreticalWashAmountSerializer,
 )
 from .members_serializer import (
+    AdminConfirmationRequestSerializer,
+    CoopShareOnboardingSerializer,
     CoopShareSerializer,
     CoopShareTransferRequestSerializer,
     CoopShareTransferSerializer,
@@ -84,6 +86,7 @@ from .members_serializer import (
     MemberEmailSerializer,
     MemberImportSerializer,
     MemberLoanSerializer,
+    MemberOnboardingSerializer,
     MemberSelfReadSerializer,
     MemberSerializer,
     SubscriptionMemberEmailsResponseSerializer,

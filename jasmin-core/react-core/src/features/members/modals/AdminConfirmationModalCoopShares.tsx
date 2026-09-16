@@ -1,6 +1,7 @@
 import { Descriptions, Modal, Tag } from "antd";
 import type { FC } from "react";
 import { useTranslation } from "react-i18next";
+import type { AdminConfirmationRequest } from "@shared/api/generated/models";
 import {
   adminConfirmationAuditItems,
   type AdminConfirmableRecord,
@@ -8,6 +9,8 @@ import {
   adminConfirmationFooter,
 } from "@shared/modals/shared";
 import { useCurrency, useTimeFormat } from "@hooks/index";
+import { OnboardingConfirmationDateField } from "@features/members/components/OnboardingConfirmationDateField";
+import { useOnboardingConfirmationDate } from "@features/members/hooks/useOnboardingConfirmationDate";
 
 /** A coop-share row as far as the admin-confirmation modal cares. */
 export interface CoopShareConfirmRecord extends AdminConfirmableRecord {
@@ -21,21 +24,42 @@ interface AdminConfirmationModalCoopSharesProps {
   isOpen: boolean;
   onClose: () => void;
   coopShare: CoopShareConfirmRecord | null;
-  onConfirm?: () => void;
+  /** Receives the confirm request body: ``confirmed_at`` while the tenant's
+   *  onboarding mode is on, empty otherwise. */
+  onConfirm?: (body: AdminConfirmationRequest) => void;
   loading?: boolean;
+  /** The share owner's entry date — the default confirmation date. */
+  memberEntryDate?: string | null;
+  /** The share owner's exit date when they have left. */
+  memberExitDate?: string | null;
 }
 
 /**
  * Admin-confirmation modal for a single cooperative share — the same shape as
  * the members / abos confirmation modals (status banner + audit line of who
- * confirmed it and when), reusing the shared admin-confirmation toolkit.
+ * confirmed it and when), reusing the shared admin-confirmation toolkit. While
+ * the tenant's onboarding mode is on it also asks for the confirmation date.
  */
 export const AdminConfirmationModalCoopShares: FC<
   AdminConfirmationModalCoopSharesProps
-> = ({ isOpen, onClose, coopShare, onConfirm, loading = false }) => {
+> = ({
+  isOpen,
+  onClose,
+  coopShare,
+  onConfirm,
+  loading = false,
+  memberEntryDate = null,
+  memberExitDate = null,
+}) => {
   const { t } = useTranslation();
   const { formatDateTime } = useTimeFormat();
   const { currencySymbol } = useCurrency();
+  const { onboardingMode, confirmedOn, setConfirmedOn, confirmationBody } =
+    useOnboardingConfirmationDate({
+      recordId: coopShare?.id ?? null,
+      entryDate: memberEntryDate,
+      exitDate: memberExitDate,
+    });
 
   if (!coopShare) {
     return null;
@@ -53,7 +77,7 @@ export const AdminConfirmationModalCoopShares: FC<
       footer={adminConfirmationFooter({
         isTerminal: coopShare.admin_confirmed,
         onClose,
-        onConfirm,
+        onConfirm: onConfirm ? () => onConfirm(confirmationBody()) : undefined,
         confirmLabel: t("members.confirm_coop_share"),
         cancelLabel: t("common.cancel"),
         loading,
@@ -90,6 +114,13 @@ export const AdminConfirmationModalCoopShares: FC<
         </Descriptions.Item>
         {adminConfirmationAuditItems(coopShare, t, formatDateTime)}
       </Descriptions>
+      {onboardingMode && !coopShare.admin_confirmed && (
+        <OnboardingConfirmationDateField
+          value={confirmedOn}
+          onChange={setConfirmedOn}
+          exitDate={memberExitDate}
+        />
+      )}
     </Modal>
   );
 };

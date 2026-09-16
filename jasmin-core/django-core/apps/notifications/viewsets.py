@@ -376,13 +376,16 @@ class EmailTemplateViewSet(RolePermissionsMixin, viewsets.ViewSet):
             raise TestSendNoRecipient("No recipient available.")
 
         from apps.shared.tenants.email_service import EmailService
+        from apps.shared.tenants.onboarding_emails import EmailCategory
 
+        # A test send goes out in onboarding mode too, whatever the slug.
         ok = EmailService().send_email(
             slug=slug,
             to_emails=[recipient],
             context=dict(spec.sample),
             purpose=f"test:{slug}",
             language=_resolve_language(request),
+            category=EmailCategory.TEST_SEND,
         )
         if not ok:
             raise EmailDispatchFailed("Failed to send test email — check server logs.")

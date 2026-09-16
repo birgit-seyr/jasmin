@@ -482,3 +482,10 @@
 .sepa-mandate-square--inactive {
   background-color: var(--color-error);
 }
+
+/* An email status tag wraps inside its fixed-width status column instead of
+   running into the next cell. */
+.ant-tag.email-status-tag {
+  white-space: normal;
+  max-width: 100%;
+}

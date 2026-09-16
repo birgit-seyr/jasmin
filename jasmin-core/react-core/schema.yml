@@ -207,11 +207,11 @@ paths:
   /api/auth/admin/users/{id}/resend-invitation/:
     post:
       operationId: auth_admin_users_resend_invitation_create
-      description: |-
-        Admin endpoints for managing tenant users.
-
-        All operations require the ``admin`` role. Wired into ``/admin/users/``
-        by ``apps.accounts.urls`` via ``DefaultRouter``.
+      description: 'Cancels the user''s open invitation, creates a new one and emails
+        it. For a member''s portal login (no internal and no customer role) the invitation
+        is a member email: refused with 409 while the tenant''s onboarding mode is
+        on, before any invitation is created or quota is used, as members/{id}/send_invitation
+        is.'
       summary: Re-send invitation email to a user still in pending_invitation
       parameters:
       - in: path
@@ -249,6 +249,12 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
           content:
             application/json:
               schema:
@@ -1457,7 +1463,9 @@ paths:
       operationId: commissioning_abos_confirm_create
       description: 'Admin-confirm a subscription. Materialises Shares, ShareDeliveries
         and the PLANNED ChargeSchedule for the term. Idempotent: re-running only fills
-        missing rows; ISSUED/PAID/FAILED/WAIVED charges are never touched.'
+        missing rows; ISSUED/PAID/FAILED/WAIVED charges are never touched. A subscription
+        of a member who has left is refused; in onboarding mode it is confirmed when
+        the member is already confirmed and the subscription ends by the exit date.'
       parameters:
       - in: path
         name: id
@@ -1475,6 +1483,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Subscription'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '409':
           content:
@@ -1509,7 +1523,9 @@ paths:
         logging in. Optional ``price_per_delivery`` lets the office set the price
         at offer time (a waiting_list entry may be a year old). Only a PENDING waiting-list
         entry can be offered; a capacity 409 means the slot filled up between the
-        office''s view and the click.'
+        office''s view and the click. Refused with 409 while the tenant''s onboarding
+        mode is on, because no member emails are sent then: no capacity is held and
+        no magic link is minted.'
       parameters:
       - in: path
         name: id
@@ -1539,13 +1555,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/Subscription'
           description: ''
-        '401':
+        '400':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
-        '400':
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
           content:
             application/json:
               schema:
@@ -3660,16 +3682,14 @@ paths:
   /api/commissioning/coop_shares/{id}/confirm/:
     post:
       operationId: commissioning_coop_shares_confirm_create
-      description: |-
-        Office-confirm a pending (e.g. member-self-subscribed) coop share.
-
-        Vice-versa cascade: if the share belongs to a not-yet-admitted member,
-        confirming the share admits the member too (initial admission from the
-        equity side) — which in turn confirms the member's other pending shares
-        and sends the admission email. This is best-effort: if the member is not
-        yet eligible for admission (e.g. below the min-shares window), the share
-        is still confirmed and the member stays pending (admit later via
-        member-confirm). Members admitted earlier skip this entirely.
+      description: Office-confirm a pending coop share. The body is optional. While
+        the tenant's onboarding mode is on, ``confirmed_at`` (YYYY-MM-DD, not in the
+        future) dates the confirmation; no email is sent; and a share of a member
+        who has already left can be confirmed on a day up to the exit date, after
+        which it is cancelled with that exit date. In onboarding mode only a pending
+        share can be confirmed, and a departed member's share is refused when the
+        member can't be admitted (coop shares out of range). Sending ``confirmed_at``
+        while the mode is off is refused (400).
       parameters:
       - in: path
         name: id
@@ -3679,6 +3699,17 @@ paths:
         required: true
       tags:
       - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminConfirmationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminConfirmationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminConfirmationRequest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -3687,6 +3718,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CoopShare'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '401':
           content:
@@ -11828,9 +11871,11 @@ paths:
   /api/commissioning/member_growth_statistics/:
     get:
       operationId: commissioning_member_growth_statistics_list
-      description: "\n    Returns member growth statistics over time, showing new
-        members per period\n    and cumulative total. Can be filtered by time period
-        and date range.\n    "
+      description: "\n    Returns confirmed members per period: entries (by entry
+        date), exits (by\n    exit date, once it has passed) and the member count
+        at the end of each\n    period. Can be filtered by year or start date; the
+        count still includes\n    members who joined before the window and hadn't
+        left by then.\n    "
       summary: Get member growth statistics
       parameters:
       - in: query
@@ -12587,7 +12632,13 @@ paths:
   /api/commissioning/members/{id}/confirm/:
     post:
       operationId: commissioning_members_confirm_create
-      description: Confirm a pending member.
+      description: Confirm a pending member. The body is optional. While the tenant's
+        onboarding mode is on, ``confirmed_at`` (YYYY-MM-DD, not in the future) dates
+        the confirmation, the entry date and the confirmation of the member's pending
+        coop shares; no email is sent; and a member who has already left can be confirmed
+        on a day up to their exit date, after which their open coop shares are cancelled
+        with that exit date. Sending ``confirmed_at`` while the mode is off is refused
+        (400).
       parameters:
       - in: path
         name: id
@@ -12597,6 +12648,17 @@ paths:
         required: true
       tags:
       - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminConfirmationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminConfirmationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminConfirmationRequest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -12605,6 +12667,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Member'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '409':
           content:
@@ -12738,9 +12806,11 @@ paths:
   /api/commissioning/members/{id}/send_invitation/:
     post:
       operationId: commissioning_members_send_invitation_create
-      description: Send (or re-send) a JasminUser invitation email to this member.
+      description: 'Send (or re-send) a JasminUser invitation email to this member.
         Creates a JasminUser in pending_invitation status linked to the member if
-        one does not already exist.
+        one does not already exist. Refused while the tenant''s onboarding mode is
+        on, because no member emails are sent then: no user or invitation is created
+        and no quota is used.'
       parameters:
       - in: path
         name: id
@@ -12758,6 +12828,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Member'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '401':
           content:
@@ -28979,6 +29061,18 @@ components:
       - HONEY_SHARE
       - OIL_SHARE
       - fruit_and_veg_shares_are_separate
+    AdminConfirmationRequest:
+      type: object
+      description: |-
+        Optional body of ``POST members/{id}/confirm/`` and
+        ``POST coop_shares/{id}/confirm/``. ``confirmed_at`` dates a confirmation
+        that happened before the tenant used Jasmin; the viewsets accept it only
+        while the tenant's onboarding mode is on.
+      properties:
+        confirmed_at:
+          type: string
+          format: date
+          nullable: true
     AdminDecidedDeletion:
       type: object
       description: |-
@@ -32977,6 +33071,7 @@ components:
       - complained
       - rejected
       - failed
+      - suppressed
       type: string
       description: |-
         * `pending` - Pending
@@ -32987,6 +33082,7 @@ components:
         * `complained` - Complained
         * `rejected` - Rejected
         * `failed` - Failed
+        * `suppressed` - Suppressed
     EmailTemplateDetail:
       type: object
       properties:
@@ -34447,6 +34543,7 @@ components:
         entry_date:
           type: string
           format: date
+          readOnly: true
           nullable: true
         is_trial:
           type: boolean
@@ -34709,6 +34806,7 @@ components:
         entry_date:
           type: string
           format: date
+          readOnly: true
           nullable: true
         is_trial:
           type: boolean
@@ -34958,7 +35056,8 @@ components:
       - template
     MemberGrowthStatistic:
       type: object
-      description: Serializer for member growth statistics.
+      description: 'Admitted members per period: entries, exits and the count at its
+        end.'
       properties:
         period:
           type: string
@@ -34966,11 +35065,16 @@ components:
           description: Period date (start of month/week/year)
         new_members:
           type: integer
-          description: Number of new members in this period
+          description: Confirmed members whose entry date falls in this period
+        exited_members:
+          type: integer
+          description: Confirmed members whose exit date falls in this period
         total_members:
           type: integer
-          description: Cumulative total members up to this period
+          description: 'Members at the end of this period: every entry up to it minus
+            every exit up to it, including those before the filtered window'
       required:
+      - exited_members
       - new_members
       - period
       - total_members
@@ -41511,6 +41615,8 @@ components:
           type: boolean
         allows_self_registration:
           type: boolean
+        onboarding_mode:
+          type: boolean
         has_markets:
           type: boolean
         sells_to_resellers:
@@ -41822,6 +41928,8 @@ components:
         round_up_to_full_pu_harvesting:
           type: boolean
         allows_self_registration:
+          type: boolean
+        onboarding_mode:
           type: boolean
         has_markets:
           type: boolean

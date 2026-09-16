@@ -23,6 +23,9 @@ export interface AdminRejectionModalProps {
   warningBody: string;
   /** Reason textarea placeholder. */
   reasonPlaceholder: string;
+  /** Label above the reason textarea. Defaults to saying the reason is sent to
+   *  the applicant. */
+  reasonLabel?: string;
 }
 
 /**
@@ -47,6 +50,7 @@ export const AdminRejectionModal: FC<AdminRejectionModalProps> = ({
   warningTitle,
   warningBody,
   reasonPlaceholder,
+  reasonLabel,
 }) => {
   const { t } = useTranslation();
 
@@ -82,7 +86,7 @@ export const AdminRejectionModal: FC<AdminRejectionModalProps> = ({
 
         <div>
           <Paragraph style={{ marginBottom: 4 }}>
-            {t("members.reject_reason_label")}
+            {reasonLabel ?? t("members.reject_reason_label")}
           </Paragraph>
           <Input.TextArea
             value={reason}

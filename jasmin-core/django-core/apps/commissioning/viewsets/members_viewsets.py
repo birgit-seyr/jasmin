@@ -71,17 +71,26 @@ from ..schemas import (
 )
 from ..scoping import enforce_privileged, scope_to_member
 from ..serializers import (
+    AdminConfirmationRequestSerializer,
+    CoopShareOnboardingSerializer,
     CoopShareSerializer,
     CoopShareTransferRequestSerializer,
     CoopShareTransferSerializer,
     MemberCreateRequestSerializer,
     MemberEmailLogSerializer,
     MemberLoanSerializer,
+    MemberOnboardingSerializer,
     MemberSelfReadSerializer,
     MemberSerializer,
     SubscriptionSerializer,
 )
 from ..services import MemberService, SubscriptionService
+from ..services.onboarding_policy import (
+    assert_departed_member_subscription_confirmable,
+    assert_member_email_action_allowed,
+    confirmation_datetime,
+    onboarding_mode_enabled,
+)
 from ..utils.optional_filters import apply_optional_filters
 from ..utils.query_params import validate_query_params
 from ..utils.validation_utils import parse_body_date
@@ -317,6 +326,17 @@ class MemberViewSet(
             and not IsStaff().has_permission(request, self)
         ):
             return MemberSelfReadSerializer
+        # Office writes while the tenant is in onboarding mode may set the
+        # historical member_number / entry_date. Writes are office-only via
+        # ``write_permission``. Schema generation (``swagger_fake_view``) has no
+        # tenant and keeps documenting ``MemberSerializer``.
+        if (
+            self.action in {"create", "update", "partial_update"}
+            and request is not None
+            and not getattr(self, "swagger_fake_view", False)
+            and onboarding_mode_enabled()
+        ):
+            return MemberOnboardingSerializer
         return MemberSerializer
 
     @extend_schema(
@@ -428,13 +448,22 @@ class MemberViewSet(
         return super().destroy(request, *args, **kwargs)
 
     @extend_schema(
-        description="Confirm a pending member.",
-        # No body — without ``request=None`` spectacular would infer a
-        # full required Member requestBody the view never reads.
-        request=None,
+        description=(
+            "Confirm a pending member. The body is optional. While the tenant's "
+            "onboarding mode is on, ``confirmed_at`` (YYYY-MM-DD, not in the "
+            "future) dates the confirmation, the entry date and the "
+            "confirmation of the member's pending coop shares; no email is "
+            "sent; and a member who has already left can be confirmed on a day "
+            "up to their exit date, after which their open coop shares are "
+            "cancelled with that exit date. Sending ``confirmed_at`` while the "
+            "mode is off is refused (400)."
+        ),
+        request=AdminConfirmationRequestSerializer,
         responses={
             200: MemberSerializer,
-            # ``MemberAlreadyConfirmed``.
+            # ``ConfirmationDate*`` errors.
+            400: ErrorResponseSerializer,
+            # ``MemberAlreadyConfirmed`` / ``MemberAlreadyCancelled``.
             409: ErrorResponseSerializer,
         },
     )
@@ -442,6 +471,12 @@ class MemberViewSet(
     def confirm(self, request: Request, pk: str | None = None) -> Response:
         enforce_privileged(request, "Only office staff may confirm members.")
         member: Member = self.get_object()
+        confirmation = AdminConfirmationRequestSerializer(data=request.data)
+        confirmation.is_valid(raise_exception=True)
+        onboarding = onboarding_mode_enabled()
+        confirmed_at = confirmation_datetime(
+            confirmation.validated_data.get("confirmed_at"), onboarding=onboarding
+        )
 
         from django.db import transaction
 
@@ -455,7 +490,12 @@ class MemberViewSet(
 
             # Raises MemberAlreadyConfirmed (409) when not pending.
             MemberService().confirm_and_notify(
-                member, admin_user=auth_user(request), request=request
+                member,
+                admin_user=auth_user(request),
+                request=request,
+                confirmed_at=confirmed_at,
+                notify=not onboarding,
+                allow_cancelled=onboarding,
             )
 
         updated_member = self.refetch_for_response(member)
@@ -646,16 +686,26 @@ class MemberViewSet(
         description=(
             "Send (or re-send) a JasminUser invitation email to this member. "
             "Creates a JasminUser in pending_invitation status linked to the "
-            "member if one does not already exist."
+            "member if one does not already exist. Refused while the tenant's "
+            "onboarding mode is on, because no member emails are sent then: "
+            "no user or invitation is created and no quota is used."
         ),
         # No body — see ``confirm``.
         request=None,
-        responses={200: MemberSerializer},
+        responses={
+            200: MemberSerializer,
+            # ``MemberInvitationError``: no email, an active user, or an
+            # address that already holds another member's login.
+            400: ErrorResponseSerializer,
+            # ``EmailActionBlockedInOnboardingMode``.
+            409: ErrorResponseSerializer,
+        },
     )
     @action(detail=True, methods=["post"])
     def send_invitation(self, request: Request, pk: str | None = None) -> Response:
         enforce_privileged(request, "Only office staff may send invitations.")
         member: Member = self.get_object()
+        assert_member_email_action_allowed()
 
         # Raises MemberInvitationError (400) when not eligible.
         MemberService().send_invitation(member, admin_user=auth_user(request))
@@ -799,6 +849,11 @@ class SubscriptionViewSet(
         doesn't fetch ``TenantSettings.get_current_settings`` per row
         (~1000+ row queries on the Abos page otherwise). One fetch
         per response covers every row.
+
+        Writes also carry ``onboarding_mode`` from the tenant flag, so
+        ``SubscriptionSerializer`` lets the office enter a start date inside
+        the lead time or in the past. Schema generation (``swagger_fake_view``)
+        has no tenant and leaves it out.
         """
         ctx = super().get_serializer_context()
         from django.db import connection
@@ -812,6 +867,10 @@ class SubscriptionViewSet(
                 ctx["min_weeks_to_cancel_before_ending"] = getattr(
                     settings, "min_weeks_to_cancel_before_ending", None
                 )
+        if self.action in {"create", "update", "partial_update"} and not getattr(
+            self, "swagger_fake_view", False
+        ):
+            ctx["onboarding_mode"] = onboarding_mode_enabled()
         return ctx
 
     @extend_schema(
@@ -928,13 +987,18 @@ class SubscriptionViewSet(
             "Admin-confirm a subscription. Materialises Shares, ShareDeliveries "
             "and the PLANNED ChargeSchedule for the term. Idempotent: re-running "
             "only fills missing rows; ISSUED/PAID/FAILED/WAIVED charges are "
-            "never touched."
+            "never touched. A subscription of a member who has left is refused; "
+            "in onboarding mode it is confirmed when the member is already "
+            "confirmed and the subscription ends by the exit date."
         ),
         # No body — without ``request=None`` spectacular would infer a full
         # required Subscription requestBody the view never reads.
         request=None,
         responses={
             200: SubscriptionSerializer,
+            # Onboarding mode: ``SubscriptionMemberNotAdmitted`` /
+            # ``SubscriptionEndsAfterMemberExit``.
+            400: ErrorResponseSerializer,
             # ``SubscriptionAlreadyConfirmed`` / ``DeliveryStationOverCapacity``.
             409: ErrorResponseSerializer,
         },
@@ -963,15 +1027,17 @@ class SubscriptionViewSet(
             if subscription.admin_confirmed:
                 raise SubscriptionAlreadyConfirmed("Subscription is already confirmed")
 
-            # Never confirm a subscription for a member who has initiated their
-            # exit — confirming materialises ShareDeliveries + PLANNED charges
-            # (and would back-cascade member.confirm()) for someone who has
-            # legally left.
+            # A member who has initiated their exit gets no new deliveries or
+            # PLANNED charges. Onboarding mode records subscriptions that
+            # already ran, so it lets one through when the member is confirmed
+            # and the subscription ends by the exit date.
             member = subscription.member
             if member and member.cancelled_at is not None:
-                raise MemberAlreadyCancelled(
-                    "Cannot confirm a subscription for a cancelled member."
-                )
+                if not onboarding_mode_enabled():
+                    raise MemberAlreadyCancelled(
+                        "Cannot confirm a subscription for a cancelled member."
+                    )
+                assert_departed_member_subscription_confirmable(subscription)
 
             subscription.confirm(admin_user=auth_user(request), save=True)
 
@@ -987,7 +1053,9 @@ class SubscriptionViewSet(
             "``price_per_delivery`` lets the office set the price at offer time "
             "(a waiting_list entry may be a year old). Only a PENDING waiting-list "
             "entry can be offered; a capacity 409 means the slot filled up "
-            "between the office's view and the click."
+            "between the office's view and the click. Refused with 409 while "
+            "the tenant's onboarding mode is on, because no member emails are "
+            "sent then: no capacity is held and no magic link is minted."
         ),
         request=inline_serializer(
             name="OfferSpotRequest",
@@ -1001,13 +1069,21 @@ class SubscriptionViewSet(
                 ),
             },
         ),
-        responses={200: SubscriptionSerializer},
+        responses={
+            200: SubscriptionSerializer,
+            # Not a pending waiting-list entry, waiting list off, or an invalid
+            # or below-floor price.
+            400: ErrorResponseSerializer,
+            # Capacity full, or ``EmailActionBlockedInOnboardingMode``.
+            409: ErrorResponseSerializer,
+        },
     )
     @action(detail=True, methods=["post"], url_path="offer_spot")
     def offer_spot(self, request: Request, pk: str | None = None) -> Response:
         from ..services.waiting_list_offer_service import WaitingListOfferService
 
         subscription: Subscription = self.get_object()
+        assert_member_email_action_allowed()
         WaitingListOfferService.offer_spot(
             subscription,
             price_per_delivery=body(request).get("price_per_delivery"),
@@ -1230,6 +1306,20 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     write_permission = IsOffice
     serializer_class = CoopShareSerializer
 
+    def get_serializer_class(self):
+        # Office writes while the tenant is in onboarding mode may set the
+        # historical ``paid_at``. Writes are office-only via
+        # ``write_permission``. Schema generation (``swagger_fake_view``) has no
+        # tenant and keeps documenting ``CoopShareSerializer``.
+        if (
+            self.action in {"create", "update", "partial_update"}
+            and getattr(self, "request", None) is not None
+            and not getattr(self, "swagger_fake_view", False)
+            and onboarding_mode_enabled()
+        ):
+            return CoopShareOnboardingSerializer
+        return CoopShareSerializer
+
     @extend_schema(
         parameters=[
             get_member_parameter(required=True),
@@ -1294,7 +1384,9 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             if member is not None:
                 acquire_advisory_xact_lock(f"coop_share_bounds:{member.pk}")
             instance = serializer.save()
-            instance.confirm(self.request.user)
+            # In onboarding mode the office enters shares a member already
+            # holds, so a trial member's conversion sends no welcome email.
+            instance.confirm(self.request.user, notify=not onboarding_mode_enabled())
 
     def perform_update(self, serializer: Any) -> None:
         from django.db import transaction
@@ -1329,10 +1421,25 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             serializer.save()
 
     @extend_schema(
-        # No body — without ``request=None`` spectacular would infer a full
-        # required CoopShare requestBody the view never reads.
-        request=None,
-        responses={200: CoopShareSerializer},
+        description=(
+            "Office-confirm a pending coop share. The body is optional. While "
+            "the tenant's onboarding mode is on, ``confirmed_at`` (YYYY-MM-DD, "
+            "not in the future) dates the confirmation; no email is sent; and a "
+            "share of a member who has already left can be confirmed on a day "
+            "up to the exit date, after which it is cancelled with that exit "
+            "date. In onboarding mode only a pending share can be confirmed, "
+            "and a departed member's share is refused when the member can't be "
+            "admitted (coop shares out of range). Sending ``confirmed_at`` "
+            "while the mode is off is refused (400)."
+        ),
+        request=AdminConfirmationRequestSerializer,
+        responses={
+            200: CoopShareSerializer,
+            # ``ConfirmationDate*`` errors / ``MemberCoopSharesOutOfRange``.
+            400: ErrorResponseSerializer,
+            # ``MemberAlreadyCancelled`` / ``CoopShareNotPending``.
+            409: ErrorResponseSerializer,
+        },
     )
     @action(detail=True, methods=["post"], url_path="confirm")
     def confirm(self, request: Request, pk: str | None = None) -> Response:
@@ -1344,12 +1451,34 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         and sends the admission email. This is best-effort: if the member is not
         yet eligible for admission (e.g. below the min-shares window), the share
         is still confirmed and the member stays pending (admit later via
-        member-confirm). Members admitted earlier skip this entirely."""
+        member-confirm). Members admitted earlier skip this entirely.
+
+        In onboarding mode the confirmation date, the email suppression and the
+        departed-member admission reach the share and the member cascade alike.
+        Once a departed member is admitted, their open shares (this one
+        included) are cancelled with the member's exit date. Onboarding mode
+        refuses a share that is not pending, so a manual date never re-stamps an
+        existing confirmation, and it refuses a departed member's share when the
+        member can't be admitted: that share could never be cancelled with the
+        exit date and would stay open on a closed membership."""
         from django.db import transaction
 
-        from ..errors import MemberAlreadyConfirmed, MemberCoopSharesOutOfRange
+        from ..errors import (
+            CoopShareNotPending,
+            MemberAlreadyConfirmed,
+            MemberCoopSharesOutOfRange,
+        )
+        from ..services.member_cancellation import (
+            cancel_coop_shares_of_departed_member,
+        )
 
         coop_share = self.get_object()
+        confirmation = AdminConfirmationRequestSerializer(data=request.data)
+        confirmation.is_valid(raise_exception=True)
+        onboarding = onboarding_mode_enabled()
+        confirmed_at = confirmation_datetime(
+            confirmation.validated_data.get("confirmed_at"), onboarding=onboarding
+        )
 
         with transaction.atomic():
             # Re-fetch under a row lock: two concurrent confirms would both
@@ -1358,21 +1487,54 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             # cascade + email) twice. The second request blocks here and then
             # operates on the already-confirmed row.
             coop_share = CoopShare.objects.select_for_update().get(pk=coop_share.pk)
-            coop_share.confirm(request.user)
+            if onboarding and (
+                coop_share.admin_confirmed or coop_share.cancelled_at is not None
+            ):
+                raise CoopShareNotPending()
+            coop_share.confirm(
+                request.user,
+                confirmed_at=confirmed_at,
+                notify=not onboarding,
+                allow_cancelled=onboarding,
+            )
 
             member = coop_share.member
-            if member is not None and not member.admin_confirmed:
+            member_admitted = member is not None and member.admin_confirmed
+            if member is not None and not member_admitted:
                 # Lock the member row too — the admission cascade's
                 # ``admin_confirmed`` check must not race a concurrent
                 # member-confirm (or a sibling share's cascade).
                 member = Member.objects.select_for_update().get(pk=member.pk)
-                if not member.admin_confirmed:
+                member_admitted = member.admin_confirmed
+                if not member_admitted:
                     try:
                         MemberService().confirm_and_notify(
-                            member, admin_user=auth_user(request), request=request
+                            member,
+                            admin_user=auth_user(request),
+                            request=request,
+                            confirmed_at=confirmed_at,
+                            notify=not onboarding,
+                            allow_cancelled=onboarding,
                         )
-                    except (MemberAlreadyConfirmed, MemberCoopSharesOutOfRange):
+                        member_admitted = True
+                    except MemberAlreadyConfirmed:
                         pass
+                    except MemberCoopSharesOutOfRange:
+                        # A departed member's share is only cancelled with the
+                        # exit date once the member is admitted. Roll the share
+                        # confirm back rather than leave it confirmed and open.
+                        if onboarding and member.cancelled_at is not None:
+                            raise
+
+            # Only reachable in onboarding mode: ``confirm`` refuses a departed
+            # member's share otherwise.
+            if (
+                member is not None
+                and member_admitted
+                and member.cancelled_at is not None
+            ):
+                cancel_coop_shares_of_departed_member(member)
+                coop_share.refresh_from_db()
 
         return Response(self.get_serializer(coop_share).data)
 

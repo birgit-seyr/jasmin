@@ -236,13 +236,14 @@ class VariationCapacityService:
             return  # variation gone — nothing to enforce
 
         quantity = subscription.quantity or 1
-        # Only current/future weeks are actually materialised (see the past-week
-        # clamp in ``SubscriptionService._delivery_weeks_excluding_paused``), so
-        # the production-cap check must evaluate the SAME range. Otherwise a full
-        # PAST week — e.g. from a historical onboarding-import term whose
-        # variation was at cap months ago — would block a confirm even though no
-        # delivery is ever created for that week. No-op in normal use (future
-        # ``valid_from``).
+        # The production-cap check evaluates current and future weeks only, the
+        # range the past-week clamp in
+        # ``SubscriptionService._delivery_weeks_excluding_paused`` materialises by
+        # default. Otherwise a full PAST week — e.g. from a historical
+        # onboarding-import term whose variation was at cap months ago — would
+        # block a confirm for a week that can't be changed any more. The past
+        # weeks an onboarding confirm backfills stay outside this check too.
+        # No-op in normal use (future ``valid_from``).
         effective_valid_from = max(
             subscription.valid_from, previous_monday(timezone.localdate())
         )
@@ -282,8 +283,8 @@ class VariationCapacityService:
         variation = ShareTypeVariation.objects.filter(pk=variation_id).first()
         if variation is None:
             return False
-        # Match ``assert_capacity_available``: only current/future weeks are
-        # materialised, so a fully-past week must not count toward the cap.
+        # Match ``assert_capacity_available``: only current/future weeks count
+        # toward the cap, so a fully-past week never does.
         effective_valid_from = max(
             subscription.valid_from, previous_monday(timezone.localdate())
         )

@@ -10,6 +10,7 @@ export * from './_deliveryStationEntry';
 export * from './absenceCategory';
 export * from './accountStatusEnum';
 export * from './activeShareOptions';
+export * from './adminConfirmationRequest';
 export * from './adminDecidedDeletion';
 export * from './adminPendingDeletion';
 export * from './adminPendingDeletionList';

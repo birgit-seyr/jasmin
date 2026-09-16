@@ -50,6 +50,7 @@ def cancel_member_with_coop_shares(
     reason: str | None = None,
     force: bool = False,
     shares_transferred: bool = False,
+    notify: bool = True,
 ) -> Member:
     """Stamp cancellation timestamps on ``member`` and cascade to every
     still-open ``CoopShare`` for that member.
@@ -74,6 +75,7 @@ def cancel_member_with_coop_shares(
 
     ``shares_transferred`` tells the cancellation email that the member's shares
     went to another member, so no settlement of their share balance follows.
+    ``notify=False`` cancels without scheduling that email.
 
     Returns ``member`` with a transient ``cancellation_result`` attribute —
     ``{"subscriptions_ended": [...], "subscriptions_not_ended": [...]}`` — so the
@@ -116,7 +118,7 @@ def cancel_member_with_coop_shares(
         member, now=now, effective=effective, cancelled_by=cancelled_by
     )
 
-    if member.email:
+    if notify and member.email:
         _send_cancellation_email(member, shares_transferred=shares_transferred)
 
     # Transient (not persisted) report for the caller — which subscriptions the
@@ -172,6 +174,27 @@ def _cascade_cancel_coop_shares(
         cancelled_effective_at=effective,
         cancelled_by=cancelled_by,
         payback_due_date=payback_due,
+    )
+
+
+def cancel_coop_shares_of_departed_member(member: Member) -> None:
+    """Cancel the open coop shares of a member who has already left, with the
+    member's own exit stamps and the normal payback due date.
+
+    Used when onboarding mode confirms a departed member or one of their coop
+    shares: the confirmed equity must not stay open on a closed membership.
+    Unlike :func:`cancel_member_with_coop_shares` the member row, its
+    subscriptions and its cancellation email are left alone. A no-op for a
+    member who has not left.
+    """
+    if member.cancelled_at is None:
+        return
+    effective = member.cancelled_effective_at or timezone.localdate(member.cancelled_at)
+    _cascade_cancel_coop_shares(
+        member,
+        now=member.cancelled_at,
+        effective=effective,
+        cancelled_by=member.cancelled_by,
     )
 
 
@@ -277,9 +300,9 @@ def _cancel_draft_subscriptions(
     Drafts hold a CapacityReservation but have no ShareDeliveries or charges
     yet. ``_cancel_active_subscriptions`` only ends admin_confirmed subs, so
     wind drafts down here: stamp them cancelled + release their capacity
-    reservation, freeing a departed member's slot and ensuring the leftover
-    draft can never be confirmed into live deliveries/charges (the confirm
-    endpoint also re-checks member.cancelled_at).
+    reservation, freeing a departed member's slot. The confirm endpoint refuses
+    a departed member's subscription; in onboarding mode it confirms one only
+    when it ends by the exit date.
     """
     from ..models import Subscription
     from .capacity_reservation_service import CapacityReservationService

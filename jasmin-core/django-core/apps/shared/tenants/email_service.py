@@ -1,6 +1,7 @@
 import logging
 import smtplib
 import uuid
+from functools import cached_property
 
 from django.core.mail import EmailMultiAlternatives
 from django.template import TemplateDoesNotExist, TemplateSyntaxError
@@ -8,8 +9,12 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .models import TenantEmailConfig
+from .onboarding_emails import EmailCategory, suppressed_by_onboarding_mode
 
 logger = logging.getLogger(__name__)
+
+# ``EmailLog.error`` of a send suppressed by onboarding mode.
+SUPPRESSED_BY_ONBOARDING_MODE = "onboarding_mode"
 
 # Mirrors EmailLog.subject / EmailTemplate.subject CharField max_length — the
 # rendered subject is truncated to this before logging so the DB never silently
@@ -195,14 +200,23 @@ class EmailService:
 
             schema_name = connection.tenant.schema_name
         self.schema_name = schema_name
-        self.config = self._get_config()
+        # Whether the last ``send_email`` call was suppressed by onboarding mode
+        # rather than failing, so a caller can log it as expected.
+        self.last_send_suppressed = False
+
+    @cached_property
+    def config(self) -> TenantEmailConfig | None:
+        """The tenant's active email config, read on first use. A send that
+        onboarding mode suppresses never reads it, so a tenant that has no
+        config yet logs no error for that send."""
+        return self._get_config()
 
     def _get_config(self) -> TenantEmailConfig | None:
         """Get tenant email config from the DB.
 
-        Deliberately not cached: a cache creates a real invalidation
-        hazard (admin updates SMTP creds → emails keep going to the old
-        SMTP until it expires) for a marginal perf win (~1ms per send).
+        Not cached beyond the service instance: a shared cache creates a real
+        invalidation hazard (admin updates SMTP creds → emails keep going to
+        the old SMTP until it expires) for a marginal perf win (~1ms per send).
         Revisit if a future bulk-send workload makes per-send DB lookup
         hot.
         """
@@ -230,6 +244,7 @@ class EmailService:
         related_object_type: str = "",
         related_object_id: str = "",
         language: str | None = None,
+        category: EmailCategory = EmailCategory.GENERAL,
     ) -> bool:
         """Send an email using tenant's configuration.
 
@@ -245,7 +260,28 @@ class EmailService:
         ``subject`` may be provided explicitly; otherwise it is derived
         from the slug's default (or the tenant override) and rendered
         with the same context.
+
+        ``category`` says what the send is for where the slug alone doesn't
+        (``onboarding_emails.EmailCategory``). While the tenant is in
+        onboarding mode, an email that is not still sent in that mode is
+        suppressed: nothing is rendered or sent, one ``suppressed`` EmailLog
+        row is written per ``to_emails`` recipient, ``last_send_suppressed``
+        is set and False is returned.
         """
+        self.last_send_suppressed = suppressed_by_onboarding_mode(
+            self.schema_name, slug=slug, category=category
+        )
+        if self.last_send_suppressed:
+            self._record_suppressed_send(
+                to_emails=to_emails,
+                subject=subject,
+                slug=slug,
+                purpose=purpose,
+                related_object_type=related_object_type,
+                related_object_id=related_object_id,
+            )
+            return False
+
         if not self.config:
             logger.error(f"Cannot send email: no config for tenant {self.schema_name}")
             return False
@@ -306,6 +342,59 @@ class EmailService:
             slug=slug,
             related_object_type=related_object_type,
             related_object_id=related_object_id,
+        )
+
+    def _record_suppressed_send(
+        self,
+        *,
+        to_emails: list[str],
+        subject: str | None,
+        slug: str,
+        purpose: str,
+        related_object_type: str,
+        related_object_id: str,
+    ) -> None:
+        """Write one ``suppressed`` EmailLog row per recipient and log the
+        suppression at INFO.
+
+        Nothing is rendered, so the subject is the caller's explicit one or
+        blank. EmailLog exists only in tenant schemas, so the rows are written
+        only while the connection is in this service's own tenant schema.
+        """
+        from django_tenants.utils import get_public_schema_name
+
+        from apps.notifications.models import EmailLog
+        from core.tenant_db import connection
+
+        log_rows: list[EmailLog] = []
+        active_schema = connection.schema_name
+        if (
+            active_schema == self.schema_name
+            and active_schema != get_public_schema_name()
+        ):
+            log_rows = EmailLog.objects.bulk_create(
+                [
+                    EmailLog(
+                        recipient=address,
+                        subject=(subject or "")[:_SUBJECT_MAX_LENGTH],
+                        template=slug,
+                        purpose=purpose or slug,
+                        related_object_type=related_object_type,
+                        related_object_id=related_object_id,
+                        status="suppressed",
+                        error=SUPPRESSED_BY_ONBOARDING_MODE,
+                    )
+                    for address in to_emails
+                ]
+            )
+        # No recipient addresses in the log line (see ``_build_and_send``).
+        logger.info(
+            "Email suppressed in onboarding mode: recipients=%d tenant=%s "
+            "slug=%s log_ids=%s",
+            len(to_emails),
+            self.schema_name,
+            slug,
+            ",".join(str(row.id) for row in log_rows) or "-",
         )
 
     def _resolve_send_language(self, language: str | None) -> tuple[str, bool]:

@@ -18,10 +18,11 @@ export interface AdminConfirmableRecord extends TableRecord {
   cancelled_at?: string | null;
 }
 
-interface UseAdminConfirmationModalOptions<TResp> {
-  /** Backend confirm call — takes the record id. Its resolved payload type
-   *  flows through to ``handleConfirm``'s ``onConfirmed`` callback. */
-  confirmFn: (id: string) => Promise<TResp>;
+interface UseAdminConfirmationModalOptions<TResp, TBody> {
+  /** Backend confirm call — takes the record id and the optional request body
+   *  the caller passed to ``handleConfirm`` / ``confirm``. Its resolved payload
+   *  type flows through to ``handleConfirm``'s ``onConfirmed`` callback. */
+  confirmFn: (id: string, body?: TBody) => Promise<TResp>;
   successKey: string;
   errorKey: string;
 }
@@ -40,7 +41,12 @@ interface UseAdminConfirmationModalOptions<TResp> {
 export function useAdminConfirmationModal<
   T extends AdminConfirmableRecord,
   TResp = unknown,
->({ confirmFn, successKey, errorKey }: UseAdminConfirmationModalOptions<TResp>) {
+  TBody = undefined,
+>({
+  confirmFn,
+  successKey,
+  errorKey,
+}: UseAdminConfirmationModalOptions<TResp, TBody>) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
@@ -57,12 +63,12 @@ export function useAdminConfirmationModal<
   }, []);
 
   const handleConfirm = useCallback(
-    async (onConfirmed?: (data: TResp) => void) => {
+    async (onConfirmed?: (data: TResp) => void, body?: TBody) => {
       if (!selectedItem) return;
 
       setLoading(true);
       try {
-        const data = await confirmFn(String(selectedItem.id ?? ""));
+        const data = await confirmFn(String(selectedItem.id ?? ""), body);
         notify.success(t(successKey));
         if (typeof onConfirmed === "function") {
           onConfirmed(data);
@@ -83,7 +89,10 @@ export function useAdminConfirmationModal<
   );
 
   /** No-callback convenience that resolves to the server payload. */
-  const confirm = useCallback(() => handleConfirm(), [handleConfirm]);
+  const confirm = useCallback(
+    (body?: TBody) => handleConfirm(undefined, body),
+    [handleConfirm],
+  );
 
   const getAdminStatus = useCallback((record: T): AdminStatus => {
     // Priority drives the column sort: admin_pending (needs office action

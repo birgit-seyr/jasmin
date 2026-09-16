@@ -293,13 +293,16 @@ def get_serializer_for_model(model_name: str) -> type[drf_serializers.BaseSerial
     return serializer_cls
 
 
-def _save_imported_member(serializer, payload, importing_user):
+def _save_imported_member(
+    serializer, payload, importing_user, *, confirm_active_users: bool
+):
     """Save an imported Member row and preserve the Member↔JasminUser link.
 
     Mirrors ``MemberViewSet.create``: an email that already belongs to a user is
-    linked (auto-confirms an active user), or rejected with ``MemberLinkConflict``
-    BEFORE the row is saved (so a conflict never leaves an orphaned member). No
-    welcome email is sent on import (``notify_user=False``).
+    linked (auto-confirms an active user unless ``confirm_active_users`` is
+    False), or rejected with ``MemberLinkConflict`` BEFORE the row is saved (so a
+    conflict never leaves an orphaned member). No welcome email is sent on
+    import (``notify_user=False``).
 
     Exception: an address whose login already belongs to a DIFFERENT member
     imports as an UNLINKED member rather than failing. Shared inboxes are
@@ -336,11 +339,14 @@ def _save_imported_member(serializer, payload, importing_user):
             admin_user=importing_user,
             notify_user=False,
             request=None,
+            confirm_active_user=confirm_active_users,
         )
     return member
 
 
-def _persist_import_row(serializer, model_name, payload, importing_user):
+def _persist_import_row(
+    serializer, model_name, payload, importing_user, *, confirm_active_users: bool
+):
     """Persist one validated row via the model-appropriate path.
 
     ``member`` rows go through ``_save_imported_member`` (which preserves the
@@ -350,7 +356,12 @@ def _persist_import_row(serializer, model_name, payload, importing_user):
     identical model-level validation.
     """
     if model_name == "member":
-        return _save_imported_member(serializer, payload, importing_user)
+        return _save_imported_member(
+            serializer,
+            payload,
+            importing_user,
+            confirm_active_users=confirm_active_users,
+        )
     return serializer.save()
 
 
@@ -376,7 +387,12 @@ def _dry_run_scope(dry_run: bool):
 
 
 def import_rows_from_csv(
-    model_name: str, file_bytes: bytes, importing_user=None, *, dry_run: bool = False
+    model_name: str,
+    file_bytes: bytes,
+    importing_user=None,
+    *,
+    dry_run: bool = False,
+    confirm_active_users: bool = True,
 ) -> DataImportResult:
     """Run an import end-to-end. Pure logic — no HTTP.
 
@@ -387,6 +403,11 @@ def import_rows_from_csv(
 
     ``importing_user`` is the office user running the import (threaded down so
     member rows can be linked to an existing JasminUser, recording the actor).
+
+    ``confirm_active_users`` decides whether a member row linked to an existing
+    active user is confirmed on import. The import view turns it off in
+    onboarding mode, where the office confirms members with their historical
+    dates afterwards.
 
     ``dry_run`` validates every row — including FK resolution (e.g. a
     Subscription's member / variation / station-day natural keys) — WITHOUT
@@ -457,7 +478,11 @@ def import_rows_from_csv(
                         # then collided for real.
                         with transaction.atomic():
                             _persist_import_row(
-                                serializer, model_name, payload, importing_user
+                                serializer,
+                                model_name,
+                                payload,
+                                importing_user,
+                                confirm_active_users=confirm_active_users,
                             )
                         result.results.append({"row": row_number, "id": None})
                     else:
@@ -472,7 +497,11 @@ def import_rows_from_csv(
                         # back, leaving a clean per-row error and nothing persisted.
                         with transaction.atomic():
                             instance = _persist_import_row(
-                                serializer, model_name, payload, importing_user
+                                serializer,
+                                model_name,
+                                payload,
+                                importing_user,
+                                confirm_active_users=confirm_active_users,
                             )
                         result.results.append(
                             {"row": row_number, "id": getattr(instance, "id", None)}

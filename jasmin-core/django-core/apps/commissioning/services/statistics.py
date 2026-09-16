@@ -1,11 +1,14 @@
 from collections import defaultdict
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Q
+from django.db.models import Count, Q, QuerySet
+from django.db.models.functions import TruncMonth, TruncWeek, TruncYear
+from django.utils import timezone
 
 from apps.shared.money import CENT
 
-from ..models import ShareContent
+from ..models import Member, ShareContent
 from ..models.choices import UnitOptions, VegetableSizeOptions
 
 
@@ -313,3 +316,74 @@ def calculate_member_dashboard_statistics() -> dict:
         "unpaid_coop_shares": _shares(live.filter(paid_at__isnull=True)),
         "payback_due_coop_shares": _payback_due_shares(),
     }
+
+
+MEMBER_GROWTH_PERIODS = ("month", "week", "year")
+
+
+def calculate_member_growth_statistics(
+    *, period: str, year: int | None = None, start_date: date | None = None
+) -> list[dict]:
+    """Confirmed members per period: entries, exits and the member count at the
+    end of each period.
+
+    A member counts from their ``entry_date`` once admin-confirmed until their
+    exit date (``cancelled_effective_at``). Trial members aren't members of the
+    cooperative yet and are left out. An exit dated after today isn't counted
+    yet, because the member still belongs to the cooperative.
+
+    ``year`` (which wins over ``start_date``) or ``start_date`` limit the
+    periods returned; ``total_members`` still starts from everyone who joined
+    before the window and hadn't left before it.
+    """
+    trunc = {"month": TruncMonth, "week": TruncWeek, "year": TruncYear}[period]
+    members = Member.objects.filter(
+        admin_confirmed=True, is_trial=False, entry_date__isnull=False
+    )
+    exited = members.filter(
+        cancelled_effective_at__isnull=False,
+        cancelled_effective_at__lte=timezone.localdate(),
+    )
+
+    window_start: date | None = start_date
+    window_end: date | None = None
+    if year is not None:
+        window_start, window_end = date(year, 1, 1), date(year, 12, 31)
+
+    def count_per_period(queryset: QuerySet[Member], field: str) -> dict[date, int]:
+        if window_start is not None:
+            queryset = queryset.filter(**{f"{field}__gte": window_start})
+        if window_end is not None:
+            queryset = queryset.filter(**{f"{field}__lte": window_end})
+        rows = (
+            queryset.annotate(period=trunc(field))
+            .values("period")
+            .annotate(count=Count("id"))
+            .order_by("period")
+        )
+        return {row["period"]: row["count"] for row in rows}
+
+    entries_by_period = count_per_period(members, "entry_date")
+    exits_by_period = count_per_period(exited, "cancelled_effective_at")
+
+    total = 0
+    if window_start is not None:
+        total = (
+            members.filter(entry_date__lt=window_start).count()
+            - exited.filter(cancelled_effective_at__lt=window_start).count()
+        )
+
+    result: list[dict] = []
+    for period_start in sorted(entries_by_period.keys() | exits_by_period.keys()):
+        new_members = entries_by_period.get(period_start, 0)
+        exited_members = exits_by_period.get(period_start, 0)
+        total += new_members - exited_members
+        result.append(
+            {
+                "period": period_start,
+                "new_members": new_members,
+                "exited_members": exited_members,
+                "total_members": total,
+            }
+        )
+    return result

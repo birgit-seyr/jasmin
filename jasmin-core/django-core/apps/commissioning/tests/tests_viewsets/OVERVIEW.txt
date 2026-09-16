@@ -52,6 +52,83 @@ test_members_viewsets.py (15 tests)
   TestSubscriptionViewSet                 4 tests   list, filter is_trial, filter by member
   TestCoopShareViewSet                    3 tests   list, filter by member
 
+test_member_onboarding_fields.py (23 tests) — onboarding mode: member_number / entry_date writability (frozen clock)
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestOnboardingPolicy                    4 tests   flag defaults off; onboarding_mode_enabled off / on / no settings row
+  TestMemberSerializerSelection          10 tests   create/update/partial_update → MemberOnboardingSerializer only while on;
+                                                    other actions and schema generation keep MemberSerializer
+  TestMemberNumberAndEntryDateFlagOff     3 tests   PATCH drops member_number; PATCH drops entry_date; create drops both
+  TestMemberNumberAndEntryDateFlagOn      6 tests   PATCH + create write both; duplicate number → 400; number on an existing
+                                                    or new trial member → member.number_not_allowed_for_trial; trial row
+                                                    without a number still saves
+
+test_onboarding_confirmation.py (49 tests) — onboarding mode: confirmation dates, no emails, admit and exit, paid_at, import link (frozen clock)
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestMemberConfirmFlagOff                3 tests   confirm sends application_approved; confirmed_at → 400
+                                                    member.confirmation_date_requires_onboarding_mode; departed member → 409
+  TestMemberConfirmFlagOn                 7 tests   confirmed_at → admin_confirmed_at (12:00 local), entry_date, pending shares'
+                                                    admin_confirmed_at, no email; typed entry_date kept; no body → now, no
+                                                    email; trial member converts on the date without emails; today accepted;
+                                                    future → member.confirmation_date_in_future; malformed date → 400
+  TestAdmitAndExit                        5 tests   departed member confirmed, open shares cancelled with the member's exit
+                                                    stamps + retention payback date, member stamps untouched, no
+                                                    member_cancelled email; pending_approval login not activated; exit day
+                                                    accepted; day after exit / no date after a past exit →
+                                                    member.confirmation_date_after_exit
+  TestCoopShareConfirm                    9 tests   off: confirmed_at → 400, member cascade sends application_approved, trial
+                                                    conversion sends trial_converted; on: confirmed_at dates the share, future
+                                                    → 400, cascade admits a trial member on the date without emails, share of
+                                                    an admitted or unadmitted departed member confirmed then cancelled, no date
+                                                    after a past exit → 400
+  TestCoopShareConfirmOnlyPendingWhileOn  4 tests   off: re-confirming a confirmed share re-stamps it; on: a confirmed (also
+                                                    cancelled, of a departed member), a confirmed or a cancelled share →
+                                                    409 coop_share.not_pending, stamps unchanged
+  TestCoopShareConfirmBelowMinimum        3 tests   on: departed member who can't be admitted → 400
+                                                    member.coop_shares_out_of_range, share left pending and open; pending
+                                                    member below the minimum → share confirmed, member stays pending; off:
+                                                    departed member's share → 409 member.already_cancelled
+  TestCoopShareCreateAndPaidAt            6 tests   perform_create sends trial_converted only while off; paid_at dropped while
+                                                    off (create, PATCH); stored as local midnight while on (create, PATCH with a
+                                                    datetime)
+  TestCoopShareSerializerSelection        10 tests  create/update/partial_update → CoopShareOnboardingSerializer only while on;
+                                                    other actions and schema generation keep CoopShareSerializer
+  TestMemberImportLinkToActiveUser        2 tests   CSV member import linked to an active user: confirmed while off, linked but
+                                                    unconfirmed while on
+
+test_onboarding_departed_subscription_confirm.py (5 tests) — onboarding mode: confirming a subscription of a member who has left (frozen clock)
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestDepartedMemberSubscriptionConfirmFlagOff  1 test   → 409 member.already_cancelled, nothing materialised
+  TestDepartedMemberSubscriptionConfirmFlagOn   4 tests  ends by the exit → confirmed, 6-week backfill up to the term end,
+                                                         charges only for those deliveries; draft wound down by the member
+                                                         exit → confirmed; ends after the exit → 400
+                                                         subscription.ends_after_member_exit; unconfirmed member → 400
+                                                         subscription.member_not_admitted, member left unadmitted
+
+test_onboarding_email_suppression.py (12 tests) — onboarding mode: suppressed member emails, refused email actions (frozen clock, in-memory SMTP)
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestSendInvitationEndpoint              3 tests   on: send_invitation → 409 onboarding_mode.email_action_blocked with no
+                                                    user, invitation or quota used; a resend → 409, open invitation kept;
+                                                    off: user + invitation created, invitation email sent
+  TestSharedLoginSlugsWhileOn             4 tests   member portal invitation → suppressed EmailLog row, nothing sent; the
+                                                    service's resend of a pending member login → new invitation, suppressed
+                                                    row; staff invitation still sent; welcome on linking a member to an
+                                                    active user → suppressed, member still confirmed
+  TestOfferSpotEndpoint                   2 tests   on: offer_spot → 409, entry stays PENDING, no token, no capacity hold, no
+                                                    offer email; off: SPOT_AVAILABLE with token
+  TestOfficeCancelEmail                   2 tests   on: cancel succeeds, member_cancelled suppressed, cancellation_email_sent_at
+                                                    stays empty; off: email sent and stamped
+  TestRenewalDigestInWorker               1 test    renewal digest under schema_context (FakeTenant) → suppressed row, logged at
+                                                    INFO instead of the ERROR renewal.digest_failed line
+
+test_subscription_onboarding_start.py (18 tests) — onboarding mode: subscription start lead time (frozen clock)
+─────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestOfficeStartFlagOff                  2 tests   office create / PATCH with a past start → subscription.start_too_soon
+  TestOfficeStartFlagOn                   4 tests   office create / PATCH with a past start accepted; end date still required;
+                                                    member self-subscribe still → subscription.start_too_soon
+  TestSerializerLeadTimeSkip              3 tests   skip only with onboarding_mode in the context AND an office request
+  TestSubscriptionViewSetContext          9 tests   create/update/partial_update carry the flag (off / on); list, retrieve,
+                                                    confirm and schema generation leave it out
+
 test_shares_viewsets.py (32 tests)
 ──────────────────────────────────
   TestShareTypeViewSet                    7 tests   list, filter share_option, create/update uppercase, invalid 400

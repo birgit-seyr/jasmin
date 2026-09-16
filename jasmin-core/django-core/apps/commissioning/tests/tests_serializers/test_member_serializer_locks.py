@@ -178,10 +178,9 @@ class TestUnconditionallyReadOnlyFields:
         "field,value",
         [
             ("member_number", 99999),
-            # ``entry_date`` is intentionally NOT here: the office "manual member
-            # transfer" flow sets it by hand (GenG §30 entry date when migrating
-            # existing members), so it is writable and must not be asserted
-            # read-only.
+            # Writable only through ``MemberOnboardingSerializer`` (tenant
+            # onboarding mode) and ``MemberImportSerializer`` (CSV import).
+            ("entry_date", datetime.date(2019, 4, 1)),
             ("sepa_consent", timezone.now()),
             ("privacy_consent", timezone.now()),
             ("withdrawal_consent", timezone.now()),

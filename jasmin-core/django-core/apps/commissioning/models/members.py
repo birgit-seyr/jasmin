@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from django.core.exceptions import ValidationError
@@ -356,7 +356,13 @@ class Member(
             self.member_number = (last_number or 0) + 1
             self.save(update_fields=["member_number"])
 
-    def confirm(self, admin_user, *, save: bool = True) -> None:
+    def confirm(
+        self,
+        admin_user,
+        *,
+        save: bool = True,
+        confirmed_at: datetime | None = None,
+    ) -> None:
         # GenG admission gate on EVERY confirm entry-point (confirm_and_notify,
         # the Subscription-confirm cascade, link_to_user, accept_invitation): a
         # non-trial member may only enter the Mitgliederliste with total equity
@@ -366,7 +372,7 @@ class Member(
         from apps.commissioning.services.coop_share_service import CoopShareService
 
         CoopShareService.assert_member_total_within_bounds(self)
-        super().confirm(admin_user, save=save)
+        super().confirm(admin_user, save=save, confirmed_at=confirmed_at)
 
     def _post_confirm(self, *, admin_user) -> None:
         """Materialise side-effects of admin-confirming a Member.
@@ -386,9 +392,13 @@ class Member(
         ``convert_trial_member_on_first_coop_share`` stamps both when
         ``is_trial`` flips to False.
 
+        The entry date is the local day of ``admin_confirmed_at``: today, or
+        the manual confirmation date of an onboarding-mode confirm.
+
         The linked JasminUser is also activated here if it was waiting on
         admin approval. That's unrelated to GenG and fires for trial
-        members too.
+        members too, but not for a member who has already left (a departed
+        member confirmed in onboarding mode).
         """
         from django.utils import timezone as _timezone
 
@@ -399,14 +409,22 @@ class Member(
                 # lock; once it returns the row is up to date.
                 self._generate_member_number()
             if not self.entry_date:
-                self.entry_date = _timezone.localdate()
+                self.entry_date = (
+                    _timezone.localdate(self.admin_confirmed_at)
+                    if self.admin_confirmed_at is not None
+                    else _timezone.localdate()
+                )
                 updated_fields.append("entry_date")
             if updated_fields:
                 self.save(update_fields=updated_fields)
         # Self-registered users wait in pending_approval until a member is
         # confirmed. Invitation-flow users stay in pending_invitation until
         # they accept the invite.
-        if self.user_id and self.user.account_status == "pending_approval":
+        if (
+            self.user_id
+            and self.cancelled_at is None
+            and self.user.account_status == "pending_approval"
+        ):
             self.user.account_status = "active"
             self.user.save(update_fields=["account_status", "is_active"])
 
@@ -534,7 +552,15 @@ class CoopShare(JasminModel, PayableMixin, AdminConfirmableMixin, CancellableMix
         self.full_clean()
         super().save(*args, **kwargs)
 
-    def confirm(self, admin_user, *, save: bool = True) -> None:
+    def confirm(
+        self,
+        admin_user,
+        *,
+        save: bool = True,
+        confirmed_at: datetime | None = None,
+        notify: bool = True,
+        allow_cancelled: bool = False,
+    ) -> None:
         """Confirm the share AND, if it admits a trial member into the
         Mitgliederliste, convert them trial→full.
 
@@ -554,21 +580,38 @@ class CoopShare(JasminModel, PayableMixin, AdminConfirmableMixin, CancellableMix
         # re-admit a departed member (stamp entry_date/member_number, fire the
         # admission email, run trial→full conversion). This is the chokepoint
         # for BOTH the office ``confirm`` action and ``perform_create``'s
-        # auto-confirm.
+        # auto-confirm. ``allow_cancelled`` is set only by the ``confirm``
+        # action in onboarding mode, where the office records a membership
+        # that has already ended; the caller then cancels the confirmed share
+        # with the member's exit date.
         if self.member_id and self.member.cancelled_at is not None:
-            from apps.commissioning.errors import MemberAlreadyCancelled
+            if not allow_cancelled:
+                from apps.commissioning.errors import MemberAlreadyCancelled
 
-            raise MemberAlreadyCancelled(
-                "Cannot confirm a coop share for a cancelled member."
+                raise MemberAlreadyCancelled(
+                    "Cannot confirm a coop share for a cancelled member."
+                )
+            from apps.commissioning.services.onboarding_policy import (
+                assert_confirmation_not_after_exit,
             )
+
+            assert_confirmation_not_after_exit(self.member, confirmed_at=confirmed_at)
         with transaction.atomic():
-            super().confirm(admin_user, save=save)
+            super().confirm(admin_user, save=save, confirmed_at=confirmed_at)
             if save and self.member_id:
                 from apps.commissioning.services.trial_conversion import (
                     convert_trial_member_on_first_coop_share,
                 )
 
-                convert_trial_member_on_first_coop_share(self.member)
+                convert_trial_member_on_first_coop_share(
+                    self.member,
+                    entry_date=(
+                        timezone.localdate(confirmed_at)
+                        if confirmed_at is not None
+                        else None
+                    ),
+                    notify=notify,
+                )
 
 
 class CoopShareTransfer(JasminModel, CreatedMixin):
@@ -919,7 +962,15 @@ class Subscription(
         Also cascades confirmation to the owning Member if it is not yet
         admin-confirmed (a confirmed subscription implies the member is
         accepted). Confirmation does NOT cascade the other way around.
+
+        While the tenant is in onboarding mode the office enters subscriptions
+        that are already running, so a fresh confirm also materialises the
+        delivery weeks back to ``backfill_earliest_monday()``.
         """
+        from apps.commissioning.services.onboarding_policy import (
+            backfill_earliest_monday,
+            onboarding_mode_enabled,
+        )
         from apps.commissioning.services.subscription_service import (
             SubscriptionService,
         )
@@ -927,12 +978,19 @@ class Subscription(
         member = self.member
         # Don't back-cascade confirmation onto a member who has initiated their
         # exit (cancelled_at set) — they should not be re-admitted by confirming
-        # a leftover subscription. The confirm endpoint already blocks this; the
-        # guard here is defense-in-depth for any other confirm() caller.
+        # a leftover subscription. The confirm endpoint refuses such a
+        # subscription, or in onboarding mode requires the member to be
+        # confirmed already; the guard covers any other confirm() caller.
         if member and not member.admin_confirmed and member.cancelled_at is None:
             member.confirm(admin_user)
 
-        SubscriptionService().materialize_confirmed_subscription(self, actor=admin_user)
+        SubscriptionService().materialize_confirmed_subscription(
+            self,
+            actor=admin_user,
+            earliest_monday=(
+                backfill_earliest_monday() if onboarding_mode_enabled() else None
+            ),
+        )
 
     @property
     def display_id(self) -> str:

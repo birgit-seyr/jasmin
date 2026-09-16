@@ -147,7 +147,11 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   const sentenceTrialAbo = getSetting(
     "info_sentence_about_trial_subscriptions",
   );
-  // End-of-term rules shared with the abos table (single source of truth).
+  // End-of-term rules shared with the abos table (single source of truth). The
+  // office may pick any Monday as the start while the tenant is in onboarding
+  // mode; members and public registration keep the lead time.
+  const allowPastStart =
+    !simplified && getSetting("onboarding_mode", false) === true;
   const {
     allowsTrial,
     endOfSeason,
@@ -157,7 +161,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     disabledValidFromDate,
     earliestValidFrom,
     trialDurationInDeliveries,
-  } = useSubscriptionTerm();
+  } = useSubscriptionTerm({ allowPastStart });
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [sepaModalOpen, setSepaModalOpen] = useState(false);
@@ -919,9 +923,9 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
 
   const handleSave = useCallback(() => performCreate(false), [performCreate]);
 
-  // valid_from: Monday + not before the tenant's earliest start (handled by
-  // ``disabledValidFromDate`` from the shared hook). valid_until: a Sunday on
-  // or after valid_from (dayjs: 0=Sun).
+  // valid_from: Monday + not before the tenant's earliest start, except for the
+  // office in onboarding mode (handled by ``disabledValidFromDate`` from the
+  // shared hook). valid_until: a Sunday on or after valid_from (dayjs: 0=Sun).
   const disableValidUntil = useCallback(
     (d: Dayjs) =>
       d.day() !== 0 || (!!validFrom && d.isBefore(validFrom, "day")),

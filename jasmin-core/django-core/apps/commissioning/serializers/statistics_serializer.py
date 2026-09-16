@@ -2,14 +2,18 @@ from rest_framework import serializers
 
 
 class MemberGrowthStatisticSerializer(serializers.Serializer):
-    """Serializer for member growth statistics."""
+    """Admitted members per period: entries, exits and the count at its end."""
 
     period = serializers.DateField(help_text="Period date (start of month/week/year)")
     new_members = serializers.IntegerField(
-        help_text="Number of new members in this period"
+        help_text="Confirmed members whose entry date falls in this period"
+    )
+    exited_members = serializers.IntegerField(
+        help_text="Confirmed members whose exit date falls in this period"
     )
     total_members = serializers.IntegerField(
-        help_text="Cumulative total members up to this period"
+        help_text="Members at the end of this period: every entry up to it minus "
+        "every exit up to it, including those before the filtered window"
     )
 
 

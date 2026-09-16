@@ -217,10 +217,12 @@ class TenantSettingsViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
     # in ``update_current_settings`` (mirrors MemberViewSet._SEPA_SENSITIVE_FIELDS).
     # The GDPR-deletion gate controls whether self-service member/customer
     # deletions auto-execute without admin approval; the billing/SEPA/tax fields
-    # drive money collection. A stolen office session must not flip these
-    # silently.
+    # drive money collection. ``onboarding_mode`` unlocks member-number edits
+    # and back-dated confirmations and stops member emails. A stolen office
+    # session must not flip these silently.
     _STEP_UP_SENSITIVE_FIELDS = (
         "require_admin_approval_for_gdpr_deletion",
+        "onboarding_mode",
         "billing_strategy",
         "billing_due_day_of_month",
         "sepa_collection_day_of_month",
@@ -751,6 +753,7 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
         )
 
         from .email_service import EmailService
+        from .onboarding_emails import EmailCategory
 
         # Route the test send through ``EmailService.send_email`` so
         # it gets a proper EmailLog row (recipient + subject + status
@@ -763,6 +766,8 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
         # slug + template — same machinery as every other slug, so
         # tenants can customise the wording in the email-templates UI
         # if they want (it only affects their own future test sends).
+        # ``EmailCategory.TEST_SEND`` keeps it going out in onboarding mode,
+        # when tenants typically set up their SMTP.
         tenant_name = getattr(getattr(config, "tenant", None), "name", "")
         try:
             ok = EmailService().send_email(
@@ -772,6 +777,7 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
                 purpose="test:smtp",
                 related_object_type="tenant_email_config",
                 related_object_id=str(config.pk),
+                category=EmailCategory.TEST_SEND,
             )
         except (smtplib.SMTPException, ConnectionError, OSError, ValueError) as exc:
             # "Send a test email" endpoint — we want to surface whatever

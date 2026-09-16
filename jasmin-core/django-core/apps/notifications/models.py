@@ -75,6 +75,7 @@ class EmailLog(models.Model):
         ("complained", "Complained"),  # marked as spam by recipient
         ("rejected", "Rejected"),  # provider refused (unverified domain ...)
         ("failed", "Failed"),  # network / unknown error during send
+        ("suppressed", "Suppressed"),  # not sent: the tenant is in onboarding mode
     ]
 
     # Recipient + content snapshot. We do NOT store the rendered HTML body

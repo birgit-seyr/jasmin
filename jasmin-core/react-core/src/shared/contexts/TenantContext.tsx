@@ -267,13 +267,20 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
     }
     try {
       const fullData = await tenantsTenantsRetrieve(tenantId);
-      setCurrentTenant((prev) => ({
-        ...(prev ?? {}),
-        ...(fullData as unknown as TenantData),
-        // Preserve the slug we computed from the subdomain (server
-        // response carries ``schema_name`` not ``slug``).
-        slug: prev?.slug,
-      }));
+      setCurrentTenant((prev) => {
+        const next: TenantData = {
+          ...(prev ?? {}),
+          ...(fullData as unknown as TenantData),
+          // Preserve the slug we computed from the subdomain (server
+          // response carries ``schema_name`` not ``slug``).
+          slug: prev?.slug,
+        };
+        // Keep the previous object when nothing changed, so a refresh that
+        // finds the same payload re-renders no tenant consumer.
+        return prev && JSON.stringify(prev) === JSON.stringify(next)
+          ? prev
+          : next;
+      });
     } catch (err) {
       // Non-fatal — the user is logged in either way. Sidebars that
       // depend on ``getSetting(...)`` will fall back to their default
@@ -329,6 +336,23 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
     // re-firing on every state update.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTenant?.id]);
+
+  // Tenant settings can change outside this tab: another office user or
+  // another tab flips a setting such as ``onboarding_mode``, which the server
+  // already applies. Re-read the full tenant whenever this tab becomes visible
+  // again, so ``getSetting`` doesn't serve the old value until a reload. Only
+  // while logged in (the full payload is auth-gated); an unchanged payload
+  // leaves the state untouched.
+  useEffect(() => {
+    if (isPlatformDomain() || !currentTenant?.id) return;
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible" || !getAccessToken()) return;
+      void refreshTenantFull();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [currentTenant?.id, refreshTenantFull]);
 
   // Re-fetch after a mutation that may have changed any tenant field.
   // When we already know the tenant id (i.e. we're past the pre-login

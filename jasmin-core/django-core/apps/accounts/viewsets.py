@@ -125,6 +125,13 @@ class AdminUserViewSet(RolePermissionsMixin, ViewSet):
 
     @extend_schema(
         summary="Re-send invitation email to a user still in pending_invitation",
+        description=(
+            "Cancels the user's open invitation, creates a new one and emails "
+            "it. For a member's portal login (no internal and no customer "
+            "role) the invitation is a member email: refused with 409 while "
+            "the tenant's onboarding mode is on, before any invitation is "
+            "created or quota is used, as members/{id}/send_invitation is."
+        ),
         request=None,
         responses={
             200: AdminUserRowSerializer,
@@ -132,11 +139,18 @@ class AdminUserViewSet(RolePermissionsMixin, ViewSet):
             401: ErrorResponseSerializer,
             403: ErrorResponseSerializer,
             404: ErrorResponseSerializer,
+            # ``EmailActionBlockedInOnboardingMode``.
+            409: ErrorResponseSerializer,
         },
     )
     @action(detail=True, methods=["post"], url_path="resend-invitation")
     def resend_invitation(self, request: Request, pk: str | None = None) -> Response:
+        from apps.authz.roles import is_member_portal_login
+        from apps.commissioning.services.onboarding_policy import (
+            assert_member_email_action_allowed,
+        )
         from apps.shared.invitations import resend_invitation
+        from apps.shared.tenants.onboarding_emails import EmailCategory
 
         try:
             user = JasminUser.objects.get(id=pk)
@@ -144,5 +158,16 @@ class AdminUserViewSet(RolePermissionsMixin, ViewSet):
             raise UserNotFound("User not found") from exc
         if user.account_status != "pending_invitation":
             raise UserNotPendingInvitation("User is not waiting for an invitation.")
-        resend_invitation(user=user, created_by=auth_user(request))
+        member_portal_login = is_member_portal_login(user.roles)
+        if member_portal_login:
+            assert_member_email_action_allowed()
+        resend_invitation(
+            user=user,
+            created_by=auth_user(request),
+            email_category=(
+                EmailCategory.MEMBER_LIFECYCLE
+                if member_portal_login
+                else EmailCategory.GENERAL
+            ),
+        )
         return Response(serialize_user_row(user))

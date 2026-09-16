@@ -7,7 +7,10 @@ import {
   getCommissioningMembersListQueryKey,
   useCommissioningMembersPartialUpdate,
 } from "@shared/api/generated/commissioning/commissioning";
-import type { Member } from "@shared/api/generated/models";
+import type {
+  AdminConfirmationRequest,
+  Member,
+} from "@shared/api/generated/models";
 import {
   adminConfirmationAuditItems,
   getAdminConfirmationStatus,
@@ -15,6 +18,8 @@ import {
   adminConfirmationFooter,
 } from "@shared/modals/shared";
 import { useDateFormat, useTenant, useTimeFormat } from "@hooks/index";
+import { OnboardingConfirmationDateField } from "@features/members/components/OnboardingConfirmationDateField";
+import { useOnboardingConfirmationDate } from "@features/members/hooks/useOnboardingConfirmationDate";
 import type { MemberRecord } from "@features/members/pages/types";
 
 const { Title } = Typography;
@@ -23,7 +28,9 @@ interface AdminConfirmationModalMembersProps {
   isOpen: boolean;
   onClose: () => void;
   member: MemberRecord | null;
-  onConfirm?: () => void;
+  /** Receives the confirm request body: ``confirmed_at`` while the tenant's
+   *  onboarding mode is on, empty otherwise. */
+  onConfirm?: (body: AdminConfirmationRequest) => void;
   /**
    * Optional handler that closes this modal and opens the
    * RejectMemberModal for the same member. When provided, a
@@ -65,12 +72,25 @@ export const AdminConfirmationModalMembers: FC<
       }),
   });
 
+  // A departed member can be confirmed in onboarding mode, on a day up to
+  // their exit date.
+  const exitDate = member?.cancelled_at
+    ? (member.cancelled_effective_at ?? null)
+    : null;
+  const { onboardingMode, confirmedOn, setConfirmedOn, confirmationBody } =
+    useOnboardingConfirmationDate({
+      recordId: member?.id != null ? String(member.id) : null,
+      entryDate: member?.entry_date ?? null,
+      exitDate,
+    });
+
   if (!member) {
     return null;
   }
 
   const memberStatus = getAdminConfirmationStatus(member, t);
   const isRejected = !!member.admin_rejected_at;
+  const isTerminal = member.admin_confirmed || isRejected;
 
   return (
     <Modal
@@ -82,9 +102,9 @@ export const AdminConfirmationModalMembers: FC<
       open={isOpen}
       onCancel={onClose}
       footer={adminConfirmationFooter({
-        isTerminal: member.admin_confirmed || isRejected,
+        isTerminal,
         onClose,
-        onConfirm,
+        onConfirm: onConfirm ? () => onConfirm(confirmationBody()) : undefined,
         confirmLabel: t("members.confirm_member"),
         cancelLabel: t("common.cancel"),
         loading,
@@ -168,6 +188,13 @@ export const AdminConfirmationModalMembers: FC<
           )}
           {adminConfirmationAuditItems(member, t, formatDateTime)}
         </Descriptions>
+        {onboardingMode && !isTerminal && (
+          <OnboardingConfirmationDateField
+            value={confirmedOn}
+            onChange={setConfirmedOn}
+            exitDate={exitDate}
+          />
+        )}
       </div>
     </Modal>
   );

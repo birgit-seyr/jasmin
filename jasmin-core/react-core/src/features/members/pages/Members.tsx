@@ -58,6 +58,10 @@ import {
 import MembersImportModal from "@features/members/modals/MembersImportModal";
 import CoopShareImportModal from "@features/members/modals/CoopShareImportModal";
 import MemberStatsCards from "@features/members/components/MemberStatsCards";
+import {
+  OnboardingModeBanner,
+  OnboardingModeSwitch,
+} from "@features/members/components/OnboardingMode";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import type { MemberRecord } from "./types";
@@ -125,14 +129,6 @@ export default function Members() {
     null,
   );
   const [inviteRow, setInviteRow] = useState<MemberRecord | null>(null);
-
-  // "Händische Übertragung von Mitgliedern" — manual member-transfer mode.
-  // While ON, the normally server-stamped ``entry_date`` (GenG §30) becomes
-  // editable in the grid so the office can hand-set historical admission dates
-  // when migrating members from another system. A deliberate, visible toggle
-  // (red while on) so it can't be flipped by accident; the serializer accepts
-  // entry_date writes to match (office-role gated).
-  const [manualMemberTransfer, setManualMemberTransfer] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [coopShareImportModalOpen, setCoopShareImportModalOpen] =
     useState(false);
@@ -145,6 +141,12 @@ export default function Members() {
   // add-row state (symptom: just-saved rows disappear until full page
   // refresh).
   const has_coop_shares = !!getSetting("has_coop_shares", true);
+
+  // Tenant onboarding mode (switch at the bottom of the page): member_number
+  // and entry_date become editable so the office can type in the historical
+  // values of members that already exist on paper. Read as a primitive for the
+  // same reason as ``has_coop_shares``.
+  const onboardingMode = !!getSetting("onboarding_mode", false);
 
   // Trial-member column visibility is derived: the concept only exists
   // when trial subs are enabled AND trial subs are allowed for trial
@@ -337,13 +339,18 @@ export default function Members() {
         key: "member_number",
         inputType: "positive_integer",
         required: false,
-        readOnly: true,
-        // Locked in the grid (renumbering a live member falsifies the
-        // Mitgliederliste) but offered in the CSV onboarding template: a
-        // tenant migrating off another system carries its existing
-        // Mitgliedsnummern over, and the follow-up imports (subscriptions,
-        // coop shares, SEPA mandates) resolve their member by that number.
-        // ``MemberImportSerializer`` accepts it on the import path only.
+        // Server-assigned on confirmation and locked in the grid (renumbering a
+        // live member falsifies the Mitgliederliste). Editable only while the
+        // tenant is in onboarding mode, where ``MemberOnboardingSerializer``
+        // accepts it. Trial members hold no Mitgliedsnummer: the server refuses
+        // a number on a trial row, and ticking ``is_trial`` clears a typed one.
+        // No ``disabled`` rule on trial rows: a disabled cell saves the stored
+        // value, so a numbered row could never be turned into a trial row.
+        readOnly: !onboardingMode,
+        // Always offered in the CSV onboarding template: a tenant migrating off
+        // another system carries its existing Mitgliedsnummern over, and the
+        // follow-up imports (subscriptions, coop shares, SEPA mandates) resolve
+        // their member by that number.
         importable: true,
         fixed: true,
         align: "center",
@@ -401,6 +408,12 @@ export default function Members() {
               // this UI gate is a usability hint, not the security
               // boundary.
               disabled: lockedAfterAdminConfirmation,
+              // In onboarding mode a pending row may carry a typed member
+              // number, which a trial member can't hold.
+              onFieldChange: (value: unknown) =>
+                onboardingMode && value === true
+                  ? { member_number: null }
+                  : undefined,
               render: (value: unknown) => (value ? "✓" : ""),
             },
           ] as EditableColumnConfig<MemberRecord>[])
@@ -410,9 +423,7 @@ export default function Members() {
         // the member into the Mitgliederliste. Stamped server-side
         // in ``_post_confirm`` (full members) or in the trial-
         // conversion hook on first CoopShare. Not an office-chosen
-        // value, NOT the share-payment date — same readOnly
-        // treatment as ``member_number``. Historical correction for
-        // migrated members happens via direct DB / data migration.
+        // value, NOT the share-payment date.
         title: (
           <>
             {t("members.entry_date")}
@@ -426,13 +437,12 @@ export default function Members() {
         readOnly: false,
         align: "center",
         width: "8em",
-        // Normally locked (server-stamped GenG §30 date). Editable only while
-        // the "händische Übertragung" toggle is on — see manualMemberTransfer.
-        disabled: !manualMemberTransfer,
-        // ...but the CSV onboarding template must always offer it: the import
-        // serializer accepts ``entry_date`` (that's the whole point of the
-        // manual transfer), and gating the template column on the toggle made
-        // the downloaded file silently lose the column.
+        // Editable only while the tenant is in onboarding mode, where
+        // ``MemberOnboardingSerializer`` accepts historical admission dates.
+        disabled: !onboardingMode,
+        // The CSV onboarding template always offers it: the import serializer
+        // accepts ``entry_date`` whatever the mode, so the template column must
+        // not depend on it.
         importable: true,
         sortable: true,
 
@@ -694,7 +704,7 @@ export default function Members() {
       contactColumns,
       noteColumn,
       has_coop_shares,
-      manualMemberTransfer,
+      onboardingMode,
     ],
   );
 
@@ -769,6 +779,8 @@ export default function Members() {
   return (
     <div>
       <h1>{t("members.list_members")}</h1>
+
+      <OnboardingModeBanner />
 
       <div className="members-list-toolbar">
         <MemberStatsCards
@@ -855,8 +867,8 @@ export default function Members() {
         isOpen={isAdminConfirmationModalOpen}
         onClose={handleCloseAdminConfirmationModal}
         member={selectedMemberForConfirmation}
-        onConfirm={async () => {
-          const updated = await confirmMember();
+        onConfirm={async (body) => {
+          const updated = await confirmMember(body);
           // Patch only the confirmed row so the table doesn't re-sort.
           const targetId = updated?.id ?? selectedMemberForConfirmation?.id;
           if (targetId !== undefined) {
@@ -919,6 +931,11 @@ export default function Members() {
           handleCloseUserInfoModal();
           setInviteRow(record as MemberRecord);
         }}
+        // The server refuses ``send_invitation`` while onboarding mode is on,
+        // because no member invitation is emailed then.
+        invitationDisabledReason={
+          onboardingMode ? t("onboarding.mode.invitation_disabled") : null
+        }
         onActivateUser={(record) => setUserActive(record, "active")}
         onDeactivateUser={(record) => setUserActive(record, "inactive")}
       />
@@ -963,6 +980,7 @@ export default function Members() {
         memberCancelledEffectiveAt={
           coopSharesRecord?.cancelled_effective_at ?? null
         }
+        memberEntryDate={coopSharesRecord?.entry_date ?? null}
       />
 
       <CancelMembershipModal
@@ -996,18 +1014,9 @@ export default function Members() {
       </ExplainerText>
 
       {isOffice && (
-        <div style={{ marginTop: 24 }}>
+        <div className="onboarding-block">
           <Space>
-            <Button
-              size="small"
-              onClick={() => setImportModalOpen(true)}
-              aria-label={
-                manualMemberTransfer
-                  ? `${t("onboarding.members_link")} — ${t("onboarding.members_manual_active")}`
-                  : undefined
-              }
-            >
-              <span aria-hidden="true">{manualMemberTransfer ? "● " : ""}</span>
+            <Button size="small" onClick={() => setImportModalOpen(true)}>
               {t("onboarding.members_link")}
             </Button>
             <Button
@@ -1017,6 +1026,7 @@ export default function Members() {
               {t("onboarding.coop_link")}
             </Button>
           </Space>
+          <OnboardingModeSwitch />
         </div>
       )}
 
@@ -1027,8 +1037,6 @@ export default function Members() {
         filename={t("commissioning.members_template.csv")}
         uploadAllowed={uploadAllowed}
         onUploadSuccess={invalidateMembersList}
-        manualTransferActive={manualMemberTransfer}
-        onToggleManualTransfer={() => setManualMemberTransfer((v) => !v)}
       />
 
       <CoopShareImportModal

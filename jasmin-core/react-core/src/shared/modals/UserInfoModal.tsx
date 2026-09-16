@@ -2,6 +2,7 @@ import { Button, Descriptions, Modal, Space, Tag } from "antd";
 import type { FC } from "react";
 import { useTranslation } from "react-i18next";
 import { useDateFormat } from "@hooks/index";
+import DisabledReasonTooltip from "@shared/ui/DisabledReasonTooltip";
 import type {
   AccountStatus,
   LinkedUserInfo,
@@ -25,6 +26,9 @@ interface UserInfoModalProps {
   onSendInvitation?: (record: UserRecord) => void;
   /** Resend an invitation that's still pending. */
   onResendInvitation?: (record: UserRecord) => void;
+  /** Why no invitation can be sent right now. Disables the send and resend
+   *  buttons and explains why on hover and to assistive technology. */
+  invitationDisabledReason?: string | null;
   /** Activate a deactivated user. */
   onActivateUser?: (record: UserRecord) => void;
   /** Deactivate an active user. */
@@ -45,6 +49,7 @@ const UserInfoModal: FC<UserInfoModalProps> = ({
   record,
   onSendInvitation,
   onResendInvitation,
+  invitationDisabledReason = null,
   onActivateUser,
   onDeactivateUser,
 }) => {
@@ -155,25 +160,48 @@ const UserInfoModal: FC<UserInfoModalProps> = ({
       <div style={{ marginTop: 16, textAlign: "right" }}>
         <Space>
           {accountStatus === "no_user" && onSendInvitation && (
-            <Button type="primary" onClick={handleSendInvitation}>
-              {t("users.send_invitation")}
-            </Button>
+            <DisabledReasonTooltip reason={invitationDisabledReason}>
+              {(reasonId) => (
+                <Button
+                  type="primary"
+                  onClick={handleSendInvitation}
+                  disabled={!!invitationDisabledReason}
+                  aria-describedby={reasonId}
+                >
+                  {t("users.send_invitation")}
+                </Button>
+              )}
+            </DisabledReasonTooltip>
           )}
           {accountStatus === "pending_invitation" && onResendInvitation && (
-            <Button
-              type={isInvitationExpired ? "default" : "primary"}
-              disabled={isInvitationExpired}
-              onClick={handleResendInvitation}
-            >
-              {t("users.resend_invitation")}
-            </Button>
+            <DisabledReasonTooltip reason={invitationDisabledReason}>
+              {(reasonId) => (
+                <Button
+                  type={isInvitationExpired ? "default" : "primary"}
+                  disabled={isInvitationExpired || !!invitationDisabledReason}
+                  onClick={handleResendInvitation}
+                  aria-describedby={reasonId}
+                >
+                  {t("users.resend_invitation")}
+                </Button>
+              )}
+            </DisabledReasonTooltip>
           )}
           {accountStatus === "pending_invitation" &&
             isInvitationExpired &&
             onSendInvitation && (
-              <Button type="primary" onClick={handleSendInvitation}>
-                {t("users.send_new_invitation")}
-              </Button>
+              <DisabledReasonTooltip reason={invitationDisabledReason}>
+                {(reasonId) => (
+                  <Button
+                    type="primary"
+                    onClick={handleSendInvitation}
+                    disabled={!!invitationDisabledReason}
+                    aria-describedby={reasonId}
+                  >
+                    {t("users.send_new_invitation")}
+                  </Button>
+                )}
+              </DisabledReasonTooltip>
             )}
           {accountStatus === "active" && onDeactivateUser && (
             <Button danger onClick={handleDeactivate}>
