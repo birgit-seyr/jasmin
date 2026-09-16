@@ -8,7 +8,8 @@
 
 export type CommissioningShareDeliveryPendingOptinListParams = {
 /**
- * Anzahl der pro Seite zurückzugebenden Ergebnisse.
+ * Page size. Pass it to opt into pagination: the response is then `{count, next, previous, results}` instead of a plain array. A value above 1000 is served at 1000 rather than refused.
+ * @minimum 1
  */
 limit?: number;
 /**
@@ -16,7 +17,8 @@ limit?: number;
  */
 member?: string;
 /**
- * Der initiale Index, von dem die Ergebnisse zurückgegeben werden sollen.
+ * Index of the first row to return. Only meaningful together with `limit`.
+ * @minimum 0
  */
 offset?: number;
 };

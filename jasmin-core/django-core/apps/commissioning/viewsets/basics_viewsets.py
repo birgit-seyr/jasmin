@@ -349,10 +349,16 @@ class ShareArticleViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         if is_purchased is not None:
             queryset = queryset.filter(is_purchased=is_purchased)
 
-        if get_price_info is not None and price_date is not None:
+        # Truthiness, not ``is not None``: ``get_price_info`` is a strict
+        # bool, so ``?get_price_info=false`` must NOT annotate the price
+        # columns. ``price_date`` is non-null by construction (it falls back to
+        # today above).
+        if get_price_info:
             queryset = queryset.annotate(**self.get_price_annotations(price_date))
 
-        if is_harvest_share_article is not None:
+        # One-armed: ``=true`` narrows to the complexly-planned articles,
+        # ``=false`` (or absent) leaves the list unrestricted.
+        if is_harvest_share_article:
             # Articles used by any share option that is planned complexly
             # (week-by-week harvest-style planning) — derived from
             # ``ShareType.needs_complex_planning`` rather than a hardcoded
@@ -380,7 +386,9 @@ class ShareArticleViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         if is_sold_to_resellers is not None:
             queryset = queryset.filter(is_sold_to_resellers=is_sold_to_resellers)
 
-        if is_data_list is not None:
+        # Annotation flag, not a filter: ``?is_data_list=false`` must leave
+        # the extra columns off rather than switching them on.
+        if is_data_list:
             queryset = queryset.annotate(
                 **self.get_share_options_annotation(),
                 default_crate_harvest_name=F("default_crate_harvest__short_name"),
@@ -530,7 +538,9 @@ class CrateViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         get_price_info = params["get_price_info"]
         is_active = params["is_active"]
 
-        if get_price_info is not None:
+        # Truthiness, not ``is not None``: ``?get_price_info=false`` must
+        # leave the price annotation off.
+        if get_price_info:
             queryset = queryset.annotate(**self.get_current_price_annotations())
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active)

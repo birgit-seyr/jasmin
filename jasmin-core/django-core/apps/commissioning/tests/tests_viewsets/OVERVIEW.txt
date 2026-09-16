@@ -1,221 +1,427 @@
 Viewset Tests Overview
 ======================
-749 tests | 157 test classes | 31 files
+795 tests | 162 test classes | 31 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
+Counts are collected cases, so a parametrized method counts once per case.
+Files are in alphabetical order.
 
-test_badge_viewsets.py (9 tests)
-────────────────────────────────
-  TestUnConfirmedSubscriptionsViewSet     3 tests   unconfirmed_subscriptions badge count
-  TestUnConfirmedTrialSubscriptionsViewSet 3 tests  unconfirmed_trial_subscriptions badge count
-  TestUnConfirmedMembersViewSet           3 tests   unconfirmed_members badge count
 
-test_basics_viewsets.py (36 tests)
+test_badge_viewsets.py (16 tests)
+─────────────────────────────────
+  TestUnconfirmedSubscriptionsViewSet      4   unconfirmed_subscriptions badge count
+  TestUnconfirmedTrialSubscriptionsViewSet 4   unconfirmed_trial_subscriptions badge count
+  TestUnconfirmedMembersViewSet            4   unconfirmed_members badge count
+  TestUnconfirmedCoopSharesViewSet         4   unconfirmed_coop_shares badge count
+
+test_basics_viewsets.py (51 tests)
 ──────────────────────────────────
-  TestSeasonViewSet                       3 tests   list, create (with valid_from/valid_until)
-  TestStorageViewSet                      5 tests   list, isPast active/inactive filter, ordering
-  TestShareArticleViewSet                 3 tests   list, isPast active filter
-  TestDefaultShareArticleInShareViewSet  19 tests   list/filter (article/variation/type), CRUD,
-                                                    bulk_upsert (create/update/delete on null|0,
-                                                    fallback unit, explicit unit, scope filter,
-                                                    404 on missing share_article, 400 on bad payload),
-                                                    permissions (member/anon)
-  TestShareArticleNetPriceDestroyGuard    3 tests   DELETE enforces can_be_deleted: active price of
-                                                    in-use article → 409 + row kept; unused → 204;
-                                                    future price of in-use article → 204
+  TestSeasonViewSet                        3   list, create (with valid_from/valid_until)
+  TestSeasonOneOpenConstraint              2   DB refuses a second open season; open + closed allowed
+  TestStorageViewSet                       5   list, is_active filter, ordering
+  TestShareArticleViewSet                 10   list, is_active filter, the is_harvest_share_article /
+                                               get_price_info / is_data_list flags read one-armed,
+                                               retrieve, create, patch, delete
+  TestStorageViewSetEditDelete             3   retrieve, partial_update, delete
+  TestCrateViewSet                         4   list, partial_update, delete
+  TestDefaultShareArticleInShareViewSet   19   list/filter (article/variation/type), CRUD,
+                                               bulk_upsert (create/update/delete on null|0,
+                                               fallback unit, explicit unit, scope filter,
+                                               404 on missing share_article, 400 on bad payload),
+                                               permissions (member/anon)
+  TestShareArticleNetPriceViewSet          2   deletability of an active vs. a future price
+  TestShareArticleNetPriceDestroyGuard     3   DELETE enforces can_be_deleted: active price of
+                                               in-use article → 409 + row kept; unused → 204;
+                                               future price of in-use article → 204
 
-test_choices_viewsets.py (8 tests)
-──────────────────────────────────
-  TestSharesDeliveryDayViewSet            3 tests   list, retrieve
-  TestOrdersDeliveryDayViewSet            2 tests   list
-  TestPaymentCycleViewSet                 3 tests   list, is_active filter
-
-test_delivery_viewsets.py (21 tests)
-────────────────────────────────────
-  TestDeliveryStationViewSet              7 tests   list, filter is_active, retrieve, filter by member (confirmed only), member-role read
-  TestDeliveryStationDayViewSet          11 tests   list, filter by station/day, capacity by week
-  TestDeliveryToursViewSet                3 tests   requires delivery_day param, list with day, update_tours targets open row on versioned station-day
-
-test_documentation_viewsets.py (19 tests)
-─────────────────────────────────────────
-  TestPlotViewSet                         6 tests   list, filter is_active, create, retrieve, delete
-  TestWasteViewSet                        2 tests   list
-  TestHarvestViewSet                      2 tests   list
-  TestPurchaseViewSet                     2 tests   list
-  TestForecastViewSet                     3 tests   list, filter by year/week
-  TestBulkSetAsExpected                   4 tests   harvest/purchase set-as-expected valid (204);
-                                                    malformed item 400 (serializer.is_valid wiring)
-
-test_members_viewsets.py (15 tests)
+test_choices_viewsets.py (15 tests)
 ───────────────────────────────────
-  TestMemberViewSet                       8 tests   list, filter active/trial, confirm, reject, retrieve
-  TestSubscriptionViewSet                 4 tests   list, filter is_trial, filter by member
-  TestCoopShareViewSet                    3 tests   list, filter by member
+  TestSharesDeliveryDayViewSet            10   list, retrieve, tour count raise/reduce rules,
+                                               get_delivery_stations flag (false omits the prefetch;
+                                               without active_at_date → 400)
+  TestOrdersDeliveryDayViewSet             2   list
+  TestPaymentCycleViewSet                  3   list, is_active filter
 
-test_member_onboarding_fields.py (23 tests) — onboarding mode: member_number / entry_date writability (frozen clock)
-──────────────────────────────────────────────────────────────────────────────────────────────────────────────
-  TestOnboardingPolicy                    4 tests   flag defaults off; onboarding_mode_enabled off / on / no settings row
-  TestMemberSerializerSelection          10 tests   create/update/partial_update → MemberOnboardingSerializer only while on;
-                                                    other actions and schema generation keep MemberSerializer
-  TestMemberNumberAndEntryDateFlagOff     3 tests   PATCH drops member_number; PATCH drops entry_date; create drops both
-  TestMemberNumberAndEntryDateFlagOn      6 tests   PATCH + create write both; duplicate number → 400; number on an existing
-                                                    or new trial member → member.number_not_allowed_for_trial; trial row
-                                                    without a number still saves
-
-test_onboarding_confirmation.py (49 tests) — onboarding mode: confirmation dates, no emails, admit and exit, paid_at, import link (frozen clock)
-──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-  TestMemberConfirmFlagOff                3 tests   confirm sends application_approved; confirmed_at → 400
-                                                    member.confirmation_date_requires_onboarding_mode; departed member → 409
-  TestMemberConfirmFlagOn                 7 tests   confirmed_at → admin_confirmed_at (12:00 local), entry_date, pending shares'
-                                                    admin_confirmed_at, no email; typed entry_date kept; no body → now, no
-                                                    email; trial member converts on the date without emails; today accepted;
-                                                    future → member.confirmation_date_in_future; malformed date → 400
-  TestAdmitAndExit                        5 tests   departed member confirmed, open shares cancelled with the member's exit
-                                                    stamps + retention payback date, member stamps untouched, no
-                                                    member_cancelled email; pending_approval login not activated; exit day
-                                                    accepted; day after exit / no date after a past exit →
-                                                    member.confirmation_date_after_exit
-  TestCoopShareConfirm                    9 tests   off: confirmed_at → 400, member cascade sends application_approved, trial
-                                                    conversion sends trial_converted; on: confirmed_at dates the share, future
-                                                    → 400, cascade admits a trial member on the date without emails, share of
-                                                    an admitted or unadmitted departed member confirmed then cancelled, no date
-                                                    after a past exit → 400
-  TestCoopShareConfirmOnlyPendingWhileOn  4 tests   off: re-confirming a confirmed share re-stamps it; on: a confirmed (also
-                                                    cancelled, of a departed member), a confirmed or a cancelled share →
-                                                    409 coop_share.not_pending, stamps unchanged
-  TestCoopShareConfirmBelowMinimum        3 tests   on: departed member who can't be admitted → 400
-                                                    member.coop_shares_out_of_range, share left pending and open; pending
-                                                    member below the minimum → share confirmed, member stays pending; off:
-                                                    departed member's share → 409 member.already_cancelled
-  TestCoopShareCreateAndPaidAt            6 tests   perform_create sends trial_converted only while off; paid_at dropped while
-                                                    off (create, PATCH); stored as local midnight while on (create, PATCH with a
-                                                    datetime)
-  TestCoopShareSerializerSelection        10 tests  create/update/partial_update → CoopShareOnboardingSerializer only while on;
-                                                    other actions and schema generation keep CoopShareSerializer
-  TestMemberImportLinkToActiveUser        2 tests   CSV member import linked to an active user: confirmed while off, linked but
-                                                    unconfirmed while on
-
-test_onboarding_departed_subscription_confirm.py (5 tests) — onboarding mode: confirming a subscription of a member who has left (frozen clock)
-────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-  TestDepartedMemberSubscriptionConfirmFlagOff  1 test   → 409 member.already_cancelled, nothing materialised
-  TestDepartedMemberSubscriptionConfirmFlagOn   4 tests  ends by the exit → confirmed, 6-week backfill up to the term end,
-                                                         charges only for those deliveries; draft wound down by the member
-                                                         exit → confirmed; ends after the exit → 400
-                                                         subscription.ends_after_member_exit; unconfirmed member → 400
-                                                         subscription.member_not_admitted, member left unadmitted
-
-test_onboarding_email_suppression.py (12 tests) — onboarding mode: suppressed member emails, refused email actions (frozen clock, in-memory SMTP)
-─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-  TestSendInvitationEndpoint              3 tests   on: send_invitation → 409 onboarding_mode.email_action_blocked with no
-                                                    user, invitation or quota used; a resend → 409, open invitation kept;
-                                                    off: user + invitation created, invitation email sent
-  TestSharedLoginSlugsWhileOn             4 tests   member portal invitation → suppressed EmailLog row, nothing sent; the
-                                                    service's resend of a pending member login → new invitation, suppressed
-                                                    row; staff invitation still sent; welcome on linking a member to an
-                                                    active user → suppressed, member still confirmed
-  TestOfferSpotEndpoint                   2 tests   on: offer_spot → 409, entry stays PENDING, no token, no capacity hold, no
-                                                    offer email; off: SPOT_AVAILABLE with token
-  TestOfficeCancelEmail                   2 tests   on: cancel succeeds, member_cancelled suppressed, cancellation_email_sent_at
-                                                    stays empty; off: email sent and stamped
-  TestRenewalDigestInWorker               1 test    renewal digest under schema_context (FakeTenant) → suppressed row, logged at
-                                                    INFO instead of the ERROR renewal.digest_failed line
-
-test_subscription_onboarding_start.py (18 tests) — onboarding mode: subscription start lead time (frozen clock)
-─────────────────────────────────────────────────────────────────────────────────────────────────────────
-  TestOfficeStartFlagOff                  2 tests   office create / PATCH with a past start → subscription.start_too_soon
-  TestOfficeStartFlagOn                   4 tests   office create / PATCH with a past start accepted; end date still required;
-                                                    member self-subscribe still → subscription.start_too_soon
-  TestSerializerLeadTimeSkip              3 tests   skip only with onboarding_mode in the context AND an office request
-  TestSubscriptionViewSetContext          9 tests   create/update/partial_update carry the flag (off / on); list, retrieve,
-                                                    confirm and schema generation leave it out
-
-test_shares_viewsets.py (89 tests)
-──────────────────────────────────
-  TestShareTypeViewSet                    7 tests   list, filter share_option, create/update uppercase, invalid 400
-  TestShareTypeVariationViewSet           5 tests   list, filter by share_type/physical/internal_name
-  TestShareTypeVariationGrossPriceViewSet 3 tests   list, filter by variation
-  TestShareTypeVariationGrossPriceDestroyGuard 2 tests  DELETE enforces can_be_deleted: price of a
-                                                    subscribed variation → 409 + row kept; unsubscribed → 204
-  TestShareViewSet                        4 tests   list, filter year/week, get_days action
-  TestDefaultShareContentBulkCreateValidation 3 tests  valid amount_<var> cell persists (200); missing field 400; NaN/non-finite 400
-  TestDefaultShareContentBulkUpdateValidation 2 tests  composite-id PUT replaces slot amount; bad-typed field 400
-  TestHarvestSharePlanningViewSet         4 tests   create persists ShareContent + station; null note ok;
-                                                    missing field 400; no-amounts 400
-  TestVirtualComponentsViewSet            3 tests   create 201 + persisted component; missing virtual_variation 400;
-                                                    non-physical component 400
-  TestShareDeliveryShareOnlyRepointCapacity 2 tests re-pointing a delivery to ANOTHER WEEK (station-day untouched)
-                                                    runs the capacity gate: full week → 409 + row unmoved; room → 200
-  TestShareDeliveryCombinedShareAndCrossDayMove 2 tests one PATCH carrying BOTH a new share and a station-day on
-                                                    another weekday writes the REQUESTED week (not the original),
-                                                    and the capacity gate judges that same week (full → 409)
-
-test_logs_viewsets.py (16 tests) — theoretical harvest/purchase/wash/clean recency window (frozen clock)
-────────────────────────────────────────────────────────────────────────────────────────────────────────
-  TestTheoreticalListRecencyWindow       16 tests   parametrized over the four lists: in ISO week 1 the current-year
-                                                    rows survive the default two-week window (its cutoff sits in the
-                                                    PREVIOUS year); a future year stays out of it; the detail route
-                                                    still reaches a row outside the window; an explicitly requested
-                                                    past ?year= is not narrowed
-
-test_resellers_viewsets.py (57 tests)
-─────────────────────────────────────
-  TestResellerViewSet                     6 tests   list, filter is_reseller/is_active_reseller, retrieve, delete
-  TestResellerHasOrdersWithoutInvoiceFilter 8 tests has_orders_without_invoice=true keeps only resellers with an
-                                                    order no invoice covers (an uninvoiced delivery note still
-                                                    counts, a crate-only invoice settles its order); false keeps
-                                                    the settled + the order-less; absent filters nothing; the
-                                                    verdict is scoped to ?year=; non-boolean → 400
-  TestOfferGroupViewSet                   2 tests   list
-  TestOfferViewSet                        3 tests   list, filter by year/week
-  TestOrderContentViewSet                 6 tests   list, create derives tax_rate, Orders page offer/article row
-                                                    create+PATCH payloads, customer page payloads via staff route,
-                                                    PATCH without amount keeps amount/stock/crate row
-  TestInvoiceResellerViewSet              6 tests   list, upload_pdf requires finalized, create_storno guards, protected fields read-only on update
-  TestDeliveryNoteResellerViewSet         3 tests   list, upload_pdf requires finalized
-  TestCommissioningListResellersViewSet   2 tests   requires params, returns for valid params
-
-test_consents_viewsets.py (32 tests) — DSGVO-critical access matrix
+test_consents_viewsets.py (45 tests) — DSGVO-critical access matrix
 ───────────────────────────────────────────────────────────────────
-  TestConsentDocumentReadAccess           6 tests   anon + member + office all 200; current/ 200 + clean 404
-  TestConsentDocumentWriteAccess          6 tests   anon 401/403, member 403; office 201; PROTECTed delete → 409
-  TestConsentDocumentImmutableOnceConsented 10 tests  PATCH/PUT changing body/title/kind/locale/version/valid_from
-                                                    of a consented doc → 409 consent.document_immutable, row +
-                                                    sha unchanged; unchanged values → 200; draft edit → 200 +
-                                                    stored PDF re-rendered
-  TestConsentRecordCreate                 7 tests   member pinned to self; spoof attempt → 403; office can act on behalf; IP from X-Forwarded-For; UA captured; unknown document → 404
-  TestConsentRecordListScoping            4 tests   anon blocked; member sees only own; office sees all; ?member= filter
-  TestConsentRecordRevoke                 5 tests   anon blocked; owner revokes own; non-owning member → 404 (not leaked); office revokes any; double-revoke → 409
-
-test_server_owned_field_locks.py (18 tests) — generic writes cannot set server-owned columns
-────────────────────────────────────────────────────────────────────────────────────────────
-  TestInvoiceLineLocks                    3 tests   PATCH cannot re-point a draft line onto a finalized invoice; finalization / source_* / order_content / delivery_note_contents dropped; create still takes invoice
-  TestDeliveryNoteLineLocks               2 tests   PATCH cannot re-point or stamp a line; create still takes delivery_note
-  TestOfferLocks                          1 test    PATCH cannot finalize an offer
-  TestInvoiceRecipientSnapshotLock        1 test    PATCH cannot plant recipient_snapshot / document_hash_version on a draft
-  TestShareContentLocks                   2 tests   PATCH cannot unfinalize or rewrite authorship; create stamps request user
-  TestDocumentationLocks                  3 tests   harvest PATCH locks finalization + authorship; harvest create stamps request user; theoretical harvest authorship
-  TestSubscriptionLocks                   1 test    PATCH cannot rewrite renewal chain / waiting-list status / authorship (frozen clock)
-  TestMemberLocks                         2 tests   PATCH cannot set consent / cancellation / waiting-list / audit stamps; create stamps request user
-  TestShareDeliveryLocks                  3 tests   overview create ignores display annotations; PATCH cannot re-point subscription (both viewsets)
+  TestConsentDocumentReadAccess            6   anon + member + office all 200; current/ 200 + clean 404
+  TestConsentDocumentWriteAccess           6   anon 401/403, member 403; office 201; PROTECTed delete → 409
+  TestConsentRecordCreate                  7   member pinned to self; spoof attempt → 403; office can act
+                                               on behalf; IP from X-Forwarded-For; UA captured; unknown
+                                               document → 404
+  TestConsentRecordListScoping             4   anon blocked; member sees only own; office sees all;
+                                               ?member= filter
+  TestConsentRecordRevoke                  5   anon blocked; owner revokes own; non-owning member → 404
+                                               (not leaked); office revokes any; double-revoke → 409
+  TestConsentRecordDestroy                 2   member cannot hard-delete; office can
+  TestConsentDocumentPDFDownload           5   renders once then serves the cached PDF; public;
+                                               body cannot make the server fetch external or internal hosts
+  TestConsentDocumentImmutableOnceConsented 10 PATCH/PUT changing body/title/kind/locale/version/valid_from
+                                               of a consented doc → 409 consent.document_immutable, row +
+                                               sha unchanged; unchanged values → 200; draft edit → 200 +
+                                               stored PDF re-rendered
 
 test_coop_share_amount_and_confirmed_lock.py (16 tests) — coop-share amount rule + confirmed-share edit lock
-─────────────────────────────────────────────────────────────────────────────────────────────────────────
-  TestOfficeCoopShareAmount               6 tests   office create -2 / 0 / 2.5 → 400 coop_share.invalid_amount; whole amount 201; PATCH to a fractional amount → 400; unchanged legacy fractional amount stays editable
-  TestConfirmedCoopShareEditLock          8 tests   PATCH amount / is_increase / due_date / member on a confirmed share → 409 coop_share.confirmed_fields_locked; PUT rewriting amount → 409; office-grid bookkeeping save (paid_back_date + note, re-sent tenant value) → 200 keeping the value snapshot; unconfirmed terms editable; confirm committed after load still locks (row re-read under lock)
-  TestCoopShareUpdateBoundsLock           2 tests   update takes the per-member coop_share_bounds advisory lock; reassignment locks both members in sorted order
+───────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestOfficeCoopShareAmount                6   office create -2 / 0 / 2.5 → 400 coop_share.invalid_amount;
+                                               whole amount 201; PATCH to a fractional amount → 400;
+                                               unchanged legacy fractional amount stays editable
+  TestConfirmedCoopShareEditLock           8   PATCH amount / is_increase / due_date / member on a confirmed
+                                               share → 409 coop_share.confirmed_fields_locked; PUT rewriting
+                                               amount → 409; office-grid bookkeeping save → 200 keeping the
+                                               value snapshot; unconfirmed terms editable; confirm committed
+                                               after load still locks (row re-read under lock)
+  TestCoopShareUpdateBoundsLock            2   update takes the per-member coop_share_bounds advisory lock;
+                                               reassignment locks both members in sorted order
 
 test_coop_share_transfer.py (30 tests) — office coop share transfer between members as ledger rows (frozen clock)
 ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-  TestCoopShareTransfer                  15 tests   negative row for the giver + positive row for the receiver (confirmed, paid on the transfer date, notes, existing rows untouched); share value with the most recent payment first; a later transfer only gives what is left; a backdated transfer is capped per share value by today's holding; giving every share needs confirm_member_cancellation, then settles the giver's rows (no payback date, settled_by_transfer) and cancels the giver with a no-settlement email; pending shares don't keep such a giver; no GDPR retention block after a full transfer; a partial giver who leaves later owes only the rest (retention + payback statistics); member register counts transfer rows from the transfer date; giver left between 0 and the minimum → 400 member.coop_shares_out_of_range, nothing written; receiver above the maximum → 400; active subscriptions keep everything; a backdated transfer to a trial member uses the transfer date as entry date
-  TestCoopShareTransferValidation        15 tests   more than the confirmed, paid shares → 400 exceeds_held; shares paid after the transfer date don't count; same member; giver not admitted; receiver pending / rejected; cancelled receiver → 400; cancelled giver → 409; future date; date before the giver's or the receiver's entry date (details.context names the side); amount 0 / -1 / 2.5 → 400; anonymous refused
+  TestCoopShareTransfer                   15   negative row for the giver + positive row for the receiver
+                                               (confirmed, paid on the transfer date, notes, existing rows
+                                               untouched); share value with the most recent payment first; a
+                                               later transfer only gives what is left; a backdated transfer is
+                                               capped per share value by today's holding; giving every share
+                                               needs confirm_member_cancellation, then settles the giver's rows
+                                               and cancels them with a no-settlement email; member register
+                                               counts transfer rows from the transfer date
+  TestCoopShareTransferValidation         15   more than the confirmed, paid shares → 400 exceeds_held; shares
+                                               paid after the transfer date don't count; same member; giver not
+                                               admitted; receiver pending / rejected; cancelled receiver → 400;
+                                               cancelled giver → 409; future date; date before either entry date;
+                                               amount 0 / -1 / 2.5 → 400; anonymous refused
 
-test_subscription_price_bounds.py (12 tests) — office subscription quantity/price bounds + solidarity floor on PATCH (frozen clock)
-────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-  TestOfficeSubscriptionBounds            6 tests   create quantity 0 / -1 → 400; price -1 → 400; PATCH quantity 0 → 400; price 0 and a free trial still 201
-  TestSolidarityFloorOnPatch              6 tests   PATCH variation / valid_from / is_trial re-checks the STORED price against the new floor → 400; variation + price at the floor → 200; unrelated edit of a below-floor draft → 200; solidarity off keeps price discretion
+test_crates_viewsets.py (35 tests)
+──────────────────────────────────
+  TestCrateDeliveryNoteContentViewSet      6   unknown delivery note → 404; empty summary; create resolves the
+                                               tax rate; finalized parent refused; summary groups mixed prices
+  TestCrateContentInvoiceResellerViewSet   3   unknown invoice → 404; empty summary; finalized invoice refused
+  TestCrateNetPriceViewSet                 6   list (with crate name), filter by crate, current-only filter,
+                                               deletability of an active vs. a future price
+  TestCrateDocumentLineWriteValidation    16   rabatt > 100 / blank rabatt / over-long note / blank amount → 400
+                                               on create and update; a PATCH without price or rabatt keeps the
+                                               stored values
+  TestCrateDocumentLineSerializerLocks     2   server-owned columns of a delivery-note / invoice crate line
+  TestCrateNetPriceDestroyGuard            2   active price of a crate in use → 409 + kept; unused → deleted
+
+test_customer_order_page_scoping.py (33 tests) — the customer (reseller) role sees only its own rows
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestCustomerOrderPage_ResellerScoping    9   list/retrieve/patch limited to own reseller; privileged and
+                                               activation fields refused on self
+  TestCustomerOrderPage_OfferScoping       1   offers of other offer groups excluded
+  TestCustomerOrderPage_OrderContentScoping 6  list/retrieve/create/update/destroy scoped; price not settable
+  TestCustomerOrderPage_OrderContentOfferScoping 8 offers only from own offer group; share-article lines and
+                                               offer swaps refused; re-sending the current offer allowed
+  TestCustomerOrderPage_CrateScoping       1   crate list for another reseller forbidden
+  TestCustomerOrderPage_DocumentsScoping   3   delivery notes scoped; document creation forbidden
+  TestCustomer_CannotAccessMemberEndpoints 3   members / share deliveries / abos forbidden
+  TestCustomerOrderPage_OfferAnnotationScoping 2 peer amounts not requestable; omitting reseller shows own only
+
+test_delivery_exception_scoping.py (3 tests)
+────────────────────────────────────────────
+  TestDeliveryExceptionMemberScoping       3   staff see every period incl. the note; a member sees only their
+                                               own variation without it; no subscription → nothing
+
+test_delivery_station_query_count.py (1 test)
+─────────────────────────────────────────────
+  (module-level)                           1   delivery-station list is scale-invariant
+
+test_delivery_viewsets.py (28 tests)
+────────────────────────────────────
+  TestDeliveryStationViewSet               8   list, is_active filter, retrieve, can_be_deleted, filter by
+                                               member (confirmed subscriptions only), member-role read
+  TestDeliveryStationDayViewSet           16   list, filter by station / day / member, capacity by week,
+                                               a member cannot query another member's station-days
+  TestDeliveryToursViewSet                 3   requires delivery_day, list with day, update_tours targets the
+                                               open row on a versioned station-day
+  TestUpdateToursCreatesStationDay         1   assigning a station without a station-day creates one
+
+test_documentation_viewsets.py (49 tests)
+─────────────────────────────────────────
+  TestPlotViewSet                          6   list, is_active filter, create, retrieve, delete
+  TestWasteViewSet                         4   list; create with a page-level storage; plain storage required
+  TestHarvestViewSet                       2   list
+  TestPurchaseViewSet                      3   list; create with a page-level storage
+  TestForecastViewSet                      4   week scope required, list, filter by year/week
+  TestForecastInvalidVariation             2   unknown variation on create / update → 404
+  TestForecastBulkCopyToNextWeek           3   empty ids → 400, unknown ids → 404, copy
+  TestPurchaseExportCsv                    3   missing dates → 400; empty range still a CSV; week-scoped
+                                               purchase included with localized labels
+  TestHarvestExportCsv                     2   empty range still a CSV; day + labels localized
+  TestBulkSetAsExpected                    6   harvest/purchase set-as-expected valid (204);
+                                               empty body does not 500; malformed item 400
+  TestDocumentationSummaryAction           1   empty summary for an unused week
+  TestAddAdditionalTheoreticalAmount       9   invalid model / unusable value / missing share_article → 400;
+                                               unknown share_article → 404; valid payload creates the row
+  TestUpdateAdditionalTheoreticalAmount    1   invalid model → 400
+  TestMovementSourceDeleteRecascades       3   deleting a movement source re-cascades the stock snapshots
+
+test_imports_viewsets.py (17 tests)
+───────────────────────────────────
+  TestExternalCodeMappingViewSet           6   list, filter by kind, create, duplicate code refused, delete
+  TestShareImportBatchViewSet              9   upload → preview-ready (or failed on invalid CSV), missing file
+                                               → 400, idempotent for the same bytes, preview action,
+                                               full upload → preview → apply round trip
+  TestExternalShareDemandViewSet           2   list, demand visible after apply
+
+test_logs_viewsets.py (16 tests) — theoretical harvest/purchase/wash/clean recency window (frozen clock)
+────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestTheoreticalListRecencyWindow        16   parametrized over the four lists: in ISO week 1 the current-year
+                                               rows survive the default two-week window (its cutoff sits in the
+                                               PREVIOUS year); a future year stays out of it; the detail route
+                                               still reaches a row outside the window; an explicitly requested
+                                               past ?year= is not narrowed
+
+test_member_detail_scoping.py (15 tests)
+────────────────────────────────────────
+  TestMemberDetail_MemberRoleScoping      10   list returns only self; office-internal fields hidden from the
+                                               member and kept for office; other members 404; self-patch refused
+  TestAbos_MemberRoleScoping               2   own subscriptions only; create forbidden
+  TestShareDelivery_MemberRoleScoping      1   list filtered to own deliveries
+  TestMember_CannotAccessResellerEndpoints 2   resellers / order contents forbidden
+
+test_member_onboarding_fields.py (23 tests) — onboarding mode: member_number / entry_date writability (frozen clock)
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestOnboardingPolicy                     4   flag defaults off; onboarding_mode_enabled off / on / no settings row
+  TestMemberSerializerSelection           10   create/update/partial_update → MemberOnboardingSerializer only while
+                                               on; other actions and schema generation keep MemberSerializer
+  TestMemberNumberAndEntryDateFlagOff      3   PATCH drops member_number; PATCH drops entry_date; create drops both
+  TestMemberNumberAndEntryDateFlagOn       6   PATCH + create write both; duplicate number → 400; number on an
+                                               existing or new trial member → member.number_not_allowed_for_trial;
+                                               trial row without a number still saves
+
+test_members_viewsets.py (43 tests)
+───────────────────────────────────
+  TestMemberViewSet                       24   list, payback-due and coop-share totals, filters (is_active,
+                                               is_trial, exclude_trial_members incl. its =false case), confirm,
+                                               reject, retrieve
+  TestSubscriptionViewSet                  8   list, filter is_trial / member, joker fields and allowance,
+                                               joker vs. donation joker mutually exclusive, confirm guards
+  TestCoopShareViewSet                     7   list, filter by member, office create auto-confirms, confirm action
+                                               (admits an unconfirmed member, blocked for a cancelled one)
+  TestConfirmedImmutableDeletion           4   confirmed member / coop share cannot be deleted; unconfirmed can
+
+test_offer_group_default.py (7 tests)
+─────────────────────────────────────
+  TestDefaultOfferGroup                    7   the default group is seeded, cannot be deleted, reports itself
+                                               not deletable, can be renamed/renumbered; only one default;
+                                               seeding flags the lowest-numbered existing group
+
+test_onboarding_confirmation.py (49 tests) — onboarding mode: confirmation dates, no emails, admit and exit, paid_at, import link (frozen clock)
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestMemberConfirmFlagOff                 3   confirm sends application_approved; confirmed_at → 400
+                                               member.confirmation_date_requires_onboarding_mode; departed → 409
+  TestMemberConfirmFlagOn                  7   confirmed_at → admin_confirmed_at (12:00 local), entry_date, pending
+                                               shares' admin_confirmed_at, no email; typed entry_date kept; no body
+                                               → now; today accepted; future → member.confirmation_date_in_future;
+                                               malformed date → 400
+  TestAdmitAndExit                         5   departed member confirmed, open shares cancelled with the member's
+                                               exit stamps + retention payback date, no member_cancelled email;
+                                               pending_approval login not activated; exit day accepted; day after
+                                               exit / no date after a past exit → member.confirmation_date_after_exit
+  TestCoopShareConfirm                     9   off: confirmed_at → 400, member cascade sends application_approved,
+                                               trial conversion sends trial_converted; on: confirmed_at dates the
+                                               share, future → 400, cascade admits a trial member on the date
+                                               without emails, share of an admitted or unadmitted departed member
+                                               confirmed then cancelled, no date after a past exit → 400
+  TestCoopShareConfirmOnlyPendingWhileOn   4   off: re-confirming a confirmed share re-stamps it; on: a confirmed
+                                               (also cancelled, of a departed member) or a cancelled share →
+                                               409 coop_share.not_pending, stamps unchanged
+  TestCoopShareConfirmBelowMinimum         3   on: departed member who can't be admitted → 400
+                                               member.coop_shares_out_of_range, share left pending and open;
+                                               pending member below the minimum → share confirmed, member stays
+                                               pending; off: departed member's share → 409 member.already_cancelled
+  TestCoopShareCreateAndPaidAt             6   perform_create sends trial_converted only while off; paid_at dropped
+                                               while off (create, PATCH); stored as local midnight while on
+  TestCoopShareSerializerSelection        10   create/update/partial_update → CoopShareOnboardingSerializer only
+                                               while on; other actions and schema generation keep CoopShareSerializer
+  TestMemberImportLinkToActiveUser         2   CSV member import linked to an active user: confirmed while off,
+                                               linked but unconfirmed while on
+
+test_onboarding_departed_subscription_confirm.py (5 tests) — confirming a subscription of a member who has left (frozen clock)
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestDepartedMemberSubscriptionConfirmFlagOff 1  → 409 member.already_cancelled, nothing materialised
+  TestDepartedMemberSubscriptionConfirmFlagOn  4  ends by the exit → confirmed, 6-week backfill up to the term end,
+                                               charges only for those deliveries; draft wound down by the member
+                                               exit → confirmed; ends after the exit → 400
+                                               subscription.ends_after_member_exit; unconfirmed member → 400
+                                               subscription.member_not_admitted, member left unadmitted
+
+test_onboarding_email_suppression.py (12 tests) — suppressed member emails, refused email actions (frozen clock, in-memory SMTP)
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestSendInvitationEndpoint               3   on: send_invitation → 409 onboarding_mode.email_action_blocked with
+                                               no user, invitation or quota used; a resend → 409, open invitation
+                                               kept; off: user + invitation created, invitation email sent
+  TestSharedLoginSlugsWhileOn              4   member portal invitation → suppressed EmailLog row, nothing sent;
+                                               the service's resend of a pending member login → new invitation,
+                                               suppressed row; staff invitation still sent; welcome on linking a
+                                               member to an active user → suppressed, member still confirmed
+  TestOfferSpotEndpoint                    2   on: offer_spot → 409, entry stays PENDING, no token, no capacity
+                                               hold, no offer email; off: SPOT_AVAILABLE with token
+  TestOfficeCancelEmail                    2   on: cancel succeeds, member_cancelled suppressed,
+                                               cancellation_email_sent_at stays empty; off: email sent and stamped
+  TestRenewalDigestInWorker                1   renewal digest under schema_context (FakeTenant) → suppressed row,
+                                               logged at INFO instead of the ERROR renewal.digest_failed line
+
+test_optin_endpoint.py (10 tests)
+─────────────────────────────────
+  TestPendingOptinEndpoint                 4   office reads any member's list; a member reads own with or without
+                                               ?member=; another member's list refused
+  TestToggleOptinEndpoint                  6   member toggles own, office on behalf; another member's delivery
+                                               refused; after the deadline → 409; non-on/off variation or missing
+                                               opt_in → 400
 
 test_picture_upload_validation.py (37 tests) — picture uploads must be raster images
 ────────────────────────────────────────────────────────────────────────────────────
-  TestPictureUploadViaUpdate             24 tests   ShareTypeVariation + DeliveryStation PATCH: html / svg / markup-named-.png → 400 picture_invalid; PNG/JPEG/WEBP/GIF stored re-encoded with matching extension; multi-picture (MPO) JPEG stored as .jpg; PNG named x.html stored as .png; byte cap + pixel cap → 400; null PATCH still clears
-  TestPictureUploadViaCreate              3 tests   DeliveryStation POST rejects html / stores PNG under .png; ShareTypeVariation POST rejects svg
-  TestNormalizeUploadedPicture           10 tests   shared helper: None/"" pass through; truncated image rejected; generated name ignores client name; CMYK→RGB drops ICC profile, unconverted keeps it; EXIF orientation applied + EXIF dropped; P-mode PNG/GIF transparency kept; 16-bit PNG kept
+  TestPictureUploadViaUpdate              24   ShareTypeVariation + DeliveryStation PATCH: html / svg /
+                                               markup-named-.png → 400 picture_invalid; PNG/JPEG/WEBP/GIF stored
+                                               re-encoded with matching extension; multi-picture (MPO) JPEG stored
+                                               as .jpg; PNG named x.html stored as .png; byte cap + pixel cap →
+                                               400; null PATCH still clears
+  TestPictureUploadViaCreate               3   DeliveryStation POST rejects html / stores PNG under .png;
+                                               ShareTypeVariation POST rejects svg
+  TestNormalizeUploadedPicture            10   shared helper: None/"" pass through; truncated image rejected;
+                                               generated name ignores client name; CMYK→RGB drops ICC profile,
+                                               unconverted keeps it; EXIF orientation applied + EXIF dropped;
+                                               P-mode PNG/GIF transparency kept; 16-bit PNG kept
+
+test_reseller_content_query_count.py (4 tests)
+──────────────────────────────────────────────
+  TestInvoiceResellerContentQueryCount     2   list is scale-invariant; missing invoice_id refused
+  TestDeliveryNoteResellerContentQueryCount 2  list is scale-invariant; missing delivery_note_id refused
+
+test_resellers_viewsets.py (71 tests)
+─────────────────────────────────────
+  TestResellerViewSet                     10   list, filter is_reseller / is_active_reseller, retrieve, IBAN never
+                                               returned in plaintext, delete (delete_context required: a bare or
+                                               unknown context → 400 and the row is kept)
+  TestResellerHasOrdersAnnotation          4   day_number scopes the has_orders annotation (Monday like any other
+                                               day); the deprecated delivery_day alias is accepted; an id-shaped
+                                               alias value → 400 naming delivery_day
+  TestResellerHasOrdersWithoutInvoiceFilter 8  has_orders_without_invoice=true keeps only resellers with an order
+                                               no invoice covers (an uninvoiced delivery note still counts, a
+                                               crate-only invoice settles its order); false keeps the settled +
+                                               the order-less; absent filters nothing; the verdict is scoped to
+                                               ?year=; non-boolean → 400
+  TestOfferGroupViewSet                    2   list
+  TestOfferViewSet                        10   list, the required year/delivery_week scope (bare list → 400, detail
+                                               route exempt), plain array without pagination params, envelope with
+                                               ?limit=, unusable limit → 400
+  TestOrderContentViewSet                  6   list, create derives tax_rate, Orders page offer/article row
+                                               create+PATCH payloads, customer page payloads via staff route,
+                                               PATCH without amount keeps amount/stock/crate row
+  TestInvoiceResellerViewSet               6   list, upload_pdf requires finalized, create_storno guards,
+                                               protected fields read-only on update
+  TestDeliveryNoteResellerViewSet          7   list, upload_pdf requires finalized, send_to_reseller guards
+                                               (finalized, PDF present, reseller e-mail) and happy path
+  TestCommissioningListResellersViewSet    2   requires params, returns for valid params
+  TestCrateOrderContentViewSetCreateValidation 4 non-numeric year on create / patch → 400 not 500; missing amount
+                                               → 400; valid payload creates the order and crate
+  TestOrganicCertificateViewSet            3   create, filter by reseller, a second certificate closes its
+                                               predecessor
+  TestPurchaseOrganicValidation            9   conventional needs none; organic / in-conversion without a covering
+                                               certificate refused; validity window checked against the delivery
+                                               week's bounds
+
+test_server_owned_field_locks.py (18 tests) — generic writes cannot set server-owned columns
+────────────────────────────────────────────────────────────────────────────────────────────
+  TestInvoiceLineLocks                     3   PATCH cannot re-point a draft line onto a finalized invoice;
+                                               finalization / source_* / order_content / delivery_note_contents
+                                               dropped; create still takes invoice
+  TestDeliveryNoteLineLocks                2   PATCH cannot re-point or stamp a line; create still takes
+                                               delivery_note
+  TestOfferLocks                           1   PATCH cannot finalize an offer
+  TestInvoiceRecipientSnapshotLock         1   PATCH cannot plant recipient_snapshot / document_hash_version
+  TestShareContentLocks                    2   PATCH cannot unfinalize or rewrite authorship; create stamps the
+                                               request user
+  TestDocumentationLocks                   3   harvest PATCH locks finalization + authorship; harvest create stamps
+                                               the request user; theoretical harvest authorship
+  TestSubscriptionLocks                    1   PATCH cannot rewrite renewal chain / waiting-list status /
+                                               authorship (frozen clock)
+  TestMemberLocks                          2   PATCH cannot set consent / cancellation / waiting-list / audit
+                                               stamps; create stamps the request user
+  TestShareDeliveryLocks                   3   overview create ignores display annotations; PATCH cannot re-point
+                                               subscription (both viewsets)
+
+test_shares_delivery_day_query_count.py (1 test)
+────────────────────────────────────────────────
+  (module-level)                           1   list can_be_deleted matches the per-instance answer
+
+test_shares_viewsets.py (101 tests)
+───────────────────────────────────
+  TestShareTypeViewSet                    13   list, include_future (current + upcoming, not past), variation
+                                               sizes and validity bounds, deletability, filter share_option,
+                                               create/update uppercase, invalid 400
+  TestShareTypeVariationViewSet           17   list, active trial price, subscription validity bounds,
+                                               include_future, create inside / outside the share type's range,
+                                               filters (share_type, physical, internal_name)
+  TestShareTypeVariationGrossPriceViewSet  4   list, filter by variation, not deletable when subscribed
+  TestShareViewSet                         4   list, filter year/week, get_days action
+  TestShareBulkUpdateAction                2   missing year → 400; an empty week succeeds
+  TestShareExportCsvAction                 4   missing / malformed dates → 400; empty range → header-only CSV;
+                                               range filters to the ISO-week window
+  TestDefaultShareContentBulkList          2   invalid year → 400; filters to the requested share option
+  TestDefaultShareContentSubscriberCounts  3   count per variation, other share options excluded, invalid year 400
+  TestDefaultShareContentBulkUpdate        1   invalid composite id → 400
+  TestDefaultShareContentBulkDelete        2   invalid composite id → 400; unknown share_article → 404
+  TestShareDeliveryMemberPermissions       4   member cannot create or delete; pending_optin still reachable;
+                                               office passes the permission layer
+  TestDefaultShareContentBulkCreateValidation 3 valid amount_<var> cell persists; missing field 400;
+                                               NaN/non-finite 400
+  TestDefaultShareContentBulkUpdateValidation 2 composite-id PUT replaces the slot amount; bad-typed field 400
+  TestHarvestSharePlanningViewSet          4   create persists ShareContent + station; null note ok;
+                                               missing field 400; no-amounts 400
+  TestVirtualComponentsViewSet             3   create 201 + persisted component; missing virtual_variation 400;
+                                               non-physical component 400
+  TestShareDeliveryJokerBillingNotify      4   update/destroy on both viewsets notify the subscription
+  TestShareDeliveryOverviewFilter          1   list filters by delivery station
+  TestShareDeliveryCreateCapacity          3   create onto a full station-day refused; with room it proceeds
+  TestShareDeliveryCrossDayMove            3   a move to another weekday re-points the share; a same-day station
+                                               move keeps it; the overview grid behaves the same
+  TestShareDeliveryApplyToFuture           4   apply_to_future false / absent does NOT propagate the station change
+                                               to future deliveries; true still does
+  TestShareDeliveryExceptionGaps           4   paused weeks returned as gaps; empty without exceptions; a member
+                                               may fetch own gaps only
+  TestShareTypeVariationGrossPriceDestroyGuard 2 DELETE enforces can_be_deleted: price of a subscribed variation
+                                               → 409 + row kept; unsubscribed → 204
+  TestShareDeliveryShareOnlyRepointCapacity 2  re-pointing a delivery to ANOTHER WEEK (station-day untouched) runs
+                                               the capacity gate: full week → 409 + row unmoved; room → 200
+  TestShareDeliveryCombinedShareAndCrossDayMove 2 one PATCH carrying BOTH a new share and a station-day on another
+                                               weekday writes the REQUESTED week (not the original), and the
+                                               capacity gate judges that same week (full → 409)
+  TestShareDeliveryDetailsList             8   the week scope is required on the list route (bare list → 400,
+                                               detail route exempt); plain array of member rows; each filter
+                                               narrows on its own (week kept without a station filter, station
+                                               filter narrows); ?limit= envelope counts member rows;
+                                               unusable limit → 400
+
+test_subscription_onboarding_start.py (19 tests) — onboarding mode: subscription start lead time (frozen clock)
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestOfficeStartFlagOff                   2   office create / PATCH with a past start → subscription.start_too_soon
+  TestOfficeStartFlagOn                    4   office create / PATCH with a past start accepted; end date still
+                                               required; member self-subscribe still → subscription.start_too_soon
+  TestSerializerLeadTimeSkip               3   skip only with onboarding_mode in the context AND an office request
+  TestSubscriptionViewSetContext          10   create/update/partial_update carry the flag (off / on); list,
+                                               retrieve, confirm and schema generation leave it out
+
+test_subscription_price_bounds.py (12 tests) — office subscription quantity/price bounds + solidarity floor on PATCH (frozen clock)
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestOfficeSubscriptionBounds             6   create quantity 0 / -1 → 400; price -1 → 400; PATCH quantity 0 →
+                                               400; price 0 and a free trial still 201
+  TestSolidarityFloorOnPatch               6   PATCH variation / valid_from / is_trial re-checks the STORED price
+                                               against the new floor → 400; variation + price at the floor → 200;
+                                               unrelated edit of a below-floor draft → 200; solidarity off keeps
+                                               price discretion
+
+test_waiting_list_api.py (13 tests)
+───────────────────────────────────
+  TestWaitingListCreateApi                 4   office create with the flag waiting-lists; without it a full station
+                                               → 409; the list filter separates waiting-listed rows; member
+                                               self-subscribe with the flag waiting-lists
+  TestWaitingListConfirmApi                2   confirm while full → 409 and the row stays waiting-listed; confirm
+                                               after a slot frees promotes it
+  TestWaitingListPatchFlipApi              3   flipping to waiting-listed enqueues and releases holds; flipping off
+                                               requires capacity and then reserves + clears
+  TestAdditionalShareCapacityExemption     1   an additional share is created even on a full station
+  TestWaitingListStatusReadOnly            1   a client-supplied waiting-list status is ignored on create
+  TestWaitingListDisabled                  2   the flag is rejected while the feature is off; a full station is
+                                               still a 409 without it

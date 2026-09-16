@@ -37,6 +37,13 @@ from ..services import (
 )
 from ..utils.query_params import validate_query_params
 
+# The purchase-cost report walks one iteration per ISO week in the range and
+# widens its year/week IN-clauses to match, so the span is bounded here: an
+# ``end_date`` of 9999-12-31 would otherwise ask for ~400 000 weeks. Five
+# years is past the longest comparison the statistics page offers.
+_MAX_PURCHASE_COST_SPAN_YEARS = 5
+_MAX_PURCHASE_COST_SPAN_DAYS = _MAX_PURCHASE_COST_SPAN_YEARS * 366
+
 
 @extend_schema(
     summary="Get member growth statistics",
@@ -94,15 +101,24 @@ def member_growth_statistics(request: Request) -> Response:
 
 @extend_schema(
     summary="Get purchase cost per week",
-    description="""
+    description=f"""
     Total money spent buying in purchased ("Zukauf") share articles, per ISO
     week over a date range. Mirrors the harvest-share-planning page's per-week
     purchase figure (price_per_unit × amount × variation demand), aggregated
     server-side so only the per-week points cross the wire. Office only.
+
+    The range is bounded: `start_date` must be on or before `end_date`, and
+    the two may span at most {_MAX_PURCHASE_COST_SPAN_YEARS} years.
     """,
     parameters=[
         get_start_date_parameter(required=True),
-        get_end_date_parameter(required=True),
+        get_end_date_parameter(
+            required=True,
+            description=(
+                "Inclusive range end (YYYY-MM-DD). At most "
+                f"{_MAX_PURCHASE_COST_SPAN_YEARS} years after `start_date`."
+            ),
+        ),
     ],
     responses={
         200: PurchaseCostByWeekSerializer(many=True),
@@ -120,6 +136,15 @@ def purchase_cost_by_week(request: Request) -> Response:
         raise InvalidQueryParam(
             "`start_date` must be on or before `end_date`.",
             field="start_date",
+        )
+    if (end_date - start_date).days > _MAX_PURCHASE_COST_SPAN_DAYS:
+        raise InvalidQueryParam(
+            f"The range must not exceed {_MAX_PURCHASE_COST_SPAN_YEARS} years.",
+            field="end_date",
+            details={
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+            },
         )
 
     data = ShareContentService().purchase_cost_by_week(start_date, end_date)

@@ -1001,6 +1001,63 @@ class BulkCopyOffersToNextWeekView(APIViewRolePermissionsMixin, APIView):
         )
 
 
+#: Message + stable code per field of the copy-to-group body. Running the
+#: declared request serializer would otherwise replace the codes this endpoint
+#: already emits with DRF's generic ``validation_error``.
+_BULK_COPY_TO_GROUP_ERRORS = {
+    "ids": (
+        "A non-empty list of offer ids is required",
+        "bulk_copy_offers.ids_required",
+    ),
+    "offer_group": (
+        "offer_group is required",
+        "bulk_copy_offers.offer_group_required",
+    ),
+    # ``year`` / ``delivery_week`` are load-bearing, not optional: they are
+    # part of ``copy_offers_to_offer_group``'s ``exists_filter``, the query
+    # that decides whether an offer is ALREADY in the target group. Passing
+    # None turns those clauses into ``IS NULL``, which matches no row, so the
+    # already-present check silently never fires and every repeat call copies
+    # the same offers again — ``skipped_count`` stuck at 0 while duplicates
+    # accumulate. Required rather than defaulted, because there is no sane
+    # default week to invent.
+    "year": ("year and delivery_week are required", "bulk_copy_offers.week_required"),
+    "delivery_week": (
+        "year and delivery_week are required",
+        "bulk_copy_offers.week_required",
+    ),
+}
+
+
+def _validated_copy_to_group_body(request: Request) -> dict:
+    """Run the declared request serializer and return its validated data.
+
+    These values go straight into ``OfferService``'s ORM lookups, so they are
+    typed before the service sees them: read raw, ``{"year": "abc"}`` reached
+    the query as a string and ``{"ids": 5}`` was iterated as one.
+    """
+    serializer = BulkCopyOffersToOfferGroupRequestSerializer(data=body(request))
+    if serializer.is_valid():
+        return dict(serializer.validated_data)
+
+    field, details = next(iter(serializer.errors.items()))
+    # ``ids`` and ``offer_group`` mean the same thing however they fail —
+    # absent, empty, or the wrong JSON type. A year or week that is PRESENT
+    # but unusable is a different failure from one that is missing, so only
+    # the absent case keeps the "required" code.
+    absent = any(
+        getattr(detail, "code", "") in ("required", "null") for detail in details
+    )
+    if field in ("ids", "offer_group") or absent:
+        message, code = _BULK_COPY_TO_GROUP_ERRORS[field]
+        raise CommissioningError(message, field=field, code=code)
+    raise CommissioningError(
+        f"Invalid value for '{field}'",
+        field=field,
+        code="bulk_copy_offers.invalid",
+    )
+
+
 class BulkCopyOffersToOfferGroupView(APIViewRolePermissionsMixin, APIView):
     read_permission = IsOffice
     write_permission = IsOffice
@@ -1015,36 +1072,11 @@ class BulkCopyOffersToOfferGroupView(APIViewRolePermissionsMixin, APIView):
     )
     @transaction.atomic
     def post(self, request: Request) -> Response:
-        year, delivery_week = body(request).get("year"), body(request).get(
-            "delivery_week"
-        )
-        offer_ids = body(request).get("ids", [])
-        offer_group = body(request).get("offer_group", None)
-
-        if not offer_group:
-            raise CommissioningError(
-                "offer_group is required",
-                field="offer_group",
-                code="bulk_copy_offers.offer_group_required",
-            )
-
-        # ``year`` / ``delivery_week`` are load-bearing, not optional: they are
-        # part of ``copy_offers_to_offer_group``'s ``exists_filter``, the query
-        # that decides whether an offer is ALREADY in the target group. Passing
-        # None turns those clauses into ``IS NULL``, which matches no row, so the
-        # already-present check silently never fires and every repeat call copies
-        # the same offers again — ``skipped_count`` stuck at 0 while duplicates
-        # accumulate. Guarded here like ``offer_group`` above rather than
-        # defaulted, because there is no sane default week to invent.
-        if year is None or delivery_week is None:
-            raise CommissioningError(
-                "year and delivery_week are required",
-                field="delivery_week" if delivery_week is None else "year",
-                code="bulk_copy_offers.week_required",
-            )
+        data = _validated_copy_to_group_body(request)
+        offer_ids = data["ids"]
 
         result = OfferService.copy_offers_to_offer_group(
-            offer_ids, year, delivery_week, offer_group
+            offer_ids, data["year"], data["delivery_week"], data["offer_group"]
         )
 
         return Response(

@@ -20,7 +20,7 @@ active_at_date_or_future?: string;
  */
 future?: boolean;
 /**
- * Include active delivery stations in the response.
+ * Include active delivery stations in the response. Requires `active_at_date` — the stations are resolved as of that date.
  */
 get_delivery_stations?: boolean;
 /**

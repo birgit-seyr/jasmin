@@ -12,9 +12,19 @@ export type CommissioningOffersListParams = {
  */
 delivery_week: number;
 /**
+ * Page size. Pass it to opt into pagination: the response is then `{count, next, previous, results}` instead of a plain array. A value above 1000 is served at 1000 rather than refused.
+ * @minimum 1
+ */
+limit?: number;
+/**
  * Offer group ID (Jasmin ID format)
  */
 offer_group?: string;
+/**
+ * Index of the first row to return. Only meaningful together with `limit`.
+ * @minimum 0
+ */
+offset?: number;
 /**
  * Reseller ID (Jasmin ID format)
  */

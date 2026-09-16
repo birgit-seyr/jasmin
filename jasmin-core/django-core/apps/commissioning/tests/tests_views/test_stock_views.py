@@ -231,6 +231,25 @@ class TestCurrentStockComparisonPatch:
         resp = api_client.patch(url, {"amount": -5}, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
+    @pytest.mark.parametrize("bad_amount", ["NaN", "nan", "Infinity", "-Infinity"])
+    def test_non_finite_amount_returns_400(self, api_client, tenant, bad_amount):
+        """``Decimal("NaN")`` and ``Decimal("Infinity")`` construct without
+        raising, so the parse guard passes them through; the ``< 0`` comparison
+        that follows then raises InvalidOperation on a NaN. Both are refused as
+        "not a number", and no movement is written."""
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        cid = _make_composite_id(article, "KG", "M", storage)
+        url = reverse("current_stock_comparison_detail", args=[cid])
+
+        resp = api_client.patch(url, {"amount": bad_amount}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "stock.amount_not_number"
+        assert not MovementShareArticle.objects.filter(
+            movement_type=MovementTypeOptions.INVENTORY, share_article=article
+        ).exists()
+
     def test_metadata_only_patch_preserves_theoretical_stock(self, api_client, tenant):
         """A PATCH with only a flag (no ``amount``) on an entity that has
         theoretical stock and no prior count must NOT zero it (a

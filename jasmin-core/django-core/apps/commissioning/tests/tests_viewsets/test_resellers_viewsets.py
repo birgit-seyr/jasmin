@@ -17,6 +17,7 @@ from apps.commissioning.models import (
     InvoiceResellerContent,
     Order,
     OrganicCertificate,
+    Reseller,
 )
 from apps.commissioning.tests.factories import (
     CrateFactory,
@@ -90,8 +91,108 @@ class TestResellerViewSet:
     def test_delete(self, api_client, tenant):
         r = ResellerFactory()
         url = reverse("reseller-detail", kwargs={"pk": r.pk})
-        resp = api_client.delete(url)
+        resp = api_client.delete(f"{url}?delete_context=resellers")
         assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_delete_without_context_returns_400(self, api_client, tenant):
+        """The service acts on ONE of the row's two roles and has no behaviour
+        without knowing which, so a bare DELETE is refused rather than
+        answered with a 204 that deleted nothing."""
+        r = ResellerFactory(is_reseller=True, is_seller=True)
+        url = reverse("reseller-detail", kwargs={"pk": r.pk})
+
+        resp = api_client.delete(url)
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["field"] == "delete_context"
+        assert Reseller.objects.filter(pk=r.pk).exists()
+
+    def test_delete_with_unknown_context_returns_400(self, api_client, tenant):
+        r = ResellerFactory(is_reseller=True, is_seller=True)
+        url = reverse("reseller-detail", kwargs={"pk": r.pk})
+
+        resp = api_client.delete(f"{url}?delete_context=sellerz")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["field"] == "delete_context"
+        assert Reseller.objects.filter(pk=r.pk).exists()
+
+    def test_delete_with_context_drops_only_that_role(self, api_client, tenant):
+        r = ResellerFactory(is_reseller=True, is_seller=True)
+        url = reverse("reseller-detail", kwargs={"pk": r.pk})
+
+        resp = api_client.delete(f"{url}?delete_context=sellers")
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        r.refresh_from_db()
+        assert r.is_reseller and not r.is_seller
+
+
+@pytest.mark.django_db
+class TestResellerHasOrdersAnnotation:
+    """The orders page highlights the resellers that already have an order on
+    the selected year/week/day."""
+
+    URL = reverse("reseller-list")
+
+    def _reseller_with_order(self, day_number):
+        reseller = ResellerFactory(is_reseller=True)
+        order = OrderFactory(
+            reseller=reseller, year=2026, delivery_week=15, day_number=day_number
+        )
+        OrderContentFactory(order=order)
+        return reseller
+
+    def _row(self, resp, reseller):
+        return next(row for row in resp.data if row["id"] == reseller.id)
+
+    def test_day_number_scopes_the_annotation(self, api_client, tenant):
+        reseller = self._reseller_with_order(2)
+
+        matching = api_client.get(
+            self.URL, {"year": 2026, "delivery_week": 15, "day_number": 2}
+        )
+        other_day = api_client.get(
+            self.URL, {"year": 2026, "delivery_week": 15, "day_number": 3}
+        )
+
+        assert self._row(matching, reseller)["has_orders"] is True
+        assert self._row(other_day, reseller)["has_orders"] is False
+
+    def test_monday_is_scoped_like_any_other_day(self, api_client, tenant):
+        """``day_number=0`` is falsy — the annotation is keyed on "was it
+        sent", not on truthiness."""
+        reseller = self._reseller_with_order(0)
+
+        resp = api_client.get(
+            self.URL, {"year": 2026, "delivery_week": 15, "day_number": 0}
+        )
+
+        assert self._row(resp, reseller)["has_orders"] is True
+
+    def test_delivery_day_is_accepted_as_an_alias(self, api_client, tenant):
+        """Shipped bundles send the day index under the older ``delivery_day``
+        name, so the alias stays accepted."""
+        reseller = self._reseller_with_order(2)
+
+        resp = api_client.get(
+            self.URL, {"year": 2026, "delivery_week": 15, "delivery_day": "2"}
+        )
+
+        assert self._row(resp, reseller)["has_orders"] is True
+
+    def test_non_numeric_delivery_day_returns_400(self, api_client, tenant):
+        """The value is matched against ``Order.day_number``, so an id-shaped
+        one is refused here instead of reaching the ORM as a ValueError."""
+        self._reseller_with_order(2)
+
+        resp = api_client.get(
+            self.URL,
+            {"year": 2026, "delivery_week": 15, "delivery_day": "some-day-id"},
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["field"] == "delivery_day"
 
 
 @pytest.mark.django_db
@@ -281,14 +382,53 @@ class TestOfferGroupViewSet:
 class TestOfferViewSet:
     URL = reverse("offer-list")
 
+    WEEK_SCOPE = {"year": 2026, "delivery_week": 10}
+
     def test_list_empty(self, api_client, tenant):
-        resp = api_client.get(self.URL)
+        resp = api_client.get(self.URL, self.WEEK_SCOPE)
         assert resp.status_code == status.HTTP_200_OK
 
     def test_list_returns(self, api_client, tenant):
-        OfferFactory()
-        resp = api_client.get(self.URL)
+        OfferFactory(**self.WEEK_SCOPE)
+        resp = api_client.get(self.URL, self.WEEK_SCOPE)
         assert len(resp.data) >= 1
+
+    def test_list_without_the_week_scope_is_400(self, api_client, tenant):
+        """The schema declares year/delivery_week required here and the
+        endpoint enforces it: without the week scope the route would read and
+        annotate every offer of every year."""
+        resp = api_client.get(self.URL)
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["field"] == "year"
+
+    def test_detail_route_needs_no_week_scope(self, api_client, tenant):
+        """The required params are a list-route rule — a detail GET/PATCH
+        carries no query string."""
+        offer = OfferFactory(**self.WEEK_SCOPE)
+        resp = api_client.get(reverse("offer-detail", args=[offer.pk]))
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_without_pagination_params_the_response_stays_a_plain_array(
+        self, api_client, tenant
+    ):
+        OfferFactory(**self.WEEK_SCOPE)
+        resp = api_client.get(self.URL, self.WEEK_SCOPE)
+        assert isinstance(resp.json(), list)
+
+    def test_limit_returns_the_paginated_envelope(self, api_client, tenant):
+        for _ in range(3):
+            OfferFactory(**self.WEEK_SCOPE)
+        resp = api_client.get(self.URL, {**self.WEEK_SCOPE, "limit": 2})
+        body = resp.json()
+        assert body["count"] == 3
+        assert len(body["results"]) == 2
+
+    @pytest.mark.parametrize("raw", ["abc", "0", "-3"])
+    def test_unusable_limit_is_400(self, api_client, tenant, raw):
+        OfferFactory(**self.WEEK_SCOPE)
+        resp = api_client.get(self.URL, {**self.WEEK_SCOPE, "limit": raw})
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["field"] == "limit"
 
     def test_filter_by_year_and_week(self, api_client, tenant):
         OfferFactory(year=2026, delivery_week=10)

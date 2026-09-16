@@ -15,12 +15,4 @@ date_from: string;
  * Inclusive end (YYYY-MM-DD), matched on due_date.
  */
 date_to: string;
-/**
- * Anzahl der pro Seite zurückzugebenden Ergebnisse.
- */
-limit?: number;
-/**
- * Der initiale Index, von dem die Ergebnisse zurückgegeben werden sollen.
- */
-offset?: number;
 };

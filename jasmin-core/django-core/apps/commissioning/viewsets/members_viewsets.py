@@ -44,6 +44,7 @@ from apps.authz.permissions import (
     RolePermissionsMixin,
 )
 from apps.shared.pii_logging import PIIReadLoggingMixin
+from apps.shared.query_params import parse_body_bool
 from apps.shared.request_utils import auth_user, body
 from core.pagination import OptionalLimitOffsetPagination
 from core.serializers import ErrorResponseSerializer
@@ -138,15 +139,13 @@ def _build_member_queryset(request: Request) -> QuerySet[Member]:
             "exclude_trial_members",
         ],
     )
-    queryset = apply_optional_filters(
-        queryset,
-        params,
-        [
-            "is_active",
-            "is_trial",
-            ("exclude_trial_members", "is_trial", lambda v: not v),
-        ],
-    )
+    queryset = apply_optional_filters(queryset, params, ["is_active", "is_trial"])
+    # One-armed, unlike the two filters above: ``?exclude_trial_members=true``
+    # drops the trial members, ``=false`` (or absent) means "don't exclude".
+    # Running it as a value filter would turn an explicit false into
+    # ``is_trial=True`` — the exact inverse of what the name promises.
+    if params["exclude_trial_members"]:
+        queryset = queryset.filter(is_trial=False)
     if params["only_with_subscriptions"]:
         queryset = queryset.filter(subscriptions__isnull=False).distinct()
 
@@ -393,7 +392,7 @@ class MemberViewSet(
         enforce_privileged(request, "Only office staff may create members.")
 
         email: str = (body(request).get("email") or "").strip().lower()
-        notify_user: bool = bool(body(request).get("notify_user"))
+        notify_user = parse_body_bool(body(request), "notify_user")
 
         service = MemberService()
         existing_user = service.find_existing_user_for_email(email)
@@ -590,7 +589,10 @@ class MemberViewSet(
         # Default: refuse if active subscriptions remain (the service raises
         # MemberHasActiveSubscriptions → 409). ``force`` bypasses the restraint
         # and ends the subscriptions as part of the cascade.
-        force = bool(body(request).get("force", False))
+        # Strictly parsed (a JSON boolean, or true/false, 1/0, yes/no,
+        # on/off): a bare ``bool()`` cast reads the string "false" as True and
+        # would force-end every active subscription the caller wanted kept.
+        force = parse_body_bool(body(request), "force")
         result_member = cancel_member_with_coop_shares(
             member,
             cancelled_effective_at=effective,

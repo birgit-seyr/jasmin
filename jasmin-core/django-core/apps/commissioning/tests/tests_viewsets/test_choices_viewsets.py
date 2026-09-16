@@ -66,6 +66,68 @@ class TestSharesDeliveryDayViewSet:
         resp = api_client.patch(url, {"number_of_tours": 2}, format="json")
         assert resp.status_code == status.HTTP_200_OK
 
+    def test_get_delivery_stations_false_omits_the_stations(self, api_client, tenant):
+        """Prefetch flag, not a filter: an explicit false must leave the
+        stations off instead of switching the prefetch on."""
+        day = SharesDeliveryDayFactory(day_number=3)
+        DeliveryStationDayFactory(delivery_day=day)
+
+        for raw in ("false", "0"):
+            resp = api_client.get(
+                self.URL,
+                {"get_delivery_stations": raw, "active_at_date": "2026-06-01"},
+            )
+            row = next(d for d in resp.data if d["id"] == day.id)
+            assert row["delivery_stations"] == [], raw
+
+        resp = api_client.get(
+            self.URL, {"get_delivery_stations": "true", "active_at_date": "2026-06-01"}
+        )
+        row = next(d for d in resp.data if d["id"] == day.id)
+        assert len(row["delivery_stations"]) == 1
+
+    def test_get_delivery_stations_without_active_at_date_returns_400(
+        self, api_client, tenant
+    ):
+        """The station prefetch resolves "active at a date" and has no answer
+        without one, so the date is required rather than compared as None."""
+        SharesDeliveryDayFactory(day_number=4)
+
+        resp = api_client.get(self.URL, {"get_delivery_stations": "true"})
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "active_at_date"
+
+    def test_get_delivery_stations_false_without_active_at_date_is_fine(
+        self, api_client, tenant
+    ):
+        """Only the prefetch needs the date; not asking for stations is still
+        a plain unfiltered list."""
+        SharesDeliveryDayFactory(day_number=5)
+
+        resp = api_client.get(self.URL, {"get_delivery_stations": "false"})
+
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_need_info_on_tours_false_omits_used_tours(self, api_client, tenant):
+        day = SharesDeliveryDayFactory(day_number=3)
+        DeliveryStationDayFactory(delivery_day=day, tour_number=2)
+
+        for raw in ("false", "0"):
+            resp = api_client.get(
+                self.URL,
+                {"need_info_on_tours": raw, "active_at_date": "2026-06-01"},
+            )
+            row = next(d for d in resp.data if d["id"] == day.id)
+            assert "used_tours" not in row, raw
+
+        resp = api_client.get(
+            self.URL, {"need_info_on_tours": "true", "active_at_date": "2026-06-01"}
+        )
+        row = next(d for d in resp.data if d["id"] == day.id)
+        assert row["used_tours"] == [2]
+
 
 # ---------------------------------------------------------------------------
 # OrdersDeliveryDayViewSet

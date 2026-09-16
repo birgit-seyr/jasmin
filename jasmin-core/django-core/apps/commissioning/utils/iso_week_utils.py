@@ -215,9 +215,10 @@ def weeks_in_range(
     if not valid_from or not valid_until:
         return set()
     weeks: set[tuple[int, int]] = set()
-    day = valid_from
-    while day <= valid_until:
-        iso_year, iso_week, _ = day.isocalendar()
+    # Step by day offset rather than advancing a date past the end: a range
+    # ending near ``date.max`` (``valid_until=9999-12-31``) makes the final
+    # ``+ 7 days`` overflow before the loop condition can stop it.
+    for offset in range(0, (valid_until - valid_from).days + 1, 7):
+        iso_year, iso_week, _ = (valid_from + _dt.timedelta(days=offset)).isocalendar()
         weeks.add((iso_year, iso_week))
-        day += _dt.timedelta(days=7)
     return weeks

@@ -48,6 +48,7 @@ from .delivery_serializer import (
     WeeklyComboMatrixResponseSerializer,
 )
 from .documentation_serializer import (
+    AdditionalTheoreticalAmountRequestSerializer,
     DocumentationAggregationItemSerializer,
     DocumentationSummaryRowSerializer,
     ForecastSerializer,

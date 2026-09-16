@@ -7,6 +7,7 @@ import datetime
 from types import SimpleNamespace
 
 import pytest
+import time_machine
 
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
@@ -181,3 +182,118 @@ class TestSubscriptionMemberEmails:
     def test_office_only(self, anon_client, catalogue):
         resp = anon_client.get(URL, {"delivery_station_day": catalogue.dsd1.id})
         assert resp.status_code in (401, 403)
+
+
+@pytest.mark.django_db
+class TestSubscriptionMemberEmailsDateWindow:
+    """Each bound of the active window applies on its own.
+
+    ``date_from`` alone means "still running on or after that date",
+    ``date_to`` alone "already started by that date", both together the
+    overlap, and neither collapses the window to today. The cancellation
+    cutoff follows the window's start — and a window with no start has none.
+
+    The clock is frozen because the no-bounds case, and the cancellation
+    cutoff, are resolved against today.
+    """
+
+    # Monday, comfortably inside the "current" term below.
+    FROZEN_NOW = datetime.date(2026, 3, 30)
+
+    @pytest.fixture
+    def terms(self, catalogue):
+        """Three subscriptions on the same station-day: one already finished,
+        one running at the frozen "now", one starting later."""
+        return SimpleNamespace(
+            past=_confirmed_sub(
+                MemberFactory(email="past@x.de"),
+                catalogue.var_veg,
+                catalogue.dsd1,
+                valid_from=datetime.date(2026, 1, 5),
+                valid_until=datetime.date(2026, 2, 1),
+            ),
+            current=_confirmed_sub(
+                MemberFactory(email="current@x.de"),
+                catalogue.var_veg,
+                catalogue.dsd1,
+                valid_from=datetime.date(2026, 3, 2),
+                valid_until=datetime.date(2026, 4, 26),
+            ),
+            future=_confirmed_sub(
+                MemberFactory(email="future@x.de"),
+                catalogue.var_veg,
+                catalogue.dsd1,
+                valid_from=datetime.date(2026, 6, 1),
+                valid_until=datetime.date(2026, 8, 30),
+            ),
+        )
+
+    def _request(self, api_client, catalogue, **params):
+        return api_client.get(
+            URL, {"delivery_station_day": catalogue.dsd1.id, **params}
+        )
+
+    @time_machine.travel(FROZEN_NOW, tick=False)
+    def test_no_bounds_means_active_today(self, api_client, catalogue, terms):
+        resp = self._request(api_client, catalogue)
+        assert _emails(resp) == {"current@x.de"}
+
+    @time_machine.travel(FROZEN_NOW, tick=False)
+    def test_date_from_alone_leaves_the_end_open(self, api_client, catalogue, terms):
+        resp = self._request(api_client, catalogue, date_from="2026-05-01")
+        assert _emails(resp) == {"future@x.de"}
+
+    @time_machine.travel(FROZEN_NOW, tick=False)
+    def test_date_to_alone_leaves_the_start_open(self, api_client, catalogue, terms):
+        resp = self._request(api_client, catalogue, date_to="2026-02-15")
+        assert _emails(resp) == {"past@x.de"}
+
+    @time_machine.travel(FROZEN_NOW, tick=False)
+    def test_both_bounds_match_the_overlap(self, api_client, catalogue, terms):
+        resp = self._request(
+            api_client, catalogue, date_from="2026-03-01", date_to="2026-05-31"
+        )
+        assert _emails(resp) == {"current@x.de"}
+
+    @time_machine.travel(FROZEN_NOW, tick=False)
+    def test_date_to_alone_keeps_a_since_cancelled_subscription(
+        self, api_client, catalogue
+    ):
+        """A window open at the start has no cancellation cutoff: a term that
+        was running inside it belongs on the list even though the cancellation
+        has taken effect by today."""
+        _confirmed_sub(
+            MemberFactory(email="cancelled@x.de"),
+            catalogue.var_veg,
+            catalogue.dsd1,
+            valid_from=datetime.date(2026, 1, 5),
+            valid_until=datetime.date(2026, 6, 28),
+            cancelled_effective_at=datetime.date(2026, 3, 1),
+        )
+
+        resp = self._request(api_client, catalogue, date_to="2026-02-15")
+
+        assert _emails(resp) == {"cancelled@x.de"}
+
+    @time_machine.travel(FROZEN_NOW, tick=False)
+    def test_date_from_moves_the_cancellation_cutoff_to_the_window_start(
+        self, api_client, catalogue
+    ):
+        """With a start, the cutoff sits there: a subscription already gone by
+        then is out, one cancelled later is in."""
+        for email, effective_at in (
+            ("gone@x.de", datetime.date(2026, 1, 20)),
+            ("leaving@x.de", datetime.date(2026, 3, 1)),
+        ):
+            _confirmed_sub(
+                MemberFactory(email=email),
+                catalogue.var_veg,
+                catalogue.dsd1,
+                valid_from=datetime.date(2026, 1, 5),
+                valid_until=datetime.date(2026, 6, 28),
+                cancelled_effective_at=effective_at,
+            )
+
+        resp = self._request(api_client, catalogue, date_from="2026-02-01")
+
+        assert _emails(resp) == {"leaving@x.de"}

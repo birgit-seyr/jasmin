@@ -41,8 +41,6 @@ _BOOL_PARAMS = (
     "is_packed_bulk",
     "is_trial",
     "manual",
-    "joker",
-    "donation_joker",
     "for_tours",
     "for_stations",
     "physical",
@@ -53,7 +51,6 @@ _BOOL_PARAMS = (
     "is_preparation_lists",
     "current",
     "future",
-    "force",
     "only_with_subscriptions",
     "on_waiting_list",
     "need_info_on_tours",
@@ -107,7 +104,6 @@ _STR_PARAMS = (
     "source",  # uppercased + looked up in a model map at the call site
     "period",
     "kind",  # read raw in more than one context — keep as passthrough
-    "delete_context",
 )
 
 PARAM_CATALOGUE: dict[str, ParamSpec] = {
@@ -132,8 +128,18 @@ PARAM_CATALOGUE: dict[str, ParamSpec] = {
     # ---- enums ----
     "share_option": ParamSpec("choice", choices=tuple(ShareOptions.values)),
     "model": ParamSpec("choice", choices=DOCUMENTATION_MODELS),
-    # ---- booleans (strict) + the one with a False default ----
+    # Which of a reseller row's two roles a DELETE means to drop. The service
+    # branches on exactly these two values and does nothing for anything else,
+    # so an unlisted value must be refused rather than silently no-op.
+    "delete_context": ParamSpec("choice", choices=("sellers", "resellers")),
+    # ---- booleans (strict) ----
+    # Action-style flags: absent means OFF, so the default lives here instead
+    # of being re-derived as ``bool(params[...])`` at each call site.
     "is_past": ParamSpec("bool", default=False),
+    "force": ParamSpec("bool", default=False),
+    "joker": ParamSpec("bool", default=False),
+    "donation_joker": ParamSpec("bool", default=False),
+    # Filter-style flags: absent means "not filtered" (``None``).
     **{name: ParamSpec("bool") for name in _BOOL_PARAMS},
     # ---- FK-id references / free strings (passthrough) ----
     **{name: ParamSpec("str") for name in _STR_PARAMS},

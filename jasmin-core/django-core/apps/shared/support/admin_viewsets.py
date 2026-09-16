@@ -16,7 +16,6 @@ from django.utils import timezone
 from django_tenants.utils import schema_context
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
-from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
@@ -24,6 +23,7 @@ from apps.shared.request_utils import client_ip
 from apps.shared.super_admin.permissions import IsSuperAdmin
 from apps.shared.super_admin.views.authentication import SuperAdminJWTAuthentication
 from apps.shared.tenants.models import Tenant
+from core.pagination import ValidatedLimitOffsetPagination
 
 from .errors import InvalidTicketStatus, TicketNotFound, TicketReplyEmpty
 from .models import AuthorKind, SupportTicket, SupportTicketMessage, TicketStatus
@@ -37,9 +37,12 @@ from .serializers import (
 logger = logging.getLogger("super_admin")
 
 
-class _SupportAdminPagination(LimitOffsetPagination):
+class _SupportAdminPagination(ValidatedLimitOffsetPagination):
     # A default_limit is required or paginate_queryset() no-ops (and .count is
     # never set). The platform page loads a window and pages, not full history.
+    # The base class parses limit/offset through the shared catalogue, so a
+    # garbage or non-positive page size is a 400 instead of a silent fallback
+    # to this default.
     default_limit = 50
     max_limit = 200
 

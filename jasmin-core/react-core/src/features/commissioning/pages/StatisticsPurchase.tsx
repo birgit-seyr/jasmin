@@ -1,5 +1,6 @@
 import { Card, DatePicker, Spin, Typography } from "antd";
-import { useMemo } from "react";
+import type { Dayjs } from "dayjs";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useCommissioningPurchaseCostByWeekList } from "@shared/api/generated/commissioning/commissioning";
 import type { PurchaseCostByWeek } from "@shared/api/generated/models";
@@ -10,6 +11,7 @@ import {
   useDateRangePresets,
   useFiscalYearRangeState,
 } from "@hooks/index";
+import { isOutsidePurchaseCostRange } from "../utils/purchaseCostRange";
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
@@ -33,6 +35,12 @@ export default function StatisticsPurchase() {
 
   // Default window: the tenant's current fiscal year.
   const [range, setRange] = useFiscalYearRangeState();
+
+  // The bound already chosen in the open panel, so the other end can be
+  // limited to the span the API serves.
+  const [pickedBound, setPickedBound] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
 
   const params = useMemo(
     () => ({
@@ -75,6 +83,17 @@ export default function StatisticsPurchase() {
         <RangePicker
           value={range}
           onChange={(v) => setRange(v && v[0] && v[1] ? [v[0], v[1]] : null)}
+          onCalendarChange={(dates) =>
+            setPickedBound(dates ? [dates[0] ?? null, dates[1] ?? null] : null)
+          }
+          onOpenChange={(open) => {
+            if (!open) setPickedBound(null);
+          }}
+          // Dates the API would refuse are not selectable: the report's span
+          // is capped server-side.
+          disabledDate={(current) =>
+            isOutsidePurchaseCostRange(current, pickedBound)
+          }
           presets={presets}
           format={dateFormat}
           allowClear={false}

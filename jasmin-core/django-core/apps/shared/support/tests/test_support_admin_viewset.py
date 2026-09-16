@@ -63,6 +63,36 @@ class TestAdminList:
         assert resp.status_code == 400
         assert resp.data["code"] == "support.invalid_status"
 
+    @pytest.mark.parametrize("raw", ["abc", "0", "-5"])
+    def test_unusable_limit_is_400(self, factory, super_admin, raw):
+        """A bad page size is refused instead of silently falling back to the
+        paginator's default."""
+        _make_ticket("test_pytest")
+        request = factory.get(f"/api/super-admin/support-tickets/?limit={raw}")
+        force_authenticate(request, user=super_admin)
+        resp = _dispatch({"get": "list"}, request)
+        assert resp.status_code == 400
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "limit"
+
+    def test_negative_offset_is_400(self, factory, super_admin):
+        _make_ticket("test_pytest")
+        request = factory.get("/api/super-admin/support-tickets/?offset=-1")
+        force_authenticate(request, user=super_admin)
+        resp = _dispatch({"get": "list"}, request)
+        assert resp.status_code == 400
+        assert resp.data["field"] == "offset"
+
+    def test_valid_limit_pages_the_inbox(self, factory, super_admin):
+        _make_ticket("test_pytest", "one")
+        _make_ticket("test_pytest", "two")
+        request = factory.get("/api/super-admin/support-tickets/?limit=1")
+        force_authenticate(request, user=super_admin)
+        resp = _dispatch({"get": "list"}, request)
+        assert resp.status_code == 200
+        assert resp.data["count"] == 2
+        assert len(resp.data["results"]) == 1
+
 
 @pytest.mark.django_db
 class TestAdminAuth:

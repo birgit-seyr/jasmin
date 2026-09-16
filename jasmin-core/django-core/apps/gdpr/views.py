@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from apps.accounts.permissions import RequiresStepUp
 from apps.authz.permissions import IsAdmin
 from apps.shared.request_utils import auth_user, body, client_ip
+from core.pagination import OptionalLimitOffsetPagination
 from core.serializers import ErrorResponseSerializer
 from core.tenant_db import connection
 from core.throttling import set_throttle_scope
@@ -475,19 +476,9 @@ def gdpr_admin_pending_deletions_view(request: Request) -> Response:
 @extend_schema(
     tags=["gdpr"],
     summary="List decided deletion requests (rejected / executed / cancelled / expired)",
-    parameters=[
-        OpenApiParameter(
-            name="limit",
-            type=int,
-            description="Page size — opt into pagination by passing this.",
-            required=False,
-        ),
-        OpenApiParameter(
-            name="offset",
-            type=int,
-            required=False,
-        ),
-    ],
+    # The view paginates by hand below, so drf-spectacular has no
+    # ``pagination_class`` to read the two parameters off.
+    parameters=OptionalLimitOffsetPagination.openapi_parameters(),
     responses={
         # ``OptionalLimitOffsetPagination`` declares the schema as the
         # plain row list — see ``get_paginated_response_schema`` on the
@@ -512,8 +503,6 @@ def gdpr_admin_decided_deletions_view(request: Request) -> Response:
     (``decided_at`` = ``admin_confirmed_at`` for rejections, the
     earliest of ``executed_at`` / ``admin_confirmed_at`` for
     executions), and the office's rejection reason verbatim."""
-    from core.pagination import OptionalLimitOffsetPagination
-
     decided_states = [
         DeletionRequestState.REJECTED,
         DeletionRequestState.EXECUTED,

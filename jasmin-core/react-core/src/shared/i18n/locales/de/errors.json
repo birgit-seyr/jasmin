@@ -388,6 +388,7 @@
     "physical_variation_not_found": "Die angegebene physische Variation wurde nicht gefunden."
   },
   "bulk_copy_offers": {
+    "invalid": "Ungültige Eingabe beim Kopieren der Angebote — bitte Jahr, Lieferwoche und Auswahl prüfen.",
     "ids_required": "Bitte mindestens ein Angebot auswählen.",
     "offer_group_required": "Bitte eine Angebotsgruppe angeben.",
     "week_required": "Bitte Jahr und Lieferwoche angeben — ohne sie kann nicht geprüft werden, ob das Angebot in der Zielgruppe schon existiert."

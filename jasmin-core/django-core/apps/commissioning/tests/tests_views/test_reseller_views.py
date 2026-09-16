@@ -189,6 +189,67 @@ class TestBulkCopyOffersToOfferGroupView:
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "bulk_copy_offers.offer_group_required"
+
+    def test_missing_week_returns_400(self, api_client, tenant):
+        group = OfferGroupFactory()
+        resp = api_client.post(
+            URL_COPY_TO_GROUP,
+            {"ids": ["some-id"], "year": 2026, "offer_group": str(group.id)},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "bulk_copy_offers.week_required"
+
+    @pytest.mark.parametrize(
+        "year,delivery_week",
+        [("abc", 15), (2026, 99), (2026, "week")],
+    )
+    def test_unusable_week_scope_returns_400(
+        self, api_client, tenant, year, delivery_week
+    ):
+        """A year or week that is present but not a usable number reached the
+        ``exists_filter`` query raw. It is a request error, not a 500, and
+        nothing is copied."""
+        from apps.commissioning.models import Offer
+
+        offer = OfferFactory(year=2026, delivery_week=15)
+        group = OfferGroupFactory()
+
+        resp = api_client.post(
+            URL_COPY_TO_GROUP,
+            {
+                "ids": [str(offer.id)],
+                "year": year,
+                "delivery_week": delivery_week,
+                "offer_group": str(group.id),
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "bulk_copy_offers.invalid"
+        assert Offer.objects.count() == 1
+
+    @pytest.mark.parametrize("ids", [5, "abc", [], None])
+    def test_unusable_ids_returns_400(self, api_client, tenant, ids):
+        """``ids`` was read with a ``[]`` default and iterated as given, so a
+        scalar reached the service."""
+        group = OfferGroupFactory()
+
+        resp = api_client.post(
+            URL_COPY_TO_GROUP,
+            {
+                "ids": ids,
+                "year": 2026,
+                "delivery_week": 15,
+                "offer_group": str(group.id),
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "bulk_copy_offers.ids_required"
 
 
 # ---------------------------------------------------------------------------

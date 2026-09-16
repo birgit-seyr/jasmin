@@ -1406,6 +1406,80 @@ class TestShareDeliveryCrossDayMove:
 
 
 @pytest.mark.django_db
+class TestShareDeliveryApplyToFuture:
+    """``apply_to_future`` is read from the serializer, which parses it, so an
+    explicit false leaves the subscription's later deliveries where they are."""
+
+    def _subscription_with_two_deliveries(self):
+        day = SharesDeliveryDayFactory(day_number=4)  # Friday
+        variation = ShareTypeVariationFactory()
+        station_day_from = DeliveryStationDayFactory(delivery_day=day)
+        station_day_to = DeliveryStationDayFactory(delivery_day=day)
+        subscription = SubscriptionFactory(
+            share_type_variation=variation,
+            default_delivery_station_day=station_day_from,
+        )
+        deliveries = [
+            ShareDeliveryFactory(
+                share=ShareFactory(
+                    year=2026,
+                    delivery_week=week,
+                    delivery_day=day,
+                    share_type_variation=variation,
+                ),
+                delivery_station_day=station_day_from,
+                subscription=subscription,
+            )
+            for week in (15, 16)
+        ]
+        return deliveries[0], deliveries[1], station_day_from, station_day_to
+
+    @pytest.mark.parametrize("raw", ["false", "0"])
+    def test_false_does_not_propagate_to_future_deliveries(
+        self, api_client, tenant, raw
+    ):
+        edited, later, station_day_from, station_day_to = (
+            self._subscription_with_two_deliveries()
+        )
+        resp = api_client.patch(
+            reverse("share_delivery-detail", args=[edited.pk]),
+            {"delivery_station_day": station_day_to.id, "apply_to_future": raw},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        edited.refresh_from_db()
+        later.refresh_from_db()
+        assert edited.delivery_station_day_id == station_day_to.id
+        assert later.delivery_station_day_id == station_day_from.id
+
+    def test_absent_does_not_propagate_to_future_deliveries(self, api_client, tenant):
+        edited, later, station_day_from, station_day_to = (
+            self._subscription_with_two_deliveries()
+        )
+        resp = api_client.patch(
+            reverse("share_delivery-detail", args=[edited.pk]),
+            {"delivery_station_day": station_day_to.id},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        later.refresh_from_db()
+        assert later.delivery_station_day_id == station_day_from.id
+
+    def test_true_still_propagates_to_future_deliveries(self, api_client, tenant):
+        edited, later, _station_day_from, station_day_to = (
+            self._subscription_with_two_deliveries()
+        )
+        resp = api_client.patch(
+            reverse("share_delivery-detail", args=[edited.pk]),
+            {"delivery_station_day": station_day_to.id, "apply_to_future": True},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        later.refresh_from_db()
+        assert later.delivery_station_day_id == station_day_to.id
+
+
+@pytest.mark.django_db
 class TestShareDeliveryExceptionGaps:
     """The ``exception_gaps`` action reconstructs the weeks a member's
     subscriptions WOULD deliver but don't, because a delivery exception
@@ -1683,3 +1757,110 @@ class TestShareDeliveryCombinedShareAndCrossDayMove:
         moving.refresh_from_db()
         assert moving.share_id == friday_shares[15].id
         assert moving.delivery_station_day_id == origin_station_day.id
+
+
+@pytest.mark.django_db
+class TestShareDeliveryDetailsList:
+    """The station pickup sheet: one merged row per member, scoped to the week
+    and weekday it is printed for, and paginatable."""
+
+    URL = reverse("share_delivery_details-list")
+    YEAR = 2026
+    WEEK = 12
+    DAY_NUMBER = 2
+
+    def _delivery(self, *, day, station_day, last_name, week=None):
+        variation = ShareTypeVariationFactory()
+        share = ShareFactory(
+            year=self.YEAR,
+            delivery_week=week or self.WEEK,
+            delivery_day=day,
+            share_type_variation=variation,
+        )
+        subscription = SubscriptionFactory(
+            member=MemberFactory(last_name=last_name),
+            share_type_variation=variation,
+            default_delivery_station_day=station_day,
+        )
+        return ShareDeliveryFactory(
+            share=share, subscription=subscription, delivery_station_day=station_day
+        )
+
+    def _scope(self, **extra):
+        return {
+            "year": self.YEAR,
+            "delivery_week": self.WEEK,
+            "day_number": self.DAY_NUMBER,
+            **extra,
+        }
+
+    def test_list_without_the_week_scope_is_400(self, api_client, tenant):
+        """Without a week scope the sheet is every shippable delivery in the
+        tenant; the schema declares the three as required and the endpoint
+        enforces it."""
+        resp = api_client.get(self.URL)
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["field"] == "year"
+
+    def test_returns_a_plain_array_of_member_rows(self, api_client, tenant):
+        day = SharesDeliveryDayFactory(day_number=self.DAY_NUMBER)
+        station_day = DeliveryStationDayFactory(delivery_day=day)
+        self._delivery(day=day, station_day=station_day, last_name="Aaa")
+        self._delivery(day=day, station_day=station_day, last_name="Bbb")
+
+        resp = api_client.get(self.URL, self._scope())
+
+        assert resp.status_code == status.HTTP_200_OK
+        rows = resp.json()
+        assert isinstance(rows, list)
+        assert [row["name"] for row in rows] == sorted(row["name"] for row in rows)
+        assert len(rows) == 2
+
+    def test_another_week_is_excluded_without_a_station_filter(
+        self, api_client, tenant
+    ):
+        """Each filter narrows on its own: with no station filter the week
+        scope still holds, rather than widening to every delivery."""
+        day = SharesDeliveryDayFactory(day_number=self.DAY_NUMBER)
+        station_day = DeliveryStationDayFactory(delivery_day=day)
+        self._delivery(day=day, station_day=station_day, last_name="Thisweek")
+        self._delivery(
+            day=day, station_day=station_day, last_name="Nextweek", week=self.WEEK + 1
+        )
+
+        rows = api_client.get(self.URL, self._scope()).json()
+
+        assert len(rows) == 1
+        assert rows[0]["name"].startswith("Thisweek")
+
+    def test_station_filter_narrows_to_that_station(self, api_client, tenant):
+        day = SharesDeliveryDayFactory(day_number=self.DAY_NUMBER)
+        station_day = DeliveryStationDayFactory(delivery_day=day)
+        other_station_day = DeliveryStationDayFactory(delivery_day=day)
+        self._delivery(day=day, station_day=station_day, last_name="Mine")
+        self._delivery(day=day, station_day=other_station_day, last_name="Theirs")
+
+        rows = api_client.get(
+            self.URL,
+            self._scope(delivery_station=station_day.delivery_station_id),
+        ).json()
+
+        assert len(rows) == 1
+        assert "Mine" in rows[0]["name"]
+
+    def test_limit_returns_the_envelope_counting_member_rows(self, api_client, tenant):
+        day = SharesDeliveryDayFactory(day_number=self.DAY_NUMBER)
+        station_day = DeliveryStationDayFactory(delivery_day=day)
+        for last_name in ("Aaa", "Bbb", "Ccc"):
+            self._delivery(day=day, station_day=station_day, last_name=last_name)
+
+        body = api_client.get(self.URL, self._scope(limit=2)).json()
+
+        assert body["count"] == 3
+        assert len(body["results"]) == 2
+
+    @pytest.mark.parametrize("raw", ["abc", "0", "-3"])
+    def test_unusable_limit_is_400(self, api_client, tenant, raw):
+        resp = api_client.get(self.URL, self._scope(limit=raw))
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["field"] == "limit"

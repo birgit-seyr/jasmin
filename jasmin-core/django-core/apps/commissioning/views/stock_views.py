@@ -221,6 +221,16 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
                     field="amount",
                     code="stock.amount_not_number",
                 ) from exc
+            # ``Decimal("NaN")`` and ``Decimal("Infinity")`` construct without
+            # raising, so the parse above lets them through. Neither is a
+            # countable quantity, and comparing a NaN raises InvalidOperation
+            # outside the try — reject both as "not a number".
+            if not amount.is_finite():
+                raise CommissioningError(
+                    "Amount must be a number",
+                    field="amount",
+                    code="stock.amount_not_number",
+                )
             if amount < 0:
                 raise CommissioningError(
                     "Amount must be non-negative",

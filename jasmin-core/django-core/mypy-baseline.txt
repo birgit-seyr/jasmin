@@ -2,7 +2,7 @@
 # Managed by scripts/mypy_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/mypy_baseline.py freeze
-# 366 finding(s).
+# 362 finding(s).
 
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
@@ -274,8 +274,6 @@ apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" ha
 apps/commissioning/viewsets/documentation_viewsets.py: "perform_destroy" undefined in superclass  [misc]
 apps/commissioning/viewsets/documentation_viewsets.py: Argument "model" to "export_csv" of "DocumentationExportService" has incompatible type "str"; expected "Literal['harvest', 'purchase']"  [arg-type]
 apps/commissioning/viewsets/documentation_viewsets.py: Argument "model" to "get_summary" of "DocumentationSummaryService" has incompatible type "str"; expected "Literal['harvest', 'purchase', 'washamount', 'cleanamount']"  [arg-type]
-apps/commissioning/viewsets/documentation_viewsets.py: Argument 1 to "add_additional_theoretical_amount" of "DocumentationSummaryService" has incompatible type "dict[str, Any] | list[Any]"; expected "dict[str, Any]"  [arg-type]
-apps/commissioning/viewsets/documentation_viewsets.py: Argument 1 to "update_additional_theoretical_amount" of "DocumentationSummaryService" has incompatible type "dict[str, Any] | list[Any]"; expected "dict[str, Any]"  [arg-type]
 apps/commissioning/viewsets/documentation_viewsets.py: Argument 2 to "add_additional_theoretical_amount" of "DocumentationSummaryService" has incompatible type "str"; expected "Literal['harvest', 'purchase', 'washamount', 'cleanamount']"  [arg-type]
 apps/commissioning/viewsets/documentation_viewsets.py: Argument 2 to "update_additional_theoretical_amount" of "DocumentationSummaryService" has incompatible type "str"; expected "int"  [arg-type]
 apps/commissioning/viewsets/documentation_viewsets.py: Argument 3 to "update_additional_theoretical_amount" of "DocumentationSummaryService" has incompatible type "str"; expected "Literal['harvest', 'purchase', 'washamount', 'cleanamount']"  [arg-type]
@@ -360,8 +358,6 @@ apps/shared/super_admin/views/authentication.py: "SuperAdmin" has no attribute "
 apps/shared/super_admin/views/authentication.py: "SuperAdmin" has no attribute "user_role"  [attr-defined]
 apps/shared/super_admin/views/backup_views.py: Incompatible types in assignment (expression has type "float", variable has type "int")  [assignment]
 apps/shared/super_admin/viewsets.py: Incompatible type for "completed_by" of "OpsChecklistRun" (got "JasminUser | None", expected "SuperAdmin | Combinable | None")  [misc]
-apps/shared/super_admin/viewsets.py: Incompatible type for lookup 'pk': (got "str | None", expected "str | int")  [misc]
-apps/shared/super_admin/viewsets.py: Incompatible type for lookup 'pk': (got "str | None", expected "str | int")  [misc]
 apps/shared/tenants/models.py: Couldn't resolve related manager 'domains' for relation 'apps.shared.tenants.models.Domain.tenant'.  [django-manager-missing]
 apps/shared/tenants/services.py: Unexpected keyword argument "force_drop" for "delete" of "Model"  [call-arg]
 apps/shared/tenants/viewsets.py: Argument 1 to "int" has incompatible type "Any | None"; expected "str | Buffer | SupportsInt | SupportsIndex"  [arg-type]

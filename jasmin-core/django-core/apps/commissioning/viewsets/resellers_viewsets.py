@@ -30,6 +30,7 @@ from apps.authz.permissions import (
     RolePermissionsMixin,
 )
 from apps.shared.pii_logging import PIIReadLoggingMixin
+from apps.shared.query_params import coerce_param
 from core.errors import ForbiddenError, NotFoundError
 from core.pagination import OptionalLimitOffsetPagination
 from core.serializers import ErrorResponseSerializer
@@ -65,7 +66,6 @@ from ..models.members import UserInvitation
 from ..schemas import (
     catalogue_param,
     get_day_number_parameter,
-    get_delivery_day_parameter,
     get_delivery_note_id_parameter,
     get_delivery_week_parameter,
     get_invoice_id_parameter,
@@ -112,7 +112,7 @@ from ..services.order_content_service import AMOUNT_NOT_SENT
 from ..utils import get_contact_annotations
 from ..utils.lookup import get_or_404
 from ..utils.optional_filters import apply_optional_filters
-from ..utils.query_params import validate_query_params
+from ..utils.query_params import PARAM_CATALOGUE, validate_query_params
 
 logger = logging.getLogger(__name__)
 
@@ -379,7 +379,30 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
             *_BOOL_RESELLER_PARAMS,
             get_year_parameter(required=False),
             get_delivery_week_parameter(required=False),
-            get_delivery_day_parameter(required=False),
+            catalogue_param(
+                "day_number",
+                required=False,
+                description=(
+                    "Day of the week (0=Monday, 6=Sunday) the `has_orders` "
+                    "annotation is scoped to. Send it together with `year` "
+                    "and `delivery_week`."
+                ),
+            ),
+            catalogue_param(
+                "delivery_day",
+                required=False,
+                # The catalogue types this name as a SharesDeliveryDay id,
+                # which is what it means on every other endpoint. Here it is
+                # matched against ``Order.day_number``, so the documented type
+                # is the enforced one: the day index, not an id.
+                type=OpenApiTypes.INT,
+                description=(
+                    "Deprecated alias of `day_number` for this endpoint: the "
+                    "value is matched against the order's day index (0-6), "
+                    "never against a SharesDeliveryDay id. Send `day_number` "
+                    "instead; when both are present `day_number` wins."
+                ),
+            ),
             catalogue_param(
                 "has_orders_without_invoice",
                 description=(
@@ -454,13 +477,24 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
                 "is_donation_recipient",
                 "year",
                 "delivery_week",
+                "day_number",
                 "delivery_day",
                 "has_orders_without_invoice",
             ],
         )
         year = params["year"]
         delivery_week = params["delivery_week"]
-        delivery_day = params["delivery_day"]
+        # ``delivery_day`` is the legacy spelling of ``day_number`` here: the
+        # value is compared against ``Order.day_number``, an integer 0-6, not
+        # against a SharesDeliveryDay id as the catalogue's STR typing of that
+        # name suggests. Coerce the alias against the ``day_number`` spec, so
+        # an id-shaped value is a 400 naming the parameter rather than a
+        # ValueError out of the ORM, and let an explicit ``day_number`` win.
+        day_number = params["day_number"]
+        if day_number is None and params["delivery_day"] is not None:
+            day_number = coerce_param(
+                params["delivery_day"], "delivery_day", PARAM_CATALOGUE["day_number"]
+            )
 
         queryset = apply_optional_filters(
             queryset,
@@ -477,13 +511,13 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
             ],
         )
 
-        if year and delivery_week and delivery_day:
+        if year and delivery_week and day_number is not None:
             queryset = queryset.annotate(
                 has_orders=Exists(
                     OrderContent.objects.filter(
                         order__year=year,
                         order__delivery_week=delivery_week,
-                        order__day_number=delivery_day,
+                        order__day_number=day_number,
                         order__reseller=OuterRef("pk"),
                     )
                 ),
@@ -553,12 +587,20 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
         return Response(response_serializer.data)
 
     @extend_schema(
-        description="Delete a reseller, optionally handling delivery station reassignment.",
+        description=(
+            "Delete a reseller in the context of ONE of its two roles. "
+            "`delete_context=sellers` drops the seller role, "
+            "`delete_context=resellers` the reseller role; the row itself is "
+            "deleted only when the role being dropped was its last one. The "
+            "parameter is required — there is no defined delete without it."
+        ),
         parameters=[
             catalogue_param(
                 "delete_context",
-                required=False,
-                description="Context for deletion logic (e.g. delivery station handling)",
+                required=True,
+                description=(
+                    "Which role this delete is about: `sellers` or `resellers`."
+                ),
             ),
         ],
     )
@@ -566,7 +608,10 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
         # Resellers may never be deleted by a customer — office-only operation.
         enforce_privileged(request, "Only office staff may delete resellers.")
         instance = self.get_object()
-        params = validate_query_params(request, optional=["delete_context"])
+        # Required, not optional: the service acts on one of the two roles and
+        # has no behaviour for any other value, so a missing or misspelled one
+        # would delete nothing while answering 204.
+        params = validate_query_params(request, required=["delete_context"])
         delete_context = params["delete_context"]
 
         self.service.delete_reseller(instance, delete_context)
@@ -806,6 +851,10 @@ class OfferViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaffOrCustomer
     write_permission = IsOffice
     serializer_class = OfferSerializer
+    # An offer group's week can hold hundreds of offers, each annotated with
+    # correlated order-volume subqueries. ``?limit=`` bounds the payload; a
+    # caller that sends neither limit nor offset still gets the plain array.
+    pagination_class = OptionalLimitOffsetPagination
 
     @extend_schema(
         parameters=[
@@ -819,11 +868,27 @@ class OfferViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[Offer]:
+        # Schema generation calls this with no request behind it, where the
+        # required week scope below would raise.
+        if getattr(self, "swagger_fake_view", False):
+            return Offer.objects.none()
+
         queryset = Offer.objects.all()
 
+        list_route = getattr(self, "action", None) == "list"
         params = validate_query_params(
             self.request,
-            optional=["year", "delivery_week", "offer_group", "reseller"],
+            # The week scope is required on the list route, as the schema has
+            # always declared it: without it every offer of every year is read
+            # and annotated. A detail route (retrieve/update/destroy) reaches
+            # this method with no query string at all, so there the two stay
+            # optional.
+            required=["year", "delivery_week"] if list_route else [],
+            optional=(
+                ["offer_group", "reseller"]
+                if list_route
+                else ["year", "delivery_week", "offer_group", "reseller"]
+            ),
         )
         year = params["year"]
         delivery_week = params["delivery_week"]

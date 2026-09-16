@@ -8,9 +8,13 @@
 
 export type CommissioningResellersListParams = {
 /**
- * sharesdeliveryday ID (Jasmin ID format)
+ * Day of the week (0=Monday, 6=Sunday) the `has_orders` annotation is scoped to. Send it together with `year` and `delivery_week`.
  */
-delivery_day?: string;
+day_number?: number;
+/**
+ * Deprecated alias of `day_number` for this endpoint: the value is matched against the order's day index (0-6), never against a SharesDeliveryDay id. Send `day_number` instead; when both are present `day_number` wins.
+ */
+delivery_day?: number;
 /**
  * ISO week number (1-53)
  */
@@ -52,11 +56,13 @@ is_seller?: boolean;
  */
 is_supplier?: boolean;
 /**
- * Anzahl der pro Seite zurückzugebenden Ergebnisse.
+ * Page size. Pass it to opt into pagination: the response is then `{count, next, previous, results}` instead of a plain array. A value above 1000 is served at 1000 rather than refused.
+ * @minimum 1
  */
 limit?: number;
 /**
- * Der initiale Index, von dem die Ergebnisse zurückgegeben werden sollen.
+ * Index of the first row to return. Only meaningful together with `limit`.
+ * @minimum 0
  */
 offset?: number;
 /**

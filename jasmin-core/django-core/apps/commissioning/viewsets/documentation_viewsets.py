@@ -21,10 +21,17 @@ from apps.authz.permissions import IsOffice, IsStaff, RolePermissionsMixin
 from apps.shared.request_utils import auth_user, body
 from core.serializers import ErrorResponseSerializer
 
-from ..errors import CommissioningError, ForecastNotFound
+from ..errors import (
+    CommissioningError,
+    CrateNotFound,
+    ForecastNotFound,
+    ShareArticleNotFound,
+)
 from ..models import (
+    Crate,
     Forecast,
     Plot,
+    ShareArticle,
 )
 from ..schemas import (
     EXPORT_DATE_RANGE_PARAMETERS,
@@ -40,6 +47,7 @@ from ..schemas import (
     get_year_parameter,
 )
 from ..serializers import (
+    AdditionalTheoreticalAmountRequestSerializer,
     BulkIdsRequestSerializer,
     DocumentationSummaryRowSerializer,
     ForecastSerializer,
@@ -57,6 +65,7 @@ from ..services import (
     ForecastService,
     GenericDocumentationService,
 )
+from ..utils.lookup import get_or_404
 from ..utils.query_params import DOCUMENTATION_MODELS, validate_query_params
 from ..utils.validation_utils import parse_bulk_ids
 from .base_viewsets import BaseArchivableViewSet
@@ -140,6 +149,39 @@ def _validated_model(request: Request) -> str:
             code="documentation.invalid_model",
         )
     return model
+
+
+def _validated_additional_theoretical_body(
+    request: Request, *, partial: bool
+) -> dict[str, Any]:
+    """Validate an additional-theoretical body and check the FK ids it names.
+
+    ``DocumentationSummaryService`` reads these keys straight into ORM lookups
+    and model writes, so they are typed here first and the FK ids resolved: a
+    non-numeric ``year`` is then a 400 and an unknown ``share_article`` id a
+    404, rather than a string reaching the query or a ``DoesNotExist``
+    escaping the service as a 500.
+
+    ``partial=True`` (the update action, which takes the row's identity from
+    the stored instance) leaves absent keys absent, so the service can still
+    tell "amount not sent" from "amount set to 0".
+    """
+    serializer = AdditionalTheoreticalAmountRequestSerializer(
+        data=body(request), partial=partial
+    )
+    serializer.is_valid(raise_exception=True)
+    data: dict[str, Any] = dict(serializer.validated_data)
+
+    if "share_article" in data:
+        get_or_404(
+            ShareArticle,
+            data["share_article"],
+            "Share article",
+            error_cls=ShareArticleNotFound,
+        )
+    if data.get("harvesting_crate"):
+        get_or_404(Crate, data["harvesting_crate"], "Crate", error_cls=CrateNotFound)
+    return data
 
 
 def _optional_summary_scope(instance: Any) -> dict[str, Any]:
@@ -609,9 +651,10 @@ class DocumentationSummaryViewSet(RolePermissionsMixin, viewsets.ViewSet):
     @action(detail=False, methods=["post"])
     def add_additional_theoretical_amount(self, request: Request) -> Response:
         model = _validated_model(request)
+        data = _validated_additional_theoretical_body(request, partial=False)
 
         instance = DocumentationSummaryService.add_additional_theoretical_amount(
-            request.data, model
+            data, model
         )
 
         return _summary_echo_response(
@@ -635,9 +678,10 @@ class DocumentationSummaryViewSet(RolePermissionsMixin, viewsets.ViewSet):
         self, request: Request, pk: str
     ) -> Response:
         model = _validated_model(request)
+        data = _validated_additional_theoretical_body(request, partial=True)
 
         instance = DocumentationSummaryService.update_additional_theoretical_amount(
-            request.data, pk, model
+            data, pk, model
         )
 
         # 200, not 201 — this PATCH/PUT action updates an existing row.

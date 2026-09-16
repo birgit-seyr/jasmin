@@ -398,6 +398,10 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
         methods=["get"],
         url_path="income_by_month",
         permission_classes=[IsOffice],
+        # One aggregated row per month, returned whole — the action never calls
+        # the paginator. Without this the viewset's paginator would document
+        # limit/offset the endpoint ignores.
+        pagination_class=None,
     )
     def income_by_month(self, request):
         """Billed income per due-date month within [date_from, date_to]."""

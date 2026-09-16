@@ -88,6 +88,37 @@ class TestMemberSampleUpload:
         assert resp.json()["successful"] == 4
         assert Member.objects.count() == 0
 
+    @pytest.mark.parametrize("raw", ["false", "0"])
+    def test_explicit_false_dry_run_persists(self, api_client, raw):
+        """``dry_run`` is parsed, not truth-tested — the multipart part arrives
+        as a string, so a truthy cast would preview instead of importing."""
+        resp = api_client.post(
+            URL,
+            {
+                "model_name": "member",
+                "file": _upload("members_sample.csv"),
+                "dry_run": raw,
+            },
+            format="multipart",
+        )
+        assert resp.status_code == 200, resp.content
+        assert resp.json()["successful"] == 4
+        assert Member.objects.count() == 4
+
+    def test_unparseable_dry_run_is_400(self, api_client):
+        resp = api_client.post(
+            URL,
+            {
+                "model_name": "member",
+                "file": _upload("members_sample.csv"),
+                "dry_run": "maybe",
+            },
+            format="multipart",
+        )
+        assert resp.status_code == 400, resp.content
+        assert resp.json()["code"] == "query.invalid_param"
+        assert Member.objects.count() == 0
+
     def test_anonymous_is_rejected(self, anon_client):
         resp = anon_client.post(
             URL,

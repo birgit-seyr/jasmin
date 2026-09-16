@@ -486,7 +486,7 @@ export default function Orders() {
           setSelectedReseller={setSelectedReseller}
           year={selectedYear}
           delivery_week={selectedWeek}
-          delivery_day={String(selectedDay)}
+          day_number={selectedDay}
           preserveSelection={true}
         />
       </div>

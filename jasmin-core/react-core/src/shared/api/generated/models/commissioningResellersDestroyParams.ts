@@ -5,10 +5,11 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { CommissioningResellersDestroyDeleteContext } from './commissioningResellersDestroyDeleteContext';
 
 export type CommissioningResellersDestroyParams = {
 /**
- * Context for deletion logic (e.g. delivery station handling)
+ * Which role this delete is about: `sellers` or `resellers`.
  */
-delete_context?: string;
+delete_context: CommissioningResellersDestroyDeleteContext;
 };

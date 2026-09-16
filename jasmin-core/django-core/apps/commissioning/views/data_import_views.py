@@ -30,6 +30,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.permissions import RequiresStepUp
 from apps.authz.permissions import APIViewRolePermissionsMixin, IsOffice
+from apps.shared.query_params import parse_body_bool
 from apps.shared.request_utils import body
 from core.serializers import ErrorResponseSerializer
 
@@ -106,12 +107,9 @@ class DataImportView(APIViewRolePermissionsMixin, APIView):
         if os.path.splitext(upload.name)[1].lower() != ".csv":
             raise DataImportInvalid("file must be a .csv", field="file")
 
-        dry_run = str(body(request).get("dry_run", "")).strip().lower() in {
-            "true",
-            "1",
-            "yes",
-            "on",
-        }
+        # Accepts a boolean or true/false, 1/0, yes/no, on/off (the form part
+        # arrives as a string); absent means a real run.
+        dry_run = parse_body_bool(body(request), "dry_run")
 
         file_bytes = upload.read()
         if not dry_run:

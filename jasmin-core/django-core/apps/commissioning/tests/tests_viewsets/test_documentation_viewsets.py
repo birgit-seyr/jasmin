@@ -558,6 +558,85 @@ class TestAddAdditionalTheoreticalAmount:
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
+    def _payload(self, article, **overrides):
+        return {
+            "model": "washamount",
+            "year": 2026,
+            "delivery_week": 15,
+            "day_number": 1,
+            "share_article": str(article.id),
+            "unit": "KG",
+            "size": "M",
+            "amount": "5.00",
+            **overrides,
+        }
+
+    def test_creates_the_row(self, api_client, tenant):
+        from decimal import Decimal
+
+        from apps.commissioning.models import AdditionalTheoreticalWashAmount
+
+        StorageFactory(is_short_term_harvest_storage=True)
+        article = ShareArticleFactory()
+
+        resp = api_client.post(
+            URL_DS_ADD_ADDITIONAL, self._payload(article), format="json"
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        written = AdditionalTheoreticalWashAmount.objects.get()
+        assert written.share_article_id == article.id
+        assert written.amount == Decimal("5.00")
+
+    @pytest.mark.parametrize(
+        "field,value",
+        [
+            ("year", "abc"),
+            ("year", 12),
+            ("delivery_week", 99),
+            ("day_number", 9),
+            ("amount", "lots"),
+        ],
+    )
+    def test_unusable_value_returns_400(self, api_client, tenant, field, value):
+        """These reach ORM lookups and model writes, so a non-numeric year used
+        to surface as a 500 rather than a request error."""
+        StorageFactory(is_short_term_harvest_storage=True)
+        article = ShareArticleFactory()
+
+        resp = api_client.post(
+            URL_DS_ADD_ADDITIONAL,
+            self._payload(article, **{field: value}),
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_missing_share_article_returns_400(self, api_client, tenant):
+        StorageFactory(is_short_term_harvest_storage=True)
+        article = ShareArticleFactory()
+        payload = self._payload(article)
+        del payload["share_article"]
+
+        resp = api_client.post(URL_DS_ADD_ADDITIONAL, payload, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_unknown_share_article_returns_404(self, api_client, tenant):
+        """A well-formed id for a row that doesn't exist is a 404: the id is
+        resolved before the service reads it."""
+        StorageFactory(is_short_term_harvest_storage=True)
+        article = ShareArticleFactory()
+
+        resp = api_client.post(
+            URL_DS_ADD_ADDITIONAL,
+            self._payload(article, share_article="no-such-article"),
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert resp.data["code"] == "share_article.not_found"
+
 
 @pytest.mark.django_db
 class TestUpdateAdditionalTheoreticalAmount:

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from drf_spectacular.plumbing import build_basic_type
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter
 
@@ -36,6 +37,30 @@ CATALOGUE_OPENAPI_TYPE = {
     "choice": OpenApiTypes.STR,
     "date": OpenApiTypes.DATE,
 }
+
+
+def param_schema(spec: ParamSpec) -> dict[str, Any]:
+    """Return the OpenAPI *schema object* for one ``ParamSpec``: its type plus
+    the bounds, ``enum`` and ``default`` the validator enforces.
+
+    ``catalogue_parameter`` documents a parameter's type; this documents its
+    range too. Pass it as ``OpenApiParameter(type=...)`` — drf-spectacular
+    takes a raw schema dict there — or nest it under ``"schema"`` in the
+    plain-dict parameter shape a DRF paginator or filter backend has to return
+    from ``get_schema_operation_parameters``.
+    """
+    schema: dict[str, Any] = dict(
+        build_basic_type(CATALOGUE_OPENAPI_TYPE[spec.kind]) or {}
+    )
+    if spec.min_value is not None:
+        schema["minimum"] = spec.min_value
+    if spec.max_value is not None:
+        schema["maximum"] = spec.max_value
+    if spec.kind == "choice" and spec.choices:
+        schema["enum"] = list(spec.choices)
+    if spec.default is not None:
+        schema["default"] = spec.default
+    return schema
 
 
 def catalogue_parameter(

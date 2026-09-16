@@ -35,8 +35,7 @@ from django.db import (
 )
 from django.db.models import Prefetch
 from django_tenants.utils import schema_context
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
+from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers as drf_serializers
 from rest_framework import status
 from rest_framework.decorators import action
@@ -45,6 +44,8 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from apps.authz.roles import VALID_ROLES
+from apps.shared.openapi_params import catalogue_parameter
+from apps.shared.query_params import parse_body_bool
 from apps.shared.request_utils import body, client_ip
 from apps.shared.tenants.errors import SchemaAlreadyExists
 from apps.shared.tenants.models import Domain, Tenant
@@ -65,6 +66,7 @@ from .errors import (
 )
 from .models import OpsChecklistItem, OpsChecklistRun
 from .permissions import IsSuperAdmin
+from .query_params import PARAM_CATALOGUE, validate_query_params
 from .serializers import (
     CreateTenantAdminRequestSerializer,
     CreateTenantAdminResponseSerializer,
@@ -156,16 +158,17 @@ class TenantManagementViewSet(ViewSet):
         tags=["super-admin"],
         summary="List all tenants",
         parameters=[
-            OpenApiParameter(
-                name="include_user_count",
-                type=OpenApiTypes.BOOL,
+            catalogue_parameter(
+                "include_user_count",
+                PARAM_CATALOGUE,
                 required=False,
                 description=(
                     "Whether to compute each tenant's user count (default "
                     "true). Counting is structurally cross-schema — a "
                     "search_path switch + COUNT per tenant — so callers that "
                     "only need the tenant roster can pass false for a cheap "
-                    "list; user_count is then null."
+                    "list; user_count is then null. Accepts true/false, 1/0, "
+                    "yes/no, on/off."
                 ),
             ),
         ],
@@ -176,12 +179,12 @@ class TenantManagementViewSet(ViewSet):
         },
     )
     def list(self, request: Request) -> Response:
-        # Allowlist (default on): only explicit truthy tokens enable the
-        # expensive per-tenant COUNT. A garbage value falls to False instead
-        # of silently triggering the count.
-        include_user_count = request.query_params.get(
-            "include_user_count", "true"
-        ).strip().lower() in ("true", "1", "yes", "on")
+        # Catalogued bool (default true): an explicit false — in any of the
+        # accepted spellings — skips the expensive per-tenant COUNT, and an
+        # unparseable value is a 400 rather than a silent False.
+        include_user_count = validate_query_params(
+            request, optional=["include_user_count"]
+        )["include_user_count"]
 
         with schema_context("public"):
             # Prefetch domains in one query instead of a per-tenant
@@ -916,6 +919,26 @@ future admin form.
 """
 
 
+def _get_checklist_item(pk: str | None) -> OpsChecklistItem:
+    """Resolve a checklist item by its id, or raise the documented 404.
+
+    ``pk`` arrives from the URL as a string while the model has an integer
+    primary key, and Django validates the int on ``filter()`` too — so a
+    non-numeric id raises ValueError before any row is looked at. Coerce it
+    here: an id that cannot name a row is "no such item", not a server error.
+    """
+    if pk is None:
+        raise NotFoundError("Checklist item not found.")
+    try:
+        item_id = int(pk)
+    except ValueError:
+        raise NotFoundError("Checklist item not found.") from None
+    item = OpsChecklistItem.objects.filter(pk=item_id).first()
+    if item is None:
+        raise NotFoundError("Checklist item not found.")
+    return item
+
+
 class OpsChecklistViewSet(ViewSet):
     """Super-admin ops checklist."""
 
@@ -986,9 +1009,7 @@ class OpsChecklistViewSet(ViewSet):
     )
     @action(detail=True, methods=["post"], url_path="mark-done")
     def mark_done(self, request: Request, pk: str | None = None) -> Response:
-        item = OpsChecklistItem.objects.filter(pk=pk).first()
-        if item is None:
-            raise NotFoundError("Checklist item not found.")
+        item = _get_checklist_item(pk)
 
         serializer = OpsChecklistMarkDoneRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -1044,9 +1065,7 @@ class OpsChecklistViewSet(ViewSet):
     )
     @action(detail=True, methods=["post"], url_path="run-rotation")
     def run_rotation(self, request: Request, pk: str | None = None) -> Response:
-        item = OpsChecklistItem.objects.filter(pk=pk).first()
-        if item is None:
-            raise NotFoundError("Checklist item not found.")
+        item = _get_checklist_item(pk)
         if item.kind not in DISPATCHABLE_KINDS:
             raise BadRequestError(
                 f"This checklist item's kind ({item.kind!r}) is "
@@ -1057,7 +1076,7 @@ class OpsChecklistViewSet(ViewSet):
 
         # ``dry_run`` only matters for ``rotate_email_creds``; the
         # secret-generators are side-effect-free anyway.
-        dry_run = bool(body(request).get("dry_run", False))
+        dry_run = parse_body_bool(body(request), "dry_run")
 
         try:
             result = rotate(item.kind, dry_run=dry_run)

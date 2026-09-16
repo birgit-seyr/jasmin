@@ -123,6 +123,28 @@ class TestPurchaseCostByWeekService:
         assert result == [{"year": 2026, "week": 15, "amount": "0.00"}]
 
 
+class TestWeeksInRangeBounds:
+    """``weeks_in_range`` backs the per-week aggregation, and its range comes
+    from client dates — so it has to terminate for any date pair, including
+    one that ends on ``date.max``."""
+
+    def test_a_range_ending_on_date_max_terminates(self):
+        from apps.commissioning.utils.iso_week_utils import weeks_in_range
+
+        weeks = weeks_in_range(date(9999, 12, 1), date.max)
+
+        assert (9999, 52) in weeks
+        assert len(weeks) == 5
+
+    def test_a_whole_week_range_is_unchanged(self):
+        from apps.commissioning.utils.iso_week_utils import weeks_in_range
+
+        assert weeks_in_range(WEEK_15_MONDAY, WEEK_16_SUNDAY) == {
+            (2026, 15),
+            (2026, 16),
+        }
+
+
 @pytest.mark.django_db
 class TestPurchaseCostByWeekEndpoint:
     def test_requires_date_params(self, api_client):
@@ -145,6 +167,28 @@ class TestPurchaseCostByWeekEndpoint:
             )
         assert response.status_code == 200
         assert response.json() == [{"year": 2026, "week": 15, "amount": "30.00"}]
+
+    def test_rejects_a_range_ending_at_date_max(self, api_client):
+        """The span cap catches ``end_date=9999-12-31`` before the week walk,
+        which would otherwise run ~400 000 iterations."""
+        response = api_client.get(
+            URL, {"start_date": "2026-04-06", "end_date": "9999-12-31"}
+        )
+        assert response.status_code == 400
+        assert response.json()["field"] == "end_date"
+
+    def test_rejects_a_span_beyond_the_cap(self, api_client):
+        response = api_client.get(
+            URL, {"start_date": "2020-01-06", "end_date": "2026-04-12"}
+        )
+        assert response.status_code == 400
+        assert response.json()["field"] == "end_date"
+
+    def test_accepts_a_multi_year_span_within_the_cap(self, api_client):
+        response = api_client.get(
+            URL, {"start_date": "2024-01-01", "end_date": "2026-04-12"}
+        )
+        assert response.status_code == 200
 
     def test_requires_authentication(self, anon_client):
         response = anon_client.get(

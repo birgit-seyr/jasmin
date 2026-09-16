@@ -22,6 +22,7 @@ from core.serializers import ErrorResponseSerializer
 
 from ..errors import (
     DeliveryDayValidFromInPast,
+    InvalidQueryParam,
     SharesDeliveryDayShorteningStrandsChildren,
 )
 from ..models import (
@@ -63,7 +64,11 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             catalogue_param(
                 "get_delivery_stations",
                 required=False,
-                description="Include active delivery stations in the response.",
+                description=(
+                    "Include active delivery stations in the response. "
+                    "Requires `active_at_date` — the stations are resolved as "
+                    "of that date."
+                ),
             ),
             catalogue_param(
                 "future",
@@ -109,7 +114,10 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 active_at_date_or_future
             ).order_by("day_number")
 
-        if need_info_on_tours is not None and active_at_date is not None:
+        # Truthiness, not ``is not None``: ``need_info_on_tours`` is a strict
+        # bool, so ``?need_info_on_tours=false`` must NOT add the tours
+        # annotation.
+        if need_info_on_tours and active_at_date is not None:
             queryset = queryset.annotate(
                 used_tours=Subquery(
                     DeliveryStationDay.current.active_at_date(active_at_date)
@@ -127,7 +135,20 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             active_records = SharesDeliveryDay.current.active_at_date(active_at_date)
             queryset = future_queryset.exclude(id__in=active_records)
 
-        if get_delivery_stations is not None:
+        # Truthiness, not ``is not None``: ``?get_delivery_stations=false``
+        # must NOT prefetch the stations.
+        if get_delivery_stations:
+            # The prefetch resolves the stations active on a given day, so it
+            # has no answer without one: ``active_at_date(None)`` builds a
+            # comparison against NULL that the query layer rejects. Say so
+            # instead of crashing — or silently prefetching today's stations
+            # for a request about some other week.
+            if active_at_date is None:
+                raise InvalidQueryParam(
+                    "Parameter 'active_at_date' is required when "
+                    "'get_delivery_stations' is requested",
+                    field="active_at_date",
+                )
             queryset = queryset.prefetch_related(
                 Prefetch(
                     "deliverystationday_set",

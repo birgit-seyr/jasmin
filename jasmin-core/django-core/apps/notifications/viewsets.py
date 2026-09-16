@@ -23,6 +23,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.template.loader import render_to_string
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import viewsets
@@ -419,10 +420,12 @@ class BackgroundJobViewSet(RolePermissionsMixin, viewsets.ViewSet):
     def retrieve(self, request: Request, pk: str | None = None) -> Response:
         try:
             job = BackgroundJob.objects.get(pk=pk)
-        except (BackgroundJob.DoesNotExist, ValueError) as exc:
-            # ``ValueError`` covers the case where ``pk`` isn't a valid
-            # UUID — return a clean 404 either way; we don't want to
-            # leak the "exists vs malformed" distinction.
+        except (BackgroundJob.DoesNotExist, DjangoValidationError) as exc:
+            # ``pk`` is a UUID column: an id that isn't a valid UUID fails in
+            # the field's ``to_python`` with Django's ValidationError, which
+            # the exception handler would otherwise render as a 400. Answer
+            # 404 either way — the "exists vs malformed" distinction isn't
+            # the client's business.
             raise NotFoundError("Job not found") from exc
         return Response(BackgroundJobSerializer(job).data)
 

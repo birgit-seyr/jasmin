@@ -134,6 +134,17 @@ class TestMarkDone:
 
         assert response.status_code == 404
 
+    @pytest.mark.parametrize("bad_pk", ["not-a-number", "12x", "", "1.5"])
+    def test_returns_404_for_a_non_numeric_pk(self, factory, super_admin, bad_pk):
+        """The item has an integer primary key and Django validates the int on
+        ``filter()`` too, so a non-numeric id raised ValueError — a 500 where
+        the endpoint documents a 404."""
+        request = factory.post(f"/ops-checklist/{bad_pk}/mark-done/", {}, format="json")
+        force_authenticate(request, user=super_admin)
+        response = _dispatch({"post": "mark_done"}, request, pk=bad_pk)
+
+        assert response.status_code == 404
+
     def test_overdue_item_becomes_not_overdue_after_mark_done(
         self, factory, super_admin, _tenant_schema
     ):
@@ -241,3 +252,16 @@ class TestRunRotationStepUp:
             response.status_code == 403
             and response.data.get("code") == "auth.step_up_required"
         ), "fresh step-up token was rejected — the gate did not accept us"
+
+    def test_non_numeric_pk_is_404_not_500(self, factory, super_admin):
+        """Same integer-pk coercion as ``mark-done``: past the step-up gate, a
+        malformed id is "no such item"."""
+        from apps.commissioning.tests.conftest import make_step_up_token
+
+        request = factory.post("/ops-checklist/oops/run-rotation/", {}, format="json")
+        force_authenticate(
+            request, user=super_admin, token=make_step_up_token(super_admin)
+        )
+        response = _dispatch({"post": "run_rotation"}, request, pk="oops")
+
+        assert response.status_code == 404

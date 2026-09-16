@@ -198,9 +198,16 @@ class ResellerAndDeliveryStationService:
         return instance
 
     @transaction.atomic
-    def delete_reseller(
-        self, instance: Reseller, delete_context: str | None = None
-    ) -> None:
+    def delete_reseller(self, instance: Reseller, delete_context: str) -> None:
+        """Drop ONE of the row's two roles, deleting it if that was the last.
+
+        ``delete_context`` says which role the caller means — ``"sellers"`` or
+        ``"resellers"``. It is mandatory: a reseller row that is both a seller
+        and a reseller has no single "delete", and defaulting to either would
+        silently unset a role the caller never named. The endpoint validates
+        the value against the query-param catalogue, so an unknown one here is
+        a programmer error rather than client input.
+        """
         if delete_context == "sellers":
             if instance.is_reseller:
                 instance.is_seller = False
@@ -214,6 +221,12 @@ class ResellerAndDeliveryStationService:
                 instance.save()
             else:
                 self._unlink_and_delete_reseller(instance)
+
+        else:
+            raise ValueError(
+                f"Unknown delete_context {delete_context!r} — "
+                "expected 'sellers' or 'resellers'."
+            )
 
     @transaction.atomic
     def delete_delivery_station(self, instance: DeliveryStation) -> None:

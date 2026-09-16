@@ -135,6 +135,44 @@ class TestListRetrieveUpdate:
         assert entry["user_count"] is None
         assert "domain" in entry
 
+    @pytest.mark.parametrize("raw", ["false", "0", "no", "off", "FALSE"])
+    def test_list_skips_user_count_for_every_false_spelling(
+        self, factory, tenant, super_admin, raw
+    ):
+        """The catalogued bool accepts the whole documented token set, so an
+        opt-out keeps working whichever spelling a client sends."""
+        request = factory.get("/tenants/", {"include_user_count": raw})
+        force_authenticate(request, user=super_admin)
+        response = _dispatch({"get": "list"}, request)
+
+        assert response.status_code == 200
+        entry = next(e for e in response.data if e["schema_name"] == tenant.schema_name)
+        assert entry["user_count"] is None, raw
+
+    def test_list_empty_include_user_count_keeps_the_default(
+        self, factory, tenant, super_admin
+    ):
+        """An empty value is "not supplied", so the documented default (count)
+        applies instead of silently opting out."""
+        request = factory.get("/tenants/", {"include_user_count": ""})
+        force_authenticate(request, user=super_admin)
+        response = _dispatch({"get": "list"}, request)
+
+        assert response.status_code == 200
+        entry = next(e for e in response.data if e["schema_name"] == tenant.schema_name)
+        assert isinstance(entry["user_count"], int)
+
+    def test_list_rejects_an_unparseable_include_user_count(
+        self, factory, tenant, super_admin
+    ):
+        request = factory.get("/tenants/", {"include_user_count": "maybe"})
+        force_authenticate(request, user=super_admin)
+        response = _dispatch({"get": "list"}, request)
+
+        assert response.status_code == 400
+        assert response.data["code"] == "query.invalid_param"
+        assert response.data["field"] == "include_user_count"
+
     def test_retrieve_returns_tenant_details(self, factory, tenant, super_admin):
         request = factory.get(f"/tenants/{tenant.id}/")
         force_authenticate(request, user=super_admin)

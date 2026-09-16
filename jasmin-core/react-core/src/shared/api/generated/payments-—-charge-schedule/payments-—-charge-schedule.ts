@@ -26,9 +26,9 @@ import type {
 
 import type {
   ChargeSchedule,
+  ChargeScheduleMonthlyIncome,
   ErrorResponse,
   PaginatedChargeScheduleList,
-  PaginatedChargeScheduleMonthlyIncomeList,
   PaymentsChargeSchedulesIncomeByMonthListParams,
   PaymentsChargeSchedulesListParams,
   RegenerateChargesResponse
@@ -239,7 +239,7 @@ export const paymentsChargeSchedulesIncomeByMonthList = (
 ) => {
       
       
-      return axiosService<PaginatedChargeScheduleMonthlyIncomeList>(
+      return axiosService<ChargeScheduleMonthlyIncome[]>(
       {url: `/api/payments/charge_schedules/income_by_month/`, method: 'GET',
         params, signal
     },

@@ -388,6 +388,7 @@
     "physical_variation_not_found": "The specified physical variation could not be found."
   },
   "bulk_copy_offers": {
+    "invalid": "Invalid input for copying offers — please check the year, delivery week and selection.",
     "ids_required": "Provide a non-empty list of offer ids.",
     "offer_group_required": "An offer group is required.",
     "week_required": "Year and delivery week are required — without them we cannot tell whether the offer is already in the target group."

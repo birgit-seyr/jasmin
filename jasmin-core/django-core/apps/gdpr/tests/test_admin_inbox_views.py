@@ -240,6 +240,23 @@ class TestAdminDecidedDeletionsView:
         page2_ids = {r["id"] for r in body2["results"]}
         assert page1_ids.isdisjoint(page2_ids)
 
+    @pytest.mark.parametrize("raw", ["abc", "0", "-3"])
+    def test_unusable_limit_is_400_instead_of_the_whole_history(self, tenant, raw):
+        """A page size DRF cannot parse used to mean "no limit given" — the
+        caller asking for one page got every decided request instead."""
+        admin = JasminUserFactory(roles=["admin"])
+        for i in range(3):
+            req = _land_in_pending_admin(
+                JasminUserFactory(roles=["member"], email=f"b{i}@example.com")
+            )
+            GDPRService.admin_reject_deletion(req, admin_user=admin, reason="n")
+
+        client, _ = _admin_client()
+        resp = client.get(self.URL + f"?limit={raw}")
+
+        assert resp.status_code == 400
+        assert resp.json()["field"] == "limit"
+
     def test_forbidden_for_non_admin(self, tenant):
         non_admin = JasminUserFactory(roles=["office"])
         client = APIClient()

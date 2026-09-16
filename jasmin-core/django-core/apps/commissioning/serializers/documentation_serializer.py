@@ -409,3 +409,59 @@ class ForecastRowSerializer(serializers.Serializer):
     unit = serializers.CharField()
     year = serializers.IntegerField()
     is_finalized = serializers.BooleanField()
+
+
+class AdditionalTheoreticalAmountRequestSerializer(serializers.Serializer):
+    """Body of the two additional-theoretical-amount actions.
+
+    ``model`` is not declared here: it is the discriminator that picks the
+    documentation model before this runs, and it keeps its own error code.
+    These are the row fields ``DocumentationSummaryService`` consumes — they
+    reach ORM lookups and model writes directly, so they are typed before the
+    service sees them.
+
+    The identity fields (``year``, ``delivery_week``, ``share_article``) are
+    required on create and optional on update, which reads them from the
+    stored row — instantiate with ``partial=True`` there. Absent keys stay
+    absent from ``validated_data``: the update path distinguishes "amount was
+    not sent" from "amount was set to 0", so a default would overwrite a
+    figure the caller never touched.
+    """
+
+    # Matches the ``year`` / ``delivery_week`` / ``day_number`` bounds in the
+    # query-param catalogue, so the same value is accepted in a body and in a
+    # query string.
+    year = serializers.IntegerField(min_value=1900, max_value=2100)
+    delivery_week = serializers.IntegerField(min_value=1, max_value=53)
+    day_number = serializers.IntegerField(
+        min_value=0, max_value=6, required=False, allow_null=True
+    )
+
+    # FK ids stay strings: the service looks the rows up by id, and the
+    # CharField primary keys make a model instance the wrong thing to pass.
+    share_article = serializers.CharField()
+    seller = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    harvesting_crate = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True
+    )
+
+    unit = serializers.CharField(required=False, allow_blank=True)
+    size = serializers.CharField(required=False, allow_blank=True)
+    note = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+    # Precision mirrors the columns written: the documentation amounts are
+    # ``DecimalField(10, 2)``, ``Harvest.amount_per_pu`` is ``(7, 3)``.
+    amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, allow_null=True
+    )
+    # Harvest splits its additional amount into a share-content and an
+    # order-content entry; every other model carries the single ``amount``.
+    amount_share_content = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, allow_null=True
+    )
+    amount_order_content = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, allow_null=True
+    )
+    amount_per_pu = serializers.DecimalField(
+        max_digits=7, decimal_places=3, required=False, allow_null=True
+    )

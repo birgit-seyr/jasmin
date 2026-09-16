@@ -15,7 +15,10 @@ interface ResellerSelectorProps {
   preserveSelection?: boolean;
   year?: number | null;
   delivery_week?: number | null;
-  delivery_day?: string | null;
+  /** Order day index (0=Monday … 6=Sunday) the `has_orders` highlight is
+   * scoped to. Sent as `day_number`; the endpoint's `delivery_day` alias is
+   * deprecated. */
+  day_number?: number | null;
   has_orders_without_invoice?: boolean;
   userType?: "reseller" | "seller";
 }
@@ -28,7 +31,7 @@ const ResellerSelector = ({
   preserveSelection = true,
   year = null,
   delivery_week = null,
-  delivery_day = null,
+  day_number = null,
   has_orders_without_invoice = false,
   userType = "reseller",
 }: ResellerSelectorProps) => {
@@ -38,7 +41,8 @@ const ResellerSelector = ({
     const params: CommissioningResellersListParams = {};
     if (year) params.year = year;
     if (delivery_week) params.delivery_week = delivery_week;
-    if (delivery_day) params.delivery_day = delivery_day;
+    // Monday is 0, so presence is what counts here, not truthiness.
+    if (day_number != null) params.day_number = day_number;
     if (has_orders_without_invoice)
       params.has_orders_without_invoice = has_orders_without_invoice;
 
@@ -50,7 +54,7 @@ const ResellerSelector = ({
       params.is_active_seller = true;
     }
     return params;
-  }, [year, delivery_week, delivery_day, has_orders_without_invoice, userType]);
+  }, [year, delivery_week, day_number, has_orders_without_invoice, userType]);
 
   const { data, isLoading: loading } = useCommissioningResellersList(queryParams);
   // Memoize the empty-fallback so `resellers` keeps a stable identity when

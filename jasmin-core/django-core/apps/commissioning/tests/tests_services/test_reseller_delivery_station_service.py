@@ -187,6 +187,17 @@ class TestDeleteReseller:
         svc.delete_reseller(reseller, delete_context="sellers")
         assert not Reseller.objects.filter(pk=pk).exists()
 
+    def test_unknown_context_is_refused_rather_than_ignored(self, tenant, svc):
+        """Neither branch matches, and doing nothing would report a successful
+        delete to a caller whose row is still there. The endpoint validates the
+        value against the catalogue, so reaching this is a programmer error."""
+        reseller = ResellerFactory(is_reseller=True, is_seller=True)
+
+        with pytest.raises(ValueError):
+            svc.delete_reseller(reseller, delete_context="typo")
+
+        assert Reseller.objects.filter(pk=reseller.pk).exists()
+
 
 # ---------------------------------------------------------------------------
 # delete_delivery_station

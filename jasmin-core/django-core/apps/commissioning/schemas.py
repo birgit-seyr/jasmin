@@ -217,12 +217,17 @@ def get_start_date_parameter(**overrides):
 
 
 def get_end_date_parameter(**overrides):
-    """Get end_date date parameter (inclusive range end, YYYY-MM-DD)."""
+    """Get end_date date parameter (inclusive range end, YYYY-MM-DD).
+
+    ``description`` is overridable: an endpoint that bounds how far the end may
+    sit from the start says so on the parameter itself.
+    """
     required = overrides.pop("required", False)
+    description = overrides.pop("description", "Inclusive range end (YYYY-MM-DD)")
 
     return catalogue_param(
         "end_date",
-        description="Inclusive range end (YYYY-MM-DD)",
+        description=description,
         required=required,
         **overrides,
     )

@@ -248,10 +248,12 @@ import type {
   PaginatedInvoiceResellerList,
   PaginatedMemberEmailLogList,
   PaginatedMemberList,
+  PaginatedOfferList,
   PaginatedPurchaseList,
   PaginatedResellerList,
   PaginatedShareArticleList,
   PaginatedShareContentList,
+  PaginatedShareDeliveryDetailsRowList,
   PaginatedShareDeliveryList,
   PaginatedSubscriptionList,
   PaginatedTheoreticalCleanAmountList,
@@ -277,7 +279,6 @@ import type {
   ShareContent,
   ShareDayPlanningRow,
   ShareDelivery,
-  ShareDeliveryDetailsRow,
   ShareDeliveryOverview,
   ShareImportApplyValidationFailedResponse,
   ShareImportBatch,
@@ -17459,7 +17460,7 @@ export const commissioningOffersList = (
 ) => {
       
       
-      return axiosService<Offer[]>(
+      return axiosService<PaginatedOfferList>(
       {url: `/api/commissioning/offers/`, method: 'GET',
         params, signal
     },
@@ -21579,6 +21580,9 @@ export function useCommissioningPurchaseExportCsvRetrieve<TData = Awaited<Return
     week over a date range. Mirrors the harvest-share-planning page's per-week
     purchase figure (price_per_unit × amount × variation demand), aggregated
     server-side so only the per-week points cross the wire. Office only.
+
+    The range is bounded: `start_date` must be on or before `end_date`, and
+    the two may span at most 5 years.
     
  * @summary Get purchase cost per week
  */
@@ -22068,11 +22072,11 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Delete a reseller, optionally handling delivery station reassignment.
+ * Delete a reseller in the context of ONE of its two roles. `delete_context=sellers` drops the seller role, `delete_context=resellers` the reseller role; the row itself is deleted only when the role being dropped was its last one. The parameter is required — there is no defined delete without it.
  */
 export const commissioningResellersDestroy = (
     id: string,
-    params?: CommissioningResellersDestroyParams,
+    params: CommissioningResellersDestroyParams,
  ) => {
       
       
@@ -22086,8 +22090,8 @@ export const commissioningResellersDestroy = (
 
 
 export const getCommissioningResellersDestroyMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningResellersDestroy>>, TError,{id: string;params?: CommissioningResellersDestroyParams}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningResellersDestroy>>, TError,{id: string;params?: CommissioningResellersDestroyParams}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningResellersDestroy>>, TError,{id: string;params: CommissioningResellersDestroyParams}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningResellersDestroy>>, TError,{id: string;params: CommissioningResellersDestroyParams}, TContext> => {
 
 const mutationKey = ['commissioningResellersDestroy'];
 const {mutation: mutationOptions} = options ?
@@ -22099,7 +22103,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningResellersDestroy>>, {id: string;params?: CommissioningResellersDestroyParams}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningResellersDestroy>>, {id: string;params: CommissioningResellersDestroyParams}> = (props) => {
           const {id,params} = props ?? {};
 
           return  commissioningResellersDestroy(id,params,)
@@ -22115,11 +22119,11 @@ const {mutation: mutationOptions} = options ?
     export type CommissioningResellersDestroyMutationError = ErrorResponse
 
     export const useCommissioningResellersDestroy = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningResellersDestroy>>, TError,{id: string;params?: CommissioningResellersDestroyParams}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningResellersDestroy>>, TError,{id: string;params: CommissioningResellersDestroyParams}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningResellersDestroy>>,
         TError,
-        {id: string;params?: CommissioningResellersDestroyParams},
+        {id: string;params: CommissioningResellersDestroyParams},
         TContext
       > => {
 
@@ -24774,7 +24778,7 @@ export const commissioningShareDeliveryDetailsList = (
 ) => {
       
       
-      return axiosService<ShareDeliveryDetailsRow[]>(
+      return axiosService<PaginatedShareDeliveryDetailsRowList>(
       {url: `/api/commissioning/share_delivery_details/`, method: 'GET',
         params, signal
     },
@@ -29795,7 +29799,7 @@ const {mutation: mutationOptions} = options ?
     /**
  * Distinct e-mail addresses of members holding a confirmed, non-waiting-list subscription that matches the filter — a copyable e-mail distribution list for the AbosEmails page.
 
-Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and not cancelled-effective before it. The active window is ``[date_from, date_to]`` when both are given, otherwise today. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Each member's primary and secondary addresses (``email`` / ``email_2`` / ``email_3``) are all included; blanks, non-address junk, and duplicates are dropped.
+Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and — where the window has a start — not cancelled effective before that start. Each bound of the active window applies on its own: ``date_from`` alone means 'still running on or after that date', ``date_to`` alone 'already started by that date', both together the overlap with ``[date_from, date_to]``, and neither collapses the window to today. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Each member's primary and secondary addresses (``email`` / ``email_2`` / ``email_3``) are all included; blanks, non-address junk, and duplicates are dropped.
  * @summary Member e-mails for a subscription filter (distribution list)
  */
 export const commissioningSubscriptionMemberEmailsRetrieve = (

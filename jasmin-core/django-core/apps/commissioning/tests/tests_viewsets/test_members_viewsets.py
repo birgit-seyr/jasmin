@@ -82,6 +82,25 @@ class TestMemberViewSet:
         for m in resp.data:
             assert m["is_trial"] is False
 
+    def test_exclude_trial_members_false_keeps_everyone(self, api_client, tenant):
+        """The flag is one-armed: an explicit false means "don't exclude", not
+        "only trial members" (which is what applying it as a value filter
+        would do)."""
+        trial = MemberFactory(is_trial=True)
+        regular = MemberFactory(is_trial=False)
+
+        for raw in ("false", "0"):
+            resp = api_client.get(self.URL, {"exclude_trial_members": raw})
+            ids = {m["id"] for m in resp.data}
+            assert {str(trial.id), str(regular.id)} <= ids, raw
+
+    def test_exclude_trial_members_absent_keeps_everyone(self, api_client, tenant):
+        trial = MemberFactory(is_trial=True)
+        regular = MemberFactory(is_trial=False)
+        resp = api_client.get(self.URL)
+        ids = {m["id"] for m in resp.data}
+        assert {str(trial.id), str(regular.id)} <= ids
+
     def test_export_csv_member_register(self, api_client, tenant):
         # GenG §30 register for a window: an admitted member (entry_date set)
         # with shares is listed; a never-admitted applicant is excluded.
@@ -237,6 +256,76 @@ class TestMemberViewSet:
         assert resp.data["member"]["id"] == member.id
         member.refresh_from_db()
         assert member.cancelled_at is not None
+
+    @time_machine.travel(datetime.date(2026, 3, 30), tick=False)  # Monday
+    def test_office_cancel_force_false_string_does_not_force(self, api_client, tenant):
+        """``force`` is parsed, not truth-tested: the strings "false" and "0"
+        mean "do not force", so the active-subscription restraint still refuses
+        the cancel and nothing is written."""
+        from apps.commissioning.tests.factories import (
+            ShareTypeVariationFactory,
+            SubscriptionFactory,
+        )
+
+        # Built once: a second OPEN SharesDeliveryDay for the same day_number
+        # (which a second SubscriptionFactory would create) is refused by the
+        # one-open-per-day constraint.
+        station_day = DeliveryStationDayFactory()
+        variation = ShareTypeVariationFactory()
+
+        for raw_force in ("false", "0"):
+            member = MemberFactory(admin_confirmed=True)
+            SubscriptionFactory(
+                member=member,
+                admin_confirmed=True,
+                valid_until=datetime.date(2026, 4, 5),  # Sunday, still active
+                default_delivery_station_day=station_day,
+                share_type_variation=variation,
+            )
+            resp = api_client.post(
+                reverse("member-cancel", kwargs={"pk": member.pk}),
+                {"effective_at": "2026-04-12", "force": raw_force},
+                format="json",
+            )
+            assert resp.status_code == status.HTTP_400_BAD_REQUEST, raw_force
+            assert resp.data["code"] == "member.has_active_subscriptions"
+            member.refresh_from_db()
+            assert member.cancelled_at is None  # nothing was written
+
+    @time_machine.travel(datetime.date(2026, 3, 30), tick=False)  # Monday
+    def test_office_cancel_force_true_string_still_forces(self, api_client, tenant):
+        """The string spellings stay accepted alongside a JSON boolean, so a
+        client that sends ``"true"`` keeps working."""
+        from apps.commissioning.tests.factories import SubscriptionFactory
+
+        member = MemberFactory(admin_confirmed=True)
+        SubscriptionFactory(
+            member=member,
+            admin_confirmed=True,
+            valid_until=datetime.date(2026, 4, 5),
+        )
+        resp = api_client.post(
+            reverse("member-cancel", kwargs={"pk": member.pk}),
+            {"effective_at": "2026-04-12", "force": "true"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        member.refresh_from_db()
+        assert member.cancelled_at is not None
+
+    @time_machine.travel(datetime.date(2026, 3, 30), tick=False)  # Monday
+    def test_office_cancel_unparseable_force_is_400(self, api_client, tenant):
+        member = MemberFactory(admin_confirmed=True)
+        resp = api_client.post(
+            reverse("member-cancel", kwargs={"pk": member.pk}),
+            {"effective_at": "2026-04-12", "force": "maybe"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "force"
+        member.refresh_from_db()
+        assert member.cancelled_at is None
 
     def test_confirm_already_confirmed_returns_409(self, api_client, tenant):
         # MemberAlreadyConfirmed is a ConflictError -> 409 (not 400).

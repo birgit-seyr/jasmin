@@ -1079,9 +1079,12 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - in: query
         name: member
         schema:
@@ -1090,10 +1093,11 @@ paths:
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: on_waiting_list
         schema:
@@ -9668,16 +9672,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: year
         schema:
@@ -10095,16 +10103,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       tags:
       - commissioning
       security:
@@ -11326,16 +11338,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       tags:
       - commissioning
       security:
@@ -12289,16 +12305,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: only_with_subscriptions
         schema:
@@ -12734,16 +12754,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       tags:
       - commissioning
       security:
@@ -13813,11 +13837,28 @@ paths:
           Week52:
             value: 52
             summary: Week 52
+      - name: limit
+        required: false
+        in: query
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
+        schema:
+          type: integer
+          minimum: 1
       - in: query
         name: offer_group
         schema:
           type: string
         description: Offer group ID (Jasmin ID format)
+      - name: offset
+        required: false
+        in: query
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
+        schema:
+          type: integer
+          minimum: 0
       - in: query
         name: reseller
         schema:
@@ -13843,9 +13884,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Offer'
+                $ref: '#/components/schemas/PaginatedOfferList'
           description: ''
         '401':
           content:
@@ -16455,16 +16494,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       tags:
       - commissioning
       security:
@@ -16834,7 +16877,8 @@ paths:
         articles, per ISO\n    week over a date range. Mirrors the harvest-share-planning
         page's per-week\n    purchase figure (price_per_unit × amount × variation
         demand), aggregated\n    server-side so only the per-week points cross the
-        wire. Office only.\n    "
+        wire. Office only.\n\n    The range is bounded: `start_date` must be on or
+        before `end_date`, and\n    the two may span at most 5 years.\n    "
       summary: Get purchase cost per week
       parameters:
       - in: query
@@ -16842,7 +16886,7 @@ paths:
         schema:
           type: string
           format: date
-        description: Inclusive range end (YYYY-MM-DD)
+        description: Inclusive range end (YYYY-MM-DD). At most 5 years after `start_date`.
         required: true
       - in: query
         name: start_date
@@ -16894,10 +16938,18 @@ paths:
         Neither requires a custom override per viewset.
       parameters:
       - in: query
+        name: day_number
+        schema:
+          type: integer
+        description: Day of the week (0=Monday, 6=Sunday) the `has_orders` annotation
+          is scoped to. Send it together with `year` and `delivery_week`.
+      - in: query
         name: delivery_day
         schema:
-          type: string
-        description: sharesdeliveryday ID (Jasmin ID format)
+          type: integer
+        description: 'Deprecated alias of `day_number` for this endpoint: the value
+          is matched against the order''s day index (0-6), never against a SharesDeliveryDay
+          id. Send `day_number` instead; when both are present `day_number` wins.'
       - in: query
         name: delivery_week
         schema:
@@ -16963,16 +17015,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: year
         schema:
@@ -17218,13 +17274,20 @@ paths:
           description: Error response.
     delete:
       operationId: commissioning_resellers_destroy
-      description: Delete a reseller, optionally handling delivery station reassignment.
+      description: Delete a reseller in the context of ONE of its two roles. `delete_context=sellers`
+        drops the seller role, `delete_context=resellers` the reseller role; the row
+        itself is deleted only when the role being dropped was its last one. The parameter
+        is required — there is no defined delete without it.
       parameters:
       - in: query
         name: delete_context
         schema:
           type: string
-        description: Context for deletion logic (e.g. delivery station handling)
+          enum:
+          - resellers
+          - sellers
+        description: 'Which role this delete is about: `sellers` or `resellers`.'
+        required: true
       - in: path
         name: id
         schema:
@@ -17976,16 +18039,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: price_date
         schema:
@@ -18286,16 +18353,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       tags:
       - commissioning
       security:
@@ -18571,9 +18642,12 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - in: query
         name: member
         schema:
@@ -18582,10 +18656,11 @@ paths:
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: share_type
         schema:
@@ -18960,6 +19035,7 @@ paths:
         name: donation_joker
         schema:
           type: boolean
+          default: false
       - in: query
         name: for_stations
         schema:
@@ -18976,6 +19052,7 @@ paths:
         name: joker
         schema:
           type: boolean
+          default: false
       - in: query
         name: year
         schema:
@@ -19071,9 +19148,12 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - in: query
         name: member
         schema:
@@ -19082,10 +19162,11 @@ paths:
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       tags:
       - commissioning
       security:
@@ -19172,6 +19253,23 @@ paths:
           Week52:
             value: 52
             summary: Week 52
+      - name: limit
+        required: false
+        in: query
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
+        schema:
+          type: integer
+          minimum: 1
+      - name: offset
+        required: false
+        in: query
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
+        schema:
+          type: integer
+          minimum: 0
       - in: query
         name: year
         schema:
@@ -19192,9 +19290,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ShareDeliveryDetailsRow'
+                $ref: '#/components/schemas/PaginatedShareDeliveryDetailsRowList'
           description: ''
         '401':
           content:
@@ -21852,6 +21948,7 @@ paths:
         name: force
         schema:
           type: boolean
+          default: false
         description: Apply the change even when the week is in the past.
       - in: query
         name: year
@@ -22068,7 +22165,8 @@ paths:
         name: get_delivery_stations
         schema:
           type: boolean
-        description: Include active delivery stations in the response.
+        description: Include active delivery stations in the response. Requires `active_at_date`
+          — the stations are resolved as of that date.
       - in: query
         name: need_info_on_tours
         schema:
@@ -22737,7 +22835,7 @@ paths:
       description: |-
         Distinct e-mail addresses of members holding a confirmed, non-waiting-list subscription that matches the filter — a copyable e-mail distribution list for the AbosEmails page.
 
-        Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and not cancelled-effective before it. The active window is ``[date_from, date_to]`` when both are given, otherwise today. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Each member's primary and secondary addresses (``email`` / ``email_2`` / ``email_3``) are all included; blanks, non-address junk, and duplicates are dropped.
+        Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, active in the window, and — where the window has a start — not cancelled effective before that start. Each bound of the active window applies on its own: ``date_from`` alone means 'still running on or after that date', ``date_to`` alone 'already started by that date', both together the overlap with ``[date_from, date_to]``, and neither collapses the window to today. ``delivery_station_day`` and ``share_type`` narrow it further; combine freely. Each member's primary and secondary addresses (``email`` / ``email_2`` / ``email_3``) are all included; blanks, non-address junk, and duplicates are dropped.
       summary: Member e-mails for a subscription filter (distribution list)
       parameters:
       - in: query
@@ -22819,16 +22917,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: share_article
         schema:
@@ -23240,16 +23342,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: share_article
         schema:
@@ -23661,16 +23767,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: share_article
         schema:
@@ -24082,16 +24192,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: share_article
         schema:
@@ -24842,16 +24956,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: year
         schema:
@@ -25202,11 +25320,17 @@ paths:
         name: limit
         schema:
           type: integer
-        description: Page size — opt into pagination by passing this.
+          minimum: 1
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
       - in: query
         name: offset
         schema:
           type: integer
+          minimum: 0
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
       tags:
       - gdpr
       security:
@@ -25610,16 +25734,20 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: purpose
         schema:
@@ -26562,9 +26690,12 @@ paths:
       - name: limit
         required: false
         in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
+        description: 'Page size. Pass it to opt into pagination: the response is then
+          `{count, next, previous, results}` instead of a plain array. A value above
+          1000 is served at 1000 rather than refused.'
         schema:
           type: integer
+          minimum: 1
       - in: query
         name: member
         schema:
@@ -26578,10 +26709,11 @@ paths:
       - name: offset
         required: false
         in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
+        description: Index of the first row to return. Only meaningful together with
+          `limit`.
         schema:
           type: integer
+          minimum: 0
       - in: query
         name: status
         schema:
@@ -26676,19 +26808,6 @@ paths:
           format: date
         description: Inclusive end (YYYY-MM-DD), matched on due_date.
         required: true
-      - name: limit
-        required: false
-        in: query
-        description: Anzahl der pro Seite zurückzugebenden Ergebnisse.
-        schema:
-          type: integer
-      - name: offset
-        required: false
-        in: query
-        description: Der initiale Index, von dem die Ergebnisse zurückgegeben werden
-          sollen.
-        schema:
-          type: integer
       tags:
       - Payments — Charge schedule
       security:
@@ -26698,7 +26817,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedChargeScheduleMonthlyIncomeList'
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChargeScheduleMonthlyIncome'
           description: ''
         '400':
           content:
@@ -36765,10 +36886,6 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/ChargeSchedule'
-    PaginatedChargeScheduleMonthlyIncomeList:
-      type: array
-      items:
-        $ref: '#/components/schemas/ChargeScheduleMonthlyIncome'
     PaginatedEmailLogList:
       type: array
       items:
@@ -36793,6 +36910,10 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/Member'
+    PaginatedOfferList:
+      type: array
+      items:
+        $ref: '#/components/schemas/Offer'
     PaginatedPurchaseList:
       type: array
       items:
@@ -36809,6 +36930,10 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/ShareContent'
+    PaginatedShareDeliveryDetailsRowList:
+      type: array
+      items:
+        $ref: '#/components/schemas/ShareDeliveryDetailsRow'
     PaginatedShareDeliveryList:
       type: array
       items:

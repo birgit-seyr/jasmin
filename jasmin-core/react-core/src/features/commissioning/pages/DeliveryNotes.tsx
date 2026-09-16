@@ -479,7 +479,6 @@ export default function DeliveryNotes() {
           setSelectedReseller={setSelectedReseller}
           year={selectedYear}
           delivery_week={selectedWeek}
-          delivery_day={null}
           include_null_option={true}
         />
       </div>

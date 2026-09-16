@@ -32,9 +32,13 @@ from ..utils.query_params import validate_query_params
         "non-waiting-list subscription that matches the filter — a copyable "
         "e-mail distribution list for the AbosEmails page.\n\n"
         "Base filter: ``admin_confirmed=True``, ``on_waiting_list=False``, "
-        "active in the window, and not cancelled-effective before it. The "
-        "active window is ``[date_from, date_to]`` when both are given, "
-        "otherwise today. ``delivery_station_day`` and ``share_type`` narrow "
+        "active in the window, and — where the window has a start — not "
+        "cancelled effective before that start. Each "
+        "bound of the active window applies on its own: ``date_from`` alone "
+        "means 'still running on or after that date', ``date_to`` alone "
+        "'already started by that date', both together the overlap with "
+        "``[date_from, date_to]``, and neither collapses the window to today. "
+        "``delivery_station_day`` and ``share_type`` narrow "
         "it further; combine freely. Each member's primary and secondary "
         "addresses (``email`` / ``email_2`` / ``email_3``) are all included; "
         "blanks, non-address junk, and duplicates are dropped."
@@ -79,22 +83,33 @@ def subscription_member_emails(request: Request) -> Response:
     date_to = params["date_to"]
 
     today = timezone.now().date()
-    window_start = date_from or today
+    # The cancellation cutoff is the start of the requested window: a
+    # subscription cancelled effective before it was already gone by then.
+    # A window open at the start (``date_to`` alone) has no such cutoff — the
+    # term filter alone decides. With no bound at all the window is today.
+    window_start = date_from if (date_from or date_to) else today
 
     subscriptions = Subscription.objects.filter(
         admin_confirmed=True, on_waiting_list=False
-    ).filter(
-        # Include subscriptions cancelled with a still-future effective date —
-        # they're active until then.
-        Q(cancelled_effective_at__isnull=True)
-        | Q(cancelled_effective_at__gte=window_start)
     )
-
-    if date_from and date_to:
-        # Term overlaps the [date_from, date_to] window.
-        subscriptions = subscriptions.filter(valid_from__lte=date_to).filter(
-            Q(valid_until__isnull=True) | Q(valid_until__gte=date_from)
+    if window_start is not None:
+        subscriptions = subscriptions.filter(
+            # A cancellation effective on or after the window start was still
+            # in the future for part of it, so the subscription counts.
+            Q(cancelled_effective_at__isnull=True)
+            | Q(cancelled_effective_at__gte=window_start)
         )
+
+    if date_from or date_to:
+        # Each bound narrows the term overlap independently, so a one-sided
+        # window means what it says: with only ``date_from`` the window runs
+        # from that date onwards, with only ``date_to`` it runs up to it.
+        if date_to:
+            subscriptions = subscriptions.filter(valid_from__lte=date_to)
+        if date_from:
+            subscriptions = subscriptions.filter(
+                Q(valid_until__isnull=True) | Q(valid_until__gte=date_from)
+            )
     else:
         subscriptions = subscriptions.filter(active_on_date_q(today))
 

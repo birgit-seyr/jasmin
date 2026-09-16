@@ -155,6 +155,64 @@ class TestShareArticleViewSet:
         for item in resp.data:
             assert item["is_active"] is True
 
+    def test_is_harvest_share_article_false_does_not_filter(self, api_client, tenant):
+        """Flag, not a value filter: ``=true`` narrows to the complexly-planned
+        articles, ``=false`` (and absent) leaves the list unrestricted."""
+        ShareTypeFactory(share_option="HARVEST_SHARE", needs_complex_planning=True)
+        ShareTypeFactory(share_option="HONEY_SHARE", needs_complex_planning=False)
+        harvest = ShareArticleFactory(share_option="HARVEST_SHARE")
+        honey = ShareArticleFactory(share_option="HONEY_SHARE")
+
+        for raw in ("false", "0"):
+            resp = api_client.get(self.URL, {"is_harvest_share_article": raw})
+            names = {a["name"] for a in resp.data}
+            assert {harvest.name, honey.name} <= names, raw
+
+        resp = api_client.get(self.URL)
+        assert {harvest.name, honey.name} <= {a["name"] for a in resp.data}
+
+        resp = api_client.get(self.URL, {"is_harvest_share_article": "true"})
+        names = {a["name"] for a in resp.data}
+        assert harvest.name in names
+        assert honey.name not in names
+
+    def test_get_price_info_false_skips_the_price_annotation(self, api_client, tenant):
+        """The price columns are a subquery annotation, so without it they come
+        back null — an explicit false must not switch the annotation on."""
+        article = ShareArticleFactory()
+        ShareArticleNetPriceFactory(
+            share_article=article,
+            valid_from=datetime.date(2026, 1, 5),
+            net_price_for_boxes_kg=Decimal("2.50"),
+        )
+
+        for raw in ("false", "0"):
+            resp = api_client.get(
+                self.URL, {"get_price_info": raw, "price_date": "2026-06-01"}
+            )
+            row = next(a for a in resp.data if a["id"] == article.id)
+            assert row["net_price_for_boxes_kg"] is None, raw
+
+        resp = api_client.get(
+            self.URL, {"get_price_info": "true", "price_date": "2026-06-01"}
+        )
+        row = next(a for a in resp.data if a["id"] == article.id)
+        assert Decimal(str(row["net_price_for_boxes_kg"])) == Decimal("2.50")
+
+    def test_is_data_list_false_skips_the_extra_columns(self, api_client, tenant):
+        """The per-share-option booleans only exist under the ``is_data_list``
+        annotation, so they are absent unless it actually ran."""
+        article = ShareArticleFactory(share_option="HARVEST_SHARE")
+
+        for raw in ("false", "0"):
+            resp = api_client.get(self.URL, {"is_data_list": raw})
+            row = next(a for a in resp.data if a["id"] == article.id)
+            assert "harvest_share" not in row, raw
+
+        resp = api_client.get(self.URL, {"is_data_list": "true"})
+        row = next(a for a in resp.data if a["id"] == article.id)
+        assert row["harvest_share"] is True
+
     def test_retrieve_returns_article(self, api_client, tenant):
         article = ShareArticleFactory(name="Carrots")
         url = reverse("share_article-detail", kwargs={"pk": article.pk})

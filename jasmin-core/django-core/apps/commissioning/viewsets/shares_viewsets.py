@@ -914,8 +914,8 @@ class ShareDeliveryViewSet(
         elif params["for_tours"]:
             mode = "tours"
 
-        joker = bool(params["joker"])
-        donation_joker = bool(params["donation_joker"])
+        joker = params["joker"]
+        donation_joker = params["donation_joker"]
 
         # Import (external-demand) tenants have no ShareDelivery rows, so their
         # matrix is FLAT per-variation columns (from the demand port); everyone
@@ -973,7 +973,11 @@ class ShareDeliveryViewSet(
             if instance.share_id
             else True
         )
-        apply_to_future = body(self.request).get("apply_to_future", False)
+        # The serializer's BooleanField has already parsed the flag, so
+        # "false"/0/"no" are False here; reading the raw body instead would
+        # propagate the station change on any non-empty string. Read before
+        # ``save()``, which pops the write-only field off validated_data.
+        apply_to_future = serializer.validated_data.get("apply_to_future", False)
 
         with transaction.atomic():
             # The delivery's ORIGINAL day/week — captured before we re-point the
@@ -1326,7 +1330,7 @@ class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         year = params["year"]
         delivery_week = params["delivery_week"]
         delivery_day = params["day_number"]
-        force = params["force"] or False
+        force = params["force"]
 
         # ``PastWeekError`` (409) propagates to the exception handler.
         SharesDayChangeService.apply(
@@ -1837,6 +1841,10 @@ class ShareDeliveryDetailsViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     # goes through the recompute-aware ShareDeliveryViewSet /
     # ShareDeliveryOverviewViewSet.
     http_method_names = ["get", "head", "options"]
+    # A station pickup sheet is one row per member, and a big tenant's week has
+    # thousands. ``?limit=`` bounds the payload; a caller that sends neither
+    # limit nor offset still gets the plain array.
+    pagination_class = OptionalLimitOffsetPagination
 
     @extend_schema(
         parameters=[
@@ -1848,18 +1856,20 @@ class ShareDeliveryDetailsViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         responses={200: ShareDeliveryDetailsRowSerializer(many=True)},
     )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        queryset = self.get_queryset()
-
-        result: dict[str, dict[str, Any]] = {}
-        for delivery in queryset:
+        rows: dict[str, dict[str, Any]] = {}
+        for delivery in self.get_queryset():
             member_name = delivery.name
-            if member_name not in result:
-                result[member_name] = {"id": delivery.id, "name": member_name}
-            result[member_name][
-                f"variation_{delivery.share_type_variation_id}"
-            ] = delivery.quantity
+            row = rows.setdefault(member_name, {"id": delivery.id, "name": member_name})
+            row[f"variation_{delivery.share_type_variation_id}"] = delivery.quantity
 
-        return Response(list(result.values()))
+        # Paginate the MERGED rows rather than the deliveries behind them: one
+        # row is one member, so ``count`` and the page size mean what the
+        # caller actually receives.
+        merged = list(rows.values())
+        page = self.paginate_queryset(merged)
+        if page is not None:
+            return self.get_paginated_response(page)
+        return Response(merged)
 
     @extend_schema(
         parameters=[
@@ -1892,30 +1902,53 @@ class ShareDeliveryDetailsViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         return Response(result, status=status.HTTP_200_OK)
 
     def get_queryset(self) -> QuerySet[ShareDelivery]:
+        # Schema generation calls this with no request behind it, where the
+        # required week scope below would raise.
+        if getattr(self, "swagger_fake_view", False):
+            return ShareDelivery.objects.none()
+
         # Only deliveries that actually ship belong on a station pickup sheet —
         # ``.shippable()`` excludes jokered + opted-out (on-off) rows via the
         # canonical ship predicate, the same rule demand/billing enforce.
         # Without it a jokered or not-confirmed delivery prints at full quantity.
         queryset = ShareDelivery.objects.shippable()
+        list_route = getattr(self, "action", None) == "list"
         params = validate_query_params(
             self.request,
-            optional=["year", "delivery_week", "day_number", "delivery_station"],
+            # The week scope is required on the list route, as the schema
+            # declares it: a pickup sheet without one is every shippable
+            # delivery in the tenant merged by member name. A detail route
+            # reaches this method with no query string, so there it stays open.
+            required=["year", "delivery_week", "day_number"] if list_route else [],
+            optional=(
+                ["delivery_station"]
+                if list_route
+                else ["year", "delivery_week", "day_number", "delivery_station"]
+            ),
         )
         year = params["year"]
         delivery_week = params["delivery_week"]
         day_number = params["day_number"]
         delivery_station = params["delivery_station"]
 
-        if year and delivery_week and day_number is not None and delivery_station:
+        # Each filter narrows on its own, so a partial scope returns the
+        # subset that was asked for rather than every station in the tenant.
+        if year is not None:
+            queryset = queryset.filter(share__year=year)
+        if delivery_week is not None:
+            queryset = queryset.filter(share__delivery_week=delivery_week)
+        if day_number is not None:
+            queryset = queryset.filter(share__delivery_day__day_number=day_number)
+        if delivery_station:
             queryset = queryset.filter(
-                share__year=year,
-                share__delivery_week=delivery_week,
-                share__delivery_day__day_number=day_number,
-                delivery_station_day__delivery_station=delivery_station,
-            ).order_by(
-                "subscription__member__last_name",
-                "subscription__member__first_name",
+                delivery_station_day__delivery_station=delivery_station
             )
+        # Ordered unconditionally: a page of an unordered queryset is an
+        # arbitrary slice, so pagination needs this even when no filter ran.
+        queryset = queryset.order_by(
+            "subscription__member__last_name",
+            "subscription__member__first_name",
+        )
 
         queryset = queryset.annotate(
             name=Case(

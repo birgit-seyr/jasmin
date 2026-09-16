@@ -8,7 +8,7 @@
 
 export type CommissioningPurchaseCostByWeekListParams = {
 /**
- * Inclusive range end (YYYY-MM-DD)
+ * Inclusive range end (YYYY-MM-DD). At most 5 years after `start_date`.
  */
 end_date: string;
 /**
