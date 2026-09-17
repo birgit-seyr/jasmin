@@ -146,12 +146,76 @@ class TestConsentDocumentReadAccess:
         assert resp.status_code == status.HTTP_200_OK
         assert [doc["kind"] for doc in resp.data] == [ConsentKind.SEPA]
 
+    def test_list_without_a_locale_returns_every_locale(self, anon_client, tenant):
+        """Listing filters by locale only when one is asked for, so every
+        translation of a kind is visible at once. A default locale on the
+        shared catalogue entry would hide all but the German rows."""
+        german = _make_doc(locale="de")
+        english = _make_doc(locale="en")
+
+        resp = anon_client.get(self.URL_LIST, {"kind": ConsentKind.PRIVACY})
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert {doc["id"] for doc in resp.data} == {german.pk, english.pk}
+
     def test_list_with_an_unknown_kind_is_refused(self, anon_client, tenant):
         resp = anon_client.get(self.URL_LIST, {"kind": "privicy"})
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.data["code"] == "query.invalid_param"
         assert resp.data["field"] == "kind"
+
+    def test_current_with_an_unknown_kind_is_refused(self, anon_client, tenant):
+        """``current`` reports a bad ``kind`` with the same error envelope as
+        the list action beside it, so a client branches on one code."""
+        resp = anon_client.get(reverse("consent_document-current"), {"kind": "privicy"})
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "kind"
+
+    def test_current_without_a_kind_is_refused(self, anon_client, tenant):
+        resp = anon_client.get(reverse("consent_document-current"))
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "kind"
+
+    def test_current_without_a_locale_looks_up_the_primary_locale(
+        self, anon_client, tenant
+    ):
+        """An absent ``locale`` narrows to ``de`` rather than matching any
+        locale — two locales of one kind are both in force, and answering
+        with whichever sorts first would hand the caller a document in a
+        language they did not ask for."""
+        english = _make_doc(locale="en")
+
+        resp = anon_client.get(
+            reverse("consent_document-current"), {"kind": ConsentKind.PRIVACY}
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+        german = _make_doc(locale="de")
+        resp = anon_client.get(
+            reverse("consent_document-current"), {"kind": ConsentKind.PRIVACY}
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["id"] == german.pk
+        assert resp.data["id"] != english.pk
+
+    def test_current_trims_a_padded_locale(self, anon_client, tenant):
+        """A catalogued string is matched byte for byte, so the action
+        normalises the locale before the lookup: a padded value resolves to
+        the document for that locale rather than to none at all."""
+        german = _make_doc(locale="de")
+
+        resp = anon_client.get(
+            reverse("consent_document-current"),
+            {"kind": ConsentKind.PRIVACY, "locale": "  de  "},
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["id"] == german.pk
 
 
 # --------------------------------------------------------------------------- #
@@ -257,12 +321,54 @@ class TestConsentRecordCreate:
         )
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
+    def test_member_sending_own_padded_id_is_recorded_not_refused(
+        self, member_client, tenant
+    ):
+        """A member id arriving with surrounding whitespace is the caller's
+        own id, so it must be recognised as such: the ownership comparison
+        reads the same normalised value the lookup does."""
+        doc = _make_doc()
+        own_member: Member = member_client._test_member  # type: ignore[attr-defined]
+        resp = member_client.post(
+            self.URL_LIST,
+            {"document_id": doc.pk, "member": f"  {own_member.pk}  "},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["member"] == own_member.pk
+
+    def test_member_padded_foreign_id_is_still_refused(self, member_client, tenant):
+        """Normalising the id must not widen who a member may consent for:
+        padding someone else's id is the same spoofing attempt."""
+        doc = _make_doc()
+        someone_else = MemberFactory()
+        resp = member_client.post(
+            self.URL_LIST,
+            {"document_id": doc.pk, "member": f"  {someone_else.pk}  "},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert not ConsentRecord.objects.filter(member=someone_else).exists()
+
     def test_office_can_record_on_behalf_of_a_member(self, api_client, tenant):
         doc = _make_doc()
         target = MemberFactory()
         resp = api_client.post(
             self.URL_LIST,
             {"document_id": doc.pk, "member": target.pk},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["member"] == target.pk
+
+    def test_office_padded_member_id_resolves_the_target_member(
+        self, api_client, tenant
+    ):
+        doc = _make_doc()
+        target = MemberFactory()
+        resp = api_client.post(
+            self.URL_LIST,
+            {"document_id": doc.pk, "member": f" {target.pk} "},
             format="json",
         )
         assert resp.status_code == status.HTTP_201_CREATED

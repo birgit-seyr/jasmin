@@ -98,6 +98,9 @@ DB required: No
     - "week" alias also validated (same range as delivery_week)
     - custom ranges override defaults
     - source="data" reads from POST body
+    - source="data" missing field → raises InvalidQueryParam (400, field set)
+    - source="data" non-object (array) body → the same missing-parameter 400,
+      not an AttributeError
     - param without range passes any int
     - boundary values (2000/1 and 2100/53) accepted
 
@@ -127,6 +130,17 @@ DB required: No
     - wrong-typed date → raises CommissioningError on field "date"
     - empty / absent date still means "derive it" (None)
 
+  TestParseBulkIds
+    - returns the list of string ids unchanged
+    - non-string or blank entry → raises BulkIdsInvalid (bulk.ids_invalid)
+    - empty list → raises RequiredFieldMissing
+    - caller can pass its own invalid-item error class
+    - a batch exactly at MAX_BULK_IDS is accepted
+    - over the cap → raises BulkIdsTooMany (bulk.ids_too_many) with
+      details {limit, received}
+    - caller can lower the cap via max_count
+    - the cap error names the caller's own field
+
 
 test_delivery_utils.py
 ----------------------
@@ -147,6 +161,11 @@ DB required: Yes (all functions query models)
     - returns variations with actual deliveries
     - excludes joker deliveries
     - returns distinct variations
+
+  TestTourStationIds
+    - returns only the stations on the requested tour (delivery_day object)
+    - day_number identifies the delivery day instead of the object
+    - a tour without stations returns an empty list
 
 
 test_storage_fields.py
@@ -177,3 +196,23 @@ DB required: Partially (build_storage_fields / extract_storage_fields need DB)
     - extracts only storage fields matching active storages
     - ignores non-storage fields
     - ignores storage fields for non-existent storages
+
+test_query_param_catalogue.py
+-----------------------------
+Source: apps/commissioning/utils/query_params.py (+ the schema helper in
+        apps/commissioning/schemas.py that publishes catalogue entries)
+DB required: No
+
+  TestCatalogueDeclaresOnlyLiveParams
+    - a parameter no endpoint reads is not catalogued (manual)
+
+  TestShareOptionCasing
+    - any casing yields the catalogue spelling (HARVEST_SHARE)
+    - a value outside the enum is still a 400 (query.invalid_param)
+
+  TestTourIsAnInt
+    - the catalogue parses tour / packing_station as ints
+    - the packing-list consumers annotate the parsed type
+
+  TestShareOptionDocumentation
+    - the published examples are values of the published enum

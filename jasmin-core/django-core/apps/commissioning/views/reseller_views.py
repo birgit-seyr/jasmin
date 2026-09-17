@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 from django.core.exceptions import ValidationError
@@ -78,6 +78,7 @@ from ..utils.iso_week_utils import week_day_to_date
 from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 from ..utils.validation_utils import (
+    parse_body_date,
     parse_bulk_ids,
     validate_and_parse_int_params,
     validate_bulk_document_request,
@@ -89,6 +90,41 @@ def _get_orders_with_related(order_ids: list[str]) -> QuerySet[Order]:
     return Order.objects.filter(id__in=order_ids).select_related(
         "delivery_note", "reseller"
     )
+
+
+def _unique_order_ids(order_ids: list[str]) -> list[str]:
+    """The requested ids with repeats dropped, first occurrence winning.
+
+    Results and errors are keyed by order, so one id can only ever yield one
+    row. Counting a repeated id twice in ``total_processed`` would put it
+    permanently out of step with ``successful + failed``.
+    """
+    return list(dict.fromkeys(order_ids))
+
+
+def _append_missing_order_errors(
+    order_ids: list[str],
+    orders: Iterable[Order],
+    errors: list[dict[str, Any]],
+) -> None:
+    """Record one error row per requested id that matches no order.
+
+    An id nobody can resolve otherwise disappears from the batch: it yields
+    neither a result nor an error, so ``successful + failed`` falls short of
+    ``total_processed`` and the caller never learns which ids were unknown.
+    """
+    found_ids = {str(order.id) for order in orders}
+    for order_id in order_ids:
+        if str(order_id) in found_ids:
+            continue
+        errors.append(
+            {
+                "order_id": str(order_id),
+                "order_number": None,
+                "error": "Order not found",
+                "success": False,
+            }
+        )
 
 
 _get_invoice_for_delivery_note = InvoiceService.get_invoice_for_delivery_note
@@ -250,7 +286,7 @@ class BulkCreateDocumentsFromOrdersView(APIViewRolePermissionsMixin, APIView):
     def post(self, request: Request) -> Response:
         params = validate_bulk_document_request(request)
 
-        order_ids = params["order_ids"]
+        order_ids = _unique_order_ids(params["order_ids"])
         model = params["model"]
         date = params["date"]
 
@@ -283,6 +319,7 @@ class BulkCreateDocumentsFromOrdersView(APIViewRolePermissionsMixin, APIView):
                 results.append(self._create_invoice(order, date, request.user))
 
         results, errors = _run_per_order_bulk(orders, handler)
+        _append_missing_order_errors(order_ids, orders, errors)
 
         return _build_bulk_response(
             model, order_ids, results, errors, success_status=status.HTTP_201_CREATED
@@ -345,7 +382,7 @@ class BulkFinalizeDocumentsView(APIViewRolePermissionsMixin, APIView):
     @transaction.atomic
     def post(self, request: Request) -> Response:
         params = validate_bulk_document_request(request)
-        order_ids = params["order_ids"]
+        order_ids = _unique_order_ids(params["order_ids"])
         model = params["model"]  # "delivery_note" or "invoice"
 
         orders = _get_orders_with_related(order_ids)
@@ -415,6 +452,7 @@ class BulkFinalizeDocumentsView(APIViewRolePermissionsMixin, APIView):
                     )
 
         results, errors = _run_per_order_bulk(orders, handler)
+        _append_missing_order_errors(order_ids, orders, errors)
         return _build_bulk_response(model, order_ids, results, errors)
 
 
@@ -436,7 +474,7 @@ class BulkDeleteDocumentsView(APIViewRolePermissionsMixin, APIView):
     @transaction.atomic
     def post(self, request: Request) -> Response:
         params = validate_bulk_document_request(request)
-        order_ids = params["order_ids"]
+        order_ids = _unique_order_ids(params["order_ids"])
         model = params["model"]  # "delivery_note" or "invoice"
 
         orders = _get_orders_with_related(order_ids)
@@ -519,6 +557,7 @@ class BulkDeleteDocumentsView(APIViewRolePermissionsMixin, APIView):
                 )
 
         results, errors = _run_per_order_bulk(orders, handler)
+        _append_missing_order_errors(order_ids, orders, errors)
         return _build_bulk_response(model, order_ids, results, errors)
 
 
@@ -544,7 +583,7 @@ class BulkSetToPaidDocumentsView(APIViewRolePermissionsMixin, APIView):
     )
     @transaction.atomic
     def post(self, request: Request) -> Response:
-        order_ids = parse_bulk_ids(request)
+        order_ids = _unique_order_ids(parse_bulk_ids(request))
         model = body(request).get("model")  # Should be "invoice"
         undo = validate_query_params(request, optional=["undo"])["undo"]
 
@@ -673,6 +712,7 @@ class BulkSetToPaidDocumentsView(APIViewRolePermissionsMixin, APIView):
                 )
 
         results, errors = _run_per_order_bulk(orders, handler)
+        _append_missing_order_errors(order_ids, orders, errors)
 
         response_data = {
             "model": model,
@@ -1110,8 +1150,15 @@ class BulkCreateSummaryInvoiceFromOrdersView(APIViewRolePermissionsMixin, APIVie
     )
     @transaction.atomic
     def post(self, request: Request) -> Response:
-        order_ids = parse_bulk_ids(request)
-        date = body(request).get("date", None)
+        order_ids = _unique_order_ids(parse_bulk_ids(request))
+        # A malformed non-empty ``date`` must not reach the invoice service:
+        # ``coerce_document_date`` falls back to the latest delivery-note date,
+        # so a typo would silently issue a summary invoice carrying a date
+        # nobody asked for — on a document that is legally immutable once
+        # finalized. Absent / empty still means "derive it".
+        date = parse_body_date(
+            request, "date", required=False, code_prefix="summary_invoice"
+        )
 
         # Fetch all orders at once
         orders = list(
@@ -1167,7 +1214,8 @@ class BulkCreateSummaryInvoiceFromOrdersView(APIViewRolePermissionsMixin, APIVie
         )
 
         delivery_notes = []
-        errors = []
+        errors: list[dict[str, Any]] = []
+        _append_missing_order_errors(order_ids, orders, errors)
 
         for order in orders:
             delivery_note = delivery_note_by_order[order.id]

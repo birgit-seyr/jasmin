@@ -16,12 +16,15 @@ from apps.commissioning.errors import DeliveryStationOverCapacity
 from apps.commissioning.models import (
     DefaultShareContent,
     DeliveryExceptionPeriod,
+    ExternalShareDemand,
     Share,
     ShareContent,
     ShareDelivery,
+    ShareImportBatch,
     ShareTypeVariationGrossPrice,
     VirtualVariationComponent,
 )
+from apps.commissioning.services.share_demand_service import ExternalDemandBackend
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
     DeliveryStationFactory,
@@ -119,6 +122,16 @@ class TestShareTypeViewSet:
         ShareTypeFactory(share_option="HARVEST_SHARE")
         ShareTypeFactory(share_option="HONEY_SHARE")
         resp = api_client.get(self.URL, {"share_option": "HARVEST_SHARE"})
+        assert all(d["share_option"] == "HARVEST_SHARE" for d in resp.data)
+
+    def test_filter_by_share_option_accepts_any_casing(self, api_client, tenant):
+        # The create/update body takes either casing for this enum, so the
+        # filter over the same enum takes it too.
+        ShareTypeFactory(share_option="HARVEST_SHARE")
+        ShareTypeFactory(share_option="HONEY_SHARE")
+        resp = api_client.get(self.URL, {"share_option": "harvest_share"})
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data
         assert all(d["share_option"] == "HARVEST_SHARE" for d in resp.data)
 
     def test_create_uppercases_share_option(self, api_client, tenant):
@@ -609,6 +622,68 @@ class TestShareViewSet:
         url = reverse("share-get-days")
         resp = api_client.get(url, {"year": 2026, "delivery_week": 15})
         assert resp.status_code == status.HTTP_200_OK
+
+
+# ---------------------------------------------------------------------------
+# ShareViewSet — the weekday columns belong to SharesDayChangeService
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestShareDayFieldsLockedOnUpdate:
+    """Moving a day rebuilds the week's theoretical objects and movements and
+    is refused for a past week — both live in ``SharesDayChangeService``, behind
+    ``/shares/bulk_update/``. A plain PATCH drops the day keys instead of
+    writing them straight to the column; create still sets them.
+    """
+
+    def test_patch_drops_the_day_keys(self, api_client, tenant):
+        share = ShareFactory()
+        share.refresh_from_db()
+        original_harvesting_day = share.harvesting_day
+        original_packing_day = share.packing_day
+
+        url = reverse("share-detail", kwargs={"pk": share.pk})
+        resp = api_client.patch(
+            url,
+            {
+                "harvesting_day": 5,
+                "packing_day": 6,
+                "changed_day_number": 4,
+                "get_current_stock_day": 2,
+                # The legitimate half of the same payload.
+                "weight1": "2.500",
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        share.refresh_from_db()
+        assert share.harvesting_day == original_harvesting_day
+        assert share.packing_day == original_packing_day
+        assert share.changed_day_number is None
+        assert share.weight1 == Decimal("2.500")
+
+    def test_create_still_sets_the_day_fields(self, api_client, tenant):
+        """``ShareDays.tsx`` creates rows through this endpoint, so the lock is
+        update-only."""
+        delivery_day = SharesDeliveryDayFactory()
+        variation = ShareTypeVariationFactory()
+        resp = api_client.post(
+            reverse("share-list"),
+            {
+                "year": 2026,
+                "delivery_week": 15,
+                "delivery_day": delivery_day.pk,
+                "share_type_variation": variation.pk,
+                "harvesting_day": 3,
+                "changed_day_number": 4,
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        share = Share.objects.get(pk=resp.data["id"])
+        assert share.harvesting_day == 3
+        assert share.changed_day_number == 4
 
 
 # ---------------------------------------------------------------------------
@@ -1431,6 +1506,27 @@ class TestHarvestSharePlanningViewSet:
         assert row.washing is False
         assert row.packing_station == 1
 
+    def test_delete_removes_the_slot(self, api_client, tenant):
+        """The composite pk carries the week: its parsed parts reach the
+        service as they are, so the rows of that week are the ones deleted."""
+        article, day, variation, _station = self._setup()
+        created = self._create_slot(api_client, article, day, variation)
+        assert created.status_code == status.HTTP_200_OK
+
+        resp = api_client.delete(self._slot_url(article))
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert not ShareContent.objects.filter(
+            share_article=article, share__year=2026, share__delivery_week=15
+        ).exists()
+
+    def test_delete_of_an_unplanned_slot_returns_404(self, api_client, tenant):
+        article, _day, _variation, _station = self._setup()
+
+        resp = api_client.delete(self._slot_url(article))
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
 
 # ---------------------------------------------------------------------------
 # VirtualComponentsViewSet — create validation wiring
@@ -1477,6 +1573,67 @@ class TestVirtualComponentsViewSet:
         }
         resp = api_client.post(self.URL, bad, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    @pytest.mark.parametrize("quantity", [0, -1, "0.00"])
+    def test_a_non_positive_quantity_is_rejected(self, api_client, tenant, quantity):
+        """The factor multiplies subscription counts when virtual demand fans
+        out into the physical variations, so it has to stay above zero."""
+        virtual = ShareTypeVariationFactory(variation_type="virtual")
+        physical = ShareTypeVariationFactory(variation_type="physical")
+        resp = api_client.post(
+            self.URL,
+            {
+                "virtual_variation": str(virtual.id),
+                "components": [
+                    {"physical_variation": str(physical.id), "quantity": quantity},
+                ],
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert not VirtualVariationComponent.objects.filter(
+            virtual_variation_id=virtual.id
+        ).exists()
+
+    def test_a_fractional_quantity_lands_exactly_on_the_column(
+        self, api_client, tenant
+    ):
+        virtual = ShareTypeVariationFactory(variation_type="virtual")
+        physical = ShareTypeVariationFactory(variation_type="physical")
+        resp = api_client.post(
+            self.URL,
+            {
+                "virtual_variation": str(virtual.id),
+                "components": [
+                    {"physical_variation": str(physical.id), "quantity": 2.5},
+                ],
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        component = VirtualVariationComponent.objects.get(
+            virtual_variation_id=virtual.id
+        )
+        assert component.quantity == Decimal("2.50")
+        # The response echoes the quantity as a number, unchanged.
+        assert resp.data["components"][0]["quantity"] == 2.5
+
+    def test_an_omitted_quantity_defaults_to_one(self, api_client, tenant):
+        virtual = ShareTypeVariationFactory(variation_type="virtual")
+        physical = ShareTypeVariationFactory(variation_type="physical")
+        resp = api_client.post(
+            self.URL,
+            {
+                "virtual_variation": str(virtual.id),
+                "components": [{"physical_variation": str(physical.id)}],
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        component = VirtualVariationComponent.objects.get(
+            virtual_variation_id=virtual.id
+        )
+        assert component.quantity == Decimal("1.00")
 
 
 # ---------------------------------------------------------------------------
@@ -2253,3 +2410,136 @@ class TestShareDeliveryDetailsList:
         resp = api_client.get(self.URL, self._scope(limit=raw))
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.data["field"] == "limit"
+
+
+# ---------------------------------------------------------------------------
+# ShareDeliveryViewSet.box_combination_matrix — flag handling
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestBoxCombinationMatrixFlags:
+    """The whole-week matrix answers one row axis and one box scope at a time:
+    ``for_tours`` / ``for_stations`` choose the axis, ``joker`` /
+    ``donation_joker`` choose which boxes are counted. Both halves of a pair
+    have no single answer, so they are refused rather than reconciled by a
+    precedence the caller cannot see. ``is_packed_bulk`` narrows the variations
+    on the import branch too, not only on the box-combination one.
+    """
+
+    URL = reverse("share_delivery-box-combination-matrix")
+
+    @staticmethod
+    def _scope(**extra: object) -> dict[str, object]:
+        return {"year": 2026, "delivery_week": 15, **extra}
+
+    def test_for_stations_and_for_tours_both_true_is_400(self, api_client, tenant):
+        resp = api_client.get(
+            self.URL, self._scope(for_stations="true", for_tours="true")
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "for_tours"
+
+    def test_joker_and_donation_joker_both_true_is_400(self, api_client, tenant):
+        resp = api_client.get(
+            self.URL, self._scope(joker="true", donation_joker="true")
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "donation_joker"
+
+    def test_one_flag_from_each_pair_still_answers(self, api_client, tenant):
+        resp = api_client.get(self.URL, self._scope(for_stations="true", joker="true"))
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_an_explicit_false_half_is_not_a_conflict(self, api_client, tenant):
+        """The refusal keys on a flag being requested, not on it being present:
+        a caller that sends the whole flag set with one half false is asking for
+        exactly one axis and one scope, so it is served."""
+        resp = api_client.get(
+            self.URL,
+            self._scope(
+                for_stations="false",
+                for_tours="true",
+                joker="false",
+                donation_joker="true",
+            ),
+        )
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_import_branch_applies_is_packed_bulk(self, api_client, tenant):
+        """On an import (external-demand) tenant the flag narrows the matrix to
+        the bulk-packed variations — the COLUMNS included, since a variation
+        outside the filter has no column to carry."""
+        delivery_day = SharesDeliveryDayFactory(day_number=2)
+        station_day = DeliveryStationDayFactory(
+            delivery_day=delivery_day, tour_number=1
+        )
+        bulk = ShareTypeVariationFactory(size="S", is_packed_bulk=True)
+        individual = ShareTypeVariationFactory(size="L", is_packed_bulk=False)
+        batch = ShareImportBatch.objects.create(
+            year=2026,
+            delivery_week=15,
+            file_checksum="1" * 64,
+            original_filename="seed.csv",
+            status=ShareImportBatch.STATUS_APPLIED,
+        )
+        for variation, quantity in ((bulk, 3), (individual, 5)):
+            ExternalShareDemand.objects.create(
+                batch=batch,
+                year=2026,
+                delivery_week=15,
+                delivery_station_day=station_day,
+                share_type_variation=variation,
+                quantity=quantity,
+            )
+
+        with mock.patch(
+            "apps.commissioning.services.share_demand_service._resolve_backend",
+            return_value=ExternalDemandBackend(),
+        ):
+            body = api_client.get(self.URL, self._scope(is_packed_bulk="true")).json()
+
+        assert [column["key"] for column in body["columns"]] == [f"variation_{bulk.pk}"]
+        row = body["rows"][0]
+        assert row[f"variation_{bulk.pk}"] == 3
+        assert f"variation_{individual.pk}" not in row
+
+    def test_import_branch_forwards_both_joker_flags(self, api_client, tenant):
+        """Import (CSV) demand carries no joker information, so asking the
+        import branch for jokered or donation-jokered counts yields no rows —
+        each flag reaches the demand port on its own, while a request for the
+        shipping counts still sees the imported demand."""
+        delivery_day = SharesDeliveryDayFactory(day_number=2)
+        station_day = DeliveryStationDayFactory(
+            delivery_day=delivery_day, tour_number=1
+        )
+        variation = ShareTypeVariationFactory(size="S")
+        batch = ShareImportBatch.objects.create(
+            year=2026,
+            delivery_week=15,
+            file_checksum="2" * 64,
+            original_filename="seed.csv",
+            status=ShareImportBatch.STATUS_APPLIED,
+        )
+        ExternalShareDemand.objects.create(
+            batch=batch,
+            year=2026,
+            delivery_week=15,
+            delivery_station_day=station_day,
+            share_type_variation=variation,
+            quantity=4,
+        )
+
+        with mock.patch(
+            "apps.commissioning.services.share_demand_service._resolve_backend",
+            return_value=ExternalDemandBackend(),
+        ):
+            shipping = api_client.get(self.URL, self._scope()).json()
+            jokered = api_client.get(self.URL, self._scope(joker="true")).json()
+            donated = api_client.get(
+                self.URL, self._scope(donation_joker="true")
+            ).json()
+
+        assert shipping["rows"][0][f"variation_{variation.pk}"] == 4
+        assert jokered["rows"] == []
+        assert donated["rows"] == []

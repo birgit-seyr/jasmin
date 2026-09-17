@@ -45,8 +45,8 @@ export interface TheoreticalCleanAmount {
   share_article: string;
   storage: string;
   /** @nullable */
-  share_content?: string | null;
+  readonly share_content?: string | null;
   /** @nullable */
-  order_content?: string | null;
+  readonly order_content?: string | null;
   readonly share_article_name?: string;
 }

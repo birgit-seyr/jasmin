@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from ..models import ConsentDocument, ConsentKind, ConsentRecord
+from ..models import ConsentDocument, ConsentRecord
 from .serializers_mixin import DeletableMixin
 
 
@@ -124,10 +124,3 @@ class ConsentRecordRevokeSerializer(serializers.Serializer):
     up to 200 chars for the audit trail."""
 
     reason = serializers.CharField(required=False, allow_blank=True, max_length=200)
-
-
-class CurrentConsentDocumentQuerySerializer(serializers.Serializer):
-    """Query params for ``/consent-documents/current/``."""
-
-    kind = serializers.ChoiceField(choices=ConsentKind.choices)
-    locale = serializers.CharField(default="de", required=False)

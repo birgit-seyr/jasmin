@@ -9,7 +9,7 @@ import type { CommissioningDefaultShareContentsBulkListListShareOption } from '.
 
 export type CommissioningDefaultShareContentsBulkListListParams = {
 /**
- * Share option (e.g. GEMUESE, OBST)
+ * Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)
  */
 share_option: CommissioningDefaultShareContentsBulkListListShareOption;
 /**

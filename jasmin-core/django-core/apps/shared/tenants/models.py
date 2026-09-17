@@ -377,6 +377,34 @@ class PackingMode(models.TextChoices):
     MIXED = "MIXED", "Mixed (per share-type variation)"
 
 
+def validate_offer_tiers(value: Any) -> None:
+    """Offer tiers are a list of quantity thresholds.
+
+    ``None`` and ``[]`` mean no tiers are configured. A tier row the office
+    has added but not filled in yet is ``None`` inside the list, so the list
+    legitimately carries nulls between the "add tier" click and the number
+    being typed. Anything else — a string, a mapping, a number, a threshold
+    below 1 — reaches the price-tier readers as if it were a tier and
+    silently mis-prices every offer line.
+
+    Django's ``clean_fields`` skips blank values, so on the settings write
+    path this also has to be called directly to cover the blank spellings
+    (``""``, ``{}``) that a field validator never sees.
+    """
+    if value is None:
+        return
+    if not isinstance(value, list):
+        raise ValidationError("Offer tiers must be a list of quantity thresholds.")
+    for entry in value:
+        if entry is None:
+            continue
+        # ``bool`` is an ``int`` subclass, and True would read as the tier 1.
+        if isinstance(entry, bool) or not isinstance(entry, (int, float)):
+            raise ValidationError("Each offer tier must be a number.")
+        if entry < 1:
+            raise ValidationError("Each offer tier must be 1 or more.")
+
+
 class TenantSettings(JasminModel):
     # versioned settings for tenants with historical tracking, because these settings can change over time
 
@@ -558,7 +586,9 @@ class TenantSettings(JasminModel):
     order_instructions_offer_reseller = models.TextField(blank=True, null=True)
 
     # Offer groups
-    used_tiers_for_offers = models.JSONField(default=list, blank=True, null=True)
+    used_tiers_for_offers = models.JSONField(
+        default=list, blank=True, null=True, validators=[validate_offer_tiers]
+    )
     offer_prices_are_per_pu = models.BooleanField(default=False)
     use_personalized_offers = models.BooleanField(default=True)
 

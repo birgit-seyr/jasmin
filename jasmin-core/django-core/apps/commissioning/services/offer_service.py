@@ -114,7 +114,12 @@ class OfferService:
             queued_keys.add(key)
             offer.pk = None
             offer.id = None
+            # A clone starts as a draft, so the whole finalization stamp is
+            # cleared — keeping the source's ``finalized_at`` / ``finalized_by``
+            # would attribute a finalization that never happened to this row.
             offer.is_finalized = False
+            offer.finalized_at = None
+            offer.finalized_by = None
             mutate_fn(offer)
             new_offers.append(offer)
 

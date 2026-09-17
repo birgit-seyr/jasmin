@@ -48,6 +48,7 @@ from core.serializers import ErrorResponseSerializer
 
 from ..errors import (
     CommissioningError,
+    InvalidQueryParam,
     RequiredFieldMissing,
     ShareArticleNotFound,
     ShareTypeVariationGrossPriceInUse,
@@ -109,6 +110,7 @@ from ..services import (
     ShareDeliveryService,
     SharesDayChangeService,
 )
+from ..services.share_delivery_service import JokerScope
 from ..utils.composite_id_utils import parse_composite_pk
 from ..utils.iso_week_utils import week_day_to_date
 from ..utils.lookup import get_or_404
@@ -403,10 +405,10 @@ class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             )
 
         # Truthiness, NOT ``is not None``: these are strict bools, so
-        # ``?physical=false`` parses to ``False`` (present-but-false). Keying on
-        # presence would wrongly restrict to PHYSICAL for ``physical=false`` and
-        # return an empty set for ``physical=true&virtual=true``. Only an
-        # explicit true opts into either filter.
+        # ``?physical=false`` parses to ``False`` (present-but-false) and keying
+        # on presence would wrongly restrict to PHYSICAL for it. Only an explicit
+        # true opts into either filter. The two clauses are AND-ed, so asking for
+        # both types at once matches nothing — a variation is one or the other.
         if physical:
             queryset = queryset.filter(
                 variation_type=ShareTypeVariation.VariationType.PHYSICAL
@@ -907,8 +909,10 @@ class ShareDeliveryViewSet(
             "(variation_<id>) sourced from weekly demand. Both render through "
             "the same frontend hook. ``joker=true`` counts the boxes skipped via "
             "a taken joker instead of the shipping ones; ``donation_joker=true`` "
-            "counts the boxes donated via a donation joker (same columns). The "
-            "two flags are mutually exclusive per row."
+            "counts the boxes donated via a donation joker (same columns). Send "
+            "at most one of ``joker`` / ``donation_joker`` and at most one of "
+            "``for_tours`` / ``for_stations`` — each pair is mutually exclusive "
+            "and sending both halves of one is refused with HTTP 400."
         ),
     )
     @action(detail=False, methods=["get"], pagination_class=None)
@@ -925,6 +929,23 @@ class ShareDeliveryViewSet(
                 "donation_joker",
             ],
         )
+        # Each pair selects one answer, so asking for both halves has no single
+        # answer: the row axis is day × tour OR day × station, and a box is
+        # counted as either jokered or donation-jokered. Keyed on an explicit
+        # true, so an explicit false stays the "not asked for" it parses to.
+        if params["for_stations"] is True and params["for_tours"] is True:
+            raise InvalidQueryParam(
+                "Parameters 'for_stations' and 'for_tours' are mutually "
+                "exclusive; request at most one.",
+                field="for_tours",
+            )
+        if params["joker"] is True and params["donation_joker"] is True:
+            raise InvalidQueryParam(
+                "Parameters 'joker' and 'donation_joker' are mutually "
+                "exclusive; request at most one.",
+                field="donation_joker",
+            )
+
         mode = "day"
         if params["for_stations"]:
             mode = "stations"
@@ -948,8 +969,8 @@ class ShareDeliveryViewSet(
                 year=params["year"],
                 delivery_week=params["delivery_week"],
                 mode=mode,
-                joker=joker,
-                donation_joker=donation_joker,
+                is_packed_bulk=params["is_packed_bulk"],
+                jokers=JokerScope(joker=joker, donation_joker=donation_joker),
             )
         else:
             result = PackingListBoxesMatrixService.get_weekly_combination_matrix(

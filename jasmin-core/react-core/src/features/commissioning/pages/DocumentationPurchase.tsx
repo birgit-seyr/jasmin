@@ -329,8 +329,9 @@ export default function DocumentationPurchase() {
                 const rowData = row as Record<string, unknown> | undefined;
                 return {
                   id: rowData?.share_article as string,
-                  theoretical_purchase_amount:
-                    rowData?.theoretical_purchase_amount as number,
+                  theoretical_purchase_amount: String(
+                    rowData?.theoretical_purchase_amount,
+                  ),
                   theoretical_purchase_unit: rowData?.unit as string,
                   theoretical_purchase_size: rowData?.size as string,
                   year: selectedYear,

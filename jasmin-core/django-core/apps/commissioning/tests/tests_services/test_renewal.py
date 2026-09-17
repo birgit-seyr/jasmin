@@ -620,6 +620,22 @@ class TestBulkRenewCap:
 
 
 @pytest.mark.django_db
+class TestBulkRenewIdValidation:
+    """The endpoint parses ``subscription_ids`` with the shared bulk-ids parser,
+    so a missing list and a non-string entry are refused the same way as on
+    every other bulk-by-ids endpoint."""
+
+    def test_endpoint_rejects_a_missing_id_list(self, api_client, tenant):
+        from django.urls import reverse
+
+        resp = api_client.post(reverse("abos-bulk-renew"), {}, format="json")
+
+        assert resp.status_code == 400, resp.data
+        assert resp.data["code"] == "required_field.missing"
+        assert resp.data["field"] == "subscription_ids"
+
+
+@pytest.mark.django_db
 class TestGrossPriceOverlapExclusion:
     def test_overlapping_windows_rejected_by_db(self, tenant):
         # The Python overlap check in TimeBoundMixin is TOCTOU-racy; the GiST

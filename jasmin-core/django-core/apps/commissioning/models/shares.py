@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from django.contrib.postgres.constraints import ExclusionConstraint
@@ -10,7 +11,7 @@ from django.contrib.postgres.fields import (
     RangeOperators,
 )
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Func
 
@@ -461,6 +462,9 @@ class VirtualVariationComponent(JasminModel):
         max_digits=5,
         decimal_places=2,
         default=1.0,
+        # The factor multiplies real subscription demand; zero or negative would
+        # erase or invert it.
+        validators=[MinValueValidator(Decimal("0.01"))],
     )
 
     class Meta:

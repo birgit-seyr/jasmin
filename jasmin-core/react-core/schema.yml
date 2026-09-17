@@ -1115,7 +1115,7 @@ paths:
           - HARVEST_SHARE_FRUIT
           - HONEY_SHARE
           - OIL_SHARE
-        description: Share option (e.g. GEMUESE, OBST)
+        description: Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)
       - in: query
         name: share_type_variation
         schema:
@@ -6481,7 +6481,7 @@ paths:
           - HARVEST_SHARE_FRUIT
           - HONEY_SHARE
           - OIL_SHARE
-        description: Share option (e.g. GEMUESE, OBST)
+        description: Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)
         required: true
       - in: query
         name: year
@@ -6658,7 +6658,7 @@ paths:
           - HARVEST_SHARE_FRUIT
           - HONEY_SHARE
           - OIL_SHARE
-        description: Share option (e.g. GEMUESE, OBST)
+        description: Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)
       - in: query
         name: year
         schema:
@@ -10036,7 +10036,10 @@ paths:
   /api/commissioning/forecast/bulk_copy_to_next_week/:
     post:
       operationId: commissioning_forecast_bulk_copy_to_next_week_create
-      description: Copy selected forecasts to the next delivery week.
+      description: Copy selected forecasts to the next delivery week. Ids that match
+        no forecast, and forecasts the next week already plans, are reported in `errors`
+        while the rest are still copied; only a request where none of the ids match
+        is a 404.
       tags:
       - commissioning
       requestBody:
@@ -10139,7 +10142,7 @@ paths:
           - HARVEST_SHARE_FRUIT
           - HONEY_SHARE
           - OIL_SHARE
-        description: Share option (e.g. GEMUESE, OBST)
+        description: Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)
       - in: query
         name: year
         schema:
@@ -10625,7 +10628,7 @@ paths:
           - HARVEST_SHARE_FRUIT
           - HONEY_SHARE
           - OIL_SHARE
-        description: Share option (e.g. GEMUESE, OBST)
+        description: Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)
         required: true
       - in: query
         name: year
@@ -10959,7 +10962,7 @@ paths:
           - HARVEST_SHARE_FRUIT
           - HONEY_SHARE
           - OIL_SHARE
-        description: Resolve variation IDs server-side from share_option (e.g. 'gemuese').
+        description: Resolve variation IDs server-side from share_option (e.g. HARVEST_SHARE).
           Use this to avoid a client-side waterfall.
       - in: query
         name: share_type_variation_ids
@@ -14766,8 +14769,9 @@ paths:
           description: Error response.
     post:
       operationId: commissioning_orders_delivery_days_create
-      description: Create a new orders delivery day, automatically closing any existing
-        delivery day with the same day_number.
+      description: 'Create a new orders delivery day. Unlike shares delivery days,
+        an orders delivery day carries no validity window and there is no succession:
+        day_number is unique, so a duplicate is rejected.'
       tags:
       - commissioning
       requestBody:
@@ -17117,7 +17121,8 @@ paths:
           minimum: 0
           maximum: 6
         description: Day of the week (0=Monday, 6=Sunday) the `has_orders` annotation
-          is scoped to. Send it together with `year` and `delivery_week`.
+          is scoped to. `has_orders` is annotated whenever at least one of `year`,
+          `delivery_week` and `day_number` is sent, scoped to those that are.
       - in: query
         name: delivery_day
         schema:
@@ -17901,7 +17906,9 @@ paths:
         name: current
         schema:
           type: boolean
-        description: Filter for current prices (valid_until is null)
+        description: Filter for current prices (valid_until is null). Ignored when
+          `active_at_date` is supplied — that parameter already selects the prices
+          active on its date.
       - in: query
         name: share_article
         schema:
@@ -19199,8 +19206,10 @@ paths:
         get flat per-variation columns (variation_<id>) sourced from weekly demand.
         Both render through the same frontend hook. ``joker=true`` counts the boxes
         skipped via a taken joker instead of the shipping ones; ``donation_joker=true``
-        counts the boxes donated via a donation joker (same columns). The two flags
-        are mutually exclusive per row.'
+        counts the boxes donated via a donation joker (same columns). Send at most
+        one of ``joker`` / ``donation_joker`` and at most one of ``for_tours`` / ``for_stations``
+        — each pair is mutually exclusive and sending both halves of one is refused
+        with HTTP 400.'
       parameters:
       - in: query
         name: delivery_week
@@ -20259,7 +20268,7 @@ paths:
           - HARVEST_SHARE_FRUIT
           - HONEY_SHARE
           - OIL_SHARE
-        description: Share option (e.g. GEMUESE, OBST)
+        description: Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)
         required: true
       - in: query
         name: year
@@ -20804,7 +20813,7 @@ paths:
           - HARVEST_SHARE_FRUIT
           - HONEY_SHARE
           - OIL_SHARE
-        description: Share option (e.g. GEMUESE, OBST)
+        description: Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)
       - in: query
         name: share_type
         schema:
@@ -21251,7 +21260,7 @@ paths:
           - HARVEST_SHARE_FRUIT
           - HONEY_SHARE
           - OIL_SHARE
-        description: Share option (e.g. GEMUESE, OBST)
+        description: Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)
       - in: query
         name: share_type
         schema:
@@ -21352,7 +21361,7 @@ paths:
           - HARVEST_SHARE_FRUIT
           - HONEY_SHARE
           - OIL_SHARE
-        description: Share option (e.g. GEMUESE, OBST)
+        description: Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)
       tags:
       - commissioning
       security:
@@ -22802,6 +22811,8 @@ paths:
         schema:
           type: string
           format: date
+        description: Inclusive range start (YYYY-MM-DD). Omitted, the ledger starts
+          2 weeks ago.
       - in: query
         name: storage
         schema:
@@ -26164,6 +26175,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmailTemplateDetail'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -26269,6 +26286,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EmailTemplateDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '401':
           content:
@@ -29618,8 +29641,10 @@ components:
           format: email
         first_name:
           type: string
+          maxLength: 255
         last_name:
           type: string
+          maxLength: 255
         roles:
           type: array
           items:
@@ -29708,8 +29733,10 @@ components:
       properties:
         first_name:
           type: string
+          maxLength: 255
         last_name:
           type: string
+          maxLength: 255
         user_language:
           allOf:
           - $ref: '#/components/schemas/UserLanguageEnum'
@@ -32179,7 +32206,8 @@ components:
           pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
           nullable: true
         unit:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/UnitEnum'
           nullable: true
       required:
       - quantity
@@ -33828,9 +33856,8 @@ components:
         day_number:
           allOf:
           - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
           nullable: true
-          minimum: 0
-          maximum: 32767
         amount:
           type: string
           format: decimal
@@ -33875,6 +33902,7 @@ components:
           type: string
         storage:
           type: string
+          readOnly: true
           nullable: true
         plot:
           type: string
@@ -33893,12 +33921,27 @@ components:
       - share_article
       - unit
       - year
+    ForecastBulkCopyError:
+      type: object
+      properties:
+        id:
+          type: string
+        error:
+          type: string
+      required:
+      - error
+      - id
     ForecastBulkCopyResponse:
       type: object
       properties:
         success:
           type: boolean
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ForecastBulkCopyError'
       required:
+      - errors
       - success
     ForecastRow:
       type: object
@@ -34076,8 +34119,9 @@ components:
         day_number:
           type: integer
         theoretical_harvest_amount:
-          type: number
-          format: double
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
         theoretical_harvest_unit:
           type: string
         theoretical_harvest_size:
@@ -37457,16 +37501,22 @@ components:
           format: email
         first_name:
           type: string
+          maxLength: 255
         last_name:
           type: string
+          maxLength: 255
         address:
           type: string
+          maxLength: 255
         zip_code:
           type: string
+          maxLength: 10
         city:
           type: string
+          maxLength: 100
         country:
           type: string
+          maxLength: 100
         coop_shares_count:
           type: integer
           minimum: 0
@@ -37607,8 +37657,9 @@ components:
         delivery_week:
           type: integer
         theoretical_purchase_amount:
-          type: number
-          format: double
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
         theoretical_purchase_unit:
           type: string
         theoretical_purchase_size:
@@ -37687,6 +37738,7 @@ components:
           format: email
         first_name:
           type: string
+          maxLength: 255
         frc_captcha_solution:
           type: string
           writeOnly: true
@@ -42666,9 +42718,11 @@ components:
           type: string
         share_content:
           type: string
+          readOnly: true
           nullable: true
         order_content:
           type: string
+          readOnly: true
           nullable: true
         share_article_name:
           type: string
@@ -42726,12 +42780,15 @@ components:
           type: string
         share_content:
           type: string
+          readOnly: true
           nullable: true
         order_content:
           type: string
+          readOnly: true
           nullable: true
         forecast:
           type: string
+          readOnly: true
           nullable: true
         share_article_name:
           type: string
@@ -42794,9 +42851,11 @@ components:
           type: string
         share_content:
           type: string
+          readOnly: true
           nullable: true
         order_content:
           type: string
+          readOnly: true
           nullable: true
         seller:
           type: string
@@ -42857,9 +42916,11 @@ components:
           type: string
         share_content:
           type: string
+          readOnly: true
           nullable: true
         order_content:
           type: string
+          readOnly: true
           nullable: true
         share_article_name:
           type: string
@@ -43067,8 +43128,10 @@ components:
       properties:
         first_name:
           type: string
+          maxLength: 255
         last_name:
           type: string
+          maxLength: 255
         user_language:
           $ref: '#/components/schemas/UserLanguageEnum'
     VariationTypeEnum:
@@ -43095,9 +43158,10 @@ components:
         physical_variation:
           type: string
         quantity:
-          type: number
-          format: double
-          default: 1.0
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          default: '1.00'
       required:
       - physical_variation
     VirtualVariationComponentListItem:

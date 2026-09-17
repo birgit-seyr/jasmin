@@ -36,6 +36,30 @@ from apps.shared.request_utils import client_ip
 
 logger = logging.getLogger("gdpr")
 
+# ``pii.read`` lines are written to a newline-delimited plain-text log, so a
+# control character inside an interpolated value would forge additional audit
+# records. This set covers everything the real values contain — ids, emails,
+# IPv4/IPv6 addresses and scope descriptors like ``list(member=ab12)``.
+_LOG_VALUE_SAFE_PUNCTUATION = "-_.@=(),:+"
+_LOG_VALUE_MAX_LENGTH = 120
+
+
+def sanitize_log_value(value: Any) -> str:
+    """Render ``value`` as a single-line, bounded token fit for an audit line.
+
+    Every character outside the alphanumeric + ``-_.@=(),:+`` set — a CR/LF
+    above all — becomes ``?``, so a caller-controlled id cannot append a forged
+    ``pii.read`` record of its own to the accountability trail.
+    """
+    return "".join(
+        (
+            character
+            if character.isalnum() or character in _LOG_VALUE_SAFE_PUNCTUATION
+            else "?"
+        )
+        for character in str(value)
+    )[:_LOG_VALUE_MAX_LENGTH]
+
 
 class PIIReadLoggingMixin:
     """Mount in front of ``RolePermissionsMixin`` on viewsets serving
@@ -69,11 +93,11 @@ class PIIReadLoggingMixin:
             actor = getattr(request.user, "email", None) or "anonymous"
             logger.info(
                 "pii.read actor=%s subject_kind=%s subject_id=%s " "tenant=%s ip=%s",
-                actor,
+                sanitize_log_value(actor),
                 subject_kind,
-                subject_id,
+                sanitize_log_value(subject_id),
                 getattr(connection, "schema_name", "?"),
-                client_ip(request),
+                sanitize_log_value(client_ip(request)),
             )
         except Exception:
             # Logging must NEVER mask a successful retrieve. If
@@ -90,16 +114,18 @@ class PIIReadLoggingMixin:
         The rare list that decrypts PII into the payload — BillingProfile's IBAN /
         account holder — calls this from its own ``list()`` override so a bulk read
         still leaves an Art. 5(2) trail. ``subject_id`` describes the scope (e.g.
-        ``"list(all)"`` / ``"list(member=ab12)"``).
+        ``"list(all)"`` / ``"list(member=ab12)"``) and typically embeds a raw
+        query-parameter value, so it is sanitized like every other interpolated
+        field.
         """
         try:
             logger.info(
                 "pii.read actor=%s subject_kind=%s subject_id=%s tenant=%s ip=%s",
-                getattr(request.user, "email", None) or "anonymous",
+                sanitize_log_value(getattr(request.user, "email", None) or "anonymous"),
                 self._pii_subject_kind(),
-                subject_id,
+                sanitize_log_value(subject_id),
                 getattr(connection, "schema_name", "?"),
-                client_ip(request),
+                sanitize_log_value(client_ip(request)),
             )
         except Exception:
             logger.exception("pii.read.logging_failed")

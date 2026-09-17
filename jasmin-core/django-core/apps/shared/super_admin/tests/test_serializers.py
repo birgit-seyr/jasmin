@@ -37,6 +37,7 @@ from apps.shared.super_admin.serializers import (
     OpsChecklistItemSerializer,
     OpsChecklistMarkDoneRequestSerializer,
     OpsChecklistRunSerializer,
+    SuperAdminLoginRequestSerializer,
     TenantDetailResponseSerializer,
     TenantListItemSerializer,
     TenantUserListResponseSerializer,
@@ -138,8 +139,38 @@ class TestCreateTenantRequest:
         with pytest.raises(ReservedDomain):
             ser.is_valid()
 
+    def test_over_long_name_rejected(self):
+        # ``Tenant.name`` is a 200-char column.
+        ser = CreateTenantRequestSerializer(data={**self.HAPPY, "name": "N" * 201})
+        assert not ser.is_valid()
+        assert "name" in ser.errors
+
+    def test_name_at_the_column_limit_accepted(self):
+        ser = CreateTenantRequestSerializer(data={**self.HAPPY, "name": "N" * 200})
+        assert ser.is_valid(), ser.errors
+
+    def test_over_long_tenant_language_rejected(self):
+        # ``Tenant.tenant_language`` is an 8-char column.
+        ser = CreateTenantRequestSerializer(
+            data={**self.HAPPY, "tenant_language": "x" * 9}
+        )
+        assert not ser.is_valid()
+        assert "tenant_language" in ser.errors
+
+    def test_over_long_admin_name_rejected(self):
+        ser = CreateTenantRequestSerializer(
+            data={**self.HAPPY, "admin_first_name": "N" * 256}
+        )
+        assert not ser.is_valid()
+        assert "admin_first_name" in ser.errors
+
 
 class TestUpdateTenantRequest:
+    def test_over_long_name_rejected(self):
+        ser = UpdateTenantRequestSerializer(data={"name": "N" * 201})
+        assert not ser.is_valid()
+        assert "name" in ser.errors
+
     def test_all_fields_optional(self):
         """All three fields are optional — an empty PATCH must validate
         (the view accepts no-op updates)."""
@@ -179,6 +210,21 @@ class TestCreateTenantAdminRequest:
         assert not ser.is_valid()
         assert missing in ser.errors
 
+    def test_email_is_trimmed_and_lowercased(self):
+        """``create_user`` derives the unique ``username`` from
+        ``email.lower()``, so the address is stored in one spelling."""
+        ser = CreateTenantAdminRequestSerializer(
+            data={**self.HAPPY, "email": "  Mixed.Case@Example.COM  "}
+        )
+        assert ser.is_valid(), ser.errors
+        assert ser.validated_data["email"] == "mixed.case@example.com"
+
+    @pytest.mark.parametrize("field", ["first_name", "last_name"])
+    def test_over_long_name_rejected(self, field):
+        ser = CreateTenantAdminRequestSerializer(data={**self.HAPPY, field: "N" * 256})
+        assert not ser.is_valid()
+        assert field in ser.errors
+
 
 class TestCreateTenantUserRequest:
     HAPPY = {
@@ -208,6 +254,55 @@ class TestCreateTenantUserRequest:
                 data={**self.HAPPY, "reseller_id": value}
             )
             assert ser.is_valid(), (value, ser.errors)
+
+    def test_email_is_trimmed_and_lowercased(self):
+        ser = CreateTenantUserRequestSerializer(
+            data={**self.HAPPY, "email": "  Mixed.Case@Example.COM  "}
+        )
+        assert ser.is_valid(), ser.errors
+        assert ser.validated_data["email"] == "mixed.case@example.com"
+
+    @pytest.mark.parametrize("field", ["first_name", "last_name"])
+    def test_over_long_name_rejected(self, field):
+        ser = CreateTenantUserRequestSerializer(data={**self.HAPPY, field: "N" * 256})
+        assert not ser.is_valid()
+        assert field in ser.errors
+
+
+class TestSuperAdminLoginRequest:
+    HAPPY = {"email": "boss@example.com", "password": _STRONG_PW}
+
+    def test_happy_path(self):
+        ser = SuperAdminLoginRequestSerializer(data=self.HAPPY)
+        assert ser.is_valid(), ser.errors
+
+    def test_email_is_trimmed_and_lowercased(self):
+        """One spelling of the address for the lockout bucket, the log line
+        and the ``email__iexact`` lookup."""
+        ser = SuperAdminLoginRequestSerializer(
+            data={**self.HAPPY, "email": "  Boss@Example.COM  "}
+        )
+        assert ser.is_valid(), ser.errors
+        assert ser.validated_data["email"] == "boss@example.com"
+
+    def test_password_keeps_surrounding_whitespace(self):
+        ser = SuperAdminLoginRequestSerializer(
+            data={**self.HAPPY, "password": "  spaced pw  "}
+        )
+        assert ser.is_valid(), ser.errors
+        assert ser.validated_data["password"] == "  spaced pw  "
+
+    @pytest.mark.parametrize("missing", ["email", "password"])
+    def test_both_fields_required(self, missing):
+        payload = {k: v for k, v in self.HAPPY.items() if k != missing}
+        ser = SuperAdminLoginRequestSerializer(data=payload)
+        assert not ser.is_valid()
+        assert missing in ser.errors
+
+    def test_malformed_email_rejected(self):
+        ser = SuperAdminLoginRequestSerializer(data={**self.HAPPY, "email": "nope"})
+        assert not ser.is_valid()
+        assert "email" in ser.errors
 
 
 class TestUpdateUserRolesRequest:

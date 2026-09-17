@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.commissioning.serializers.serializers_mixin import (
@@ -7,7 +10,32 @@ from apps.commissioning.serializers.serializers_mixin import (
 )
 from apps.shared.pii_masking import MaskedIBANFieldMixin
 
+from .errors import MandateReferenceLocked, SepaMandateSignedInFuture
 from .models import BillingProfile, BillingRun, ChargeSchedule
+
+
+def validate_mandate_signature_date(value):
+    """Refuse a SEPA mandate signature date that lies beyond tomorrow.
+
+    A ``DtOfSgntr`` after today is refused at export — where it aborts the
+    pain.008 batch for every other member in the run — so both the interactive
+    write and the CSV import reject it at entry. The bound is one day past the
+    server's today rather than today itself: the office SEPA modal derives the
+    signature date from the BROWSER clock, so an operator in a timezone ahead
+    of the server's ``TIME_ZONE`` signs a mandate dated the server's tomorrow.
+    That one day of slack absorbs the skew and still catches the data-entry
+    slips — dates weeks or months out — that a batch actually dies on.
+
+    The rule lives here rather than on ``BillingProfile.clean()``, which runs
+    on every save and would make an already-stored future date permanently
+    un-saveable, including the export's own first-use stamp.
+    """
+    if value is not None and value > timezone.localdate() + timedelta(days=1):
+        raise SepaMandateSignedInFuture(
+            "A SEPA mandate cannot be dated after today.",
+            field="sepa_mandate_signed_at",
+        )
+    return value
 
 
 class BillingProfileSerializer(
@@ -64,6 +92,27 @@ class BillingProfileSerializer(
         # writable on create where it's the sole source of the link.
         if self.instance is not None:
             self.fields["member"].read_only = True
+
+    def validate_sepa_mandate_reference(self, value):
+        # Once a mandate has been collected against, the bank matches every
+        # following RCUR transaction to the reference it holds on file, so a
+        # changed reference orphans the mandate. Resubmitting the stored value
+        # is accepted: the office SEPA form sends the whole mandate block back
+        # on every save.
+        if (
+            self.instance is not None
+            and self.instance.sepa_mandate_first_use_at is not None
+            and value != self.instance.sepa_mandate_reference
+        ):
+            raise MandateReferenceLocked(
+                "The mandate reference cannot be changed after the mandate "
+                "has been used.",
+                field="sepa_mandate_reference",
+            )
+        return value
+
+    def validate_sepa_mandate_signed_at(self, value):
+        return validate_mandate_signature_date(value)
 
 
 class BillingProfileMemberSerializer(BillingProfileSerializer):
@@ -258,6 +307,9 @@ class SepaMandateImportSerializer(serializers.Serializer):
     sepa_mandate_paper_received_at = serializers.DateField(
         required=False, allow_null=True
     )
+
+    def validate_sepa_mandate_signed_at(self, value):
+        return validate_mandate_signature_date(value)
 
     @staticmethod
     def _resolve_member(number: int):

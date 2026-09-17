@@ -27,7 +27,7 @@ delivery_week: number;
  */
 physical_share_type_variations?: boolean;
 /**
- * Share option (e.g. GEMUESE, OBST)
+ * Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)
  */
 share_option?: CommissioningShareTypeVariationsTotalsRetrieveShareOption;
 /**

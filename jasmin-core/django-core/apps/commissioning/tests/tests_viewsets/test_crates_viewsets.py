@@ -290,6 +290,7 @@ def crate_document(request, tenant):
                 order=OrderFactory(reseller=ResellerFactory())
             ),
             crate=crate,
+            missing_required_code="crate_delivery_note_content.missing_required",
         )
     return SimpleNamespace(
         url=URL_CRATE_INV_CONTENT,
@@ -299,6 +300,7 @@ def crate_document(request, tenant):
         model=CrateContentInvoiceReseller,
         parent=InvoiceResellerFactory(),
         crate=crate,
+        missing_required_code="crate_content_invoice.missing_required",
     )
 
 
@@ -326,6 +328,71 @@ def _crate_lines(document):
 
 @pytest.mark.django_db
 class TestCrateDocumentLineWriteValidation:
+    def test_create_without_amount_reports_missing_required(
+        self, api_client, crate_document
+    ):
+        """Create and update answer an omitted required key with one code, so
+        the message does not depend on the verb the table happened to use."""
+        resp = api_client.post(
+            crate_document.url, _crate_body(crate_document), format="json"
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == crate_document.missing_required_code
+        assert not _crate_lines(crate_document).exists()
+
+    def test_create_without_crate_type_reports_missing_required(
+        self, api_client, crate_document
+    ):
+        body = _crate_body(crate_document, amount=2)
+        del body["crate_type"]
+
+        resp = api_client.post(crate_document.url, body, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == crate_document.missing_required_code
+        assert not _crate_lines(crate_document).exists()
+
+    def test_create_without_the_document_id_reports_missing_required(
+        self, api_client, crate_document
+    ):
+        body = _crate_body(crate_document, amount=2)
+        del body[crate_document.parent_key]
+
+        resp = api_client.post(crate_document.url, body, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == crate_document.missing_required_code
+        assert not _crate_lines(crate_document).exists()
+
+    def test_create_with_an_unknown_document_id_stays_a_404(
+        self, api_client, crate_document
+    ):
+        """A key that is present but names no row is still a lookup failure,
+        not a malformed request."""
+        body = _crate_body(crate_document, amount=2)
+        body[crate_document.parent_key] = "nonexistent-id"
+
+        resp = api_client.post(crate_document.url, body, format="json")
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert not _crate_lines(crate_document).exists()
+
+    def test_create_with_an_unknown_crate_type_stays_a_404(
+        self, api_client, crate_document
+    ):
+        resp = api_client.post(
+            crate_document.url,
+            {
+                crate_document.parent_key: str(crate_document.parent.id),
+                "crate_type": "nonexistent-id",
+                "amount": 2,
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert not _crate_lines(crate_document).exists()
+
     def test_create_rejects_rabatt_over_100(self, api_client, crate_document):
         # A 150 % discount would give the line a negative net.
         resp = api_client.post(

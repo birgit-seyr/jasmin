@@ -24,7 +24,6 @@ from .consents_serializer import (
     ConsentRecordCreateSerializer,
     ConsentRecordRevokeSerializer,
     ConsentRecordSerializer,
-    CurrentConsentDocumentQuerySerializer,
 )
 from .coop_share_import_serializer import CoopShareImportSerializer
 from .crates_serializer import (

@@ -57,7 +57,6 @@ string and in a JSON or multipart body.
 from __future__ import annotations
 
 import re
-from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, Literal
@@ -352,22 +351,3 @@ def validate_query_params(
     _refuse_a_week_the_year_does_not_have(out, catalogue)
     _refuse_an_inverted_date_range(out, catalogue)
     return out
-
-
-def validate_choice_param(
-    value: str, valid_choices: Collection[str], param_name: str
-) -> str:
-    """Validate a query-param value against a set of allowed choices.
-
-    Raises ``InvalidQueryParam`` (HTTP 400) with a deterministic,
-    alphabetically sorted choice list in the message; returns the value
-    unchanged when it is valid.
-    """
-    if value not in valid_choices:
-        raise InvalidQueryParam(
-            f"Invalid {param_name} '{value}'. Must be one of: "
-            f"{', '.join(sorted(valid_choices))}",
-            field=param_name,
-            details={param_name: value},
-        )
-    return value

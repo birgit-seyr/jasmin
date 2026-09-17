@@ -35,7 +35,7 @@ from apps.shared.auth_cookies import (
     set_tenant_refresh_cookie,
 )
 from apps.shared.deferred_email import schedule_deferred_email
-from apps.shared.request_utils import auth_user, body, client_ip
+from apps.shared.request_utils import auth_user, client_ip
 from core.serializers import ErrorResponseSerializer
 from core.throttling import set_throttle_scope
 
@@ -598,7 +598,9 @@ def register_send_code_view(request):
     serializer.is_valid(raise_exception=True)
     # Captcha gates the FIRST anonymous touch of the wizard; the later
     # verify_code + register steps are gated by the code / verified marker.
-    verify_captcha(body(request).get("frc_captcha_solution"), scope="register")
+    verify_captcha(
+        serializer.validated_data.get("frc_captcha_solution"), scope="register"
+    )
     email = serializer.validated_data["email"]
     first_name = serializer.validated_data.get("first_name") or ""
     # Anti-enumeration: identical response whether or not we send. Skip the

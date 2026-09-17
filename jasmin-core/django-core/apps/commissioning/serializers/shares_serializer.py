@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -21,6 +22,7 @@ from ..models import (
     ShareTypeVariationGrossPrice,
     Subscription,
 )
+from ..services.shares_day_change_service import SHARE_DAY_FIELDS
 from ..utils.capacity_window import build_capacity_by_week, parse_capacity_window
 from ..utils.dynamic_keys import AMOUNT_KEY_PREFIX, DAY_VARIATION_RE
 from ..utils.iso_week_utils import share_delivery_date
@@ -569,7 +571,13 @@ class ShareContentSerializer(serializers.ModelSerializer):
         read_only_fields = (*AUDIT_READONLY_FIELDS, *FINALIZATION_READONLY_FIELDS)
 
 
-class ShareSerializer(serializers.ModelSerializer):
+class ShareSerializer(ReadOnlyOnUpdateMixin, serializers.ModelSerializer):
+    # The weekday columns belong to ``SharesDayChangeService`` (past-week guard
+    # plus the theoretical / movement rebuild), reached through
+    # ``/shares/bulk_update/``. A plain PATCH would move a day without either,
+    # so they lock once the row exists; create still sets them.
+    READ_ONLY_ON_UPDATE = SHARE_DAY_FIELDS
+
     delivery_day_number = serializers.IntegerField(read_only=True)
     share_type_name = serializers.CharField(read_only=True)
     share_type_variation_size = serializers.CharField(read_only=True)
@@ -739,7 +747,15 @@ class DefaultShareContentResponseSerializer(serializers.Serializer):
 
 class VirtualVariationComponentItemSerializer(serializers.Serializer):
     physical_variation = serializers.CharField()
-    quantity = serializers.FloatField(default=1.0)
+    # Weights the subscription count when virtual demand fans out into the
+    # physical variations, so a zero or negative factor would erase or invert
+    # real demand. Decimal end-to-end onto the 2dp column.
+    quantity = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        default=Decimal("1"),
+    )
 
 
 class VirtualVariationComponentListItemSerializer(serializers.Serializer):

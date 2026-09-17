@@ -12157,7 +12157,7 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Copy selected forecasts to the next delivery week.
+ * Copy selected forecasts to the next delivery week. Ids that match no forecast, and forecasts the next week already plans, are reported in `errors` while the rest are still copied; only a request where none of the ids match is a 404.
  */
 export const commissioningForecastBulkCopyToNextWeekCreate = (
     bulkIdsRequest: BulkIdsRequest,
@@ -18548,7 +18548,7 @@ export function useCommissioningOrdersDeliveryDaysList<TData = Awaited<ReturnTyp
 
 
 /**
- * Create a new orders delivery day, automatically closing any existing delivery day with the same day_number.
+ * Create a new orders delivery day. Unlike shares delivery days, an orders delivery day carries no validity window and there is no succession: day_number is unique, so a duplicate is rejected.
  */
 export const commissioningOrdersDeliveryDaysCreate = (
     ordersDeliveryDay: NonReadonly<OrdersDeliveryDay>,
@@ -24483,7 +24483,7 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Whole-week matrix for AmountShareTypeVariations: one row per delivery day (or day×tour / day×station). Subscription tenants get box-combination columns (combo_<key>, each cell the box count); import (external-demand) tenants get flat per-variation columns (variation_<id>) sourced from weekly demand. Both render through the same frontend hook. ``joker=true`` counts the boxes skipped via a taken joker instead of the shipping ones; ``donation_joker=true`` counts the boxes donated via a donation joker (same columns). The two flags are mutually exclusive per row.
+ * Whole-week matrix for AmountShareTypeVariations: one row per delivery day (or day×tour / day×station). Subscription tenants get box-combination columns (combo_<key>, each cell the box count); import (external-demand) tenants get flat per-variation columns (variation_<id>) sourced from weekly demand. Both render through the same frontend hook. ``joker=true`` counts the boxes skipped via a taken joker instead of the shipping ones; ``donation_joker=true`` counts the boxes donated via a donation joker (same columns). Send at most one of ``joker`` / ``donation_joker`` and at most one of ``for_tours`` / ``for_stations`` — each pair is mutually exclusive and sending both halves of one is refused with HTTP 400.
  */
 export const commissioningShareDeliveryBoxCombinationMatrixRetrieve = (
     params: CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams,

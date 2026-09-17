@@ -16,11 +16,13 @@ from rest_framework.test import APIRequestFactory
 from apps.commissioning.errors import (
     BulkFinalizeIdsInvalid,
     BulkIdsInvalid,
+    BulkIdsTooMany,
     CommissioningError,
     InvalidQueryParam,
     RequiredFieldMissing,
 )
 from apps.commissioning.utils.validation_utils import (
+    MAX_BULK_IDS,
     parse_bulk_ids,
     validate_and_parse_int_params,
     validate_bulk_document_request,
@@ -37,12 +39,15 @@ def _make_get_request(params: dict | None = None):
     return Request(django_request)
 
 
-def _make_post_request(data: dict | None = None):
-    """Helper: build a DRF Request from a POST with JSON body."""
+def _make_post_request(data: dict | list | None = None):
+    """Helper: build a DRF Request from a POST with JSON body.
+
+    A list payload builds the non-object body a hand-crafted client can send.
+    """
     from rest_framework.parsers import JSONParser
     from rest_framework.request import Request
 
-    django_request = factory.post("/fake/", data or {}, format="json")
+    django_request = factory.post("/fake/", data if data else {}, format="json")
     return Request(django_request, parsers=[JSONParser()])
 
 
@@ -123,6 +128,24 @@ class TestValidateAndParseIntParams:
             request, ["year", "delivery_week"], source="data"
         )
         assert values == [2026, 5]
+
+    def test_source_data_missing_field_raises(self):
+        request = _make_post_request({"year": 2026})
+        with pytest.raises(InvalidQueryParam) as excinfo:
+            validate_and_parse_int_params(
+                request, ["year", "delivery_week"], source="data"
+            )
+        assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
+        assert excinfo.value.field == "delivery_week"
+
+    def test_source_data_non_object_body_raises_the_normal_400(self):
+        """A JSON array body carries no fields to read, so it takes the
+        missing-parameter 400 rather than crashing on the absent ``.get``."""
+        request = _make_post_request([2026, 5])
+        with pytest.raises(InvalidQueryParam) as excinfo:
+            validate_and_parse_int_params(request, ["year"], source="data")
+        assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
+        assert excinfo.value.field == "year"
 
     def test_param_without_range_passes_any_int(self):
         request = _make_get_request({"custom_param": "999999"})
@@ -254,3 +277,62 @@ class TestParseBulkIds:
             parse_bulk_ids(request, invalid_item_error=BulkFinalizeIdsInvalid)
         assert excinfo.value.code == "finalize.ids_invalid"
         assert excinfo.value.field == "ids"
+
+    def test_a_batch_at_the_cap_is_accepted(self):
+        """The cap sits above any real office batch, so the boundary itself
+        must still go through."""
+        ids = [f"id{index}" for index in range(MAX_BULK_IDS)]
+        request = _make_post_request({"ids": ids})
+        assert parse_bulk_ids(request) == ids
+
+    def test_over_the_cap_raises(self):
+        ids = [f"id{index}" for index in range(MAX_BULK_IDS + 1)]
+        request = _make_post_request({"ids": ids})
+        with pytest.raises(BulkIdsTooMany) as excinfo:
+            parse_bulk_ids(request)
+        assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
+        assert excinfo.value.code == "bulk.ids_too_many"
+        assert excinfo.value.field == "ids"
+        assert excinfo.value.details == {
+            "limit": MAX_BULK_IDS,
+            "received": MAX_BULK_IDS + 1,
+        }
+
+    def test_caller_can_lower_the_cap(self):
+        request = _make_post_request({"ids": ["id1", "id2", "id3"]})
+        assert parse_bulk_ids(request, max_count=3) == ["id1", "id2", "id3"]
+        with pytest.raises(BulkIdsTooMany) as excinfo:
+            parse_bulk_ids(request, max_count=2)
+        assert excinfo.value.details == {"limit": 2, "received": 3}
+
+    def test_default_cap_stays_within_the_advisory_lock_budget(self):
+        """The bulk stock views hold one advisory lock per entity in the batch
+        until their transaction commits, against a cluster-wide Postgres lock
+        table of roughly max_locks_per_transaction * max_connections entries,
+        so the default batch may claim only a small slice of it."""
+        assert MAX_BULK_IDS <= 1000
+
+    def test_a_lock_exhausting_batch_is_refused_by_default(self):
+        """A caller that names more entities than one transaction may safely
+        lock is turned away by the default cap, without the call site having to
+        pass a ``max_count`` of its own."""
+        ids = [f"id{index}" for index in range(1001)]
+        request = _make_post_request({"ids": ids})
+        with pytest.raises(BulkIdsTooMany) as excinfo:
+            parse_bulk_ids(request)
+        assert excinfo.value.details["received"] == 1001
+        assert excinfo.value.details["limit"] <= 1000
+
+    def test_default_cap_leaves_the_per_endpoint_caps_in_charge(self):
+        """An endpoint with heavier per-id work sets a lower ``max_count`` and
+        must keep reporting its own error, so the shared ceiling sits above the
+        tightest per-endpoint cap (subscription bulk renewal, at 500)."""
+        ids = [f"id{index}" for index in range(501)]
+        request = _make_post_request({"ids": ids})
+        assert parse_bulk_ids(request) == ids
+
+    def test_cap_error_names_the_callers_field(self):
+        request = _make_post_request({"subscription_ids": ["a", "b"]})
+        with pytest.raises(BulkIdsTooMany) as excinfo:
+            parse_bulk_ids(request, field="subscription_ids", max_count=1)
+        assert excinfo.value.field == "subscription_ids"

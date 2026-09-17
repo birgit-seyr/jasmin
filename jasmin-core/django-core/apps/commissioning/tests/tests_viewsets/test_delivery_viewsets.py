@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
-from apps.commissioning.models import DeliveryStationDay
+from apps.commissioning.models import DeliveryStation, DeliveryStationDay
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
     DeliveryStationFactory,
@@ -825,3 +825,129 @@ class TestUpdateToursCreatesStationDay:
                 delivery_station=station, delivery_day=day
             )
             assert created.valid_from == datetime.date(2026, 10, 5)
+
+
+# ---------------------------------------------------------------------------
+# DeliveryStationViewSet — an IBAN rewrite needs step-up
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestDeliveryStationIbanStepUp:
+    """A station writes through to the ContactEntity a linked reseller shares,
+    so an IBAN rewrite here redirects money exactly as it does on the reseller
+    and is gated the same way."""
+
+    STORED_IBAN = "DE89370400440532013000"
+    NEW_IBAN = "DE75512108001245126199"
+    LIST_URL = reverse("delivery_station-list")
+    SHORT_NAME = "Bank Street Station"
+
+    @staticmethod
+    def _station_with_contact(iban):
+        from apps.commissioning.tests.factories import ContactEntityFactory
+
+        return DeliveryStationFactory(contact=ContactEntityFactory(iban=iban))
+
+    @staticmethod
+    def _url(station):
+        return reverse("delivery_station-detail", kwargs={"pk": station.pk})
+
+    @classmethod
+    def _create_body(cls, **overrides):
+        return {
+            "short_name": cls.SHORT_NAME,
+            "address": "Main 1",
+            "zip_code": "12345",
+            "city": "Town",
+            **overrides,
+        }
+
+    def _created(self):
+        return DeliveryStation.objects.filter(short_name=self.SHORT_NAME)
+
+    def test_rewriting_the_iban_is_refused_without_step_up(self, api_client, tenant):
+        station = self._station_with_contact(self.STORED_IBAN)
+
+        resp = api_client.patch(
+            self._url(station), {"iban": self.NEW_IBAN}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "auth.step_up_required"
+        station.contact.refresh_from_db()
+        assert station.contact.iban == self.STORED_IBAN
+
+    def test_a_station_without_a_contact_is_gated_too(self, api_client, tenant):
+        station = DeliveryStationFactory()
+
+        resp = api_client.patch(
+            self._url(station), {"iban": self.NEW_IBAN}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "auth.step_up_required"
+
+    def test_a_fresh_step_up_claim_writes_the_iban(self, step_up_client, tenant):
+        station = self._station_with_contact(self.STORED_IBAN)
+
+        resp = step_up_client.patch(
+            self._url(station), {"iban": self.NEW_IBAN}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        station.contact.refresh_from_db()
+        assert station.contact.iban == self.NEW_IBAN
+
+    def test_resending_the_stored_iban_prompts_for_nothing(self, api_client, tenant):
+        station = self._station_with_contact(self.STORED_IBAN)
+
+        resp = api_client.patch(
+            self._url(station),
+            {"iban": self.STORED_IBAN, "is_active": False},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        station.refresh_from_db()
+        assert station.is_active is False
+
+    def test_an_edit_that_leaves_the_iban_alone_prompts_for_nothing(
+        self, api_client, tenant
+    ):
+        station = self._station_with_contact(self.STORED_IBAN)
+
+        resp = api_client.patch(self._url(station), {"is_active": False}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        station.refresh_from_db()
+        assert station.is_active is False
+
+    def test_creating_with_an_iban_is_refused_without_step_up(self, api_client, tenant):
+        resp = api_client.post(
+            self.LIST_URL, self._create_body(iban=self.NEW_IBAN), format="json"
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "auth.step_up_required"
+        assert not self._created().exists()
+
+    def test_a_fresh_step_up_claim_creates_with_the_iban(self, step_up_client, tenant):
+        resp = step_up_client.post(
+            self.LIST_URL, self._create_body(iban=self.NEW_IBAN), format="json"
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert self._created().get().contact.iban == self.NEW_IBAN
+
+    def test_creating_without_an_iban_key_prompts_for_nothing(self, api_client, tenant):
+        resp = api_client.post(self.LIST_URL, self._create_body(), format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert self._created().exists()
+
+    def test_creating_with_a_blank_iban_prompts_for_nothing(self, api_client, tenant):
+        """A create payload that serialises every contact field carries an
+        empty ``iban``; it sets no bank account, so it is not challenged."""
+        resp = api_client.post(self.LIST_URL, self._create_body(iban=""), format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert self._created().get().contact.iban in (None, "")

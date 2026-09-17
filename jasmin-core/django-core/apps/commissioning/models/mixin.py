@@ -212,14 +212,25 @@ class TimeBoundMixin(models.Model):
 
         Exposed as a staticmethod so service-layer bulk operations can call
         the same logic that ``clean()`` uses.
+
+        Raises a ``JasminError`` rather than a Django ``ValidationError`` so the
+        client gets a stable, translatable code per case. Django's
+        ``full_clean()`` only collects ``django.core.exceptions.ValidationError``,
+        so this propagates straight out of ``clean()`` instead of aggregating
+        with the other field errors.
         """
+        from apps.commissioning.errors import (
+            TimeBoundValidFromNotMonday,
+            TimeBoundValidUntilNotSunday,
+        )
+
         if valid_from and valid_from.weekday() != 0:
-            raise ValidationError(
-                {"valid_from": "The 'valid_from' date must be a Monday."}
+            raise TimeBoundValidFromNotMonday(
+                "The 'valid_from' date must be a Monday.", field="valid_from"
             )
         if valid_until and valid_until.weekday() != 6:
-            raise ValidationError(
-                {"valid_until": "The 'valid_until' date must be a Sunday."}
+            raise TimeBoundValidUntilNotSunday(
+                "The 'valid_until' date must be a Sunday.", field="valid_until"
             )
 
     @staticmethod
@@ -227,16 +238,16 @@ class TimeBoundMixin(models.Model):
         """Ensure valid_until is same or after valid_from.
 
         Exposed as a staticmethod so service-layer bulk operations can call
-        the same logic that ``clean()`` uses.
+        the same logic that ``clean()`` uses. Raises a ``JasminError`` — see
+        ``validate_week_boundaries`` for what that means inside ``full_clean``.
         """
-        if valid_from and valid_until:
-            if valid_until < valid_from:
-                raise ValidationError(
-                    {
-                        "valid_until": "End date must be same or after start date.",
-                        "valid_from": "Start date must be same or before end date.",
-                    }
-                )
+        from apps.commissioning.errors import TimeBoundInvalidRange
+
+        if valid_from and valid_until and valid_until < valid_from:
+            raise TimeBoundInvalidRange(
+                "End date must be the same as or after the start date.",
+                field="valid_until",
+            )
 
     def _validate_no_overlap(self) -> None:
         """Reject overlapping time periods within the same group.
@@ -926,11 +937,14 @@ class FinalizedProtectedMixin:
         # ``self.is_finalized`` check below because the caller has already
         # flipped it to ``False`` in memory; the DB row is still
         # ``True``. Inspect the persisted state directly.
+        #
+        # A save with no ``update_fields`` writes every column, ``is_finalized``
+        # included, so it has to be checked too — at the cost of one primary-key
+        # read per full save of an unfinalized one-way row.
         if (
             not is_insert
             and self.IS_FINALIZED_ONE_WAY
-            and update_fields
-            and "is_finalized" in update_fields
+            and (update_fields is None or "is_finalized" in update_fields)
             and not self.is_finalized
         ):
             was_finalized = (

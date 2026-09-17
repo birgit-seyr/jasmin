@@ -8,6 +8,11 @@ from ..models import (
 )
 from .serializers_mixin import AUDIT_READONLY_FIELDS, NameFieldMixin
 
+# The line a theoretical row was derived from. The services that create these
+# rows own the movements and snapshots derived alongside them, so repointing one
+# through a generic PATCH would leave that derived state on the old parent.
+PROVENANCE_READONLY_FIELDS = ("share_content", "order_content")
+
 
 class TheoreticalHarvestSerializer(NameFieldMixin, serializers.ModelSerializer):
     NAME_FIELDS = ["share_article_name"]
@@ -16,7 +21,12 @@ class TheoreticalHarvestSerializer(NameFieldMixin, serializers.ModelSerializer):
         model = TheoreticalHarvest
         fields = "__all__"
         # ``created_by`` is stamped by ``_TheoreticalBaseViewSet.perform_create``.
-        read_only_fields = AUDIT_READONLY_FIELDS
+        read_only_fields = (
+            *AUDIT_READONLY_FIELDS,
+            *PROVENANCE_READONLY_FIELDS,
+            # A harvest row also records the forecast it was planned from.
+            "forecast",
+        )
 
 
 class TheoreticalCleanAmountSerializer(NameFieldMixin, serializers.ModelSerializer):
@@ -26,7 +36,7 @@ class TheoreticalCleanAmountSerializer(NameFieldMixin, serializers.ModelSerializ
         model = TheoreticalCleanAmount
         fields = "__all__"
         # ``created_by`` is stamped by ``_TheoreticalBaseViewSet.perform_create``.
-        read_only_fields = AUDIT_READONLY_FIELDS
+        read_only_fields = (*AUDIT_READONLY_FIELDS, *PROVENANCE_READONLY_FIELDS)
 
 
 class TheoreticalPurchaseSerializer(NameFieldMixin, serializers.ModelSerializer):
@@ -36,7 +46,7 @@ class TheoreticalPurchaseSerializer(NameFieldMixin, serializers.ModelSerializer)
         model = TheoreticalPurchase
         fields = "__all__"
         # ``created_by`` is stamped by ``_TheoreticalBaseViewSet.perform_create``.
-        read_only_fields = AUDIT_READONLY_FIELDS
+        read_only_fields = (*AUDIT_READONLY_FIELDS, *PROVENANCE_READONLY_FIELDS)
 
 
 class TheoreticalWashAmountSerializer(NameFieldMixin, serializers.ModelSerializer):
@@ -46,7 +56,7 @@ class TheoreticalWashAmountSerializer(NameFieldMixin, serializers.ModelSerialize
         model = TheoreticalWashAmount
         fields = "__all__"
         # ``created_by`` is stamped by ``_TheoreticalBaseViewSet.perform_create``.
-        read_only_fields = AUDIT_READONLY_FIELDS
+        read_only_fields = (*AUDIT_READONLY_FIELDS, *PROVENANCE_READONLY_FIELDS)
 
 
 class StockComparisonSerializer(serializers.Serializer):

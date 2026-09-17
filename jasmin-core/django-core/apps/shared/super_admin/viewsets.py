@@ -112,6 +112,21 @@ def _tenant_schema_or_409(tenant):
         ) from exc
 
 
+def _validate_role_selection(roles: list[str]) -> None:
+    """Refuse a role list that is empty or an unusable combination.
+
+    A role-less account can sign in but reach nothing, and no later permission
+    check grants it anything, so at least one role is required.
+    """
+    from apps.authz.roles import validate_role_combination
+
+    if not roles:
+        raise InvalidRoles("Select at least one role for the new user.", field="roles")
+    combo_err = validate_role_combination(roles)
+    if combo_err:
+        raise InvalidRoles(combo_err)
+
+
 class TenantManagementViewSet(ViewSet):
     """Super-admin tenant management.
 
@@ -577,7 +592,10 @@ class TenantManagementViewSet(ViewSet):
             with _tenant_schema_or_409(tenant):
                 from apps.accounts.models import JasminUser
 
-                if JasminUser.objects.filter(email=email).exists():
+                # ``iexact``: ``create_user`` derives the unique ``username``
+                # from ``email.lower()``, so a case variant is the same account
+                # and would otherwise slip past this check into the constraint.
+                if JasminUser.objects.filter(email__iexact=email).exists():
                     raise UserEmailExists(
                         f"User with email '{email}' already exists in this tenant"
                     )
@@ -646,16 +664,12 @@ class TenantManagementViewSet(ViewSet):
         roles = data.get("roles", [])
         reseller_id = data.get("reseller_id") or None
 
+        _validate_role_selection(roles)
+
         if reseller_id and "customer" not in roles:
             raise InvalidRoles(
                 "reseller_id can only be set when 'customer' is in roles"
             )
-
-        from apps.authz.roles import validate_role_combination
-
-        combo_err = validate_role_combination(roles)
-        if combo_err:
-            raise InvalidRoles(combo_err)
 
         try:
             with schema_context("public"):
@@ -667,7 +681,10 @@ class TenantManagementViewSet(ViewSet):
             with _tenant_schema_or_409(tenant):
                 from apps.accounts.models import JasminUser
 
-                if JasminUser.objects.filter(email=email).exists():
+                # ``iexact``: ``create_user`` derives the unique ``username``
+                # from ``email.lower()``, so a case variant is the same account
+                # and would otherwise slip past this check into the constraint.
+                if JasminUser.objects.filter(email__iexact=email).exists():
                     raise UserEmailExists(
                         f"User with email '{email}' already exists in this tenant"
                     )

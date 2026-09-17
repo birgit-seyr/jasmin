@@ -26,6 +26,7 @@ from django.utils.crypto import get_random_string
 
 from apps.accounts.models import JasminUser
 from apps.authz.roles import VALID_ROLES, Role
+from apps.shared.languages import DEFAULT_LANGUAGE_CODE, SUPPORTED_LANGUAGE_CODES
 from apps.shared.tenant_urls import frontend_base_url, tenant_name
 from apps.shared.tenants.onboarding_emails import EmailCategory
 
@@ -41,8 +42,15 @@ INVITATION_TTL = timedelta(days=7)
 # --------------------------------------------------------------------------- #
 
 
-def _tenant_default_language(default: str = "en") -> str:
-    """Return the tenant's configured default language, or `default`."""
+def _tenant_default_language(default: str = DEFAULT_LANGUAGE_CODE) -> str:
+    """Return the tenant's supported default language, or `default`.
+
+    ``Tenant.tenant_language`` is a free 8-character column while
+    ``JasminUser.user_language`` is a 3-character enum, so the tenant value is
+    narrowed before it seeds a user: a regional tag keeps its base subtag
+    (``de-DE`` -> ``de``) and a code the platform ships no UI or email
+    templates for falls back to `default`.
+    """
     from django.db import connection
 
     schema = getattr(connection, "schema_name", None)
@@ -56,9 +64,9 @@ def _tenant_default_language(default: str = "en") -> str:
         # No tenant row, or DB unreachable / unmigrated. Best-effort
         # lookup → fall back to the caller's default.
         return default
-    if getattr(tenant, "tenant_language", None):
-        return tenant.tenant_language
-    return default
+    code = (getattr(tenant, "tenant_language", "") or "").strip().lower()
+    base = code.split("-")[0].split("_")[0]
+    return base if base in SUPPORTED_LANGUAGE_CODES else default
 
 
 def _normalize_roles(roles: Iterable[str] | None) -> list[str]:

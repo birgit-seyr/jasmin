@@ -1,6 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 
+from ..errors import ShareTypeVariationNotFound
 from ..models import (
     Crate,
     CrateNetPrice,
@@ -8,9 +9,10 @@ from ..models import (
     Season,
     ShareArticle,
     ShareArticleNetPrice,
+    ShareTypeVariation,
     Storage,
 )
-from ..models.choices import ShareOptions
+from ..models.choices import ShareOptions, UnitOptions
 from ..utils.deletion_utils import parent_in_use
 from .serializers_mixin import DeletableMixin, NameFieldMixin
 
@@ -219,7 +221,12 @@ class DefaultShareArticleInShareBulkEntrySerializer(serializers.Serializer):
 
     share_type_variation = serializers.CharField()
     quantity = serializers.DecimalField(max_digits=7, decimal_places=3, allow_null=True)
-    unit = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    # The column is choices-constrained and the upsert writes it without
+    # ``full_clean``, so the choice check has to happen here. Blank / null falls
+    # back to the share article's ``default_movement_unit``.
+    unit = serializers.ChoiceField(
+        choices=UnitOptions.choices, required=False, allow_null=True, allow_blank=True
+    )
 
 
 class DefaultShareArticleInShareBulkUpsertRequestSerializer(serializers.Serializer):
@@ -230,3 +237,35 @@ class DefaultShareArticleInShareBulkUpsertRequestSerializer(serializers.Serializ
     # unbounded number of update_or_create/delete ops through the single
     # atomic loop (soft DoS). Well above any realistic per-article variation set.
     entries = DefaultShareArticleInShareBulkEntrySerializer(many=True, max_length=2000)
+
+    def validate_entries(self, entries: list[dict]) -> list[dict]:
+        """Refuse an unknown ``share_type_variation`` on a written cell.
+
+        The upsert assigns the id straight to the FK, where a miss surfaces as a
+        generic integrity conflict; one batched existence check turns that into
+        a named 404. Only cells that get written are checked — a null or
+        non-positive quantity takes the delete branch, and deleting a cell whose
+        variation is already gone is a no-op. The grid sends one entry per
+        variation it has loaded, so a stale id there must not cost the caller
+        every other cell in the row.
+        """
+        written_ids = {
+            entry["share_type_variation"]
+            for entry in entries
+            if entry.get("quantity") is not None and entry["quantity"] > 0
+        }
+        if not written_ids:
+            return entries
+        known_ids = set(
+            ShareTypeVariation.objects.filter(id__in=written_ids).values_list(
+                "id", flat=True
+            )
+        )
+        missing_ids = sorted(written_ids - known_ids)
+        if missing_ids:
+            raise ShareTypeVariationNotFound(
+                f"Unknown share type variation(s): {', '.join(missing_ids)}",
+                field="entries",
+                details={"share_type_variation": missing_ids},
+            )
+        return entries

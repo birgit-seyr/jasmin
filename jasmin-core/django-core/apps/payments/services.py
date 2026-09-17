@@ -759,18 +759,21 @@ class BillingRunService:
         member has an active billing profile suited to `payment_method`.
         Caller still has to call :meth:`export` to produce files + flip status.
         """
-        if period_end < period_start:
-            raise BillingRunInvalidPeriod("period_end must be >= period_start")
         # Enforce the past-date invariant in the service itself, not just
         # the create view — a management command / script / bulk job would
-        # otherwise mint a DRAFT that fails at the bank on export. The
-        # collection_date >= period_end relationship stays a soft warning:
-        # advance / prepaid collection can legitimately debit before the period
-        # ends, so it is not a hard error.
+        # otherwise mint a DRAFT that fails at the bank on export. It is
+        # checked ahead of the period order so a payload that breaks both
+        # rules answers with the collection-date code the office client
+        # branches on. The collection_date >= period_end relationship stays a
+        # soft warning: advance / prepaid collection can legitimately debit
+        # before the period ends, so it is not a hard error.
         if collection_date < timezone.localdate():
             raise BillingRunInvalidCollectionDate(
-                f"collection_date {collection_date} is in the past."
+                f"collection_date {collection_date} is in the past.",
+                details={"collection_date": str(collection_date)},
             )
+        if period_end < period_start:
+            raise BillingRunInvalidPeriod("period_end must be >= period_start")
         if collection_date < period_end:
             logger.warning(
                 "collection_date %s is before period_end %s",

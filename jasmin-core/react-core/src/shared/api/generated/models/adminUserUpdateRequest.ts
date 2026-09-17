@@ -12,7 +12,9 @@ import type { AccountStatusEnum } from './accountStatusEnum';
  * All fields optional — PATCH semantics.
  */
 export interface AdminUserUpdateRequest {
+  /** @maxLength 255 */
   first_name?: string;
+  /** @maxLength 255 */
   last_name?: string;
   /** @nullable */
   user_language?: AdminUserUpdateRequestUserLanguage;

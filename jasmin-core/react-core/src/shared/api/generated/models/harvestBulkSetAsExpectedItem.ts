@@ -15,7 +15,8 @@ export interface HarvestBulkSetAsExpectedItem {
   year: number;
   delivery_week: number;
   day_number: number;
-  theoretical_harvest_amount: number;
+  /** @pattern ^-?\d{0,8}(?:\.\d{0,2})?$ */
+  theoretical_harvest_amount: string;
   theoretical_harvest_unit: string;
   theoretical_harvest_size: string;
   storage: string;

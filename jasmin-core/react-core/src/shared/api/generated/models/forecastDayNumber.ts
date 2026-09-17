@@ -8,8 +8,6 @@
 import type { DayNumberEnum } from './dayNumberEnum';
 
 /**
- * @minimum 0
- * @maximum 32767
  * @nullable
  */
 export type ForecastDayNumber = DayNumberEnum | null;

@@ -5,6 +5,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from encrypted_model_fields.fields import EncryptedCharField
 
+from apps.shared.iban_validator import validate_iban
+
 from .base import JasminModel
 from .choices import (
     ShareOptions,
@@ -480,8 +482,13 @@ class ContactEntity(JasminModel):
     phone_2 = models.CharField(max_length=150, blank=True, null=True)
     phone_3 = models.CharField(max_length=150, blank=True, null=True)
     uid = models.CharField(max_length=100, blank=True, null=True)
-    # Encrypted: bank-account identifier, never queried by value.
-    iban = EncryptedCharField(max_length=34, blank=True, null=True)
+    # Encrypted: bank-account identifier, never queried by value. The
+    # mod-97 / country-length check matches every other IBAN column in the
+    # platform; the write paths here don't run ``full_clean()``, so the
+    # serializer re-attaches the same validator to the flattened contact field.
+    iban = EncryptedCharField(
+        max_length=34, blank=True, null=True, validators=[validate_iban]
+    )
 
     class Meta:
         indexes = [

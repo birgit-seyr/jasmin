@@ -60,7 +60,7 @@ class PackingListService:
         share_type: str,
         is_past: bool,
         delivery_station: str | None = None,
-        tour: str | None = None,
+        tour: int | None = None,
         packing_station: int | None = None,
         is_packed_bulk: bool | None = None,
         *,
@@ -461,7 +461,7 @@ class PackingListService:
         day_number: int,
         is_past: bool,
         delivery_station: str | None = None,
-        tour: str | None = None,
+        tour: int | None = None,
         is_packed_bulk: bool | None = None,
     ) -> dict[str, Any]:
         """ "Was ihr nehmen könnt" — the per-SHARE amount matrix a member reads

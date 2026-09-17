@@ -730,10 +730,9 @@ class TestProfileUpdateEndpoint:
         )
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_over_long_name_returns_400_not_500(self, tenant):
-        # The request serializer has no max_length, so the value reaches the
-        # varchar column and Postgres raises DataError. The exception handler
-        # maps it to a 400 without echoing the value or the database text.
+    def test_over_long_name_returns_400_naming_the_field(self, tenant):
+        # The serializer bounds the field to its column width, so the refusal
+        # is a per-field validation error and the value never reaches Postgres.
         user = JasminUserFactory(roles=[Role.OFFICE])
         client = APIClient()
         client.force_authenticate(user=user)
@@ -742,6 +741,17 @@ class TestProfileUpdateEndpoint:
             f"/api/auth/{user.id}/", data={"first_name": long_name}, format="json"
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert resp.data["code"] == "data.value_invalid"
+        assert resp.data["code"] == "validation_error"
+        assert "first_name" in resp.data["details"]
         assert long_name not in str(resp.data)
         assert "varying" not in str(resp.data)
+
+    def test_name_at_the_column_limit_is_accepted(self, tenant):
+        # The bound matches the column exactly — a 255-char name must still save.
+        user = JasminUserFactory(roles=[Role.OFFICE])
+        client = APIClient()
+        client.force_authenticate(user=user)
+        resp = client.patch(
+            f"/api/auth/{user.id}/", data={"first_name": "N" * 255}, format="json"
+        )
+        assert resp.status_code == status.HTTP_200_OK, resp.data

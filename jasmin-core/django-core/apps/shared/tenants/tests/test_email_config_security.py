@@ -9,8 +9,17 @@ backend mapping and the "not both" guard.
 
 from __future__ import annotations
 
-import pytest
+import socket
+from unittest.mock import patch
 
+import pytest
+from django.test import override_settings
+
+from apps.shared.tenants.errors import (
+    SmtpHostNotAllowed,
+    SmtpPortInvalid,
+    SmtpTlsSslConflict,
+)
 from apps.shared.tenants.models import TenantEmailConfig
 from apps.shared.tenants.serializers import TenantEmailConfigSerializer
 
@@ -52,7 +61,7 @@ class TestEmailConfigSecurity:
 
     def test_serializer_rejects_both_tls_and_ssl(self, tenant):
         # Django's SMTP backend raises if both are set — the serializer catches
-        # it first with a field error.
+        # it first, with a stable code the client can translate.
         config = self._create_email_config(
             tenant, smtp_use_tls=True, smtp_use_ssl=False
         )
@@ -61,8 +70,12 @@ class TestEmailConfigSecurity:
             data={"smtp_use_tls": True, "smtp_use_ssl": True},
             partial=True,
         )
-        assert not ser.is_valid()
-        assert "smtp_use_ssl" in ser.errors
+
+        with pytest.raises(SmtpTlsSslConflict) as exc_info:
+            ser.is_valid(raise_exception=True)
+
+        assert exc_info.value.code == "email_config.tls_ssl_conflict"
+        assert exc_info.value.field == "smtp_use_ssl"
 
     def test_serializer_accepts_ssl_only(self, tenant):
         # Switching to SSL sends BOTH booleans (tls off, ssl on) — mirrors the
@@ -87,5 +100,57 @@ class TestEmailConfigSecurity:
         ser = TenantEmailConfigSerializer(
             instance=config, data={"smtp_use_ssl": True}, partial=True
         )
-        assert not ser.is_valid()
-        assert "smtp_use_ssl" in ser.errors
+
+        with pytest.raises(SmtpTlsSslConflict):
+            ser.is_valid(raise_exception=True)
+
+
+@pytest.mark.django_db
+class TestSmtpFieldErrorCodes:
+    """Host and port refusals carry a stable code, not a DRF field map — the
+    office UI can only translate a message it can identify."""
+
+    def _serializer(self, tenant, data) -> TenantEmailConfigSerializer:
+        config = TenantEmailConfig.objects.create(
+            tenant=tenant,
+            smtp_host="smtp.example.org",
+            smtp_port=587,
+            from_email="noreply@example.org",
+            from_name="Test Tenant",
+            is_active=True,
+        )
+        return TenantEmailConfigSerializer(instance=config, data=data, partial=True)
+
+    @pytest.mark.parametrize("port", [0, 70000, -1])
+    def test_a_port_outside_the_tcp_range_carries_its_code(self, tenant, port):
+        ser = self._serializer(tenant, {"smtp_port": port})
+
+        with pytest.raises(SmtpPortInvalid) as exc_info:
+            ser.is_valid(raise_exception=True)
+
+        assert exc_info.value.code == "email_config.smtp_port_invalid"
+        assert exc_info.value.field == "smtp_port"
+
+    @override_settings(SMTP_ALLOW_PRIVATE_HOSTS=False)
+    def test_an_internal_host_carries_its_code(self, tenant):
+        ser = self._serializer(tenant, {"smtp_host": "smtp.internal.test"})
+
+        with patch(
+            "apps.shared.smtp_host_validator.socket.getaddrinfo",
+            return_value=[(socket.AF_INET, 1, 6, "", ("10.1.2.3", 0))],
+        ):
+            with pytest.raises(SmtpHostNotAllowed) as exc_info:
+                ser.is_valid(raise_exception=True)
+
+        assert exc_info.value.code == "email_config.smtp_host_not_allowed"
+        assert exc_info.value.field == "smtp_host"
+
+    @override_settings(SMTP_ALLOW_PRIVATE_HOSTS=False)
+    def test_a_public_host_is_accepted(self, tenant):
+        ser = self._serializer(tenant, {"smtp_host": "smtp.example.test"})
+
+        with patch(
+            "apps.shared.smtp_host_validator.socket.getaddrinfo",
+            return_value=[(socket.AF_INET, 1, 6, "", ("93.184.216.34", 0))],
+        ):
+            assert ser.is_valid(), ser.errors

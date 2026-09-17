@@ -1,9 +1,12 @@
 """Staff app's query-parameter catalogue (built on the shared machinery).
 
-Holds the params that are staff-specific and NOT in the commissioning catalogue
-— the ISO ``week`` and the copy ``from_week`` / ``to_week``. (The generic
-``is_active`` param is reused from commissioning; ``year`` lives here so the
-staff schema helpers stay self-contained.)
+Holds the query params staff endpoints validate by: ``year`` and the ISO
+``week``. (The generic ``is_active`` param is reused from commissioning;
+``year`` lives here too so the staff schema helpers stay self-contained.)
+
+The copy endpoint's ``from_week`` / ``to_week`` are request-BODY fields
+validated by ``WeeklyPlanCopySerializer``, not query params, so they are not
+catalogued here.
 """
 
 from __future__ import annotations
@@ -18,8 +21,6 @@ from apps.shared.query_params import validate_query_params as _validate
 STAFF_PARAM_CATALOGUE: dict[str, ParamSpec] = {
     "year": YEAR_PARAM,
     "week": ISO_WEEK_PARAM,
-    "from_week": ISO_WEEK_PARAM,
-    "to_week": ISO_WEEK_PARAM,
 }
 
 

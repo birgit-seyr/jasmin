@@ -235,14 +235,29 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
     )
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         _reject_if_crates_disabled()
+        delivery_note_id = body(request).get("delivery_note_id")
+        crate_type_id = body(request).get("crate_type")
+
+        # The same three-key pre-check ``update`` runs, so an omitted field
+        # reports one code for the whole write regardless of the verb, and
+        # ``get_or_404`` is left to answer only for an id that is present but
+        # unknown.
+        if (
+            not all([delivery_note_id, crate_type_id])
+            or body(request).get("amount") is None
+        ):
+            raise CrateDeliveryNoteContentMissingRequired(
+                "delivery_note_id, crate_type and amount are required"
+            )
+
         delivery_note = get_or_404(
             DeliveryNoteReseller,
-            body(request).get("delivery_note_id"),
+            delivery_note_id,
             "Delivery note",
         )
         _reject_finalized(delivery_note, "delivery note", "add crates to finalized")
 
-        crate_type = get_or_404(Crate, body(request).get("crate_type"), "Crate type")
+        crate_type = get_or_404(Crate, crate_type_id, "Crate type")
         data = _validated_crate_write(
             CrateDeliveryNoteContentWriteRequestSerializer, request
         )
@@ -477,12 +492,20 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
     )
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         _reject_if_crates_disabled()
-        invoice = get_or_404(
-            InvoiceReseller, body(request).get("invoice_id"), "Invoice"
-        )
+        invoice_id = body(request).get("invoice_id")
+        crate_type_id = body(request).get("crate_type")
+
+        # The same three-key pre-check ``update`` runs — see the delivery-note
+        # sibling for the rationale.
+        if not all([invoice_id, crate_type_id]) or body(request).get("amount") is None:
+            raise CrateContentInvoiceMissingRequired(
+                "invoice_id, crate_type and amount are required"
+            )
+
+        invoice = get_or_404(InvoiceReseller, invoice_id, "Invoice")
         _reject_finalized(invoice, "invoice", "add crates to finalized")
 
-        crate_type = get_or_404(Crate, body(request).get("crate_type"), "Crate type")
+        crate_type = get_or_404(Crate, crate_type_id, "Crate type")
         data = _validated_crate_write(
             CrateInvoiceContentWriteRequestSerializer, request
         )

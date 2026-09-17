@@ -35,7 +35,7 @@ from apps.authz.permissions import (
     has_any_role,
 )
 from apps.authz.roles import Role
-from apps.shared.request_utils import body, client_ip
+from apps.shared.request_utils import client_ip
 from core.serializers import ErrorResponseSerializer
 
 from ..errors import (
@@ -53,7 +53,6 @@ from ..serializers import (
     ConsentRecordCreateSerializer,
     ConsentRecordRevokeSerializer,
     ConsentRecordSerializer,
-    CurrentConsentDocumentQuerySerializer,
 )
 from ..services import ConsentService
 from ..utils.lookup import get_or_404
@@ -269,12 +268,18 @@ class ConsentDocumentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         user sees, and the ``id`` it sends back via POST /consents/
         is what gets recorded as proof.
         """
-        params = CurrentConsentDocumentQuerySerializer(data=request.query_params)
-        params.is_valid(raise_exception=True)
+        params = validate_query_params(
+            request, required=["consent_kind"], optional=["locale"]
+        )
+        # ``locale`` is catalogued as a plain string — matched byte for byte,
+        # and with no default, so the list action can answer across locales.
+        # Exactly one document is in force here, so a padded value still names
+        # the locale the caller meant and an absent one means the primary.
+        locale = (params["locale"] or "").strip() or "de"
         # Raises ConsentDocumentNotFound → 404 via exception handler
         doc = ConsentService.get_current_document(
-            kind=params.validated_data["kind"],
-            locale=params.validated_data.get("locale", "de"),
+            kind=params["consent_kind"],
+            locale=locale,
         )
         return Response(ConsentDocumentSerializer(doc).data)
 
@@ -341,8 +346,11 @@ class ConsentRecordViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
         # Determine which Member this consent is for: either the
         # caller (member-role) or an explicit ``member`` override
-        # (office-only — refuse to honour for non-staff).
-        target_member_id = body(request).get("member") or own_member_id(request)
+        # (office-only — refuse to honour for non-staff). Both the
+        # ownership comparison below and the lookup read the serializer's
+        # normalised value, so a padded id is judged and resolved alike.
+        requested_member_id = payload.validated_data.get("member")
+        target_member_id = requested_member_id or own_member_id(request)
         if target_member_id is None:
             raise ConsentTargetMemberUnresolved(
                 "No target Member could be inferred from the request."
@@ -352,8 +360,8 @@ class ConsentRecordViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         # and admin bypass this — they legitimately record consents
         # on behalf of members during paper-based onboarding.
         if (
-            body(request).get("member")
-            and str(request.data["member"]) != str(own_member_id(request))
+            requested_member_id
+            and str(requested_member_id) != str(own_member_id(request))
             and not has_any_role(request, Role.OFFICE, Role.ADMIN)
         ):
             raise PrivilegeRequired(

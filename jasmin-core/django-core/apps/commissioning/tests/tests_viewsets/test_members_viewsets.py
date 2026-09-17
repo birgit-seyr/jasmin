@@ -10,7 +10,7 @@ import time_machine
 from django.urls import reverse
 from rest_framework import status
 
-from apps.commissioning.models import CoopShare, MemberLoan
+from apps.commissioning.models import CoopShare, MemberLoan, Subscription
 from apps.commissioning.tests.factories import (
     CoopShareFactory,
     DeliveryStationDayFactory,
@@ -663,3 +663,26 @@ class TestMemberRegisterExportDateRange:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.data["code"] == "query.invalid_param"
         assert resp.data["field"] == "date_from"
+
+
+@pytest.mark.django_db
+class TestBulkRenewIdList:
+    """``bulk_renew`` reads its id array through the shared bulk parser, so a
+    malformed list is refused with the same code as every other bulk-by-ids
+    endpoint — and refused before any subscription is renewed."""
+
+    URL = reverse("abos-bulk-renew")
+
+    def test_a_non_string_id_is_refused_before_anything_is_renewed(
+        self, api_client, tenant
+    ):
+        resp = api_client.post(
+            self.URL, {"subscription_ids": ["some-id", 17]}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST, resp.data
+        assert resp.data["code"] == "bulk.ids_invalid"
+        assert resp.data["field"] == "subscription_ids"
+        assert not Subscription.objects.filter(
+            previous_subscription__isnull=False
+        ).exists()

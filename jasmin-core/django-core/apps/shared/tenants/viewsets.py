@@ -33,7 +33,12 @@ from .errors import (
     NoTenantContext,
     YearNumberingLocked,
 )
-from .models import Tenant, TenantEmailConfig, TenantSettings
+from .models import (
+    Tenant,
+    TenantEmailConfig,
+    TenantSettings,
+    validate_offer_tiers,
+)
 from .serializers import (
     TenantEmailConfigSerializer,
     TenantNonStaffReadSerializer,
@@ -525,11 +530,19 @@ class TenantSettingsViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
         changed_fields = set()
         ignored_keys: list[str] = []
         for key, value in new_settings_data.items():
-            if key in writable_fields:
-                setattr(new_settings, key, value)
-                changed_fields.add(key)
-            else:
+            if key not in writable_fields:
                 ignored_keys.append(str(key))
+                continue
+            # A key being present says nothing about intent: the settings
+            # pages autosave by echoing the WHOLE fetched row back, so every
+            # setting arrives on every save. Only a value that differs from
+            # the locked current version counts as a change — otherwise a
+            # stored value that fails a validator would block every unrelated
+            # setting the caller does change, with no UI path to repair it.
+            if current_settings is not None and value == getattr(current_settings, key):
+                continue
+            setattr(new_settings, key, value)
+            changed_fields.add(key)
 
         if ignored_keys:
             logger.warning(
@@ -539,6 +552,19 @@ class TenantSettingsViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
                 sorted(ignored_keys)[:10],
             )
 
+        # ``Model.clean_fields`` skips a field whose value is blank, and
+        # ``used_tiers_for_offers`` is ``blank=True``, so its field validator
+        # never sees an empty mapping or an empty string. ``[]`` and ``null``
+        # legitimately mean "no tiers configured"; a mapping or a string is
+        # not a tier list at all and reaches the price-tier readers as one.
+        if "used_tiers_for_offers" in changed_fields:
+            try:
+                validate_offer_tiers(new_settings.used_tiers_for_offers)
+            except DjangoValidationError as exc:
+                raise InvalidSettingsValue(
+                    "; ".join(exc.messages), field="used_tiers_for_offers"
+                ) from exc
+
         # This is the ONLY write path for TenantSettings and it setattr's
         # raw values (the serializer never validates them), so enforce the
         # model field validators here — e.g. billing_due_day_of_month /
@@ -546,7 +572,7 @@ class TenantSettingsViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
         # Without this an out-of-range day persists and later crashes
         # charge-schedule generation (period_start.replace(day=0)).
         #
-        # Validate ONLY the fields this request changed: a whole-object
+        # Validate ONLY the values this request changes: a whole-object
         # full_clean would re-validate untouched legacy columns (e.g. a row
         # that predates a stricter validator) and wrongly reject a valid
         # edit. Uniqueness is enforced by the partial unique constraint, so
@@ -748,7 +774,11 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
             TestEmailSendFailed,
         )
 
-        to_email = (body(request).get("to_email") or "").strip()
+        # A non-string ``to_email`` is as unusable as a missing one, and the
+        # recipient allowlist below compares it case-insensitively — so settle
+        # the type here rather than letting a hand-crafted body reach ``.strip()``.
+        raw_to_email = body(request).get("to_email")
+        to_email = raw_to_email.strip() if isinstance(raw_to_email, str) else ""
         if not to_email:
             raise TestEmailRecipientMissing("to_email is required")
 

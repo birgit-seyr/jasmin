@@ -11,12 +11,24 @@ from rest_framework import serializers
 
 from apps.shared.languages import LanguageChoices
 
+# Column widths the request payloads are written into: ``JasminUser.first_name``
+# / ``last_name`` and the ``Member`` address block. Declaring them on the
+# serializers keeps an over-long value a per-field 400 naming the field, rather
+# than a database error the handler can only report generically.
+PERSON_NAME_MAX_LENGTH = 255
+ADDRESS_MAX_LENGTH = 255
+ZIP_CODE_MAX_LENGTH = 10
+CITY_MAX_LENGTH = 100
+COUNTRY_MAX_LENGTH = 100
+
 
 class UserProfileUpdateRequestSerializer(serializers.Serializer):
     """Request body for ``PATCH /api/auth/<user_id>/``."""
 
-    first_name = serializers.CharField(required=False)
-    last_name = serializers.CharField(required=False)
+    first_name = serializers.CharField(
+        required=False, max_length=PERSON_NAME_MAX_LENGTH
+    )
+    last_name = serializers.CharField(required=False, max_length=PERSON_NAME_MAX_LENGTH)
     user_language = serializers.ChoiceField(
         choices=LanguageChoices.choices, required=False
     )
@@ -217,14 +229,26 @@ class PublicRegisterRequestSerializer(serializers.Serializer):
     # account is created without a usable password and an ``accounts.invitation``
     # (set-password) link is emailed on success — see ``registration_service``.
     email = serializers.EmailField()
-    first_name = serializers.CharField(required=False, allow_blank=True)
-    last_name = serializers.CharField(required=False, allow_blank=True)
+    first_name = serializers.CharField(
+        required=False, allow_blank=True, max_length=PERSON_NAME_MAX_LENGTH
+    )
+    last_name = serializers.CharField(
+        required=False, allow_blank=True, max_length=PERSON_NAME_MAX_LENGTH
+    )
 
     # Optional address fields.
-    address = serializers.CharField(required=False, allow_blank=True)
-    zip_code = serializers.CharField(required=False, allow_blank=True)
-    city = serializers.CharField(required=False, allow_blank=True)
-    country = serializers.CharField(required=False, allow_blank=True)
+    address = serializers.CharField(
+        required=False, allow_blank=True, max_length=ADDRESS_MAX_LENGTH
+    )
+    zip_code = serializers.CharField(
+        required=False, allow_blank=True, max_length=ZIP_CODE_MAX_LENGTH
+    )
+    city = serializers.CharField(
+        required=False, allow_blank=True, max_length=CITY_MAX_LENGTH
+    )
+    country = serializers.CharField(
+        required=False, allow_blank=True, max_length=COUNTRY_MAX_LENGTH
+    )
 
     # Number of cooperative shares the applicant wants. Creates a single
     # CoopShare row with this quantity in pending (admin_confirmed=False)
@@ -301,7 +325,9 @@ class RegisterSendCodeRequestSerializer(serializers.Serializer):
     email-ownership verification code (step "confirm email" of the wizard)."""
 
     email = serializers.EmailField()
-    first_name = serializers.CharField(required=False, allow_blank=True)
+    first_name = serializers.CharField(
+        required=False, allow_blank=True, max_length=PERSON_NAME_MAX_LENGTH
+    )
     frc_captcha_solution = serializers.CharField(
         required=False, allow_blank=True, write_only=True
     )
@@ -353,8 +379,8 @@ class AdminUserRowSerializer(serializers.Serializer):
 
 class AdminUserCreateRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
+    first_name = serializers.CharField(max_length=PERSON_NAME_MAX_LENGTH)
+    last_name = serializers.CharField(max_length=PERSON_NAME_MAX_LENGTH)
     roles = serializers.ListField(child=serializers.CharField(), required=False)
     user_language = serializers.ChoiceField(
         choices=LanguageChoices.choices, required=False, allow_null=True
@@ -365,8 +391,10 @@ class AdminUserCreateRequestSerializer(serializers.Serializer):
 class AdminUserUpdateRequestSerializer(serializers.Serializer):
     """All fields optional — PATCH semantics."""
 
-    first_name = serializers.CharField(required=False)
-    last_name = serializers.CharField(required=False)
+    first_name = serializers.CharField(
+        required=False, max_length=PERSON_NAME_MAX_LENGTH
+    )
+    last_name = serializers.CharField(required=False, max_length=PERSON_NAME_MAX_LENGTH)
     user_language = serializers.ChoiceField(
         choices=LanguageChoices.choices, required=False, allow_null=True
     )

@@ -108,12 +108,15 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         future: bool | None = params["future"]
         need_info_on_tours: bool | None = params["need_info_on_tours"]
 
+        # The two date windows are alternatives, not layers: chained so that a
+        # request sending both gets the narrower ``active_at_date`` view rather
+        # than whichever branch happens to run last. Mirrors the station-days
+        # endpoint.
         if active_at_date:
             queryset = SharesDeliveryDay.current.active_at_date(
                 active_at_date
             ).order_by("day_number")
-
-        if active_at_date_or_future:
+        elif active_at_date_or_future:
             queryset = SharesDeliveryDay.current.active_at_date_or_future(
                 active_at_date_or_future
             ).order_by("day_number")
@@ -134,7 +137,16 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
         # Truthiness, not ``is not None``: ``future`` is a strict bool, so
         # ``?future=false`` must NOT switch to the future-days view.
-        if future and active_at_date is not None:
+        if future:
+            # "Future" is measured against a date — the view is the open-ended
+            # days minus those already active at it — so there is no answer
+            # without one. Say so instead of ignoring the flag and returning
+            # the plain list the caller did not ask for.
+            if active_at_date is None:
+                raise InvalidQueryParam(
+                    "Parameter 'active_at_date' is required when 'future' is requested",
+                    field="active_at_date",
+                )
             future_queryset = SharesDeliveryDay.objects.filter(valid_until__isnull=True)
             active_records = SharesDeliveryDay.current.active_at_date(active_at_date)
             queryset = future_queryset.exclude(id__in=active_records)
@@ -346,24 +358,14 @@ class OrdersDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         return queryset
 
     @extend_schema(
-        description="Create a new orders delivery day, automatically closing any "
-        "existing delivery day with the same day_number.",
+        description="Create a new orders delivery day. Unlike shares delivery "
+        "days, an orders delivery day carries no validity window and there is "
+        "no succession: day_number is unique, so a duplicate is rejected.",
         responses={400: ErrorResponseSerializer},
     )
     def create(self, request: Request, *args, **kwargs) -> Response:
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        validated_data: dict = serializer.validated_data
-
-        valid_from = validated_data.get("valid_from")
-        today = timezone.now().date()
-
-        if valid_from and valid_from < today:
-            raise DeliveryDayValidFromInPast(
-                "Cannot create delivery day with valid_from date in the past.",
-                field="valid_from",
-            )
 
         instance = serializer.save()
         response_serializer = self.get_serializer(instance)

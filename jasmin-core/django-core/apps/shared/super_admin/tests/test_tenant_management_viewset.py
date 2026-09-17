@@ -545,6 +545,29 @@ class TestCreateAdmin:
         assert response.status_code == 400
         assert "already exists" in response.data["message"]
 
+    def test_email_is_stored_lowercased(self, factory, tenant, super_admin):
+        """``create_user`` derives the unique ``username`` from
+        ``email.lower()``, so the stored address matches it."""
+        request = factory.post(
+            f"/tenants/{tenant.id}/create-admin/",
+            {
+                "first_name": "Mixed",
+                "last_name": "Case",
+                "email": "Mixed.Case@Example.COM",
+                "password": _STRONG_PW,
+            },
+            format="json",
+        )
+        force_authenticate(
+            request, user=super_admin, token=make_step_up_token(super_admin)
+        )
+        response = _dispatch({"post": "create_admin"}, request, pk=tenant.id)
+
+        assert response.status_code == 201, response.data
+        assert response.data["email"] == "mixed.case@example.com"
+        with schema_context(tenant.schema_name):
+            assert JasminUser.objects.filter(email="mixed.case@example.com").exists()
+
     def test_requires_step_up_without_claim(self, factory, tenant, super_admin):
         """Minting a tenant admin is a persistent-backdoor risk — without a
         fresh step-up claim the request is refused before any user is created."""
@@ -617,6 +640,53 @@ class TestCreateUser:
 
         assert response.status_code == 400
         assert "customer" in response.data["message"].lower()
+
+    @pytest.mark.parametrize("roles", [[], None], ids=["empty", "absent"])
+    def test_rejects_missing_roles(self, factory, tenant, super_admin, roles):
+        """A role-less account can sign in but reach nothing, and no later
+        permission check grants it anything — the selection is required."""
+        payload = {
+            "first_name": "No",
+            "last_name": "Roles",
+            "email": "no-roles@example.com",
+            "password": _STRONG_PW,
+        }
+        if roles is not None:
+            payload["roles"] = roles
+        request = factory.post(
+            f"/tenants/{tenant.id}/create-user/", payload, format="json"
+        )
+        force_authenticate(
+            request, user=super_admin, token=make_step_up_token(super_admin)
+        )
+        response = _dispatch({"post": "create_user"}, request, pk=tenant.id)
+
+        assert response.status_code == 400
+        assert response.data["code"] == "super_admin.invalid_roles"
+        with schema_context(tenant.schema_name):
+            assert not JasminUser.objects.filter(email="no-roles@example.com").exists()
+
+    def test_email_is_stored_lowercased(self, factory, tenant, super_admin):
+        request = factory.post(
+            f"/tenants/{tenant.id}/create-user/",
+            {
+                "first_name": "Mixed",
+                "last_name": "Case",
+                "email": "User.Mixed@Example.COM",
+                "password": _STRONG_PW,
+                "roles": ["office"],
+            },
+            format="json",
+        )
+        force_authenticate(
+            request, user=super_admin, token=make_step_up_token(super_admin)
+        )
+        response = _dispatch({"post": "create_user"}, request, pk=tenant.id)
+
+        assert response.status_code == 201, response.data
+        assert response.data["email"] == "user.mixed@example.com"
+        with schema_context(tenant.schema_name):
+            assert JasminUser.objects.filter(email="user.mixed@example.com").exists()
 
     def test_requires_step_up_without_claim(self, factory, tenant, super_admin):
         """Creating a user (roles can include ``admin``) is gated: without a

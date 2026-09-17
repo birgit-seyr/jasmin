@@ -4,7 +4,6 @@ from decimal import Decimal
 
 from django.db.models import Sum
 from django.db.models.functions import TruncMonth
-from django.utils import timezone
 from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
@@ -31,7 +30,7 @@ from core.pagination import OptionalLimitOffsetPagination
 from core.serializers import ErrorResponseSerializer
 
 from .constants import OPEN_CHARGE_STATUSES, BillingRunStatus, ChargeStatus
-from .errors import BillingRunInvalidCollectionDate, BillingRunNotDraft
+from .errors import BillingRunNotDraft
 from .models import BillingProfile, BillingRun, ChargeSchedule
 from .scoping import scope_to_member
 from .serializers import (
@@ -193,12 +192,17 @@ class BillingProfileViewSet(
     def get_queryset(self):
         qs = BillingProfile.objects.select_related("member").all()
         qs = scope_to_member(qs, self.request, path="member")
-        # Staff can narrow to one member (members are already self-scoped, so
-        # the param is a redundant no-op for them). Lets callers that only need
-        # one member's mandate fetch + decrypt a single row instead of the whole
+        # Staff can narrow to one member. Lets callers that only need one
+        # member's mandate fetch + decrypt a single row instead of the whole
         # tenant, and keeps the PII-read audit line scoped (``list(member=...)``).
         member_id = self.request.query_params.get("member")
         if member_id:
+            # A non-privileged caller may narrow only to their OWN profile; a
+            # foreign ``?member=`` is a 403, not a silent empty set — the same
+            # contract the charge-schedule list enforces. Privileged roles
+            # (office/admin/management) bypass, and ``scope_to_member`` above
+            # stays the defense-in-depth backstop.
+            enforce_owner(self.request, member_id, user_attr="member_profile")
             qs = qs.filter(member_id=member_id)
         return qs
 
@@ -511,21 +515,14 @@ class BillingRunViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = CreateBillingRunSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # Reject a past RequestedCollectionDate before building a run: SEPA
-        # can't settle a debit before today, so the bank would reject the whole
-        # pain.008 batch at export. (The DatePicker disables past dates too;
-        # this is the server-side backstop.)
-        collection_date = serializer.validated_data["collection_date"]
-        if collection_date < timezone.localdate():
-            raise BillingRunInvalidCollectionDate(
-                "collection_date must not be in the past "
-                f"(got {collection_date.isoformat()}).",
-                details={"collection_date": collection_date.isoformat()},
-            )
-        # ``BillingRunService.create_run`` raises payments JasminErrors
-        # (BillingRunInvalidPeriod / NoEligibleCharges / NoValidSepaMandates)
-        # — they carry stable dotted codes and reach the canonical handler
-        # on their own, no ``ValidationError`` re-wrap needed.
+        # ``BillingRunService.create_run`` is the single enforcement point for
+        # the run's own invariants — period order, a collection_date in the past
+        # (SEPA can't settle a debit before today, so the bank would bounce the
+        # whole pain.008 batch), no eligible charges, no valid mandates — so a
+        # management command or bulk job is held to exactly the same rules as
+        # this endpoint. It raises payments JasminErrors, which carry stable
+        # dotted codes and reach the canonical handler on their own, no
+        # ``ValidationError`` re-wrap needed.
         run = BillingRunService.create_run(
             period_start=serializer.validated_data["period_start"],
             period_end=serializer.validated_data["period_end"],

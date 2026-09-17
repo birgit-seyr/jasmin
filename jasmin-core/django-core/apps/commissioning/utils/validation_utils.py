@@ -19,6 +19,7 @@ from apps.shared.request_utils import body
 
 from ..errors import (
     BulkIdsInvalid,
+    BulkIdsTooMany,
     CommissioningError,
     InvalidQueryParam,
     RequiredFieldMissing,
@@ -36,6 +37,22 @@ _BODY_INT_SPECS = {
 
 #: A name with no catalogued range: still parsed as an integer, just unbounded.
 _UNBOUNDED_INT = ParamSpec("int")
+
+# Ceiling on the ids one bulk call may carry. Every id costs a row lock plus
+# its cascade inside the caller's single transaction, and the bulk stock views
+# additionally take one transaction-scoped advisory lock per distinct entity in
+# the batch, held until that transaction commits. Postgres sizes its lock table
+# cluster-wide — roughly ``max_locks_per_transaction * max_connections``, ~6400
+# at the defaults this deployment runs on — so one oversized batch can push
+# unrelated transactions, other tenants included, into "out of shared memory".
+# 1000 holds a single batch to roughly a sixth of that table, so several
+# concurrent batches still fit. It also stays clear of every batch the office
+# UI can produce: a bulk action is fed the table's checkbox selection, and the
+# page-size picker tops out at 500 rows. An endpoint whose per-id work is
+# heavier than a lock — the subscription bulk renewal, which resolves a
+# variation and runs a full_clean INSERT per id — passes its own lower
+# ``max_count`` rather than relying on this ceiling.
+MAX_BULK_IDS = 1000
 
 
 def validate_and_parse_int_params(
@@ -93,7 +110,10 @@ def validate_and_parse_int_params(
         )
 
     parsed_values = []
-    params_source = request.query_params if source == "query" else request.data
+    # ``body`` rather than ``request.data``: a body that is not a JSON object
+    # (an array, a bare string) reads as empty here, so the missing-parameter
+    # 400 below answers it instead of ``.get`` raising AttributeError (500).
+    params_source = request.query_params if source == "query" else body(request)
 
     for param_name in param_names:
         value = params_source.get(param_name)
@@ -162,6 +182,7 @@ def parse_bulk_ids(
     *,
     field: str = "ids",
     invalid_item_error: type[BulkIdsInvalid] = BulkIdsInvalid,
+    max_count: int = MAX_BULK_IDS,
 ) -> list[str]:
     """Extract and validate the ``{field: [...]}`` array from a bulk request body.
 
@@ -177,6 +198,10 @@ def parse_bulk_ids(
     ``field=<field>``) is raised. Ids are string primary keys or string
     composite ids; a number, null, list or object entry would otherwise reach
     the composite-id parsers, which call ``.split`` on it and fail with a 500.
+
+    At most ``max_count`` ids (default :data:`MAX_BULK_IDS`) per call, otherwise
+    :class:`apps.commissioning.errors.BulkIdsTooMany` (HTTP 400) is raised with
+    the ``limit`` and the ``received`` count in ``details``.
     """
     ids = body(request).get(field)
     if not ids or not isinstance(ids, list):
@@ -186,6 +211,12 @@ def parse_bulk_ids(
         )
     if not all(isinstance(item, str) and item.strip() for item in ids):
         raise invalid_item_error("Every id must be a non-empty string.", field=field)
+    if len(ids) > max_count:
+        raise BulkIdsTooMany(
+            f"At most {max_count} ids per request.",
+            field=field,
+            details={"limit": max_count, "received": len(ids)},
+        )
     return ids
 
 

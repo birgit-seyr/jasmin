@@ -2,7 +2,7 @@
 # Managed by scripts/mypy_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/mypy_baseline.py freeze
-# 351 finding(s).
+# 348 finding(s).
 
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
@@ -214,7 +214,6 @@ apps/commissioning/utils/share_type_variation_amounts.py: Argument "variation_id
 apps/commissioning/utils/share_type_variation_amounts.py: Invalid index type "tuple[Any, object]" for "dict[tuple[str, str], int]"; expected type "tuple[str, str]"  [index]
 apps/commissioning/utils/tax_rate_utils.py: Incompatible return value type (got "Decimal | int | None", expected "Decimal | int")  [return-value]
 apps/commissioning/utils/tax_rate_utils.py: Incompatible return value type (got "Decimal | int | None", expected "Decimal | int")  [return-value]
-apps/commissioning/utils/validation_utils.py: Item "list[Any]" of "_ImmutableQueryDict | dict[str, Any] | list[Any]" has no attribute "get"  [union-attr]
 apps/commissioning/utils/weight.py: Incompatible types in assignment (expression has type "str", variable has type "Decimal | float")  [assignment]
 apps/commissioning/views/documentation_views.py: "type[JasminModel]" has no attribute "objects"  [attr-defined]
 apps/commissioning/views/finalize_views.py: "Model" has no attribute "unfinalize"  [attr-defined]
@@ -245,7 +244,6 @@ apps/commissioning/views/share_views.py: Argument 3 to "_build_variation_totals_
 apps/commissioning/views/share_views.py: Argument 4 to "_build_variation_totals_by_key" of "ShareTypeVariationAmountsForPlanningView" has incompatible type "object"; expected "int"  [arg-type]
 apps/commissioning/views/share_views.py: Module "rest_framework.views" does not explicitly export attribute "Response"  [attr-defined]
 apps/commissioning/views/stock_views.py: Argument 1 to "_get_storage_or_error" of "StorageLoggingView" has incompatible type "str | None"; expected "str"  [arg-type]
-apps/commissioning/views/stock_views.py: Argument 2 to "_update_inventory_fields" has incompatible type "dict[str, Any] | list[Any]"; expected "dict[Any, Any]"  [arg-type]
 apps/commissioning/views/stock_views.py: Function "builtins.callable" is not valid as a type  [valid-type]
 apps/commissioning/views/stock_views.py: Incompatible types in assignment (expression has type "float", variable has type "Decimal")  [assignment]
 apps/commissioning/views/stock_views.py: callable? not callable  [misc]
@@ -256,7 +254,6 @@ apps/commissioning/viewsets/basics_viewsets.py: Function "apps.commissioning.vie
 apps/commissioning/viewsets/basics_viewsets.py: Need type annotation for "invalid" (hint: "invalid: set[<type>] = ...")  [var-annotated]
 apps/commissioning/viewsets/basics_viewsets.py: Need type annotation for "value"  [var-annotated]
 apps/commissioning/viewsets/choices_models_viewsets.py: Incompatible type for lookup 'day_number': (got "Any | None", expected "str | int")  [misc]
-apps/commissioning/viewsets/consents_viewsets.py: No overload variant of "__getitem__" of "list" matches argument type "str"  [call-overload]
 apps/commissioning/viewsets/crates_viewsets.py: Argument 1 to "float" has incompatible type "Decimal | int | Any | None"; expected "str | Buffer | SupportsFloat | SupportsIndex"  [arg-type]
 apps/commissioning/viewsets/crates_viewsets.py: Argument 2 to "_get_tax_rate" has incompatible type "date | None"; expected "date"  [arg-type]
 apps/commissioning/viewsets/crates_viewsets.py: Argument 2 to "_get_tax_rate" has incompatible type "date | None"; expected "date"  [arg-type]

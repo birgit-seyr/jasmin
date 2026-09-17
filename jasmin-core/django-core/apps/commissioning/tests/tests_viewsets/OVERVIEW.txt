@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-877 tests | 170 test classes | 32 files
+910 tests | 172 test classes | 32 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 Counts are collected cases, so a parametrized method counts once per case.
@@ -14,7 +14,7 @@ test_badge_viewsets.py (16 tests)
   TestUnconfirmedMembersViewSet            4   unconfirmed_members badge count
   TestUnconfirmedCoopSharesViewSet         4   unconfirmed_coop_shares badge count
 
-test_basics_viewsets.py (54 tests)
+test_basics_viewsets.py (57 tests)
 ──────────────────────────────────
   TestSeasonViewSet                        3   list, create (with valid_from/valid_until)
   TestSeasonOneOpenConstraint              2   DB refuses a second open season; open + closed allowed
@@ -31,32 +31,41 @@ test_basics_viewsets.py (54 tests)
                                                fallback unit, explicit unit, scope filter,
                                                404 on missing share_article, 400 on bad payload),
                                                permissions (member/anon)
+  TestShareArticleNetPriceFiltering        3   share_article filter; current returns the open-ended
+                                               price; active_at_date supersedes current
   TestShareArticleNetPriceViewSet          2   deletability of an active vs. a future price
   TestShareArticleNetPriceDestroyGuard     3   DELETE enforces can_be_deleted: active price of
                                                in-use article → 409 + row kept; unused → 204;
                                                future price of in-use article → 204
 
-test_choices_viewsets.py (21 tests)
+test_choices_viewsets.py (28 tests)
 ───────────────────────────────────
-  TestSharesDeliveryDayViewSet            10   list, retrieve, tour count raise/reduce rules,
+  TestSharesDeliveryDayViewSet            15   list, retrieve, tour count raise/reduce rules,
                                                get_delivery_stations flag (false omits the prefetch;
-                                               without active_at_date → 400)
+                                               without active_at_date → 400), active_at_date wins
+                                               over active_at_date_or_future, future needs
+                                               active_at_date (→ 400) and returns the not-yet-active
+                                               days
   TestSharesDeliveryDayValidFromMove       6   moving valid_from later past existing shares or
                                                station-days → 409 and the row is untouched, onboarding
                                                mode included; moving it into a past week → 400 unless
                                                onboarding mode is on; moving it later with nothing
                                                before it → 200
-  TestOrdersDeliveryDayViewSet             2   list
+  TestOrdersDeliveryDayViewSet             4   list; create (no validity window to judge);
+                                               duplicate day_number rejected
   TestPaymentCycleViewSet                  3   list, is_active filter
 
-test_consents_viewsets.py (47 tests) — DSGVO-critical access matrix
+test_consents_viewsets.py (53 tests) — DSGVO-critical access matrix
 ───────────────────────────────────────────────────────────────────
-  TestConsentDocumentReadAccess            8   anon + member + office all 200; current/ 200 + clean 404;
-                                               ?kind= filters the list, an unknown kind → 400
+  TestConsentDocumentReadAccess           11   anon + member + office all 200; current/ 200 + clean 404;
+                                               ?kind= filters the list, an unknown kind → 400; current/
+                                               with an unknown or missing kind → 400 query.invalid_param;
+                                               current/ without a locale looks up 'de'
   TestConsentDocumentWriteAccess           6   anon 401/403, member 403; office 201; PROTECTed delete → 409
-  TestConsentRecordCreate                  7   member pinned to self; spoof attempt → 403; office can act
-                                               on behalf; IP from X-Forwarded-For; UA captured; unknown
-                                               document → 404
+  TestConsentRecordCreate                 10   member pinned to self; spoof attempt → 403 (padded id too);
+                                               member's own padded id → 201; office can act on behalf,
+                                               padded id included; IP from X-Forwarded-For; UA captured;
+                                               unknown document → 404
   TestConsentRecordListScoping             4   anon blocked; member sees only own; office sees all;
                                                ?member= filter
   TestConsentRecordRevoke                  5   anon blocked; owner revokes own; non-owning member → 404
@@ -98,16 +107,18 @@ test_coop_share_transfer.py (30 tests) — office coop share transfer between me
                                                cancelled giver → 409; future date; date before either entry date;
                                                amount 0 / -1 / 2.5 → 400; anonymous refused
 
-test_crates_viewsets.py (35 tests)
+test_crates_viewsets.py (45 tests)
 ──────────────────────────────────
   TestCrateDeliveryNoteContentViewSet      6   unknown delivery note → 404; empty summary; create resolves the
                                                tax rate; finalized parent refused; summary groups mixed prices
   TestCrateContentInvoiceResellerViewSet   3   unknown invoice → 404; empty summary; finalized invoice refused
   TestCrateNetPriceViewSet                 6   list (with crate name), filter by crate, current-only filter,
                                                deletability of an active vs. a future price
-  TestCrateDocumentLineWriteValidation    16   rabatt > 100 / blank rabatt / over-long note / blank amount → 400
+  TestCrateDocumentLineWriteValidation    26   rabatt > 100 / blank rabatt / over-long note / blank amount → 400
                                                on create and update; a PATCH without price or rabatt keeps the
-                                               stored values
+                                               stored values; an omitted document id / crate_type / amount → one
+                                               missing_required code per document, while a present-but-unknown
+                                               id stays a 404
   TestCrateDocumentLineSerializerLocks     2   server-owned columns of a delivery-note / invoice crate line
   TestCrateNetPriceDestroyGuard            2   active price of a crate in use → 409 + kept; unused → deleted
 
@@ -150,7 +161,7 @@ test_delivery_viewsets.py (39 tests)
   TestUpdateToursCreatesStationDay         2   assigning a station without a station-day creates one; on a
                                                future-dated day it opens at that day's own start
 
-test_documentation_viewsets.py (56 tests)
+test_documentation_viewsets.py (57 tests)
 ─────────────────────────────────────────
   TestPlotViewSet                          6   list, is_active filter, create, retrieve, delete
   TestWasteViewSet                         4   list; create with a page-level storage; plain storage required
@@ -158,7 +169,8 @@ test_documentation_viewsets.py (56 tests)
   TestPurchaseViewSet                      3   list; create with a page-level storage
   TestForecastViewSet                      4   week scope required, list, filter by year/week
   TestForecastInvalidVariation             2   unknown variation on create / update → 404
-  TestForecastBulkCopyToNextWeek           3   empty ids → 400, unknown ids → 404, copy
+  TestForecastBulkCopyToNextWeek           4   empty ids → 400, unknown ids → 404, copy, a partial
+                                               selection copies the rest and names the missing ids
   TestPurchaseExportCsv                    4   missing dates → 400 naming date_from; a non-YYYY-MM-DD date
                                                → 400 before the export runs; empty range still a CSV;
                                                week-scoped purchase included with localized labels
@@ -389,11 +401,11 @@ test_shares_delivery_day_query_count.py (1 test)
 ────────────────────────────────────────────────
   (module-level)                           1   list can_be_deleted matches the per-instance answer
 
-test_shares_viewsets.py (121 tests)
+test_shares_viewsets.py (136 tests)
 ───────────────────────────────────
-  TestShareTypeViewSet                    15   list, include_future (current + upcoming, not past), variation
-                                               sizes and validity bounds, deletability, filter share_option,
-                                               create/update uppercase, invalid 400, non-string
+  TestShareTypeViewSet                    16   list, include_future (current + upcoming, not past), variation
+                                               sizes and validity bounds, deletability, filter share_option
+                                               (any casing), create/update uppercase, invalid 400, non-string
                                                share_option 400 on create and update
   TestShareTypeVariationViewSet           17   list, active trial price, subscription validity bounds,
                                                include_future, create inside / outside the share type's range,
@@ -421,14 +433,16 @@ test_shares_viewsets.py (121 tests)
   TestDefaultShareContentBulkUpdateValidation 4 composite-id PUT replaces the slot amount; bad-typed field 400;
                                                a PATCH without range_1 → 400 required_field.missing and no
                                                row written; a PATCH carrying the ranges rewrites the slot
-  TestHarvestSharePlanningViewSet         12   create persists ShareContent + station; null note ok;
+  TestHarvestSharePlanningViewSet         14   create persists ShareContent + station; null note ok;
                                                missing field 400; no-amounts 400; a PATCH of one cell
                                                keeps washing / packing_station / note, while PUT still
                                                replaces them; kg_per_piece / price_per_unit / an amount
                                                cell wider than their columns → 400 naming the field,
                                                while a cell at the column limit still persists;
                                                switching a slot to cleaning clears the stored washing
-                                               flag, and a payload carrying both is a 400
+                                               flag, and a payload carrying both is a 400; DELETE on
+                                               the composite pk clears that week's rows, on an
+                                               unplanned slot → 404
   TestVirtualComponentsViewSet             3   create 201 + persisted component; missing virtual_variation 400;
                                                non-physical component 400
   TestShareDeliveryJokerBillingNotify      4   update/destroy on both viewsets notify the subscription
@@ -452,6 +466,11 @@ test_shares_viewsets.py (121 tests)
                                                narrows on its own (week kept without a station filter, station
                                                filter narrows); ?limit= envelope counts member rows;
                                                unusable limit → 400
+  TestBoxCombinationMatrixFlags            5   the weekly matrix refuses both halves of a pair
+                                               (for_tours + for_stations, joker + donation_joker) → 400
+                                               naming the field, while one per pair — and an explicit
+                                               false half — still answers; the import branch applies
+                                               is_packed_bulk to the columns and the counts
 
 test_subscription_onboarding_start.py (19 tests) — onboarding mode: subscription start lead time (frozen clock)
 ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -462,7 +481,7 @@ test_subscription_onboarding_start.py (19 tests) — onboarding mode: subscripti
   TestSubscriptionViewSetContext          10   create/update/partial_update carry the flag (off / on); list,
                                                retrieve, confirm and schema generation leave it out
 
-test_subscription_price_bounds.py (12 tests) — office subscription quantity/price bounds + solidarity floor on PATCH (frozen clock)
+test_subscription_price_bounds.py (16 tests) — office subscription quantity/price bounds + solidarity floor on PATCH (frozen clock)
 ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
   TestOfficeSubscriptionBounds             6   create quantity 0 / -1 → 400; price -1 → 400; PATCH quantity 0 →
                                                400; price 0 and a free trial still 201
@@ -470,6 +489,9 @@ test_subscription_price_bounds.py (12 tests) — office subscription quantity/pr
                                                against the new floor → 400; variation + price at the floor → 200;
                                                unrelated edit of a below-floor draft → 200; solidarity off keeps
                                                price discretion
+  TestOfferSpotPriceBounds                 4   offer_spot price outside numeric(8,2) (third decimal, too wide)
+                                               → 400 subscription.invalid_price and the entry stays PENDING; a
+                                               cent price is offered; no price keeps the stored one
 
 test_waiting_list_api.py (13 tests)
 ───────────────────────────────────

@@ -1147,3 +1147,434 @@ class TestPurchaseOrganicValidation:
         )
         with pytest.raises(OrganicPurchaseCertificateRequired):
             PurchaseSerializer().validate(self._attrs(seller, "organic"))
+
+
+# ---------------------------------------------------------------------------
+# ResellerViewSet — has_orders under a partial scope
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestResellerHasOrdersPartialScope:
+    """The delivery-notes and payments reseller dropdowns ask for the flag with
+    a year + week scope and no day at all."""
+
+    URL = reverse("reseller-list")
+
+    @staticmethod
+    def _row(resp, reseller):
+        return next(row for row in resp.data if row["id"] == reseller.id)
+
+    @staticmethod
+    def _reseller_with_order(*, year=2026, delivery_week=15, day_number=2):
+        reseller = ResellerFactory()
+        OrderContentFactory(
+            order=OrderFactory(
+                reseller=reseller,
+                year=year,
+                delivery_week=delivery_week,
+                day_number=day_number,
+            )
+        )
+        return reseller
+
+    def test_year_and_week_scope_annotates_the_flag(self, api_client, tenant):
+        with_order = self._reseller_with_order()
+        without_order = ResellerFactory()
+
+        resp = api_client.get(self.URL, {"year": 2026, "delivery_week": 15})
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert self._row(resp, with_order)["has_orders"] is True
+        assert self._row(resp, without_order)["has_orders"] is False
+
+    def test_the_week_still_scopes_the_flag(self, api_client, tenant):
+        reseller = self._reseller_with_order(delivery_week=15)
+
+        resp = api_client.get(self.URL, {"year": 2026, "delivery_week": 16})
+
+        assert self._row(resp, reseller)["has_orders"] is False
+
+    def test_a_year_alone_scopes_the_flag(self, api_client, tenant):
+        reseller = self._reseller_with_order(year=2026)
+
+        matching = api_client.get(self.URL, {"year": 2026})
+        other_year = api_client.get(self.URL, {"year": 2025})
+
+        assert self._row(matching, reseller)["has_orders"] is True
+        assert self._row(other_year, reseller)["has_orders"] is False
+
+    def test_without_any_scope_the_flag_stays_absent(self, api_client, tenant):
+        reseller = self._reseller_with_order()
+
+        resp = api_client.get(self.URL)
+
+        assert "has_orders" not in self._row(resp, reseller)
+
+
+# ---------------------------------------------------------------------------
+# ResellerViewSet — list filters belong to the list
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestResellerDetailRoutesIgnoreListFilters:
+    """A filter on a detail or write URL must not narrow the row away: the
+    write has already committed by the time its response row is re-read."""
+
+    URL = reverse("reseller-list")
+
+    @staticmethod
+    def _detail_url(reseller):
+        return reverse("reseller-detail", kwargs={"pk": reseller.pk})
+
+    def test_retrieve_with_an_excluding_filter_still_answers(self, api_client, tenant):
+        reseller = ResellerFactory(is_reseller=True)
+
+        resp = api_client.get(f"{self._detail_url(reseller)}?is_reseller=false")
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["id"] == reseller.id
+
+    def test_patch_with_an_excluding_filter_still_updates(self, api_client, tenant):
+        reseller = ResellerFactory(is_active_reseller=True)
+
+        resp = api_client.patch(
+            f"{self._detail_url(reseller)}?is_active_reseller=false",
+            {"customer_number": 4242},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        reseller.refresh_from_db()
+        assert reseller.customer_number == 4242
+
+    def test_create_with_a_filter_on_the_query_string_answers_the_new_row(
+        self, api_client, tenant
+    ):
+        payload = {
+            "company_name": "Filtered Away GmbH",
+            "first_name": "Ada",
+            "last_name": "Lovelace",
+            "email": "ada@example.com",
+            "address": "Main 1",
+            "zip_code": "12345",
+            "city": "Town",
+            "is_reseller": True,
+            "is_active_reseller": False,
+        }
+
+        resp = api_client.post(
+            f"{self.URL}?is_active_reseller=true", payload, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert Reseller.objects.filter(pk=resp.data["id"]).exists()
+
+
+# ---------------------------------------------------------------------------
+# OrderContentViewSet — the day scope on a detail route
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestOrderContentDetailDayScope:
+    """Monday is ``0``, so a truthiness check would silently drop the filter."""
+
+    @staticmethod
+    def _detail_url(order_content):
+        return reverse("order_contents-detail", kwargs={"pk": order_content.pk})
+
+    def test_a_monday_row_is_kept_by_a_monday_filter(self, api_client, tenant):
+        order_content = OrderContentFactory(order=OrderFactory(day_number=0))
+
+        resp = api_client.get(f"{self._detail_url(order_content)}?day_number=0")
+
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_another_day_is_excluded_by_a_monday_filter(self, api_client, tenant):
+        order_content = OrderContentFactory(order=OrderFactory(day_number=2))
+
+        resp = api_client.get(f"{self._detail_url(order_content)}?day_number=0")
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ---------------------------------------------------------------------------
+# OfferViewSet — reseller and offer_group together
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestOfferResellerAndOfferGroupTogether:
+    URL = reverse("offer-list")
+    WEEK_SCOPE = {"year": 2026, "delivery_week": 10}
+
+    def test_a_matching_pair_returns_the_group_offers(self, api_client, tenant):
+        offer_group = OfferGroupFactory()
+        reseller = ResellerFactory(offer_group=offer_group)
+        offer = OfferFactory(offer_group=offer_group, **self.WEEK_SCOPE)
+        OfferFactory(offer_group=OfferGroupFactory(), **self.WEEK_SCOPE)
+
+        resp = api_client.get(
+            self.URL,
+            {
+                **self.WEEK_SCOPE,
+                "reseller": reseller.id,
+                "offer_group": offer_group.id,
+            },
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert {row["id"] for row in resp.data} == {offer.id}
+
+    def test_a_contradicting_pair_answers_the_resellers_own_group(
+        self, api_client, tenant
+    ):
+        """The reseller's own group wins over a contradicting ``offer_group``:
+        a reseller never sees another group's offers, and the pair is answered
+        rather than refused."""
+        own_group = OfferGroupFactory()
+        reseller = ResellerFactory(offer_group=own_group)
+        own_offer = OfferFactory(offer_group=own_group, **self.WEEK_SCOPE)
+        foreign_group = OfferGroupFactory()
+        OfferFactory(offer_group=foreign_group, **self.WEEK_SCOPE)
+
+        resp = api_client.get(
+            self.URL,
+            {
+                **self.WEEK_SCOPE,
+                "reseller": reseller.id,
+                "offer_group": foreign_group.id,
+            },
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert {row["id"] for row in resp.data} == {own_offer.id}
+
+    def test_a_groupless_reseller_with_a_group_param_answers_empty(
+        self, api_client, tenant
+    ):
+        reseller = ResellerFactory(offer_group=None)
+        foreign_group = OfferGroupFactory()
+        OfferFactory(offer_group=foreign_group, **self.WEEK_SCOPE)
+
+        resp = api_client.get(
+            self.URL,
+            {
+                **self.WEEK_SCOPE,
+                "reseller": reseller.id,
+                "offer_group": foreign_group.id,
+            },
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data == []
+
+    def test_a_reseller_without_a_group_sees_no_offers(self, api_client, tenant):
+        reseller = ResellerFactory(offer_group=None)
+        OfferFactory(offer_group=OfferGroupFactory(), **self.WEEK_SCOPE)
+
+        resp = api_client.get(self.URL, {**self.WEEK_SCOPE, "reseller": reseller.id})
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data == []
+
+
+# ---------------------------------------------------------------------------
+# Uploaded e-invoice XML
+# ---------------------------------------------------------------------------
+_HOSTILE_EINVOICE_XML = (
+    b'<?xml version="1.0"?>\n'
+    b'<!DOCTYPE invoice [<!ENTITY payload SYSTEM "file:///etc/passwd">]>\n'
+    b"<invoice>&payload;</invoice>"
+)
+
+_MATCHING_EINVOICE_XML = (
+    b'<rsm:Invoice xmlns:rsm="urn:example">'
+    b"<rsm:ExchangedDocument><rsm:ID>RE-2026-7</rsm:ID></rsm:ExchangedDocument>"
+    b"<rsm:GrandTotalAmount>10.00</rsm:GrandTotalAmount>"
+    b"</rsm:Invoice>"
+)
+
+
+class TestVerifyEinvoiceXmlMatches:
+    """Which uploaded e-invoice bodies block an upload and which are tolerated."""
+
+    @staticmethod
+    def _verify(raw: bytes, *, number=7, sum_brutto=Decimal("10.00")):
+        from io import BytesIO
+        from types import SimpleNamespace
+
+        from apps.commissioning.viewsets.resellers_viewsets import (
+            _verify_einvoice_xml_matches,
+        )
+
+        document = SimpleNamespace(number=number, sum_brutto=sum_brutto)
+        return _verify_einvoice_xml_matches(document, BytesIO(raw))
+
+    def test_a_matching_body_passes(self):
+        assert self._verify(_MATCHING_EINVOICE_XML) is None
+
+    def test_a_wrong_number_is_reported(self):
+        raw = _MATCHING_EINVOICE_XML.replace(b"RE-2026-7", b"RE-2026-8")
+
+        assert "number" in self._verify(raw)
+
+    def test_a_malformed_body_is_tolerated(self):
+        assert self._verify(b"<invoice") is None
+
+    def test_a_body_defusedxml_refuses_blocks_the_upload(self):
+        assert self._verify(_HOSTILE_EINVOICE_XML) is not None
+
+
+@pytest.mark.django_db
+class TestInvoiceEinvoiceXmlUpload:
+    def test_an_xml_defusedxml_refuses_is_rejected(self, api_client, tenant):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        invoice = InvoiceResellerFactory(is_finalized=True)
+        url = reverse("invoices-upload-pdf", kwargs={"pk": invoice.pk})
+
+        resp = api_client.post(
+            url,
+            {
+                "file": SimpleUploadedFile(
+                    "invoice.pdf", b"%PDF-1.4 minimal", content_type="application/pdf"
+                ),
+                "xml_file": SimpleUploadedFile(
+                    "invoice.xml",
+                    _HOSTILE_EINVOICE_XML,
+                    content_type="application/xml",
+                ),
+            },
+            format="multipart",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "uploaded_document.invalid"
+        assert resp.data["field"] == "xml_file"
+        invoice.refresh_from_db()
+        assert not invoice.file
+
+
+# ---------------------------------------------------------------------------
+# ResellerViewSet — an IBAN rewrite needs step-up
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestResellerIbanStepUp:
+    STORED_IBAN = "DE89370400440532013000"
+    NEW_IBAN = "DE75512108001245126199"
+    LIST_URL = reverse("reseller-list")
+    COMPANY = "Bank Street GmbH"
+
+    @staticmethod
+    def _reseller(iban):
+        from apps.commissioning.tests.factories import ContactEntityFactory
+
+        return ResellerFactory(contact=ContactEntityFactory(iban=iban))
+
+    @staticmethod
+    def _url(reseller):
+        return reverse("reseller-detail", kwargs={"pk": reseller.pk})
+
+    @classmethod
+    def _create_body(cls, **overrides):
+        return {
+            "company_name": cls.COMPANY,
+            "first_name": "Ada",
+            "last_name": "Lovelace",
+            "email": "ada@example.com",
+            "address": "Main 1",
+            "zip_code": "12345",
+            "city": "Town",
+            "is_reseller": True,
+            **overrides,
+        }
+
+    def _created(self):
+        return Reseller.objects.filter(contact__company_name=self.COMPANY)
+
+    def test_rewriting_the_iban_is_refused_without_step_up(self, api_client, tenant):
+        reseller = self._reseller(self.STORED_IBAN)
+
+        resp = api_client.patch(
+            self._url(reseller), {"iban": self.NEW_IBAN}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "auth.step_up_required"
+        reseller.contact.refresh_from_db()
+        assert reseller.contact.iban == self.STORED_IBAN
+
+    def test_a_first_iban_is_refused_without_step_up(self, api_client, tenant):
+        reseller = self._reseller(None)
+
+        resp = api_client.patch(
+            self._url(reseller), {"iban": self.NEW_IBAN}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        reseller.contact.refresh_from_db()
+        assert reseller.contact.iban in (None, "")
+
+    def test_a_fresh_step_up_claim_writes_the_iban(self, step_up_client, tenant):
+        reseller = self._reseller(self.STORED_IBAN)
+
+        resp = step_up_client.patch(
+            self._url(reseller), {"iban": self.NEW_IBAN}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        reseller.contact.refresh_from_db()
+        assert reseller.contact.iban == self.NEW_IBAN
+
+    def test_resending_the_stored_iban_prompts_for_nothing(self, api_client, tenant):
+        reseller = self._reseller(self.STORED_IBAN)
+
+        resp = api_client.patch(
+            self._url(reseller),
+            {"iban": self.STORED_IBAN, "customer_number": 777},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        reseller.refresh_from_db()
+        assert reseller.customer_number == 777
+
+    def test_an_edit_that_leaves_the_iban_alone_prompts_for_nothing(
+        self, api_client, tenant
+    ):
+        reseller = self._reseller(self.STORED_IBAN)
+
+        resp = api_client.patch(
+            self._url(reseller), {"customer_number": 888}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        reseller.refresh_from_db()
+        assert reseller.customer_number == 888
+
+    def test_creating_with_an_iban_is_refused_without_step_up(self, api_client, tenant):
+        resp = api_client.post(
+            self.LIST_URL, self._create_body(iban=self.NEW_IBAN), format="json"
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "auth.step_up_required"
+        assert not self._created().exists()
+
+    def test_a_fresh_step_up_claim_creates_with_the_iban(self, step_up_client, tenant):
+        resp = step_up_client.post(
+            self.LIST_URL, self._create_body(iban=self.NEW_IBAN), format="json"
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        created = self._created().get()
+        assert created.contact.iban == self.NEW_IBAN
+
+    def test_creating_without_an_iban_key_prompts_for_nothing(self, api_client, tenant):
+        resp = api_client.post(self.LIST_URL, self._create_body(), format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert self._created().exists()
+
+    def test_creating_with_a_blank_iban_prompts_for_nothing(self, api_client, tenant):
+        """A create payload that serialises every contact field carries an
+        empty ``iban``; it sets no bank account, so it is not challenged."""
+        resp = api_client.post(self.LIST_URL, self._create_body(iban=""), format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert self._created().get().contact.iban in (None, "")

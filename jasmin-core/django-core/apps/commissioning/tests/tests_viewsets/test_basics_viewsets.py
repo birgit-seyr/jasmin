@@ -645,7 +645,7 @@ class TestDefaultShareArticleInShareViewSet:
                     {
                         "share_type_variation": variation.pk,
                         "quantity": "1.000",
-                        "unit": "PIECE",
+                        "unit": "PCS",
                     },
                 ],
             },
@@ -653,7 +653,7 @@ class TestDefaultShareArticleInShareViewSet:
         )
         assert resp.status_code == status.HTTP_200_OK
         row = DefaultShareArticleInShare.objects.get(share_article=article)
-        assert row.unit == "PIECE"
+        assert row.unit == "PCS"
 
     def test_bulk_upsert_returns_only_rows_for_share_article(self, api_client, tenant):
         article = ShareArticleFactory(default_movement_unit="KG")
@@ -700,6 +700,122 @@ class TestDefaultShareArticleInShareViewSet:
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_bulk_upsert_rejects_a_unit_outside_the_choices(self, api_client, tenant):
+        """The column is choices-constrained and the upsert writes it without
+        ``full_clean``, so an off-list unit has to be refused here."""
+        article = ShareArticleFactory(default_movement_unit="KG")
+        variation = ShareTypeVariationFactory()
+        resp = api_client.post(
+            self.BULK_URL,
+            {
+                "share_article": article.pk,
+                "entries": [
+                    {
+                        "share_type_variation": variation.pk,
+                        "quantity": "1.000",
+                        "unit": "PIECE",
+                    },
+                ],
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert not DefaultShareArticleInShare.objects.filter(
+            share_article=article
+        ).exists()
+
+    def test_bulk_upsert_accepts_a_blank_unit_and_falls_back(self, api_client, tenant):
+        """Blank stays allowed — the upsert reads it as "use the article's
+        default movement unit"."""
+        article = ShareArticleFactory(default_movement_unit="KG")
+        variation = ShareTypeVariationFactory()
+        resp = api_client.post(
+            self.BULK_URL,
+            {
+                "share_article": article.pk,
+                "entries": [
+                    {
+                        "share_type_variation": variation.pk,
+                        "quantity": "1.000",
+                        "unit": "",
+                    },
+                ],
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert (
+            DefaultShareArticleInShare.objects.get(share_article=article).unit == "KG"
+        )
+
+    def test_bulk_upsert_unknown_variation_returns_404(self, api_client, tenant):
+        article = ShareArticleFactory(default_movement_unit="KG")
+        resp = api_client.post(
+            self.BULK_URL,
+            {
+                "share_article": article.pk,
+                "entries": [
+                    {
+                        "share_type_variation": "does-not-exist",
+                        "quantity": "1.000",
+                    },
+                ],
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert resp.data["code"] == "share_type_variation.not_found"
+        assert not DefaultShareArticleInShare.objects.filter(
+            share_article=article
+        ).exists()
+
+    def test_bulk_upsert_tolerates_an_unknown_variation_on_the_delete_branch(
+        self, api_client, tenant
+    ):
+        """A null quantity means "remove this cell", and removing a cell whose
+        variation is gone is a no-op. The grid sends one entry per variation it
+        has loaded, so a stale id among the cleared cells must still leave the
+        rest of the row saved."""
+        article = ShareArticleFactory(default_movement_unit="KG")
+        variation = ShareTypeVariationFactory()
+        resp = api_client.post(
+            self.BULK_URL,
+            {
+                "share_article": article.pk,
+                "entries": [
+                    {"share_type_variation": "does-not-exist", "quantity": None},
+                    {"share_type_variation": variation.pk, "quantity": "2.000"},
+                ],
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        row = DefaultShareArticleInShare.objects.get(share_article=article)
+        assert row.share_type_variation_id == variation.pk
+        assert row.quantity == Decimal("2.000")
+
+    def test_bulk_upsert_names_every_unknown_variation(self, api_client, tenant):
+        """The existence check is batched, so one round-trip reports them all."""
+        article = ShareArticleFactory(default_movement_unit="KG")
+        known = ShareTypeVariationFactory()
+        resp = api_client.post(
+            self.BULK_URL,
+            {
+                "share_article": article.pk,
+                "entries": [
+                    {"share_type_variation": known.pk, "quantity": "1.000"},
+                    {"share_type_variation": "missing-a", "quantity": "1.000"},
+                    {"share_type_variation": "missing-b", "quantity": "1.000"},
+                ],
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert resp.data["details"]["share_type_variation"] == [
+            "missing-a",
+            "missing-b",
+        ]
+
     # ---- permissions ----------------------------------------------------
     def test_member_user_cannot_write(self, anon_client, member_user, tenant):
         anon_client.force_authenticate(user=member_user)
@@ -731,6 +847,69 @@ class TestDefaultShareArticleInShareViewSet:
 # ShareArticleNetPriceViewSet — deletability
 # ---------------------------------------------------------------------------
 URL_SHARE_ARTICLE_NET_PRICE = reverse("share_article_net_price-list")
+
+
+@pytest.mark.django_db
+class TestShareArticleNetPriceFiltering:
+    """``share_article`` / ``current`` / ``active_at_date`` on the list."""
+
+    @staticmethod
+    def _price_window(article):
+        closed = ShareArticleNetPriceFactory(
+            share_article=article,
+            valid_from=datetime.date(2026, 1, 5),
+            valid_until=datetime.date(2026, 5, 31),
+        )
+        open_ended = ShareArticleNetPriceFactory(
+            share_article=article,
+            valid_from=datetime.date(2026, 6, 1),
+            valid_until=None,
+        )
+        return closed, open_ended
+
+    def test_filter_by_share_article(self, api_client, tenant):
+        wanted = ShareArticleNetPriceFactory()
+        other = ShareArticleNetPriceFactory()
+
+        resp = api_client.get(
+            URL_SHARE_ARTICLE_NET_PRICE,
+            {"share_article": str(wanted.share_article_id)},
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        returned = {row["id"] for row in resp.data}
+        assert wanted.id in returned
+        assert other.id not in returned
+
+    def test_current_returns_only_the_open_ended_price(self, api_client, tenant):
+        article = ShareArticleFactory()
+        closed, open_ended = self._price_window(article)
+
+        resp = api_client.get(
+            URL_SHARE_ARTICLE_NET_PRICE,
+            {"share_article": str(article.id), "current": "true"},
+        )
+
+        assert [row["id"] for row in resp.data] == [open_ended.id]
+        assert closed.id not in {row["id"] for row in resp.data}
+
+    def test_active_at_date_supersedes_current(self, api_client, tenant):
+        """``active_at_date`` already selects a point in time, so the
+        open-ended-only filter does not narrow it further."""
+        article = ShareArticleFactory()
+        closed, open_ended = self._price_window(article)
+
+        resp = api_client.get(
+            URL_SHARE_ARTICLE_NET_PRICE,
+            {
+                "share_article": str(article.id),
+                "current": "true",
+                "active_at_date": "2026-03-02",
+            },
+        )
+
+        assert [row["id"] for row in resp.data] == [closed.id]
+        assert open_ended.id not in {row["id"] for row in resp.data}
 
 
 @pytest.mark.django_db

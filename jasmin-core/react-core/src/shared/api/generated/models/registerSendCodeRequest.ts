@@ -12,6 +12,7 @@ email-ownership verification code (step "confirm email" of the wizard).
  */
 export interface RegisterSendCodeRequest {
   email: string;
+  /** @maxLength 255 */
   first_name?: string;
   frc_captcha_solution?: string;
 }

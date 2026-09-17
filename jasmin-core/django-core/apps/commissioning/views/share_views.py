@@ -73,12 +73,11 @@ class ShareContentGranularityView(APIViewRolePermissionsMixin, APIView):
         },
     )
     def get(self, request: Request) -> Response:
-        # Granularity is a per-share_type property: a simple share (honey,
+        # Granularity is a per-share_option property: a simple share (honey,
         # delivered uniformly to every station) is day-consistent even when
-        # the complex harvest share in the same week varies per station/tour.
-        # Without this scoping the packing UI judged honey by the harvest
-        # share's granularity and showed the wrong selectors. share_type wins
-        # when both are present (it's the narrower, displayed scope).
+        # the complex harvest share in the same week varies per station/tour,
+        # so the consistency check is scoped by ``share_option`` and a simple
+        # share is never judged by a complex share's per-station amounts.
         params = validate_query_params(
             request,
             required=["year", "delivery_week"],

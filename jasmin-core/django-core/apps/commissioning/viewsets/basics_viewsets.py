@@ -32,7 +32,6 @@ from core.serializers import ErrorResponseSerializer
 
 from ..errors import (
     CommissioningError,
-    InvalidQueryParam,
     ShareArticleNetPriceInUse,
     ShareArticleNotFound,
 )
@@ -51,7 +50,6 @@ from ..models.managers import active_on_date_q
 from ..schemas import (
     catalogue_param,
     get_active_at_date_parameter,
-    get_current_parameter,
     get_is_active_parameter,
     get_price_info_parameter,
     get_share_article_parameter,
@@ -461,7 +459,15 @@ class ShareArticleNetPriceViewSet(
     @extend_schema(
         parameters=[
             get_share_article_parameter(required=False),
-            get_current_parameter(),
+            catalogue_param(
+                "current",
+                required=False,
+                description=(
+                    "Filter for current prices (valid_until is null). Ignored "
+                    "when `active_at_date` is supplied — that parameter already "
+                    "selects the prices active on its date."
+                ),
+            ),
             get_active_at_date_parameter(),
         ],
     )
@@ -487,12 +493,7 @@ class ShareArticleNetPriceViewSet(
                 queryset = queryset.filter(valid_until__isnull=True)
 
         if share_article is not None:
-            try:
-                queryset = queryset.filter(share_article=share_article)
-            except (ValueError, TypeError) as exc:
-                raise InvalidQueryParam(
-                    "Invalid value for share_article.", field="share_article"
-                ) from exc
+            queryset = queryset.filter(share_article=share_article)
 
         # Latest first — modals scroll through price history newest-on-top.
         # Tie-break on id so the order is stable when two rows share a date.

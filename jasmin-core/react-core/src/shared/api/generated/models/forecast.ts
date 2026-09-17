@@ -28,12 +28,8 @@ export interface Forecast {
    * @maximum 53
    */
   delivery_week: number;
-  /**
-   * @minimum 0
-   * @maximum 32767
-   * @nullable
-   */
-  day_number?: ForecastDayNumber;
+  /** @nullable */
+  readonly day_number?: ForecastDayNumber;
   /**
    * @nullable
    * @pattern ^-?\d{0,8}(?:\.\d{0,2})?$
@@ -65,7 +61,7 @@ export interface Forecast {
   readonly finalized_by?: string | null;
   share_article: string;
   /** @nullable */
-  storage?: string | null;
+  readonly storage?: string | null;
   /** @nullable */
   plot?: string | null;
   readonly can_be_deleted?: boolean;

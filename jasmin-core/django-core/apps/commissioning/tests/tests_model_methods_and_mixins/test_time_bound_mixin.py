@@ -7,6 +7,11 @@ import datetime
 import pytest
 from django.core.exceptions import ValidationError
 
+from apps.commissioning.errors import (
+    TimeBoundInvalidRange,
+    TimeBoundValidFromNotMonday,
+    TimeBoundValidUntilNotSunday,
+)
 from apps.commissioning.tests.factories import (
     SharesDeliveryDayFactory,
 )
@@ -27,8 +32,10 @@ class TestValidateWeekBoundaries:
     def test_valid_from_non_monday_raises(self, tenant):
         tuesday = datetime.date(2026, 4, 7)  # Tuesday
         sdd = SharesDeliveryDayFactory.build(day_number=2, valid_from=tuesday)
-        with pytest.raises(ValidationError, match="Monday"):
+        with pytest.raises(TimeBoundValidFromNotMonday) as exc_info:
             sdd.validate_week_boundaries(sdd.valid_from, sdd.valid_until)
+        assert exc_info.value.code == "time_bound.valid_from_not_monday"
+        assert exc_info.value.field == "valid_from"
 
     def test_valid_until_sunday_passes(self, tenant):
         monday = datetime.date(2026, 4, 6)
@@ -44,8 +51,10 @@ class TestValidateWeekBoundaries:
         sdd = SharesDeliveryDayFactory.build(
             day_number=2, valid_from=monday, valid_until=saturday
         )
-        with pytest.raises(ValidationError, match="Sunday"):
+        with pytest.raises(TimeBoundValidUntilNotSunday) as exc_info:
             sdd.validate_week_boundaries(sdd.valid_from, sdd.valid_until)
+        assert exc_info.value.code == "time_bound.valid_until_not_sunday"
+        assert exc_info.value.field == "valid_until"
 
     def test_valid_until_none_passes(self, tenant):
         monday = datetime.date(2026, 4, 6)
@@ -53,6 +62,28 @@ class TestValidateWeekBoundaries:
             day_number=2, valid_from=monday, valid_until=None
         )
         sdd.validate_week_boundaries(sdd.valid_from, sdd.valid_until)
+
+    def test_save_rejects_non_monday_valid_from(self, tenant):
+        """``save()`` runs the check through ``full_clean()``, so the coded
+        error reaches the API instead of a generic validation failure."""
+        with pytest.raises(TimeBoundValidFromNotMonday):
+            SharesDeliveryDayFactory(day_number=4, valid_from=datetime.date(2026, 4, 7))
+
+    def test_save_rejects_non_sunday_valid_until(self, tenant):
+        with pytest.raises(TimeBoundValidUntilNotSunday):
+            SharesDeliveryDayFactory(
+                day_number=5,
+                valid_from=datetime.date(2026, 4, 6),
+                valid_until=datetime.date(2026, 4, 11),
+            )
+
+    def test_save_accepts_whole_week_window(self, tenant):
+        sdd = SharesDeliveryDayFactory(
+            day_number=6,
+            valid_from=datetime.date(2026, 4, 6),
+            valid_until=datetime.date(2026, 4, 12),
+        )
+        assert sdd.pk is not None
 
 
 # ---------------------------------------------------------------------------
@@ -74,8 +105,10 @@ class TestValidateDateRange:
             valid_from=datetime.date(2026, 6, 1),
             valid_until=datetime.date(2026, 1, 4),
         )
-        with pytest.raises(ValidationError, match="End date"):
+        with pytest.raises(TimeBoundInvalidRange) as exc_info:
             sdd.validate_date_range(sdd.valid_from, sdd.valid_until)
+        assert exc_info.value.code == "time_bound.invalid_range"
+        assert exc_info.value.field == "valid_until"
 
     def test_same_date_passes(self, tenant):
         d = datetime.date(2026, 4, 6)  # Monday
@@ -211,7 +244,7 @@ class TestHandleSuccession:
         bad_until = datetime.date(2026, 4, 25)  # Saturday — NOT a Sunday
         # handle_succession closes `pred` at succ_from-1 (a valid Sunday); the
         # successor's OWN full_clean then rejects the non-Sunday valid_until.
-        with pytest.raises(ValidationError):
+        with pytest.raises(TimeBoundValidUntilNotSunday):
             SharesDeliveryDayFactory(
                 day_number=2, valid_from=succ_from, valid_until=bad_until
             )

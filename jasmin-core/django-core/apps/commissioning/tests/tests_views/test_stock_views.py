@@ -889,3 +889,156 @@ class TestStorageLoggingView:
         assert [row["running_balance"] for row in resp.data] == [11.0, 10.7, 10.5]
         # amount stays a JSON number on the wire (floated only at the boundary).
         assert [row["amount"] for row in resp.data] == [0.3, 0.2, 10.5]
+
+
+# ---------------------------------------------------------------------------
+# Finalized INVENTORY entries
+# ---------------------------------------------------------------------------
+def _counted_entry(api_client, amount=20):
+    """A counted INVENTORY entry plus its detail URL."""
+    article = ShareArticleFactory()
+    storage = StorageFactory()
+    _seed_theoretical_stock(article, storage, 50)
+    composite_id = _make_composite_id(article, "KG", "M", storage)
+    detail_url = reverse("current_stock_comparison_detail", args=[composite_id])
+    api_client.patch(detail_url, {"amount": amount}, format="json")
+    return article, storage, detail_url
+
+
+def _finalize(article, storage):
+    MovementShareArticle.objects.filter(pk=_inventory_for(article, storage).pk).update(
+        is_finalized=True
+    )
+
+
+@pytest.mark.django_db
+class TestCurrentStockComparisonFinalizedEntry:
+    def test_count_change_is_refused(self, api_client, tenant):
+        article, storage, detail_url = _counted_entry(api_client)
+        _finalize(article, storage)
+
+        resp = api_client.patch(detail_url, {"amount": 99}, format="json")
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "stock.inventory_finalized"
+        assert _inventory_for(article, storage).counted_amount == Decimal("20.000")
+
+    def test_flags_and_note_stay_editable(self, api_client, tenant):
+        article, storage, detail_url = _counted_entry(api_client)
+        _finalize(article, storage)
+
+        resp = api_client.patch(
+            detail_url, {"washed": True, "note": "second shelf"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        entry = _inventory_for(article, storage)
+        assert entry.washed is True
+        assert entry.note == "second shelf"
+        assert entry.counted_amount == Decimal("20.000")
+
+    @pytest.mark.parametrize("echoed_amount", [20, 20.0, "20"])
+    def test_unchanged_count_alongside_a_flag_edit_is_accepted(
+        self, api_client, tenant, echoed_amount
+    ):
+        """The grid echoes the whole row on save, so a flag edit re-sends the
+        stored count — that is not a recount."""
+        article, storage, detail_url = _counted_entry(api_client)
+        _finalize(article, storage)
+
+        resp = api_client.patch(
+            detail_url,
+            {"amount": echoed_amount, "washed": True, "note": "second shelf"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        entry = _inventory_for(article, storage)
+        assert entry.washed is True
+        assert entry.note == "second shelf"
+        assert entry.counted_amount == Decimal("20.000")
+
+    def test_delete_is_refused(self, api_client, tenant):
+        article, storage, detail_url = _counted_entry(api_client)
+        _finalize(article, storage)
+
+        resp = api_client.delete(detail_url)
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "stock.inventory_finalized"
+        assert _inventory_for(article, storage).counted_amount == Decimal("20.000")
+
+    def test_delete_of_an_unfinalized_entry_still_works(self, api_client, tenant):
+        article, storage, detail_url = _counted_entry(api_client)
+
+        resp = api_client.delete(detail_url)
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        assert not MovementShareArticle.objects.filter(
+            movement_type=MovementTypeOptions.INVENTORY, share_article=article
+        ).exists()
+
+
+# ---------------------------------------------------------------------------
+# PATCH body validation on the inventory detail endpoint
+# ---------------------------------------------------------------------------
+def _fresh_detail_url():
+    article = ShareArticleFactory()
+    storage = StorageFactory()
+    composite_id = _make_composite_id(article, "KG", "M", storage)
+    return (
+        article,
+        storage,
+        reverse("current_stock_comparison_detail", args=[composite_id]),
+    )
+
+
+@pytest.mark.django_db
+class TestCurrentStockComparisonPatchBody:
+    def test_non_boolean_flag_is_refused_and_writes_nothing(self, api_client, tenant):
+        article, _storage, detail_url = _fresh_detail_url()
+
+        resp = api_client.patch(detail_url, {"washed": "perhaps"}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert not MovementShareArticle.objects.filter(
+            movement_type=MovementTypeOptions.INVENTORY, share_article=article
+        ).exists()
+
+    def test_over_long_note_is_refused(self, api_client, tenant):
+        article, _storage, detail_url = _fresh_detail_url()
+
+        resp = api_client.patch(detail_url, {"note": "x" * 501}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert not MovementShareArticle.objects.filter(
+            movement_type=MovementTypeOptions.INVENTORY, share_article=article
+        ).exists()
+
+    def test_string_booleans_from_the_client_are_accepted(self, api_client, tenant):
+        article, storage, detail_url = _fresh_detail_url()
+
+        resp = api_client.patch(
+            detail_url, {"washed": "true", "for_shares": "false"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        entry = _inventory_for(article, storage)
+        assert entry.washed is True
+        assert entry.for_shares is False
+
+    def test_null_note_is_accepted(self, api_client, tenant):
+        article, storage, detail_url = _fresh_detail_url()
+
+        resp = api_client.patch(detail_url, {"note": None}, format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert _inventory_for(article, storage).note is None
+
+    def test_amount_keeps_its_own_error_code(self, api_client, tenant):
+        _article, _storage, detail_url = _fresh_detail_url()
+
+        resp = api_client.patch(detail_url, {"amount": "abc"}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "stock.amount_not_number"

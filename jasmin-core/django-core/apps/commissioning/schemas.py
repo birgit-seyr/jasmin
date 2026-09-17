@@ -519,7 +519,7 @@ def get_share_option_parameter(**overrides):
 
     return catalogue_param(
         "share_option",
-        description="Share option (e.g. GEMUESE, OBST)",
+        description="Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)",
         required=required,
         **overrides,
     )

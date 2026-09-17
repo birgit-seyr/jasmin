@@ -211,17 +211,10 @@ class MyCustomerDataView(APIView):
         perms.append(requires_step_up_for_fields("iban")())
         return perms
 
-    def _resolve(self, request: Request, *, create_missing: bool = False) -> Reseller:
+    def _resolve(self, request: Request) -> Reseller:
         reseller: Reseller | None = getattr(request.user, "linked_reseller", None)
         if reseller is None:
             raise CustomerProfileNotLinked("No customer profile linked to this user.")
-        if reseller.contact is None and create_missing:
-            # Office-onboarded resellers always have a contact, but the
-            # seed-fixture / future self-service flows may not. Provision a blank
-            # ContactEntity lazily on the WRITE path only, so the self-edit
-            # surface is usable — GET stays side-effect-free (idempotent).
-            reseller.contact = ContactEntity.objects.create()
-            reseller.save(update_fields=["contact"])
         return reseller
 
     def get(self, request: Request) -> Response:
@@ -234,9 +227,15 @@ class MyCustomerDataView(APIView):
             MyCustomerDataReadSerializer(contact, context={"reseller": reseller}).data
         )
 
+    @transaction.atomic
     def patch(self, request: Request) -> Response:
-        reseller = self._resolve(request, create_missing=True)
-        contact = reseller.contact
+        reseller = self._resolve(request)
+        # Office-onboarded resellers always have a contact, but the seed-fixture
+        # / future self-service flows may not. A transient row carries the edit
+        # through validation and the step-up check, so a refused payload leaves
+        # no blank ContactEntity behind; it is saved and linked only once the
+        # write is going ahead.
+        contact = reseller.contact or ContactEntity()
         # Object-level step-up check against the ContactEntity that owns the
         # iban — raises StepUpRequired only when iban actually changes.
         self.check_object_permissions(request, contact)
@@ -244,7 +243,10 @@ class MyCustomerDataView(APIView):
             contact, data=request.data, partial=True
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        contact = serializer.save()
+        if reseller.contact_id != contact.id:
+            reseller.contact = contact
+            reseller.save(update_fields=["contact"])
         logger.info(
             "commissioning.my_customer_data.update user=%s fields=%s tenant=%s ip=%s",
             auth_user(request).email,

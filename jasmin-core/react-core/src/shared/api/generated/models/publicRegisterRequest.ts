@@ -17,11 +17,17 @@ listed here are explicit so drf-spectacular / orval pick them up.
  */
 export interface PublicRegisterRequest {
   email: string;
+  /** @maxLength 255 */
   first_name?: string;
+  /** @maxLength 255 */
   last_name?: string;
+  /** @maxLength 255 */
   address?: string;
+  /** @maxLength 10 */
   zip_code?: string;
+  /** @maxLength 100 */
   city?: string;
+  /** @maxLength 100 */
   country?: string;
   /** @minimum 0 */
   coop_shares_count?: number;

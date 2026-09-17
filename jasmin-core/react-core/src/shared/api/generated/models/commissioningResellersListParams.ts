@@ -8,7 +8,7 @@
 
 export type CommissioningResellersListParams = {
 /**
- * Day of the week (0=Monday, 6=Sunday) the `has_orders` annotation is scoped to. Send it together with `year` and `delivery_week`.
+ * Day of the week (0=Monday, 6=Sunday) the `has_orders` annotation is scoped to. `has_orders` is annotated whenever at least one of `year`, `delivery_week` and `day_number` is sent, scoped to those that are.
  * @minimum 0
  * @maximum 6
  */

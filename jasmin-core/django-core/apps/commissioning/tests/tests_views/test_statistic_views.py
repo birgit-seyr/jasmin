@@ -202,3 +202,33 @@ class TestHistoricalShareTypeVariationAverages:
         )
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data == {}
+
+
+@pytest.mark.django_db
+class TestHistoricalAveragesErrorFields:
+    """Both refusals name the parameter the caller can still change, so the
+    client can attach the message to the right input."""
+
+    def test_missing_selector_names_the_variation_ids(self, api_client, tenant):
+        resp = api_client.get(
+            URL_VARIATION_AVERAGES, {"year": 2026, "delivery_week": 15}
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "share_type_variation_ids"
+
+    def test_unresolvable_share_option_names_the_share_option(self, api_client, tenant):
+        resp = api_client.get(
+            URL_VARIATION_AVERAGES,
+            {
+                "year": 2026,
+                "delivery_week": 15,
+                "share_option": "HONEY_SHARE",
+                "active_at_date": "2000-01-03",
+            },
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["field"] == "share_option"
+        assert resp.data["details"]["share_option"] == "HONEY_SHARE"

@@ -51,7 +51,6 @@ _BOOL_PARAMS = (
     "is_active",
     "is_packed_bulk",
     "is_trial",
-    "manual",
     "for_tours",
     "for_stations",
     "physical",
@@ -122,8 +121,10 @@ PARAM_CATALOGUE: dict[str, ParamSpec] = {
     "day_number": ParamSpec("int", min_value=0, max_value=6),
     "num_weeks": ParamSpec("int", min_value=1, max_value=104, default=52),
     "years_back": ParamSpec("int", min_value=0, max_value=50, default=2),
-    "tour": ParamSpec("int", min_value=0),  # tour number — int()-coerced at call sites
-    "packing_station": ParamSpec("int", min_value=0),  # int()-coerced at call sites
+    # Tour number and packing-station number: parsed here, so every consumer
+    # downstream takes the int this yields rather than re-coercing a string.
+    "tour": ParamSpec("int", min_value=0),
+    "packing_station": ParamSpec("int", min_value=0),
     # ---- dates (YYYY-MM-DD) ----
     "active_at_date": ParamSpec("date"),
     "active_at_date_or_future": ParamSpec("date"),
@@ -133,7 +134,12 @@ PARAM_CATALOGUE: dict[str, ParamSpec] = {
     "date_to": ParamSpec("date"),
     "price_date": ParamSpec("date"),
     # ---- enums ----
-    "share_option": ParamSpec("choice", choices=tuple(ShareOptions.values)),
+    # Case-insensitive to match the POST/PATCH body, which upper-cases the
+    # value before validating it: one spelling rule for the same enum wherever
+    # it is sent, and the catalogue's own spelling comes back either way.
+    "share_option": ParamSpec(
+        "choice", choices=tuple(ShareOptions.values), case_insensitive=True
+    ),
     "model": ParamSpec("choice", choices=DOCUMENTATION_MODELS),
     # Which of a reseller row's two roles a DELETE means to drop. The service
     # branches on exactly these two values and does nothing for anything else,

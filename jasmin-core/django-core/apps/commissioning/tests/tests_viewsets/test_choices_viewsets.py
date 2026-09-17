@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
+from apps.commissioning.models import OrdersDeliveryDay
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
     OrdersDeliveryDayFactory,
@@ -141,6 +142,90 @@ class TestSharesDeliveryDayViewSet:
         resp = api_client.get(self.URL, {"get_delivery_stations": "false"})
 
         assert resp.status_code == status.HTTP_200_OK
+
+    def test_active_at_date_wins_over_active_at_date_or_future(
+        self, api_client, tenant
+    ):
+        """The two date windows are alternatives: a request sending both gets
+        the narrower one, not whichever branch runs last."""
+        closed = SharesDeliveryDayFactory(
+            day_number=1,
+            valid_from=datetime.date(2026, 1, 5),
+            valid_until=datetime.date(2026, 5, 31),
+        )
+        upcoming = SharesDeliveryDayFactory(
+            day_number=1, valid_from=datetime.date(2026, 6, 1)
+        )
+
+        resp = api_client.get(
+            self.URL,
+            {
+                "active_at_date": "2026-03-02",
+                "active_at_date_or_future": "2026-03-02",
+            },
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        returned = {row["id"] for row in resp.data}
+        assert closed.id in returned
+        assert upcoming.id not in returned
+
+    def test_active_at_date_or_future_alone_also_returns_the_upcoming_day(
+        self, api_client, tenant
+    ):
+        closed = SharesDeliveryDayFactory(
+            day_number=1,
+            valid_from=datetime.date(2026, 1, 5),
+            valid_until=datetime.date(2026, 5, 31),
+        )
+        upcoming = SharesDeliveryDayFactory(
+            day_number=1, valid_from=datetime.date(2026, 6, 1)
+        )
+
+        resp = api_client.get(self.URL, {"active_at_date_or_future": "2026-03-02"})
+
+        assert resp.status_code == status.HTTP_200_OK
+        returned = {row["id"] for row in resp.data}
+        assert {closed.id, upcoming.id} <= returned
+
+    def test_future_without_active_at_date_returns_400(self, api_client, tenant):
+        """ "Future" is measured against a date, so the flag has no meaning
+        without one and is refused instead of silently ignored."""
+        SharesDeliveryDayFactory(day_number=6)
+
+        resp = api_client.get(self.URL, {"future": "true"})
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "query.invalid_param"
+        assert resp.data["field"] == "active_at_date"
+
+    def test_future_false_without_active_at_date_is_fine(self, api_client, tenant):
+        SharesDeliveryDayFactory(day_number=6)
+
+        resp = api_client.get(self.URL, {"future": "false"})
+
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_future_with_active_at_date_returns_the_not_yet_active_days(
+        self, api_client, tenant
+    ):
+        active = SharesDeliveryDayFactory(
+            day_number=1,
+            valid_from=datetime.date(2026, 1, 5),
+            valid_until=datetime.date(2026, 5, 31),
+        )
+        upcoming = SharesDeliveryDayFactory(
+            day_number=1, valid_from=datetime.date(2026, 6, 1)
+        )
+
+        resp = api_client.get(
+            self.URL, {"future": "true", "active_at_date": "2026-03-02"}
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        returned = {row["id"] for row in resp.data}
+        assert upcoming.id in returned
+        assert active.id not in returned
 
     def test_need_info_on_tours_false_omits_used_tours(self, api_client, tenant):
         day = SharesDeliveryDayFactory(day_number=3)
@@ -301,6 +386,25 @@ class TestOrdersDeliveryDayViewSet:
         OrdersDeliveryDayFactory()
         resp = api_client.get(self.URL)
         assert len(resp.data) >= 1
+
+    def test_create_day(self, api_client, tenant):
+        """An orders delivery day carries no validity window — there is no
+        start date to judge, so a plain day_number is enough."""
+        resp = api_client.post(self.URL, {"day_number": 3}, format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["day_number"] == 3
+
+    def test_create_duplicate_day_number_is_rejected(self, api_client, tenant):
+        """day_number is unique and nothing supersedes the existing row."""
+        existing = OrdersDeliveryDayFactory(day_number=4)
+
+        resp = api_client.post(self.URL, {"day_number": 4}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert OrdersDeliveryDay.objects.filter(day_number=4).count() == 1
+        existing.refresh_from_db()
+        assert existing.day_number == 4
 
 
 # ---------------------------------------------------------------------------

@@ -63,6 +63,20 @@ class TestTenantSmtpTestSend:
         assert resp.data["code"] == "email_config.test_recipient_missing"
         assert "to_email" in resp.data["message"].lower()
 
+    @pytest.mark.parametrize(
+        "to_email", [123, ["ops@example.org"], {"address": "ops@example.org"}, True]
+    )
+    def test_a_non_string_to_email_returns_400(self, api_client, tenant, to_email):
+        """The recipient is compared case-insensitively against the allowlist,
+        so a value that is not a string is refused before it gets there rather
+        than crashing the action."""
+        _make_config(tenant)
+
+        resp = api_client.post(URL, {"to_email": to_email}, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "email_config.test_recipient_missing"
+
     def test_no_config_returns_400(self, api_client, tenant):
         # No TenantEmailConfig created for this tenant.
         resp = api_client.post(URL, {"to_email": "ops@example.org"}, format="json")

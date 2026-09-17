@@ -41,7 +41,11 @@ from ..errors import (
 from ..lockout import is_locked, register_failure, reset_failures
 from ..models import SuperAdmin, SuperAdminBlacklistedToken
 from ..permissions import IsSuperAdmin
-from ..serializers import SessionTenantSerializer, SessionUserSerializer
+from ..serializers import (
+    SessionTenantSerializer,
+    SessionUserSerializer,
+    SuperAdminLoginRequestSerializer,
+)
 from .authentication import SuperAdminJWTAuthentication
 
 logger = logging.getLogger("super_admin")
@@ -185,6 +189,16 @@ def super_admin_login_view(request: Request) -> Response:
     ):
         raise SuperAdminMissingCredentials("Email and password are required")
 
+    # Validate the address and normalise its spelling before it keys anything:
+    # the lockout bucket, the log line and the account lookup below all have to
+    # agree on one form of the same account.
+    credentials = SuperAdminLoginRequestSerializer(
+        data={"email": email, "password": password}
+    )
+    credentials.is_valid(raise_exception=True)
+    email = credentials.validated_data["email"]
+    password = credentials.validated_data["password"]
+
     # Per-account brute-force lock (checked before any DB/password work so a
     # locked account is refused regardless of source IP — the per-IP throttle
     # alone can't stop a distributed guessing attack on this credential).
@@ -199,16 +213,24 @@ def super_admin_login_view(request: Request) -> Response:
         )
 
     with schema_context("public"):
-        try:
-            user = SuperAdmin.objects.get(email=email)
-        except SuperAdmin.DoesNotExist:
+        # ``iexact``: an account stored with an uppercase local part must still
+        # authenticate against the lowercased submission above. Uniqueness is
+        # on the exact string, so two rows may differ in local-part case alone
+        # — a ``get()`` would raise ``MultipleObjectsReturned`` and turn the
+        # platform's own login into a 500. The exact spelling wins; otherwise
+        # the first case variant in sort order is tried.
+        user = (
+            SuperAdmin.objects.filter(email=email).first()
+            or SuperAdmin.objects.filter(email__iexact=email).order_by("email").first()
+        )
+        if user is None:
             register_failure(email)
             logger.warning(
                 "superadmin.login.failed user=%s ip=%s reason=user_not_found",
                 email,
                 client_ip(request),
             )
-            raise SuperAdminInvalidCredentials("Invalid credentials") from None
+            raise SuperAdminInvalidCredentials("Invalid credentials")
 
         if not user.check_password(password):
             register_failure(email)

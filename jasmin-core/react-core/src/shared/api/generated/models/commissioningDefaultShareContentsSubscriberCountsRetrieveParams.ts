@@ -9,7 +9,7 @@ import type { CommissioningDefaultShareContentsSubscriberCountsRetrieveShareOpti
 
 export type CommissioningDefaultShareContentsSubscriberCountsRetrieveParams = {
 /**
- * Share option (e.g. GEMUESE, OBST)
+ * Share option (e.g. HARVEST_SHARE, CHICKEN_SHARE)
  */
 share_option?: CommissioningDefaultShareContentsSubscriberCountsRetrieveShareOption;
 /**

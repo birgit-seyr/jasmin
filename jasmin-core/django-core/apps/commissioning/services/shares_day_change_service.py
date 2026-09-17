@@ -25,8 +25,6 @@ from django.db import transaction
 from django.utils import timezone
 from isoweek import Week
 
-from core.errors import BadRequestError
-
 from ..errors import PastWeekError
 from ..models import (
     Share,
@@ -82,14 +80,7 @@ class SharesDayChangeService:
         Raises:
             PastWeekError: when the week is in the past and
                 ``force=False``.
-            ValueError: on missing required arguments.
         """
-        if year is None or delivery_week is None:
-            raise BadRequestError(
-                "year and delivery_week are required",
-                code="shares_day_change.missing_required",
-            )
-
         # ── Past-week guard ──
         if not force:
             today = timezone.now().date()

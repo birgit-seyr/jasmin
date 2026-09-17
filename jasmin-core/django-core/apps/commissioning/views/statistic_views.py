@@ -182,7 +182,7 @@ def member_dashboard_statistics(request: Request) -> Response:
             "share_option",
             required=False,
             description="Resolve variation IDs server-side from share_option "
-            "(e.g. 'gemuese'). Use this to avoid a client-side waterfall.",
+            "(e.g. HARVEST_SHARE). Use this to avoid a client-side waterfall.",
         ),
         catalogue_param(
             "active_at_date",
@@ -263,6 +263,7 @@ def _parse_variation_average_params(request: Request) -> dict:
         raise InvalidQueryParam(
             "Provide either 'share_type_variation_ids' or 'share_option' "
             "to identify which variations to compute averages for",
+            field="share_type_variation_ids",
         )
 
     if variation_ids_str:
@@ -288,8 +289,18 @@ def _parse_variation_average_params(request: Request) -> dict:
         variation_ids = list(qs.values_list("id", flat=True))
 
     if not variation_ids:
+        # Name the parameter the caller actually supplied, so the client can
+        # attach the message to the input the user can still change.
         raise InvalidQueryParam(
-            "No matching share-type-variations for the given parameters"
+            "No matching share-type-variations for the given parameters",
+            field=("share_type_variation_ids" if variation_ids_str else "share_option"),
+            details={
+                "share_type_variation_ids": variation_ids_str or None,
+                "share_option": share_option,
+                "active_at_date": (
+                    active_at_date.isoformat() if active_at_date else None
+                ),
+            },
         )
 
     return {

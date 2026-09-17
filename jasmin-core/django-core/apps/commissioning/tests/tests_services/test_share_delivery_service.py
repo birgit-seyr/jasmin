@@ -144,3 +144,86 @@ class TestGetWeeklyVariationCountMatrix:
         assert len(result["rows"]) == 1
         assert result["rows"][0]["day_number"] == 2
         assert result["rows"][0][column_key] == 7
+
+
+@pytest.mark.django_db
+class TestWeeklyVariationCountMatrixBulkFilter:
+    """``is_packed_bulk`` narrows the flat matrix to the bulk-packed variations
+    (``True``), to the individually packed ones (``False``), or leaves it
+    covering both (``None``, the default) — columns and counts alike, so the
+    flag means the same here as on the box-combination sibling."""
+
+    def _setup(self):
+        delivery_day = SharesDeliveryDayFactory(day_number=2)
+        station_day = DeliveryStationDayFactory(
+            delivery_day=delivery_day, tour_number=1
+        )
+        payment_cycle = PaymentCycleFactory()
+        variations = {}
+        for size, is_packed_bulk, quantity in (("S", True, 3), ("L", False, 5)):
+            variation = ShareTypeVariationFactory(
+                size=size, is_packed_bulk=is_packed_bulk
+            )
+            subscription = SubscriptionFactory(
+                member=MemberFactory(),
+                share_type_variation=variation,
+                payment_cycle=payment_cycle,
+                default_delivery_station_day=station_day,
+                quantity=quantity,
+            )
+            share = ShareFactory(
+                year=2026,
+                delivery_week=15,
+                delivery_day=delivery_day,
+                share_type_variation=variation,
+            )
+            share_delivery = ShareDeliveryFactory(
+                share=share, delivery_station_day=station_day
+            )
+            share_delivery.subscription = subscription
+            share_delivery.save()
+            variations[is_packed_bulk] = variation
+        return variations[True], variations[False]
+
+    def test_true_keeps_only_the_bulk_variation(self, tenant):
+        bulk, individual = self._setup()
+
+        result = ShareDeliveryService.get_weekly_variation_count_matrix(
+            year=2026, delivery_week=15, is_packed_bulk=True
+        )
+
+        assert [column["key"] for column in result["columns"]] == [
+            f"variation_{bulk.pk}"
+        ]
+        row = result["rows"][0]
+        assert row[f"variation_{bulk.pk}"] == 3
+        assert f"variation_{individual.pk}" not in row
+
+    def test_false_keeps_only_the_individually_packed_variation(self, tenant):
+        bulk, individual = self._setup()
+
+        result = ShareDeliveryService.get_weekly_variation_count_matrix(
+            year=2026, delivery_week=15, is_packed_bulk=False
+        )
+
+        assert [column["key"] for column in result["columns"]] == [
+            f"variation_{individual.pk}"
+        ]
+        row = result["rows"][0]
+        assert row[f"variation_{individual.pk}"] == 5
+        assert f"variation_{bulk.pk}" not in row
+
+    def test_omitted_covers_both(self, tenant):
+        bulk, individual = self._setup()
+
+        result = ShareDeliveryService.get_weekly_variation_count_matrix(
+            year=2026, delivery_week=15
+        )
+
+        assert {column["key"] for column in result["columns"]} == {
+            f"variation_{bulk.pk}",
+            f"variation_{individual.pk}",
+        }
+        row = result["rows"][0]
+        assert row[f"variation_{bulk.pk}"] == 3
+        assert row[f"variation_{individual.pk}"] == 5

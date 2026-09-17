@@ -17,7 +17,6 @@ import {
   useCommissioningShareTypeVariationsList,
   useCommissioningVirtualVariationComponentsList,
 } from "@shared/api/generated/commissioning/commissioning";
-import type { VirtualVariationComponentsRequest } from "@shared/api/generated/models";
 import { notify } from '@shared/utils';
 import { getErrorMessage } from "@shared/utils/apiError";
 import { getShareTypeVariationSizeLabelPure } from "@hooks/index";
@@ -153,8 +152,11 @@ export default function VirtualComponentModal({
 
       await commissioningVirtualVariationComponentsCreate({
         virtual_variation: String(share_type_variation),
-        components,
-      } as VirtualVariationComponentsRequest);
+        components: components.map(({ physical_variation, quantity }) => ({
+          physical_variation,
+          quantity: String(quantity),
+        })),
+      });
 
       queryClient.invalidateQueries({
         queryKey: getCommissioningVirtualVariationComponentsListQueryKey({

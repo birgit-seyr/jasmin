@@ -12,6 +12,9 @@ end_date?: string;
  * Share article ID (Jasmin ID format)
  */
 share_article?: string;
+/**
+ * Inclusive range start (YYYY-MM-DD). Omitted, the ledger starts 2 weeks ago.
+ */
 start_date?: string;
 /**
  * Storage ID (Jasmin ID format)

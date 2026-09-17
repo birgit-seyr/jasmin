@@ -17,6 +17,9 @@ from typing import Any
 
 from .query_params import validate_query_params
 
+# Request attribute the parsed window is memoized under.
+_WINDOW_CACHE_ATTR = "_parsed_capacity_window"
+
 
 def parse_capacity_window(request) -> tuple[int | None, int | None, int]:
     """Resolve ``(year, start_week, num_weeks)`` from a request's query params.
@@ -26,9 +29,16 @@ def parse_capacity_window(request) -> tuple[int | None, int | None, int]:
     capacity window on the request" and emit ``None``. ``num_weeks`` defaults to
     52 (its catalogue default). Validates via the central query-param catalogue,
     so a malformed value is a clean 400, not a 500.
+
+    ``capacity_by_week`` is a per-row ``SerializerMethodField``, so the window is
+    memoized on the request object: one list response would otherwise re-run the
+    same catalogue validation once per row, on both capacity axes.
     """
     if not request:
         return None, None, 52
+    cached = getattr(request, _WINDOW_CACHE_ATTR, None)
+    if cached is not None:
+        return cached
     parsed = validate_query_params(
         request,
         optional=["year", "delivery_week", "num_weeks"],
@@ -36,9 +46,13 @@ def parse_capacity_window(request) -> tuple[int | None, int | None, int]:
     year = parsed["year"]
     start_week = parsed["delivery_week"]
     num_weeks = parsed["num_weeks"]
+    window: tuple[int | None, int | None, int]
     if year is not None and start_week is not None:
-        return year, start_week, num_weeks
-    return None, None, 52
+        window = (year, start_week, num_weeks)
+    else:
+        window = (None, None, 52)
+    setattr(request, _WINDOW_CACHE_ATTR, window)
+    return window
 
 
 def build_capacity_by_week(

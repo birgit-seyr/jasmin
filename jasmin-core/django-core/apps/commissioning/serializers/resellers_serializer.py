@@ -4,6 +4,7 @@ from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from ..constants import get_default_tax_rate_crates
+from ..errors import OrderableItemReferenceInvalid
 from ..models import (
     CrateContentInvoiceReseller,
     CrateDeliveryNoteContent,
@@ -51,6 +52,50 @@ CRATE_DOCUMENT_LINE_READONLY_FIELDS = (
     *FINALIZATION_READONLY_FIELDS,
     *SOURCE_SNAPSHOT_READONLY_FIELDS,
 )
+
+
+def validate_single_item_reference(attrs: dict, instance) -> None:
+    """Enforce the ``OrderableItem`` rule that a line references EXACTLY one
+    item — an ``offer`` or a ``share_article``, never both and never neither.
+
+    ``OrderContent`` inherits the check from its model ``save()``, which runs
+    ``full_clean()``. The delivery-note and invoice line models deliberately do
+    not: ``full_clean()`` on a legally immutable document row would start
+    rejecting saves over unrelated legacy values. So the client-writable path
+    carries the targeted check instead.
+
+    On update the rule is enforced only when the request actually MOVES a
+    reference. Nothing has ever enforced the XOR on these two models, so rows
+    violating it exist; the line tables echo the whole edited row back, which
+    puts the unchanged ``share_article`` into every PATCH. Keying on presence
+    would therefore freeze such a row — an edit of its ``note`` or ``amount``
+    would 400, and no column writes ``offer``, so the client cannot repair it
+    either. Keying on the value lets unrelated edits through while a write that
+    moves a reference still has to leave the line well-formed.
+    """
+    # A create has to produce a well-formed line even when it names no
+    # reference at all, so there is nothing to compare against.
+    moves_a_reference = instance is None
+    references = []
+
+    for field_name in ("offer", "share_article"):
+        stored = None if instance is None else getattr(instance, f"{field_name}_id")
+        if field_name in attrs:
+            incoming = attrs[field_name]
+            incoming_pk = getattr(incoming, "pk", incoming)
+            references.append(incoming_pk)
+            if incoming_pk != stored:
+                moves_a_reference = True
+        else:
+            references.append(stored)
+
+    if not moves_a_reference:
+        return
+
+    if sum(bool(reference) for reference in references) != 1:
+        raise OrderableItemReferenceInvalid(
+            "A line must reference exactly one of offer or share_article."
+        )
 
 
 class ResellerListSerializer(DeletableListSerializer):
@@ -392,6 +437,11 @@ class InvoiceResellerContentSerializer(
         model = InvoiceResellerContent
         fields = "__all__"
         read_only_fields = (*DOCUMENT_LINE_READONLY_FIELDS, "delivery_note_contents")
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        validate_single_item_reference(attrs, self.instance)
+        return attrs
 
 
 class CrateItemSummarySerializer(serializers.Serializer):
@@ -801,6 +851,11 @@ class DeliveryNoteResellerContentSerializer(
         model = DeliveryNoteContent
         fields = "__all__"
         read_only_fields = DOCUMENT_LINE_READONLY_FIELDS
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        validate_single_item_reference(attrs, self.instance)
+        return attrs
 
 
 class CrateDeliveryNoteContentSerializer(

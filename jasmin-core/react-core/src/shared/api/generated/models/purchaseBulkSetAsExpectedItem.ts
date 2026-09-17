@@ -10,7 +10,8 @@ export interface PurchaseBulkSetAsExpectedItem {
   id: string;
   year: number;
   delivery_week: number;
-  theoretical_purchase_amount: number;
+  /** @pattern ^-?\d{0,8}(?:\.\d{0,2})?$ */
+  theoretical_purchase_amount: string;
   theoretical_purchase_unit: string;
   theoretical_purchase_size: string;
   storage: string;

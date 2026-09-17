@@ -8,5 +8,6 @@
 
 export interface VirtualVariationComponentItem {
   physical_variation: string;
-  quantity?: number;
+  /** @pattern ^-?\d{0,3}(?:\.\d{0,2})?$ */
+  quantity?: string;
 }

@@ -6,7 +6,14 @@ from rest_framework import serializers
 from apps.authz.permissions import IsOffice, has_any_role
 from apps.shared.pii_masking import MaskedIBANFieldMixin
 
-from ..models import CoopShare, CoopShareTransfer, Member, Subscription
+from ..errors import MemberNotFound, ShareTypeVariationNotFound
+from ..models import (
+    CoopShare,
+    CoopShareTransfer,
+    Member,
+    ShareTypeVariation,
+    Subscription,
+)
 from .serializers_mixin import (
     AUDIT_READONLY_FIELDS,
     DeletableMixin,
@@ -594,6 +601,26 @@ class SubscriptionSerializer(
             # guard against direct API calls.
             *CANCELLATION_READONLY_FIELDS,
         )
+
+    def validate_member(self, value: str) -> str:
+        """Reject an unknown member id with the named 404.
+
+        The id is written straight to the FK — create resolves it, update
+        assigns ``member_id`` — so a miss would otherwise surface as a generic
+        integrity conflict on update.
+        """
+        if not Member.objects.filter(pk=value).exists():
+            raise MemberNotFound(f"Member {value} not found", field="member")
+        return value
+
+    def validate_share_type_variation(self, value: str) -> str:
+        """Reject an unknown variation id with the named 404 — same FK path as
+        ``validate_member``."""
+        if not ShareTypeVariation.objects.filter(pk=value).exists():
+            raise ShareTypeVariationNotFound(
+                f"ShareTypeVariation {value} not found", field="share_type_variation"
+            )
+        return value
 
     def validate(self, attrs):
         # 1. Hard lockdown for confirmed subscriptions.

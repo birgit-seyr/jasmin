@@ -6,11 +6,13 @@ from decimal import Decimal
 from unittest import mock
 
 import pytest
+from django.utils import timezone
 
 from apps.commissioning.models import ForecastOfferGroup, Offer
 from apps.commissioning.services.offer_service import OfferService
 from apps.commissioning.tests.factories import (
     ForecastFactory,
+    JasminUserFactory,
     OfferFactory,
     OfferGroupFactory,
     OrderContentFactory,
@@ -106,7 +108,12 @@ class TestAnnotateOffersWithOrderedAmounts:
 class TestCopyOffersToNextWeek:
     def test_copies_to_next_week(self, tenant):
         offer = OfferFactory(
-            year=2026, delivery_week=10, amount=Decimal("20"), is_finalized=True
+            year=2026,
+            delivery_week=10,
+            amount=Decimal("20"),
+            is_finalized=True,
+            finalized_at=timezone.now(),
+            finalized_by=JasminUserFactory(),
         )
 
         result = OfferService.copy_offers_to_next_week([offer.pk])
@@ -117,6 +124,29 @@ class TestCopyOffersToNextWeek:
         assert new_offer.year == 2026
         assert new_offer.delivery_week == 11
         assert new_offer.is_finalized is False
+        # The copy is a draft: the source's finalization stamp must not ride
+        # along, neither the timestamp nor the user who finalized it.
+        assert new_offer.finalized_at is None
+        assert new_offer.finalized_by_id is None
+
+    def test_copies_a_finalized_offer_without_a_finalizing_user(self, tenant):
+        """``finalized_by`` is nullable — a source finalized by a job carries
+        only the timestamp, and the copy must clear that too."""
+        offer = OfferFactory(
+            year=2026,
+            delivery_week=10,
+            amount=Decimal("20"),
+            is_finalized=True,
+            finalized_at=timezone.now(),
+            finalized_by=None,
+        )
+
+        result = OfferService.copy_offers_to_next_week([offer.pk])
+
+        new_offer = Offer.objects.get(pk=result["created_ids"][0])
+        assert new_offer.is_finalized is False
+        assert new_offer.finalized_at is None
+        assert new_offer.finalized_by_id is None
 
     def test_skips_duplicate(self, tenant):
         article = ShareArticleFactory()
@@ -200,7 +230,14 @@ class TestCopyOffersToNextWeek:
 class TestCopyOffersToOfferGroup:
     def test_copies_to_group(self, tenant):
         group = OfferGroupFactory()
-        offer = OfferFactory(year=2026, delivery_week=15, amount=Decimal("10"))
+        offer = OfferFactory(
+            year=2026,
+            delivery_week=15,
+            amount=Decimal("10"),
+            is_finalized=True,
+            finalized_at=timezone.now(),
+            finalized_by=JasminUserFactory(),
+        )
 
         result = OfferService.copy_offers_to_offer_group(
             [offer.pk],
@@ -213,6 +250,8 @@ class TestCopyOffersToOfferGroup:
         new_offer = Offer.objects.get(pk=result["created_ids"][0])
         assert new_offer.offer_group_id == group.pk
         assert new_offer.is_finalized is False
+        assert new_offer.finalized_at is None
+        assert new_offer.finalized_by_id is None
 
     def test_skips_existing_in_group(self, tenant):
         article = ShareArticleFactory()

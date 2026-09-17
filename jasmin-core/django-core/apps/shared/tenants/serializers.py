@@ -4,9 +4,16 @@ from django.core.files.base import ContentFile
 from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers
 
-from apps.shared.image_upload import strict_image_decoding
+from apps.shared.image_upload import normalize_uploaded_picture, strict_image_decoding
 
-from .errors import TenantAppIconInvalid
+from .errors import (
+    SmtpHostNotAllowed,
+    SmtpPortInvalid,
+    SmtpTlsSslConflict,
+    TenantAppIconInvalid,
+    TenantFeatureFlagsInvalid,
+    TenantLogoInvalid,
+)
 from .models import Tenant, TenantEmailConfig, TenantSettings
 
 # ---- Web-app launcher icon (``Tenant.app_icon``) constraints ---------------
@@ -141,6 +148,67 @@ class TenantSerializer(_TenantSettingsOverlayMixin, serializers.ModelSerializer)
             "updated_at",
             "action_rate_limit_overrides",
         )
+
+    def validate_logo(self, value):
+        """Accept only a raster picture, and store a re-encode of it.
+
+        The stored file is served from the tenant's own origin with a
+        Content-Type derived from its extension, so a picture kept under a
+        caller-chosen name (a real PNG uploaded as ``x.html``) would be handed
+        back as that type. The helper re-encodes to the detected format under
+        a generated name, so neither the uploader's bytes nor their file name
+        reach storage.
+        """
+        return normalize_uploaded_picture(
+            value, error_cls=TenantLogoInvalid, field="logo"
+        )
+
+    def validate_bio_logo(self, value):
+        """Same picture normalization as ``logo`` — see ``validate_logo``."""
+        return normalize_uploaded_picture(
+            value, error_cls=TenantLogoInvalid, field="bio_logo"
+        )
+
+    def validate_navigation(self, value):
+        return self._validate_feature_flags(value, "navigation")
+
+    def validate_ai(self, value):
+        return self._validate_feature_flags(value, "ai")
+
+    def _validate_feature_flags(self, value, field):
+        """A flag group is an object mapping a flag name to an on/off value.
+
+        The group is free JSON, so a string, list or number would persist here
+        and only fail much later in the client that reads the flags (a string
+        has a ``length``, so it survives every "is anything configured?" test
+        on the way).
+
+        Unknown flag names stay allowed — the group grows with the UI. And the
+        configuration page echoes the whole tenant row back on every save, so a
+        group that arrives unchanged is accepted as-is and only a value the
+        request actually changes has to satisfy the rule; otherwise one stored
+        oddity would block every later edit of an unrelated field.
+        """
+        stored = getattr(self.instance, field, None) if self.instance else None
+        if value == stored:
+            return value
+
+        if not isinstance(value, dict):
+            raise TenantFeatureFlagsInvalid(
+                "Expected an object mapping flag names to true/false.",
+                field=field,
+            )
+
+        stored_flags = stored if isinstance(stored, dict) else {}
+        for flag, flag_value in value.items():
+            if flag in stored_flags and flag_value == stored_flags[flag]:
+                continue
+            if not isinstance(flag_value, bool):
+                raise TenantFeatureFlagsInvalid(
+                    f"The flag '{flag}' must be true or false.",
+                    field=field,
+                )
+        return value
 
     def validate_app_icon(self, value):
         """Enforce square / minimum-size / format, then normalize.
@@ -418,19 +486,19 @@ class TenantEmailConfigSerializer(serializers.ModelSerializer):
         from apps.shared.smtp_host_validator import smtp_host_is_blocked
 
         if smtp_host_is_blocked(value):
-            raise serializers.ValidationError(
+            raise SmtpHostNotAllowed(
                 "Enter a public SMTP host. Private, loopback, link-local and "
                 "reserved addresses are not allowed.",
-                code="smtp_host_not_allowed",
+                field="smtp_host",
             )
         return value
 
     def validate_smtp_port(self, value):
         """SMTP port must be a valid TCP port (1–65535)."""
         if value is not None and not (1 <= value <= 65535):
-            raise serializers.ValidationError(
+            raise SmtpPortInvalid(
                 "Enter a valid port number between 1 and 65535.",
-                code="smtp_port_invalid",
+                field="smtp_port",
             )
         return value
 
@@ -446,8 +514,9 @@ class TenantEmailConfigSerializer(serializers.ModelSerializer):
             "smtp_use_ssl", getattr(self.instance, "smtp_use_ssl", False)
         )
         if use_tls and use_ssl:
-            raise serializers.ValidationError(
-                {"smtp_use_ssl": "Choose either STARTTLS or SSL, not both."}
+            raise SmtpTlsSslConflict(
+                "Choose either STARTTLS or SSL, not both.",
+                field="smtp_use_ssl",
             )
         return attrs
 

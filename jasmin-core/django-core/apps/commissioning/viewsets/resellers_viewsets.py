@@ -168,9 +168,10 @@ def _verify_einvoice_xml_matches(obj, uploaded_xml) -> str | None:
     *some* XML).
 
     Deliberately conservative: it only HARD-FAILS on an unambiguous mismatch
-    of the document number or the grand total. A missing element, an
-    unparseable body, or a credit-note sign flip is tolerated (returns
-    ``None``) so a legitimate upload is never blocked by a format quirk.
+    of the document number or the grand total, or on a body ``defusedxml``
+    refuses to parse. A missing element, a merely malformed body, or a
+    credit-note sign flip is tolerated (returns ``None``) so a legitimate
+    upload is never blocked by a format quirk.
     """
     from decimal import Decimal, InvalidOperation
 
@@ -189,11 +190,19 @@ def _verify_einvoice_xml_matches(obj, uploaded_xml) -> str | None:
         raw = uploaded_xml.read()
         uploaded_xml.seek(0)
         root = ET.fromstring(raw)
-    except (ET.ParseError, ValueError, TypeError, DefusedXmlException):
-        # Not structurally XML (magic-byte check stands), OR a hostile
-        # DTD/entity payload defusedxml refuses to parse — reject either way
-        # rather than letting an XXE / entity-expansion attempt through.
-        return None
+    except (ET.ParseError, ValueError, TypeError) as exc:
+        # A body defusedxml refuses outright (hostile DTD / entity definition,
+        # raised as a DefusedXmlException — itself a ValueError, so this tuple
+        # catches it) is refused: nothing expands in this process, but a
+        # tolerated upload would be stored on the document, emailed to the
+        # reseller and accounting, and handed to the factur-x converter.
+        # Anything else is merely malformed past the magic-byte check and stays
+        # tolerated, so a format quirk never blocks a legitimate upload.
+        return (
+            "uploaded e-invoice XML could not be parsed safely"
+            if isinstance(exc, DefusedXmlException)
+            else None
+        )
 
     def local(tag: str) -> str:
         return tag.rsplit("}", 1)[-1]
@@ -361,6 +370,20 @@ def uninvoiced_orders_of_outer_reseller(year: int | None = None) -> QuerySet[Ord
     )
 
 
+# Contact fields whose rewrite needs a fresh identity proof.
+_STEP_UP_CONTACT_FIELDS = ("iban",)
+
+
+def _payload_sets_a_step_up_field(request: Request | None) -> bool:
+    """True when the write body puts a non-empty value on a gated contact field.
+
+    An empty string or ``null`` sets no bank account, so it is not a value the
+    step-up challenge is there to protect.
+    """
+    data = getattr(request, "data", None) or {}
+    return any(str(data.get(field) or "").strip() for field in _STEP_UP_CONTACT_FIELDS)
+
+
 class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaffOrCustomer
     write_permission = IsOfficeOrCustomer
@@ -370,6 +393,24 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.service = ResellerAndDeliveryStationService()
+
+    def get_permissions(self):
+        from apps.accounts.permissions import requires_step_up_for_fields
+
+        # Rewriting the linked contact's IBAN redirects where money is paid, so
+        # that one field trips the step-up modal; every other reseller edit
+        # (name, address, invoice settings) passes unprompted. On an update the
+        # gate compares the submitted value with the stored one, so re-sending
+        # an unchanged IBAN prompts for nothing. A create has nothing to
+        # compare against and the gate there fires on the key alone, so it is
+        # only attached when the payload carries an actual bank account —
+        # a blank or null ``iban`` sets none and must not be challenged.
+        permissions = super().get_permissions()
+        if self.action in {"update", "partial_update"} or (
+            self.action == "create" and _payload_sets_a_step_up_field(self.request)
+        ):
+            permissions.append(requires_step_up_for_fields(*_STEP_UP_CONTACT_FIELDS)())
+        return permissions
 
     @extend_schema(
         parameters=[
@@ -381,8 +422,9 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
                 required=False,
                 description=(
                     "Day of the week (0=Monday, 6=Sunday) the `has_orders` "
-                    "annotation is scoped to. Send it together with `year` "
-                    "and `delivery_week`."
+                    "annotation is scoped to. `has_orders` is annotated "
+                    "whenever at least one of `year`, `delivery_week` and "
+                    "`day_number` is sent, scoped to those that are."
                 ),
             ),
             catalogue_param(
@@ -414,7 +456,14 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return super().list(request, *args, **kwargs)
 
-    def get_queryset(self) -> QuerySet[Reseller]:
+    def _base_queryset(self) -> QuerySet[Reseller]:
+        """Every reseller row this caller may reach, carrying the joins and
+        annotations all routes need — and none of the list filters.
+
+        ``create`` and ``update`` re-read the row they just wrote through this,
+        so a list filter left on a write's query string cannot filter that row
+        away and answer 404 for a write that did land.
+        """
         from django.utils import timezone
 
         from ..models.managers import active_on_date_q
@@ -461,6 +510,21 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
             )
             .all()
         )
+
+        contact_annotations = get_contact_annotations()
+        queryset = queryset.annotate(**contact_annotations)
+
+        # Non-privileged callers (customers) may only see/edit their own
+        # linked reseller row.
+        return scope_to_reseller(queryset, self.request, path="pk")
+
+    def get_queryset(self) -> QuerySet[Reseller]:
+        queryset = self._base_queryset()
+        # What follows are the list page's filters. A detail route and the
+        # re-read after a write reach this method too, and must not be narrowed
+        # by a query param that happens to be on the URL.
+        if getattr(self, "action", None) != "list":
+            return queryset
 
         params = validate_query_params(
             self.request,
@@ -514,14 +578,21 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
             ],
         )
 
-        if year and delivery_week and day_number is not None:
+        # ``has_orders`` follows whichever of the three scope params were sent:
+        # the delivery-notes and payments dropdowns send year + delivery_week
+        # with no day, and a flag scoped to that week is what they mean by it.
+        order_scope: dict[str, int] = {}
+        if year:
+            order_scope["order__year"] = year
+        if delivery_week:
+            order_scope["order__delivery_week"] = delivery_week
+        if day_number is not None:
+            order_scope["order__day_number"] = day_number
+        if order_scope:
             queryset = queryset.annotate(
                 has_orders=Exists(
                     OrderContent.objects.filter(
-                        order__year=year,
-                        order__delivery_week=delivery_week,
-                        order__day_number=day_number,
-                        order__reseller=OuterRef("pk"),
+                        order__reseller=OuterRef("pk"), **order_scope
                     )
                 ),
             )
@@ -536,12 +607,7 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
                 )
             ).filter(has_orders_without_invoice=params["has_orders_without_invoice"])
 
-        contact_annotations = get_contact_annotations()
-        queryset = queryset.annotate(**contact_annotations)
-
-        # Non-privileged callers (customers) may only see/edit their own
-        # linked reseller row.
-        return scope_to_reseller(queryset, self.request, path="pk")
+        return queryset
 
     @extend_schema(description="Create a reseller with a linked contact entity.")
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -693,13 +759,11 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             queryset = queryset.filter(order__year=year)
         if delivery_week:
             queryset = queryset.filter(order__delivery_week=delivery_week)
-        if day_number:
+        # Monday is ``0``: key the filter on "was it sent", not on truthiness.
+        if day_number is not None:
             queryset = queryset.filter(order__day_number=day_number)
         if reseller:
-            try:
-                queryset = queryset.filter(order__reseller=reseller)
-            except Reseller.DoesNotExist:
-                queryset = OrderContent.objects.none()
+            queryset = queryset.filter(order__reseller=reseller)
 
         queryset = queryset.annotate(
             order_number=F("order__number"),
@@ -920,15 +984,17 @@ class OfferViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             queryset = queryset.filter(delivery_week=delivery_week)
 
         if reseller_id is not None:
-
             reseller = get_or_404(
                 Reseller, reseller_id, "Reseller", error_cls=ResellerNotFound
             )
-            offer_group = reseller.offer_group
-            if offer_group is not None:
-                queryset = queryset.filter(offer_group=offer_group)
-            else:
-                queryset = Offer.objects.none()
+            # A reseller only ever gets its own group's offers, so its group is
+            # the effective one: it takes precedence over an ``offer_group``
+            # the caller sent alongside it, and a reseller with no group at all
+            # matches no offer. Resolving it into ``offer_group`` lets the
+            # single filter below do the work.
+            if reseller.offer_group_id is None:
+                return Offer.objects.none()
+            offer_group = reseller.offer_group_id
 
         if offer_group is not None:
             queryset = queryset.filter(offer_group=offer_group)

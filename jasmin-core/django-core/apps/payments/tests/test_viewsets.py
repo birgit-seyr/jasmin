@@ -448,6 +448,27 @@ class TestBillingRunViewSet:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.data["code"] == "billing_run.invalid_collection_date"
 
+    @time_machine.travel("2026-03-10")
+    def test_past_collection_date_outranks_a_reversed_period(
+        self, api_client, tenant, tenant_settings, billing_profile
+    ):
+        """A payload that breaks both run rules answers with the collection-date
+        code and its ``details`` value — that is the code the office client
+        branches on and the value it renders back at the operator."""
+        resp = api_client.post(
+            self.URL,
+            {
+                "period_start": "2026-02-28",
+                "period_end": "2026-02-01",  # reversed period
+                "collection_date": "2026-01-15",  # before frozen today
+                "payment_method": PaymentMethodOptions.SEPA_DIRECT_DEBIT,
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "billing_run.invalid_collection_date"
+        assert resp.data["details"]["collection_date"] == "2026-01-15"
+
     def test_create_run_with_no_charges_returns_400(
         self, api_client, tenant, tenant_settings, billing_profile
     ):
@@ -571,3 +592,210 @@ class TestSepaMandateStatusAction:
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_403_FORBIDDEN,
         )
+
+
+# ---------------------------------------------------------------------------
+# BillingProfileViewSet — ``?member=`` ownership
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestBillingProfileMemberParam:
+    URL = "/api/payments/billing_profiles/"
+
+    def test_member_foreign_member_param_is_403(
+        self, member_api_client, tenant, member
+    ):
+        # A non-privileged caller passing another member's ?member= gets a 403,
+        # not a silent empty 200 — the same contract as the charge list.
+        other = MemberFactory()
+        resp = member_api_client.get(self.URL, {"member": str(other.pk)})
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_member_own_member_param_is_allowed(
+        self, member_api_client, tenant, member, billing_profile
+    ):
+        resp = member_api_client.get(self.URL, {"member": str(member.pk)})
+        assert resp.status_code == status.HTTP_200_OK
+        assert {row["id"] for row in resp.data} == {str(billing_profile.pk)}
+
+    def test_office_can_narrow_to_any_member(self, api_client, tenant, member):
+        # Privileged roles bypass the ownership check entirely.
+        other = MemberFactory()
+        BillingProfile.objects.create(
+            member=other,
+            payment_method=PaymentMethodOptions.BANK_TRANSFER,
+            is_active=True,
+        )
+        resp = api_client.get(self.URL, {"member": str(other.pk)})
+        assert resp.status_code == status.HTTP_200_OK
+        assert {row["member"] for row in resp.data} == {str(other.pk)}
+
+    def test_pii_audit_scope_cannot_carry_a_newline(
+        self, api_client, tenant, billing_profile
+    ):
+        # The scope descriptor embeds the raw ?member= value and lands in a
+        # newline-delimited log file, so a CR/LF in it would forge a second
+        # pii.read record attributing a read to someone else.
+        from unittest.mock import patch
+
+        with patch("apps.shared.pii_logging.logger") as mock_logger:
+            resp = api_client.get(
+                self.URL, {"member": "x\npii.read actor=ghost@example.org"}
+            )
+
+        assert resp.status_code == status.HTTP_200_OK
+        args = mock_logger.info.call_args[0]
+        scope = args[3]
+        assert "\n" not in scope
+        assert scope.startswith("list(member=x?pii.read")
+
+
+# ---------------------------------------------------------------------------
+# BillingProfileViewSet — SEPA mandate write rules
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestBillingProfileMandateWriteRules:
+    URL = "/api/payments/billing_profiles/"
+
+    @pytest.fixture(autouse=True)
+    def _frozen_today(self):
+        """Pin "today" to 2026-03-02 so the signature-date rule is evaluated
+        against a fixed reference — the dates below stay past / future forever.
+        """
+        with time_machine.travel(datetime.datetime(2026, 3, 2, 12, 0), tick=False):
+            yield
+
+    @pytest.fixture()
+    def step_up_client(self, user):
+        """Office client whose token carries a fresh step-up claim. The mandate
+        fields are step-up gated, so a plain office PATCH of a CHANGED one is
+        refused before the serializer runs."""
+        from rest_framework.test import APIClient
+
+        from apps.commissioning.tests.conftest import make_step_up_token
+
+        client = APIClient()
+        client.force_authenticate(user=user, token=make_step_up_token(user))
+        return client
+
+    @staticmethod
+    def _mark_used(billing_profile):
+        billing_profile.sepa_mandate_first_use_at = datetime.date(2026, 2, 1)
+        billing_profile.save()
+        return billing_profile
+
+    def test_reference_change_refused_on_used_mandate(
+        self, step_up_client, tenant, billing_profile
+    ):
+        self._mark_used(billing_profile)
+        stored = billing_profile.sepa_mandate_reference
+
+        resp = step_up_client.patch(
+            f"{self.URL}{billing_profile.pk}/",
+            {"sepa_mandate_reference": "MND-REWRITTEN-001"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "billing_profile.mandate_reference_locked"
+        billing_profile.refresh_from_db()
+        assert billing_profile.sepa_mandate_reference == stored
+
+    def test_identical_reference_resubmission_is_accepted(
+        self, api_client, tenant, billing_profile
+    ):
+        # The office SEPA form sends the whole mandate block back on every save,
+        # so an unchanged reference must pass on a used mandate.
+        self._mark_used(billing_profile)
+        stored = billing_profile.sepa_mandate_reference
+
+        resp = api_client.patch(
+            f"{self.URL}{billing_profile.pk}/",
+            {"sepa_mandate_reference": stored, "notes": "re-ran SEPA setup"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        billing_profile.refresh_from_db()
+        assert billing_profile.sepa_mandate_reference == stored
+        assert billing_profile.notes == "re-ran SEPA setup"
+
+    def test_reference_change_allowed_before_first_use(
+        self, step_up_client, tenant, billing_profile
+    ):
+        # Nothing has been collected yet (first_use_at is NULL), so the bank
+        # holds no reference and the office may still correct it.
+        assert billing_profile.sepa_mandate_first_use_at is None
+
+        resp = step_up_client.patch(
+            f"{self.URL}{billing_profile.pk}/",
+            {"sepa_mandate_reference": "MND-CORRECTED-001"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        billing_profile.refresh_from_db()
+        assert billing_profile.sepa_mandate_reference == "MND-CORRECTED-001"
+
+    def test_future_signed_date_is_refused_on_update(
+        self, step_up_client, tenant, billing_profile
+    ):
+        stored = billing_profile.sepa_mandate_signed_at
+
+        resp = step_up_client.patch(
+            f"{self.URL}{billing_profile.pk}/",
+            {"sepa_mandate_signed_at": "2026-04-01"},  # after frozen today
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "sepa.mandate_signed_in_future"
+        billing_profile.refresh_from_db()
+        assert billing_profile.sepa_mandate_signed_at == stored
+
+    def test_signed_today_is_accepted(self, step_up_client, tenant, billing_profile):
+        resp = step_up_client.patch(
+            f"{self.URL}{billing_profile.pk}/",
+            {"sepa_mandate_signed_at": "2026-03-02"},  # frozen today
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        billing_profile.refresh_from_db()
+        assert billing_profile.sepa_mandate_signed_at == datetime.date(2026, 3, 2)
+
+    def test_signature_dated_tomorrow_is_accepted(
+        self, step_up_client, tenant, billing_profile
+    ):
+        """The SEPA modal derives the signature date from the browser clock, so
+        an operator in a timezone ahead of the server submits the server's
+        tomorrow for a mandate being signed right now. One day of slack keeps
+        that saveable."""
+        resp = step_up_client.patch(
+            f"{self.URL}{billing_profile.pk}/",
+            {"sepa_mandate_signed_at": "2026-03-03"},  # frozen today + 1 day
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        billing_profile.refresh_from_db()
+        assert billing_profile.sepa_mandate_signed_at == datetime.date(2026, 3, 3)
+
+    def test_future_signed_date_is_refused_on_create(self, step_up_client, tenant):
+        fresh = MemberFactory()
+
+        resp = step_up_client.post(
+            self.URL,
+            {
+                "member": str(fresh.pk),
+                "payment_method": PaymentMethodOptions.SEPA_DIRECT_DEBIT,
+                "iban": "DE89370400440532013000",
+                "account_holder": "Ada Lovelace",
+                "sepa_mandate_signed_at": "2026-04-01",
+                "is_active": True,
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "sepa.mandate_signed_in_future"
+        assert not BillingProfile.objects.filter(member=fresh).exists()

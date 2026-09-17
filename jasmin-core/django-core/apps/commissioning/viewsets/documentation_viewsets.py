@@ -357,12 +357,28 @@ class ForecastViewSet(BaseArchivableViewSet):
         return Response(response_serializer.data)
 
     @extend_schema(
-        description="Copy selected forecasts to the next delivery week.",
+        description=(
+            "Copy selected forecasts to the next delivery week. Ids that match "
+            "no forecast, and forecasts the next week already plans, are "
+            "reported in `errors` while the rest are still copied; only a "
+            "request where none of the ids match is a 404."
+        ),
         request=BulkIdsRequestSerializer,
         responses={
             201: inline_serializer(
                 name="ForecastBulkCopyResponse",
-                fields={"success": drf_serializers.BooleanField()},
+                fields={
+                    "success": drf_serializers.BooleanField(),
+                    "errors": drf_serializers.ListField(
+                        child=inline_serializer(
+                            name="ForecastBulkCopyError",
+                            fields={
+                                "id": drf_serializers.CharField(),
+                                "error": drf_serializers.CharField(),
+                            },
+                        )
+                    ),
+                },
             ),
             # ``RequiredFieldMissing`` — empty/missing ``ids``.
             400: ErrorResponseSerializer,
@@ -385,16 +401,41 @@ class ForecastViewSet(BaseArchivableViewSet):
             id__in=selected_ids
         ).prefetch_related("forecastsharetypevariation_set", "forecastoffergroup_set")
 
-        if not forecast_instances.exists():
-            raise ForecastNotFound("No valid forecasts found")
-
+        found_ids = set()
+        already_planned_ids = set()
         for instance in forecast_instances:
-            self.forecast_service.bulk_copy_forecast_to_next_week(
+            found_ids.add(str(instance.id))
+            # The service returns ``None`` instead of a copy when the next week
+            # already holds a twin (same article / unit / size), so the return
+            # value is what says whether a row was actually written.
+            copied = self.forecast_service.bulk_copy_forecast_to_next_week(
                 instance=instance,
                 validated_data={},
             )
+            if copied is None:
+                already_planned_ids.add(str(instance.id))
 
-        return Response({"success": True}, status=status.HTTP_201_CREATED)
+        if not found_ids:
+            raise ForecastNotFound("No valid forecasts found")
+
+        # A selection where only some ids are copied still copies the rest, so
+        # name the skipped ones rather than answering a bare success the caller
+        # would read as "all ten were copied". Order follows the request.
+        errors = []
+        for selected_id in dict.fromkeys(selected_ids):
+            if selected_id not in found_ids:
+                errors.append({"id": selected_id, "error": "Forecast not found"})
+            elif selected_id in already_planned_ids:
+                errors.append(
+                    {
+                        "id": selected_id,
+                        "error": "Already planned for the next week",
+                    }
+                )
+
+        return Response(
+            {"success": True, "errors": errors}, status=status.HTTP_201_CREATED
+        )
 
 
 class _MovementSourceDestroyMixin:

@@ -12,7 +12,7 @@ export type CommissioningShareArticleNetPricesListParams = {
  */
 active_at_date?: string;
 /**
- * Filter for current prices (valid_until is null)
+ * Filter for current prices (valid_until is null). Ignored when `active_at_date` is supplied — that parameter already selects the prices active on its date.
  */
 current?: boolean;
 /**

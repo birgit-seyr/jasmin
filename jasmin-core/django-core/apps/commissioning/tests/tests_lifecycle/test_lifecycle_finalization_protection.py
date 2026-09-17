@@ -617,6 +617,65 @@ class TestContentRowSaveBlockedWhenFinalized:
 
 
 @pytest.mark.django_db
+class TestOneWayUnfinalizeBlockedOnSave:
+    """``IS_FINALIZED_ONE_WAY`` models refuse the finalized -> draft flip at the
+    ``save()`` layer, whether the caller passes ``update_fields`` or writes the
+    whole row. The Postgres trigger refuses the same transition underneath; the
+    Python layer is what turns it into a domain error instead of an
+    ``IntegrityError``.
+    """
+
+    def test_order_full_save_unfinalize_raises(self, tenant):
+        _ensure_settings(connection.tenant)
+        order, _, _ = _build_finalized_chain()
+
+        order.is_finalized = False
+        with pytest.raises(FinalizedError, match="Cannot unfinalize Order"):
+            order.save()
+
+        order.refresh_from_db()
+        assert order.is_finalized is True
+
+    def test_order_update_fields_unfinalize_raises(self, tenant):
+        _ensure_settings(connection.tenant)
+        order, _, _ = _build_finalized_chain()
+
+        order.is_finalized = False
+        with pytest.raises(FinalizedError, match="Cannot unfinalize Order"):
+            order.save(update_fields=["is_finalized"])
+
+        order.refresh_from_db()
+        assert order.is_finalized is True
+
+    def test_invoice_content_full_save_unfinalize_raises(self, tenant):
+        _ensure_settings(connection.tenant)
+        _, _, invoice = _build_finalized_chain()
+        line = invoice.items.first()
+
+        line.is_finalized = False
+        with pytest.raises(
+            FinalizedError, match="Cannot unfinalize InvoiceResellerContent"
+        ):
+            line.save()
+
+        line.refresh_from_db()
+        assert line.is_finalized is True
+
+    def test_draft_order_full_save_still_works(self, tenant):
+        """The widened guard reads the stored flag; an order that was never
+        finalized saves normally."""
+        _ensure_settings(connection.tenant)
+        order = _make_order_with_one_of_each()
+
+        order.note = "still a draft"
+        order.save()
+
+        order.refresh_from_db()
+        assert order.is_finalized is False
+        assert order.note == "still a draft"
+
+
+@pytest.mark.django_db
 class TestContentRowDeleteBlockedWhenFinalized:
     """``FinalizedProtectedMixin.delete`` raises ``FinalizedError`` on
     finalized rows. Same matrix as the save test."""

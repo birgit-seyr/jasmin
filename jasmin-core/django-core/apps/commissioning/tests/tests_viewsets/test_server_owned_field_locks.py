@@ -25,6 +25,7 @@ from rest_framework import status
 from apps.commissioning.models import (
     DeliveryNoteContent,
     InvoiceResellerContent,
+    Share,
     ShareContent,
     ShareDelivery,
 )
@@ -32,6 +33,7 @@ from apps.commissioning.tests.factories import (
     DeliveryNoteContentFactory,
     DeliveryNoteResellerFactory,
     DeliveryStationDayFactory,
+    ForecastFactory,
     HarvestFactory,
     InvoiceResellerFactory,
     JasminUserFactory,
@@ -46,7 +48,10 @@ from apps.commissioning.tests.factories import (
     ShareTypeVariationFactory,
     StorageFactory,
     SubscriptionFactory,
+    TheoreticalCleanAmountFactory,
     TheoreticalHarvestFactory,
+    TheoreticalPurchaseFactory,
+    TheoreticalWashAmountFactory,
 )
 
 FORGED_TIMESTAMP = "2020-01-01T00:00:00Z"
@@ -612,3 +617,192 @@ class TestShareDeliveryLocks:
         delivery.refresh_from_db()
         assert delivery.joker_taken is True
         assert delivery.subscription_id == subscription.pk
+
+
+# ---------------------------------------------------------------------------
+# Theoretical rows — the line they were derived from
+# ---------------------------------------------------------------------------
+THEORETICAL_ENDPOINTS = [
+    ("theoretical_harvests", TheoreticalHarvestFactory),
+    ("theoretical_purchase_amounts", TheoreticalPurchaseFactory),
+    ("theoretical_wash_amounts", TheoreticalWashAmountFactory),
+    ("theoretical_clean_amounts", TheoreticalCleanAmountFactory),
+]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(("basename", "factory"), THEORETICAL_ENDPOINTS)
+class TestTheoreticalProvenanceLocks:
+    """A theoretical row records the share/order content it was derived from,
+    and the services that build these rows own the movements and snapshots
+    derived alongside them. Repointing the source line through a plain PATCH
+    would leave all of that on the old parent, so the FKs are read-only —
+    dropped silently, with the rest of the payload still landing.
+    """
+
+    def test_patch_cannot_repoint_the_source_line(
+        self, api_client, tenant, basename, factory
+    ):
+        row = factory()
+        original_share_content_id = row.share_content_id
+        assert original_share_content_id is not None
+        # Reuse the same Share: a second ShareContentFactory would open another
+        # SharesDeliveryDay on the same weekday, which the DB refuses.
+        other_content = ShareContentFactory(
+            share=row.share_content.share, share_article=ShareArticleFactory()
+        )
+
+        resp = api_client.patch(
+            reverse(f"{basename}-detail", args=[row.id]),
+            {"share_content": other_content.id, "amount": "12.00"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        row.refresh_from_db()
+        assert row.share_content_id == original_share_content_id
+        assert row.amount == Decimal("12.00")
+
+    def test_patch_cannot_attach_a_source_line_to_a_row_without_one(
+        self, api_client, tenant, basename, factory
+    ):
+        """The absent case: a row derived from neither content line stays
+        unattached."""
+        row = factory(share_content=None)
+        assert row.share_content_id is None
+        content = ShareContentFactory()
+
+        resp = api_client.patch(
+            reverse(f"{basename}-detail", args=[row.id]),
+            {"share_content": content.id, "amount": "8.00"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        row.refresh_from_db()
+        assert row.share_content_id is None
+        assert row.amount == Decimal("8.00")
+
+    def test_patch_cannot_attach_an_order_content(
+        self, api_client, tenant, basename, factory
+    ):
+        row = factory()
+        order_content = OrderContentFactory()
+
+        resp = api_client.patch(
+            reverse(f"{basename}-detail", args=[row.id]),
+            {"order_content": order_content.id},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        row.refresh_from_db()
+        assert row.order_content_id is None
+
+
+@pytest.mark.django_db
+class TestTheoreticalHarvestForecastLock:
+    """A theoretical harvest also records the forecast it was planned from —
+    same provenance rule as the content lines."""
+
+    def test_patch_cannot_repoint_the_forecast(self, api_client, tenant):
+        row = TheoreticalHarvestFactory()
+        original_forecast_id = row.forecast_id
+        assert original_forecast_id is not None
+        other_forecast = ForecastFactory()
+
+        resp = api_client.patch(
+            reverse("theoretical_harvests-detail", args=[row.id]),
+            {"forecast": other_forecast.id, "amount": "9.00"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        row.refresh_from_db()
+        assert row.forecast_id == original_forecast_id
+        assert row.amount == Decimal("9.00")
+
+    def test_patch_cannot_attach_a_forecast_to_a_row_without_one(
+        self, api_client, tenant
+    ):
+        row = TheoreticalHarvestFactory(forecast=None)
+        forecast = ForecastFactory()
+
+        resp = api_client.patch(
+            reverse("theoretical_harvests-detail", args=[row.id]),
+            {"forecast": forecast.id},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        row.refresh_from_db()
+        assert row.forecast_id is None
+
+
+# ---------------------------------------------------------------------------
+# Shares — the weekday columns
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestShareDayLocks:
+    """``SharesDayChangeService`` owns the six weekday columns on a Share: it
+    refuses a past week and rebuilds the theoretical rows and movements that
+    snapshotted the old day. A plain PATCH does neither, so the columns lock
+    once the row exists. Create leaves them open — the day grid lays out a new
+    week through this endpoint, and a NULL day field would be backfilled from
+    the delivery day's defaults instead of the days the office picked.
+    """
+
+    def test_patch_cannot_move_a_weekday(self, api_client, tenant):
+        share = ShareFactory()
+        share.refresh_from_db()
+        original_harvesting_day = share.harvesting_day
+        original_washing_day = share.washing_day
+        assert original_harvesting_day is not None
+
+        resp = api_client.patch(
+            reverse("share-detail", kwargs={"pk": share.pk}),
+            {
+                "harvesting_day": 5,
+                "washing_day": 6,
+                "changed_day_number": 4,
+                # The legitimate half of the payload — the weights grid.
+                "weight1": "2.500",
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        share.refresh_from_db()
+        assert share.weight1 == Decimal("2.500")
+        assert share.harvesting_day == original_harvesting_day
+        assert share.washing_day == original_washing_day
+        assert share.changed_day_number is None
+
+    def test_create_still_sets_every_weekday(self, api_client, tenant):
+        delivery_day = SharesDeliveryDayFactory()
+
+        resp = api_client.post(
+            reverse("share-list"),
+            {
+                "year": 2026,
+                "delivery_week": 15,
+                "delivery_day": delivery_day.pk,
+                "share_type_variation": ShareTypeVariationFactory().pk,
+                "changed_day_number": 4,
+                "harvesting_day": 5,
+                "packing_day": 6,
+                "washing_day": 3,
+                "cleaning_day": 2,
+                "get_current_stock_day": 1,
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        share = Share.objects.get(pk=resp.data["id"])
+        assert share.changed_day_number == 4
+        assert share.harvesting_day == 5
+        assert share.packing_day == 6
+        assert share.washing_day == 3
+        assert share.cleaning_day == 2
+        assert share.get_current_stock_day == 1

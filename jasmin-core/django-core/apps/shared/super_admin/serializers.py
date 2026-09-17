@@ -12,6 +12,18 @@ from apps.shared.tenants.provisioning import (
     validate_schema_name as _validate_schema_name,
 )
 
+# Column widths the request payloads are written into: ``JasminUser.first_name``
+# / ``last_name`` / ``email``, ``Tenant.name``, ``Tenant.tenant_language``, and
+# django-tenants' own ``TenantMixin.schema_name`` / ``DomainMixin.domain``.
+# Declaring them on the serializers keeps an over-long value a per-field 400
+# rather than a database error the handler can only report generically.
+PERSON_NAME_MAX_LENGTH = 255
+TENANT_NAME_MAX_LENGTH = 200
+TENANT_LANGUAGE_MAX_LENGTH = 8
+SCHEMA_NAME_MAX_LENGTH = 63
+DOMAIN_MAX_LENGTH = 253
+EMAIL_MAX_LENGTH = 254
+
 # --- List Tenants ---
 
 
@@ -32,19 +44,36 @@ class TenantListItemSerializer(serializers.Serializer):
 
 
 class CreateTenantRequestSerializer(serializers.Serializer):
-    schema_name = serializers.CharField()
-    name = serializers.CharField()
-    domain = serializers.CharField()
+    # Every bound below mirrors the column the value is written to, so an
+    # over-long string is a per-field 400 here instead of a Postgres DataError
+    # rendered as the generic ``data.value_invalid``. The ``validate_*`` hooks
+    # further down check charset, reserved names and the platform label only —
+    # none of them looks at length, so the bound belongs on the field.
+    schema_name = serializers.CharField(max_length=SCHEMA_NAME_MAX_LENGTH)
+    name = serializers.CharField(max_length=TENANT_NAME_MAX_LENGTH)
+    domain = serializers.CharField(max_length=DOMAIN_MAX_LENGTH)
+    # Not a ChoiceField: the platform's create-tenant form offers languages
+    # beyond the two the platform ships templates for, and ``provision_tenant``
+    # stores whatever arrives. The length bound is the column's.
     tenant_language = serializers.CharField(
-        required=False, allow_blank=True, default=""
+        required=False,
+        allow_blank=True,
+        default="",
+        max_length=TENANT_LANGUAGE_MAX_LENGTH,
     )
-    admin_email = serializers.EmailField()
+    admin_email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH)
     admin_password = serializers.CharField()
     admin_first_name = serializers.CharField(
-        required=False, allow_blank=True, default=""
+        required=False,
+        allow_blank=True,
+        default="",
+        max_length=PERSON_NAME_MAX_LENGTH,
     )
     admin_last_name = serializers.CharField(
-        required=False, allow_blank=True, default=""
+        required=False,
+        allow_blank=True,
+        default="",
+        max_length=PERSON_NAME_MAX_LENGTH,
     )
 
     # Delegate to the shared tenants helper so the HTTP path, the create_tenant
@@ -127,6 +156,23 @@ class ResellerListItemSerializer(serializers.Serializer):
     display = serializers.CharField()
 
 
+# --- Super Admin Login ---
+
+
+class SuperAdminLoginRequestSerializer(serializers.Serializer):
+    """Credentials posted to the super-admin login endpoint."""
+
+    email = serializers.EmailField()
+    # trim_whitespace=False: a password is taken verbatim.
+    password = serializers.CharField(trim_whitespace=False, write_only=True)
+
+    def validate_email(self, value: str) -> str:
+        # One spelling of the address for the lockout bucket, the audit log
+        # line and the ``email__iexact`` lookup. Mirrors the tenant-side
+        # ``apps.accounts.serializers.LoginRequestSerializer``.
+        return value.strip().lower()
+
+
 # --- Super Admin Session (login response) ---
 
 
@@ -159,7 +205,7 @@ class SessionTenantSerializer(serializers.Serializer):
 
 
 class UpdateTenantRequestSerializer(serializers.Serializer):
-    name = serializers.CharField(required=False)
+    name = serializers.CharField(required=False, max_length=TENANT_NAME_MAX_LENGTH)
     description = serializers.CharField(
         required=False, allow_blank=True, allow_null=True
     )
@@ -177,12 +223,18 @@ class UpdateTenantResponseSerializer(serializers.Serializer):
 
 
 class CreateTenantAdminRequestSerializer(serializers.Serializer):
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
+    first_name = serializers.CharField(max_length=PERSON_NAME_MAX_LENGTH)
+    last_name = serializers.CharField(max_length=PERSON_NAME_MAX_LENGTH)
     email = serializers.EmailField()
     # trim_whitespace=False: a password is taken verbatim (matches the
     # CreateTenantUser serializer).
     password = serializers.CharField(trim_whitespace=False)
+
+    def validate_email(self, value: str) -> str:
+        # ``JasminUser`` stores ``username = email.lower()`` under a unique
+        # constraint, so the address is effectively case-insensitive. Normalise
+        # here and the duplicate pre-check, the row and the constraint all agree.
+        return value.strip().lower()
 
     def validate_password(self, value: str) -> str:
         return _validate_admin_password(value)
@@ -198,8 +250,8 @@ class CreateTenantAdminResponseSerializer(serializers.Serializer):
 
 
 class CreateTenantUserRequestSerializer(serializers.Serializer):
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
+    first_name = serializers.CharField(max_length=PERSON_NAME_MAX_LENGTH)
+    last_name = serializers.CharField(max_length=PERSON_NAME_MAX_LENGTH)
     email = serializers.EmailField()
     # trim_whitespace=False: a password is taken verbatim — DRF's default would
     # silently strip surrounding spaces the user typed.
@@ -208,6 +260,12 @@ class CreateTenantUserRequestSerializer(serializers.Serializer):
     reseller_id = serializers.CharField(
         required=False, allow_blank=True, allow_null=True
     )
+
+    def validate_email(self, value: str) -> str:
+        # ``JasminUser`` stores ``username = email.lower()`` under a unique
+        # constraint, so the address is effectively case-insensitive. Normalise
+        # here and the duplicate pre-check, the row and the constraint all agree.
+        return value.strip().lower()
 
     def validate_password(self, value: str) -> str:
         return _validate_admin_password(value)

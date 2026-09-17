@@ -68,6 +68,22 @@ def _login(factory, **data):
     return super_admin_login_view(request)
 
 
+def _create_case_variant_admins() -> str:
+    """Store the same address twice, capitalised differently, and return the
+    lowercase spelling. Both rows are active and share one password."""
+    lowercase = "dup.case@example.com"
+    with schema_context("public"):
+        for stored in ("Dup.Case@example.com", lowercase):
+            admin, _ = SuperAdmin.objects.get_or_create(
+                email=stored,
+                defaults={"first_name": "Dup", "last_name": "Case"},
+            )
+            admin.is_active = True
+            admin.set_password(SUPER_ADMIN_PASSWORD)
+            admin.save()
+    return lowercase
+
+
 def _refresh_cookie_value(response) -> str | None:
     """Pull the super-admin refresh cookie value out of a Response."""
     morsel = response.cookies.get(SUPER_ADMIN_REFRESH_COOKIE)
@@ -136,6 +152,85 @@ class TestLogin:
         response = _login(factory, email=SUPER_ADMIN_EMAIL, password=password)
         assert response.status_code == 400
         assert response.data["code"] == "super_admin.missing_credentials"
+
+    def test_mixed_case_email_authenticates(self, factory, super_admin, tenant):
+        """The submitted address is normalised, so the account is found
+        however the operator capitalised what they typed."""
+        response = _login(
+            factory, email=SUPER_ADMIN_EMAIL.upper(), password=SUPER_ADMIN_PASSWORD
+        )
+
+        assert response.status_code == 200, response.data
+        assert response.data["user"]["email"] == SUPER_ADMIN_EMAIL
+
+    def test_surrounding_whitespace_in_email_is_trimmed(
+        self, factory, super_admin, tenant
+    ):
+        response = _login(
+            factory,
+            email=f"  {SUPER_ADMIN_EMAIL}  ",
+            password=SUPER_ADMIN_PASSWORD,
+        )
+
+        assert response.status_code == 200, response.data
+
+    def test_account_stored_with_capitals_can_log_in(
+        self, factory, _tenant_schema, tenant
+    ):
+        """The lookup is case-insensitive, so an address stored with an
+        uppercase local part authenticates against a lowercase submission."""
+        stored_email = "Upper.Case@example.com"
+        with schema_context("public"):
+            admin, _ = SuperAdmin.objects.get_or_create(
+                email=stored_email,
+                defaults={"first_name": "Upper", "last_name": "Case"},
+            )
+            admin.is_active = True
+            admin.set_password(SUPER_ADMIN_PASSWORD)
+            admin.save()
+
+        response = _login(
+            factory, email=stored_email.lower(), password=SUPER_ADMIN_PASSWORD
+        )
+
+        assert response.status_code == 200, response.data
+        assert response.data["user"]["email"] == stored_email
+
+    def test_duplicate_case_variants_resolve_the_exact_match(
+        self, factory, _tenant_schema, tenant
+    ):
+        """Uniqueness is on the exact address, so two rows may differ in
+        local-part case alone — the lookup resolves one of them instead of
+        failing on the multiple match."""
+        lowercase = _create_case_variant_admins()
+
+        response = _login(factory, email=lowercase, password=SUPER_ADMIN_PASSWORD)
+
+        assert response.status_code == 200, response.data
+        assert response.data["user"]["email"] == lowercase
+
+    def test_duplicate_case_variants_still_refuse_a_wrong_password(
+        self, factory, _tenant_schema, tenant
+    ):
+        """A bad password against a doubly-stored address is an ordinary
+        credential failure, not a server error."""
+        lowercase = _create_case_variant_admins()
+
+        response = _login(factory, email=lowercase, password="wrong")
+
+        assert response.status_code == 400, response.data
+        assert response.data["message"] == "Invalid credentials"
+
+    def test_malformed_email_is_refused_before_the_account_lookup(
+        self, factory, super_admin
+    ):
+        """A value that cannot be an address is a validation failure, not a
+        credential guess — it never reaches the ORM lookup."""
+        response = _login(factory, email="not-an-email", password=SUPER_ADMIN_PASSWORD)
+
+        assert response.status_code == 400
+        assert response.data["code"] == "validation_error"
+        assert "email" in response.data["details"]
 
     def test_malformed_body_reveals_nothing_about_the_account(
         self, factory, super_admin

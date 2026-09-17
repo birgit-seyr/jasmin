@@ -44,7 +44,15 @@ class ForecastSerializer(NameFieldMixin, DeletableMixin, serializers.ModelSerial
         model = Forecast
         fields = "__all__"
         # Forecasts are finalized through ``/bulk_finalize/``.
-        read_only_fields = (*AUDIT_READONLY_FIELDS, *FINALIZATION_READONLY_FIELDS)
+        read_only_fields = (
+            *AUDIT_READONLY_FIELDS,
+            *FINALIZATION_READONLY_FIELDS,
+            # ``ForecastService`` persists neither column from a create/update
+            # payload, so declaring them writable would advertise a write that
+            # does nothing. Both stay serialized on output.
+            "storage",
+            "day_number",
+        )
 
     def to_representation(self, instance):
         """
@@ -244,7 +252,11 @@ class PurchaseBulkSetAsExpectedItemSerializer(serializers.Serializer):
     id = serializers.CharField()
     year = serializers.IntegerField()
     delivery_week = serializers.IntegerField()
-    theoretical_purchase_amount = serializers.FloatField()
+    # The amount lands on a 2dp ``DecimalField``; taking it as a Decimal keeps
+    # the stored value off the binary-float path.
+    theoretical_purchase_amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2
+    )
     theoretical_purchase_unit = serializers.CharField()
     theoretical_purchase_size = serializers.CharField()
     storage = serializers.CharField()
@@ -264,7 +276,11 @@ class HarvestBulkSetAsExpectedItemSerializer(serializers.Serializer):
     year = serializers.IntegerField()
     delivery_week = serializers.IntegerField()
     day_number = serializers.IntegerField()
-    theoretical_harvest_amount = serializers.FloatField()
+    # The amount lands on a 2dp ``DecimalField``; taking it as a Decimal keeps
+    # the stored value off the binary-float path.
+    theoretical_harvest_amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2
+    )
     theoretical_harvest_unit = serializers.CharField()
     theoretical_harvest_size = serializers.CharField()
     storage = serializers.CharField()

@@ -1,6 +1,7 @@
 """SubscriptionViewSet (office abos) — quantity / price bounds, and the
 solidarity-price floor re-checked on PATCH when the variation, start date or
-trial flag changes without re-sending the price.
+trial flag changes without re-sending the price, plus the waiting-list offer
+price, which reaches the endpoint outside any serializer.
 
 The clock is frozen to 2026-07-20 (a Monday) so ``VALID_FROM`` (2026-09-07)
 stays beyond the subscription lead time forever; the floor itself is resolved at
@@ -11,6 +12,7 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
+from unittest import mock
 
 import pytest
 import time_machine
@@ -19,6 +21,9 @@ from django.utils import timezone
 from rest_framework import status
 
 from apps.commissioning.models import Subscription
+from apps.commissioning.services.waiting_list_offer_service import (
+    WaitingListOfferService,
+)
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
     MemberFactory,
@@ -289,3 +294,89 @@ class TestSolidarityFloorOnPatch:
         )
 
         assert resp.status_code == status.HTTP_200_OK, resp.data
+
+
+@pytest.mark.django_db
+class TestOfferSpotPriceBounds:
+    """``offer_spot`` reads its price straight from the request body, so the
+    endpoint holds it to the column's ``numeric(8, 2)`` bounds before the offer
+    service coerces and stores it."""
+
+    @pytest.fixture(autouse=True)
+    def _hold_and_email(self):
+        """The station-day hold and the offer email have their own suites; here
+        they only keep the offer from needing real capacity or SMTP."""
+        with (
+            mock.patch(
+                "apps.commissioning.services.waiting_list_offer_service."
+                "CapacityReservationService.reserve_for_subscription",
+                return_value=None,
+            ),
+            mock.patch.object(
+                WaitingListOfferService, "_send_offer_email", return_value=None
+            ),
+        ):
+            yield
+
+    @pytest.fixture
+    def pending_entry(self, tenant, dsd):
+        return SubscriptionFactory(
+            share_type_variation=ShareTypeVariationFactory(capacity=5),
+            default_delivery_station_day=dsd,
+            valid_from=VALID_FROM,
+            valid_until=VALID_UNTIL,
+            price_per_delivery=Decimal("10.00"),
+            admin_confirmed=False,
+            on_waiting_list=True,
+            waiting_list_status=Subscription.WaitingListStatus.PENDING,
+        )
+
+    def _offer(self, api_client, subscription, payload):
+        return api_client.post(
+            reverse("abos-offer-spot", kwargs={"pk": subscription.pk}),
+            payload,
+            format="json",
+        )
+
+    def test_third_decimal_is_refused_instead_of_rounded_on_write(
+        self, api_client, pending_entry
+    ):
+        resp = self._offer(api_client, pending_entry, {"price_per_delivery": "10.999"})
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST, resp.data
+        assert resp.data["code"] == "subscription.invalid_price"
+        pending_entry.refresh_from_db()
+        assert pending_entry.price_per_delivery == Decimal("10.00")
+        assert (
+            pending_entry.waiting_list_status == Subscription.WaitingListStatus.PENDING
+        )
+
+    def test_amount_wider_than_the_column_is_refused(self, api_client, pending_entry):
+        resp = self._offer(
+            api_client, pending_entry, {"price_per_delivery": "12345678.00"}
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST, resp.data
+        assert resp.data["code"] == "subscription.invalid_price"
+        pending_entry.refresh_from_db()
+        assert pending_entry.price_per_delivery == Decimal("10.00")
+
+    def test_cent_price_is_offered(self, api_client, pending_entry):
+        resp = self._offer(api_client, pending_entry, {"price_per_delivery": "12.50"})
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        pending_entry.refresh_from_db()
+        assert pending_entry.price_per_delivery == Decimal("12.50")
+        assert (
+            pending_entry.waiting_list_status
+            == Subscription.WaitingListStatus.SPOT_AVAILABLE
+        )
+
+    def test_offer_without_a_price_keeps_the_stored_one(
+        self, api_client, pending_entry
+    ):
+        resp = self._offer(api_client, pending_entry, {})
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        pending_entry.refresh_from_db()
+        assert pending_entry.price_per_delivery == Decimal("10.00")

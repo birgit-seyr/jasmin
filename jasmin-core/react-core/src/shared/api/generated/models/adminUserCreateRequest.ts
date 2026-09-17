@@ -9,7 +9,9 @@ import type { AdminUserCreateRequestUserLanguage } from './adminUserCreateReques
 
 export interface AdminUserCreateRequest {
   email: string;
+  /** @maxLength 255 */
   first_name: string;
+  /** @maxLength 255 */
   last_name: string;
   roles?: string[];
   /** @nullable */

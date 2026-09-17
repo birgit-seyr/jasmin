@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from datetime import time as dt_time
 from decimal import Decimal, InvalidOperation
 
@@ -10,6 +10,7 @@ from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models import QuerySet  # noqa: F401  used in type hints
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
+from rest_framework import serializers as drf_serializers
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -22,7 +23,9 @@ from apps.shared.request_utils import body
 from core.serializers import ErrorResponseSerializer
 
 from ..errors import (
+    CommissioningError,
     CompositeIdInvalid,
+    InventoryEntryFinalized,
     InventoryEntryNotFound,
     ShareArticleNotFound,
     StorageNotFound,
@@ -76,6 +79,71 @@ _UPDATABLE_INVENTORY_FIELDS = frozenset(
         "note",
     }
 )
+
+#: How far back the storage ledger reaches when the caller sends no start_date.
+_LEDGER_DEFAULT_WINDOW = timedelta(weeks=2)
+
+
+class _InventoryMetadataSerializer(drf_serializers.Serializer):
+    """The flag/note half of an INVENTORY movement's PATCH body.
+
+    ``amount`` is parsed separately by the view, which answers a malformed one
+    with the stable ``stock.amount_*`` codes; everything else is validated
+    here so a bad flag or an over-long note is refused as a field error
+    instead of reaching ``full_clean()`` inside ``save()``.
+    """
+
+    for_shares = drf_serializers.BooleanField(required=False)
+    for_resellers = drf_serializers.BooleanField(required=False)
+    for_markets = drf_serializers.BooleanField(required=False)
+    washed = drf_serializers.BooleanField(required=False)
+    cleaned = drf_serializers.BooleanField(required=False)
+    note = drf_serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, max_length=500
+    )
+
+
+def _validated_inventory_metadata(request: Request) -> dict:
+    """Return the validated flag/note fields present in the PATCH body."""
+    serializer = _InventoryMetadataSerializer(data=body(request))
+    serializer.is_valid(raise_exception=True)
+    return serializer.validated_data
+
+
+def _parse_counted_amount(request: Request) -> Decimal | None:
+    """Parse the absolute counted value out of an INVENTORY PATCH body.
+
+    ``None`` means the body carries no ``amount`` at all — a metadata-only
+    PATCH, which leaves the stored count alone.
+    """
+    raw = body(request).get("amount")
+    if raw is None:
+        return None
+    try:
+        amount = Decimal(str(raw))
+    except (ValueError, TypeError, InvalidOperation) as exc:
+        raise CommissioningError(
+            "Amount must be a number",
+            field="amount",
+            code="stock.amount_not_number",
+        ) from exc
+    # ``Decimal("NaN")`` and ``Decimal("Infinity")`` construct without
+    # raising, so the parse above lets them through. Neither is a countable
+    # quantity, and comparing a NaN raises InvalidOperation — reject both as
+    # "not a number".
+    if not amount.is_finite():
+        raise CommissioningError(
+            "Amount must be a number",
+            field="amount",
+            code="stock.amount_not_number",
+        )
+    if amount < 0:
+        raise CommissioningError(
+            "Amount must be non-negative",
+            field="amount",
+            code="stock.amount_negative",
+        )
+    return amount
 
 
 class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
@@ -205,38 +273,12 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
     )
     @transaction.atomic
     def patch(self, request: Request, composite_id: str) -> Response:
-        from ..errors import CommissioningError
-
         # parse_composite_id raises CompositeIdInvalid (canonical 400,
         # code="stock.invalid_composite_id") — let it propagate, no re-wrap.
         parsed = parse_composite_id(composite_id)
 
-        amount = body(request).get("amount")
-        if amount is not None:
-            try:
-                amount = Decimal(str(amount))
-            except (ValueError, TypeError, InvalidOperation) as exc:
-                raise CommissioningError(
-                    "Amount must be a number",
-                    field="amount",
-                    code="stock.amount_not_number",
-                ) from exc
-            # ``Decimal("NaN")`` and ``Decimal("Infinity")`` construct without
-            # raising, so the parse above lets them through. Neither is a
-            # countable quantity, and comparing a NaN raises InvalidOperation
-            # outside the try — reject both as "not a number".
-            if not amount.is_finite():
-                raise CommissioningError(
-                    "Amount must be a number",
-                    field="amount",
-                    code="stock.amount_not_number",
-                )
-            if amount < 0:
-                raise CommissioningError(
-                    "Amount must be non-negative",
-                    field="amount",
-                    code="stock.amount_negative",
-                )
+        metadata = _validated_inventory_metadata(request)
+        amount = _parse_counted_amount(request)
 
         share_article = get_or_404(
             ShareArticle,
@@ -315,12 +357,12 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
                         storage=storage,
                         amount=correction,
                         counted_amount=counted,
-                        for_shares=body(request).get("for_shares", True),
-                        for_resellers=body(request).get("for_resellers", False),
-                        for_markets=body(request).get("for_markets", False),
-                        washed=body(request).get("washed", False),
-                        cleaned=body(request).get("cleaned", False),
-                        note=body(request).get("note", ""),
+                        for_shares=metadata.get("for_shares", True),
+                        for_resellers=metadata.get("for_resellers", False),
+                        for_markets=metadata.get("for_markets", False),
+                        washed=metadata.get("washed", False),
+                        cleaned=metadata.get("cleaned", False),
+                        note=metadata.get("note", ""),
                     )
             except (IntegrityError, DjangoValidationError) as exc:
                 # A concurrent writer created this entity-day's INVENTORY
@@ -362,7 +404,21 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
                 created = True
 
         if existing:
-            updated = _update_inventory_fields(existing, request.data)
+            # A finalized count is what the ledger builds on, so it stays put
+            # until the entry is unfinalized; the flags and the note describe
+            # the same count and remain editable. The stock grid echoes the
+            # whole row back on every save, so only an ``amount`` that differs
+            # from the stored count is a recount.
+            if (
+                existing.is_finalized
+                and amount is not None
+                and amount != existing.counted_amount
+            ):
+                raise InventoryEntryFinalized(
+                    "Inventory entry is finalized — unfinalize it before "
+                    "changing the count."
+                )
+            updated = _update_inventory_fields(existing, metadata)
 
             # Recalculate correction delta when counted amount changes
             if amount is not None:
@@ -462,7 +518,7 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
         inventory_start = inventory_date.replace(hour=0, minute=0, second=0)
         inventory_end = inventory_date.replace(hour=23, minute=59, second=59)
 
-        deleted_count, _ = MovementShareArticle.objects.filter(
+        entries = MovementShareArticle.objects.filter(
             movement_type=MovementTypeOptions.INVENTORY,
             share_article_id=parsed["share_article_id"],
             unit=parsed["unit"],
@@ -470,7 +526,14 @@ class CurrentStockComparisonView(APIViewRolePermissionsMixin, APIView):
             storage_id=parsed["storage_id"],
             date__gte=inventory_start,
             date__lte=inventory_end,
-        ).delete()
+        )
+
+        if any(entry.is_finalized for entry in entries):
+            raise InventoryEntryFinalized(
+                "Inventory entry is finalized — unfinalize it before deleting it."
+            )
+
+        deleted_count, _ = entries.delete()
 
         if deleted_count == 0:
             raise InventoryEntryNotFound("Inventory entry not found")
@@ -531,7 +594,8 @@ def _is_inventory_race(exc: IntegrityError | DjangoValidationError) -> bool:
 
 
 def _update_inventory_fields(inventory: MovementShareArticle, data: dict) -> bool:
-    """Update inventory movement fields from request data. Returns True if changed."""
+    """Update inventory movement fields from validated data. Returns True if
+    changed."""
     updated = False
     for field in _UPDATABLE_INVENTORY_FIELDS:
         if field in data:
@@ -1163,7 +1227,14 @@ class StorageLoggingView(APIViewRolePermissionsMixin, APIView):
         parameters=[
             get_storage_parameter(required=True),
             get_share_article_parameter(required=False),
-            catalogue_param("start_date", required=False),
+            catalogue_param(
+                "start_date",
+                required=False,
+                description=(
+                    "Inclusive range start (YYYY-MM-DD). Omitted, the ledger "
+                    f"starts {_LEDGER_DEFAULT_WINDOW.days // 7} weeks ago."
+                ),
+            ),
             catalogue_param("end_date", required=False),
         ],
         responses={
@@ -1187,11 +1258,8 @@ class StorageLoggingView(APIViewRolePermissionsMixin, APIView):
             params["start_date"], params["end_date"]
         )
 
-        # Default to three weeks ago when no start_date is provided
         if start_date is None:
-            from datetime import timedelta
-
-            start_date = timezone.now() - timedelta(weeks=2)
+            start_date = timezone.now() - _LEDGER_DEFAULT_WINDOW
             start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
 
         events = self._build_event_list(storage, share_article_id, start_date, end_date)

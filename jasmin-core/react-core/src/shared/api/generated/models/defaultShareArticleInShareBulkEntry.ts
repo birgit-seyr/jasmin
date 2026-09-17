@@ -5,6 +5,7 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { DefaultShareArticleInShareBulkEntryUnit } from './defaultShareArticleInShareBulkEntryUnit';
 
 /**
  * One cell in the ``bulk_upsert`` payload.
@@ -17,5 +18,5 @@ export interface DefaultShareArticleInShareBulkEntry {
    */
   quantity: string | null;
   /** @nullable */
-  unit?: string | null;
+  unit?: DefaultShareArticleInShareBulkEntryUnit;
 }

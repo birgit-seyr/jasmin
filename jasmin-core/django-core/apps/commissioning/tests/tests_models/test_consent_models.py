@@ -26,6 +26,7 @@ import pytest
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 
+from apps.commissioning.errors import TimeBoundInvalidRange
 from apps.commissioning.models import (
     ConsentDocument,
     ConsentKind,
@@ -192,7 +193,7 @@ class TestTimeBoundIntegration:
         belt-and-suspenders for raw-SQL paths — but app-level is the
         layer we hit first and the one the UI sees, so assert there.
         """
-        with pytest.raises(ValidationError):
+        with pytest.raises(TimeBoundInvalidRange):
             ConsentDocument.objects.create(
                 kind=ConsentKind.PRIVACY,
                 locale="de",

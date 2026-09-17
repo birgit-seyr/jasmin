@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
 from django.db.models import (
@@ -43,6 +43,7 @@ from apps.authz.permissions import (
     IsStaffOrMember,
     RolePermissionsMixin,
 )
+from apps.shared.money import CENT
 from apps.shared.pii_logging import PIIReadLoggingMixin
 from apps.shared.query_params import parse_body_bool
 from apps.shared.request_utils import auth_user, body
@@ -54,6 +55,7 @@ from ..errors import (
     MemberConfirmedImmutable,
     SubscriptionAlreadyConfirmed,
     SubscriptionConfirmedImmutable,
+    SubscriptionPriceInvalid,
 )
 from ..models import CoopShare, Member, ShareDelivery, Subscription
 from ..models.choices import InvitationStatus
@@ -94,7 +96,7 @@ from ..services.onboarding_policy import (
 )
 from ..utils.optional_filters import apply_optional_filters
 from ..utils.query_params import validate_query_params
-from ..utils.validation_utils import parse_body_date
+from ..utils.validation_utils import parse_body_date, parse_bulk_ids
 from .badge_viewsets import pending_admin_confirmation_q
 
 logger = logging.getLogger(__name__)
@@ -854,6 +856,32 @@ def _build_subscription_queryset(
     return scope_to_member(queryset, request, path="member")
 
 
+#: ``Subscription.price_per_delivery`` is ``numeric(8, 2)``: six digits before
+#: the decimal point.
+_PRICE_LIMIT = Decimal("1000000")
+
+
+def _validated_offer_price(raw: Any) -> Any:
+    """Return the waiting-list offer price unchanged once it fits the column.
+
+    The offer price is read straight from the request body instead of going
+    through a serializer, so the ``numeric(8, 2)`` bounds are enforced here: a
+    third decimal would be silently rounded away on write, and a wider amount
+    overflows the column. Coercion itself stays in the offer service.
+    """
+    if raw is None or raw == "":
+        return raw
+    try:
+        amount = Decimal(str(raw).strip())
+    except (InvalidOperation, ValueError, TypeError):
+        raise SubscriptionPriceInvalid(raw) from None
+    if not amount.is_finite() or abs(amount) >= _PRICE_LIMIT:
+        raise SubscriptionPriceInvalid(raw)
+    if amount.quantize(CENT, rounding=ROUND_HALF_UP) != amount:
+        raise SubscriptionPriceInvalid(raw)
+    return raw
+
+
 @extend_schema_view(
     # ``retrieve`` is inherited (no override) and would be guessed; the viewset's
     # ``serializer_class`` / ``_build_subscription_queryset`` return a single
@@ -1113,7 +1141,9 @@ class SubscriptionViewSet(
         assert_member_email_action_allowed()
         WaitingListOfferService.offer_spot(
             subscription,
-            price_per_delivery=body(request).get("price_per_delivery"),
+            price_per_delivery=_validated_offer_price(
+                body(request).get("price_per_delivery")
+            ),
         )
         updated = self.refetch_for_response(subscription)
         return Response(self.get_serializer(updated).data, status=status.HTTP_200_OK)
@@ -1288,13 +1318,19 @@ class SubscriptionViewSet(
         from ..errors import CommissioningError
         from ..services.renewal import bulk_renew as bulk_renew_service
 
-        ids = body(request).get("subscription_ids")
-        if not isinstance(ids, list) or not ids:
+        # Each renewal runs variation/price resolution + an INSERT with
+        # full_clean (station-day coverage query included) synchronously in this
+        # request — an unbounded list is a gateway-timeout / mild-DoS vector.
+        # Capped ahead of the shared parser, whose own ceiling is higher and
+        # answers with a different code.
+        requested = body(request).get("subscription_ids")
+        if isinstance(requested, list) and len(requested) > 500:
             raise CommissioningError(
-                "Provide a non-empty list of subscription_ids.",
+                "At most 500 subscriptions can be renewed per request.",
                 field="subscription_ids",
-                code="subscription.bulk_renew.ids_required",
+                code="subscription.bulk_renew.too_many_ids",
             )
+        ids = parse_bulk_ids(request, field="subscription_ids")
 
         # Optional common end date for the whole batch (the modal's chosen date);
         # omit for the per-subscription term-length default.
@@ -1305,19 +1341,8 @@ class SubscriptionViewSet(
             code_prefix="subscription.bulk_renew",
             format_code="subscription.bulk_renew.invalid_valid_until",
         )
-        # Each renewal runs variation/price resolution + an INSERT with
-        # full_clean (station-day coverage query included) synchronously in this
-        # request — an unbounded list is a gateway-timeout / mild-DoS vector.
-        if len(ids) > 500:
-            raise CommissioningError(
-                "At most 500 subscriptions can be renewed per request.",
-                field="subscription_ids",
-                code="subscription.bulk_renew.too_many_ids",
-            )
 
-        result = bulk_renew_service(
-            [str(i) for i in ids], new_valid_until=new_valid_until
-        )
+        result = bulk_renew_service(ids, new_valid_until=new_valid_until)
         return Response(result, status=status.HTTP_200_OK)
 
 

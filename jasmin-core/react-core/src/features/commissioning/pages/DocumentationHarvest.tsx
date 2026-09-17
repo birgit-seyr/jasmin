@@ -352,9 +352,10 @@ export default function DocumentationHarvest() {
                     const row = data.find((item) => item.id === id);
                     return {
                       id: (row as Record<string, unknown>)?.share_article,
-                      theoretical_harvest_amount: (
-                        row as Record<string, unknown>
-                      )?.theoretical_harvest_amount,
+                      theoretical_harvest_amount: String(
+                        (row as Record<string, unknown>)
+                          ?.theoretical_harvest_amount,
+                      ),
                       theoretical_harvest_unit: (row as Record<string, unknown>)
                         ?.unit,
                       theoretical_harvest_size: (row as Record<string, unknown>)

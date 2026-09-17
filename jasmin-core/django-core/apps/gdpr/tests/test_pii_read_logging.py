@@ -136,3 +136,46 @@ class TestPIIReadLoggingLeavesResponseIntact:
 
         assert response.status_code == 200
         assert any("pii.read.logging_failed" in r.getMessage() for r in caplog.records)
+
+
+class TestLogValueSanitization:
+    """``pii.read`` lines go to a newline-delimited plain-text log, so every
+    interpolated value is reduced to a single safe token first."""
+
+    def test_newline_cannot_forge_a_second_audit_line(self):
+        from apps.shared.pii_logging import sanitize_log_value
+
+        cleaned = sanitize_log_value(
+            "ab12\npii.read actor=ghost@example.org subject_kind=forged"
+        )
+
+        assert "\n" not in cleaned
+        assert cleaned.startswith("ab12?pii.read")
+
+    def test_carriage_return_and_other_control_characters_are_replaced(self):
+        from apps.shared.pii_logging import sanitize_log_value
+
+        assert sanitize_log_value("a\rb\tc\x00d e") == "a?b?c?d?e"
+
+    def test_real_values_survive_unchanged(self):
+        from apps.shared.pii_logging import sanitize_log_value
+
+        for value in (
+            "list(all)",
+            "list(member=ab12-CD_34)",
+            "office.user+tag@example.org",
+            "2001:db8::1",
+            "203.0.113.7",
+        ):
+            assert sanitize_log_value(value) == value
+
+    def test_value_is_length_bounded(self):
+        from apps.shared.pii_logging import sanitize_log_value
+
+        assert len(sanitize_log_value("a" * 500)) == 120
+
+    def test_non_string_values_are_coerced(self):
+        from apps.shared.pii_logging import sanitize_log_value
+
+        assert sanitize_log_value(None) == "None"
+        assert sanitize_log_value(42) == "42"

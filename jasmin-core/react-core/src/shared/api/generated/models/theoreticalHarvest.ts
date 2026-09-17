@@ -45,10 +45,10 @@ export interface TheoreticalHarvest {
   share_article: string;
   storage: string;
   /** @nullable */
-  share_content?: string | null;
+  readonly share_content?: string | null;
   /** @nullable */
-  order_content?: string | null;
+  readonly order_content?: string | null;
   /** @nullable */
-  forecast?: string | null;
+  readonly forecast?: string | null;
   readonly share_article_name?: string;
 }

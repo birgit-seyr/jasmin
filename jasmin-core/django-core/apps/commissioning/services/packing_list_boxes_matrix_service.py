@@ -90,7 +90,7 @@ class PackingListBoxesMatrixService:
         day_number: int,
         is_past: bool = False,
         delivery_station: str | None = None,
-        tour: str | None = None,
+        tour: int | None = None,
         is_packed_bulk: bool | None = None,
     ) -> dict[str, Any]:
         active_at_date = saturday_of_iso_week(year, delivery_week)

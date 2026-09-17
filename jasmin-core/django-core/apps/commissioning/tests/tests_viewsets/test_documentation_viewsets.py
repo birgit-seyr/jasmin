@@ -8,7 +8,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from apps.commissioning.models import Harvest, Purchase, Waste
+from apps.commissioning.models import Forecast, Harvest, Purchase, Waste
 from apps.commissioning.tests.factories import (
     ForecastFactory,
     HarvestFactory,
@@ -288,7 +288,90 @@ class TestForecastBulkCopyToNextWeek:
             format="json",
         )
         assert resp.status_code == status.HTTP_201_CREATED
-        assert resp.data == {"success": True}
+        assert resp.data == {"success": True, "errors": []}
+
+    def test_partial_selection_copies_the_rest_and_names_the_missing_ids(
+        self, api_client, tenant
+    ):
+        """One unknown id must not silently shrink the batch: the known
+        forecasts are copied and the skipped ones are reported."""
+        fc = ForecastFactory(year=2026, delivery_week=15)
+
+        resp = api_client.post(
+            URL_FORECAST_BULK_COPY,
+            {"ids": [str(fc.id), "nonexistent-id"]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["success"] is True
+        assert resp.data["errors"] == [
+            {"id": "nonexistent-id", "error": "Forecast not found"}
+        ]
+        assert Forecast.objects.filter(
+            share_article=fc.share_article, year=2026, delivery_week=16
+        ).exists()
+
+    def test_already_planned_forecast_is_named_in_errors(self, api_client, tenant):
+        """A forecast the next week already plans is a no-op in the service, so
+        it is reported instead of being counted as a copy."""
+        fc = ForecastFactory(year=2026, delivery_week=15)
+        ForecastFactory(
+            year=2026,
+            delivery_week=16,
+            share_article=fc.share_article,
+            unit=fc.unit,
+            size=fc.size,
+        )
+
+        resp = api_client.post(
+            URL_FORECAST_BULK_COPY,
+            {"ids": [str(fc.id)]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["errors"] == [
+            {"id": str(fc.id), "error": "Already planned for the next week"}
+        ]
+        assert (
+            Forecast.objects.filter(
+                share_article=fc.share_article, year=2026, delivery_week=16
+            ).count()
+            == 1
+        )
+
+    def test_mixed_batch_names_every_skip_in_request_order(self, api_client, tenant):
+        """An unknown id and an already-planned forecast are both reported,
+        ordered by the request, while the copyable forecast is copied."""
+        copyable = ForecastFactory(year=2026, delivery_week=15)
+        already_planned = ForecastFactory(year=2026, delivery_week=15)
+        ForecastFactory(
+            year=2026,
+            delivery_week=16,
+            share_article=already_planned.share_article,
+            unit=already_planned.unit,
+            size=already_planned.size,
+        )
+
+        resp = api_client.post(
+            URL_FORECAST_BULK_COPY,
+            {"ids": [str(copyable.id), str(already_planned.id), "nonexistent-id"]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["success"] is True
+        assert resp.data["errors"] == [
+            {
+                "id": str(already_planned.id),
+                "error": "Already planned for the next week",
+            },
+            {"id": "nonexistent-id", "error": "Forecast not found"},
+        ]
+        assert Forecast.objects.filter(
+            share_article=copyable.share_article, year=2026, delivery_week=16
+        ).exists()
 
 
 # ---------------------------------------------------------------------------
@@ -773,3 +856,87 @@ class TestExportDateRangeOrder:
             {"date_from": "2026-01-15", "date_to": "2026-01-15"},
         )
         assert resp.status_code == status.HTTP_200_OK
+
+
+# ---------------------------------------------------------------------------
+# bulk_set_as_expected — the posted amount is money-grade, not a JSON float
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestBulkSetAsExpectedAmountPrecision:
+    """The amount lands on a 2dp ``DecimalField``, so it is taken as a Decimal:
+    the value the office confirmed is the value stored."""
+
+    def _harvest_payload(self, article, storage, amount):
+        return {
+            "selectedData": [
+                {
+                    "id": str(article.pk),
+                    "year": 2026,
+                    "delivery_week": 15,
+                    "day_number": 1,
+                    "theoretical_harvest_amount": amount,
+                    "theoretical_harvest_unit": "KG",
+                    "theoretical_harvest_size": "M",
+                    "storage": storage.id,
+                }
+            ]
+        }
+
+    def test_harvest_amount_is_stored_exactly(self, api_client, tenant):
+        from decimal import Decimal
+
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+
+        resp = api_client.post(
+            URL_HARVEST_BULK_SET_EXPECTED,
+            self._harvest_payload(article, storage, 12.34),
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        harvest = Harvest.objects.get(share_article=article)
+        assert harvest.amount == Decimal("12.34")
+
+    def test_a_harvest_amount_finer_than_the_column_is_refused(
+        self, api_client, tenant
+    ):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+
+        resp = api_client.post(
+            URL_HARVEST_BULK_SET_EXPECTED,
+            self._harvest_payload(article, storage, 12.345),
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert not Harvest.objects.filter(share_article=article).exists()
+
+    def test_purchase_amount_is_stored_exactly(self, api_client, tenant):
+        from decimal import Decimal
+
+        article = ShareArticleFactory(is_purchased=True)
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+
+        resp = api_client.post(
+            URL_PURCHASE_BULK_SET_EXPECTED,
+            {
+                "selectedData": [
+                    {
+                        "id": str(article.pk),
+                        "year": 2026,
+                        "delivery_week": 15,
+                        "theoretical_purchase_amount": 7.05,
+                        "theoretical_purchase_unit": "KG",
+                        "theoretical_purchase_size": "M",
+                        "storage": storage.id,
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        purchase = Purchase.objects.get(share_article=article)
+        assert purchase.amount == Decimal("7.05")

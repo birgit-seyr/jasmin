@@ -5,7 +5,9 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { ForecastBulkCopyError } from './forecastBulkCopyError';
 
 export interface ForecastBulkCopyResponse {
   success: boolean;
+  errors: ForecastBulkCopyError[];
 }

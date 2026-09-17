@@ -957,3 +957,203 @@ class TestBulkFinalizeDocumentsViewHappyPath:
         # attempted on the right model.
         assert resp.data["model"] == "delivery_note"
         assert resp.data["total_processed"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Unknown order ids in a bulk batch
+# ---------------------------------------------------------------------------
+UNKNOWN_ORDER_ID = "no-such-order"
+
+
+def _reports_unknown_id(response) -> bool:
+    return any(
+        row["order_id"] == UNKNOWN_ORDER_ID and row["error"] == "Order not found"
+        for row in response.data.get("errors", [])
+    )
+
+
+@pytest.mark.django_db
+class TestBulkUnknownOrderIdsAreReported:
+    """An id matching no order gets its own error row on every bulk endpoint,
+    so ``successful + failed`` adds up to ``total_processed`` instead of
+    silently falling short."""
+
+    def test_create_documents(self, api_client, tenant):
+        order = OrderFactory(reseller=ResellerFactory())
+        OrderContentFactory(order=order)
+
+        resp = api_client.post(
+            URL_CREATE_DOCS,
+            {"ids": [str(order.id), UNKNOWN_ORDER_ID], "model": "delivery_note"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_207_MULTI_STATUS
+        assert resp.data["total_processed"] == 2
+        assert resp.data["successful"] + resp.data["failed"] == 2
+        assert _reports_unknown_id(resp)
+
+    def test_finalize_documents(self, api_client, tenant):
+        order = OrderFactory(reseller=ResellerFactory())
+        delivery_note = DeliveryNoteResellerFactory(order=order)
+        DeliveryNoteContentFactory(delivery_note=delivery_note)
+
+        resp = api_client.post(
+            URL_FINALIZE_DOCS,
+            {"ids": [str(order.id), UNKNOWN_ORDER_ID], "model": "delivery_note"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_207_MULTI_STATUS
+        assert resp.data["total_processed"] == 2
+        assert resp.data["successful"] + resp.data["failed"] == 2
+        assert _reports_unknown_id(resp)
+
+    def test_delete_documents(self, api_client, tenant):
+        order = OrderFactory(reseller=ResellerFactory())
+        DeliveryNoteResellerFactory(order=order)
+
+        resp = api_client.post(
+            URL_DELETE_DOCS,
+            {"ids": [str(order.id), UNKNOWN_ORDER_ID], "model": "delivery_note"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_207_MULTI_STATUS
+        assert resp.data["total_processed"] == 2
+        assert resp.data["successful"] + resp.data["failed"] == 2
+        assert _reports_unknown_id(resp)
+
+    def test_set_to_paid(self, api_client, tenant):
+        from apps.commissioning.services import InvoiceService
+        from apps.commissioning.tests.tests_services.test_invoice_service import (
+            _finalized_delivery_note,
+        )
+
+        delivery_note = _finalized_delivery_note(
+            tenant, reseller=ResellerFactory(), delivery_week=15
+        )
+        InvoiceService.create_summary_invoice_from_delivery_notes([delivery_note])
+
+        resp = api_client.post(
+            URL_SET_TO_PAID,
+            {
+                "ids": [str(delivery_note.order.id), UNKNOWN_ORDER_ID],
+                "model": "invoice",
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_207_MULTI_STATUS
+        assert resp.data["total_processed"] == 2
+        assert resp.data["successful"] + resp.data["failed"] == 2
+        assert _reports_unknown_id(resp)
+
+    def test_summary_invoice(self, api_client, tenant):
+        from apps.commissioning.tests.tests_services.test_invoice_service import (
+            _finalized_delivery_note,
+        )
+
+        delivery_note = _finalized_delivery_note(
+            tenant, reseller=ResellerFactory(), delivery_week=15
+        )
+
+        resp = api_client.post(
+            URL_SUMMARY_INVOICE,
+            {"ids": [str(delivery_note.order.id), UNKNOWN_ORDER_ID]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_207_MULTI_STATUS
+        assert resp.data["total_orders_included"] == 1
+        assert _reports_unknown_id(resp)
+
+
+@pytest.mark.django_db
+class TestBulkRepeatedOrderIdsCountOnce:
+    """One id means one order means one row, so a repeated id is collapsed and
+    ``total_processed`` still matches ``successful + failed``."""
+
+    def test_create_documents(self, api_client, tenant):
+        order = OrderFactory(reseller=ResellerFactory())
+        OrderContentFactory(order=order)
+
+        resp = api_client.post(
+            URL_CREATE_DOCS,
+            {"ids": [str(order.id), str(order.id)], "model": "delivery_note"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert resp.data["total_processed"] == 1
+        assert resp.data["successful"] + resp.data["failed"] == 1
+        assert DeliveryNoteReseller.objects.filter(order=order).count() == 1
+
+    def test_delete_documents(self, api_client, tenant):
+        order = OrderFactory(reseller=ResellerFactory())
+        DeliveryNoteResellerFactory(order=order)
+
+        resp = api_client.post(
+            URL_DELETE_DOCS,
+            {"ids": [str(order.id), str(order.id)], "model": "delivery_note"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert resp.data["total_processed"] == 1
+        assert resp.data["successful"] + resp.data["failed"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Summary invoice date
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestBulkCreateSummaryInvoiceDate:
+    def _delivery_note(self, tenant):
+        from apps.commissioning.tests.tests_services.test_invoice_service import (
+            _finalized_delivery_note,
+        )
+
+        return _finalized_delivery_note(
+            tenant, reseller=ResellerFactory(), delivery_week=15
+        )
+
+    def test_malformed_date_is_refused(self, api_client, tenant):
+        delivery_note = self._delivery_note(tenant)
+        invoices_before = InvoiceReseller.objects.count()
+
+        resp = api_client.post(
+            URL_SUMMARY_INVOICE,
+            {"ids": [str(delivery_note.order.id)], "date": "2026-13-45"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "summary_invoice.date_format"
+        assert InvoiceReseller.objects.count() == invoices_before
+
+    def test_valid_date_is_used(self, api_client, tenant):
+        delivery_note = self._delivery_note(tenant)
+
+        resp = api_client.post(
+            URL_SUMMARY_INVOICE,
+            {"ids": [str(delivery_note.order.id)], "date": "2026-05-25"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        invoice = InvoiceReseller.objects.get(pk=resp.data["invoice_id"])
+        assert str(invoice.date) == "2026-05-25"
+
+    def test_absent_date_is_derived(self, api_client, tenant):
+        delivery_note = self._delivery_note(tenant)
+
+        resp = api_client.post(
+            URL_SUMMARY_INVOICE,
+            {"ids": [str(delivery_note.order.id)]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        invoice = InvoiceReseller.objects.get(pk=resp.data["invoice_id"])
+        assert invoice.date is not None

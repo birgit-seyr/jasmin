@@ -1150,3 +1150,59 @@ class TestMyMembershipCancel:
             URL_MEMBERSHIP_CANCEL, {"effective_at": "2026-12-31"}, format="json"
         )
         assert resp.status_code == status.HTTP_409_CONFLICT
+
+
+# ---------------------------------------------------------------------------
+# my_customer_data — a refused PATCH writes nothing
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestMyCustomerDataPatchWritesNothingWhenRefused:
+    def test_invalid_payload_leaves_the_contact_untouched(self, tenant):
+        customer_user = JasminUserFactory(roles=["customer"])
+        contact = ContactEntityFactory(city="Munich")
+        ResellerFactory(linked_user=customer_user, contact=contact)
+        contacts_before = ContactEntity.objects.count()
+
+        resp = _client_for(customer_user).patch(
+            URL_MY_CUSTOMER,
+            data={"email": "not-an-email", "city": "Berlin"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert ContactEntity.objects.count() == contacts_before
+        contact.refresh_from_db()
+        assert contact.city == "Munich"
+
+    def test_step_up_refusal_leaves_the_contact_untouched(self, tenant):
+        customer_user = JasminUserFactory(roles=["customer"])
+        contact = ContactEntityFactory(city="Munich", iban="DE89370400440532013000")
+        ResellerFactory(linked_user=customer_user, contact=contact)
+        contacts_before = ContactEntity.objects.count()
+
+        resp = _client_for(customer_user).patch(
+            URL_MY_CUSTOMER,
+            data={"iban": "DE89370400440532099999", "city": "Berlin"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert ContactEntity.objects.count() == contacts_before
+        contact.refresh_from_db()
+        assert contact.city == "Munich"
+        assert contact.iban == "DE89370400440532013000"
+
+    def test_step_up_client_may_change_the_iban(self, tenant):
+        customer_user = JasminUserFactory(roles=["customer"])
+        contact = ContactEntityFactory(iban="DE89370400440532013000")
+        ResellerFactory(linked_user=customer_user, contact=contact)
+
+        resp = _step_up_client_for(customer_user).patch(
+            URL_MY_CUSTOMER,
+            data={"iban": "DE02120300000000202051"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        contact.refresh_from_db()
+        assert contact.iban == "DE02120300000000202051"

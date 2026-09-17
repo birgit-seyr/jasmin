@@ -245,3 +245,57 @@ class TestSepaMandateMirrorsToMember:
         for raw in (raw_member, raw_profile):
             assert raw, "column should not be empty"
             assert self.IBAN not in str(raw), "plaintext IBAN found in the column!"
+
+
+@pytest.mark.django_db
+class TestSepaMandateImportSignatureDate:
+    """The CSV importer is held to the same signature-date rule as the
+    interactive write: a future-dated mandate would otherwise sit in the data
+    until export, where it aborts the pain.008 batch for every other member."""
+
+    @pytest.fixture(autouse=True)
+    def _frozen_today(self):
+        import datetime
+
+        import time_machine
+
+        with time_machine.travel(datetime.datetime(2026, 3, 2, 12, 0), tick=False):
+            yield
+
+    @staticmethod
+    def _row(signed_at: str) -> dict:
+        return {
+            "member_number": 2001,
+            "account_holder": "Ada Lovelace",
+            "iban": "DE89370400440532013000",
+            "sepa_mandate_reference": "MND-IMPORT-0001",
+            "sepa_mandate_signed_at": signed_at,
+        }
+
+    def test_future_signed_date_is_refused(self, tenant):
+        from apps.payments.errors import SepaMandateSignedInFuture
+        from apps.payments.serializers import SepaMandateImportSerializer
+
+        MemberFactory(member_number=2001)
+        serializer = SepaMandateImportSerializer(data=self._row("2026-04-01"))
+
+        with pytest.raises(SepaMandateSignedInFuture):
+            serializer.is_valid()
+
+    def test_past_signed_date_is_accepted(self, tenant):
+        from apps.payments.serializers import SepaMandateImportSerializer
+
+        MemberFactory(member_number=2001)
+        serializer = SepaMandateImportSerializer(data=self._row("2026-01-15"))
+
+        assert serializer.is_valid(), serializer.errors
+
+    def test_signed_date_one_day_ahead_is_accepted(self, tenant):
+        """The rule allows one day past the server's today, so a mandate signed
+        in a timezone ahead of the server survives both entry points."""
+        from apps.payments.serializers import SepaMandateImportSerializer
+
+        MemberFactory(member_number=2001)
+        serializer = SepaMandateImportSerializer(data=self._row("2026-03-03"))
+
+        assert serializer.is_valid(), serializer.errors

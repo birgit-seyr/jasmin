@@ -264,3 +264,52 @@ def test_unused_absence_category_is_deletable(api_client):
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not AbsenceCategory.objects.filter(id=category.id).exists()
+
+
+# --------------------------------------------------------------------------- #
+# ``max_lines`` bounds — the week grid materializes ``range(max_lines)`` rows
+# per category, so a category with no rows can never hold an assignment.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("value", [0, -3])
+def test_create_weekly_plan_category_rejects_non_positive_max_lines(api_client, value):
+    response = api_client.post(
+        reverse("weekly_plan_categories-list"),
+        {"name": "Harvest", "max_lines": value},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "max_lines" in response.data.get("details", {})
+    assert not WeeklyPlanCategory.objects.filter(name="Harvest").exists()
+
+
+def test_lowering_max_lines_below_one_is_rejected(api_client):
+    category = WeeklyPlanCategory.objects.create(name="Kitchen", max_lines=3)
+
+    response = api_client.patch(
+        reverse("weekly_plan_categories-detail", args=[category.id]),
+        {"max_lines": 0},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    category.refresh_from_db()
+    assert category.max_lines == 3
+
+
+def test_a_stored_non_positive_max_lines_stays_editable(api_client):
+    # The list page echoes every column back on save, so a row that already
+    # carries a non-positive count must stay editable while the count itself
+    # is unchanged.
+    category = WeeklyPlanCategory.objects.create(name="Legacy", max_lines=0)
+
+    response = api_client.patch(
+        reverse("weekly_plan_categories-detail", args=[category.id]),
+        {"name": "Legacy renamed", "max_lines": 0, "is_active": True},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    category.refresh_from_db()
+    assert category.name == "Legacy renamed"
+    assert category.max_lines == 0

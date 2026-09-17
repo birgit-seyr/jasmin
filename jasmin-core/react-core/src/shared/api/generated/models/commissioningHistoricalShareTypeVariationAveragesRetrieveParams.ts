@@ -19,7 +19,7 @@ active_at_date?: string;
  */
 delivery_week: number;
 /**
- * Resolve variation IDs server-side from share_option (e.g. 'gemuese'). Use this to avoid a client-side waterfall.
+ * Resolve variation IDs server-side from share_option (e.g. HARVEST_SHARE). Use this to avoid a client-side waterfall.
  */
 share_option?: CommissioningHistoricalShareTypeVariationAveragesRetrieveShareOption;
 /**

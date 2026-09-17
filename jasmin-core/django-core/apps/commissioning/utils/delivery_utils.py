@@ -84,7 +84,7 @@ def tour_station_ids(
     *,
     delivery_day: SharesDeliveryDay | None = None,
     day_number: int | None = None,
-    tour: str,
+    tour: int,
 ) -> list[str]:
     """Delivery-station ids on ``tour`` for a delivery day, at ``active_at_date``.
 

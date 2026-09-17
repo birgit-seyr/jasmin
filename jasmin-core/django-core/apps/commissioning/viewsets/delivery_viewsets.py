@@ -81,6 +81,20 @@ from ..utils.query_params import validate_query_params
 logger = logging.getLogger(__name__)
 
 
+# Contact fields whose rewrite needs a fresh identity proof.
+_STEP_UP_CONTACT_FIELDS = ("iban",)
+
+
+def _payload_sets_a_step_up_field(request: Request | None) -> bool:
+    """True when the write body puts a non-empty value on a gated contact field.
+
+    An empty string or ``null`` sets no bank account, so it is not a value the
+    step-up challenge is there to protect.
+    """
+    data = getattr(request, "data", None) or {}
+    return any(str(data.get(field) or "").strip() for field in _STEP_UP_CONTACT_FIELDS)
+
+
 class DeliveryStationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     # Members may READ delivery stations (their own page's stations card shows
     # pickup info / messenger link / map). Writes stay office-only.
@@ -91,6 +105,24 @@ class DeliveryStationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.service = ResellerAndDeliveryStationService()
+
+    def get_permissions(self):
+        from apps.accounts.permissions import requires_step_up_for_fields
+
+        # A station writes through to its ContactEntity, the same row a linked
+        # reseller shares — so rewriting the IBAN here redirects money just as
+        # it does on the reseller, and trips the same step-up modal. Every
+        # other station edit passes unprompted. On an update the gate compares
+        # the submitted value with the stored one, so an unchanged IBAN is
+        # free; a create has nothing to compare against and the gate there
+        # fires on the key alone, so it is only attached when the payload
+        # carries an actual bank account — a blank or null ``iban`` sets none.
+        permissions = super().get_permissions()
+        if self.action in {"update", "partial_update"} or (
+            self.action == "create" and _payload_sets_a_step_up_field(self.request)
+        ):
+            permissions.append(requires_step_up_for_fields(*_STEP_UP_CONTACT_FIELDS)())
+        return permissions
 
     @extend_schema(
         parameters=[

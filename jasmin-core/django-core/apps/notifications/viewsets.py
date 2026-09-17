@@ -43,6 +43,7 @@ from .errors import (
     EmailDispatchFailed,
     EmailTemplateNotFound,
     TestSendNoRecipient,
+    UnsupportedLanguage,
 )
 from .models import BackgroundJob, EmailLog, EmailTemplate
 from .query_params import PARAM_CATALOGUE, validate_query_params
@@ -128,9 +129,20 @@ def _tenant_language() -> str:
 
 def _resolve_language(request: Request) -> str:
     """Pick the language from ``?language=`` or fall back to tenant default."""
-    explicit = normalize_language(request.query_params.get("language"))
+    raw = request.query_params.get("language")
+    explicit = normalize_language(raw)
     if explicit:
         return explicit
+    if raw and raw.strip():
+        # A value that was sent but cannot be mapped must not fall through to
+        # the tenant default: these endpoints write and delete the override row
+        # for the language they resolve, so a typo would edit or drop the
+        # tenant's own template instead of the one the caller named.
+        raise UnsupportedLanguage(
+            f"Unsupported language '{raw}'.",
+            field="language",
+            details={"language": raw},
+        )
     return _tenant_language()
 
 
@@ -258,6 +270,7 @@ class EmailTemplateViewSet(RolePermissionsMixin, viewsets.ViewSet):
         parameters=[LANGUAGE_PARAM],
         responses={
             200: EmailTemplateDetailSerializer,
+            400: ErrorResponseSerializer,
             401: ErrorResponseSerializer,
             403: ErrorResponseSerializer,
             404: ErrorResponseSerializer,
@@ -320,6 +333,7 @@ class EmailTemplateViewSet(RolePermissionsMixin, viewsets.ViewSet):
         request=None,
         responses={
             200: EmailTemplateDetailSerializer,
+            400: ErrorResponseSerializer,
             401: ErrorResponseSerializer,
             403: ErrorResponseSerializer,
             404: ErrorResponseSerializer,

@@ -3,6 +3,8 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.shared.iban_validator import validate_iban
+
 from ..utils import (
     build_storage_fields,
     extract_storage_fields_from_data,
@@ -739,6 +741,11 @@ class DynamicContactFieldsMixin:
                 required=is_required,
                 allow_null=allow_null,
                 allow_blank=allow_blank,
+                # These fields are hand-built rather than derived by
+                # ModelSerializer, so the model's own validators don't come
+                # along. The contact IBAN needs its well-formedness check on
+                # the write path: nothing else runs ``full_clean()`` there.
+                validators=[validate_iban] if field.name == "iban" else [],
             )
 
         elif isinstance(field, models.TextField):

@@ -2,7 +2,7 @@
 # Managed by scripts/ruff_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/ruff_baseline.py freeze
-# 201 finding(s).
+# 200 finding(s).
 
 apps/accounts/backends.py: N806 Variable `UserModel` in function should be lowercase
 apps/accounts/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
@@ -101,7 +101,6 @@ apps/commissioning/services/share_content_service.py: C901 `replace_share_planni
 apps/commissioning/services/share_content_service.py: PLR0913 Too many arguments in function definition (6 > 5)
 apps/commissioning/services/share_content_service.py: PLR0913 Too many arguments in function definition (7 > 5)
 apps/commissioning/services/share_content_service.py: PLR0915 Too many statements (62 > 50)
-apps/commissioning/services/share_delivery_service.py: C901 `get_weekly_variation_count_matrix` is too complex (12 > 10)
 apps/commissioning/services/share_demand_service.py: C901 `aggregated_rows` is too complex (11 > 10)
 apps/commissioning/services/share_demand_service.py: C901 `aggregated_rows` is too complex (14 > 10)
 apps/commissioning/services/share_demand_service.py: PLR0913 Too many arguments in function definition (11 > 5)
@@ -110,7 +109,7 @@ apps/commissioning/services/share_demand_service.py: PLR0913 Too many arguments 
 apps/commissioning/services/share_demand_service.py: PLR0913 Too many arguments in function definition (11 > 5)
 apps/commissioning/services/share_import_service.py: C901 `parse_and_validate` is too complex (16 > 10)
 apps/commissioning/services/share_import_service.py: PLR0915 Too many statements (58 > 50)
-apps/commissioning/services/shares_day_change_service.py: C901 `apply` is too complex (17 > 10)
+apps/commissioning/services/shares_day_change_service.py: C901 `apply` is too complex (16 > 10)
 apps/commissioning/services/shares_delivery_day_service.py: C901 `update_share_deliveries_for_delivery_day` is too complex (12 > 10)
 apps/commissioning/services/snapshot_service.py: PLR0913 Too many arguments in function definition (6 > 5)
 apps/commissioning/services/snapshot_service.py: PLR0913 Too many arguments in function definition (8 > 5)
@@ -163,8 +162,8 @@ apps/commissioning/views/email_distribution_views.py: C901 `subscription_member_
 apps/commissioning/views/reseller_views.py: C901 `post` is too complex (11 > 10)
 apps/commissioning/views/reseller_views.py: C901 `post` is too complex (11 > 10)
 apps/commissioning/views/reseller_views.py: C901 `post` is too complex (12 > 10)
-apps/commissioning/views/stock_views.py: C901 `patch` is too complex (17 > 10)
-apps/commissioning/views/stock_views.py: PLR0915 Too many statements (61 > 50)
+apps/commissioning/views/stock_views.py: C901 `patch` is too complex (14 > 10)
+apps/commissioning/views/stock_views.py: PLR0915 Too many statements (54 > 50)
 apps/commissioning/viewsets/basics_viewsets.py: C901 `get_queryset` is too complex (11 > 10)
 apps/commissioning/viewsets/delivery_viewsets.py: C901 `_migrate_succession_children` is too complex (16 > 10)
 apps/commissioning/viewsets/resellers_viewsets.py: C901 `_verify_einvoice_xml_matches` is too complex (15 > 10)

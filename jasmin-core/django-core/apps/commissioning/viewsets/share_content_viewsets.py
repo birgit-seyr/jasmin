@@ -171,8 +171,8 @@ class HarvestSharePlanningViewSet(RolePermissionsMixin, viewsets.ViewSet):
         # recreated row, so a field the caller never sent must come from the
         # stored rows rather than the column default. A PUT replaces them.
         share_contents = self.service.replace_share_planning(
-            year=int(year),
-            delivery_week=int(delivery_week),
+            year=year,
+            delivery_week=delivery_week,
             share_article_id=share_article,
             unit=unit,
             size=size,
@@ -190,8 +190,8 @@ class HarvestSharePlanningViewSet(RolePermissionsMixin, viewsets.ViewSet):
             # handler) will drop the row entirely.
             group_data = {
                 "id": pk,
-                "year": int(year),
-                "delivery_week": int(delivery_week),
+                "year": year,
+                "delivery_week": delivery_week,
                 "share_article": share_article,
                 "unit": unit,
                 "size": size,
@@ -237,8 +237,8 @@ class HarvestSharePlanningViewSet(RolePermissionsMixin, viewsets.ViewSet):
         # ``delete_share_planning`` raises ``ShareContentNotFound`` (404) when no
         # rows match; the central exception handler maps it to the canonical body.
         deleted_count = self.service.delete_share_planning(
-            year=int(year),
-            delivery_week=int(delivery_week),
+            year=year,
+            delivery_week=delivery_week,
             share_article_id=share_article,
             unit=unit,
             size=size,
@@ -277,8 +277,8 @@ class HarvestSharePlanningViewSet(RolePermissionsMixin, viewsets.ViewSet):
         # ``validated_data`` carries the dynamic ``day_<id>_variation_<id>`` backup
         # amounts (merged by ``DynamicAmountKeysMixin``).
         share_contents = self.service.update_backup_fields(
-            year=int(year),
-            delivery_week=int(delivery_week),
+            year=year,
+            delivery_week=delivery_week,
             share_article_id=share_article_id,
             unit=unit,
             size=size,

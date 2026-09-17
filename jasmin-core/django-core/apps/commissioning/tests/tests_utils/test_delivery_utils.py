@@ -24,6 +24,7 @@ from apps.commissioning.utils.delivery_utils import (
     get_active_share_type_variations,
     get_delivery_station_days_from_shares_delivery_day,
     get_shares_delivery_day_from_day_number,
+    tour_station_ids,
 )
 from apps.commissioning.utils.share_type_variation_amounts import (
     get_variation_quantities_by_station_day,
@@ -336,3 +337,71 @@ class TestVirtualFoldingInOverview:
         # the virtual variation itself is never a grid key.
         assert grid[(dsd.pk, physical.pk)] == 2
         assert all(key[1] != virtual.pk for key in grid)
+
+
+# ---------------------------------------------------------------------------
+# tour_station_ids
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestTourStationIds:
+    """The tour number arrives as the int the query-param catalogue parsed."""
+
+    ACTIVE_FROM = datetime.date(2025, 12, 29)
+
+    def _active_date(self):
+        return Week(YEAR, WEEK).monday() + datetime.timedelta(days=DAY_NUMBER)
+
+    def _delivery_day(self):
+        return SharesDeliveryDayFactory(
+            day_number=DAY_NUMBER, valid_from=self.ACTIVE_FROM
+        )
+
+    def test_returns_only_the_stations_on_that_tour(self, tenant):
+        delivery_day = self._delivery_day()
+        on_tour = DeliveryStationDayFactory(
+            delivery_day=delivery_day,
+            tour_number=1,
+            stop_order=1,
+            valid_from=self.ACTIVE_FROM,
+        )
+        DeliveryStationDayFactory(
+            delivery_day=delivery_day,
+            tour_number=2,
+            stop_order=1,
+            valid_from=self.ACTIVE_FROM,
+        )
+
+        station_ids = tour_station_ids(
+            self._active_date(), delivery_day=delivery_day, tour=1
+        )
+
+        assert station_ids == [on_tour.delivery_station_id]
+
+    def test_day_number_identifies_the_delivery_day(self, tenant):
+        delivery_day = self._delivery_day()
+        station_day = DeliveryStationDayFactory(
+            delivery_day=delivery_day,
+            tour_number=1,
+            stop_order=1,
+            valid_from=self.ACTIVE_FROM,
+        )
+
+        station_ids = tour_station_ids(
+            self._active_date(), day_number=DAY_NUMBER, tour=1
+        )
+
+        assert station_ids == [station_day.delivery_station_id]
+
+    def test_a_tour_without_stations_is_empty(self, tenant):
+        delivery_day = self._delivery_day()
+        DeliveryStationDayFactory(
+            delivery_day=delivery_day,
+            tour_number=1,
+            stop_order=1,
+            valid_from=self.ACTIVE_FROM,
+        )
+
+        assert (
+            tour_station_ids(self._active_date(), delivery_day=delivery_day, tour=9)
+            == []
+        )
