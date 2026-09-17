@@ -7,8 +7,9 @@ Covers the contract the rest of the consent system depends on:
   - ``revoke`` flips ``revoked_at`` AND recomputes the cache to the
     next-still-active record (or NULL).
   - ``get_current_document`` returns the active row for a (kind,
-    locale) pair, picks the latest ``valid_from`` when several are
-    eligible, and raises a clean 404 when none are.
+    locale) pair -- at most one can be in force, since overlapping
+    windows are refused by the DB -- and raises a clean 404 when none
+    are.
 
 These are audit-critical paths — a silent regression here is a
 DSGVO finding that compounds with every new signup until someone
@@ -20,6 +21,7 @@ from __future__ import annotations
 import datetime
 
 import pytest
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.commissioning.errors import (
@@ -94,29 +96,30 @@ class TestGetCurrentDocument:
         )
         assert found.pk == doc.pk
 
-    def test_picks_the_latest_valid_from_when_multiple_active(self, tenant):
-        """If by accident two documents are both "active" right now
-        (overlap_unique_fields would normally prevent this, but raw
-        SQL or a future bug could), the service must still return
-        exactly one row — the latest by ``valid_from``."""
+    def test_second_document_in_force_at_the_same_time_rejected_by_db(self, tenant):
+        """Two documents for one (kind, locale) may not both be in force on a
+        date, so ``get_current_document`` never has to break a tie on an
+        audit-critical read. The ``consentdocument_no_overlap`` exclusion
+        constraint refuses the second row over the inclusive
+        [valid_from, valid_until] range — both are open-ended here, so they
+        overlap from the later ``valid_from`` on. ``_make_document`` writes via
+        ``Model.save``, skipping the TOCTOU-racy Python check, which is what
+        makes this a test of the DB layer."""
         _make_document(
             kind=ConsentKind.PRIVACY,
             locale="de",
             version="old",
             valid_from=datetime.date(2026, 1, 1),
         )
-        newer = _make_document(
-            kind=ConsentKind.PRIVACY,
-            locale="de",
-            version="new",
-            valid_from=datetime.date(2026, 3, 1),
-        )
-        found = ConsentService.get_current_document(
-            kind=ConsentKind.PRIVACY,
-            locale="de",
-            as_of=datetime.date(2026, 6, 1),
-        )
-        assert found.pk == newer.pk
+        with pytest.raises(
+            IntegrityError, match="consentdocument_no_overlap"
+        ), transaction.atomic():
+            _make_document(
+                kind=ConsentKind.PRIVACY,
+                locale="de",
+                version="new",
+                valid_from=datetime.date(2026, 3, 1),
+            )
 
     def test_skips_documents_that_have_been_superseded(self, tenant):
         """A row with ``valid_until`` in the past must NOT be returned

@@ -6839,7 +6839,7 @@ class Migration(migrations.Migration):
                 expressions=[
                     ("share_type_variation", "="),
                     (
-                        apps.commissioning.models.shares._InclusiveDateRange(
+                        apps.commissioning.models.mixin.InclusiveDateRange(
                             "valid_from",
                             "valid_until",
                             django.contrib.postgres.fields.ranges.RangeBoundary(

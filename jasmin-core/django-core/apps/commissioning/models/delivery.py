@@ -2,12 +2,18 @@ from __future__ import annotations
 
 import datetime
 
+from django.contrib.postgres.constraints import ExclusionConstraint
+from django.contrib.postgres.fields import RangeBoundary, RangeOperators
 from django.db import models
 from django.utils import timezone
 
 from .base import JasminModel
 from .choices import PaymentCycleOptions
-from .mixin import TimeBoundMixin, time_bound_valid_range_constraint
+from .mixin import (
+    InclusiveDateRange,
+    TimeBoundMixin,
+    time_bound_valid_range_constraint,
+)
 
 
 class DeliveryStation(JasminModel):
@@ -105,6 +111,27 @@ class DeliveryExceptionPeriod(JasminModel, TimeBoundMixin):
     class Meta:
         constraints = [
             time_bound_valid_range_constraint("deliveryexceptionperiod_valid_range"),
+            # A variation's pauses may not overlap: delivery materialisation
+            # skips the union of its pause weeks, so two overlapping periods
+            # make "which pause owns this week" ambiguous once one is edited or
+            # deleted. Postgres rejects the overlap over the inclusive
+            # [valid_from, valid_until] range — the Python check in
+            # ``clean()`` is TOCTOU-racy and the bulk paths skip it entirely —
+            # while back-to-back pauses (summer then winter) stay legal.
+            ExclusionConstraint(
+                name="deliveryexceptionperiod_no_overlap",
+                expressions=[
+                    ("share_type_variation", RangeOperators.EQUAL),
+                    (
+                        InclusiveDateRange(
+                            "valid_from",
+                            "valid_until",
+                            RangeBoundary(inclusive_lower=True, inclusive_upper=True),
+                        ),
+                        RangeOperators.OVERLAPS,
+                    ),
+                ],
+            ),
         ]
 
     def __str__(self) -> str:

@@ -5,15 +5,10 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from django.contrib.postgres.constraints import ExclusionConstraint
-from django.contrib.postgres.fields import (
-    DateRangeField,
-    RangeBoundary,
-    RangeOperators,
-)
+from django.contrib.postgres.fields import RangeBoundary, RangeOperators
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Func
 
 from .base import JasminModel
 
@@ -30,20 +25,10 @@ from .mixin import (
     ArchivableMixin,
     CreatedMixin,
     FinalizableMixin,
+    InclusiveDateRange,
     TimeBoundMixin,
     time_bound_valid_range_constraint,
 )
-
-
-class _InclusiveDateRange(Func):
-    """``daterange(valid_from, valid_until, '[]')`` — both bounds inclusive,
-    matching the domain's whole-week semantics (``valid_until`` is an inclusive
-    Sunday; a NULL upper bound means open-ended). Used by the GiST exclusion
-    constraint below so ADJACENT windows (A ends the day before B starts) do
-    NOT conflict while genuinely overlapping ones do."""
-
-    function = "DATERANGE"
-    output_field = DateRangeField()
 
 
 class ShareType(JasminModel, TimeBoundMixin):
@@ -80,14 +65,34 @@ class ShareType(JasminModel, TimeBoundMixin):
             # that skips save()) at the DB, since share_option-scoped planning
             # (forecast, demand aggregation, stock synthesis) assumes at most
             # one active ShareType per option. Full time-overlap across closed
-            # ranges is still only enforced in Python by
-            # ``TimeBoundMixin._validate_no_overlap``.
+            # ranges is enforced by the exclusion constraint below.
             models.UniqueConstraint(
                 fields=["share_option"],
                 condition=models.Q(valid_until__isnull=True),
                 name="sharetype_one_open_per_option",
             ),
             time_bound_valid_range_constraint("sharetype_valid_range"),
+            # No two share types for one option may cover the same date — the
+            # planning chain resolves the type active on a date and must find
+            # exactly one. Postgres enforces the inclusive
+            # [valid_from, valid_until] range, which the TOCTOU-racy Python
+            # check cannot (and which bulk_create / QuerySet.update() skip
+            # entirely); succession (a predecessor closed the day before its
+            # successor starts) is adjacent, not overlapping, so it stays legal.
+            ExclusionConstraint(
+                name="sharetype_no_overlap",
+                expressions=[
+                    ("share_option", RangeOperators.EQUAL),
+                    (
+                        InclusiveDateRange(
+                            "valid_from",
+                            "valid_until",
+                            RangeBoundary(inclusive_lower=True, inclusive_upper=True),
+                        ),
+                        RangeOperators.OVERLAPS,
+                    ),
+                ],
+            ),
         ]
 
     def __str__(self) -> str:
@@ -267,14 +272,34 @@ class ShareTypeVariation(JasminModel, TimeBoundMixin):
         constraints = [
             # At most one OPEN variation per (share_type, size) — succession is
             # allowed (a closed predecessor + a new open one may share the
-            # pair). Full time-overlap is enforced in Python by
-            # ``TimeBoundMixin._validate_no_overlap`` via ``overlap_unique_fields``.
+            # pair). Full time-overlap is enforced by the exclusion constraint
+            # below.
             models.UniqueConstraint(
                 fields=["share_type", "size"],
                 condition=models.Q(valid_until__isnull=True),
                 name="sharetypevariation_one_open_per_type_size",
             ),
             time_bound_valid_range_constraint("sharetypevariation_valid_range"),
+            # No two variations of one (share_type, size) may cover the same
+            # date — renewal resolves the successor variation for a term by
+            # date and must find exactly one. Postgres enforces the inclusive
+            # [valid_from, valid_until] range even on the bulk paths that skip
+            # ``clean()``; succession rows are adjacent, not overlapping.
+            ExclusionConstraint(
+                name="sharetypevariation_no_overlap",
+                expressions=[
+                    ("share_type", RangeOperators.EQUAL),
+                    ("size", RangeOperators.EQUAL),
+                    (
+                        InclusiveDateRange(
+                            "valid_from",
+                            "valid_until",
+                            RangeBoundary(inclusive_lower=True, inclusive_upper=True),
+                        ),
+                        RangeOperators.OVERLAPS,
+                    ),
+                ],
+            ),
         ]
 
     def __str__(self) -> str:
@@ -596,7 +621,7 @@ class ShareTypeVariationGrossPrice(JasminModel, TimeBoundMixin):
                 expressions=[
                     ("share_type_variation", RangeOperators.EQUAL),
                     (
-                        _InclusiveDateRange(
+                        InclusiveDateRange(
                             "valid_from",
                             "valid_until",
                             RangeBoundary(inclusive_lower=True, inclusive_upper=True),

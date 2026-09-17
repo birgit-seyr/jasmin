@@ -160,34 +160,34 @@ class TestShareArticlePriceHistoryResolution:
                 ]
             )
 
-    def test_overlapping_windows_resolve_to_newest_deterministically(self, tenant):
-        # Only OPEN-vs-OPEN is DB-blocked; a CLOSED window can still
-        # overlap a newer OPEN one (closed-range overlap stays Python-only /
-        # TOCTOU, and bulk_create bypasses it). When a date falls in both,
-        # get_pricing_on_date must pick the newest valid_from deterministically.
+    def test_window_overlapping_a_closed_one_rejected_by_db_constraint(self, tenant):
+        # No date may fall in two windows at once, so get_pricing_on_date never
+        # has to break a tie: the sharearticlenetprice_no_overlap exclusion
+        # constraint rejects a window intersecting an existing one over the
+        # inclusive [valid_from, valid_until] range — even via bulk_create,
+        # which skips the TOCTOU-racy Python check.
+        from django.db import IntegrityError, transaction
+
         article = ShareArticleFactory(default_movement_unit="PCS")
-        ShareArticleNetPrice.objects.bulk_create(
-            [
-                ShareArticleNetPrice(
-                    share_article=article,
-                    valid_from=_W1_MON,
-                    valid_until=datetime.date(2026, 12, 27),  # closed, far Sunday
-                    net_price_for_orders_pieces_1=Decimal("1.50"),
-                    tax_rate=Decimal("7.00"),
-                ),
-                ShareArticleNetPrice(
-                    share_article=article,
-                    valid_from=_W13_MON,
-                    valid_until=None,  # open — overlaps the closed window above
-                    net_price_for_orders_pieces_1=Decimal("2.00"),
-                    tax_rate=Decimal("7.00"),
-                ),
-            ]
+        ShareArticleNetPriceFactory(
+            share_article=article,
+            valid_from=_W1_MON,
+            valid_until=_W26_SUN,
+            net_price_for_orders_pieces_1=Decimal("1.50"),
+            tax_rate=Decimal("7.00"),
         )
-        pricing = article.get_pricing_on_date(datetime.date(2026, 5, 1))
-        assert pricing is not None
-        assert pricing.valid_from == _W13_MON  # newest-effective wins
-        assert pricing.net_price_for_orders_pieces_1 == Decimal("2.00")
+
+        overlapping = ShareArticleNetPrice(
+            share_article=article,
+            valid_from=_W13_MON,  # starts inside the closed window above
+            valid_until=None,
+            net_price_for_orders_pieces_1=Decimal("2.00"),
+            tax_rate=Decimal("7.00"),
+        )
+        with pytest.raises(
+            IntegrityError, match="sharearticlenetprice_no_overlap"
+        ), transaction.atomic():
+            ShareArticleNetPrice.objects.bulk_create([overlapping])
 
     def test_open_ended_window_resolves_for_far_future_dates(self, tenant):
         """A price with ``valid_until=None`` must resolve indefinitely."""

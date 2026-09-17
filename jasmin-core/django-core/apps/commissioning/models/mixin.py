@@ -6,9 +6,11 @@ from collections.abc import Iterable
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.contrib.postgres.fields import DateRangeField
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator
 from django.db import models, transaction
+from django.db.models import Func
 from django.utils import timezone
 
 from apps.accounts.models import JasminUser
@@ -322,6 +324,17 @@ class TimeBoundMixin(models.Model):
         return existing
 
 
+class InclusiveDateRange(Func):
+    """``daterange(valid_from, valid_until, '[]')`` — both bounds inclusive,
+    matching the domain's whole-week semantics (``valid_until`` is an inclusive
+    Sunday; a NULL upper bound means open-ended). Used by the GiST exclusion
+    constraints on the TimeBound subclasses so ADJACENT windows (A ends the day
+    before B starts) do NOT conflict while genuinely overlapping ones do."""
+
+    function = "DATERANGE"
+    output_field = DateRangeField()
+
+
 def time_bound_valid_range_constraint(name: str) -> models.CheckConstraint:
     """``valid_until IS NULL OR valid_until >= valid_from`` as a DB CheckConstraint.
 
@@ -405,9 +418,10 @@ class PricingMixin:
 
     def get_pricing_on_date(self, date: datetime.date):
         # newest-effective-wins tie-break: the pricing models declare their own
-        # Meta (so TimeBoundMixin's ordering isn't inherited) and the no-overlap
-        # guard is a TOCTOU check with no DB exclusion backstop — so order
-        # explicitly to stay deterministic if two windows ever overlap (matches
+        # Meta, so TimeBoundMixin's ordering isn't inherited. Both models served
+        # here carry a ``<model>_no_overlap`` exclusion constraint, so at most
+        # one window is active on a given date; the explicit order still decides
+        # the winner for rows written before those constraints existed (matches
         # the sibling resolvers in basics_viewsets). This is the canonical
         # tax_rate / net-price read for invoices.
         from .managers import active_on_date_q

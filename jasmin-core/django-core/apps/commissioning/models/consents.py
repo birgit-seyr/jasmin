@@ -31,12 +31,15 @@ from __future__ import annotations
 
 import hashlib
 
+from django.contrib.postgres.constraints import ExclusionConstraint
+from django.contrib.postgres.fields import RangeBoundary, RangeOperators
 from django.db import models
 from django.utils import timezone
 
 from .base import JasminModel
 from .choices import ConsentKind
 from .mixin import (
+    InclusiveDateRange,
     TimeBoundMixin,
     nullable_date_order_constraint,
     time_bound_valid_range_constraint,
@@ -107,6 +110,28 @@ class ConsentDocument(JasminModel, TimeBoundMixin):
                 name="consentdocument_unique_kind_version_locale",
             ),
             time_bound_valid_range_constraint("consentdocument_valid_range"),
+            # One document per (kind, locale) covers any given date: "the
+            # privacy policy in force on <date>" must resolve to exactly one
+            # revision for the consent audit trail to be demonstrable.
+            # Postgres rejects overlapping inclusive [valid_from, valid_until]
+            # ranges even on the bulk paths that skip ``clean()``; a successor
+            # starting the day after its predecessor ends is adjacent, not
+            # overlapping, so publishing a new revision stays unaffected.
+            ExclusionConstraint(
+                name="consentdocument_no_overlap",
+                expressions=[
+                    ("kind", RangeOperators.EQUAL),
+                    ("locale", RangeOperators.EQUAL),
+                    (
+                        InclusiveDateRange(
+                            "valid_from",
+                            "valid_until",
+                            RangeBoundary(inclusive_lower=True, inclusive_upper=True),
+                        ),
+                        RangeOperators.OVERLAPS,
+                    ),
+                ],
+            ),
         ]
         ordering = ["kind", "locale", "-valid_from"]
 

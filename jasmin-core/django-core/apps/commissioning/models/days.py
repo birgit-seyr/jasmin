@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from django.contrib.postgres.constraints import ExclusionConstraint
+from django.contrib.postgres.fields import RangeBoundary, RangeOperators
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -7,7 +9,11 @@ from django.db.models import Q
 
 from .base import JasminModel
 from .choices import DayNumberOptions
-from .mixin import TimeBoundMixin, time_bound_valid_range_constraint
+from .mixin import (
+    InclusiveDateRange,
+    TimeBoundMixin,
+    time_bound_valid_range_constraint,
+)
 
 
 # delivery days of the week for shares (delivery days for orders for resellers might be different)
@@ -52,6 +58,27 @@ class SharesDeliveryDay(JasminModel, TimeBoundMixin):
                 name="sharesdeliveryday_one_open_per_day_number",
             ),
             time_bound_valid_range_constraint("sharesdeliveryday_valid_range"),
+            # One row per day_number covers any given date. The partial-unique
+            # above only guards the OPEN rows, but the day-number resolution
+            # chain also reads historical rows by date — two overlapping closed
+            # windows would make that read ambiguous. Postgres enforces the
+            # whole inclusive [valid_from, valid_until] range, including on the
+            # bulk paths the Python check never sees; a successor starting the
+            # day after its predecessor ends is adjacent, not overlapping.
+            ExclusionConstraint(
+                name="sharesdeliveryday_no_overlap",
+                expressions=[
+                    ("day_number", RangeOperators.EQUAL),
+                    (
+                        InclusiveDateRange(
+                            "valid_from",
+                            "valid_until",
+                            RangeBoundary(inclusive_lower=True, inclusive_upper=True),
+                        ),
+                        RangeOperators.OVERLAPS,
+                    ),
+                ],
+            ),
         ]
 
     def __str__(self) -> str:
@@ -130,6 +157,29 @@ class DeliveryStationDay(JasminModel, TimeBoundMixin):
                 name="deliverystationday_unique_active_per_station_day",
             ),
             time_bound_valid_range_constraint("deliverystationday_valid_range"),
+            # One row per (station, day) covers any given date — capacity and
+            # occupancy are keyed on the row active on the delivery date, so an
+            # overlap would split one station-day's capacity across two rows.
+            # Postgres enforces the whole inclusive [valid_from, valid_until]
+            # range (the partial-unique above only guards the open rows),
+            # including on the bulk copy/repoint paths that skip ``clean()``;
+            # a copy starting the day after the original closes is adjacent,
+            # not overlapping.
+            ExclusionConstraint(
+                name="deliverystationday_no_overlap",
+                expressions=[
+                    ("delivery_station", RangeOperators.EQUAL),
+                    ("delivery_day", RangeOperators.EQUAL),
+                    (
+                        InclusiveDateRange(
+                            "valid_from",
+                            "valid_until",
+                            RangeBoundary(inclusive_lower=True, inclusive_upper=True),
+                        ),
+                        RangeOperators.OVERLAPS,
+                    ),
+                ],
+            ),
         ]
 
     def __str__(self) -> str:

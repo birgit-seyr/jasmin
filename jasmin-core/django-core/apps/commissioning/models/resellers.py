@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from decimal import Decimal
 
+from django.contrib.postgres.constraints import ExclusionConstraint
+from django.contrib.postgres.fields import RangeBoundary, RangeOperators
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -18,6 +20,7 @@ from .mixin import (
     FinalizableMixin,
     FinalizedProtectedMixin,
     FinalizedProtectedQuerySet,
+    InclusiveDateRange,
     LinePricingMixin,
     NumberedDocumentMixin,
     PayableMixin,
@@ -240,6 +243,27 @@ class OrganicCertificate(JasminModel, TimeBoundMixin):
         # the JasminModel/TimeBoundMixin MRO).
         constraints = [
             time_bound_valid_range_constraint("organiccertificate_valid_range"),
+            # At most one certificate per reseller covers any given date: the
+            # purchase organic-status check reads the certificate active on the
+            # delivery date, so overlapping certificates make that read
+            # ambiguous. Postgres enforces it over the inclusive
+            # [valid_from, valid_until] range, which the TOCTOU-racy Python
+            # check cannot and the bulk paths skip; a renewal starting the day
+            # after the previous one ends is adjacent, not overlapping.
+            ExclusionConstraint(
+                name="organiccertificate_no_overlap",
+                expressions=[
+                    ("reseller", RangeOperators.EQUAL),
+                    (
+                        InclusiveDateRange(
+                            "valid_from",
+                            "valid_until",
+                            RangeBoundary(inclusive_lower=True, inclusive_upper=True),
+                        ),
+                        RangeOperators.OVERLAPS,
+                    ),
+                ],
+            ),
         ]
 
     def __str__(self) -> str:

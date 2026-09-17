@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.constraints import ExclusionConstraint
+from django.contrib.postgres.fields import ArrayField, RangeBoundary, RangeOperators
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from encrypted_model_fields.fields import EncryptedCharField
@@ -13,6 +14,7 @@ from .choices import (
     UnitOptions,
 )
 from .mixin import (
+    InclusiveDateRange,
     PricingMixin,
     TimeBoundMixin,
     time_bound_valid_range_constraint,
@@ -33,12 +35,28 @@ class Season(JasminModel, TimeBoundMixin):
     )
 
     class Meta:
-        # NOTE: the "one OPEN season globally" backstop is a partial unique
-        # index installed via migration 0015 (RunSQL). The global overlap group
+        # The "one OPEN season globally" backstop is a partial unique index
+        # installed via migration 0015 (RunSQL): the global overlap group
         # (overlap_unique_fields = ()) has no column to scope a Django
-        # UniqueConstraint on, so it can't live here in Meta.constraints.
+        # UniqueConstraint on. An exclusion constraint needs no such column, so
+        # it closes the other half — two CLOSED seasons covering the same date,
+        # which the partial index cannot see and which bulk_create /
+        # QuerySet.update() slip past the Python check entirely.
         constraints = [
             time_bound_valid_range_constraint("season_valid_range"),
+            ExclusionConstraint(
+                name="season_no_overlap",
+                expressions=[
+                    (
+                        InclusiveDateRange(
+                            "valid_from",
+                            "valid_until",
+                            RangeBoundary(inclusive_lower=True, inclusive_upper=True),
+                        ),
+                        RangeOperators.OVERLAPS,
+                    ),
+                ],
+            ),
         ]
 
     def __str__(self) -> str:
@@ -396,14 +414,34 @@ class ShareArticleNetPrice(JasminModel, TimeBoundMixin):
             # backstop the other one-open TimeBound models carry. Closes the
             # open-vs-open race (Python _validate_no_overlap is TOCTOU);
             # get_pricing_on_date is the canonical invoice tax/net read, so the
-            # active window must be unambiguous. Closed-range overlap stays
-            # Python-only via _validate_no_overlap.
+            # active window must be unambiguous. Overlap across closed ranges
+            # is caught by the exclusion constraint below.
             models.UniqueConstraint(
                 fields=["share_article"],
                 condition=models.Q(valid_until__isnull=True),
                 name="sharearticlenetprice_one_open_per_article",
             ),
             time_bound_valid_range_constraint("sharearticlenetprice_valid_range"),
+            # No two price windows for one article may cover the same date, so
+            # get_pricing_on_date always resolves to exactly one. Postgres
+            # enforces the inclusive [valid_from, valid_until] range, which the
+            # TOCTOU-racy Python check cannot and which bulk_create /
+            # QuerySet.update() skip entirely; a successor window starting the
+            # day after its predecessor ends is adjacent, not overlapping.
+            ExclusionConstraint(
+                name="sharearticlenetprice_no_overlap",
+                expressions=[
+                    ("share_article", RangeOperators.EQUAL),
+                    (
+                        InclusiveDateRange(
+                            "valid_from",
+                            "valid_until",
+                            RangeBoundary(inclusive_lower=True, inclusive_upper=True),
+                        ),
+                        RangeOperators.OVERLAPS,
+                    ),
+                ],
+            ),
         ]
 
     def __str__(self) -> str:
@@ -438,6 +476,24 @@ class CrateNetPrice(JasminModel, TimeBoundMixin):
                 name="cratenetprice_one_open_per_crate",
             ),
             time_bound_valid_range_constraint("cratenetprice_valid_range"),
+            # No two price windows for one crate may cover the same date, so
+            # the deposit price on a document date is unambiguous (DB backstop
+            # for the TOCTOU-racy Python check; see ShareArticleNetPrice
+            # above). Adjacent windows stay legal.
+            ExclusionConstraint(
+                name="cratenetprice_no_overlap",
+                expressions=[
+                    ("crate", RangeOperators.EQUAL),
+                    (
+                        InclusiveDateRange(
+                            "valid_from",
+                            "valid_until",
+                            RangeBoundary(inclusive_lower=True, inclusive_upper=True),
+                        ),
+                        RangeOperators.OVERLAPS,
+                    ),
+                ],
+            ),
         ]
 
     def __str__(self) -> str:
