@@ -13,13 +13,14 @@ from datetime import date
 from typing import Any
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 
 from ..errors import (
     EmployeeNotFound,
     InvalidWeeklyPlanAssignment,
     WeeklyPlanCategoryNotFound,
+    WeeklyPlanCopySourceRowsOutOfRange,
     WeeklyPlanCopyTargetNotEmpty,
 )
 from ..models import Employee, WeeklyPlan, WeeklyPlanCategory
@@ -181,6 +182,44 @@ def weeks_stranded_by_shrink(
     return [{"year": year, "week": week} for year, week in stranded]
 
 
+def rows_beyond_category_rows(year: int, week: int) -> list[dict[str, Any]]:
+    """Rows of ``(year, week)`` sitting at a ``row_index`` at or past their own
+    category's ``max_lines``, grouped per category, categories by name.
+
+    Each row is compared against the count of the category it belongs to, in the
+    join, so one category's size never judges another's — and it stays one query.
+    A NULL ``row_index`` occupies no grid position at all, so no count applies to
+    it and it never matches.
+    """
+    offending = (
+        WeeklyPlan.objects.filter(year=year, week=week)
+        .filter(row_index__gte=F("weekly_plan_category__max_lines"))
+        .values(
+            "weekly_plan_category_id",
+            "weekly_plan_category__name",
+            "weekly_plan_category__max_lines",
+            "row_index",
+        )
+        .distinct()
+        .order_by("weekly_plan_category__name", "row_index")
+    )
+
+    per_category: dict[str, dict[str, Any]] = {}
+    for row in offending:
+        category_id = row["weekly_plan_category_id"]
+        entry = per_category.setdefault(
+            category_id,
+            {
+                "category_id": category_id,
+                "category_name": row["weekly_plan_category__name"],
+                "max_lines": row["weekly_plan_category__max_lines"],
+                "row_indexes": [],
+            },
+        )
+        entry["row_indexes"].append(row["row_index"])
+    return list(per_category.values())
+
+
 @transaction.atomic
 def copy_week(year: int, from_week: int, to_week: int) -> int:
     """Copy every cell of ``from_week`` into an EMPTY ``to_week`` (same year).
@@ -188,6 +227,17 @@ def copy_week(year: int, from_week: int, to_week: int) -> int:
     Refuses if the target week already holds rows (would silently merge). The
     reference's "skip Saturday / skip absent employees" refinement is deferred
     until the Saturday-shift and absence surfaces exist. Returns the copied count.
+
+    Refuses too while the source week holds a row past its category's current
+    ``max_lines``. Lowering that count is allowed over weeks nobody edits any
+    more, so a past week may legitimately carry such rows; the grid renders only
+    ``range(max_lines)``, so carrying them into an editable week hides them
+    there and the next whole-week replace — which rebuilds the week from the
+    cells the client was served — deletes them. Skipping just those rows would
+    lose the same data, so the whole copy is refused even when only one of
+    several categories is blocking: a partial copy would fill the target week,
+    and the retry after raising the count would then hit the target-not-empty
+    refusal. All-or-nothing keeps the copy repeatable once the office has acted.
     """
     if from_week == to_week:
         raise InvalidWeeklyPlanAssignment(
@@ -196,6 +246,23 @@ def copy_week(year: int, from_week: int, to_week: int) -> int:
     if WeeklyPlan.objects.filter(year=year, week=to_week).exists():
         raise WeeklyPlanCopyTargetNotEmpty(
             f"Week {to_week} already has a weekly plan", field="to_week"
+        )
+
+    blocking = rows_beyond_category_rows(year, from_week)
+    if blocking:
+        listed = "; ".join(
+            "'{name}' rows {rows} (max_lines {max_lines})".format(
+                name=entry["category_name"],
+                rows=", ".join(str(index) for index in entry["row_indexes"]),
+                max_lines=entry["max_lines"],
+            )
+            for entry in blocking
+        )
+        raise WeeklyPlanCopySourceRowsOutOfRange(
+            f"Week {from_week} holds weekly-plan rows beyond the current row "
+            f"count of their category: {listed}",
+            field="from_week",
+            details={"categories": blocking},
         )
 
     copies = [

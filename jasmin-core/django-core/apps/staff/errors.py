@@ -42,6 +42,16 @@ class WeeklyPlanCopyTargetNotEmpty(ConflictError):
     code = "staff.weekly_plan_copy_target_not_empty"
 
 
+class WeeklyPlanCopySourceRowsOutOfRange(ConflictError):
+    """Copy refused because the source week holds rows at a ``row_index`` at or
+    beyond their category's ``max_lines``. Such rows sit at no position the grid
+    renders, so copying them into an editable week hides them there and the next
+    whole-week replace deletes them. Raise the category's ``max_lines`` or clear
+    the rows in the source week."""
+
+    code = "staff.weekly_plan_copy_source_rows_out_of_range"
+
+
 class WeeklyPlanCategoryShrinkBlocked(ConflictError):
     """``max_lines`` cannot be lowered while weekly-plan entries sit in the rows
     that would disappear. Those rows stay in the database, vanish from the grid

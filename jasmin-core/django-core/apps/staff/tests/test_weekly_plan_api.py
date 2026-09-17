@@ -240,6 +240,136 @@ def test_copy_into_nonempty_week_conflicts(api_client, category, employees):
     assert WeeklyPlan.objects.get(year=YEAR, week=WEEK + 1).employee_id == bob.id
 
 
+def test_copy_carries_the_last_rendered_row(api_client, category, employees):
+    alice, _ = employees
+    # row_index max_lines - 1 is the last row the grid renders — it copies.
+    api_client.post(
+        reverse("weekly_plan-list"),
+        {
+            "year": YEAR,
+            "week": WEEK,
+            "assignments": [_assign(category, category.max_lines - 1, 3, alice)],
+        },
+        format="json",
+    )
+
+    response = api_client.post(
+        reverse("weekly_plan-copy"),
+        {"year": YEAR, "from_week": WEEK, "to_week": WEEK + 1},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    copied = WeeklyPlan.objects.get(year=YEAR, week=WEEK + 1)
+    assert copied.row_index == category.max_lines - 1
+    assert copied.employee_id == alice.id
+
+
+def test_copy_refuses_source_rows_past_the_category_row_count(
+    api_client, category, employees
+):
+    alice, _ = employees
+    WeeklyPlan.objects.create(
+        year=YEAR,
+        week=WEEK,
+        day=0,
+        weekly_plan_category=category,
+        employee=alice,
+        row_index=0,
+    )
+    WeeklyPlan.objects.create(
+        year=YEAR,
+        week=WEEK,
+        day=1,
+        weekly_plan_category=category,
+        employee=alice,
+        row_index=2,
+    )
+    # The count drops under the second row, which the shrink guard allows once
+    # the week holding it is past.
+    category.max_lines = 2
+    category.save(update_fields=["max_lines"])
+
+    response = api_client.post(
+        reverse("weekly_plan-copy"),
+        {"year": YEAR, "from_week": WEEK, "to_week": WEEK + 1},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["code"] == "staff.weekly_plan_copy_source_rows_out_of_range"
+    assert response.data["field"] == "from_week"
+    assert response.data["details"]["categories"] == [
+        {
+            "category_id": category.id,
+            "category_name": "Harvest",
+            "max_lines": 2,
+            "row_indexes": [2],
+        }
+    ]
+    # Neither week moved: the target stays empty and the source keeps both rows.
+    assert not WeeklyPlan.objects.filter(year=YEAR, week=WEEK + 1).exists()
+    assert WeeklyPlan.objects.filter(year=YEAR, week=WEEK).count() == 2
+
+
+def test_one_blocking_category_refuses_the_whole_copy(api_client, category, employees):
+    alice, _ = employees
+    fitting = WeeklyPlanCategory.objects.create(name="Packing", max_lines=4)
+    WeeklyPlan.objects.create(
+        year=YEAR,
+        week=WEEK,
+        day=0,
+        weekly_plan_category=fitting,
+        employee=alice,
+        row_index=3,
+    )
+    WeeklyPlan.objects.create(
+        year=YEAR,
+        week=WEEK,
+        day=0,
+        weekly_plan_category=category,
+        employee=alice,
+        row_index=2,
+    )
+    category.max_lines = 1
+    category.save(update_fields=["max_lines"])
+
+    response = api_client.post(
+        reverse("weekly_plan-copy"),
+        {"year": YEAR, "from_week": WEEK, "to_week": WEEK + 1},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    blocked = response.data["details"]["categories"]
+    assert [entry["category_id"] for entry in blocked] == [category.id]
+    # The category that fits is not copied either — a partial copy would fill
+    # the target week and block the retry.
+    assert not WeeklyPlan.objects.filter(year=YEAR, week=WEEK + 1).exists()
+
+
+def test_copy_ignores_a_row_at_no_grid_position(api_client, category, employees):
+    alice, _ = employees
+    # A NULL row_index sits at no position, so no row count applies to it.
+    WeeklyPlan.objects.create(
+        year=YEAR,
+        week=WEEK,
+        day=0,
+        weekly_plan_category=category,
+        employee=alice,
+        row_index=None,
+    )
+
+    response = api_client.post(
+        reverse("weekly_plan-copy"),
+        {"year": YEAR, "from_week": WEEK, "to_week": WEEK + 1},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert WeeklyPlan.objects.filter(year=YEAR, week=WEEK + 1).count() == 1
+
+
 def test_copy_same_week_is_rejected(api_client, category):
     response = api_client.post(
         reverse("weekly_plan-copy"),

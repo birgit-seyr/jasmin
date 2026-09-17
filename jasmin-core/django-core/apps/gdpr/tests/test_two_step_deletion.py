@@ -542,3 +542,56 @@ class TestAdminApproveRejectViews:
 
         assert approve.status_code == 403
         assert reject.status_code == 403
+
+
+@pytest.mark.django_db
+class TestAdminRejectBodyShapes:
+    """The rejection reason is read straight off the JSON body, so a value
+    that is not a string has to be refused as a missing reason rather than
+    reaching ``.strip()`` — which would answer with a 500."""
+
+    @staticmethod
+    def _pending_request():
+        user = JasminUserFactory(roles=["member"])
+        deletion_request = GDPRService.request_deletion(user)
+        GDPRService.confirm_deletion_token(str(deletion_request.token))
+        return deletion_request
+
+    @staticmethod
+    def _reject(deletion_request, data):
+        client = APIClient()
+        client.force_authenticate(user=JasminUserFactory(roles=["admin"]))
+        return client.post(
+            reverse(
+                "gdpr-admin-reject-deletion",
+                kwargs={"request_id": str(deletion_request.pk)},
+            ),
+            data=data,
+            format="json",
+        )
+
+    @pytest.mark.parametrize(
+        "reason", [["a", "list"], 42, {"nested": "object"}, True], ids=repr
+    )
+    def test_non_string_reason_is_a_400(self, tenant, reason):
+        response = self._reject(self._pending_request(), {"reason": reason})
+
+        assert response.status_code == 400
+        assert response.json()["code"] == "gdpr.missing_rejection_reason"
+
+    def test_json_array_body_is_a_400(self, tenant):
+        """A whole JSON array as the body has no ``reason`` to read."""
+        response = self._reject(self._pending_request(), [{"reason": "nope"}])
+
+        assert response.status_code == 400
+        assert response.json()["code"] == "gdpr.missing_rejection_reason"
+
+    def test_string_reason_still_rejects_the_request(self, tenant):
+        deletion_request = self._pending_request()
+
+        response = self._reject(deletion_request, {"reason": "  retention duty  "})
+
+        assert response.status_code == 200
+        assert response.json()["state"] == str(DeletionRequestState.REJECTED)
+        deletion_request.refresh_from_db()
+        assert deletion_request.admin_rejection_reason == "retention duty"

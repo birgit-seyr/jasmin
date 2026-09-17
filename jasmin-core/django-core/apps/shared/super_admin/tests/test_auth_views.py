@@ -619,3 +619,72 @@ class TestLoginAccountLockout:
         # ...the real super-admin is unaffected and can still log in.
         resp = _login(factory, email=SUPER_ADMIN_EMAIL, password=SUPER_ADMIN_PASSWORD)
         assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Non-object / non-string request bodies
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestCredentialBodyShapes:
+    """Both credential endpoints read their fields straight off the JSON
+    body. A value that is not a string is a hand-crafted request, and the
+    refusal must be the endpoint's ordinary credential failure — never a 500,
+    and never distinguishable from a wrong-but-string password."""
+
+    @staticmethod
+    def _step_up(factory, admin, data):
+        from rest_framework.test import force_authenticate
+
+        from apps.commissioning.tests.conftest import make_step_up_token
+        from apps.shared.super_admin.views.auth_views import super_admin_step_up_view
+
+        admin.is_super_admin = True
+        admin.user_role = "super_admin"
+        request = factory.post("/auth/step-up/", data, format="json")
+        force_authenticate(request, user=admin, token=make_step_up_token(admin))
+        return super_admin_step_up_view(request)
+
+    def test_login_json_array_body_is_a_400(self, factory, super_admin):
+        """A whole JSON array as the body has no credentials to read."""
+        request = factory.post("/auth/login/", [{"email": SUPER_ADMIN_EMAIL}], "json")
+        response = super_admin_login_view(request)
+
+        assert response.status_code == 400
+        assert response.data["code"] == "super_admin.missing_credentials"
+
+    @pytest.mark.parametrize("password", [{"$ne": None}, ["hunter2"], 42], ids=repr)
+    def test_step_up_non_string_password_is_refused(
+        self, factory, super_admin, password
+    ):
+        response = self._step_up(factory, super_admin, {"password": password})
+
+        assert response.status_code == 400
+        assert response.data["code"] == "auth.invalid_credentials"
+
+    def test_step_up_json_array_body_is_refused(self, factory, super_admin):
+        response = self._step_up(factory, super_admin, [{"password": "x"}])
+
+        assert response.status_code == 400
+        assert response.data["code"] == "auth.invalid_credentials"
+
+    def test_step_up_non_string_password_matches_a_wrong_string(
+        self, factory, super_admin
+    ):
+        """A non-string password is indistinguishable from a wrong one."""
+        non_string = self._step_up(factory, super_admin, {"password": ["hunter2"]})
+        wrong_string = self._step_up(factory, super_admin, {"password": "hunter2"})
+
+        assert non_string.status_code == wrong_string.status_code
+        assert non_string.data["code"] == wrong_string.data["code"]
+        assert non_string.data["message"] == wrong_string.data["message"]
+
+    def test_step_up_correct_password_still_issues_a_token(self, factory, super_admin):
+        response = self._step_up(
+            factory, super_admin, {"password": SUPER_ADMIN_PASSWORD}
+        )
+
+        assert response.status_code == 200
+        assert response.data["access"]
+        assert response.data["ttl_seconds"]

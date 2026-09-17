@@ -495,7 +495,8 @@
     "employee_in_use": "This staff member can't be deleted because weekly plan entries, absences or employments still reference them. Deactivate them instead.",
     "weekly_plan_category_in_use": "This weekly plan category can't be deleted because it is used in the weekly plan. Deactivate it instead.",
     "absence_category_in_use": "This absence category can't be deleted because absences still reference it. Deactivate it instead.",
-    "weekly_plan_category_shrink_blocked": "The number of rows can't be reduced because the rows that would disappear still hold entries. Please clear those entries first."
+    "weekly_plan_category_shrink_blocked": "The number of rows can't be reduced because the rows that would disappear still hold entries. Please clear those entries first.",
+    "weekly_plan_copy_source_rows_out_of_range": "The source week holds entries in rows the category no longer has, because its number of rows has since been reduced. Copied over, those entries would travel along invisibly and be deleted the next time the target week is saved. Please raise the category's number of rows again, or clear the affected entries in the source week."
   },
   "email_config": {
     "test_recipient_missing": "Please enter a recipient address for the test email.",

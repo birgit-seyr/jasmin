@@ -495,7 +495,8 @@
     "employee_in_use": "Diese MitarbeiterIn kann nicht gelöscht werden, weil noch Wochenplan-Einträge, Abwesenheiten oder Anstellungen auf sie verweisen. Stattdessen deaktivieren.",
     "weekly_plan_category_in_use": "Diese Wochenplan-Kategorie kann nicht gelöscht werden, weil sie im Wochenplan verwendet wird. Stattdessen deaktivieren.",
     "absence_category_in_use": "Diese Abwesenheits-Kategorie kann nicht gelöscht werden, weil noch Abwesenheiten auf sie verweisen. Stattdessen deaktivieren.",
-    "weekly_plan_category_shrink_blocked": "Die Zeilenzahl kann nicht verringert werden, weil in den wegfallenden Zeilen noch Einträge stehen. Bitte diese Einträge zuerst entfernen."
+    "weekly_plan_category_shrink_blocked": "Die Zeilenzahl kann nicht verringert werden, weil in den wegfallenden Zeilen noch Einträge stehen. Bitte diese Einträge zuerst entfernen.",
+    "weekly_plan_copy_source_rows_out_of_range": "Die Quellwoche enthält Einträge in Zeilen, die es in der Kategorie nicht mehr gibt, weil deren Zeilenzahl inzwischen verringert wurde. Kopiert würden diese Einträge unsichtbar mitwandern und beim nächsten Speichern der Zielwoche gelöscht. Bitte die Zeilenzahl der Kategorie wieder erhöhen oder die betroffenen Einträge in der Quellwoche entfernen."
   },
   "email_config": {
     "test_recipient_missing": "Bitte eine Empfängeradresse für die Test-E-Mail angeben.",

@@ -295,7 +295,13 @@ def gdpr_admin_reject_deletion_view(request: Request, request_id: str) -> Respon
     user phoned to cancel). The reason is required so the audit trail
     captures it."""
     deletion_request = _get_pending_request(request_id)
-    reason = (body(request).get("reason") or "").strip()
+    raw_reason = body(request).get("reason")
+    if raw_reason is not None and not isinstance(raw_reason, str):
+        # A non-string reason is a hand-crafted body, and refusing it as a
+        # missing reason keeps it away from ``.strip()``, which would answer
+        # with a 500 instead.
+        raise MissingRejectionReason("A rejection reason is required.")
+    reason = (raw_reason or "").strip()
     if not reason:
         # 400 (bad input) — distinct from the 409 state errors the service
         # raises. The global handler renders the canonical {code,message}.
