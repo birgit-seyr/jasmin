@@ -286,6 +286,13 @@ class TestShareImportBatchViewSet:
 
         resp = api_client.post(url)
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        # The batch stays at the top level so the UI can render the per-row
+        # table, and the coded refusal sits beside it so the client can
+        # translate the toast instead of showing a raw field value.
+        assert resp.data["id"] == batch_id
+        assert resp.data["validation_report"]
+        assert resp.data["code"] == "share_import.validation_failed"
+        assert resp.data["message"] and resp.data["message"] != resp.data["code"]
 
     # ---- apply ----------------------------------------------------------
 
@@ -333,6 +340,12 @@ class TestShareImportBatchViewSet:
             reverse("share_import_batch-apply", kwargs={"pk": batch_id})
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "share_import.validation_failed"
+        assert resp.data["message"] and resp.data["message"] != resp.data["code"]
+        # ``detail`` and the nested batch keep the shape existing clients read.
+        assert resp.data["detail"] == "Validation failed; cannot apply."
+        assert resp.data["batch"]["id"] == batch_id
+        assert resp.data["batch"]["validation_report"]
 
     # ---- list / filter --------------------------------------------------
 
@@ -531,3 +544,50 @@ class TestShareImportBatchTerminalStatus:
             year=2026, delivery_week=15, is_estimate=False
         )
         assert demand.quantity == 12
+
+
+@pytest.mark.django_db
+def test_validation_failed_400s_compose_published_components():
+    """The documented 400 bodies reference the batch component, never copy it.
+
+    Copying ``ShareImportBatchSerializer``'s field instances into a second
+    component re-declares its ``status`` choice set, which costs the published
+    ``ShareImportBatchStatusEnum`` its name, and rebinds ``file_url`` and the
+    two user FKs onto a serializer that has neither the method nor the model
+    behind them.
+    """
+    from drf_spectacular.generators import SchemaGenerator
+
+    schema = SchemaGenerator().get_schema(request=None, public=True)
+    components = schema["components"]["schemas"]
+    paths = schema["paths"]
+
+    preview_400 = paths["/api/commissioning/share_import_batches/{id}/preview/"][
+        "post"
+    ]["responses"]["400"]["content"]["application/json"]["schema"]
+    assert preview_400 == {
+        "allOf": [
+            {"$ref": "#/components/schemas/ShareImportBatch"},
+            {"$ref": "#/components/schemas/ErrorResponse"},
+        ]
+    }
+
+    apply_400 = paths["/api/commissioning/share_import_batches/{id}/apply/"]["post"][
+        "responses"
+    ]["400"]["content"]["application/json"]["schema"]
+    apply_component = components[apply_400["$ref"].rsplit("/", 1)[-1]]
+    assert "code" in apply_component["properties"]
+    assert "message" in apply_component["properties"]
+    assert "#/components/schemas/ShareImportBatch" in str(
+        apply_component["properties"]["batch"]
+    )
+
+    # The batch's status enum keeps its published name. A second component
+    # carrying the same choice set forces a hash-suffixed fallback
+    # (``StatusE19Enum``) and deletes this one, renaming a published type.
+    assert "ShareImportBatchStatusEnum" in components
+    assert not [
+        name
+        for name in components
+        if name.startswith("Status") and name.endswith("Enum")
+    ]

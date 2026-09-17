@@ -230,8 +230,7 @@
   },
   "offer_group": {
     "not_found": "Offer group not found.",
-    "cannot_delete_default": "The default offer group cannot be deleted.",
-    "conflicts_with_reseller": "The selected offer group does not belong to the selected reseller. Please filter by only one of the two."
+    "cannot_delete_default": "The default offer group cannot be deleted."
   },
   "export": {
     "invalid_dates": "Invalid date range for export — please check the start and end dates."
@@ -329,6 +328,7 @@
     "date_format": "Invalid document date — please use the YYYY-MM-DD format."
   },
   "billing_profile": {
+    "iban_locked": "The SEPA mandate has already been used — its IBAN can no longer be changed. To use a different account, replace the mandate (a new mandate with a new mandate reference); the account must not be swapped silently.",
     "mandate_reference_locked": "The SEPA mandate has already been used — its mandate reference can no longer be changed. Set up a new mandate if a different reference is needed."
   },
   "billing_run": {
@@ -461,7 +461,8 @@
     "apply_failed": "The import could not be applied.",
     "batch_in_terminal_status": "This import has already been applied, or replaced by a newer one, and cannot be validated or applied again. Upload a new file instead.",
     "file_already_used": "This file has already been imported for this week (status: {{status}}) and cannot be applied again. Upload a changed or newly exported file to correct the week.",
-    "invalid_status": "The import batch is in a status that cannot be applied (needs preview_ready or validated)."
+    "invalid_status": "The import batch is in a status that cannot be applied (needs preview_ready or validated).",
+    "validation_failed": "Some rows in the file are invalid, so the import was not applied. The per-row report shows which rows are affected and what to fix."
   },
   "shares_day_change": {
     "missing_required": "Year and delivery week are required."

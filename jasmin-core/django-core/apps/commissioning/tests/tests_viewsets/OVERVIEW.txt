@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-910 tests | 172 test classes | 32 files
+910 tests | 173 test classes | 32 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 Counts are collected cases, so a parametrized method counts once per case.
@@ -190,7 +190,7 @@ test_documentation_viewsets.py (57 tests)
                                                (query.invalid_param naming date_from); a single-day
                                                range still exports
 
-test_imports_viewsets.py (25 tests)
+test_imports_viewsets.py (26 tests)
 ───────────────────────────────────
   TestExternalCodeMappingViewSet           7   list, filter by kind, unknown kind → 400, create, duplicate
                                                code refused, delete
@@ -329,7 +329,7 @@ test_picture_upload_validation.py (37 tests) — picture uploads must be raster 
                                                unconverted keeps it; EXIF orientation applied + EXIF dropped;
                                                P-mode PNG/GIF transparency kept; 16-bit PNG kept
 
-test_query_param_contract.py (17 tests) — documented required vs. what the server needs
+test_query_param_contract.py (19 tests) — documented required vs. what the server needs
 ───────────────────────────────────────────────────────────────────────────────────────
   TestDocumentedQueryParamContract        17   the six scoped operations (orders_overview, default share
                                                content bulk_list, the four CSV exports) document their
@@ -337,6 +337,9 @@ test_query_param_contract.py (17 tests) — documented required vs. what the ser
                                                (waste, coop_shares, order_contents, external_share_demand)
                                                document theirs optional AND serve a bare call; the export
                                                date pair is documented as a date, not a free string
+  TestOffersScopePrecedenceIsDocumented    2   the offers list documents its two overlapping scope
+                                               parameters in terms of each other: reseller names
+                                               offer_group and offer_group names reseller
 
 test_reseller_content_query_count.py (4 tests)
 ──────────────────────────────────────────────

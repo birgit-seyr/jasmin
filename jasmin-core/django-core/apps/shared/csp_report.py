@@ -37,6 +37,26 @@ _MAX_REPORT_BYTES = 64 * 1024
 # needs, from an endpoint that requires no credentials.
 _MAX_REPORTS_PER_POST = 10
 
+# Every field read off a report is attacker-controlled and unbounded in the
+# body, so each one is truncated before it reaches the log. The per-POST cap
+# above bounds the number of lines, not their width: without this, a single
+# anonymous POST of a 60 KB `document-uri` fits under _MAX_REPORT_BYTES and
+# still writes a 60 KB line, rolling the retention window the cap protects.
+# 500 chars identifies a page, a directive or a blocked URL comfortably.
+_MAX_LOGGED_FIELD_CHARS = 500
+
+
+def _bounded(value: object) -> object:
+    """Truncate a report field for logging, keeping a missing one as ``None``.
+
+    ``None`` passes through unchanged so the log line reads ``doc=None`` rather
+    than a quoted ``'None'`` that is indistinguishable from a page literally
+    named that.
+    """
+    if value is None:
+        return None
+    return str(value)[:_MAX_LOGGED_FIELD_CHARS]
+
 
 @csrf_exempt
 @require_POST
@@ -86,11 +106,16 @@ def csp_report_view(request: HttpRequest) -> HttpResponse:
 
     for r in reports:
         logger.warning(
-            "csp.violation host=%s directive=%r blocked=%r src=%r ip=%s",
+            "csp.violation host=%s doc=%r directive=%r blocked=%r src=%r ip=%s",
             request.get_host(),
-            r.get("violated-directive") or r.get("effectiveDirective"),
-            r.get("blocked-uri") or r.get("blockedURL"),
-            r.get("source-file") or r.get("sourceFile"),
+            # The page that violated the policy. ``source-file`` names the
+            # script the violation came from, which for a bundled SPA is the
+            # same chunk on every route — only the document tells a reviewer
+            # WHICH page produced the report.
+            _bounded(r.get("document-uri") or r.get("documentURL")),
+            _bounded(r.get("violated-directive") or r.get("effectiveDirective")),
+            _bounded(r.get("blocked-uri") or r.get("blockedURL")),
+            _bounded(r.get("source-file") or r.get("sourceFile")),
             request.META.get("REMOTE_ADDR", "?"),
         )
 

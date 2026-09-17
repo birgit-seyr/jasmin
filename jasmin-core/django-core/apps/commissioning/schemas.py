@@ -346,12 +346,18 @@ def get_crate_parameter(**overrides):
 
 # RESELLER
 def get_reseller_parameter(**overrides):
-    """Get reseller parameter."""
+    """Get reseller parameter.
+
+    ``description`` is overridable: an endpoint where the reseller does more
+    than select rows — resolving another parameter's scope, or parameterising
+    an annotation — says so on the parameter itself.
+    """
     required = overrides.pop("required", False)
+    description = overrides.pop("description", "Reseller ID (Jasmin ID format)")
 
     return catalogue_param(
         "reseller",
-        description="Reseller ID (Jasmin ID format)",
+        description=description,
         required=required,
         **overrides,
     )
@@ -359,12 +365,17 @@ def get_reseller_parameter(**overrides):
 
 # OFFER GROUP
 def get_offer_group_parameter(**overrides):
-    """Get offer_group parameter."""
+    """Get offer_group parameter.
+
+    ``description`` is overridable: an endpoint where another parameter can
+    override this one documents that precedence here.
+    """
     required = overrides.pop("required", False)
+    description = overrides.pop("description", "Offer group ID (Jasmin ID format)")
 
     return catalogue_param(
         "offer_group",
-        description="Offer group ID (Jasmin ID format)",
+        description=description,
         required=required,
         **overrides,
     )

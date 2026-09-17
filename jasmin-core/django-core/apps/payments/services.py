@@ -740,6 +740,60 @@ def _render_remittance(
 # --------------------------------------------------------------------------- #
 
 
+class BillingProfileService:
+    """Mandate-lifecycle operations on a member's ``BillingProfile``."""
+
+    @staticmethod
+    @transaction.atomic
+    def replace_mandate(
+        profile: BillingProfile,
+        *,
+        iban: str,
+        account_holder: str | None = None,
+        signed_at: date | None = None,
+    ) -> BillingProfile:
+        """Issue a NEW SEPA mandate for ``profile``, pointing at ``iban``.
+
+        A mandate is the pairing of a reference with the account the member
+        authorised. ``_build_pain008_xml`` reads that reference, the signature
+        date and the IBAN off this single row, and derives the sequence type
+        from ``sepa_mandate_first_use_at`` alone — so re-pointing an
+        already-used reference at another account emits an RCUR quoting a
+        reference the bank holds against the previous account. A new account
+        therefore gets a new reference and signature date, and a cleared
+        first-use stamp so the next export announces it as FRST.
+
+        Issuing a mandate is also what ARMS direct-debit collection, so the
+        profile is switched onto the SEPA path and activated. A profile that
+        was moved off SEPA while keeping its mandate columns (the Art. 7(3)
+        revoke handler flips ``payment_method`` to BANK_TRANSFER) would
+        otherwise come back from a successful replace still uncollectable:
+        ``is_sepa_ready`` false, no run ever picking the member up, and an
+        office that believes the new mandate is live. The member signing a new
+        mandate is precisely the consent that re-arms it.
+        """
+        locked = BillingProfile.objects.select_for_update().get(pk=profile.pk)
+        locked.iban = iban
+        if account_holder:
+            locked.account_holder = account_holder
+        # Minted here rather than left to ``save()``, which only fills a BLANK
+        # reference — retiring the existing one is the point of this operation.
+        locked.sepa_mandate_reference = (
+            BillingProfile._generate_sepa_mandate_reference()
+        )
+        locked.sepa_mandate_signed_at = signed_at or timezone.localdate()
+        locked.sepa_mandate_first_use_at = None
+        # The paper stamp belongs to the mandate it was filed against. Carried
+        # over, a tenant that requires a paper signature would show the brand-new
+        # mandate as already confirmed — in the office UI and in the GDPR
+        # subject-access export — and nobody would chase the signed form.
+        locked.sepa_mandate_paper_received_at = None
+        locked.payment_method = PaymentMethodOptions.SEPA_DIRECT_DEBIT
+        locked.is_active = True
+        locked.save()
+        return locked
+
+
 class BillingRunService:
     """Builds a `BillingRun` and exports it (SEPA pain.008 XML for direct-debit runs)."""
 

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
+from xml.etree import ElementTree as ET
 
 import pytest
 import time_machine
@@ -24,6 +25,10 @@ from apps.payments.constants import (
     PaymentMethodOptions,
 )
 from apps.payments.models import BillingProfile, BillingRun, ChargeSchedule
+from apps.payments.services import BillingRunService
+
+# pain.008.001.02 lives in this namespace per ISO 20022.
+PAIN008_NS = "urn:iso:std:iso:20022:tech:xsd:pain.008.001.02"
 
 
 def _make_charge(member, subscription, *, status=ChargeStatus.PLANNED, due=None):
@@ -780,6 +785,98 @@ class TestBillingProfileMandateWriteRules:
         billing_profile.refresh_from_db()
         assert billing_profile.sepa_mandate_signed_at == datetime.date(2026, 3, 3)
 
+    def test_iban_change_refused_on_used_mandate(
+        self, step_up_client, tenant, billing_profile
+    ):
+        self._mark_used(billing_profile)
+
+        resp = step_up_client.patch(
+            f"{self.URL}{billing_profile.pk}/",
+            {"iban": "CH9300762011623852957"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "billing_profile.iban_locked"
+        billing_profile.refresh_from_db()
+        assert billing_profile.iban == "DE89370400440532013000"
+
+    def test_reformatted_identical_iban_is_accepted(
+        self, step_up_client, tenant, billing_profile
+    ):
+        # The office SEPA form re-enters the IBAN on every save and operators
+        # paste it off bank statements, so the same account arrives spaced and
+        # lower-cased. That is not a change of account.
+        self._mark_used(billing_profile)
+
+        resp = step_up_client.patch(
+            f"{self.URL}{billing_profile.pk}/",
+            {"iban": "de89 3704 0044 0532 0130 00"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        billing_profile.refresh_from_db()
+        # The CANONICAL form is what is stored, not what the operator typed:
+        # the pain.008 debtor block only strips spaces, and the XSD refuses a
+        # lower-case IBAN — which fails the whole batch, not just this member.
+        assert billing_profile.iban == "DE89370400440532013000"
+
+    def test_iban_change_allowed_before_first_use(
+        self, step_up_client, tenant, billing_profile
+    ):
+        # Nothing has been collected yet, so the bank holds no mandate against
+        # the old account and the office may still correct a mistyped IBAN.
+        # Sent as pasted off a bank statement (spaced, lower-cased) so this
+        # also pins that an accepted IBAN lands canonically.
+        assert billing_profile.sepa_mandate_first_use_at is None
+
+        resp = step_up_client.patch(
+            f"{self.URL}{billing_profile.pk}/",
+            {"iban": "ch93 0076 2011 6238 5295 7"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        billing_profile.refresh_from_db()
+        assert billing_profile.iban == "CH9300762011623852957"
+
+    def test_reformatted_iban_survives_the_next_export(
+        self, step_up_client, tenant_settings, subscription, billing_profile
+    ):
+        # The office SEPA modal clears its fields on open, so the operator
+        # retypes the IBAN — off a statement, spaced and lower-cased. The
+        # pain.008 debtor block only strips spaces and the XSD demands an
+        # upper-case country code, so storing it as typed kills the whole
+        # batch at the next run, for every member in it.
+        self._mark_used(billing_profile)
+
+        resp = step_up_client.patch(
+            f"{self.URL}{billing_profile.pk}/",
+            {"iban": "de89 3704 0044 0532 0130 00"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK
+
+        _make_charge(
+            billing_profile.member, subscription, due=datetime.date(2026, 3, 10)
+        )
+        run = BillingRunService.create_run(
+            period_start=datetime.date(2026, 3, 1),
+            period_end=datetime.date(2026, 3, 31),
+            collection_date=datetime.date(2026, 4, 7),
+        )
+        # Exports with ``validate=True``: a degraded IBAN raises here rather
+        # than producing a file the bank would reject.
+        BillingRunService.export(run)
+        run.refresh_from_db()
+        with run.sepa_xml_export.open("rb") as fh:
+            root = ET.fromstring(fh.read())
+
+        assert [el.text for el in root.iter(f"{{{PAIN008_NS}}}IBAN")][-1] == (
+            "DE89370400440532013000"
+        )
+
     def test_future_signed_date_is_refused_on_create(self, step_up_client, tenant):
         fresh = MemberFactory()
 
@@ -799,3 +896,176 @@ class TestBillingProfileMandateWriteRules:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.data["code"] == "sepa.mandate_signed_in_future"
         assert not BillingProfile.objects.filter(member=fresh).exists()
+
+
+# ---------------------------------------------------------------------------
+# BillingProfileViewSet — replace_mandate
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestBillingProfileReplaceMandate:
+    URL = "/api/payments/billing_profiles/"
+    NEW_IBAN = "CH9300762011623852957"
+
+    @pytest.fixture(autouse=True)
+    def _frozen_today(self):
+        """Pin "today" to 2026-03-02 so the signature date the action stamps and
+        the run's collection date stay fixed relative to it."""
+        with time_machine.travel(datetime.datetime(2026, 3, 2, 12, 0), tick=False):
+            yield
+
+    @pytest.fixture()
+    def step_up_client(self, user):
+        """Office client whose token carries a fresh step-up claim: replacing a
+        mandate writes an IBAN, so the action is step-up gated."""
+        from rest_framework.test import APIClient
+
+        from apps.commissioning.tests.conftest import make_step_up_token
+
+        client = APIClient()
+        client.force_authenticate(user=user, token=make_step_up_token(user))
+        return client
+
+    @staticmethod
+    def _mark_used(billing_profile):
+        billing_profile.sepa_mandate_first_use_at = datetime.date(2026, 2, 1)
+        billing_profile.save()
+        return billing_profile
+
+    def _replace(self, client, billing_profile, **payload):
+        return client.post(
+            f"{self.URL}{billing_profile.pk}/replace_mandate/",
+            {"iban": self.NEW_IBAN, **payload},
+            format="json",
+        )
+
+    def test_mints_a_new_reference_and_clears_first_use(
+        self, step_up_client, tenant, billing_profile
+    ):
+        self._mark_used(billing_profile)
+        old_reference = billing_profile.sepa_mandate_reference
+
+        resp = self._replace(step_up_client, billing_profile)
+
+        assert resp.status_code == status.HTTP_200_OK
+        billing_profile.refresh_from_db()
+        assert billing_profile.sepa_mandate_reference
+        assert billing_profile.sepa_mandate_reference != old_reference
+        assert billing_profile.sepa_mandate_first_use_at is None
+        assert billing_profile.iban == self.NEW_IBAN
+        assert billing_profile.sepa_mandate_signed_at == datetime.date(2026, 3, 2)
+
+    def test_account_holder_is_kept_when_omitted(
+        self, step_up_client, tenant, billing_profile
+    ):
+        stored_holder = billing_profile.account_holder
+
+        resp = self._replace(step_up_client, billing_profile)
+
+        assert resp.status_code == status.HTTP_200_OK
+        billing_profile.refresh_from_db()
+        assert billing_profile.account_holder == stored_holder
+
+    def test_requires_step_up(self, api_client, tenant, billing_profile):
+        self._mark_used(billing_profile)
+        stored_reference = billing_profile.sepa_mandate_reference
+
+        resp = self._replace(api_client, billing_profile)
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        billing_profile.refresh_from_db()
+        assert billing_profile.sepa_mandate_reference == stored_reference
+        assert billing_profile.iban == "DE89370400440532013000"
+
+    def test_member_cannot_replace(self, member_api_client, tenant, billing_profile):
+        resp = self._replace(member_api_client, billing_profile)
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        billing_profile.refresh_from_db()
+        assert billing_profile.iban == "DE89370400440532013000"
+
+    def test_malformed_iban_is_refused(self, step_up_client, tenant, billing_profile):
+        resp = self._replace(step_up_client, billing_profile, iban="DE00 NOT-AN-IBAN")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        billing_profile.refresh_from_db()
+        assert billing_profile.iban == "DE89370400440532013000"
+
+    def test_next_export_announces_the_new_mandate_as_frst(
+        self, step_up_client, tenant_settings, subscription, billing_profile
+    ):
+        # The mandate has already been collected against, so without the
+        # replacement the next export would go out RCUR under the old
+        # reference — against an account the bank never saw under it.
+        self._mark_used(billing_profile)
+
+        resp = self._replace(step_up_client, billing_profile)
+        assert resp.status_code == status.HTTP_200_OK
+        billing_profile.refresh_from_db()
+        new_reference = billing_profile.sepa_mandate_reference
+
+        _make_charge(
+            billing_profile.member, subscription, due=datetime.date(2026, 3, 10)
+        )
+        run = BillingRunService.create_run(
+            period_start=datetime.date(2026, 3, 1),
+            period_end=datetime.date(2026, 3, 31),
+            collection_date=datetime.date(2026, 4, 7),
+        )
+        BillingRunService.export(run)
+        run.refresh_from_db()
+        with run.sepa_xml_export.open("rb") as fh:
+            root = ET.fromstring(fh.read())
+
+        assert [el.text for el in root.iter(f"{{{PAIN008_NS}}}SeqTp")] == ["FRST"]
+        assert [el.text for el in root.iter(f"{{{PAIN008_NS}}}MndtId")] == [
+            new_reference
+        ]
+        assert [el.text for el in root.iter(f"{{{PAIN008_NS}}}IBAN")][-1] == (
+            self.NEW_IBAN
+        )
+
+    def test_iban_is_stored_canonically(self, step_up_client, tenant, billing_profile):
+        # Same canonical-storage rule as the interactive IBAN write: the XSD
+        # refuses a lower-case IBAN at export.
+        resp = self._replace(
+            step_up_client, billing_profile, iban="ch93 0076 2011 6238 5295 7"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        billing_profile.refresh_from_db()
+        assert billing_profile.iban == self.NEW_IBAN
+
+    def test_paper_receipt_is_not_carried_over(
+        self, step_up_client, tenant, billing_profile
+    ):
+        # The stamp records the paper filed for the OLD mandate. Carried over,
+        # a tenant that requires paper signatures shows the new mandate as
+        # already confirmed — and the GDPR subject-access export reports that
+        # date against it — so nobody chases the newly signed form.
+        billing_profile.sepa_mandate_paper_received_at = datetime.date(2026, 1, 20)
+        billing_profile.save()
+
+        resp = self._replace(step_up_client, billing_profile)
+
+        assert resp.status_code == status.HTTP_200_OK
+        billing_profile.refresh_from_db()
+        assert billing_profile.sepa_mandate_paper_received_at is None
+
+    def test_replacing_rearms_a_profile_moved_off_sepa(
+        self, step_up_client, tenant, billing_profile
+    ):
+        # Revoking SEPA consent (Art. 7(3)) flips the profile to BANK_TRANSFER
+        # while keeping its mandate columns. Signing a new mandate is the
+        # consent that re-arms collection; without that, the office gets a 200
+        # and a fresh reference on a profile no run will ever pick up.
+        billing_profile.payment_method = PaymentMethodOptions.BANK_TRANSFER
+        billing_profile.is_active = False
+        billing_profile.save()
+
+        resp = self._replace(step_up_client, billing_profile)
+
+        assert resp.status_code == status.HTTP_200_OK
+        billing_profile.refresh_from_db()
+        assert billing_profile.payment_method == PaymentMethodOptions.SEPA_DIRECT_DEBIT
+        assert billing_profile.is_active is True
+        assert billing_profile.is_sepa_ready is True

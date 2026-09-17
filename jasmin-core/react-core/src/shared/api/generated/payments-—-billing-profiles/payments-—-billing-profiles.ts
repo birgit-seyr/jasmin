@@ -27,7 +27,8 @@ import type {
 import type {
   BillingProfile,
   ErrorResponse,
-  PaymentsBillingProfilesListParams
+  PaymentsBillingProfilesListParams,
+  ReplaceMandate
 } from '.././models';
 
 import { axiosService } from '../../../services/api';
@@ -543,6 +544,72 @@ export const usePaymentsBillingProfilesDestroy = <TError = ErrorResponse,
       > => {
 
       const mutationOptions = getPaymentsBillingProfilesDestroyMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Issues a NEW SEPA mandate for this profile against the submitted IBAN: a freshly minted ``sepa_mandate_reference``, the new signature date (today unless given), and a cleared ``sepa_mandate_first_use_at``, so the next export announces the mandate as FRST. This is the deliberate alternative to editing ``iban`` on a mandate that has already been collected against, which is refused: the bank matches collections to the reference it holds against the authorised account, so another account needs another mandate rather than a swap underneath the old reference. Step-up authentication is required, as for any IBAN write.
+ * @summary Replace the SEPA mandate (Office only)
+ */
+export const paymentsBillingProfilesReplaceMandateCreate = (
+    id: string,
+    replaceMandate: ReplaceMandate,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<BillingProfile>(
+      {url: `/api/payments/billing_profiles/${id}/replace_mandate/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: replaceMandate, signal
+    },
+      );
+    }
+  
+
+
+export const getPaymentsBillingProfilesReplaceMandateCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentsBillingProfilesReplaceMandateCreate>>, TError,{id: string;data: ReplaceMandate}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof paymentsBillingProfilesReplaceMandateCreate>>, TError,{id: string;data: ReplaceMandate}, TContext> => {
+
+const mutationKey = ['paymentsBillingProfilesReplaceMandateCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentsBillingProfilesReplaceMandateCreate>>, {id: string;data: ReplaceMandate}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  paymentsBillingProfilesReplaceMandateCreate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PaymentsBillingProfilesReplaceMandateCreateMutationResult = NonNullable<Awaited<ReturnType<typeof paymentsBillingProfilesReplaceMandateCreate>>>
+    export type PaymentsBillingProfilesReplaceMandateCreateMutationBody = ReplaceMandate
+    export type PaymentsBillingProfilesReplaceMandateCreateMutationError = ErrorResponse
+
+    /**
+ * @summary Replace the SEPA mandate (Office only)
+ */
+export const usePaymentsBillingProfilesReplaceMandateCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentsBillingProfilesReplaceMandateCreate>>, TError,{id: string;data: ReplaceMandate}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof paymentsBillingProfilesReplaceMandateCreate>>,
+        TError,
+        {id: string;data: ReplaceMandate},
+        TContext
+      > => {
+
+      const mutationOptions = getPaymentsBillingProfilesReplaceMandateCreateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

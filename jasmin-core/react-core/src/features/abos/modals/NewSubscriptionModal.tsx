@@ -47,13 +47,12 @@ import {
 import type { ShareTypeVariationOption } from "@hooks/useAllShareTypeVariations";
 import {
   capacityWindowParams,
-  stationDayTermCapacity,
   termCapacity,
   termWeekKeys,
 } from "@features/abos/utils/stationCapacity";
+import { useDeliveryStationPicker } from "../hooks/useDeliveryStationPicker";
 import ShareTypeVariationPickerGrid from "../components/ShareTypeVariationPickerGrid";
 import { DeliveryStationMap } from "@shared/ui";
-import type { DeliveryStationMapMarker } from "@shared/ui";
 import ToolTipIcon from "@shared/ui/ToolTipIcon";
 import { filterVariationsForTrial, notify } from "@shared/utils";
 import { getErrorCode, getErrorMessage } from "@shared/utils/apiError";
@@ -486,49 +485,6 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     }
   }, [availableDays, dayFilter]);
 
-  // Station options: the smaller secondary line shows the tightest term week's
-  // free slots as "freie Plätze (free/total)".
-  const stationOptions = useMemo(() => {
-    const options = deliveryStationDays
-      .filter(
-        (stationDay) =>
-          dayFilter === "all" ||
-          Number(stationDay.delivery_day_number) === dayFilter,
-      )
-      .map((stationDay) => {
-        const { total, minFree, isFull } = showCapacity
-          ? stationDayTermCapacity(
-              stationDay.capacity,
-              stationDay.capacity_by_week,
-              periodWeekKeys,
-              quantity,
-            )
-          : { total: null, minFree: null, isFull: false };
-        return {
-          value: stationDay.value,
-          label: stationDay.label,
-          total,
-          free: minFree,
-          isFull,
-          // Office sees a full station greyed when the waiting list is off.
-          disabled: !allowsWaitingList && isFull,
-        };
-      });
-    // Members / public don't see full stations at all when the list is off.
-    if (simplified && !allowsWaitingList) {
-      return options.filter((option) => !option.isFull);
-    }
-    return options;
-  }, [
-    deliveryStationDays,
-    periodWeekKeys,
-    showCapacity,
-    quantity,
-    allowsWaitingList,
-    simplified,
-    dayFilter,
-  ]);
-
   // Currently-picked station-day (shared with the Select via the same form
   // field), used to highlight the matching map marker.
   const selectedStationDay = Form.useWatch(
@@ -536,138 +492,18 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
     form,
   ) as string | undefined;
 
-  // Map markers: ONE per delivery station (a station can host several days).
-  // Only stations with coordinates appear; the popup lists that station's days
-  // as buttons that set the same ``default_delivery_station_day`` field the
-  // Select drives. A station is greyed only when EVERY one of its days is full.
-  const stationMarkers = useMemo<DeliveryStationMapMarker[]>(() => {
-    // Compute fullness from the RAW station-days (not the member-filtered
-    // ``stationOptions``) so a full day the Select hides can't reappear on the
-    // map reading as available.
-    const capacityByDay = new Map(
-      deliveryStationDays.map((stationDay) => {
-        const { total, minFree, isFull } = showCapacity
-          ? stationDayTermCapacity(
-              stationDay.capacity,
-              stationDay.capacity_by_week,
-              periodWeekKeys,
-              quantity,
-            )
-          : { total: null, minFree: null, isFull: false };
-        return [stationDay.value, { total, free: minFree, isFull }];
-      }),
-    );
-    const byStation = new Map<
-      string,
-      {
-        stationId: string;
-        lat: number;
-        lon: number;
-        name: string;
-        days: {
-          value: string;
-          label: string;
-          free: number | null;
-          total: number | null;
-          isFull: boolean;
-        }[];
-      }
-    >();
-
-    for (const stationDay of deliveryStationDays) {
-      // Mirror the Select's day filter so the map shows the same stations.
-      if (
-        dayFilter !== "all" &&
-        Number(stationDay.delivery_day_number) !== dayFilter
-      ) {
-        continue;
-      }
-      const lat =
-        stationDay.coords_lat != null ? Number(stationDay.coords_lat) : NaN;
-      const lon =
-        stationDay.coords_lon != null ? Number(stationDay.coords_lon) : NaN;
-      if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-
-      const stationId = String(stationDay.delivery_station ?? "");
-      if (!stationId) continue;
-      const capacity = capacityByDay.get(stationDay.value);
-      // Members / public don't see full stations at all when the list is off.
-      if (simplified && !allowsWaitingList && capacity?.isFull) continue;
-      const entry = byStation.get(stationId) ?? {
-        stationId,
-        lat,
-        lon,
-        name:
-          stationDay.delivery_station_name ??
-          stationDay.delivery_station_short_name ??
-          "",
-        days: [],
-      };
-      entry.days.push({
-        value: stationDay.value,
-        label: stationDay.label,
-        free: capacity?.free ?? null,
-        total: capacity?.total ?? null,
-        isFull: capacity?.isFull ?? false,
-      });
-      byStation.set(stationId, entry);
-    }
-
-    return Array.from(byStation.values())
-      .filter((station) => station.days.length > 0)
-      .map((station) => ({
-        id: station.stationId,
-        lat: station.lat,
-        lon: station.lon,
-        label: station.name,
-        selected: station.days.some((day) => day.value === selectedStationDay),
-        disabled: station.days.every((day) => day.isFull),
-        popup: (
-          <div>
-            <strong>{station.name}</strong>
-            <Flex vertical gap={4} style={{ marginTop: 8 }}>
-              {station.days.map((day) => (
-                <Button
-                  key={day.value}
-                  size="small"
-                  // Office sees a full day greyed when the waiting list is off.
-                  disabled={!allowsWaitingList && day.isFull}
-                  type={
-                    day.value === selectedStationDay ? "primary" : "default"
-                  }
-                  onClick={() =>
-                    form.setFieldsValue({
-                      default_delivery_station_day: day.value,
-                    })
-                  }
-                >
-                  {day.label}
-                  {day.isFull
-                    ? ` · ${t("abos.station_full_waiting_list")}`
-                    : day.total != null && day.free != null
-                      ? ` · ${t("delivery.free_spots_of_total", {
-                          free: day.free,
-                          total: day.total,
-                        })}`
-                      : ""}
-                </Button>
-              ))}
-            </Flex>
-          </div>
-        ),
-      }));
-  }, [
+  // The Select's options and the map's markers, off one fullness computation.
+  const { stationOptions, stationMarkers } = useDeliveryStationPicker({
     deliveryStationDays,
-    showCapacity,
     periodWeekKeys,
     quantity,
+    showCapacity,
     allowsWaitingList,
     simplified,
-    selectedStationDay,
     dayFilter,
+    selectedStationDay,
     form,
-    t,
-  ]);
+  });
 
   // Whether the currently-picked station-day is full for the term — the
   // subscription then goes to the waiting list instead of holding capacity.
@@ -1430,6 +1266,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         <SepaSetupModal
           open={sepaModalOpen}
           memberId={memberId}
+          officeMode={!isMemberOnly}
           onClose={() => {
             setSepaModalOpen(false);
             refetchBillingProfiles();

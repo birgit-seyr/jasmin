@@ -9,9 +9,12 @@ The grid is a dense matrix the client stays dumb about: for each active
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone
 
 from ..errors import (
     EmployeeNotFound,
@@ -140,6 +143,42 @@ def replace_week(year: int, week: int, assignments: list[dict[str, Any]]) -> Non
 
     WeeklyPlan.objects.filter(year=year, week=week).delete()
     WeeklyPlan.objects.bulk_create(rows_to_create)
+
+
+def weeks_stranded_by_shrink(
+    category_id: str, new_max_lines: int
+) -> list[dict[str, int]]:
+    """ISO weeks from the current one on that hold rows a ``max_lines`` of
+    ``new_max_lines`` would hide, oldest first.
+
+    Lowering the count only hides those rows from :func:`build_week_grid`, but
+    the grid is a replace-all surface: the client seeds its cell map purely from
+    the grid it was served, so the next edit to ANY cell of such a week posts an
+    assignment list without the hidden rows and :func:`replace_week` deletes
+    them for good. Past weeks stay out of the answer — nothing edits them, and
+    counting them would leave a long-lived category permanently unshrinkable.
+
+    A row with a NULL ``row_index`` sits at no grid position at all, so the
+    count it is compared against makes no difference to it; it is not reported.
+    """
+    # The local date, not the UTC one: east of UTC the two differ for the first
+    # hours of a day, and during those hours the UTC date still sits in the week
+    # that ended the night before — which would refuse a shrink over a week the
+    # office can no longer edit.
+    today: date = timezone.localdate()
+    current_year, current_week, _ = today.isocalendar()
+
+    stranded = (
+        WeeklyPlan.objects.filter(
+            weekly_plan_category_id=category_id,
+            row_index__gte=new_max_lines,
+        )
+        .filter(Q(year__gt=current_year) | Q(year=current_year, week__gte=current_week))
+        .values_list("year", "week")
+        .distinct()
+        .order_by("year", "week")
+    )
+    return [{"year": year, "week": week} for year, week in stranded]
 
 
 @transaction.atomic

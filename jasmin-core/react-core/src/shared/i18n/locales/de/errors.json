@@ -230,8 +230,7 @@
   },
   "offer_group": {
     "not_found": "Angebotsgruppe nicht gefunden.",
-    "cannot_delete_default": "Die Standard-Angebotsgruppe kann nicht gelöscht werden.",
-    "conflicts_with_reseller": "Die gewählte Angebotsgruppe gehört nicht zum gewählten Wiederverkäufer. Bitte nur nach einem von beiden filtern."
+    "cannot_delete_default": "Die Standard-Angebotsgruppe kann nicht gelöscht werden."
   },
   "export": {
     "invalid_dates": "Ungültiger Datumsbereich für den Export — bitte Anfangs- und Enddatum prüfen."
@@ -329,6 +328,7 @@
     "date_format": "Ungültiges Belegdatum — bitte im Format JJJJ-MM-TT angeben."
   },
   "billing_profile": {
+    "iban_locked": "Das SEPA-Mandat wurde bereits eingesetzt — die IBAN kann nicht mehr geändert werden. Für ein anderes Konto bitte das Mandat ersetzen (neues Mandat mit neuer Mandatsreferenz); ein stilles Austauschen des Kontos ist nicht zulässig.",
     "mandate_reference_locked": "Das SEPA-Mandat wurde bereits eingesetzt — die Mandatsreferenz kann nicht mehr geändert werden. Für eine andere Referenz bitte ein neues Mandat anlegen."
   },
   "billing_run": {
@@ -461,7 +461,8 @@
     "apply_failed": "Der Import konnte nicht angewendet werden.",
     "batch_in_terminal_status": "Dieser Import wurde bereits angewendet oder durch einen neueren ersetzt und kann nicht erneut geprüft oder angewendet werden. Bitte eine neue Datei hochladen.",
     "file_already_used": "Diese Datei wurde für diese Woche bereits importiert (Status: {{status}}) und kann nicht erneut angewendet werden. Für eine Korrektur bitte eine geänderte oder neu exportierte Datei hochladen.",
-    "invalid_status": "Der Import-Batch ist in einem Status, der nicht angewendet werden kann (benötigt „preview_ready“ oder „validated“)."
+    "invalid_status": "Der Import-Batch ist in einem Status, der nicht angewendet werden kann (benötigt „preview_ready“ oder „validated“).",
+    "validation_failed": "Einige Zeilen der Datei sind ungültig, der Import wurde nicht angewendet. Die Zeilenprüfung zeigt, welche Zeilen betroffen sind und was zu korrigieren ist."
   },
   "shares_day_change": {
     "missing_required": "Jahr und Lieferwoche sind erforderlich."

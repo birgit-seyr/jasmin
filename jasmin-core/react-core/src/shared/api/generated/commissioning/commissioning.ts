@@ -138,6 +138,7 @@ import type {
   CommissioningShareDeliveryOverviewListParams,
   CommissioningShareDeliveryPendingOptinListParams,
   CommissioningShareImportBatchesListParams,
+  CommissioningShareImportBatchesPreviewCreate400,
   CommissioningShareTypeVariationAmountsForPlanningRetrieve200,
   CommissioningShareTypeVariationAmountsForPlanningRetrieveParams,
   CommissioningShareTypeVariationPriceListParams,
@@ -25766,7 +25767,7 @@ export const commissioningShareImportBatchesPreviewCreate = (
   
 
 
-export const getCommissioningShareImportBatchesPreviewCreateMutationOptions = <TError = ShareImportBatch | ErrorResponse,
+export const getCommissioningShareImportBatchesPreviewCreateMutationOptions = <TError = CommissioningShareImportBatchesPreviewCreate400 | ErrorResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareImportBatchesPreviewCreate>>, TError,{id: string}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareImportBatchesPreviewCreate>>, TError,{id: string}, TContext> => {
 
@@ -25793,9 +25794,9 @@ const {mutation: mutationOptions} = options ?
 
     export type CommissioningShareImportBatchesPreviewCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningShareImportBatchesPreviewCreate>>>
     
-    export type CommissioningShareImportBatchesPreviewCreateMutationError = ShareImportBatch | ErrorResponse
+    export type CommissioningShareImportBatchesPreviewCreateMutationError = CommissioningShareImportBatchesPreviewCreate400 | ErrorResponse
 
-    export const useCommissioningShareImportBatchesPreviewCreate = <TError = ShareImportBatch | ErrorResponse,
+    export const useCommissioningShareImportBatchesPreviewCreate = <TError = CommissioningShareImportBatchesPreviewCreate400 | ErrorResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareImportBatchesPreviewCreate>>, TError,{id: string}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningShareImportBatchesPreviewCreate>>,

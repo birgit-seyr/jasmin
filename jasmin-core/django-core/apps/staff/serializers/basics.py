@@ -2,8 +2,9 @@ from rest_framework import serializers
 
 from apps.commissioning.serializers.serializers_mixin import DeletableMixin
 
-from ..errors import StaffError
+from ..errors import StaffError, WeeklyPlanCategoryShrinkBlocked
 from ..models import AbsenceCategory, Employee, WeeklyPlanCategory
+from ..services.weekly_plan import weeks_stranded_by_shrink
 
 
 class EmployeeSerializer(DeletableMixin, serializers.ModelSerializer):
@@ -37,6 +38,27 @@ class WeeklyPlanCategorySerializer(DeletableMixin, serializers.ModelSerializer):
             raise StaffError(
                 message, field="max_lines", details={"max_lines": [message]}
             )
+
+        # Lowering the count hides every row past it from the week grid, and the
+        # grid replaces a whole week on each edit from the cells it was served —
+        # so the first edit to such a week deletes the hidden rows. Refuse while
+        # the current week or a later one still holds one. Only weeks that are
+        # still editable count; past ones would make the category unshrinkable.
+        if self.instance is not None and value < self.instance.max_lines:
+            stranded_weeks = weeks_stranded_by_shrink(self.instance.id, value)
+            if stranded_weeks:
+                message = (
+                    f"Weekly-plan entries still sit in rows that a max_lines of "
+                    f"{value} would hide. Clear them first."
+                )
+                # Two shapes in one map: the ``max_lines`` list is the per-field
+                # error the grid marks the cell with, ``weeks`` is structured
+                # context naming the weeks in the way.
+                raise WeeklyPlanCategoryShrinkBlocked(
+                    message,
+                    field="max_lines",
+                    details={"max_lines": [message], "weeks": stranded_weeks},
+                )
         return value
 
 

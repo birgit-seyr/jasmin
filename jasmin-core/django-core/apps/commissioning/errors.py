@@ -438,14 +438,6 @@ class OfferGroupCannotDeleteDefault(ConflictError):
     code = "offer_group.cannot_delete_default"
 
 
-class OfferGroupConflictsWithReseller(BadRequestError):
-    """The requested ``offer_group`` is not the group the requested ``reseller``
-    belongs to. The two filters contradict each other, so the request is refused
-    rather than silently answered for one of them."""
-
-    code = "offer_group.conflicts_with_reseller"
-
-
 # --------------------------------------------------------------------------- #
 # Orders / delivery notes / invoices                                          #
 # --------------------------------------------------------------------------- #
@@ -716,6 +708,16 @@ class ShareImportFileAlreadyUsed(ConflictError):
     carries ``batch_id`` and ``status``."""
 
     code = "share_import.file_already_used"
+
+
+class ShareImportValidationFailed(BadRequestError):
+    """Rows in the uploaded file failed validation, so neither the preview nor
+    the apply can build the week's demand from it. The error itself only says
+    the file as a whole is unusable — WHICH rows failed and why is carried in
+    the batch's ``validation_report``, which the import UI renders as a per-row
+    table."""
+
+    code = "share_import.validation_failed"
 
 
 # --------------------------------------------------------------------------- #
@@ -1967,6 +1969,7 @@ __all__ = [
     "InvalidExportDates",
     "DataImportInvalid",
     "ShareImportBatchInTerminalStatus",
+    "ShareImportValidationFailed",
     "MemberNotFound",
     "MemberProfileNotLinked",
     "CustomerProfileNotLinked",
@@ -2041,7 +2044,6 @@ __all__ = [
     "OrganicPurchaseCertificateRequired",
     "BulkIdsTooMany",
     "InventoryEntryFinalized",
-    "OfferGroupConflictsWithReseller",
     "OrderableItemReferenceInvalid",
     "TimeBoundValidFromNotMonday",
     "TimeBoundValidUntilNotSunday",

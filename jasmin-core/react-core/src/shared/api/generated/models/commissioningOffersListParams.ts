@@ -19,7 +19,7 @@ delivery_week: number;
  */
 limit?: number;
 /**
- * Offer group ID (Jasmin ID format)
+ * Offer group ID (Jasmin ID format). Ignored whenever the scope resolves from a reseller: that reseller's own offer group wins. A caller without an office/admin/management role is always scoped to their own linked reseller, so for them this parameter never applies, sent or not.
  */
 offer_group?: string;
 /**
@@ -28,7 +28,7 @@ offer_group?: string;
  */
 offset?: number;
 /**
- * Reseller ID (Jasmin ID format)
+ * Reseller ID (Jasmin ID format). Also scopes the amount_ordered totals to this reseller. Its own offer group wins over an offer_group sent alongside it, and a reseller with no offer group matches no offer. A caller without an office/admin/management role is forced to their own linked reseller whether or not this is sent.
  */
 reseller?: string;
 /**

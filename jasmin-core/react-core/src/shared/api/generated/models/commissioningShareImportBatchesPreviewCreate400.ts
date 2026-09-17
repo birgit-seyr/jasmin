@@ -6,10 +6,6 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ShareImportBatch } from './shareImportBatch';
+import type { ErrorResponse } from './errorResponse';
 
-export interface ShareImportApplyValidationFailedResponse {
-  code: string;
-  message: string;
-  detail: string;
-  batch: ShareImportBatch;
-}
+export type CommissioningShareImportBatchesPreviewCreate400 = ShareImportBatch & ErrorResponse;

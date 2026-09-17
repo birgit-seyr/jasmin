@@ -929,8 +929,25 @@ class OfferViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         parameters=[
             get_year_parameter(required=True),
             get_delivery_week_parameter(required=True),
-            get_offer_group_parameter(),
-            get_reseller_parameter(),
+            get_offer_group_parameter(
+                description=(
+                    "Offer group ID (Jasmin ID format). Ignored whenever the "
+                    "scope resolves from a reseller: that reseller's own offer "
+                    "group wins. A caller without an office/admin/management "
+                    "role is always scoped to their own linked reseller, so "
+                    "for them this parameter never applies, sent or not."
+                ),
+            ),
+            get_reseller_parameter(
+                description=(
+                    "Reseller ID (Jasmin ID format). Also scopes the "
+                    "amount_ordered totals to this reseller. Its own offer "
+                    "group wins over an offer_group sent alongside it, and a "
+                    "reseller with no offer group matches no offer. A caller "
+                    "without an office/admin/management role is forced to "
+                    "their own linked reseller whether or not this is sent."
+                ),
+            ),
         ],
     )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:

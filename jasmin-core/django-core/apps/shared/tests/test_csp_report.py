@@ -14,7 +14,11 @@ from unittest.mock import patch
 import pytest
 from django.test import Client
 
-from apps.shared.csp_report import _MAX_REPORT_BYTES, _MAX_REPORTS_PER_POST
+from apps.shared.csp_report import (
+    _MAX_LOGGED_FIELD_CHARS,
+    _MAX_REPORT_BYTES,
+    _MAX_REPORTS_PER_POST,
+)
 
 URL = "/api/csp-report/"
 
@@ -30,6 +34,12 @@ def _post(payload, *, raw: str | None = None):
 def report_logger():
     with patch("apps.shared.csp_report.logger") as mock_logger:
         yield mock_logger
+
+
+def _rendered(mock_logger, index: int = 0) -> str:
+    """The log line as it reaches the handler, format string applied."""
+    fmt, *args = mock_logger.warning.call_args_list[index][0]
+    return fmt % tuple(args)
 
 
 class TestMalformedBodies:
@@ -96,6 +106,55 @@ class TestWellFormedReports:
         assert report_logger.warning.call_count == 2
 
 
+class TestDocumentIsRecorded:
+    """The logged line names the page the violation came from.
+
+    ``source-file`` is the script, which for a bundled SPA is the same chunk on
+    every route, so without the document a reviewer cannot tell which page to
+    look at.
+    """
+
+    def test_legacy_document_uri_is_logged(self, tenant, report_logger):
+        resp = _post(
+            {
+                "csp-report": {
+                    "document-uri": "https://tenant.example/invoices",
+                    "violated-directive": "frame-src",
+                    "blocked-uri": "blob",
+                }
+            }
+        )
+
+        assert resp.status_code == 204
+        line = _rendered(report_logger)
+        assert "doc=" in line
+        assert "https://tenant.example/invoices" in line
+
+    def test_reporting_api_document_url_is_logged(self, tenant, report_logger):
+        resp = _post(
+            [
+                {
+                    "body": {
+                        "documentURL": "https://tenant.example/abos",
+                        "effectiveDirective": "worker-src",
+                    }
+                }
+            ]
+        )
+
+        assert resp.status_code == 204
+        line = _rendered(report_logger)
+        assert "doc=" in line
+        assert "https://tenant.example/abos" in line
+
+    def test_a_report_carrying_no_document_still_logs(self, tenant, report_logger):
+        resp = _post({"csp-report": {"violated-directive": "img-src"}})
+
+        assert resp.status_code == 204
+        assert report_logger.warning.call_count == 1
+        assert "doc=None" in _rendered(report_logger)
+
+
 class TestFloodProtection:
     """One anonymous POST must not be able to write an unbounded number of log
     lines: the container ships every logger to a single capped stream, so a
@@ -115,6 +174,32 @@ class TestFloodProtection:
 
         assert resp.status_code == 204
         assert report_logger.warning.call_count == 3
+
+    def test_one_report_cannot_write_an_oversized_line(self, tenant, report_logger):
+        """The per-POST cap bounds how MANY lines a body writes, not how wide
+        each one is. Every field of a report is attacker-controlled, so a body
+        that fits under the size cap must still not turn into a log line of
+        comparable size."""
+        long_document = "A" * 20_000
+        payload = {
+            "csp-report": {
+                "document-uri": long_document,
+                "violated-directive": "D" * 5_000,
+                "blocked-uri": "B" * 15_000,
+                "source-file": "C" * 10_000,
+            }
+        }
+        assert len(json.dumps(payload)) < _MAX_REPORT_BYTES
+
+        resp = _post(payload)
+
+        assert resp.status_code == 204
+        line = _rendered(report_logger)
+        # Four fields at the per-field bound, plus the host / ip / literals.
+        assert len(line) < 2_500
+        assert long_document not in line
+        # Truncated, not dropped: enough of the document survives to identify it.
+        assert "A" * _MAX_LOGGED_FIELD_CHARS in line
 
     def test_a_body_over_the_size_cap_is_dropped_unread(self, tenant, report_logger):
         oversized = json.dumps([{"effectiveDirective": "script-src"}] * 5000)

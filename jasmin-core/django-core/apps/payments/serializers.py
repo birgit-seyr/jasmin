@@ -8,10 +8,29 @@ from rest_framework import serializers
 from apps.commissioning.serializers.serializers_mixin import (
     MemberStringFieldMixin,
 )
+from apps.shared.iban_validator import validate_iban as validate_iban_format
 from apps.shared.pii_masking import MaskedIBANFieldMixin
 
-from .errors import MandateReferenceLocked, SepaMandateSignedInFuture
+from .errors import IbanLocked, MandateReferenceLocked, SepaMandateSignedInFuture
 from .models import BillingProfile, BillingRun, ChargeSchedule
+
+
+def normalized_iban(value) -> str:
+    """Canonical form of an IBAN: no whitespace, upper-case.
+
+    An IBAN identifies the same account however it is typed. The office pastes
+    them off bank statements, so the same account arrives as ``DE89 3704 ...``
+    on one save and unspaced on the next; comparing the raw strings would read
+    a re-typed identical IBAN as a change of account.
+
+    This is also the form that gets STORED. pain.008.001.02 restricts the
+    debtor IBAN to ``[A-Z]{2}[0-9]{2}[a-zA-Z0-9]{1,30}`` and the export only
+    strips spaces, so a lower-cased IBAN kept as typed fails XSD validation —
+    which aborts the whole batch, for every member in the run, not just this
+    one. Normalising on the way in keeps the comparison form and the stored
+    form the same.
+    """
+    return "".join(str(value or "").split()).upper()
 
 
 def validate_mandate_signature_date(value):
@@ -111,6 +130,30 @@ class BillingProfileSerializer(
             )
         return value
 
+    def validate_iban(self, value):
+        # The bank holds the mandate reference against the account the member
+        # authorised, and the pain.008 debtor block reads the reference, the
+        # signature date and the IBAN off this one row while deriving the
+        # sequence type from ``sepa_mandate_first_use_at``. Swapping the IBAN
+        # under a used mandate would therefore go out as an RCUR quoting a
+        # reference the bank holds against the previous account. Pointing a
+        # mandate at another account is a new mandate, so the office uses the
+        # ``replace_mandate`` action instead. Resubmitting the same account is
+        # accepted: the office SEPA form re-enters the IBAN on every save, in
+        # whatever formatting the operator typed — which is also why the
+        # canonical form is what gets stored, not the typed one.
+        if (
+            self.instance is not None
+            and self.instance.sepa_mandate_first_use_at is not None
+            and normalized_iban(value) != normalized_iban(self.instance.iban)
+        ):
+            raise IbanLocked(
+                "The IBAN cannot be changed after the mandate has been used. "
+                "Replace the mandate to collect from another account.",
+                field="iban",
+            )
+        return normalized_iban(value)
+
     def validate_sepa_mandate_signed_at(self, value):
         return validate_mandate_signature_date(value)
 
@@ -126,6 +169,31 @@ class BillingProfileMemberSerializer(BillingProfileSerializer):
 
     class Meta(BillingProfileSerializer.Meta):
         fields = [f for f in BillingProfileSerializer.Meta.fields if f != "notes"]
+
+
+class ReplaceMandateSerializer(serializers.Serializer):
+    """Request body for the billing-profile ``replace_mandate`` action.
+
+    Replacing is the deliberate alternative to editing ``iban`` on a used
+    mandate, which is refused. The new mandate reference is minted server-side:
+    it is the identifier the bank will match future collections against, so it
+    is never accepted from the client.
+    """
+
+    iban = serializers.CharField(validators=[validate_iban_format])
+    # Left unchanged when omitted — the account holder is usually the same
+    # person moving banks.
+    account_holder = serializers.CharField(required=False, allow_blank=False)
+    # The date the member signed the NEW mandate; defaults to today.
+    sepa_mandate_signed_at = serializers.DateField(required=False)
+
+    def validate_iban(self, value):
+        # Stored canonically, like every other IBAN write: the pain.008 debtor
+        # block only strips spaces, and the XSD refuses a lower-case IBAN.
+        return normalized_iban(value)
+
+    def validate_sepa_mandate_signed_at(self, value):
+        return validate_mandate_signature_date(value)
 
 
 class SepaMandateStatusSerializer(serializers.Serializer):

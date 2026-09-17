@@ -50,7 +50,7 @@ export const complexityPins = {
 // Longest function per file, blank lines and comments excluded.
 export const functionLengthPins = {
   "src/features/abos/hooks/columns/useAbosColumns.tsx": 590,
-  "src/features/abos/modals/NewSubscriptionModal.tsx": 1046,
+  "src/features/abos/modals/NewSubscriptionModal.tsx": 901,
   "src/features/abos/pages/WaitingListAbos.tsx": 470,
   "src/features/commissioning/hooks/columns/useHarvestingListColumns.tsx": 484,
   "src/features/commissioning/hooks/columns/useOrderColumns.tsx": 433,
@@ -83,7 +83,7 @@ export const functionLengthPins = {
 // Total file length, blank lines and comments INCLUDED — a file you have to
 // scroll is a file you have to scroll.
 export const fileLengthPins = {
-  "src/features/abos/modals/NewSubscriptionModal.tsx": 1443,
+  "src/features/abos/modals/NewSubscriptionModal.tsx": 1280,
   "src/features/commissioning/pages/PlanningShareContentBase.tsx": 1252,
   "src/features/members/pages/Members.tsx": 1078,
   "src/shared/tables/BasicEditableTable/EditableTable.tsx": 1278,

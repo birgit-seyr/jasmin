@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from apps.authz.permissions import IsOffice, RolePermissionsMixin
 from core.serializers import ErrorResponseSerializer
 
-from ..errors import CommissioningError
+from ..errors import CommissioningError, ShareImportValidationFailed
 from ..models import (
     ExternalCodeMapping,
     ExternalShareDemand,
@@ -33,6 +33,42 @@ from ..serializers.imports_serializer import (
 )
 from ..services.share_import_service import ShareImportService
 from ..utils.query_params import validate_query_params
+
+
+def _validation_failed_error() -> ShareImportValidationFailed:
+    """The refusal both import paths answer with when row validation fails.
+
+    It only says the file as a whole is unusable — WHICH rows failed and why
+    travels in the same body, in the batch's ``validation_report``.
+    """
+
+    return ShareImportValidationFailed(
+        "Some rows in the file are invalid, so the import was not applied. "
+        "The per-row report shows which rows are affected and what to fix."
+    )
+
+
+def _batch_with_error_envelope() -> dict[str, Any]:
+    """Raw schema for "the batch, with the canonical error envelope beside it".
+
+    The preview's validation-failed body keeps the batch at the top level and
+    carries the error keys next to it, so the documented schema is the union of
+    the two existing components.
+
+    Composed by reference rather than by copying ``ShareImportBatchSerializer``
+    field instances into a second component: a copy is rebound onto a bare
+    serializer that has neither ``get_file_url`` nor a ``Meta.model``, which
+    drops ``file_url``'s nullability and leaves ``created_by``/``applied_by``
+    untyped — and its duplicate ``status`` choice set costs the published
+    ``ShareImportBatchStatusEnum`` its name.
+    """
+
+    return {
+        "allOf": [
+            {"$ref": "#/components/schemas/ShareImportBatch"},
+            {"$ref": "#/components/schemas/ErrorResponse"},
+        ]
+    }
 
 
 class ExternalCodeMappingViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
@@ -153,12 +189,16 @@ class ShareImportBatchViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSe
         request=None,
         responses={
             200: ShareImportBatchSerializer,
-            # NOT the canonical error envelope: a failed validation returns
-            # the batch itself (status + validation_report) so the UI can
-            # render the per-row error table.
+            # A superset of the canonical error envelope: the batch itself
+            # (status + validation_report) stays at the top level so the UI can
+            # render the per-row error table, and the ``code``/``message`` pair
+            # sits beside it so the client can translate the refusal.
             400: OpenApiResponse(
-                response=ShareImportBatchSerializer,
-                description="Validation failed — batch with validation_report.",
+                response=_batch_with_error_envelope(),
+                description=(
+                    "Validation failed — batch with validation_report, "
+                    "plus the error code and message."
+                ),
             ),
         },
     )
@@ -169,7 +209,12 @@ class ShareImportBatchViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSe
         if not outcome.is_ok:
             batch.refresh_from_db()
             return Response(
-                ShareImportBatchSerializer(batch, context={"request": request}).data,
+                {
+                    **ShareImportBatchSerializer(
+                        batch, context={"request": request}
+                    ).data,
+                    **_validation_failed_error().to_dict(),
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         ShareImportService.build_preview(batch, outcome.rows)
@@ -184,13 +229,16 @@ class ShareImportBatchViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSe
         request=None,
         responses={
             200: ShareImportBatchSerializer,
-            # Validation-failed shape (``detail`` + ``batch``) — the frontend
-            # surfaces ``detail`` and the batch carries the per-row report.
-            # The defensive ``CommissioningError`` path below maps to the
-            # canonical error envelope instead (rare).
+            # Validation-failed shape: the ``code``/``message`` pair the client
+            # translates, the nested ``batch`` carrying the per-row report, and
+            # ``detail`` for callers that already read it. The defensive
+            # ``CommissioningError`` path below maps to the canonical error
+            # envelope instead (rare).
             400: inline_serializer(
                 name="ShareImportApplyValidationFailedResponse",
                 fields={
+                    "code": drf_serializers.CharField(),
+                    "message": drf_serializers.CharField(),
                     "detail": drf_serializers.CharField(),
                     "batch": ShareImportBatchSerializer(),
                 },
@@ -205,6 +253,7 @@ class ShareImportBatchViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSe
             batch.refresh_from_db()
             return Response(
                 {
+                    **_validation_failed_error().to_dict(),
                     "detail": "Validation failed; cannot apply.",
                     "batch": ShareImportBatchSerializer(
                         batch, context={"request": request}

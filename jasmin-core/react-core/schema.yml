@@ -13979,7 +13979,10 @@ paths:
         name: offer_group
         schema:
           type: string
-        description: Offer group ID (Jasmin ID format)
+        description: 'Offer group ID (Jasmin ID format). Ignored whenever the scope
+          resolves from a reseller: that reseller''s own offer group wins. A caller
+          without an office/admin/management role is always scoped to their own linked
+          reseller, so for them this parameter never applies, sent or not.'
       - name: offset
         required: false
         in: query
@@ -13992,7 +13995,11 @@ paths:
         name: reseller
         schema:
           type: string
-        description: Reseller ID (Jasmin ID format)
+        description: Reseller ID (Jasmin ID format). Also scopes the amount_ordered
+          totals to this reseller. Its own offer group wins over an offer_group sent
+          alongside it, and a reseller with no offer group matches no offer. A caller
+          without an office/admin/management role is forced to their own linked reseller
+          whether or not this is sent.
       - in: query
         name: year
         schema:
@@ -20104,8 +20111,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ShareImportBatch'
-          description: Validation failed — batch with validation_report.
+                allOf:
+                - $ref: '#/components/schemas/ShareImportBatch'
+                - $ref: '#/components/schemas/ErrorResponse'
+          description: Validation failed — batch with validation_report, plus the
+            error code and message.
         '401':
           content:
             application/json:
@@ -26599,13 +26609,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/BillingProfile'
           description: ''
-        '401':
+        '400':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
-        '400':
+          description: ''
+        '401':
           content:
             application/json:
               schema:
@@ -26666,13 +26676,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/BillingProfile'
           description: ''
-        '401':
+        '400':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
-        '400':
+          description: ''
+        '401':
           content:
             application/json:
               schema:
@@ -26735,6 +26745,73 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/payments/billing_profiles/{id}/replace_mandate/:
+    post:
+      operationId: payments_billing_profiles_replace_mandate_create
+      description: 'Issues a NEW SEPA mandate for this profile against the submitted
+        IBAN: a freshly minted ``sepa_mandate_reference``, the new signature date
+        (today unless given), and a cleared ``sepa_mandate_first_use_at``, so the
+        next export announces the mandate as FRST. This is the deliberate alternative
+        to editing ``iban`` on a mandate that has already been collected against,
+        which is refused: the bank matches collections to the reference it holds against
+        the authorised account, so another account needs another mandate rather than
+        a swap underneath the old reference. Step-up authentication is required, as
+        for any IBAN write.'
+      summary: Replace the SEPA mandate (Office only)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der billing profile identifiziert.
+        required: true
+      tags:
+      - Payments — Billing profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceMandate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReplaceMandate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReplaceMandate'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingProfile'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/payments/billing_profiles/mandate_status/:
     get:
       operationId: payments_billing_profiles_mandate_status_list
@@ -37772,6 +37849,25 @@ components:
           type: boolean
       required:
       - verified
+    ReplaceMandate:
+      type: object
+      description: |-
+        Request body for the billing-profile ``replace_mandate`` action.
+
+        Replacing is the deliberate alternative to editing ``iban`` on a used
+        mandate, which is refused. The new mandate reference is minted server-side:
+        it is the identifier the bank will match future collections against, so it
+        is never accepted from the client.
+      properties:
+        iban:
+          type: string
+        account_holder:
+          type: string
+        sepa_mandate_signed_at:
+          type: string
+          format: date
+      required:
+      - iban
     Reseller:
       type: object
       description: |-
@@ -40256,13 +40352,19 @@ components:
     ShareImportApplyValidationFailedResponse:
       type: object
       properties:
+        code:
+          type: string
+        message:
+          type: string
         detail:
           type: string
         batch:
           $ref: '#/components/schemas/ShareImportBatch'
       required:
       - batch
+      - code
       - detail
+      - message
     ShareImportBatch:
       type: object
       properties:

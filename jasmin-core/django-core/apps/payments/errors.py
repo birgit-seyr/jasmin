@@ -82,6 +82,19 @@ class MandateReferenceLocked(BadRequestError):
     code = "billing_profile.mandate_reference_locked"
 
 
+class IbanLocked(BadRequestError):
+    """The IBAN can no longer be changed: the mandate has been used
+    (``sepa_mandate_first_use_at`` is stamped), and the bank holds that mandate
+    reference against the account the member authorised. Re-pointing a live
+    mandate at another account is not an edit — it is a new mandate, so the
+    office replaces the mandate (new reference for the new account) rather than
+    swapping the IBAN underneath the old one. Resubmitting the SAME IBAN is
+    accepted; the office SEPA form sends the whole mandate block back on every
+    save."""
+
+    code = "billing_profile.iban_locked"
+
+
 class SepaMandateSignedInFuture(BadRequestError):
     """``sepa_mandate_signed_at`` lies in the future. A mandate cannot be signed
     after today, and such a value aborts the entire pain.008 batch at export
@@ -101,5 +114,6 @@ __all__ = [
     "SepaExportInvalid",
     "BillingRunMixedCurrency",
     "MandateReferenceLocked",
+    "IbanLocked",
     "SepaMandateSignedInFuture",
 ]

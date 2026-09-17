@@ -50,5 +50,12 @@
   "column_tooltip": "SEPA mandate active during the subscription term",
   "mandate_active_for_term": "Active during this subscription",
   "no_profile": "No SEPA profile for this member.",
-  "view_details": "View details"
+  "view_details": "View details",
+  "mandate_in_use_title": "Mandate already in use",
+  "mandate_in_use_notice": "This mandate has already been collected against. The bank details can only change by issuing a NEW mandate: the system mints a new mandate reference, the next collection goes out as a first direct debit (FRST), and any paper signature has to be filed again. Without this option the bank details stay as they are — the account holder, signature date and paper confirmation can still be saved.",
+  "replace_mandate_confirm": "Issue a new mandate and change the bank details",
+  "iban_locked_hint": "Locked while the existing mandate stays in force. To change it, select \"Issue a new mandate\" above.",
+  "mandate_reference_replaced_hint": "A new mandate reference is minted automatically for the new mandate.",
+  "mandate_reference_locked_hint": "Locked while the existing mandate stays in force — the bank matches collections to this reference. To change it, select \"Issue a new mandate\" above.",
+  "mandate_in_use_member_notice": "This mandate has already been collected against. The bank details can no longer be changed here — that requires a new mandate. Please contact the office."
 }

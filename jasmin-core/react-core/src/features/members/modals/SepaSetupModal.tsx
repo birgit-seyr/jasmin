@@ -28,6 +28,7 @@ import {
   usePaymentsBillingProfilesCreate,
   usePaymentsBillingProfilesList,
   usePaymentsBillingProfilesPartialUpdate,
+  usePaymentsBillingProfilesReplaceMandateCreate,
 } from "@shared/api/generated/payments-—-billing-profiles/payments-—-billing-profiles";
 import ConsentBlock, {
   ConsentDocumentKind,
@@ -60,6 +61,21 @@ interface FormValues {
   /** Office-only: a manually-set mandate reference. Blank → the backend
    *  auto-generates one on save. */
   sepa_mandate_reference?: string;
+}
+
+/**
+ * Which hint sits under the mandate-reference field. The reference is what the
+ * bank matches collections against, so a mandate already in use keeps the one
+ * it has (the backend refuses any other value), a replacement gets a fresh one
+ * minted server-side, and an unused mandate may be given one by hand.
+ */
+function mandateReferenceHintKey(
+  ibanLocked: boolean,
+  replacingMandate: boolean,
+): string {
+  if (ibanLocked) return "sepa.mandate_reference_locked_hint";
+  if (replacingMandate) return "sepa.mandate_reference_replaced_hint";
+  return "sepa.mandate_reference_auto_hint";
 }
 
 /**
@@ -99,6 +115,10 @@ export default function SepaSetupModal({
   // paper checkbox only appears when the tenant requires a paper signature.
   const [signedDate, setSignedDate] = useState<Dayjs>(dayjs());
   const [paperReceived, setPaperReceived] = useState(false);
+  // Office-only opt-in: issue a NEW mandate for a different account (see
+  // ``mandateInUse``). Off by default — the account only changes when the
+  // office says so.
+  const [replacingMandate, setReplacingMandate] = useState(false);
   const requiresPaperSignature = Boolean(
     getSetting("requires_paper_signature_for_sepa_mandate", false),
   );
@@ -136,6 +156,7 @@ export default function SepaSetupModal({
         : dayjs(),
     );
     setPaperReceived(Boolean(existing?.sepa_mandate_paper_received_at));
+    setReplacingMandate(false);
     if (officeMode) {
       form.setFieldsValue({
         sepa_mandate_reference: existing?.sepa_mandate_reference ?? undefined,
@@ -143,8 +164,21 @@ export default function SepaSetupModal({
     }
   }, [open, existing, form, officeMode]);
 
+  // A mandate the bank has already collected against is pinned to the account
+  // the member authorised: its reference is what the bank matches collections
+  // to, so re-pointing it at a different IBAN would emit an RCUR quoting a
+  // reference held against the old account. The backend refuses an ``iban``
+  // change on such a profile; replacing it is a separate, office-only action.
+  const mandateAlreadyUsed = Boolean(existing?.sepa_mandate_first_use_at);
+  const mandateInUse = officeMode && mandateAlreadyUsed;
+  // The submitted IBAN can't be compared against the stored one (the API only
+  // ever returns it masked), so the account is held still until the office
+  // explicitly opts into a replacement. Everything else stays editable.
+  const ibanLocked = mandateInUse && !replacingMandate;
+
   const createMutation = usePaymentsBillingProfilesCreate();
   const patchMutation = usePaymentsBillingProfilesPartialUpdate();
+  const replaceMandateMutation = usePaymentsBillingProfilesReplaceMandateCreate();
 
   const handleSubmit = async () => {
     setSubmitError(null);
@@ -187,7 +221,21 @@ export default function SepaSetupModal({
         officeMode && values.sepa_mandate_reference?.trim()
           ? { sepa_mandate_reference: values.sepa_mandate_reference.trim() }
           : {};
-      if (existing?.id) {
+      if (existing?.id && replacingMandate) {
+        // Replacing is its own server-side operation: it mints the new mandate
+        // reference (never accepted from here — it is what the bank matches
+        // collections against), clears the first-use stamp so the next export
+        // announces the account as FRST, drops the paper stamp filed against
+        // the retired mandate, and re-arms the SEPA path.
+        await replaceMandateMutation.mutateAsync({
+          id: existing.id,
+          data: {
+            iban: values.iban,
+            account_holder: values.account_holder,
+            sepa_mandate_signed_at: signedAt,
+          },
+        });
+      } else if (existing?.id) {
         await patchMutation.mutateAsync({
           id: existing.id,
           data: {
@@ -200,7 +248,10 @@ export default function SepaSetupModal({
             // interceptor handles the challenge transparently.)
             payment_method: PaymentMethodEnum.SEPA_DD,
             is_active: true,
-            iban: values.iban,
+            // A mandate already in use keeps its account: the IBAN is left out
+            // of the payload entirely, so re-saving the account holder, the
+            // signed date or the paper confirmation still works.
+            ...(ibanLocked ? {} : { iban: values.iban }),
             account_holder: values.account_holder,
             sepa_mandate_signed_at: signedAt,
             ...paperFields,
@@ -288,6 +339,36 @@ export default function SepaSetupModal({
             )}
           </Space>
         )}
+        {mandateInUse && (
+          <Alert
+            type="warning"
+            showIcon
+            message={t("sepa.mandate_in_use_title")}
+            description={
+              <Space direction="vertical" size={4} className="w-full">
+                <Text>{t("sepa.mandate_in_use_notice")}</Text>
+                <Checkbox
+                  checked={replacingMandate}
+                  onChange={(e) => setReplacingMandate(e.target.checked)}
+                  aria-label={t("sepa.replace_mandate_confirm")}
+                >
+                  {t("sepa.replace_mandate_confirm")}
+                </Checkbox>
+              </Space>
+            }
+          />
+        )}
+        {!officeMode && mandateAlreadyUsed && (
+          // Issuing a new mandate is office-only, so self-service has no route
+          // to a different account: say where to go instead of letting the save
+          // run into the backend lock.
+          <Alert
+            type="warning"
+            showIcon
+            message={t("sepa.mandate_in_use_title")}
+            description={t("sepa.mandate_in_use_member_notice")}
+          />
+        )}
         <Paragraph type="secondary">
           {t(officeMode ? "sepa.office_setup_intro" : "sepa.setup_intro")}
         </Paragraph>
@@ -317,20 +398,28 @@ export default function SepaSetupModal({
           <Form.Item
             label="IBAN"
             name="iban"
-            rules={[
-              {
-                required: true,
-                message: t("sepa.iban_required"),
-              },
-              {
-                pattern: /^[A-Z0-9 ]{15,34}$/i,
-                message: t("sepa.iban_invalid"),
-              },
-            ]}
+            extra={ibanLocked ? t("sepa.iban_locked_hint") : undefined}
+            // A locked IBAN is never sent, so it carries no rules either —
+            // demanding a value the submit drops would be a dead end.
+            rules={
+              ibanLocked
+                ? []
+                : [
+                    {
+                      required: true,
+                      message: t("sepa.iban_required"),
+                    },
+                    {
+                      pattern: /^[A-Z0-9 ]{15,34}$/i,
+                      message: t("sepa.iban_invalid"),
+                    },
+                  ]
+            }
           >
             <Input
               placeholder="DE89 3704 0044 0532 0130 00"
               autoComplete="off"
+              disabled={ibanLocked}
             />
           </Form.Item>
           <Form.Item
@@ -349,9 +438,16 @@ export default function SepaSetupModal({
             <Form.Item
               label={t("sepa.mandate_reference")}
               name="sepa_mandate_reference"
-              extra={t("sepa.mandate_reference_auto_hint")}
+              extra={t(mandateReferenceHintKey(ibanLocked, replacingMandate))}
             >
-              <Input autoComplete="off" />
+              {/* The reference is what the bank matches collections against, so
+                  a mandate already in use keeps it: the backend refuses any
+                  value that differs from the stored one. The seeded value stays
+                  in the form store and is resent verbatim. */}
+              <Input
+                autoComplete="off"
+                disabled={ibanLocked || replacingMandate}
+              />
             </Form.Item>
           )}
         </Form>
@@ -370,8 +466,12 @@ export default function SepaSetupModal({
               />
             </div>
             {requiresPaperSignature && (
+              // A replacement retires the paper stamp with the mandate it was
+              // filed against, so the new mandate starts with the signature
+              // outstanding whatever the box said.
               <Checkbox
-                checked={paperReceived}
+                checked={replacingMandate ? false : paperReceived}
+                disabled={replacingMandate}
                 onChange={(e) => setPaperReceived(e.target.checked)}
               >
                 {t("sepa.paper_signature_received")}

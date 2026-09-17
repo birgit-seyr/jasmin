@@ -9,6 +9,7 @@ additional share's whole period. Enforced at subscription create + draft update.
 from __future__ import annotations
 
 import datetime
+from typing import Any
 
 from ..errors import AdditionalShareExceedsBase, AdditionalShareRequiresBase
 from ..models import ShareTypeVariation, Subscription
@@ -79,3 +80,53 @@ def assert_additional_share_has_base(
 
     if valid_until is not None and max(covering_ends) < valid_until:
         raise AdditionalShareExceedsBase(suggested_valid_until=max(covering_ends))
+
+
+def _as_id(value: Any) -> Any:
+    """Normalise an FK input to its pk.
+
+    The serializer sends ``member`` / ``share_type_variation`` as id strings,
+    but the update path also accepts model instances (the setattr loop in
+    ``update_draft_subscription`` assigns those straight to the FK). Both shapes
+    have to compare like-for-like against the stored ``*_id``, and the pk is
+    what may reach the rule's queryset: ``TapirModel.id`` is a ``CharField``, so
+    filtering it by an instance stringifies the instance and silently matches
+    nothing.
+    """
+    return getattr(value, "pk", value)
+
+
+def assert_additional_share_has_base_on_update(
+    subscription: Subscription,
+    validated_data: dict[str, Any],
+) -> None:
+    """Apply the rule to a draft edit — but only when the edit MOVES one of the
+    inputs the rule reads (member, variation, ``valid_from``, ``valid_until``).
+
+    Clients PATCH whole rows back, so a field's presence in ``validated_data``
+    carries no intent; only a value that differs from the stored one counts as a
+    move. An edit that leaves all four where they are (a station change, a
+    quantity fix) is therefore never held to account for the row's pre-existing
+    state, which keeps an add-on whose base has gone missing repairable instead
+    of delete-and-recreate. An edit that does move one of them is judged on the
+    resulting values, so no write can introduce or re-assert a violation.
+    """
+    current: dict[str, Any] = {
+        "member": subscription.member_id,
+        "share_type_variation": subscription.share_type_variation_id,
+        "valid_from": subscription.valid_from,
+        "valid_until": subscription.valid_until,
+    }
+    resulting = {
+        field: _as_id(validated_data[field]) if field in validated_data else stored
+        for field, stored in current.items()
+    }
+    if resulting == current:
+        return
+
+    assert_additional_share_has_base(
+        member_id=resulting["member"],
+        share_type_variation_id=resulting["share_type_variation"],
+        valid_from=resulting["valid_from"],
+        valid_until=resulting["valid_until"],
+    )

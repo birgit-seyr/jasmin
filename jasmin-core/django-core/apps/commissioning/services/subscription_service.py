@@ -33,7 +33,10 @@ from ..models import (
     ShareTypeVariation,
     Subscription,
 )
-from .additional_share_policy import assert_additional_share_has_base
+from .additional_share_policy import (
+    assert_additional_share_has_base,
+    assert_additional_share_has_base_on_update,
+)
 from .capacity_reservation_service import CapacityReservationService
 from .delivery_cycle import filter_weeks_by_delivery_cycle
 from .variation_capacity_service import VariationCapacityService
@@ -213,17 +216,12 @@ class SubscriptionService:
         don't yet have shares / deliveries / charges. Caller must ensure
         ``subscription.admin_confirmed is False``.
         """
-        # Re-check the additional-share rule against the RESULTING term/variation
-        # (a draft edit could switch to a Zusatz or extend it past its base).
-        assert_additional_share_has_base(
-            member_id=validated_data.get("member") or subscription.member_id,
-            share_type_variation_id=(
-                validated_data.get("share_type_variation")
-                or subscription.share_type_variation_id
-            ),
-            valid_from=validated_data.get("valid_from", subscription.valid_from),
-            valid_until=validated_data.get("valid_until", subscription.valid_until),
-        )
+        # Re-check the additional-share rule against the RESULTING
+        # term/variation, but only when this edit actually moves one of them (a
+        # draft edit could switch to a Zusatz or extend it past its base). An
+        # edit elsewhere on the row leaves the rule's inputs untouched and must
+        # stay possible even when they already violate it.
+        assert_additional_share_has_base_on_update(subscription, validated_data)
         previous_station_day_id = subscription.default_delivery_station_day_id
         was_waiting_listed = subscription.on_waiting_list
         for field, value in validated_data.items():

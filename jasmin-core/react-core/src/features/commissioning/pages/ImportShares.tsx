@@ -77,6 +77,27 @@ const STATUS_COLOR: Record<ImportBatchStatus, string> = {
   superseded: "default",
 };
 
+/**
+ * The batch a validation-failed 400 carries: apply nests it under `batch`,
+ * preview returns its fields at the top level. Anything else — a network blip,
+ * a coded refusal with no batch — yields null, so the batch already on screen
+ * stays put.
+ */
+function failedBatchFromError(err: unknown): ShareImportBatch | null {
+  const body = (err as { response?: { data?: unknown } })?.response?.data;
+  if (!body || typeof body !== "object") return null;
+  const nested = (body as { batch?: unknown }).batch;
+  const candidate = nested && typeof nested === "object" ? nested : body;
+  const { id, validation_report: report } = candidate as {
+    id?: unknown;
+    validation_report?: unknown;
+  };
+  if (typeof id !== "string" || typeof report !== "object" || report === null) {
+    return null;
+  }
+  return candidate as ShareImportBatch;
+}
+
 export default function ImportShares() {
   const { t } = useTranslation();
   const { getSetting } = useTenant();
@@ -158,10 +179,18 @@ export default function ImportShares() {
         `${action}: ${(data as unknown as ShareImportBatch).status}`,
       );
     } catch (err: unknown) {
-      // The canonical error envelope carries `message` / `code`, not `detail`,
-      // so reading `detail` alone leaves every JasminError on the untranslated
-      // fallback. The apply endpoint's validation-failed body does use
-      // `detail`, which the shared extractor covers too.
+      // A validation failure answers 400 with the batch that failed. Showing
+      // it keeps the per-row report in step with the file just rejected; the
+      // batch from the last successful action would otherwise stay on screen.
+      // The backend persists that failure before answering, so the history
+      // list is refreshed too — its cached row would otherwise keep the
+      // pre-failure status, and re-selecting it would swap the report on
+      // screen for the stale row's empty one.
+      const failedBatch = failedBatchFromError(err);
+      if (failedBatch) {
+        setActiveBatch(failedBatch);
+        await fetchBatches();
+      }
       notify.error(getErrorMessage(err, t("import_shares.action_failed")));
     } finally {
       setBusy(false);

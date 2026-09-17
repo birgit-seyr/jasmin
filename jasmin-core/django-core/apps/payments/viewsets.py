@@ -40,9 +40,10 @@ from .serializers import (
     ChargeScheduleMonthlyIncomeSerializer,
     ChargeScheduleSerializer,
     CreateBillingRunSerializer,
+    ReplaceMandateSerializer,
     SepaMandateStatusSerializer,
 )
-from .services import BillingRunService, ChargeScheduleService
+from .services import BillingProfileService, BillingRunService, ChargeScheduleService
 
 # The typed query params the payments read endpoints accept (validated via
 # the shared catalogue machinery; a bad or out-of-range value 400s).
@@ -91,10 +92,23 @@ BILLED_INCOME_STATUSES = (*OPEN_CHARGE_STATUSES, ChargeStatus.PAID)
     update=extend_schema(
         tags=["Payments — Billing profiles"],
         summary="Replace a billing profile (Office only)",
+        # A write to a USED mandate is refused with a stable code
+        # (``billing_profile.iban_locked`` /
+        # ``billing_profile.mandate_reference_locked``), so the client can send
+        # the operator to the replace-mandate flow instead of showing a generic
+        # failure. Undocumented, the generated client advertises no 400 here.
+        responses={
+            200: BillingProfileSerializer,
+            400: ErrorResponseSerializer,
+        },
     ),
     partial_update=extend_schema(
         tags=["Payments — Billing profiles"],
         summary="Patch a billing profile (Office only)",
+        responses={
+            200: BillingProfileSerializer,
+            400: ErrorResponseSerializer,
+        },
     ),
     destroy=extend_schema(
         tags=["Payments — Billing profiles"],
@@ -145,10 +159,18 @@ class BillingProfileViewSet(
     _CREATE_EXEMPT_STEP_UP_FIELDS = ("is_active", "payment_method")
 
     def get_permissions(self):
-        from apps.accounts.permissions import requires_step_up_for_fields
+        from apps.accounts.permissions import (
+            RequiresStepUp,
+            requires_step_up_for_fields,
+        )
 
         perms = super().get_permissions()
-        if self.action in {"create", "update", "partial_update"}:
+        if self.action == "replace_mandate":
+            # Unconditional rather than field-conditional: the action always
+            # writes an IBAN and mints a new mandate reference, so there is no
+            # benign payload shape to let through.
+            perms.append(RequiresStepUp())
+        elif self.action in {"create", "update", "partial_update"}:
             fields = self._SEPA_SENSITIVE_FIELDS
             if self.action == "create":
                 fields = tuple(
@@ -231,6 +253,51 @@ class BillingProfileViewSet(
         )
         data = SepaMandateStatusSerializer(profiles, many=True).data
         return Response(data)
+
+    @extend_schema(
+        tags=["Payments — Billing profiles"],
+        summary="Replace the SEPA mandate (Office only)",
+        description=(
+            "Issues a NEW SEPA mandate for this profile against the submitted "
+            "IBAN: a freshly minted ``sepa_mandate_reference``, the new "
+            "signature date (today unless given), and a cleared "
+            "``sepa_mandate_first_use_at``, so the next export announces the "
+            "mandate as FRST. This is the deliberate alternative to editing "
+            "``iban`` on a mandate that has already been collected against, "
+            "which is refused: the bank matches collections to the reference it "
+            "holds against the authorised account, so another account needs "
+            "another mandate rather than a swap underneath the old reference. "
+            "Step-up authentication is required, as for any IBAN write."
+        ),
+        request=ReplaceMandateSerializer,
+        responses={
+            200: BillingProfileSerializer,
+            400: ErrorResponseSerializer,
+            401: ErrorResponseSerializer,
+            403: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="replace_mandate",
+        permission_classes=[IsOffice],
+    )
+    def replace_mandate(self, request, pk=None):
+        """Issue a new SEPA mandate pointing at another account."""
+        profile = self.get_object()
+        serializer = ReplaceMandateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        profile = BillingProfileService.replace_mandate(
+            profile,
+            iban=serializer.validated_data["iban"],
+            account_holder=serializer.validated_data.get("account_holder"),
+            signed_at=serializer.validated_data.get("sepa_mandate_signed_at"),
+        )
+        return Response(
+            BillingProfileSerializer(profile, context={"request": request}).data
+        )
 
 
 @extend_schema_view(

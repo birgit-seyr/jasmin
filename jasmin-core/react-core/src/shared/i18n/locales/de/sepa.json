@@ -50,5 +50,12 @@
   "column_tooltip": "SEPA-Mandat aktiv im Abo-Zeitraum",
   "mandate_active_for_term": "Aktiv im Abo-Zeitraum",
   "no_profile": "Kein SEPA-Profil für dieses Mitglied.",
-  "view_details": "Details anzeigen"
+  "view_details": "Details anzeigen",
+  "mandate_in_use_title": "Mandat wird bereits genutzt",
+  "mandate_in_use_notice": "Über dieses Mandat wurde bereits eingezogen. Die Bankverbindung lässt sich nur ändern, indem ein NEUES Mandat erteilt wird: Das System vergibt dabei eine neue Mandatsreferenz, der nächste Einzug läuft wieder als Erstlastschrift (FRST), und eine vorhandene Papier-Unterschrift muss neu erfasst werden. Ohne diese Auswahl bleibt die Bankverbindung unverändert – Kontoinhaber, Unterschriftsdatum und Papiereingang lassen sich weiterhin speichern.",
+  "replace_mandate_confirm": "Neues Mandat erteilen und Bankverbindung ändern",
+  "iban_locked_hint": "Gesperrt, solange das bestehende Mandat weiterläuft. Zum Ändern oben „Neues Mandat erteilen“ auswählen.",
+  "mandate_reference_replaced_hint": "Beim neuen Mandat wird die Mandatsreferenz automatisch neu vergeben.",
+  "mandate_reference_locked_hint": "Gesperrt, solange das bestehende Mandat weiterläuft – die Bank ordnet die Einzüge über diese Referenz zu. Zum Ändern oben „Neues Mandat erteilen“ auswählen.",
+  "mandate_in_use_member_notice": "Über dieses Mandat wurde bereits eingezogen. Die Bankverbindung kann hier nicht mehr geändert werden – dafür muss ein neues Mandat erteilt werden. Bitte wende dich dafür an das Büro."
 }

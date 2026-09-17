@@ -25,6 +25,7 @@ vi.mock("react-i18next", () => ({
 const listMock = vi.fn((..._args: unknown[]) => ({ data: [] as unknown[] }));
 const createMutateMock = vi.fn();
 const patchMutateMock = vi.fn();
+const replaceMutateMock = vi.fn();
 vi.mock(
   "@shared/api/generated/payments-—-billing-profiles/payments-—-billing-profiles",
   () => ({
@@ -35,16 +36,21 @@ vi.mock(
     usePaymentsBillingProfilesPartialUpdate: () => ({
       mutateAsync: patchMutateMock,
     }),
+    usePaymentsBillingProfilesReplaceMandateCreate: () => ({
+      mutateAsync: replaceMutateMock,
+    }),
     getPaymentsBillingProfilesListQueryKey: () => ["billing-profiles"],
   }),
 );
 
-// Office fields depend on the tenant + date-format hooks; the base tests
-// render WITHOUT ``officeMode`` so these only need to not throw.
+// Office fields depend on the tenant + date-format hooks. ``getSetting`` hands
+// back the caller's fallback by default, which leaves the paper-signature
+// requirement off; the paper-signature case swaps in its own implementation.
+const getSettingMock = vi.hoisted(() =>
+  vi.fn((_key: string, fallback?: unknown) => fallback),
+);
 vi.mock("@hooks/configuration/useTenant", () => ({
-  useTenant: () => ({
-    getSetting: (_key: string, fallback?: unknown) => fallback,
-  }),
+  useTenant: () => ({ getSetting: getSettingMock }),
 }));
 vi.mock("@hooks/configuration/useDateFormat", () => ({
   useDateFormat: () => ({
@@ -140,9 +146,13 @@ function fillForm() {
 }
 
 beforeEach(() => {
+  getSettingMock
+    .mockReset()
+    .mockImplementation((_key: string, fallback?: unknown) => fallback);
   listMock.mockReset().mockReturnValue({ data: [] });
   createMutateMock.mockReset().mockResolvedValue(undefined);
   patchMutateMock.mockReset().mockResolvedValue(undefined);
+  replaceMutateMock.mockReset().mockResolvedValue(undefined);
   consentCreateMock.mockReset().mockResolvedValue(undefined);
   notifySuccessMock.mockReset();
   notifyErrorMock.mockReset();
@@ -330,5 +340,199 @@ describe("SepaSetupModal", () => {
     expect(consentCreateMock).not.toHaveBeenCalled();
     expect(notifySuccessMock).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A mandate the bank has already collected against (``sepa_mandate_first_use_at``
+ * set) is pinned to the account the member authorised: the backend refuses an
+ * ``iban`` change on it. The client can't tell whether a submitted IBAN differs
+ * from the stored one (the API only returns it masked), so the account is held
+ * still until the office explicitly opts into issuing a new mandate.
+ */
+describe("SepaSetupModal — mandate already in use", () => {
+  const PROFILE_IN_USE = {
+    id: "bp-1",
+    member: MEMBER_ID,
+    iban_masked: "DE89 **** **** **** 3000",
+    account_holder_masked: "M*** B*******",
+    sepa_mandate_first_use_at: "2026-02-03",
+    // The reference the bank matches collections against, and a paper
+    // signature already filed against this mandate.
+    sepa_mandate_reference: "MND-2025-014",
+    sepa_mandate_paper_received_at: "2026-01-20",
+  };
+
+  function renderOfficeModal() {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    const onClose = vi.fn();
+    render(
+      <QueryClientProvider client={client}>
+        <SepaSetupModal open memberId={MEMBER_ID} onClose={onClose} officeMode />
+      </QueryClientProvider>,
+    );
+    return { onClose };
+  }
+
+  function attestAndSubmit() {
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "sepa.office_mandate_confirm" }),
+    );
+    fireEvent.click(screen.getByTestId("primary"));
+  }
+
+  it("leaves the iban out of the PATCH and never replaces while the opt-in is unticked", async () => {
+    listMock.mockReturnValue({ data: [PROFILE_IN_USE] });
+    renderOfficeModal();
+
+    // The account is held still, but everything else still saves.
+    expect(screen.getByLabelText("IBAN")).toBeDisabled();
+    // The reference is locked with the account it belongs to: the backend
+    // refuses any value other than the stored one while the mandate is in use.
+    expect(screen.getByLabelText("sepa.mandate_reference")).toBeDisabled();
+    // Office gets the opt-in, not the member-facing dead-end notice.
+    expect(
+      screen.queryByText("sepa.mandate_in_use_member_notice"),
+    ).toBeNull();
+    fireEvent.change(screen.getByLabelText("sepa.account_holder"), {
+      target: { value: "Mara Beispiel" },
+    });
+    attestAndSubmit();
+
+    await waitFor(() => expect(patchMutateMock).toHaveBeenCalledTimes(1));
+    expect(replaceMutateMock).not.toHaveBeenCalled();
+    const patched = patchMutateMock.mock.calls[0][0] as {
+      id: string;
+      data: Record<string, unknown>;
+    };
+    expect(patched.id).toBe("bp-1");
+    // Sending it would trip the backend lock and fail a save that is only
+    // fixing the account holder.
+    expect(patched.data).not.toHaveProperty("iban");
+    expect(patched.data).toMatchObject({
+      account_holder: "Mara Beispiel",
+      payment_method: "SEPA_DD",
+      // Seeded from the profile and resent verbatim — the backend compares it
+      // against the stored value and refuses anything that differs.
+      sepa_mandate_reference: "MND-2025-014",
+    });
+  });
+
+  it("routes the new account to replace_mandate once the office ticks the opt-in", async () => {
+    listMock.mockReturnValue({ data: [PROFILE_IN_USE] });
+    renderOfficeModal();
+
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "sepa.replace_mandate_confirm" }),
+    );
+    // Opting in unlocks the account field.
+    expect(screen.getByLabelText("IBAN")).toBeEnabled();
+    fireEvent.change(screen.getByLabelText("IBAN"), {
+      target: { value: "DE89370400440532013000" },
+    });
+    fireEvent.change(screen.getByLabelText("sepa.account_holder"), {
+      target: { value: "Mara Beispiel" },
+    });
+    attestAndSubmit();
+
+    await waitFor(() => expect(replaceMutateMock).toHaveBeenCalledTimes(1));
+    expect(patchMutateMock).not.toHaveBeenCalled();
+    expect(replaceMutateMock).toHaveBeenCalledWith({
+      id: "bp-1",
+      data: {
+        iban: "DE89370400440532013000",
+        account_holder: "Mara Beispiel",
+        sepa_mandate_signed_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      },
+    });
+    // The reference the bank matches collections against is minted server-side.
+    const replaced = replaceMutateMock.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(replaced.data).not.toHaveProperty("sepa_mandate_reference");
+  });
+
+  it("keeps the plain PATCH path for a mandate that has never been used", async () => {
+    listMock.mockReturnValue({
+      data: [{ id: "bp-2", member: MEMBER_ID, sepa_mandate_first_use_at: null }],
+    });
+    renderOfficeModal();
+
+    expect(
+      screen.queryByRole("checkbox", { name: "sepa.replace_mandate_confirm" }),
+    ).toBeNull();
+    expect(screen.getByLabelText("IBAN")).toBeEnabled();
+    fillForm();
+    attestAndSubmit();
+
+    await waitFor(() => expect(patchMutateMock).toHaveBeenCalledTimes(1));
+    expect(replaceMutateMock).not.toHaveBeenCalled();
+    expect(patchMutateMock).toHaveBeenCalledWith({
+      id: "bp-2",
+      data: expect.objectContaining({ iban: "DE89370400440532013000" }),
+    });
+  });
+
+  it("member self-service is unaffected — no opt-in offered, iban still PATCHed", async () => {
+    listMock.mockReturnValue({ data: [PROFILE_IN_USE] });
+    renderModal();
+
+    // Replacement is office-only; the member flow keeps today's behaviour.
+    expect(
+      screen.queryByRole("checkbox", { name: "sepa.replace_mandate_confirm" }),
+    ).toBeNull();
+    expect(screen.getByLabelText("IBAN")).toBeEnabled();
+    fillForm();
+    fireEvent.click(screen.getByTestId("accept-consent"));
+    fireEvent.click(screen.getByTestId("primary"));
+
+    await waitFor(() => expect(patchMutateMock).toHaveBeenCalledTimes(1));
+    expect(replaceMutateMock).not.toHaveBeenCalled();
+    expect(patchMutateMock).toHaveBeenCalledWith({
+      id: "bp-1",
+      data: expect.objectContaining({ iban: "DE89370400440532013000" }),
+    });
+  });
+
+  it("tells the member to contact the office instead of offering a replacement", () => {
+    listMock.mockReturnValue({ data: [PROFILE_IN_USE] });
+    renderModal();
+
+    // Issuing a new mandate is office-only, so the member flow names the way
+    // out rather than leaving the backend lock as the only feedback.
+    expect(
+      screen.getByText("sepa.mandate_in_use_member_notice"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("checkbox", { name: "sepa.replace_mandate_confirm" }),
+    ).toBeNull();
+  });
+
+  it("paper-signature tenant: replacing retires the filed signature and the reference stays locked", () => {
+    getSettingMock.mockImplementation((key: string, fallback?: unknown) =>
+      key === "requires_paper_signature_for_sepa_mandate" ? true : fallback,
+    );
+    listMock.mockReturnValue({ data: [PROFILE_IN_USE] });
+    renderOfficeModal();
+
+    const paperCheckbox = () =>
+      screen.getByRole("checkbox", { name: "sepa.paper_signature_received" });
+    // Seeded from the signature filed against the current mandate.
+    expect(paperCheckbox()).toBeChecked();
+    expect(paperCheckbox()).toBeEnabled();
+
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "sepa.replace_mandate_confirm" }),
+    );
+
+    // The replacement clears the paper stamp server-side, so the new mandate
+    // starts with its signature outstanding whatever the box said.
+    expect(paperCheckbox()).not.toBeChecked();
+    expect(paperCheckbox()).toBeDisabled();
+    // The reference is minted server-side for the new mandate and pinned to the
+    // old one until then — never editable from here on a mandate in use.
+    expect(screen.getByLabelText("sepa.mandate_reference")).toBeDisabled();
   });
 });

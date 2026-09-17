@@ -53,8 +53,18 @@ vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
 }));
 
 // SEPA gate: stub the setup modal + return a ready mandate so the save flow
-// isn't blocked (the mandate gate has its own coverage elsewhere).
-vi.mock("@features/members/modals/SepaSetupModal", () => ({ default: () => null }));
+// isn't blocked (the modal has its own suite). The stub records the props it is
+// handed — whether the office can reach the mandate-replacement opt-in from
+// here rests entirely on the ``officeMode`` flag passed down.
+const sepaModal = vi.hoisted(() => ({
+  lastProps: undefined as { officeMode?: boolean } | undefined,
+}));
+vi.mock("@features/members/modals/SepaSetupModal", () => ({
+  default: (props: { officeMode?: boolean }) => {
+    sepaModal.lastProps = props;
+    return null;
+  },
+}));
 vi.mock(
   "@shared/api/generated/payments-—-billing-profiles/payments-—-billing-profiles",
   () => ({
@@ -285,6 +295,7 @@ function fillRequiredFields(price?: string) {
 beforeEach(() => {
   rolesMock.mockReset();
   getSettingMock.mockReset();
+  sepaModal.lastProps = undefined;
   subscriptionTerm.lastOptions = undefined;
   subscribeCreateMock.mockReset().mockResolvedValue(undefined);
   abosCreateMock.mockReset().mockResolvedValue(undefined);
@@ -455,5 +466,35 @@ describe("NewSubscriptionModal — onboarding-mode start date", () => {
     renderModal({ mode: "public", forceTrial: true, onIntent: vi.fn() });
 
     expect(subscriptionTerm.lastOptions).toEqual({ allowPastStart: false });
+  });
+});
+
+/**
+ * The SEPA setup modal reached from this modal's "mandate missing" warning is
+ * the same component the member page uses, and its office-only affordances —
+ * the opt-in that issues a new mandate for a changed bank account — appear only
+ * when it is told it is being driven by the office. Without that flag an office
+ * user editing a member whose mandate has already been collected against lands
+ * on a locked IBAN with no way forward.
+ */
+describe("NewSubscriptionModal — SEPA setup hand-off", () => {
+  const noSettings = (_key: string, fallback?: unknown) => fallback;
+
+  it("office: hands the SEPA modal the office flag", () => {
+    rolesMock.mockReturnValue({ isMemberOnly: false });
+    getSettingMock.mockImplementation(noSettings);
+
+    renderModal();
+
+    expect(sepaModal.lastProps?.officeMode).toBe(true);
+  });
+
+  it("member self-service: the SEPA modal stays in member mode", () => {
+    rolesMock.mockReturnValue({ isMemberOnly: true });
+    getSettingMock.mockImplementation(noSettings);
+
+    renderModal();
+
+    expect(sepaModal.lastProps?.officeMode).toBe(false);
   });
 });

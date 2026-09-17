@@ -8,6 +8,10 @@ actually does on a bare call. Two lies are possible and both are caught here:
 * documented optional, refused at runtime — the generated client type says the
   call is legal and the server 400s.
 
+A third lie is about what a parameter does rather than whether it is required:
+two parameters that select overlapping scope, where one silently overrides the
+other and the schema says nothing about which wins.
+
 The schema is the one drf-spectacular emits, so these assertions fail if an
 ``@extend_schema`` and its ``validate_query_params`` call drift apart.
 """
@@ -164,3 +168,27 @@ class TestDocumentedQueryParamContract:
         parameters = _query_parameters(path)
         for name in ("date_from", "date_to"):
             assert parameters[name]["schema"] == {"type": "string", "format": "date"}
+
+
+_OFFERS_PATH = "/api/commissioning/offers/"
+
+
+@pytest.mark.django_db
+class TestOffersScopePrecedenceIsDocumented:
+    """The offers list resolves its group scope from ``reseller``, so neither
+    scope parameter may be documented without naming the other.
+
+    Only the cross-reference is asserted, not the prose around it: the
+    behaviour itself is guarded by ``TestOfferResellerAndOfferGroupTogether``
+    in ``test_resellers_viewsets.py``.
+    """
+
+    def test_reseller_names_the_parameter_it_overrides(self):
+        description = _query_parameters(_OFFERS_PATH)["reseller"]["description"]
+
+        assert "offer_group" in description
+
+    def test_offer_group_names_the_parameter_that_overrides_it(self):
+        description = _query_parameters(_OFFERS_PATH)["offer_group"]["description"]
+
+        assert "reseller" in description

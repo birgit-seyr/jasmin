@@ -8,6 +8,8 @@ import pytest
 import time_machine
 
 from apps.commissioning.errors import (
+    AdditionalShareExceedsBase,
+    AdditionalShareRequiresBase,
     CancellationAfterValidUntil,
     CancellationBeforeValidFrom,
     CancellationInPast,
@@ -22,7 +24,9 @@ from apps.commissioning.tests.factories import (
     MemberFactory,
     PaymentCycleFactory,
     SharesDeliveryDayFactory,
+    ShareTypeFactory,
     ShareTypeVariationFactory,
+    SubscriptionFactory,
 )
 
 
@@ -424,3 +428,189 @@ class TestCancelSubscription:
                 effective_at=datetime.date(2026, 3, 22),
             )
         assert exc.value.code == "subscription.cancel.in_past"
+
+
+# ---------------------------------------------------------------------------
+# update_draft_subscription — the additional-share ("Zusatz") base rule
+# ---------------------------------------------------------------------------
+def _addon_variation(size="M"):
+    # ``ShareTypeFactory`` gets-or-creates by ``share_option``, so two add-on
+    # variations share one share type and need distinct sizes to satisfy
+    # ``sharetypevariation_one_open_per_type_size``.
+    return ShareTypeVariationFactory(
+        share_type=ShareTypeFactory(
+            share_option="HONEY_SHARE", is_additional_share_type=True
+        ),
+        size=size,
+    )
+
+
+def _base_variation(size="M"):
+    return ShareTypeVariationFactory(
+        share_type=ShareTypeFactory(
+            share_option="HARVEST_SHARE", is_additional_share_type=False
+        ),
+        size=size,
+    )
+
+
+# The add-on draft's own term, and the two base terms it is judged against: one
+# outlasting the draft, one ending between the draft's end and _LATER_SUNDAY.
+_ADDON_FROM = datetime.date(2026, 2, 2)  # Monday
+_ADDON_UNTIL = datetime.date(2026, 5, 31)  # Sunday
+_BASE_END = datetime.date(2026, 6, 28)  # Sunday
+_LATER_SUNDAY = datetime.date(2026, 8, 30)  # Sunday
+
+
+def _addon_draft_with_base(base_until):
+    """An add-on draft sitting inside a base share of the same member."""
+    member = MemberFactory()
+    base = SubscriptionFactory(
+        member=member,
+        share_type_variation=_base_variation(),
+        valid_from=datetime.date(2026, 1, 5),  # Monday
+        valid_until=base_until,
+    )
+    return SubscriptionFactory(
+        member=member,
+        share_type_variation=_addon_variation(),
+        valid_from=_ADDON_FROM,
+        valid_until=_ADDON_UNTIL,
+        # Its own station, but the base's weekday: a second SharesDeliveryDay on
+        # the same day number would trip its one-open-per-day-number rule.
+        default_delivery_station_day=DeliveryStationDayFactory(
+            delivery_day=base.default_delivery_station_day.delivery_day
+        ),
+    )
+
+
+@pytest.mark.django_db
+class TestUpdateDraftAdditionalShareGuard:
+    """A draft edit answers to the add-on/base rule only when it moves one of
+    the rule's inputs: the member, the variation, or the validity window."""
+
+    @pytest.fixture
+    def orphan_addon_draft(self, tenant):
+        """An add-on draft whose member holds no base share — the state a draft
+        is left in once its base share is gone."""
+        return SubscriptionFactory(
+            share_type_variation=_addon_variation(),
+            valid_from=datetime.date(2026, 2, 2),  # Monday
+            valid_until=datetime.date(2026, 6, 28),  # Sunday
+        )
+
+    def test_edit_of_another_field_is_accepted(self, orphan_addon_draft):
+        # The grid PATCHes the whole row back, so the unchanged member /
+        # variation / window ride along with the single field that moved.
+        SubscriptionService().update_draft_subscription(
+            orphan_addon_draft,
+            {
+                "member": orphan_addon_draft.member_id,
+                "share_type_variation": orphan_addon_draft.share_type_variation_id,
+                "valid_from": orphan_addon_draft.valid_from,
+                "valid_until": orphan_addon_draft.valid_until,
+                "quantity": 2,
+            },
+        )
+
+        orphan_addon_draft.refresh_from_db()
+        assert orphan_addon_draft.quantity == 2
+
+    def test_station_day_edit_is_accepted(self, orphan_addon_draft):
+        # Same weekday, another station: minting a second SharesDeliveryDay for
+        # the same day number would trip its one-open-per-day-number rule.
+        station_day = DeliveryStationDayFactory(
+            delivery_day=orphan_addon_draft.default_delivery_station_day.delivery_day
+        )
+
+        SubscriptionService().update_draft_subscription(
+            orphan_addon_draft, {"default_delivery_station_day": station_day}
+        )
+
+        orphan_addon_draft.refresh_from_db()
+        assert orphan_addon_draft.default_delivery_station_day_id == station_day.pk
+
+    def test_moving_the_variation_is_refused(self, orphan_addon_draft):
+        other_addon = _addon_variation(size="L")
+        with pytest.raises(AdditionalShareRequiresBase):
+            SubscriptionService().update_draft_subscription(
+                orphan_addon_draft, {"share_type_variation": other_addon.id}
+            )
+
+        orphan_addon_draft.refresh_from_db()
+        assert orphan_addon_draft.share_type_variation_id != other_addon.id
+
+    def test_moving_the_window_is_refused(self, orphan_addon_draft):
+        with pytest.raises(AdditionalShareRequiresBase):
+            SubscriptionService().update_draft_subscription(
+                orphan_addon_draft,
+                {"valid_from": datetime.date(2026, 3, 2)},  # Monday
+            )
+
+        orphan_addon_draft.refresh_from_db()
+        assert orphan_addon_draft.valid_from == datetime.date(2026, 2, 2)
+
+    def test_create_still_refuses_an_addon_without_a_base(self, tenant):
+        member = MemberFactory()
+        with pytest.raises(AdditionalShareRequiresBase):
+            SubscriptionService().create_bare_subscription(
+                {
+                    "member": member.id,
+                    "share_type_variation": _addon_variation().id,
+                    "valid_from": datetime.date(2026, 2, 2),
+                    "valid_until": datetime.date(2026, 6, 28),
+                    "quantity": 1,
+                    "payment_cycle": PaymentCycleFactory(),
+                    "default_delivery_station_day": DeliveryStationDayFactory(),
+                }
+            )
+        assert not Subscription.objects.filter(member=member).exists()
+
+    def test_legal_move_within_the_base_is_accepted(self, tenant):
+        # A move is re-judged on its RESULTING values, not refused outright:
+        # the base still covers the new end, so the write lands.
+        draft = _addon_draft_with_base(base_until=_LATER_SUNDAY)
+
+        SubscriptionService().update_draft_subscription(
+            draft, {"valid_until": _BASE_END}
+        )
+
+        draft.refresh_from_db()
+        assert draft.valid_until == _BASE_END
+
+    def test_extending_past_the_base_is_refused(self, tenant):
+        draft = _addon_draft_with_base(base_until=_BASE_END)
+
+        with pytest.raises(AdditionalShareExceedsBase) as exc:
+            SubscriptionService().update_draft_subscription(
+                draft, {"valid_until": _LATER_SUNDAY}
+            )
+        assert exc.value.details["suggested_valid_until"] == str(_BASE_END)
+
+        draft.refresh_from_db()
+        assert draft.valid_until == _ADDON_UNTIL
+
+    def test_extending_to_the_suggested_end_is_accepted(self, tenant):
+        # The mirror of the refusal above: the end the error suggests is the
+        # one the rule accepts.
+        draft = _addon_draft_with_base(base_until=_BASE_END)
+
+        SubscriptionService().update_draft_subscription(
+            draft, {"valid_until": _BASE_END}
+        )
+
+        draft.refresh_from_db()
+        assert draft.valid_until == _BASE_END
+
+    def test_member_echoed_as_an_instance_is_not_a_move(self, orphan_addon_draft):
+        # The serializer sends an id string, but the update path also takes a
+        # model instance. Unnormalised it never equals the stored id string, so
+        # this no-op echo would read as a move and the base-less draft would be
+        # refused an edit it is allowed to make.
+        SubscriptionService().update_draft_subscription(
+            orphan_addon_draft,
+            {"member": orphan_addon_draft.member, "quantity": 3},
+        )
+
+        orphan_addon_draft.refresh_from_db()
+        assert orphan_addon_draft.quantity == 3
