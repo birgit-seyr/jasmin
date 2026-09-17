@@ -2,7 +2,7 @@
 # Managed by scripts/mypy_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/mypy_baseline.py freeze
-# 354 finding(s).
+# 351 finding(s).
 
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
@@ -267,9 +267,6 @@ apps/commissioning/viewsets/delivery_viewsets.py: Argument 1 of "perform_update"
 apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "has_started"  [union-attr]
 apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "share_type_variation_id"  [union-attr]
 apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "valid_from"  [union-attr]
-apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "valid_from"  [union-attr]
-apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "valid_until"  [union-attr]
-apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "valid_until"  [union-attr]
 apps/commissioning/viewsets/delivery_viewsets.py: Item "None" of "Any | None" has no attribute "valid_until"  [union-attr]
 apps/commissioning/viewsets/documentation_viewsets.py: "perform_destroy" undefined in superclass  [misc]
 apps/commissioning/viewsets/documentation_viewsets.py: Argument "model" to "export_csv" of "DocumentationExportService" has incompatible type "str"; expected "Literal['harvest', 'purchase']"  [arg-type]

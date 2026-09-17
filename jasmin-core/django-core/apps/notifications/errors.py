@@ -34,6 +34,16 @@ class TestSendNoRecipient(BadRequestError):
     code = "email_template.test_send_no_recipient"
 
 
+class UnsupportedLanguage(BadRequestError):
+    """The requested ``language`` could not be mapped to a supported locale.
+
+    An unmappable value must not fall back to the tenant default: the template
+    endpoints write (and reset) the row for the resolved language, so a typo
+    would edit or delete the tenant-default template instead."""
+
+    code = "email_template.unsupported_language"
+
+
 class EmailDispatchFailed(JasminError):
     """The upstream email provider/SMTP relay rejected or failed the send."""
 
@@ -45,5 +55,6 @@ __all__ = [
     "EmailTemplateNotFound",
     "UndeclaredPlaceholders",
     "TestSendNoRecipient",
+    "UnsupportedLanguage",
     "EmailDispatchFailed",
 ]

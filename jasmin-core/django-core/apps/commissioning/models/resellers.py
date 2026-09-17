@@ -902,6 +902,12 @@ class DeliveryNoteReseller(
 
     is_cancelled = models.BooleanField(default=False)
 
+    # The document ``date`` is deliberately NOT ordered against ``finalized_at``
+    # or ``has_been_sent_to_reseller_at``: a Lieferschein is issued with or
+    # before the goods, so the document date is normally LATER than the moment
+    # the note is finalized or sent. A note prepared days in advance is the
+    # ordinary case, not an error.
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -913,36 +919,6 @@ class DeliveryNoteReseller(
 
     def __str__(self) -> str:
         return f"Delivery Note {self.display_number} - {self.order.reseller}"
-
-    def clean(self) -> None:
-        super().clean()
-        # The document ``date`` (a DateField) must not be later than the
-        # timestamps stamped when the note is finalized / sent (both
-        # DateTimeFields). Compare on the date component. NULL-tolerant: each
-        # pair is only enforced when both members are set. These cross-type
-        # (DateField vs DateTimeField) rules live in ``clean()`` only — a DB
-        # CheckConstraint would need a Cast on the timestamp column.
-        if (
-            self.date is not None
-            and self.finalized_at is not None
-            and self.date > self.finalized_at.date()
-        ):
-            raise ValidationError(
-                {"date": "Document date must be on or before the finalization date."}
-            )
-        if (
-            self.date is not None
-            and self.has_been_sent_to_reseller_at is not None
-            and self.date > self.has_been_sent_to_reseller_at.date()
-        ):
-            raise ValidationError(
-                {
-                    "date": (
-                        "Document date must be on or before the date it was sent "
-                        "to the reseller."
-                    )
-                }
-            )
 
     def save(self, *args, **kwargs) -> None:
 

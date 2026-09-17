@@ -60,6 +60,16 @@ class BulkIdsInvalid(BadRequestError):
     code = "bulk.ids_invalid"
 
 
+class BulkIdsTooMany(BadRequestError):
+    """A bulk-by-ids request carries more ids than one call may process.
+
+    Every id costs a row lock and a cascade inside a single transaction, so an
+    unbounded list holds those locks for the whole batch and stalls concurrent
+    office work. ``details`` carries the ``limit`` and the ``received`` count."""
+
+    code = "bulk.ids_too_many"
+
+
 class BulkFinalizeIdsInvalid(BulkIdsInvalid):
     """A generic bulk (un)finalize ``ids`` entry is not a string id."""
 
@@ -155,13 +165,32 @@ class DeliveryDayRequired(BadRequestError):
 
 
 class DeliveryDayValidFromInPast(BadRequestError):
-    """A delivery day was created with a ``valid_from`` date in the past.
+    """A delivery day or station-day was CREATED with a ``valid_from`` date
+    before today.
 
-    400 (not the 409 ``PastWeekError``): the request is malformed input — a
-    new delivery day must take effect today or later. ``field="valid_from"``.
+    Creation only, and the boundary is today rather than the current week's
+    Monday — a move on an existing row raises
+    ``DeliveryDayValidFromMoveIntoPast`` instead, which is the laxer of the two.
+    400 (not the 409 ``PastWeekError``): the request is malformed input — a new
+    row must take effect today or later. ``field="valid_from"``.
     """
 
     code = "delivery_day.valid_from_in_past"
+
+
+class DeliveryDayValidFromMoveIntoPast(BadRequestError):
+    """An EXISTING delivery day's or station-day's ``valid_from`` was moved back
+    into a week that has already been delivered and billed.
+
+    The Monday of the current week is the earliest start such a move may land
+    on. Onboarding mode lifts the rule: there the office is dating back a
+    schedule that has been running on paper. Distinct from
+    ``DeliveryDayValidFromInPast`` (creation, and stricter — no onboarding
+    exemption, and the boundary is today), so each message can name the
+    boundary its own path actually enforces. ``field="valid_from"``.
+    """
+
+    code = "delivery_day.valid_from_move_into_past"
 
 
 class DeliveryExceptionInvalidRange(BadRequestError):
@@ -409,6 +438,14 @@ class OfferGroupCannotDeleteDefault(ConflictError):
     code = "offer_group.cannot_delete_default"
 
 
+class OfferGroupConflictsWithReseller(BadRequestError):
+    """The requested ``offer_group`` is not the group the requested ``reseller``
+    belongs to. The two filters contradict each other, so the request is refused
+    rather than silently answered for one of them."""
+
+    code = "offer_group.conflicts_with_reseller"
+
+
 # --------------------------------------------------------------------------- #
 # Orders / delivery notes / invoices                                          #
 # --------------------------------------------------------------------------- #
@@ -443,6 +480,15 @@ class OrderContentItemChangeForbidden(ForbiddenError):
     staff may change what a line orders."""
 
     code = "order_content.item_change_forbidden"
+
+
+class OrderableItemReferenceInvalid(BadRequestError):
+    """An order / delivery-note / invoice line must reference EXACTLY one item:
+    an ``offer`` or a ``share_article``, never both and never neither. A line
+    with both is ambiguous about what was sold; one with neither prices at zero
+    and prints as an empty position on a legally binding document."""
+
+    code = "orderable_item.reference_invalid"
 
 
 class DeliveryNoteNotFound(NotFoundError):
@@ -601,6 +647,15 @@ class InvalidAmount(BadRequestError):
 
 class NotEnoughStock(ConflictError):
     code = "stock.insufficient"
+
+
+class InventoryEntryFinalized(ConflictError):
+    """A finalized inventory entry cannot be recounted, edited or deleted.
+
+    The counted amount is what the stock ledger builds on, so changing it under
+    a finalized count rewrites history silently. Unfinalize the entry first."""
+
+    code = "stock.inventory_finalized"
 
 
 class ForecastNotFound(NotFoundError):
@@ -1507,6 +1562,26 @@ class ShareTypeSuccessionHasActiveVariations(ConflictError):
         )
 
 
+class TimeBoundValidFromNotMonday(BadRequestError):
+    """A time-bound record starts on a Monday — validity windows are whole ISO
+    weeks. ``field`` is ``valid_from``."""
+
+    code = "time_bound.valid_from_not_monday"
+
+
+class TimeBoundValidUntilNotSunday(BadRequestError):
+    """A time-bound record ends on a Sunday — validity windows are whole ISO
+    weeks. ``field`` is ``valid_until``."""
+
+    code = "time_bound.valid_until_not_sunday"
+
+
+class TimeBoundInvalidRange(BadRequestError):
+    """A time-bound record's ``valid_until`` lies before its ``valid_from``."""
+
+    code = "time_bound.invalid_range"
+
+
 class SuccessionStartBeforePredecessor(ConflictError):
     """A new time-bound record can't start *before* the open record it would
     succeed. ``TimeBoundMixin.handle_succession`` closes the predecessor at
@@ -1754,6 +1829,32 @@ class DeliveryStationDayStartMoveStrandsChildren(ConflictError):
         )
 
 
+class DeliveryStationDayStartsBeforeDeliveryDay(ConflictError):
+    """A station-day's ``valid_from`` would fall before the ``valid_from`` of the
+    SharesDeliveryDay row it hangs off. The station-day would then be active on
+    weeks its delivery day does not cover, and the no-overlap check is scoped to
+    (station, delivery_day) — so a row reaching back past its own day can shadow
+    a sibling sitting on an OLDER delivery-day row without tripping it."""
+
+    code = "delivery_station_day.starts_before_delivery_day"
+
+    def __init__(
+        self, *, station_day, new_valid_from, delivery_day, delivery_day_valid_from
+    ) -> None:
+        super().__init__(
+            f"Cannot start station-day '{station_day}' on {new_valid_from}: its "
+            f"delivery day '{delivery_day}' only starts on "
+            f"{delivery_day_valid_from}. Move the delivery day's start first, or "
+            "pick a start on or after it.",
+            details={
+                "station_day": station_day,
+                "new_valid_from": str(new_valid_from),
+                "delivery_day": delivery_day,
+                "delivery_day_valid_from": str(delivery_day_valid_from),
+            },
+        )
+
+
 class DeliveryStationInUse(ConflictError):
     """A DeliveryStation cannot be deleted while any of its station-days still
     carry deliveries (the billing basis) — deleting would CASCADE-wipe those
@@ -1918,6 +2019,7 @@ __all__ = [
     "SharesDeliveryDaySuccessionCoverageGap",
     "DeliveryStationDayShorteningStrandsChildren",
     "DeliveryStationDayStartMoveStrandsChildren",
+    "DeliveryStationDayStartsBeforeDeliveryDay",
     # Membership / coop-share / document errors.
     "MemberHasActiveSubscriptions",
     "MemberAlreadyCancelled",
@@ -1933,7 +2035,15 @@ __all__ = [
     "OfferGroupCannotDeleteDefault",
     "PackingAmountsDivergeAcrossStations",
     "DeliveryDayValidFromInPast",
+    "DeliveryDayValidFromMoveIntoPast",
     "DocumentNotFinalized",
     "InvalidUploadedDocument",
     "OrganicPurchaseCertificateRequired",
+    "BulkIdsTooMany",
+    "InventoryEntryFinalized",
+    "OfferGroupConflictsWithReseller",
+    "OrderableItemReferenceInvalid",
+    "TimeBoundValidFromNotMonday",
+    "TimeBoundValidUntilNotSunday",
+    "TimeBoundInvalidRange",
 ]

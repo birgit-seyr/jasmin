@@ -72,6 +72,25 @@ class BillingRunMixedCurrency(BadRequestError):
     code = "billing_run.mixed_currency"
 
 
+class MandateReferenceLocked(BadRequestError):
+    """The SEPA mandate reference can no longer be changed: the mandate has been
+    used (``sepa_mandate_first_use_at`` is stamped), so every following
+    collection goes out as RCUR under the reference the bank holds on file.
+    Resubmitting the SAME reference is accepted; a different one needs a new
+    mandate."""
+
+    code = "billing_profile.mandate_reference_locked"
+
+
+class SepaMandateSignedInFuture(BadRequestError):
+    """``sepa_mandate_signed_at`` lies in the future. A mandate cannot be signed
+    after today, and such a value aborts the entire pain.008 batch at export
+    time — for every other member in the run — so it is refused where it is
+    entered."""
+
+    code = "sepa.mandate_signed_in_future"
+
+
 __all__ = [
     "BillingRunInvalidPeriod",
     "BillingRunInvalidCollectionDate",
@@ -81,4 +100,6 @@ __all__ = [
     "BillingRunHasNoCharges",
     "SepaExportInvalid",
     "BillingRunMixedCurrency",
+    "MandateReferenceLocked",
+    "SepaMandateSignedInFuture",
 ]

@@ -8,14 +8,15 @@ passes that date (e.g. a ``valid_from`` literal ages into the past, so a
 
 This test scans every ``apps/**/test_*.py`` for date literals that are still in
 the future, whose enclosing test method is NOT frozen (no ``time_machine`` /
-``freeze_time`` decorator or in-body context manager) and whose surrounding
-context reads as wall-clock-relative. Any such (file, function) that is NOT in
-``ALLOWLIST`` fails the suite.
+``freeze_time`` decorator, in-body context manager, or class-scoped autouse
+fixture) and whose surrounding context reads as wall-clock-relative. Any such
+(file, function) that is NOT in ``ALLOWLIST`` fails the suite.
 
 When this test fails on a NEW entry, do ONE of:
 
-  * **Freeze the clock** — add ``@time_machine.travel(<date before the literal>,
-    tick=False)`` to the test method (the fix for a genuine bomb), or
+  * **Freeze the clock** — put the test under ``time_machine.travel(<date before
+    the literal>, tick=False)`` (the fix for a genuine bomb), as a decorator on
+    the method or, for a whole plain-pytest class, an autouse fixture, or
   * **Inject the reference date** — make the code under test take an ``as_of=`` /
     explicit date argument instead of reading the clock, or
   * **Allowlist it** — if the literal is genuinely inert (stored/echoed data, a
@@ -115,6 +116,56 @@ def _enclosing_def(lines: list[str], idx: int) -> int | None:
     return None
 
 
+def _body_freezes(lines: list[str], def_idx: int, end: int) -> bool:
+    """True if the ``def`` at ``def_idx`` pins the clock somewhere in its body."""
+    indent = len(lines[def_idx]) - len(lines[def_idx].lstrip())
+    for j in range(def_idx + 1, end):
+        ln = lines[j]
+        if ln.strip() and (len(ln) - len(ln.lstrip())) <= indent:
+            break
+        if "time_machine.travel" in ln or "freeze_time" in ln or "freezegun" in ln:
+            return True
+    return False
+
+
+def _enclosing_class(lines: list[str], def_idx: int) -> tuple[int, int] | None:
+    """Body bounds of the class holding ``def_idx``, or None for a plain function."""
+    for i in range(def_idx, -1, -1):
+        if re.match(r"^class\s+\w+", lines[i]):
+            body_end = next(
+                (j for j in range(i + 1, len(lines)) if lines[j][:1].strip()),
+                len(lines),
+            )
+            return i, body_end
+        # A module-level statement above us means there is no enclosing class.
+        if lines[i][:1].strip():
+            return None
+    return None
+
+
+def _class_autouse_freeze(lines: list[str], def_idx: int) -> bool:
+    """True if an autouse fixture on the enclosing class pins the clock.
+
+    Such a fixture freezes every test in the class. Plain pytest classes have no
+    other way to do it — a ``time_machine`` class decorator only applies to
+    ``unittest.TestCase`` — so this shape is as good as a per-method decorator.
+    """
+    bounds = _enclosing_class(lines, def_idx)
+    if bounds is None:
+        return False
+    start, end = bounds
+    for i in range(start, end):
+        if "autouse=True" not in lines[i]:
+            continue
+        fixture = next(
+            (j for j in range(i + 1, end) if re.match(r"^\s*def\s+\w+", lines[j])),
+            None,
+        )
+        if fixture is not None and _body_freezes(lines, fixture, end):
+            return True
+    return False
+
+
 def _is_frozen(lines: list[str], def_idx: int) -> bool:
     # decorator(s) directly above the def
     i = def_idx - 1
@@ -130,14 +181,9 @@ def _is_frozen(lines: list[str], def_idx: int) -> bool:
             continue
         break
     # in-body ``with time_machine.travel(...)`` / freeze_time context manager
-    indent = len(lines[def_idx]) - len(lines[def_idx].lstrip())
-    for j in range(def_idx + 1, len(lines)):
-        ln = lines[j]
-        if ln.strip() and (len(ln) - len(ln.lstrip())) <= indent:
-            break
-        if "time_machine.travel" in ln or "freeze_time" in ln or "freezegun" in ln:
-            return True
-    return False
+    if _body_freezes(lines, def_idx, len(lines)):
+        return True
+    return _class_autouse_freeze(lines, def_idx)
 
 
 def _scan() -> set[str]:

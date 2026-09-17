@@ -31,9 +31,11 @@ from core.serializers import ErrorResponseSerializer
 from ..errors import (
     DeliveryDayNotFound,
     DeliveryDayValidFromInPast,
+    DeliveryDayValidFromMoveIntoPast,
     DeliveryExceptionPeriodLocked,
     DeliveryStationDayShorteningStrandsChildren,
     DeliveryStationDayStartMoveStrandsChildren,
+    DeliveryStationDayStartsBeforeDeliveryDay,
 )
 from ..models import (
     CapacityReservation,
@@ -70,6 +72,7 @@ from ..services import (
 from ..services.delivery_exceptions import (
     resync_delivery_exception,
 )
+from ..services.onboarding_policy import onboarding_mode_enabled
 from ..utils import get_contact_annotations
 from ..utils.iso_week_utils import previous_monday, weeks_in_range
 from ..utils.lookup import get_or_404
@@ -295,6 +298,16 @@ class DeliveryToursViewSet(RolePermissionsMixin, viewsets.ViewSet):
             error_cls=DeliveryDayNotFound,
         )
 
+        # The start a newly assigned station-day opens on. Clamped up to the
+        # delivery day's own start so a tour built on a future-dated day does
+        # not mint a station-day active on weeks that day does not run — the
+        # window rule perform_create/perform_update enforce, which this path
+        # bypasses by writing the model directly. Both operands are Mondays, as
+        # valid_from must be.
+        assignment_valid_from = max(
+            previous_monday(timezone.localdate()), shares_delivery_day.valid_from
+        )
+
         with transaction.atomic():
             # Only the CURRENTLY-OPEN station-day per (station, day) carries the
             # live tour assignment. DeliveryStationDay is TimeBoundMixin: closed
@@ -337,13 +350,14 @@ class DeliveryToursViewSet(RolePermissionsMixin, viewsets.ViewSet):
                             # Required on create: TimeBoundMixin.valid_from is
                             # NOT NULL with no default, and full_clean() also
                             # enforces the project-wide "valid_from is always a
-                            # Monday" invariant — so omitting it turned the
-                            # create branch into a 400 "Validation failed".
-                            # The Monday of the CURRENT week, because the update
-                            # branch takes effect immediately (it just re-stamps
-                            # the open row), and a newly assigned station should
-                            # not behave differently from a reassigned one.
-                            "valid_from": previous_monday(timezone.localdate()),
+                            # Monday" invariant, so omitting it makes the create
+                            # branch a 400 "Validation failed". The current
+                            # week's Monday (clamped — see above), because the
+                            # update branch takes effect immediately (it just
+                            # re-stamps the open row) and a newly assigned
+                            # station should not behave differently from a
+                            # reassigned one.
+                            "valid_from": assignment_valid_from,
                         },
                     )
                     if created:
@@ -359,6 +373,17 @@ class DeliveryToursViewSet(RolePermissionsMixin, viewsets.ViewSet):
             {"message": "Tours updated successfully"},
             status=status.HTTP_200_OK,
         )
+
+
+def _bound_station_day(serializer: Any) -> DeliveryStationDay:
+    """The station-day a BOUND serializer is updating.
+
+    DRF types ``BaseSerializer.instance`` as ``Any | None`` because one
+    serializer class serves both create (unbound) and update (bound).
+    ``perform_update`` only ever runs bound, so the read is safe — taken once
+    here, typed, instead of at every attribute access below.
+    """
+    return serializer.instance
 
 
 class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
@@ -385,6 +410,29 @@ class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             raise DeliveryDayValidFromInPast(
                 "Cannot create a station-day with valid_from in the past.",
                 field="valid_from",
+            )
+
+        # A station-day lives inside its delivery day's window (the same rule
+        # perform_update applies to a move): opening before the day's own start
+        # would make it active on weeks the day does not run. Enforced here too
+        # because a future-dated delivery day is offered alongside a valid_from
+        # picker that only bounds the date at today — and once the row is saved
+        # the office UI locks both fields, so an out-of-window row could not be
+        # repaired from there.
+        delivery_day = serializer.validated_data.get("delivery_day")
+        if (
+            valid_from
+            and delivery_day is not None
+            and valid_from < delivery_day.valid_from
+        ):
+            raise DeliveryStationDayStartsBeforeDeliveryDay(
+                station_day=(
+                    f"{serializer.validated_data.get('delivery_station')} - "
+                    f"{delivery_day}"
+                ),
+                new_valid_from=valid_from,
+                delivery_day=str(delivery_day),
+                delivery_day_valid_from=delivery_day.valid_from,
             )
 
         station_day = serializer.save()
@@ -504,7 +552,7 @@ class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         # (In perform_update, not clean(), because the create path closes the
         # predecessor via handle_succession→save()→clean() BEFORE the migration
         # runs — guarding clean() would break legitimate succession.)
-        instance = serializer.instance
+        instance = _bound_station_day(serializer)
         new_valid_until = serializer.validated_data.get(
             "valid_until", instance.valid_until
         )
@@ -539,14 +587,53 @@ class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                     stranded_count=stranded,
                 )
 
+        # Moving the start into a past week re-opens weeks that have already
+        # been delivered and billed, so it is refused — except while the tenant
+        # is onboarding, where the office enters a pickup schedule that has been
+        # running on paper for a while. The flag is read here rather than in the
+        # model: recomputes must keep behaving the same when it flips. Only a
+        # CHANGED start is judged, so editing the capacity or the pickup times
+        # of a long-running row stays possible.
+        current_valid_from = instance.valid_from
+        new_valid_from = serializer.validated_data.get("valid_from", current_valid_from)
+        if (
+            new_valid_from != current_valid_from
+            and new_valid_from < previous_monday(timezone.localdate())
+            and not onboarding_mode_enabled()
+        ):
+            raise DeliveryDayValidFromMoveIntoPast(
+                "Cannot move a station-day's valid_from into a past week.",
+                field="valid_from",
+            )
+
+        # A station-day lives inside its delivery day's window: reaching back
+        # past the day's own start would make it active on weeks the day does
+        # not run. The no-overlap check is scoped to (station, delivery_day), so
+        # a row moved earlier can shadow a sibling on an OLDER delivery-day row
+        # without tripping it. Judged only when the request actually moves the
+        # start or repoints the day, in every mode — an already-out-of-window
+        # historical row stays editable.
+        delivery_day = serializer.validated_data.get(
+            "delivery_day", instance.delivery_day
+        )
+        start_or_day_changed = (
+            new_valid_from != current_valid_from
+            or delivery_day.pk != instance.delivery_day_id
+        )
+        if start_or_day_changed and new_valid_from < delivery_day.valid_from:
+            raise DeliveryStationDayStartsBeforeDeliveryDay(
+                station_day=str(instance),
+                new_valid_from=new_valid_from,
+                delivery_day=str(delivery_day),
+                delivery_day_valid_from=delivery_day.valid_from,
+            )
+
         # Mirror at the other end of the window: moving valid_from LATER leaves
         # the deliveries/reservations before the new start with no station-day
         # covering them. They keep pointing at this row (the migration runs only
         # on the create/succession path), so they are orphaned rather than
-        # re-homed. Moving the start EARLIER only widens the window. A start in
-        # the past is deliberately NOT refused here.
-        current_valid_from = instance.valid_from
-        new_valid_from = serializer.validated_data.get("valid_from", current_valid_from)
+        # re-homed. Moving the start EARLIER only widens the window, in every
+        # mode.
         if new_valid_from > current_valid_from:
             vf_week = Week.withdate(new_valid_from)
             stranded = (

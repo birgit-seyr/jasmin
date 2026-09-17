@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 
 import pytest
+import time_machine
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -21,6 +22,33 @@ from apps.commissioning.tests.factories import (
     SubscriptionFactory,
 )
 from apps.commissioning.utils.iso_week_utils import previous_monday
+from apps.shared.tenants.models import TenantSettings
+
+
+def _set_onboarding_mode(tenant, enabled: bool) -> None:
+    row = TenantSettings.objects.filter(tenant=tenant, valid_until__isnull=True).first()
+    if row is None:
+        row = TenantSettings.objects.create(
+            tenant=tenant, valid_from=timezone.now() - datetime.timedelta(days=365)
+        )
+    elif row.valid_from > timezone.now():
+        # The frozen clock sits before a row opened in real time; move its start
+        # back so ``get_current_settings`` sees it.
+        row.valid_from = timezone.now() - datetime.timedelta(days=365)
+    row.onboarding_mode = enabled
+    row.save()
+
+
+@pytest.fixture()
+def onboarding_mode(tenant):
+    _set_onboarding_mode(tenant, True)
+    yield
+    _set_onboarding_mode(tenant, False)
+
+
+@pytest.fixture()
+def onboarding_mode_off(tenant):
+    _set_onboarding_mode(tenant, False)
 
 
 # ---------------------------------------------------------------------------
@@ -248,65 +276,6 @@ class TestDeliveryStationDayViewSet:
         assert str(dsd_a.id) in ids
         assert str(dsd_b.id) not in ids
 
-    def test_moving_start_later_past_existing_deliveries_returns_409(
-        self, api_client, tenant
-    ):
-        """Moving the START of a station-day's window later leaves the
-        deliveries before the new date with no station-day covering them.
-
-        They keep pointing at this row — the migration runs only on the
-        create/succession path — so nothing re-homes them. All dates sit in the
-        past, so the assertion never depends on the wall clock.
-        """
-        station_day = DeliveryStationDayFactory(valid_from=datetime.date(2026, 1, 5))
-        # ISO week 15/2026 starts 2026-04-06 — before the proposed new start.
-        share = ShareFactory(
-            delivery_day=station_day.delivery_day, year=2026, delivery_week=15
-        )
-        ShareDeliveryFactory(share=share, delivery_station_day=station_day)
-
-        url = reverse("delivery_station_day-detail", kwargs={"pk": station_day.pk})
-        resp = api_client.patch(url, {"valid_from": "2026-06-01"}, format="json")
-
-        assert resp.status_code == status.HTTP_409_CONFLICT
-        assert resp.data["code"] == "delivery_station_day.start_move_strands_children"
-        assert resp.data["details"]["stranded_count"] == 1
-        station_day.refresh_from_db()
-        assert station_day.valid_from == datetime.date(2026, 1, 5)
-
-    def test_moving_start_earlier_into_the_past_is_allowed(self, api_client, tenant):
-        """Widening the window backwards strands nothing, and a start in the
-        past stays permitted — onboarding backfills a running schedule."""
-        station_day = DeliveryStationDayFactory(valid_from=datetime.date(2026, 1, 5))
-        share = ShareFactory(
-            delivery_day=station_day.delivery_day, year=2026, delivery_week=15
-        )
-        ShareDeliveryFactory(share=share, delivery_station_day=station_day)
-
-        url = reverse("delivery_station_day-detail", kwargs={"pk": station_day.pk})
-        resp = api_client.patch(url, {"valid_from": "2025-11-03"}, format="json")
-
-        assert resp.status_code == status.HTTP_200_OK
-        station_day.refresh_from_db()
-        assert station_day.valid_from == datetime.date(2025, 11, 3)
-
-    def test_moving_start_later_with_nothing_before_it_is_allowed(
-        self, api_client, tenant
-    ):
-        station_day = DeliveryStationDayFactory(valid_from=datetime.date(2026, 1, 5))
-        # Week 40/2026 starts 2026-09-28 — after the proposed new start.
-        share = ShareFactory(
-            delivery_day=station_day.delivery_day, year=2026, delivery_week=40
-        )
-        ShareDeliveryFactory(share=share, delivery_station_day=station_day)
-
-        url = reverse("delivery_station_day-detail", kwargs={"pk": station_day.pk})
-        resp = api_client.patch(url, {"valid_from": "2026-06-01"}, format="json")
-
-        assert resp.status_code == status.HTTP_200_OK
-        station_day.refresh_from_db()
-        assert station_day.valid_from == datetime.date(2026, 6, 1)
-
     def test_capacity_without_year_week_returns_null(self, api_client, tenant):
         DeliveryStationDayFactory(capacity=10)
         resp = api_client.get(self.URL)
@@ -452,6 +421,256 @@ class TestDeliveryStationDayViewSet:
 
 
 # ---------------------------------------------------------------------------
+# DeliveryStationDayViewSet — moving valid_from
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestDeliveryStationDayValidFromMove:
+    """PATCHing the START of a station-day's window.
+
+    Moving it LATER past existing deliveries is refused in every mode: they keep
+    pointing at this row — the migration runs only on the create/succession path
+    — so nothing re-homes them. Moving it EARLIER into a week that has already
+    been delivered is refused too, unless the tenant is in onboarding mode; a
+    start before the station-day's OWN delivery day is refused in every mode.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _frozen_clock(self):
+        # A Monday away from any year boundary. The current week starts
+        # 2026-02-02, so the rows built at 2026-01-05 start in a past week
+        # while 2026-06-01 stays comfortably in the future.
+        with time_machine.travel(datetime.datetime(2026, 2, 2, 12, 0), tick=False):
+            yield
+
+    @staticmethod
+    def _url(station_day):
+        return reverse("delivery_station_day-detail", kwargs={"pk": station_day.pk})
+
+    def test_moving_start_later_past_existing_deliveries_returns_409(
+        self, api_client, tenant, onboarding_mode_off
+    ):
+        station_day = DeliveryStationDayFactory(valid_from=datetime.date(2026, 1, 5))
+        # ISO week 15/2026 starts 2026-04-06 — before the proposed new start.
+        share = ShareFactory(
+            delivery_day=station_day.delivery_day, year=2026, delivery_week=15
+        )
+        ShareDeliveryFactory(share=share, delivery_station_day=station_day)
+
+        resp = api_client.patch(
+            self._url(station_day), {"valid_from": "2026-06-01"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "delivery_station_day.start_move_strands_children"
+        assert resp.data["details"]["stranded_count"] == 1
+        station_day.refresh_from_db()
+        assert station_day.valid_from == datetime.date(2026, 1, 5)
+
+    def test_moving_start_later_past_deliveries_stays_refused_in_onboarding_mode(
+        self, api_client, tenant, onboarding_mode
+    ):
+        """Onboarding opens the earlier direction only — the later move still
+        strands the deliveries pointing at this row."""
+        station_day = DeliveryStationDayFactory(valid_from=datetime.date(2026, 1, 5))
+        share = ShareFactory(
+            delivery_day=station_day.delivery_day, year=2026, delivery_week=15
+        )
+        ShareDeliveryFactory(share=share, delivery_station_day=station_day)
+
+        resp = api_client.patch(
+            self._url(station_day), {"valid_from": "2026-06-01"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "delivery_station_day.start_move_strands_children"
+        station_day.refresh_from_db()
+        assert station_day.valid_from == datetime.date(2026, 1, 5)
+
+    def test_moving_start_into_a_past_week_is_refused(
+        self, api_client, tenant, onboarding_mode_off
+    ):
+        # The delivery day itself starts well before the proposed date, so the
+        # past-week rule is the only one in play.
+        delivery_day = SharesDeliveryDayFactory(valid_from=datetime.date(2025, 10, 6))
+        station_day = DeliveryStationDayFactory(
+            delivery_day=delivery_day, valid_from=datetime.date(2026, 1, 5)
+        )
+
+        resp = api_client.patch(
+            self._url(station_day), {"valid_from": "2025-11-03"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "delivery_day.valid_from_move_into_past"
+        station_day.refresh_from_db()
+        assert station_day.valid_from == datetime.date(2026, 1, 5)
+
+    def test_moving_start_into_a_past_week_is_allowed_in_onboarding_mode(
+        self, api_client, tenant, onboarding_mode
+    ):
+        """Widening the window backwards strands nothing, and the office is
+        entering a pickup schedule that has been running for a while."""
+        delivery_day = SharesDeliveryDayFactory(valid_from=datetime.date(2025, 10, 6))
+        station_day = DeliveryStationDayFactory(
+            delivery_day=delivery_day, valid_from=datetime.date(2026, 1, 5)
+        )
+        share = ShareFactory(delivery_day=delivery_day, year=2026, delivery_week=15)
+        ShareDeliveryFactory(share=share, delivery_station_day=station_day)
+
+        resp = api_client.patch(
+            self._url(station_day), {"valid_from": "2025-11-03"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        station_day.refresh_from_db()
+        assert station_day.valid_from == datetime.date(2025, 11, 3)
+
+    def test_moving_start_before_its_delivery_day_is_refused(
+        self, api_client, tenant, onboarding_mode_off
+    ):
+        delivery_day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 3, 2))
+        station_day = DeliveryStationDayFactory(
+            delivery_day=delivery_day, valid_from=datetime.date(2026, 3, 2)
+        )
+
+        # The current week's Monday — not a past week, so only the delivery
+        # day's own start stands in the way.
+        resp = api_client.patch(
+            self._url(station_day), {"valid_from": "2026-02-02"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "delivery_station_day.starts_before_delivery_day"
+        station_day.refresh_from_db()
+        assert station_day.valid_from == datetime.date(2026, 3, 2)
+
+    def test_moving_start_before_its_delivery_day_is_refused_in_onboarding_mode(
+        self, api_client, tenant, onboarding_mode
+    ):
+        """Onboarding relaxes the past-week rule, not the coverage one — the
+        station-day would be active on weeks its day does not run."""
+        delivery_day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 3, 2))
+        station_day = DeliveryStationDayFactory(
+            delivery_day=delivery_day, valid_from=datetime.date(2026, 3, 2)
+        )
+
+        resp = api_client.patch(
+            self._url(station_day), {"valid_from": "2025-11-03"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "delivery_station_day.starts_before_delivery_day"
+        station_day.refresh_from_db()
+        assert station_day.valid_from == datetime.date(2026, 3, 2)
+
+    def test_moving_start_later_with_nothing_before_it_is_allowed(
+        self, api_client, tenant, onboarding_mode_off
+    ):
+        station_day = DeliveryStationDayFactory(valid_from=datetime.date(2026, 1, 5))
+        # Week 40/2026 starts 2026-09-28 — after the proposed new start.
+        share = ShareFactory(
+            delivery_day=station_day.delivery_day, year=2026, delivery_week=40
+        )
+        ShareDeliveryFactory(share=share, delivery_station_day=station_day)
+
+        resp = api_client.patch(
+            self._url(station_day), {"valid_from": "2026-06-01"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        station_day.refresh_from_db()
+        assert station_day.valid_from == datetime.date(2026, 6, 1)
+
+
+# ---------------------------------------------------------------------------
+# DeliveryStationDayViewSet — creating
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestDeliveryStationDayCreate:
+    """POSTing a station-day.
+
+    The new row must open inside its delivery day's window, and not in the
+    past. The window guard matters as much here as on the move: the office UI
+    locks ``delivery_day`` and ``valid_from`` once the row is saved, and moving
+    the start back to reach the day is refused by the update guard too — so a
+    row minted outside its day's window has no repair path.
+    """
+
+    URL = reverse("delivery_station_day-list")
+
+    @pytest.fixture(autouse=True)
+    def _frozen_clock(self):
+        # A Monday away from any year boundary, so the dates below keep their
+        # past/future relationship whatever the wall clock reads.
+        with time_machine.travel(datetime.datetime(2026, 2, 2, 12, 0), tick=False):
+            yield
+
+    @staticmethod
+    def _payload(station, delivery_day, valid_from):
+        return {
+            "delivery_station": str(station.id),
+            "delivery_day": str(delivery_day.id),
+            "valid_from": valid_from,
+        }
+
+    def test_creating_before_its_delivery_day_returns_409(self, api_client, tenant):
+        """A future-dated delivery day is offered next to a valid_from picker
+        bounded only at today, so this is the pairing the office lands on."""
+        delivery_day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 10, 5))
+        station = DeliveryStationFactory()
+
+        resp = api_client.post(
+            self.URL,
+            # A future Monday — past the create guard, still eight weeks before
+            # the delivery day itself starts.
+            self._payload(station, delivery_day, "2026-08-10"),
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "delivery_station_day.starts_before_delivery_day"
+        assert not DeliveryStationDay.objects.filter(
+            delivery_station=station, delivery_day=delivery_day
+        ).exists()
+
+    def test_creating_on_its_delivery_days_own_start_is_allowed(
+        self, api_client, tenant
+    ):
+        delivery_day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 10, 5))
+        station = DeliveryStationFactory()
+
+        resp = api_client.post(
+            self.URL,
+            self._payload(station, delivery_day, "2026-10-05"),
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        created = DeliveryStationDay.objects.get(
+            delivery_station=station, delivery_day=delivery_day
+        )
+        assert created.valid_from == datetime.date(2026, 10, 5)
+
+    def test_creating_with_valid_from_in_the_past_returns_400(self, api_client, tenant):
+        """The create boundary is today; the laxer move boundary (the current
+        week's Monday, liftable by onboarding mode) carries its own code."""
+        delivery_day = SharesDeliveryDayFactory(valid_from=datetime.date(2025, 10, 6))
+        station = DeliveryStationFactory()
+
+        resp = api_client.post(
+            self.URL,
+            self._payload(station, delivery_day, "2026-01-05"),
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "delivery_day.valid_from_in_past"
+        assert not DeliveryStationDay.objects.filter(
+            delivery_station=station, delivery_day=delivery_day
+        ).exists()
+
+
+# ---------------------------------------------------------------------------
 # DeliveryToursViewSet
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
@@ -570,5 +789,39 @@ class TestUpdateToursCreatesStationDay:
         assert created.valid_from is not None
         assert created.valid_from.weekday() == 0, "valid_from must be a Monday"
         # Effective from the current week, matching the update branch, which
-        # re-stamps the open row and so takes effect immediately.
+        # re-stamps the open row and so takes effect immediately. This day
+        # started long ago, so the clamp to its own start doesn't bite.
         assert created.valid_from == previous_monday(timezone.localdate())
+
+    def test_assignment_on_a_future_dated_day_opens_at_that_days_start(
+        self, api_client, tenant
+    ):
+        """A station-day may not open before its delivery day, so the created
+        row starts at the day's own start rather than this week's Monday."""
+        with time_machine.travel(datetime.datetime(2026, 2, 2, 12, 0), tick=False):
+            station = DeliveryStationFactory()
+            day = SharesDeliveryDayFactory(
+                day_number=5, valid_from=datetime.date(2026, 10, 5)
+            )
+
+            resp = api_client.post(
+                reverse("delivery_tours-update-tours"),
+                {
+                    "delivery_day": str(day.id),
+                    "tours": [
+                        {
+                            "tour_number": 1,
+                            "positions": [
+                                {"position": 1, "delivery_station_id": str(station.id)}
+                            ],
+                        }
+                    ],
+                },
+                format="json",
+            )
+
+            assert resp.status_code == status.HTTP_200_OK
+            created = DeliveryStationDay.objects.get(
+                delivery_station=station, delivery_day=day
+            )
+            assert created.valid_from == datetime.date(2026, 10, 5)

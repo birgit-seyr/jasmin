@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-867 tests | 168 test classes | 32 files
+877 tests | 170 test classes | 32 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 Counts are collected cases, so a parametrized method counts once per case.
@@ -36,15 +36,16 @@ test_basics_viewsets.py (54 tests)
                                                in-use article → 409 + row kept; unused → 204;
                                                future price of in-use article → 204
 
-test_choices_viewsets.py (19 tests)
+test_choices_viewsets.py (21 tests)
 ───────────────────────────────────
   TestSharesDeliveryDayViewSet            10   list, retrieve, tour count raise/reduce rules,
                                                get_delivery_stations flag (false omits the prefetch;
                                                without active_at_date → 400)
-  TestSharesDeliveryDayValidFromMove       4   moving valid_from later past existing shares or
-                                               station-days → 409 and the row is untouched; moving it
-                                               earlier (incl. into the past) stays allowed, as does
-                                               moving it later with nothing before it
+  TestSharesDeliveryDayValidFromMove       6   moving valid_from later past existing shares or
+                                               station-days → 409 and the row is untouched, onboarding
+                                               mode included; moving it into a past week → 400 unless
+                                               onboarding mode is on; moving it later with nothing
+                                               before it → 200
   TestOrdersDeliveryDayViewSet             2   list
   TestPaymentCycleViewSet                  3   list, is_active filter
 
@@ -132,17 +133,22 @@ test_delivery_station_query_count.py (1 test)
 ─────────────────────────────────────────────
   (module-level)                           1   delivery-station list is scale-invariant
 
-test_delivery_viewsets.py (31 tests)
+test_delivery_viewsets.py (39 tests)
 ────────────────────────────────────
   TestDeliveryStationViewSet               8   list, is_active filter, retrieve, can_be_deleted, filter by
                                                member (confirmed subscriptions only), member-role read
-  TestDeliveryStationDayViewSet           19   list, filter by station / day / member, capacity by week,
-                                               a member cannot query another member's station-days;
-                                               moving valid_from later past existing deliveries → 409 with
-                                               the row untouched, earlier or with nothing before it → 200
+  TestDeliveryStationDayViewSet           16   list, filter by station / day / member, capacity by week,
+                                               a member cannot query another member's station-days
+  TestDeliveryStationDayValidFromMove      7   moving valid_from later past existing deliveries → 409 in
+                                               both modes and the row is untouched; into a past week →
+                                               400 unless onboarding mode is on; before its own delivery
+                                               day → 409 in both modes; later with nothing before it → 200
+  TestDeliveryStationDayCreate             3   creating before its delivery day's own start → 409 and no
+                                               row; on that start → 201; valid_from before today → 400
   TestDeliveryToursViewSet                 3   requires delivery_day, list with day, update_tours targets the
                                                open row on a versioned station-day
-  TestUpdateToursCreatesStationDay         1   assigning a station without a station-day creates one
+  TestUpdateToursCreatesStationDay         2   assigning a station without a station-day creates one; on a
+                                               future-dated day it opens at that day's own start
 
 test_documentation_viewsets.py (56 tests)
 ─────────────────────────────────────────

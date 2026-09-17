@@ -22,6 +22,7 @@ from core.serializers import ErrorResponseSerializer
 
 from ..errors import (
     DeliveryDayValidFromInPast,
+    DeliveryDayValidFromMoveIntoPast,
     InvalidQueryParam,
     SharesDeliveryDayShorteningStrandsChildren,
     SharesDeliveryDayStartMoveStrandsChildren,
@@ -44,6 +45,8 @@ from ..serializers import (
     SharesDeliveryDaySerializer,
 )
 from ..services import SharesDeliveryDayService
+from ..services.onboarding_policy import onboarding_mode_enabled
+from ..utils.iso_week_utils import previous_monday
 from ..utils.query_params import validate_query_params
 
 logger = logging.getLogger(__name__)
@@ -261,16 +264,32 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                     stranded_count=stranded,
                 )
 
+        # Moving the start into a past week re-opens weeks the office has
+        # already delivered and billed, so it is refused — except while the
+        # tenant is onboarding, where the office enters a schedule that has been
+        # running on paper for a while and must be able to date it back. The
+        # flag is read here rather than in the model: recomputes must keep
+        # behaving the same when it flips. Only a CHANGED start is judged, so
+        # editing any other field of a long-running row stays possible.
+        new_valid_from = serializer.validated_data.get(
+            "valid_from", instance.valid_from
+        )
+        if (
+            new_valid_from != instance.valid_from
+            and new_valid_from < previous_monday(timezone.localdate())
+            and not onboarding_mode_enabled()
+        ):
+            raise DeliveryDayValidFromMoveIntoPast(
+                "Cannot move a delivery day's valid_from into a past week.",
+                field="valid_from",
+            )
+
         # The mirror case at the other end of the window: moving valid_from
         # LATER leaves everything before the new start with no day covering it.
         # The children keep pointing at this row — the child-migration services
         # run only on the create (succession) path — so they are silently
         # orphaned rather than re-homed. A start moved EARLIER only widens the
-        # window and strands nothing. A start in the past is deliberately NOT
-        # refused here; only the move past existing children is.
-        new_valid_from = serializer.validated_data.get(
-            "valid_from", instance.valid_from
-        )
+        # window and strands nothing, in every mode.
         if new_valid_from > instance.valid_from:
             stranded = instance.deliverystationday_set.filter(
                 valid_from__lt=new_valid_from

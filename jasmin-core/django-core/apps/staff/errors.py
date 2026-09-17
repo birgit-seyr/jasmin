@@ -42,6 +42,15 @@ class WeeklyPlanCopyTargetNotEmpty(ConflictError):
     code = "staff.weekly_plan_copy_target_not_empty"
 
 
+class WeeklyPlanCategoryShrinkBlocked(ConflictError):
+    """``max_lines`` cannot be lowered while weekly-plan entries sit in the rows
+    that would disappear. Those rows stay in the database, vanish from the grid
+    and are still carried along by a week copy, so the lowering is refused until
+    they are cleared."""
+
+    code = "staff.weekly_plan_category_shrink_blocked"
+
+
 class EmployeeInUse(ConflictError):
     """An employee cannot be deleted while weekly-plan cells, absences or
     employments still reference them — a delete would CASCADE all of those

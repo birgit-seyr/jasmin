@@ -13,7 +13,8 @@
   "stock": {
     "insufficient": "Nicht genug Bestand für diese Aktion.",
     "amount_negative": "Die Menge darf nicht negativ sein.",
-    "amount_not_number": "Die Menge muss eine Zahl sein."
+    "amount_not_number": "Die Menge muss eine Zahl sein.",
+    "inventory_finalized": "Dieser Inventureintrag ist finalisiert und kann nicht mehr geändert oder gelöscht werden. Bitte zuerst die Finalisierung aufheben."
   },
   "subscription": {
     "start_too_soon": "Das Abo kann frühestens am {{earliest}} starten ({{min_weeks}} Woche(n) Vorlauf).",
@@ -116,7 +117,10 @@
     "invalid_share_option": "Ungültige Anteilsoption."
   },
   "time_bound": {
-    "succession_start_before_predecessor": "Es kann kein neuer Eintrag vor dem bestehenden offenen Eintrag begonnen werden, den er ablösen würde. Wähle ein Startdatum am oder nach dem des bestehenden Eintrags, oder schließe den bestehenden Eintrag zuerst."
+    "succession_start_before_predecessor": "Es kann kein neuer Eintrag vor dem bestehenden offenen Eintrag begonnen werden, den er ablösen würde. Wähle ein Startdatum am oder nach dem des bestehenden Eintrags, oder schließe den bestehenden Eintrag zuerst.",
+    "valid_from_not_monday": "Das Startdatum muss ein Montag sein.",
+    "valid_until_not_sunday": "Das Enddatum muss ein Sonntag sein.",
+    "invalid_range": "Das Enddatum darf nicht vor dem Startdatum liegen."
   },
   "share_type_variation": {
     "not_found": "Anteilsvariation nicht gefunden.",
@@ -135,7 +139,9 @@
     "invalid_domain": "Die Domain ist ungültig — bitte eine gültige Domain angeben.",
     "reserved_domain": "Diese Subdomain ist für die Plattform reserviert — bitte eine andere Domain wählen.",
     "weak_password": "Das Passwort ist zu schwach — bitte ein sichereres Passwort wählen.",
-    "no_context": "Diese Anfrage enthält keinen Mandanten-Kontext. Bitte die Seite über die Adresse des Mandanten erneut aufrufen."
+    "no_context": "Diese Anfrage enthält keinen Mandanten-Kontext. Bitte die Seite über die Adresse des Mandanten erneut aufrufen.",
+    "logo_invalid": "Das Logo muss ein PNG-, JPEG-, WEBP- oder GIF-Bild sein und die Größen- und Auflösungsgrenzen einhalten.",
+    "feature_flags_invalid": "Die Einstellungen für Navigation und KI müssen als Objekt mit An-/Aus-Werten übermittelt werden."
   },
   "tenant_settings": {
     "coop_shares_bounds_inverted": "Die Mindestanzahl an Geschäftsanteilen darf die Höchstanzahl nicht überschreiten.",
@@ -162,7 +168,8 @@
   "delivery_day": {
     "not_found": "Liefertag nicht gefunden.",
     "required": "Der Liefertag ist erforderlich.",
-    "valid_from_in_past": "Ein Liefertag kann nicht mit einem Gültig-ab-Datum in der Vergangenheit angelegt werden."
+    "valid_from_in_past": "Neu angelegte Liefertage und Stationstage dürfen nicht in der Vergangenheit beginnen — bitte ein Datum ab heute wählen.",
+    "valid_from_move_into_past": "Der Beginn darf nicht in eine bereits vergangene Woche verschoben werden — frühestens der Montag der laufenden Woche ist möglich. Nur im Onboarding-Modus lässt sich der Beginn weiter zurück datieren."
   },
   "delivery_station": {
     "invalid": "Verteilstation ungültig — bitte die Eingabe prüfen.",
@@ -202,6 +209,9 @@
     "offer_not_in_offer_group": "Dieses Angebot gehört nicht zu deiner Angebotsgruppe.",
     "item_change_forbidden": "Angebot oder Artikel einer Bestellposition kann nur das Büro ändern."
   },
+  "orderable_item": {
+    "reference_invalid": "Eine Position muss genau eine Sache enthalten: entweder ein Angebot oder einen Artikel — nicht beides und nicht nichts."
+  },
   "packing_list": {
     "amounts_diverge_across_stations": "Die Packmengen unterscheiden sich je nach Verteilstation. Bitte eine Verteilstation (oder Tour) auswählen, um die Packliste anzuzeigen."
   },
@@ -220,7 +230,8 @@
   },
   "offer_group": {
     "not_found": "Angebotsgruppe nicht gefunden.",
-    "cannot_delete_default": "Die Standard-Angebotsgruppe kann nicht gelöscht werden."
+    "cannot_delete_default": "Die Standard-Angebotsgruppe kann nicht gelöscht werden.",
+    "conflicts_with_reseller": "Die gewählte Angebotsgruppe gehört nicht zum gewählten Wiederverkäufer. Bitte nur nach einem von beiden filtern."
   },
   "export": {
     "invalid_dates": "Ungültiger Datumsbereich für den Export — bitte Anfangs- und Enddatum prüfen."
@@ -287,7 +298,8 @@
     "value_invalid": "Ein Wert ist zu lang, außerhalb des zulässigen Bereichs oder hat das falsche Format — bitte Eingaben prüfen."
   },
   "bulk": {
-    "ids_invalid": "„ids“ darf nur nicht-leere Text-IDs enthalten."
+    "ids_invalid": "„ids“ darf nur nicht-leere Text-IDs enthalten.",
+    "ids_too_many": "Zu viele Einträge in einer Anfrage — bitte die Auswahl in kleinere Blöcke aufteilen."
   },
   "shares_delivery_day": {
     "not_found": "Für den angegebenen Tag wurde kein aktiver Liefertag gefunden.",
@@ -300,6 +312,7 @@
   "delivery_station_day": {
     "shortening_strands_children": "Dieser Stationstag kann nicht zu diesem Datum beendet werden: Zukünftige Lieferungen oder Kapazitätsreservierungen würden danach noch bestehen und verwaisen. Lege stattdessen einen Nachfolge-Stationstag an (der sie überträgt) oder wähle ein späteres Enddatum.",
     "start_move_strands_children": "Der Beginn dieses Stationstags kann nicht auf dieses Datum verschoben werden: Bestehende Lieferungen oder Kapazitätsreservierungen liegen davor und wären dann nicht mehr abgedeckt. Wähle ein früheres Startdatum oder verschiebe sie zuerst.",
+    "starts_before_delivery_day": "Der Stationstag kann nicht vor seinem Liefertag beginnen. Verschiebe zuerst den Beginn des Liefertags oder wähle ein Startdatum ab dessen Beginn.",
     "in_use": "Dieser Abholtag kann nicht gelöscht werden, weil noch Lieferungen darauf verweisen. Bitte zuerst die Lieferungen verschieben oder beenden."
   },
   "inventory_entry": {
@@ -315,6 +328,9 @@
     "model_invalid": "Ungültiger Dokumenttyp — muss Lieferschein oder Rechnung sein.",
     "date_format": "Ungültiges Belegdatum — bitte im Format JJJJ-MM-TT angeben."
   },
+  "billing_profile": {
+    "mandate_reference_locked": "Das SEPA-Mandat wurde bereits eingesetzt — die Mandatsreferenz kann nicht mehr geändert werden. Für eine andere Referenz bitte ein neues Mandat anlegen."
+  },
   "billing_run": {
     "invalid_period": "Das End-Datum muss nach dem Start-Datum liegen.",
     "no_eligible_charges": "Keine fälligen geplanten Abbuchungen im gewählten Zeitraum gefunden.",
@@ -325,7 +341,8 @@
     "mixed_currency": "Die fälligen Abbuchungen haben unterschiedliche Währungen. Ein Lastschriftlauf muss eine einheitliche Währung haben."
   },
   "sepa": {
-    "export_invalid": "SEPA-Export nicht möglich: erforderliche Gläubiger- oder Zahlungspflichtige-Daten fehlen."
+    "export_invalid": "SEPA-Export nicht möglich: erforderliche Gläubiger- oder Zahlungspflichtige-Daten fehlen.",
+    "mandate_signed_in_future": "Das Unterschriftsdatum des SEPA-Mandats darf nicht in der Zukunft liegen."
   },
   "crates": {
     "disabled_on_documents": "Kisten werden für diese Organisation nicht auf Belegen geführt und können daher nicht hinzugefügt werden."
@@ -370,7 +387,8 @@
     "dispatch_failed": "Der E-Mail-Versand ist fehlgeschlagen — bitte später erneut versuchen.",
     "not_found": "E-Mail-Vorlage nicht gefunden.",
     "test_send_no_recipient": "Für den Testversand ist keine Empfängeradresse vorhanden.",
-    "undeclared_placeholders": "Die Vorlage verwendet Platzhalter, die für diese E-Mail nicht verfügbar sind: {{placeholders}}. Bitte nur die angezeigten Variablen verwenden."
+    "undeclared_placeholders": "Die Vorlage verwendet Platzhalter, die für diese E-Mail nicht verfügbar sind: {{placeholders}}. Bitte nur die angezeigten Variablen verwenden.",
+    "unsupported_language": "Diese Sprache wird nicht unterstützt. Bitte eine der verfügbaren Sprachen wählen."
   },
   "forecast": {
     "not_found": "Prognose nicht gefunden."
@@ -416,7 +434,8 @@
   },
   "summary_invoice": {
     "ids_required": "Bitte mindestens eine Bestellung auswählen.",
-    "no_valid_dns": "Keine gültigen Lieferscheine gefunden, um eine Sammelrechnung zu erstellen."
+    "no_valid_dns": "Keine gültigen Lieferscheine gefunden, um eine Sammelrechnung zu erstellen.",
+    "date_format": "Ungültiges Rechnungsdatum — bitte im Format JJJJ-MM-TT angeben."
   },
   "crate_order_content": {
     "not_found": "Kisten-Bestellposition nicht gefunden."
@@ -474,13 +493,17 @@
     "weekly_plan_copy_target_not_empty": "Die Zielwoche enthält bereits einen Wochenplan. Kopieren ist nur in eine leere Woche möglich.",
     "employee_in_use": "Diese MitarbeiterIn kann nicht gelöscht werden, weil noch Wochenplan-Einträge, Abwesenheiten oder Anstellungen auf sie verweisen. Stattdessen deaktivieren.",
     "weekly_plan_category_in_use": "Diese Wochenplan-Kategorie kann nicht gelöscht werden, weil sie im Wochenplan verwendet wird. Stattdessen deaktivieren.",
-    "absence_category_in_use": "Diese Abwesenheits-Kategorie kann nicht gelöscht werden, weil noch Abwesenheiten auf sie verweisen. Stattdessen deaktivieren."
+    "absence_category_in_use": "Diese Abwesenheits-Kategorie kann nicht gelöscht werden, weil noch Abwesenheiten auf sie verweisen. Stattdessen deaktivieren.",
+    "weekly_plan_category_shrink_blocked": "Die Zeilenzahl kann nicht verringert werden, weil in den wegfallenden Zeilen noch Einträge stehen. Bitte diese Einträge zuerst entfernen."
   },
   "email_config": {
     "test_recipient_missing": "Bitte eine Empfängeradresse für die Test-E-Mail angeben.",
     "not_set_up": "Der E-Mail-Versand ist noch nicht eingerichtet. Bitte zuerst SMTP-Host und Absenderadresse hinterlegen und speichern, dann die Test-E-Mail senden.",
     "test_recipient_not_allowed": "Test-E-Mails gehen nur an die eigene Konto-Adresse oder an die Kontaktadresse der Organisation. Bitte eine dieser Adressen eintragen.",
-    "test_send_failed": "Die Test-E-Mail konnte nicht gesendet werden. Bitte SMTP-Host, Port und Zugangsdaten prüfen und erneut versuchen."
+    "test_send_failed": "Die Test-E-Mail konnte nicht gesendet werden. Bitte SMTP-Host, Port und Zugangsdaten prüfen und erneut versuchen.",
+    "smtp_host_not_allowed": "Bitte einen öffentlich erreichbaren SMTP-Host angeben. Private, lokale und reservierte Adressen sind nicht erlaubt.",
+    "smtp_port_invalid": "Bitte eine gültige Portnummer zwischen 1 und 65535 angeben.",
+    "tls_ssl_conflict": "Bitte entweder STARTTLS oder SSL wählen, nicht beides."
   },
   "support": {
     "ticket_not_found": "Support-Anfrage nicht gefunden.",

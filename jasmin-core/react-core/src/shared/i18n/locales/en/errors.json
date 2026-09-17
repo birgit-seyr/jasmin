@@ -13,7 +13,8 @@
   "stock": {
     "insufficient": "Not enough stock for this action.",
     "amount_negative": "Amount must not be negative.",
-    "amount_not_number": "Amount must be a number."
+    "amount_not_number": "Amount must be a number.",
+    "inventory_finalized": "This inventory entry is finalized and can no longer be changed or deleted. Unfinalize it first."
   },
   "subscription": {
     "start_too_soon": "The subscription can't start before {{earliest}} ({{min_weeks}} week(s) lead time).",
@@ -116,7 +117,10 @@
     "invalid_share_option": "Invalid share option."
   },
   "time_bound": {
-    "succession_start_before_predecessor": "Can't start a new record before the existing open record it would succeed. Choose a start date on or after the existing record's, or close the existing record first."
+    "succession_start_before_predecessor": "Can't start a new record before the existing open record it would succeed. Choose a start date on or after the existing record's, or close the existing record first.",
+    "valid_from_not_monday": "The start date must be a Monday.",
+    "valid_until_not_sunday": "The end date must be a Sunday.",
+    "invalid_range": "The end date must not be before the start date."
   },
   "share_type_variation": {
     "not_found": "Share type variation not found.",
@@ -135,7 +139,9 @@
     "invalid_domain": "The domain is invalid — please enter a valid domain.",
     "reserved_domain": "This subdomain is reserved for the platform — please choose a different domain.",
     "weak_password": "The password is too weak — please choose a stronger one.",
-    "no_context": "This request carries no tenant context. Please open the page via the tenant's own address."
+    "no_context": "This request carries no tenant context. Please open the page via the tenant's own address.",
+    "logo_invalid": "The logo must be a PNG, JPEG, WEBP or GIF image within the size and resolution limits.",
+    "feature_flags_invalid": "The navigation and AI settings must be sent as an object of on/off values."
   },
   "tenant_settings": {
     "coop_shares_bounds_inverted": "The minimum number of coop shares cannot exceed the maximum.",
@@ -162,7 +168,8 @@
   "delivery_day": {
     "not_found": "Delivery day not found.",
     "required": "The delivery day is required.",
-    "valid_from_in_past": "A delivery day cannot be created with a valid-from date in the past."
+    "valid_from_in_past": "A new delivery day or station-day cannot start in the past — pick a date from today onward.",
+    "valid_from_move_into_past": "The start cannot be moved into a past week — the Monday of the current week is the earliest possible. Only in onboarding mode can the start be dated further back."
   },
   "delivery_station": {
     "invalid": "Invalid delivery station input — please check the data.",
@@ -202,6 +209,9 @@
     "offer_not_in_offer_group": "This offer is not part of your offer group.",
     "item_change_forbidden": "Only office staff can change the offer or article of an order line."
   },
+  "orderable_item": {
+    "reference_invalid": "A line must reference exactly one item: either an offer or an article — not both, and not neither."
+  },
   "packing_list": {
     "amounts_diverge_across_stations": "Packing amounts differ between delivery stations. Select a delivery station (or tour) to view the packing list."
   },
@@ -220,7 +230,8 @@
   },
   "offer_group": {
     "not_found": "Offer group not found.",
-    "cannot_delete_default": "The default offer group cannot be deleted."
+    "cannot_delete_default": "The default offer group cannot be deleted.",
+    "conflicts_with_reseller": "The selected offer group does not belong to the selected reseller. Please filter by only one of the two."
   },
   "export": {
     "invalid_dates": "Invalid date range for export — please check the start and end dates."
@@ -287,7 +298,8 @@
     "value_invalid": "A value is too long, out of range or in the wrong format — please check your input."
   },
   "bulk": {
-    "ids_invalid": "ids may only contain non-empty string IDs."
+    "ids_invalid": "ids may only contain non-empty string IDs.",
+    "ids_too_many": "Too many entries in a single request — please split the selection into smaller batches."
   },
   "shares_delivery_day": {
     "not_found": "No active delivery day found for the given day.",
@@ -300,6 +312,7 @@
   "delivery_station_day": {
     "shortening_strands_children": "This station-day can't end on that date: future deliveries or capacity reservations would outlive it and be stranded. Create a successor station-day (which migrates them), or pick a later end date.",
     "start_move_strands_children": "This station-day can't start on that date: existing deliveries or capacity reservations fall before it and would no longer be covered. Pick an earlier start date, or move them first.",
+    "starts_before_delivery_day": "A station-day cannot start before its delivery day. Move the delivery day's start first, or pick a start on or after it.",
     "in_use": "This pickup day cannot be deleted while deliveries still reference it. Move or end those deliveries first."
   },
   "inventory_entry": {
@@ -315,6 +328,9 @@
     "model_invalid": "Invalid document type — must be a delivery note or an invoice.",
     "date_format": "Invalid document date — please use the YYYY-MM-DD format."
   },
+  "billing_profile": {
+    "mandate_reference_locked": "The SEPA mandate has already been used — its mandate reference can no longer be changed. Set up a new mandate if a different reference is needed."
+  },
   "billing_run": {
     "invalid_period": "The end date must be on or after the start date.",
     "no_eligible_charges": "No eligible planned charges found in the selected period.",
@@ -325,7 +341,8 @@
     "mixed_currency": "The due charges have different currencies. A billing run must use a single currency."
   },
   "sepa": {
-    "export_invalid": "Cannot export SEPA file: required creditor or debtor fields are missing."
+    "export_invalid": "Cannot export SEPA file: required creditor or debtor fields are missing.",
+    "mandate_signed_in_future": "The SEPA mandate signature date must not be in the future."
   },
   "crates": {
     "disabled_on_documents": "Crates are not put on documents for this tenant, so they cannot be added."
@@ -370,7 +387,8 @@
     "dispatch_failed": "Sending the email failed — please try again later.",
     "not_found": "Email template not found.",
     "test_send_no_recipient": "No recipient address is available for the test send.",
-    "undeclared_placeholders": "The template uses variables that are not available for this email: {{placeholders}}. Please use only the variables shown."
+    "undeclared_placeholders": "The template uses variables that are not available for this email: {{placeholders}}. Please use only the variables shown.",
+    "unsupported_language": "This language is not supported. Please choose one of the available languages."
   },
   "forecast": {
     "not_found": "Forecast not found."
@@ -416,7 +434,8 @@
   },
   "summary_invoice": {
     "ids_required": "Provide a non-empty list of order ids.",
-    "no_valid_dns": "No valid delivery notes found to create a summary invoice."
+    "no_valid_dns": "No valid delivery notes found to create a summary invoice.",
+    "date_format": "Invalid invoice date — please use the YYYY-MM-DD format."
   },
   "crate_order_content": {
     "not_found": "Crate order content not found."
@@ -474,13 +493,17 @@
     "weekly_plan_copy_target_not_empty": "The target week already has a weekly plan. Copy is only possible into an empty week.",
     "employee_in_use": "This staff member can't be deleted because weekly plan entries, absences or employments still reference them. Deactivate them instead.",
     "weekly_plan_category_in_use": "This weekly plan category can't be deleted because it is used in the weekly plan. Deactivate it instead.",
-    "absence_category_in_use": "This absence category can't be deleted because absences still reference it. Deactivate it instead."
+    "absence_category_in_use": "This absence category can't be deleted because absences still reference it. Deactivate it instead.",
+    "weekly_plan_category_shrink_blocked": "The number of rows can't be reduced because the rows that would disappear still hold entries. Please clear those entries first."
   },
   "email_config": {
     "test_recipient_missing": "Please enter a recipient address for the test email.",
     "not_set_up": "Email sending is not set up yet. Please save an SMTP host and a from-address first, then send the test email.",
     "test_recipient_not_allowed": "Test emails only go to your own account address or the organisation's contact address. Please enter one of those.",
-    "test_send_failed": "The test email could not be sent. Please check the SMTP host, port and credentials, then try again."
+    "test_send_failed": "The test email could not be sent. Please check the SMTP host, port and credentials, then try again.",
+    "smtp_host_not_allowed": "Please enter a public SMTP host. Private, loopback, link-local and reserved addresses are not allowed.",
+    "smtp_port_invalid": "Please enter a valid port number between 1 and 65535.",
+    "tls_ssl_conflict": "Choose either STARTTLS or SSL, not both."
   },
   "support": {
     "ticket_not_found": "Support ticket not found.",

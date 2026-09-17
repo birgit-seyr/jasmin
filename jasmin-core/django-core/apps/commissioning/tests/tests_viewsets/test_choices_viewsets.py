@@ -5,7 +5,9 @@ from __future__ import annotations
 import datetime
 
 import pytest
+import time_machine
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 
 from apps.commissioning.tests.factories import (
@@ -16,6 +18,33 @@ from apps.commissioning.tests.factories import (
     SharesDeliveryDayFactory,
     SubscriptionFactory,
 )
+from apps.shared.tenants.models import TenantSettings
+
+
+def _set_onboarding_mode(tenant, enabled: bool) -> None:
+    row = TenantSettings.objects.filter(tenant=tenant, valid_until__isnull=True).first()
+    if row is None:
+        row = TenantSettings.objects.create(
+            tenant=tenant, valid_from=timezone.now() - datetime.timedelta(days=365)
+        )
+    elif row.valid_from > timezone.now():
+        # The frozen clock sits before a row opened in real time; move its start
+        # back so ``get_current_settings`` sees it.
+        row.valid_from = timezone.now() - datetime.timedelta(days=365)
+    row.onboarding_mode = enabled
+    row.save()
+
+
+@pytest.fixture()
+def onboarding_mode(tenant):
+    _set_onboarding_mode(tenant, True)
+    yield
+    _set_onboarding_mode(tenant, False)
+
+
+@pytest.fixture()
+def onboarding_mode_off(tenant):
+    _set_onboarding_mode(tenant, False)
 
 
 # ---------------------------------------------------------------------------
@@ -137,21 +166,30 @@ class TestSharesDeliveryDayViewSet:
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestSharesDeliveryDayValidFromMove:
-    """Moving the START of a delivery day's window later leaves its existing
-    children before the new date uncovered.
+    """PATCHing the START of a delivery day's window.
 
-    Nothing re-homes them — the child-migration services run only on the
-    create/succession path — so the row silently stops covering rows that still
-    point at it. All dates here sit in the past so the assertions never depend
-    on the wall clock.
+    Moving it LATER past existing children is refused in every mode: nothing
+    re-homes them — the child-migration services run only on the
+    create/succession path — so the row would silently stop covering rows that
+    still point at it. Moving it EARLIER into a week that has already been
+    delivered is refused too, unless the tenant is in onboarding mode and is
+    entering a schedule that has been running on paper.
     """
+
+    @pytest.fixture(autouse=True)
+    def _frozen_clock(self):
+        # A Monday away from any year boundary. The current week starts
+        # 2026-02-02, so the rows built at 2026-01-05 start in a past week
+        # while 2026-06-01 stays comfortably in the future.
+        with time_machine.travel(datetime.datetime(2026, 2, 2, 12, 0), tick=False):
+            yield
 
     @staticmethod
     def _url(day):
         return reverse("share_delivery_day-detail", kwargs={"pk": day.pk})
 
     def test_moving_start_later_past_existing_shares_returns_409(
-        self, api_client, tenant
+        self, api_client, tenant, onboarding_mode_off
     ):
         day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 1, 5))
         # ISO week 15/2026 starts 2026-04-06 — before the proposed new start.
@@ -168,7 +206,7 @@ class TestSharesDeliveryDayValidFromMove:
         assert day.valid_from == datetime.date(2026, 1, 5)
 
     def test_moving_start_later_past_existing_station_days_returns_409(
-        self, api_client, tenant
+        self, api_client, tenant, onboarding_mode_off
     ):
         day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 1, 5))
         DeliveryStationDayFactory(
@@ -184,10 +222,43 @@ class TestSharesDeliveryDayValidFromMove:
         day.refresh_from_db()
         assert day.valid_from == datetime.date(2026, 1, 5)
 
-    def test_moving_start_earlier_into_the_past_is_allowed(self, api_client, tenant):
-        """Widening the window backwards strands nothing, and a start in the
-        past is deliberately permitted — onboarding backfills a schedule that
-        has been running for a while."""
+    def test_moving_start_later_past_children_stays_refused_in_onboarding_mode(
+        self, api_client, tenant, onboarding_mode
+    ):
+        """Onboarding opens the earlier direction only — the later move still
+        strands the children pointing at this day."""
+        day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 1, 5))
+        ShareFactory(delivery_day=day, year=2026, delivery_week=15)
+
+        resp = api_client.patch(
+            self._url(day), {"valid_from": "2026-06-01"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "shares_delivery_day.start_move_strands_children"
+        day.refresh_from_db()
+        assert day.valid_from == datetime.date(2026, 1, 5)
+
+    def test_moving_start_into_a_past_week_is_refused(
+        self, api_client, tenant, onboarding_mode_off
+    ):
+        day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 1, 5))
+        ShareFactory(delivery_day=day, year=2026, delivery_week=15)
+
+        resp = api_client.patch(
+            self._url(day), {"valid_from": "2025-11-03"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "delivery_day.valid_from_move_into_past"
+        day.refresh_from_db()
+        assert day.valid_from == datetime.date(2026, 1, 5)
+
+    def test_moving_start_into_a_past_week_is_allowed_in_onboarding_mode(
+        self, api_client, tenant, onboarding_mode
+    ):
+        """Widening the window backwards strands nothing, and the office is
+        entering a schedule that has been running for a while."""
         day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 1, 5))
         ShareFactory(delivery_day=day, year=2026, delivery_week=15)
 
@@ -200,7 +271,7 @@ class TestSharesDeliveryDayValidFromMove:
         assert day.valid_from == datetime.date(2025, 11, 3)
 
     def test_moving_start_later_with_nothing_before_it_is_allowed(
-        self, api_client, tenant
+        self, api_client, tenant, onboarding_mode_off
     ):
         day = SharesDeliveryDayFactory(valid_from=datetime.date(2026, 1, 5))
         # Week 40/2026 starts 2026-09-28 — after the proposed new start.

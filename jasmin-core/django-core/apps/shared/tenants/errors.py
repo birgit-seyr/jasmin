@@ -73,6 +73,26 @@ class TenantAppIconInvalid(BadRequestError):
     code = "tenant.app_icon_invalid"
 
 
+class TenantLogoInvalid(BadRequestError):
+    """An uploaded tenant logo is not a usable picture: too large, too many
+    pixels, or not a decodable PNG/JPEG/WEBP/GIF.
+
+    The file is re-encoded and renamed on the way in, because it is served from
+    the tenant's own origin — a picture kept under a caller-chosen name and
+    extension would be handed back with that extension's content type."""
+
+    code = "tenant.logo_invalid"
+
+
+class TenantFeatureFlagsInvalid(BadRequestError):
+    """``navigation`` / ``ai`` must be an object mapping flag names to booleans.
+
+    They are stored as free JSON, so a string, list or number would persist and
+    only fail much later in the client that reads the flags."""
+
+    code = "tenant.feature_flags_invalid"
+
+
 class YearNumberingLocked(BadRequestError):
     """A year-based numbering setting cannot be changed anymore because
     documents of the corresponding type already exist."""
@@ -140,6 +160,27 @@ class TestEmailRecipientNotAllowed(BadRequestError):
 
 class TestEmailSendFailed(BadRequestError):
     code = "email_config.test_send_failed"
+
+
+class SmtpHostNotAllowed(BadRequestError):
+    """The configured SMTP host is not a public address. Private, loopback,
+    link-local and reserved targets are refused so tenant email settings cannot
+    be pointed at the platform's own network."""
+
+    code = "email_config.smtp_host_not_allowed"
+
+
+class SmtpPortInvalid(BadRequestError):
+    """The configured SMTP port is outside 1-65535."""
+
+    code = "email_config.smtp_port_invalid"
+
+
+class SmtpTlsSslConflict(BadRequestError):
+    """STARTTLS and implicit SSL were both enabled. They are alternative
+    transports, and enabling both yields a connection that never completes."""
+
+    code = "email_config.tls_ssl_conflict"
 
 
 # --------------------------------------------------------------------------- #
