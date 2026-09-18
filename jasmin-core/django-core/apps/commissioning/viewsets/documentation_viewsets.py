@@ -146,6 +146,9 @@ def _validated_model(request: Request) -> str:
             f"Invalid model '{model}'. Must be one of: {list(DOCUMENTATION_MODELS)}",
             field="model",
             code="documentation.invalid_model",
+            # The refused value in machine-readable form as well as in the
+            # message, so the client can show it without parsing prose.
+            details={"model": model},
         )
     return model
 

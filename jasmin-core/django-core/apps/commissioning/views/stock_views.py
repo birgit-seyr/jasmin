@@ -10,7 +10,6 @@ from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models import QuerySet  # noqa: F401  used in type hints
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import serializers as drf_serializers
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -43,6 +42,7 @@ from ..schemas import (
 from ..serializers import (
     BulkIdsRequestSerializer,
     InventoryEntrySerializer,
+    InventoryMetadataSerializer,
     StockComparisonSerializer,
     StorageLoggingEntrySerializer,
 )
@@ -84,28 +84,9 @@ _UPDATABLE_INVENTORY_FIELDS = frozenset(
 _LEDGER_DEFAULT_WINDOW = timedelta(weeks=2)
 
 
-class _InventoryMetadataSerializer(drf_serializers.Serializer):
-    """The flag/note half of an INVENTORY movement's PATCH body.
-
-    ``amount`` is parsed separately by the view, which answers a malformed one
-    with the stable ``stock.amount_*`` codes; everything else is validated
-    here so a bad flag or an over-long note is refused as a field error
-    instead of reaching ``full_clean()`` inside ``save()``.
-    """
-
-    for_shares = drf_serializers.BooleanField(required=False)
-    for_resellers = drf_serializers.BooleanField(required=False)
-    for_markets = drf_serializers.BooleanField(required=False)
-    washed = drf_serializers.BooleanField(required=False)
-    cleaned = drf_serializers.BooleanField(required=False)
-    note = drf_serializers.CharField(
-        required=False, allow_blank=True, allow_null=True, max_length=500
-    )
-
-
 def _validated_inventory_metadata(request: Request) -> dict:
     """Return the validated flag/note fields present in the PATCH body."""
-    serializer = _InventoryMetadataSerializer(data=body(request))
+    serializer = InventoryMetadataSerializer(data=body(request))
     serializer.is_valid(raise_exception=True)
     return serializer.validated_data
 

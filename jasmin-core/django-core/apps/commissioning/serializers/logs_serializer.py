@@ -81,6 +81,25 @@ class StockComparisonSerializer(serializers.Serializer):
     note = serializers.CharField(allow_null=True, allow_blank=True, required=False)
 
 
+class InventoryMetadataSerializer(serializers.Serializer):
+    """The flag/note half of an INVENTORY movement's PATCH body.
+
+    ``amount`` is parsed separately by the view, which answers a malformed one
+    with the stable ``stock.amount_*`` codes; everything else is validated
+    here so a bad flag or an over-long note is refused as a field error
+    instead of reaching ``full_clean()`` inside ``save()``.
+    """
+
+    for_shares = serializers.BooleanField(required=False)
+    for_resellers = serializers.BooleanField(required=False)
+    for_markets = serializers.BooleanField(required=False)
+    washed = serializers.BooleanField(required=False)
+    cleaned = serializers.BooleanField(required=False)
+    note = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, max_length=500
+    )
+
+
 class InventoryEntrySerializer(serializers.Serializer):
     """Response serializer for PATCH on an INVENTORY movement."""
 

@@ -23,14 +23,16 @@ from __future__ import annotations
 
 import pytest
 from django_tenants.utils import schema_context
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIRequestFactory, force_authenticate
 
+from apps.commissioning.tests.conftest import make_step_up_token
 from apps.shared.auth_cookies import SUPER_ADMIN_REFRESH_COOKIE
 from apps.shared.super_admin.models import SuperAdmin, SuperAdminBlacklistedToken
 from apps.shared.super_admin.views.auth_views import (
     SuperAdminRefreshToken,
     super_admin_login_view,
     super_admin_logout_view,
+    super_admin_step_up_view,
     super_admin_token_refresh_view,
 )
 
@@ -66,6 +68,20 @@ def _login(factory, **data):
     """POST to login view, return Response."""
     request = factory.post("/auth/login/", data, format="json")
     return super_admin_login_view(request)
+
+
+def _step_up(factory, admin, data):
+    """POST ``data`` to the step-up view authenticated as ``admin``.
+
+    The step-up token passed to ``force_authenticate`` puts the request in the
+    state a real super-admin session is in when the frontend interceptor
+    re-verifies: an authenticated caller with ``request.auth`` populated.
+    """
+    admin.is_super_admin = True
+    admin.user_role = "super_admin"
+    request = factory.post("/auth/step-up/", data, format="json")
+    force_authenticate(request, user=admin, token=make_step_up_token(admin))
+    return super_admin_step_up_view(request)
 
 
 def _create_case_variant_admins() -> str:
@@ -622,6 +638,109 @@ class TestLoginAccountLockout:
 
 
 # ---------------------------------------------------------------------------
+# Step-up spends the same per-account budget as the login
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestStepUpAccountLockout:
+    """Step-up re-verifies the password the login view checks, so its failures
+    feed the same per-account counter. They are counted here but never
+    enforced: the login view counts a failure for any submitted address,
+    matching account or not, so enforcing that shared counter at step-up would
+    hand an anonymous caller a way to block the operator's step-up-gated
+    actions. MAX is lowered to 3 per-test for determinism; the autouse
+    ``_clear_throttle_cache`` fixture (``cache.clear``) isolates lock state
+    between tests."""
+
+    @pytest.fixture(autouse=True)
+    def _low_threshold(self, settings):
+        settings.SUPER_ADMIN_LOGIN_MAX_FAILURES = 3
+
+    def test_wrong_password_answers_exactly_as_before(self, factory, super_admin):
+        """A failure keeps its original wire shape — counting the attempt does
+        not reshape the refusal."""
+        response = _step_up(factory, super_admin, {"password": "wrong"})
+
+        assert response.status_code == 400
+        assert response.data["code"] == "auth.invalid_credentials"
+        assert response.data["message"] == "Incorrect password."
+
+    def test_passing_the_threshold_still_answers_as_a_failure(
+        self, factory, super_admin
+    ):
+        """Step-up spends the budget without consulting it, so a wrong password
+        answers the same however many attempts came before."""
+        for _ in range(5):
+            response = _step_up(factory, super_admin, {"password": "wrong"})
+
+            assert response.status_code == 400
+            assert response.data["code"] == "auth.invalid_credentials"
+
+    def test_missing_password_counts_toward_the_budget(self, factory, super_admin):
+        """An empty body never reaches ``check_password``, so it has to be
+        counted explicitly or it is a free guess. The count shows on the login,
+        which is where the counter is enforced."""
+        for _ in range(3):
+            assert _step_up(factory, super_admin, {}).status_code == 400
+
+        response = _login(
+            factory, email=SUPER_ADMIN_EMAIL, password=SUPER_ADMIN_PASSWORD
+        )
+        assert response.status_code == 429
+        assert response.data["code"] == "super_admin.account_locked"
+
+    def test_a_locked_account_can_still_step_up(self, factory, super_admin):
+        """Anyone can close the login on a known address by guessing at it, so
+        gating step-up on that counter would be a denial of service against the
+        operator. The correct password still issues the step-up token."""
+        for _ in range(3):
+            _login(factory, email=SUPER_ADMIN_EMAIL, password="wrong")
+        locked_login = _login(
+            factory, email=SUPER_ADMIN_EMAIL, password=SUPER_ADMIN_PASSWORD
+        )
+        assert locked_login.status_code == 429
+
+        response = _step_up(factory, super_admin, {"password": SUPER_ADMIN_PASSWORD})
+
+        assert response.status_code == 200
+
+    def test_successful_step_up_clears_the_counter(self, factory, super_admin):
+        for _ in range(2):
+            assert (
+                _step_up(factory, super_admin, {"password": "wrong"}).status_code == 400
+            )
+
+        success = _step_up(factory, super_admin, {"password": SUPER_ADMIN_PASSWORD})
+        assert success.status_code == 200
+
+        # Two more failures leave the login open. Carried over, the four would
+        # have crossed the threshold and closed it.
+        for _ in range(2):
+            assert (
+                _step_up(factory, super_admin, {"password": "wrong"}).status_code == 400
+            )
+        assert (
+            _login(
+                factory, email=SUPER_ADMIN_EMAIL, password=SUPER_ADMIN_PASSWORD
+            ).status_code
+            == 200
+        )
+
+    def test_step_up_failures_lock_the_login(self, factory, super_admin):
+        """One budget per credential: the counter is keyed by the account's
+        email, so guesses spent on step-up also close the login."""
+        for _ in range(3):
+            _step_up(factory, super_admin, {"password": "wrong"})
+
+        response = _login(
+            factory, email=SUPER_ADMIN_EMAIL, password=SUPER_ADMIN_PASSWORD
+        )
+        assert response.status_code == 429
+        assert response.data["code"] == "super_admin.account_locked"
+
+
+# ---------------------------------------------------------------------------
 # Non-object / non-string request bodies
 # ---------------------------------------------------------------------------
 
@@ -632,19 +751,6 @@ class TestCredentialBodyShapes:
     body. A value that is not a string is a hand-crafted request, and the
     refusal must be the endpoint's ordinary credential failure — never a 500,
     and never distinguishable from a wrong-but-string password."""
-
-    @staticmethod
-    def _step_up(factory, admin, data):
-        from rest_framework.test import force_authenticate
-
-        from apps.commissioning.tests.conftest import make_step_up_token
-        from apps.shared.super_admin.views.auth_views import super_admin_step_up_view
-
-        admin.is_super_admin = True
-        admin.user_role = "super_admin"
-        request = factory.post("/auth/step-up/", data, format="json")
-        force_authenticate(request, user=admin, token=make_step_up_token(admin))
-        return super_admin_step_up_view(request)
 
     def test_login_json_array_body_is_a_400(self, factory, super_admin):
         """A whole JSON array as the body has no credentials to read."""
@@ -658,13 +764,13 @@ class TestCredentialBodyShapes:
     def test_step_up_non_string_password_is_refused(
         self, factory, super_admin, password
     ):
-        response = self._step_up(factory, super_admin, {"password": password})
+        response = _step_up(factory, super_admin, {"password": password})
 
         assert response.status_code == 400
         assert response.data["code"] == "auth.invalid_credentials"
 
     def test_step_up_json_array_body_is_refused(self, factory, super_admin):
-        response = self._step_up(factory, super_admin, [{"password": "x"}])
+        response = _step_up(factory, super_admin, [{"password": "x"}])
 
         assert response.status_code == 400
         assert response.data["code"] == "auth.invalid_credentials"
@@ -673,17 +779,15 @@ class TestCredentialBodyShapes:
         self, factory, super_admin
     ):
         """A non-string password is indistinguishable from a wrong one."""
-        non_string = self._step_up(factory, super_admin, {"password": ["hunter2"]})
-        wrong_string = self._step_up(factory, super_admin, {"password": "hunter2"})
+        non_string = _step_up(factory, super_admin, {"password": ["hunter2"]})
+        wrong_string = _step_up(factory, super_admin, {"password": "hunter2"})
 
         assert non_string.status_code == wrong_string.status_code
         assert non_string.data["code"] == wrong_string.data["code"]
         assert non_string.data["message"] == wrong_string.data["message"]
 
     def test_step_up_correct_password_still_issues_a_token(self, factory, super_admin):
-        response = self._step_up(
-            factory, super_admin, {"password": SUPER_ADMIN_PASSWORD}
-        )
+        response = _step_up(factory, super_admin, {"password": SUPER_ADMIN_PASSWORD})
 
         assert response.status_code == 200
         assert response.data["access"]

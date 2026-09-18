@@ -53,10 +53,10 @@ MATRIX: list[tuple[str, str, str, str]] = [
     # POST: IsOfficeOrMember lets the member pass the permission layer, but
     # ``enforce_privileged`` inside ``create()`` blocks non-office writers.
     ("/api/commissioning/members/", "post", "member", "deny"),
-    # NB: MemberSerializer accepts an empty body (all fields default/blank),
-    # so a permission-passed POST returns 201, not 4xx. Categorise as "ok":
-    # the assertion still proves office is allowed to write.
-    ("/api/commissioning/members/", "post", "office", "ok"),
+    # The empty body clears the permission layer and is then refused by the
+    # create-path identity floor, so this lands in "4xx" like the other POSTs
+    # the harness sends no valid body for. It still proves office is not denied.
+    ("/api/commissioning/members/", "post", "office", "4xx"),
     # ------- Subscriptions / Abos (StaffOrMember read, Office write) -------
     ("/api/commissioning/abos/", "get", "anon", "deny"),
     # Members CAN list abos — the queryset is row-scoped to their own

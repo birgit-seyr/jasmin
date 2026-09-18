@@ -445,11 +445,22 @@ def super_admin_step_up_view(request: Request) -> Response:
     from apps.accounts.errors import InvalidCredentials
 
     user = request.user
+    email = getattr(user, "email", "")
+
+    # Step-up re-verifies the login credential, so its failures spend the same
+    # per-account budget the login view keeps: one counter per credential, not
+    # per endpoint. They are COUNTED here but deliberately not ENFORCED. The
+    # login view registers a failure for any submitted address, matching
+    # account or not, so refusing step-up on that shared counter would let an
+    # anonymous caller lock the operator out of every step-up-gated action by
+    # guessing against a known address. The guessing rate is already capped by
+    # the ``super_admin_login`` throttle scope this endpoint shares.
     password = body(request).get("password") or ""
     if not password or not user.check_password(password):
+        register_failure(email)
         logger.warning(
             "superadmin.step_up.verify_failed user=%s",
-            getattr(user, "email", "-"),
+            email or "-",
         )
         raise InvalidCredentials("Incorrect password.")
 
@@ -462,9 +473,10 @@ def super_admin_step_up_view(request: Request) -> Response:
             access[claim] = current_payload[claim]
     access["step_up_verified_at"] = int(time.time())
 
+    reset_failures(email)
     logger.info(
         "superadmin.step_up.verified user=%s ttl=%ss",
-        getattr(user, "email", "-"),
+        email or "-",
         settings.STEP_UP_TTL_SECONDS,
     )
     return Response(

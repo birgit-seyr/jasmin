@@ -68,6 +68,7 @@ from .finalize_serializer import (
 )
 from .logs_serializer import (
     InventoryEntrySerializer,
+    InventoryMetadataSerializer,
     StockComparisonSerializer,
     StorageLoggingEntrySerializer,
     TheoreticalCleanAmountSerializer,

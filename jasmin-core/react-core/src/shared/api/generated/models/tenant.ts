@@ -7,6 +7,7 @@
  */
 import type { TenantCurrentSettings } from './tenantCurrentSettings';
 import type { TenantSettingsProperty } from './tenantSettingsProperty';
+import type { TenantLanguageEnum } from './tenantLanguageEnum';
 import type { TenantEmail } from './tenantEmail';
 import type { TenantEmailForOrders } from './tenantEmailForOrders';
 import type { TenantWebsite } from './tenantWebsite';
@@ -37,6 +38,7 @@ export interface Tenant {
   readonly current_settings?: TenantCurrentSettings;
   readonly settings?: TenantSettingsProperty;
   readonly app_icon_version?: string;
+  tenant_language?: TenantLanguageEnum;
   readonly schema_name?: string;
   /** @maxLength 200 */
   name: string;
@@ -67,8 +69,6 @@ export interface Tenant {
    * @nullable
    */
   organic_control_number?: string | null;
-  /** @maxLength 8 */
-  tenant_language?: string;
   /**
    * @maxLength 20
    * @nullable

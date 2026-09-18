@@ -548,7 +548,9 @@ class TestAdminApproveRejectViews:
 class TestAdminRejectBodyShapes:
     """The rejection reason is read straight off the JSON body, so a value
     that is not a string has to be refused as a missing reason rather than
-    reaching ``.strip()`` — which would answer with a 500."""
+    reaching ``.strip()`` — which would answer with a 500. A body that is not
+    an object at all carries no fields to read, and lands on the same
+    missing-reason 400."""
 
     @staticmethod
     def _pending_request():
@@ -579,12 +581,23 @@ class TestAdminRejectBodyShapes:
         assert response.status_code == 400
         assert response.json()["code"] == "gdpr.missing_rejection_reason"
 
-    def test_json_array_body_is_a_400(self, tenant):
-        """A whole JSON array as the body has no ``reason`` to read."""
-        response = self._reject(self._pending_request(), [{"reason": "nope"}])
+    def test_json_array_body_is_refused_as_a_missing_reason(self, tenant):
+        """Characterises ``apps.shared.request_utils.body``'s object-only
+        contract at this endpoint: a JSON array is a legal body, carries no
+        fields, and so yields no ``reason`` — the view answers with its own
+        400 and leaves the request untouched. A body accessor that passed the
+        list through instead would reach ``.get()`` on a list and raise.
+        """
+        deletion_request = self._pending_request()
+
+        response = self._reject(deletion_request, [{"reason": "nope"}])
 
         assert response.status_code == 400
         assert response.json()["code"] == "gdpr.missing_rejection_reason"
+        deletion_request.refresh_from_db()
+        assert deletion_request.state == DeletionRequestState.PENDING_ADMIN
+        assert deletion_request.admin_rejection_reason is None
+        assert deletion_request.admin_rejected_at is None
 
     def test_string_reason_still_rejects_the_request(self, tenant):
         deletion_request = self._pending_request()

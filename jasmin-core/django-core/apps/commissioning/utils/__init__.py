@@ -28,6 +28,6 @@ from .storage_fields import (
     extract_storage_fields_from_data,
 )
 from .validation_utils import (
-    validate_and_parse_int_params,
+    parse_body_int_fields,
     validate_bulk_document_request,
 )

@@ -29,9 +29,12 @@ the canonical order) so two concurrent offers for the last share serialise.
 from __future__ import annotations
 
 import logging
+from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.utils import timezone
+
+from apps.shared.money import fits_decimal_column, to_decimal
 
 from ..errors import (
     SubscriptionPriceInvalid,
@@ -49,6 +52,26 @@ logger = logging.getLogger(__name__)
 
 # How long the member has to respond to a "your spot is available" offer.
 OFFER_EXPIRY_DAYS = 7
+
+
+def offer_price_fits_column(amount: Decimal) -> bool:
+    """Whether ``amount`` is storable in ``Subscription.price_per_delivery``.
+
+    The offer price reaches this service outside any serializer, so nothing
+    upstream holds it to the column. The model's own ``full_clean`` does catch
+    an unstorable amount, but only at the save inside
+    :meth:`WaitingListOfferService.offer_spot` — after the capacity hold has
+    been taken — and as a bare ``ValidationError`` rather than a priced error
+    the API can render.
+
+    The bounds are read off the field so they can't drift from the column.
+    """
+    field = Subscription._meta.get_field("price_per_delivery")
+    return fits_decimal_column(
+        amount,
+        max_digits=field.max_digits,
+        decimal_places=field.decimal_places,
+    )
 
 
 class WaitingListOfferService:
@@ -90,15 +113,13 @@ class WaitingListOfferService:
         # Persisted by ``notify_spot_available``'s save below.
         offered_price = subscription.price_per_delivery
         if price_per_delivery is not None and price_per_delivery != "":
-            from decimal import InvalidOperation
-
-            from apps.shared.money import to_decimal
-
             try:
                 offered_price = to_decimal(price_per_delivery)
             except (InvalidOperation, ValueError, TypeError):
                 raise SubscriptionPriceInvalid(price_per_delivery) from None
-            if not offered_price.is_finite() or offered_price < 0:
+            # The column check screens out NaN, so the sign comparison only
+            # ever sees a finite amount — comparing a NaN raises.
+            if not offer_price_fits_column(offered_price) or offered_price < 0:
                 raise SubscriptionPriceInvalid(price_per_delivery)
 
         # The offered price (new or stored) must clear the solidarity floor —

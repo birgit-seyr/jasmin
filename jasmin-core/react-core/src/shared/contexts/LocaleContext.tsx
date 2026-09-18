@@ -12,6 +12,7 @@ import { useAuth } from "./AuthContext";
 import { TenantContext } from "./TenantContext";
 import { authPartialUpdate } from "@shared/api/generated/auth/auth";
 import type { UserProfileUpdateRequest } from "@shared/api/generated/models";
+import { isSupportedLanguageCode } from "@shared/i18n/languages";
 
 /**
  * Load a dayjs locale on demand. English is built into dayjs and
@@ -209,14 +210,10 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
         // Only fields the server persists for a profile PATCH; theme &
         // sidebar_collapsed are local-only preferences.
         const profilePayload: UserProfileUpdateRequest = {};
-        // Persist only a backend-supported language (the user_language field is
-        // constrained to these). A language from browser/tenant detection could
-        // be fr/it (or anything) — switch the UI to it locally below, but never
-        // send an unsupported code to the server (it would 400).
-        if (
-          newPreferences.language === "de" ||
-          newPreferences.language === "en"
-        ) {
+        // A language from browser/tenant detection can be anything — switch
+        // the UI to it locally below, but never send an unsupported code to
+        // the server, whose choice field would 400.
+        if (isSupportedLanguageCode(newPreferences.language)) {
           profilePayload.user_language = newPreferences.language;
         }
         if (Object.keys(profilePayload).length > 0) {

@@ -62,6 +62,7 @@
     "email_already_has_user_named_numbered": "Diese E-Mail-Adresse hat bereits ein Benutzerkonto von {{holder_name}} (Mitglied #{{holder_member_number}}). Eine Adresse kann nur EIN Login haben — dieses Mitglied bleibt ohne eigenen Zugang oder braucht eine eigene Adresse.",
     "email_already_has_user_anonymous": "Diese E-Mail-Adresse hat bereits ein Benutzerkonto, das zu einem anderen Mitglied gehört. Eine Adresse kann nur EIN Login haben.",
     "no_email": "Diesem Mitglied fehlt eine E-Mail-Adresse — bitte erst eintragen.",
+    "identity_required": "Ein Mitglied braucht mindestens ein identifizierendes Feld: Vorname, Nachname, Firmenname, Abholname oder eine E-Mail-Adresse.",
     "invitation_invalid": "Diese Einladung ist nicht (mehr) gültig.",
     "coop_shares_out_of_range": "Die Anzahl der Genossenschaftsanteile ({{total}}) dieses Mitglieds liegt außerhalb des erlaubten Bereichs. Bitte passe die Genossenschaftsanteile an, bevor du das Mitglied bestätigst.",
     "coop_shares_out_of_range_range": "Dieses Mitglied hat {{total}} Genossenschaftsanteil(e). Erlaubt sind zwischen {{minimum}} und {{maximum}}. Bitte passe die Genossenschaftsanteile an, bevor du das Mitglied bestätigst.",
@@ -496,7 +497,8 @@
     "weekly_plan_category_in_use": "Diese Wochenplan-Kategorie kann nicht gelöscht werden, weil sie im Wochenplan verwendet wird. Stattdessen deaktivieren.",
     "absence_category_in_use": "Diese Abwesenheits-Kategorie kann nicht gelöscht werden, weil noch Abwesenheiten auf sie verweisen. Stattdessen deaktivieren.",
     "weekly_plan_category_shrink_blocked": "Die Zeilenzahl kann nicht verringert werden, weil in den wegfallenden Zeilen noch Einträge stehen. Bitte diese Einträge zuerst entfernen.",
-    "weekly_plan_copy_source_rows_out_of_range": "Die Quellwoche enthält Einträge in Zeilen, die es in der Kategorie nicht mehr gibt, weil deren Zeilenzahl inzwischen verringert wurde. Kopiert würden diese Einträge unsichtbar mitwandern und beim nächsten Speichern der Zielwoche gelöscht. Bitte die Zeilenzahl der Kategorie wieder erhöhen oder die betroffenen Einträge in der Quellwoche entfernen."
+    "weekly_plan_copy_source_rows_out_of_range": "Die Quellwoche enthält Einträge in Zeilen, die es in der Kategorie nicht mehr gibt, weil deren Zeilenzahl inzwischen verringert wurde. Kopiert würden diese Einträge unsichtbar mitwandern und beim nächsten Speichern der Zielwoche gelöscht. Bitte die Zeilenzahl der Kategorie wieder erhöhen oder die betroffenen Einträge in der Quellwoche entfernen.",
+    "weekly_plan_copy_source_category_inactive": "Die Quellwoche enthält Einträge in Kategorien, die deaktiviert sind. Der Wochenplan zeigt nur aktive Kategorien; kopiert würden diese Einträge unsichtbar mitwandern und beim nächsten Speichern der Zielwoche gelöscht. Bitte die Kategorie wieder aktivieren oder die betroffenen Einträge in der Quellwoche entfernen."
   },
   "email_config": {
     "test_recipient_missing": "Bitte eine Empfängeradresse für die Test-E-Mail angeben.",

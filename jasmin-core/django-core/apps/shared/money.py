@@ -40,3 +40,32 @@ def round_money(value) -> Decimal:
     """Coerce ``value`` (see :func:`to_decimal`) and round to whole cents
     with ``ROUND_HALF_UP``."""
     return to_decimal(value).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+def fits_decimal_column(
+    amount: Decimal, *, max_digits: int, decimal_places: int
+) -> bool:
+    """Whether ``amount`` is storable as written in a
+    ``numeric(max_digits, decimal_places)`` column.
+
+    ``False`` for a non-finite amount, for one whose integer part overflows the
+    column, and for one carrying more decimals than the column keeps — that last
+    one is the quiet failure, since the write would round it away and store an
+    amount nobody asked for. A trailing zero is not extra precision:
+    ``10.9900`` fits two decimal places.
+
+    Screening for non-finite first also makes this safe to call before any
+    comparison of ``amount``, which would raise on a NaN.
+
+    ``copy_abs`` rather than ``abs``: the latter is context-sensitive and
+    raises ``decimal.Overflow`` on an extreme exponent (``1e6000000``), which
+    would turn a value this predicate exists to refuse into an unhandled
+    error. ``copy_abs`` only flips the sign, so such an amount reaches the
+    comparison and is answered with ``False``.
+    """
+    if not amount.is_finite():
+        return False
+    if amount.copy_abs() >= Decimal(10) ** (max_digits - decimal_places):
+        return False
+    quantum = Decimal(1).scaleb(-decimal_places)
+    return amount.quantize(quantum, rounding=ROUND_HALF_UP) == amount

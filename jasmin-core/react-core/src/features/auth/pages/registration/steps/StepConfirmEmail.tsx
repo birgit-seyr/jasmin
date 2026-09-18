@@ -6,8 +6,8 @@ import {
   useAuthRegisterSendCodeCreate,
   useAuthRegisterVerifyCodeCreate,
 } from "@shared/api/generated/auth/auth";
-import type { UserLanguageEnum } from "@shared/api/generated/models";
 import { FriendlyCaptcha } from "@shared/auth/FriendlyCaptcha";
+import { isSupportedLanguageCode } from "@shared/i18n/languages";
 import { useTenant } from "@hooks/index";
 import { getErrorMessage } from "@shared/utils/apiError";
 import type { StepProps } from "../types";
@@ -90,9 +90,10 @@ export default function StepConfirmEmail({ data, update, next, back }: StepProps
       accepted_consent_documents: Object.keys(consents).length
         ? consents
         : undefined,
-      user_language: (["de", "en", "fr", "it"].includes(langBase)
-        ? langBase
-        : "en") as UserLanguageEnum,
+      // Detection reports whatever locale the browser is set to, which on a
+      // tenant with no configured language can be one the backend's choice
+      // field rejects. Registering in English beats failing the submission.
+      user_language: isSupportedLanguageCode(langBase) ? langBase : "en",
     };
   };
 

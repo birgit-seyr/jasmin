@@ -2,9 +2,9 @@
 Generic validation utilities for request parameters.
 Reusable across all views in the commissioning app.
 
-All helpers raise :class:`apps.commissioning.errors.InvalidQueryParam`
-(HTTP 400 via ``core.exception_handler``) on bad input and return the
-parsed values directly — callers don't need any error handling.
+All helpers raise a :class:`core.errors.JasminError` subclass (HTTP 400 via
+``core.exception_handler``) on bad input and return the parsed values
+directly — callers don't need any error handling.
 """
 
 from __future__ import annotations
@@ -21,7 +21,6 @@ from ..errors import (
     BulkIdsInvalid,
     BulkIdsTooMany,
     CommissioningError,
-    InvalidQueryParam,
     RequiredFieldMissing,
 )
 from .query_params import PARAM_CATALOGUE
@@ -55,48 +54,44 @@ _UNBOUNDED_INT = ParamSpec("int")
 MAX_BULK_IDS = 1000
 
 
-def validate_and_parse_int_params(
+def parse_body_int_fields(
     request: Request,
-    param_names: list[str],
-    source: str = "query",
+    field_names: list[str],
     ranges: dict[str, tuple[int, int]] | None = None,
 ) -> list[int]:
-    """
-    Validate and parse integer parameters from request with automatic range checks.
+    """Validate and parse integer fields from the request BODY.
+
+    Body-only: a query parameter is validated by ``validate_query_params``
+    against ``PARAM_CATALOGUE``, the front door for the query string, and the
+    catalogue models no body fields.
 
     Parsing and the 400 shape come from ``coerce_param``, the same parser the
     catalogued query parameters use, so an integer means one thing everywhere.
-
-    Automatically validates common ranges, taken from the query catalogue:
+    The ranges are the catalogue's as well:
     - year: 1900-2100
     - delivery_week/week: 1-53
 
     Args:
         request: DRF Request object
-        param_names: List of parameter names to validate
-        source: Where to get params from - "query" (GET) or "data" (POST body)
-        ranges: Optional custom ranges to override defaults {param_name: (min, max)}
+        field_names: Body fields to read, in the order their values are returned
+        ranges: Optional custom ranges overriding the defaults {field: (min, max)}
 
     Returns:
-        List of parsed integer values (same order as ``param_names``).
+        List of parsed integer values (same order as ``field_names``).
 
     Raises:
-        InvalidQueryParam: if a parameter is missing, not an integer, or
-            outside its allowed range.
+        RequiredFieldMissing: if a field is absent from the body.
+        InvalidQueryParam: if a present value is not an integer or lies outside
+            its allowed range — ``coerce_param`` raises that one for a body
+            scalar just as it does for a query parameter.
 
     Example:
-        >>> # GET request with automatic year/week validation
-        >>> year, week = validate_and_parse_int_params(
+        >>> year, week = parse_body_int_fields(
         ...     request, ["year", "delivery_week"]
         ... )
 
-        >>> # POST request
-        >>> year, week = validate_and_parse_int_params(
-        ...     request, ["year", "delivery_week"], source="data"
-        ... )
-
         >>> # Custom range override
-        >>> (year,) = validate_and_parse_int_params(
+        >>> (year,) = parse_body_int_fields(
         ...     request, ["year"], ranges={"year": (1900, 2200)}
         ... )
     """
@@ -111,18 +106,19 @@ def validate_and_parse_int_params(
 
     parsed_values = []
     # ``body`` rather than ``request.data``: a body that is not a JSON object
-    # (an array, a bare string) reads as empty here, so the missing-parameter
-    # 400 below answers it instead of ``.get`` raising AttributeError (500).
-    params_source = request.query_params if source == "query" else body(request)
+    # (an array, a bare string) reads as empty here, so the missing-field 400
+    # below answers it instead of ``.get`` raising AttributeError (500).
+    fields = body(request)
 
-    for param_name in param_names:
-        value = params_source.get(param_name)
+    for field_name in field_names:
+        value = fields.get(field_name)
 
-        # Check if parameter is present
+        # Nothing was sent, so ``field`` names it and there is no offending
+        # value for ``details`` to echo — unlike the coercion failures below.
         if value is None:
-            raise InvalidQueryParam(
-                f"{param_name} parameter is required",
-                field=param_name,
+            raise RequiredFieldMissing(
+                f"{field_name} field is required",
+                field=field_name,
             )
 
         # ``str`` because a JSON body carries real ints, while the shared
@@ -130,8 +126,8 @@ def validate_and_parse_int_params(
         parsed_values.append(
             coerce_param(
                 str(value),
-                param_name,
-                effective_specs.get(param_name, _UNBOUNDED_INT),
+                field_name,
+                effective_specs.get(field_name, _UNBOUNDED_INT),
             )
         )
 

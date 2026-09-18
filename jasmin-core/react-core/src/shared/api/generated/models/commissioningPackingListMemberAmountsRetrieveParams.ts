@@ -34,6 +34,7 @@ is_past?: boolean;
 /**
  * Tour number
  * @minimum 0
+ * @maximum 20
  */
 tour?: number;
 /**

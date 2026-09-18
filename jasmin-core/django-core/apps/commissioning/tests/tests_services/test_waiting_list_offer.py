@@ -13,6 +13,7 @@ import datetime
 from unittest import mock
 
 import pytest
+import time_machine
 from django.utils import timezone
 
 from apps.commissioning.errors import (
@@ -44,11 +45,18 @@ def dsd():
     return DeliveryStationDayFactory()
 
 
+# The instant the whole module runs at. ``_SPAN`` brackets it, so an offered
+# term reads as live no matter how far the real clock has moved on.
+_NOW = datetime.datetime(2026, 7, 20, 12, 0)
+
+
 @pytest.fixture(autouse=True)
 def _mock_holds_and_email():
     """Isolate the offer state machine: stub the DSD reservation (own suite) and
-    the deferred email so tests don't need harvest/DSD capacity or SMTP."""
+    the deferred email so tests don't need harvest/DSD capacity or SMTP, and pin
+    the clock so the term the subscriptions are built on stays current."""
     with (
+        time_machine.travel(_NOW, tick=False),
         mock.patch.object(
             WaitingListOfferService, "_send_offer_email", return_value=None
         ),
@@ -299,3 +307,39 @@ class TestWaitingListOfferPriceRules:
         sub.refresh_from_db()
         assert sub.waiting_list_status == Subscription.WaitingListStatus.PENDING
         assert sub.price_per_delivery is None
+
+    @pytest.mark.parametrize(
+        "price",
+        [
+            "12345678.00",  # more than the six digits before the point
+            "1e6",  # the same overflow in exponent notation
+            "10.999",  # a third decimal the write would round away
+            " 12.345 ",  # ... and surrounded by whitespace
+            "999999.995",  # in range until it rounds up out of it
+        ],
+    )
+    def test_offer_outside_the_column_bounds_is_refused(self, tenant, dsd, price):
+        """A caller that isn't the endpoint is held to ``numeric(8, 2)`` too."""
+        from apps.commissioning.errors import SubscriptionPriceInvalid
+
+        sub = _pending(ShareTypeVariationFactory(capacity=5), dsd)
+
+        with pytest.raises(SubscriptionPriceInvalid):
+            WaitingListOfferService.offer_spot(sub, price_per_delivery=price)
+
+        sub.refresh_from_db()
+        assert sub.waiting_list_status == Subscription.WaitingListStatus.PENDING
+        assert sub.price_per_delivery is None
+
+    def test_offer_at_the_widest_storable_amount_is_sent(self, tenant, dsd):
+        """The bound is the column's, not a stricter one: the largest amount
+        ``numeric(8, 2)`` holds still goes out."""
+        from decimal import Decimal
+
+        sub = _pending(ShareTypeVariationFactory(capacity=5), dsd)
+
+        WaitingListOfferService.offer_spot(sub, price_per_delivery="999999.99")
+
+        sub.refresh_from_db()
+        assert sub.waiting_list_status == Subscription.WaitingListStatus.SPOT_AVAILABLE
+        assert sub.price_per_delivery == Decimal("999999.99")

@@ -103,7 +103,13 @@ class DataImportView(APIViewRolePermissionsMixin, APIView):
         },
     )
     def post(self, request: Request) -> Response:
-        model_name = (body(request).get("model_name") or "").strip().lower()
+        raw_model_name = body(request).get("model_name")
+        if raw_model_name is not None and not isinstance(raw_model_name, str):
+            # A ``model_name`` sent as a file part rather than a form field
+            # arrives as an UploadedFile. Refusing it as the missing field
+            # keeps it away from ``.strip()``, which would answer with a 500.
+            raise RequiredFieldMissing("model_name is required", field="model_name")
+        model_name = (raw_model_name or "").strip().lower()
         upload = request.FILES.get("file")
 
         if not model_name:

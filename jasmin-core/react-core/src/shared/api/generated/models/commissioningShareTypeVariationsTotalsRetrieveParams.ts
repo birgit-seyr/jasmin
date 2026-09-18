@@ -36,6 +36,7 @@ share_option?: CommissioningShareTypeVariationsTotalsRetrieveShareOption;
 share_type?: string;
 /**
  * @minimum 0
+ * @maximum 20
  */
 tour?: number;
 /**

@@ -149,13 +149,37 @@ class TestCreateTenantRequest:
         ser = CreateTenantRequestSerializer(data={**self.HAPPY, "name": "N" * 200})
         assert ser.is_valid(), ser.errors
 
-    def test_over_long_tenant_language_rejected(self):
-        # ``Tenant.tenant_language`` is an 8-char column.
+    @pytest.mark.parametrize("code", ["en", "de"])
+    def test_supported_tenant_language_accepted(self, code):
         ser = CreateTenantRequestSerializer(
-            data={**self.HAPPY, "tenant_language": "x" * 9}
+            data={**self.HAPPY, "tenant_language": code}
+        )
+        assert ser.is_valid(), ser.errors
+        assert ser.validated_data["tenant_language"] == code
+
+    @pytest.mark.parametrize(
+        "code", ["fr", "it", "deu", "de-DE", "DE", "english", "xx", "x" * 9]
+    )
+    def test_unsupported_tenant_language_rejected(self, code):
+        # Only the languages the platform ships UI + email templates for
+        # (``apps.shared.languages.LanguageChoices``) may be provisioned.
+        ser = CreateTenantRequestSerializer(
+            data={**self.HAPPY, "tenant_language": code}
         )
         assert not ser.is_valid()
         assert "tenant_language" in ser.errors
+
+    def test_omitted_tenant_language_defaults_to_blank(self):
+        # ``provision_tenant`` writes this straight onto the column, and the
+        # language readers treat "" as "no tenant preference".
+        ser = CreateTenantRequestSerializer(data=self.HAPPY)
+        assert ser.is_valid(), ser.errors
+        assert ser.validated_data["tenant_language"] == ""
+
+    def test_blank_tenant_language_accepted(self):
+        ser = CreateTenantRequestSerializer(data={**self.HAPPY, "tenant_language": ""})
+        assert ser.is_valid(), ser.errors
+        assert ser.validated_data["tenant_language"] == ""
 
     def test_over_long_admin_name_rejected(self):
         ser = CreateTenantRequestSerializer(

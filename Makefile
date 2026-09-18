@@ -250,6 +250,19 @@ type-check:
 test-frontend:
 	$(COMPOSE_DEV) exec frontend npm run test:run
 
+# --- Inventory drift (runs on the host) --------------------------------------
+# Sweeps the code for module-level numeric constants and reports them. Where a
+# curated numeric-constants inventory is present it also reports the drift both
+# ways: constants the page does not name, and names it lists that no longer
+# exist. That page is a local, gitignored artifact, so on a checkout without it
+# you get the plain census and no comparison. A report, not a gate — it exits 0
+# on drift unless you pass TUNABLES_ARGS=--strict, and it is deliberately not
+# part of `check`. Host-run because it reads outside the backend container's
+# mounts.
+.PHONY: tunables
+tunables:
+	cd $(DJANGO_DIR) && $(PYTHON) scripts/tunables.py $(TUNABLES_ARGS)
+
 # --- Run the whole CI gate in one shot ---------------------------------------
 .PHONY: check
 check: black ruff import-contracts mypy pytest type-check lint lint-pins test-frontend

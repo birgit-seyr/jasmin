@@ -28,12 +28,22 @@ from apps.commissioning.tests.factories import (
     SubscriptionFactory,
 )
 
-# A term that covers "today" (the session clock) so live subs are counted.
+# A term that covers the frozen instant below, so live subs are counted.
 # Subscriptions require a Monday valid_from + a Sunday valid_until.
 _SPAN = {
     "valid_from": datetime.date(2026, 1, 5),  # Monday
     "valid_until": datetime.date(2027, 1, 3),  # Sunday
 }
+
+# The instant the whole module runs at. ``_SPAN`` brackets it, so a subscription
+# built from it reads as live no matter how far the real clock has moved on.
+_NOW = datetime.datetime(2026, 7, 20, 12, 0)
+
+
+@pytest.fixture(autouse=True)
+def _frozen_clock():
+    with time_machine.travel(_NOW, tick=False):
+        yield
 
 
 @pytest.fixture

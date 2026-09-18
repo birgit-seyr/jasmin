@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 
 import axiosService from "@shared/services/api";
 import { SUPER_ADMIN_ENDPOINTS } from "@features/platform/services/superAdmin";
+import { SUPPORTED_LANGUAGES } from "@shared/i18n/languages";
 import { getErrorMessage } from "@shared/utils/apiError";
 
 interface CreateTenantModalProps {
@@ -119,9 +120,11 @@ export default function CreateTenantModal({ onClose, onSuccess }: CreateTenantMo
               }
               className="sa-form-input"
             >
-              <option value="de">Deutsch</option>
-              <option value="en">English</option>
-              <option value="fr">Français</option>
+              {SUPPORTED_LANGUAGES.map((language) => (
+                <option key={language.code} value={language.code}>
+                  {language.label}
+                </option>
+              ))}
             </select>
           </div>
 

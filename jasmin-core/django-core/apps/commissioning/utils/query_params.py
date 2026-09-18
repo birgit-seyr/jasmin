@@ -10,9 +10,9 @@ validator) lives in :mod:`apps.shared.query_params`; this module binds it to
 the commissioning catalogue. See the shared module's docstring for the
 per-kind validation depth (``int``/``date``/``bool``/``choice``/``str``).
 
-This catalogue is the front door for QUERY params. ``validate_and_parse_int_params``
-(in :mod:`.validation_utils`) is kept only for POST-body int parsing (its
-``source="data"`` mode), which the catalogue does not cover.
+This catalogue is the front door for QUERY params. ``parse_body_int_fields``
+(in :mod:`.validation_utils`) covers POST-body int parsing, which the catalogue
+does not model.
 """
 
 from __future__ import annotations
@@ -44,6 +44,12 @@ DOCUMENTATION_SOURCES = ("HARVEST", "PURCHASE", "WASTE")
 # The groupings ``calculate_member_growth_statistics`` can truncate by — one
 # per truncation it knows how to apply.
 MEMBER_GROWTH_PERIODS = ("month", "week", "year")
+
+# The largest tour and packing-station numbers the platform operates. Raise
+# them when a tenant genuinely runs more; each has to stay within the range of
+# the column it filters, which the catalogue test pins.
+MAX_TOUR_NUMBER = 20
+MAX_PACKING_STATION = 10
 
 
 # Strict bool params (absent → ``None``, i.e. "not filtered").
@@ -123,8 +129,12 @@ PARAM_CATALOGUE: dict[str, ParamSpec] = {
     "years_back": ParamSpec("int", min_value=0, max_value=50, default=2),
     # Tour number and packing-station number: parsed here, so every consumer
     # downstream takes the int this yields rather than re-coercing a string.
-    "tour": ParamSpec("int", min_value=0),
-    "packing_station": ParamSpec("int", min_value=0),
+    # Bounded by the operating maxima above rather than by the column width:
+    # both are queryset filters, so a number past anything the platform runs is
+    # a typo, and unbounded it answers with an empty grid that reads as "no
+    # rows here" instead of "no such tour".
+    "tour": ParamSpec("int", min_value=0, max_value=MAX_TOUR_NUMBER),
+    "packing_station": ParamSpec("int", min_value=0, max_value=MAX_PACKING_STATION),
     # ---- dates (YYYY-MM-DD) ----
     "active_at_date": ParamSpec("date"),
     "active_at_date_or_future": ParamSpec("date"),

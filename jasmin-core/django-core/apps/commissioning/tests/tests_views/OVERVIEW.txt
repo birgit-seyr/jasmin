@@ -380,7 +380,7 @@ alphabetical order.
      - test_missing_year_returns_400
 
 ================================================================================
-10. test_statistic_views.py  (13 tests)
+10. test_statistic_views.py  (16 tests)
     Views: member_growth_statistics, historical_share_variation_averages
     (purchase_cost_by_week is covered in
      tests_services/test_purchase_cost_by_week.py)
@@ -401,6 +401,11 @@ alphabetical order.
      - test_returns_averages
      - test_missing_params_returns_400
      - test_empty_for_no_data
+
+   TestHistoricalAveragesErrorFields
+     - test_missing_selector_names_the_variation_ids
+     - test_missing_selector_details_separate_blank_from_omitted
+     - test_unresolvable_share_option_names_the_share_option
 
 ================================================================================
 11. test_stock_views.py  (59 tests)

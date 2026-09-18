@@ -23,142 +23,140 @@ from apps.commissioning.errors import (
 )
 from apps.commissioning.utils.validation_utils import (
     MAX_BULK_IDS,
+    parse_body_int_fields,
     parse_bulk_ids,
-    validate_and_parse_int_params,
     validate_bulk_document_request,
 )
 
 factory = APIRequestFactory()
 
 
-def _make_get_request(params: dict | None = None):
-    """Helper: build a DRF Request from a GET with query params."""
-    from rest_framework.request import Request
-
-    django_request = factory.get("/fake/", params or {})
-    return Request(django_request)
-
-
-def _make_post_request(data: dict | list | None = None):
+def _make_post_request(data: dict | list | None = None, path: str = "/fake/"):
     """Helper: build a DRF Request from a POST with JSON body.
 
     A list payload builds the non-object body a hand-crafted client can send.
+    ``path`` may carry a query string, to assert that a body-only helper does
+    not read it.
     """
     from rest_framework.parsers import JSONParser
     from rest_framework.request import Request
 
-    django_request = factory.post("/fake/", data if data else {}, format="json")
+    django_request = factory.post(path, data if data else {}, format="json")
     return Request(django_request, parsers=[JSONParser()])
 
 
 # ---------------------------------------------------------------------------
-# validate_and_parse_int_params
+# parse_body_int_fields
 # ---------------------------------------------------------------------------
-class TestValidateAndParseIntParams:
-    def test_valid_params(self):
-        request = _make_get_request({"year": "2026", "delivery_week": "10"})
-        values = validate_and_parse_int_params(request, ["year", "delivery_week"])
+class TestParseBodyIntFields:
+    def test_valid_fields(self):
+        request = _make_post_request({"year": 2026, "delivery_week": 10})
+        values = parse_body_int_fields(request, ["year", "delivery_week"])
         assert values == [2026, 10]
 
-    def test_missing_param_raises(self):
-        request = _make_get_request({"year": "2026"})
-        with pytest.raises(InvalidQueryParam) as excinfo:
-            validate_and_parse_int_params(request, ["year", "delivery_week"])
+    def test_reads_the_body_not_the_query_string(self):
+        """The catalogue validator owns the query string, so a value sent there
+        does not satisfy a body field."""
+        request = _make_post_request({}, path="/fake/?year=2026")
+        with pytest.raises(RequiredFieldMissing) as excinfo:
+            parse_body_int_fields(request, ["year"])
+        assert excinfo.value.code == "required_field.missing"
+        assert excinfo.value.field == "year"
+
+    def test_a_string_spelling_of_an_int_is_accepted(self):
+        """A JSON body may carry the number as a string; the shared parser reads
+        the wire spelling either way."""
+        request = _make_post_request({"year": "2026"})
+        assert parse_body_int_fields(request, ["year"]) == [2026]
+
+    def test_missing_field_raises(self):
+        request = _make_post_request({"year": 2026})
+        with pytest.raises(RequiredFieldMissing) as excinfo:
+            parse_body_int_fields(request, ["year", "delivery_week"])
         assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
+        assert excinfo.value.code == "required_field.missing"
         assert excinfo.value.field == "delivery_week"
-        assert "delivery_week" in excinfo.value.message
+        # Nothing was sent, so there is no offending value to echo.
+        assert excinfo.value.details == {}
+
+    def test_non_object_body_raises_the_normal_400(self):
+        """A JSON array body carries no fields to read, so it takes the
+        missing-field 400 rather than crashing on the absent ``.get``."""
+        request = _make_post_request([2026, 5])
+        with pytest.raises(RequiredFieldMissing) as excinfo:
+            parse_body_int_fields(request, ["year"])
+        assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
+        assert excinfo.value.code == "required_field.missing"
+        assert excinfo.value.field == "year"
 
     def test_non_integer_raises(self):
-        request = _make_get_request({"year": "abc"})
+        request = _make_post_request({"year": "abc"})
         with pytest.raises(InvalidQueryParam) as excinfo:
-            validate_and_parse_int_params(request, ["year"])
+            parse_body_int_fields(request, ["year"])
         assert excinfo.value.field == "year"
         assert "integer" in excinfo.value.message
 
     def test_year_out_of_range(self):
-        request = _make_get_request({"year": "1899"})
+        request = _make_post_request({"year": 1899})
         with pytest.raises(InvalidQueryParam) as excinfo:
-            validate_and_parse_int_params(request, ["year"])
+            parse_body_int_fields(request, ["year"])
         assert excinfo.value.field == "year"
         assert "1900" in excinfo.value.message
 
     def test_year_range_matches_the_query_catalogue(self):
-        """Body and query share one range, so a year cannot be legal in a query
-        string and refused in a body."""
-        request = _make_get_request({"year": "1900"})
-        assert validate_and_parse_int_params(request, ["year"]) == [1900]
+        """The bounds are the catalogue's, so a year legal in a query string is
+        legal in a body."""
+        request = _make_post_request({"year": 1900})
+        assert parse_body_int_fields(request, ["year"]) == [1900]
 
     @pytest.mark.parametrize("raw", ["20_26", "2026.0", "2e3", "٢٠٢٦"])
     def test_exotic_int_spellings_are_refused(self, raw):
         """The same parser as a catalogued query param: ``int()`` reads these,
         the API does not."""
-        request = _make_get_request({"year": raw})
+        request = _make_post_request({"year": raw})
         with pytest.raises(InvalidQueryParam) as excinfo:
-            validate_and_parse_int_params(request, ["year"])
+            parse_body_int_fields(request, ["year"])
         assert excinfo.value.field == "year"
 
     def test_week_out_of_range_high(self):
-        request = _make_get_request({"delivery_week": "54"})
+        request = _make_post_request({"delivery_week": 54})
         with pytest.raises(InvalidQueryParam) as excinfo:
-            validate_and_parse_int_params(request, ["delivery_week"])
+            parse_body_int_fields(request, ["delivery_week"])
         assert "53" in excinfo.value.message
 
     def test_week_out_of_range_low(self):
-        request = _make_get_request({"delivery_week": "0"})
+        request = _make_post_request({"delivery_week": 0})
         with pytest.raises(InvalidQueryParam) as excinfo:
-            validate_and_parse_int_params(request, ["delivery_week"])
+            parse_body_int_fields(request, ["delivery_week"])
         assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
 
     def test_week_alias_also_validated(self):
-        request = _make_get_request({"week": "0"})
+        request = _make_post_request({"week": 0})
         with pytest.raises(InvalidQueryParam) as excinfo:
-            validate_and_parse_int_params(request, ["week"])
+            parse_body_int_fields(request, ["week"])
         assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
 
     def test_custom_range_overrides_default(self):
-        request = _make_get_request({"year": "1950"})
-        values = validate_and_parse_int_params(
-            request, ["year"], ranges={"year": (1900, 2200)}
+        request = _make_post_request({"year": 1950})
+        values = parse_body_int_fields(
+            request,
+            ["year"],
+            ranges={"year": (1900, 2200)},
         )
         assert values == [1950]
 
-    def test_source_data_reads_from_post_body(self):
-        request = _make_post_request({"year": 2026, "delivery_week": 5})
-        values = validate_and_parse_int_params(
-            request, ["year", "delivery_week"], source="data"
-        )
-        assert values == [2026, 5]
-
-    def test_source_data_missing_field_raises(self):
-        request = _make_post_request({"year": 2026})
-        with pytest.raises(InvalidQueryParam) as excinfo:
-            validate_and_parse_int_params(
-                request, ["year", "delivery_week"], source="data"
-            )
-        assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
-        assert excinfo.value.field == "delivery_week"
-
-    def test_source_data_non_object_body_raises_the_normal_400(self):
-        """A JSON array body carries no fields to read, so it takes the
-        missing-parameter 400 rather than crashing on the absent ``.get``."""
-        request = _make_post_request([2026, 5])
-        with pytest.raises(InvalidQueryParam) as excinfo:
-            validate_and_parse_int_params(request, ["year"], source="data")
-        assert excinfo.value.http_status == status.HTTP_400_BAD_REQUEST
-        assert excinfo.value.field == "year"
-
-    def test_param_without_range_passes_any_int(self):
-        request = _make_get_request({"custom_param": "999999"})
-        values = validate_and_parse_int_params(request, ["custom_param"])
+    def test_field_without_range_passes_any_int(self):
+        request = _make_post_request({"custom_field": 999999})
+        values = parse_body_int_fields(request, ["custom_field"])
         assert values == [999999]
 
     def test_boundary_values_accepted(self):
-        request = _make_get_request({"year": "2000", "delivery_week": "1"})
-        values = validate_and_parse_int_params(request, ["year", "delivery_week"])
+        request = _make_post_request({"year": 2000, "delivery_week": 1})
+        values = parse_body_int_fields(request, ["year", "delivery_week"])
         assert values == [2000, 1]
 
-        request = _make_get_request({"year": "2100", "delivery_week": "53"})
-        values = validate_and_parse_int_params(request, ["year", "delivery_week"])
+        request = _make_post_request({"year": 2100, "delivery_week": 53})
+        values = parse_body_int_fields(request, ["year", "delivery_week"])
         assert values == [2100, 53]
 
 

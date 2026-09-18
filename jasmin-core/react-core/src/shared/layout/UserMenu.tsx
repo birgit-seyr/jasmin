@@ -16,6 +16,7 @@ import { useCommissioningMembersRetrieve } from "@shared/api/generated/commissio
 import { useRoles } from "@shared/auth/useRoles";
 import { useAuth } from "@shared/contexts/AuthContext";
 import { useLocale } from "@shared/contexts/LocaleContext";
+import { SUPPORTED_LANGUAGES } from "@shared/i18n/languages";
 import { useIsMobile } from "@hooks/index";
 import UserProfileModal, { type UserProfileTab } from "./UserProfileModal";
 
@@ -91,17 +92,6 @@ export default function UserMenu() {
     return !ownMember.admin_confirmed || !!ownMember.admin_rejected_at;
   })();
 
-  // Available languages mirror ``LanguageSwitcher.tsx``. Keeping them
-  // co-located in two places is fine — both are thin shells over
-  // ``useLocale``.
-  // Only the languages we support end-to-end (UI + email templates + the
-  // backend ``user_language`` choices). fr/it are deferred/incomplete and not
-  // user-selectable yet.
-  const languages: { code: string; flag: string; label: string }[] = [
-    { code: "de", flag: "🇩🇪", label: "Deutsch" },
-    { code: "en", flag: "🇺🇸", label: "English" },
-  ];
-
   const items: MenuProps["items"] = gateMenu
     ? [
         {
@@ -123,7 +113,7 @@ export default function UserMenu() {
           key: "language",
           icon: <GlobalOutlined />,
           label: t("profile.menu_language"),
-          children: languages.map((lang) => ({
+          children: SUPPORTED_LANGUAGES.map((lang) => ({
             key: `language-${lang.code}`,
             label: (
               <Space>

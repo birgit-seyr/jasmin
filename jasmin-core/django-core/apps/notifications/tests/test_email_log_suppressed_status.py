@@ -16,7 +16,10 @@ from rest_framework.test import APIClient
 
 from apps.commissioning.tests.factories import JasminUserFactory
 from apps.notifications.models import EmailLog
-from apps.notifications.tasks import RETENTION_DAYS, cleanup_stale_email_logs
+from apps.notifications.tasks import (
+    NOTIFICATION_LOG_RETENTION_DAYS,
+    cleanup_stale_email_logs,
+)
 
 
 def _log(status_value: str, *, recipient: str) -> EmailLog:
@@ -47,7 +50,8 @@ class TestCleanup:
         EmailLog.objects.filter(
             pk__in=[old_suppressed.pk, old_sent.pk, old_failed.pk]
         ).update(
-            created_at=timezone.now() - datetime.timedelta(days=RETENTION_DAYS + 1)
+            created_at=timezone.now()
+            - datetime.timedelta(days=NOTIFICATION_LOG_RETENTION_DAYS + 1)
         )
 
         cleanup_stale_email_logs.call_local()

@@ -17,7 +17,7 @@ from core.serializers import ErrorResponseSerializer
 from core.tenant_db import connection
 
 from ..errors import CustomerProfileNotLinked, MemberProfileNotLinked
-from ..models import ContactEntity, CoopShare, Member, Reseller
+from ..models import CoopShare, Member, Reseller
 from ..serializers import (
     MyCoopShareSubscribeSerializer,
     MyCustomerDataReadSerializer,
@@ -219,10 +219,7 @@ class MyCustomerDataView(APIView):
 
     def get(self, request: Request) -> Response:
         reseller = self._resolve(request)
-        # Side-effect-free read: if no contact row exists yet, serialize a
-        # transient (unsaved) blank one so the response shape is consistent
-        # without a DB write.
-        contact = reseller.contact or ContactEntity()
+        contact = reseller.contact
         return Response(
             MyCustomerDataReadSerializer(contact, context={"reseller": reseller}).data
         )
@@ -230,12 +227,10 @@ class MyCustomerDataView(APIView):
     @transaction.atomic
     def patch(self, request: Request) -> Response:
         reseller = self._resolve(request)
-        # Office-onboarded resellers always have a contact, but the seed-fixture
-        # / future self-service flows may not. A transient row carries the edit
-        # through validation and the step-up check, so a refused payload leaves
-        # no blank ContactEntity behind; it is saved and linked only once the
-        # write is going ahead.
-        contact = reseller.contact or ContactEntity()
+        # ``Reseller.contact`` is a required FK, so the linked row always
+        # exists and the edit lands on it directly. Validation and the step-up
+        # check run before any write, so a refused payload changes nothing.
+        contact = reseller.contact
         # Object-level step-up check against the ContactEntity that owns the
         # iban — raises StepUpRequired only when iban actually changes.
         self.check_object_permissions(request, contact)
@@ -244,9 +239,6 @@ class MyCustomerDataView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         contact = serializer.save()
-        if reseller.contact_id != contact.id:
-            reseller.contact = contact
-            reseller.save(update_fields=["contact"])
         logger.info(
             "commissioning.my_customer_data.update user=%s fields=%s tenant=%s ip=%s",
             auth_user(request).email,

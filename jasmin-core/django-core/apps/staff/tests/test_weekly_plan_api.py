@@ -8,6 +8,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from apps.staff.models import Employee, WeeklyPlan, WeeklyPlanCategory
+from apps.staff.services.weekly_plan import rows_beyond_category_rows
 
 pytestmark = pytest.mark.django_db
 
@@ -145,6 +146,34 @@ def test_row_index_out_of_range_is_rejected(api_client, category, employees):
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["code"] == "staff.invalid_weekly_plan_assignment"
     # Nothing persisted (validation is before the write, in one transaction).
+    assert not WeeklyPlan.objects.filter(year=YEAR, week=WEEK).exists()
+
+
+def test_assignment_into_a_deactivated_category_is_rejected(
+    api_client, category, employees
+):
+    """The grid renders active categories only, so a row written into a
+    deactivated one would sit where nobody can see or edit it — and the next
+    whole-week replace would delete it. A browser holding a grid rendered
+    before the category was switched off still posts its cells."""
+    alice, _ = employees
+    category.is_active = False
+    category.save(update_fields=["is_active"])
+
+    response = api_client.post(
+        reverse("weekly_plan-list"),
+        {
+            "year": YEAR,
+            "week": WEEK,
+            "assignments": [_assign(category, 0, 0, alice)],
+        },
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
+    assert response.data["code"] == "staff.invalid_weekly_plan_assignment"
+    assert response.data["field"] == "category_id"
+    assert "Harvest" in response.data["message"]
     assert not WeeklyPlan.objects.filter(year=YEAR, week=WEEK).exists()
 
 
@@ -348,16 +377,84 @@ def test_one_blocking_category_refuses_the_whole_copy(api_client, category, empl
     assert not WeeklyPlan.objects.filter(year=YEAR, week=WEEK + 1).exists()
 
 
-def test_copy_ignores_a_row_at_no_grid_position(api_client, category, employees):
+def test_copy_refuses_source_rows_in_a_deactivated_category(
+    api_client, category, employees
+):
     alice, _ = employees
-    # A NULL row_index sits at no position, so no row count applies to it.
     WeeklyPlan.objects.create(
         year=YEAR,
         week=WEEK,
         day=0,
         weekly_plan_category=category,
         employee=alice,
-        row_index=None,
+        row_index=0,
+    )
+    category.is_active = False
+    category.save(update_fields=["is_active"])
+
+    response = api_client.post(
+        reverse("weekly_plan-copy"),
+        {"year": YEAR, "from_week": WEEK, "to_week": WEEK + 1},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["code"] == "staff.weekly_plan_copy_source_category_inactive"
+    assert response.data["field"] == "from_week"
+    # No max_lines in the entry: the remedy is switching the category back on,
+    # and a row count the grid never reaches would only misdirect.
+    assert response.data["details"]["categories"] == [
+        {
+            "category_id": category.id,
+            "category_name": "Harvest",
+            "row_indexes": [0],
+        }
+    ]
+    # Neither week moved.
+    assert not WeeklyPlan.objects.filter(year=YEAR, week=WEEK + 1).exists()
+    assert WeeklyPlan.objects.filter(year=YEAR, week=WEEK).count() == 1
+
+
+def test_a_deactivated_category_is_named_over_its_row_count(
+    api_client, category, employees
+):
+    alice, _ = employees
+    # The row is past the category's count AND in a switched-off category. Only
+    # the deactivation is reported: raising the count of a category the grid
+    # does not render shows nothing.
+    WeeklyPlan.objects.create(
+        year=YEAR,
+        week=WEEK,
+        day=0,
+        weekly_plan_category=category,
+        employee=alice,
+        row_index=5,
+    )
+    category.is_active = False
+    category.save(update_fields=["is_active"])
+
+    response = api_client.post(
+        reverse("weekly_plan-copy"),
+        {"year": YEAR, "from_week": WEEK, "to_week": WEEK + 1},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["code"] == "staff.weekly_plan_copy_source_category_inactive"
+    assert [
+        entry["category_id"] for entry in response.data["details"]["categories"]
+    ] == [category.id]
+
+
+def test_copy_ignores_a_deactivated_category_holding_no_rows(
+    api_client, category, employees
+):
+    alice, _ = employees
+    WeeklyPlanCategory.objects.create(name="Retired", max_lines=2, is_active=False)
+    api_client.post(
+        reverse("weekly_plan-list"),
+        {"year": YEAR, "week": WEEK, "assignments": [_assign(category, 0, 0, alice)]},
+        format="json",
     )
 
     response = api_client.post(
@@ -368,6 +465,68 @@ def test_copy_ignores_a_row_at_no_grid_position(api_client, category, employees)
 
     assert response.status_code == status.HTTP_200_OK
     assert WeeklyPlan.objects.filter(year=YEAR, week=WEEK + 1).count() == 1
+
+
+def test_the_row_count_refusal_leaves_deactivated_categories_alone(
+    tenant, category, employees
+):
+    # Called directly: each of the two refusals owns its categories, so the
+    # office is never told to raise a row count on a category the grid does not
+    # render. The copy endpoint reaches this one second, so the partition is
+    # only visible from here.
+    alice, _ = employees
+    WeeklyPlan.objects.create(
+        year=YEAR,
+        week=WEEK,
+        day=0,
+        weekly_plan_category=category,
+        employee=alice,
+        row_index=5,
+    )
+    category.is_active = False
+    category.save(update_fields=["is_active"])
+
+    assert rows_beyond_category_rows(YEAR, WEEK) == []
+
+
+def test_copy_carries_a_row_with_no_row_index(api_client, category, employees):
+    """Characterisation of the NULL ``row_index`` policy, not a copy guard.
+
+    A row with no ``row_index`` sits at no grid position under any category, so
+    neither copy refusal looks at it — in an active category and in a
+    deactivated one alike — and the copy carries it along. Whether such a row
+    should block the copy instead is a policy call; this test states the one in
+    force, so changing it is a deliberate act rather than an accident.
+    """
+    alice, bob = employees
+    switched_off = WeeklyPlanCategory.objects.create(
+        name="Retired", max_lines=2, is_active=False
+    )
+    WeeklyPlan.objects.create(
+        year=YEAR,
+        week=WEEK,
+        day=0,
+        weekly_plan_category=category,
+        employee=alice,
+        row_index=None,
+    )
+    WeeklyPlan.objects.create(
+        year=YEAR,
+        week=WEEK,
+        day=0,
+        weekly_plan_category=switched_off,
+        employee=bob,
+        row_index=None,
+    )
+
+    response = api_client.post(
+        reverse("weekly_plan-copy"),
+        {"year": YEAR, "from_week": WEEK, "to_week": WEEK + 1},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert WeeklyPlan.objects.filter(year=YEAR, week=WEEK + 1).count() == 2
 
 
 def test_copy_same_week_is_rejected(api_client, category):

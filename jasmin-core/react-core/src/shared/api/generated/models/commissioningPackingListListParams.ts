@@ -34,6 +34,7 @@ is_past?: boolean;
 /**
  * Packing station number
  * @minimum 0
+ * @maximum 10
  */
 packing_station?: number;
 /**
@@ -43,6 +44,7 @@ share_type: string;
 /**
  * Tour number
  * @minimum 0
+ * @maximum 20
  */
 tour?: number;
 /**

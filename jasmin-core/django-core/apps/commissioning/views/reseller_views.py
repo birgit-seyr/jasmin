@@ -79,8 +79,8 @@ from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
 from ..utils.validation_utils import (
     parse_body_date,
+    parse_body_int_fields,
     parse_bulk_ids,
-    validate_and_parse_int_params,
     validate_bulk_document_request,
 )
 
@@ -1323,10 +1323,9 @@ class CreateOffersView(APIViewRolePermissionsMixin, APIView):
     @transaction.atomic
     def post(self, request: Request) -> Response:
         """Create offers for a week."""
-        year, delivery_week = validate_and_parse_int_params(
+        year, delivery_week = parse_body_int_fields(
             request,
             ["year", "delivery_week"],
-            source="data",
         )
 
         result = OfferService.create_offers(year=year, delivery_week=delivery_week)

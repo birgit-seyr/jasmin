@@ -217,6 +217,27 @@ class TestHistoricalAveragesErrorFields:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.data["code"] == "query.invalid_param"
         assert resp.data["field"] == "share_type_variation_ids"
+        assert resp.data["details"] == {
+            "share_type_variation_ids": None,
+            "share_option": None,
+        }
+
+    def test_missing_selector_details_separate_blank_from_omitted(
+        self, api_client, tenant
+    ):
+        """A selector sent blank and one never sent parse to the same empty
+        value, so ``details`` echoes the raw request instead: the blank one
+        comes back as an empty string, the omitted one as null."""
+        resp = api_client.get(
+            URL_VARIATION_AVERAGES,
+            {"year": 2026, "delivery_week": 15, "share_type_variation_ids": ""},
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["details"] == {
+            "share_type_variation_ids": "",
+            "share_option": None,
+        }
 
     def test_unresolvable_share_option_names_the_share_option(self, api_client, tenant):
         resp = api_client.get(

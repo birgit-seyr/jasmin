@@ -62,6 +62,7 @@
     "email_already_has_user_named_numbered": "This email address already has a user account belonging to {{holder_name}} (member #{{holder_member_number}}). An address can hold only ONE login — this member stays without their own access, or needs a separate address.",
     "email_already_has_user_anonymous": "This email address already has a user account belonging to another member. An address can hold only ONE login.",
     "no_email": "This member has no email address — please add one first.",
+    "identity_required": "A member needs at least one identifying field: first name, last name, company name, pickup name, or an email address.",
     "invitation_invalid": "This invitation is no longer valid.",
     "coop_shares_out_of_range": "This member's number of cooperative shares ({{total}}) is outside the allowed range. Please adjust the cooperative shares before confirming the member.",
     "coop_shares_out_of_range_range": "This member has {{total}} cooperative share(s). The allowed range is between {{minimum}} and {{maximum}}. Please adjust the cooperative shares before confirming the member.",
@@ -496,7 +497,8 @@
     "weekly_plan_category_in_use": "This weekly plan category can't be deleted because it is used in the weekly plan. Deactivate it instead.",
     "absence_category_in_use": "This absence category can't be deleted because absences still reference it. Deactivate it instead.",
     "weekly_plan_category_shrink_blocked": "The number of rows can't be reduced because the rows that would disappear still hold entries. Please clear those entries first.",
-    "weekly_plan_copy_source_rows_out_of_range": "The source week holds entries in rows the category no longer has, because its number of rows has since been reduced. Copied over, those entries would travel along invisibly and be deleted the next time the target week is saved. Please raise the category's number of rows again, or clear the affected entries in the source week."
+    "weekly_plan_copy_source_rows_out_of_range": "The source week holds entries in rows the category no longer has, because its number of rows has since been reduced. Copied over, those entries would travel along invisibly and be deleted the next time the target week is saved. Please raise the category's number of rows again, or clear the affected entries in the source week.",
+    "weekly_plan_copy_source_category_inactive": "The source week holds entries in categories that are deactivated. The weekly plan only shows active categories, so copied over, those entries would travel along invisibly and be deleted the next time the target week is saved. Please reactivate the category, or clear the affected entries in the source week."
   },
   "email_config": {
     "test_recipient_missing": "Please enter a recipient address for the test email.",

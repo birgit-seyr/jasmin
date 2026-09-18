@@ -10,10 +10,11 @@ import time_machine
 from django.urls import reverse
 from rest_framework import status
 
-from apps.commissioning.models import CoopShare, MemberLoan, Subscription
+from apps.commissioning.models import CoopShare, Member, MemberLoan, Subscription
 from apps.commissioning.tests.factories import (
     CoopShareFactory,
     DeliveryStationDayFactory,
+    JasminUserFactory,
     MemberFactory,
     ShareDeliveryFactory,
     ShareFactory,
@@ -686,3 +687,176 @@ class TestBulkRenewIdList:
         assert not Subscription.objects.filter(
             previous_subscription__isnull=False
         ).exists()
+
+
+@pytest.mark.django_db
+class TestMemberCreateNonStringEmail:
+    """``create`` reads ``email`` off the body to look for an existing
+    JasminUser before the serializer runs. A non-string value is refused by the
+    serializer's ``EmailField`` instead of reaching ``.strip()``, and never
+    reaches the lookup — so it cannot report whether an account exists."""
+
+    URL = reverse("member-list")
+
+    @pytest.mark.parametrize(
+        "bad_email", [["ada@example.com"], 17, {"address": "ada@example.com"}, True]
+    )
+    def test_a_non_string_email_is_a_clean_400(self, api_client, tenant, bad_email):
+        resp = api_client.post(
+            self.URL,
+            {"first_name": "Ada", "last_name": "Lovelace", "email": bad_email},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST, resp.data
+        assert resp.data["code"] == "validation_error"
+        assert resp.data["field"] == "email"
+        assert not Member.objects.filter(first_name="Ada").exists()
+
+    def test_a_non_string_email_cannot_probe_for_an_existing_account(
+        self, api_client, tenant
+    ):
+        # The address belongs to a user in a link-blocking status, so the
+        # well-formed request answers with the conflict.
+        JasminUserFactory(email="taken@example.com", account_status="pending_approval")
+        taken = api_client.post(
+            self.URL, {"first_name": "A", "email": "taken@example.com"}, format="json"
+        )
+        assert taken.status_code == status.HTTP_409_CONFLICT, taken.data
+
+        # The malformed variants of a taken and an unused address must be
+        # indistinguishable, or the refusal leaks the account's existence.
+        malformed_taken = api_client.post(
+            self.URL, {"first_name": "A", "email": ["taken@example.com"]}, format="json"
+        )
+        malformed_unused = api_client.post(
+            self.URL,
+            {"first_name": "A", "email": ["nobody@example.com"]},
+            format="json",
+        )
+
+        assert malformed_taken.status_code == status.HTTP_400_BAD_REQUEST
+        assert malformed_taken.status_code == malformed_unused.status_code
+        assert malformed_taken.data["code"] == malformed_unused.data["code"]
+        assert malformed_taken.data["message"] == malformed_unused.data["message"]
+
+    def test_a_string_email_still_trims_and_links_the_existing_user(
+        self, api_client, tenant
+    ):
+        JasminUserFactory(email="Ada.Linked@Example.com", account_status="active")
+
+        resp = api_client.post(
+            self.URL,
+            {
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "  Ada.Linked@Example.com  ",
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        # The lookup only matches once the surrounding whitespace is stripped.
+        assert resp.data["linked_user_info"] is not None
+
+
+@pytest.mark.django_db
+class TestMemberCreateIdentityFloor:
+    """``create`` refuses a body that names nobody.
+
+    Every Member column is nullable or defaulted and ``MemberSerializer``
+    declares no required field, so serializer validation alone accepts an empty
+    body — and the legally-relevant register gains a row with no holder.
+    """
+
+    URL = reverse("member-list")
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            pytest.param({}, id="empty-object"),
+            pytest.param({"note": "walk-in, papers to follow"}, id="note-only"),
+            pytest.param({"is_active": True, "is_student": True}, id="flags-only"),
+            pytest.param(
+                {"address": "Feldweg 1", "zip_code": "12345", "city": "Ackerstadt"},
+                id="address-only",
+            ),
+            pytest.param({"first_name": "   ", "last_name": ""}, id="blank-names"),
+        ],
+    )
+    def test_a_body_without_an_identifying_field_is_refused(
+        self, api_client, tenant, payload
+    ):
+        before = Member.objects.count()
+
+        resp = api_client.post(self.URL, payload, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST, resp.data
+        assert resp.data["code"] == "member.identity_required"
+        assert "company_name" in resp.data["details"]["any_of"]
+        assert Member.objects.count() == before
+
+    def test_a_json_array_body_is_refused(self, api_client, tenant):
+        # ``body()`` yields {} for a body that is not a JSON object, so the
+        # array's contents never reach the serializer and the create would
+        # otherwise persist an empty row.
+        before = Member.objects.count()
+
+        resp = api_client.post(self.URL, [{"first_name": "Ada"}], format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST, resp.data
+        assert resp.data["code"] == "member.identity_required"
+        assert Member.objects.count() == before
+
+    @pytest.mark.parametrize(
+        "field_name, value",
+        [
+            ("first_name", "Ada"),
+            ("last_name", "Lovelace"),
+            # A company member carries no natural-person name.
+            ("company_name", "Hofladen GmbH"),
+            ("pickup_name", "Ada L."),
+            ("email", "identity.floor@example.com"),
+            ("email_2", "second.floor@example.com"),
+            ("email_3", "third.floor@example.com"),
+        ],
+    )
+    def test_one_identifying_field_is_enough(
+        self, api_client, tenant, field_name, value
+    ):
+        resp = api_client.post(self.URL, {field_name: value}, format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert Member.objects.filter(**{field_name: value}).exists()
+
+    def test_an_ordinary_create_still_works(self, api_client, tenant):
+        resp = api_client.post(
+            self.URL,
+            {
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada.identity-floor@example.com",
+                "address": "Feldweg 1",
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert Member.objects.filter(email="ada.identity-floor@example.com").exists()
+
+    def test_a_patch_carrying_no_identifying_field_is_unaffected(
+        self, api_client, tenant
+    ):
+        # The floor is on create only: an ordinary edit sends just the field it
+        # changes, and the stored row already names its holder.
+        member = MemberFactory()
+
+        resp = api_client.patch(
+            reverse("member-detail", kwargs={"pk": member.pk}),
+            {"note": "edited"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        member.refresh_from_db()
+        assert member.note == "edited"

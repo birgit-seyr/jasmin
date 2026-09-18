@@ -260,10 +260,19 @@ def _parse_variation_average_params(request: Request) -> dict:
     years_back: int = params["years_back"]
 
     if not variation_ids_str and not share_option:
+        # The raw values, not the parsed ones: a blank ``?share_option=`` parses
+        # to the same ``None`` as an omitted one, so only the wire text separates
+        # "sent empty" (echoed as "") from "never sent" (echoed as null).
         raise InvalidQueryParam(
             "Provide either 'share_type_variation_ids' or 'share_option' "
             "to identify which variations to compute averages for",
             field="share_type_variation_ids",
+            details={
+                "share_type_variation_ids": request.query_params.get(
+                    "share_type_variation_ids"
+                ),
+                "share_option": request.query_params.get("share_option"),
+            },
         )
 
     if variation_ids_str:

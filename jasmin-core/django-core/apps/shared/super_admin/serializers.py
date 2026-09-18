@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.shared.languages import LanguageChoices
 from apps.shared.tenants.provisioning import (
     normalize_domain as _normalize_domain,
 )
@@ -13,13 +14,12 @@ from apps.shared.tenants.provisioning import (
 )
 
 # Column widths the request payloads are written into: ``JasminUser.first_name``
-# / ``last_name`` / ``email``, ``Tenant.name``, ``Tenant.tenant_language``, and
-# django-tenants' own ``TenantMixin.schema_name`` / ``DomainMixin.domain``.
+# / ``last_name`` / ``email``, ``Tenant.name``, and django-tenants' own
+# ``TenantMixin.schema_name`` / ``DomainMixin.domain``.
 # Declaring them on the serializers keeps an over-long value a per-field 400
 # rather than a database error the handler can only report generically.
 PERSON_NAME_MAX_LENGTH = 255
 TENANT_NAME_MAX_LENGTH = 200
-TENANT_LANGUAGE_MAX_LENGTH = 8
 SCHEMA_NAME_MAX_LENGTH = 63
 DOMAIN_MAX_LENGTH = 253
 EMAIL_MAX_LENGTH = 254
@@ -52,14 +52,17 @@ class CreateTenantRequestSerializer(serializers.Serializer):
     schema_name = serializers.CharField(max_length=SCHEMA_NAME_MAX_LENGTH)
     name = serializers.CharField(max_length=TENANT_NAME_MAX_LENGTH)
     domain = serializers.CharField(max_length=DOMAIN_MAX_LENGTH)
-    # Not a ChoiceField: the platform's create-tenant form offers languages
-    # beyond the two the platform ships templates for, and ``provision_tenant``
-    # stores whatever arrives. The length bound is the column's.
-    tenant_language = serializers.CharField(
+    # Constrained to the languages the platform ships UI + email templates for,
+    # so a tenant can't be created asking for a locale nothing can render.
+    # Blank stays accepted and is the default: ``provision_tenant`` writes ``""``
+    # for an omitted language, and the readers
+    # (``apps.shared.invitations``, ``tenants.email_service``) treat ``""`` as
+    # "no tenant preference" and fall back.
+    tenant_language = serializers.ChoiceField(
+        choices=LanguageChoices.choices,
         required=False,
         allow_blank=True,
         default="",
-        max_length=TENANT_LANGUAGE_MAX_LENGTH,
     )
     admin_email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH)
     admin_password = serializers.CharField()

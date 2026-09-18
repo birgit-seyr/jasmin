@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-910 tests | 173 test classes | 32 files
+1015 tests | 190 test classes | 32 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 Counts are collected cases, so a parametrized method counts once per case.
@@ -230,7 +230,7 @@ test_member_onboarding_fields.py (23 tests) — onboarding mode: member_number /
                                                existing or new trial member → member.number_not_allowed_for_trial;
                                                trial row without a number still saves
 
-test_members_viewsets.py (49 tests)
+test_members_viewsets.py (71 tests)
 ───────────────────────────────────
   TestMemberViewSet                       24   list, payback-due and coop-share totals, filters (is_active,
                                                is_trial, exclude_trial_members incl. its =false case), confirm,
@@ -244,6 +244,18 @@ test_members_viewsets.py (49 tests)
                                                reach a row the list filter excludes; a PATCH carrying
                                                that filter still returns the updated row
   TestMemberRegisterExportDateRange        1   inverted range → 400 query.invalid_param naming date_from
+  TestBulkRenewIdList                      1   bulk_renew refuses a non-string id in
+                                               subscription_ids with bulk.ids_invalid before
+                                               anything is renewed
+  TestMemberCreateNonStringEmail           6   a non-string email is a clean 400 that cannot probe
+                                               whether an account exists; a string one still trims
+                                               and links the user
+  TestMemberCreateIdentityFloor           15   create refuses a body that names nobody (empty
+                                               object, note / flags / address only, blank names, a
+                                               JSON array body) with 400 member.identity_required
+                                               and no row; any one of first / last / company /
+                                               pickup name or email 1-3 is enough; an ordinary
+                                               create and PATCH unaffected
 
 test_offer_group_default.py (7 tests)
 ─────────────────────────────────────
@@ -446,8 +458,9 @@ test_shares_viewsets.py (136 tests)
                                                flag, and a payload carrying both is a 400; DELETE on
                                                the composite pk clears that week's rows, on an
                                                unplanned slot → 404
-  TestVirtualComponentsViewSet             3   create 201 + persisted component; missing virtual_variation 400;
-                                               non-physical component 400
+  TestVirtualComponentsViewSet             9   create 201 + persisted component; missing virtual_variation 400;
+                                               non-physical component 400; the quantity default is a Decimal on
+                                               the unsaved model, which the DB round-trip cannot show
   TestShareDeliveryJokerBillingNotify      4   update/destroy on both viewsets notify the subscription
   TestShareDeliveryOverviewFilter          1   list filters by delivery station
   TestShareDeliveryCreateCapacity          3   create onto a full station-day refused; with room it proceeds
@@ -469,9 +482,10 @@ test_shares_viewsets.py (136 tests)
                                                narrows on its own (week kept without a station filter, station
                                                filter narrows); ?limit= envelope counts member rows;
                                                unusable limit → 400
-  TestBoxCombinationMatrixFlags            5   the weekly matrix refuses both halves of a pair
+  TestBoxCombinationMatrixFlags            8   the weekly matrix refuses both halves of a pair
                                                (for_tours + for_stations, joker + donation_joker) → 400
-                                               naming the field, while one per pair — and an explicit
+                                               naming the field and echoing both offending values in
+                                               details, while one per pair — and an explicit
                                                false half — still answers; the import branch applies
                                                is_packed_bulk to the columns and the counts
 

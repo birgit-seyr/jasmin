@@ -26,9 +26,14 @@ import datetime
 import pytest
 from django.utils import timezone
 
-from apps.commissioning.errors import LockedAfterAdminConfirmation
+from apps.commissioning.errors import (
+    LockedAfterAdminConfirmation,
+    MemberIdentityRequired,
+)
 from apps.commissioning.serializers import (
     CoopShareSerializer,
+    MemberImportSerializer,
+    MemberOnboardingSerializer,
     MemberSelfReadSerializer,
     MemberSerializer,
 )
@@ -291,6 +296,56 @@ class TestMemberUserLinkIsReadOnly:
         assert serializer.is_valid(raise_exception=False), serializer.errors
         assert "user" not in serializer.validated_data
         assert serializer.validated_data.get("first_name") == "ChangeMe"
+
+
+@pytest.mark.django_db
+@pytest.mark.django_db
+class TestMemberIdentityFloorCoversEveryCreatePath:
+    """The floor sits on ``MemberSerializer.validate``, so the office create,
+    the onboarding create and the CSV import are all held to it. The import
+    matters most: it writes rows in bulk and never passes through the viewset,
+    so a floor placed there would leave the bulk path open.
+
+    ``MemberIdentityRequired`` is a ``JasminError``, not a DRF
+    ``ValidationError``, so it propagates out of ``is_valid()`` rather than
+    collecting into ``.errors``.
+    """
+
+    @pytest.mark.parametrize(
+        "serializer_class",
+        [MemberSerializer, MemberOnboardingSerializer, MemberImportSerializer],
+    )
+    def test_a_row_naming_nobody_is_refused(self, tenant, serializer_class):
+        serializer = serializer_class(data={"city": "Ackerstadt"})
+
+        with pytest.raises(MemberIdentityRequired):
+            serializer.is_valid()
+
+    def test_a_member_number_alone_does_not_name_a_row(self, tenant):
+        """The import serializer unlocks ``member_number``, but a register
+        entry holding only a number still names nobody."""
+        serializer = MemberImportSerializer(data={"member_number": 4711})
+
+        with pytest.raises(MemberIdentityRequired):
+            serializer.is_valid()
+
+    def test_one_identifying_field_is_enough_on_the_import_path(self, tenant):
+        serializer = MemberImportSerializer(
+            data={"company_name": "Hofladen GmbH", "member_number": 4712}
+        )
+
+        assert serializer.is_valid(), serializer.errors
+
+    def test_an_update_is_unaffected(self, tenant):
+        """The stored row already names its holder, and a PATCH carries only
+        the field it changes."""
+        member = MemberFactory(first_name="Ada", last_name="Lovelace")
+
+        serializer = MemberSerializer(
+            instance=member, data={"note": "edited"}, partial=True
+        )
+
+        assert serializer.is_valid(), serializer.errors
 
 
 @pytest.mark.django_db

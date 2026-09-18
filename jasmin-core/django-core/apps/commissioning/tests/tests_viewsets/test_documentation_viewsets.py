@@ -657,6 +657,10 @@ class TestAddAdditionalTheoreticalAmount:
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "documentation.invalid_model"
+        # Machine-readable as well as in the prose, so the client can show the
+        # value the caller sent without parsing the message.
+        assert resp.data["details"] == {"model": "not-a-real-model"}
 
     def _payload(self, article, **overrides):
         return {

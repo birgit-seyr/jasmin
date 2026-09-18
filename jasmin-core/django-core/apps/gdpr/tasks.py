@@ -50,18 +50,11 @@ from huey.contrib.djhuey import db_periodic_task
 from apps.commissioning.models import Member
 from apps.gdpr.errors import RetentionPeriodActive
 from apps.gdpr.services import GDPRService
+from apps.shared.retention import EX_MEMBER_RETENTION_YEARS
 from apps.shared.tenants.sweep import for_each_tenant
 
 log = logging.getLogger("gdpr")
 ops_log = logging.getLogger("tasks")
-
-# GenG §31 / HGB §257 / AO §147 — ten years from the legal exit date is
-# the statutory floor. We treat that floor as both the soonest a member
-# CAN be anonymised and the SLA: once 10 years elapse, the platform
-# erases unless an explicit retention block still applies (open
-# CoopShare, open invoice, etc. — those are picked up by
-# ``GDPRService.check_retention_blocks``).
-EX_MEMBER_RETENTION_YEARS = 10
 
 
 def _retention_cutoff(today: datetime.date | None = None) -> datetime.date:

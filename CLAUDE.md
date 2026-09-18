@@ -88,7 +88,12 @@ the matching section of Part 1.
 
 - **Use modern, state-of-the-art approaches** — current Django/React best
   practices, no legacy patterns.
-- **English only.** No German in code, names, or anywhere else.
+- **English only for anything new.** No German in new code, names, or anywhere
+  else. The German names already shipped stay as they are — renaming them would
+  break stored columns, bookmarked URLs and in-flight clients: `rabatt` /
+  `source_rabatt` (model columns and wire fields), `netto` / `brutto` (the money
+  helpers below), `abos` (an API path and the `src/features/abos/` folder), and
+  `storno` (the invoice-reversal action). Don't extend the pattern to new names.
 - **No hard-to-read abbreviations.** Not `dsd` for DeliveryStationDay, not `oc`
   for OrderContent. Longer but readable wins.
 - **Names say what a thing is; no needless constants.** Don't give a trivial
@@ -105,7 +110,11 @@ the matching section of Part 1.
   [docs/domain-glossary.md](docs/domain-glossary.md).
 - **Model instance IDs are strings, not UUIDs or ints.** See
   [the CharField primary key pitfall](#charfield-primary-key-pitfall).
-- **`valid_from` dates are always Mondays.**
+- **`valid_from` is a Monday and `valid_until` a Sunday** on `TimeBoundMixin`
+  models — a validity window is whole ISO weeks. Enforced in Python, not by a DB
+  constraint. Two exceptions: `ConsentDocument` opts out on purpose (a policy
+  revision goes live the day legal review finishes), and a `valid_from` outside
+  the mixin — `staff.Employment` — carries no such rule.
 
 ## Backend rules
 
@@ -121,7 +130,7 @@ file.
 | `APIView`-style endpoints | `views.py` or a `views/` package |
 | Serializers | `serializers` (**plural**) — never singular `serializer/` |
 | Services | `services.py` or a `services/` package |
-| Errors | `errors.py` (every app carries one) |
+| Errors | `errors.py` (every app that raises one has it; the `cultivation` / `economics` stubs don't) |
 
 Within a `services/` package, modules that expose a `*Service` class take the
 `_service.py` suffix (the dominant pattern); function-only helper / operation
@@ -152,9 +161,17 @@ impact — but keep it readable). Prefer **plural** resource nouns for new
 endpoints (`share_deliveries`, not `share_delivery`). Viewset / serializer /
 service classes are `PascalCase` and **mirror their model**; don't rename a
 viewset/service away from its model name to "fix" casing — fix the model (a
-deliberate migration) or leave it. The **gdpr / notifications / accounts /
-super-admin** apps are internally kebab-consistent — that's an accepted per-app
-dialect, leave it; only hold _new_ tenant-API endpoints to snake.
+deliberate migration) or leave it.
+
+Outside those three apps the dialect varies, and each app is internally
+consistent enough to leave alone — only hold _new_ tenant-API endpoints to
+snake. `gdpr` and `shared.support` are kebab on both surfaces (`deletion-log/`,
+`gdpr-my-data`, `set-status`, `basename="support-ticket"`). `notifications` is
+kebab (`basename="email-log"`) with a single snake stray,
+`url_path="test_send"`. `accounts` splits deliberately: kebab paths and
+basename (`logout-all/`, `step-up/`, `admin-users`) against snake URL `name=`
+(`logout_all`, `step_up`, `two_factor_verify`). `staff` is fully snake
+(`basename="weekly_plan_categories"`).
 
 ### Errors
 
@@ -174,9 +191,13 @@ Every `JasminError` code needs `de` **and** `en` entries in the locale
 
 **OpenAPI query params come from the catalogue — never hand-roll
 `OpenApiParameter` in `@extend_schema`.** A query parameter is declared ONCE as
-a `ParamSpec` (defined in `apps/shared/query_params.py`) inside the app's
-catalogue — `PARAM_CATALOGUE` in `apps/commissioning/utils/query_params.py`;
-payments keeps its own. That catalogue is what `validate_query_params(...)`
+a `ParamSpec` (defined in `apps/shared/query_params.py`) inside the app's OWN
+catalogue — there are five: `PARAM_CATALOGUE` in
+`apps/commissioning/utils/query_params.py`, `apps/notifications/query_params.py`
+and `apps/shared/super_admin/query_params.py`, `STAFF_PARAM_CATALOGUE` in
+`apps/staff/query_params.py`, and payments' inline one in
+`apps/payments/viewsets.py`. Reach for your app's, never another's. That
+catalogue is what `validate_query_params(...)`
 actually enforces at runtime, so the schema must be derived from it rather than
 re-typed by hand — otherwise the docs and the validator drift silently. Real
 bugs this caught: `undo` documented as `string` but validated as `bool`,
@@ -192,6 +213,13 @@ add a `ParamSpec` for it** rather than declaring it inline. The only legitimate
 inline `OpenApiParameter` is a non-query one
 (`location=OpenApiParameter.PATH`/`HEADER`), which the catalogue doesn't model.
 
+**CI enforces this**, from both ends, in
+`apps/shared/tests/test_query_param_catalogue_drift.py`: one class reads the
+emitted schema and matches every documented query parameter against the
+catalogue its path is served from; the other reads the SOURCE, so a hand-rolled
+parameter is caught even on an endpoint that is unrouted, unreachable, or simply
+not exercised by any other test.
+
 ### ORM & data hygiene
 
 - **Avoid Django signals where possible; prefer explicit service calls.**
@@ -199,7 +227,7 @@ inline `OpenApiParameter` is a non-query one
 
 #### CharField primary key pitfall
 
-`TapirModel.id` is a `CharField` (not int/UUID). Django's ORM does NOT
+`JasminModel.id` is a `CharField` (not int/UUID). Django's ORM does NOT
 auto-unwrap Model instances when filtering against a `CharField`:
 
 ```python
@@ -212,8 +240,14 @@ With normal int/UUID PKs, `filter(pk=instance)` works because Django calls
 `instance._get_pk_val()`. With `CharField`, `get_prep_value` falls back to
 `str(value)` and silently produces a non-matching value.
 
-Always pass `.pk` explicitly when filtering TapirModel rows by a model instance
-(e.g. in `apps/authz/scoping.py::scope_by_user_attr`).
+Always pass `.pk` explicitly when filtering `JasminModel` rows by a model
+instance (e.g. in `apps/authz/scoping.py::scope_by_user_attr`).
+
+`JasminModel` and `generate_jasmin_id` are duplicated per app **on purpose** —
+each app stays independently extractable, and its historical migrations keep
+resolving its own `generate_jasmin_id`. Don't consolidate them into one shared
+base; `apps/shared/tests/test_jasmin_model_consistency.py` holds the copies
+byte-identical and will fail if one drifts.
 
 #### Money / Decimal hygiene
 
@@ -249,23 +283,12 @@ Three rules:
    `tax_rate` that get re-coerced via `_to_decimal()` on any downstream
    arithmetic).
 
-If you genuinely need to round in a NEW location (a new export, a new
-calculator), instantiate the same pattern locally rather than importing across
-app boundaries:
-
-```python
-from decimal import ROUND_HALF_UP, Decimal
-
-_CENT = Decimal("0.01")
-
-def _round_money(value) -> Decimal:
-    if isinstance(value, float):
-        value = str(value)  # avoid binary-fp drift
-    return Decimal(value).quantize(_CENT, rounding=ROUND_HALF_UP)
-```
-
-See `docs/code_audit/readme/engineering-audit-playbook.md` (Pass #3) for the
-methodology and what "done" looks like for this rule.
+Rounding in a NEW location (a new export, a new calculator) imports the shared
+primitives — `round_money`, `to_decimal` and `CENT` from `apps.shared.money`.
+That module is domain-free and explicitly safe to import from any app,
+`commissioning` included. Don't hand-roll a local `_round_money`: a copy drifts
+from the shared one, which additionally treats `None` as zero and passes a
+`Decimal` through unchanged.
 
 ### Migrations
 
@@ -279,14 +302,13 @@ schema-affecting RunSQL, etc.), make the reverse a `noop` rather than
 fake-reversibility — a dropped column's data can't be restored, and pretending
 otherwise is worse than declaring it gone. See
 `apps/commissioning/migrations/0011_backfill_over_default_variation_capacity.py`
-for the shape. Confirmed by the 2026-05-24 migration-safety audit
-(`docs/code_audit/readme/engineering-audit-playbook.md`, Part 5).
+for the shape.
 
 #### FinalizedProtectedMixin: keep Python + Postgres allowlists in sync
 
-`Order`, `DeliveryNoteReseller`, `InvoiceReseller`, and the 6 content models
-(`OrderContent`, `DeliveryNoteContent`, `InvoiceResellerContent`, and the three
-crate variants) are protected by **two parallel layers** that enforce the same
+`Offer`, `Order`, `DeliveryNoteReseller`, `InvoiceReseller`, and the 6 content
+models (`OrderContent`, `DeliveryNoteContent`, `InvoiceResellerContent`, and the
+three crate variants) are protected by **two parallel layers** that enforce the same
 "which columns may change after `is_finalized=True`" whitelist:
 
 1. **Python** — `FinalizedProtectedMixin.ALLOWED_FINALIZED_UPDATES` on the model
@@ -296,7 +318,8 @@ crate variants) are protected by **two parallel layers** that enforce the same
    migration time. The canonical shape is `PROTECTED_TABLES[<table>]["allowed"]`
    inside `apps/commissioning/migrations/0002_finalized_protection_and_reference_data.py`
    (the post-squash installer; the earlier 0007/0019/0020/0032 chain was folded
-   into it and no longer exists).
+   into it. Those numbers have since been reused by unrelated migrations, so
+   don't go looking for the old chain under them).
 
 The two allowlists MUST stay in sync. Drift between them means either:
 
@@ -315,8 +338,12 @@ allowlist until a follow-up migration explicitly rewrites the function body.
 needs a follow-up migration that rebuilds the trigger function with the matching
 `PROTECTED_TABLES[<table>]["allowed"]` list. Mirror the `_build_function_sql` /
 `_build_forward_sql` helpers from migration
-`0002_finalized_protection_and_reference_data` (self-contained, reverse=noop).
-Same column names on both sides.
+`0002_finalized_protection_and_reference_data`, which is self-contained. Give
+the rebuild a real `reverse_sql` that restores the previous function body — a
+trigger-body swap touches no data, so it is genuinely reversible, and 0002,
+0015 and 0024 each declare one. (The `noop` reverses in 0002 belong to its
+reference-data seeds, which are a different case.) Same column names on both
+sides.
 
 **The six content tables: copy 0024, not 0002.**
 `apps/commissioning/migrations/0024_content_parent_move_protection.py` rebuilt
@@ -428,11 +455,11 @@ equivalent exists is a defect, not a shortcut.
 
 | Need | Use |
 | ---- | --- |
-| Table | `EditableTable` (`READ_ONLY_PERMISSION` for read-only reports) |
+| Table | `EditableTable` for anything editable; `CrudListPage` / `useCrudListPage` for a standard CRUD list page; `ReadOnlyReportTable` for read-only, server-paginated or custom-action tables (`READ_ONLY_PERMISSION` gates an EditableTable read-only) |
 | Column defs | the `use*Column(s)` hooks — `useTimeBoundColumns`, `useActiveStatusColumn`, `useSellerColumn`, `useShareArticleColumn`, `useNoteColumn`, … |
 | Date-range picker | AntD `RangePicker` + `useDateRangePresets` |
-| Date display/format | `useDateFormat` — `dateFormat` (picker), `formatDate` (cells), `formatDateForAPI` (`YYYY-MM-DD` payloads). Never hardcode a date format. |
-| CSV | `buildCsvString` + `downloadCsvBlob`, or `ExportCsvDateRangeModal` for a date-range export honoring the tenant `csv_format` |
+| Date display/format | `useDateFormat` — `dateFormat` (picker), `formatDate` (cells), `formatDateForAPI` (`YYYY-MM-DD` payloads). Never hardcode a date format. It is a hook (it reads tenant settings through `useTenant`), so it cannot be called from a plain service — format in the component and pass the string down, or hand the formatter in. |
+| CSV | `buildCsvString` + `downloadCsvBlob` (`src/shared/utils/csv.ts`), or `ExportCsvDateRangeModal` for a date-range export honoring the tenant `csv_format`. The export-modal shells live in `src/features/commissioning/modals/csv/`, not `shared`. |
 | Money / currency | `useCurrency` |
 | Selectors | `src/shared/selectors/*` — Year/Week/Month/Day/Member/Reseller/ShareType |
 | Data | the `use*List` TanStack hooks + the `use<Entity>` wrappers (`useDeliveryStations`, `useShareTypeVariations`, `useSellers`, …) |
@@ -508,9 +535,13 @@ cards/sections are co-located in `src/features/<app>/components/`. See
 ### Styling & accessibility
 
 - **Don't use inline styles** unless really necessary — use the CSS files.
-- **Add `aria-label`s where advisable** when making a frontend component, and
-  generally think about the a11y implications.
-- **Don't use `<Empty/>`** — use a subtle grey "no data" message instead.
+- **a11y is a CI gate, not advice.** The `jsx-a11y` recommended set runs at
+  `error` over every hand-written `.jsx`/`.tsx` with zero debt, so a missing
+  `alt`, a label-less control or a stray `autoFocus` fails `npm run lint`. Add
+  `aria-label`s as you go rather than discovering them in CI.
+- **Don't use AntD `<Empty/>`** — use the shared `EmptyHint` (`@shared/ui`) for
+  every "nothing here" state, including inside an AntD table via
+  `locale={{ emptyText: <EmptyHint>…</EmptyHint> }}`.
 
 ### i18n
 
@@ -571,8 +602,11 @@ pytest classes — so its hardcoded future value stays future forever.
   future value and away from any year boundary (relative-date math that crosses
   Dec→Jan is its own bomb, invisible to any literal scanner).
 - The CI guard `apps/shared/tests/test_no_unfrozen_future_dates.py` catches
-  unfrozen **date literals** but NOT week-number constants or year-boundary
-  relative math — don't rely on it to catch this.
+  unfrozen **date literals** — at function, class-body or module scope — but NOT
+  week-number constants or year-boundary relative math, so don't rely on it to
+  catch those. A `::<module>` or `::<ClassName>` failure means a shared constant
+  the whole file or class spreads; it clears once every test in that scope is
+  frozen, which one module-level `autouse` fixture does in a single place.
 
 ### Frontend testing
 
@@ -606,9 +640,9 @@ vi.mock("react-i18next", () => ({
 | | |
 | --- | --- |
 | Runner | Vitest 3 + jsdom + @testing-library/react |
-| Configs | `vitest.config.ts` (jsdom default); per-file `// @vitest-environment node` pragma for Node-only suites (PDF generation, file I/O) |
+| Configs | `vitest.config.ts` (jsdom default); `vitest.census.config.ts` for the render-census suite; per-file `// @vitest-environment node` pragma for Node-only suites (PDF generation, file I/O) |
 | Setup | `src/test/setup.ts` — jest-dom matchers, RTL cleanup, matchMedia/window polyfills (env-guarded so node-env files don't crash) |
-| MSW | `src/test/msw/server.ts` — `setupServer` with default 401 on `/auth/refresh/` so pages start logged-out. `setup.ts` wires `listen({onUnhandledRequest:'error'})` / `resetHandlers` / `close`. |
+| MSW | `src/test/msw/server.ts` — `setupServer` with default 401 on `/auth/refresh/` so pages start logged-out. `setup.ts` wires `listen()` / `resetHandlers` / `close` — with an `onUnhandledRequest` callback, not `'error'`: it returns silently for static assets and wasm (`yoga.wasm`, pulled in by @react-pdf) and calls `print.error()` for everything else, so an unmocked API call still fails the test without dumping a binary blob into the output. |
 | Run | `npm test` (watch), `npm run test:run` (CI-style single run), `npm run test:ui` (browser UI) |
 
 **Conventions**
@@ -654,10 +688,13 @@ vi.mock("react-i18next", () => ({
   initialises). A variable dereferenced LAZILY — behind a `() => ...mock(...)`
   arrow, read only at call/render time — is safe as a plain module-scope `const`.
   Reference: `src/shared/ui/__tests__/BulkActionButton.test.tsx`.
+- **Don't hand-roll a partial `useTenant` stub** — a partial one is a recorded
+  breakage. Use `makeUseTenantMock` (`src/test/tenantMock.ts`), as 15 suites do.
 - **`getErrorMessage` only inspects errors that look like axios errors** — mocks
   must include `isAxiosError: true` alongside `response.data`.
-- **Render-loop smoke test pattern:** wrap the page in React's `<Profiler>` and
-  assert a LOOSE upper bound on `onRender` call count. Healthy baselines so far:
+- **Render-loop smoke test pattern:** use `profileRenders()` from
+  `src/test/profileRenders.tsx` — 12 suites already do — rather than hand-rolling
+  a `<Profiler>`, and assert a LOOSE upper bound on the commit count. Healthy baselines so far:
   LoginPage ~6, MemberDetail ~5 commits on initial mount; bounds set to 50 / 80
   (10× headroom). A real setState-in-render loop produces thousands of commits,
   so loose bounds catch the bug while tolerating legitimate dep changes.
@@ -692,12 +729,15 @@ The platform uses django-tenants to isolate tenant data at the PostgreSQL schema
 level:
 
 - **Public schema** — shared data (Tenant definitions, Domains, super-admin users)
-- **Tenant schemas** — each tenant (e.g. `test_tenant`) gets its own isolated
-  schema containing all business data (users, members, payments, etc.)
+- **Tenant schemas** — each tenant gets its own isolated schema containing all
+  business data (users, members, payments, etc.). The dev seed creates `test`,
+  served at `test.localhost`.
 
 **URL routing:**
 
-- Super-admin platform: `marillen.localhost` (or `PLATFORM_SUBDOMAIN` in prod) →
+- Super-admin platform: `marillen.localhost` (prod: `SUPER_ADMIN_SUBDOMAIN` for
+  backend + nginx, and `VITE_SUPER_ADMIN_SUBDOMAIN` — a BUILD arg baked into the
+  frontend image, so setting it after the build silently keeps `marillen`) →
   serves SuperAdminApp (tenant management, dashboards)
 - Tenant subdomains: `tenant-name.localhost` → serves JasminApp with that tenant's
   data
@@ -724,21 +764,23 @@ Located in `jasmin-core/django-core/apps/`:
 | `accounts` | User authentication, profiles, roles (member, staff, admin) |
 | `authz` | Authorization, role-based permissions, tenant-bound JWT authentication |
 | `commissioning` | Members, subscriptions, shares and weekly deliveries, stations and tours, resellers and orders, warehouse/stock |
-| `cultivation` | Growing/planting data, sowing and planting lists, CP-SAT bed planner |
-| `economics` | Financial reports, pricing, invoicing |
+| `cultivation` | Stub — no models, migrations or endpoints; `solver/config_solver.py` holds bed-planner constants only. The `src/features/cultivation/` pages are placeholders too. |
+| `economics` | Chart of accounts — `Account` / `AccountValue` (monthly debit/credit). No API surface. Invoicing lives in `commissioning`, billing in `payments`. |
 | `gdpr` | Data export/deletion for GDPR compliance |
-| `notifications` | Email/SMS templates, notification dispatch (via Huey + Anymail) |
+| `notifications` | Email templates, notification dispatch, background jobs (via Huey) |
 | `payments` | SEPA Direct Debit, billing runs, charge schedules, subscriptions |
-| `staff` | Staff scheduling, permissions, admin dashboards |
+| `staff` | Employees and employments, weekly staff plan, absences. Role-gated through `apps.authz`. |
 | `shared.tenants` | Tenant and domain models, multi-tenancy bootstrap |
 | `shared.super_admin` | Platform-wide admin endpoints (tenant CRUD, etc.) |
+| `shared.support` | Support tickets (tenant `tickets`, super-admin `support-tickets`) |
 
 `apps/shared/` also holds standalone always-shared utility modules (importable
 from `commissioning`): `auth_cookies.py`, `csp_report.py`, `csv_safety.py`,
-`deferred_email.py`, `iban_validator.py`, `invitations.py`, `languages.py`,
-`money.py`, `pii_logging.py`, `pii_masking.py`, `query_params.py`,
-`request_utils.py`, `sepa_mandate_hooks.py`, `smtp_host_validator.py`,
-`subscription_hooks.py`.
+`deferred_email.py`, `iban_validator.py`, `image_upload.py`, `invitations.py`,
+`languages.py`, `model_fields.py`, `money.py`, `openapi_params.py`,
+`pii_logging.py`, `pii_masking.py`, `query_params.py`, `request_utils.py`,
+`retention.py`, `sepa_mandate_hooks.py`, `smtp_host_validator.py`,
+`subscription_hooks.py`, `tenant_urls.py`.
 
 **Key Django patterns:**
 
@@ -747,7 +789,8 @@ from `commissioning`): `auth_cookies.py`, `csp_report.py`, `csv_safety.py`,
 - Tests use pytest fixtures with session-scoped tenant setup (see
   `apps/commissioning/tests/conftest.py`)
 - Settings split: `SHARED_APPS` (cross-tenant) and `TENANT_APPS` (per-tenant)
-- Email via Anymail with a provider-agnostic interface (SendGrid/SMTP)
+- Email via Django's SMTP backend — MailHog in dev, a tenant/ops SMTP host in
+  prod, with an SSRF guard (`SMTP_ALLOW_PRIVATE_HOSTS`) on tenant-supplied hosts
 - Security: django-axes for account lockout, django-auditlog for audit trail,
   encrypted fields for PII
 
@@ -766,7 +809,6 @@ src/
   │   ├── ui/             # design-system primitives  ├── tables/  EditableTable & friends
   │   ├── selectors/      # generic Year/Week pickers ├── layout/  app shell (Sidebar, UserMenu…)
   │   ├── modals/         # generic + cross-feature modals
-  │   ├── pdfs/           # PDF infra (shrinks as commissioning-specific docs move into the feature)
   │   ├── hooks/          # cross-cutting hooks + the `index.ts` barrel
   │   ├── contexts/       # Auth, Tenant, Locale, Menu …
   │   ├── services/       # the wire: api.ts, tokenStore, authEndpoints, stepUp
@@ -818,7 +860,8 @@ Import and boundary rules are in [Structure & imports](#structure--imports).
 
 - **Payments**: SEPA Direct Debit via custom billing logic (no third-party
   processor in base)
-- **Email**: Anymail (provider-agnostic) + SendGrid (production typical)
+- **Email**: Django's SMTP backend (no Anymail) — MailHog in dev, tenant/ops
+  SMTP host in prod
 - **PDF generation**: WeasyPrint (backend) and @react-pdf/renderer (frontend)
 - **Internationalization**: i18next (frontend), Django i18n (backend), supports
   de/en/fr/it (de is the primary locale and `fallbackLng`)
@@ -879,25 +922,36 @@ npm run build                    # Production build
 ### API generation (after backend API changes)
 
 ```bash
-make generate-schema             # Generate OpenAPI schema from Django
+DEBUG=True make generate-schema  # Generate OpenAPI schema from Django
 make generate-frontend-api       # Run orval to update React client
-make generate-api                # Both steps combined
+DEBUG=True make generate-api     # Both steps combined
 ```
+
+`manage.py` force-enables DEBUG only for `runserver` / `shell` / `shell_plus` /
+`dbshell`. `spectacular` is not in that set, so without `DEBUG=True` it boots
+with `DEBUG=False`, hits the prod boot guards and leaves `schema.yml` silently
+stale — which then fails CI's "API schema is up-to-date" step. Running it inside
+the backend container works too.
 
 ### Testing
 
 **Backend (pytest):**
 
 ```bash
+make test-local                             # the whole suite against the dev Postgres (:5433)
 cd jasmin-core/django-core
-poetry run pytest                           # Run all tests
-poetry run pytest -k test_name              # Run single test by name
-poetry run pytest apps/payments/tests/      # Run tests for a specific app
-poetry run pytest apps/payments/tests/test_models.py::TestBillingProfile        # Test class
-poetry run pytest apps/payments/tests/test_models.py::TestBillingProfile::test_foo  # Single test
-poetry run pytest --maxfail=1 -q            # Stop after first failure, quiet mode
-poetry run pytest --cov=apps --cov-report=html  # Coverage report
+POSTGRES_PORT=5433 poetry run pytest -k test_name          # single test by name
+POSTGRES_PORT=5433 poetry run pytest apps/payments/tests/  # one app
+POSTGRES_PORT=5433 poetry run pytest apps/payments/tests/test_models.py::TestBillingProfileValidation
+POSTGRES_PORT=5433 poetry run pytest --maxfail=1 -q        # stop after first failure
+POSTGRES_PORT=5433 poetry run pytest --cov=apps --cov-report=html
 ```
+
+**`POSTGRES_PORT=5433` is not optional on the host.** The setting defaults to
+5432, where a native Postgres usually sits with no `jasmin` role, so a bare
+`poetry run pytest` errors in every fixture. `make test-local` sets it for you.
+Never run two pytest sessions at once — they share one schema and clobber each
+other; give a second run its own `POSTGRES_DB=<name>`.
 
 Pytest configuration lives in `pyproject.toml`:
 
@@ -913,11 +967,23 @@ Pytest configuration lives in `pyproject.toml`:
 ```bash
 cd jasmin-core/react-core
 npm run test:run                 # Run tests
-npm run test:ui                  # Open test UI
 npm run type-check               # TypeScript check (no emit)
 ```
 
 ### Linting & code quality
+
+`make check` runs the whole CI gate in one shot: black, ruff, import-contracts,
+mypy, pytest, type-check, lint, lint-pins, test-frontend.
+
+Much of it also runs on `git commit` through pre-commit (once you have run
+`pre-commit install`): gitleaks secret scanning, `ruff --fix` and `black` over
+`jasmin-core/django-core/(apps|config|core)`, and `npm run lint` over the
+frontend `src`. The ruff hook passes `--extend-ignore` for the hygiene rules
+(naming, complexity, argument and statement counts) because those are gated in
+CI through `scripts/ruff_baseline.py` instead — ruff reports every finding in a
+file you touch rather than only your lines, so leaving them on here would block
+a commit on pre-existing findings elsewhere in the same file. Skip one hook with
+`SKIP=ruff git commit`, or all of them with `--no-verify`.
 
 **Backend:**
 
@@ -933,7 +999,9 @@ poetry run python scripts/mypy_baseline.py freeze   # Re-freeze after fixing fin
 ```
 
 Ruff config lives in `pyproject.toml` (`[tool.ruff]` and `[tool.ruff.lint]`). The
-selected rule set is `E,F,B,BLE,UP,I` with `__init__.py` re-exports, conftest
+selected rule set is `E,F,B,BLE,UP,I` plus the hygiene rules `N,C901,PLR0913,
+PLR0915` (gated against `ruff-baseline.txt`, see [Hygiene gates](#hygiene-gates)),
+with `__init__.py` re-exports, conftest
 fixtures, Django settings star-imports, generated migrations, and the
 `apps/cultivation/solver/**` research code allow-listed.
 
@@ -946,21 +1014,28 @@ npm run lint:fix                 # Auto-fix issues
 
 **CI/CD** — configured in `.github/workflows/ci.yml`:
 
-- Runs on all pushes to main and all PRs
-- Frontend job: type-check, lint, vitest, production build
-- Backend job: black --check, ruff check, pytest (with a Postgres service for
-  django-tenants tests)
+- Runs on all pushes to main and all PRs; five jobs
+- Frontend: type-check, lint, `lint:pins`, vitest, production build, bundle-size
+  budget, npm audit
+- Backend: black, ruff baseline, mypy baseline, import contracts, pytest (with a
+  Postgres service for django-tenants tests)
+- Two "you forgot to regenerate" gates fail PRs most often: `makemigrations
+  --check --dry-run`, and the schema-freshness diff (`spectacular` then
+  `git diff --exit-code` on `schema.yml`)
 - Concurrency-cancels in-flight runs when a new commit lands on the same branch/PR
 
 ### Production deployment
 
-**Build & deploy:** there are **no `make prod-*` targets** — the Makefile only
-defines `dev-*` plus generate/migrate helpers. Production is driven via
-`docker-compose.yml` directly (build + `docker compose up -d`, then run
-migrations through the backend container). Match your host's actual deploy flow.
+**Build & deploy:** there are no `make prod-*` targets, but there IS a committed
+flow — run `./scripts/deploy.sh` from the repo root on the server. It is
+idempotent: validates `.env`, issues the wildcard cert, builds, brings the core
+stack up, waits for backend health, migrates. `scripts/update.sh` is the
+"I pushed — now what?" wrapper around it.
 
-**Database backups:** `pg_dump` against the `postgres` service (e.g.
-`docker compose exec postgres pg_dump ...`) — there is no `make prod-backup`.
+**Database backups:** the `backup` service runs them — a nightly GPG-encrypted
+`pg_dump` plus a media archive (`backups/backup.sh`), with an rclone off-host
+push scaffold. `BACKUP_ENCRYPTION_KEY` is required; compose refuses to start
+without it. Don't hand-roll `pg_dump`; that skips the encrypted path.
 
 **Stack components** (`docker-compose.yml`):
 
@@ -971,6 +1046,7 @@ migrations through the backend container). Match your host's actual deploy flow.
 - `frontend`: React + Nginx (built SPA)
 - `gateway`: Public Nginx with TLS, routes to backend/frontend
 - `certbot`: Let's Encrypt renewal (wildcard certs via Linode DNS plugin)
+- `backup`: nightly encrypted DB dump + media archive
 
 ## Test fixtures & patterns
 
@@ -982,9 +1058,10 @@ Tests in `apps/*/tests/` use pytest with session-scoped database setup.
 | ------- | ----------------- |
 | `_tenant_schema` | Creates the `test_pytest` schema (session-scoped, shared across apps via get-or-create) |
 | `tenant` | Switches the DB connection to the `test_pytest` schema |
-| `user` | Authenticated TapirUser with `office` role |
-| `member_user` | Authenticated TapirUser with `member` role only |
+| `user` | Authenticated `JasminUser` with `office` role |
+| `member_user` | Authenticated `JasminUser` with `member` role only |
 | `api_client` | DRF APIClient authenticated as `user` |
+| `step_up_client` | `api_client` whose token carries a fresh `step_up_verified_at` claim — required by any `RequiresStepUp` endpoint; plain `api_client` leaves `request.auth` None, so the gate raises before the view runs |
 | `anon_client` | Unauthenticated APIClient |
 | `api_request_factory` | DRF APIRequestFactory for unit-testing views without routing |
 
@@ -992,11 +1069,14 @@ Tests in `apps/*/tests/` use pytest with session-scoped database setup.
 shared fixtures and add domain-specific ones (`billing_profile`, `subscription`).
 
 **Factories** — factory-boy for test data creation (see imports in conftest.py),
-e.g. `MemberFactory(user=user)` creates a Member with a linked TapirUser.
+e.g. `MemberFactory(user=user)` creates a Member with a linked `JasminUser`.
 
 **Key patterns:**
 
-- Tests are isolated per app schema → safe to run in parallel
+- One schema for the whole suite: every app's conftest re-exports commissioning's
+  session-scoped `_tenant_schema` (`test_pytest`); only `apps/shared/tenants/tests/`
+  owns its own (`test_tenants`). There is no pytest-xdist — two concurrent pytest
+  sessions clobber the same schema, so give a second run its own `POSTGRES_DB`
 - Use `@pytest.mark.django_db` if needed (usually implicit with fixtures)
 - Parametrize with `@pytest.mark.parametrize` for data-driven tests
 - Time travel: the `time-machine` library for date/time testing (see
@@ -1015,15 +1095,15 @@ e.g. `MemberFactory(user=user)` creates a Member with a linked TapirUser.
 
 - Multi-tenant setup: `SHARED_APPS`, `TENANT_APPS`, `PUBLIC_SCHEMA_NAME`, `ROOT_URLCONF`
 - Security: CSRF, CORS, rate limiting (django-axes)
-- Email: Anymail provider config
+- Email: Django SMTP backend config (host, port, TLS), per-tenant overrides
 - JWT: token lifetime (access 15m, refresh 7d), rotation enabled
-- Logging: separate logs for security, auth, app, tenants
+- Logging: three rotating files — `app.log`, `auth.log`, `security.log` (the
+  `tenants` logger writes into `app.log`)
 
 **Frontend config** — `jasmin-core/react-core/vite.config.js` (dev server) **and
 `vite.config.production.js`** (the production build — `npm run build` uses this
-one, easy to miss); `vitest.config.ts` for tests. ⚠️ `vite.config.ts` is an empty
-**directory**, not a config. Aliases must stay in sync across all three +
-`tsconfig.json`.
+one, easy to miss); `vitest.config.ts` for tests. Aliases must stay in sync
+across all three + `tsconfig.json`.
 
 - Path aliases: `@`, `@app`, `@shared`, `@features`, `@hooks`, `@routing`
 - API proxy: proxies `/api`, `/media`, `/static` to backend (tenant-aware)
@@ -1036,7 +1116,7 @@ one, easy to miss); `vitest.config.ts` for tests. ⚠️ `vite.config.ts` is an 
   gunicorn/runserver selection
 
 **Environment** — `.env.dev.example` (dev template — `cp .env.dev.example
-.env.dev`), `.env.example` (prod template), `.env.local`
+.env.dev`) and `.env.example` (prod template → `.env`)
 
 - Required in prod: `DJANGO_SECRET_KEY`, `FIELD_ENCRYPTION_KEY`, `POSTGRES_*`,
   `FRONTEND_DOMAIN`
@@ -1047,13 +1127,16 @@ one, easy to miss); `vitest.config.ts` for tests. ⚠️ `vite.config.ts` is an 
 **Add a new tenant-scoped feature:**
 
 1. Create a new Django app in `apps/` with models
-2. Add migrations (stored in `apps/myapp/migrations/`)
-3. Run `make dev-migrate` to apply to shared + tenant schemas
-4. Add DRF viewsets/views in the app's `viewsets.py`/`views.py` and wire routes in
+2. Register it in `TENANT_APPS` in `config/settings.py` (or `SHARED_APPS` if its
+   data is public-schema) — until you do, `makemigrations` produces nothing and
+   step 3 silently no-ops
+3. Add migrations (stored in `apps/myapp/migrations/`)
+4. Run `make dev-migrate` to apply to shared + tenant schemas
+5. Add DRF viewsets/views in the app's `viewsets.py`/`views.py` and wire routes in
    `apps/<app>/urls.py`; ensure the app is `include()`d in `config/tenant_urls.py`
-5. Generate schema: `make generate-schema`
-6. Generate React client: `make generate-frontend-api`
-7. Build React pages under `src/features/<app>/pages/` (with co-located
+6. Generate schema: `DEBUG=True make generate-schema`
+7. Generate React client: `make generate-frontend-api`
+8. Build React pages under `src/features/<app>/pages/` (with co-located
    `components/`, and `modals/`/`hooks/` for app-specific ones; generic ones go
    in `src/shared/`)
 
@@ -1078,13 +1161,15 @@ poetry run python manage.py migrate_schemas --tenant
 
 ```bash
 make dev-bash                                          # Enter backend container
-python manage.py shell --schema=test_tenant            # Tenant-specific shell
-python manage.py tenant_command showmigrations --schema=test_tenant
+python manage.py tenant_command shell --schema=test    # Tenant-specific shell
+python manage.py tenant_command showmigrations --schema=test
 ```
 
 **Monitor background tasks:**
 
 - Huey logs appear in `make dev-logs` output
+- `make huey` runs a worker on the host (`manage.py run_huey -w 1 -k thread`)
+  when you want the queue draining outside the dev stack
 - In dev docker-compose, check redis at `localhost:6379`
 - Production: Huey is a separate service consuming the Redis queue
 
@@ -1093,5 +1178,6 @@ python manage.py tenant_command showmigrations --schema=test_tenant
 - **Backend**: logs in `jasmin-core/django-core/logs/` (app.log, auth.log, security.log)
 - **Frontend**: browser console + Vite HMR logs
 - **Docker Compose**: `make dev-logs` tails all services
-- **Database**: `docker exec -it jasmin-postgres psql -U jasmin -d jasmin`
+- **Database**: `docker exec -it jasmin-postgres-1 psql -U jasmin -d jasmin`
+  (compose sets no `container_name`, so names carry the project prefix and `-1`)
 - **API docs**: `/api/docs/` (Swagger) and `/api/redoc/` (ReDoc) during development

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from django.db.models import (
@@ -43,7 +43,6 @@ from apps.authz.permissions import (
     IsStaffOrMember,
     RolePermissionsMixin,
 )
-from apps.shared.money import CENT
 from apps.shared.pii_logging import PIIReadLoggingMixin
 from apps.shared.query_params import parse_body_bool
 from apps.shared.request_utils import auth_user, body
@@ -94,6 +93,7 @@ from ..services.onboarding_policy import (
     confirmation_datetime,
     onboarding_mode_enabled,
 )
+from ..services.waiting_list_offer_service import offer_price_fits_column
 from ..utils.optional_filters import apply_optional_filters
 from ..utils.query_params import validate_query_params
 from ..utils.validation_utils import parse_body_date, parse_bulk_ids
@@ -405,7 +405,13 @@ class MemberViewSet(
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         enforce_privileged(request, "Only office staff may create members.")
 
-        email: str = (body(request).get("email") or "").strip().lower()
+        raw_email = body(request).get("email")
+        # A non-string email is a hand-crafted body. It can't match a user, so
+        # skip the lookup and let the serializer's ``EmailField`` refuse it a
+        # few lines below; ``.strip()`` on it would answer with a 500 instead.
+        # Blanking it rather than raising here also keeps the refusal identical
+        # whether or not an account with that address exists.
+        email: str = raw_email.strip().lower() if isinstance(raw_email, str) else ""
         notify_user = parse_body_bool(body(request), "notify_user")
 
         service = MemberService()
@@ -856,18 +862,15 @@ def _build_subscription_queryset(
     return scope_to_member(queryset, request, path="member")
 
 
-#: ``Subscription.price_per_delivery`` is ``numeric(8, 2)``: six digits before
-#: the decimal point.
-_PRICE_LIMIT = Decimal("1000000")
-
-
 def _validated_offer_price(raw: Any) -> Any:
     """Return the waiting-list offer price unchanged once it fits the column.
 
     The offer price is read straight from the request body instead of going
-    through a serializer, so the ``numeric(8, 2)`` bounds are enforced here: a
-    third decimal would be silently rounded away on write, and a wider amount
-    overflows the column. Coercion itself stays in the offer service.
+    through a serializer, so a value that isn't a number at all is rejected
+    here, at the edge. The column bound itself is the offer service's rule,
+    applied to every caller; running it here too keeps an unparseable body and
+    an unstorable amount answering with the same error. Coercion stays in the
+    service.
     """
     if raw is None or raw == "":
         return raw
@@ -875,9 +878,7 @@ def _validated_offer_price(raw: Any) -> Any:
         amount = Decimal(str(raw).strip())
     except (InvalidOperation, ValueError, TypeError):
         raise SubscriptionPriceInvalid(raw) from None
-    if not amount.is_finite() or abs(amount) >= _PRICE_LIMIT:
-        raise SubscriptionPriceInvalid(raw)
-    if amount.quantize(CENT, rounding=ROUND_HALF_UP) != amount:
+    if not offer_price_fits_column(amount):
         raise SubscriptionPriceInvalid(raw)
     return raw
 

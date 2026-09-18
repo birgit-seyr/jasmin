@@ -5,6 +5,7 @@ from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers
 
 from apps.shared.image_upload import normalize_uploaded_picture, strict_image_decoding
+from apps.shared.languages import LanguageChoices
 
 from .errors import (
     SmtpHostNotAllowed,
@@ -121,6 +122,20 @@ class TenantSerializer(_TenantSettingsOverlayMixin, serializers.ModelSerializer)
     # ``refreshTenantFull()`` swaps in after login, and without the field the
     # frontend would lose the icon stamp the moment a session authenticates.
     app_icon_version = serializers.CharField(read_only=True)
+    # Constrained to the languages the platform actually renders UI strings and
+    # email templates for — the same ``LanguageChoices`` source
+    # ``accounts.user_language`` and the super-admin create serializer use. The
+    # column is a plain 8-character ``CharField``, so under ``fields =
+    # "__all__"`` an admin PATCH could store any string, and every later locale
+    # lookup would silently fall back instead of rejecting the value on write.
+    #
+    # No ``default``: an omitted key must stay OUT of ``validated_data`` so a
+    # partial update leaves the stored language alone. Blank stays accepted —
+    # ``apps.shared.invitations`` and ``tenants.email_service`` read ``""`` as
+    # "no tenant preference" and fall back to their own default.
+    tenant_language = serializers.ChoiceField(
+        choices=LanguageChoices.choices, required=False, allow_blank=True
+    )
 
     class Meta:
         model = Tenant

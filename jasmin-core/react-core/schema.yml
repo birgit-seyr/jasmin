@@ -15509,6 +15509,7 @@ paths:
         schema:
           type: integer
           minimum: 0
+          maximum: 10
         description: Packing station number
       - in: query
         name: share_type
@@ -15521,6 +15522,7 @@ paths:
         schema:
           type: integer
           minimum: 0
+          maximum: 20
         description: Tour number
       - in: query
         name: year
@@ -15621,6 +15623,7 @@ paths:
         schema:
           type: integer
           minimum: 0
+          maximum: 20
         description: Tour number
       - in: query
         name: year
@@ -15719,6 +15722,7 @@ paths:
         schema:
           type: integer
           minimum: 0
+          maximum: 20
         description: Tour number
       - in: query
         name: year
@@ -21281,6 +21285,7 @@ paths:
         schema:
           type: integer
           minimum: 0
+          maximum: 20
       - in: query
         name: year
         schema:
@@ -41703,6 +41708,8 @@ components:
         app_icon_version:
           type: string
           readOnly: true
+        tenant_language:
+          $ref: '#/components/schemas/TenantLanguageEnum'
         schema_name:
           type: string
           readOnly: true
@@ -41732,9 +41739,6 @@ components:
           type: string
           nullable: true
           maxLength: 100
-        tenant_language:
-          type: string
-          maxLength: 8
         phone_number:
           type: string
           nullable: true
@@ -41970,6 +41974,14 @@ components:
       required:
       - from_email
       - from_name
+    TenantLanguageEnum:
+      enum:
+      - en
+      - de
+      type: string
+      description: |-
+        * `en` - English
+        * `de` - German
     TenantNonStaffRead:
       type: object
       description: |-

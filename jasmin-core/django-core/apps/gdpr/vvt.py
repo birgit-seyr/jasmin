@@ -242,8 +242,9 @@ TOMS: list[dict[str, str]] = [
     {
         "label": "Encryption in transit",
         "value": (
-            "TLS via gateway nginx + Let's Encrypt wildcard. See "
-            "docs/security/https-deploy-runbook.md."
+            "TLS terminated at the gateway nginx with a Let's Encrypt "
+            "wildcard certificate, renewed automatically by certbot; HSTS "
+            "enabled"
         ),
     },
     {

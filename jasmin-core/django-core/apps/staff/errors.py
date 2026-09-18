@@ -52,6 +52,16 @@ class WeeklyPlanCopySourceRowsOutOfRange(ConflictError):
     code = "staff.weekly_plan_copy_source_rows_out_of_range"
 
 
+class WeeklyPlanCopySourceCategoryInactive(ConflictError):
+    """Copy refused because the source week holds rows in a category that is
+    deactivated. The grid renders active categories only, so every row of such
+    a category sits at no position the target week shows and the next
+    whole-week replace deletes it. Reactivate the category or clear its rows in
+    the source week."""
+
+    code = "staff.weekly_plan_copy_source_category_inactive"
+
+
 class WeeklyPlanCategoryShrinkBlocked(ConflictError):
     """``max_lines`` cannot be lowered while weekly-plan entries sit in the rows
     that would disappear. Those rows stay in the database, vanish from the grid

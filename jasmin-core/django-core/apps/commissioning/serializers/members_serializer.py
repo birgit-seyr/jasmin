@@ -201,8 +201,26 @@ class MemberSerializer(
             "account_owner": {"write_only": True},
         }
 
+    # Any ONE of these says who a new member row is for. The floor is "at least
+    # one", not "a name": a company member legitimately carries only a
+    # ``company_name``, and an office-managed member may be on file with
+    # nothing but a pickup name. ``member_number`` is deliberately absent — a
+    # register entry holding only a number still names nobody.
+    IDENTIFYING_FIELDS = (
+        "first_name",
+        "last_name",
+        "company_name",
+        "pickup_name",
+        "email",
+        "email_2",
+        "email_3",
+    )
+
     def validate(self, attrs):
-        from apps.commissioning.errors import LockedAfterAdminConfirmation
+        from apps.commissioning.errors import (
+            LockedAfterAdminConfirmation,
+            MemberIdentityRequired,
+        )
         from apps.commissioning.services.trial_policy import (
             assert_member_creation_allowed,
         )
@@ -238,6 +256,20 @@ class MemberSerializer(
         was_trial = getattr(self.instance, "is_trial", False)
         if is_trial and not was_trial:
             assert_member_creation_allowed(is_trial=True)
+
+        # A create has to say who the row is for; an update does not, because
+        # the stored row already does and a PATCH carries only what changed.
+        # Here rather than in the viewset so the office create, the onboarding
+        # create and the CSV import — which all validate through this class —
+        # are held to the one rule.
+        if self.instance is None and not any(
+            str(attrs.get(field_name) or "").strip()
+            for field_name in self.IDENTIFYING_FIELDS
+        ):
+            raise MemberIdentityRequired(
+                "A member needs at least one identifying field.",
+                details={"any_of": list(self.IDENTIFYING_FIELDS)},
+            )
         return super().validate(attrs)
 
 

@@ -889,6 +889,20 @@ class MemberCoopSharesOutOfRange(BadRequestError):
         )
 
 
+class MemberIdentityRequired(BadRequestError):
+    """A member create carried nothing that says who the row is for.
+
+    Every Member column is nullable or defaulted, so serializer validation on
+    its own accepts an empty body — and the Mitgliederliste, which is legally
+    relevant, gains a row nobody can attribute afterwards. One identifying
+    field is the floor rather than a name: a company member legitimately has no
+    natural-person name, and an office-managed member may be on file with only
+    a pickup name or an email address.
+    """
+
+    code = "member.identity_required"
+
+
 class MemberNumberNotAllowedForTrial(BadRequestError):
     """A CSV import row set ``member_number`` on a row with ``is_trial=True``.
 

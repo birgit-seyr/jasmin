@@ -560,6 +560,7 @@ export * from './tenantEmailConfig';
 export * from './tenantEmailConfigAccountingEmail';
 export * from './tenantEmailConfigReplyToEmail';
 export * from './tenantEmailForOrders';
+export * from './tenantLanguageEnum';
 export * from './tenantNonStaffRead';
 export * from './tenantNonStaffReadCurrentSettings';
 export * from './tenantNonStaffReadEmail';

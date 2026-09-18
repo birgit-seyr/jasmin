@@ -1635,6 +1635,15 @@ class TestVirtualComponentsViewSet:
         )
         assert component.quantity == Decimal("1.00")
 
+    def test_the_column_default_is_a_decimal(self):
+        """The round-trip above cannot tell the defaults apart — Postgres
+        normalises a float and a Decimal to the same stored value. An unsaved
+        instance can, and it is the one that reaches Decimal arithmetic."""
+        default = VirtualVariationComponent().quantity
+
+        assert isinstance(default, Decimal)
+        assert default == Decimal("1.00")
+
 
 # ---------------------------------------------------------------------------
 # ShareDeliveryViewSet / ShareDeliveryOverviewViewSet — joker_taken re-plans
@@ -2446,6 +2455,21 @@ class TestBoxCombinationMatrixFlags:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.data["code"] == "query.invalid_param"
         assert resp.data["field"] == "donation_joker"
+
+    def test_axis_conflict_details_echo_the_sent_spellings(self, api_client, tenant):
+        """``details`` carries the offending values so the client can show them.
+        Both halves parsed to true, so the wire text is the only thing left that
+        distinguishes the accepted spellings the caller actually used."""
+        resp = api_client.get(self.URL, self._scope(for_stations="on", for_tours="1"))
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["details"] == {"for_stations": "on", "for_tours": "1"}
+
+    def test_scope_conflict_details_echo_the_sent_spellings(self, api_client, tenant):
+        resp = api_client.get(self.URL, self._scope(joker="yes", donation_joker="true"))
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["details"] == {"joker": "yes", "donation_joker": "true"}
 
     def test_one_flag_from_each_pair_still_answers(self, api_client, tenant):
         resp = api_client.get(self.URL, self._scope(for_stations="true", joker="true"))

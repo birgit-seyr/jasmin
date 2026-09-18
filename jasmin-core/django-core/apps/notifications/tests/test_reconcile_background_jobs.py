@@ -140,8 +140,12 @@ class TestPruneOldBackgroundJobs:
     """Terminal rows past the retention window are deleted; queued/
     running rows and recent terminal rows are kept."""
 
-    OLD = datetime.timedelta(days=notification_tasks.RETENTION_DAYS + 5)
-    RECENT = datetime.timedelta(days=notification_tasks.RETENTION_DAYS - 5)
+    OLD = datetime.timedelta(
+        days=notification_tasks.NOTIFICATION_LOG_RETENTION_DAYS + 5
+    )
+    RECENT = datetime.timedelta(
+        days=notification_tasks.NOTIFICATION_LOG_RETENTION_DAYS - 5
+    )
 
     def test_prunes_old_terminal_jobs_only(self, tenant):
         old_done = _job(status=BackgroundJob.STATUS_DONE, created_age=self.OLD)

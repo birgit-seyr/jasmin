@@ -9,6 +9,7 @@ The grid is a dense matrix the client stays dumb about: for each active
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from datetime import date
 from typing import Any
 
@@ -20,6 +21,7 @@ from ..errors import (
     EmployeeNotFound,
     InvalidWeeklyPlanAssignment,
     WeeklyPlanCategoryNotFound,
+    WeeklyPlanCopySourceCategoryInactive,
     WeeklyPlanCopySourceRowsOutOfRange,
     WeeklyPlanCopyTargetNotEmpty,
 )
@@ -111,6 +113,17 @@ def replace_week(year: int, week: int, assignments: list[dict[str, Any]]) -> Non
                 f"Unknown weekly-plan category: {assignment['category_id']}",
                 field="category_id",
             )
+        # ``build_week_grid`` renders active categories only, so a row written
+        # into a deactivated one sits at no position the office can see or edit,
+        # and the next whole-week replace deletes it. A grid rendered before the
+        # category was switched off still posts its cells, so refuse them here
+        # rather than store rows nobody can reach.
+        if not category.is_active:
+            raise InvalidWeeklyPlanAssignment(
+                f"Category '{category.name}' is deactivated, so the weekly plan "
+                "does not show it. Reactivate it, or drop its assignments.",
+                field="category_id",
+            )
         if assignment["employee_id"] not in valid_employee_ids:
             raise EmployeeNotFound(
                 f"Unknown employee: {assignment['employee_id']}",
@@ -182,17 +195,78 @@ def weeks_stranded_by_shrink(
     return [{"year": year, "week": week} for year, week in stranded]
 
 
+def _per_category(
+    rows: Iterable[Mapping[str, Any]], *, carry: tuple[str, ...] = ()
+) -> list[dict[str, Any]]:
+    """Collapse ``values()`` rows into one entry per category, each carrying the
+    ``row_indexes`` that named it, in the order the query returned them.
+
+    ``carry`` names further category columns to copy onto the entry, given
+    without their ``weekly_plan_category__`` prefix. The two callers report
+    different reasons and so answer with different keys — only a refusal about
+    ``max_lines`` can say what that count is.
+    """
+    per_category: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        category_id = row["weekly_plan_category_id"]
+        entry = per_category.setdefault(
+            category_id,
+            {
+                "category_id": category_id,
+                "category_name": row["weekly_plan_category__name"],
+                **{key: row[f"weekly_plan_category__{key}"] for key in carry},
+                "row_indexes": [],
+            },
+        )
+        entry["row_indexes"].append(row["row_index"])
+    return list(per_category.values())
+
+
+def rows_in_inactive_categories(year: int, week: int) -> list[dict[str, Any]]:
+    """Rows of ``(year, week)`` belonging to a deactivated category, grouped per
+    category, categories by name.
+
+    :func:`build_week_grid` renders active categories only, so every row of a
+    deactivated category sits at no position the grid shows, whatever its
+    ``row_index`` — the category's ``max_lines`` says nothing about those rows
+    and is left out of the answer. A NULL ``row_index`` occupies no grid
+    position under any category, so it is left out here as everywhere else.
+    """
+    hidden = (
+        WeeklyPlan.objects.filter(
+            year=year,
+            week=week,
+            weekly_plan_category__is_active=False,
+            row_index__isnull=False,
+        )
+        .values(
+            "weekly_plan_category_id",
+            "weekly_plan_category__name",
+            "row_index",
+        )
+        .distinct()
+        .order_by("weekly_plan_category__name", "row_index")
+    )
+
+    return _per_category(hidden)
+
+
 def rows_beyond_category_rows(year: int, week: int) -> list[dict[str, Any]]:
-    """Rows of ``(year, week)`` sitting at a ``row_index`` at or past their own
-    category's ``max_lines``, grouped per category, categories by name.
+    """Rows of ``(year, week)`` in an ACTIVE category, sitting at a ``row_index``
+    at or past that category's ``max_lines``, grouped per category, categories by
+    name.
 
     Each row is compared against the count of the category it belongs to, in the
     join, so one category's size never judges another's — and it stays one query.
     A NULL ``row_index`` occupies no grid position at all, so no count applies to
-    it and it never matches.
+    it and it never matches. A deactivated category is out of scope: no count
+    gives its rows a position either, and :func:`rows_in_inactive_categories`
+    names them under that reason instead, so no category is reported by both.
     """
     offending = (
-        WeeklyPlan.objects.filter(year=year, week=week)
+        WeeklyPlan.objects.filter(
+            year=year, week=week, weekly_plan_category__is_active=True
+        )
         .filter(row_index__gte=F("weekly_plan_category__max_lines"))
         .values(
             "weekly_plan_category_id",
@@ -204,20 +278,7 @@ def rows_beyond_category_rows(year: int, week: int) -> list[dict[str, Any]]:
         .order_by("weekly_plan_category__name", "row_index")
     )
 
-    per_category: dict[str, dict[str, Any]] = {}
-    for row in offending:
-        category_id = row["weekly_plan_category_id"]
-        entry = per_category.setdefault(
-            category_id,
-            {
-                "category_id": category_id,
-                "category_name": row["weekly_plan_category__name"],
-                "max_lines": row["weekly_plan_category__max_lines"],
-                "row_indexes": [],
-            },
-        )
-        entry["row_indexes"].append(row["row_index"])
-    return list(per_category.values())
+    return _per_category(offending, carry=("max_lines",))
 
 
 @transaction.atomic
@@ -238,6 +299,11 @@ def copy_week(year: int, from_week: int, to_week: int) -> int:
     several categories is blocking: a partial copy would fill the target week,
     and the retry after raising the count would then hit the target-not-empty
     refusal. All-or-nothing keeps the copy repeatable once the office has acted.
+
+    A row in a deactivated category is refused on the same ground — the grid
+    renders active categories only, so that row reaches no position in the
+    target week either — under its own code, because the remedy differs:
+    switch the category back on, rather than give it more rows.
     """
     if from_week == to_week:
         raise InvalidWeeklyPlanAssignment(
@@ -246,6 +312,22 @@ def copy_week(year: int, from_week: int, to_week: int) -> int:
     if WeeklyPlan.objects.filter(year=year, week=to_week).exists():
         raise WeeklyPlanCopyTargetNotEmpty(
             f"Week {to_week} already has a weekly plan", field="to_week"
+        )
+
+    hidden = rows_in_inactive_categories(year, from_week)
+    if hidden:
+        listed = "; ".join(
+            "'{name}' rows {rows}".format(
+                name=entry["category_name"],
+                rows=", ".join(str(index) for index in entry["row_indexes"]),
+            )
+            for entry in hidden
+        )
+        raise WeeklyPlanCopySourceCategoryInactive(
+            f"Week {from_week} holds weekly-plan rows in deactivated "
+            f"categories: {listed}",
+            field="from_week",
+            details={"categories": hidden},
         )
 
     blocking = rows_beyond_category_rows(year, from_week)

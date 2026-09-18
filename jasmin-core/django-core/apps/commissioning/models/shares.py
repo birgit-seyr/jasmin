@@ -486,7 +486,7 @@ class VirtualVariationComponent(JasminModel):
     quantity = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        default=1.0,
+        default=Decimal("1.00"),
         # The factor multiplies real subscription demand; zero or negative would
         # erase or invert it.
         validators=[MinValueValidator(Decimal("0.01"))],

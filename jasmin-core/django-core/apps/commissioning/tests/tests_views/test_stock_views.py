@@ -1042,3 +1042,17 @@ class TestCurrentStockComparisonPatchBody:
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.data["code"] == "stock.amount_not_number"
+
+
+class TestInventoryMetadataSerializerLocation:
+    """The PATCH body serializer is owned by the serializers package."""
+
+    def test_the_view_uses_the_packaged_serializer(self):
+        from apps.commissioning.serializers import InventoryMetadataSerializer
+        from apps.commissioning.views import stock_views
+
+        assert (
+            InventoryMetadataSerializer.__module__
+            == "apps.commissioning.serializers.logs_serializer"
+        )
+        assert stock_views.InventoryMetadataSerializer is InventoryMetadataSerializer

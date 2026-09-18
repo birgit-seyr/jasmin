@@ -6,6 +6,7 @@ import { useAutoSave, useTenant } from "@hooks/index";
 import type { Tenant } from "@shared/api/generated/models";
 import { tenantsTenantsPartialUpdate } from "@shared/api/generated/tenants/tenants";
 import type { Writable } from "@shared/api/typeHelpers";
+import { SUPPORTED_LANGUAGES } from "@shared/i18n/languages";
 import {
   AutoSaveIndicator,
   PictureUploadField,
@@ -38,6 +39,16 @@ type TenantFormState = Partial<Writable<Omit<Tenant, "logo" | "bio_logo">>> & {
   logo?: File | string | null;
   bio_logo?: File | string | null;
 };
+
+/**
+ * Options for the tenant language select. The code is appended to each label
+ * because this is a long settings form, where a bare native language name is
+ * easy to skim past.
+ */
+const TENANT_LANGUAGE_OPTIONS = SUPPORTED_LANGUAGES.map((language) => ({
+  value: language.code,
+  label: `${language.label} (${language.code.toUpperCase()})`,
+}));
 
 export default function ConfigurationGeneral() {
   const [tenantData, setTenantData] = useState<TenantFormState>({});
@@ -179,12 +190,7 @@ export default function ConfigurationGeneral() {
             key: "tenant_language",
             label: t("tenant.organization.tenant_language"),
             type: "select",
-            options: [
-              { value: "de", label: "Deutsch (DE)" },
-              { value: "en", label: "English (EN)" },
-              { value: "fr", label: "Français (FR)" },
-              { value: "it", label: "Italiano (IT)" },
-            ],
+            options: TENANT_LANGUAGE_OPTIONS,
             defaultValue: "de",
           },
           {
@@ -336,7 +342,10 @@ export default function ConfigurationGeneral() {
       city: tenant.city || "",
       country: tenant.country || "",
       organic_control_number: tenant.organic_control_number || "",
-      tenant_language: tenant.tenant_language || "",
+      // Omit rather than blank: the serializer has no ``default``, so an
+      // absent key leaves the stored language untouched on PATCH, and the
+      // published enum carries no blank member.
+      tenant_language: tenant.tenant_language ?? undefined,
       fiscal_year_start_month: tenant.fiscal_year_start_month || 1,
       iban: tenant.iban || "",
       sepa_creditor_id: tenant.sepa_creditor_id || "",

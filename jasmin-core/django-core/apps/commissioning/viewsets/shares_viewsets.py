@@ -933,17 +933,28 @@ class ShareDeliveryViewSet(
         # answer: the row axis is day × tour OR day × station, and a box is
         # counted as either jokered or donation-jokered. Keyed on an explicit
         # true, so an explicit false stays the "not asked for" it parses to.
+        # ``details`` echoes the RAW spellings rather than the parsed booleans:
+        # both parsed to true by definition here, so only the wire text tells
+        # the caller which of the accepted spellings its request actually sent.
         if params["for_stations"] is True and params["for_tours"] is True:
             raise InvalidQueryParam(
                 "Parameters 'for_stations' and 'for_tours' are mutually "
                 "exclusive; request at most one.",
                 field="for_tours",
+                details={
+                    "for_stations": request.query_params.get("for_stations"),
+                    "for_tours": request.query_params.get("for_tours"),
+                },
             )
         if params["joker"] is True and params["donation_joker"] is True:
             raise InvalidQueryParam(
                 "Parameters 'joker' and 'donation_joker' are mutually "
                 "exclusive; request at most one.",
                 field="donation_joker",
+                details={
+                    "joker": request.query_params.get("joker"),
+                    "donation_joker": request.query_params.get("donation_joker"),
+                },
             )
 
         mode = "day"
@@ -2164,7 +2175,10 @@ class VirtualComponentsViewSet(RolePermissionsMixin, viewsets.ViewSet):
         created_components = []
         for component_data in components:
             physical_variation_id = component_data.get("physical_variation")
-            quantity = component_data.get("quantity", 1.0)
+            # The item serializer defaults ``quantity``, so the key is always
+            # present on validated data. A literal fallback here would put a
+            # float on the path to a Decimal column.
+            quantity = component_data["quantity"]
 
             if not physical_variation_id:
                 continue

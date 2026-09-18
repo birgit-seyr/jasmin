@@ -7,13 +7,11 @@ from huey import crontab
 from huey.contrib.djhuey import db_periodic_task, db_task
 
 from apps.commissioning.services import InvoiceService
+from apps.shared.retention import IMPORT_BATCH_RETENTION_DAYS
 from apps.shared.tenants.sweep import for_each_tenant
 
 log = logging.getLogger("django.security")
 ops_log = logging.getLogger("tasks")
-
-# Stale-import-batch retention window.
-IMPORT_BATCH_RETENTION_DAYS = 90
 
 
 @db_periodic_task(crontab(hour="3", minute="0"), retries=2, retry_delay=300)

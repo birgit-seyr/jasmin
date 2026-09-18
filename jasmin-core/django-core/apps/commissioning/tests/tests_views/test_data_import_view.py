@@ -414,3 +414,46 @@ class TestUnreadableRowUpload:
         assert body["failed"] == 1
         assert body["errors"][0]["row"] == 5
         assert Crate.objects.filter(name__in=["GoodOne", "GoodTwo"]).count() == 2
+
+
+@pytest.mark.django_db
+class TestNonStringModelName:
+    """``model_name`` is read off the multipart body before the upload is
+    touched. A part sent as a FILE arrives as an UploadedFile, which is refused
+    as the missing field rather than crashing in ``.strip()``."""
+
+    def test_model_name_sent_as_a_file_part_is_a_clean_400(self, api_client):
+        resp = api_client.post(
+            URL,
+            {
+                "model_name": SimpleUploadedFile(
+                    "model_name.txt", b"member", content_type="text/plain"
+                ),
+                "file": _upload("members_sample.csv"),
+            },
+            format="multipart",
+        )
+
+        assert resp.status_code == 400, resp.content
+        payload = resp.json()
+        assert payload["code"] == "required_field.missing"
+        assert payload["field"] == "model_name"
+        assert not Member.objects.filter(email="ada.lovelace@example.org").exists()
+
+    def test_a_json_array_body_is_refused_by_the_parser(self, api_client):
+        # The endpoint parses multipart only, so a JSON body never reaches the
+        # view; assert the refusal is the parser's clean 4xx, not a crash.
+        resp = api_client.post(URL, [{"model_name": "member"}], format="json")
+
+        assert resp.status_code == 415, resp.content
+
+    def test_a_string_model_name_is_still_trimmed_and_lowercased(self, api_client):
+        resp = api_client.post(
+            URL,
+            {"model_name": "  MEMBER  ", "file": _upload("members_sample.csv")},
+            format="multipart",
+        )
+
+        assert resp.status_code == 200, resp.content
+        assert resp.json()["model_name"] == "member"
+        assert Member.objects.filter(email="ada.lovelace@example.org").exists()

@@ -23,14 +23,10 @@ from django.utils import timezone
 from huey import crontab
 from huey.contrib.djhuey import db_periodic_task, periodic_task
 
+from apps.shared.retention import NOTIFICATION_LOG_RETENTION_DAYS
 from apps.shared.tenants.sweep import for_each_tenant
 
 log = logging.getLogger("tasks")
-
-# 90 days is the operational sweet spot: long enough to debug a
-# "did this member get the invoice?" question, short enough not to
-# bloat the per-tenant table.
-RETENTION_DAYS = 90
 
 # EmailLog statuses we DELETE after the retention window: healthy traffic
 # and ``suppressed`` (not sent because the tenant was in onboarding mode,
@@ -49,7 +45,7 @@ def cleanup_stale_email_logs() -> None:
     """Prune the per-tenant ``EmailLog`` table.
 
     EmailLog grows linearly with sends. Iterate every tenant schema and
-    delete rows older than ``RETENTION_DAYS`` whose status is in the
+    delete rows older than ``NOTIFICATION_LOG_RETENTION_DAYS`` whose status is in the
     deletable set (the bulk of healthy traffic). Anything still in
     flight or in a state ops might want to inspect is kept.
     """
@@ -58,7 +54,7 @@ def cleanup_stale_email_logs() -> None:
     # query only runs once we've entered a tenant via schema_context.
     from apps.notifications.models import EmailLog
 
-    cutoff = timezone.now() - datetime.timedelta(days=RETENTION_DAYS)
+    cutoff = timezone.now() - datetime.timedelta(days=NOTIFICATION_LOG_RETENTION_DAYS)
     counters = {"deleted": 0}
 
     def prune(tenant) -> None:
@@ -79,7 +75,7 @@ def cleanup_stale_email_logs() -> None:
     log.info(
         "housekeeping.email_log_pruned total_deleted=%s retention_days=%s",
         counters["deleted"],
-        RETENTION_DAYS,
+        NOTIFICATION_LOG_RETENTION_DAYS,
     )
 
 
@@ -179,16 +175,15 @@ def reconcile_stale_background_jobs() -> None:
 def prune_old_background_jobs() -> None:
     """Prune terminal (done/failed) ``BackgroundJob`` rows past the retention window.
 
-    BackgroundJob was the one growing operational table with no retention sweep:
-    each bulk send leaves a row whose ``result`` JSON carries per-reseller names
-    and outcomes that outlived the EmailLog retention window forever. Delete
-    done/failed rows older than ``RETENTION_DAYS`` (mirrors the EmailLog policy);
-    queued/running rows are never touched here — the reconcile watchdog owns
-    those.
+    Each bulk send leaves a row whose ``result`` JSON carries per-reseller
+    names and outcomes — the same recipient data the EmailLog rows hold,
+    which is why the two share one window. Delete done/failed rows older
+    than ``NOTIFICATION_LOG_RETENTION_DAYS``; queued/running rows are never
+    touched here, the reconcile watchdog owns those.
     """
     from apps.notifications.models import BackgroundJob
 
-    cutoff = timezone.now() - datetime.timedelta(days=RETENTION_DAYS)
+    cutoff = timezone.now() - datetime.timedelta(days=NOTIFICATION_LOG_RETENTION_DAYS)
     counters = {"deleted": 0}
 
     def prune(tenant) -> None:
@@ -212,7 +207,7 @@ def prune_old_background_jobs() -> None:
     log.info(
         "housekeeping.background_job_pruned total_deleted=%s retention_days=%s",
         counters["deleted"],
-        RETENTION_DAYS,
+        NOTIFICATION_LOG_RETENTION_DAYS,
     )
 
 

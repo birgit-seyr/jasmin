@@ -85,9 +85,15 @@ test_validation_utils.py
 Source: apps/commissioning/utils/validation_utils.py
 DB required: No
 
-  TestValidateAndParseIntParams
-    - valid params return parsed int list
-    - missing param → raises InvalidQueryParam (400, field set)
+  TestParseBodyIntFields
+    - valid body fields return parsed int list
+    - reads the body, not the query string: a value in the query string does
+      not satisfy a body field → raises RequiredFieldMissing
+    - a string spelling of an int in the body is accepted
+    - missing body field → raises RequiredFieldMissing
+      (required_field.missing, 400, field set, empty details)
+    - non-object (array) body → the same missing-field 400, not an
+      AttributeError
     - non-integer value → raises InvalidQueryParam
     - exotic int spellings (20_26, 2026.0, 2e3, non-ASCII digits) → raises
       InvalidQueryParam (same parser as a catalogued query param)
@@ -97,27 +103,8 @@ DB required: No
     - week out of range low (0 < 1) → raises InvalidQueryParam
     - "week" alias also validated (same range as delivery_week)
     - custom ranges override defaults
-    - source="data" reads from POST body
-    - source="data" missing field → raises InvalidQueryParam (400, field set)
-    - source="data" non-object (array) body → the same missing-parameter 400,
-      not an AttributeError
-    - param without range passes any int
+    - field without range passes any int
     - boundary values (2000/1 and 2100/53) accepted
-
-  TestValidateOptionalIntParams
-    - all present → parsed dict
-    - all missing → dict with None values
-    - partial present
-    - invalid value → raises InvalidQueryParam
-
-  TestValidateYearWeekDay
-    - valid year/week/day → (int, int, int) tuple
-    - missing day_number → raises InvalidQueryParam
-
-  TestValidateYearWithOptionalWeekDay
-    - year only → dict with None week/day
-    - all params → full dict
-    - missing year → raises InvalidQueryParam
 
   TestValidateBulkDocumentRequest
     - valid delivery_note request
@@ -213,6 +200,13 @@ DB required: No
   TestTourIsAnInt
     - the catalogue parses tour / packing_station as ints
     - the packing-list consumers annotate the parsed type
+
+  TestTourAndPackingStationOperatingMaxima
+    - the catalogue bound is the operating maximum (tour 20, packing station 10)
+    - the maximum still fits the column the param filters
+    - the maximum itself is accepted
+    - a value past the maximum is refused (query.invalid_param)
+    - the values the endpoints really receive still parse
 
   TestShareOptionDocumentation
     - the published examples are values of the published enum
