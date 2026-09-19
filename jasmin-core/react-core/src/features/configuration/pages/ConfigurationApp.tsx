@@ -32,8 +32,9 @@ export default function ConfigurationApp() {
 
   // A tenant that uploads its weekly share amounts runs no subscriptions and
   // holds no member records, so the MEMBERS and ABOS modules would show empty
-  // pages. Their navigation toggles are locked rather than left to promise a
-  // module that has nothing behind it.
+  // pages. Their navigation toggles are locked, and shown off
+  // (``disabledDisplayValue``) because the modules are in fact hidden — the
+  // stored preference is left untouched and returns when the flag is cleared.
   const weeklyUpload = getSetting(
     "uploads_weekly_share_amount",
     false,
@@ -161,6 +162,7 @@ export default function ConfigurationApp() {
             defaultValue: true,
             disabled: weeklyUpload,
             disabledTooltip: t("settings.navigation.locked_by_weekly_upload"),
+            disabledDisplayValue: false,
           },
           {
             key: "navigation.show_abos",
@@ -169,6 +171,7 @@ export default function ConfigurationApp() {
             defaultValue: true,
             disabled: weeklyUpload,
             disabledTooltip: t("settings.navigation.locked_by_weekly_upload"),
+            disabledDisplayValue: false,
           },
           {
             key: "navigation.show_commissioning",

@@ -70,6 +70,19 @@ export interface SettingConfig {
   placeholderKey?: string;
   disabledTooltip?: string;
   /**
+   * Value to SHOW while the setting is ``disabled``, instead of the one the
+   * form holds. Display only: it never reaches ``onChange``, the form state or
+   * the save payload, so the stored preference survives the lock and reappears
+   * once the lock lifts.
+   *
+   * Set it when the lock means the feature is actually OFF — e.g. a module
+   * toggle switched off by the tenant's operating mode, where a ticked-but-grey
+   * box would promise a module that isn't there. Leave it unset for a setting
+   * that is merely un-editable (server-locked, admin-only): those keep showing
+   * their real value.
+   */
+  disabledDisplayValue?: unknown;
+  /**
    * Show this setting only when the predicate returns true. Receives a
    * ``getSettingValue(key, defaultValue?)`` helper bound to the
    * currently-edited (unsaved) tenant settings so dependent rows
@@ -120,15 +133,28 @@ interface RenderOptions {
   }>;
 }
 
+/** What the control shows: the form's value, unless the setting is locked and
+ *  declares a ``disabledDisplayValue`` to stand in for it. */
+function displayedValue(setting: SettingConfig, formValue: unknown): unknown {
+  if (setting.disabled && setting.disabledDisplayValue !== undefined) {
+    return setting.disabledDisplayValue;
+  }
+  return formValue;
+}
+
 export const SettingsRenderer = {
   // Render input based on type
 
   renderInput: (
     setting: SettingConfig,
-    value: unknown,
+    formValue: unknown,
     onChange: (value: unknown) => void,
     options: RenderOptions = {},
   ): ReactNode => {
+    // Purely cosmetic — the caller's state is never written, so a stand-in
+    // value cannot reach a save payload.
+    const value = displayedValue(setting, formValue);
+
     switch (setting.type) {
       case "checkbox":
         return (

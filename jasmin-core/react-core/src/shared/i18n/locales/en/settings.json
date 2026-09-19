@@ -31,7 +31,7 @@
     "show_warehouse": "Module WAREHOUSE",
     "show_economics": "Module ECONOMICS",
     "show_cultivation": "Module CULTIVATION",
-    "locked_by_weekly_upload": "This module is locked because the weekly share amounts are uploaded. There are then no members and subscriptions in the system."
+    "locked_by_weekly_upload": "This module is locked because the weekly share amounts are uploaded, so there are no members or subscriptions in the system."
   },
   "ai": {
     "title": "AI Settings",

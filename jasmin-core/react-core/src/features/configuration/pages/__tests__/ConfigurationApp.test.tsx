@@ -1,12 +1,14 @@
 // Configuration > App: a tenant that uploads its weekly share amounts runs no
 // subscriptions and keeps no member records, so that switch leads the page and
-// the MEMBERS / ABOS module toggles are locked with the reason beside them.
-// Every other module toggle, and the whole page for a tenant without the flag,
-// stays exactly as it was.
+// the MEMBERS / ABOS module toggles are locked with the reason beside them, and
+// shown OFF because the modules are hidden. The lock is cosmetic: the stored
+// preference stays in form state and in the save payload, so it comes back the
+// moment the flag is cleared. Every other module toggle, and the whole page for
+// a tenant without the flag, stays exactly as it was.
 
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 
 const stable = vi.hoisted(() => ({
   // Mutated per test. ``undefined`` models the key being ABSENT from the
@@ -14,6 +16,9 @@ const stable = vi.hoisted(() => ({
   // today — the mocked getSetting below then falls through to the caller's
   // default instead of answering with a hardcoded boolean.
   weeklyUpload: undefined as boolean | undefined,
+  // The page's autosave callback, captured at render so a test can fire the
+  // save the office's next edit would fire and inspect what goes on the wire.
+  save: null as null | (() => Promise<void>),
   // Stable references: the page re-seeds its form state from a useEffect keyed
   // on the tenant object, so a fresh literal per render would spin.
   translation: {
@@ -34,7 +39,9 @@ vi.mock("@hooks/index", async () => {
   const { makeUseTenantMock } = await import("../../../../test/tenantMock");
   // Built once, outside the useTenant arrow, so the identity is reference-stable.
   const tenant = makeUseTenantMock({
-    tenant: { id: "tenant-1" },
+    // ``navigation`` carries the tenant's STORED module preference — both
+    // modules on. The weekly-upload lock must never overwrite it.
+    tenant: { id: "tenant-1", navigation: { show_members: true, show_abos: true } },
     // Mirrors the real getSetting (TenantContext): a tenant with no settings
     // object, or a missing path segment, yields the CALLER-SUPPLIED default.
     // Flipping the page's ``false`` default to ``true`` therefore changes what
@@ -46,7 +53,10 @@ vi.mock("@hooks/index", async () => {
   });
   return {
     useTenant: () => tenant,
-    useAutoSave: () => stable.autoSave,
+    useAutoSave: (options: { save: () => Promise<void> }) => {
+      stable.save = options.save;
+      return stable.autoSave;
+    },
   };
 });
 
@@ -65,6 +75,8 @@ vi.mock("@shared/utils", () => ({
   toApiDate: () => null,
 }));
 
+import { tenantsTenantsPartialUpdate } from "@shared/api/generated/tenants/tenants";
+import { SettingsRenderer } from "../../components/SettingsRenderer";
 import ConfigurationApp from "../ConfigurationApp";
 
 const WEEKLY_UPLOAD = "settings.commissioning.uploads_weekly_amount";
@@ -92,9 +104,20 @@ function lockIcons(): HTMLElement[] {
   return screen.queryAllByLabelText(LOCK_REASON);
 }
 
+/** The ``navigation`` blob of the Tenant PATCH the page just sent. The backend
+ *  replaces the whole JSON field, so whatever is missing here is lost. */
+function savedNavigation(): Record<string, unknown> {
+  const calls = vi.mocked(tenantsTenantsPartialUpdate).mock.calls;
+  expect(calls).toHaveLength(1);
+  const body = calls[0][1] as { navigation?: Record<string, unknown> };
+  return body.navigation ?? {};
+}
+
 describe("ConfigurationApp weekly-upload tenants", () => {
   beforeEach(() => {
     stable.weeklyUpload = undefined;
+    stable.save = null;
+    vi.mocked(tenantsTenantsPartialUpdate).mockClear();
   });
 
   it("leads the page with the weekly-upload switch", () => {
@@ -108,31 +131,37 @@ describe("ConfigurationApp weekly-upload tenants", () => {
     ).toBeInTheDocument();
   });
 
-  it("leaves the module toggles usable when the flag is off", () => {
+  it("leaves the module toggles usable and on when the flag is off", () => {
     stable.weeklyUpload = false;
     render(<ConfigurationApp />);
 
     expect(moduleToggle(MEMBERS)).toBeEnabled();
     expect(moduleToggle(ABOS)).toBeEnabled();
+    expect(moduleToggle(MEMBERS)).toBeChecked();
+    expect(moduleToggle(ABOS)).toBeChecked();
     expect(lockIcons()).toHaveLength(0);
   });
 
-  it("leaves the module toggles usable when the flag is absent", () => {
+  it("reads identically when the flag is absent entirely", () => {
     // ``weeklyUpload`` stays undefined: getSetting answers with the default the
     // page passes, which is how every tenant in production reads today.
     render(<ConfigurationApp />);
 
     expect(moduleToggle(MEMBERS)).toBeEnabled();
     expect(moduleToggle(ABOS)).toBeEnabled();
+    expect(moduleToggle(MEMBERS)).toBeChecked();
+    expect(moduleToggle(ABOS)).toBeChecked();
     expect(lockIcons()).toHaveLength(0);
   });
 
-  it("locks the members and abos toggles when the flag is on", () => {
+  it("shows the members and abos toggles off and locked when the flag is on", () => {
     stable.weeklyUpload = true;
     render(<ConfigurationApp />);
 
     expect(moduleToggle(MEMBERS)).toBeDisabled();
     expect(moduleToggle(ABOS)).toBeDisabled();
+    expect(moduleToggle(MEMBERS)).not.toBeChecked();
+    expect(moduleToggle(ABOS)).not.toBeChecked();
     expect(lockIcons()).toHaveLength(2);
   });
 
@@ -142,5 +171,52 @@ describe("ConfigurationApp weekly-upload tenants", () => {
 
     expect(moduleToggle(COMMISSIONING)).toBeEnabled();
     expect(moduleToggle(STAFF)).toBeEnabled();
+    expect(moduleToggle(COMMISSIONING)).toBeChecked();
+    expect(moduleToggle(STAFF)).toBeChecked();
+  });
+
+  it("keeps the stored preference in the saved payload while locked", async () => {
+    stable.weeklyUpload = true;
+    render(<ConfigurationApp />);
+
+    // The unchecked boxes above must be cosmetic: saving from this page — which
+    // is what any unrelated edit does, since the PATCH carries the whole form
+    // state — has to send the tenant's stored ``true``. A ``false`` here would
+    // be permanent: the backend replaces the navigation blob wholesale, so the
+    // modules would stay hidden even after the flag is cleared.
+    await act(async () => {
+      await stable.save?.();
+    });
+
+    expect(savedNavigation()).toMatchObject({
+      show_members: true,
+      show_abos: true,
+    });
+  });
+});
+
+describe("SettingsRenderer disabled settings", () => {
+  it("keeps showing the real value when a setting is locked for another reason", () => {
+    // Server-locked / admin-only settings (SettingsPage's locked_settings) set
+    // ``disabled`` without ``disabledDisplayValue``: the office still sees what
+    // the value actually is, it just can't change it.
+    render(
+      <>
+        {SettingsRenderer.renderInput(
+          {
+            key: "navigation.show_staff",
+            label: STAFF,
+            type: "checkbox",
+            disabled: true,
+            disabledTooltip: "tooltip.locked_setting_tooltip",
+          },
+          true,
+          () => {},
+        )}
+      </>,
+    );
+
+    expect(moduleToggle(STAFF)).toBeDisabled();
+    expect(moduleToggle(STAFF)).toBeChecked();
   });
 });
