@@ -7,6 +7,9 @@
   "save_success": "Settings saved successfully",
   "unsaved_changes_warning": "You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.",
   "unsaved_changes_title": "Unsaved Changes",
+  "operating_mode": {
+    "title": "Operating Mode"
+  },
   "general": {
     "title": "General Settings",
     "currency": "Currency",
@@ -27,7 +30,8 @@
     "show_staff": "Module STAFF",
     "show_warehouse": "Module WAREHOUSE",
     "show_economics": "Module ECONOMICS",
-    "show_cultivation": "Module CULTIVATION"
+    "show_cultivation": "Module CULTIVATION",
+    "locked_by_weekly_upload": "This module is locked because the weekly share amounts are uploaded. There are then no members and subscriptions in the system."
   },
   "ai": {
     "title": "AI Settings",

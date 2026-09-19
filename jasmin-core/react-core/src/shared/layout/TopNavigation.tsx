@@ -99,10 +99,20 @@ function SecondaryNavigation() {
   const { getSetting } = useTenant();
   const flags = useRoles();
 
+  // A tenant that imports its weekly share demand as aggregate rows keeps no
+  // member or subscription records, so the members and abos sections have
+  // nothing to show and are dropped whatever their navigation.show_* settings
+  // say. The flag can only ever remove those two — every other section, and
+  // the show_* settings themselves, keep deciding on their own.
+  const weeklyUpload = getSetting(
+    "uploads_weekly_share_amount",
+    false,
+  ) as boolean;
+
   const navigationSettings = useMemo(
     () => ({
-      members: getSetting("navigation.show_members", true),
-      abos: getSetting("navigation.show_abos", true),
+      members: !weeklyUpload && getSetting("navigation.show_members", true),
+      abos: !weeklyUpload && getSetting("navigation.show_abos", true),
       commissioning: getSetting("navigation.show_commissioning", true),
       staff: getSetting("navigation.show_staff", true),
       warehouse: getSetting("navigation.show_warehouse", true),
@@ -111,7 +121,7 @@ function SecondaryNavigation() {
       exports: getSetting("navigation.show_exports", true),
       configuration: getSetting("navigation.show_configuration", true),
     }),
-    [getSetting],
+    [getSetting, weeklyUpload],
   );
 
   const topMenuItems = useMemo(() => {

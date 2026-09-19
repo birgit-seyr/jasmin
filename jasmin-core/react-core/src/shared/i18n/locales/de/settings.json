@@ -7,6 +7,9 @@
   "save_success": "Einstellungen erfolgreich gespeichert",
   "unsaved_changes_warning": "Es gibt ungespeicherte Änderungen. Beim Verlassen der Seite gehen sie verloren.",
   "unsaved_changes_title": "Ungespeicherte Änderungen",
+  "operating_mode": {
+    "title": "Betriebsmodus"
+  },
   "general": {
     "title": "Allgemeine Einstellungen",
     "currency": "Währung",
@@ -27,7 +30,8 @@
     "show_staff": "Modul MITARBEITERINNEN",
     "show_warehouse": "Modul BETRIEBSMITTEL",
     "show_economics": "Modul WIRTSCHAFTLICHKEIT",
-    "show_cultivation": "Modul ANBAUPLANUNG"
+    "show_cultivation": "Modul ANBAUPLANUNG",
+    "locked_by_weekly_upload": "Dieses Modul ist gesperrt, weil die wöchentlichen Anteilsmengen hochgeladen werden. Dann gibt es keine Mitglieder und Abos im Programm."
   },
   "ai": {
     "title": "KI-Einstellungen",

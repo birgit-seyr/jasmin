@@ -28,7 +28,16 @@ export default function ConfigurationApp() {
   const [loading, setLoading] = useState(true);
 
   const { t } = useTranslation();
-  const { tenant, refreshTenant } = useTenant();
+  const { tenant, getSetting, refreshTenant } = useTenant();
+
+  // A tenant that uploads its weekly share amounts runs no subscriptions and
+  // holds no member records, so the MEMBERS and ABOS modules would show empty
+  // pages. Their navigation toggles are locked rather than left to promise a
+  // module that has nothing behind it.
+  const weeklyUpload = getSetting(
+    "uploads_weekly_share_amount",
+    false,
+  ) as boolean;
 
   // Default settings
   const defaultSettings = DEFAULT_UI_SETTINGS as unknown as Record<
@@ -38,6 +47,21 @@ export default function ConfigurationApp() {
 
   const settingsConfig = useMemo<SettingsCategory[]>(
     () => [
+      // First card on the page: this one switch decides whether the tenant
+      // runs subscriptions at all, and it gates the module toggles below.
+      {
+        category: "operating_mode",
+        title: t("settings.operating_mode.title"),
+        settings: [
+          {
+            key: "uploads_weekly_share_amount",
+            label: t("settings.commissioning.uploads_weekly_amount"),
+            description: t("settings.commissioning.uploads_weekly_amount_desc"),
+            type: "checkbox",
+            defaultValue: false,
+          },
+        ],
+      },
       {
         category: "general",
         title: t("settings.general.title"),
@@ -124,14 +148,6 @@ export default function ConfigurationApp() {
             type: "checkbox",
             defaultValue: false,
           },
-          {
-            key: "uploads_weekly_share_amount",
-            label: t("settings.commissioning.uploads_weekly_amount"),
-            description: t("settings.commissioning.uploads_weekly_amount_desc"),
-
-            type: "checkbox",
-            defaultValue: false,
-          },
         ],
       },
       {
@@ -143,12 +159,16 @@ export default function ConfigurationApp() {
             label: t("settings.navigation.show_members"),
             type: "checkbox",
             defaultValue: true,
+            disabled: weeklyUpload,
+            disabledTooltip: t("settings.navigation.locked_by_weekly_upload"),
           },
           {
             key: "navigation.show_abos",
             label: t("settings.navigation.show_abos"),
             type: "checkbox",
             defaultValue: true,
+            disabled: weeklyUpload,
+            disabledTooltip: t("settings.navigation.locked_by_weekly_upload"),
           },
           {
             key: "navigation.show_commissioning",
@@ -197,7 +217,7 @@ export default function ConfigurationApp() {
       //   ],
       // },
     ],
-    [t],
+    [t, weeklyUpload],
   );
 
   // Sync state from tenant data

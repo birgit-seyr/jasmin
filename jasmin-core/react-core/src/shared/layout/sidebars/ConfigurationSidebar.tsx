@@ -1,4 +1,5 @@
 import { SettingOutlined } from "@ant-design/icons";
+import { useTenant } from "@hooks/index";
 import { filterByRole, useRoles, type RoleGatedItem } from "@shared/auth";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -15,6 +16,11 @@ export default function ConfigurationSidebar({
 }: ConfigurationSidebarProps) {
   const { t } = useTranslation();
   const flags = useRoles();
+  const { getSetting } = useTenant();
+  const weeklyUpload = getSetting(
+    "uploads_weekly_share_amount",
+    false,
+  ) as boolean;
 
   const items = [
     {
@@ -65,71 +71,80 @@ export default function ConfigurationSidebar({
       ],
     },
 
-    {
-      type: "group",
-      key: "configuration-group-members",
-      label: t("configuration.group.members"),
-      children: [
-        {
-          key: "configuration-members",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/members">
-              {t("configuration.members")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-subscriptions",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/subscriptions">
-              {t("configuration.subscriptions")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-payments",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/payments">
-              {t("configuration.payments")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-gdpr",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/gdpr">
-              {t("configuration.data_protection")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-consents",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/consents">{t("consent.admin.title")}</Link>
-          ),
-        },
-        {
-          key: "configuration-email-templates-members",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/email-templates/members">
-              {t("configuration.email_templates")}
-            </Link>
-          ),
-        },
-      ],
-    },
+    // A tenant that uploads its weekly share amounts runs no subscriptions and
+    // keeps no member records, so every page in this group — data protection
+    // and consents included — would act on nothing.
+    ...(weeklyUpload
+      ? []
+      : [
+          {
+            type: "group",
+            key: "configuration-group-members",
+            label: t("configuration.group.members"),
+            children: [
+              {
+                key: "configuration-members",
+                requireRole: "isAdmin",
+                icon: <SettingOutlined />,
+                label: (
+                  <Link to="/configuration/members">
+                    {t("configuration.members")}
+                  </Link>
+                ),
+              },
+              {
+                key: "configuration-subscriptions",
+                requireRole: "isAdmin",
+                icon: <SettingOutlined />,
+                label: (
+                  <Link to="/configuration/subscriptions">
+                    {t("configuration.subscriptions")}
+                  </Link>
+                ),
+              },
+              {
+                key: "configuration-payments",
+                requireRole: "isAdmin",
+                icon: <SettingOutlined />,
+                label: (
+                  <Link to="/configuration/payments">
+                    {t("configuration.payments")}
+                  </Link>
+                ),
+              },
+              {
+                key: "configuration-gdpr",
+                requireRole: "isAdmin",
+                icon: <SettingOutlined />,
+                label: (
+                  <Link to="/configuration/gdpr">
+                    {t("configuration.data_protection")}
+                  </Link>
+                ),
+              },
+              {
+                key: "configuration-consents",
+                requireRole: "isAdmin",
+                icon: <SettingOutlined />,
+                label: (
+                  <Link to="/configuration/consents">
+                    {t("consent.admin.title")}
+                  </Link>
+                ),
+              },
+              {
+                key: "configuration-email-templates-members",
+                requireRole: "isAdmin",
+                icon: <SettingOutlined />,
+                label: (
+                  <Link to="/configuration/email-templates/members">
+                    {t("configuration.email_templates")}
+                  </Link>
+                ),
+              },
+            ],
+          },
+        ]),
     {
       type: "group",
       key: "configuration-group-commissioning",

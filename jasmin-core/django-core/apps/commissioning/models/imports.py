@@ -1,12 +1,12 @@
 """Models for the weekly external share-demand import pipeline.
 
-A tenant whose ``Tenant.features['commissioning']['demand_source']`` is
-``"external_csv"`` does not use ``Subscription`` / ``ShareDelivery`` as the
-source of truth for "how many share_type_variations do we need". Instead,
-an office user
-uploads a CSV/XLSX once a week, the file is parsed, validated, previewed
-and finally applied. The applied demand lives in :class:`ExternalShareDemand`
-and is consumed by :class:`apps.commissioning.services.ShareDemandService`.
+A tenant whose ``TenantSettings.uploads_weekly_share_amount`` is set does not
+use ``Subscription`` / ``ShareDelivery`` as the source of truth for "how many
+share_type_variations do we need". Instead, an office user uploads a CSV/XLSX
+once a week, the file is parsed, validated, previewed and finally applied. The
+applied demand lives in :class:`ExternalShareDemand` and is consumed by
+:class:`apps.commissioning.services.ShareDemandService`, which resolves the
+backend from that same flag.
 """
 
 from __future__ import annotations
