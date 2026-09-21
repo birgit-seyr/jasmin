@@ -11,8 +11,7 @@ set -eu
 # GDPR note: the deletion-replay step is a SEPARATE, second step that
 # MUST run in a Python/Django-bearing container (the ``huey`` or
 # ``backend`` service) — it is NOT run here, because this image has no
-# Python/Django. The instructions are printed at the end and in
-# docs/security/restore-drill.md.
+# Python/Django. The exact command is printed at the end of this script.
 # ───────────────────────────────────────────────────────────────
 
 BACKUP_FILE="${1:?Usage: restore.sh <backup_file.sql.gz.gpg>}"
@@ -62,6 +61,5 @@ echo " container (this backup image has no Python). Run:"
 echo ""
 echo "     docker compose exec huey python manage.py replay_gdpr_deletions"
 echo ""
-echo " (the 'backend' service works too.) See"
-echo " docs/security/restore-drill.md for the full runbook."
+echo " (the 'backend' service works too.)"
 echo "============================================================"

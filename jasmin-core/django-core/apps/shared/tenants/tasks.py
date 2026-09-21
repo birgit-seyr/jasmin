@@ -280,6 +280,207 @@ def prune_old_backups() -> dict[str, int]:
     }
 
 
+# ---------------------------------------------------------------
+# Backup freshness alerting
+# ---------------------------------------------------------------
+
+
+# The artifact kinds ``backups/backup.sh`` writes every night, mapped to the
+# wording the alert email uses. Both are checked INDEPENDENTLY: a DB dump that
+# lands on time says nothing about whether the media archive (invoice /
+# delivery-note PDFs, e-invoice XML, consent documents, tenant logos) was
+# written, and one masking the other is the failure this alert exists for.
+# The keys mirror the ``kind`` alternation in ``_BACKUP_FILENAME_RE``.
+BACKUP_KINDS: dict[str, str] = {
+    "sql": "database dump",
+    "tar": "media archive",
+}
+
+
+def _backup_max_age() -> datetime.timedelta:
+    """How old the newest artifact of a kind may get before we alert.
+
+    Mirrors ``_backup_dir()``: a setting rather than a literal so ops can widen
+    the window from the environment (a less-than-daily backup schedule) without
+    a code change. The 36 h default tolerates one missed 02:00 run plus clock
+    skew without crying wolf.
+    """
+    hours = int(getattr(settings, "BACKUP_MAX_AGE_HOURS", 36))
+    return datetime.timedelta(hours=hours)
+
+
+def stale_backup_kinds(
+    paths: Iterable[Path],
+    now: datetime.datetime,
+    max_age: datetime.timedelta,
+) -> dict[str, datetime.datetime | None]:
+    """Return ``{kind: newest timestamp}`` for each kind that is NOT fresh.
+
+    Pure function — no filesystem, no clock — so the decision logic is
+    testable in isolation, like ``classify_backups_for_pruning``.
+
+    A ``None`` value means no artifact of that kind is present at all. That is
+    louder than a stale one: a stale artifact proves backups once worked and
+    have since stopped, while ``None`` can also mean they never ran here.
+
+    Filenames ``_parse_backup`` doesn't recognise are skipped rather than
+    counted — a stray README or a half-written upload must not pass for a
+    fresh dump. (The prune keeps such files for the same reason it can't date
+    them; neither guesses at a file it cannot identify.)
+    """
+    newest: dict[str, datetime.datetime] = {}
+    for path in paths:
+        parsed = _parse_backup(path.name)
+        if parsed is None:
+            continue
+        timestamp, kind = parsed
+        if kind not in newest or timestamp > newest[kind]:
+            newest[kind] = timestamp
+
+    cutoff = now - max_age
+    return {
+        kind: newest.get(kind)
+        for kind in BACKUP_KINDS
+        if kind not in newest or newest[kind] < cutoff
+    }
+
+
+def _describe_backup_kind(
+    kind: str, newest: datetime.datetime | None, now: datetime.datetime
+) -> str:
+    """One line per problem kind for the alert email body."""
+    label = BACKUP_KINDS.get(kind, kind)
+    if newest is None:
+        return f"  {label} ({kind}): NO artifact at all in the backup directory"
+    age_hours = (now - newest).total_seconds() / 3600
+    return (
+        f"  {label} ({kind}): newest is {newest:%Y-%m-%d %H:%M} ({age_hours:.1f} h old)"
+    )
+
+
+def _mail_admins_safely(subject: str, message: str, *, log_key: str) -> bool:
+    """Send an admin alert, reporting whether it actually went out.
+
+    A broken mail backend must not fail the sweep — the structured log line is
+    written either way — and the boolean keeps an undelivered alert visible in
+    the task's summary instead of reading as a clean run.
+    """
+    try:
+        mail_admins(subject=subject, message=message)
+    except Exception:
+        log.exception(log_key)
+        return False
+    return True
+
+
+@db_periodic_task(crontab(hour="6", minute="10"), retries=2, retry_delay=600)
+def alert_on_stale_backups() -> dict[str, int]:
+    """Alert when a nightly backup artifact has stopped appearing.
+
+    Backup CREATION is ``crond`` inside the dedicated ``backup`` container and
+    depends on neither Django nor Huey, so when that container dies or loses
+    its cron the nightly dump simply never runs and the newest artifact quietly
+    ages — nothing else notices. This checks the newest DB dump and the newest
+    media archive INDEPENDENTLY and emails ``settings.ADMINS`` when either is
+    older than ``settings.BACKUP_MAX_AGE_HOURS`` or absent entirely.
+
+    Runs at 06:10: clear of the 02:00 backup (a late-starting dump has
+    finished) and of the 05:00 prune, and off the ``*/15`` sweep grid.
+
+    Only the LOCAL backup directory is visible from here; the off-host rclone
+    copy is not checked.
+
+    Known limitation — this task runs IN Huey, so it cannot detect its own
+    container being down: a dead Huey means no check runs and no alert is sent.
+    It detects a dead ``backup`` container, which is the likelier failure,
+    while the Huey container has its own liveness signal (``huey_heartbeat``
+    drives the compose healthcheck). An outside-in check covering both belongs
+    in Uptime Kuma (the ``uptime_kuma_data`` volume), not here.
+
+    Returns ``{"kinds_checked": N, "stale": N, "missing": N, "alerts": N}``
+    for the dev/QA runner.
+    """
+    backup_dir = _backup_dir()
+    max_age = _backup_max_age()
+    # Filename timestamps come from ``date`` inside the backup container, which
+    # sets no TZ and so writes UTC; compare against a naive UTC now, exactly as
+    # the prune does. Any residual skew is hours, the threshold is a day and a
+    # half.
+    now = timezone.now().replace(tzinfo=None)
+
+    try:
+        files = [p for p in backup_dir.iterdir() if p.is_file()]
+    except OSError:
+        # Unlike the prune — which no-ops on a missing directory — an unreadable
+        # backup directory is alerted on: a lost volume mount would otherwise
+        # silently disable the very alert that is supposed to notice silence.
+        log.error("backup.freshness.no_dir dir=%s", backup_dir, exc_info=True)
+        sent = _mail_admins_safely(
+            subject="[Jasmin] backup freshness UNKNOWN — cannot read the backup directory",
+            message=(
+                f"The backup-freshness check could not read {backup_dir}.\n\n"
+                "Backup artifacts cannot be checked at all, so a stopped "
+                "backup would go unnoticed. Check the huey container's "
+                "./backups volume mount and the directory's permissions."
+            ),
+            log_key="backup.freshness.alert_failed",
+        )
+        return {"kinds_checked": 0, "stale": 0, "missing": 0, "alerts": int(sent)}
+
+    problems = stale_backup_kinds(files, now, max_age)
+    if not problems:
+        log.info(
+            "backup.freshness.ok kinds=%s max_age=%s dir=%s",
+            len(BACKUP_KINDS),
+            max_age,
+            backup_dir,
+        )
+        return {
+            "kinds_checked": len(BACKUP_KINDS),
+            "stale": 0,
+            "missing": 0,
+            "alerts": 0,
+        }
+
+    missing = sum(1 for newest in problems.values() if newest is None)
+    for kind, newest in sorted(problems.items()):
+        log.error(
+            "backup.freshness.stale kind=%s newest=%s max_age=%s dir=%s",
+            kind,
+            newest.isoformat() if newest else "none",
+            max_age,
+            backup_dir,
+        )
+
+    detail = "\n".join(
+        _describe_backup_kind(kind, newest, now)
+        for kind, newest in sorted(problems.items())
+    )
+    labels = ", ".join(BACKUP_KINDS.get(kind, kind) for kind in sorted(problems))
+    sent = _mail_admins_safely(
+        subject=f"[Jasmin] backup freshness alert — {labels}",
+        message=(
+            f"No fresh backup artifact within {max_age} for:\n\n{detail}\n\n"
+            f"Directory checked: {backup_dir} (local copy only — the off-host "
+            "rclone copy is not visible from here).\n\n"
+            "Backups are written at 02:00 by crond in the 'backup' container. "
+            "Check that it is up and its cron is installed:\n"
+            "  docker compose ps backup\n"
+            "  docker compose exec backup crontab -l\n"
+            "  docker compose logs backup | tail -50\n"
+            "A one-shot run: docker compose exec backup "
+            "/usr/local/bin/backup.sh now"
+        ),
+        log_key="backup.freshness.alert_failed",
+    )
+    return {
+        "kinds_checked": len(BACKUP_KINDS),
+        "stale": len(problems) - missing,
+        "missing": missing,
+        "alerts": int(sent),
+    }
+
+
 # Keep the rate-limit ledger well beyond the widest guard window (7 days) so a
 # little history remains for forensic review, but bounded so the table can't
 # grow without limit.

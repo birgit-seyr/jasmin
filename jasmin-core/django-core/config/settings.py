@@ -1147,10 +1147,17 @@ MEDIA_URL_SIGNATURE_BUCKET = int(
 )
 
 # Filesystem location of the pg_dump backup files. Read by the
-# ``prune_old_backups`` Huey task in apps/shared/tenants/tasks.py.
+# ``prune_old_backups`` and ``alert_on_stale_backups`` Huey tasks in
+# apps/shared/tenants/tasks.py.
 # Default ``/backups`` matches the path inside the prod container as
 # mounted by docker-compose.yml; override via environment for dev/tests.
 BACKUP_DIR = os.environ.get("BACKUP_DIR", "/backups")
+
+# How old the newest backup artifact of a kind may get before
+# ``alert_on_stale_backups`` emails the admins. Backups run daily at 02:00, so
+# 36 h tolerates one missed run plus clock skew without crying wolf; widen it
+# from the environment if the backup schedule ever becomes less than daily.
+BACKUP_MAX_AGE_HOURS = int(os.environ.get("BACKUP_MAX_AGE_HOURS", "36"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

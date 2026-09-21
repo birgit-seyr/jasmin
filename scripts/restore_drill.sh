@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# Restore drill — restores a backup into a throwaway sandbox postgres
-# and writes a per-table row-count comparison vs the live prod DB.
+# Restore drill — restores a backup into a throwaway sandbox postgres and
+# writes a per-table row-count comparison vs the live prod DB, then unpacks
+# the newest media archive to prove that half restores too.
 #
 # Usage:
 #     ./scripts/restore_drill.sh                       # newest file in ./backups/
 #     ./scripts/restore_drill.sh ./backups/foo.sql
 #     ./scripts/restore_drill.sh ./backups/foo.sql.gz.gpg
+#
+#     MEDIA_ARCHIVE=./backups/bar_media_20260525_020000.tar.gz.gpg \
+#         ./scripts/restore_drill.sh                   # pin the media archive
 #
 # Requires:
 #     - docker
@@ -13,17 +17,26 @@
 #       query the live DB for the comparison column)
 #     - for .sql.gz.gpg files: BACKUP_ENCRYPTION_KEY in the environment
 #       (sourced from .env on prod, kept in your password manager)
+#     - for the media archive: gpg + tar on the host, and room under $TMPDIR
+#       for one unpacked copy of the media tree (point TMPDIR elsewhere if
+#       /tmp is small — the media tree is PDFs and images, not rows)
 #
 # Output:
 #     docs/code_audit/security/restore-drills/YYYY-MM-DD.md  (markdown table; sign-off
 #                                         block appended by the operator)
 #
+# Exit status:
+#     Non-zero if the media archive was found but failed to restore. A
+#     missing media archive is not a failure — a deployment with no uploads
+#     yet legitimately has none.
+#
 # Safety:
 #     The sandbox container is fully isolated (no host port, default
 #     bridge network only) and torn down at the end. Prod is read-only
-#     for the row-count query — no writes anywhere near it.
-#
-# See docs/code_audit/security/restore-drill.md for the runbook this script implements.
+#     for the row-count query — no writes anywhere near it. The media
+#     archive is unpacked into a throwaway mktemp dir, removed by the exit
+#     trap, and NEVER into media_volume, which holds the live uploads.
+#     ./backups/ is only ever read from — no artifact is moved or deleted.
 
 set -euo pipefail
 
@@ -37,6 +50,11 @@ SANDBOX_PASSWORD="sandbox_$(date +%s)_$RANDOM"
 PROD_POSTGRES_CONTAINER="${PROD_POSTGRES_CONTAINER:-$(docker compose ps -q postgres 2>/dev/null || true)}"
 OUTPUT_DIR="docs/code_audit/security/restore-drills"
 OUTPUT_FILE="${OUTPUT_DIR}/$(date +%Y-%m-%d).md"
+# Media-verification state. Declared up front because the exit trap reads
+# MEDIA_EXTRACT_DIR under ``set -u``, and it must be empty until mktemp runs.
+MEDIA_EXTRACT_DIR=""
+MEDIA_STATUS="not run"
+MEDIA_FAILED=0
 
 # ── Argument: backup file ──────────────────────────────────────────────────
 BACKUP="${1:-}"
@@ -77,6 +95,13 @@ echo "Restore drill starting — log: $OUTPUT_FILE"
 
 # ── Cleanup hook (always runs, even on failure) ────────────────────────────
 cleanup() {
+    # Extend this function rather than adding a second ``trap ... EXIT``: a
+    # second trap on the same signal REPLACES this one, silently leaving the
+    # sandbox container running.
+    if [ -n "$MEDIA_EXTRACT_DIR" ] && [ -d "$MEDIA_EXTRACT_DIR" ]; then
+        echo "Removing media scratch dir ($MEDIA_EXTRACT_DIR)..."
+        rm -rf "$MEDIA_EXTRACT_DIR"
+    fi
     if docker ps -q --filter "name=^${SANDBOX_CONTAINER}$" | grep -q .; then
         echo "Tearing down sandbox container..."
         docker stop "$SANDBOX_CONTAINER" > /dev/null 2>&1 || true
@@ -193,12 +218,102 @@ while IFS= read -r qualified; do
 done < <(docker exec "$SANDBOX_CONTAINER" \
     psql -U "$SANDBOX_USER" -d "$SANDBOX_DB" -t -A -c "$ENUMERATE_SQL")
 
+# ── Media archive verification ─────────────────────────────────────────────
+# backups/backup.sh verifies the media tar only as far as ``tar -t`` (a
+# listing). This step actually unpacks it, so a drill produces evidence that
+# BOTH halves of a backup restore — the DB and the uploaded documents.
+#
+# The extract target is a throwaway mktemp dir removed by the exit trap. It is
+# never media_volume: that holds the live uploads, and the drill must not be
+# able to write anywhere near them. ./backups/ is read-only here too.
+MEDIA_ARCHIVE="${MEDIA_ARCHIVE:-$(ls -t backups/*_media_*.tar.gz.gpg 2>/dev/null | head -n 1 || true)}"
+
+{
+    echo ""
+    echo "## Media archive verification"
+    echo ""
+} >> "$OUTPUT_FILE"
+
+if [ -z "$MEDIA_ARCHIVE" ]; then
+    MEDIA_STATUS="SKIPPED (none present)"
+    echo "No *_media_*.tar.gz.gpg under ./backups/ — skipping media verification."
+    {
+        echo "- **Result:** SKIPPED — no \`*_media_*.tar.gz.gpg\` under \`./backups/\`."
+        echo "- A deployment with no uploads yet legitimately has none, so this does"
+        echo "  not fail the drill."
+    } >> "$OUTPUT_FILE"
+elif [ ! -f "$MEDIA_ARCHIVE" ]; then
+    MEDIA_STATUS="FAIL (no such file)"
+    MEDIA_FAILED=1
+    echo "ERROR: media archive not found: $MEDIA_ARCHIVE" >&2
+    {
+        echo "- **Result:** FAIL — \`$MEDIA_ARCHIVE\` does not exist."
+    } >> "$OUTPUT_FILE"
+elif [ -z "${BACKUP_ENCRYPTION_KEY:-}" ]; then
+    MEDIA_STATUS="SKIPPED (BACKUP_ENCRYPTION_KEY not set)"
+    echo "WARNING: BACKUP_ENCRYPTION_KEY not set — cannot verify $MEDIA_ARCHIVE" >&2
+    {
+        echo "- **Result:** SKIPPED — \`BACKUP_ENCRYPTION_KEY\` not set, so"
+        echo "  \`$MEDIA_ARCHIVE\` could not be decrypted."
+        echo "- The media half of this backup is therefore **unverified**. Re-run with"
+        echo "  the passphrase exported to get a complete drill."
+    } >> "$OUTPUT_FILE"
+elif ! command -v gpg > /dev/null 2>&1; then
+    MEDIA_STATUS="SKIPPED (gpg not installed)"
+    echo "WARNING: gpg not installed on this host — cannot verify $MEDIA_ARCHIVE" >&2
+    {
+        echo "- **Result:** SKIPPED — \`gpg\` is not installed on this host."
+        echo "- The media half of this backup is therefore **unverified**."
+    } >> "$OUTPUT_FILE"
+else
+    MEDIA_MTIME=$(date -r "$MEDIA_ARCHIVE" '+%Y-%m-%d %H:%M:%S')
+    MEDIA_EXTRACT_DIR="$(mktemp -d)"
+    echo "Verifying media archive: $MEDIA_ARCHIVE"
+    echo "  unpacking into $MEDIA_EXTRACT_DIR (removed on exit)"
+
+    if gpg --batch --quiet --decrypt --passphrase "$BACKUP_ENCRYPTION_KEY" "$MEDIA_ARCHIVE" \
+         | gunzip \
+         | tar -C "$MEDIA_EXTRACT_DIR" -xf -; then
+        media_files=$(find "$MEDIA_EXTRACT_DIR" -type f | wc -l | tr -d ' ' || true)
+        # BSD du right-pads its size column; strip so the report reads cleanly.
+        media_size=$(du -sh "$MEDIA_EXTRACT_DIR" | cut -f1 | tr -d ' ' || true)
+        # backup.sh runs ``tar -C /app/media -cf - .``, so the immediate
+        # subdirectories of the extract root are the per-tenant media roots.
+        media_top_dirs=$(find "$MEDIA_EXTRACT_DIR" -mindepth 1 -maxdepth 1 -type d \
+            -exec basename {} \; | sort | tr '\n' ' ' | sed 's/ *$//' || true)
+        [ -n "$media_top_dirs" ] || media_top_dirs="(none — archive has no top-level directories)"
+
+        MEDIA_STATUS="PASS"
+        echo "  decrypted + unpacked OK — $media_files files"
+        {
+            echo "- **Result:** PASS — decrypts, gunzips and untars cleanly."
+            echo "- **Archive:** \`$MEDIA_ARCHIVE\`"
+            echo "- **Archive mtime:** $MEDIA_MTIME"
+            echo "- **Files extracted:** $media_files"
+            echo "- **Unpacked size:** $media_size"
+            echo "- **Top-level directories (per-tenant media roots):** $media_top_dirs"
+        } >> "$OUTPUT_FILE"
+    else
+        MEDIA_STATUS="FAIL"
+        MEDIA_FAILED=1
+        echo "ERROR: media archive failed to decrypt/unpack: $MEDIA_ARCHIVE" >&2
+        {
+            echo "- **Result:** FAIL — \`$MEDIA_ARCHIVE\` did not decrypt, gunzip and untar."
+            echo "- **Archive mtime:** $MEDIA_MTIME"
+            echo "- Treat this as an incident. The DB half may be fine, but the uploaded"
+            echo "  documents (invoice / delivery-note PDFs, e-invoice XML, consent"
+            echo "  documents, share imports) are NOT recoverable from this archive."
+        } >> "$OUTPUT_FILE"
+    fi
+fi
+
 {
     echo ""
     echo "## Summary"
     echo ""
     echo "- Tables compared: **$TOTAL_TABLES**"
     echo "- Tables with diff > ±1000 rows: **$LARGE_DIFFS** (eyeball these in sign-off)"
+    echo "- Media archive: **$MEDIA_STATUS**"
     echo ""
     echo "## Sign-off"
     echo ""
@@ -213,6 +328,12 @@ echo "Drill complete."
 echo "Log: $OUTPUT_FILE"
 echo ""
 echo "Next steps:"
-echo "  1. Review the row-count table"
+echo "  1. Review the row-count table and the media verification result"
 echo "  2. Append the sign-off block (set Outcome: PASS / FAIL + notes)"
 echo "  3. git add + commit the log as the audit artifact"
+
+if [ "$MEDIA_FAILED" -ne 0 ]; then
+    echo ""
+    echo "MEDIA VERIFICATION FAILED — the drill did NOT pass. See $OUTPUT_FILE" >&2
+    exit 1
+fi
