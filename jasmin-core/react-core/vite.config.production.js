@@ -51,6 +51,7 @@ export default defineConfig({
         // Note ``antd`` + ``rc-*`` get their own chunk to dedupe
         // shared ant-design internals across lazy page chunks.
         manualChunks(id) {
+          if (id.includes('/shared/i18n/locales/')) return 'locales';
           if (id.includes('node_modules/@react-pdf/')) return 'vendor-pdf';
           if (id.includes('node_modules/react-router')) return 'vendor-router';
           if (

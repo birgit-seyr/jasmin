@@ -113,6 +113,7 @@ export default defineConfig({
         // on app boot. Letting Rollup place it on its own keeps the
         // heavy ``pdf`` chunk lazy until a PDF-using page is visited.
         manualChunks(id) {
+          if (id.includes('/shared/i18n/locales/')) return 'locales';
           if (id.includes('node_modules/@react-pdf/')) return 'pdf';
           if (id.includes('node_modules/react-router')) return 'router';
           if (

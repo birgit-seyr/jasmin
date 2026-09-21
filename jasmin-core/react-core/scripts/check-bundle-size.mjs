@@ -11,6 +11,11 @@
 // Budgets are gzip KB. Bump them DELIBERATELY when a real feature lands; a
 // surprise jump almost always means an eager import that belongs in a lazy
 // route chunk instead of the boot path.
+//
+// The four locale bundles are statically imported by shared/i18n, so every
+// translation key is boot-path weight. vite.config.production.js keeps them
+// in their own `locales` chunk; adding keys therefore moves the locales
+// budget below rather than the entry one, which stays a measure of code.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
@@ -53,11 +58,17 @@ for (const p of [...criticalPath].sort((a, b) => sizes[b] - sizes[a])) {
 }
 
 const reactChunk = criticalPath.find((p) => /vendor-react-/.test(p));
+const localesChunk = criticalPath.find((p) => /locales-/.test(p));
 
 // Budgets (gzip KB).
 const budgets = [
   { name: "total critical-path (boot preload)", kb: totalKB, limit: 1200 },
-  { name: "entry chunk (app boot code)", kb: sizes[entry], limit: 165 },
+  { name: "entry chunk (app boot code)", kb: sizes[entry], limit: 45 },
+  {
+    name: "locales (statically bundled translation JSON)",
+    kb: localesChunk ? sizes[localesChunk] : 0,
+    limit: 145,
+  },
   {
     name: "vendor-react",
     kb: reactChunk ? sizes[reactChunk] : 0,
