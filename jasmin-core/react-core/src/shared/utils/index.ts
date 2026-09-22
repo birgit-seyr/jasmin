@@ -26,7 +26,7 @@ export { getDayName } from './weekdayNames';
 export { generatePdfFilename } from './pdfFilename';
 export { formatWeekLabel, formatDayLabel } from './weekLabels';
 // NB: pdfColumns (extractPdfColumns) is intentionally NOT re-exported here.
-// It statically imports @react-pdf/renderer (~484KB gzip), and re-exporting
+// It statically imports @react-pdf/renderer, pulling in the ~450 kB gzip PDF chunk, and re-exporting
 // through this barrel pulls that library into the entry chunk for every page
 // (the barrel is imported app-wide). PDF-only consumers import from
 // "@shared/utils/pdfColumns" directly so the lib stays in the lazy PDF chunks.

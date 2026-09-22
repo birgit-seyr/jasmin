@@ -6,7 +6,7 @@ export { default as DeliveryNotePDFGenerator } from "./forResellers/DeliveryNote
 // Helpers re-exported from their own files (NOT the *PDFGenerator
 // React-component files). The helper files do not carry a top-level
 // @react-pdf/renderer import, so consumers reaching for just the
-// helper through this barrel keep the ~484 KB gzip PDF chunk out of
+// helper through this barrel keep the ~450 kB gzip PDF chunk out of
 // their eager bundle. See generate{Invoice,DeliveryNote}PDF.tsx's
 // docstrings for the architecture.
 export { generateAndUploadDeliveryNotePDF } from "./forResellers/generateDeliveryNotePDF";

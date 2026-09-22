@@ -30,7 +30,7 @@ import StornoInvoiceModal from "@features/commissioning/modals/StornoInvoiceModa
 // modules though, and Vite's tree-shaking through the barrel isn't
 // perfect for side-effectful files, so for the helper we import it
 // directly from its dedicated file. That file has no top-level
-// @react-pdf static import, which is what keeps the ~484 KB gzip
+// @react-pdf static import, which is what keeps the ~450 kB gzip
 // PDF chunk out of Invoices.tsx's eager bundle.
 import { InvoicePDFButtons } from "@features/commissioning/pdfs";
 import { generateAndUploadInvoicePDF } from "@features/commissioning/pdfs/forResellers/generateInvoicePDF";

@@ -26,7 +26,7 @@ import { JobProgressDrawer } from "@shared/ui/JobProgressDrawer";
 import { SendOffersModal } from "@features/commissioning/modals";
 // OfferPDFGenerator statically imports @react-pdf/renderer (it uses
 // ``PDFDownloadLink`` for the offer-pdf download). Lazy-loading
-// keeps the ~484 KB gzip PDF chunk out of Offers.tsx's eager bundle.
+// keeps the ~450 kB gzip PDF chunk out of Offers.tsx's eager bundle.
 // The component only ever renders when an offer group is selected
 // AND all offers are finalized — so the chunk loads on first
 // "ready for download" state, not on page open.

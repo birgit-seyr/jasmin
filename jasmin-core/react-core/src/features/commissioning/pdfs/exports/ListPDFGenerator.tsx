@@ -12,7 +12,7 @@ import { downloadBlob } from "@shared/utils";
  *
  * Pages that render this button (e.g. CleaningList, PackingListBoxes,
  * DeliveryStationsOverview, ...) cost ~0 bytes of PDF library
- * payload at boot. The ~484 KB gzip ``@react-pdf/renderer`` chunk
+ * payload at boot. The ~450 kB gzip PDF chunk
  * only downloads when the user actually clicks Download.
  *
  * The wrappers (CleaningListPDFGenerator,

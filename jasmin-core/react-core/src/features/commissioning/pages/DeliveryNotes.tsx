@@ -25,7 +25,7 @@ import { DeliveryNoteModal } from "@features/commissioning/modals";
 import { DeliveryNotePDFButtons } from "@features/commissioning/pdfs";
 // Helper imported directly from its dedicated file — the file has
 // no top-level @react-pdf static import, so this page's eager
-// bundle does NOT carry the ~484 KB gzip PDF chunk. See
+// bundle does NOT carry the ~450 kB gzip PDF chunk. See
 // generateDeliveryNotePDF.tsx's docstring for the architecture.
 import { generateAndUploadDeliveryNotePDF } from "@features/commissioning/pdfs/forResellers/generateDeliveryNotePDF";
 import { ResellerSelector, WeekSelector } from "@shared/selectors";

@@ -29,7 +29,7 @@ import { FinalizedNotice } from '@features/commissioning/components';
 // InvoicePDFGenerator statically imports @react-pdf/renderer (it
 // renders ``<PDFViewer>`` for inline preview). Lazy-loading it here
 // means the modal-bearing pages (Invoices.tsx, Orders.tsx via
-// OrderInfoPanel) don't pull the ~484 KB gzip PDF chunk into their
+// OrderInfoPanel) don't pull the ~450 kB gzip PDF chunk into their
 // eager bundles. Vite will emit InvoicePDFGenerator + its transitive
 // deps as a separate chunk that only loads when this Suspense
 // boundary first renders the component.

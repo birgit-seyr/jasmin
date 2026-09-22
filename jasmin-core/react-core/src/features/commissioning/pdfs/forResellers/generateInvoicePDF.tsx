@@ -20,7 +20,7 @@ import {
  * document component are dynamic-imported inside the function body.
  * The exported file therefore does NOT carry @react-pdf at parse time —
  * any consumer that only imports this helper (and not the React-component
- * generator) keeps the ~484 KB gzip PDF chunk OUT of its eager bundle.
+ * generator) keeps the ~450 kB gzip PDF chunk OUT of its eager bundle.
  *
  * The React-component generator (``InvoicePDFGenerator``) lives in
  * its own file (``InvoicePDFGenerator.tsx``) and is itself meant to

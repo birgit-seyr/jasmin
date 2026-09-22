@@ -65,6 +65,11 @@ export default defineConfig({
           // which welds the entry to that chunk and drags the whole ~450 kB
           // PDF stack onto the boot critical path behind a ~1 kB dependency.
           if (id.includes('node_modules/base64-js')) return 'vendor-buffer';
+          // ~450 kB gzip, and only about a fifth of it is @react-pdf
+          // itself: the bulk is fontkit, pdfkit and yoga-layout's wasm,
+          // which it pulls in. Naming the chunk keeps that whole stack
+          // behind the lazy PDF routes instead of duplicating it across
+          // every page chunk that touches a PDF.
           if (id.includes('node_modules/@react-pdf/')) return 'vendor-pdf';
           if (id.includes('node_modules/react-router')) return 'vendor-router';
           if (

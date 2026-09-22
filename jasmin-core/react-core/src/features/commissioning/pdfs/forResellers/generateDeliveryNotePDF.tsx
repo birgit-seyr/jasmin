@@ -13,7 +13,7 @@ import { buildDeliveryNotePdfData } from "./resellerPdfData";
  * ``DeliveryNotePDF`` document component are dynamic-imported inside
  * the function body. The exported file therefore does NOT carry
  * @react-pdf at parse time — consumers that only import this helper
- * keep the ~484 KB gzip PDF chunk out of their eager bundle.
+ * keep the ~450 kB gzip PDF chunk out of their eager bundle.
  */
 export async function generateAndUploadDeliveryNotePDF(
   deliveryNoteId: string,

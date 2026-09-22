@@ -1,4 +1,4 @@
-import abo from './abos.json';
+import abos from './abos.json';
 import app from './app.json';
 import auth from './auth.json';
 import commissioning from './commissioning.json';
@@ -17,7 +17,7 @@ import table from './table.json';
 import warehouse from './warehouse.json';
 
 export default {
-  abo,
+  abos,
   app,
   auth,
   commissioning,
