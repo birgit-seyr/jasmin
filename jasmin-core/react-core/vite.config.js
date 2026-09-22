@@ -106,12 +106,12 @@ export default defineConfig({
         // walks the dep graph and reliably co-locates packages into
         // the named chunk regardless of how callers import them.
         //
-        // ``buffer`` deliberately NOT in any named chunk: main.jsx
-        // imports it eagerly to polyfill ``globalThis.Buffer`` (used
-        // by @react-pdf/renderer's image loader). Co-bundling it with
-        // @react-pdf would force the entire 1.5 MB PDF chunk to load
-        // on app boot. Letting Rollup place it on its own keeps the
-        // heavy ``pdf`` chunk lazy until a PDF-using page is visited.
+        // ``base64-js`` is named so it cannot land in the pdf chunk.
+        // main.jsx imports ``buffer`` eagerly to polyfill
+        // ``globalThis.Buffer`` (used by @react-pdf/renderer's image
+        // loader) and ``buffer`` requires base64-js; if Rollup parks that
+        // shared dependency inside the pdf chunk, the entry statically
+        // imports it and the entire heavy pdf chunk is preloaded on boot.
         manualChunks(id) {
           // One chunk per language, named explicitly: an un-named dynamic
           // import is named after its module's basename, and every locale
@@ -120,6 +120,7 @@ export default defineConfig({
           // ``locale-de`` reaches the boot path.
           const locale = id.match(/\/shared\/i18n\/locales\/([a-z]{2})\//);
           if (locale) return `locale-${locale[1]}`;
+          if (id.includes('node_modules/base64-js')) return 'buffer';
           if (id.includes('node_modules/@react-pdf/')) return 'pdf';
           if (id.includes('node_modules/react-router')) return 'router';
           if (

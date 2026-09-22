@@ -91,9 +91,23 @@ if (eagerLocales.length) {
   process.exit(1);
 }
 
+// @react-pdf and its font / layout / hyphenation stack is ~450 kB gzip that
+// only staff-gated PDF pages can use. It does not reach the boot path by being
+// imported, but by sharing a dependency with something that is — so assert its
+// absence rather than budgeting its size.
+const eagerPdf = criticalPath.filter((p) => /vendor-pdf-/.test(p));
+if (eagerPdf.length) {
+  console.error(
+    `\u2717 vendor-pdf on the boot critical path: ${eagerPdf.join(", ")}. ` +
+      "Something in the entry's static closure shares a dependency with it \u2014 " +
+      "check base64-js and the commissioning components barrel.",
+  );
+  process.exit(1);
+}
+
 // Budgets (gzip KB).
 const budgets = [
-  { name: "total critical-path (boot preload)", kb: totalKB, limit: 1075 },
+  { name: "total critical-path (boot preload)", kb: totalKB, limit: 600 },
   { name: "entry chunk (app boot code)", kb: sizes[entry], limit: 45 },
   {
     name: "locale-de (the resident fallback bundle)",

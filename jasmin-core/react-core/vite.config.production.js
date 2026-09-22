@@ -58,6 +58,13 @@ export default defineConfig({
           // ``locale-de`` reaches the boot path.
           const locale = id.match(/\/shared\/i18n\/locales\/([a-z]{2})\//);
           if (locale) return `locale-${locale[1]}`;
+          // ``base64-js`` gets a chunk of its own. main.tsx imports
+          // ``buffer`` eagerly to polyfill ``globalThis.Buffer``, and
+          // ``buffer`` requires base64-js. Left unassigned, Rollup parks
+          // base64-js in the PDF chunk (reachable from @react-pdf too),
+          // which welds the entry to that chunk and drags the whole ~450 kB
+          // PDF stack onto the boot critical path behind a ~1 kB dependency.
+          if (id.includes('node_modules/base64-js')) return 'vendor-buffer';
           if (id.includes('node_modules/@react-pdf/')) return 'vendor-pdf';
           if (id.includes('node_modules/react-router')) return 'vendor-router';
           if (

@@ -1,6 +1,10 @@
 import { Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { ImportSharesModeBanner } from '@features/commissioning/components';
+// Deep import rather than the ``@features/commissioning/components``
+// barrel: that barrel re-exports OrderInfoPanel, which reaches the pdfs
+// barrel and its static PDF templates, pulling @react-pdf into the app
+// shell chunk every authenticated user loads.
+import ImportSharesModeBanner from "@features/commissioning/components/ImportSharesModeBanner";
 import TenantDashboardPage from "@features/platform/pages/TenantDashboard";
 import UnauthorizedPage from "../UnauthorizedPage";
 import { ProtectedRoute } from "./ProtectedRoute";
