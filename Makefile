@@ -250,6 +250,18 @@ type-check:
 test-frontend:
 	$(COMPOSE_DEV) exec frontend npm run test:run
 
+.PHONY: build
+build:
+	$(COMPOSE_DEV) exec frontend npm run build
+
+# The bundle-size budgets can only be measured on built output, and vitest
+# never runs Rollup — so a chunking regression is invisible to every other
+# frontend target here. Depends on `build` so `check` cannot measure a stale
+# or absent dist.
+.PHONY: size
+size: build
+	$(COMPOSE_DEV) exec frontend npm run size
+
 # --- Inventory drift (runs on the host) --------------------------------------
 # Sweeps the code for module-level numeric constants and reports them. Where a
 # curated numeric-constants inventory is present it also reports the drift both
@@ -265,4 +277,4 @@ tunables:
 
 # --- Run the whole CI gate in one shot ---------------------------------------
 .PHONY: check
-check: black ruff import-contracts mypy pytest type-check lint lint-pins test-frontend
+check: black ruff import-contracts mypy pytest type-check lint lint-pins test-frontend size

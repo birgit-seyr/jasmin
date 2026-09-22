@@ -12,10 +12,10 @@
 // surprise jump almost always means an eager import that belongs in a lazy
 // route chunk instead of the boot path.
 //
-// The four locale bundles are statically imported by shared/i18n, so every
-// translation key is boot-path weight. vite.config.production.js keeps them
-// in their own `locales` chunk; adding keys therefore moves the locales
-// budget below rather than the entry one, which stays a measure of code.
+// Only German is boot weight: shared/i18n keeps `de` in i18next's `resources`
+// as the fallback floor and fetches every other language as its own chunk on
+// demand. So `locale-de` is budgeted below, and any OTHER `locale-*` chunk
+// reaching the critical path is a regression, not a bigger number.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
@@ -58,22 +58,49 @@ for (const p of [...criticalPath].sort((a, b) => sizes[b] - sizes[a])) {
 }
 
 const reactChunk = criticalPath.find((p) => /vendor-react-/.test(p));
-const localesChunk = criticalPath.find((p) => /locales-/.test(p));
+const deLocaleChunk = criticalPath.find((p) => /locale-de-/.test(p));
+
+// A budget whose chunk has vanished has to FAIL rather than quietly score
+// zero. A chunk leaving the critical path is exactly the kind of change these
+// budgets exist to notice, so treating it as 0 kB switches the gate off at
+// the one moment it was needed.
+for (const [name, chunk] of [
+  ["vendor-react", reactChunk],
+  ["locale-de", deLocaleChunk],
+]) {
+  if (!chunk) {
+    console.error(
+      `\u2717 No ${name} chunk on the boot critical path. Either the chunking ` +
+        "changed or it stopped being preloaded \u2014 check dist/index.html.",
+    );
+    process.exit(1);
+  }
+}
+
+// German is the only language that boots; the rest are fetched on demand. One
+// of them turning up here means a static import crept back in and dragged the
+// whole translation set onto the critical path with it.
+const eagerLocales = criticalPath.filter((p) =>
+  /locale-(?!de-)[a-z]{2}-/.test(p),
+);
+if (eagerLocales.length) {
+  console.error(
+    `\u2717 Non-German locale chunk(s) preloaded at boot: ${eagerLocales.join(", ")}. ` +
+      "Only locale-de belongs on the critical path.",
+  );
+  process.exit(1);
+}
 
 // Budgets (gzip KB).
 const budgets = [
-  { name: "total critical-path (boot preload)", kb: totalKB, limit: 1200 },
+  { name: "total critical-path (boot preload)", kb: totalKB, limit: 1075 },
   { name: "entry chunk (app boot code)", kb: sizes[entry], limit: 45 },
   {
-    name: "locales (statically bundled translation JSON)",
-    kb: localesChunk ? sizes[localesChunk] : 0,
-    limit: 145,
+    name: "locale-de (the resident fallback bundle)",
+    kb: sizes[deLocaleChunk],
+    limit: 75,
   },
-  {
-    name: "vendor-react",
-    kb: reactChunk ? sizes[reactChunk] : 0,
-    limit: 60,
-  },
+  { name: "vendor-react", kb: sizes[reactChunk], limit: 60 },
 ];
 
 let failed = false;

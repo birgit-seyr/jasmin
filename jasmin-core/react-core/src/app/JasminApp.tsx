@@ -1,6 +1,7 @@
 import { ConfigProvider, Layout, theme } from "antd";
 import { lazy, Suspense, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { activateLanguage } from "@shared/i18n";
 import { Navigate, Route, Routes } from "react-router-dom";
 import DynamicSidebar from "@shared/layout/DynamicSidebar";
 import Footer from "@shared/layout/Footer";
@@ -43,9 +44,12 @@ export default function JasminApp() {
 
   const { defaultAlgorithm, darkAlgorithm } = theme;
 
+  // Keyed on i18next's language rather than the context's, so AntD's chrome
+  // turns over in the same paint as the translated text. The context flips as
+  // soon as the profile PATCH resolves, which is one fetch earlier.
   const antdLocale = useMemo(
-    () => ANTD_LOCALES[language as keyof typeof ANTD_LOCALES] || enUS,
-    [language],
+    () => ANTD_LOCALES[i18n.language as keyof typeof ANTD_LOCALES] || enUS,
+    [i18n.language],
   );
 
   const antdTheme = {
@@ -62,10 +66,8 @@ export default function JasminApp() {
   };
 
   useEffect(() => {
-    if (language && i18n.language !== language) {
-      i18n.changeLanguage(language);
-    }
-  }, [language, i18n]);
+    if (language) void activateLanguage(language);
+  }, [language]);
 
   // Show the full-screen loader ONLY during the initial auth boot. Gating on
   // the per-action ``loading`` would unmount the login page on every submit and

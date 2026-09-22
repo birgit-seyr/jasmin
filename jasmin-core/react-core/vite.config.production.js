@@ -51,7 +51,13 @@ export default defineConfig({
         // Note ``antd`` + ``rc-*`` get their own chunk to dedupe
         // shared ant-design internals across lazy page chunks.
         manualChunks(id) {
-          if (id.includes('/shared/i18n/locales/')) return 'locales';
+          // One chunk per language, named explicitly: an un-named dynamic
+          // import is named after its module's basename, and every locale
+          // barrel is ``locales/<lng>/index.ts``, so they would all collide
+          // on ``index``. Only ``de`` is statically reachable, so only
+          // ``locale-de`` reaches the boot path.
+          const locale = id.match(/\/shared\/i18n\/locales\/([a-z]{2})\//);
+          if (locale) return `locale-${locale[1]}`;
           if (id.includes('node_modules/@react-pdf/')) return 'vendor-pdf';
           if (id.includes('node_modules/react-router')) return 'vendor-router';
           if (
