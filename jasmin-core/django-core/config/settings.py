@@ -933,13 +933,21 @@ TWO_FACTOR_CHALLENGE_LIFETIME = timedelta(minutes=5)
 # the authenticator app, and submitting the first code (two requests).
 TWO_FACTOR_ENROLMENT_LIFETIME = timedelta(minutes=15)
 # Roles that MUST enrol 2FA before a JWT is issued. Empty = opt-in for
-# everyone; flip to e.g. ["admin"] once the office has all enrolled.
+# everyone; set ``TWO_FACTOR_REQUIRED_ROLES=admin`` (comma-separated) in the
+# environment once the office has all enrolled. Env-driven rather than a
+# literal so the mandate can be turned on per deployment without a code
+# change — ``role_requires_enrolment`` short-circuits while this is empty,
+# which leaves the whole enrolment-mandate login branch unreachable.
 # Super-admin (public schema) is not eligible for this gate — its host is
 # instead IP-restricted at the nginx gateway (see the django_otp note in
 # TENANT_APPS and nginx/super_admin_allowed_ips.conf). That allowlist is
 # the ONLY thing standing in for 2FA on super-admin, so it is not optional
 # infra — the ``gateway`` CI job verifies it.
-TWO_FACTOR_REQUIRED_ROLES: list[str] = []
+TWO_FACTOR_REQUIRED_ROLES: list[str] = [
+    _role.strip()
+    for _role in os.environ.get("TWO_FACTOR_REQUIRED_ROLES", "").split(",")
+    if _role.strip()
+]
 
 # Friendly Captcha — bot / abuse protection on public auth endpoints
 # (login, register, password-reset-request, password-reset-confirm).

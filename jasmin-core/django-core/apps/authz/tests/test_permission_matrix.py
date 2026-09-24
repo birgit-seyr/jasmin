@@ -16,7 +16,6 @@ from apps.authz.permissions import (
     HasAnyRole,
     IsAdmin,
     IsCustomer,
-    IsGardener,
     IsManagement,
     IsMember,
     IsOffice,
@@ -55,7 +54,6 @@ def _request(user, *, path="/x"):
 # (PermissionClass, set_of_roles_that_must_be_granted).
 EXPECTED_GRANTS: list[tuple[type[HasAnyRole], set[str]]] = [
     (IsOffice, {Role.OFFICE, Role.ADMIN}),
-    (IsGardener, {Role.GARDENER, Role.ADMIN}),
     (IsManagement, {Role.MANAGEMENT, Role.ADMIN}),
     (IsAdmin, {Role.ADMIN}),
     (

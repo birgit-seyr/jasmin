@@ -4,7 +4,7 @@ Covers:
     - URL routing under /api/payments/
     - BillingProfileViewSet: scoping (members see only own profile)
     - ChargeScheduleViewSet: scoping + filters + regenerate action
-    - BillingRunViewSet: staff-only, create + export action
+    - BillingRunViewSet: office-only, create + export action
     - Auth/permission edge cases (anonymous, member-only, etc.)
 """
 
@@ -364,6 +364,17 @@ class TestBillingRunViewSet:
 
     def test_member_cannot_list(self, member_api_client, tenant):
         resp = member_api_client.get(self.URL)
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_gardener_cannot_list(self, gardener_api_client, tenant):
+        """An internal role is not enough here.
+
+        The serializer hands out ``sepa_xml_export_url`` — a signed link to
+        the pain.008 file naming every debited member and their IBAN — and
+        that link carries no role check of its own, so this gate is the only
+        thing guarding it. The viewset applies no row scoping either.
+        """
+        resp = gardener_api_client.get(self.URL)
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
     def test_office_can_list(self, api_client, tenant):

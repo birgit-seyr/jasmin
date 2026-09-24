@@ -95,6 +95,26 @@ def _payload_sets_a_step_up_field(request: Request | None) -> bool:
     return any(str(data.get(field) or "").strip() for field in _STEP_UP_CONTACT_FIELDS)
 
 
+def _subscribed_station_ids(member):
+    """The stations a member collects from — the default station of every
+    confirmed, uncancelled subscription still running today.
+
+    ``default_delivery_station_day`` has ``related_name="+"`` (no reverse
+    accessor), so this filters FORWARD from Subscription into a distinct
+    station-id subquery rather than reverse-joining, which also keeps a
+    caller's queryset free of row multiplication.
+    """
+    today = timezone.now().date()
+    return (
+        Subscription.objects.filter(member=member, admin_confirmed=True)
+        .filter(cancelled_at__isnull=True)
+        .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
+        .filter(default_delivery_station_day__isnull=False)
+        .values_list("default_delivery_station_day__delivery_station", flat=True)
+        .distinct()
+    )
+
+
 class DeliveryStationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     # Members may READ delivery stations (their own page's stations card shows
     # pickup info / messenger link / map). Writes stay office-only.
@@ -123,6 +143,23 @@ class DeliveryStationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         ):
             permissions.append(requires_step_up_for_fields(*_STEP_UP_CONTACT_FIELDS)())
         return permissions
+
+    def get_serializer_context(self):
+        """Tell the serializer which stations this caller collects from.
+
+        Staff read every station's operational block (door code, host's direct
+        line); a member gets it only for their own stops. The serializer can't
+        determine that per row without a query each, so resolve the whole set
+        once — and only for non-staff callers, since staff never consult it.
+        """
+        context = super().get_serializer_context()
+        request = self.request
+        if request is not None and not has_any_role(request, *IsStaff.required_roles):
+            member = getattr(getattr(request, "user", None), "member_profile", None)
+            context["own_station_ids"] = (
+                frozenset(_subscribed_station_ids(member)) if member else frozenset()
+            )
+        return context
 
     @extend_schema(
         parameters=[
@@ -180,24 +217,9 @@ class DeliveryStationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         if delivery_day is not None:
             queryset = queryset.filter(deliverystationday__delivery_day=delivery_day)
 
-        # Scope to the stations a member is subscribed to — the default station of
-        # their active/upcoming confirmed subscriptions. ``default_delivery_station_day``
-        # has related_name="+" (no reverse accessor), so filter FORWARD from
-        # Subscription into a distinct station-id subquery rather than reverse-
-        # joining (which also keeps the outer queryset free of row multiplication).
+        # Scope to the stations the member is subscribed to.
         if member is not None:
-            today = timezone.now().date()
-            member_station_ids = (
-                Subscription.objects.filter(member=member, admin_confirmed=True)
-                .filter(cancelled_at__isnull=True)
-                .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
-                .filter(default_delivery_station_day__isnull=False)
-                .values_list(
-                    "default_delivery_station_day__delivery_station", flat=True
-                )
-                .distinct()
-            )
-            queryset = queryset.filter(id__in=member_station_ids)
+            queryset = queryset.filter(id__in=_subscribed_station_ids(member))
 
         contact_annotations = get_contact_annotations()
         queryset = queryset.annotate(**contact_annotations)

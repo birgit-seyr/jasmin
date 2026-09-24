@@ -11,7 +11,10 @@ from unittest.mock import patch
 
 import pytest
 
-from apps.commissioning.errors import MemberUserAlreadyActive
+from apps.commissioning.errors import (
+    MemberEmailHeldByNonMemberLogin,
+    MemberUserAlreadyActive,
+)
 from apps.commissioning.models import UserInvitation
 from apps.commissioning.services.member_service import MemberService
 from apps.commissioning.tests.factories import JasminUserFactory, MemberFactory
@@ -60,3 +63,61 @@ class TestSendInvitationReinvite:
         member.refresh_from_db()
         assert member.user is not None
         assert UserInvitation.objects.filter(user=member.user, status="sent").exists()
+
+
+@pytest.mark.django_db
+class TestSendInvitationDoesNotTakeOverANonMemberLogin:
+    """An unlinked member whose address matches a login with NO member profile
+    must be refused rather than re-provisioned.
+
+    ``create_user_with_invitation`` reuses ``inactive`` / ``pending_invitation``
+    rows, so without this the office would hand an existing account — its
+    primary key, and every ``created_by`` reference pointing at it — to a
+    different person. ``send_invitation`` is office-gated, not admin-gated,
+    which is what makes it worth pinning.
+    """
+
+    def _office(self):
+        return JasminUserFactory(roles=["office"])
+
+    def test_a_deactivated_staff_login_is_not_taken_over(self, tenant):
+        staff = JasminUserFactory(
+            email="ex.staff@example.com",
+            first_name="Former",
+            last_name="Employee",
+            roles=["office"],
+            account_status="inactive",
+        )
+        member = MemberFactory(
+            user=None,
+            email="ex.staff@example.com",
+            first_name="New",
+            last_name="Member",
+        )
+
+        with pytest.raises(MemberEmailHeldByNonMemberLogin):
+            MemberService().send_invitation(member, admin_user=self._office())
+
+        staff.refresh_from_db()
+        member.refresh_from_db()
+        # Untouched on every axis the reuse branch would have rewritten.
+        assert staff.first_name == "Former"
+        assert staff.roles == ["office"]
+        assert staff.account_status == "inactive"
+        assert member.user is None
+        assert not UserInvitation.objects.filter(user=staff).exists()
+
+    def test_a_staff_invitation_in_flight_is_not_hijacked(self, tenant):
+        staff = JasminUserFactory(
+            email="pending.staff@example.com",
+            roles=["office"],
+            account_status="pending_invitation",
+        )
+        member = MemberFactory(user=None, email="pending.staff@example.com")
+
+        with pytest.raises(MemberEmailHeldByNonMemberLogin):
+            MemberService().send_invitation(member, admin_user=self._office())
+
+        staff.refresh_from_db()
+        assert staff.roles == ["office"]
+        assert staff.account_status == "pending_invitation"

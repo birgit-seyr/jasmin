@@ -18,25 +18,21 @@ export default function WarehouseSidebar({
       key: "warehouse-fertilizer",
       icon: <UserOutlined />,
       label: t("warehouse.fertilizer"),
-      permission: "warehouse.view",
     },
     {
       key: "warehouse-pesticides",
       icon: <BarChartOutlined />,
       label: t("warehouse.pesticides"),
-      permission: "warehouse.view",
     },
     {
       key: "warehouse-tools",
       icon: <BarChartOutlined />,
       label: t("warehouse.tools"),
-      permission: "warehouse.view",
     },
     {
       key: "warehouse-others",
       icon: <BarChartOutlined />,
       label: t("warehouse.others"),
-      permission: "warehouse.view",
     },
   ];
 

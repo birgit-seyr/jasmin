@@ -3,9 +3,6 @@ import type { ReactElement } from "react";
 /** Per-route access metadata, consumed by ``ProtectedRoute``. */
 export interface RouteMeta {
   title?: string;
-  requiredRole?: string | string[];
-  requiredPermission?: string;
-  requiredSetting?: string;
 }
 
 /** A single tenant route: path + element, with optional access metadata. */

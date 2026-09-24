@@ -35,6 +35,19 @@ http {
     log_format main '$remote_addr - $remote_user [$time_local] "$request" '
                     '$status $body_bytes_sent "$http_referer" "$http_user_agent" '
                     'host="$host" rt=$request_time ut=$upstream_response_time';
+
+    # /media/ URLs carry a capability token in the query string (``?st=``,
+    # core/protected_media.py). ``$request`` is the full request line, so the
+    # default format would write every live token to disk in cleartext for the
+    # whole validity window — a log reader would hold the file. This format is
+    # identical except for ``$uri``, which is the path WITHOUT the query: who
+    # fetched which file, when, and with what status all stay auditable, the
+    # token does not. Media is the only location that needs this; /static/ and
+    # /_protected_media/ log nothing at all.
+    log_format media '$remote_addr - $remote_user [$time_local] '
+                     '"$request_method $uri $server_protocol" '
+                     '$status $body_bytes_sent "$http_referer" "$http_user_agent" '
+                     'host="$host" rt=$request_time ut=$upstream_response_time';
     access_log /var/log/nginx/access.log main;
     error_log  /var/log/nginx/error.log warn;
 
@@ -271,6 +284,9 @@ http {
         # to the internal location below — nginx still does the file
         # I/O, Django never streams bytes.
         location /media/ {
+            # Log without the query string: the ``?st=`` token must not be
+            # written to disk. See the ``media`` log_format above.
+            access_log /var/log/nginx/access.log media;
             # Every /media/ hit now runs Django token validation before
             # nginx serves the file — rate-limit it like the other
             # backend-proxied locations so an unauthenticated flood
@@ -415,6 +431,9 @@ http {
         # to the internal location below — nginx still does the file
         # I/O, Django never streams bytes.
         location /media/ {
+            # Log without the query string: the ``?st=`` token must not be
+            # written to disk. See the ``media`` log_format above.
+            access_log /var/log/nginx/access.log media;
             # Every /media/ hit now runs Django token validation before
             # nginx serves the file — rate-limit it like the other
             # backend-proxied locations so an unauthenticated flood

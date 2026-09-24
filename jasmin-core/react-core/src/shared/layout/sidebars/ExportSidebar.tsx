@@ -23,7 +23,6 @@ export default function ExportSidebar({
           <Link to="/exports/members">{t("exports.members")}</Link>
         </div>
       ),
-      permission: "exports.view",
     },
     {
       key: "exports-commissioning",
@@ -33,7 +32,6 @@ export default function ExportSidebar({
           <Link to="/exports/commissioning">{t("exports.commissioning")}</Link>
         </div>
       ),
-      permission: "exports.view",
     },
     {
       key: "exports-staff",
@@ -43,7 +41,6 @@ export default function ExportSidebar({
           <Link to="/exports/staff">{t("exports.staff")}</Link>
         </div>
       ),
-      permission: "exports.view",
     },
     {
       key: "exports-warehouse",
@@ -53,7 +50,6 @@ export default function ExportSidebar({
           <Link to="/exports/warehouse">{t("exports.warehouse")}</Link>
         </div>
       ),
-      permission: "exports.view",
     },
     {
       key: "exports-economics",
@@ -63,7 +59,6 @@ export default function ExportSidebar({
           <Link to="/exports/economics">{t("exports.economics")}</Link>
         </div>
       ),
-      permission: "exports.view",
     },
     {
       key: "exports-cultivation",
@@ -73,7 +68,6 @@ export default function ExportSidebar({
           <Link to="/exports/cultivation">{t("exports.cultivation")}</Link>
         </div>
       ),
-      permission: "exports.view",
     },
   ];
 

@@ -17,14 +17,16 @@ class ExternalCodeMappingSerializer(serializers.ModelSerializer):
 
 
 class ShareImportBatchSerializer(serializers.ModelSerializer):
-    file_url = serializers.SerializerMethodField()
-
+    # The uploaded CSV itself is deliberately NOT exposed. Reading ``.url`` on
+    # the FileField mints a signed capability token for it (the default storage
+    # signs every media URL), and that file holds a tenant's per-station demand
+    # for the week — so a bare attribute access would hand out a bearer link to
+    # member data on every list call. Nothing consumes it: the page renders
+    # ``original_filename``.
     class Meta:
         model = ShareImportBatch
         fields = [
             "id",
-            "file",
-            "file_url",
             "original_filename",
             "file_checksum",
             "year",
@@ -41,8 +43,6 @@ class ShareImportBatchSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
-            "file",
-            "file_url",
             "original_filename",
             "file_checksum",
             "status",
@@ -55,12 +55,6 @@ class ShareImportBatchSerializer(serializers.ModelSerializer):
             "applied_at",
             "applied_by",
         ]
-
-    def get_file_url(self, obj: ShareImportBatch) -> str | None:
-        try:
-            return obj.file.url if obj.file else None
-        except ValueError:
-            return None
 
 
 class ShareImportUploadSerializer(serializers.Serializer):

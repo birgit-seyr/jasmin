@@ -4,8 +4,8 @@ Generic, project-agnostic — only depends on `request.user.roles` being an
 iterable of role strings (see `apps.authz.roles.Role`). Any consuming app
 imports from here and never reaches into a specific user app.
 
-Mirrors the frontend `RoleFlags` shape in `src/auth/useRoles.ts`. Keep these
-in sync — backend enforcement must match UI gating exactly.
+Mirrors the frontend `RoleFlags` shape in `src/shared/auth/useRoles.ts`. Keep
+these in sync — backend enforcement must match UI gating exactly.
 """
 
 from __future__ import annotations
@@ -66,10 +66,6 @@ class HasAnyRole(BasePermission):
 
 class IsOffice(HasAnyRole):
     required_roles = (Role.OFFICE, Role.ADMIN)
-
-
-class IsGardener(HasAnyRole):
-    required_roles = (Role.GARDENER, Role.ADMIN)
 
 
 class IsManagement(HasAnyRole):
@@ -191,6 +187,29 @@ class RolePermissionsMixin:
     read_permission: type[BasePermission] | None = None
     write_permission: type[BasePermission] | None = None
     public_read_actions: frozenset[str] = frozenset()
+    # Action names to route through ``read_permission`` instead of
+    # ``write_permission``. A custom ``@action`` takes the write gate even when
+    # it is a read-only GET, which is stricter than the viewset's declared read
+    # gate and surfaces as a 403 on a page the role is allowed to open:
+    #
+    #     class WeeklyPlanViewSet(RolePermissionsMixin, ViewSet):
+    #         read_permission = IsStaff
+    #         write_permission = IsOffice
+    #         read_actions = frozenset({"grid"})
+    #
+    # Opt-in on purpose, and it must stay that way. On a viewset whose read
+    # gate admits members, the strict default is the only thing keeping a
+    # read-only GET office-only — four actions in this codebase rely on that,
+    # and naming any of them here would hand bulk personal data to member-role
+    # callers. Treating every GET as a read would do it wholesale.
+    #
+    # Unlike ``public_read_actions`` this never opens an action to anonymous
+    # callers; it only picks which of the two declared gates applies.
+    #
+    # A comment rather than a docstring on purpose: drf-spectacular walks the
+    # MRO for the first non-DRF class docstring, so prose here would be
+    # published as the API description of every viewset lacking one of its own.
+    read_actions: frozenset[str] = frozenset()
     _READ_ACTIONS = frozenset({"list", "retrieve"})
 
     def get_permissions(self):
@@ -203,11 +222,8 @@ class RolePermissionsMixin:
             return [AllowAny()]
 
         base = super().get_permissions()
-        chosen = (
-            self.read_permission
-            if action in self._READ_ACTIONS
-            else self.write_permission
-        )
+        is_read = action in self._READ_ACTIONS or action in self.read_actions
+        chosen = self.read_permission if is_read else self.write_permission
         return base + ([chosen()] if chosen else [])
 
 

@@ -391,9 +391,10 @@ class TestInvitationAccept:
 
 def _step_up_client(user) -> APIClient:
     """Authenticated client whose access token carries a fresh
-    ``step_up_verified_at`` claim. Granting a role via ``create`` /
-    ``partial_update`` (a ``roles`` payload) is step-up gated, so admin-user
-    flows that assign roles need this rather than a bare ``force_authenticate``.
+    ``step_up_verified_at`` claim. ``create`` / ``partial_update`` are step-up
+    gated whenever the payload carries a privilege-bearing key — ``roles``,
+    ``account_status`` or ``reseller_id`` — so those flows need this rather
+    than a bare ``force_authenticate``.
     """
     import time
 
@@ -510,10 +511,12 @@ class TestAdminUsersGating:
     def test_admin_partial_update_invalid_choice_returns_400(self, tenant):
         # account_status is a ChoiceField — an invalid choice is rejected by
         # is_valid (which runs on a REAL user id; a bad id would 404 first).
+        # It is also privilege-bearing, so the payload is step-up gated and
+        # permissions run before validation: without a fresh claim this would
+        # 403 before the choice is ever checked.
         admin = JasminUserFactory(roles=[Role.ADMIN])
         target = JasminUserFactory(account_status="active")
-        client = APIClient()
-        client.force_authenticate(user=admin)
+        client = _step_up_client(admin)
         resp = client.patch(
             f"/api/auth/admin/users/{target.id}/",
             data={"account_status": "banana"},

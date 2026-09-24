@@ -14,7 +14,6 @@ export default function MobileSidebar() {
       label: (
         <Link to="/commissioning/forecast">{t("commissioning.forecast")}</Link>
       ),
-      permission: "commissioning.view",
     },
 
     {
@@ -24,7 +23,6 @@ export default function MobileSidebar() {
           {t("commissioning.documentation_amounts")}
         </Link>
       ),
-      permission: "commissioning.view",
     },
 
     {
@@ -34,7 +32,6 @@ export default function MobileSidebar() {
           {t("commissioning.documentation_harvest")}
         </Link>
       ),
-      permission: "commissioning.view",
     },
     
     {
@@ -44,7 +41,6 @@ export default function MobileSidebar() {
           {t("commissioning.washing_list")}
         </Link>
       ),
-      permission: "commissioning.projects.view",
     },
     {
       key: "commissioning-harvesting-lists",
@@ -53,7 +49,6 @@ export default function MobileSidebar() {
           {t("commissioning.harvesting_lists")}
         </Link>
       ),
-      permission: "commissioning.projects.view",
     },
     {
       key: "commissioning-packing-lists",
@@ -62,7 +57,6 @@ export default function MobileSidebar() {
           {t("commissioning.packing_lists")}
         </Link>
       ),
-      permission: "commissioning.projects.view",
     },
     {
       key: "commissioning-commissioning-lists",
@@ -71,7 +65,6 @@ export default function MobileSidebar() {
           {t("commissioning.commissioning_lists")}
         </Link>
       ),
-      permission: "commissioning.projects.view",
     },
   ];
 

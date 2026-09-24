@@ -41,10 +41,12 @@ export default function ShareWeights() {
   const { t } = useTranslation();
   const { format } = useNumberFormat();
   const { getShareTypeVariationSizeLabel } = useShareTypeVariationSizeOptions();
-  const { canEdit } = useRoles();
+  // Writes here are office-only on the backend (ShareViewSet, IsOffice);
+  // `canEdit` would offer gardener/staff a save the API refuses.
+  const { isOffice } = useRoles();
   const permissions = useMemo(
-    () => gatedByPermissionOnlyEdit(canEdit),
-    [canEdit],
+    () => gatedByPermissionOnlyEdit(isOffice),
+    [isOffice],
   );
 
   const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =

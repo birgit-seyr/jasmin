@@ -32,11 +32,13 @@ const employeesResource: CrudResource<EmployeeRow> = {
 
 export default function ListEmployees() {
   const { t } = useTranslation();
-  const { canEdit } = useRoles();
+  // Writes here are office-only on the backend (EmployeeViewSet, IsOffice);
+  // `canEdit` would offer gardener/staff a save the API refuses.
+  const { isOffice } = useRoles();
   const isActiveColumn = useIsActiveColumn();
   const permissions = useMemo(
-    () => permissionsWithDeletable(canEdit),
-    [canEdit],
+    () => permissionsWithDeletable(isOffice),
+    [isOffice],
   );
 
   const columns = useMemo<EditableColumnConfig<EmployeeRow>[]>(

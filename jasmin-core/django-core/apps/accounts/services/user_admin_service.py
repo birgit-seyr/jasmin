@@ -10,6 +10,8 @@ Business rules enforced here:
   create members.
 - Account status updates from this surface are restricted to
   active/inactive transitions.
+- The last active admin can be neither demoted nor deactivated. Either would
+  leave the tenant with no administrator and no in-app recovery.
 - ``reseller_id`` is wired onto the linked Reseller object.
 """
 
@@ -210,67 +212,118 @@ def create_user_with_invite(*, data: dict[str, Any], created_by: JasminUser) -> 
 _ADMIN_SETTABLE_STATUSES = {"active", "inactive"}
 
 
+def _refuse_if_last_active_admin(*, user: JasminUser, attempted: str) -> None:
+    """Refuse an action that would leave the tenant with no administrator.
+
+    Demotion and deactivation both reach zero admins, so both take this guard
+    and the SAME lock. Serialising matters: without it, a concurrent demote-A
+    and deactivate-B each read the OTHER as "another active admin" under READ
+    COMMITTED, both pass, and both commit. The xact-scoped lock makes the
+    second block until the first commits, then re-read the reduced admin set
+    and be correctly refused. There is no in-app recovery from zero admins —
+    only an out-of-band super-admin grant.
+    """
+    acquire_advisory_xact_lock("admin_role:mutation")
+    another_active_admin_exists = (
+        JasminUser.objects.filter(roles__contains=[Role.ADMIN], is_active=True)
+        .exclude(pk=user.pk)
+        .exists()
+    )
+    if not another_active_admin_exists:
+        raise AdminUserError(
+            f"Cannot {attempted} the last active admin — the tenant would be "
+            "left without an administrator."
+        )
+
+
+def _log_user_update(
+    *,
+    actor: JasminUser,
+    user: JasminUser,
+    updated_fields: list[str],
+    previous_roles: list[str] | None,
+) -> None:
+    """Write the operational record of an admin edit to auth.log.
+
+    A role change gets its own line carrying before AND after: ``fields=
+    ['roles']`` cannot answer the question anyone actually asks of it. The
+    durable record is the auditlog row the save emits; this is the line an
+    operator greps.
+    """
+    logger.info(
+        "admin.user_updated by=%s target=%s fields=%s",
+        actor.email,
+        user.email,
+        sorted(set(updated_fields)),
+    )
+    if previous_roles is not None:
+        logger.info(
+            "admin.user_roles_changed by=%s target=%s before=%s after=%s",
+            actor.email,
+            user.email,
+            sorted(previous_roles),
+            sorted(user.roles or []),
+        )
+
+
+def _apply_role_change(
+    *, user: JasminUser, data: dict[str, Any], updated_fields: list[str]
+) -> list[str] | None:
+    """Validate and apply a requested role change, returning the prior list.
+
+    ``None`` means the payload carried no ``roles`` key at all — which is
+    what tells the caller there is no role change to log, as distinct from a
+    change that happened to end at the same set.
+    """
+    if "roles" not in data:
+        return None
+
+    new_roles = list(dict.fromkeys(data.get("roles") or []))
+    _validate_roles(new_roles)
+
+    currently_member = Role.MEMBER in (user.roles or [])
+    wants_member = Role.MEMBER in new_roles
+
+    if wants_member and not currently_member:
+        # Office can't grant the member role through this surface.
+        from apps.commissioning.models import Member
+
+        if not Member.objects.filter(user=user).exists():
+            raise AdminUserError(
+                "Cannot add 'member' role: this user is not linked to "
+                "a Member record. Create the member from the Members "
+                "page instead."
+            )
+    if not wants_member and currently_member:
+        from apps.commissioning.models import Member
+
+        if Member.objects.filter(user=user).exists():
+            raise AdminUserError(
+                "Cannot remove 'member' role while a Member record is "
+                "linked. Delete the member first."
+            )
+
+    # Self-demotion counts: the actor may be the last admin themselves.
+    removing_admin = Role.ADMIN in (user.roles or []) and Role.ADMIN not in new_roles
+    if removing_admin:
+        _refuse_if_last_active_admin(
+            user=user, attempted="remove the 'admin' role from"
+        )
+
+    previous_roles = list(user.roles or [])
+    user.roles = new_roles
+    updated_fields.append("roles")
+    return previous_roles
+
+
 @transaction.atomic
 def update_user_admin(
     *, user: JasminUser, data: dict[str, Any], actor: JasminUser
 ) -> dict:
     updated_fields: list[str] = []
-
-    if "roles" in data:
-        new_roles = list(dict.fromkeys(data.get("roles") or []))
-        _validate_roles(new_roles)
-
-        currently_member = Role.MEMBER in (user.roles or [])
-        wants_member = Role.MEMBER in new_roles
-
-        if wants_member and not currently_member:
-            # Office can't grant the member role through this surface.
-            from apps.commissioning.models import Member
-
-            if not Member.objects.filter(user=user).exists():
-                raise AdminUserError(
-                    "Cannot add 'member' role: this user is not linked to "
-                    "a Member record. Create the member from the Members "
-                    "page instead."
-                )
-        if not wants_member and currently_member:
-            from apps.commissioning.models import Member
-
-            if Member.objects.filter(user=user).exists():
-                raise AdminUserError(
-                    "Cannot remove 'member' role while a Member record is "
-                    "linked. Delete the member first."
-                )
-
-        # Don't let the last active admin lose the role — including via
-        # self-demotion. That leaves the tenant with no administrator and no
-        # in-app recovery (only an out-of-band super-admin grant restores it).
-        removing_admin = (
-            Role.ADMIN in (user.roles or []) and Role.ADMIN not in new_roles
-        )
-        if removing_admin:
-            # Serialise concurrent admin-role mutations so the check-and-demote
-            # can't race. Without this, two requests each demoting a DIFFERENT
-            # admin (or two self-demotions) both read the OTHER as "another
-            # active admin" under READ COMMITTED, both pass the guard, and both
-            # commit — leaving the tenant with ZERO admins (no in-app recovery,
-            # only an out-of-band super-admin grant). The xact-scoped advisory
-            # lock makes the second mutation block until the first commits, then
-            # re-read the now-reduced admin set and be correctly refused.
-            acquire_advisory_xact_lock("admin_role:mutation")
-            another_active_admin_exists = (
-                JasminUser.objects.filter(roles__contains=[Role.ADMIN], is_active=True)
-                .exclude(pk=user.pk)
-                .exists()
-            )
-            if not another_active_admin_exists:
-                raise AdminUserError(
-                    "Cannot remove the 'admin' role from the last active "
-                    "admin — the tenant would be left without an administrator."
-                )
-
-        user.roles = new_roles
-        updated_fields.append("roles")
+    previous_roles = _apply_role_change(
+        user=user, data=data, updated_fields=updated_fields
+    )
 
     for field in ("first_name", "last_name", "user_language"):
         if field in data:
@@ -289,17 +342,25 @@ def update_user_admin(
                 f"Cannot change account_status while user is in "
                 f"'{user.account_status}'."
             )
+        # Deactivating reaches zero admins just as demotion does.
+        deactivating_admin = (
+            new_status == "inactive"
+            and user.is_active
+            and Role.ADMIN in (user.roles or [])
+        )
+        if deactivating_admin:
+            _refuse_if_last_active_admin(user=user, attempted="deactivate")
         user.account_status = new_status
         updated_fields.append("account_status")
 
     if updated_fields:
         # save() will sync is_active; pass updated_at so the timestamp moves.
         user.save(update_fields=[*updated_fields, "updated_at"])
-        logger.info(
-            "admin.user_updated by=%s target=%s fields=%s",
-            actor.email,
-            user.email,
-            sorted(set(updated_fields)),
+        _log_user_update(
+            actor=actor,
+            user=user,
+            updated_fields=updated_fields,
+            previous_roles=previous_roles,
         )
 
     # Reseller link is handled separately because it lives on Reseller, not

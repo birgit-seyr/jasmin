@@ -2,6 +2,7 @@ import { ConfigProvider, Layout, theme } from "antd";
 import { lazy, Suspense, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { activateLanguage } from "@shared/i18n";
+import { ROLES } from "@shared/auth/roles";
 import { Navigate, Route, Routes } from "react-router-dom";
 import DynamicSidebar from "@shared/layout/DynamicSidebar";
 import Footer from "@shared/layout/Footer";
@@ -115,23 +116,17 @@ export default function JasminApp() {
     );
   }
 
-  // Check user roles
-  const hasRole = (role: string) => user?.roles?.includes(role);
   const hasOnlyRole = (role: string) =>
     user?.roles?.length === 1 && user?.roles[0] === role;
 
-  // Allow any user with at least one valid role
-  const hasAnyValidRole =
-    hasRole("office") ||
-    hasRole("management") ||
-    hasRole("gardener") ||
-    hasRole("pack_team") ||
-    hasRole("harvest_team") ||
-    hasRole("admin") ||
-    hasRole("superuser") ||
-    hasRole("staff") ||
-    hasRole("member") ||
-    hasRole("customer");
+  // Derived from the canonical list rather than spelled out, so a role added
+  // there is recognised here and a name that is not a role cannot be tested
+  // for. The literal list this replaces checked pack_team, harvest_team and
+  // superuser, none of which are roles.
+  const validRoles: string[] = Object.values(ROLES);
+  const hasAnyValidRole = (user?.roles ?? []).some((role) =>
+    validRoles.includes(role),
+  );
 
   if (!hasAnyValidRole) {
     return (

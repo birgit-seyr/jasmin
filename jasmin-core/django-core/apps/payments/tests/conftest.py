@@ -88,6 +88,18 @@ def member_api_client(member):
 
 
 @pytest.fixture()
+def gardener_api_client(tenant):
+    """APIClient authenticated as a gardener — internal, but not office.
+
+    The role that separates ``IsStaff`` from ``IsOffice``: a gate of the
+    former admits this client, the latter must refuse it.
+    """
+    client = APIClient()
+    client.force_authenticate(user=JasminUserFactory(roles=["gardener"]))
+    return client
+
+
+@pytest.fixture()
 def billing_profile(member):
     """A fully-valid SEPA Direct Debit profile for `member`."""
     return BillingProfile.objects.create(

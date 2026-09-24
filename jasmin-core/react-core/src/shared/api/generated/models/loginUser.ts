@@ -13,7 +13,6 @@ export interface LoginUser {
   last_name: string;
   user_language: string;
   roles: string[];
-  permissions: string[];
   /** @nullable */
   member_id?: string | null;
   /** @nullable */

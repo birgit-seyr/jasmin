@@ -379,7 +379,7 @@ class TestEmailBackend:
 
 class TestUpdateUserAdminLastAdminGuard:
     """``update_user_admin`` must not let the last active admin lose the role
-    (including via self-demotion) — that locks the tenant out."""
+    OR be deactivated (including by themselves) — either locks the tenant out."""
 
     def test_cannot_remove_admin_from_last_active_admin(self, tenant):
         admin = JasminUserFactory(roles=[Role.ADMIN], account_status="active")
@@ -401,3 +401,33 @@ class TestUpdateUserAdminLastAdminGuard:
         admin = JasminUserFactory(roles=[Role.ADMIN], account_status="active")
         with pytest.raises(AdminUserError, match="last active admin"):
             update_user_admin(user=admin, data={"roles": [Role.OFFICE]}, actor=admin)
+
+    def test_cannot_deactivate_last_active_admin(self, tenant):
+        # Deactivating is the other way to reach zero administrators, and the
+        # status branch guards it separately from the roles branch.
+        admin = JasminUserFactory(roles=[Role.ADMIN], account_status="active")
+        with pytest.raises(AdminUserError, match="last active admin"):
+            update_user_admin(
+                user=admin, data={"account_status": "inactive"}, actor=admin
+            )
+        admin.refresh_from_db()
+        assert admin.account_status == "active"
+        assert admin.is_active
+
+    def test_can_deactivate_admin_when_another_active_admin_exists(self, tenant):
+        other = JasminUserFactory(roles=[Role.ADMIN], account_status="active")
+        admin = JasminUserFactory(roles=[Role.ADMIN], account_status="active")
+        update_user_admin(user=admin, data={"account_status": "inactive"}, actor=other)
+        admin.refresh_from_db()
+        assert admin.account_status == "inactive"
+
+    def test_deactivating_a_non_admin_is_not_blocked(self, tenant):
+        # The guard must not fire for anyone who is not an admin, even when
+        # they are the last active user of their own role.
+        JasminUserFactory(roles=[Role.ADMIN], account_status="active")
+        office = JasminUserFactory(roles=[Role.OFFICE], account_status="active")
+        update_user_admin(
+            user=office, data={"account_status": "inactive"}, actor=office
+        )
+        office.refresh_from_db()
+        assert office.account_status == "inactive"

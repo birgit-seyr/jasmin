@@ -37,8 +37,8 @@ import { axiosService } from '../../../services/api';
 
 
 /**
- * Staff-only. Manages export batches.
- * @summary List billing runs (staff only)
+ * Office-only. Manages SEPA export batches.
+ * @summary List billing runs (office only)
  */
 export const paymentsBillingRunsList = (
     params?: PaymentsBillingRunsListParams,
@@ -110,7 +110,7 @@ export function usePaymentsBillingRunsList<TData = Awaited<ReturnType<typeof pay
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary List billing runs (staff only)
+ * @summary List billing runs (office only)
  */
 
 export function usePaymentsBillingRunsList<TData = Awaited<ReturnType<typeof paymentsBillingRunsList>>, TError = ErrorResponse>(
@@ -196,7 +196,7 @@ export const usePaymentsBillingRunsCreate = <TError = ErrorResponse,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Staff-only. Manages export batches.
+ * Office-only. Manages SEPA export batches.
  * @summary Retrieve a single billing run
  */
 export const paymentsBillingRunsRetrieve = (
@@ -289,7 +289,7 @@ export function usePaymentsBillingRunsRetrieve<TData = Awaited<ReturnType<typeof
 
 
 /**
- * Staff-only. Manages export batches.
+ * Office-only. Manages SEPA export batches.
  * @summary Delete a DRAFT billing run (Office only)
  */
 export const paymentsBillingRunsDestroy = (

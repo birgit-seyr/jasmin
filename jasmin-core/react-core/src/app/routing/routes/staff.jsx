@@ -1,4 +1,5 @@
 import { lazy } from "react";
+import { RequireRole } from "@shared/auth";
 
 const DashboardStaff = lazy(
   () => import("@features/staff/pages/DashboardStaff"),
@@ -22,58 +23,70 @@ const SaturdayShifts = lazy(
 export const staffRoutes = [
   {
     path: "/staff/dashboard",
-    element: <DashboardStaff />,
+    element: (
+      <RequireRole flag="isStaff">
+        <DashboardStaff />
+      </RequireRole>
+    ),
     meta: {
       title: "app.routes.staff_dashboard",
-      // requiredRole: [],
-      // requiredPermission: []
     },
   },
 
   {
     path: "/staff/weekly-staff-plan",
-    element: <WeeklyStaffPlan />,
+    element: (
+      <RequireRole flag="isStaff">
+        <WeeklyStaffPlan />
+      </RequireRole>
+    ),
     meta: {
       title: "app.routes.weekly_staff_plan",
-      // requiredRole: [],
-      // requiredPermission: []
     },
   },
 
   {
     path: "/staff/saturday-shifts",
-    element: <SaturdayShifts />,
+    element: (
+      <RequireRole flag="isStaff">
+        <SaturdayShifts />
+      </RequireRole>
+    ),
     meta: {
       title: "app.routes.saturday_shifts",
-      // requiredRole: [],
-      // requiredPermission: []
     },
   },
   {
     path: "/staff/weekly-plan-categories",
-    element: <ListWeeklyPlanCategories />,
+    element: (
+      <RequireRole flag="isStaff">
+        <ListWeeklyPlanCategories />
+      </RequireRole>
+    ),
     meta: {
       title: "app.routes.weekly_plan_categories",
-      // requiredRole: [],
-      // requiredPermission: []
     },
   },
   {
     path: "/staff/employees",
-    element: <ListEmployees />,
+    element: (
+      <RequireRole flag="isStaff">
+        <ListEmployees />
+      </RequireRole>
+    ),
     meta: {
       title: "app.routes.employees",
-      // requiredRole: [],
-      // requiredPermission: []
     },
   },
   {
     path: "/staff/absence-categories",
-    element: <ListAbsenceCategory />,
+    element: (
+      <RequireRole flag="isStaff">
+        <ListAbsenceCategory />
+      </RequireRole>
+    ),
     meta: {
       title: "app.routes.absence_categories",
-      // requiredRole: [],
-      // requiredPermission: []
     },
   },
 ];

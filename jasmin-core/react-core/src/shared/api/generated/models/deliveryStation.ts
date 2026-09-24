@@ -19,6 +19,8 @@ export interface DeliveryStation {
   readonly can_be_deleted?: boolean;
   readonly tour_assignment_missing?: boolean;
   readonly linked_reseller_can_be_deleted?: boolean;
+  readonly iban_masked?: string;
+  readonly iban_stored?: boolean;
   is_active?: boolean;
   /**
    * @maxLength 100

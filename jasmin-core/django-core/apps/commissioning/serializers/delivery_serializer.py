@@ -121,6 +121,24 @@ class DeliveryStationSerializer(
     # checkboxes can be unticked. False when the linked Reseller still has
     # dependants and would be orphaned by an unlink.
     linked_reseller_can_be_deleted = serializers.SerializerMethodField()
+    # ``to_representation`` drops the decrypted ``iban`` the contact
+    # annotations flatten onto the row; these carry the safe view, mirroring
+    # ``ResellerSerializer`` over the same shared ContactEntity. The office
+    # types a new IBAN to change it — the write path is untouched.
+    iban_masked = serializers.SerializerMethodField()
+    iban_stored = serializers.SerializerMethodField()
+
+    # The station-operational block: the door/lockbox code and the host's
+    # direct line. A member needs these for the stop they actually collect
+    # from and for no other — the catalogue read carries no row filter unless
+    # ``?member=`` is supplied, so without this every member reads every
+    # station's entry code.
+    MEMBER_PRIVATE_FIELDS = (
+        "access_code",
+        "contact_name",
+        "contact_phone",
+        "messenger_group_link",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -178,6 +196,36 @@ class DeliveryStationSerializer(
             reseller, exclude_models=["DeliveryStation"]
         )
         return can_delete
+
+    def get_iban_masked(self, obj) -> str:
+        from apps.shared.pii_masking import mask_iban
+
+        contact = getattr(obj, "contact", None)
+        return mask_iban(getattr(contact, "iban", None) if contact else None)
+
+    def get_iban_stored(self, obj) -> bool:
+        contact = getattr(obj, "contact", None)
+        return bool(getattr(contact, "iban", None) if contact else None)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # NEVER echo the decrypted IBAN. ``ContactEntity.iban`` is an
+        # EncryptedCharField and ``get_contact_annotations`` flattens every
+        # scalar contact column onto the row, so leaving it here undoes
+        # encryption-at-rest for every reader of an endpoint members can call.
+        data.pop("iban", None)
+
+        request = self.context.get("request")
+        if request is not None and has_any_role(request, *IsStaff.required_roles):
+            return data
+        # Non-staff reader — or no request to judge by, which fails closed.
+        # ``own_station_ids`` comes from the viewset context and holds the
+        # stations this member collects from.
+        own_station_ids = self.context.get("own_station_ids") or frozenset()
+        if instance.pk not in own_station_ids:
+            for field in self.MEMBER_PRIVATE_FIELDS:
+                data.pop(field, None)
+        return data
 
 
 # ========================================

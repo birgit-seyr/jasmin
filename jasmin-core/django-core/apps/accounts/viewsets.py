@@ -46,22 +46,30 @@ class AdminUserViewSet(RolePermissionsMixin, ViewSet):
     read_permission = IsAdmin
     write_permission = IsAdmin
 
+    # Payload keys that change what a user can do, each of which must cost a
+    # fresh password. ``roles`` assigns any role, ``admin`` included. A
+    # deactivated account keeps its role list, so ``account_status`` back to
+    # ``active`` restores whatever privilege the row already held — the same
+    # grant as writing ``roles``, reached without the key. ``reseller_id``
+    # binds a customer login to a reseller's data.
+    _PRIVILEGE_FIELDS = frozenset({"roles", "account_status", "reseller_id"})
+
     def get_permissions(self):
-        """Step-up-gate role grants. ``create`` / ``partial_update`` route into
-        ``create_user_with_invite`` / ``update_user_admin``, which can assign
-        ANY role (incl. ``admin`` / ``office``) — a privilege escalation a
-        stolen session token alone must not be able to fire without a fresh
-        password re-confirmation. Gate whenever the payload carries ``roles``
-        (mirrors the super-admin ``TenantManagementViewSet.update_user_roles``
-        gate); edits that leave roles untouched (name, contact, …) pass through
-        unprompted. Inspected on ``request.data`` rather than via
+        """Step-up-gate privilege grants. ``create`` / ``partial_update`` route
+        into ``create_user_with_invite`` / ``update_user_admin``, which can
+        escalate through any key in ``_PRIVILEGE_FIELDS`` — something a stolen
+        session token alone must not be able to fire (mirrors the super-admin
+        ``TenantManagementViewSet.update_user_roles`` gate). Edits touching
+        none of those keys (name, contact, …) pass through unprompted.
+        Inspected on ``request.data`` rather than via
         ``requires_step_up_for_fields`` because this is a plain ``ViewSet`` —
         it never calls ``check_object_permissions``, so an object-level gate
         would silently never fire.
         """
         perms = super().get_permissions()
-        if self.action in {"create", "partial_update"} and "roles" in (
-            getattr(self.request, "data", None) or {}
+        data = getattr(self.request, "data", None) or {}
+        if self.action in {"create", "partial_update"} and any(
+            field in data for field in self._PRIVILEGE_FIELDS
         ):
             perms.append(RequiresStepUp())
         return perms
@@ -173,4 +181,33 @@ class AdminUserViewSet(RolePermissionsMixin, ViewSet):
                 else EmailCategory.GENERAL
             ),
         )
+        return Response(serialize_user_row(user))
+
+    @extend_schema(
+        summary="Cancel a pending invitation (admin)",
+        description=(
+            "Revokes the outstanding invitation link for a user who has not "
+            "accepted yet. The account row is kept, so a cancellation made in "
+            "error is undone by resending rather than by re-provisioning."
+        ),
+        request=None,
+        responses={
+            200: AdminUserRowSerializer,
+            400: ErrorResponseSerializer,
+            401: ErrorResponseSerializer,
+            403: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
+    )
+    @action(detail=True, methods=["post"], url_path="cancel-invitation")
+    def cancel_invitation(self, request: Request, pk: str | None = None) -> Response:
+        from apps.shared.invitations import cancel_invitation
+
+        try:
+            user = JasminUser.objects.get(id=pk)
+        except JasminUser.DoesNotExist as exc:
+            raise UserNotFound("User not found") from exc
+        if user.account_status != "pending_invitation":
+            raise UserNotPendingInvitation("User is not waiting for an invitation.")
+        cancel_invitation(user=user, cancelled_by=auth_user(request))
         return Response(serialize_user_row(user))

@@ -290,6 +290,8 @@ class HarvestSharePlanningViewSet(RolePermissionsMixin, viewsets.ViewSet):
 class PackingListViewSet(RolePermissionsMixin, viewsets.ViewSet):
     read_permission = IsStaff
     write_permission = IsOffice
+    # Read-only GETs — both back the isStaff-gated packing-list pages.
+    read_actions = frozenset({"boxes_matrix", "member_amounts"})
     # See HarvestSharePlanningViewSet for the rationale.
     serializer_class = inline_serializer(name="PackingListPlaceholder", fields={})
 

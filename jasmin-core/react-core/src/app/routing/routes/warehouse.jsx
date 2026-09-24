@@ -1,4 +1,5 @@
 import { lazy } from "react";
+import { RequireRole } from "@shared/auth";
 
 const DashboardWarehouse = lazy(() =>
   import("@features/warehouse/pages/DashboardWarehouse")
@@ -7,11 +8,13 @@ const DashboardWarehouse = lazy(() =>
 export const warehouseRoutes = [
   {
     path: "/warehouse/dashboard",
-    element: <DashboardWarehouse />,
+    element: (
+      <RequireRole flag="isStaff">
+        <DashboardWarehouse />
+      </RequireRole>
+    ),
     meta: {
       title: "app.routes.warehouse_dashboard",
-      // requiredRole: [],
-      // requiredPermission: []
     },
   },
 ];

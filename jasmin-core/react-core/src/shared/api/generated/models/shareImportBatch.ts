@@ -10,10 +10,6 @@ import type { ShareImportBatchStatusEnum } from './shareImportBatchStatusEnum';
 export interface ShareImportBatch {
   readonly id?: string;
   /** @nullable */
-  readonly file?: string | null;
-  /** @nullable */
-  readonly file_url?: string | null;
-  /** @nullable */
   readonly original_filename?: string | null;
   readonly file_checksum?: string;
   /**

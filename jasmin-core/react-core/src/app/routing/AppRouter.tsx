@@ -50,12 +50,12 @@ export const AppRouter = ({ defaultRedirect = "/" }: AppRouterProps) => {
         {routeGroups.map(({ path: groupPath, routes }) => {
           const groupRoutes = (
             <Routes>
-              {routes.map(({ path, element, meta }) => (
+              {routes.map(({ path, element }) => (
                 <Route
                   key={path}
                   path={path.replace(groupPath, "")}
                   element={
-                    <ProtectedRoute meta={meta}>{element}</ProtectedRoute>
+                    <ProtectedRoute>{element}</ProtectedRoute>
                   }
                 />
               ))}

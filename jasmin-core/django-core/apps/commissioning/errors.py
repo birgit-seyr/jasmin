@@ -157,6 +157,20 @@ class DeliveryStationNotFound(BadRequestError):
     code = "delivery_station.not_found"
 
 
+class SharedStationIdentityLocked(ForbiddenError):
+    """A customer self-edit tried to rewrite identity columns on a
+    ``ContactEntity`` that a ``DeliveryStation`` also owns.
+
+    One row can back both a Reseller and a pickup station
+    (``ResellerAndDeliveryStationService`` does ``get_or_create(contact=…)``),
+    and the station's name and address are shown to members as a physical
+    collection point. Station writes are office-only, so the customer surface
+    must not reach those columns through the shared row. Contact and bank
+    fields on the same row stay editable."""
+
+    code = "my_data.shared_station_identity_locked"
+
+
 class DeliveryDayRequired(BadRequestError):
     """The ``delivery_day`` parameter is missing on an endpoint that
     needs it to resolve the SharesDeliveryDay."""
@@ -975,6 +989,24 @@ class MemberHasNoEmail(MemberInvitationError):
 
 class MemberUserAlreadyActive(MemberInvitationError):
     code = "member.user_already_active"
+
+
+class MemberEmailHeldByNonMemberLogin(MemberInvitationError):
+    """The member's address already holds a login with no member profile.
+
+    Distinct from :class:`MemberEmailAlreadyHasUser`, which names a login
+    belonging to a DIFFERENT member. Here the row belongs to nobody — a staff
+    account, or one still mid-invitation. Inviting into it would not create an
+    account, it would take one over: the shared invitation helper reuses
+    ``inactive`` / ``pending_invitation`` rows, rolling this member's name onto
+    the row and replacing its roles, so the primary key and every
+    ``created_by`` reference pointing at it silently changes owner.
+
+    Attaching an existing login to a member is a separate, deliberate
+    operation — ``MemberService.link_to_user``, which runs
+    ``assert_user_can_be_linked``."""
+
+    code = "member.email_held_by_non_member_login"
 
 
 class MemberEmailAlreadyHasUser(MemberInvitationError):
@@ -2062,4 +2094,6 @@ __all__ = [
     "TimeBoundValidFromNotMonday",
     "TimeBoundValidUntilNotSunday",
     "TimeBoundInvalidRange",
+    "SharedStationIdentityLocked",
+    "MemberEmailHeldByNonMemberLogin",
 ]

@@ -127,7 +127,7 @@ describe("AuthContext.login", () => {
     axiosPostMock.mockResolvedValue({
       data: {
         access: "new-jwt",
-        user: { id: "u-1", roles: ["office"], permissions: ["view_x"] },
+        user: { id: "u-1", roles: ["office"] },
       },
     });
 
@@ -331,7 +331,7 @@ describe("AuthContext token sync + helpers", () => {
     expect(localStorage.getItem("auth")).toBeNull();
   });
 
-  it("hasRole / hasPermission consult the live user", async () => {
+  it("hasRole consults the live user", async () => {
     performRefreshMock.mockRejectedValue(new Error("anon"));
     axiosPostMock.mockResolvedValue({
       data: {
@@ -339,7 +339,6 @@ describe("AuthContext token sync + helpers", () => {
         user: {
           id: "u-1",
           roles: ["office", "member"],
-          permissions: ["view_x"],
         },
       },
     });
@@ -355,8 +354,6 @@ describe("AuthContext token sync + helpers", () => {
     expect(probedAuth!.hasRole("office")).toBe(true);
     expect(probedAuth!.hasRole(["admin", "member"])).toBe(true);
     expect(probedAuth!.hasRole("admin")).toBe(false);
-    expect(probedAuth!.hasPermission("view_x")).toBe(true);
-    expect(probedAuth!.hasPermission("delete_x")).toBe(false);
     // userRole prefers "admin" then first role.
     expect(probedAuth!.userRole).toBe("office");
   });

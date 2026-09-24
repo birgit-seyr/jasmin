@@ -643,6 +643,11 @@ class ShareDeliveryViewSet(
     week's planning data."""
 
     read_permission = IsStaffOrMember
+    # A read-only GET behind an isStaff-gated page. Naming it here routes it
+    # through ``read_permission``, which admits members — the action's own
+    # ``enforce_privileged`` is what excludes them, so that call is required,
+    # not redundant.
+    read_actions = frozenset({"box_combination_matrix"})
     # Members may ONLY reach the opt-in actions (see get_permissions). All
     # standard CRUD + the office @actions require IsOffice. IsOfficeOrMember on
     # every write verb would let a member POST/PATCH/DELETE arbitrary
@@ -917,7 +922,16 @@ class ShareDeliveryViewSet(
     )
     @action(detail=False, methods=["get"], pagination_class=None)
     def box_combination_matrix(self, request: Request) -> Response:
-        enforce_privileged(request, "Staff only.")
+        # Load-bearing, not redundant: this action is named in ``read_actions``,
+        # so the mixin applies ``read_permission = IsStaffOrMember`` and a
+        # member clears that gate. This check is what keeps the whole-tenant
+        # matrix — every tour/station × box combination, unscoped — off a
+        # member's screen. The default privileged set excludes staff and
+        # gardener, who are exactly the roles this page is gated for, so it
+        # takes the full internal set instead.
+        enforce_privileged(
+            request, "Staff only.", privileged_roles=IsStaff.required_roles
+        )
         params = validate_query_params(
             request,
             required=["year", "delivery_week"],
@@ -1210,6 +1224,10 @@ class ShareContentViewSet(BaseArchivableViewSet):
 class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaff
     write_permission = IsOffice
+    # Read-only GETs. ``export_csv`` is the share-weights CSV button, which is
+    # bulk operational data rather than personal data — consistent with this
+    # viewset's own ``read_permission``.
+    read_actions = frozenset({"get_days", "export_csv"})
     serializer_class = ShareSerializer
 
     @extend_schema(
@@ -1529,6 +1547,9 @@ _DEFAULT_SHARE_CONTENT_ID_FIELDS = [
 class DefaultShareContentViewSet(RolePermissionsMixin, viewsets.ViewSet):
     read_permission = IsStaff
     write_permission = IsOffice
+    # Read-only GETs. Only reachable from office pages today; naming them makes
+    # ``read_permission = IsStaff`` mean what it says.
+    read_actions = frozenset({"bulk_list", "subscriber_counts"})
     # Pure ViewSet — every @action below has its own @extend_schema.
     # This placeholder silences spectacular's class-level "unable to
     # guess serializer" warning without affecting the actual schema.
@@ -1870,6 +1891,8 @@ class ShareDeliveryOverviewViewSet(
 class ShareDeliveryDetailsViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaff
     write_permission = IsOffice
+    # Read-only GET behind the isStaff-gated delivery-station details page.
+    read_actions = frozenset({"matrix"})
     serializer_class = ShareDeliveryOverviewSerializer
     # Read-only: the UI consumes only the aggregated ``list`` grid below. The
     # inherited create/update/destroy verbs would mutate demand-driving

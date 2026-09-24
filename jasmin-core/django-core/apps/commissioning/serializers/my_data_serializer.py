@@ -5,7 +5,8 @@ from rest_framework import serializers
 
 from apps.shared.pii_masking import MaskedIBANFieldMixin
 
-from ..models import ContactEntity, CoopShare, Member
+from ..errors import SharedStationIdentityLocked
+from ..models import ContactEntity, CoopShare, DeliveryStation, Member
 
 
 class MyDataCoopShareSerializer(serializers.ModelSerializer):
@@ -242,6 +243,25 @@ class MyCustomerDataUpdateSerializer(serializers.ModelSerializer):
     Edits the linked ``ContactEntity``. The owning ``Reseller`` row
     (customer_number, invoice_*, channel flags) stays office-only."""
 
+    # Columns that name the contact as a PLACE. A single ContactEntity can back
+    # both a Reseller and a DeliveryStation — ``ResellerAndDeliveryStationService``
+    # binds them with ``get_or_create(contact=…)`` — and where it does, these
+    # columns are the pickup location members are sent to. Station writes are
+    # office-only, so this self-service surface must not reach them through the
+    # shared row. Every other field here identifies the person rather than the
+    # place and stays self-editable.
+    STATION_IDENTITY_FIELDS = frozenset(
+        {
+            "company_name",
+            "first_name",
+            "last_name",
+            "address",
+            "zip_code",
+            "city",
+            "country",
+        }
+    )
+
     class Meta:
         model = ContactEntity
         fields = [
@@ -265,3 +285,19 @@ class MyCustomerDataUpdateSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "iban": {"required": False, "allow_blank": True, "allow_null": True},
         }
+
+    def validate(self, attrs: dict) -> dict:
+        attrs = super().validate(attrs)
+        if self.instance is None:
+            return attrs
+        changed = sorted(
+            name
+            for name in self.STATION_IDENTITY_FIELDS & set(attrs)
+            if attrs[name] != getattr(self.instance, name, None)
+        )
+        if changed and DeliveryStation.objects.filter(contact=self.instance).exists():
+            raise SharedStationIdentityLocked(
+                "This contact also identifies a delivery station. "
+                f"{', '.join(changed)} can only be changed by the office."
+            )
+        return attrs

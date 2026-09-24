@@ -351,6 +351,69 @@ export const useAuthAdminUsersPartialUpdate = <TError = ErrorResponse,
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Revokes the outstanding invitation link for a user who has not accepted yet. The account row is kept, so a cancellation made in error is undone by resending rather than by re-provisioning.
+ * @summary Cancel a pending invitation (admin)
+ */
+export const authAdminUsersCancelInvitationCreate = (
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<AdminUserRow>(
+      {url: `/api/auth/admin/users/${id}/cancel-invitation/`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getAuthAdminUsersCancelInvitationCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authAdminUsersCancelInvitationCreate>>, TError,{id: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof authAdminUsersCancelInvitationCreate>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['authAdminUsersCancelInvitationCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authAdminUsersCancelInvitationCreate>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  authAdminUsersCancelInvitationCreate(id,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AuthAdminUsersCancelInvitationCreateMutationResult = NonNullable<Awaited<ReturnType<typeof authAdminUsersCancelInvitationCreate>>>
+    
+    export type AuthAdminUsersCancelInvitationCreateMutationError = ErrorResponse
+
+    /**
+ * @summary Cancel a pending invitation (admin)
+ */
+export const useAuthAdminUsersCancelInvitationCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authAdminUsersCancelInvitationCreate>>, TError,{id: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof authAdminUsersCancelInvitationCreate>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getAuthAdminUsersCancelInvitationCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Cancels the user's open invitation, creates a new one and emails it. For a member's portal login (no internal and no customer role) the invitation is a member email: refused with 409 while the tenant's onboarding mode is on, before any invitation is created or quota is used, as members/{id}/send_invitation is.
  * @summary Re-send invitation email to a user still in pending_invitation
  */

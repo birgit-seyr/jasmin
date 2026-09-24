@@ -23,6 +23,7 @@ from ..errors import (
     MemberAlreadyCancelled,
     MemberAlreadyConfirmed,
     MemberEmailAlreadyHasUser,
+    MemberEmailHeldByNonMemberLogin,
     MemberHasNoEmail,
     MemberUserAlreadyActive,
     UserAlreadyLinked,
@@ -366,6 +367,23 @@ class MemberService:
             holder = getattr(conflicting_user, "member_profile", None)
             if holder is not None and holder.pk != member.pk:
                 raise MemberEmailAlreadyHasUser(email=member.email, holder=holder)
+            # ``member.user_id`` is None on this branch, so no member profile
+            # at all means the address belongs to a NON-member login — a staff
+            # account, or one still mid-invitation. That is not an account to
+            # invite into: ``create_user_with_invitation`` reuses ``inactive``
+            # and ``pending_invitation`` rows, so it would roll this member's
+            # name onto that row, replace its roles with [member], and link it
+            # here — handing the primary key, and every ``created_by``
+            # reference pointing at it, to whoever accepts the invite. The
+            # account would also come back to life without the explicit
+            # operator decision ``_deactivate_linked_user`` requires.
+            # Attaching an existing login to a member is a separate operation
+            # (``link_to_user`` → ``assert_user_can_be_linked``).
+            if holder is None:
+                raise MemberEmailHeldByNonMemberLogin(
+                    "This email address already has a login without a member "
+                    "profile."
+                )
 
         user, _invitation = create_user_with_invitation(
             email=member.email,

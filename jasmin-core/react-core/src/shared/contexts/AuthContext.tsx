@@ -40,7 +40,6 @@ import { TenantContext } from "./TenantContext";
  */
 interface AuthUser {
   id: string;
-  permissions?: string[];
   roles?: string[];
   user_language?: string;
   theme?: string;
@@ -66,7 +65,6 @@ interface AuthMetadata {
 
 interface AuthContextValue {
   user: AuthUser | null;
-  permissions: string[];
   userRole: string | null;
   loading: boolean;
   /** True only during the initial silent-refresh boot (NOT per-action). The
@@ -77,7 +75,6 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
   accessToken: string | null;
-  hasPermission: (permission: string) => boolean;
   hasRole: (role: string | string[]) => boolean | undefined;
   /** ``/api/auth/login/`` returns ONE of two shapes: the completed
    *  login (``{ access, user, tenant }``) or, when the account has 2FA
@@ -426,14 +423,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const isAuthenticated = !!accessToken;
 
-  const hasPermission = useCallback(
-    (permission: string) => {
-      const userPermissions = getUser()?.permissions || [];
-      return userPermissions.includes(permission);
-    },
-    [getUser],
-  );
-
   const hasRole = useCallback(
     (role: string | string[]) => {
       const currentUser = getUser();
@@ -447,7 +436,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       user: getUser(),
-      permissions: getUser()?.permissions || [],
       userRole: getUser()?.roles?.includes("admin")
         ? "admin"
         : getUser()?.roles?.[0] || null,
@@ -458,7 +446,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSuperAdmin:
         isSuperAdminHost(window.location.hostname) && isAuthenticated,
       accessToken,
-      hasPermission,
       hasRole,
       login,
       verifyTwoFactor,
@@ -479,7 +466,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessToken,
       getUser,
       getAccessToken,
-      hasPermission,
       hasRole,
       login,
       verifyTwoFactor,

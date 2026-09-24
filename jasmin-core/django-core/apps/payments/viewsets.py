@@ -503,7 +503,7 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
 @extend_schema_view(
     list=extend_schema(
         tags=["Payments — Billing runs"],
-        summary="List billing runs (staff only)",
+        summary="List billing runs (office only)",
         parameters=[
             catalogue_parameter(
                 "year",
@@ -541,9 +541,18 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
     ),
 )
 class BillingRunViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-    """Staff-only. Manages export batches."""
+    """Office-only. Manages SEPA export batches."""
 
-    read_permission = IsStaff
+    # Read is office rather than staff, and the reason is a comment rather
+    # than part of the docstring: drf-spectacular publishes the docstring as
+    # the endpoint description, and this rationale describes exactly where
+    # the weak point is. The serializer hands out ``sepa_xml_export_url``, a
+    # signed link to the pain.008 file listing every debited member's name
+    # and IBAN, and that link carries no role check of its own — possession
+    # of the token is the authorization. This gate is the only thing between
+    # an internal role and that file, and the viewset applies no row scoping
+    # either, so a broader gate would mean the whole billing history.
+    read_permission = IsOffice
     write_permission = IsOffice
     queryset = BillingRun.objects.all()
     serializer_class = BillingRunSerializer

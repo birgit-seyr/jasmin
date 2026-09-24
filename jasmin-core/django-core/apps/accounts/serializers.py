@@ -77,7 +77,6 @@ class LoginUserSerializer(serializers.Serializer):
     last_name = serializers.CharField(allow_blank=True)
     user_language = serializers.CharField()
     roles = serializers.ListField(child=serializers.CharField())
-    permissions = serializers.ListField(child=serializers.CharField())
     member_id = serializers.CharField(allow_null=True, required=False)
     reseller_id = serializers.CharField(allow_null=True, required=False)
 

@@ -56,6 +56,7 @@
     "link_conflict": "Verknüpfung nicht möglich — dieser User ist bereits einem anderen Mitglied zugeordnet.",
     "user_already_linked": "Dieser User ist bereits mit einem Mitglied verknüpft.",
     "user_in_blocked_status": "Dieser User ist gesperrt und kann nicht eingeladen werden.",
+    "email_held_by_non_member_login": "Zu dieser E-Mail-Adresse gibt es bereits ein Login ohne Mitgliedsprofil, etwa ein Mitarbeitenden-Konto. Eine Einladung würde dieses Konto übernehmen statt ein neues anzulegen — bitte das bestehende Konto bewusst verknüpfen.",
     "user_already_active": "Dieser User ist bereits aktiv — keine Einladung mehr nötig.",
     "email_already_has_user": "Diese E-Mail-Adresse hat bereits ein Benutzerkonto, das zu einem anderen Mitglied gehört. Eine Adresse kann nur EIN Login haben — bitte lade dieses Mitglied ein oder hinterlege hier eine eigene Adresse.",
     "email_already_has_user_named": "Diese E-Mail-Adresse hat bereits ein Benutzerkonto von {{holder_name}}. Eine Adresse kann nur EIN Login haben — bitte hinterlege für dieses Mitglied eine eigene Adresse.",
@@ -178,6 +179,9 @@
     "capacity_below_occupancy": "Kapazität kann nicht auf {{capacity}} gesetzt werden — in KW {{week}}/{{year}} sind bereits {{peak}} Anteile gebucht. Bitte mindestens {{peak}} wählen.",
     "in_use": "Diese Verteilstation kann nicht gelöscht werden, weil noch Lieferungen auf ihre Abholtage verweisen. Bitte zuerst die Lieferungen verschieben oder beenden.",
     "not_found": "Verteilstation nicht gefunden."
+  },
+  "my_data": {
+    "shared_station_identity_locked": "Name und Adresse dieses Kontos gehören zu einer Verteilstation und können hier nicht geändert werden — bitte ans Büro wenden. E-Mail, Telefon und Bankverbindung bleiben änderbar."
   },
   "delivery_exception": {
     "invalid_range": "Der Zeitraum der Lieferpause ist ungültig — Beginn muss ein Montag, Ende ein Sonntag sein, und der Beginn darf nicht nach dem Ende liegen.",

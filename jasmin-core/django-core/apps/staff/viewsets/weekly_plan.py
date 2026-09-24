@@ -26,6 +26,10 @@ class WeeklyPlanViewSet(RolePermissionsMixin, viewsets.ViewSet):
 
     read_permission = IsStaff
     write_permission = IsOffice
+    # This viewset defines no ``list``/``retrieve``, so without naming ``grid``
+    # here ``read_permission`` is never consulted at all and the whole weekly
+    # plan is office-only. ``create`` / ``copy`` stay on ``write_permission``.
+    read_actions = frozenset({"grid"})
 
     @extend_schema(
         parameters=[get_year_parameter(), get_week_parameter()],

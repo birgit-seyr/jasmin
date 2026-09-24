@@ -263,6 +263,33 @@ def resend_invitation(
     return invitation
 
 
+def cancel_invitation(*, user: JasminUser, cancelled_by=None) -> int:
+    """Revoke every outstanding invitation for ``user``. Returns the count.
+
+    ``get_invitation`` resolves only rows still in ``SENT``, so flipping them
+    to ``CANCELLED`` makes an already-emailed link inert on the next click —
+    the token is the sole credential, and there is otherwise no way to stop an
+    acceptance inside the 7-day TTL.
+
+    The account row is deliberately untouched: it stays ``pending_invitation``
+    and inactive, so a revocation made in error is undone by
+    :func:`resend_invitation` rather than by re-provisioning the user.
+    """
+    from apps.commissioning.models import UserInvitation
+    from apps.commissioning.models.choices import InvitationStatus
+
+    revoked = UserInvitation.objects.filter(
+        user=user, status=InvitationStatus.SENT
+    ).update(status=InvitationStatus.CANCELLED)
+    logger.info(
+        "invitation.cancelled user=%s by=%s count=%s",
+        user.email,
+        getattr(cancelled_by, "email", "system"),
+        revoked,
+    )
+    return revoked
+
+
 def get_invitation(token: str):
     """Look up an invitation by token. Returns the invitation or None.
 

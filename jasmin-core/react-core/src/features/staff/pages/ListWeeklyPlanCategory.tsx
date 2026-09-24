@@ -32,11 +32,13 @@ const weeklyPlanCategoriesResource: CrudResource<WeeklyPlanCategoryRow> = {
 
 export default function ListWeeklyPlanCategory() {
   const { t } = useTranslation();
-  const { canEdit } = useRoles();
+  // Writes here are office-only on the backend (WeeklyPlanCategoryViewSet,
+  // IsOffice); `canEdit` would offer gardener/staff a save the API refuses.
+  const { isOffice } = useRoles();
   const isActiveColumn = useIsActiveColumn();
   const permissions = useMemo(
-    () => permissionsWithDeletable(canEdit),
-    [canEdit],
+    () => permissionsWithDeletable(isOffice),
+    [isOffice],
   );
 
   const columns = useMemo<EditableColumnConfig<WeeklyPlanCategoryRow>[]>(

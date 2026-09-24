@@ -1,25 +1,26 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@shared/contexts/AuthContext";
-import { useTenant } from "@hooks/index";
-import UnauthorizedPage from "../UnauthorizedPage";
-import { logger } from "@shared/utils";
-import type { RouteMeta } from "./types";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  /** Route meta information (access requirements). */
-  meta?: RouteMeta;
 }
 
+/**
+ * Authentication only — it decides whether you are logged in, never what you
+ * may reach.
+ *
+ * Authorization is ``RequireRole`` inside the route files, which reads the
+ * full role list. Nothing here should gate on a role: the one singular role
+ * value available (``userRole``) collapses a multi-role user to one string,
+ * so a check against it would answer differently depending on the order the
+ * backend happened to store them in.
+ */
 export const ProtectedRoute = ({
   children,
-  meta,
 }: ProtectedRouteProps): ReactNode => {
-  const { isAuthenticated, hasPermission, loading, userRole, isSuperAdmin } =
-    useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
-  const { getSetting } = useTenant();
 
   if (loading) {
     return (
@@ -29,49 +30,9 @@ export const ProtectedRoute = ({
     );
   }
 
-  // 1. Authentication check
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 2. Super admin bypass
-  if (isSuperAdmin) {
-    return children; // Super admins can access everything
-  }
-
-  // 3. Tenant superuser bypass
-  if (userRole === "superuser") {
-    return children; // Tenant superusers can access everything in their tenant
-  }
-
-  // 4. Meta-based checks (evaluated independently — a route may declare a
-  //    role gate, a permission gate, or both). Super-admins and tenant
-  //    superusers already returned above, so any role that reaches here —
-  //    including "member" — must be explicitly listed to pass the role gate.
-  if (meta?.requiredRole) {
-    const roles = Array.isArray(meta.requiredRole)
-      ? meta.requiredRole
-      : [meta.requiredRole];
-    if (!userRole || !roles.includes(userRole)) {
-      return <Navigate to="/unauthorized" replace />;
-    }
-  }
-
-  if (meta?.requiredPermission && !hasPermission(meta.requiredPermission)) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  if (meta?.requiredSetting) {
-    const settingEnabled = getSetting(meta.requiredSetting, false);
-
-    if (!settingEnabled) {
-      logger.debug(`🚫 Route blocked: ${meta.requiredSetting} is disabled`);
-      return (
-        <UnauthorizedPage message={`Feature not enabled for this tenant`} />
-      );
-    }
-  }
-
-  // 5. All checks passed
   return children;
 };

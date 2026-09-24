@@ -24,7 +24,6 @@ export default function StaffSidebar({
           {t("staff.weekly_staff_plan")}
         </Link>
       ),
-      permission: "staff.team.view",
     },
     {
       key: "staff-saturday-shifts",
@@ -32,7 +31,6 @@ export default function StaffSidebar({
       label: (
         <Link to="/staff/saturday-shifts">{t("staff.saturday_shifts")}</Link>
       ),
-      permission: "staff.team.view",
     },
     {
       key: "staff-data",
@@ -44,7 +42,6 @@ export default function StaffSidebar({
         {
           key: "staff-employees",
           label: <Link to="/staff/employees">{t("staff.employees")}</Link>,
-          permission: "staff.team.view",
         },
         {
           key: "staff-weekly-plan-categories",
@@ -53,7 +50,6 @@ export default function StaffSidebar({
               {t("staff.weekly_plan_categories")}
             </Link>
           ),
-          permission: "staff.team.view",
         },
         {
           key: "staff-absence-categories",
@@ -62,7 +58,6 @@ export default function StaffSidebar({
               {t("staff.absence_categories")}
             </Link>
           ),
-          permission: "staff.team.view",
         },
       ],
     },

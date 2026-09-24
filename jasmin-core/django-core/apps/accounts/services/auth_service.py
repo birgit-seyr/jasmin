@@ -50,7 +50,6 @@ class LoginResult:
     refresh: str
     member_id: str | None
     reseller_id: str | None
-    permissions: list[str]
 
 
 @dataclass
@@ -142,18 +141,6 @@ def _issue_login_tokens(*, user: JasminUser, tenant) -> LoginResult:
     user_roles = user.roles or ["member"]
     access["user_role"] = user_roles[0] if user_roles else "member"
 
-    try:
-        permissions = (
-            list(user.get_all_permissions())
-            if hasattr(user, "get_all_permissions")
-            else []
-        )
-    except (AttributeError, TypeError):
-        # Backend doesn't expose ``get_all_permissions`` or returns
-        # something non-iterable — log-and-ignore is enough; the JWT
-        # just won't carry permissions.
-        permissions = []
-
     member_profile = getattr(user, "member_profile", None)
     linked_reseller = getattr(user, "linked_reseller", None)
 
@@ -163,7 +150,6 @@ def _issue_login_tokens(*, user: JasminUser, tenant) -> LoginResult:
         refresh=str(refresh),
         member_id=member_profile.id if member_profile else None,
         reseller_id=linked_reseller.id if linked_reseller else None,
-        permissions=permissions,
     )
 
 

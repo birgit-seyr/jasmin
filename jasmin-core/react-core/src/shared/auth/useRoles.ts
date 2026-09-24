@@ -6,7 +6,7 @@ import { ROLES, type Role } from "./roles";
  * named groups for common combinations across the app.
  *
  *   const r = useRoles();
- *   if (r.canEdit) { ... }            // gardener + office + admin
+ *   if (r.canEdit) { ... }            // gardener + staff + office + admin
  *   if (r.isOffice) { ... }           // office + admin
  *   if (r.isStaff) { ... }            // any internal role
  *   if (r.gardener && r.office) ...   // raw role checks still available
@@ -21,7 +21,12 @@ export type RoleFlags = Omit<Record<Role, boolean>, "member" | "customer"> & {
   hasMemberRole: boolean;
   /** holds the customer role */
   hasCustomerRole: boolean;
-  /** gardener OR office OR admin — “can edit operational data” */
+  /**
+   * gardener OR staff OR office OR admin — "can edit operational data".
+   * Only correct for resources whose backend write gate is `IsStaff`. Pages on
+   * an `IsOffice` write gate must use `isOffice`, or they render controls the
+   * API refuses.
+   */
   canEdit: boolean;
   /** office OR admin — administrative actions (exports, prices, finalize…) */
   isOffice: boolean;

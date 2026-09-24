@@ -9,7 +9,7 @@ apps/accounts/models.py: N806 Variable `CHUNK_SIZE` in function should be lowerc
 apps/accounts/services/auth_service.py: C901 `refresh_access_token` is too complex (11 > 10)
 apps/accounts/services/registration_service.py: C901 `register_public_applicant` is too complex (13 > 10)
 apps/accounts/services/registration_service.py: PLR0915 Too many statements (57 > 50)
-apps/accounts/services/user_admin_service.py: C901 `update_user_admin` is too complex (19 > 10)
+apps/accounts/services/user_admin_service.py: C901 `update_user_admin` is too complex (13 > 10)
 apps/accounts/tests/test_onboarding_member_invitations.py: PLR0913 Too many arguments in function definition (7 > 5)
 apps/authz/scoping.py: PLR0913 Too many arguments in function definition (6 > 5)
 apps/commissioning/models/base.py: N806 Variable `CHUNK_SIZE` in function should be lowercase

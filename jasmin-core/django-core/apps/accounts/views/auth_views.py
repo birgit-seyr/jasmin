@@ -196,7 +196,6 @@ def _login_payload(*, result, tenant) -> dict:
             "last_name": user.last_name or "",
             "user_language": getattr(user, "user_language", "en"),
             "roles": user.roles or ["member"],
-            "permissions": result.permissions,
             "member_id": result.member_id,
             "reseller_id": result.reseller_id,
         },

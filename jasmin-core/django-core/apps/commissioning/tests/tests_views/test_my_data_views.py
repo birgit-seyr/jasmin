@@ -32,6 +32,7 @@ from apps.commissioning.tests.factories import (
     ContactEntityFactory,
     CoopShareFactory,
     DeliveryStationDayFactory,
+    DeliveryStationFactory,
     JasminUserFactory,
     MemberFactory,
     PaymentCycleFactory,
@@ -1206,3 +1207,87 @@ class TestMyCustomerDataPatchWritesNothingWhenRefused:
         assert resp.status_code == status.HTTP_200_OK
         contact.refresh_from_db()
         assert contact.iban == "DE02120300000000202051"
+
+
+# ---------------------------------------------------------------------------
+# my_customer_data — a ContactEntity shared with a delivery station
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestMyCustomerDataSharedWithADeliveryStation:
+    """A reseller that doubles as a pickup point shares ONE ContactEntity with
+    the station, so this surface reaches columns naming a physical location
+    members are directed to. Station writes are office-only, and the shared row
+    must not be a way around that."""
+
+    LOCKED_CODE = "my_data.shared_station_identity_locked"
+
+    def _shared_contact(self, customer_user):
+        contact = ContactEntityFactory(
+            company_name="Hof Sonnenblume",
+            address="Hauptstrasse 1",
+            zip_code="4051",
+            city="Basel",
+            phone="061 000 00 00",
+        )
+        ResellerFactory(linked_user=customer_user, contact=contact)
+        DeliveryStationFactory(contact=contact)
+        return contact
+
+    def test_identity_fields_are_refused_while_a_station_shares_the_row(self, tenant):
+        customer_user = JasminUserFactory(roles=["customer"])
+        contact = self._shared_contact(customer_user)
+
+        resp = _client_for(customer_user).patch(
+            URL_MY_CUSTOMER,
+            data={"city": "Zurich", "address": "Anderswo 9"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == self.LOCKED_CODE
+        contact.refresh_from_db()
+        assert contact.city == "Basel"
+        assert contact.address == "Hauptstrasse 1"
+
+    def test_personal_contact_fields_on_the_same_row_stay_editable(self, tenant):
+        customer_user = JasminUserFactory(roles=["customer"])
+        contact = self._shared_contact(customer_user)
+
+        resp = _client_for(customer_user).patch(
+            URL_MY_CUSTOMER,
+            data={"phone": "061 111 11 11"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        contact.refresh_from_db()
+        assert contact.phone == "061 111 11 11"
+
+    def test_echoing_an_unchanged_identity_field_is_not_a_refusal(self, tenant):
+        """The guard compares against the stored row, not the mere presence of
+        the key — a form that resubmits every field must still save."""
+        customer_user = JasminUserFactory(roles=["customer"])
+        contact = self._shared_contact(customer_user)
+
+        resp = _client_for(customer_user).patch(
+            URL_MY_CUSTOMER,
+            data={"city": "Basel", "phone": "061 222 22 22"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        contact.refresh_from_db()
+        assert contact.phone == "061 222 22 22"
+
+    def test_a_customer_whose_contact_backs_no_station_edits_freely(self, tenant):
+        customer_user = JasminUserFactory(roles=["customer"])
+        contact = ContactEntityFactory(city="Basel")
+        ResellerFactory(linked_user=customer_user, contact=contact)
+
+        resp = _client_for(customer_user).patch(
+            URL_MY_CUSTOMER, data={"city": "Zurich"}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        contact.refresh_from_db()
+        assert contact.city == "Zurich"

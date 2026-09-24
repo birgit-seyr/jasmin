@@ -18,7 +18,6 @@ from apps.authz.permissions import (
     HasAnyRole,
     IsAdmin,
     IsCustomer,
-    IsGardener,
     IsManagement,
     IsMember,
     IsOffice,
@@ -86,7 +85,6 @@ PERMISSION_MATRIX = [
         [Role.OFFICE, Role.ADMIN],
         [Role.STAFF, Role.MEMBER, Role.CUSTOMER, Role.GARDENER],
     ),
-    (IsGardener, [Role.GARDENER, Role.ADMIN], [Role.OFFICE, Role.STAFF, Role.MEMBER]),
     (IsManagement, [Role.MANAGEMENT, Role.ADMIN], [Role.OFFICE, Role.STAFF]),
     (
         IsAdmin,

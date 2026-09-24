@@ -204,6 +204,54 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/auth/admin/users/{id}/cancel-invitation/:
+    post:
+      operationId: auth_admin_users_cancel_invitation_create
+      description: Revokes the outstanding invitation link for a user who has not
+        accepted yet. The account row is kept, so a cancellation made in error is
+        undone by resending rather than by re-provisioning.
+      summary: Cancel a pending invitation (admin)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - auth
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserRow'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/auth/admin/users/{id}/resend-invitation/:
     post:
       operationId: auth_admin_users_resend_invitation_create
@@ -26850,8 +26898,8 @@ paths:
   /api/payments/billing_runs/:
     get:
       operationId: payments_billing_runs_list
-      description: Staff-only. Manages export batches.
-      summary: List billing runs (staff only)
+      description: Office-only. Manages SEPA export batches.
+      summary: List billing runs (office only)
       parameters:
       - in: query
         name: year
@@ -26942,7 +26990,7 @@ paths:
   /api/payments/billing_runs/{id}/:
     get:
       operationId: payments_billing_runs_retrieve
-      description: Staff-only. Manages export batches.
+      description: Office-only. Manages SEPA export batches.
       summary: Retrieve a single billing run
       parameters:
       - in: path
@@ -26982,7 +27030,7 @@ paths:
           description: ''
     delete:
       operationId: payments_billing_runs_destroy
-      description: Staff-only. Manages export batches.
+      description: Office-only. Manages SEPA export batches.
       summary: Delete a DRAFT billing run (Office only)
       parameters:
       - in: path
@@ -32950,6 +32998,12 @@ components:
         linked_reseller_can_be_deleted:
           type: boolean
           readOnly: true
+        iban_masked:
+          type: string
+          readOnly: true
+        iban_stored:
+          type: boolean
+          readOnly: true
         is_active:
           type: boolean
         short_name:
@@ -34999,10 +35053,6 @@ components:
           type: array
           items:
             type: string
-        permissions:
-          type: array
-          items:
-            type: string
         member_id:
           type: string
           nullable: true
@@ -35014,7 +35064,6 @@ components:
       - first_name
       - id
       - last_name
-      - permissions
       - roles
       - user_language
     Member:
@@ -40375,15 +40424,6 @@ components:
       properties:
         id:
           type: string
-          readOnly: true
-        file:
-          type: string
-          format: uri
-          nullable: true
-          readOnly: true
-        file_url:
-          type: string
-          nullable: true
           readOnly: true
         original_filename:
           type: string

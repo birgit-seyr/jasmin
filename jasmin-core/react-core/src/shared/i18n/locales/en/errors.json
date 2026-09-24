@@ -56,6 +56,7 @@
     "link_conflict": "Cannot link — this user is already attached to a different member.",
     "user_already_linked": "This user is already linked to a member.",
     "user_in_blocked_status": "This user is blocked and cannot be invited.",
+    "email_held_by_non_member_login": "This email address already has a login with no member profile, such as a staff account. Inviting would take that account over rather than create a new one — link the existing account deliberately instead.",
     "user_already_active": "This user is already active — no invitation needed.",
     "email_already_has_user": "This email address already has a user account belonging to another member. An address can hold only ONE login — invite that member, or give this one their own address.",
     "email_already_has_user_named": "This email address already has a user account belonging to {{holder_name}}. An address can hold only ONE login — give this member their own address.",
@@ -178,6 +179,9 @@
     "capacity_below_occupancy": "Capacity can't be set to {{capacity}} — {{peak}} share(s) are already booked for week {{week}}/{{year}}. Please choose at least {{peak}}.",
     "in_use": "This delivery station cannot be deleted while deliveries still reference its pickup days. Move or end those deliveries first.",
     "not_found": "Delivery station does not exist."
+  },
+  "my_data": {
+    "shared_station_identity_locked": "The name and address on this account belong to a delivery station and cannot be changed here — please contact the office. Email, phone and bank details remain editable."
   },
   "delivery_exception": {
     "invalid_range": "The delivery-pause period is invalid — it must start on a Monday, end on a Sunday, and the start must not be after the end.",

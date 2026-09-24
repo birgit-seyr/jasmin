@@ -1,6 +1,6 @@
 /**
  * Single source of truth for user roles in the frontend.
- * Mirrors `apps/accounts/constants.py::Role` on the backend — keep in sync.
+ * Mirrors `apps/authz/roles.py::Role` on the backend — keep in sync.
  *
  * A user can have multiple roles (e.g. ["member", "office"]).
  *
