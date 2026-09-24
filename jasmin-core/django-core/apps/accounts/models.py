@@ -1,3 +1,4 @@
+import logging
 import uuid
 from typing import Any
 
@@ -18,9 +19,30 @@ from apps.shared.languages import LanguageChoices
 
 from .constants import ID_LENGTH, JASMIN_ID_ALPHABET
 
+logger = logging.getLogger(__name__)
+
 
 def generate_jasmin_id() -> str:
     return generate(alphabet=JASMIN_ID_ALPHABET, size=ID_LENGTH)
+
+
+def _clean_role_list(roles) -> tuple[list[str], list[str]]:
+    """Split ``roles`` into ``(known, unknown)``, de-duplicated, order kept.
+
+    A non-sequence yields nothing known. That guard is load-bearing rather
+    than defensive: every membership test here is ``in``-based, so a bare
+    string would be matched a character at a time — ``roles="superadmin"``
+    would satisfy a check for ``"admin"``.
+    """
+    if not isinstance(roles, (list, tuple, set, frozenset)):
+        return [], []
+    known: list[str] = []
+    unknown: list[str] = []
+    for role in roles:
+        bucket = known if role in VALID_ROLES else unknown
+        if role not in bucket:
+            bucket.append(role)
+    return known, unknown
 
 
 class JasminModel(models.Model):
@@ -247,7 +269,7 @@ class JasminUser(JasminModel, AbstractBaseUser, PermissionsMixin):
 
     def clean(self):
         super().clean()
-        invalid = [r for r in (self.roles or []) if r not in VALID_ROLES]
+        _known, invalid = _clean_role_list(self.roles)
         if invalid:
             raise ValidationError(
                 {
@@ -283,6 +305,23 @@ class JasminUser(JasminModel, AbstractBaseUser, PermissionsMixin):
     def save(self, *args, **kwargs):
         # Single source of truth: is_active is derived from account_status.
         self.is_active = self.account_status == "active"
+
+        # Normalise roles on EVERY write, so the invariant holds for plain
+        # ``user.roles = [...]`` assignments rather than only the paths that
+        # remember to call ``set_roles``. Drop-and-log instead of raising: a
+        # row that already holds an illegal value has to stay saveable, or
+        # nobody — including an admin trying to fix the roles — could write to
+        # it at all. ``update_fields`` is deliberately left alone; persisting a
+        # column the caller never listed could clobber a concurrent change.
+        known_roles, unknown_roles = _clean_role_list(self.roles)
+        if unknown_roles:
+            logger.warning(
+                "jasmin_user.unknown_roles_dropped user=%s dropped=%s",
+                self.pk,
+                sorted(unknown_roles),
+            )
+        if known_roles != (self.roles or []):
+            self.roles = known_roles
 
         # Track status-transition timestamps. We only stamp the
         # ``activated_at`` / ``inactivated_at`` fields when the status
@@ -324,7 +363,10 @@ class JasminUser(JasminModel, AbstractBaseUser, PermissionsMixin):
         return self.name
 
     def has_any_role(self, roles) -> bool:
-        own = self.roles or []
+        # ``save()`` normalises, but an unsaved instance can hold anything, and
+        # a bare string would turn this into a substring test — see
+        # ``_clean_role_list``.
+        own = self.roles if isinstance(self.roles, (list, tuple)) else []
         return any(r in own for r in roles)
 
     @property
@@ -340,19 +382,17 @@ class JasminUser(JasminModel, AbstractBaseUser, PermissionsMixin):
     # ------------------------------------------------------------------ #
 
     def set_roles(self, roles) -> None:
-        roles = list(roles or [])
-        invalid = [r for r in roles if r not in VALID_ROLES]
+        """Validate, de-duplicate, assign.
+
+        Raises on an unknown role, unlike ``save()`` which drops and logs: a
+        caller reaching for this method is stating the roles explicitly, so a
+        typo should be refused rather than quietly discarded.
+        """
+        known, invalid = _clean_role_list(roles)
         if invalid:
             raise ValidationError(
                 "Invalid role(s): %(invalid)s",
                 code="invalid_roles",
                 params={"invalid": ", ".join(invalid)},
             )
-        # de-dup, preserve order
-        seen = set()
-        deduped = []
-        for r in roles:
-            if r not in seen:
-                seen.add(r)
-                deduped.append(r)
-        self.roles = deduped
+        self.roles = known

@@ -26493,15 +26493,19 @@ paths:
   /api/payments/billing_profiles/:
     get:
       operationId: payments_billing_profiles_list
-      description: Members see only their own billing profile. Staff (Office) sees
-        every member's profile.
+      description: Members see only their own billing profile. Office, admin and management
+        see every member's profile; bank identifiers are returned masked (``iban_masked``
+        / ``account_holder_masked``) — the decrypted values are write-only and never
+        echoed.
       summary: List billing profiles
       parameters:
       - in: query
         name: member
         schema:
           type: string
-        description: Filter by member id (staff only).
+        description: Filter by member id. Office, admin and management may filter
+          to any member; any other caller is limited to their own linked member, and
+          a foreign id is refused.
       tags:
       - Payments — Billing profiles
       security:
@@ -26524,7 +26528,8 @@ paths:
     post:
       operationId: payments_billing_profiles_create
       description: |-
-        Members can read their own profile. Staff (Office) can manage all.
+        Members read their own profile; office, admin and management read every
+        profile. Writes are office-only.
 
         Edits that touch any of the SEPA-mandate fields require step-up
         auth, because rewriting IBAN / mandate-reference could redirect a
@@ -26579,7 +26584,8 @@ paths:
     get:
       operationId: payments_billing_profiles_retrieve
       description: |-
-        Members can read their own profile. Staff (Office) can manage all.
+        Members read their own profile; office, admin and management read every
+        profile. Writes are office-only.
 
         Edits that touch any of the SEPA-mandate fields require step-up
         auth, because rewriting IBAN / mandate-reference could redirect a
@@ -26622,7 +26628,8 @@ paths:
     put:
       operationId: payments_billing_profiles_update
       description: |-
-        Members can read their own profile. Staff (Office) can manage all.
+        Members read their own profile; office, admin and management read every
+        profile. Writes are office-only.
 
         Edits that touch any of the SEPA-mandate fields require step-up
         auth, because rewriting IBAN / mandate-reference could redirect a
@@ -26689,7 +26696,8 @@ paths:
     patch:
       operationId: payments_billing_profiles_partial_update
       description: |-
-        Members can read their own profile. Staff (Office) can manage all.
+        Members read their own profile; office, admin and management read every
+        profile. Writes are office-only.
 
         Edits that touch any of the SEPA-mandate fields require step-up
         auth, because rewriting IBAN / mandate-reference could redirect a
@@ -26756,7 +26764,8 @@ paths:
     delete:
       operationId: payments_billing_profiles_destroy
       description: |-
-        Members can read their own profile. Staff (Office) can manage all.
+        Members read their own profile; office, admin and management read every
+        profile. Writes are office-only.
 
         Edits that touch any of the SEPA-mandate fields require step-up
         auth, because rewriting IBAN / mandate-reference could redirect a
@@ -26872,9 +26881,9 @@ paths:
         Abos SEPA column): whether each member has an active, usable SEPA mandate
         (``has_active_sepa_mandate`` mirrors ``is_sepa_ready``) plus the mandate reference
         and the signed / paper-received dates. Excludes IBAN / account holder, so
-        a bulk read neither decrypts nor exposes bank PII and does NOT emit the SEC-1
-        bank-identifier audit line. Office-only (mapped to ``write_permission`` —
-        it is not one of the member-readable ``_READ_ACTIONS``).'
+        a bulk read neither decrypts nor exposes bank PII, so it emits no bank-identifier
+        audit line. Office-only (mapped to ``write_permission`` — it is not one of
+        the member-readable ``_READ_ACTIONS``).'
       summary: Per-member SEPA mandate status (no bank identifiers)
       tags:
       - payments
@@ -26899,7 +26908,7 @@ paths:
     get:
       operationId: payments_billing_runs_list
       description: Office-only. Manages SEPA export batches.
-      summary: List billing runs (office only)
+      summary: List billing runs (Office only)
       parameters:
       - in: query
         name: year
@@ -27129,8 +27138,8 @@ paths:
   /api/payments/charge_schedules/:
     get:
       operationId: payments_charge_schedules_list
-      description: Read-only ledger of planned/issued/paid charges. Members only see
-        their own rows; staff sees all.
+      description: Read-only ledger of planned/issued/paid charges. Members see only
+        their own rows; office, admin and management see all.
       summary: List charge schedule rows
       parameters:
       - name: limit
@@ -27146,7 +27155,9 @@ paths:
         name: member
         schema:
           type: string
-        description: Filter by member id (staff only).
+        description: Filter by member id. Office, admin and management may filter
+          to any member; any other caller is limited to their own linked member, and
+          a foreign id is refused.
       - in: query
         name: month
         schema:
@@ -27210,7 +27221,7 @@ paths:
       description: |-
         Read-only ledger view.
 
-        Members see only their own rows. Staff sees all.
+        Members see only their own rows; office, admin and management see all.
         Mutations only happen via the regenerator service or BillingRunService.
       summary: Retrieve a single charge
       parameters:

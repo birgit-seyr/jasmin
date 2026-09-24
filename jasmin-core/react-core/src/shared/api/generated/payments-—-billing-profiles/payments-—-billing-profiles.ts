@@ -64,7 +64,7 @@ type NonReadonly<T> = [T] extends [UnionToIntersection<T>] ? {
 
 
 /**
- * Members see only their own billing profile. Staff (Office) sees every member's profile.
+ * Members see only their own billing profile. Office, admin and management see every member's profile; bank identifiers are returned masked (``iban_masked`` / ``account_holder_masked``) — the decrypted values are write-only and never echoed.
  * @summary List billing profiles
  */
 export const paymentsBillingProfilesList = (
@@ -158,7 +158,8 @@ export function usePaymentsBillingProfilesList<TData = Awaited<ReturnType<typeof
 
 
 /**
- * Members can read their own profile. Staff (Office) can manage all.
+ * Members read their own profile; office, admin and management read every
+profile. Writes are office-only.
 
 Edits that touch any of the SEPA-mandate fields require step-up
 auth, because rewriting IBAN / mandate-reference could redirect a
@@ -231,7 +232,8 @@ export const usePaymentsBillingProfilesCreate = <TError = ErrorResponse,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Members can read their own profile. Staff (Office) can manage all.
+ * Members read their own profile; office, admin and management read every
+profile. Writes are office-only.
 
 Edits that touch any of the SEPA-mandate fields require step-up
 auth, because rewriting IBAN / mandate-reference could redirect a
@@ -332,7 +334,8 @@ export function usePaymentsBillingProfilesRetrieve<TData = Awaited<ReturnType<ty
 
 
 /**
- * Members can read their own profile. Staff (Office) can manage all.
+ * Members read their own profile; office, admin and management read every
+profile. Writes are office-only.
 
 Edits that touch any of the SEPA-mandate fields require step-up
 auth, because rewriting IBAN / mandate-reference could redirect a
@@ -405,7 +408,8 @@ export const usePaymentsBillingProfilesUpdate = <TError = ErrorResponse,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Members can read their own profile. Staff (Office) can manage all.
+ * Members read their own profile; office, admin and management read every
+profile. Writes are office-only.
 
 Edits that touch any of the SEPA-mandate fields require step-up
 auth, because rewriting IBAN / mandate-reference could redirect a
@@ -478,7 +482,8 @@ export const usePaymentsBillingProfilesPartialUpdate = <TError = ErrorResponse,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Members can read their own profile. Staff (Office) can manage all.
+ * Members read their own profile; office, admin and management read every
+profile. Writes are office-only.
 
 Edits that touch any of the SEPA-mandate fields require step-up
 auth, because rewriting IBAN / mandate-reference could redirect a

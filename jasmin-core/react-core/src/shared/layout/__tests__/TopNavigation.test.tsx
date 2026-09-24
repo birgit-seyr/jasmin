@@ -85,7 +85,17 @@ const allRoleFlags: RoleFlags = {
   roles: [ROLES.ADMIN],
 };
 
-vi.mock("@shared/auth", () => ({ useRoles: () => allRoleFlags }));
+// Per-test role overrides, mirroring ``settings`` above: the mock reads this
+// lazily, so one reference-stable holder answers differently per test. Without
+// it every test sees all-flags-true and no section's gate VALUE is observable —
+// a section gated on the wrong flag would render identically.
+const roleOverrides = vi.hoisted(() => ({
+  value: {} as Partial<Record<string, unknown>>,
+}));
+
+vi.mock("@shared/auth", () => ({
+  useRoles: () => ({ ...allRoleFlags, ...roleOverrides.value }),
+}));
 
 // The top bar's own controls pull in auth, modal and locale contexts plus the
 // member API; they have nothing to do with the section gating.
@@ -146,6 +156,47 @@ describe("TopNavigation section bar", () => {
     settings.weeklyUpload = undefined;
     settings.showMembers = undefined;
     settings.showAbos = undefined;
+    roleOverrides.value = {};
+  });
+
+  // The Staff section is gated on isStaff, matching the /staff/* routes and the
+  // backend (every apps/staff viewset reads IsStaff). The crew tier could
+  // already reach these pages by URL, so the menu entry stops hiding a live
+  // surface. Both directions are asserted: the positive alone cannot tell
+  // "gated on isStaff" apart from "not gated at all".
+  it("offers the staff section to a crew-tier user", () => {
+    roleOverrides.value = {
+      office: false,
+      admin: false,
+      management: false,
+      isOffice: false,
+      isAdmin: false,
+      isManagement: false,
+    };
+    renderNavigation();
+
+    expect(screen.getByText("nav.staff")).toBeInTheDocument();
+    expect(linkTo("/staff/dashboard"), "staff must be linked").not.toBeNull();
+  });
+
+  it("withholds the staff section from a member-only user", () => {
+    roleOverrides.value = {
+      gardener: false,
+      office: false,
+      staff: false,
+      management: false,
+      admin: false,
+      hasMemberRole: true,
+      isOffice: false,
+      isAdmin: false,
+      isManagement: false,
+      isStaff: false,
+      isMemberOnly: true,
+    };
+    renderNavigation();
+
+    expect(screen.queryByText("nav.staff")).not.toBeInTheDocument();
+    expect(linkTo("/staff/dashboard"), "staff must not be linked").toBeNull();
   });
 
   it("shows members and abos when uploads_weekly_share_amount is off", () => {

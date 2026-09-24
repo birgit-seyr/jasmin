@@ -13,9 +13,12 @@ needs to change to match the host's user model.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from django.db.models import QuerySet
 
 from apps.authz.scoping import (
+    DEFAULT_PRIVILEGED_ROLES,
     enforce_owner,
     enforce_privileged,
     get_owner_id,
@@ -38,23 +41,54 @@ __all__ = [
 ]
 
 
-def scope_to_reseller(qs: QuerySet, request, *, path: str) -> QuerySet:
+def scope_to_reseller(
+    qs: QuerySet,
+    request,
+    *,
+    path: str,
+    privileged_roles: Iterable[str] = DEFAULT_PRIVILEGED_ROLES,
+) -> QuerySet:
     """Restrict `qs` to the caller's linked reseller (privileged roles bypass).
 
     `path` is the lookup from `qs.model` to a `Reseller` row,
     e.g. ``"reseller"`` or ``"order__reseller"``.
+
+    Pass ``privileged_roles=IsStaff.required_roles`` on a reseller-context READ:
+    a reseller is a business contact rather than member-owned data, and the
+    crew tier has no ``linked_reseller``, so on the default it bypasses nothing
+    and is handed an empty list. Keep the default on anything member-owned, and
+    thread it per call site — changing the default here would also move the
+    invoice and delivery-note scopes.
     """
-    return scope_by_user_attr(qs, request, user_attr="linked_reseller", path=path)
+    return scope_by_user_attr(
+        qs,
+        request,
+        user_attr="linked_reseller",
+        path=path,
+        privileged_roles=privileged_roles,
+    )
 
 
-def scope_to_offer_group(qs: QuerySet, request, *, path: str) -> QuerySet:
-    """Restrict `qs` to offers in the caller's reseller's offer group."""
+def scope_to_offer_group(
+    qs: QuerySet,
+    request,
+    *,
+    path: str,
+    privileged_roles: Iterable[str] = DEFAULT_PRIVILEGED_ROLES,
+) -> QuerySet:
+    """Restrict `qs` to offers in the caller's reseller's offer group.
+
+    Same ``privileged_roles`` contract as :func:`scope_to_reseller`. Where a
+    caller also runs an ``is_privileged`` guard before reaching here, both must
+    use the SAME set or the earlier guard still empties the result.
+    """
     return scope_by_user_attr(
         qs,
         request,
         user_attr="linked_reseller",
         attr_path="offer_group_id",
         path=path,
+        privileged_roles=privileged_roles,
     )
 
 

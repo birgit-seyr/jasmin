@@ -161,7 +161,11 @@ function SecondaryNavigation() {
         icon: <TeamOutlined />,
         label: <Link to="/staff/dashboard">{t("nav.staff")}</Link>,
         show: navigationSettings.staff,
-        requireRole: "isOffice",
+        // isStaff, matching the routes and the backend: every apps/staff
+        // viewset reads IsStaff and writes IsOffice, so the crew tier can read
+        // these pages and could already reach them by URL. Offering the menu
+        // entry makes the three layers agree instead of hiding a live surface.
+        requireRole: "isStaff",
       },
       {
         key: NAVIGATION_SECTIONS.WAREHOUSE,

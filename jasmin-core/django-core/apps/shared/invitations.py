@@ -70,18 +70,27 @@ def _tenant_default_language(default: str = DEFAULT_LANGUAGE_CODE) -> str:
 
 
 def _normalize_roles(roles: Iterable[str] | None) -> list[str]:
-    """Keep the known roles; fall back to the member role when none survive.
+    """Fall back to the member role for an empty list; refuse unknown roles.
 
     The fallback serves the member-linked callers (member send-invitation,
     public self-registration), which pass ``[Role.MEMBER]`` explicitly anyway.
     The admin create surface must never reach it — a login created from
     Configuration → Users with no role would silently become a member — so
     ``create_user_with_invite`` requires a non-empty role list of its own.
+
+    An unknown role raises. Every caller today passes either a hardcoded
+    ``[Role.MEMBER]`` or an admin-validated list, so reaching this with a bad
+    value is a programming error — and this helper is the choke point every
+    provisioning path funnels through, where a silent drop would turn that bug
+    into a quietly downgraded account.
     """
+    roles = list(roles or [])
     if not roles:
         return [Role.MEMBER]
-    out = [r for r in roles if r in VALID_ROLES]
-    return out or [Role.MEMBER]
+    unknown = sorted({r for r in roles if r not in VALID_ROLES})
+    if unknown:
+        raise ValueError(f"Unknown role(s): {', '.join(unknown)}")
+    return roles
 
 
 def _has_member_row(user: JasminUser) -> bool:

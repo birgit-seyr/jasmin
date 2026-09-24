@@ -19,7 +19,22 @@ from django.db.models import QuerySet
 from .permissions import has_any_role
 from .roles import Role
 
-# Default "internal users see everything" set.
+# The OWNER-BYPASS set: who may read rows they do not own. Deliberately NOT
+# ``IsStaff``. The crew tier (gardener, staff) has no ``member_profile`` and no
+# ``linked_reseller``, so on member-owned data it fails closed to an empty
+# queryset instead of seeing everyone's — the intended direction for
+# subscriptions, billing profiles and share deliveries.
+#
+# Catalogue- and business-shaped data is the other case: there the read gate is
+# the whole internal tier, and those call sites pass
+# ``privileged_roles=IsStaff.required_roles`` explicitly. Do that per call site
+# rather than widening this default — one edit here would hand gardener and
+# staff every member's billing row.
+#
+# Note the two failure modes share this set: ``scope_by_user_attr`` turns a
+# non-bypassing caller into an empty list, while ``enforce_owner`` raises 403
+# for the same caller. Adjacent endpoints can therefore answer the same role
+# differently; pick the helper deliberately.
 DEFAULT_PRIVILEGED_ROLES: tuple[str, ...] = (
     Role.OFFICE,
     Role.ADMIN,

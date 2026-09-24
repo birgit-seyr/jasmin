@@ -31,7 +31,7 @@ import { axiosService } from '../../../services/api';
 
 
 /**
- * Lightweight mandate-status list for overview tables (e.g. the Abos SEPA column): whether each member has an active, usable SEPA mandate (``has_active_sepa_mandate`` mirrors ``is_sepa_ready``) plus the mandate reference and the signed / paper-received dates. Excludes IBAN / account holder, so a bulk read neither decrypts nor exposes bank PII and does NOT emit the SEC-1 bank-identifier audit line. Office-only (mapped to ``write_permission`` — it is not one of the member-readable ``_READ_ACTIONS``).
+ * Lightweight mandate-status list for overview tables (e.g. the Abos SEPA column): whether each member has an active, usable SEPA mandate (``has_active_sepa_mandate`` mirrors ``is_sepa_ready``) plus the mandate reference and the signed / paper-received dates. Excludes IBAN / account holder, so a bulk read neither decrypts nor exposes bank PII, so it emits no bank-identifier audit line. Office-only (mapped to ``write_permission`` — it is not one of the member-readable ``_READ_ACTIONS``).
  * @summary Per-member SEPA mandate status (no bank identifiers)
  */
 export const paymentsBillingProfilesMandateStatusList = (

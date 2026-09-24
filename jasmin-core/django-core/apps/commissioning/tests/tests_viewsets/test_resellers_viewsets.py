@@ -9,6 +9,7 @@ from decimal import Decimal
 import pytest
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.test import APIClient
 
 from apps.commissioning.models import (
     CrateContentInvoiceReseller,
@@ -25,6 +26,7 @@ from apps.commissioning.tests.factories import (
     DeliveryNoteContentFactory,
     DeliveryNoteResellerFactory,
     InvoiceResellerFactory,
+    JasminUserFactory,
     OfferFactory,
     OfferGroupFactory,
     OrderContentFactory,
@@ -393,6 +395,98 @@ class TestResellerHasOrdersWithoutInvoiceFilter:
 # ---------------------------------------------------------------------------
 # OfferGroupViewSet
 # ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestCrewTierReadsResellerContext:
+    """The crew tier has no ``linked_reseller``, so under the owner-bypass
+    default it scoped to nothing and received an empty 200 — never a 403.
+
+    These assert CONTENT deliberately: the status code is ``200 OK`` before and
+    after the fix, so a route-matrix row categorising the response cannot tell
+    the two apart. Only the rows can. Customer scoping must survive unchanged,
+    which is the other half of every case here.
+    """
+
+    RESELLERS = reverse("reseller-list")
+    OFFERS = reverse("offer-list")
+    ORDER_CONTENTS = reverse("order_contents-list")
+    WEEK = {"year": 2026, "delivery_week": 15}
+
+    def _client(self, user) -> APIClient:
+        client = APIClient()
+        client.force_authenticate(user=user)
+        return client
+
+    def _staff_client(self) -> APIClient:
+        return self._client(JasminUserFactory(roles=["staff"]))
+
+    def test_staff_sees_resellers(self, tenant):
+        """Backs the required seller dropdown on the isStaff purchase page."""
+        reseller = ResellerFactory()
+
+        resp = self._staff_client().get(self.RESELLERS)
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert reseller.id in [row["id"] for row in resp.data]
+
+    def test_a_customer_still_sees_only_their_own_reseller(self, tenant):
+        customer = JasminUserFactory(roles=["customer"])
+        mine = ResellerFactory(linked_user=customer)
+        theirs = ResellerFactory()
+
+        resp = self._client(customer).get(self.RESELLERS)
+
+        ids = [row["id"] for row in resp.data]
+        assert mine.id in ids
+        assert theirs.id not in ids
+
+    def test_a_customer_with_no_linked_reseller_still_sees_nothing(self, tenant):
+        """The fail-closed path survives: no owner, no rows."""
+        ResellerFactory()
+
+        resp = self._client(JasminUserFactory(roles=["customer"])).get(self.RESELLERS)
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert len(resp.data) == 0
+
+    def test_staff_sees_offers(self, tenant):
+        offer = OfferFactory(**self.WEEK)
+
+        resp = self._staff_client().get(self.OFFERS, self.WEEK)
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert offer.id in [row["id"] for row in resp.data]
+
+    def test_a_customer_still_sees_only_their_own_offer_group(self, tenant):
+        customer = JasminUserFactory(roles=["customer"])
+        own_group = OfferGroupFactory()
+        ResellerFactory(linked_user=customer, offer_group=own_group)
+        mine = OfferFactory(**self.WEEK, offer_group=own_group)
+        theirs = OfferFactory(**self.WEEK, offer_group=OfferGroupFactory())
+
+        resp = self._client(customer).get(self.OFFERS, self.WEEK)
+
+        ids = [row["id"] for row in resp.data]
+        assert mine.id in ids
+        assert theirs.id not in ids
+
+    def test_staff_sees_order_contents_for_a_reseller(self, tenant):
+        """``list`` carries its own privilege guard, separate from the scoped
+        queryset. Both have to admit the crew tier: while only one did, this
+        returned the unlinked-caller short-circuit whatever the data held.
+        """
+        reseller = ResellerFactory()
+        order = OrderFactory(reseller=reseller, **self.WEEK, day_number=2)
+        OrderContentFactory(order=order)
+
+        resp = self._staff_client().get(
+            self.ORDER_CONTENTS,
+            {**self.WEEK, "day_number": 2, "reseller": reseller.id},
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["items"], "staff received the unlinked-caller empty payload"
+
+
 @pytest.mark.django_db
 class TestOfferGroupViewSet:
     URL = reverse("offer_group-list")

@@ -40,7 +40,7 @@ import { axiosService } from '../../../services/api';
 
 
 /**
- * Read-only ledger of planned/issued/paid charges. Members only see their own rows; staff sees all.
+ * Read-only ledger of planned/issued/paid charges. Members see only their own rows; office, admin and management see all.
  * @summary List charge schedule rows
  */
 export const paymentsChargeSchedulesList = (
@@ -136,7 +136,7 @@ export function usePaymentsChargeSchedulesList<TData = Awaited<ReturnType<typeof
 /**
  * Read-only ledger view.
 
-Members see only their own rows. Staff sees all.
+Members see only their own rows; office, admin and management see all.
 Mutations only happen via the regenerator service or BillingRunService.
  * @summary Retrieve a single charge
  */

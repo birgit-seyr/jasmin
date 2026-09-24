@@ -452,8 +452,12 @@ export const commissioningRoutes: AppRoute[] = [
   },
   {
     path: "/commissioning/customer-orders/:resellerId",
+    // Office, not staff: this is an editing surface and every mutation on it
+    // is office-only (OrderContentViewSet.write_permission), so a crew-tier
+    // user would get a page that 403s on save. The only inbound link is the
+    // isOffice reseller list.
     element: (
-      <RequireRole flag="isStaff">
+      <RequireRole flag="isOffice">
         <CustomerOrderPage />
       </RequireRole>
     ),

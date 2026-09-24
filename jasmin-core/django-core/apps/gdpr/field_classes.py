@@ -79,6 +79,14 @@ FIELD_CLASSIFICATION: dict[str, dict[str, tuple[FieldClass, Replacement]]] = {
         "username": (FieldClass.PII_IMMEDIATE, lambda i: f"deleted_{i.pk}"),
         "last_login_ip": (FieldClass.PII_IMMEDIATE, None),
         "avatar": (FieldClass.PII_IMMEDIATE, None),
+        # Not PII, but it must not outlive the erasure: a scrubbed row that
+        # still carries ``["office"]`` is a standing privilege grant belonging
+        # to someone who asked to be forgotten, and every permission class
+        # reads this list straight off the row. Classified PII_IMMEDIATE
+        # because that is one of only two classes the anonymiser actually
+        # writes — OPERATIONAL would record the field as considered and leave
+        # the value exactly where it is.
+        "roles": (FieldClass.PII_IMMEDIATE, lambda _instance: []),
     },
     # ----------------------------------------------------------------
     # commissioning.Member — co-op member record. ``address`` /

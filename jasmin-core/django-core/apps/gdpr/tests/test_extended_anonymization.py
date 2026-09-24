@@ -330,6 +330,60 @@ class TestEmailLogAnonymization:
 
 
 @pytest.mark.django_db
+class TestJasminUserRolesAnonymization:
+    """A scrubbed row that still carries ``["office"]`` is a standing privilege
+    grant belonging to someone who asked to be forgotten, and every permission
+    class reads this list straight off the row.
+
+    ``member`` is the exception, and it is machine-owned rather than granted:
+    ``Member.save()`` calls ``ensure_member_role``, and erasure keeps the Member
+    row for referential integrity, so scrubbing the user and then the member
+    re-derives it. That is the designed behaviour, not a survival — it grants
+    self-scoped access to an already-anonymised profile.
+    """
+
+    PRIVILEGED = ("office", "admin", "staff", "gardener", "management")
+
+    def test_a_staff_only_login_is_left_with_no_roles(self, tenant):
+        """The case the finding describes: an ex-employee with no member
+        profile. Nothing re-derives anything, so the list empties."""
+        user = JasminUserFactory(
+            email="ex.office@example.com", roles=["office", "admin"]
+        )
+
+        GDPRService.anonymize_user(user)
+
+        user.refresh_from_db()
+        assert user.roles == []
+
+    def test_no_privileged_role_survives_erasure_of_a_member(self, tenant):
+        user = JasminUserFactory(
+            email="ex.office.member@example.com",
+            roles=["office", "admin", "member"],
+        )
+        MemberFactory(user=user)
+
+        GDPRService.anonymize_user(user)
+
+        user.refresh_from_db()
+        assert not set(user.roles or []) & set(self.PRIVILEGED)
+
+    def test_the_machine_owned_member_role_is_re_derived(self, tenant):
+        """Pinned deliberately: ``member`` coming back is the Member row's
+        doing, so a future reader does not mistake it for a failed scrub."""
+        user = JasminUserFactory(roles=["office", "member"])
+        MemberFactory(user=user)
+        original_pk = user.pk
+
+        GDPRService.anonymize_user(user)
+
+        user.refresh_from_db()
+        # A scrub, not a delete — the pk stays so historical FKs resolve.
+        assert user.pk == original_pk
+        assert user.roles == ["member"]
+
+
+@pytest.mark.django_db
 class TestAxesPurge:
     def test_access_attempt_records_deleted(self, tenant):
         user = JasminUserFactory(email="brute@example.com")

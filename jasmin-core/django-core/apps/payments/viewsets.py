@@ -69,15 +69,21 @@ BILLED_INCOME_STATUSES = (*OPEN_CHARGE_STATUSES, ChargeStatus.PAID)
         tags=["Payments — Billing profiles"],
         summary="List billing profiles",
         description=(
-            "Members see only their own billing profile. "
-            "Staff (Office) sees every member's profile."
+            "Members see only their own billing profile. Office, admin and "
+            "management see every member's profile; bank identifiers are "
+            "returned masked (``iban_masked`` / ``account_holder_masked``) — "
+            "the decrypted values are write-only and never echoed."
         ),
         parameters=[
             catalogue_parameter(
                 "member",
                 PARAM_CATALOGUE,
                 required=False,
-                description="Filter by member id (staff only).",
+                description=(
+                    "Filter by member id. Office, admin and management may "
+                    "filter to any member; any other caller is limited to "
+                    "their own linked member, and a foreign id is refused."
+                ),
             ),
         ],
     ),
@@ -118,7 +124,8 @@ BILLED_INCOME_STATUSES = (*OPEN_CHARGE_STATUSES, ChargeStatus.PAID)
 class BillingProfileViewSet(
     PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelViewSet
 ):
-    """Members can read their own profile. Staff (Office) can manage all.
+    """Members read their own profile; office, admin and management read every
+    profile. Writes are office-only.
 
     Edits that touch any of the SEPA-mandate fields require step-up
     auth, because rewriting IBAN / mandate-reference could redirect a
@@ -200,9 +207,10 @@ class BillingProfileViewSet(
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
         # Unlike the name/member_number/status lists that PIIReadLoggingMixin
-        # deliberately skips, the billing-profile list decrypts the IBAN +
-        # account holder into the payload. A bulk read of every member's bank
-        # identifier must leave an Art. 5(2) accountability trail, so log it
+        # deliberately skips, the billing-profile list carries a masked bank
+        # identifier for every member (country code + last 4, holder initials).
+        # A bulk read of that still needs an Art. 5(2) accountability trail —
+        # the decrypted values are write-only and never echoed — so log it
         # explicitly here (the mixin only auto-logs the detail retrieve()).
         if status.is_success(response.status_code):
             member = request.query_params.get("member")
@@ -214,7 +222,7 @@ class BillingProfileViewSet(
     def get_queryset(self):
         qs = BillingProfile.objects.select_related("member").all()
         qs = scope_to_member(qs, self.request, path="member")
-        # Staff can narrow to one member. Lets callers that only need one
+        # Privileged roles can narrow to one member. Lets callers that only need one
         # member's mandate fetch + decrypt a single row instead of the whole
         # tenant, and keeps the PII-read audit line scoped (``list(member=...)``).
         member_id = self.request.query_params.get("member")
@@ -236,8 +244,8 @@ class BillingProfileViewSet(
             "mandate (``has_active_sepa_mandate`` mirrors ``is_sepa_ready``) "
             "plus the mandate reference and the signed / paper-received dates. "
             "Excludes IBAN / account holder, so a bulk read neither decrypts "
-            "nor exposes bank PII and does NOT emit the SEC-1 bank-identifier "
-            "audit line. Office-only (mapped to ``write_permission`` — it is "
+            "nor exposes bank PII, so it emits no bank-identifier audit line. "
+            "Office-only (mapped to ``write_permission`` — it is "
             "not one of the member-readable ``_READ_ACTIONS``)."
         ),
         responses={200: SepaMandateStatusSerializer(many=True)},
@@ -305,15 +313,19 @@ class BillingProfileViewSet(
         tags=["Payments — Charge schedule"],
         summary="List charge schedule rows",
         description=(
-            "Read-only ledger of planned/issued/paid charges. "
-            "Members only see their own rows; staff sees all."
+            "Read-only ledger of planned/issued/paid charges. Members see "
+            "only their own rows; office, admin and management see all."
         ),
         parameters=[
             catalogue_parameter(
                 "member",
                 PARAM_CATALOGUE,
                 required=False,
-                description="Filter by member id (staff only).",
+                description=(
+                    "Filter by member id. Office, admin and management may "
+                    "filter to any member; any other caller is limited to "
+                    "their own linked member, and a foreign id is refused."
+                ),
             ),
             catalogue_parameter(
                 "status",
@@ -347,7 +359,7 @@ class BillingProfileViewSet(
 class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet):
     """Read-only ledger view.
 
-    Members see only their own rows. Staff sees all.
+    Members see only their own rows; office, admin and management see all.
     Mutations only happen via the regenerator service or BillingRunService.
     """
 
@@ -425,7 +437,7 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
     )
     @action(detail=False, methods=["post"], permission_classes=[IsOffice])
     def regenerate(self, request):
-        """Regenerate PLANNED charges for all subscriptions (staff only)."""
+        """Regenerate PLANNED charges for all subscriptions (Office only)."""
         result = ChargeScheduleService.regenerate_all()
         return Response({"regenerated_subscriptions": len(result), "details": result})
 
@@ -503,7 +515,7 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
 @extend_schema_view(
     list=extend_schema(
         tags=["Payments — Billing runs"],
-        summary="List billing runs (office only)",
+        summary="List billing runs (Office only)",
         parameters=[
             catalogue_parameter(
                 "year",

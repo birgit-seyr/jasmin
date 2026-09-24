@@ -73,20 +73,25 @@ class TestReinviteRolePreservation:
 
         assert reinvited.roles == [Role.MEMBER]
 
-    def test_an_invalid_role_does_not_drop_the_membership(self, tenant):
-        # An unknown role is filtered out, so the normalised list is empty and
-        # resolves to the bare member default — the Member link keeps the role
-        # whichever way the normalisation lands.
+    def test_an_unknown_role_is_refused_rather_than_filtered(self, tenant):
+        """``_normalize_roles`` is the choke point every provisioning path
+        funnels through, so an unknown role fails loudly instead of silently
+        degrading the account to the bare member default. The call is atomic,
+        so a refusal writes nothing."""
         user = JasminUserFactory(
             email="bogus-role@example.com",
             roles=[Role.STAFF],
             account_status="pending_invitation",
         )
         MemberFactory(user=user, email="bogus-role@example.com")
+        user.refresh_from_db()
+        roles_before = list(user.roles)
 
-        reinvited = _invite("bogus-role@example.com", ["not_a_role"])
+        with pytest.raises(ValueError):
+            _invite("bogus-role@example.com", ["not_a_role"])
 
-        assert reinvited.roles == [Role.MEMBER]
+        user.refresh_from_db()
+        assert user.roles == roles_before
 
 
 class TestNewUserRoleDefault:

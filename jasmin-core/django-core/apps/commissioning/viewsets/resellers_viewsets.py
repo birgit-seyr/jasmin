@@ -514,9 +514,17 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
         contact_annotations = get_contact_annotations()
         queryset = queryset.annotate(**contact_annotations)
 
-        # Non-privileged callers (customers) may only see/edit their own
-        # linked reseller row.
-        return scope_to_reseller(queryset, self.request, path="pk")
+        # Customers may only see their own linked reseller row. The crew tier
+        # bypasses: a reseller is a business contact, the read gate already
+        # admits staff, and ``CommissioningListResellersViewSet`` shows them
+        # the same rows unscoped — without this they get an empty required
+        # seller dropdown on the isStaff purchase-documentation page.
+        return scope_to_reseller(
+            queryset,
+            self.request,
+            path="pk",
+            privileged_roles=IsStaff.required_roles,
+        )
 
     def get_queryset(self) -> QuerySet[Reseller]:
         queryset = self._base_queryset()
@@ -728,8 +736,10 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         day_number = params["day_number"]
 
         # Object scoping: non-privileged callers may only list order content
-        # for their own linked reseller. Privileged staff roles bypass.
-        if not is_privileged(request):
+        # for their own linked reseller. The crew tier bypasses, matching
+        # ``get_queryset`` below — the two must use the SAME set or this guard
+        # returns empty before the scoped queryset is ever reached.
+        if not is_privileged(request, privileged_roles=IsStaff.required_roles):
             own_id = own_reseller_id(request)
             if own_id is None:
                 return Response({"items": [], "orders_delivery_day_defaults": {}})
@@ -771,7 +781,12 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             offer_name=F("offer__share_article__name"),
         )
 
-        return scope_to_reseller(queryset, self.request, path="order__reseller")
+        return scope_to_reseller(
+            queryset,
+            self.request,
+            path="order__reseller",
+            privileged_roles=IsStaff.required_roles,
+        )
 
     @extend_schema(
         description="Create order content with an order and crates.",
@@ -987,7 +1002,7 @@ class OfferViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         # at a peer in the same offer_group, and force their own reseller when the
         # param is omitted (else the annotation sums the whole group's orders).
         # Mirrors OrderContentViewSet.list; privileged staff bypass.
-        if not is_privileged(self.request):
+        if not is_privileged(self.request, privileged_roles=IsStaff.required_roles):
             own_id = own_reseller_id(self.request)
             if own_id is None:
                 return Offer.objects.none()
@@ -1035,7 +1050,14 @@ class OfferViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 )
             ),
         )
-        queryset = scope_to_offer_group(queryset, self.request, path="offer_group_id")
+        # Same set as the ``is_privileged`` guard above, or that guard empties
+        # the result before this scope is applied.
+        queryset = scope_to_offer_group(
+            queryset,
+            self.request,
+            path="offer_group_id",
+            privileged_roles=IsStaff.required_roles,
+        )
         # ``OfferSerializer.organic_status`` reads ``share_article.organic_status``
         # per row — select_related the FK so the list isn't N+1 (the
         # ``share_article_name`` annotation only pulls the name column via JOIN,

@@ -8,7 +8,7 @@
 
 export type PaymentsBillingProfilesListParams = {
 /**
- * Filter by member id (staff only).
+ * Filter by member id. Office, admin and management may filter to any member; any other caller is limited to their own linked member, and a foreign id is refused.
  */
 member?: string;
 };

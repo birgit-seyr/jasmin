@@ -1,7 +1,7 @@
 """Object scoping for the payments app.
 
 Members may only see their own BillingProfile / ChargeSchedule.
-BillingRun is staff-only (see viewsets.py permission classes).
+BillingRun is office-only (see viewsets.py permission classes).
 """
 
 from __future__ import annotations

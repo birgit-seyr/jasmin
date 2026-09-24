@@ -34,8 +34,6 @@ export default function StaffSidebar({
     },
     {
       key: "staff-data",
-
-      requireRole: "isStaff",
       icon: <BubbleChartIcon />,
       label: <div className="sidebar-section-header">{t("staff.data")}</div>,
       children: [
