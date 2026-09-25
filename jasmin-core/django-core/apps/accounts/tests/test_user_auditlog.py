@@ -22,6 +22,19 @@ def _changes_blob(user) -> str:
     return " ".join(str(e.changes) for e in LogEntry.objects.get_for_object(user))
 
 
+def _role_changes_blob(user) -> str:
+    """Role history lives under the profile's content type, not the user's.
+
+    ``roles`` is a property on JasminUser backed by JasminProfile, and
+    auditlog diffs concrete fields — so the trail is on the profile row.
+    """
+    from auditlog.models import LogEntry
+
+    return " ".join(
+        str(e.changes) for e in LogEntry.objects.get_for_object(user.jasmin_profile)
+    )
+
+
 @pytest.mark.django_db
 class TestJasminUserAuditlog:
     def test_role_change_is_audited_with_before_and_after(self, tenant):
@@ -35,10 +48,14 @@ class TestJasminUserAuditlog:
             "JasminUser saves should produce auditlog entries — is the "
             "registration in accounts/apps.py gone?"
         )
-        blob = _changes_blob(user)
-        assert "roles" in blob
+        blob = _role_changes_blob(user)
+        assert "roles" in blob, (
+            "Role changes should leave a trail on the profile — is the "
+            "JasminProfile registration in accounts/apps.py gone?"
+        )
         # Both sides of the change are recoverable, which is the whole point.
         assert Role.ADMIN in blob
+        assert Role.OFFICE in blob
 
     def test_deactivation_is_audited(self, tenant):
         user = JasminUserFactory(roles=[Role.OFFICE], account_status="active")

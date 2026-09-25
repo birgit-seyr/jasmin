@@ -489,6 +489,7 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
                 "contact",
                 "linked_user",
                 "linked_user__linked_reseller",
+                "linked_user__jasmin_profile",
                 "linked_delivery_station",
             )
             .prefetch_related(

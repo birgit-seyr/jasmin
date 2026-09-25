@@ -176,7 +176,6 @@ class Command(BaseCommand):
             # ``JasminUser()`` raise TypeError on the very first user, so this
             # command has never seeded anything.
             user_language="en",
-            roles=[],
             account_status=status,
         )
         if status == "pending_invitation":

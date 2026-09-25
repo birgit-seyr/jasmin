@@ -63,9 +63,9 @@ class TestAdminDemotionConcurrency:
     def _isolate_admins(self, tenant):
         # transaction=True shares committed rows across tests; neutralise any
         # pre-existing active admins so this test's two are the only ones.
-        JasminUser.objects.filter(roles__contains=[Role.ADMIN], is_active=True).update(
-            is_active=False
-        )
+        JasminUser.objects.filter(
+            jasmin_profile__roles__contains=[Role.ADMIN], is_active=True
+        ).update(is_active=False)
 
     def test_two_admins_demoting_each_other_keeps_one(self, tenant):
         admin_a = JasminUserFactory(roles=[Role.ADMIN])

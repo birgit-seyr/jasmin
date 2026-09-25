@@ -75,8 +75,11 @@ _SELF_PATH = Path(__file__).resolve()
 # bypassed via bulk ``update()``. ``account_status`` drives
 # ``is_active`` / ``activated_at`` / ``inactivated_at`` on JasminUser;
 # ``admin_confirmed`` drives ``_post_confirm`` side-effects on
-# AdminConfirmableMixin consumers (Member, Subscription, ...).
-_PROTECTED_FIELDS: tuple[str, ...] = ("account_status", "admin_confirmed")
+# AdminConfirmableMixin consumers (Member, Subscription, ...);
+# ``roles`` on JasminProfile is normalised by ``JasminUser.save()``, which
+# drops unknown values — a bulk update writes them straight through, and an
+# unknown role in that list is a grant nothing later validates.
+_PROTECTED_FIELDS: tuple[str, ...] = ("account_status", "admin_confirmed", "roles")
 
 # ``.update(`` or ``.bulk_update(`` (but NOT ``.update_or_create(`` —
 # the trailing ``_or_create`` makes the regex's literal ``(`` fail to

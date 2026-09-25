@@ -305,6 +305,14 @@ class AnonymizationMixin:
         user.account_status = "inactive"
         user.save()
 
+        # The roles live on the profile; scrub that row on its own rather
+        # than through the user's ``roles`` property, so the classification
+        # is what clears them here exactly as it does for every other model.
+        profile = getattr(user, "jasmin_profile", None)
+        if profile is not None:
+            _apply_classification(profile, "accounts.JasminProfile")
+            profile.save()
+
     @staticmethod
     def _anonymize_member(member: Member) -> None:
         """Scrub the Member row in place. Field-set from
@@ -588,6 +596,11 @@ class AnonymizationMixin:
         scrub = GDPRService._scrub_logentries_for
 
         scrub(type(user), [user.pk])
+        # Role history is registered under the profile's own content type, so
+        # scrubbing the user's entries does not reach it.
+        from apps.accounts.models import JasminProfile
+
+        scrub(JasminProfile, [user.pk])
         scrub(
             UserInvitation,
             UserInvitation.objects.filter(user=user).values_list("pk", flat=True),

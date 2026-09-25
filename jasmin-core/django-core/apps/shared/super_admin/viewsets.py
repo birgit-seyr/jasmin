@@ -833,7 +833,8 @@ class TenantManagementViewSet(ViewSet):
                     acquire_advisory_xact_lock("admin_role:mutation")
                     another_active_admin_exists = (
                         user_model.objects.filter(
-                            roles__contains=[Role.ADMIN], is_active=True
+                            jasmin_profile__roles__contains=[Role.ADMIN],
+                            is_active=True,
                         )
                         .exclude(pk=user.pk)
                         .exists()
@@ -845,7 +846,10 @@ class TenantManagementViewSet(ViewSet):
                         )
 
                 user.roles = roles
-                user.save(update_fields=["roles"])
+                # ``roles`` is a property backed by the user's profile, not an
+                # ``update_fields`` name; the assignment above is what queues
+                # the write.
+                user.save(update_fields=["updated_at"])
 
                 # Drop reseller link if 'customer' is no longer in roles.
                 if "customer" not in roles:

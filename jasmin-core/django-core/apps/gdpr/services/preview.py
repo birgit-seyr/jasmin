@@ -182,7 +182,10 @@ class PreviewMixin:
             row_count = model.objects.filter(**filters).count()
             return (row_count > 0, row_count)
 
-        presence: dict[str, tuple[bool, int]] = {settings.AUTH_USER_MODEL: (True, 1)}
+        presence: dict[str, tuple[bool, int]] = {
+            settings.AUTH_USER_MODEL: (True, 1),
+            "accounts.JasminProfile": (True, 1),
+        }
 
         if member is not None:
             presence["commissioning.Member"] = (True, 1)

@@ -2,6 +2,7 @@ import logging
 import uuid
 from typing import Any
 
+from django.conf import settings
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -138,6 +139,18 @@ ACCOUNT_STATUS_CHOICES = [
 
 
 class JasminUserManager(BaseUserManager):
+    def get_queryset(self):
+        """Join the profile on every user query.
+
+        ``roles`` lives on the profile, and every permission check reads it —
+        several times per request. Without this join each of those is a second
+        SELECT. Doing it in the default manager rather than in an
+        authentication subclass also covers SimpleJWT, which loads the request
+        user through ``UserModel._default_manager`` and would otherwise need a
+        version-coupled override.
+        """
+        return super().get_queryset().select_related("jasmin_profile")
+
     def create_user(self, first_name, last_name, email, password=None, **kwargs):
         if first_name is None:
             raise TypeError(_("Users must have a first name."))
@@ -206,8 +219,18 @@ class JasminUser(JasminModel, AbstractBaseUser, PermissionsMixin):
         choices=[("inline", "Inline Editing"), ("modal", "Modal Editing")],
         default="inline",
     )
-    roles = models.JSONField(
-        default=list, blank=True, null=True, help_text="List of roles this user has"
+    # Superseded by ``JasminProfile.roles``, which the ``roles`` property
+    # reads. Kept as a mirrored copy, written on every role change, so a
+    # release can be reverted without restoring a backup — migrations are
+    # forward-only, so this column is the only cheap way back. Nothing reads
+    # it; the follow-up migration that drops it is the end of the move.
+    #
+    # ``db_column`` pins the physical name: a Django model cannot carry a
+    # field and a property of the same name (whichever is declared second
+    # silently wins), so the attribute had to be renamed while the column
+    # stayed put.
+    legacy_roles = models.JSONField(
+        default=list, blank=True, null=True, db_column="roles"
     )
 
     date_joined = models.DateTimeField(default=timezone.now)
@@ -306,22 +329,22 @@ class JasminUser(JasminModel, AbstractBaseUser, PermissionsMixin):
         # Single source of truth: is_active is derived from account_status.
         self.is_active = self.account_status == "active"
 
-        # Normalise roles on EVERY write, so the invariant holds for plain
-        # ``user.roles = [...]`` assignments rather than only the paths that
-        # remember to call ``set_roles``. Drop-and-log instead of raising: a
-        # row that already holds an illegal value has to stay saveable, or
-        # nobody — including an admin trying to fix the roles — could write to
-        # it at all. ``update_fields`` is deliberately left alone; persisting a
-        # column the caller never listed could clobber a concurrent change.
-        known_roles, unknown_roles = _clean_role_list(self.roles)
-        if unknown_roles:
-            logger.warning(
-                "jasmin_user.unknown_roles_dropped user=%s dropped=%s",
-                self.pk,
-                sorted(unknown_roles),
-            )
-        if known_roles != (self.roles or []):
-            self.roles = known_roles
+        # ``roles`` is a property, not a column: Django validates
+        # ``update_fields`` against concrete fields and would raise. Callers
+        # legitimately name it to mean "persist the roles", so translate
+        # rather than refuse — the flush below is what actually writes them.
+        requested = kwargs.get("update_fields")
+        if requested is not None and "roles" in requested:
+            kwargs["update_fields"] = [f for f in requested if f != "roles"]
+
+        # Only normalise when roles were actually assigned on this instance.
+        # Reading them unconditionally would put a profile query on all ~20
+        # user.save() paths that have nothing to do with roles.
+        pending_roles = self._normalised_role_buffer()
+        if pending_roles is not None:
+            self._roles_buffer = pending_roles
+            # Mirror into the retained column in the same UPDATE.
+            self.legacy_roles = pending_roles
 
         # Track status-transition timestamps. We only stamp the
         # ``activated_at`` / ``inactivated_at`` fields when the status
@@ -346,10 +369,102 @@ class JasminUser(JasminModel, AbstractBaseUser, PermissionsMixin):
 
         if update_fields is not None:
             extra = {"is_active"}
+            if pending_roles is not None:
+                extra.add("legacy_roles")
             if "account_status" in update_fields:
                 extra.update(stamped)
             kwargs["update_fields"] = list({*update_fields, *extra})
+
+        was_insert = self._state.adding
         super().save(*args, **kwargs)
+
+        # After the user row exists, so the profile's FK has something to
+        # point at. Every user gets a profile, whether or not roles were
+        # assigned — a user without one would read as role-less.
+        if pending_roles is not None or was_insert:
+            self._flush_roles(pending_roles or [], kwargs.get("using"))
+
+    # ------------------------------------------------------------------ #
+    # Roles                                                               #
+    # ------------------------------------------------------------------ #
+
+    # A pending role write, held only between assignment and the next save.
+    # Annotated without a value on purpose: its ABSENCE is what distinguishes
+    # "roles were never touched on this instance" from a deliberate
+    # ``user.roles = []``, which is a real operation that must reach the row.
+    _roles_buffer: Any
+
+    @property
+    def roles(self) -> list[str]:
+        """The user's role list, stored on the linked :class:`JasminProfile`.
+
+        A property rather than a column so a host project embedding Jasmin can
+        supply its own ``AUTH_USER_MODEL``: Jasmin cannot add columns to a user
+        model it does not own, but it can carry a profile beside it.
+        """
+        try:
+            return self._roles_buffer
+        except AttributeError:
+            pass
+        if self._state.adding:
+            # The nanoid default means ``pk`` is already populated before the
+            # first save, so a relation read here would query for a profile
+            # row that cannot exist yet.
+            return []
+        try:
+            return self.jasmin_profile.roles or []
+        except JasminProfile.DoesNotExist:
+            # Fail closed, but never silently: every permission class reads
+            # this list, so a missing profile would otherwise read as
+            # "no roles" and deny access with no trace of why.
+            # ``save()`` creates the row for every new user and the backfill
+            # covered the existing ones, so reaching this is a defect.
+            logger.error("jasmin_user.profile_missing user=%s", self.pk)
+            return []
+
+    @roles.setter
+    def roles(self, value) -> None:
+        # Buffered rather than written through: the setter has to work on an
+        # unsaved instance (``JasminUser(roles=[...])``, which every factory
+        # and the ``create_user`` funnel rely on), where there is no row to
+        # write to yet. ``save()`` flushes it.
+        self._roles_buffer = value
+
+    def refresh_from_db(self, using=None, fields=None, from_queryset=None) -> None:
+        # Django clears the cached reverse one-to-one, but knows nothing about
+        # the buffer — leaving it in place would keep serving a value the
+        # caller asked to re-read from the database.
+        self.__dict__.pop("_roles_buffer", None)
+        super().refresh_from_db(using=using, fields=fields, from_queryset=from_queryset)
+
+    def _normalised_role_buffer(self) -> list[str] | None:
+        """The pending role write, cleaned — or None when roles weren't touched.
+
+        Drop-and-log rather than raise: a row that already holds an illegal
+        value has to stay saveable, or nobody — including an admin trying to
+        fix the roles — could write to it at all.
+        """
+        try:
+            buffered = self._roles_buffer
+        except AttributeError:
+            return None
+        known, unknown = _clean_role_list(buffered)
+        if unknown:
+            logger.warning(
+                "jasmin_user.unknown_roles_dropped user=%s dropped=%s",
+                self.pk,
+                sorted(unknown),
+            )
+        return known
+
+    def _flush_roles(self, roles: list[str], using: str | None) -> None:
+        """Persist the pending role write to the profile, creating it if needed."""
+        JasminProfile.objects.using(using).update_or_create(
+            user_id=self.pk, defaults={"roles": roles}
+        )
+        self.__dict__.pop("_roles_buffer", None)
+        # Drop the stale cached relation so the next read re-queries.
+        self._state.fields_cache.pop("jasmin_profile", None)
 
     # ------------------------------------------------------------------ #
     # Convenience accessors                                               #
@@ -396,3 +511,33 @@ class JasminUser(JasminModel, AbstractBaseUser, PermissionsMixin):
                 params={"invalid": ", ".join(invalid)},
             )
         self.roles = known
+
+
+class JasminProfile(models.Model):
+    """Jasmin's own per-user state, held beside the user model rather than on it.
+
+    Jasmin is meant to be embeddable as a package in a host Django project that
+    owns ``AUTH_USER_MODEL``. Such a host cannot be asked to add Jasmin's
+    columns to its user table, so anything Jasmin needs about a user beyond
+    Django's own auth fields belongs here.
+
+    Reached through ``JasminUser.roles``; there is no reason to query it
+    directly outside this module.
+    """
+
+    # The profile has no identity of its own — it is the user's Jasmin state —
+    # so it borrows the user's primary key instead of carrying a second,
+    # meaningless nanoid. This is a deliberate departure from ``JasminModel``,
+    # which every other tenant model subclasses.
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="jasmin_profile",
+        primary_key=True,
+    )
+    roles = models.JSONField(
+        default=list, blank=True, null=True, help_text="List of roles this user has"
+    )
+
+    def __str__(self) -> str:
+        return f"JasminProfile({self.user_id})"

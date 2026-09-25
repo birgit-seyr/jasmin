@@ -120,14 +120,15 @@ class Command(BaseCommand):
                 "first_name": spec["first_name"],
                 "last_name": spec["last_name"],
                 "username": spec["email"].lower(),
-                "roles": spec["roles"],
                 "account_status": "active",
             },
         )
+        # Set outside the defaults: ``roles`` is a property backed by the
+        # user's profile, not a model field get_or_create can populate.
+        user.roles = spec["roles"]
         if not user_created:
             user.first_name = spec["first_name"]
             user.last_name = spec["last_name"]
-            user.roles = spec["roles"]
             user.account_status = "active"
         user.set_password(PASSWORD)
         user.save()

@@ -133,7 +133,6 @@ class Command(BaseCommand):
                     "username": email.lower(),
                     "first_name": "Test",
                     "last_name": "Admin",
-                    "roles": ["admin"],
                     "account_status": "active",
                     "user_language": language,
                 },

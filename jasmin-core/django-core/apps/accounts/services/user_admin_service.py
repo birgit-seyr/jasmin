@@ -225,7 +225,9 @@ def _refuse_if_last_active_admin(*, user: JasminUser, attempted: str) -> None:
     """
     acquire_advisory_xact_lock("admin_role:mutation")
     another_active_admin_exists = (
-        JasminUser.objects.filter(roles__contains=[Role.ADMIN], is_active=True)
+        JasminUser.objects.filter(
+            jasmin_profile__roles__contains=[Role.ADMIN], is_active=True
+        )
         .exclude(pk=user.pk)
         .exists()
     )

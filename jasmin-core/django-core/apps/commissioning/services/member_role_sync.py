@@ -31,7 +31,10 @@ def ensure_member_role(user: JasminUser) -> None:
         return
     roles.append(Role.MEMBER)
     user.roles = roles
-    user.save(update_fields=["roles", "updated_at"])
+    # ``roles`` is a property backed by the user's profile, so it is not an
+    # ``update_fields`` name — assigning it is what queues the write, and
+    # ``save()`` persists it whichever fields are listed.
+    user.save(update_fields=["updated_at"])
 
 
 def retract_member_role(user: JasminUser) -> None:
@@ -45,7 +48,7 @@ def retract_member_role(user: JasminUser) -> None:
     if roles == (user.roles or []):
         return
     user.roles = roles
-    update_fields = ["roles", "updated_at"]
+    update_fields = ["updated_at"]
     if not roles and not getattr(user, "linked_reseller", None):
         user.account_status = "inactive"
         update_fields.append("account_status")

@@ -129,7 +129,11 @@ def _build_member_queryset(request: Request, *, filtered: bool) -> QuerySet[Memb
         status=InvitationStatus.SENT
     ).order_by("-created_at")
     queryset: QuerySet[Member] = Member.objects.select_related(
-        "user", "user__linked_reseller", "admin_confirmed_by", "created_by"
+        "user",
+        "user__linked_reseller",
+        "user__jasmin_profile",
+        "admin_confirmed_by",
+        "created_by",
     ).prefetch_related(
         Prefetch(
             "user__invitations",
