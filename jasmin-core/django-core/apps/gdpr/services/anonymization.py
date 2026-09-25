@@ -6,10 +6,10 @@ import logging
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q, QuerySet
 
-from apps.accounts.models import JasminUser
 from apps.commissioning.models import (
     ConsentRecord,
     ContactEntity,
@@ -38,6 +38,10 @@ from ..field_classes import FieldClass, get_classification, resolve_replacement
 from ..models import DeletionLog
 
 if TYPE_CHECKING:
+    # Type-only: the runtime path uses ``get_user_model()``, so this module
+    # also works under a host project with a different ``AUTH_USER_MODEL``.
+    from apps.accounts.models import JasminUser
+
     # ``GDPRService`` is assembled in the package ``__init__`` and bound into
     # this module's namespace there. Method bodies must resolve it at call
     # time through the ASSEMBLED class so monkeypatched attributes on
@@ -296,7 +300,7 @@ class AnonymizationMixin:
         # delete used for ``run.sepa_xml_export`` elsewhere in this module.
         if user.avatar:
             user.avatar.delete(save=False)
-        _apply_classification(user, "accounts.JasminUser")
+        _apply_classification(user, settings.AUTH_USER_MODEL)
         user.is_active = False
         user.account_status = "inactive"
         user.save()

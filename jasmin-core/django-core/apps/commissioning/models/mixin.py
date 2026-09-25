@@ -5,7 +5,9 @@ import uuid
 from collections.abc import Iterable
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
+from typing import TYPE_CHECKING
 
+from django.conf import settings
 from django.contrib.postgres.fields import DateRangeField
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator
@@ -13,9 +15,13 @@ from django.db import models, transaction
 from django.db.models import Func
 from django.utils import timezone
 
-from apps.accounts.models import JasminUser
 from apps.shared.money import CENT, round_money, to_decimal
 from core.db_locks import acquire_advisory_xact_lock
+
+if TYPE_CHECKING:
+    # Type-only: the FKs above target ``settings.AUTH_USER_MODEL``, so nothing
+    # here needs the concrete class at runtime.
+    from apps.accounts.models import JasminUser
 
 from .managers import (
     ActiveOnlyManager,
@@ -29,7 +35,7 @@ class AdminConfirmableMixin(models.Model):
 
     admin_confirmed = models.BooleanField(default=False)
     admin_confirmed_by = models.ForeignKey(
-        "accounts.JasminUser",
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -570,7 +576,7 @@ class CreatedMixin(models.Model):
 
     created_at = models.DateTimeField(default=timezone.now)
     created_by = models.ForeignKey(
-        "accounts.JasminUser",
+        settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         blank=True,
         null=True,
@@ -587,7 +593,7 @@ class CancellableMixin(models.Model):
     cancelled_at = models.DateTimeField(blank=True, null=True)
     cancelled_effective_at = models.DateField(blank=True, null=True)
     cancelled_by = models.ForeignKey(
-        "accounts.JasminUser",
+        settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         blank=True,
         null=True,
@@ -660,7 +666,7 @@ class FinalizableMixin(models.Model):
     is_finalized = models.BooleanField(default=False)
     finalized_at = models.DateTimeField(blank=True, null=True)
     finalized_by = models.ForeignKey(
-        "accounts.JasminUser",
+        settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         blank=True,
         null=True,

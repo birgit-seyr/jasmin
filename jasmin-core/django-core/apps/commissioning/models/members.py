@@ -4,6 +4,7 @@ import uuid
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import F, Q
@@ -72,7 +73,7 @@ class Member(
     birth_date = models.DateField(blank=True, null=True)
 
     user = models.OneToOneField(
-        "accounts.JasminUser",
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         related_name="member_profile",
         blank=True,
@@ -281,12 +282,13 @@ class Member(
             and prev_user_id != self.user_id
             and not Member.objects.filter(user_id=prev_user_id).exists()
         ):
-            from apps.accounts.models import JasminUser
+            from django.contrib.auth import get_user_model
+
             from apps.commissioning.services.member_role_sync import (
                 retract_member_role,
             )
 
-            prev_user = JasminUser.objects.filter(pk=prev_user_id).first()
+            prev_user = get_user_model().objects.filter(pk=prev_user_id).first()
             if prev_user is not None:
                 retract_member_role(prev_user)
 
@@ -664,7 +666,7 @@ class UserInvitation(JasminModel, CreatedMixin):
     # state. Set as soon as the invitation is created. NULL only for legacy
     # rows.
     user = models.ForeignKey(
-        "accounts.JasminUser",
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="invitations",
         null=True,

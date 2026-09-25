@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from django.conf import settings
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import RangeBoundary, RangeOperators
 from django.core.exceptions import ValidationError
@@ -1036,7 +1037,7 @@ class ShareDelivery(JasminModel):
     is_opted_in = models.BooleanField(default=False)
     optin_decided_at = models.DateTimeField(blank=True, null=True)
     optin_decided_by = models.ForeignKey(
-        "accounts.JasminUser",
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         blank=True,
         null=True,

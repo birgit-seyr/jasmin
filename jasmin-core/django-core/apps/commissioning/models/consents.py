@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import hashlib
 
+from django.conf import settings
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import RangeBoundary, RangeOperators
 from django.db import models
@@ -228,7 +229,7 @@ class ConsentRecord(JasminModel):
     revoked_at = models.DateTimeField(blank=True, null=True)
     revoked_reason = models.CharField(max_length=200, blank=True, default="")
     revoked_by = models.ForeignKey(
-        "accounts.JasminUser",
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         blank=True,
         null=True,

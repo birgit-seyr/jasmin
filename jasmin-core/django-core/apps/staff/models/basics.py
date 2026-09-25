@@ -1,10 +1,10 @@
 from typing import Any
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models
 from nanoid import generate
 
-from apps.accounts.models import JasminUser
 from apps.shared.model_fields import day_of_week_field, iso_week_field
 
 from ..constants import ID_LENGTH, JASMIN_ID_ALPHABET
@@ -95,7 +95,7 @@ class Employee(JasminModel):
         max_length=50, unique=True, blank=True, null=True
     )
     user = models.OneToOneField(
-        JasminUser,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         blank=True,
         null=True,

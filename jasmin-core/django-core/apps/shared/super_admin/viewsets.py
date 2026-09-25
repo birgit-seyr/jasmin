@@ -25,6 +25,7 @@ import logging
 from contextlib import contextmanager
 from typing import Any
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import (
     DatabaseError,
@@ -227,9 +228,9 @@ class TenantManagementViewSet(ViewSet):
                     user_count = 0
                     try:
                         with schema_context(tenant.schema_name):
-                            from apps.accounts.models import JasminUser
+                            user_model = get_user_model()
 
-                            user_count = JasminUser.objects.count()
+                            user_count = user_model.objects.count()
                     except (OperationalError, ProgrammingError):
                         # Schema doesn't exist yet or accounts table missing
                         # — leave ``user_count`` at 0 and continue.
@@ -478,9 +479,9 @@ class TenantManagementViewSet(ViewSet):
                 tenant = Tenant.objects.exclude(schema_name="public").get(id=pk)
 
             with _tenant_schema_or_409(tenant):
-                from apps.accounts.models import JasminUser
+                user_model = get_user_model()
 
-                users = JasminUser.objects.all().order_by("last_name", "first_name")
+                users = user_model.objects.all().order_by("last_name", "first_name")
 
                 def serialize_user(user: Any) -> dict[str, Any]:
                     return {
@@ -590,18 +591,18 @@ class TenantManagementViewSet(ViewSet):
                 tenant = Tenant.objects.exclude(schema_name="public").get(id=pk)
 
             with _tenant_schema_or_409(tenant):
-                from apps.accounts.models import JasminUser
+                user_model = get_user_model()
 
                 # ``iexact``: ``create_user`` derives the unique ``username``
                 # from ``email.lower()``, so a case variant is the same account
                 # and would otherwise slip past this check into the constraint.
-                if JasminUser.objects.filter(email__iexact=email).exists():
+                if user_model.objects.filter(email__iexact=email).exists():
                     raise UserEmailExists(
                         f"User with email '{email}' already exists in this tenant"
                     )
 
                 try:
-                    user = JasminUser.objects.create_user(
+                    user = user_model.objects.create_user(
                         first_name=first_name,
                         last_name=last_name,
                         email=email,
@@ -679,12 +680,12 @@ class TenantManagementViewSet(ViewSet):
                 tenant = Tenant.objects.exclude(schema_name="public").get(id=pk)
 
             with _tenant_schema_or_409(tenant):
-                from apps.accounts.models import JasminUser
+                user_model = get_user_model()
 
                 # ``iexact``: ``create_user`` derives the unique ``username``
                 # from ``email.lower()``, so a case variant is the same account
                 # and would otherwise slip past this check into the constraint.
-                if JasminUser.objects.filter(email__iexact=email).exists():
+                if user_model.objects.filter(email__iexact=email).exists():
                     raise UserEmailExists(
                         f"User with email '{email}' already exists in this tenant"
                     )
@@ -702,7 +703,7 @@ class TenantManagementViewSet(ViewSet):
                 # Requests run in autocommit (no ATOMIC_REQUESTS), so this is
                 # required — mirrors create_user_with_invite's @transaction.atomic.
                 with transaction.atomic():
-                    user = JasminUser.objects.create_user(
+                    user = user_model.objects.create_user(
                         first_name=first_name,
                         last_name=last_name,
                         email=email,
@@ -805,7 +806,7 @@ class TenantManagementViewSet(ViewSet):
         if combo_err:
             raise InvalidRoles(combo_err)
 
-        from apps.accounts.models import JasminUser
+        user_model = get_user_model()
 
         try:
             with schema_context("public"):
@@ -817,7 +818,7 @@ class TenantManagementViewSet(ViewSet):
             # Atomic so the role change + reseller unlink are all-or-nothing
             # (no role/reseller-link desync on a partial failure).
             with _tenant_schema_or_409(tenant), transaction.atomic():
-                user = JasminUser.objects.get(id=user_id)
+                user = user_model.objects.get(id=user_id)
                 previous_roles = list(user.roles or [])
 
                 # Last-admin protection (mirrors the in-tenant guard): refuse to
@@ -831,7 +832,7 @@ class TenantManagementViewSet(ViewSet):
                 if removing_admin and not force:
                     acquire_advisory_xact_lock("admin_role:mutation")
                     another_active_admin_exists = (
-                        JasminUser.objects.filter(
+                        user_model.objects.filter(
                             roles__contains=[Role.ADMIN], is_active=True
                         )
                         .exclude(pk=user.pk)
@@ -875,7 +876,7 @@ class TenantManagementViewSet(ViewSet):
 
         except Tenant.DoesNotExist:
             raise TenantNotFound("Tenant not found") from None
-        except JasminUser.DoesNotExist:
+        except user_model.DoesNotExist:
             raise TenantUserNotFound("User not found in this tenant") from None
 
 

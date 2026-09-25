@@ -17,18 +17,24 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
-from django.contrib.auth import password_validation
+from django.contrib.auth import get_user_model, password_validation
 from django.core.exceptions import ValidationError
 from django.db import OperationalError, ProgrammingError, transaction
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
-from apps.accounts.models import JasminUser
 from apps.authz.roles import VALID_ROLES, Role
 from apps.shared.languages import DEFAULT_LANGUAGE_CODE, SUPPORTED_LANGUAGE_CODES
 from apps.shared.tenant_urls import frontend_base_url, tenant_name
 from apps.shared.tenants.onboarding_emails import EmailCategory
+
+if TYPE_CHECKING:
+    # Type-only: the concrete user model keeps mypy precise, while the runtime
+    # path goes through ``get_user_model()`` so this module works under a host
+    # project whose ``AUTH_USER_MODEL`` is something else.
+    from apps.accounts.models import JasminUser
 
 logger = logging.getLogger("authentication")
 
@@ -144,7 +150,7 @@ def create_user_with_invitation(
     from apps.commissioning.models.choices import InvitationStatus
 
     email = email.strip().lower()
-    existing = JasminUser.objects.filter(email__iexact=email).first()
+    existing = get_user_model().objects.filter(email__iexact=email).first()
     if existing and existing.account_status not in (
         "pending_invitation",
         "inactive",
@@ -166,7 +172,7 @@ def create_user_with_invitation(
     if user is None:
         # We need a placeholder password so set_password can be called later.
         # Use a random unusable password until accept_invitation() is hit.
-        user = JasminUser.objects.create_user(
+        user = get_user_model().objects.create_user(
             first_name=first_name,
             last_name=last_name,
             email=email,

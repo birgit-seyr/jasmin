@@ -1,7 +1,7 @@
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django_tenants.utils import schema_context
 
-from apps.accounts.models import JasminUser
 from apps.gdpr.errors import RetentionPeriodActive
 from apps.gdpr.models import DeletionLog
 from apps.gdpr.services import GDPRService
@@ -25,7 +25,7 @@ class Command(BaseCommand):
                 # per call, so iterate a fixed snapshot of the pre-restore logs.
                 logs = list(DeletionLog.objects.all())
                 for log in logs:
-                    user = JasminUser.objects.filter(email=log.user_email).first()
+                    user = get_user_model().objects.filter(email=log.user_email).first()
                     if not (user and user.is_active):
                         # Already re-anonymized (email is now deleted_*@…) or
                         # gone — nothing to replay for this log.

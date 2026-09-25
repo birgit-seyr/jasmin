@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.accounts.models import JasminUser
 from apps.commissioning.models import (
     ConsentRecord,
     ContactEntity,
@@ -28,6 +27,10 @@ from ..models import DeletionRequest
 from .anonymization import _ci_recipient_q, _ci_username_q
 
 if TYPE_CHECKING:
+    # Type-only: the runtime path uses ``get_user_model()``, so this module
+    # also works under a host project with a different ``AUTH_USER_MODEL``.
+    from apps.accounts.models import JasminUser
+
     # ``GDPRService`` is assembled in the package ``__init__`` and bound into
     # this module's namespace there. Method bodies must resolve it at call
     # time through the ASSEMBLED class so monkeypatched attributes on

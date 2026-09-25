@@ -113,9 +113,9 @@ class Command(BaseCommand):
             # language to the tenant so the whole dev tenant is consistent.
             with schema_context(schema):
                 call_command("seed_test_users")
-                from apps.accounts.models import JasminUser
+                from django.contrib.auth import get_user_model
 
-                JasminUser.objects.exclude(email=admin_email).update(
+                get_user_model().objects.exclude(email=admin_email).update(
                     user_language=opts["language"]
                 )
 
@@ -125,9 +125,9 @@ class Command(BaseCommand):
         self, schema: str, email: str, password: str, language: str
     ) -> None:
         with schema_context(schema):
-            from apps.accounts.models import JasminUser
+            from django.contrib.auth import get_user_model
 
-            user, _ = JasminUser.objects.get_or_create(
+            user, _ = get_user_model().objects.get_or_create(
                 email=email,
                 defaults={
                     "username": email.lower(),

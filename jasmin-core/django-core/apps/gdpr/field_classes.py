@@ -29,6 +29,8 @@ from collections.abc import Callable
 from enum import StrEnum
 from typing import Any
 
+from django.conf import settings
+
 
 class FieldClass(StrEnum):
     """How a field gets handled during anonymization."""
@@ -69,7 +71,7 @@ FIELD_CLASSIFICATION: dict[str, dict[str, tuple[FieldClass, Replacement]]] = {
     # accounts.JasminUser — the auth identity, may be linked to a
     # Member, a Reseller, both, or neither (staff-only).
     # ----------------------------------------------------------------
-    "accounts.JasminUser": {
+    settings.AUTH_USER_MODEL: {
         "first_name": (FieldClass.TOMBSTONE, "Gelöscht"),
         "last_name": (FieldClass.TOMBSTONE, "Gelöscht"),
         "email": (

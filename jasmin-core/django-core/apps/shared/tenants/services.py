@@ -85,9 +85,11 @@ class TenantService:
             logger.info(f"Created tenant '{name}' (schema={schema_name})")
 
             with schema_context(tenant.schema_name):
-                from apps.accounts.models import JasminUser
+                from django.contrib.auth import get_user_model
 
-                admin_user = JasminUser.objects.create_user(
+                user_model = get_user_model()
+
+                admin_user = user_model.objects.create_user(
                     email=admin_email,
                     password=admin_password,
                     first_name=admin_first_name,

@@ -40,9 +40,9 @@ from __future__ import annotations
 from typing import Any
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.accounts.models import JasminUser
 from apps.authz.roles import Role
 from apps.commissioning.models import ContactEntity, Member, Reseller
 
@@ -114,7 +114,7 @@ class Command(BaseCommand):
             self._seed_one(spec)
 
     def _seed_one(self, spec: dict[str, Any]) -> None:
-        user, user_created = JasminUser.objects.get_or_create(
+        user, user_created = get_user_model().objects.get_or_create(
             email=spec["email"],
             defaults={
                 "first_name": spec["first_name"],

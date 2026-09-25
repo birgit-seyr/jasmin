@@ -359,12 +359,15 @@ def gdpr_admin_preview_deletion_view(request: Request, user_id: str) -> Response
     irreversible scrub). Lets the office answer "what happens if we delete this
     person?" before committing. See
     :meth:`apps.gdpr.services.GDPRService.preview_deletion`."""
-    from apps.accounts.models import JasminUser
+    from django.contrib.auth import get_user_model
+
     from core.errors import NotFoundError
 
+    user_model = get_user_model()
+
     try:
-        target = JasminUser.objects.get(pk=user_id)
-    except JasminUser.DoesNotExist:
+        target = user_model.objects.get(pk=user_id)
+    except user_model.DoesNotExist:
         raise NotFoundError("User not found.") from None
 
     preview = GDPRService.preview_deletion(target)

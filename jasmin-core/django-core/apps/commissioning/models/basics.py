@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.conf import settings
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import ArrayField, RangeBoundary, RangeOperators
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -510,7 +511,7 @@ class ContactEntity(JasminModel):
     acronym = models.CharField(max_length=200, blank=True, null=True)
 
     user = models.OneToOneField(
-        "accounts.JasminUser",
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         related_name="reseller_profile",
         blank=True,

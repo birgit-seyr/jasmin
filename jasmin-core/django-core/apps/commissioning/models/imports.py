@@ -11,6 +11,7 @@ backend from that same flag.
 
 from __future__ import annotations
 
+from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
@@ -94,7 +95,7 @@ class ShareImportBatch(JasminModel, CreatedMixin):
 
     applied_at = models.DateTimeField(blank=True, null=True)
     applied_by = models.ForeignKey(
-        "accounts.JasminUser",
+        settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         blank=True,
         null=True,

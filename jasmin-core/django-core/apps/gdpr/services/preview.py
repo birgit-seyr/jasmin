@@ -16,7 +16,8 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
-from apps.accounts.models import JasminUser
+from django.conf import settings
+
 from apps.commissioning.models import (
     ConsentRecord,
     CoopShare,
@@ -34,6 +35,10 @@ from ..field_classes import FieldClass, get_classification
 from .anonymization import _ci_recipient_q
 
 if TYPE_CHECKING:
+    # Type-only: the runtime path uses ``get_user_model()``, so this module
+    # also works under a host project with a different ``AUTH_USER_MODEL``.
+    from apps.accounts.models import JasminUser
+
     # ``GDPRService`` is assembled in the package ``__init__`` and bound into
     # this module's namespace there — see the binding loop in ``__init__``.
     from . import GDPRService
@@ -177,7 +182,7 @@ class PreviewMixin:
             row_count = model.objects.filter(**filters).count()
             return (row_count > 0, row_count)
 
-        presence: dict[str, tuple[bool, int]] = {"accounts.JasminUser": (True, 1)}
+        presence: dict[str, tuple[bool, int]] = {settings.AUTH_USER_MODEL: (True, 1)}
 
         if member is not None:
             presence["commissioning.Member"] = (True, 1)

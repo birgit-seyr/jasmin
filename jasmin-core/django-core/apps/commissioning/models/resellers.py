@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import RangeBoundary, RangeOperators
 from django.core.exceptions import ValidationError
@@ -85,7 +86,7 @@ class Reseller(JasminModel):
     # or reassign the reseller first.
     contact = models.ForeignKey("ContactEntity", on_delete=models.PROTECT)
     linked_user = models.OneToOneField(
-        "accounts.JasminUser",
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         blank=True,
         null=True,

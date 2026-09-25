@@ -13,11 +13,10 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
-
-from apps.accounts.models import JasminUser
 
 from ..errors import (
     MemberAlreadyCancelled,
@@ -31,6 +30,12 @@ from ..errors import (
 )
 from ..models import Member
 from .member_email import schedule_member_email
+
+if TYPE_CHECKING:
+    # Type-only: the concrete user model keeps mypy precise, while the runtime
+    # path goes through ``get_user_model()`` so this module works under a host
+    # project whose ``AUTH_USER_MODEL`` is something else.
+    from apps.accounts.models import JasminUser
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +51,7 @@ class MemberService:
     def find_existing_user_for_email(email: str | None) -> JasminUser | None:
         if not email:
             return None
-        return JasminUser.objects.filter(email__iexact=email).first()
+        return get_user_model().objects.filter(email__iexact=email).first()
 
     @staticmethod
     def assert_user_can_be_linked(user: JasminUser) -> None:
