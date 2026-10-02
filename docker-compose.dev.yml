@@ -233,7 +233,7 @@ services:
     #     "CREATE DATABASE glitchtip OWNER ${POSTGRES_USER:-jasmin};"
     # Pinned to a published patch tag (the floating ``v4`` major was pulled
     # from Docker Hub); keep this in sync with the prod compose pin.
-    image: glitchtip/glitchtip:v4.1.0
+    image: glitchtip/glitchtip:6.2.6
     # Opt-in (see uptime-kuma): excluded from ``make dev-up``. Enable with
     # ``docker compose --profile observability up``.
     profiles: ["observability"]
@@ -256,7 +256,7 @@ services:
 
   glitchtip-worker:
     # Pinned patch tag — keep in sync with glitchtip-web above and the prod pin.
-    image: glitchtip/glitchtip:v4.1.0
+    image: glitchtip/glitchtip:6.2.6
     profiles: ["observability"] # opt-in (see glitchtip-web)
     command: ./bin/run-celery-with-beat.sh
     environment:
