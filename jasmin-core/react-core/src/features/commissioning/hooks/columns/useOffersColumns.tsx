@@ -303,17 +303,22 @@ export function useOffersColumns({
         dataIndex: "amount",
         key: "amount",
         width: "8em",
-        inputType: "positive_integer",
+        inputType: "positive_decimal3",
         required: true,
         align: "center",
         suffix: t("commissioning.pu"),
         render: (_: unknown, record: TableRecord) => {
           const amount = record.amount ? Number(record.amount) : 0;
-          const color = amount === 0 ? "darkred" : "darkgreen";
+          const amountClass =
+            amount === 0 ? "offer-amount-none-left" : "offer-amount-left";
+          // An order leaves a fraction of a PU behind; show the digits it
+          // has (up to the column's 3), so "2,500" can't read as thousands.
+          const fractionDigits =
+            String(Number(amount.toFixed(3))).split(".")[1]?.length ?? 0;
 
           return (
-            <span style={{ color }}>
-              {format(amount, 0)} {t("commissioning.pu")}
+            <span className={amountClass}>
+              {format(amount, fractionDigits)} {t("commissioning.pu")}
             </span>
           );
         },

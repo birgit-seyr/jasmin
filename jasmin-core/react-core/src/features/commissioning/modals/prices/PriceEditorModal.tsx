@@ -70,6 +70,8 @@ export interface PriceEditorModalProps<T, TCreate = T, TUpdate = TCreate> {
   listHook: ListHook<T, Record<string, string>>;
   getListQueryKey: GetListQueryKey<Record<string, string>>;
   api: PriceModalApi<TCreate, TUpdate>;
+  /** Called after a price is created or updated, for the page behind the modal. */
+  onSave?: () => void;
 }
 
 /**
@@ -96,6 +98,7 @@ export default function PriceEditorModal<T, TCreate = T, TUpdate = TCreate>({
   listHook,
   getListQueryKey,
   api,
+  onSave,
 }: PriceEditorModalProps<T, TCreate, TUpdate>) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -148,8 +151,9 @@ export default function PriceEditorModal<T, TCreate = T, TUpdate = TCreate>({
     (record: TableRecord, action: "create" | "update") => {
       trackRecentlyAdded(record, action);
       invalidateData();
+      onSave?.();
     },
-    [trackRecentlyAdded, invalidateData],
+    [trackRecentlyAdded, invalidateData, onSave],
   );
 
   const customEdit = useCallback(

@@ -41,7 +41,7 @@
   "list_additional_share_articles": "",
   "list_offer_groups": "Here offer groups can be created, which can then be assigned to the individual resellers.",
   "delivery_exceptions": "A delivery pause suspends whole weeks for a share type variation: nothing is delivered, no demand is produced and nothing is billed for that period. Already-confirmed subscriptions are adjusted automatically (future weeks only).",
-  "station_fees": "Per delivery station with a configured fee, shows what the farm owes it for the chosen period (net). Each station uses exactly one fee: per delivered box, per month, or per year. For monthly/yearly fees, pick a matching period.",
+  "station_fees": "Per delivery station with a configured fee, shows what the farm owes it for the chosen period (net). Each station uses exactly one fee: per delivered box, per month, or per year. A monthly or yearly fee is prorated by day: each month or year counts with the share of its days inside the period.",
   "list_plots": "This list can then be used in the harvest forecast, so that the harvest team knows where which vegetable is to be harvested.",
   "list_absence_categories": "Absence categories are kept per year and used to mark absences in the weekly plan.",
   "list_share_articles": "All data here is only stored as a default. It can be changed specifically at any time in all other places such as harvest forecast, box planning etc.",

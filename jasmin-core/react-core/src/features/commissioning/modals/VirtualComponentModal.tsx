@@ -48,7 +48,11 @@ export default function VirtualComponentModal({
   zIndex = 1100,
 }: VirtualComponentModalProps) {
   const [saving, setSaving] = useState(false);
-  const [selectedVariations, setSelectedVariations] = useState<Record<string, number>>({});
+  // A null quantity is a field cleared mid-edit; it stays empty while the user
+  // types and is saved as 1.
+  const [selectedVariations, setSelectedVariations] = useState<
+    Record<string, number | null>
+  >({});
 
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -123,7 +127,7 @@ export default function VirtualComponentModal({
     (variationId: string | number, quantity: number | null) => {
       setSelectedVariations((prev) => ({
         ...prev,
-        [variationId]: quantity || 1,
+        [variationId]: quantity,
       }));
     },
     [],
@@ -146,7 +150,7 @@ export default function VirtualComponentModal({
       const components = Object.entries(selectedVariations).map(
         ([physical_variation, quantity]) => ({
           physical_variation,
-          quantity,
+          quantity: quantity || 1,
         }),
       );
 

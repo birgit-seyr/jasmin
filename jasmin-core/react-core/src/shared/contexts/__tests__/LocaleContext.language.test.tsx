@@ -11,8 +11,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { flushMicrotasks } from "@/test/profileRenders";
 
-const { authPartialUpdate } = vi.hoisted(() => ({
+const { authPartialUpdate, notify } = vi.hoisted(() => ({
   authPartialUpdate: vi.fn(() => Promise.resolve({})),
+  notify: { error: vi.fn(), success: vi.fn() },
 }));
 
 /** Holds dayjs's German locale back until a test lets it arrive, the way its
@@ -42,12 +43,16 @@ vi.mock("react-i18next", () => ({
 const auth: { user: { id: string; user_language?: string } | null } = {
   user: null,
 };
-vi.mock("../AuthContext", () => ({ useAuth: () => ({ user: auth.user }) }));
+const updateUser = vi.fn();
+vi.mock("../AuthContext", () => ({
+  useAuth: () => ({ user: auth.user, updateUser }),
+}));
 vi.mock("../TenantContext", async () => {
   const { createContext } = await import("react");
   return { TenantContext: createContext(undefined) };
 });
 vi.mock("@shared/api/generated/auth/auth", () => ({ authPartialUpdate }));
+vi.mock("@shared/utils/notify", () => ({ default: notify }));
 
 import { TenantContext } from "../TenantContext";
 import { LocaleProvider, useLocale } from "../LocaleContext";
@@ -109,6 +114,8 @@ describe("LocaleProvider language", () => {
     auth.user = null;
     probed = null;
     authPartialUpdate.mockClear();
+    updateUser.mockClear();
+    notify.error.mockClear();
   });
 
   describe("signed out", () => {
@@ -247,7 +254,7 @@ describe("LocaleProvider language", () => {
       expect(dayjs.locale()).toBe("en");
     });
 
-    it("saves a pick to the profile and keeps it in this browser", async () => {
+    it("saves a pick to the profile, the signed-in user and this browser", async () => {
       auth.user = { id: "u1", user_language: "de" };
       renderProvider("de");
       expect(probed?.language).toBe("de");
@@ -259,6 +266,57 @@ describe("LocaleProvider language", () => {
       });
       expect(probed?.language).toBe("en");
       expect(storedPick()).toBe("en");
+      // A later profile save writes the signed-in user back whole, so it must
+      // carry the pick, or the language flips back.
+      expect(updateUser).toHaveBeenCalledWith({ user_language: "en" });
+    });
+
+    it("keeps a language the profile can't store off the signed-in user", async () => {
+      auth.user = { id: "u1", user_language: "de" };
+      renderProvider("de");
+
+      await act(() => probed!.saveLanguage("xx"));
+
+      expect(authPartialUpdate).not.toHaveBeenCalled();
+      expect(updateUser).not.toHaveBeenCalled();
+      expect(probed?.language).toBe("xx");
+    });
+
+    it("tells the user the server's reason when a pick can't be saved and keeps the language", async () => {
+      auth.user = { id: "u1", user_language: "de" };
+      renderProvider("de");
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      const refusal = {
+        isAxiosError: true,
+        response: { status: 400, data: { message: "Language not allowed" } },
+      };
+      authPartialUpdate.mockRejectedValueOnce(refusal);
+
+      await act(() =>
+        expect(probed!.saveLanguage("en")).rejects.toBe(refusal),
+      );
+
+      expect(notify.error).toHaveBeenCalledWith("Language not allowed");
+      expect(probed?.error).toBe("Language not allowed");
+      expect(probed?.language).toBe("de");
+      expect(updateUser).not.toHaveBeenCalled();
+      expect(consoleError).not.toHaveBeenCalled();
+      consoleError.mockRestore();
+    });
+
+    it("tells the user in their language when the server gives no reason", async () => {
+      auth.user = { id: "u1", user_language: "de" };
+      renderProvider("de");
+      authPartialUpdate.mockRejectedValueOnce(new Error("Network Error"));
+
+      await act(() =>
+        expect(probed!.saveLanguage("en")).rejects.toThrow("Network Error"),
+      );
+
+      expect(notify.error).toHaveBeenCalledWith(
+        "profile.preferences_save_error",
+      );
+      expect(probed?.error).toBe("profile.preferences_save_error");
     });
   });
 });

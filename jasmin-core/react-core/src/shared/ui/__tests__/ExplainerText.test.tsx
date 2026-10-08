@@ -35,4 +35,27 @@ describe("ExplainerText", () => {
     render(<ExplainerText>tip</ExplainerText>);
     expect(screen.getByText("💡")).toBeInTheDocument();
   });
+
+  it.each([
+    ["an empty text", ""],
+    ["a blank text", "  "],
+    ["no text", null],
+  ])("renders nothing, not even the title or the icon, for %s", (_label, body) => {
+    const { container } = render(<ExplainerText title="Info">{body}</ExplainerText>);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("renders a body put together from several parts", () => {
+    render(
+      <ExplainerText title="Info">
+        {"First part"}
+        <br />
+        {""}
+      </ExplainerText>,
+    );
+
+    expect(screen.getByText("Info")).toBeInTheDocument();
+    expect(screen.getByText("First part")).toBeInTheDocument();
+  });
 });

@@ -167,6 +167,7 @@ export function HarvestingMobileCard({
               }
               icon={<CheckOutlined />}
               title={t("commissioning.actual_harvest")}
+              aria-label={t("commissioning.actual_harvest")}
             />
           </div>
         )}

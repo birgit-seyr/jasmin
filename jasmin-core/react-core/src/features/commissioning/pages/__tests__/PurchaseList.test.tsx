@@ -189,8 +189,15 @@ vi.mock("@features/commissioning/components", () => ({
 }));
 
 // Lazy react-pdf generator — must be stubbed or it pulls in @react-pdf/renderer.
+// It shows the file name and subtitle it was handed.
 vi.mock("@features/commissioning/pdfs/exports/PurchaseListPDFGenerator", () => ({
-  default: () => <div data-testid="purchase-list-pdf-generator" />,
+  default: ({ filename, subtitle }: { filename: string; subtitle: string }) => (
+    <div
+      data-testid="purchase-list-pdf-generator"
+      data-filename={filename}
+      data-subtitle={subtitle}
+    />
+  ),
 }));
 
 // ── Imports under test ───────────────────────────────────────────────────────
@@ -624,5 +631,30 @@ describe("PurchaseList saves", () => {
     );
 
     expect(lastNextWeekParams()).toMatchObject({ year: 2026, delivery_week: 53 });
+  });
+});
+
+describe("PurchaseList PDF", () => {
+  const pdf = () => screen.getByTestId("purchase-list-pdf-generator");
+
+  it("names the selected week and next week under their year", async () => {
+    renderPage();
+    await includeNextWeek();
+
+    expect(pdf()).toHaveAttribute("data-subtitle", "commissioning.KW 41+42/2026");
+    expect(pdf().getAttribute("data-filename")).toMatch(/_2026_commissioning\.KW41\+42$/);
+  });
+
+  it("names next week by its own year in the last week of a year", async () => {
+    // Tuesday 29 December 2026 lies in ISO week 53; next week is week 1 of 2027.
+    vi.setSystemTime(new Date(2026, 11, 29, 12, 0));
+    renderPage();
+    await includeNextWeek();
+
+    expect(lastNextWeekParams()).toMatchObject({ year: 2027, delivery_week: 1 });
+    expect(pdf()).toHaveAttribute("data-subtitle", "commissioning.KW 53/2026+1/2027");
+    expect(pdf().getAttribute("data-filename")).toMatch(
+      /_2026_commissioning\.KW53\+2027_commissioning\.KW1$/,
+    );
   });
 });

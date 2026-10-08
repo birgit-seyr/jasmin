@@ -27,7 +27,7 @@ export {
 } from './amountFormat';
 export { getShareOptionLabel } from './shareOptionLabel';
 
-export { getDayName } from './weekdayNames';
+export { getDayName, toDayNumber } from './weekdayNames';
 export { generatePdfFilename } from './pdfFilename';
 export { formatWeekLabel, formatDayLabel } from './weekLabels';
 // NB: pdfColumns (extractPdfColumns) is intentionally NOT re-exported here.

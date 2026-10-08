@@ -16,7 +16,10 @@ vi.mock("react-i18next", () => ({
 }));
 
 const auth: { user: { id: string; theme?: string } | null } = { user: null };
-vi.mock("../AuthContext", () => ({ useAuth: () => ({ user: auth.user }) }));
+const updateUser = vi.fn();
+vi.mock("../AuthContext", () => ({
+  useAuth: () => ({ user: auth.user, updateUser }),
+}));
 vi.mock("../TenantContext", async () => {
   const { createContext } = await import("react");
   return { TenantContext: createContext(undefined) };
@@ -74,6 +77,7 @@ describe("LocaleProvider theme", () => {
     auth.user = null;
     probed = null;
     authPartialUpdate.mockClear();
+    updateUser.mockClear();
   });
 
   afterEach(() => {
@@ -113,10 +117,9 @@ describe("LocaleProvider theme", () => {
     await waitFor(() => expect(probed?.theme).toBe("dark"));
   });
 
-  it("saves a choice to the profile and keeps it in this browser", async () => {
+  it("saves a choice to the profile, the signed-in user and this browser", async () => {
     fakeDevice(false);
     auth.user = { id: "u1", theme: "system" };
-    localStorage.setItem("auth", JSON.stringify({ user: auth.user }));
     renderProvider();
     await waitFor(() => expect(probed?.themePreference).toBe("system"));
 
@@ -125,6 +128,8 @@ describe("LocaleProvider theme", () => {
     expect(authPartialUpdate).toHaveBeenCalledWith("u1", { theme: "dark" });
     expect(probed?.theme).toBe("dark");
     expect(localStorage.getItem("theme")).toBe("dark");
-    expect(JSON.parse(localStorage.getItem("auth")!).user.theme).toBe("dark");
+    // Through AuthContext, which also keeps the stored ``auth`` entry: a later
+    // profile save writes the signed-in user back whole.
+    expect(updateUser).toHaveBeenCalledWith({ theme: "dark" });
   });
 });

@@ -23,6 +23,7 @@ import { IconActionButton, ToolTipIcon } from "@shared/ui";
 import { CsvImportButton } from "@shared/modals";
 import { useContactColumns, useOrganicGate, useTenant } from "@hooks/index";
 import { isFieldDisabled } from "@shared/utils";
+import { sellerLabel } from "@features/commissioning/hooks/useSellers";
 import OrganicCertificatesModal from "../modals/OrganicCertificatesModal";
 
 type ResellerRow = Reseller & TableRecord;
@@ -68,7 +69,7 @@ export default function ListSellers() {
   const openCertModal = useCallback((record: ResellerRow) => {
     setCertReseller({
       id: String(record.id ?? ""),
-      name: String(record.company_name ?? record.id ?? ""),
+      name: sellerLabel(record),
     });
   }, []);
 
@@ -88,7 +89,6 @@ export default function ListSellers() {
     (transformedData: Record<string, unknown>) => ({
       ...transformedData,
       is_seller: true,
-      comes_from_seller_page: true,
     }),
     [],
   );
@@ -110,6 +110,11 @@ export default function ListSellers() {
         inputType: "checkbox",
         required: false,
         sortable: true,
+        // A linked station still in use can't be unlinked: the server keeps
+        // it, so the box would only tick itself again.
+        disabled: (record: ResellerRow) =>
+          !!record.is_also_delivery_station &&
+          record.linked_delivery_station_can_be_deleted === false,
       },
       {
         title: <>{t("resellers.is_reseller")}</>,
@@ -147,7 +152,8 @@ export default function ListSellers() {
               title: <>{t("resellers.organic_certificates")}</>,
               dataIndex: "organic_certificates",
               key: "organic_certificates",
-              editable: false,
+              // A button column, not a field: kept out of edits and the import template.
+              disabled: true,
               align: "center",
               width: "9em",
               // The button only appears when THIS seller has an organic control
@@ -206,6 +212,8 @@ export default function ListSellers() {
               columns={columns}
               filename={t("commissioning.sellers_template.csv")}
               modelName="reseller"
+              // The template has no is_seller column: every imported row becomes a seller.
+              fixedValues={{ is_seller: true }}
               onUploadSuccess={list.invalidate}
             />
           ) : null

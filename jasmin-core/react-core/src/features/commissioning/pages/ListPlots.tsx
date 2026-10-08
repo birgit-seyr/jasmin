@@ -51,7 +51,7 @@ export default function ListPlots() {
         dataIndex: "name",
         key: "name",
         inputType: "text",
-        required: false,
+        required: true,
         width: "16em",
         align: "left",
       },

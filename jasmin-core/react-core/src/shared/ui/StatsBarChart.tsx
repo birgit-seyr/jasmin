@@ -55,6 +55,9 @@ interface StatsBarChartProps {
   series: StatsBarSeries[];
   /** X-axis category key (default "label"). */
   xKey?: string;
+  /** Key of the field that identifies each row uniquely (default `xKey`); set
+   *  it when two rows can share a label. */
+  rowKey?: string;
   height?: number;
   /** Shown when there is no non-zero data. */
   emptyText: ReactNode;
@@ -91,6 +94,7 @@ export default function StatsBarChart({
   data,
   series,
   xKey = "label",
+  rowKey = xKey,
   height = 300,
   emptyText,
   showLegend,
@@ -179,7 +183,7 @@ export default function StatsBarChart({
         </thead>
         <tbody>
           {data.map((row, index) => (
-            <tr key={String(row[xKey] ?? index)}>
+            <tr key={String(row[rowKey] ?? index)}>
               <th scope="row">{String(row[xKey] ?? "")}</th>
               {series.map((s) => {
                 const value = Number(row[s.id] ?? 0);

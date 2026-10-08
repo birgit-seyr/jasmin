@@ -150,3 +150,27 @@ class BackupFailed(JasminError):
 class BackupTimedOut(JasminError):
     code = "super_admin.backup_timed_out"
     http_status = 504
+
+
+__all__ = [
+    "TenantNotFound",
+    "TenantUserNotFound",
+    "TenantSchemaMissing",
+    "DomainInUse",
+    "TenantProvisioningFailed",
+    "UserEmailExists",
+    "InvalidRoles",
+    "LastAdminProtected",
+    "ResellerNotFound",
+    "ResellerAlreadyLinked",
+    "SuperAdminMissingCredentials",
+    "SuperAdminInvalidCredentials",
+    "SuperAdminAccountDisabled",
+    "SuperAdminAccountLocked",
+    "RefreshTokenMissing",
+    "RefreshTokenInvalid",
+    "NotSuperAdminToken",
+    "BackupScriptMissing",
+    "BackupFailed",
+    "BackupTimedOut",
+]

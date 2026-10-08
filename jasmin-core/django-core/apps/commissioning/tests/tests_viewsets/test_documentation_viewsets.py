@@ -150,6 +150,110 @@ class TestWasteViewSet:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert "storage" in resp.data["details"]
 
+    def _post_waste(self, api_client, article, storage):
+        return api_client.post(
+            self.URL,
+            {
+                "year": 2026,
+                "delivery_week": 28,
+                "day_number": 1,
+                "share_article": str(article.id),
+                "unit": "KG",
+                "size": "M",
+                "amount": "3",
+                "storage": str(storage.id),
+            },
+            format="json",
+        )
+
+    def test_same_article_on_the_same_day_in_another_storage_is_recorded(
+        self, api_client, tenant
+    ):
+        """The page lists one storage's waste, so a waste of the same article,
+        unit and size thrown away from another storage that day is its own
+        row."""
+        article = ShareArticleFactory()
+        WasteFactory(
+            year=2026,
+            delivery_week=28,
+            day_number=1,
+            share_article=article,
+            unit="KG",
+            size="M",
+            storage=StorageFactory(is_short_term_harvest_storage=True),
+        )
+        other_storage = StorageFactory()
+
+        resp = self._post_waste(api_client, article, other_storage)
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert Waste.objects.filter(share_article=article).count() == 2
+
+    def test_same_article_on_the_same_day_in_the_same_storage_is_refused(
+        self, api_client, tenant
+    ):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        WasteFactory(
+            year=2026,
+            delivery_week=28,
+            day_number=1,
+            share_article=article,
+            unit="KG",
+            size="M",
+            storage=storage,
+        )
+
+        resp = self._post_waste(api_client, article, storage)
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "waste.already_documented"
+        assert "non_field_errors" in resp.data["details"]
+        assert Waste.objects.filter(share_article=article).count() == 1
+
+    def test_moving_a_waste_onto_a_documented_one_is_refused(self, api_client, tenant):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        key = {
+            "year": 2026,
+            "delivery_week": 28,
+            "day_number": 1,
+            "share_article": article,
+            "unit": "KG",
+            "size": "M",
+        }
+        WasteFactory(**key, storage=storage)
+        other = WasteFactory(**key, storage=StorageFactory())
+
+        resp = api_client.patch(
+            reverse("waste-detail", args=[other.pk]),
+            {"storage": str(storage.id)},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "waste.already_documented"
+
+    def test_saving_a_waste_unchanged_is_not_a_duplicate_of_itself(
+        self, api_client, tenant
+    ):
+        waste = WasteFactory(
+            year=2026,
+            delivery_week=28,
+            day_number=1,
+            unit="KG",
+            size="M",
+            storage=StorageFactory(is_short_term_harvest_storage=True),
+        )
+
+        resp = api_client.patch(
+            reverse("waste-detail", args=[waste.pk]),
+            {"amount": "4", "storage": str(waste.storage_id)},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+
 
 # ---------------------------------------------------------------------------
 # HarvestViewSet

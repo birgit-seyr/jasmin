@@ -301,7 +301,7 @@ describe("VirtualComponentModal editing", () => {
     expect(quantity).toHaveAttribute("inputmode", "numeric");
   });
 
-  it.skip("replaces a saved quantity with the one typed over it", async () => {
+  it("replaces a saved quantity with the one typed over it", async () => {
     const user = userEvent.setup();
     serverComponents = [component("var-small", 2)];
     renderModal();

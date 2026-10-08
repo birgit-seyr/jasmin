@@ -1096,6 +1096,18 @@ class TestDelimiter:
         assert outcome.errors == {}
         assert [(row.row_number, row.quantity) for row in outcome.rows] == [(1, 4)]
 
+    def test_a_semicolon_file_with_a_capitalised_header_parses(self, import_world):
+        """The header is case-insensitive, so choosing the separator must be
+        too — or the comma wins and every row misses its columns."""
+        outcome = self._validate(
+            b"Year;Delivery_Week;Delivery_Station_Code;Delivery_Day_Code;"
+            b"VARIATION_CODE;Quantity\r\n"
+            b"2026;15;STN-1;WED;VEG-M;5\r\n"
+        )
+
+        assert outcome.errors == {}
+        assert [(row.row_number, row.quantity) for row in outcome.rows] == [(1, 5)]
+
     def test_a_comma_file_still_parses(self, import_world):
         outcome = self._validate(
             _csv_bytes(

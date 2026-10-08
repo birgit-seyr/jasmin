@@ -129,7 +129,7 @@ export default function ExportCsvAtDateModal({
         </Button>,
       ]}
     >
-      <div className="flex-center-y gap-12" style={{ marginBottom: 16 }}>
+      <div className="flex-center-y gap-12 mb-16">
         <DatePicker
           value={selectedDate}
           onChange={(date) => {
@@ -144,7 +144,7 @@ export default function ExportCsvAtDateModal({
       </div>
 
       {loading && (
-        <div style={{ textAlign: "center", padding: 24 }}>
+        <div className="csv-export-at-date__loading">
           <Spin />
         </div>
       )}
@@ -154,7 +154,7 @@ export default function ExportCsvAtDateModal({
       )}
 
       {!loading && rows && rows.length > 0 && (
-        <div style={{ color: "var(--color-success)", fontWeight: 500 }}>
+        <div className="csv-export-at-date__loaded">
           {t(loadedMessageKey, { count: rows.length })}
         </div>
       )}

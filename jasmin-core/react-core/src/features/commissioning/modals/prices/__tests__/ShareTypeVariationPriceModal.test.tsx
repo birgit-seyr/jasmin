@@ -12,6 +12,7 @@
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
+import type { ReactElement } from "react";
 import type { EditableColumnConfig } from "@shared/tables/BasicEditableTable/types";
 
 vi.mock("react-i18next", () => ({
@@ -65,9 +66,15 @@ vi.mock("@shared/ui", () => ({
 
 // ── Capture the columns the modal hands the (stubbed) editor shell ─────────
 let capturedColumns: EditableColumnConfig[] = [];
+let capturedProps: { onSave?: () => void; api?: unknown }[] = [];
 vi.mock("../PriceEditorModal", () => ({
-  default: (props: { columns: EditableColumnConfig[] }) => {
+  default: (props: {
+    columns: EditableColumnConfig[];
+    onSave?: () => void;
+    api?: unknown;
+  }) => {
     capturedColumns = props.columns;
+    capturedProps.push(props);
     return <div data-testid="price-editor-shell" />;
   },
 }));
@@ -76,19 +83,25 @@ import ShareTypeVariationPriceModal from "../ShareTypeVariationPriceModal";
 
 const SOLIDARITY_COL = "solidarity_min_price_per_delivery";
 
-function renderModal() {
-  render(
+function modal(onSave?: () => void): ReactElement {
+  return (
     <ShareTypeVariationPriceModal
       visible
       onClose={vi.fn()}
+      onSave={onSave}
       share_type_variation="stv-1"
       share_type_variation_name="Gemüse M"
-    />,
+    />
   );
+}
+
+function renderModal(onSave?: () => void) {
+  return render(modal(onSave));
 }
 
 beforeEach(() => {
   capturedColumns = [];
+  capturedProps = [];
   getSettingMock.mockReset();
 });
 
@@ -118,5 +131,23 @@ describe("ShareTypeVariationPriceModal — solidarity column gating", () => {
     expect(dataIndexes).not.toContain(SOLIDARITY_COL);
     // The reference price column survives the toggle being off.
     expect(dataIndexes).toContain("price_per_delivery");
+  });
+});
+
+describe("ShareTypeVariationPriceModal — editor wiring", () => {
+  it("hands the caller's onSave to the editor, so the variation list reloads after a price change", () => {
+    const onSave = vi.fn();
+
+    renderModal(onSave);
+
+    expect(capturedProps.at(-1)?.onSave).toBe(onSave);
+  });
+
+  it("keeps the editor's API functions the same object across renders", () => {
+    const { rerender } = renderModal();
+    rerender(modal());
+
+    expect(capturedProps.length).toBeGreaterThan(1);
+    expect(capturedProps.at(-1)?.api).toBe(capturedProps[0].api);
   });
 });

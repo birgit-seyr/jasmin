@@ -12,6 +12,7 @@ import {
   commissioningBulkCopyOffersToOfferGroupCreate,
   commissioningBulkFinalizeCreate,
 } from "@shared/api/generated/commissioning/commissioning";
+import type { BulkCopyOffersResponse } from "@shared/api/generated/models";
 import { BulkActionButton } from "@shared/ui";
 import type { useOffersData } from "@features/commissioning/hooks/useOffersData";
 import { notify } from "@shared/utils";
@@ -37,6 +38,27 @@ export default function OffersBulkActions({
   const { t } = useTranslation();
   const nothingSelected = selectedRowKeys.length === 0;
 
+  // The backend skips an offer whose copy already exists at the target, so a
+  // successful request may have copied only some of the offers, or none.
+  const reportCopy = (
+    result: BulkCopyOffersResponse,
+    messageKey: "copied_to_next_week" | "copied_to_offer_group",
+    values: Record<string, unknown> = {},
+  ) => {
+    const counts = {
+      count: result.total_copied,
+      skipped: result.skipped_count,
+      ...values,
+    };
+    if (result.total_copied === 0) {
+      notify.warning(t(`commissioning.${messageKey}_none`, counts));
+    } else if (result.skipped_count > 0) {
+      notify.success(t(`commissioning.${messageKey}_some_skipped`, counts));
+    } else {
+      notify.success(t(`commissioning.${messageKey}`, counts));
+    }
+  };
+
   return (
     <div className="button-row-spaced">
       <BulkActionButton
@@ -60,10 +82,10 @@ export default function OffersBulkActions({
         icon={null}
         onConfirm={async () => {
           try {
-            await commissioningBulkCopyOffersToNextWeekCreate({
+            const result = await commissioningBulkCopyOffersToNextWeekCreate({
               ids: selectedRowKeys as number[],
             } as never);
-            notify.success(t("commissioning.copied_to_next_week"));
+            reportCopy(result, "copied_to_next_week");
             onClearSelection();
           } catch (error) {
             notify.error(getErrorMessage(error, t("commissioning.copy_failed")));
@@ -98,17 +120,16 @@ export default function OffersBulkActions({
             icon={null}
             onConfirm={async () => {
               try {
-                await commissioningBulkCopyOffersToOfferGroupCreate({
-                  ids: selectedRowKeys as number[],
-                  year: selectedYear,
-                  delivery_week: selectedWeek,
-                  offer_group: offerGroup.id,
-                } as never);
-                notify.success(
-                  t("commissioning.copied_to_offer_group", {
-                    offerGroup: offerGroup.name,
-                  }),
-                );
+                const result =
+                  await commissioningBulkCopyOffersToOfferGroupCreate({
+                    ids: selectedRowKeys as number[],
+                    year: selectedYear,
+                    delivery_week: selectedWeek,
+                    offer_group: offerGroup.id,
+                  } as never);
+                reportCopy(result, "copied_to_offer_group", {
+                  offerGroup: offerGroup.name,
+                });
                 onClearSelection();
               } catch (error) {
                 notify.error(

@@ -425,7 +425,7 @@ describe("InvoiceModal header", () => {
 // ── Line and crate cells ────────────────────────────────────────────────────
 
 describe("InvoiceModal cells", () => {
-  it("formats a line's price, discount, net amount and VAT rate with the tenant's currency and number format", () => {
+  it("formats a line's price, discount, net amount and VAT rate with the tenant's currency and number format and takes a fractional VAT rate", () => {
     renderModal();
 
     expect(screen.getByTestId("lines-line-1-price_per_unit")).toHaveTextContent(
@@ -439,6 +439,10 @@ describe("InvoiceModal cells", () => {
       "7,00 %",
     );
     expect(screen.getByTestId("lines-line-1-amount")).toHaveTextContent("2,00");
+    for (const name of ["lines", "crates"] as const) {
+      const vat = grid(name).columns.find((c) => c.dataIndex === "tax_rate");
+      expect(vat?.inputType).toBe("positive_decimal2");
+    }
   });
 
   it("shows the backend's net line amount rather than recomputing it", () => {

@@ -133,6 +133,7 @@ export default function DeliveryNoteModal({
       amount: {
         title: t("commissioning.ordered_amount"),
         width: "6em",
+        inputType: "positive_decimal3",
         render: (value: unknown, record: DeliveryNoteContentRecord) => {
           const numValue = Number(value);
           if (isNaN(numValue) || numValue === 0) return "";

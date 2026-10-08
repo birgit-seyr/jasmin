@@ -71,7 +71,7 @@ export const functionLengthPins = {
   "src/shared/layout/sidebars/CommissioningSidebar.tsx": 601,
   "src/shared/tables/BasicEditableTable/EditableTable.tsx": 836,
   "src/shared/tables/BasicEditableTable/FormInput.tsx": 472,
-  "src/shared/tables/BasicEditableTable/useEditableTable.ts": 539,
+  "src/shared/tables/BasicEditableTable/useEditableTable.ts": 536,
 };
 
 // Total file length, blank lines and comments INCLUDED — a file you have to

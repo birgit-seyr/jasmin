@@ -25,6 +25,7 @@ from apps.commissioning.models import (
     Crate,
     DeliveryStation,
     Member,
+    OfferGroup,
     Reseller,
     ShareArticle,
 )
@@ -1078,6 +1079,50 @@ class TestResellerAndDeliveryStationImport:
         assert result.errors[0]["row"] == 4
         assert "city" in result.errors[0]["error"]
         assert not DeliveryStation.objects.filter(short_name="NOCITY").exists()
+
+
+# The template the resellers page hands out names the offer group by
+# ``offer_group_name``, a column the reseller serializer does not read.
+_RESELLER_TEMPLATE_CSV = b"".join(
+    [
+        b"Company,Address,ZIP,City,Email,Offer group\n",
+        b"company_name,address,zip_code,city,email,offer_group_name\n",
+        b"string,string,string,string,string,string\n",
+        b"Kern Farm Shop,4 Market Lane,8010,Graz,shop@example.org,Restaurants\n",
+    ]
+)
+
+
+@pytest.mark.django_db
+class TestImportedResellerOfferGroup:
+    """An imported reseller sees the offers of the tenant's default offer group,
+    as one the office creates in the grid does."""
+
+    def _import(self):
+        return import_rows_from_csv(
+            "reseller",
+            _RESELLER_TEMPLATE_CSV,
+            options=ImportOptions(fixed_values={"is_reseller": True}),
+        )
+
+    def test_an_imported_reseller_gets_the_default_offer_group(self, tenant):
+        result = self._import()
+
+        assert result.failed == 0, result.errors
+        shop = Reseller.objects.get(contact__company_name="Kern Farm Shop")
+        assert shop.is_reseller is True
+        assert shop.offer_group_id == OfferGroup.get_default().pk
+
+    def test_without_a_default_offer_group_the_reseller_is_imported_without_one(
+        self, tenant
+    ):
+        OfferGroup.objects.filter(is_default=True).update(is_default=False)
+
+        result = self._import()
+
+        assert result.failed == 0, result.errors
+        shop = Reseller.objects.get(contact__company_name="Kern Farm Shop")
+        assert shop.offer_group is None
 
 
 # The template the extra articles page hands out: the grid locks the unit and

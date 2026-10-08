@@ -240,3 +240,31 @@ class ActionRateLimitExceeded(RateLimitError):
             ),
             details={"action": str(action), "scope": scope, "limit": limit},
         )
+
+
+__all__ = [
+    "InvalidSchemaName",
+    "SchemaAlreadyExists",
+    "InvalidDomain",
+    "ReservedDomain",
+    "WeakPassword",
+    "NoTenantContext",
+    "TenantAppIconInvalid",
+    "TenantLogoInvalid",
+    "TenantRateLimitsInvalid",
+    "TenantFeatureFlagsInvalid",
+    "YearNumberingLocked",
+    "EmptyNumberingPrefix",
+    "CoopSharesBoundsInverted",
+    "InvalidSettingsPayload",
+    "InvalidSettingsValue",
+    "TestEmailRecipientMissing",
+    "EmailConfigNotSetUp",
+    "EmailSendingNotSetUp",
+    "TestEmailRecipientNotAllowed",
+    "TestEmailSendFailed",
+    "SmtpHostNotAllowed",
+    "SmtpPortInvalid",
+    "SmtpTlsSslConflict",
+    "ActionRateLimitExceeded",
+]

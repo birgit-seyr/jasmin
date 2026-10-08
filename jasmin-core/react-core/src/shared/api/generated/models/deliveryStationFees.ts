@@ -19,7 +19,13 @@ export interface DeliveryStationFees {
   start_date: string;
   end_date: string;
   fee_type: FeeTypeEnum;
+  /** Whole units: the billed quantity rounded up. Kept for clients that read an integer count; the total is based on billed_quantity. */
   quantity: number;
+  /**
+   * The quantity the total is based on: boxes delivered, or the months or years of the range prorated by day.
+   * @pattern ^-?\d{0,8}(?:\.\d{0,4})?$
+   */
+  billed_quantity: string;
   quantity_unit: string;
   rate_net: string;
   total_net: string;

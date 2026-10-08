@@ -6,13 +6,19 @@ import pytest
 from django.db import IntegrityError, transaction
 
 from apps.commissioning.errors import RequiredFieldMissing
-from apps.commissioning.models import ContactEntity, DeliveryStation, Reseller
+from apps.commissioning.models import (
+    ContactEntity,
+    DeliveryStation,
+    OfferGroup,
+    Reseller,
+)
 from apps.commissioning.services.reseller_and_delivery_station_service import (
     ResellerAndDeliveryStationService,
 )
 from apps.commissioning.tests.factories import (
     ContactEntityFactory,
     DeliveryStationFactory,
+    OfferGroupFactory,
     ResellerFactory,
 )
 
@@ -75,6 +81,80 @@ class TestCreateReseller:
         }
         with pytest.raises(RequiredFieldMissing, match="Missing required contact"):
             svc.create_reseller(data)
+
+
+# ---------------------------------------------------------------------------
+# offer group of a new reseller
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestNewResellerOfferGroup:
+    """A reseller created without an offer group gets the tenant's default one,
+    the group the office grid pre-selects, so it sees offers from the start."""
+
+    def _reseller_data(self, **overrides):
+        return {
+            "is_reseller": True,
+            "is_seller": False,
+            "is_also_delivery_station": False,
+            **_contact_data(),
+            **overrides,
+        }
+
+    def test_without_an_offer_group_the_default_is_assigned(self, tenant, svc):
+        reseller = svc.create_reseller(self._reseller_data())
+
+        assert reseller.offer_group_id == OfferGroup.get_default().pk
+
+    def test_an_explicit_offer_group_is_kept(self, tenant, svc):
+        chosen = OfferGroupFactory()
+
+        reseller = svc.create_reseller(self._reseller_data(offer_group=chosen))
+
+        assert reseller.offer_group_id == chosen.pk
+
+    def test_without_a_default_offer_group_the_reseller_has_none(self, tenant, svc):
+        OfferGroup.objects.filter(is_default=True).update(is_default=False)
+
+        reseller = svc.create_reseller(self._reseller_data())
+
+        assert reseller.offer_group is None
+
+    def test_a_reseller_created_by_a_new_station_gets_the_default(self, tenant, svc):
+        station = svc.create_delivery_station(
+            {
+                "is_also_reseller": True,
+                "is_also_seller": False,
+                "is_active": True,
+                **_contact_data(),
+            }
+        )
+
+        assert station.linked_reseller.offer_group_id == OfferGroup.get_default().pk
+
+    def test_a_reseller_created_by_a_station_update_gets_the_default(self, tenant, svc):
+        contact = ContactEntityFactory(address="St", zip_code="55555", city="City")
+        station = DeliveryStationFactory(contact=contact)
+
+        svc.update_delivery_station(
+            station, {"is_also_reseller": True, "is_also_seller": False}
+        )
+
+        reseller = Reseller.objects.get(contact=contact)
+        assert reseller.offer_group_id == OfferGroup.get_default().pk
+
+    def test_a_station_update_leaves_an_existing_resellers_group_alone(
+        self, tenant, svc
+    ):
+        contact = ContactEntityFactory(address="St", zip_code="66666", city="City")
+        reseller = ResellerFactory(contact=contact, is_reseller=True, offer_group=None)
+        station = DeliveryStationFactory(contact=contact)
+
+        svc.update_delivery_station(
+            station, {"is_also_reseller": True, "is_also_seller": False}
+        )
+
+        reseller.refresh_from_db()
+        assert reseller.offer_group is None
 
 
 # ---------------------------------------------------------------------------

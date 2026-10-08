@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { FormInstance } from "antd";
 import { Checkbox, Flex } from "antd";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import {
   commissioningDocumentationSummaryAddAdditionalTheoreticalAmountCreate,
@@ -60,6 +61,43 @@ const shareArticleFilters = {
   is_active: true,
   is_purchased: true,
 };
+
+/**
+ * The PDF's file name and subtitle for the selected week, and next week when it
+ * is included. Next week goes by its own year when it lies in the next one, as
+ * week 1 does after the last week of a year.
+ */
+function describePdfPeriod({
+  title,
+  resellerLabel,
+  year,
+  week,
+  nextWeek,
+  t,
+}: {
+  title: string;
+  resellerLabel: string | null;
+  year: number;
+  week: number | null;
+  nextWeek: { year: number; week: number } | null;
+  t: TFunction;
+}): { filename: string; subtitle: string } {
+  const weekLabel = formatWeekLabel(week, t);
+  const kw = `${t("commissioning.KW")} ${week}`;
+  let period = `${year}_${weekLabel}`;
+  let subtitle = `${kw}/${year}`;
+  if (nextWeek && nextWeek.year !== year) {
+    period += `+${nextWeek.year}_${formatWeekLabel(nextWeek.week, t)}`;
+    subtitle += `+${nextWeek.week}/${nextWeek.year}`;
+  } else if (nextWeek) {
+    period += `+${nextWeek.week}`;
+    subtitle = `${kw}+${nextWeek.week}/${year}`;
+  }
+  return {
+    filename: generatePdfFilename([title, resellerLabel, period]),
+    subtitle,
+  };
+}
 
 export default function PurchaseList() {
   const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek, currentWeek } =
@@ -513,24 +551,28 @@ export default function PurchaseList() {
     },
   ];
 
-  const generateFilename = useMemo(() => {
-    const weekLabel = includeNextWeek
-      ? `${formatWeekLabel(selectedWeek, t)}+${nextWeekParams.delivery_week}`
-      : formatWeekLabel(selectedWeek, t);
-    return generatePdfFilename([
-      t("commissioning.purchase_list"),
-      selectedResellerLabel,
+  const { filename: generateFilename, subtitle: pdfSubtitle } = useMemo(
+    () =>
+      describePdfPeriod({
+        title: t("commissioning.purchase_list"),
+        resellerLabel: selectedResellerLabel,
+        year: selectedYear,
+        week: selectedWeek,
+        nextWeek: includeNextWeek
+          ? { year: nextWeekParams.year, week: nextWeekParams.delivery_week }
+          : null,
+        t,
+      }),
+    [
       selectedYear,
-      weekLabel,
-    ]);
-  }, [
-    selectedYear,
-    selectedWeek,
-    includeNextWeek,
-    nextWeekParams.delivery_week,
-    t,
-    selectedResellerLabel,
-  ]);
+      selectedWeek,
+      includeNextWeek,
+      nextWeekParams.year,
+      nextWeekParams.delivery_week,
+      t,
+      selectedResellerLabel,
+    ],
+  );
 
   // The table saves a next-week-only row through ``update`` under its key. The
   // row has no entry yet, so it goes to the create endpoint, which upserts the
@@ -584,7 +626,7 @@ export default function PurchaseList() {
         setSelectedReseller={setSelectedReseller}
         userType="seller"
       />
-      <div style={{ margin: "16px 0" }}>
+      <div className="mt-16 mb-16">
         <Flex align="center" gap="8px" component="label">
           <Checkbox
             checked={includeNextWeek}
@@ -601,11 +643,7 @@ export default function PurchaseList() {
         title={t("commissioning.purchase_list_pdf", {
           resellerLabel: selectedResellerLabel,
         })}
-        subtitle={
-          includeNextWeek
-            ? `${t("commissioning.KW")} ${selectedWeek}+${nextWeekParams.delivery_week}/${selectedYear}`
-            : `${t("commissioning.KW")} ${selectedWeek}/${selectedYear}`
-        }
+        subtitle={pdfSubtitle}
         columns={columns}
       />
 

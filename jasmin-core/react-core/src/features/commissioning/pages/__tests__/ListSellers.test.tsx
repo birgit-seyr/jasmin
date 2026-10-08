@@ -92,9 +92,15 @@ type CertificatesStubProps = {
   reseller_name: string;
 };
 type TemplateStubProps = {
-  columns: { dataIndex?: string | number }[];
+  columns: {
+    dataIndex?: string | number;
+    readOnly?: boolean;
+    disabled?: unknown;
+    importable?: boolean;
+  }[];
   filename: string;
   modelName?: string;
+  fixedValues?: Row;
   onUploadSuccess?: () => void;
   onImported?: () => void;
 };
@@ -194,9 +200,9 @@ function axiosError(status: number, data: Row) {
   });
 }
 
-/** The fields of a request body the serializer stores; the row's bookkeeping and the page's own flags fall away. */
+/** The fields of a request body the serializer stores; the row's bookkeeping falls away. */
 function storedFields(body: Row): Row {
-  const { key: _key, comes_from_seller_page: _fromSellerPage, ...fields } = body;
+  const { key: _key, ...fields } = body;
   return fields;
 }
 
@@ -492,6 +498,7 @@ describe("ListSellers new seller", () => {
       is_seller: true,
       is_active_seller: true,
     });
+    expect(created()).not.toHaveProperty("comes_from_seller_page");
     const lindner = await waitFor(() => rowOf("Gärtnerei Lindner"));
     expect(flag(lindner, ACTIVE)).toBeChecked();
     expect(cellOf(lindner, "resellers.city")).toHaveTextContent("Steyr");
@@ -556,6 +563,38 @@ describe("ListSellers new seller", () => {
 // ── Editing and deleting ────────────────────────────────────────────────────
 
 describe("ListSellers editing and deleting", () => {
+  it("keeps a seller's delivery station ticked while the station is still in use", async () => {
+    serverRows = serverRows.map((row) =>
+      row.id === BERGER.id ? { ...row, linked_delivery_station_can_be_deleted: false } : row,
+    );
+    const { user } = await renderLoaded();
+
+    await editRow(user, "Hofkäserei Berger");
+
+    const box = within(cellOf(editingRow(), DELIVERY_STATION)).getByRole("checkbox");
+    expect(box).toBeChecked();
+    expect(box).toBeDisabled();
+  });
+
+  it("lets the office untick a delivery station nobody uses yet, and tick one for a seller without", async () => {
+    const { user } = await renderLoaded();
+
+    await editRow(user, "Hofkäserei Berger");
+    const box = within(cellOf(editingRow(), DELIVERY_STATION)).getByRole("checkbox");
+    expect(box).toBeEnabled();
+    await user.click(box);
+    await saveRow(user);
+
+    await waitFor(() => expect(api.updateReseller).toHaveBeenCalledTimes(1));
+    expect(api.updateReseller).toHaveBeenCalledWith(
+      "res-berger",
+      expect.objectContaining({ is_also_delivery_station: false }),
+    );
+
+    await editRow(user, "Gemüsebau Gruber");
+    expect(within(cellOf(editingRow(), DELIVERY_STATION)).getByRole("checkbox")).toBeEnabled();
+  });
+
   it("saves a changed seller under its id, keeping its seller role, without reloading", async () => {
     const { user } = await renderLoaded();
 
@@ -698,6 +737,30 @@ describe("ListSellers organic certificates", () => {
     );
   });
 
+  it.each([
+    ["the name members see", { name_for_member_pages: "Lang's eggs" }, "Lang's eggs"],
+    ["the contact's name", {}, "Lena Lang"],
+  ])(
+    "titles the certificates of a seller without a company name by %s",
+    async (_label, names, title) => {
+      certifyFarm();
+      serverRows = [
+        ...serverRows,
+        seller({
+          id: "res-lang", first_name: "Lena", last_name: "Lang", address: "Hofweg 2",
+          zip_code: "4020", city: "Linz", organic_control_number: "AT-BIO-555", ...names,
+        }),
+      ];
+      const { user } = await renderLoaded();
+
+      await user.click(rowButton("Lena", MANAGE_CERTIFICATES));
+
+      expect(screen.getByRole("dialog", { name: "Organic certificates" })).toHaveTextContent(
+        `Certificates of ${title} (res-lang)`,
+      );
+    },
+  );
+
   it("offers the certificates of a seller once it is given a control number", async () => {
     certifyFarm();
     const { user } = await renderLoaded();
@@ -723,6 +786,23 @@ describe("ListSellers organic certificates", () => {
 // ── CSV import ──────────────────────────────────────────────────────────────
 
 describe("ListSellers CSV import", () => {
+  it("leaves the certificate button column out of the template on a certified farm", async () => {
+    certifyFarm();
+    tenantState.settings = { allow_upload_for_data_lists: true };
+    const { user } = await renderLoaded();
+
+    await user.click(screen.getByRole("button", { name: "csv_upload.open" }));
+    await screen.findByRole("dialog", { name: "csv_upload.import_title" });
+
+    // The columns the template emits, by the rule DownloadCsvTemplateButton applies.
+    const emitted = (stubs.template?.columns ?? []).filter(
+      (column) =>
+        column.importable === true || (column.readOnly !== true && column.disabled !== true),
+    );
+    expect(emitted.map((column) => column.dataIndex)).toContain("organic_control_number");
+    expect(emitted.map((column) => column.dataIndex)).not.toContain("organic_certificates");
+  });
+
   it("offers no CSV import unless the tenant allows uploads", async () => {
     await renderLoaded();
 
@@ -739,6 +819,9 @@ describe("ListSellers CSV import", () => {
     expect(stubs.template).toMatchObject({
       filename: "commissioning.sellers_template.csv",
       modelName: "reseller",
+      // The template has no role column, so every imported row is made a
+      // seller, or it would land outside this list.
+      fixedValues: { is_seller: true },
     });
     expect(stubs.template?.columns.map((column) => column.dataIndex)).toEqual(
       expect.arrayContaining([

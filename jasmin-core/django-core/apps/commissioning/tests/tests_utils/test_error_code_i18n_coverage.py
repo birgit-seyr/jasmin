@@ -32,24 +32,28 @@ def _relative(path: Path) -> str:
 
 
 def _discover_errors_modules() -> list[Path]:
-    """Every ``errors.py`` under ``apps/``, at ANY depth.
+    """Every ``errors.py`` under ``apps/``, at ANY depth, and every module of an
+    ``errors/`` package.
 
     Apps are not all one level deep: ``apps/shared/tenants``,
     ``apps/shared/super_admin`` and ``apps/shared/support`` are nested, so a
     one-level ``apps/*/errors.py`` scan covers neither them nor any future
-    nested app. Test and migration trees are skipped — an ``errors.py`` there
+    nested app. An app whose errors outgrew one module keeps them in an
+    ``errors/`` package (``apps/commissioning/errors/``), whose modules carry
+    other names. Test and migration trees are skipped — an errors module there
     would be fixture code, not a wire contract.
     """
+    candidates = [*APPS_DIR.rglob("errors.py"), *APPS_DIR.rglob("errors/*.py")]
     return sorted(
         path
-        for path in APPS_DIR.rglob("errors.py")
+        for path in candidates
         if not {"tests", "migrations"} & set(path.relative_to(APPS_DIR).parts)
     )
 
 
 ERRORS_FILES = [DJANGO_CORE / "core" / "errors.py", *_discover_errors_modules()]
 
-# Every errors.py that exists today. Discovery must keep finding all of them:
+# Every errors module that exists today. Discovery must keep finding all of them:
 # the scope of this guard can otherwise shrink in silence — a renamed app, a
 # moved module, a re-narrowed glob — and the codes it stops covering reach
 # users as raw English without any test turning red.
@@ -58,7 +62,15 @@ EXPECTED_ERRORS_MODULES = frozenset(
         "core/errors.py",
         "apps/accounts/errors.py",
         "apps/authz/errors.py",
-        "apps/commissioning/errors.py",
+        "apps/commissioning/errors/__init__.py",
+        "apps/commissioning/errors/deletion.py",
+        "apps/commissioning/errors/delivery.py",
+        "apps/commissioning/errors/generic.py",
+        "apps/commissioning/errors/members.py",
+        "apps/commissioning/errors/orders.py",
+        "apps/commissioning/errors/shares.py",
+        "apps/commissioning/errors/subscriptions.py",
+        "apps/commissioning/errors/time_bound.py",
         "apps/gdpr/errors.py",
         "apps/notifications/errors.py",
         "apps/payments/errors.py",

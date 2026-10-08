@@ -450,7 +450,7 @@ export default function DeliveryStationsDetails() {
           suffix={t("commissioning.delivery_day")}
         />
       </div>
-      <div style={{ marginTop: "1em", marginLeft: "-2em" }}>
+      <div className="delivery-stations-details__station-selector">
         <DeliveryStationSelector
           selectedDeliveryStation={selectedDeliveryStation}
           setSelectedDeliveryStation={setSelectedDeliveryStation}
@@ -459,14 +459,7 @@ export default function DeliveryStationsDetails() {
         />
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          gap: "1em",
-          marginTop: "1em",
-        }}
-      >
+      <div className="delivery-stations-details__pdf-buttons">
         <DeliveryStationDetailsPDFGenerator
           pages={currentStationPages}
           week={selectedWeek!}
@@ -487,7 +480,7 @@ export default function DeliveryStationsDetails() {
         />
         <ToolTipIcon
           title={t("tooltip.pickup_list_single_delivery_station")}
-          style={{ marginLeft: "-1em" }}
+          className="tooltip-icon-beside-button"
         />
 
         <DeliveryStationDetailsPDFGenerator
@@ -507,7 +500,7 @@ export default function DeliveryStationsDetails() {
         />
         <ToolTipIcon
           title={t("tooltip.pickup_list_whole_day")}
-          style={{ marginLeft: "-1em" }}
+          className="tooltip-icon-beside-button"
         />
 
         <DeliveryStationDetailsPDFGenerator
@@ -526,7 +519,7 @@ export default function DeliveryStationsDetails() {
         />
         <ToolTipIcon
           title={t("tooltip.pickup_list_whole_week")}
-          style={{ marginLeft: "-1em" }}
+          className="tooltip-icon-beside-button"
         />
       </div>
 
@@ -544,13 +537,12 @@ export default function DeliveryStationsDetails() {
           pagination={false}
           size="small"
           loading={loading}
-          className="custom-jasmin-table w-max"
+          className="custom-jasmin-table w-max mt-2em"
           rowKey="id"
           bordered
-          style={{ width: "max-content", marginTop: "2em" }}
           locale={{
             emptyText: (
-              <div style={{ height: "4em" }}>
+              <div className="delivery-stations-details__empty">
                 {matrixFailed
                   ? t("common.error_loading_data")
                   : selectedDeliveryStation

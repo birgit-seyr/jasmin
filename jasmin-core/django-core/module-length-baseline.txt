@@ -2,9 +2,8 @@
 # Managed by scripts/module_length.py; do not hand-edit. A pin only goes
 # down: split the module, then
 #     poetry run python scripts/module_length.py freeze
-# 21 module(s).
+# 20 module(s).
 
-apps/commissioning/errors.py: 2323
 apps/commissioning/models/members.py: 1129
 apps/commissioning/models/mixin.py: 1413
 apps/commissioning/models/resellers.py: 1332

@@ -4,6 +4,17 @@ import { toOptions, type Option } from "@hooks/internal/toOptions";
 
 export type SellerOption = Option<Reseller>;
 
+/**
+ * A seller's name wherever the app shows it: the company name, else the name
+ * members see, else the contact's first and last name.
+ */
+export const sellerLabel = (
+  seller: Pick<Reseller, "company_name" | "name_for_member_pages" | "first_name" | "last_name">,
+): string =>
+  seller.company_name ||
+  seller.name_for_member_pages ||
+  `${seller.first_name ?? ""} ${seller.last_name ?? ""}`.trim();
+
 export const useSellers = (params: CommissioningResellersListParams = {}) => {
   const { data, isLoading, error, refetch } = useCommissioningResellersList({
     is_active_seller: true,
@@ -11,15 +22,7 @@ export const useSellers = (params: CommissioningResellersListParams = {}) => {
     ...params,
   });
 
-  const sellers: SellerOption[] = toOptions(
-    data,
-    // Label falls back through the best available name: company name →
-    // name_for_member_pages → the contact's first/last name.
-    (s) =>
-      s.company_name ||
-      s.name_for_member_pages ||
-      `${s.first_name ?? ""} ${s.last_name ?? ""}`.trim(),
-  );
+  const sellers: SellerOption[] = toOptions(data, sellerLabel);
 
   return {
     sellers,

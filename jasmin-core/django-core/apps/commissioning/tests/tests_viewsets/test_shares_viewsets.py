@@ -661,6 +661,29 @@ class TestShareViewSet:
         resp = api_client.get(url, {"year": 2026, "delivery_week": 15})
         assert resp.status_code == status.HTTP_200_OK
 
+    def test_delete_is_refused(self, api_client, tenant):
+        """A Share is a planning unit that recompute and the delivery services
+        build; a direct delete would cascade its contents and deliveries away
+        without the snapshot, virtual-share and billing follow-ups."""
+        day = SharesDeliveryDayFactory()
+        station_day = DeliveryStationDayFactory(delivery_day=day)
+        variation = ShareTypeVariationFactory()
+        share = ShareFactory(delivery_day=day, share_type_variation=variation)
+        delivery = ShareDeliveryFactory(
+            share=share,
+            delivery_station_day=station_day,
+            subscription=SubscriptionFactory(
+                share_type_variation=variation,
+                default_delivery_station_day=station_day,
+            ),
+        )
+
+        resp = api_client.delete(reverse("share-detail", kwargs={"pk": share.pk}))
+
+        assert resp.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+        assert Share.objects.filter(pk=share.pk).exists()
+        assert ShareDelivery.objects.filter(pk=delivery.pk).exists()
+
 
 # ---------------------------------------------------------------------------
 # ShareViewSet — the weekday columns belong to SharesDayChangeService
@@ -2031,6 +2054,57 @@ class TestShareDeliveryCrossDayMove:
             delivery_day=day_b,
             share_type_variation=variation,
         ).exists()
+
+
+@pytest.mark.django_db
+class TestShareDeliveryWeekMove:
+    """Reassigning a delivery to another week's Share on the same weekday
+    recomputes the Share it left as well as the one it joined."""
+
+    @pytest.fixture(autouse=True)
+    def _frozen_clock(self):
+        with time_machine.travel(datetime.datetime(2026, 3, 2, 12, 0), tick=False):
+            yield
+
+    def test_the_old_weeks_share_is_recomputed(self, api_client, tenant):
+        day = SharesDeliveryDayFactory(day_number=4)
+        variation = ShareTypeVariationFactory()
+        station_day = DeliveryStationDayFactory(delivery_day=day)
+        share_week_15, share_week_16 = (
+            ShareFactory(
+                year=2026,
+                delivery_week=week,
+                delivery_day=day,
+                share_type_variation=variation,
+            )
+            for week in (15, 16)
+        )
+        subscription = SubscriptionFactory(
+            share_type_variation=variation, default_delivery_station_day=station_day
+        )
+        delivery = ShareDeliveryFactory(
+            share=share_week_15,
+            delivery_station_day=station_day,
+            subscription=subscription,
+        )
+
+        with mock.patch(
+            "apps.commissioning.services.recompute.recompute_shares"
+        ) as recompute:
+            resp = api_client.patch(
+                reverse("share_delivery-detail", args=[delivery.pk]),
+                {"share": share_week_16.id},
+                format="json",
+            )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        delivery.refresh_from_db()
+        assert delivery.share_id == share_week_16.id
+        recompute.assert_called_once()
+        assert set(recompute.call_args.args[0]) == {
+            share_week_15.id,
+            share_week_16.id,
+        }
 
 
 @pytest.mark.django_db

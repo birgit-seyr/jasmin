@@ -28,7 +28,7 @@ export default function RelatedDayInfo({
   const format = formatDate ?? defaultFormatDate;
 
   return (
-    <div className="imitating-bold-select" style={{marginTop: "1em"}}>
+    <div className="imitating-bold-select mt-1em">
       {label}
       {relatedDayNumbers.map((day, index) => (
         <span key={day}>

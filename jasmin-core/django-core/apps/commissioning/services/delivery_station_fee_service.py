@@ -1,34 +1,75 @@
-"""Station-fee billing: what the solawi owes a pickup station for a period.
+"""Station-fee billing: what the farm owes a pickup station for a period.
 
+A per-box fee bills the boxes delivered in the range. A monthly fee bills each
+month the range touches by the share of that month's days inside it, a yearly
+fee each calendar year by the share of its 365 or 366 days, so a week bills
+about a quarter of a month and a whole year exactly 12 months or one year.
 
-
-All amounts are NET (no VAT) and Decimal end-to-end; sent on the wire as
-2-decimal strings per the money hygiene rule.
+All amounts are NET (no VAT) and Decimal end-to-end, rounded to the cent once
+per station and range, and sent on the wire as 2-decimal strings per the money
+hygiene rule.
 """
 
 from __future__ import annotations
 
+import calendar
 import datetime
-from decimal import Decimal
+import math
+from decimal import ROUND_HALF_UP, Decimal
+from fractions import Fraction
 
 from django.db.models import Q, QuerySet
 
-from apps.shared.money import round_money
+from apps.shared.money import round_money, to_decimal
 
 from ..models import DeliveryStation, ExternalShareDemand, ShareDelivery
 from ..utils.iso_week_utils import delivery_date_from_fields
 from .share_demand_service import ExternalDemandBackend, _resolve_backend
 
-
-def _calendar_months(start: datetime.date, end: datetime.date) -> int:
-    """Distinct calendar months the range overlaps, inclusive (Jul 15 → Aug 20
-    = 2). For a per-month fee the office should pick month-aligned ranges."""
-    return (end.year - start.year) * 12 + (end.month - start.month) + 1
+# The billed quantity is sent at this precision; the total is computed from the
+# exact day fraction, so it can differ from rate × the sent quantity by a cent.
+QUANTITY_PLACES = Decimal("0.0001")
 
 
-def _calendar_years(start: datetime.date, end: datetime.date) -> int:
-    """Distinct calendar years the range overlaps, inclusive."""
-    return end.year - start.year + 1
+def _days_in_month(year: int, month: int) -> int:
+    return calendar.monthrange(year, month)[1]
+
+
+def _days_in_year(year: int) -> int:
+    return 366 if calendar.isleap(year) else 365
+
+
+def _prorated_months(start: datetime.date, end: datetime.date) -> Fraction:
+    """The months [start, end] covers, each month weighed by the share of its
+    days inside the range: 5–11 October is 7/31, a whole year 12."""
+    months = Fraction(0)
+    month_start = start.replace(day=1)
+    while month_start <= end:
+        days = _days_in_month(month_start.year, month_start.month)
+        month_end = month_start.replace(day=days)
+        covered = (min(end, month_end) - max(start, month_start)).days + 1
+        months += Fraction(covered, days)
+        month_start = month_end + datetime.timedelta(days=1)
+    return months
+
+
+def _prorated_years(start: datetime.date, end: datetime.date) -> Fraction:
+    """The calendar years [start, end] covers, each weighed by the share of its
+    days (365 or 366) inside the range."""
+    years = Fraction(0)
+    for year in range(start.year, end.year + 1):
+        year_start = max(start, datetime.date(year, 1, 1))
+        year_end = min(end, datetime.date(year, 12, 31))
+        years += Fraction((year_end - year_start).days + 1, _days_in_year(year))
+    return years
+
+
+def _times(rate: Decimal, quantity: Fraction) -> Decimal:
+    """``rate × quantity`` as one Decimal division. The quantity stays an exact
+    fraction until here — summing per-month Decimal quotients could land a
+    hair off an exact half cent and round the wrong way."""
+    product = Fraction(rate) * quantity
+    return Decimal(product.numerator) / Decimal(product.denominator)
 
 
 class DeliveryStationFeeService:
@@ -182,30 +223,36 @@ class DeliveryStationFeeService:
         year_rate = station.fee_per_year_net
 
         lines: list[dict] = []
+        quantity = Fraction(0)
         if box_rate > 0:
             lines = DeliveryStationFeeService._delivered_box_lines(station, start, end)
-            quantity = sum(line["boxes"] for line in lines)
+            quantity = Fraction(sum(line["boxes"] for line in lines))
             fee_type, rate, unit = "per_box", box_rate, "boxes"
         elif month_rate > 0:
-            quantity = _calendar_months(start, end)
+            quantity = _prorated_months(start, end)
             fee_type, rate, unit = "per_month", month_rate, "months"
         elif year_rate > 0:
-            quantity = _calendar_years(start, end)
+            quantity = _prorated_years(start, end)
             fee_type, rate, unit = "per_year", year_rate, "years"
         else:
-            quantity, rate, fee_type, unit = 0, Decimal("0"), "none", ""
+            rate, fee_type, unit = Decimal("0"), "none", ""
 
-        total = round_money(rate * quantity)
+        rate = to_decimal(rate)
         return {
             "delivery_station": station.id,
             "delivery_station_name": station.short_name,
             "start_date": start,
             "end_date": end,
             "fee_type": fee_type,
-            "quantity": quantity,
+            # Whole units for clients that read an integer count: the prorated
+            # quantity rounded up, so a part of a month reads as one month.
+            "quantity": math.ceil(quantity),
+            "billed_quantity": _times(Decimal(1), quantity).quantize(
+                QUANTITY_PLACES, rounding=ROUND_HALF_UP
+            ),
             "quantity_unit": unit,
             "rate_net": str(round_money(rate)),
-            "total_net": str(total),
+            "total_net": str(round_money(_times(rate, quantity))),
             "lines": lines,
         }
 

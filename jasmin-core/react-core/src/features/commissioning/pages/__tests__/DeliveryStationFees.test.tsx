@@ -5,9 +5,10 @@
  * the real week selector, EditableTable and date-range export dialog. The
  * generated commissioning client is the mocking boundary: its fee hook is a
  * real TanStack query around a spy that answers from an in-memory farm the way
- * the backend does — boxes delivered in the range for a fee per box, calendar
- * months or years the range touches for a monthly or yearly fee — with money
- * as decimal strings. A download is recorded, not saved.
+ * the backend does — boxes delivered in the range for a fee per box, the
+ * months or years of the range prorated by day for a monthly or yearly fee —
+ * with money and the billed quantity as decimal strings. A download is
+ * recorded, not saved.
  *
  * The clock is frozen on Wednesday 7 October 2026 (ISO week 41). The tenant
  * writes numbers the English way, with a decimal point.
@@ -123,13 +124,17 @@ function daysBetween(start: string, end: string): Date[] {
   return days;
 }
 
-/** What a station is billed for over the range, the way the backend counts it. */
+const daysInMonth = (day: Date) =>
+  new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth() + 1, 0)).getUTCDate();
+const daysInYear = (day: Date) => (day.getUTCFullYear() % 4 === 0 ? 366 : 365);
+
+/** What a station is billed for over the range, the way the backend counts it:
+ * every day of a monthly or yearly fee's range is its share of its month or year. */
 function quantityFor(station: FeeStation, start: string, end: string): number {
-  const [startYear, startMonth] = start.split("-").map(Number);
-  const [endYear, endMonth] = end.split("-").map(Number);
-  if (station.feeType === "per_month") return (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
-  if (station.feeType === "per_year") return endYear - startYear + 1;
-  const deliveries = daysBetween(start, end).filter((day) => day.getUTCDay() === station.deliveryDay);
+  const days = daysBetween(start, end);
+  if (station.feeType === "per_month") return days.reduce((sum, day) => sum + 1 / daysInMonth(day), 0);
+  if (station.feeType === "per_year") return days.reduce((sum, day) => sum + 1 / daysInYear(day), 0);
+  const deliveries = days.filter((day) => day.getUTCDay() === station.deliveryDay);
   return deliveries.length * (station.boxesPerDelivery ?? 0);
 }
 
@@ -140,11 +145,12 @@ let feeStations: FeeStation[] = [];
 
 function feesFor({ start_date, end_date }: FeeParams): FeeRow[] {
   return feeStations.map((station) => {
-    const quantity = quantityFor(station, start_date, end_date);
+    const billed = quantityFor(station, start_date, end_date);
     return {
       delivery_station: station.id, delivery_station_name: station.name, start_date, end_date,
-      fee_type: station.feeType, quantity, quantity_unit: UNITS[station.feeType],
-      rate_net: money(station.rateCents), total_net: money(station.rateCents * quantity), lines: [],
+      fee_type: station.feeType, quantity: Math.ceil(billed - 1e-9), billed_quantity: billed.toFixed(4),
+      quantity_unit: UNITS[station.feeType],
+      rate_net: money(station.rateCents), total_net: money(Math.round(station.rateCents * billed)), lines: [],
     };
   });
 }
@@ -193,6 +199,9 @@ const PER_BOX = "commissioning.fee_type_per_box";
 const PER_MONTH = "commissioning.fee_type_per_month";
 const PER_YEAR = "commissioning.fee_type_per_year";
 const ALL_WEEKS = "commissioning.all_delivery_weeks";
+const BOXES = "commissioning.fee_quantity_unit.boxes";
+const MONTHS = "commissioning.fee_quantity_unit.months";
+const YEARS = "commissioning.fee_quantity_unit.years";
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -346,22 +355,22 @@ describe("DeliveryStationFees rows", () => {
     await renderLoaded();
 
     expect(shownStations()).toEqual(["Farm shop", "School", "Old mill", "st-church-hall"]);
-    expect(amountsOf("Farm shop")).toEqual(["312 x", `1.50 € / ${PER_BOX}`, "468.00 €"]);
-    expect(amountsOf("School")).toEqual(["520 x", `0.80 € / ${PER_BOX}`, "416.00 €"]);
-    expect(amountsOf("Old mill")).toEqual(["1 x", `120.00 € / ${PER_YEAR}`, "120.00 €"]);
+    expect(amountsOf("Farm shop")).toEqual([`312 ${BOXES}`, `1.50 € / ${PER_BOX}`, "468.00 €"]);
+    expect(amountsOf("School")).toEqual([`520 ${BOXES}`, `0.80 € / ${PER_BOX}`, "416.00 €"]);
+    expect(amountsOf("Old mill")).toEqual([`1 ${YEARS}`, `120.00 € / ${PER_YEAR}`, "120.00 €"]);
   });
 
   it("names a station without a short name by its id", async () => {
     await renderLoaded();
 
-    expect(amountsOf("st-church-hall")).toEqual(["12 x", `35.00 € / ${PER_MONTH}`, "420.00 €"]);
+    expect(amountsOf("st-church-hall")).toEqual([`12 ${MONTHS}`, `35.00 € / ${PER_MONTH}`, "420.00 €"]);
   });
 
   it("shows the amounts in the tenant's currency", async () => {
     tenantState.settings = { ...tenantState.settings, currency: "CHF" };
     await renderLoaded();
 
-    expect(amountsOf("School")).toEqual(["520 x", `0.80 CHF / ${PER_BOX}`, "416.00 CHF"]);
+    expect(amountsOf("School")).toEqual([`520 ${BOXES}`, `0.80 CHF / ${PER_BOX}`, "416.00 CHF"]);
   });
 
   it("writes the amounts in the tenant's number format", async () => {
@@ -370,14 +379,46 @@ describe("DeliveryStationFees rows", () => {
     renderPage();
 
     await screen.findByText("Old mill");
-    expect(amountsOf("Old mill")).toEqual(["1 x", `1.234,50 € / ${PER_YEAR}`, "1.234,50 €"]);
+    expect(amountsOf("Old mill")).toEqual([`1 ${YEARS}`, `1.234,50 € / ${PER_YEAR}`, "1.234,50 €"]);
+  });
+
+  it("shows a week's share of a monthly or yearly fee in the tenant's number format", async () => {
+    tenantState.settings = { number_locale: "de-DE" };
+    const { user } = renderPage();
+    await screen.findByText("Farm shop");
+
+    await user.click(weekArrow("common.next"));
+
+    // 29 December to 4 January: 3 of December's 31 days and 4 of January's,
+    // 3 of 2025's 365 days and 4 of 2026's.
+    await waitFor(() =>
+      expect(amountsOf("st-church-hall")).toEqual([`0,2258 ${MONTHS}`, `35,00 € / ${PER_MONTH}`, "7,90 €"]),
+    );
+    expect(amountsOf("Old mill")).toEqual([`0,0192 ${YEARS}`, `120,00 € / ${PER_YEAR}`, "2,30 €"]);
+    expect(amountsOf("Farm shop")).toEqual([`6 ${BOXES}`, `1,50 € / ${PER_BOX}`, "9,00 €"]);
+  });
+
+  it("names the unit in the plural of the billed quantity", async () => {
+    const counts: unknown[] = [];
+    const t = i18nMock.t;
+    i18nMock.t = (key: string, options?: unknown) => {
+      if (key.startsWith("commissioning.fee_quantity_unit.")) counts.push((options as { count: number }).count);
+      return t(key, options);
+    };
+    try {
+      await renderLoaded();
+    } finally {
+      i18nMock.t = t;
+    }
+
+    expect(counts).toEqual(expect.arrayContaining([312, 520, 1, 12]));
   });
 
   it("puts a dollar sign in front of the amount", async () => {
     tenantState.settings = { ...tenantState.settings, currency: "USD" };
     await renderLoaded();
 
-    expect(amountsOf("Farm shop")).toEqual(["312 x", `$1.50 / ${PER_BOX}`, "$468.00"]);
+    expect(amountsOf("Farm shop")).toEqual([`312 ${BOXES}`, `$1.50 / ${PER_BOX}`, "$468.00"]);
   });
 
   it("finds a station by its name", async () => {
@@ -413,13 +454,16 @@ describe("DeliveryStationFees picking the period", () => {
     await user.click(weekArrow("common.next"));
 
     await waitFor(() => expect(lastRequest()).toEqual({ start_date: "2025-12-29", end_date: "2026-01-04" }));
-    await waitFor(() => expect(amountsOf("Old mill")).toEqual(["2 x", `120.00 € / ${PER_YEAR}`, "240.00 €"]));
-    expect(amountsOf("Farm shop")).toEqual(["6 x", `1.50 € / ${PER_BOX}`, "9.00 €"]);
+    // 3 days of 2025 and 4 of 2026, not two whole years.
+    await waitFor(() => expect(amountsOf("Old mill")).toEqual([`0.0192 ${YEARS}`, `120.00 € / ${PER_YEAR}`, "2.30 €"]));
+    expect(amountsOf("st-church-hall")).toEqual([`0.2258 ${MONTHS}`, `35.00 € / ${PER_MONTH}`, "7.90 €"]);
+    expect(amountsOf("Farm shop")).toEqual([`6 ${BOXES}`, `1.50 € / ${PER_BOX}`, "9.00 €"]);
 
     await user.click(weekArrow("common.next"));
 
     await waitFor(() => expect(lastRequest()).toEqual({ start_date: "2026-01-05", end_date: "2026-01-11" }));
-    await waitFor(() => expect(amountsOf("Old mill")).toEqual(["1 x", `120.00 € / ${PER_YEAR}`, "120.00 €"]));
+    await waitFor(() => expect(amountsOf("Farm shop")[0]).toBe(`6 ${BOXES}`));
+    expect(amountsOf("Old mill")).toEqual([`0.0192 ${YEARS}`, `120.00 € / ${PER_YEAR}`, "2.30 €"]);
   });
 
   it("steps back from the first week of a year to the last week of the year before", async () => {
@@ -526,11 +570,12 @@ describe("DeliveryStationFees CSV", () => {
       ["Old mill", PER_YEAR],
       ["st-church-hall", PER_MONTH],
     ]);
-    expect(lines.map(([, , quantity]) => quantity.split(" ")[0])).toEqual(["30", "40", "1", "1"]);
+    // September is a whole month, and 30 of the year's 365 days.
+    expect(lines.map(([, , quantity]) => csvAmount(quantity.split(" ")[0]))).toEqual([30, 40, 0.0822, 1]);
     expect(lines.map(([, , , rate, total]) => [csvAmount(rate), csvAmount(total)])).toEqual([
       [1.5, 45],
       [0.8, 32],
-      [120, 120],
+      [120, 9.86],
       [35, 35],
     ]);
   });
@@ -551,7 +596,7 @@ describe("DeliveryStationFees CSV", () => {
     expect(lines).toEqual([
       `Farm shop;${PER_BOX};30 commissioning.fee_quantity_unit.boxes;1,50;45,00`,
       `School;${PER_BOX};40 commissioning.fee_quantity_unit.boxes;0,80;32,00`,
-      `Old mill;${PER_YEAR};1 commissioning.fee_quantity_unit.years;120,00;120,00`,
+      `Old mill;${PER_YEAR};0,0822 commissioning.fee_quantity_unit.years;120,00;9,86`,
       `st-church-hall;${PER_MONTH};1 commissioning.fee_quantity_unit.months;35,00;35,00`,
     ]);
   });
@@ -560,10 +605,11 @@ describe("DeliveryStationFees CSV", () => {
     tenantState.settings = { ...tenantState.settings, csv_format: "en" };
     const { user } = await renderLoaded();
 
-    const [header, firstLine] = await downloadLastMonth(user);
+    const [header, firstLine, , oldMill] = await downloadLastMonth(user);
 
     expect(header).toBe([STATION, "commissioning.fee_type", QUANTITY, RATE, TOTAL].join(","));
     expect(firstLine).toBe(`Farm shop,${PER_BOX},30 commissioning.fee_quantity_unit.boxes,1.50,45.00`);
+    expect(oldMill).toBe(`Old mill,${PER_YEAR},0.0822 commissioning.fee_quantity_unit.years,120.00,9.86`);
   });
 
   it("closes the export without asking for fees on cancel", async () => {
@@ -617,10 +663,10 @@ describe("DeliveryStationFees on a phone", () => {
 
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(detailsOn(cardOf("Farm shop"))).toEqual([
-      `${QUANTITY}: 312 x`, `${RATE}: 1.50 € / ${PER_BOX}`, `${TOTAL}: 468.00 €`,
+      `${QUANTITY}: 312 ${BOXES}`, `${RATE}: 1.50 € / ${PER_BOX}`, `${TOTAL}: 468.00 €`,
     ]);
     expect(detailsOn(cardOf("st-church-hall"))).toEqual([
-      `${QUANTITY}: 12 x`, `${RATE}: 35.00 € / ${PER_MONTH}`, `${TOTAL}: 420.00 €`,
+      `${QUANTITY}: 12 ${MONTHS}`, `${RATE}: 35.00 € / ${PER_MONTH}`, `${TOTAL}: 420.00 €`,
     ]);
   });
 

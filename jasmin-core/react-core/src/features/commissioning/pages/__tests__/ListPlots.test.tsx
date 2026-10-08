@@ -382,7 +382,7 @@ describe("ListPlots new plot", () => {
     expect(stored("plot-new-1")?.is_active).toBe(false);
   });
 
-  it.skip("refuses a new plot without a name and sends nothing", async () => {
+  it("refuses a new plot without a name and sends nothing", async () => {
     silenceConsoleErrors();
     const { user } = await renderLoaded();
 

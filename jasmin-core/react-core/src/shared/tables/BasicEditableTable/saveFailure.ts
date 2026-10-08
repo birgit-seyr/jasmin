@@ -2,6 +2,12 @@ import { getErrorMessage } from "@shared/utils/apiError";
 import { nodeText } from "./nodeText";
 import type { EditableColumnConfig, TableRecord } from "./types";
 
+/** The keys under which a refusal speaks about the row as a whole rather than
+ *  one of its fields: DRF's `non_field_errors`, the canonical shape's `_errors`
+ *  and Django's model-wide `__all__`. They name no column, so they neither
+ *  border a cell nor lead the banner. */
+const NON_FIELD_KEYS = ["non_field_errors", "_errors", "__all__"];
+
 /** The field → message pairs in `source`, but for the `skip` keys: list values
  *  always, a plain string value only when `listsOnly` is off. */
 function fieldMessages(
@@ -43,11 +49,22 @@ export function describeSaveFailure<T extends TableRecord>(
       fieldErrors,
       fieldMessages(
         body as Record<string, unknown>,
-        new Set(["code", "message", "details", "request_id", "field"]),
+        new Set([
+          "code",
+          "message",
+          "details",
+          "request_id",
+          "field",
+          ...NON_FIELD_KEYS,
+        ]),
         false,
       ),
       details && typeof details === "object"
-        ? fieldMessages(details as Record<string, unknown>, new Set(), true)
+        ? fieldMessages(
+            details as Record<string, unknown>,
+            new Set(NON_FIELD_KEYS),
+            true,
+          )
         : {},
     );
   }

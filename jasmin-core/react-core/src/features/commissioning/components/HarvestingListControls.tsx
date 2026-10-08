@@ -31,15 +31,8 @@ export default function HarvestingListControls({
   if (isMobile) {
     if (!canChangeRoundUp) return null;
     return (
-      <div style={{ marginBottom: "8px" }}>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            cursor: "pointer",
-          }}
-        >
+      <div className="harvesting-list-controls--mobile">
+        <label className="harvesting-list-controls__round-up">
           <Checkbox
             checked={roundUpToFullPU}
             onChange={(e) => onRoundUpChange(e.target.checked)}
@@ -53,15 +46,7 @@ export default function HarvestingListControls({
   }
 
   return (
-    <div
-      style={{
-        marginTop: "2em",
-        marginBottom: "2em",
-        display: "flex",
-        alignItems: "center",
-        gap: "1em",
-      }}
-    >
+    <div className="harvesting-list-controls">
       <Space.Compact>
         <Button
           type={isGardenerView ? "default" : "primary"}
@@ -79,14 +64,7 @@ export default function HarvestingListControls({
         </Button>
       </Space.Compact>
       {canChangeRoundUp && (
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            cursor: "pointer",
-          }}
-        >
+        <label className="harvesting-list-controls__round-up">
           <Checkbox
             checked={roundUpToFullPU}
             onChange={(e) => onRoundUpChange(e.target.checked)}

@@ -99,7 +99,7 @@ export function CsvImportModal({
             </Text>
           )}
 
-          <div style={{ marginTop: 12 }}>
+          <div className="mt-12">
             <DownloadCsvTemplateButton
               columns={columns}
               filename={filename}

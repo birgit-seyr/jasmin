@@ -125,6 +125,7 @@ let serverPrices: ShareArticleNetPrice[] = [];
 
 function renderModal() {
   const profiler = profileRenders();
+  const onSave = vi.fn();
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
@@ -137,13 +138,14 @@ function renderModal() {
         <ShareArticleExtraPriceModal
           visible
           onClose={vi.fn()}
+          onSave={onSave}
           share_article="art-juice"
           share_article_name="Apple juice"
         />,
       )}
     </QueryClientProvider>,
   );
-  return { profiler };
+  return { onSave, profiler };
 }
 
 function rowOf(text: string): HTMLElement {
@@ -292,7 +294,7 @@ describe("ShareArticleExtraPriceModal saving", () => {
 
   it("adds a price with a piece price per tier and its own VAT rate", async () => {
     tenantSettings.values = { used_tiers_for_offers: [1, 6, 12] };
-    renderModal();
+    const { onSave } = renderModal();
     await screen.findByText("3,20 €");
 
     await userEvent.click(
@@ -325,11 +327,13 @@ describe("ShareArticleExtraPriceModal saving", () => {
     );
     await screen.findByText("3,40 €");
     expect(amountsIn(rowOf("3,40 €"))).toEqual(["3,40 €", "3,10 €", "2,90 €"]);
+    // The extra-article list hears of the saved price.
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 
   it("corrects one tier price of a saved price and keeps the other", async () => {
     tenantSettings.values = { used_tiers_for_offers: [1, 6] };
-    renderModal();
+    const { onSave } = renderModal();
     await screen.findByText("3,20 €");
 
     await userEvent.click(
@@ -349,6 +353,7 @@ describe("ShareArticleExtraPriceModal saving", () => {
       }),
     );
     expect(await screen.findByText("2,89 €")).toBeInTheDocument();
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 
   it("shows the prices read-only to staff without the office role", async () => {

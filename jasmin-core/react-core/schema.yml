@@ -19870,40 +19870,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
-    delete:
-      operationId: commissioning_shares_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-        description: Ein eindeutiger Wert, der share identifiziert.
-        required: true
-      tags:
-      - commissioning
-      security:
-      - tenantBoundJwtAuth: []
-      responses:
-        '204':
-          description: No response body
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
   /api/commissioning/shares/bulk_update/:
     put:
       operationId: commissioning_shares_bulk_update_update
@@ -28983,7 +28949,8 @@ components:
             — anonymous callers must not be able to enumerate internal
             schema identifiers; the auth-gated ``TenantSerializer`` keeps it)
           * Branding: ``logo``, ``bio_logo``
-          * i18n / locale bootstrap: ``tenant_language``, ``date_format``
+          * i18n / locale bootstrap: ``tenant_language``, ``date_format``,
+            ``number_locale``
           * Tenant-disabled UX: ``is_active``
           * Public legal-notice / GDPR contact block: ``address``,
             ``zip_code``, ``city``, ``country``, ``email``, ``phone_number``,
@@ -29044,6 +29011,9 @@ components:
         date_format:
           type: string
           maxLength: 32
+        number_locale:
+          type: string
+          maxLength: 16
         currency:
           type: string
           maxLength: 8
@@ -30267,6 +30237,14 @@ components:
           $ref: '#/components/schemas/FeeTypeEnum'
         quantity:
           type: integer
+          description: 'Whole units: the billed quantity rounded up. Kept for clients
+            that read an integer count; the total is based on billed_quantity.'
+        billed_quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,4})?$
+          description: 'The quantity the total is based on: boxes delivered, or the
+            months or years of the range prorated by day.'
         quantity_unit:
           type: string
         rate_net:
@@ -30278,6 +30256,7 @@ components:
           items:
             $ref: '#/components/schemas/DeliveryStationFeesLine'
       required:
+      - billed_quantity
       - delivery_station
       - delivery_station_name
       - end_date
@@ -40937,9 +40916,7 @@ components:
         unit:
           $ref: '#/components/schemas/UnitEnum'
         size:
-          allOf:
-          - $ref: '#/components/schemas/VegetableSizeEnum'
-          default: M
+          $ref: '#/components/schemas/VegetableSizeEnum'
         note:
           type: string
           nullable: true

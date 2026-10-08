@@ -10,8 +10,18 @@ import {
 } from "@shared/api/generated/commissioning/commissioning";
 import type { CrateNetPrice } from "@shared/api/generated/models/crateNetPrice";
 import type { EditableColumnConfig } from "@shared/tables/BasicEditableTable/types";
-import PriceEditorModal from "./PriceEditorModal";
+import PriceEditorModal, { type PriceModalApi } from "./PriceEditorModal";
 import { buildCurrencyPriceColumn, buildTaxRateColumn } from "./priceColumns";
+
+// Module-level so the editor's table keeps the same API functions across
+// renders. Each call reads the generated client only when it runs, so loading
+// this module never touches it.
+const CRATE_NET_PRICE_API: PriceModalApi<CrateNetPrice> = {
+  create: (price) => commissioningCrateNetPricesCreate(price),
+  partialUpdate: (id, price) =>
+    commissioningCrateNetPricesPartialUpdate(id, price),
+  destroy: (id) => commissioningCrateNetPricesDestroy(id),
+};
 
 interface CratePriceModalProps {
   visible: boolean;
@@ -26,6 +36,7 @@ export default function CratePriceModal({
   onClose,
   crate,
   crate_name,
+  onSave,
 }: CratePriceModalProps) {
   const { t } = useTranslation();
   const { currencySymbol } = useCurrency();
@@ -75,11 +86,8 @@ export default function CratePriceModal({
       columns={columns}
       listHook={useCommissioningCrateNetPricesList}
       getListQueryKey={getCommissioningCrateNetPricesListQueryKey}
-      api={{
-        create: commissioningCrateNetPricesCreate,
-        partialUpdate: commissioningCrateNetPricesPartialUpdate,
-        destroy: commissioningCrateNetPricesDestroy,
-      }}
+      api={CRATE_NET_PRICE_API}
+      onSave={onSave}
     />
   );
 }

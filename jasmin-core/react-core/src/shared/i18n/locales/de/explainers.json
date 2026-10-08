@@ -42,7 +42,7 @@
   "list_additional_share_articles": "",
   "list_offer_groups": "Hier können Angebotsgruppen erstellt werden, die dann den einzelnen Wiederverkäufern zugewiesen werden können.",
   "delivery_exceptions": "Eine Lieferpause setzt für eine Anteilsvariante ganze Wochen aus: In diesem Zeitraum wird nichts geliefert, es entsteht kein Bedarf und es wird nichts abgerechnet. Bereits bestätigte Abos werden automatisch angepasst (nur zukünftige Wochen).",
-  "station_fees": "Zeigt pro Verteilstation mit hinterlegter Gebühr pro Kiste, was die Solawi ihr für den gewählten Zeitraum schuldet (netto).",
+  "station_fees": "Zeigt pro Verteilstation mit hinterlegter Gebühr, was der Hof ihr für den gewählten Zeitraum schuldet (netto). Jede Station hat genau eine Gebühr: pro gelieferter Kiste, pro Monat oder pro Jahr. Eine Monats- oder Jahresgebühr wird tageweise anteilig berechnet: Jeder Monat und jedes Jahr zählt mit dem Anteil seiner Tage im Zeitraum.",
   "list_plots": "Diese Liste kann dann in der Ernteprognose verwendet werden, damit das Ernte-Team weiß, wo welches Gemüse zu ernten ist.",
   "list_absence_categories": "Abwesenheits-Kategorien werden pro Jahr geführt und im Wochenplan zur Kennzeichnung von Abwesenheiten verwendet.",
   "list_share_articles": "Alle Daten sind hier nur als Standard hinterlegt. Sie können an allen anderen Stellen wie Ernteprognose, Kistenplanung etc. zu jedem Zeitpunkt spezifisch geändert werden.",

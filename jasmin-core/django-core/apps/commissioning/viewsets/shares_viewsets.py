@@ -1039,11 +1039,11 @@ class ShareDeliveryViewSet(
         apply_to_future = serializer.validated_data.get("apply_to_future", False)
 
         with transaction.atomic():
-            # The delivery's ORIGINAL day/week — captured before we re-point the
-            # Share, so the apply-to-future scan still finds this member's other
-            # deliveries on their existing weekday.
+            # The delivery's ORIGINAL Share, captured before any re-point: the
+            # apply-to-future scan finds the member's other deliveries on its
+            # weekday, and it is always recomputed, having lost this delivery.
             original_share = instance.share
-            affected_share_ids: set = set()
+            affected_share_ids: set = {original_share.id}
 
             # The Share the save will write: an explicit reassignment in the
             # body wins, otherwise the row keeps its current one.
@@ -1060,7 +1060,6 @@ class ShareDeliveryViewSet(
                 and target_delivery_station_day.delivery_day_id
                 != target_share.delivery_day_id
             ):
-                affected_share_ids.add(original_share.id)
                 target_share = self._share_for_delivery_day(
                     target_share, target_delivery_station_day.delivery_day
                 )
@@ -1213,11 +1212,12 @@ class ShareContentViewSet(BaseArchivableViewSet):
 class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaff
     write_permission = IsOffice
-    # Read-only GETs. ``export_csv`` is the share-weights CSV button, which is
-    # bulk operational data rather than personal data — consistent with this
-    # viewset's own ``read_permission``.
+    # Read-only GETs. ``export_csv`` (the share-weights CSV) is bulk operational
+    # data, not personal data, so this viewset's ``read_permission`` covers it.
     read_actions = frozenset({"get_days", "export_csv"})
     serializer_class = ShareSerializer
+    # No DELETE: cascading a Share skips recompute, snapshots and charge re-planning.
+    http_method_names = ["get", "post", "put", "patch", "head", "options"]
 
     @extend_schema(
         parameters=[

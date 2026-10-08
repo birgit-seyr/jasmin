@@ -57,6 +57,7 @@ import {
   generatePdfFilename,
   getDayName,
   isWeekInPast,
+  toDayNumber,
 } from "@shared/utils";
 import HarvestingCrateSummary from "@features/commissioning/components/HarvestingCrateSummary";
 import HarvestingListControls from "@features/commissioning/components/HarvestingListControls";
@@ -69,8 +70,12 @@ export default function HarvestingList() {
     setSelectedWeek,
     currentWeek,
   } = useYearWeekState();
-  const [selectedDay, setSelectedDay] = useState<number | null>(
-    () => dayjs().isoWeekday() - 1,
+  const [selectedDay, setSelectedDay] = useState(() =>
+    toDayNumber(dayjs().isoWeekday() - 1),
+  );
+  const selectDay = useCallback(
+    (day: number | null) => setSelectedDay(toDayNumber(day)),
+    [],
   );
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
@@ -220,7 +225,7 @@ export default function HarvestingList() {
 
         <DaySelector
           selectedDay={selectedDay}
-          setSelectedDay={setSelectedDay}
+          setSelectedDay={selectDay}
           selectedWeek={selectedWeek ?? currentWeek}
           selectedYear={selectedYear}
           days={[0, 1, 2, 3, 4, 5, 6]}

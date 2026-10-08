@@ -945,7 +945,7 @@ describe("on a phone", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: SET_AS_EXPECTED }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: CONFIRM })).not.toBeInTheDocument());
     expect(api.confirm).toHaveBeenCalledTimes(1);
-    expect(api.confirm).toHaveBeenCalledWith("h-carrots", { amount: 43.5, year: 2026, delivery_week: 41, day_number: TUESDAY });
+    expect(api.confirm).toHaveBeenCalledWith("h-carrots", { amount: "43.50", year: 2026, delivery_week: 41, day_number: TUESDAY });
     expect(looksConfirmed(confirmButtonOf("Carrots"))).toBe(true);
     // The list is read again with the harvest recorded.
     await waitFor(() => expect(api.summary.mock.calls.length).toBeGreaterThan(readsBefore));

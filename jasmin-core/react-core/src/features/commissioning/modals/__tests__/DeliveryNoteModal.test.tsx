@@ -433,6 +433,8 @@ describe("DeliveryNoteModal cells", () => {
 
     expect(screen.getByTestId("lines-line-1-amount")).toHaveTextContent("2,50");
     expect(screen.getByTestId("lines-line-2-amount")).toHaveTextContent("12,0");
+    const amount = grid("lines").columns.find((c) => c.dataIndex === "amount");
+    expect(amount?.inputType).toBe("positive_decimal3");
   });
 
   it("shows no VAT column, so the rate is only corrected on the invoice", () => {

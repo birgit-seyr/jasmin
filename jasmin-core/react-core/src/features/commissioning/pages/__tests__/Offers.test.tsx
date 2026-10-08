@@ -544,9 +544,15 @@ describe("Offers editing", () => {
       record: TableRecord,
     ) => boolean;
     expect(canDeleteRecord({ key: "offer-1", amount_ordered: "0.000" })).toBe(true);
-    expect(canDeleteRecord({ key: "offer-2", amount_ordered: "15.000" })).toBe(
-      false,
-    );
+    expect(canDeleteRecord({ key: "offer-2", amount_ordered: "15.000" })).toBe(false);
+  });
+
+  it("shows and takes an available amount in PU fractions", async () => {
+    setOffers([makeOffer({ amount: "2.500" })]);
+    renderPage();
+    await pickOfferGroup();
+    expect(screen.getByTestId("offer-1-amount")).toHaveTextContent("2,5 commissioning.pu");
+    expect(grid().columns.find((c) => c.key === "amount")?.inputType).toBe("positive_decimal3");
   });
 
   it("keeps the offers read-only for a user without the office role", async () => {
@@ -658,9 +664,7 @@ describe("Offers prices", () => {
     renderPage();
     await pickOfferGroup();
 
-    const changed = within(screen.getByTestId("offer-1-price_1")).getByText(
-      "2,90 €",
-    );
+    const changed = within(screen.getByTestId("offer-1-price_1")).getByText("2,90 €");
     expect(changed).toHaveStyle({ fontWeight: "bold" });
   });
 
@@ -668,9 +672,7 @@ describe("Offers prices", () => {
     renderPage();
     await pickOfferGroup();
 
-    const unchanged = within(screen.getByTestId("offer-1-price_1")).getByText(
-      "2,40 €",
-    );
+    const unchanged = within(screen.getByTestId("offer-1-price_1")).getByText("2,40 €");
     expect(unchanged).toHaveStyle({ fontWeight: "normal" });
   });
 

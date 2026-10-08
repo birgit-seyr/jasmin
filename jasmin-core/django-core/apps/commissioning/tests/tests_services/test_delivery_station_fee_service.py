@@ -175,21 +175,28 @@ class TestComputeFeesBilling:
         assert result["quantity"] == 4
         assert result["total_net"] == "8.00"
 
-    def test_per_month_counts_calendar_months(self, tenant):
+    def test_per_month_prorates_the_months_by_day(self, tenant):
         station = DeliveryStationFactory(fee_per_month_net=Decimal("50.00"))
-        # 2026-07-06 .. 2026-08-02 overlaps July + August = 2 calendar months.
+        # 2026-07-06 .. 2026-08-02: 26 of July's 31 days and 2 of August's 31.
         result = DeliveryStationFeeService.compute_fees(station, _FROM, _UNTIL)
         assert result["fee_type"] == "per_month"
-        assert result["quantity"] == 2
-        assert result["total_net"] == "100.00"
+        assert result["billed_quantity"] == Decimal("0.9032")  # 28/31
+        assert result["quantity"] == 1
+        assert result["total_net"] == "45.16"  # 50 × 28/31 = 45.161…
         assert result["lines"] == []
 
-    def test_per_year_counts_calendar_years(self, tenant):
+    def test_per_year_prorates_the_year_by_day(self, tenant):
         station = DeliveryStationFactory(fee_per_year_net=Decimal("300.00"))
         result = DeliveryStationFeeService.compute_fees(station, _FROM, _UNTIL)
         assert result["fee_type"] == "per_year"
+        assert result["billed_quantity"] == Decimal("0.0767")  # 28/365
         assert result["quantity"] == 1
-        assert result["total_net"] == "300.00"
+        assert result["total_net"] == "23.01"  # 300 × 28/365 = 23.013…
+
+    def test_per_box_bills_the_box_count(self, tenant):
+        station, _ = _station_with_deliveries(fee_per_box_net=Decimal("2.50"))
+        result = DeliveryStationFeeService.compute_fees(station, _FROM, _UNTIL)
+        assert result["billed_quantity"] == Decimal("4")
 
     def test_compute_all_only_includes_fee_stations(self, tenant):
         with_fee = DeliveryStationFactory(fee_per_box_net=Decimal("1.00"))
@@ -197,6 +204,150 @@ class TestComputeFeesBilling:
 
         rows = DeliveryStationFeeService.compute_all(_FROM, _UNTIL)
         assert [r["delivery_station"] for r in rows] == [with_fee.id]
+
+
+def _monthly(rate: str):
+    return DeliveryStationFactory(fee_per_month_net=Decimal(rate))
+
+
+def _yearly(rate: str):
+    return DeliveryStationFactory(fee_per_year_net=Decimal(rate))
+
+
+def _week(year: int, week: int) -> tuple[datetime.date, datetime.date]:
+    monday = datetime.date.fromisocalendar(year, week, 1)
+    return monday, monday + datetime.timedelta(days=6)
+
+
+def _weeks_covering(year: int) -> list[tuple[datetime.date, datetime.date]]:
+    """The calendar year cut into disjoint Monday-to-Sunday ranges, the first
+    and last clipped to the year."""
+    first, last = datetime.date(year, 1, 1), datetime.date(year, 12, 31)
+    ranges = []
+    start = first
+    while start <= last:
+        sunday = start + datetime.timedelta(days=6 - start.weekday())
+        ranges.append((start, min(sunday, last)))
+        start = sunday + datetime.timedelta(days=1)
+    return ranges
+
+
+@pytest.mark.django_db
+class TestComputeFeesProration:
+    """A monthly fee bills each month a range touches by the share of that
+    month's days the range covers, a yearly fee each calendar year by the
+    share of its days; the total is rounded to the cent once."""
+
+    def test_week_41_bills_seven_days_of_october(self, tenant):
+        start, end = _week(2026, 41)  # Mon 5 – Sun 11 October
+
+        result = DeliveryStationFeeService.compute_fees(_monthly("31.00"), start, end)
+
+        assert result["billed_quantity"] == Decimal("0.2258")  # 7/31
+        assert result["quantity"] == 1
+        assert result["quantity_unit"] == "months"
+        assert result["total_net"] == "7.00"
+
+    def test_week_1_of_2026_bills_the_days_of_both_months(self, tenant):
+        start, end = _week(2026, 1)  # Mon 29 Dec 2025 – Sun 4 Jan 2026
+
+        result = DeliveryStationFeeService.compute_fees(_monthly("31.00"), start, end)
+
+        # 3/31 of December and 4/31 of January — not two whole months.
+        assert result["billed_quantity"] == Decimal("0.2258")
+        assert result["quantity"] == 1
+        assert result["total_net"] == "7.00"
+
+    def test_week_1_of_2026_bills_the_days_of_both_years(self, tenant):
+        start, end = _week(2026, 1)
+
+        result = DeliveryStationFeeService.compute_fees(_yearly("365.00"), start, end)
+
+        # 3/365 of 2025 and 4/365 of 2026 — not two whole years.
+        assert result["billed_quantity"] == Decimal("0.0192")
+        assert result["quantity"] == 1
+        assert result["quantity_unit"] == "years"
+        assert result["total_net"] == "7.00"
+
+    def test_a_full_year_bills_twelve_months(self, tenant):
+        result = DeliveryStationFeeService.compute_fees(
+            _monthly("35.00"), datetime.date(2026, 1, 1), datetime.date(2026, 12, 31)
+        )
+
+        assert result["billed_quantity"] == Decimal("12")
+        assert result["quantity"] == 12
+        assert result["total_net"] == "420.00"
+
+    def test_a_full_year_bills_one_year(self, tenant):
+        result = DeliveryStationFeeService.compute_fees(
+            _yearly("120.00"), datetime.date(2026, 1, 1), datetime.date(2026, 12, 31)
+        )
+
+        assert result["billed_quantity"] == Decimal("1")
+        assert result["quantity"] == 1
+        assert result["total_net"] == "120.00"
+
+    @pytest.mark.parametrize(
+        ("station_factory", "rate", "yearly_total"),
+        [
+            (_monthly, "35.00", Decimal("420.00")),
+            (_yearly, "100.00", Decimal("100.00")),
+        ],
+    )
+    def test_disjoint_weeks_add_up_to_the_year(
+        self, tenant, station_factory, rate, yearly_total
+    ):
+        station = station_factory(rate)
+        ranges = _weeks_covering(2026)
+
+        totals = [
+            Decimal(
+                DeliveryStationFeeService.compute_fees(station, start, end)["total_net"]
+            )
+            for start, end in ranges
+        ]
+
+        # Each range is rounded to the cent on its own, so the sum may drift by
+        # at most half a cent per range.
+        assert abs(sum(totals) - yearly_total) <= Decimal("0.005") * len(ranges)
+        assert len(ranges) == 53
+
+    def test_a_leap_year_counts_its_366_days(self, tenant):
+        # February 2028 has 29 days, the year 366.
+        result = DeliveryStationFeeService.compute_fees(
+            _yearly("366.00"), datetime.date(2028, 2, 1), datetime.date(2028, 2, 29)
+        )
+        assert result["total_net"] == "29.00"
+
+        whole = DeliveryStationFeeService.compute_fees(
+            _yearly("366.00"), datetime.date(2028, 1, 1), datetime.date(2028, 12, 31)
+        )
+        assert whole["billed_quantity"] == Decimal("1")
+        assert whole["total_net"] == "366.00"
+
+    def test_a_leap_february_bills_by_its_29_days(self, tenant):
+        result = DeliveryStationFeeService.compute_fees(
+            _monthly("29.00"), datetime.date(2028, 2, 1), datetime.date(2028, 2, 14)
+        )
+        assert result["billed_quantity"] == Decimal("0.4828")  # 14/29
+        assert result["total_net"] == "14.00"
+
+    def test_a_mid_month_range_bills_its_days(self, tenant):
+        # 10 – 24 September: 15 of September's 30 days.
+        result = DeliveryStationFeeService.compute_fees(
+            _monthly("40.00"), datetime.date(2026, 9, 10), datetime.date(2026, 9, 24)
+        )
+        assert result["billed_quantity"] == Decimal("0.5")
+        assert result["quantity"] == 1
+        assert result["total_net"] == "20.00"
+
+    def test_the_total_is_rounded_once_not_per_month(self, tenant):
+        # 0.06 a month over 3 December and 4 January days: 0.0058 + 0.0077
+        # would round to 0.01 each, but the whole 0.06 × 7/31 = 0.0135 is 0.01.
+        result = DeliveryStationFeeService.compute_fees(
+            _monthly("0.06"), datetime.date(2025, 12, 29), datetime.date(2026, 1, 4)
+        )
+        assert result["total_net"] == "0.01"
 
 
 @pytest.mark.django_db
@@ -287,7 +438,22 @@ class TestBillingEndpoint:
         row = next(r for r in rows if r["delivery_station"] == station.id)
         assert row["fee_type"] == "per_box"
         assert row["quantity"] == 4
+        assert row["billed_quantity"] == "4.0000"
         assert row["total_net"] == "10.00"
+
+    def test_sends_the_prorated_quantity_as_a_string(self, api_client, tenant):
+        station = DeliveryStationFactory(fee_per_month_net=Decimal("31.00"))
+
+        response = api_client.get(
+            self.URL, {"start_date": "2026-10-05", "end_date": "2026-10-11"}
+        )
+
+        assert response.status_code == 200
+        row = next(r for r in response.json() if r["delivery_station"] == station.id)
+        assert row["fee_type"] == "per_month"
+        assert row["quantity"] == 1
+        assert row["billed_quantity"] == "0.2258"
+        assert row["total_net"] == "7.00"
 
     def test_rejects_inverted_range(self, api_client, tenant):
         response = api_client.get(

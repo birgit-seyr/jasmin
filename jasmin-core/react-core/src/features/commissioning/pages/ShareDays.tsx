@@ -9,7 +9,6 @@ import { useTranslation } from "react-i18next";
 import {
   commissioningSharesBulkUpdateUpdate,
   commissioningSharesCreate,
-  commissioningSharesDestroy,
   getCommissioningSharesGetDaysListQueryKey,
   useCommissioningSharesGetDaysList,
 } from "@shared/api/generated/commissioning/commissioning";
@@ -158,7 +157,6 @@ export default function ShareDays() {
     () =>
       wrapApiFunctions<Share & TableRecord>({
         create: (payload) => commissioningSharesCreate(payload),
-        delete: (id) => commissioningSharesDestroy(id),
       }),
     [],
   );

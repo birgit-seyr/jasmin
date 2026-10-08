@@ -2,12 +2,14 @@
   "purchase": {
     "organic_certificate_required": "Für Bio oder Umstellung muss der Lieferant für diese Kalenderwoche ein gültiges Bio-Zertifikat besitzen."
   },
+  "waste": {
+    "already_documented": "Dieser Artikel ist in dieser Einheit und Größe für diesen Tag und dieses Lager bereits als Ausschuss dokumentiert."
+  },
   "commissioning": {
     "past_week": "Diese Woche liegt in der Vergangenheit und kann nicht mehr geändert werden.",
     "share_days_locked": "Die Tage dieses Anteils sind gesperrt, weil bereits Sharecontent dafür existiert.",
     "already_finalized": "Dieser Datensatz ist bereits finalisiert und kann nicht mehr geändert werden.",
     "invalid": "Eingabe ungültig — bitte die Daten prüfen und erneut speichern.",
-    "not_enough_stock": "Nicht genug Bestand für diese Aktion.",
     "picture_invalid": "Das Bild muss ein PNG-, JPEG-, WEBP- oder GIF-Bild mit höchstens 20 MB und 40 Megapixeln sein."
   },
   "stock": {
@@ -46,7 +48,6 @@
     "invalid_price": "Der Preis pro Lieferung muss eine Zahl von mindestens 0 sein.",
     "delivery_station_day_out_of_range": "Der gewählte Lieferstationstag deckt nicht den gesamten Abozeitraum ab — er beginnt nach dem Abostart oder endet (ohne Nachfolge-Tag) vor dem Aboende. Bitte einen Lieferstationstag wählen, der den gesamten Zeitraum abdeckt.",
     "bulk_renew": {
-      "ids_required": "Bitte mindestens ein Abo auswählen.",
       "too_many_ids": "Es können höchstens 500 Abos pro Anfrage verlängert werden.",
       "invalid_valid_until": "Ungültiges Enddatum. Bitte ein gültiges Datum wählen."
     },
@@ -188,16 +189,15 @@
   },
   "delivery_day": {
     "not_found": "Liefertag nicht gefunden.",
-    "required": "Der Liefertag ist erforderlich.",
     "valid_from_in_past": "Neu angelegte Liefertage und Stationstage dürfen nicht in der Vergangenheit beginnen — bitte ein Datum ab heute wählen.",
     "valid_from_move_into_past": "Der Beginn darf nicht in eine bereits vergangene Woche verschoben werden — frühestens der Montag der laufenden Woche ist möglich. Nur im Onboarding-Modus lässt sich der Beginn weiter zurück datieren."
   },
   "delivery_station": {
-    "invalid": "Verteilstation ungültig — bitte die Eingabe prüfen.",
     "over_capacity": "Diese Verteilstation ist für KW {{week}}/{{year}} voll ({{occupied}}/{{capacity}}). Bitte eine andere Station wählen.",
     "capacity_below_occupancy": "Kapazität kann nicht auf {{capacity}} gesetzt werden — in KW {{week}}/{{year}} sind bereits {{peak}} Anteile gebucht. Bitte mindestens {{peak}} wählen.",
     "in_use": "Diese Verteilstation kann nicht gelöscht werden, weil noch Lieferungen auf ihre Abholtage verweisen. Bitte zuerst die Lieferungen verschieben oder beenden.",
-    "not_found": "Verteilstation nicht gefunden."
+    "not_found": "Verteilstation nicht gefunden.",
+    "more_than_one_fee": "Nur eine Gebühr ist möglich: pro Kiste, pro Monat oder pro Jahr."
   },
   "my_data": {
     "shared_station_identity_locked": "Name und Adresse dieses Kontos gehören zu einer Verteilstation und können hier nicht geändert werden — bitte ans Büro wenden. E-Mail, Telefon und Bankverbindung bleiben änderbar."
@@ -241,7 +241,6 @@
   },
   "reseller": {
     "not_found": "Wiederverkäufer nicht gefunden.",
-    "invalid": "Wiederverkäufer-Eingabe ungültig — bitte die Daten prüfen.",
     "already_linked": "Dieser Wiederverkäufer ist bereits mit einem anderen User verknüpft.",
     "customer_role_required": "Eine Wiederverkäufer-Verknüpfung ist nur für die Rolle 'Kunde' möglich.",
     "email_missing": "Für diesen Wiederverkäufer ist keine Rechnungs-E-Mail-Adresse hinterlegt.",
@@ -250,9 +249,6 @@
   "storage": {
     "not_found": "Lager nicht gefunden.",
     "in_use": "Dieses Lager wird noch verwendet (etwa von Prognosen oder Dokumentationseinträgen) und kann nicht gelöscht werden."
-  },
-  "offer": {
-    "not_found": "Angebot nicht gefunden."
   },
   "offer_group": {
     "not_found": "Angebotsgruppe nicht gefunden.",
@@ -296,7 +292,6 @@
   "registration": {
     "failed": "Registrierung fehlgeschlagen — bitte erneut versuchen.",
     "host_disabled": "Die Registrierung ist auf diesem Host nicht verfügbar.",
-    "weak_password": "Das Passwort ist zu schwach — bitte ein sichereres Passwort wählen.",
     "invalid_code": "Der Bestätigungscode ist ungültig oder abgelaufen.",
     "email_not_verified": "Bitte bestätige zuerst deine E-Mail-Adresse."
   },
@@ -464,15 +459,12 @@
     "week_required": "Bitte Jahr und Lieferwoche angeben — ohne sie kann nicht geprüft werden, ob das Angebot in der Zielgruppe schon existiert."
   },
   "bulk_invoice_reminder": {
-    "ids_required": "Bitte mindestens einen Eintrag auswählen.",
     "model_invalid": "Ungültiger Typ — es werden nur Rechnungen unterstützt."
   },
   "bulk_set_paid": {
-    "ids_required": "Bitte mindestens eine Bestellung auswählen.",
     "model_invalid": "Ungültiger Typ — es werden nur Rechnungen unterstützt."
   },
   "summary_invoice": {
-    "ids_required": "Bitte mindestens eine Bestellung auswählen.",
     "no_valid_dns": "Keine gültigen Lieferscheine gefunden, um eine Sammelrechnung zu erstellen.",
     "date_format": "Ungültiges Rechnungsdatum — bitte im Format JJJJ-MM-TT angeben."
   },
@@ -490,10 +482,7 @@
   "finalize": {
     "app_label_invalid": "Ungültiges „app_label“ — nur „commissioning“ ist zulässig.",
     "ids_invalid": "„ids“ darf nur Text-IDs enthalten.",
-    "ids_not_list": "„ids“ muss eine Liste sein.",
-    "ids_required": "Der Parameter „ids“ ist erforderlich.",
     "model_invalid": "Dieser Modelltyp existiert nicht oder kann nicht finalisiert werden.",
-    "model_not_found": "Der angegebene Modelltyp wurde nicht gefunden.",
     "model_required": "Der Parameter „model“ ist erforderlich.",
     "one_way_model": "Finalisierte Belege sind gesetzlich unveränderlich und können nicht wieder entfinalisiert werden. Für eine Rückabwicklung bitte eine Stornierung erstellen, für eine Korrektur ein Korrekturdokument."
   },
@@ -504,9 +493,6 @@
     "invalid_status": "Der Import-Batch ist in einem Status, der nicht angewendet werden kann (benötigt „preview_ready“ oder „validated“).",
     "mapping_target_missing": "Die interne ID gehört zu keinem Objekt der gewählten Art. Bitte die ID der Station, der Anteilsvariante bzw. des Liefertags prüfen.",
     "validation_failed": "Einige Zeilen der Datei sind ungültig, der Import wurde nicht angewendet. Die Zeilenprüfung zeigt, welche Zeilen betroffen sind und was zu korrigieren ist."
-  },
-  "shares_day_change": {
-    "missing_required": "Jahr und Lieferwoche sind erforderlich."
   },
   "waiting_list": {
     "disabled": "Die Warteliste ist für diese Organisation deaktiviert. Ausgebuchte Anteile können nicht auf die Warteliste gesetzt werden."

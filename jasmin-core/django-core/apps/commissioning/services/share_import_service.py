@@ -94,7 +94,10 @@ def _delimiter_of(header_line: str) -> str:
     does — a spreadsheet saved as CSV in German uses ``;`` — else a comma."""
 
     def required_columns_split_by(delimiter: str) -> int:
-        cells = {cell.strip().strip('"') for cell in header_line.split(delimiter)}
+        cells = {
+            cell.strip().strip('"').strip().lower()
+            for cell in header_line.split(delimiter)
+        }
         return len(REQUIRED_COLUMNS & cells)
 
     return (

@@ -1,0 +1,31 @@
+/* Delivery-station tour lists (DeliveryStationsOverview), pickup lists
+   (DeliveryStationsDetails) and station fees (DeliveryStationFees). */
+.delivery-stations-overview__tour {
+  margin-top: 4em;
+  margin-bottom: 2em;
+}
+
+.delivery-stations-overview__pdf {
+  margin-top: 3em;
+}
+
+/* Pulled left so the selector lines up with the day selector above it. */
+.delivery-stations-details__station-selector {
+  margin-top: 1em;
+  margin-left: -2em;
+}
+
+.delivery-stations-details__pdf-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 1em;
+  margin-top: 1em;
+}
+
+.delivery-stations-details__empty {
+  height: 4em;
+}
+
+.delivery-station-fees__table {
+  width: 50%;
+}

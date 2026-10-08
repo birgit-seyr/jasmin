@@ -66,8 +66,7 @@ export default function UserProfileModal({
       });
       notify.success(t("profile.saved"));
       setEditMode(false);
-    } catch (error) {
-      console.error("Operation failed:", error);
+    } catch {
       notify.error(t("profile.save_error"));
     } finally {
       setSaving(false);

@@ -153,7 +153,7 @@ function TourTable({
   );
 
   return (
-    <div style={{ marginTop: "4em", marginBottom: "2em" }}>
+    <div className="delivery-stations-overview__tour">
       <h3>{t("commissioning.tour_number", { number: tourNumber })}</h3>
       <Table
         columns={columns}
@@ -301,7 +301,7 @@ export default function DeliveryStationsOverview() {
       {/* PDF Download — combination-based, so only for subscription tenants
           (import tenants have no combos; the on-page flat view covers them). */}
       {showTours && tours.length > 0 && !usesExternalDemand && (
-        <div style={{ marginTop: "3em" }}>
+        <div className="delivery-stations-overview__pdf">
           <DeliveryStationsOverviewPDFGenerator
             tours={tours.map((tour) => ({
               tour_number: tour.tour_number,

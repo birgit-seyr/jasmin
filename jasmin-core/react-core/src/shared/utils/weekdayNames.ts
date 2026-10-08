@@ -1,3 +1,5 @@
+import type { DayNumberEnum } from "@shared/api/generated/models";
+
 // Single source of truth for weekday-name i18n keys, indexed by the backend
 // day_number: 0 = Monday … 6 = Sunday (matches SharesDeliveryDay.day_number /
 // DayNumberOptions). NOTE Monday is 0 — a falsy `!dayNumber` guard would
@@ -39,3 +41,14 @@ export const getDayName = (
   const name = key ? t(key).toUpperCase() : undefined;
   return name || `${(dayIndex ?? 0) + 1}`;
 };
+
+/** Whether ``day`` is a backend ``day_number`` (0 = Monday … 6 = Sunday). */
+const isDayNumber = (day: number): day is DayNumberEnum =>
+  Number.isInteger(day) && day >= 0 && day <= 6;
+
+/**
+ * Narrows a selector's day index to the backend ``day_number``; anything
+ * else, ``null`` included, becomes ``null``.
+ */
+export const toDayNumber = (day: number | null): DayNumberEnum | null =>
+  day !== null && isDayNumber(day) ? day : null;

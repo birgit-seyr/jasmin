@@ -28,7 +28,8 @@ must render without authentication.)
     — anonymous callers must not be able to enumerate internal
     schema identifiers; the auth-gated ``TenantSerializer`` keeps it)
   * Branding: ``logo``, ``bio_logo``
-  * i18n / locale bootstrap: ``tenant_language``, ``date_format``
+  * i18n / locale bootstrap: ``tenant_language``, ``date_format``,
+    ``number_locale``
   * Tenant-disabled UX: ``is_active``
   * Public legal-notice / GDPR contact block: ``address``,
     ``zip_code``, ``city``, ``country``, ``email``, ``phone_number``,
@@ -78,6 +79,8 @@ export interface CurrentTenant {
   tenant_language?: string;
   /** @maxLength 32 */
   date_format?: string;
+  /** @maxLength 16 */
+  number_locale?: string;
   /** @maxLength 8 */
   currency?: string;
   is_active?: boolean;

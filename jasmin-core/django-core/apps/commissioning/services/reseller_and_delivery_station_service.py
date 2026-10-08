@@ -8,6 +8,7 @@ from ..errors import RequiredFieldMissing
 from ..models import (
     ContactEntity,
     DeliveryStation,
+    OfferGroup,
     Reseller,
 )
 from ..utils.deletion_utils import can_delete_instance
@@ -22,6 +23,11 @@ class ResellerAndDeliveryStationService:
         validated_data["contact"] = contact
         # Transient flag from the serializer — not a model field.
         is_also_delivery_station = validated_data.pop("is_also_delivery_station", False)
+        # A reseller sees only its offer group's offers, so one created without
+        # a group (a CSV import, an API client) gets the default the office
+        # grid pre-selects.
+        if validated_data.get("offer_group") is None:
+            validated_data["offer_group"] = OfferGroup.get_default()
         reseller = Reseller.objects.create(**validated_data)
 
         if is_also_delivery_station:
@@ -51,7 +57,9 @@ class ResellerAndDeliveryStationService:
         if (
             delivery_station.is_also_reseller or delivery_station.is_also_seller
         ) and contact:
-            reseller, created = Reseller.objects.get_or_create(contact=contact)
+            reseller, created = Reseller.objects.get_or_create(
+                contact=contact, defaults={"offer_group": OfferGroup.get_default()}
+            )
             reseller.is_reseller = (
                 reseller.is_reseller or delivery_station.is_also_reseller
             )
@@ -164,7 +172,10 @@ class ResellerAndDeliveryStationService:
         instance.save()
 
         if (instance.is_also_reseller or instance.is_also_seller) and instance.contact:
-            reseller, created = Reseller.objects.get_or_create(contact=instance.contact)
+            reseller, created = Reseller.objects.get_or_create(
+                contact=instance.contact,
+                defaults={"offer_group": OfferGroup.get_default()},
+            )
             reseller.is_reseller = reseller.is_reseller or instance.is_also_reseller
             reseller.is_seller = reseller.is_seller or instance.is_also_seller
             reseller.save()

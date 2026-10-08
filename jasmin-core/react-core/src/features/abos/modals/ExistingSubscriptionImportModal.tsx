@@ -178,7 +178,7 @@ export default function ExistingSubscriptionImportModal({
                       meaning: t(`onboarding.sub_help.${key}`),
                     }))}
                   />
-                  <div style={{ marginTop: 12 }}>
+                  <div className="mt-12">
                     {uploadAllowed ? (
                       <DownloadCsvTemplateButton
                         columns={subscriptionColumns}

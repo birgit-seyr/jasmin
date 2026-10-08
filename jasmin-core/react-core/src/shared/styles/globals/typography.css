@@ -138,6 +138,15 @@ h5 {
   color: var(--color-primary);
 }
 
+/* An offer's amount still to be had, in the offers table: red once none is left. */
+.offer-amount-none-left {
+  color: var(--color-error-text);
+}
+
+.offer-amount-left {
+  color: var(--color-success-text);
+}
+
 /* The line under a page's title that says what the page is for. */
 .page-subtitle {
   margin-top: 0;

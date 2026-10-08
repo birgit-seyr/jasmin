@@ -144,7 +144,7 @@ file.
 | `APIView`-style endpoints | `views.py` or a `views/` package |
 | Serializers | `serializers` (**plural**) — never singular `serializer/` |
 | Services | `services.py` or a `services/` package |
-| Errors | `errors.py` (every app that raises one has it; the `cultivation` / `economics` stubs don't) |
+| Errors | `errors.py` or an `errors/` package (every app that raises one has it; the `cultivation` / `economics` stubs don't) |
 
 Within a `services/` package, modules that expose a `*Service` class take the
 `_service.py` suffix (the dominant pattern); function-only helper / operation
@@ -190,7 +190,9 @@ basename (`logout-all/`, `step-up/`, `admin-users`) against snake URL `name=`
 ### Errors
 
 Use the errors in `errors.py` whenever possible, or write new ones there where
-necessary. New errors go in the corresponding app's `errors.py` and subclass
+necessary. New errors go in the corresponding app's `errors.py` (in `commissioning`,
+the matching module of the `errors/` package, re-exported with `__all__` from its
+`__init__.py`) and subclass
 `JasminError` (`core/errors.py`), with a stable per-case `code` — never a bare
 DRF `ValidationError` or a hand-built `Response`.
 

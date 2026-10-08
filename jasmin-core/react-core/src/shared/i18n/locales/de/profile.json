@@ -15,6 +15,7 @@
   "role": "Rolle",
   "saved": "Profil erfolgreich gespeichert",
   "save_error": "Profil konnte nicht gespeichert werden",
+  "preferences_save_error": "Die Einstellung konnte nicht gespeichert werden",
   "load_error": "Daten konnten nicht geladen werden",
   "my_member_page": "Meine Seite",
   "pickup_name_help": "Abholname zum anonymen Abholen",

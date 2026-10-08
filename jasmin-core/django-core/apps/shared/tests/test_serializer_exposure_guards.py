@@ -288,6 +288,97 @@ class TestAnonymousReadSurface:
             assert row.get("capacity") is None
 
 
+#: The pre-login tenant payload (``CurrentTenantView``, ``GET
+#: /api/tenants/current/``). The view opens itself with an empty
+#: ``permission_classes`` rather than ``public_read_actions``, so the sweep above
+#: cannot see it. Its serializer lists fields explicitly; this pins that list so
+#: a field joins the anonymous payload only by updating it here. The farm's
+#: public identity, branding, locale and the registration wizard's settings
+#: scalars — never banking, ``email_for_orders`` or the settings overlay.
+_ANONYMOUS_TENANT_FIELDS = frozenset(
+    {
+        "address",
+        "allowed_trial_subscription_duration",
+        "allows_solidarity_pricing",
+        "allows_trial_subscriptions",
+        "allows_trial_subscriptions_for_trial_members",
+        "allows_waiting_list_for_subscriptions",
+        "app_icon_version",
+        "auditing_association",
+        "bio_logo",
+        "city",
+        "content_responsible",
+        "country",
+        "currency",
+        "date_format",
+        "description",
+        "email",
+        "friendly_captcha_sitekey",
+        "id",
+        "info_sentence_about_coop_shares",
+        "is_active",
+        "legal_form",
+        "legal_notice_extra_html",
+        "legal_representatives",
+        "logo",
+        "max_number_coop_shares",
+        "min_number_coop_shares",
+        "min_weeks_from_creation_to_start_delivery",
+        "name",
+        # The registration wizard shows and reads numbers in the farm's format.
+        "number_locale",
+        "organic_control_number",
+        "participates_in_dispute_resolution",
+        "phone_number",
+        "privacy_policy_html",
+        "professional_association",
+        "register_court",
+        "register_number",
+        "register_type",
+        "requires_paper_signature_for_membership",
+        "season_start_week",
+        "subscriptions_end_after_one_year",
+        "subscriptions_end_at_end_of_season",
+        "supervisory_board",
+        "tenant_language",
+        "uid",
+        "value_one_coop_share",
+        "website",
+        "zip_code",
+    }
+)
+
+
+class TestAnonymousTenantPayload:
+    def test_the_published_field_set_has_not_drifted(self):
+        from apps.shared.tenants.serializers import CurrentTenantSerializer
+
+        live = frozenset(CurrentTenantSerializer().fields)
+        added = sorted(live - _ANONYMOUS_TENANT_FIELDS)
+        removed = sorted(_ANONYMOUS_TENANT_FIELDS - live)
+        assert live == _ANONYMOUS_TENANT_FIELDS, (
+            f"CurrentTenantSerializer publishes a different field set to "
+            f"unauthenticated callers than _ANONYMOUS_TENANT_FIELDS records.\n"
+            f"  newly exposed: {added}\n"
+            f"  no longer exposed: {removed}\n"
+            f"If a field was ADDED, confirm it is safe for anonymous readers "
+            f"before updating the registry."
+        )
+
+    def test_an_anonymous_visitor_reads_the_farm_number_format(
+        self, tenant, monkeypatch
+    ):
+        from apps.shared.tenants.serializers import CurrentTenantSerializer
+
+        # The tenant object is session-scoped; monkeypatch puts the value back.
+        monkeypatch.setattr(tenant, "number_locale", "en-US")
+
+        payload = CurrentTenantSerializer(tenant).data
+
+        assert payload["number_locale"] == "en-US"
+        assert "settings" not in payload
+
+
 # --------------------------------------------------------------------------- #
 # 2. File-URL exposure                                                         #
 # --------------------------------------------------------------------------- #

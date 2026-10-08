@@ -17,8 +17,18 @@ import {
 } from "@hooks/index";
 import { useOfferTiers } from "@features/commissioning/hooks";
 import type { EditableColumnConfig } from "@shared/tables/BasicEditableTable/types";
-import PriceEditorModal from "./PriceEditorModal";
+import PriceEditorModal, { type PriceModalApi } from "./PriceEditorModal";
 import { buildCurrencyPriceColumn, buildTaxRateColumn } from "./priceColumns";
+
+// Module-level so the editor's table keeps the same API functions across
+// renders. Each call reads the generated client only when it runs, so loading
+// this module never touches it.
+const SHARE_ARTICLE_NET_PRICE_API: PriceModalApi<ShareArticleNetPrice> = {
+  create: (price) => commissioningShareArticleNetPricesCreate(price),
+  partialUpdate: (id, price) =>
+    commissioningShareArticleNetPricesPartialUpdate(id, price),
+  destroy: (id) => commissioningShareArticleNetPricesDestroy(id),
+};
 
 interface ShareArticleExtraPriceModalProps {
   visible: boolean;
@@ -39,6 +49,7 @@ export default function ShareArticleExtraPriceModal({
   onClose,
   share_article,
   share_article_name,
+  onSave,
 }: ShareArticleExtraPriceModalProps) {
   const { t } = useTranslation();
   const { currencySymbol } = useCurrency();
@@ -110,11 +121,8 @@ export default function ShareArticleExtraPriceModal({
       columns={columns}
       listHook={useCommissioningShareArticleNetPricesList}
       getListQueryKey={getCommissioningShareArticleNetPricesListQueryKey}
-      api={{
-        create: commissioningShareArticleNetPricesCreate,
-        partialUpdate: commissioningShareArticleNetPricesPartialUpdate,
-        destroy: commissioningShareArticleNetPricesDestroy,
-      }}
+      api={SHARE_ARTICLE_NET_PRICE_API}
+      onSave={onSave}
     />
   );
 }

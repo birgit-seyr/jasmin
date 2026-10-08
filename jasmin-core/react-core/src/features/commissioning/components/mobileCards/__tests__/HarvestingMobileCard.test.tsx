@@ -261,7 +261,7 @@ describe("HarvestingMobileCard actions", () => {
     expect(confirmButton()).not.toHaveClass("is-confirmed");
   });
 
-  it.skip("names the confirm button for screen readers by what it does", () => {
+  it("names the confirm button for screen readers by what it does", () => {
     renderCard();
 
     expect(screen.getByRole("button", { name: CONFIRM })).toBe(confirmButton());

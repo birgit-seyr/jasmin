@@ -90,10 +90,10 @@ beforeEach(() => {
 
 describe("confirming the expected harvest untouched", () => {
   it.each([
-    ["an expected amount summed in floats", 10.2 - 3.4, "6,80", 6.8],
-    ["an expected amount planned to three decimals", 0.875, "0,88", 0.88],
+    ["an expected amount summed in floats", 10.2 - 3.4, "6,80", "6.80"],
+    ["an expected amount planned to three decimals", 0.875, "0,88", "0.88"],
     // Half up on the decimals the field shows, not on the float: 1.005 is 1.00499… as a float.
-    ["an expected amount on a half", 1.005, "1,01", 1.01],
+    ["an expected amount on a half", 1.005, "1,01", "1.01"],
   ])("starts from %s at two decimals, as the field shows it, and saves that", async (_case, expected, shown, saved) => {
     const user = userEvent.setup();
     render(<HarvestConfirmation row={leeksExpecting(expected)} />);
@@ -133,7 +133,9 @@ describe("a refused confirmation", () => {
     const dialog = await confirmLeeks();
 
     expect(notify.error).toHaveBeenCalledWith("Week is read-only.");
-    expect(dialog).toBeVisible();
+    // The dialog may still be in its opening animation; a closed one never
+    // becomes visible again.
+    await waitFor(() => expect(dialog).toBeVisible());
     expect(within(dialog).getByRole("spinbutton", { name: CONFIRM })).toHaveValue("4,00");
   });
 

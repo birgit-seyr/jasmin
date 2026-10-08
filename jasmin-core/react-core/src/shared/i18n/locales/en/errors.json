@@ -2,12 +2,14 @@
   "purchase": {
     "organic_certificate_required": "For organic or in-conversion goods, the supplier must hold a certificate valid for this delivery week."
   },
+  "waste": {
+    "already_documented": "This article in this unit and size is already documented as waste for this day and storage."
+  },
   "commissioning": {
     "past_week": "This week is in the past and cannot be modified anymore.",
     "share_days_locked": "The day fields on this share are locked because ShareContent already exists for it.",
     "already_finalized": "This record is finalized and cannot be modified anymore.",
     "invalid": "Invalid input — please check the data and try again.",
-    "not_enough_stock": "Not enough stock for this action.",
     "picture_invalid": "The picture must be a PNG, JPEG, WEBP or GIF image of at most 20 MB and 40 megapixels."
   },
   "stock": {
@@ -46,7 +48,6 @@
     "invalid_price": "The price per delivery must be a number of at least 0.",
     "delivery_station_day_out_of_range": "The selected delivery-station day doesn't cover the whole subscription term — it starts after the subscription begins or ends (with no successor day) before the subscription ends. Please choose a delivery-station day that covers the term.",
     "bulk_renew": {
-      "ids_required": "Provide a non-empty list of subscription ids.",
       "too_many_ids": "At most 500 subscriptions can be renewed per request.",
       "invalid_valid_until": "Invalid end date. Please choose a valid date."
     },
@@ -188,16 +189,15 @@
   },
   "delivery_day": {
     "not_found": "Delivery day not found.",
-    "required": "The delivery day is required.",
     "valid_from_in_past": "A new delivery day or station-day cannot start in the past — pick a date from today onward.",
     "valid_from_move_into_past": "The start cannot be moved into a past week — the Monday of the current week is the earliest possible. Only in onboarding mode can the start be dated further back."
   },
   "delivery_station": {
-    "invalid": "Invalid delivery station input — please check the data.",
     "over_capacity": "This delivery station is full for week {{week}}/{{year}} ({{occupied}}/{{capacity}}). Please pick another station.",
     "capacity_below_occupancy": "Capacity can't be set to {{capacity}} — {{peak}} share(s) are already booked for week {{week}}/{{year}}. Please choose at least {{peak}}.",
     "in_use": "This delivery station cannot be deleted while deliveries still reference its pickup days. Move or end those deliveries first.",
-    "not_found": "Delivery station does not exist."
+    "not_found": "Delivery station does not exist.",
+    "more_than_one_fee": "Only one fee applies: per box, per month or per year."
   },
   "my_data": {
     "shared_station_identity_locked": "The name and address on this account belong to a delivery station and cannot be changed here — please contact the office. Email, phone and bank details remain editable."
@@ -241,7 +241,6 @@
   },
   "reseller": {
     "not_found": "Reseller not found.",
-    "invalid": "Invalid reseller input — please check the data.",
     "already_linked": "This reseller is already linked to a different user.",
     "customer_role_required": "Reseller link is only available for the 'customer' role.",
     "email_missing": "This reseller has no billing email address configured.",
@@ -250,9 +249,6 @@
   "storage": {
     "not_found": "Storage not found.",
     "in_use": "This storage is still in use (by forecasts or documentation entries, say) and can't be deleted."
-  },
-  "offer": {
-    "not_found": "Offer not found."
   },
   "offer_group": {
     "not_found": "Offer group not found.",
@@ -296,7 +292,6 @@
   "registration": {
     "failed": "Registration failed — please try again.",
     "host_disabled": "Registration is not available on this host.",
-    "weak_password": "The password is too weak — please choose a stronger one.",
     "invalid_code": "The verification code is invalid or has expired.",
     "email_not_verified": "Please verify your email address first."
   },
@@ -464,15 +459,12 @@
     "week_required": "Year and delivery week are required — without them we cannot tell whether the offer is already in the target group."
   },
   "bulk_invoice_reminder": {
-    "ids_required": "Provide a non-empty list of ids.",
     "model_invalid": "model must be 'invoice'."
   },
   "bulk_set_paid": {
-    "ids_required": "Provide a non-empty list of order ids.",
     "model_invalid": "model must be 'invoice'."
   },
   "summary_invoice": {
-    "ids_required": "Provide a non-empty list of order ids.",
     "no_valid_dns": "No valid delivery notes found to create a summary invoice.",
     "date_format": "Invalid invoice date — please use the YYYY-MM-DD format."
   },
@@ -490,10 +482,7 @@
   "finalize": {
     "app_label_invalid": "Invalid app_label — only commissioning is supported.",
     "ids_invalid": "ids may only contain string IDs.",
-    "ids_not_list": "ids must be a list.",
-    "ids_required": "The ids parameter is required.",
     "model_invalid": "This model type does not exist or cannot be finalized.",
-    "model_not_found": "The requested model was not found.",
     "model_required": "The model parameter is required.",
     "one_way_model": "Finalized documents are legally immutable and cannot be unfinalized. To reverse, create a cancellation; to revise, issue a correction document."
   },
@@ -504,9 +493,6 @@
     "invalid_status": "The import batch is in a status that cannot be applied (needs preview_ready or validated).",
     "mapping_target_missing": "The internal id belongs to no object of the chosen kind. Check the id of the station, share type variation or delivery day.",
     "validation_failed": "Some rows in the file are invalid, so the import was not applied. The per-row report shows which rows are affected and what to fix."
-  },
-  "shares_day_change": {
-    "missing_required": "Year and delivery week are required."
   },
   "waiting_list": {
     "disabled": "The waiting list is turned off for this organization. At-capacity shares can't be added to a waiting list."

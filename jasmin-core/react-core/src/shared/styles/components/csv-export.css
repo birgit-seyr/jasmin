@@ -1,0 +1,10 @@
+/* CSV export dialogs (ExportCsvAtDateModal). */
+.csv-export-at-date__loading {
+  text-align: center;
+  padding: 24px;
+}
+
+.csv-export-at-date__loaded {
+  color: var(--color-success);
+  font-weight: 500;
+}

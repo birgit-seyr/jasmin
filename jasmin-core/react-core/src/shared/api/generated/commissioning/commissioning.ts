@@ -25939,61 +25939,6 @@ const {mutation: mutationOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const commissioningSharesDestroy = (
-    id: string,
- ) => {
-      
-      
-      return axiosService<void>(
-      {url: `/api/commissioning/shares/${id}/`, method: 'DELETE'
-    },
-      );
-    }
-  
-
-
-export const getCommissioningSharesDestroyMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesDestroy>>, TError,{id: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesDestroy>>, TError,{id: string}, TContext> => {
-
-const mutationKey = ['commissioningSharesDestroy'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningSharesDestroy>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
-
-          return  commissioningSharesDestroy(id,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CommissioningSharesDestroyMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningSharesDestroy>>>
-    
-    export type CommissioningSharesDestroyMutationError = ErrorResponse
-
-    export const useCommissioningSharesDestroy = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesDestroy>>, TError,{id: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof commissioningSharesDestroy>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
-
-      const mutationOptions = getCommissioningSharesDestroyMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
     /**
  * Bulk update day-level fields on shares for a given week. If harvesting/packing/washing/cleaning_day changes, the linked theoretical objects and movements are recreated.
  */

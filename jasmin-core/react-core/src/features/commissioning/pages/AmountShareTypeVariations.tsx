@@ -62,7 +62,7 @@ export default function AmountShareTypeVariations({
   // via a taken joker instead of the shipping ones — same columns, same layout.
 
   // Only needed to decide whether the "show tours" switch is meaningful.
-  const { toursExist } = usePlanningAxes({
+  const { toursExist, daysLoading } = usePlanningAxes({
     year: selectedYear,
     week: selectedWeek ?? currentWeek,
     requireStations: true,
@@ -81,18 +81,30 @@ export default function AmountShareTypeVariations({
     if (jokerMode) params.joker = true;
     if (showDeliveryStations) {
       params.for_stations = true;
-    } else if (showTours) {
+    } else if (showTours && toursExist) {
+      // The switch shows only in a week with a day of two tours; elsewhere it
+      // keeps its position for the next such week but splits nothing.
       params.for_tours = true;
     }
     // Shows EVERYTHING, including bulk-packed variations (no is_packed_bulk
     // filter) — it's the full weekly overview.
     return params;
-  }, [jokerMode, selectedYear, selectedWeek, showTours, showDeliveryStations]);
+  }, [
+    jokerMode,
+    selectedYear,
+    selectedWeek,
+    showTours,
+    toursExist,
+    showDeliveryStations,
+  ]);
+  // With the tours shown, the matrix waits for the week's days to tell whether
+  // it has tours, rather than loading whole days first.
+  const awaitingTours = showTours && daysLoading;
 
   const { data: boxMatrix, isFetching: boxFetching } =
     useCommissioningShareDeliveryBoxCombinationMatrixRetrieve(
       boxMatrixParams as CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams,
-      { query: { enabled: !!boxMatrixParams } },
+      { query: { enabled: !!boxMatrixParams && !awaitingTours } },
     );
 
   const matrixColumns = useMemo<PackingBoxesMatrixColumn[]>(
@@ -124,8 +136,9 @@ export default function AmountShareTypeVariations({
 
   // No box combinations this week (e.g. a past / empty week): surface the
   // read-only warning instead of an empty grid, and hide the grouping switches.
+  const matrixLoading = boxFetching || awaitingTours;
   const noColumns =
-    selectedWeek != null && !boxFetching && matrixColumns.length === 0;
+    selectedWeek != null && !matrixLoading && matrixColumns.length === 0;
 
   return (
     <div>
@@ -163,12 +176,7 @@ export default function AmountShareTypeVariations({
               />
             </div>
           )}
-          <div
-            style={{
-              marginTop: toursExist ? "0.5em" : "2em",
-              marginBottom: "1em",
-            }}
-          >
+          <div className={`${toursExist ? "mt-0-5em" : "mt-2em"} mb-3em`}>
             <LabeledSwitch
               value={showDeliveryStations}
               onChange={(checked: boolean) => {
@@ -181,14 +189,12 @@ export default function AmountShareTypeVariations({
               withEyeIcons
             />
           </div>
-
-          <div style={{ height: "2em" }}></div>
           <Table
             columns={boxColumns}
             dataSource={boxRows}
             pagination={false}
             size="small"
-            loading={boxFetching}
+            loading={matrixLoading}
             className="custom-jasmin-table w-max"
             rowKey="id"
             bordered

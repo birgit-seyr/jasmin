@@ -161,6 +161,8 @@ class InternalError(JasminError):
 __all__ = [
     "JasminError",
     "BadRequestError",
+    "InvalidQueryParam",
+    "DataValueInvalid",
     "AuthError",
     "ForbiddenError",
     "NotFoundError",

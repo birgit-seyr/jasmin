@@ -78,14 +78,10 @@ export default function DocumentationWaste() {
   const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
     overrides: {
       unit: {
-        disabled: (record: Record<string, unknown>) => {
-          if (record.key != -1) return true;
-        },
+        disabled: (record: Record<string, unknown>) => record.key !== -1,
       },
       size: {
-        disabled: (record: Record<string, unknown>) => {
-          if (record.key != -1) return true;
-        },
+        disabled: (record: Record<string, unknown>) => record.key !== -1,
       },
       // A waste is stored with two decimals, so it is typed and shown with them.
       amount: { inputType: "positive_decimal2" },
@@ -153,7 +149,7 @@ export default function DocumentationWaste() {
     () => [
       {
         ...shareArticleColumn,
-        disabled: (record: TableRecord) => record.key != -1,
+        disabled: (record: TableRecord) => record.key !== -1,
       },
       ...amountUnitSizeColumns,
       {
@@ -214,6 +210,11 @@ export default function DocumentationWaste() {
         customSave={customSave}
         customEdit={customEdit}
         permissions={permissions}
+        // The rows are all of the selected storage, so the check needs no storage.
+        uniqueCheck={["share_article", "unit", "size"]}
+        uniqueCheckMessage={t(
+          "validation.unique.share_article_unit_size_must_be_unique",
+        )}
         keyboardAddShortcut={true}
       />
       <AddShareArticleEntry

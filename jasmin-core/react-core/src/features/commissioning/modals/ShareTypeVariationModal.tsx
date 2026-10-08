@@ -712,7 +712,8 @@ export default function ShareTypeVariationModal({
             ? `${getShareTypeVariationSizeLabel(selectedShareTypeVariation.size ?? "")} `
             : ""
         }
-        onSave={undefined}
+        // The variation rows carry their active prices.
+        onSave={invalidateData}
       />
       <RichTextEditorModal
         // Fresh key per opened record so the editor remounts and

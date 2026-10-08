@@ -567,7 +567,8 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
         — anonymous callers must not be able to enumerate internal
         schema identifiers; the auth-gated ``TenantSerializer`` keeps it)
       * Branding: ``logo``, ``bio_logo``
-      * i18n / locale bootstrap: ``tenant_language``, ``date_format``
+      * i18n / locale bootstrap: ``tenant_language``, ``date_format``,
+        ``number_locale``
       * Tenant-disabled UX: ``is_active``
       * Public legal-notice / GDPR contact block: ``address``,
         ``zip_code``, ``city``, ``country``, ``email``, ``phone_number``,
@@ -656,6 +657,9 @@ class CurrentTenantSerializer(serializers.ModelSerializer):
             "app_icon_version",
             "tenant_language",
             "date_format",
+            # The registration wizard shows and reads numbers in the farm's
+            # format; the anonymous payload carries no settings overlay.
+            "number_locale",
             "currency",
             "is_active",
             # Public legal-notice ("Impressum") + privacy-policy controller

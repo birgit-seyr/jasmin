@@ -107,7 +107,7 @@ export default function CoopShareImportModal({
               meaning: t(`onboarding.coop_help.${key}`),
             }))}
           />
-          <div style={{ marginTop: 12 }}>
+          <div className="mt-12">
             {uploadAllowed ? (
               <DownloadCsvTemplateButton
                 columns={columns}

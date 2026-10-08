@@ -2,7 +2,9 @@
  * Single source of truth for decimal display + parsing in the UI.
  *
  * Reads `number_locale` from the active tenant's settings (BCP-47 tag,
- * e.g. "de-DE" → "1.234,50") and exposes:
+ * e.g. "de-DE" → "1.234,50") — before sign-in, from the tenant's top-level
+ * scalar the anonymous `/tenants/current/` payload carries, as the public
+ * registration shows and reads numbers — and exposes:
  *
  *   - `format(value, decimals)`  — render-side; use it instead of
  *     `value.toFixed(N)` in cell renders, summaries, PDFs.
@@ -22,8 +24,11 @@ import {
 } from "@shared/utils/numberFormat";
 
 export function useNumberFormat() {
-  const { getSetting } = useTenant();
-  const locale = (getSetting("number_locale", "de-DE") as string) || "de-DE";
+  const { getSetting, tenant } = useTenant();
+  const locale =
+    (getSetting("number_locale") as string | undefined) ||
+    (tenant?.number_locale as string | undefined) ||
+    "de-DE";
 
   return useMemo(
     () => ({

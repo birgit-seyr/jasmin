@@ -215,6 +215,63 @@ describe("useEditableTable", () => {
     expect(onSaveSuccess).toHaveBeenCalledWith(created, "create");
   });
 
+  it.each([
+    "number", "integer", "positive_integer", "negative_integer", "decimal1", "decimal2",
+    "decimal3", "positive_decimal2", "negative_decimal2", "positive_decimal3",
+    "negative_decimal3", "percentage", "kw",
+  ] as const)(
+    "save() sends a cleared optional %s cell as null, a required one and a text cell as typed",
+    async (inputType) => {
+      const apiFunctions = { update: vi.fn().mockResolvedValue({ data: sampleRow }) };
+      const columns: EditableColumnConfig<Row>[] = [
+        { title: "Name", dataIndex: "name", inputType: "text" },
+        { title: "Amount", dataIndex: "amount", inputType, required: false },
+        { title: "Number", dataIndex: "number", inputType },
+        { title: "Count", dataIndex: "count", inputType, required: true },
+      ];
+      const { result } = renderHook(() => useEditableTable<Row>({ columns, apiFunctions }));
+      act(() => {
+        result.current.setDataWithTransform([sampleRow]);
+      });
+
+      await act(async () => {
+        await result.current.save("r1", { name: "", amount: "", number: "  ", count: "" });
+      });
+
+      expect(apiFunctions.update).toHaveBeenCalledWith("r1", {
+        name: "",
+        amount: null,
+        number: null,
+        count: "",
+      });
+    },
+  );
+
+  it("save() hands customSave a cleared number cell as typed and sends what customSave leaves blank as null", async () => {
+    const apiFunctions = { update: vi.fn().mockResolvedValue({ data: sampleRow }) };
+    const columns: EditableColumnConfig<Row>[] = [
+      { title: "Amount", dataIndex: "amount", inputType: "decimal2" },
+      { title: "Number", dataIndex: "number", inputType: "integer" },
+    ];
+    const customSave = vi.fn((row: Record<string, unknown>) => ({
+      ...row,
+      amount: row.amount === "" ? 0 : row.amount,
+    }));
+    const { result } = renderHook(() =>
+      useEditableTable<Row>({ columns, apiFunctions, customSave }),
+    );
+    act(() => {
+      result.current.setDataWithTransform([sampleRow]);
+    });
+
+    await act(async () => {
+      await result.current.save("r1", { amount: "", number: "" });
+    });
+
+    expect(customSave.mock.calls[0][0]).toEqual({ amount: "", number: "" });
+    expect(apiFunctions.update).toHaveBeenCalledWith("r1", { amount: 0, number: null });
+  });
+
   it("customSave returning null aborts the save without hitting the API", async () => {
     const apiFunctions = { update: vi.fn() };
     const customSave = vi.fn(() => null);

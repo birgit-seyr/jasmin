@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-1212 tests | 233 test classes | 42 files
+1226 tests | 235 test classes | 43 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 Counts are collected cases, so a parametrized method counts once per case.
@@ -193,6 +193,13 @@ test_delivery_station_pii_exposure.py (4 tests)
   TestDeliveryStationMemberExposure        4   neither a member nor staff ever receives a station's IBAN; a
                                                member reads the door code of their own station only
 
+test_delivery_station_one_fee.py (8 tests)
+──────────────────────────────────────────
+  TestDeliveryStationOneFee                8   a create or update leaving more than one non-zero fee
+                                               is refused (a PATCH counts the stored fees), switching
+                                               fees in one write and other edits are saved, a stored
+                                               station with two fees stays readable
+
 test_delivery_station_photo_link.py (3 tests)
 ─────────────────────────────────────────────
   TestDeliveryStationPhotoLink             3   the office sets a photo link and clears it with "" or null
@@ -250,10 +257,14 @@ test_documentation_past_week_guard.py (29 tests)
                                                unfinalize with a read-only-week row → 409, nothing
                                                unfinalized; the grace week unfinalizes
 
-test_documentation_viewsets.py (71 tests)
+test_documentation_viewsets.py (75 tests)
 ─────────────────────────────────────────
   TestPlotViewSet                          6   list, is_active filter, create, retrieve, delete
-  TestWasteViewSet                         4   list; create with a page-level storage; plain storage required
+  TestWasteViewSet                         8   list; create with a page-level storage; plain storage required;
+                                               the same article, unit and size on a day is refused in one
+                                               storage with waste.already_documented and recorded in
+                                               another; moving a waste onto a documented one is refused;
+                                               an unchanged save is no duplicate of itself
   TestHarvestViewSet                       2   list
   TestPurchaseViewSet                      3   list; create with a page-level storage
   TestForecastViewSet                      4   week scope required, list, filter by year/week
@@ -590,7 +601,7 @@ test_shares_delivery_day_query_count.py (1 test)
 ────────────────────────────────────────────────
   (module-level)                           1   list can_be_deleted matches the per-instance answer
 
-test_shares_viewsets.py (145 tests)
+test_shares_viewsets.py (147 tests)
 ───────────────────────────────────
   TestShareTypeViewSet                    16   list, include_future (current + upcoming, not past), variation
                                                sizes and validity bounds, deletability, filter share_option
@@ -600,7 +611,7 @@ test_shares_viewsets.py (145 tests)
                                                include_future, create inside / outside the share type's range,
                                                filters (share_type, physical, internal_name)
   TestShareTypeVariationGrossPriceViewSet  4   list, filter by variation, not deletable when subscribed
-  TestShareViewSet                         4   list, filter year/week, get_days action
+  TestShareViewSet                         5   list, filter year/week, get_days action, DELETE refused (405)
   TestShareDayFieldsLockedOnUpdate         2   a plain PATCH drops the day keys (moving a day goes through
                                                /shares/bulk_update/); create still sets them
   TestShareBulkUpdateAction                2   missing year → 400; an empty week succeeds
@@ -643,6 +654,7 @@ test_shares_viewsets.py (145 tests)
   TestShareDeliveryWithoutStationDay       1   clearing the station day keeps the delivery readable
   TestShareDeliveryCrossDayMove            3   a move to another weekday re-points the share; a same-day station
                                                move keeps it; the overview grid behaves the same
+  TestShareDeliveryWeekMove                1   a move to another week's share recomputes the old share too
   TestShareDeliveryApplyToFuture           4   apply_to_future false / absent does NOT propagate the station change
                                                to future deliveries; true still does
   TestShareDeliveryExceptionGaps           7   paused weeks returned as gaps; empty without exceptions; a member

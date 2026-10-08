@@ -37,7 +37,7 @@ const AddShareArticleEntry: FC<AddShareArticleEntryProps> = ({
         disabled={disabled}
         className="new-share-article-entry-button"
       >
-        {t("commissioning.add_share_article") || "Add Share Article"}
+        {t("commissioning.add_share_article")}
       </Button>
     </>
   );

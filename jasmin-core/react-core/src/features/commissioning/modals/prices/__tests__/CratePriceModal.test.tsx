@@ -133,6 +133,7 @@ const dayBefore = (isoDate: string) => {
 
 function renderModal() {
   const onClose = vi.fn();
+  const onSave = vi.fn();
   const profiler = profileRenders();
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -148,11 +149,12 @@ function renderModal() {
           onClose={onClose}
           crate="crate-euro"
           crate_name="Euro crate"
+          onSave={onSave}
         />,
       )}
     </QueryClientProvider>,
   );
-  return { onClose, profiler };
+  return { onClose, onSave, profiler };
 }
 
 function rowOf(text: string): HTMLElement {
@@ -396,7 +398,7 @@ describe("CratePriceModal new price", () => {
   });
 
   it("adds a price for the crate and shows the previous price closed the day before", async () => {
-    renderModal();
+    const { onSave } = renderModal();
     await screen.findByText("1,50 €");
 
     await startNewPrice();
@@ -421,6 +423,8 @@ describe("CratePriceModal new price", () => {
       expect(within(rowOf("1,50 €")).getByText("11.10.2026")).toBeInTheDocument(),
     );
     expect(api.list).toHaveBeenCalledTimes(2);
+    // The crate list hears of the saved price.
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 
   it("accepts a negative net price but no negative VAT rate", async () => {
@@ -524,7 +528,7 @@ describe("CratePriceModal existing prices", () => {
   });
 
   it("corrects a price that is not in use, keeping its validity", async () => {
-    renderModal();
+    const { onSave } = renderModal();
     await screen.findByText("1,20 €");
 
     await userEvent.click(
@@ -550,6 +554,7 @@ describe("CratePriceModal existing prices", () => {
       }),
     );
     expect(await screen.findByText("1,25 €")).toBeInTheDocument();
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 
   it("deletes a price that is not in use after confirmation", async () => {

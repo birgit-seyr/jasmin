@@ -22,10 +22,24 @@
   cursor: not-allowed;
 }
 
-/* A ToolTipIcon nudged to sit beside a bulk-action button in an action row.
-   ``margin-left`` needs ``!important`` to beat the icon's default inline
-   ``marginLeft`` from the component. */
-.tooltip-icon-bulk-action {
-  margin-left: -4px !important;
+/* ToolTipIcon's info icon. ``.anticon`` raises the specificity above AntD's
+   own ``.anticon`` rule (colour, vertical-align), which is injected at runtime
+   after this stylesheet. */
+.anticon.tooltip-icon {
+  margin-left: 4px;
+  color: var(--color-future-blue);
+  cursor: pointer;
+  vertical-align: super;
+  font-size: 0.8em;
+}
+
+/* A ToolTipIcon nudged to sit beside a bulk-action button in an action row. */
+.anticon.tooltip-icon.tooltip-icon-bulk-action {
+  margin-left: -4px;
   margin-top: 12px;
+}
+
+/* A ToolTipIcon pulled into the trailing margin of the button before it. */
+.anticon.tooltip-icon.tooltip-icon-beside-button {
+  margin-left: -1em;
 }

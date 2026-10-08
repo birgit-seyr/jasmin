@@ -58,13 +58,13 @@ const ShareArticleModal: FC<ShareArticleModalProps> = ({
 
   return (
     <Modal
-      title={t("commissioning.add_share_article") || "Add Share Article"}
+      title={t("commissioning.add_share_article")}
       open={isVisible}
       onOk={handleSave}
       onCancel={handleCancel}
       width="30em"
-      okText={t("table.save") || "Save"}
-      cancelText={t("table.cancel") || "Cancel"}
+      okText={t("table.save")}
+      cancelText={t("table.cancel")}
       confirmLoading={loading}
     >
       <Form form={form} layout="vertical" onKeyDown={handleKeyDown}>
@@ -101,64 +101,29 @@ const ShareArticleModal: FC<ShareArticleModalProps> = ({
           <Input />
         </Form.Item>
 
-        <div className="flex-center-y gap-8" style={{ marginBottom: "16px" }}>
-          <Form.Item
-            name="is_active"
-            valuePropName="checked"
-            style={{ margin: 0 }}
-          >
-            <Checkbox />
-          </Form.Item>
-          <span>{t("commissioning.is_active")}</span>
-        </div>
+        <Form.Item name="is_active" valuePropName="checked">
+          <Checkbox>{t("commissioning.is_active")}</Checkbox>
+        </Form.Item>
 
-        <div className="flex-center-y gap-8" style={{ marginBottom: "16px" }}>
-          <Form.Item
-            name="is_purchased"
-            valuePropName="checked"
-            style={{ margin: 0 }}
-          >
-            <Checkbox />
-          </Form.Item>
-          <span>{t("commissioning.is_purchased")}</span>
-        </div>
+        <Form.Item name="is_purchased" valuePropName="checked">
+          <Checkbox>{t("commissioning.is_purchased")}</Checkbox>
+        </Form.Item>
 
         {!fruit_and_veg_shares_are_separate && (
-          <div className="flex-center-y gap-8" style={{ marginBottom: "16px" }}>
-            <Form.Item
-              name="harvest_share"
-              valuePropName="checked"
-              style={{ margin: 0 }}
-            >
-              <Checkbox />
-            </Form.Item>
-            <span>{t("commissioning.for_harvest_share")}</span>
-          </div>
+          <Form.Item name="harvest_share" valuePropName="checked">
+            <Checkbox>{t("commissioning.for_harvest_share")}</Checkbox>
+          </Form.Item>
         )}
 
         {fruit_and_veg_shares_are_separate && (
           <>
-            <div className="flex-center-y gap-8" style={{ marginBottom: "16px" }}>
-              <Form.Item
-                name="harvest_share"
-                valuePropName="checked"
-                style={{ margin: 0 }}
-              >
-                <Checkbox />
-              </Form.Item>
-              <span>{t("commissioning.for_harvest_share_veg_only")}</span>
-            </div>
+            <Form.Item name="harvest_share" valuePropName="checked">
+              <Checkbox>{t("commissioning.for_harvest_share_veg_only")}</Checkbox>
+            </Form.Item>
 
-            <div className="flex-center-y gap-8" style={{ marginBottom: "16px" }}>
-              <Form.Item
-                name="harvest_share_fruit"
-                valuePropName="checked"
-                style={{ margin: 0 }}
-              >
-                <Checkbox />
-              </Form.Item>
-              <span>{t("commissioning.for_harvest_share_fruits_only")}</span>
-            </div>
+            <Form.Item name="harvest_share_fruit" valuePropName="checked">
+              <Checkbox>{t("commissioning.for_harvest_share_fruits_only")}</Checkbox>
+            </Form.Item>
           </>
         )}
       </Form>

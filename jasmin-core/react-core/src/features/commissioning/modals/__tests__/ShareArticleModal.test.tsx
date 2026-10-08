@@ -163,8 +163,14 @@ function ArticlePage({
 
 let queryClient: QueryClient;
 
-/** Renders the page and waits until the farm's share options are in. */
-async function renderPage(defaultValues?: Record<string, unknown>) {
+/**
+ * Renders the page and, unless told otherwise, waits until the farm's share
+ * options are in.
+ */
+async function renderPage(
+  defaultValues?: Record<string, unknown>,
+  { waitForShareOptions = true }: { waitForShareOptions?: boolean } = {},
+) {
   const user = userEvent.setup();
   const onSuccess = vi.fn();
   const onClose = vi.fn();
@@ -183,7 +189,7 @@ async function renderPage(defaultValues?: Record<string, unknown>) {
     </QueryClientProvider>,
   );
   await waitFor(() => expect(api.activeShareOptions).toHaveBeenCalled());
-  await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+  if (waitForShareOptions) await waitFor(() => expect(queryClient.isFetching()).toBe(0));
   return { user, onSuccess, onClose, profiler };
 }
 
@@ -204,12 +210,9 @@ const unitSelect = () => within(dialog()).getByRole("combobox", { name: UNIT });
 const saveButton = () => within(dialog()).getByRole("button", { name: /table\.save/ });
 const cancelButton = () => within(dialog()).getByRole("button", { name: "table.cancel" });
 
-/** The checkbox in the dialog whose text reads `text`; the text sits beside it. */
-function checkboxBeside(text: string): HTMLInputElement {
-  const row = within(dialog()).getByText(text).parentElement;
-  if (!row) throw new Error(`No checkbox beside ${text}`);
-  return within(row).getByRole("checkbox");
-}
+/** The checkbox in the dialog named `text`, as a screen reader announces it. */
+const checkboxBeside = (text: string): HTMLInputElement =>
+  within(dialog()).getByRole("checkbox", { name: text });
 
 const shownCheckboxTexts = () =>
   [ACTIVE, PURCHASED, HARVEST_SHARE, VEGETABLE_SHARE, FRUIT_SHARE].filter(
@@ -306,6 +309,78 @@ describe("ShareArticleModal opening", () => {
     await openDialog(user);
 
     expect(shownCheckboxTexts()).toEqual([ACTIVE, PURCHASED, VEGETABLE_SHARE, FRUIT_SHARE]);
+  });
+
+  it("names every checkbox by its text", async () => {
+    api.activeShareOptions.mockResolvedValue(SHARE_OPTIONS_APART);
+    const { user } = await renderPage();
+
+    await openDialog(user);
+
+    const names = within(dialog())
+      .getAllByRole("checkbox")
+      .map((checkbox) => checkbox.closest("label")?.textContent ?? "");
+    expect(names).toEqual([ACTIVE, PURCHASED, VEGETABLE_SHARE, FRUIT_SHARE]);
+  });
+
+  it("starts a new article in the vegetable share only, as the article list does, when the farm runs the shares apart", async () => {
+    api.activeShareOptions.mockResolvedValue(SHARE_OPTIONS_APART);
+    const { user } = await renderPage();
+
+    await openDialog(user);
+
+    expect(checkboxBeside(VEGETABLE_SHARE)).toBeChecked();
+    expect(checkboxBeside(FRUIT_SHARE)).not.toBeChecked();
+  });
+
+  it("starts a new article outside every share when the farm runs no vegetable share", async () => {
+    api.activeShareOptions.mockResolvedValue({
+      ...SHARE_OPTIONS_APART,
+      HARVEST_SHARE: false,
+    });
+    const { user } = await renderPage();
+
+    await openDialog(user);
+
+    expect(checkboxBeside(VEGETABLE_SHARE)).not.toBeChecked();
+    expect(checkboxBeside(FRUIT_SHARE)).not.toBeChecked();
+  });
+
+  it.each([
+    ["together", SHARE_OPTIONS_TOGETHER, HARVEST_SHARE],
+    ["apart", SHARE_OPTIONS_APART, VEGETABLE_SHARE],
+  ])(
+    "starts in the same share when the share options (%s) arrive after it opened",
+    async (_shares, options, vegetableShare) => {
+      let answer: (options: ActiveShareOptions) => void = () => {};
+      api.activeShareOptions.mockImplementation(
+        () => new Promise((resolve) => (answer = resolve)),
+      );
+      const { user } = await renderPage(undefined, { waitForShareOptions: false });
+      await openDialog(user);
+
+      answer(options);
+
+      await waitFor(() => expect(checkboxBeside(vegetableShare)).toBeChecked());
+      const fruitShare = within(dialog()).queryByRole("checkbox", { name: FRUIT_SHARE });
+      if (fruitShare) expect(fruitShare).not.toBeChecked();
+    },
+  );
+
+  it("keeps the shares the office picked when the share options arrive later", async () => {
+    let answer: (options: ActiveShareOptions) => void = () => {};
+    api.activeShareOptions.mockImplementation(() => new Promise((resolve) => (answer = resolve)));
+    const { user } = await renderPage(undefined, { waitForShareOptions: false });
+    await openDialog(user);
+    // Before the options arrive the vegetable share isn't known to run, so
+    // the box starts empty; the office ticks it and unticks it again.
+    await setChecked(user, HARVEST_SHARE, true);
+    await setChecked(user, HARVEST_SHARE, false);
+
+    answer(SHARE_OPTIONS_TOGETHER);
+
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    expect(checkboxBeside(HARVEST_SHARE)).not.toBeChecked();
   });
 
   it("settles after opening instead of re-rendering in a loop", async () => {

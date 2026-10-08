@@ -77,7 +77,13 @@ vi.mock("@shared/api/generated/commissioning/commissioning", async () => {
   };
 });
 
-type PriceModalStubProps = { visible: boolean; onClose: () => void; crate: string | null; crate_name: string };
+type PriceModalStubProps = {
+  visible: boolean;
+  onClose: () => void;
+  crate: string | null;
+  crate_name: string;
+  onSave?: () => void;
+};
 type DialogStubProps = { open: boolean; onClose: () => void };
 
 // The page needs only these three; the barrel would also load every other
@@ -90,10 +96,11 @@ vi.mock("@features/commissioning/modals", async () => ({
         <button type="button" onClick={onClose}>Close price export</button>
       </div>
     ) : null,
-  CratePriceModal: ({ visible, onClose, crate, crate_name }: PriceModalStubProps) =>
+  CratePriceModal: ({ visible, onClose, crate, crate_name, onSave }: PriceModalStubProps) =>
     visible ? (
       <div role="dialog" aria-label="Prices">
         <p>{`Prices of ${crate_name} (${crate})`}</p>
+        <button type="button" onClick={onSave}>Save a price</button>
         <button type="button" onClick={onClose}>Close prices</button>
       </div>
     ) : null,
@@ -471,6 +478,8 @@ describe("ListCrates new crate", () => {
         is_active: true, number: "3", name: "Pallet box", short_name: "PB", note: "For potatoes",
       }),
     );
+    // A crate has no validity of its own; its prices do.
+    expect(api.createCrate.mock.calls[0][0]).not.toHaveProperty("valid_from");
     expect(stored("crate-new-1")).toEqual(
       crate({ id: "crate-new-1", number: 3, name: "Pallet box", short_name: "PB", note: "For potatoes" }),
     );
@@ -482,6 +491,32 @@ describe("ListCrates new crate", () => {
     await user.click(within(pallet).getByRole("button", { name: PRICES }));
     expect(dialog("Prices")).toHaveTextContent("Prices of Pallet box (crate-new-1)");
     expect(api.listCrates).toHaveBeenCalledTimes(1);
+  });
+
+  it("adds a crate with a name and no short name", async () => {
+    const { user } = await renderLoaded();
+
+    await startNewRow(user);
+    await typeInto(user, NAME, "Pallet box");
+    await saveRow(user);
+
+    await createdOnce();
+    expect(stored("crate-new-1")).toMatchObject({ name: "Pallet box", number: null });
+    expect(await screen.findByText("Pallet box")).toBeInTheDocument();
+  });
+
+  it("refuses a new crate with a short name but no name, marking the name", async () => {
+    silenceConsoleErrors();
+    const { user } = await renderLoaded();
+
+    await startNewRow(user);
+    await typeInto(user, SHORT_NAME, "PB");
+    await saveRow(user);
+
+    expect(await screen.findByText("table.save_failed_generic — table.save_failed_hint")).toBeVisible();
+    expect(input(NAME)).toBeInvalid();
+    expect(input(SHORT_NAME)).not.toBeInvalid();
+    expect(api.createCrate).not.toHaveBeenCalled();
   });
 
   it("refuses a new crate without a name or a short name and sends nothing", async () => {
@@ -584,6 +619,20 @@ describe("ListCrates editing and deleting", () => {
     expect(api.listCrates).toHaveBeenCalledTimes(1);
   });
 
+  it("clears a crate's number", async () => {
+    const { user } = await renderLoaded();
+
+    await editRow(user, "Half crate");
+    await user.clear(input(NUMBER));
+    await saveRow(user);
+
+    await updatedOnce();
+    expect(api.updateCrate.mock.calls[0][1]).toEqual(expect.objectContaining({ number: null }));
+    expect(api.updateCrate.mock.calls[0][1]).not.toHaveProperty("valid_from");
+    expect(stored("crate-half")).toEqual({ ...HALF, number: null });
+    await waitFor(() => expect(cellOf(rowOf("Half crate"), NUMBER)).toHaveTextContent(""));
+  });
+
   it("gives a crate a new number", async () => {
     const { user } = await renderLoaded();
 
@@ -661,6 +710,15 @@ describe("ListCrates prices", () => {
     await user.click(rowButton("Banana box", PRICES));
 
     expect(dialog("Prices")).toHaveTextContent("Prices of Banana box (crate-banana)");
+  });
+
+  it("reloads the crates once a price is saved", async () => {
+    const { user } = await renderLoaded();
+    await user.click(rowButton("Euro crate", PRICES));
+
+    await user.click(screen.getByRole("button", { name: "Save a price" }));
+
+    await waitFor(() => expect(api.listCrates).toHaveBeenCalledTimes(2));
   });
 });
 

@@ -310,7 +310,7 @@ describe("StatisticsPurchase figures", () => {
 
   // A calendar year can begin and end in an ISO week 1 (2025 does), so the
   // chart then carries two weeks numbered 1, a year apart.
-  it.skip("tells the two weeks numbered 1 of a range across a year's turn apart", async () => {
+  it("tells the two weeks numbered 1 of a range across a year's turn apart", async () => {
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});
     api.purchaseCostByWeek.mockResolvedValue([
       point(2025, 1, "10.00"), point(2025, 2, "20.00"), point(2025, 52, "30.00"), point(2026, 1, "40.00"),

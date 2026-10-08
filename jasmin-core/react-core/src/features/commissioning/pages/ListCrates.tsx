@@ -1,6 +1,5 @@
 import { DownloadOutlined } from "@ant-design/icons";
 import { Button, Flex } from "antd";
-import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -25,7 +24,7 @@ import {
 } from "@shared/tables";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, HideInactiveSwitch } from "@shared/ui";
-import { useDateFormat, useNoteColumn } from "@hooks/index";
+import { useNoteColumn } from "@hooks/index";
 import {
   useIsActiveColumn,
   useShareArticlePriceColumn,
@@ -44,7 +43,6 @@ const cratesResource: CrudResource<CrateRow> = {
 export default function ListCrates() {
   const { t } = useTranslation();
   const { canEdit } = useRoles();
-  const { formatDateForAPI } = useDateFormat();
   const { noteColumn } = useNoteColumn();
   const isActiveColumn = useIsActiveColumn();
   const permissions = useMemo(
@@ -78,14 +76,6 @@ export default function ListCrates() {
 
   const priceModalColumn = useShareArticlePriceColumn(handleOpenModal);
 
-  const customSave = useCallback(
-    (transformedData: Record<string, unknown>) => ({
-      ...transformedData,
-      valid_from: formatDateForAPI(dayjs()),
-    }),
-    [formatDateForAPI],
-  );
-
   const columns = useMemo<any[]>(
     () => [
       isActiveColumn,
@@ -103,7 +93,7 @@ export default function ListCrates() {
         dataIndex: "name",
         key: "name",
         inputType: "text",
-        required: false,
+        required: true,
         width: "12em",
         align: "left",
         sortable: true,
@@ -113,7 +103,7 @@ export default function ListCrates() {
         dataIndex: "short_name",
         key: "short_name",
         inputType: "text",
-        required: true,
+        required: false,
         width: "10em",
         align: "left",
       },
@@ -165,7 +155,6 @@ export default function ListCrates() {
         loading={list.isLoading}
         onSaveSuccess={list.onSaveSuccess}
         onDeleteSuccess={list.onDeleteSuccess}
-        customSave={customSave}
         customEdit={list.customEdit}
         uniqueCheck={["name"]}
         uniqueCheckMessage={t("validation.unique.name")}

@@ -21,8 +21,19 @@ import { getErrorMessage } from "@shared/utils/apiError";
 import { Checkbox } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import PriceEditorModal from "./PriceEditorModal";
+import PriceEditorModal, { type PriceModalApi } from "./PriceEditorModal";
 import { buildCurrencyPriceColumn, buildTaxRateColumn } from "./priceColumns";
+
+// Module-level so the editor's table keeps the same API functions across
+// renders. Each call reads the generated client only when it runs, so loading
+// this module never touches it.
+const SHARE_TYPE_VARIATION_PRICE_API: PriceModalApi<ShareTypeVariationGrossPrice> =
+  {
+    create: (price) => commissioningShareTypeVariationPriceCreate(price),
+    partialUpdate: (id, price) =>
+      commissioningShareTypeVariationPricePartialUpdate(id, price),
+    destroy: (id) => commissioningShareTypeVariationPriceDestroy(id),
+  };
 
 interface ShareTypeVariationPriceModalProps {
   visible: boolean;
@@ -37,6 +48,7 @@ export default function ShareTypeVariationPriceModal({
   onClose,
   share_type_variation,
   share_type_variation_name,
+  onSave,
 }: ShareTypeVariationPriceModalProps) {
   const { t } = useTranslation();
   const { currencySymbol } = useCurrency();
@@ -278,11 +290,8 @@ export default function ShareTypeVariationPriceModal({
       columns={columns}
       listHook={useCommissioningShareTypeVariationPriceList}
       getListQueryKey={getCommissioningShareTypeVariationPriceListQueryKey}
-      api={{
-        create: commissioningShareTypeVariationPriceCreate,
-        partialUpdate: commissioningShareTypeVariationPricePartialUpdate,
-        destroy: commissioningShareTypeVariationPriceDestroy,
-      }}
+      api={SHARE_TYPE_VARIATION_PRICE_API}
+      onSave={onSave}
     />
   );
 }

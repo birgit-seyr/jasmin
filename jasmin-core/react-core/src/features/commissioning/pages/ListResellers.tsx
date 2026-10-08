@@ -238,7 +238,6 @@ export default function ListResellers() {
     (transformedData: Record<string, unknown>) => ({
       ...transformedData,
       is_reseller: true,
-      comes_from_reseller_page: true,
     }),
     [],
   );
@@ -516,6 +515,8 @@ export default function ListResellers() {
         columns={columns}
         filename={t("commissioning.resellers_template.csv")}
         modelName="reseller"
+        // The template has no is_reseller column: every imported row becomes a reseller.
+        fixedValues={{ is_reseller: true }}
         onUploadSuccess={list.invalidate}
       />
 

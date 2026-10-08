@@ -244,7 +244,7 @@ describe("OffersBulkActions copying to next week", () => {
 
     await confirm(user, COPY_TO_NEXT_WEEK, "commissioning.confirm_offers_copy_title");
 
-    await waitFor(() => expect(notify.success).toHaveBeenCalledWith("commissioning.copied_to_next_week"));
+    await waitFor(() => expect(notify.success).toHaveBeenCalledWith("commissioning.copied_to_next_week count=2 skipped=0"));
     expect(api.copyToNextWeek).toHaveBeenCalledTimes(1);
     expect(api.copyToNextWeek).toHaveBeenCalledWith({ ids: SELECTED });
     expect(onClearSelection).toHaveBeenCalledTimes(1);
@@ -274,7 +274,7 @@ describe("OffersBulkActions copying to next week", () => {
     expect(notify.success).not.toHaveBeenCalled();
   });
 
-  it.skip("does not report offers as copied when next week already had all of them", async () => {
+  it("does not report offers as copied when next week already had all of them", async () => {
     api.copyToNextWeek.mockResolvedValue(copied({ total_copied: 0, skipped_count: 2, copied_offers: [] }));
     const { user } = renderActions();
 
@@ -282,6 +282,18 @@ describe("OffersBulkActions copying to next week", () => {
 
     await waitFor(() => expect(notify.warning).toHaveBeenCalledTimes(1));
     expect(notify.success).not.toHaveBeenCalled();
+  });
+
+  it("counts the offers copied and the ones next week already had", async () => {
+    api.copyToNextWeek.mockResolvedValue(copied({ total_copied: 1, skipped_count: 1, copied_offers: ["offer-new-1"] }));
+    const { user } = renderActions();
+
+    await confirm(user, COPY_TO_NEXT_WEEK, "commissioning.confirm_offers_copy_title");
+
+    await waitFor(() =>
+      expect(notify.success).toHaveBeenCalledWith("commissioning.copied_to_next_week_some_skipped count=1 skipped=1"),
+    );
+    expect(notify.warning).not.toHaveBeenCalled();
   });
 });
 
@@ -296,7 +308,7 @@ describe("OffersBulkActions copying into another offer group", () => {
     );
 
     await waitFor(() =>
-      expect(notify.success).toHaveBeenCalledWith("commissioning.copied_to_offer_group offerGroup=Farm shop"),
+      expect(notify.success).toHaveBeenCalledWith("commissioning.copied_to_offer_group count=2 skipped=0 offerGroup=Farm shop"),
     );
     expect(api.copyToOfferGroup).toHaveBeenCalledTimes(1);
     expect(api.copyToOfferGroup).toHaveBeenCalledWith({
@@ -307,6 +319,24 @@ describe("OffersBulkActions copying into another offer group", () => {
     });
     expect(onClearSelection).toHaveBeenCalledTimes(1);
     expect(api.copyToNextWeek).not.toHaveBeenCalled();
+  });
+
+  it("warns instead of reporting a copy when the group already had every offer", async () => {
+    api.copyToOfferGroup.mockResolvedValue(copied({ total_copied: 0, skipped_count: 2, copied_offers: [] }));
+    const { user } = renderActions();
+
+    await confirm(
+      user,
+      copyToGroup("Farm shop"),
+      "commissioning.confirm_copy_to_offer_group offerGroup=Farm shop",
+    );
+
+    await waitFor(() =>
+      expect(notify.warning).toHaveBeenCalledWith(
+        "commissioning.copied_to_offer_group_none count=0 skipped=2 offerGroup=Farm shop",
+      ),
+    );
+    expect(notify.success).not.toHaveBeenCalled();
   });
 
   it("shows the server's reason when the group copy fails and keeps the selection", async () => {

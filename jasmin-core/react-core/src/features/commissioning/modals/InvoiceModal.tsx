@@ -217,7 +217,7 @@ export default function InvoiceModal({
         title: <span className="text-xs">{t("commissioning.ust")}</span>,
         dataIndex: "tax_rate",
         key: "tax_rate",
-        inputType: "positive_integer",
+        inputType: "positive_decimal2",
         required: false,
         align: "center",
         width: "6em",

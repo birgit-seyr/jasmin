@@ -8,6 +8,7 @@ import { useDateFormat } from "@hooks/configuration/useDateFormat";
 import axiosService from "@shared/services/api";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { buildLiveRecord } from "./buildLiveRecord";
+import { blankOptionalNumbersToNull } from "./blankNumbers";
 import { duplicateErrors } from "./duplicateErrors";
 import { periodErrors } from "./periodErrors";
 import { RowSaveRefused } from "./RowSaveRefused";
@@ -430,12 +431,7 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
           }
         });
 
-        const completeRow: Record<string, unknown> = {
-          ...row,
-          ...disabledFields,
-        };
-
-        const processedRow = { ...completeRow };
+        const processedRow: Record<string, unknown> = { ...row, ...disabledFields };
 
         if (autoHandleDates) {
           const dateFields = getDateFields(columns);
@@ -480,6 +476,7 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
             return false;
           }
         }
+        transformedRow = blankOptionalNumbersToNull(transformedRow, columns);
 
         // Uniqueness and validity-period rules
         const errors = ruleErrors({

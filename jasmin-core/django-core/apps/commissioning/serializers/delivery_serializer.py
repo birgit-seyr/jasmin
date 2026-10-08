@@ -11,6 +11,7 @@ from ..errors import (
     DeliveryExceptionInvalidRange,
     DeliveryExceptionOverlap,
     DeliveryExceptionPeriodLocked,
+    DeliveryStationMoreThanOneFee,
     PictureInvalid,
 )
 from ..models import DeliveryExceptionPeriod, DeliveryStation, DeliveryStationDay
@@ -153,6 +154,23 @@ class DeliveryStationSerializer(
         # List path bulk-precomputes both deletability flags (one batch per
         # reverse relation) instead of running ``can_delete_instance`` per row.
         list_serializer_class = DeliveryStationListSerializer
+
+    FEE_FIELDS = ("fee_per_box_net", "fee_per_month_net", "fee_per_year_net")
+
+    def validate(self, attrs):
+        """A station is paid one way only. A partial update is judged together
+        with the fees the station stores, so adding a second fee is refused
+        while switching from one to another in the same write is not."""
+        attrs = super().validate(attrs)
+        fees = [
+            attrs.get(field, getattr(self.instance, field, 0))
+            for field in self.FEE_FIELDS
+        ]
+        if sum(1 for fee in fees if fee and fee > 0) > 1:
+            raise DeliveryStationMoreThanOneFee(
+                "Only one fee applies: per box, per month or per year."
+            )
+        return attrs
 
     def validate_picture(self, value):
         """Only a decodable PNG/JPEG/WEBP/GIF is stored, re-encoded under a
@@ -718,7 +736,20 @@ class DeliveryStationFeesSerializer(serializers.Serializer):
     fee_type = serializers.ChoiceField(
         choices=["per_box", "per_month", "per_year", "none"]
     )
-    quantity = serializers.IntegerField()
+    quantity = serializers.IntegerField(
+        help_text=(
+            "Whole units: the billed quantity rounded up. Kept for clients that "
+            "read an integer count; the total is based on billed_quantity."
+        )
+    )
+    billed_quantity = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        help_text=(
+            "The quantity the total is based on: boxes delivered, or the months "
+            "or years of the range prorated by day."
+        ),
+    )
     quantity_unit = serializers.CharField(allow_blank=True)
     rate_net = serializers.CharField()
     total_net = serializers.CharField()

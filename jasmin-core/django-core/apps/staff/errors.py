@@ -113,3 +113,21 @@ class AbsenceCategoryInUse(ConflictError):
     would CASCADE them away. Deactivate the category instead."""
 
     code = "staff.absence_category_in_use"
+
+
+__all__ = [
+    "StaffError",
+    "EmployeeNotFound",
+    "WeeklyPlanCategoryNotFound",
+    "InvalidWeeklyPlanAssignment",
+    "WeeklyPlanCopyTargetNotEmpty",
+    "WeeklyPlanCopySourceRowsOutOfRange",
+    "WeeklyPlanCopySourceCategoryInactive",
+    "WeeklyPlanCategoryShrinkBlocked",
+    "EmployeeShortNameTaken",
+    "WeeklyPlanCategorySortOrderTaken",
+    "AbsenceCategoryNameTaken",
+    "EmployeeInUse",
+    "WeeklyPlanCategoryInUse",
+    "AbsenceCategoryInUse",
+]

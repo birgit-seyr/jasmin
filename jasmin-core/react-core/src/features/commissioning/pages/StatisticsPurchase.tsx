@@ -58,10 +58,14 @@ export default function StatisticsPurchase() {
 
   const { chartData, series, total } = useMemo(() => {
     const points = (rawData ?? []) as PurchaseCostByWeek[];
+    // Bare ISO week number on the x-axis (the selected range is shown in the
+    // picker above) — "week/year" once the range spans years, so the two
+    // weeks numbered 1 around a New Year stay apart. ``amount`` is a 2dp
+    // money string on the wire.
+    const spansYears = new Set(points.map((point) => point.year)).size > 1;
     const chartData = points.map((point) => ({
-      // Bare ISO week number on the x-axis (the selected range is shown in the
-      // picker above); ``amount`` is a 2dp money string on the wire.
-      label: point.week,
+      key: `${point.year}-${point.week}`,
+      label: spansYears ? `${point.week}/${point.year}` : point.week,
       amount: parseFloat(point.amount) || 0,
     }));
     const total = chartData.reduce((sum, point) => sum + point.amount, 0);
@@ -128,6 +132,7 @@ export default function StatisticsPurchase() {
             // visually-hidden data table (per-week figures for screen readers).
             ariaLabel={t("commissioning.statistics_purchase_chart_title")}
             xHeader={t("commissioning.KW")}
+            rowKey="key"
             // Weeks with no buy-in (e.g. delivery-exception weeks): a dark-grey
             // baseline stub bar, with their x-axis week number one step greyer.
             // Show every week number, not just recharts' auto-thinned subset.

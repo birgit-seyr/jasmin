@@ -1,8 +1,13 @@
 from typing import TypedDict
 
+from django.db import models
 from rest_framework import serializers
 
-from ..errors import OfferGroupNotFound, ShareTypeVariationNotFound
+from ..errors import (
+    OfferGroupNotFound,
+    ShareTypeVariationNotFound,
+    WasteAlreadyDocumented,
+)
 from ..models import (
     Forecast,
     Harvest,
@@ -189,6 +194,15 @@ class HarvestSerializer(StorageFieldsMixin, serializers.ModelSerializer):
         read_only_fields = (*AUDIT_READONLY_FIELDS, *FINALIZATION_READONLY_FIELDS)
 
 
+# Read off the model's constraint so the check and the database agree on the key.
+_WASTE_UNIQUE_FIELDS = next(
+    constraint.fields
+    for constraint in Waste._meta.constraints
+    if isinstance(constraint, models.UniqueConstraint)
+    and constraint.name == "waste_unique_year_week_day_article_unit_size_storage"
+)
+
+
 class WasteSerializer(StorageFieldsMixin, NameFieldMixin, serializers.ModelSerializer):
     NAME_FIELDS = ["share_article_name"]
 
@@ -197,6 +211,33 @@ class WasteSerializer(StorageFieldsMixin, NameFieldMixin, serializers.ModelSeria
         fields = "__all__"
         # ``created_by`` is stamped by ``WasteViewSet.create``.
         read_only_fields = AUDIT_READONLY_FIELDS
+        # The per-day uniqueness is checked in ``validate`` so a duplicate is
+        # refused with its own code instead of DRF's generic unique-together
+        # message, which names the raw fields.
+        validators: list = []
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        key = {
+            field: attrs.get(field, getattr(self.instance, field, None))
+            for field in _WASTE_UNIQUE_FIELDS
+        }
+        # A NULL never collides in Postgres, and the constraint only covers rows
+        # with a day.
+        if any(value is None for value in key.values()):
+            return attrs
+        duplicates = Waste.objects.filter(**key)
+        if self.instance is not None:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+        if duplicates.exists():
+            message = (
+                "This article in this unit and size is already documented as "
+                "waste for this day and storage."
+            )
+            raise WasteAlreadyDocumented(
+                message, details={"non_field_errors": [message]}
+            )
+        return attrs
 
 
 class DocumentationAggregationItemSerializer(serializers.Serializer):

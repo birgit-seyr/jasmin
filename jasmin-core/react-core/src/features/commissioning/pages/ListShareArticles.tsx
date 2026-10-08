@@ -44,6 +44,7 @@ import {
   useShareOptions,
 } from "@features/commissioning/hooks";
 import { getShareOptionLabel, syncPurchasedName } from "@shared/utils";
+import { newShareArticleShareFlag } from "@features/commissioning/utils/newShareArticleShare";
 
 // Pure row predicates — a row is harvest-only or purchase-only based on
 // ``is_purchased``. Module-level so they're stable references.
@@ -203,15 +204,11 @@ export default function ListShareArticles() {
     ) => {
       if (record.key === -1) {
         // customSave turns every ticked per-option flag into share_option_list,
-        // so a new article ticks only an option whose column the office sees:
-        // the filtered one, or else the vegetable share (the common case)
-        // when the farm runs it.
-        const preselectedShareOption =
-          activeFilter !== "all"
-            ? activeFilter
-            : visibleShareOptions.some((opt) => opt.value === "HARVEST_SHARE")
-              ? "harvest_share"
-              : null;
+        // so a new article ticks only an option whose column the office sees.
+        const preselectedShareOption = newShareArticleShareFlag(
+          activeFilter !== "all" ? activeFilter : null,
+          visibleShareOptions.some((opt) => opt.value === "HARVEST_SHARE"),
+        );
         const defaultValues: Record<string, unknown> = {
           is_active: true,
           ...(preselectedShareOption && { [preselectedShareOption]: true }),

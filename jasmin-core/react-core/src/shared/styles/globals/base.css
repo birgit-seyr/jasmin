@@ -94,6 +94,30 @@
   margin-bottom: 16px;
 }
 
+.mb-3em {
+  margin-bottom: 3em;
+}
+
+.mt-0-5em {
+  margin-top: 0.5em;
+}
+
+.mt-12 {
+  margin-top: 12px;
+}
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mt-1em {
+  margin-top: 1em;
+}
+
+.mt-2em {
+  margin-top: 2em;
+}
+
 .text-center {
   text-align: center;
 }

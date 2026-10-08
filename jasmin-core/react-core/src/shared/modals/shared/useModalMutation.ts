@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { notify } from "@shared/utils";
-import { getErrorMessage } from "@shared/utils/apiError";
+import { getErrorMessage, getServerErrorMessage } from "@shared/utils/apiError";
 
 export interface ModalMutationOptions<T> {
   /** Toast shown on success. Omit for a silent success. */
@@ -52,7 +52,13 @@ export function useModalMutation() {
         options?.onSuccess?.(result);
         return result;
       } catch (error) {
-        notify.error(getErrorMessage(error, options?.errorMessage));
+        // Axios' and JS' own text ("Network Error") never replaces the
+        // caller's translated fallback; it shows only when there is none.
+        notify.error(
+          getServerErrorMessage(error) ??
+            options?.errorMessage ??
+            getErrorMessage(error),
+        );
         return undefined;
       } finally {
         inFlight.current = false;

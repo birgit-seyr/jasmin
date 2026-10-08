@@ -1,0 +1,21 @@
+/* HarvestingList page controls: the office/gardener view toggle and the
+   "round up to full PU" checkbox. */
+.harvesting-list-controls {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  margin-top: 2em;
+  margin-bottom: 2em;
+}
+
+/* Phone: only the checkbox, tucked close to the list below. */
+.harvesting-list-controls--mobile {
+  margin-bottom: 8px;
+}
+
+.harvesting-list-controls__round-up {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}

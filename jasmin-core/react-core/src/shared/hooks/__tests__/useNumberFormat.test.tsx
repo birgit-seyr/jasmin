@@ -10,15 +10,18 @@ import { useNumberFormat } from "../useNumberFormat";
  * to return what we want. Mirrors the shape used by the real
  * TenantProvider; matches the pattern in `useTenant.test.tsx`.
  */
-function makeTenantWrapper(numberLocale: string | undefined) {
+function makeTenantWrapper(
+  numberLocale: string | undefined,
+  tenant: Record<string, unknown> | null = null,
+) {
   const getSetting = (key: string, defaultValue: unknown = null) => {
     if (key === "number_locale") return numberLocale ?? defaultValue;
     return defaultValue;
   };
 
   const value = {
-    tenant: null,
-    currentTenant: null,
+    tenant,
+    currentTenant: tenant,
     loading: false,
     error: null,
     getSetting,
@@ -58,6 +61,21 @@ describe("useNumberFormat", () => {
       wrapper: makeTenantWrapper(undefined),
     });
     expect(result.current.locale).toBe("de-DE");
+  });
+
+  it("reads the anonymous tenant payload's number_locale before sign-in, when there are no settings", () => {
+    const { result } = renderHook(() => useNumberFormat(), {
+      wrapper: makeTenantWrapper(undefined, { number_locale: "en-US" }),
+    });
+    expect(result.current.locale).toBe("en-US");
+    expect(result.current.format(1234.5, 2)).toBe("1,234.50");
+  });
+
+  it("prefers the settings overlay over the tenant's top-level number_locale", () => {
+    const { result } = renderHook(() => useNumberFormat(), {
+      wrapper: makeTenantWrapper("de-CH", { number_locale: "en-US" }),
+    });
+    expect(result.current.locale).toBe("de-CH");
   });
 
   it("exposes a `parse` that round-trips the locale's display format", () => {

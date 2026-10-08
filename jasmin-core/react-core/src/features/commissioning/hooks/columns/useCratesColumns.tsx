@@ -174,7 +174,7 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
           ),
           dataIndex: "tax_rate",
           key: "tax_rate",
-          inputType: "positive_integer",
+          inputType: "positive_decimal2",
           required: false,
           // The crate's tax rate is authoritative — set on crate selection
           // (handleCrateChange) and locked, not user-editable.

@@ -15,6 +15,7 @@
   "role": "Role",
   "saved": "Profile saved successfully",
   "save_error": "Failed to save profile",
+  "preferences_save_error": "Failed to save the setting",
   "load_error": "Failed to load data",
   "my_member_page": "My page",
   "pickup_name_help": "Pickup name for anonymous pickup",

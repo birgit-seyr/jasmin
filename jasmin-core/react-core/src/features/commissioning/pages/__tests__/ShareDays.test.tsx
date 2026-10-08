@@ -80,7 +80,6 @@ vi.mock("@shared/api/generated/commissioning/commissioning", async () => {
     commissioningSharesBulkUpdateUpdate: (body: unknown, params: unknown) =>
       api.saveDays(body, params),
     commissioningSharesCreate: vi.fn(),
-    commissioningSharesDestroy: vi.fn(),
   };
 });
 

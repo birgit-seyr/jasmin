@@ -109,7 +109,7 @@ export default function SepaMandateImportModal({
               meaning: t(`onboarding.sepa_help.${key}`),
             }))}
           />
-          <div style={{ marginTop: 12 }}>
+          <div className="mt-12">
             {uploadAllowed ? (
               <DownloadCsvTemplateButton
                 columns={columns}

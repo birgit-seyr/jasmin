@@ -327,7 +327,6 @@ export function usePlanningHarvestSharesColumns(
               </Button>
               <ToolTipIcon
                 title={t("tooltip.backup_for_share_content")}
-                style={{ marginLeft: 4 }}
               />
             </>
           );
