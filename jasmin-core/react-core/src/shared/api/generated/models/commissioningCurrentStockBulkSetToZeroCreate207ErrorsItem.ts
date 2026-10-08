@@ -9,4 +9,5 @@
 export type CommissioningCurrentStockBulkSetToZeroCreate207ErrorsItem = {
   id?: string;
   error?: string;
+  code?: string;
 };

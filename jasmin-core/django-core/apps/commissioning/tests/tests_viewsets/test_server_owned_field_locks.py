@@ -406,24 +406,21 @@ class TestDocumentationLocks:
     def test_theoretical_harvest_patch_cannot_rewrite_authorship(
         self, api_client, tenant
     ):
-        # The theoretical list/detail queryset is scoped to the recent weeks
-        # around "now"; pin the clock inside the factory's week 15/2026.
-        with time_machine.travel(datetime.datetime(2026, 4, 13, 12, 0), tick=False):
-            theoretical_harvest = TheoreticalHarvestFactory()
-            original_created_at = theoretical_harvest.created_at
+        theoretical_harvest = TheoreticalHarvestFactory()
+        original_created_at = theoretical_harvest.created_at
 
-            resp = api_client.patch(
-                reverse(
-                    "theoretical_harvests-detail",
-                    kwargs={"pk": theoretical_harvest.pk},
-                ),
-                {
-                    "created_by": JasminUserFactory().pk,
-                    "created_at": FORGED_TIMESTAMP,
-                    "note": "edited",
-                },
-                format="json",
-            )
+        resp = api_client.patch(
+            reverse(
+                "theoretical_harvests-detail",
+                kwargs={"pk": theoretical_harvest.pk},
+            ),
+            {
+                "created_by": JasminUserFactory().pk,
+                "created_at": FORGED_TIMESTAMP,
+                "note": "edited",
+            },
+            format="json",
+        )
 
         assert resp.status_code == status.HTTP_200_OK, resp.data
         theoretical_harvest.refresh_from_db()

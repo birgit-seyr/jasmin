@@ -28,7 +28,14 @@ from ..errors import (
     CompositeIdInvalid,
     FinalizedError,
 )
-from ..models import DeliveryNoteReseller, InvoiceReseller, Order, ShareContent
+from ..models import (
+    DeliveryNoteReseller,
+    Forecast,
+    Harvest,
+    InvoiceReseller,
+    Order,
+    ShareContent,
+)
 from ..serializers import (
     BulkFinalizeRequestSerializer,
     BulkFinalizeResponseSerializer,
@@ -43,6 +50,7 @@ from ..services.finalization_quota import (
 )
 from ..services.planning_slots import PlanningSlot
 from ..utils import get_finalizable_objects
+from ..utils.read_only_week import refuse_read_only_week
 from ..utils.validation_utils import parse_bulk_ids
 
 
@@ -109,6 +117,16 @@ def _validate_bulk_finalize_request(request: Request) -> tuple[list[str], str]:
             field="model",
         )
     return list(serializer.validated_data["ids"]), model_name
+
+
+def _refuse_read_only_documentation_week(obj: Any) -> None:
+    """Refuse a forecast or harvest in a week its page shows read-only.
+
+    Their other writes refuse the same weeks. The other finalizable models
+    carry their own rules for closed weeks.
+    """
+    if isinstance(obj, (Forecast, Harvest)):
+        refuse_read_only_week(obj.year, obj.delivery_week)
 
 
 class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
@@ -199,6 +217,7 @@ class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
 
         def finalize_one(obj: Any) -> None:
             nonlocal finalized_count, already_finalized_count
+            _refuse_read_only_documentation_week(obj)
             if (
                 isinstance(obj, (InvoiceReseller, Order, DeliveryNoteReseller))
                 and obj.is_finalized
@@ -228,7 +247,11 @@ class BulkFinalizeView(APIViewRolePermissionsMixin, APIView):
                 already_finalized_count += 1
 
         def record_error(obj: Any, exc: Exception) -> None:
-            errors.append({"id": str(obj.id), "error": str(exc)})
+            error = {"id": str(obj.id), "error": str(exc)}
+            if isinstance(exc, JasminError):
+                # The stable code lets a client translate the refusal.
+                error["code"] = exc.code
+            errors.append(error)
 
         # ``JasminError`` is in the catch set because the commissioning
         # finalizers raise domain errors for a bad item (e.g. an empty
@@ -315,6 +338,8 @@ class BulkUnfinalizeView(APIViewRolePermissionsMixin, APIView):
         request=BulkFinalizeRequestSerializer,
         responses={
             200: BulkUnfinalizeResponseSerializer,
+            # A one-way model, or a forecast or harvest in a read-only week
+            # (``commissioning.past_week``).
             409: ErrorResponseSerializer,
         },
     )
@@ -357,6 +382,10 @@ class BulkUnfinalizeView(APIViewRolePermissionsMixin, APIView):
                 code="finalize.one_way_model",
             )
 
+        # All or nothing, like the one-way refusal above: nothing is
+        # unfinalized while one of the rows lies in a read-only week.
+        for obj in objects:
+            _refuse_read_only_documentation_week(obj)
         for obj in objects:
             obj.unfinalize()
 

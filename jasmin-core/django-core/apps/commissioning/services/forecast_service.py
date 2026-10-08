@@ -23,6 +23,7 @@ from ..models import (
     ShareTypeVariation,
     TheoreticalHarvest,
 )
+from ..models.choices import ShareOptions
 from ..utils import (
     get_physical_share_type_variation_totals,
     sort_share_articles,
@@ -33,26 +34,12 @@ from .recompute import recompute_shares
 
 logger = logging.getLogger(__name__)
 
-_FORECAST_FIELDS = frozenset(
-    {
-        "amount",
-        "bed_number",
-        "delivery_week",
-        "for_all_harvest_shares",
-        "for_all_harvest_shares_fruit",
-        "for_all_markets",
-        "for_all_resellers",
-        "note",
-        "plot",
-        "share_article",
-        "harvesting_crate",
-        "size",
-        "unit",
-        "year",
-        "amount_per_pu",
-        "sort_order",
-    }
-)
+# The keys of a create/update payload that are Forecast columns. Derived from
+# the model, so it can't drift from it: ``ForecastSerializer`` (``fields =
+# "__all__"``) decides which columns are writable, and its ``validated_data``
+# never carries a read-only one. Everything else in that dict is a
+# ``variation_<id>`` / ``offer_group_<id>`` selection flag.
+_FORECAST_FIELDS = frozenset(field.name for field in Forecast._meta.concrete_fields)
 
 # Forecast fields whose change does NOT affect the materialised
 # ShareContent rows (or anything downstream that ``recompute_shares``
@@ -66,12 +53,9 @@ _FORECAST_FIELDS = frozenset(
 #   * ``sort_order`` — display-only on the office UI.
 #   * ``bed_number`` — display-only on the harvesting list header.
 #   * ``plot`` — display-only on the harvesting list header.
-#   * ``harvesting_crate`` — consumed at harvest entry time, not at
-#     planning time.
-#
 #
 # A field NOT in this set (``amount``, ``share_article``, ``unit``,
-# ``size``, ``year``, ``delivery_week``, ``for_all_*``, ``amount_per_pu``)
+# ``size``, ``year``, ``delivery_week``, ``for_all_*``)
 # takes the full path because it changes either the ShareContent
 # rows themselves or which variations the forecast covers.
 #
@@ -87,7 +71,6 @@ _LIGHT_UPDATE_FIELDS = frozenset(
         "sort_order",
         "bed_number",
         "plot",
-        "harvesting_crate",
     }
 )
 
@@ -230,18 +213,16 @@ class ForecastService:
             setattr(instance, attr, value)
         instance.save()
 
-        validated_data["share_article"] = instance.share_article
+        update_data = self._complete_partial_update(instance, validated_data)
 
-        forecast_variations = self._update_share_type_variations(
-            instance, validated_data
-        )
+        forecast_variations = self._update_share_type_variations(instance, update_data)
 
         # Delete orphaned share_contents when variations are removed
         self._delete_orphaned_share_contents(instance, forecast_variations)
 
-        self._update_offer_groups(instance, validated_data)
+        self._update_offer_groups(instance, update_data)
         created, updated = self._create_or_update_share_contents(
-            instance, validated_data, forecast_variations
+            instance, update_data, forecast_variations
         )
 
         # Recompute every affected share exactly once: the survivors already
@@ -260,6 +241,68 @@ class ForecastService:
         )
 
         return instance
+
+    @staticmethod
+    def _complete_partial_update(
+        instance: Forecast, validated_data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """The update's data with everything a PATCH left out read from *instance*.
+
+        The relation rewrite below rebuilds the variation and offer-group rows
+        from this dict, so it needs the forecast's identity columns and its
+        whole selection. *instance* already carries the body's column values.
+
+        A body without any ``variation_<id>`` key and without either
+        ``for_all_harvest_shares*`` flag keeps the explicitly chosen
+        variations; the links the stored "for all" flags imply are left out
+        here, since those flags add them again for the (possibly new) week.
+        A body without any ``offer_group_<id>`` key keeps the offer groups.
+        """
+        update_data = dict(validated_data)
+        for field in (
+            "share_article",
+            "size",
+            "unit",
+            "year",
+            "delivery_week",
+            "for_all_harvest_shares",
+            "for_all_harvest_shares_fruit",
+        ):
+            update_data[field] = getattr(instance, field)
+
+        names_variations = any(
+            key.startswith("variation_")
+            or key in ("for_all_harvest_shares", "for_all_harvest_shares_fruit")
+            for key in validated_data
+        )
+        if not names_variations:
+            implied_options = {
+                option
+                for option, flag in (
+                    (ShareOptions.HARVEST_SHARE, instance.for_all_harvest_shares),
+                    (
+                        ShareOptions.HARVEST_SHARE_FRUITS_ONLY,
+                        instance.for_all_harvest_shares_fruit,
+                    ),
+                )
+                if flag
+            }
+            for variation_id in (
+                ForecastShareTypeVariation.objects.filter(forecast=instance)
+                .exclude(
+                    share_type_variation__share_type__share_option__in=implied_options
+                )
+                .values_list("share_type_variation_id", flat=True)
+            ):
+                update_data[f"variation_{variation_id}"] = True
+
+        if not any(key.startswith("offer_group_") for key in validated_data):
+            for offer_group_id in ForecastOfferGroup.objects.filter(
+                forecast=instance
+            ).values_list("offer_group_id", flat=True):
+                update_data[f"offer_group_{offer_group_id}"] = True
+
+        return update_data
 
     @staticmethod
     def _is_light_update(instance: Forecast, validated_data: dict[str, Any]) -> bool:
@@ -400,14 +443,17 @@ class ForecastService:
         if validated_data.get("for_all_harvest_shares"):
             for share_type_variation in ShareTypeVariation.current.active_at_date(
                 active_at_date
-            ).filter(share_type__share_option="HARVEST_SHARE", variation_type=physical):
+            ).filter(
+                share_type__share_option=ShareOptions.HARVEST_SHARE,
+                variation_type=physical,
+            ):
                 collected[str(share_type_variation.id)] = share_type_variation
 
         if validated_data.get("for_all_harvest_shares_fruit"):
             for share_type_variation in ShareTypeVariation.current.active_at_date(
                 active_at_date
             ).filter(
-                share_type__share_option="HARVEST_SHARE_FRUIT",
+                share_type__share_option=ShareOptions.HARVEST_SHARE_FRUITS_ONLY,
                 variation_type=physical,
             ):
                 collected[str(share_type_variation.id)] = share_type_variation

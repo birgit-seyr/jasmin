@@ -5377,6 +5377,8 @@ paths:
         \   (counted == the entity's current balance) with its stored correction left\n
         \   alone, so finalizing never moves a balance. An entry that is already\n
         \   finalized is left untouched and reported under ``errors`` for that id.\n
+        \   An id in a week the stock count page shows read-only is left untouched
+        and\n    reported under ``errors`` with the code ``commissioning.past_week``.\n
         \   "
       summary: Bulk finalize inventory entries
       tags:
@@ -5415,6 +5417,8 @@ paths:
                           type: string
                         error:
                           type: string
+                        code:
+                          type: string
           description: Bulk operation completed (all items succeeded)
         '207':
           content:
@@ -5434,6 +5438,8 @@ paths:
                         id:
                           type: string
                         error:
+                          type: string
+                        code:
                           type: string
           description: Bulk operation completed with per-item errors
         '400':
@@ -5461,7 +5467,9 @@ paths:
         multiple\n    INVENTORY entries — including a negative one, which is what
         an\n    over-allocated article really holds. An entry that already carries
         a count,\n    or is finalized, is left untouched and reported under ``errors``
-        for that\n    id.\n    "
+        for that\n    id.\n    An id in a week the stock count page shows read-only
+        is left untouched and\n    reported under ``errors`` with the code ``commissioning.past_week``.\n
+        \   "
       summary: Bulk set inventory to expected values
       tags:
       - commissioning
@@ -5499,6 +5507,8 @@ paths:
                           type: string
                         error:
                           type: string
+                        code:
+                          type: string
           description: Bulk operation completed (all items succeeded)
         '207':
           content:
@@ -5518,6 +5528,8 @@ paths:
                         id:
                           type: string
                         error:
+                          type: string
+                        code:
                           type: string
           description: Bulk operation completed with per-item errors
         '400':
@@ -5544,7 +5556,9 @@ paths:
       description: "\n    Record a physical count of 0 for multiple INVENTORY entries
         — the item was\n    looked for and none was there. An entry that already carries
         a count, or is\n    finalized, is left untouched and reported under ``errors``
-        for that id.\n    "
+        for that id.\n    An id in a week the stock count page shows read-only is
+        left untouched and\n    reported under ``errors`` with the code ``commissioning.past_week``.\n
+        \   "
       summary: Bulk set inventory to zero
       tags:
       - commissioning
@@ -5582,6 +5596,8 @@ paths:
                           type: string
                         error:
                           type: string
+                        code:
+                          type: string
           description: Bulk operation completed (all items succeeded)
         '207':
           content:
@@ -5601,6 +5617,8 @@ paths:
                         id:
                           type: string
                         error:
+                          type: string
+                        code:
                           type: string
           description: Bulk operation completed with per-item errors
         '400':
@@ -9444,7 +9462,8 @@ paths:
     post:
       operationId: commissioning_forecast_bulk_copy_to_next_week_create
       description: Copy selected forecasts to the next delivery week. Ids that match
-        no forecast, and forecasts the next week already plans, are reported in `errors`
+        no forecast, forecasts the next week already plans, and forecasts whose next
+        week is read-only (`code` `commissioning.past_week`) are reported in `errors`
         while the rest are still copied; only a request where none of the ids match
         is a 404.
       tags:
@@ -27276,7 +27295,8 @@ components:
           items:
             type: object
             additionalProperties: {}
-          description: List of errors encountered during finalization
+          description: 'Errors encountered during finalization: the id, the error
+            and, for a domain refusal, its stable code.'
       required:
       - already_finalized_count
       - errors
@@ -31028,6 +31048,8 @@ components:
         id:
           type: string
         error:
+          type: string
+        code:
           type: string
       required:
       - error

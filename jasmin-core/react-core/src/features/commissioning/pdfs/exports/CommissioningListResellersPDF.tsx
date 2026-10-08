@@ -3,6 +3,7 @@ import type { TFunction } from "i18next";
 import type { CommissioningListResellersEntry } from "@shared/api/generated/models";
 import { useVegetableSizeOptions, useUnitOptions } from "@hooks/index";
 import { formatNumber } from "@shared/utils/numberFormat";
+import { orderLineArticleLabel } from "@features/commissioning/utils/orderLineLabel";
 import { listStyles } from "./listPdfBase";
 import {
   ListPDFFooter,
@@ -162,9 +163,7 @@ const CommissioningListResellersPDF = ({
                       ]}
                     >
                       <Text style={{ fontWeight: 500 }}>
-                        {item.share_article_name}
-                        {item.size !== "M" &&
-                          `, ${getVegetableSizeLabel(item.size)}`}
+                        {orderLineArticleLabel(item, getVegetableSizeLabel)}
                       </Text>
                     </View>
                     <View

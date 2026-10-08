@@ -5930,6 +5930,8 @@ export const useCommissioningCreateOffersCreate = <TError = ErrorResponse,
     (counted == the entity's current balance) with its stored correction left
     alone, so finalizing never moves a balance. An entry that is already
     finalized is left untouched and reported under ``errors`` for that id.
+    An id in a week the stock count page shows read-only is left untouched and
+    reported under ``errors`` with the code ``commissioning.past_week``.
     
  * @summary Bulk finalize inventory entries
  */
@@ -6001,6 +6003,8 @@ export const useCommissioningCurrentStockBulkFinalizeCreate = <TError = ErrorRes
     over-allocated article really holds. An entry that already carries a count,
     or is finalized, is left untouched and reported under ``errors`` for that
     id.
+    An id in a week the stock count page shows read-only is left untouched and
+    reported under ``errors`` with the code ``commissioning.past_week``.
     
  * @summary Bulk set inventory to expected values
  */
@@ -6070,6 +6074,8 @@ export const useCommissioningCurrentStockBulkSetAsExpectedCreate = <TError = Err
     Record a physical count of 0 for multiple INVENTORY entries — the item was
     looked for and none was there. An entry that already carries a count, or is
     finalized, is left untouched and reported under ``errors`` for that id.
+    An id in a week the stock count page shows read-only is left untouched and
+    reported under ``errors`` with the code ``commissioning.past_week``.
     
  * @summary Bulk set inventory to zero
  */
@@ -11443,7 +11449,7 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Copy selected forecasts to the next delivery week. Ids that match no forecast, and forecasts the next week already plans, are reported in `errors` while the rest are still copied; only a request where none of the ids match is a 404.
+ * Copy selected forecasts to the next delivery week. Ids that match no forecast, forecasts the next week already plans, and forecasts whose next week is read-only (`code` `commissioning.past_week`) are reported in `errors` while the rest are still copied; only a request where none of the ids match is a 404.
  */
 export const commissioningForecastBulkCopyToNextWeekCreate = (
     bulkIdsRequest: BulkIdsRequest,

@@ -14,7 +14,6 @@
 import { AppstoreOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd";
 import { Button, Space } from "antd";
-import dayjs from "dayjs";
 import type { TFunction } from "i18next";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -59,8 +58,6 @@ import {
   generatePdfFilename,
   getDayName,
 } from "@shared/utils";
-
-const currentWeek = dayjs().isoWeek();
 
 const shareArticleFilters = {
   is_harvest_share_article: true,
@@ -146,6 +143,7 @@ export default function AdditionalTheoreticalSummaryList(
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
+    currentWeek,
     selectedDay,
     setSelectedDay,
     isPast,

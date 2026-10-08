@@ -35,7 +35,6 @@ import { AddShareArticleEntry } from "@features/commissioning/components";
 import { formatAmountForUnit } from "@shared/utils";
 
 import {
-  currentWeek,
   useIsMobile,
   useNoteColumn,
   useNumberFormat,
@@ -126,6 +125,7 @@ export default function DocumentationHarvest() {
     selectedYear,
     setSelectedYear,
     selectedWeek,
+    currentWeek,
     setSelectedWeek,
     selectedDay,
     setSelectedDay,

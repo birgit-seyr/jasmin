@@ -17,6 +17,7 @@ from rest_framework import status
 from apps.commissioning.models import MovementShareArticle
 from apps.commissioning.models.choices import MovementTypeOptions
 from apps.commissioning.tests.factories import (
+    HarvestFactory,
     MovementShareArticleFactory,
     ShareArticleFactory,
     StorageFactory,
@@ -34,12 +35,16 @@ def _monday_of_week_41():
         yield
 
 
-def _url(article, storage, week: int) -> str:
-    composite_id = build_composite_id(
+def _composite_id(article, storage, week: int) -> str:
+    return build_composite_id(
         str(article.id), "KG", "M", str(storage.id), YEAR, week, 1
     )
+
+
+def _url(article, storage, week: int) -> str:
     return reverse(
-        "current_stock_comparison_detail", kwargs={"composite_id": composite_id}
+        "current_stock_comparison_detail",
+        kwargs={"composite_id": _composite_id(article, storage, week)},
     )
 
 
@@ -93,3 +98,54 @@ class TestStockCountPastWeek:
         assert resp.status_code == status.HTTP_409_CONFLICT, resp.data
         assert resp.data["code"] == "commissioning.past_week"
         assert _inventories(article).exists()
+
+
+def _stocked_article(storage):
+    """An article with a theoretical stock of 50 in *storage*, harvested well
+    before both weeks, for the bulk actions to act on."""
+    article = ShareArticleFactory()
+    MovementShareArticleFactory(
+        share_article=article,
+        storage=storage,
+        harvest=HarvestFactory(share_article=article, storage=storage),
+        unit="KG",
+        size="M",
+        movement_type=MovementTypeOptions.HARVEST,
+        amount=Decimal("50"),
+        date=datetime.datetime(2026, 9, 1, 12, tzinfo=datetime.UTC),
+    )
+    return article
+
+
+@pytest.mark.django_db
+class TestStockBulkPastWeek:
+    """An id in a read-only week is a per-item error carrying the past-week
+    code, while an id in the grace week of the same request is still written."""
+
+    @pytest.mark.parametrize(
+        "url_name",
+        [
+            "bulk_finalize_current_stock",
+            "bulk_set_as_expected_current_stock",
+            "bulk_set_to_zero_current_stock",
+        ],
+    )
+    def test_read_only_week_id_is_a_per_item_error(self, api_client, tenant, url_name):
+        storage = StorageFactory()
+        read_only_article = _stocked_article(storage)
+        grace_article = _stocked_article(storage)
+        read_only_id = _composite_id(read_only_article, storage, READ_ONLY_WEEK)
+
+        resp = api_client.post(
+            reverse(url_name),
+            {"ids": [read_only_id, _composite_id(grace_article, storage, GRACE_WEEK)]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_207_MULTI_STATUS, resp.data
+        assert resp.data["created"] == 1
+        [error] = resp.data["errors"]
+        assert error["id"] == read_only_id
+        assert error["code"] == "commissioning.past_week"
+        assert not _inventories(read_only_article).exists()
+        assert _inventories(grace_article).exists()

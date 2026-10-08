@@ -537,6 +537,9 @@ describe("ShareDays changing a delivery day's plan", () => {
       changed_day_number: null, harvesting_day: MONDAY, packing_day: TUESDAY,
       washing_day: SATURDAY, cleaning_day: TUESDAY, get_current_stock_day: TUESDAY,
     });
+    // The week travels in the query only; the body carries the row's days.
+    expect(body).not.toHaveProperty("year");
+    expect(body).not.toHaveProperty("delivery_week");
     expect(highlightedIn(TUESDAY)).toEqual([WASHING]);
     expect(planOf(FRIDAY).movedTo).toBe(shown(THURSDAY));
   });

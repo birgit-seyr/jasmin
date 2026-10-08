@@ -7,9 +7,9 @@
  * farm. The PDF library, the PDF template and the browser download are
  * stubbed, so no real PDF is rendered.
  *
- * The clock is frozen on Tuesday 6 October 2026 (ISO week 41). The page and
- * the week state read "today" once when their modules load, so the clock is
- * set before the imports run as well as before every test.
+ * The clock is frozen on Tuesday 6 October 2026 (ISO week 41), before the
+ * imports run as well as before every test. The page reads "today" when it
+ * mounts, so a test that moves the clock before rendering opens on that day.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -470,6 +470,65 @@ describe("CommissioningListResellers loading", () => {
   });
 });
 
+// ── Opening day ─────────────────────────────────────────────────────────────
+
+describe("CommissioningListResellers opening day", () => {
+  /** Opens the page on the given day and waits for its first orders request. */
+  async function openOn(date: Date) {
+    vi.setSystemTime(date);
+    renderPage();
+    await waitFor(() => expect(api.orders).toHaveBeenCalled());
+  }
+
+  it.each([
+    ["Monday", new Date(2026, 9, 5, 12, 0), "Monday, 05.10.2026", 0],
+    ["Tuesday", new Date(2026, 9, 6, 12, 0), "Tuesday, 06.10.2026", TUESDAY],
+    ["Wednesday", new Date(2026, 9, 7, 12, 0), "Wednesday, 07.10.2026", WEDNESDAY],
+    ["Thursday", new Date(2026, 9, 8, 12, 0), "Thursday, 08.10.2026", THURSDAY],
+  ])("opens on today on a %s", async (_weekday, today, label, day) => {
+    await openOn(today);
+
+    expect(shownIn(selectNamed(WEEK))).toBe("commissioning.week_short 41");
+    expect(shownIn(selectNamed(DAY))).toBe(dayLabel(label));
+    expect(api.orders.mock.calls).toEqual([[ordersRequest(day)]]);
+  });
+
+  // The module loaded on Tuesday of week 41, so these also show that the
+  // page reads the date when it opens.
+  it.each([
+    ["Friday", new Date(2026, 9, 9, 12, 0)],
+    ["Saturday", new Date(2026, 9, 10, 12, 0)],
+    ["Sunday", new Date(2026, 9, 11, 12, 0)],
+  ])("opens on next week's Monday on a %s, without asking for this week", async (_weekday, today) => {
+    await openOn(today);
+
+    expect(shownIn(selectNamed(YEAR))).toBe("2026");
+    expect(shownIn(selectNamed(WEEK))).toBe("commissioning.week_short 42");
+    expect(shownIn(selectNamed(DAY))).toBe(dayLabel("Monday, 12.10.2026"));
+    expect(api.orders.mock.calls).toEqual([[ordersRequest(0, { week: 42 })]]);
+    expect(api.daysWithOrders.mock.calls).toEqual([[daysRequest({ week: 42 })]]);
+  });
+
+  it("opens on the Monday of week 53 on the Friday of week 52 of a year with 53 weeks", async () => {
+    await openOn(new Date(2026, 11, 25, 12, 0));
+
+    expect(shownIn(selectNamed(WEEK))).toBe("commissioning.week_short 53");
+    expect(shownIn(selectNamed(DAY))).toBe(dayLabel("Monday, 28.12.2026"));
+    expect(api.orders.mock.calls).toEqual([[ordersRequest(0, { week: 53 })]]);
+  });
+
+  it("opens on week 1 of the next year on the Friday of a year's last week", async () => {
+    // 1 January 2027 still belongs to ISO week 53 of 2026.
+    await openOn(new Date(2027, 0, 1, 12, 0));
+
+    expect(shownIn(selectNamed(YEAR))).toBe("2027");
+    expect(shownIn(selectNamed(WEEK))).toBe("commissioning.week_short 1");
+    expect(shownIn(selectNamed(DAY))).toBe(dayLabel("Monday, 04.01.2027"));
+    expect(api.orders.mock.calls).toEqual([[ordersRequest(0, { year: 2027, week: 1 })]]);
+    expect(api.daysWithOrders.mock.calls).toEqual([[daysRequest({ year: 2027, week: 1 })]]);
+  });
+});
+
 // ── The cards ───────────────────────────────────────────────────────────────
 
 describe("CommissioningListResellers cards", () => {
@@ -755,8 +814,8 @@ describe("CommissioningListResellers on a phone", () => {
     expect(headingOf("Green Grocer")).toHaveTextContent(EARLY);
     expect(cardOf("Green Grocer").querySelectorAll(".mobile-card-item")).toHaveLength(2);
 
-    const carrots = blockOf("Carrots");
-    expect(within(carrots).getByText(LARGE)).toBeInTheDocument();
+    // Named like the table names it: the sort after the name, then the size.
+    const carrots = blockOf(`Carrots Nantaise, ${LARGE}`);
     expect(figuresOf(carrots)).toEqual({
       "commissioning.amount": `12,0 ${KG}`,
       [PU]: `4,8 (2,50 ${KG}/${PU})`,
@@ -765,6 +824,7 @@ describe("CommissioningListResellers on a phone", () => {
 
     const lettuce = blockOf("Lettuce");
     expect(within(lettuce).queryByText(MEDIUM)).not.toBeInTheDocument();
+    expect(blockOf(`Radishes Cherry Belle, ${SMALL}`)).toBeInTheDocument();
     expect(figuresOf(lettuce)).toEqual({
       "commissioning.amount": `30,0 ${PIECES}`,
       [PU]: `2,5 (12,00 ${PIECES}/${PU})`,

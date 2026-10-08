@@ -10,19 +10,29 @@
  * records its props, so the tests read the rows the page hands the table and
  * drive the table's save hooks the way its save does: `customSave` with the
  * form values and the row, then `apiFunctions.update` under the row's key.
+ *
+ * The clock is frozen on Tuesday 6 October 2026 (ISO week 41) before the
+ * imports run as well as before every test. The page reads "today" when it
+ * mounts, so a test that moves the clock before rendering opens on that week.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { currentWeek, currentYear } from "@hooks/useYearWeekState";
 import type {
   EditableTableProps,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { profileRenders, flushMicrotasks } from "@/test/profileRenders";
+
+const NOW = vi.hoisted(() => {
+  const now = new Date(2026, 9, 6, 12, 0);
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(now);
+  return now;
+});
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -64,13 +74,9 @@ vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
 // label getters; useNumberFormat returns a simple formatter. These stubs mean
 // the page never reaches the real useTenant via this barrel.
 vi.mock("@hooks/index", async () => {
-  const { useYearWeekState, currentYear, currentWeek } = await import(
-    "@hooks/useYearWeekState"
-  );
+  const { useYearWeekState } = await import("@hooks/useYearWeekState");
   return {
     useYearWeekState,
-    currentYear,
-    currentWeek,
     useInvalidateAfterTableMutation: () => ({
       onSaveSuccess: vi.fn(),
       onDeleteSuccess: vi.fn(),
@@ -190,7 +196,6 @@ vi.mock("@features/commissioning/pdfs/exports/PurchaseListPDFGenerator", () => (
 // ── Imports under test ───────────────────────────────────────────────────────
 
 import PurchaseList from "../PurchaseList";
-import { nextIsoWeek } from "../purchaseListWeeks";
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -343,6 +348,8 @@ function lastNextWeekParams(): Record<string, unknown> {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
   table.props = null;
   api.summaryRetrieve
     .mockReset()
@@ -354,6 +361,10 @@ beforeEach(() => {
     );
   api.create.mockReset().mockResolvedValue({ id: "purchase-new" });
   api.partialUpdate.mockReset().mockResolvedValue({ id: "cur-a" });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -388,6 +399,22 @@ describe("PurchaseList (smoke)", () => {
     await flushMicrotasks(50);
 
     expect(profiler.onRender.mock.calls.length).toBeLessThan(80);
+  });
+});
+
+describe("PurchaseList opening week", () => {
+  // The module loaded in week 41 of 2026, so this shows that the page reads
+  // the date when it opens.
+  it("opens on today's week when it opens after New Year", async () => {
+    vi.setSystemTime(new Date(2027, 0, 4, 12, 0));
+    renderPage();
+
+    expect(selectedWeekParams()[0]).toMatchObject({
+      year: 2027,
+      delivery_week: 1,
+    });
+    await includeNextWeek();
+    expect(lastNextWeekParams()).toMatchObject({ year: 2027, delivery_week: 2 });
   });
 });
 
@@ -450,8 +477,8 @@ describe("PurchaseList with next week included", () => {
     expect(api.create).toHaveBeenCalledWith(
       expect.objectContaining({
         model: "purchase",
-        year: currentYear,
-        delivery_week: currentWeek,
+        year: 2026,
+        delivery_week: 41,
         share_article: "art-b",
         unit: "KG",
         size: "L",
@@ -477,8 +504,8 @@ describe("PurchaseList with next week included", () => {
 
     expect(api.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        year: currentYear,
-        delivery_week: currentWeek,
+        year: 2026,
+        delivery_week: 41,
         amount: 0,
         note: "Bring crates",
       }),
@@ -533,8 +560,8 @@ describe("PurchaseList with next week included", () => {
     expect(api.partialUpdate).toHaveBeenCalledWith(
       "cur-a",
       expect.objectContaining({
-        year: currentYear,
-        delivery_week: currentWeek,
+        year: 2026,
+        delivery_week: 41,
         amount: 2,
         size: "M",
         seller: null,
@@ -597,16 +624,5 @@ describe("PurchaseList saves", () => {
     );
 
     expect(lastNextWeekParams()).toMatchObject({ year: 2026, delivery_week: 53 });
-  });
-});
-
-describe("nextIsoWeek", () => {
-  it.each([
-    [2026, 41, 2026, 42],
-    [2026, 52, 2026, 53],
-    [2026, 53, 2027, 1],
-    [2027, 52, 2028, 1],
-  ])("follows %i week %i with %i week %i", (year, week, nextYear, nextWeek) => {
-    expect(nextIsoWeek(year, week)).toEqual({ year: nextYear, week: nextWeek });
   });
 });

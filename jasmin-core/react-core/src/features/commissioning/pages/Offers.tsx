@@ -53,13 +53,10 @@ import { getErrorMessage } from "@shared/utils/apiError";
 import OfferSendingStatusTable from "@features/commissioning/components/OfferSendingStatusTable";
 import OffersBulkActions from "@features/commissioning/components/OffersBulkActions";
 
-const currentYear = dayjs().isoWeekYear();
-const nextWeek = dayjs().isoWeek();
-
 export default function Offers() {
   const { isOffice } = useRoles();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState(nextWeek);
+  const [selectedYear, setSelectedYear] = useState(() => dayjs().isoWeekYear());
+  const [selectedWeek, setSelectedWeek] = useState(() => dayjs().isoWeek());
   const [selectedOfferGroup, setSelectedOfferGroup] = useState<string | null>(
     null,
   );

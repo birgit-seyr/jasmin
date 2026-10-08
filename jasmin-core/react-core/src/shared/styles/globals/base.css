@@ -86,6 +86,14 @@
   margin-bottom: 1em;
 }
 
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
+
 .text-center {
   text-align: center;
 }

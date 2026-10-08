@@ -200,6 +200,9 @@ class TestUpdateForecastWithRelatedObjects:
             share_article=article,
             amount=Decimal("100"),
             storage=storage,
+            # An explicit selection: a stored "for all" flag would link every
+            # active harvest-share variation again.
+            for_all_harvest_shares=False,
         )
         old_var = ShareTypeVariationFactory()
         ForecastShareTypeVariationFactory(
@@ -226,6 +229,21 @@ class TestUpdateForecastWithRelatedObjects:
         ).exists()
         assert ForecastShareTypeVariation.objects.filter(
             forecast=forecast, share_type_variation=new_var
+        ).exists()
+
+    def test_a_body_without_the_for_all_flag_keeps_the_stored_one(self, tenant):
+        forecast = ForecastFactory(
+            year=2026, delivery_week=15, for_all_harvest_shares=True
+        )
+        variation = ShareTypeVariationFactory()
+        assert variation.share_type.share_option == "HARVEST_SHARE"
+
+        ForecastService().update_forecast_with_related_objects(
+            forecast, {"amount": Decimal("75")}
+        )
+
+        assert ForecastShareTypeVariation.objects.filter(
+            forecast=forecast, share_type_variation=variation
         ).exists()
 
 

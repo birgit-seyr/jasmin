@@ -4,11 +4,12 @@ import { Button } from "antd";
 import axiosService from "@shared/services/api";
 import i18n from "@shared/i18n";
 import { notify } from '@shared/utils';
-import { getErrorMessage } from '@shared/utils/apiError';
+import { getErrorMessage, messageForErrorCode } from '@shared/utils/apiError';
 
 interface BulkItemFailure {
   id?: string | number;
   error?: string;
+  code?: string;
 }
 
 /**
@@ -24,6 +25,11 @@ const partialFailures = (data: unknown): BulkItemFailure[] => {
   const { errors } = data as { errors?: unknown };
   return Array.isArray(errors) ? (errors as BulkItemFailure[]) : [];
 };
+
+/** A skipped item's reason: its error code's translation when there is one,
+ * else the server's own (English) text. */
+const failureReason = ({ code, error }: BulkItemFailure): string =>
+  (code && messageForErrorCode(code)) || error || "";
 
 // Generic over the response body: ``TResponse`` infers from the
 // ``apiFunction`` return type, so ``onSuccess`` receives the typed body
@@ -135,7 +141,7 @@ const BulkActionButton = <TResponse = unknown,>({
           i18n.t("table.bulk_partial_skipped", {
             skipped: skipped.length,
             total: selectedIds.length,
-            reason: skipped[0]?.error ?? "",
+            reason: failureReason(skipped[0]),
           }),
         );
       } else if (successMessage) {

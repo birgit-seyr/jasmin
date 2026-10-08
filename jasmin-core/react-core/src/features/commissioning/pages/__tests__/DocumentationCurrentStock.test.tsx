@@ -8,9 +8,9 @@
  * hooks are real TanStack queries around spies that answer from an in-memory
  * stock list. The new-article dialog is a stub.
  *
- * The clock is frozen on Tuesday 6 October 2026 (ISO week 41). The page reads
- * today's weekday, and the week state today's week, once when their modules
- * load, so the clock is set before the imports run as well as before every test.
+ * The clock is frozen on Tuesday 6 October 2026 (ISO week 41), before the
+ * imports run as well as before every test. The page reads today's week and
+ * weekday when it mounts.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

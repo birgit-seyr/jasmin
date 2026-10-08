@@ -26,7 +26,6 @@ import type {
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { useAuth } from "@shared/contexts/AuthContext";
 import {
-  currentWeek,
   useCurrency,
   useTenant,
   useTimeFormat,
@@ -54,8 +53,13 @@ export default function CustomerOrderPage() {
   const resellerId =
     resellerIdParam || (user?.reseller_id as string | undefined);
 
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    currentWeek,
+  } = useYearWeekState();
   const currentDay = dayjs().isoWeekday();
   const [selectedDay, setSelectedDay] = useState(
     currentDay - 1 === 6 ? 5 : currentDay - 1,
@@ -82,7 +86,7 @@ export default function CustomerOrderPage() {
       delivery_week: selectedWeek ?? currentWeek,
       reseller: resellerId!,
     }),
-    [selectedYear, selectedWeek, resellerId],
+    [selectedYear, selectedWeek, currentWeek, resellerId],
   );
 
   const { data: offers = [] } = useCommissioningOffersList(offersParams, {
@@ -96,7 +100,7 @@ export default function CustomerOrderPage() {
       day_number: selectedDay,
       reseller: resellerId!,
     }),
-    [selectedYear, selectedWeek, selectedDay, resellerId],
+    [selectedYear, selectedWeek, currentWeek, selectedDay, resellerId],
   );
 
   const { data: rawOrderContents } = useCommissioningOrderContentsList(

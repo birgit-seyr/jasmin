@@ -50,10 +50,9 @@ from .statistic_views import (
     member_growth_statistics,
     purchase_cost_by_week,
 )
-from .stock_views import (
-    CurrentStockComparisonView,
-    StorageLoggingView,
+from .stock_bulk_views import (
     bulk_finalize_current_stock,
     bulk_set_as_expected_current_stock,
     bulk_set_to_zero_current_stock,
 )
+from .stock_views import CurrentStockComparisonView, StorageLoggingView

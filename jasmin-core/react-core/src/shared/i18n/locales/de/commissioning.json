@@ -133,6 +133,7 @@
   "is_purchased": "wird zugekauft",
   "is_fruit": "Obst",
   "is_vegetable": "Gemüse",
+  "share_option_load_failed": "{{option}} konnte nicht geladen werden, darum lässt sich die PDF noch nicht herunterladen.",
   "share_option": {
     "HARVEST_SHARE": "Ernteanteile Gemüse",
     "HARVEST_SHARE_FRUIT": "Ernteanteile Obst",

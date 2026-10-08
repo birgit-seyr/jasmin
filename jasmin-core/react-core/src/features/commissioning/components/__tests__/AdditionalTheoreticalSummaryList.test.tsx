@@ -11,9 +11,9 @@
  * farm. The PDF library and the browser download are stubbed, so no real PDF
  * is rendered.
  *
- * The clock is frozen on Tuesday 6 October 2026 (ISO week 41). The page and
- * its week state read today's week and weekday once when their modules load,
- * so the clock is set before the imports run as well as before every test.
+ * The clock is frozen on Tuesday 6 October 2026 (ISO week 41), before the
+ * imports run as well as before every test. The page reads today's week and
+ * weekday when it mounts.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

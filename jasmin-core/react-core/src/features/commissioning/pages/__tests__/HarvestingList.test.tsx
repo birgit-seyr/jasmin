@@ -5,7 +5,7 @@
  * are the mocking boundary — real TanStack queries around spies that answer from
  * an in-memory farm. The PDF library and the download are stubbed. The clock is
  * frozen on Tuesday 6 October 2026 (ISO week 41, day number 1); the page reads
- * today when its modules load, so the clock is set before the imports too.
+ * today when it mounts; the clock is set before the imports too.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

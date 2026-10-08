@@ -9,4 +9,5 @@ export {
 } from "./PackingListBoxesMobileCard";
 export { DocumentationHarvestMobileCard } from "./DocumentationHarvestMobileCard";
 export { DocumentationCurrentStockMobileCard } from "./DocumentationCurrentStockMobileCard";
+export { ResellerOrderMobileCards } from "./ResellerOrderMobileCards";
 export { useHarvestConfirmation } from "./useHarvestConfirmation";

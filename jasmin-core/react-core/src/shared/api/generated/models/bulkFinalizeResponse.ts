@@ -12,6 +12,6 @@ export interface BulkFinalizeResponse {
   finalized_count: number;
   already_finalized_count: number;
   total_requested: number;
-  /** List of errors encountered during finalization */
+  /** Errors encountered during finalization: the id, the error and, for a domain refusal, its stable code. */
   errors: BulkFinalizeResponseErrorsItem[];
 }

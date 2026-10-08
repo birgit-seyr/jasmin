@@ -9,9 +9,9 @@
  * way the backend does, echoing the saved row in summary shape. The article
  * form behind "add article" is a stub, and a download is recorded, not saved.
  *
- * The clock is frozen on Tuesday 6 October 2026 (ISO week 41). The page's
- * week state reads "today" once when its module loads, so the clock is set
- * before the imports run as well as before every test.
+ * The clock is frozen on Tuesday 6 October 2026 (ISO week 41), before the
+ * imports run as well as before every test. The page's week state reads
+ * "today" when the page mounts.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

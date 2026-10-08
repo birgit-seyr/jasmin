@@ -4,7 +4,7 @@ COMMISSIONING APP — VIEW TESTS OVERVIEW
 
 Directory: apps/commissioning/tests/tests_views/
 Total files: 13
-Total tests: 438
+Total tests: 441
 Run: poetry run pytest apps/commissioning/tests/tests_views/ -q
 
 Counts are collected cases, so a parametrized method counts once per case and a
@@ -487,14 +487,21 @@ alphabetical order.
      - test_unresolvable_share_option_names_the_share_option
 
 ================================================================================
-12. test_stock_past_week_guard.py  (3 tests)
-    Views: CurrentStockComparisonView (PATCH/DELETE) — the read-only past week,
+12. test_stock_past_week_guard.py  (6 tests)
+    Views: CurrentStockComparisonView (PATCH/DELETE), bulk_finalize_current_stock,
+           bulk_set_as_expected_current_stock, bulk_set_to_zero_current_stock
+           — the read-only past week,
            clock frozen on Monday of week 41/2026 (week 39 read-only, week 40 grace)
 --------------------------------------------------------------------------------
    TestStockCountPastWeek
      - test_count_in_a_read_only_week_is_refused
      - test_count_in_the_grace_week_is_accepted
      - test_delete_in_a_read_only_week_is_refused
+
+   TestStockBulkPastWeek  (3 cases)
+     - test_read_only_week_id_is_a_per_item_error  (finalize / set as expected /
+       set to zero: 207, the read-only id carries the past-week code, the
+       grace-week id is still written)
 
 ================================================================================
 13. test_stock_views.py  (72 tests)

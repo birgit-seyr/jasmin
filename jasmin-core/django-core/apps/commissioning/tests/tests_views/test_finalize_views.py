@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import datetime
 from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
+import time_machine
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
@@ -322,14 +324,18 @@ class TestBulkFinalizeModelGate:
     )
     def test_staff_roles_can_finalize_staff_models(self, tenant, role, factory, model):
         """The live callers: the Offers, Forecast and Harvest pages send these
-        lowercase names with app_label "commissioning"."""
-        obj = factory()
+        lowercase names with app_label "commissioning".
 
-        resp = _client_with_roles(role).post(
-            URL_FINALIZE,
-            {"model": model, "app_label": "commissioning", "ids": [str(obj.id)]},
-            format="json",
-        )
+        On Monday of week 15/2026 the factories' week 15 is the current week,
+        which the forecast and harvest finalize do not refuse as read-only."""
+        with time_machine.travel(datetime.datetime(2026, 4, 6, 12, 0), tick=False):
+            obj = factory()
+
+            resp = _client_with_roles(role).post(
+                URL_FINALIZE,
+                {"model": model, "app_label": "commissioning", "ids": [str(obj.id)]},
+                format="json",
+            )
 
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["finalized_count"] == 1
@@ -337,14 +343,17 @@ class TestBulkFinalizeModelGate:
         assert obj.is_finalized is True
 
     def test_gardener_can_unfinalize_a_harvest(self, tenant):
-        harvest = HarvestFactory()
-        type(harvest).objects.filter(pk=harvest.pk).update(is_finalized=True)
+        """On Monday of week 15/2026 the factory's week 15 is the current week,
+        which the harvest unfinalize does not refuse as read-only."""
+        with time_machine.travel(datetime.datetime(2026, 4, 6, 12, 0), tick=False):
+            harvest = HarvestFactory()
+            type(harvest).objects.filter(pk=harvest.pk).update(is_finalized=True)
 
-        resp = _client_with_roles("gardener").post(
-            URL_UNFINALIZE,
-            {"model": "harvest", "ids": [str(harvest.id)]},
-            format="json",
-        )
+            resp = _client_with_roles("gardener").post(
+                URL_UNFINALIZE,
+                {"model": "harvest", "ids": [str(harvest.id)]},
+                format="json",
+            )
 
         assert resp.status_code == status.HTTP_200_OK
         harvest.refresh_from_db()

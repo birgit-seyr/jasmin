@@ -23,7 +23,7 @@ import {
 import {
   EditableTable,
   type CrudResource,
-  gatedByPermission,
+  permissionsWithDeletable,
   useCrudListPage,
 } from "@shared/tables";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
@@ -93,17 +93,8 @@ export default function ListShareArticles() {
   const [allArticlesExportVisible, setAllArticlesExportVisible] =
     useState(false);
 
-  // Custom delete guard (identical to `permissionsWithDeletable` but spelled
-  // out because delete gating here also needs `canEdit`).
   const permissions = useMemo(
-    () => ({
-      ...gatedByPermission(canEdit),
-      canDeleteRecord: (record: TableRecord) => {
-        if (!canEdit) return false;
-        if (record.key === -1 || !record.id) return true;
-        return record.can_be_deleted !== false;
-      },
-    }),
+    () => permissionsWithDeletable(canEdit),
     [canEdit],
   );
 
@@ -132,12 +123,11 @@ export default function ListShareArticles() {
 
   const handleOpenModal = useCallback(
     (record: Record<string, unknown>) => {
-      if (!canManagePrices) return;
       setSelectedShareArticleId(String(record.id ?? ""));
       setSelectedShareArticleName(record.name as string);
       setModalVisible(true);
     },
-    [canManagePrices],
+    [],
   );
 
   const handleCloseModal = useCallback(() => {
@@ -274,7 +264,7 @@ export default function ListShareArticles() {
     <div>
       <div className="flex-between">
         <div>
-          <h1 style={{ marginBottom: 0 }}>
+          <h1 className="mb-0">
             {t("commissioning.share_articles")}
           </h1>
           <h5>{t("commissioning.share_articles_description")}</h5>
@@ -312,14 +302,7 @@ export default function ListShareArticles() {
         </Flex>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          marginBottom: 16,
-        }}
-      >
+      <div className="flex-center-y gap-16 mb-16">
         <Radio.Group
           value={activeFilter}
           onChange={(e) => setActiveFilter(e.target.value)}

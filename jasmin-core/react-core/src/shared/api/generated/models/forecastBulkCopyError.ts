@@ -9,4 +9,5 @@
 export interface ForecastBulkCopyError {
   id: string;
   error: string;
+  code?: string;
 }

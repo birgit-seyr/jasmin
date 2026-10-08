@@ -1,0 +1,4 @@
+/* Pulls the first line up towards the reseller's card heading. */
+.reseller-order-mobile-cards {
+  margin-top: -8px;
+}

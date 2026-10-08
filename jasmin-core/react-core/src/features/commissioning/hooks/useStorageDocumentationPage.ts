@@ -16,7 +16,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import { currentWeek } from "@hooks/index";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 
 import {
@@ -53,7 +52,8 @@ export function useStorageDocumentationPage({
     queryEnabled: !!selectedStorage,
   });
 
-  const { rawData, selectedYear, selectedWeek, selectedDay } = summary;
+  const { rawData, selectedYear, selectedWeek, currentWeek, selectedDay } =
+    summary;
 
   const data = useMemo<TableRecord[]>(() => {
     // Directional cast at the orval boundary: raw rows lack the table-only
@@ -86,7 +86,14 @@ export function useStorageDocumentationPage({
           ? 0
           : transformedData.amount,
     }),
-    [selectedStorage, selectedYear, selectedWeek, selectedDay, withDay],
+    [
+      selectedStorage,
+      selectedYear,
+      selectedWeek,
+      currentWeek,
+      selectedDay,
+      withDay,
+    ],
   );
 
   return {

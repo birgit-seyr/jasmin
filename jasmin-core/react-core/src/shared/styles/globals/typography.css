@@ -150,6 +150,14 @@ h5 {
   color: var(--color-text-secondary);
 }
 
+/* An explanation paragraph at the top of a modal's body; keeps the line
+   breaks the translation carries. */
+.modal-intro {
+  white-space: pre-line;
+  color: var(--color-text-secondary);
+  margin-bottom: 1em;
+}
+
 /* Generic muted helpers (used as plain inline color, no font-size override). */
 .text-muted {
   color: var(--color-text-tertiary);

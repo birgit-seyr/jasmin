@@ -31,7 +31,6 @@ import { ExplainerText, MobileStack, PastWarningMessage } from "@shared/ui";
 import { AddShareArticleEntry } from "@features/commissioning/components";
 import { useRoles } from "@shared/auth";
 import {
-  currentWeek,
   useInvalidateAfterTableMutation,
   useNoteColumn,
   useYearWeekState,
@@ -42,17 +41,22 @@ import {
   useShareArticles,
 } from "@features/commissioning/hooks";
 
-const currentDay = dayjs().isoWeekday();
-
 const shareArticleFilters = {
   is_active: true,
 };
 
 export default function DocumentationWaste() {
   const { isStaff } = useRoles();
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
-  const [selectedDay, setSelectedDay] = useState<number | null>(currentDay - 1);
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    currentWeek,
+  } = useYearWeekState();
+  const [selectedDay, setSelectedDay] = useState<number | null>(
+    () => dayjs().isoWeekday() - 1,
+  );
   const [selectedStorage, setSelectedStorage] = useState<string | null>(null);
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
@@ -133,7 +137,7 @@ export default function DocumentationWaste() {
       delivery_week: selectedWeek ?? currentWeek,
       day_number: selectedDay,
     }),
-    [selectedYear, selectedWeek, selectedDay, selectedStorage],
+    [selectedYear, selectedWeek, currentWeek, selectedDay, selectedStorage],
   );
 
   const customEdit = useCallback((record: TableRecord, form: FormInstance) => {

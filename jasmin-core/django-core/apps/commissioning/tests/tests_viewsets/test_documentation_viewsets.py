@@ -14,6 +14,8 @@ from rest_framework import status
 from apps.commissioning.models import (
     AdditionalTheoreticalPurchase,
     Forecast,
+    ForecastOfferGroup,
+    ForecastShareTypeVariation,
     Harvest,
     MovementShareArticle,
     Purchase,
@@ -21,12 +23,15 @@ from apps.commissioning.models import (
 )
 from apps.commissioning.tests.factories import (
     ForecastFactory,
+    ForecastShareTypeVariationFactory,
     HarvestFactory,
     MovementShareArticleFactory,
+    OfferGroupFactory,
     PlotFactory,
     PurchaseFactory,
     ResellerFactory,
     ShareArticleFactory,
+    ShareTypeVariationFactory,
     StorageFactory,
     WasteFactory,
 )
@@ -278,6 +283,79 @@ class TestForecastInvalidVariation:
         )
         assert resp.status_code == status.HTTP_404_NOT_FOUND
         assert resp.data["code"] == "share_type_variation.not_found"
+
+
+# ---------------------------------------------------------------------------
+# ForecastViewSet — a PATCH that names only the changed fields
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestForecastPartialUpdate:
+    """A PATCH carries only what changed: the week, unit, size and the
+    variation / offer-group selection it leaves out are the stored ones."""
+
+    def _patch(self, api_client, forecast, payload):
+        url = reverse("forecast-detail", kwargs={"pk": forecast.pk})
+        return api_client.patch(url, payload, format="json")
+
+    def test_amount_only_updates_the_amount(self, api_client, tenant):
+        forecast = ForecastFactory(year=2026, delivery_week=15, amount=3)
+
+        resp = self._patch(api_client, forecast, {"amount": "7"})
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        forecast.refresh_from_db()
+        assert forecast.amount == Decimal("7")
+        assert (forecast.year, forecast.delivery_week) == (2026, 15)
+
+    def test_note_only_updates_the_note(self, api_client, tenant):
+        forecast = ForecastFactory(year=2026, delivery_week=15)
+
+        resp = self._patch(api_client, forecast, {"note": "late frost"})
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        forecast.refresh_from_db()
+        assert forecast.note == "late frost"
+
+    def test_amount_only_keeps_the_variations_and_offer_groups(
+        self, api_client, tenant
+    ):
+        forecast = ForecastFactory(
+            year=2026, delivery_week=15, amount=3, for_all_harvest_shares=False
+        )
+        variation = ShareTypeVariationFactory()
+        ForecastShareTypeVariationFactory(
+            forecast=forecast, share_type_variation=variation
+        )
+        offer_group = OfferGroupFactory()
+        ForecastOfferGroup.objects.create(forecast=forecast, offer_group=offer_group)
+
+        resp = self._patch(api_client, forecast, {"amount": "7"})
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert resp.data[f"variation_{variation.pk}"] is True
+        assert resp.data[f"offer_group_{offer_group.pk}"] is True
+        assert ForecastShareTypeVariation.objects.filter(
+            forecast=forecast, share_type_variation=variation
+        ).exists()
+        assert ForecastOfferGroup.objects.filter(
+            forecast=forecast, offer_group=offer_group
+        ).exists()
+
+    def test_a_flag_set_to_false_still_removes_its_variation(self, api_client, tenant):
+        forecast = ForecastFactory(
+            year=2026, delivery_week=15, for_all_harvest_shares=False
+        )
+        variation = ShareTypeVariationFactory()
+        ForecastShareTypeVariationFactory(
+            forecast=forecast, share_type_variation=variation
+        )
+
+        resp = self._patch(
+            api_client, forecast, {"amount": "7", f"variation_{variation.pk}": False}
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert not ForecastShareTypeVariation.objects.filter(forecast=forecast).exists()
 
 
 # ---------------------------------------------------------------------------

@@ -61,11 +61,9 @@ vi.mock("@hooks/index", async () => {
   const { useTableRowSelection } = await import(
     "@hooks/useTableRowSelection"
   );
-  // Pure React-state hook (+ its module-const currentYear/currentWeek) — use
-  // the real implementation so year/week selection behaves as in production.
-  const { useYearWeekState, currentYear, currentWeek } = await import(
-    "@hooks/useYearWeekState"
-  );
+  // Pure React-state hook — use the real implementation so year/week
+  // selection behaves as in production.
+  const { useYearWeekState } = await import("@hooks/useYearWeekState");
   const tenant = makeUseTenantMock({
     tenant: { id: "t-1" },
     logoUrl: "https://example.test/logo.png",
@@ -77,8 +75,6 @@ vi.mock("@hooks/index", async () => {
     }),
     useTableRowSelection,
     useYearWeekState,
-    currentYear,
-    currentWeek,
   };
 });
 
@@ -320,7 +316,7 @@ describe("DeliveryNotes mount", () => {
     expect(ordersOverviewListHookMock).toHaveBeenCalled();
     const [params] = ordersOverviewListHookMock.mock.calls[0];
     const p = params as { year: number; delivery_week?: number };
-    // currentYear / currentWeek are computed from dayjs at module load.
+    // The year and week are today's, read when the page mounts.
     // We don't pin the values — just verify the shape.
     expect(typeof p.year).toBe("number");
     expect(typeof p.delivery_week).toBe("number");

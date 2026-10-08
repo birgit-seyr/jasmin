@@ -19,6 +19,18 @@ export function mondayOfIsoWeek(isoYear: number, week: number): Dayjs {
 }
 
 /**
+ * The ISO week after `week` of ISO year `year`. A year with 53 ISO weeks
+ * reaches week 53 before the next year's week 1.
+ */
+export function nextIsoWeek(
+  year: number,
+  week: number,
+): { year: number; week: number } {
+  const monday = mondayOfIsoWeek(year, week).add(1, "week");
+  return { year: monday.isoWeekYear(), week: monday.isoWeek() };
+}
+
+/**
  * Is the selected ISO week more than one week in the past (i.e. read-only)?
  *
  * A week counts as "past" once it is >1 week behind the current week.

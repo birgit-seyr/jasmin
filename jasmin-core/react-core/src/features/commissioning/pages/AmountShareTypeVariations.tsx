@@ -2,7 +2,7 @@ import {
   useBoxCombinationColumns,
   usePlanningAxes,
 } from "@features/commissioning/hooks";
-import { currentWeek, useYearWeekState } from "@hooks/index";
+import { useYearWeekState } from "@hooks/index";
 import { useCommissioningShareDeliveryBoxCombinationMatrixRetrieve } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams,
@@ -42,8 +42,13 @@ function boxRowLabel(row: WeeklyComboMatrixRow, t: TFunction): string {
 export default function AmountShareTypeVariations({
   jokerMode = false,
 }: AmountShareTypeVariationsProps) {
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    currentWeek,
+  } = useYearWeekState();
 
   const [showTours, setShowTours] = useState(false);
   const [showDeliveryStations, setShowDeliveryStations] = useState(false);

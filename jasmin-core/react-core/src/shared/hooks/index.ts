@@ -16,11 +16,7 @@ export { useErrorDateFormat } from './configuration/useErrorDateFormat';
 export { useDateRangePresets } from './configuration/useDateRangePresets';
 export { useDeliveryDayLabel } from './useDeliveryDayLabel';
 export { useTenantYearOptions } from './configuration/useTenantYearOptions';
-export {
-  useYearWeekState,
-  currentYear,
-  currentWeek,
-} from './useYearWeekState';
+export { useYearWeekState } from './useYearWeekState';
 export type {
   UseYearWeekState,
   UseYearWeekStateOptions,

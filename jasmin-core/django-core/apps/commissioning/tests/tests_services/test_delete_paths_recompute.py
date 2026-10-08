@@ -9,10 +9,12 @@ endpoint, and the theoretical-object DELETE endpoints.
 
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
+import time_machine
 from django.urls import reverse
 
 from apps.commissioning.models import (
@@ -170,11 +172,14 @@ class TestDeletePathsRecompute:
     def test_forecast_delete_recalcs_with_theoretical_movement(
         self, api_client, tenant
     ):
-        _article, forecast, sc = _build_harvest_share_content()
-        assert _has_theoretical_harvest_movement()
+        # On Monday of week 15 the forecast's week is the current one, which
+        # the forecast endpoint does not refuse as read-only.
+        with time_machine.travel(datetime.datetime(2026, 4, 6, 12, 0), tick=False):
+            _article, forecast, sc = _build_harvest_share_content()
+            assert _has_theoretical_harvest_movement()
 
-        with patch(_RECALC) as recalc, patch(_CASCADE) as cascade:
-            resp = api_client.delete(reverse("forecast-detail", args=[forecast.id]))
+            with patch(_RECALC) as recalc, patch(_CASCADE) as cascade:
+                resp = api_client.delete(reverse("forecast-detail", args=[forecast.id]))
 
         assert resp.status_code in (200, 204), resp.content
         assert not ShareContent.objects.filter(id=sc.id).exists()  # cascaded away

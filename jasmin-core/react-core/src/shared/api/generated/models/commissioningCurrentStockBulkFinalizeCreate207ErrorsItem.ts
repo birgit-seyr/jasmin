@@ -9,4 +9,5 @@
 export type CommissioningCurrentStockBulkFinalizeCreate207ErrorsItem = {
   id?: string;
   error?: string;
+  code?: string;
 };

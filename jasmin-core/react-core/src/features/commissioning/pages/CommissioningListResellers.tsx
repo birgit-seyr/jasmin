@@ -13,7 +13,9 @@ import type {
   CommissioningListResellersEntry,
 } from "@shared/api/generated/models";
 import { PastWarningMessage } from "@shared/ui";
+import { ResellerOrderMobileCards } from "@features/commissioning/components/mobileCards";
 import { CommissioningListResellersPDFGenerator } from "@features/commissioning/pdfs";
+import { orderLineArticleLabel } from "@features/commissioning/utils/orderLineLabel";
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { ExplainerText, MobileStack } from "@shared/ui";
 import {
@@ -29,9 +31,21 @@ import {
   formatWeekLabel,
   generatePdfFilename,
   getDayName,
+  nextIsoWeek,
 } from "@shared/utils";
 
-const currentDay = dayjs().isoWeekday();
+/**
+ * The delivery day the page opens on: today from Monday to Thursday, and next
+ * week's Monday from Friday on, when this week's deliveries are packed.
+ */
+function openingDeliveryDay(): { year: number; week: number; day: number } {
+  const today = dayjs();
+  const year = today.isoWeekYear();
+  const week = today.isoWeek();
+  const weekday = today.isoWeekday();
+  if (weekday < 5) return { year, week, day: weekday - 1 };
+  return { ...nextIsoWeek(year, week), day: 0 };
+}
 
 // Derived straight from the generated client — the ``commissioning_lists_resellers``
 // endpoint is fully serializer-typed, so there's no parallel interface to keep
@@ -42,10 +56,16 @@ type OrderContent = Reseller["order"]["contents"][number];
 export default function CommissioningListResellers() {
   const { t } = useTranslation();
 
+  // Read once when the page opens, so the first request already asks for the
+  // opening day's week.
+  const [openingDay] = useState(openingDeliveryDay);
   const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
+    useYearWeekState({
+      initialYear: openingDay.year,
+      initialWeek: openingDay.week,
+    });
   const [selectedDay, setSelectedDay] = useState<number | null>(
-    currentDay === 5 || currentDay === 6 ? 0 : currentDay - 1,
+    openingDay.day,
   );
 
   const { getUnitLabel } = useUnitOptions();
@@ -136,14 +156,8 @@ export default function CommissioningListResellers() {
         key: "share_article_name",
         width: "18em",
         align: "left",
-        render: (_, record) => (
-          <>
-            {[record.share_article_name, record.sort].filter(Boolean).join(" ")}
-            {record.size && record.size !== "M" && (
-              <>, {getVegetableSizeLabel(record.size)}</>
-            )}
-          </>
-        ),
+        render: (_, record) =>
+          orderLineArticleLabel(record, getVegetableSizeLabel),
       },
       {
         title: t("commissioning.per_pu"),
@@ -261,94 +275,7 @@ export default function CommissioningListResellers() {
               }
             >
               {isMobile ? (
-                <div
-                  className="flex-col gap-8"
-                  style={{
-                    marginTop: -8,
-                  }}
-                >
-                  {reseller.order.contents.map((item) => {
-                    const amount = Number(item.amount);
-                    const amountPerPu = Number(item.amount_per_pu);
-                    const puCount =
-                      !isNaN(amount) && !isNaN(amountPerPu) && amountPerPu > 0
-                        ? format(amount / amountPerPu, 1)
-                        : null;
-                    const formattedAmount = !isNaN(amount)
-                      ? format(amount, 1)
-                      : "-";
-                    const unitLabel = getUnitLabel(item.unit);
-                    const sizeLabel =
-                      item.size && item.size !== "M"
-                        ? getVegetableSizeLabel(item.size)
-                        : "";
-
-                    return (
-                      <div
-                        key={item.id}
-                        className="mobile-card-item"
-                        style={{ cursor: "default" }}
-                      >
-                        <div className="mobile-card-content flex-min">
-                          <div className="mobile-card-title">
-                            {item.share_article_name}
-                            {sizeLabel && (
-                              <span className="text-hint">{sizeLabel}</span>
-                            )}
-                          </div>
-                          <div
-                            style={{ display: "flex", gap: 24, marginTop: 6 }}
-                          >
-                            <div>
-                              <div className="text-muted-xs">
-                                {t("commissioning.amount")}
-                              </div>
-                              <div className="flex-baseline">
-                                <span
-                                  style={{
-                                    fontWeight: 600,
-                                    fontSize: "1.2em",
-                                  }}
-                                >
-                                  {formattedAmount}
-                                </span>
-                                {unitLabel && (
-                                  <span className="text-secondary">
-                                    {unitLabel}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {puCount && (
-                              <div>
-                                <div className="text-muted-xs">
-                                  {t("commissioning.pu")}
-                                </div>
-                                <div className="flex-baseline">
-                                  <span
-                                    style={{
-                                      fontWeight: 500,
-                                      fontSize: "1.2em",
-                                    }}
-                                  >
-                                    {puCount}
-                                  </span>
-                                  <span className="text-secondary">
-                                    ({format(Number(item.amount_per_pu), 2)}{" "}
-                                    {unitLabel}/{t("commissioning.pu")})
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          {item.note && (
-                            <div className="text-meta">{item.note}</div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <ResellerOrderMobileCards lines={reseller.order.contents} />
               ) : (
                 <Table
                   className="custom-jasmin-table"

@@ -24,7 +24,8 @@ export interface PackingModeShareGroups {
  * Single source for the packing pages' scoping:
  *   * PackingListBulk  → only bulk-packed share types in its selector.
  *   * PackingListBoxes → only boxed share types in its selector.
- *   * CommissioningListPacking → a table per bulk-packed share option.
+ *   * CommissioningListPacking → a table per active share option, bulk-packed
+ *     and boxed alike.
  *
  * Both underlying queries (share types + variations) go through TanStack
  * Query, so calling this hook alongside an existing ``useShareTypes`` with the

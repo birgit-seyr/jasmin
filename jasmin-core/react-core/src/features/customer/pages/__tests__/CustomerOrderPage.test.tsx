@@ -61,13 +61,9 @@ vi.mock("@hooks/index", async () => {
     logoUrl: "https://example.test/logo.png",
     getSetting: (_key: string, defaultValue?: unknown) => defaultValue,
   });
-  const { useYearWeekState, currentYear, currentWeek } = await import(
-    "@hooks/useYearWeekState"
-  );
+  const { useYearWeekState } = await import("@hooks/useYearWeekState");
   return {
     useYearWeekState,
-    currentYear,
-    currentWeek,
     useTenant: () => tenant,
     useCurrency: () => ({
       currencySymbol: "€",

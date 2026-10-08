@@ -245,7 +245,7 @@ class MovementShareArticle(JasminModel):
             # row. The upsert's empty select_for_update() takes no gap lock under
             # READ COMMITTED, so two concurrent PATCHes could both insert; the read
             # paths then SUM all same-day INVENTORY rows and double-count. ``date``
-            # is always 23:00 (_ywd_to_datetime), so it's effectively the calendar
+            # is always 23:00 (inventory_datetime), so it's effectively the calendar
             # day. nulls_distinct=False (PG15+) so two NULL-storage rows collide.
             models.UniqueConstraint(
                 fields=["share_article", "unit", "size", "storage", "date"],

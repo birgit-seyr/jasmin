@@ -61,8 +61,6 @@ import {
 
 const { Text } = Typography;
 
-const currentYear = dayjs().year();
-
 const GROUPING_MODES = {
   NONE: "none",
   WEEK: "week",
@@ -93,7 +91,7 @@ export default function Invoices() {
     onSelectedRowsChange: handleRowSelectionChange,
     rowSelection: rowSelectionConfig,
   } = useTableRowSelection();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedYear, setSelectedYear] = useState(() => dayjs().year());
   const { t } = useTranslation();
   const { getSetting, tenant, logoUrl, bioLogoUrl } = useTenant();
   const { formatCurrency } = useCurrency();

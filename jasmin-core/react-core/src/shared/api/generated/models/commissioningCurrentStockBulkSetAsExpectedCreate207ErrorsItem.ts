@@ -9,4 +9,5 @@
 export type CommissioningCurrentStockBulkSetAsExpectedCreate207ErrorsItem = {
   id?: string;
   error?: string;
+  code?: string;
 };

@@ -2,7 +2,7 @@
 # Managed by scripts/mypy_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/mypy_baseline.py freeze
-# 315 finding(s).
+# 313 finding(s).
 
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
@@ -224,9 +224,7 @@ apps/commissioning/views/share_views.py: Argument 3 to "_build_variation_totals_
 apps/commissioning/views/share_views.py: Argument 4 to "_build_variation_totals_by_key" of "ShareTypeVariationAmountsForPlanningView" has incompatible type "object"; expected "int"  [arg-type]
 apps/commissioning/views/share_views.py: Module "rest_framework.views" does not explicitly export attribute "Response"  [attr-defined]
 apps/commissioning/views/stock_views.py: Argument 1 to "_get_storage_or_error" of "StorageLoggingView" has incompatible type "str | None"; expected "str"  [arg-type]
-apps/commissioning/views/stock_views.py: Function "builtins.callable" is not valid as a type  [valid-type]
 apps/commissioning/views/stock_views.py: Incompatible types in assignment (expression has type "float", variable has type "Decimal")  [assignment]
-apps/commissioning/views/stock_views.py: callable? not callable  [misc]
 apps/commissioning/viewsets/basics_viewsets.py: Argument 1 to "_share_option_q" has incompatible type "list[str | None]"; expected "list[str]"  [arg-type]
 apps/commissioning/viewsets/basics_viewsets.py: Argument 1 to "active_on_date_q" has incompatible type "date | str"; expected "date"  [arg-type]
 apps/commissioning/viewsets/basics_viewsets.py: Function "apps.commissioning.viewsets.basics_viewsets.ShareArticleViewSet.list" is not valid as a type  [valid-type]

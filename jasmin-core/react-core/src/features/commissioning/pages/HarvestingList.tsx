@@ -45,7 +45,6 @@ import {
   useIsMobile,
   useTenantSettingToggle,
   useYearWeekState,
-  currentWeek,
 } from "@hooks/index";
 import {
   useHarvestingListColumns,
@@ -61,12 +60,17 @@ import {
 import HarvestingCrateSummary from "@features/commissioning/components/HarvestingCrateSummary";
 import HarvestingListControls from "@features/commissioning/components/HarvestingListControls";
 
-const currentDay = dayjs().isoWeekday();
-
 export default function HarvestingList() {
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
-  const [selectedDay, setSelectedDay] = useState<number | null>(currentDay - 1);
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    currentWeek,
+  } = useYearWeekState();
+  const [selectedDay, setSelectedDay] = useState<number | null>(
+    () => dayjs().isoWeekday() - 1,
+  );
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
     [selectedYear, selectedWeek],
@@ -101,6 +105,7 @@ export default function HarvestingList() {
     selectedYear,
     selectedWeek,
     selectedDay,
+    fallbackWeek: currentWeek,
     isPast,
     isGardenerView,
     roundUpToFullPU,

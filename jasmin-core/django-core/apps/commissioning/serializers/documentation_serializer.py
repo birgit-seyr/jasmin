@@ -52,35 +52,16 @@ class ForecastSerializer(NameFieldMixin, DeletableMixin, serializers.ModelSerial
         )
 
     def to_representation(self, instance):
-        """
-        Handle both model instances and dictionary data from the service
-        """
-        if isinstance(instance, dict):
-            # Convert dictionary back to model instance
-            if "id" in instance:
-                try:
-                    # Get the actual model instance
-                    model_instance = self.Meta.model.objects.get(id=instance["id"])
-                    # Use the model instance for serialization
-                    instance = model_instance
-                except self.Meta.model.DoesNotExist:
-                    # Fallback: create a temporary instance with the dict data
-                    # This won't work for SerializerMethodFields that need database access
-                    return instance
-            else:
-                # No ID available, return dict as-is (SerializerMethodFields won't work)
-                return instance
-
-        # Now we always have a model instance
         data = super().to_representation(instance)
 
-        # Add variation fields.
+        # The link rows' foreign-key ids, not the linked objects: the create
+        # and update responses render a forecast without a prefetch, where
+        # reaching through to the object costs a query per link.
         for variation_rel in instance.forecastsharetypevariation_set.all():
-            data[f"variation_{variation_rel.share_type_variation.id}"] = True
+            data[f"variation_{variation_rel.share_type_variation_id}"] = True
 
-        # Add offer group fields.
         for offer_group_rel in instance.forecastoffergroup_set.all():
-            data[f"offer_group_{offer_group_rel.offer_group.id}"] = True
+            data[f"offer_group_{offer_group_rel.offer_group_id}"] = True
 
         return data
 

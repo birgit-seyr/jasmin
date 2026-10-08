@@ -187,7 +187,7 @@ export default function ListExtraArticles() {
     <div>
       <div className="flex-between">
         <div>
-          <h1 style={{ marginBottom: 0 }}>
+          <h1 className="mb-0">
             {t("commissioning.extra_articles")}
           </h1>
           <h5>{t("commissioning.extra_articles_description")}</h5>

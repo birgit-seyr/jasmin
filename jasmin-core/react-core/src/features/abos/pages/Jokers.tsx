@@ -2,7 +2,7 @@ import {
   useBoxCombinationColumns,
   usePlanningAxes,
 } from "@features/commissioning/hooks";
-import { currentWeek, useTenant, useYearWeekState } from "@hooks/index";
+import { useTenant, useYearWeekState } from "@hooks/index";
 import { useCommissioningShareDeliveryBoxCombinationMatrixRetrieve } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningShareDeliveryBoxCombinationMatrixRetrieveParams,
@@ -66,8 +66,13 @@ export default function Jokers() {
   const { getSetting } = useTenant();
   const usesJokers = getSetting("uses_jokers", true);
 
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    currentWeek,
+  } = useYearWeekState();
 
   const [showTours, setShowTours] = useState(false);
   const [showDeliveryStations, setShowDeliveryStations] = useState(false);

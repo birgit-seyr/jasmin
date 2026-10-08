@@ -1,4 +1,5 @@
-"""The harvest and purchase documentation refuse a week the pages show read-only.
+"""The forecast, harvest and purchase documentation refuse a week the pages show
+read-only.
 
 A week turns read-only once it lies more than one week behind the current ISO
 week; the week right after it is still the grace in which late entries go in.
@@ -15,8 +16,9 @@ import time_machine
 from django.urls import reverse
 from rest_framework import status
 
-from apps.commissioning.models import Harvest, Purchase
+from apps.commissioning.models import Forecast, Harvest, Purchase
 from apps.commissioning.tests.factories import (
+    ForecastFactory,
     HarvestFactory,
     PurchaseFactory,
     ShareArticleFactory,
@@ -250,3 +252,228 @@ class TestAdditionalTheoreticalPastWeek:
         )
 
         _assert_refused(resp)
+
+
+def _forecast_payload(article, week: int) -> dict:
+    return {
+        "year": YEAR,
+        "delivery_week": week,
+        "share_article": str(article.id),
+        "unit": "KG",
+        "size": "M",
+        "amount": "5",
+        "for_all_harvest_shares": False,
+        "for_all_harvest_shares_fruit": False,
+    }
+
+
+@pytest.mark.django_db
+class TestForecastPastWeek:
+    URL = reverse("forecast-list")
+
+    def test_create_in_a_read_only_week_is_refused(self, api_client, tenant):
+        article = ShareArticleFactory()
+
+        resp = api_client.post(
+            self.URL, _forecast_payload(article, READ_ONLY_WEEK), format="json"
+        )
+
+        _assert_refused(resp)
+        assert not Forecast.objects.filter(share_article=article).exists()
+
+    def test_create_in_the_grace_week_is_accepted(self, api_client, tenant):
+        resp = api_client.post(
+            self.URL,
+            _forecast_payload(ShareArticleFactory(), GRACE_WEEK),
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+
+    def test_update_of_a_read_only_week_row_is_refused(self, api_client, tenant):
+        forecast = ForecastFactory(year=YEAR, delivery_week=READ_ONLY_WEEK, amount=3)
+        url = reverse("forecast-detail", kwargs={"pk": forecast.pk})
+
+        _assert_refused(api_client.patch(url, {"amount": "7"}, format="json"))
+        forecast.refresh_from_db()
+        assert forecast.amount == 3
+
+    def test_moving_a_row_into_a_read_only_week_is_refused(self, api_client, tenant):
+        forecast = ForecastFactory(year=YEAR, delivery_week=GRACE_WEEK)
+        url = reverse("forecast-detail", kwargs={"pk": forecast.pk})
+
+        resp = api_client.patch(url, {"delivery_week": READ_ONLY_WEEK}, format="json")
+
+        _assert_refused(resp)
+        forecast.refresh_from_db()
+        assert forecast.delivery_week == GRACE_WEEK
+
+    def test_update_in_the_grace_week_is_accepted(self, api_client, tenant):
+        forecast = ForecastFactory(year=YEAR, delivery_week=GRACE_WEEK, amount=3)
+        url = reverse("forecast-detail", kwargs={"pk": forecast.pk})
+
+        # The forecast service rebuilds the variation rows from the body's week,
+        # so the body names it as the page's row save does.
+        resp = api_client.patch(
+            url,
+            {"year": YEAR, "delivery_week": GRACE_WEEK, "amount": "7"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+
+    def test_delete_of_a_read_only_week_row_is_refused(self, api_client, tenant):
+        forecast = ForecastFactory(year=YEAR, delivery_week=READ_ONLY_WEEK)
+        url = reverse("forecast-detail", kwargs={"pk": forecast.pk})
+
+        _assert_refused(api_client.delete(url))
+        assert Forecast.objects.filter(pk=forecast.pk).exists()
+
+    def test_delete_in_the_grace_week_is_accepted(self, api_client, tenant):
+        forecast = ForecastFactory(year=YEAR, delivery_week=GRACE_WEEK)
+        url = reverse("forecast-detail", kwargs={"pk": forecast.pk})
+
+        resp = api_client.delete(url)
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        assert not Forecast.objects.filter(pk=forecast.pk).exists()
+
+
+@pytest.mark.django_db
+class TestForecastBulkPastWeek:
+    def test_copy_into_a_read_only_week_is_a_per_item_error(self, api_client, tenant):
+        """The copy writes the next week, so a forecast whose next week is
+        read-only is named in ``errors`` while one whose next week is writable is
+        still copied."""
+        into_read_only = ForecastFactory(year=YEAR, delivery_week=READ_ONLY_WEEK - 1)
+        into_grace = ForecastFactory(year=YEAR, delivery_week=READ_ONLY_WEEK)
+
+        resp = api_client.post(
+            reverse("forecast-bulk-copy-to-next-week"),
+            {"ids": [str(into_read_only.id), str(into_grace.id)]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        [error] = resp.data["errors"]
+        assert error["id"] == str(into_read_only.id)
+        assert error["code"] == "commissioning.past_week"
+        assert not Forecast.objects.filter(
+            share_article=into_read_only.share_article, delivery_week=READ_ONLY_WEEK
+        ).exists()
+        assert Forecast.objects.filter(
+            share_article=into_grace.share_article, delivery_week=GRACE_WEEK
+        ).exists()
+
+    def test_finalize_in_a_read_only_week_is_a_per_item_error(self, api_client, tenant):
+        read_only = ForecastFactory(year=YEAR, delivery_week=READ_ONLY_WEEK)
+        grace = ForecastFactory(year=YEAR, delivery_week=GRACE_WEEK)
+
+        resp = api_client.post(
+            reverse("bulk_finalize"),
+            {
+                "model": "forecast",
+                "app_label": "commissioning",
+                "ids": [str(read_only.id), str(grace.id)],
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_207_MULTI_STATUS, resp.data
+        assert resp.data["finalized_count"] == 1
+        [error] = resp.data["errors"]
+        assert error["id"] == str(read_only.id)
+        assert error["code"] == "commissioning.past_week"
+        read_only.refresh_from_db()
+        grace.refresh_from_db()
+        assert read_only.is_finalized is False
+        assert grace.is_finalized is True
+
+    def test_unfinalize_in_a_read_only_week_is_refused(self, api_client, tenant):
+        read_only = ForecastFactory(
+            year=YEAR, delivery_week=READ_ONLY_WEEK, is_finalized=True
+        )
+        grace = ForecastFactory(year=YEAR, delivery_week=GRACE_WEEK, is_finalized=True)
+
+        resp = api_client.post(
+            reverse("bulk_unfinalize"),
+            {
+                "model": "forecast",
+                "app_label": "commissioning",
+                "ids": [str(read_only.id), str(grace.id)],
+            },
+            format="json",
+        )
+
+        _assert_refused(resp)
+        read_only.refresh_from_db()
+        grace.refresh_from_db()
+        assert read_only.is_finalized is True
+        assert grace.is_finalized is True
+
+    def test_unfinalize_in_the_grace_week_is_accepted(self, api_client, tenant):
+        grace = ForecastFactory(year=YEAR, delivery_week=GRACE_WEEK, is_finalized=True)
+
+        resp = api_client.post(
+            reverse("bulk_unfinalize"),
+            {"model": "forecast", "app_label": "commissioning", "ids": [str(grace.id)]},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        grace.refresh_from_db()
+        assert grace.is_finalized is False
+
+
+@pytest.mark.django_db
+class TestHarvestBulkFinalizePastWeek:
+    @staticmethod
+    def _post(api_client, url_name: str, *harvests):
+        return api_client.post(
+            reverse(url_name),
+            {
+                "model": "harvest",
+                "app_label": "commissioning",
+                "ids": [str(harvest.id) for harvest in harvests],
+            },
+            format="json",
+        )
+
+    def test_finalize_in_a_read_only_week_is_a_per_item_error(self, api_client, tenant):
+        read_only = HarvestFactory(year=YEAR, delivery_week=READ_ONLY_WEEK)
+        grace = HarvestFactory(year=YEAR, delivery_week=GRACE_WEEK)
+
+        resp = self._post(api_client, "bulk_finalize", read_only, grace)
+
+        assert resp.status_code == status.HTTP_207_MULTI_STATUS, resp.data
+        assert resp.data["finalized_count"] == 1
+        [error] = resp.data["errors"]
+        assert error["id"] == str(read_only.id)
+        assert error["code"] == "commissioning.past_week"
+        read_only.refresh_from_db()
+        grace.refresh_from_db()
+        assert read_only.is_finalized is False
+        assert grace.is_finalized is True
+
+    def test_unfinalize_in_a_read_only_week_is_refused(self, api_client, tenant):
+        read_only = HarvestFactory(
+            year=YEAR, delivery_week=READ_ONLY_WEEK, is_finalized=True
+        )
+        grace = HarvestFactory(year=YEAR, delivery_week=GRACE_WEEK, is_finalized=True)
+
+        resp = self._post(api_client, "bulk_unfinalize", read_only, grace)
+
+        _assert_refused(resp)
+        read_only.refresh_from_db()
+        grace.refresh_from_db()
+        assert read_only.is_finalized is True
+        assert grace.is_finalized is True
+
+    def test_unfinalize_in_the_grace_week_is_accepted(self, api_client, tenant):
+        grace = HarvestFactory(year=YEAR, delivery_week=GRACE_WEEK, is_finalized=True)
+
+        resp = self._post(api_client, "bulk_unfinalize", grace)
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        grace.refresh_from_db()
+        assert grace.is_finalized is False

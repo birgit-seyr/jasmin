@@ -6,6 +6,7 @@ import {
   hasWeekBegun,
   isWeekInPast,
   mondayOfIsoWeek,
+  nextIsoWeek,
 } from "../weekRange";
 
 // The ISO weeks around New Year belong to the year they mostly lie in, not to
@@ -30,6 +31,17 @@ describe("mondayOfIsoWeek", () => {
     expect(day(mondayOfIsoWeek(2026, 53))).toBe("2026-12-28");
     expect(day(mondayOfIsoWeek(2027, 1))).toBe("2027-01-04");
     expect(day(mondayOfIsoWeek(2025, 10))).toBe("2025-03-03");
+  });
+});
+
+describe("nextIsoWeek", () => {
+  it.each([
+    [2026, 41, 2026, 42],
+    [2026, 52, 2026, 53],
+    [2026, 53, 2027, 1],
+    [2027, 52, 2028, 1],
+  ])("follows %i week %i with %i week %i", (year, week, nextYear, nextWeek) => {
+    expect(nextIsoWeek(year, week)).toEqual({ year: nextYear, week: nextWeek });
   });
 });
 

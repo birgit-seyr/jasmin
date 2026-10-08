@@ -35,7 +35,6 @@ import {
 } from "@shared/ui";
 import { AddShareArticleEntry } from "@features/commissioning/components";
 import {
-  currentWeek,
   useCurrency,
   useNoteColumn,
   useNumberFormat,
@@ -81,6 +80,7 @@ export default function DocumentationPurchase() {
     selectedYear,
     setSelectedYear,
     selectedWeek,
+    currentWeek,
     setSelectedWeek,
     isPast,
     isFetching,

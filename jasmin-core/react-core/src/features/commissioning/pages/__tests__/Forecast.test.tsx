@@ -8,6 +8,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { profileRenders, flushMicrotasks } from "@/test/profileRenders";
@@ -17,12 +18,27 @@ import { profileRenders, flushMicrotasks } from "@/test/profileRenders";
 const pageState = vi.hoisted(() => ({
   variationsLoading: false,
   listEnabled: [] as unknown[],
+  selectedRowKeys: [] as string[],
 }));
+
+const { t, notify, copyToNextWeek } = vi.hoisted(() => ({
+  t: vi.fn((k: string, fallback?: unknown) =>
+    typeof fallback === "string" ? fallback : k,
+  ),
+  notify: {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+  },
+  copyToNextWeek: vi.fn(),
+}));
+
+vi.mock("@shared/utils/notify", () => ({ default: notify }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (k: string, fallback?: unknown) =>
-      typeof fallback === "string" ? fallback : k,
+    t,
     i18n: { language: "de", changeLanguage: () => Promise.resolve() },
   }),
   Trans: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
@@ -34,7 +50,7 @@ vi.mock("react-i18next", () => ({
 // enabled it, and returns a fully-resolved shape.
 vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
   commissioningBulkFinalizeCreate: vi.fn().mockResolvedValue({}),
-  commissioningForecastBulkCopyToNextWeekCreate: vi.fn().mockResolvedValue({}),
+  commissioningForecastBulkCopyToNextWeekCreate: copyToNextWeek,
   commissioningForecastCreate: vi.fn().mockResolvedValue({}),
   commissioningForecastDestroy: vi.fn().mockResolvedValue({}),
   commissioningForecastPartialUpdate: vi.fn().mockResolvedValue({}),
@@ -63,13 +79,9 @@ vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
 vi.mock("@hooks/index", async () => {
   const { makeUseTenantMock } = await import("@/test/tenantMock");
   const tenant = makeUseTenantMock();
-  const { useYearWeekState, currentYear, currentWeek } = await import(
-    "@hooks/useYearWeekState"
-  );
+  const { useYearWeekState } = await import("@hooks/useYearWeekState");
   return {
     useYearWeekState,
-    currentYear,
-    currentWeek,
     useTenant: () => tenant,
     useIsMobile: () => false,
     useNoteColumn: () => ({
@@ -80,7 +92,7 @@ vi.mock("@hooks/index", async () => {
     // its second variations query are skipped.
     useActiveShareOptions: () => ({ activeShareOptions: {} }),
     useTableRowSelection: () => ({
-      selectedRowKeys: [],
+      selectedRowKeys: pageState.selectedRowKeys,
       setSelectedRowKeys: vi.fn(),
       onSelectedRowsChange: vi.fn(),
       rowSelection: { type: "checkbox" },
@@ -182,6 +194,7 @@ vi.mock("@features/commissioning/components/mobileCards", () => ({
 
 // ── Imports under test ───────────────────────────────────────────────────────
 
+import i18n from "@shared/i18n";
 import Forecast from "../Forecast";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -200,6 +213,10 @@ function makeQueryClient() {
 beforeEach(() => {
   pageState.variationsLoading = false;
   pageState.listEnabled = [];
+  pageState.selectedRowKeys = [];
+  t.mockClear();
+  Object.values(notify).forEach((fn) => fn.mockReset());
+  copyToNextWeek.mockReset();
 });
 
 describe("Forecast (smoke)", () => {
@@ -255,5 +272,65 @@ describe("Forecast (smoke)", () => {
     await flushMicrotasks(50);
 
     expect(profiler.onRender.mock.calls.length).toBeLessThan(80);
+  });
+});
+
+describe("Forecast copy to next week", () => {
+  async function copySelected(errors: unknown[]) {
+    pageState.selectedRowKeys = ["f1", "f2"];
+    copyToNextWeek.mockResolvedValue({ created: 2 - errors.length, errors });
+
+    render(
+      <QueryClientProvider client={makeQueryClient()}>
+        <Forecast />
+      </QueryClientProvider>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", {
+        name: "commissioning.copy_selected_to_next_week",
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: "common.yes" }));
+    expect(copyToNextWeek).toHaveBeenCalledWith({ ids: ["f1", "f2"] });
+  }
+
+  const skippedWarning = () =>
+    t.mock.calls.find(([key]) => key === "table.bulk_partial_skipped");
+
+  it("names a skipped forecast's reason in its translated error code", async () => {
+    await copySelected([
+      {
+        id: "f1",
+        error: "This week is in the past.",
+        code: "commissioning.past_week",
+      },
+    ]);
+
+    expect(notify.warning).toHaveBeenCalledWith("table.bulk_partial_skipped");
+    expect(skippedWarning()?.[1]).toEqual({
+      skipped: 1,
+      total: 2,
+      reason: i18n.t("errors.commissioning.past_week"),
+    });
+  });
+
+  it("keeps the server's reason when the skip carries no code", async () => {
+    await copySelected([{ id: "f1", error: "Already planned next week" }]);
+
+    expect(notify.warning).toHaveBeenCalledWith("table.bulk_partial_skipped");
+    expect(skippedWarning()?.[1]).toEqual({
+      skipped: 1,
+      total: 2,
+      reason: "Already planned next week",
+    });
+  });
+
+  it("warns about nothing when no forecast was skipped", async () => {
+    await copySelected([]);
+
+    expect(notify.warning).not.toHaveBeenCalled();
+    expect(skippedWarning()).toBeUndefined();
   });
 });

@@ -19,15 +19,20 @@ import { ExplainerText } from "@shared/ui";
 import { Select } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { currentWeek, useYearWeekState } from "@hooks/index";
+import { useYearWeekState } from "@hooks/index";
 
 // The aggregation rows carry no server id (grouped by article/size/unit), so a
 // stable synthetic key is minted per row for the table.
 type DocumentationRow = DocumentationAggregationItem & TableRecord;
 
 export default function DocumentationOverview() {
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    currentWeek,
+  } = useYearWeekState();
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedShareArticle, setSelectedShareArticle] = useState<
     string | null

@@ -18,7 +18,6 @@ import {
   useDeliveryDayLabel,
   useInvalidateAfterTableMutation,
   useIsMobile,
-  currentWeek,
   useNoteColumn,
   useNumberFormat,
   useVegetableSizeOptions,
@@ -115,8 +114,13 @@ export default function PackingListBulk() {
     | "MIXED";
   const showSize = Boolean(getSetting("show_size_column"));
 
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    currentWeek,
+  } = useYearWeekState();
   // Backend day numbers run 0 = Monday … 6 = Sunday.
   const [selectedDeliveryDay, setSelectedDeliveryDay] = useState<number | null>(
     () => dayjs().isoWeekday() - 1,
@@ -200,6 +204,7 @@ export default function PackingListBulk() {
     [
       selectedYear,
       selectedWeek,
+      currentWeek,
       selectedDeliveryDay,
       isMobile,
       dateFormat,
@@ -210,7 +215,7 @@ export default function PackingListBulk() {
   const calculateDeliveryDate = useCallback(
     (deliveryDayNum: number | null) =>
       deliveryDayLabel(selectedYear, selectedWeek ?? currentWeek, deliveryDayNum),
-    [deliveryDayLabel, selectedYear, selectedWeek],
+    [deliveryDayLabel, selectedYear, selectedWeek, currentWeek],
   );
 
   const [selectedDeliveryStation, setSelectedDeliveryStation] =

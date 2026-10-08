@@ -31,6 +31,7 @@ import type {
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import { isWeekInPast } from "@shared/utils";
 import { useInvalidateAfterTableMutation } from "@hooks/useInvalidateAfterTableMutation";
+import { useYearWeekState } from "@hooks/useYearWeekState";
 
 /**
  * A documentation-summary row as the pages consume it: the API row plus the
@@ -39,10 +40,6 @@ import { useInvalidateAfterTableMutation } from "@hooks/useInvalidateAfterTableM
  */
 export type DocumentationSummaryRecord = DocumentationSummaryRow &
   TableRecord & { next_week_theoretical?: number };
-
-const currentYear = dayjs().isoWeekYear();
-const currentWeek = dayjs().isoWeek();
-const currentDay = dayjs().isoWeekday();
 
 export type DocumentationModel =
   | "harvest"
@@ -76,10 +73,16 @@ export function useDocumentationSummaryPage({
   extraListParams,
   queryEnabled = true,
 }: UseDocumentationSummaryPageOptions) {
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(currentWeek);
-  const [selectedDay, setSelectedDay] = useState<number | null>(
-    withDay ? currentDay - 1 : null,
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    currentWeek,
+  } = useYearWeekState();
+  // Backend day numbers run 0 = Monday … 6 = Sunday.
+  const [selectedDay, setSelectedDay] = useState<number | null>(() =>
+    withDay ? dayjs().isoWeekday() - 1 : null,
   );
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
@@ -155,6 +158,7 @@ export function useDocumentationSummaryPage({
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
+    currentWeek,
     selectedDay,
     setSelectedDay,
     isPast,

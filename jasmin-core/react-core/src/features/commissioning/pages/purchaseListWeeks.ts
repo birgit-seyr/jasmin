@@ -1,17 +1,4 @@
 import type { DocumentationSummaryRecord } from "@features/commissioning/hooks/useDocumentationSummaryPage";
-import { mondayOfIsoWeek } from "@shared/utils";
-
-/**
- * The ISO week after `week` of ISO year `year`. A year with 53 ISO weeks
- * reaches week 53 before the next year's week 1.
- */
-export function nextIsoWeek(
-  year: number,
-  week: number,
-): { year: number; week: number } {
-  const monday = mondayOfIsoWeek(year, week).add(1, "week");
-  return { year: monday.isoWeekYear(), week: monday.isoWeek() };
-}
 
 // Server ids are alphanumeric, so none can start with this prefix.
 const NEXT_WEEK_ONLY_ID_PREFIX = "next_week_only:";

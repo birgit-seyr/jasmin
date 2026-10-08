@@ -9,9 +9,9 @@
  * library, the PDF template and the browser download are stubbed, so no real
  * PDF is rendered.
  *
- * The clock is frozen on Tuesday 6 October 2026 (ISO week 41). The week state
- * reads "today" once when its module loads, so the clock is set before the
- * imports run as well as before every test.
+ * The clock is frozen on Tuesday 6 October 2026 (ISO week 41), before the
+ * imports run as well as before every test. The week state reads "today" when
+ * the page mounts.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -228,6 +228,7 @@ const UNIT = "commissioning.unit";
 const SIZE = "commissioning.size";
 const TOTAL = "commissioning.total_amount";
 const NO_DATA = "table.no_data";
+const LOAD_FAILED = "commissioning.share_option_load_failed";
 const KG = "commissioning.units.kg";
 const PIECES = "commissioning.units.pcs";
 const BUNCH = "commissioning.units.bunch";
@@ -765,9 +766,10 @@ describe("CommissioningListPacking without a plan", () => {
     expect(downloadButton()).toBeDisabled();
   });
 
-  it("lists none of a share option's articles when its plan cannot be loaded, and still lists the others", async () => {
+  it("says which share option's plan failed to load, keeps the download disabled and still lists the others", async () => {
+    let vegetablesFail = true;
     api.planning.mockImplementation(async (params: PlanningParams) => {
-      if (params.share_option === VEGETABLES && params.delivery_week === 41) {
+      if (vegetablesFail && params.share_option === VEGETABLES && params.delivery_week === 41) {
         throw new Error("Network Error");
       }
       return answerFromFarm(params);
@@ -776,12 +778,18 @@ describe("CommissioningListPacking without a plan", () => {
 
     expect(await screen.findByText("Apples")).toBeInTheDocument();
     await waitFor(() => expect(anyTableBusy()).toBe(false));
-    expect(rowsOf(tableOf(VEGETABLES_HEADING))).toEqual([]);
-    expect(screen.queryByText("Carrots")).not.toBeInTheDocument();
+    const vegetables = tableOf(VEGETABLES_HEADING);
+    expect(rowsOf(vegetables)).toEqual([]);
+    expect(within(vegetables).getByRole("alert")).toHaveTextContent(LOAD_FAILED);
+    expect(within(tableOf(FRUIT_HEADING)).queryByRole("alert")).not.toBeInTheDocument();
+    expect(downloadButton()).toBeDisabled();
 
-    await userEvent.click(arrow(WEEK, "common.next"));
+    vegetablesFail = false;
+    await userEvent.click(within(vegetables).getByRole("button", { name: "table.retry" }));
 
-    expect(await screen.findByText("Beetroot")).toBeInTheDocument();
+    expect(await screen.findByText("Carrots")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await waitFor(() => expect(downloadButton()).toBeEnabled());
   });
 });
 

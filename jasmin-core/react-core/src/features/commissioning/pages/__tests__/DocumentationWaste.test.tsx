@@ -9,8 +9,8 @@
  * "add article" is a stub.
  *
  * The clock is frozen on Tuesday 6 October 2026 (ISO week 41, day number 1).
- * The page's week and day state read "today" once when their modules load, so
- * the clock is set before the imports run as well as before every test.
+ * The clock is set before the imports run as well as before every test; the
+ * page reads "today" when it mounts, so a test can move it before rendering.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -400,6 +400,15 @@ describe("DocumentationWaste loading", () => {
     expect(screen.queryByText("Potatoes")).not.toBeInTheDocument();
     expect(screen.queryByText("table.past_week_readonly")).not.toBeInTheDocument();
     expect(screen.getByText("explainers.waste")).toBeInTheDocument();
+  });
+
+  // The module loaded in week 41 of 2026; the page reads the date when it opens.
+  it("opens on today's week and day when it opens after New Year", async () => {
+    vi.setSystemTime(new Date(2027, 0, 7, 12, 0));
+    renderPage();
+
+    await waitFor(() => expect(api.list).toHaveBeenCalled());
+    expect(lastListRequest()).toEqual({ year: 2027, delivery_week: 1, day_number: 3, is_past: false });
   });
 
   it("loads no waste until the storages are known", async () => {

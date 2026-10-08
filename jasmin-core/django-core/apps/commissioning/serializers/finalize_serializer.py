@@ -66,7 +66,10 @@ class BulkFinalizeResponseSerializer(serializers.Serializer):
     total_requested = serializers.IntegerField()
     errors = serializers.ListField(
         child=serializers.DictField(),
-        help_text="List of errors encountered during finalization",
+        help_text=(
+            "Errors encountered during finalization: the id, the error and, for "
+            "a domain refusal, its stable code."
+        ),
     )
 
 

@@ -9,8 +9,8 @@
  * modal and the browser download are stubbed.
  *
  * The clock is frozen on Tuesday 6 October 2026 (ISO week 41, day number 1).
- * The page's week and day state read "today" once when their modules load, so
- * the clock is set before the imports run as well as before every test.
+ * The clock is set before the imports run as well as before every test; the
+ * page reads "today" when it mounts.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

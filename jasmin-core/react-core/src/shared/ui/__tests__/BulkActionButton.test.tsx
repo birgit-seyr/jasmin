@@ -22,6 +22,7 @@ const { notify, axiosMock } = vi.hoisted(() => ({
 vi.mock("@shared/utils", () => ({ notify }));
 vi.mock("@shared/services/api", () => ({ default: axiosMock }));
 
+import i18n from "@shared/i18n";
 import BulkActionButton from "../BulkActionButton";
 
 beforeEach(() => {
@@ -110,6 +111,48 @@ describe("BulkActionButton", () => {
     // The warning replaces the green toast; the caller still refreshes.
     expect(notify.success).not.toHaveBeenCalled();
     expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  async function clickWithSkips(errors: unknown[]) {
+    const apiFunction = vi.fn().mockResolvedValue({ updated: 0, errors });
+    render(
+      <BulkActionButton
+        selectedIds={["a", "b"]}
+        apiFunction={apiFunction}
+        buttonText="Finalize"
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /finalize/i }));
+  }
+
+  it("names a skipped item's reason in its translated error code", async () => {
+    await clickWithSkips([
+      {
+        id: "a",
+        error: "This week is in the past.",
+        code: "commissioning.past_week",
+      },
+    ]);
+
+    expect(notify.warning).toHaveBeenCalledWith(
+      i18n.t("table.bulk_partial_skipped", {
+        skipped: 1,
+        total: 2,
+        reason: i18n.t("errors.commissioning.past_week"),
+      }),
+    );
+    expect(notify.warning.mock.calls[0][0]).not.toContain(
+      "This week is in the past.",
+    );
+  });
+
+  it("keeps the server's reason when the code has no translation", async () => {
+    await clickWithSkips([
+      { id: "a", error: "Something odd happened", code: "no_such.code" },
+    ]);
+
+    expect(notify.warning.mock.calls[0][0]).toContain("Something odd happened");
   });
 
   it("warns and does not hit the API when selection is empty even if it could click", async () => {

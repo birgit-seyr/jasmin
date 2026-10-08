@@ -48,7 +48,6 @@ import {
 } from "@features/commissioning/components/mobileCards";
 import { PackingBoxesMatrixPDFGenerator } from "@features/commissioning/pdfs";
 import {
-  currentWeek,
   useIsMobile,
   useNumberFormat,
   useTenant,
@@ -63,8 +62,6 @@ import {
   getDayName,
   isWeekInPast,
 } from "@shared/utils";
-
-const currentDay = dayjs().isoWeekday();
 
 /** The matrix the page shows: the boxes of each combination, or — for a farm
  *  that uploads its weekly share amounts — the amounts per share. */
@@ -148,7 +145,7 @@ function usePackingScope({
 }
 
 /**
- * Packing boxes MATRIX (v2 of PackingListBoxes).
+ * Packing boxes MATRIX.
  *
  * Columns are the distinct box COMBINATIONS that actually occur — a base box
  * (non-additional share) plus the add-ons ("Zusatz") packed into it — derived
@@ -157,19 +154,18 @@ function usePackingScope({
  * share_articles; each cell is the per-box quantity of that article in that
  * combination. The pinned first row is the box count per combination.
  *
- * Scope + granularity mirror PackingListBoxes: the tenant's ShareContent
- * granularity decides which scope selector is needed — nothing when every day
- * has the same amounts (days_ok), a tour selector when amounts are tour- but
- * not day-consistent, and a required delivery-station selector otherwise. The
- * count row follows whichever scope is active.
+ * Scope: the tenant's ShareContent granularity decides which scope selector
+ * is needed — nothing when every day has the same amounts (days_ok), a tour
+ * selector when amounts are tour- but not day-consistent, and a required
+ * delivery-station selector otherwise. The count row follows whichever scope
+ * is active.
  */
 export default function PackingListBoxes() {
   const { t } = useTranslation();
   const { getSetting } = useTenant();
   const isMobile = useIsMobile();
 
-  // Shared identity columns (article / unit / size + note) — the SAME left
-  // columns PackingListBoxes uses.
+  // Shared identity columns (article / unit / size + note).
   const { baseColumns, noteColumn, withUnitSizeLabels } =
     usePackingBaseColumns();
 
@@ -187,10 +183,15 @@ export default function PackingListBoxes() {
   ) as boolean;
 
   // --- Filters (scope). No ShareType selector — all share types at once. ---
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    currentWeek,
+  } = useYearWeekState();
   const [selectedDeliveryDay, setSelectedDeliveryDay] = useState<number | null>(
-    currentDay - 1,
+    () => dayjs().isoWeekday() - 1,
   );
 
   const isPast = useMemo(
@@ -275,6 +276,7 @@ export default function PackingListBoxes() {
       [
         selectedYear,
         selectedWeek,
+        currentWeek,
         selectedDeliveryDay,
         needsStation,
         selectedDeliveryStation,

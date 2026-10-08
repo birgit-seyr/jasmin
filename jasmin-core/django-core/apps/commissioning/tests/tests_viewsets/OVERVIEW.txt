@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-1192 tests | 229 test classes | 41 files
+1212 tests | 233 test classes | 42 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 Counts are collected cases, so a parametrized method counts once per case.
@@ -227,7 +227,7 @@ test_delivery_viewsets.py (52 tests)
                                                ContactEntity); resending the stored IBAN, other edits and no or a
                                                blank IBAN prompt for nothing
 
-test_documentation_past_week_guard.py (15 tests)
+test_documentation_past_week_guard.py (29 tests)
 ────────────────────────────────────────────────
   Clock frozen on Monday of week 41/2026: week 39 is read-only, week 40 the grace week.
   TestHarvestPastWeek                      7   create / update / delete / bulk set-as-expected in a read-only
@@ -237,8 +237,20 @@ test_documentation_past_week_guard.py (15 tests)
                                                week → 409; the grace week still creates
   TestAdditionalTheoreticalPastWeek        3   add in a read-only week → 409, in the grace week → 201; an
                                                update of an entry in a read-only week → 409
+  TestForecastPastWeek                     7   create / update / delete in a read-only week → 409, writes
+                                               nothing; moving a row into one is refused; the grace week
+                                               still creates, updates and deletes
+  TestForecastBulkPastWeek                 4   copy into a read-only next week and bulk finalize in a
+                                               read-only week → per-item error with the past-week code
+                                               while the rest is written; bulk unfinalize with a
+                                               read-only-week row → 409, nothing unfinalized; the grace
+                                               week unfinalizes
+  TestHarvestBulkFinalizePastWeek          3   generic bulk finalize in a read-only week → per-item error
+                                               with the past-week code while the grace week finalizes; bulk
+                                               unfinalize with a read-only-week row → 409, nothing
+                                               unfinalized; the grace week unfinalizes
 
-test_documentation_viewsets.py (67 tests)
+test_documentation_viewsets.py (71 tests)
 ─────────────────────────────────────────
   TestPlotViewSet                          6   list, is_active filter, create, retrieve, delete
   TestWasteViewSet                         4   list; create with a page-level storage; plain storage required
@@ -246,6 +258,9 @@ test_documentation_viewsets.py (67 tests)
   TestPurchaseViewSet                      3   list; create with a page-level storage
   TestForecastViewSet                      4   week scope required, list, filter by year/week
   TestForecastInvalidVariation             2   unknown variation on create / update → 404
+  TestForecastPartialUpdate                4   a PATCH of only the amount or the note succeeds; one without
+                                               variation / offer-group keys keeps both selections; a
+                                               variation flag sent as false still removes it
   TestForecastBulkCopyToNextWeek           6   empty ids → 400, unknown ids → 404, copy, a partial selection
                                                copies the rest and names the missing ids; an already planned
                                                forecast is named in errors, a mixed batch names every skip in
@@ -272,6 +287,11 @@ test_documentation_viewsets.py (67 tests)
                                                range still exports
   TestBulkSetAsExpectedAmountPrecision     3   the confirmed harvest / purchase amount is stored exactly; one
                                                finer than the 2dp column is refused
+
+test_forecast_query_count.py (2 tests) — frozen clock
+─────────────────────────────────────────────────────
+  (module-level)                           2   forecast list is scale-invariant; the serializer's variation /
+                                               offer-group flags cost no query per link
 
 test_imports_viewsets.py (29 tests)
 ───────────────────────────────────

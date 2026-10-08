@@ -11,6 +11,7 @@ from drf_spectacular.utils import (
     extend_schema,
     inline_serializer,
 )
+from isoweek import Week
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -25,6 +26,7 @@ from ..errors import (
     CommissioningError,
     CrateNotFound,
     ForecastNotFound,
+    PastWeekError,
     PlotInUse,
     ShareArticleNotFound,
 )
@@ -346,6 +348,7 @@ class ForecastViewSet(BaseArchivableViewSet):
         from ..services.snapshot_service import SnapshotService
         from ..services.theoretical_objects import recalculate_actual_corrections
 
+        refuse_read_only_week(instance.year, instance.delivery_week)
         share_contents = ShareContent.objects.filter(forecast=instance)
         # Wide capture (both movement halves) plus this Forecast's own
         # theoretical-harvest movements: TheoreticalHarvest rows linked directly
@@ -408,6 +411,7 @@ class ForecastViewSet(BaseArchivableViewSet):
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        _refuse_read_only_weeks(serializer.validated_data)
 
         forecast = self.forecast_service.create_forecast_with_related_objects(
             validated_data=serializer.validated_data
@@ -424,6 +428,7 @@ class ForecastViewSet(BaseArchivableViewSet):
 
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+        _refuse_read_only_weeks(serializer.validated_data, instance)
 
         forecast = self.forecast_service.update_forecast_with_related_objects(
             instance=instance, validated_data=serializer.validated_data
@@ -435,8 +440,9 @@ class ForecastViewSet(BaseArchivableViewSet):
     @extend_schema(
         description=(
             "Copy selected forecasts to the next delivery week. Ids that match "
-            "no forecast, and forecasts the next week already plans, are "
-            "reported in `errors` while the rest are still copied; only a "
+            "no forecast, forecasts the next week already plans, and forecasts "
+            "whose next week is read-only (`code` `commissioning.past_week`) "
+            "are reported in `errors` while the rest are still copied; only a "
             "request where none of the ids match is a 404."
         ),
         request=BulkIdsRequestSerializer,
@@ -451,6 +457,8 @@ class ForecastViewSet(BaseArchivableViewSet):
                             fields={
                                 "id": drf_serializers.CharField(),
                                 "error": drf_serializers.CharField(),
+                                # Only on a refusal that has a stable code.
+                                "code": drf_serializers.CharField(required=False),
                             },
                         )
                     ),
@@ -479,8 +487,15 @@ class ForecastViewSet(BaseArchivableViewSet):
 
         found_ids = set()
         already_planned_ids = set()
+        read_only_refusals: dict[str, PastWeekError] = {}
         for instance in forecast_instances:
             found_ids.add(str(instance.id))
+            next_week = Week(instance.year, instance.delivery_week) + 1
+            try:
+                refuse_read_only_week(next_week.year, next_week.week)
+            except PastWeekError as exc:
+                read_only_refusals[str(instance.id)] = exc
+                continue
             # The service returns ``None`` instead of a copy when the next week
             # already holds a twin (same article / unit / size), so the return
             # value is what says whether a row was actually written.
@@ -501,6 +516,11 @@ class ForecastViewSet(BaseArchivableViewSet):
         for selected_id in dict.fromkeys(selected_ids):
             if selected_id not in found_ids:
                 errors.append({"id": selected_id, "error": "Forecast not found"})
+            elif selected_id in read_only_refusals:
+                refusal = read_only_refusals[selected_id]
+                errors.append(
+                    {"id": selected_id, "error": refusal.message, "code": refusal.code}
+                )
             elif selected_id in already_planned_ids:
                 errors.append(
                     {

@@ -1,4 +1,4 @@
-import { Modal } from "antd";
+import { Modal, Spin } from "antd";
 import ModalCloseFooter from "@shared/modals/ModalCloseFooter";
 import type { Key, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -345,13 +345,7 @@ export default function BackupModal({
       destroyOnHidden
       footer={[<ModalCloseFooter key="close" onClose={onClose} />]}
     >
-      <p
-        style={{
-          whiteSpace: "pre-line",
-          color: "var(--color-text-secondary)",
-          marginBottom: "1em",
-        }}
-      >
+      <p className="modal-intro">
         {t("commissioning.backup_modal_info")}
       </p>
       {data && backupData ? (
@@ -369,8 +363,8 @@ export default function BackupModal({
           />
         </div>
       ) : (
-        <div style={{ textAlign: "center", padding: "2em" }}>
-          {t("common.loading")}...
+        <div className="loading-placeholder">
+          <Spin size="large" />
         </div>
       )}
     </Modal>

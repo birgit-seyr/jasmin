@@ -29,7 +29,6 @@ import { AddShareArticleEntry } from "@features/commissioning/components";
 // ListPDFGenerator for the click-to-load architecture.
 import PurchaseListPDFGenerator from "@features/commissioning/pdfs/exports/PurchaseListPDFGenerator";
 import {
-  currentWeek,
   useInvalidateAfterTableMutation,
   useIsMobile,
   useNoteColumn,
@@ -49,11 +48,11 @@ import {
   formatWeekLabel,
   generatePdfFilename,
   isWeekInPast,
+  nextIsoWeek,
 } from "@shared/utils";
 import {
   isNextWeekOnlyRowKey,
   mergePurchaseListRows,
-  nextIsoWeek,
 } from "./purchaseListWeeks";
 
 const shareArticleFilters = {
@@ -63,7 +62,7 @@ const shareArticleFilters = {
 };
 
 export default function PurchaseList() {
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek, currentWeek } =
     useYearWeekState();
   const [selectedReseller, setSelectedReseller] = useState<string | null>(null);
   const isPast = useMemo(
@@ -130,7 +129,7 @@ export default function PurchaseList() {
         seller: selectedReseller ?? undefined,
         is_preparation_lists: true,
       }),
-      [selectedYear, selectedWeek, selectedReseller, isPast],
+      [selectedYear, selectedWeek, currentWeek, selectedReseller, isPast],
     );
 
   const nextWeekParams =
@@ -144,7 +143,7 @@ export default function PurchaseList() {
         seller: selectedReseller ?? undefined,
         is_preparation_lists: true,
       };
-    }, [selectedYear, selectedWeek, selectedReseller]);
+    }, [selectedYear, selectedWeek, currentWeek, selectedReseller]);
 
   const { data: rawCurrentWeek, isFetching: currentWeekFetching } =
     useCommissioningDocumentationSummarySummaryRetrieve(listParams);
@@ -330,7 +329,7 @@ export default function PurchaseList() {
         note: typeof note === "string" && note.trim() ? note : null,
       };
     },
-    [selectedYear, selectedWeek, selectedReseller],
+    [selectedYear, selectedWeek, currentWeek, selectedReseller],
   );
 
   const customEdit = useCallback((record: TableRecord, form: FormInstance) => {

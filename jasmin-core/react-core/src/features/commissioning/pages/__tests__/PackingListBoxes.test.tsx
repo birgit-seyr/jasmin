@@ -8,9 +8,9 @@
  * library, the PDF template and the browser download are stubbed, so no real
  * PDF is rendered.
  *
- * The clock is frozen on Tuesday 6 October 2026 (ISO week 41). The page and
- * the week state read "today" once when their modules load, so the clock is
- * set before the imports run as well as before every test.
+ * The clock is frozen on Tuesday 6 October 2026 (ISO week 41), before the
+ * imports run as well as before every test. The page reads "today" when it
+ * mounts, so a test that moves the clock before rendering opens on that day.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -583,6 +583,26 @@ describe("PackingListBoxes choosing the day", () => {
     expect(shownIn(selectNamed(DAY))).toBe("commissioning.delivery_day Monday, 05.10.2026");
     expect(api.granularity).toHaveBeenLastCalledWith(granularityFor(MONDAY));
     expect(lastBoxesRequest()).toEqual(requestFor(MONDAY));
+  });
+
+  // The module loaded on Tuesday of week 41, so these show that the page
+  // reads the date when it opens.
+  it("opens on today's delivery day when it opens later that week", async () => {
+    vi.setSystemTime(new Date(2026, 9, 9, 12, 0));
+    renderPage();
+
+    expect(await screen.findByText("Pumpkins")).toBeInTheDocument();
+    expect(shownIn(selectNamed(DAY))).toBe(FRIDAY_LABEL);
+    expect(lastBoxesRequest()).toEqual(requestFor(FRIDAY));
+  });
+
+  it("opens on today's week when it opens in a later week", async () => {
+    vi.setSystemTime(new Date(2026, 9, 13, 12, 0));
+    renderPage();
+
+    await waitFor(() => expect(api.boxesMatrix).toHaveBeenCalled());
+    expect(shownIn(selectNamed(WEEK))).toBe("commissioning.week_short 42");
+    expect(lastBoxesRequest()).toEqual(requestFor(TUESDAY, { delivery_week: 42 }));
   });
 
   it("lists another day's boxes, named after that day on paper, when the day changes", async () => {

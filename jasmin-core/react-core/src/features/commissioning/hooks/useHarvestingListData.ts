@@ -13,7 +13,6 @@
  */
 
 import { useQueryClient } from "@tanstack/react-query";
-import dayjs from "dayjs";
 import { activeAtDateForWeek, formatAmountForUnit } from "@shared/utils";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -35,8 +34,6 @@ import { useVegetableSizeOptions } from "@hooks/useVegetableSizeOptions";
 import { useUnitOptions } from "@hooks/useUnitOptions";
 import type { ShareDeliveryDayOption } from "./useShareDeliveryDays";
 import { useShareDeliveryDays } from "./useShareDeliveryDays";
-
-const currentWeekFallback = dayjs().isoWeek();
 
 function parseNumber(value: unknown): number {
   const num = parseFloat(value as string);
@@ -72,6 +69,7 @@ export function useHarvestingListData({
   selectedYear,
   selectedWeek,
   selectedDay,
+  fallbackWeek,
   isPast,
   isGardenerView,
   roundUpToFullPU,
@@ -79,6 +77,8 @@ export function useHarvestingListData({
   selectedYear: number;
   selectedWeek: number | null;
   selectedDay: number | null;
+  /** The week to ask for while no week is selected: today's, read at mount. */
+  fallbackWeek: number;
   isPast: boolean;
   isGardenerView: boolean;
   roundUpToFullPU: boolean;
@@ -92,7 +92,7 @@ export function useHarvestingListData({
   // ── Related days + variations totals for the selected harvest day ──
 
   const { getRelatedDays, isLoaded: daysLoaded } = useCurrentDays(
-    selectedWeek ?? currentWeekFallback,
+    selectedWeek ?? fallbackWeek,
     selectedYear,
   );
 
@@ -127,7 +127,7 @@ export function useHarvestingListData({
     if (ids.length === 0) return undefined;
     return {
       year: selectedYear,
-      delivery_week: selectedWeek ?? currentWeekFallback,
+      delivery_week: selectedWeek ?? fallbackWeek,
       delivery_day: ids,
       sending_share_type_id: true,
       physical_share_type_variations: true,
@@ -137,6 +137,7 @@ export function useHarvestingListData({
     shareDeliveryDays,
     selectedYear,
     selectedWeek,
+    fallbackWeek,
   ]);
 
   // Same totals the on-screen ``VariationsTotalsCard`` shows; pulled here

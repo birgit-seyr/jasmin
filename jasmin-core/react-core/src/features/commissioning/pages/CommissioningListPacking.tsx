@@ -1,3 +1,4 @@
+import { Alert, Button } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -11,7 +12,6 @@ import {
 import { CommissioningListPackingPDFGenerator } from "@features/commissioning/pdfs";
 import { SharesDeliveryDaySelector } from "@features/commissioning/selectors";
 import {
-  currentWeek,
   useIsMobile,
   useNumberFormat,
   useTenant,
@@ -106,10 +106,12 @@ interface ShareOptionPackingTableProps {
   columns: EditableColumnConfig<TableRecord>[];
   year: number;
   week: number | null;
+  /** Today's week, read when the page mounted. */
+  currentWeek: number;
   deliveryDayId: string | null;
   /** Reports this option's resolved rows up to the parent so they can be
    *  collected into the PDF (each table owns its own fetch) — `null` while
-   *  they are loading. */
+   *  they are loading or after their load failed. */
   onRowsChange?: (shareOption: string, rows: PackingRow[] | null) => void;
 }
 
@@ -126,9 +128,11 @@ function ShareOptionPackingTable({
   columns,
   year,
   week,
+  currentWeek,
   deliveryDayId,
   onRowsChange,
 }: ShareOptionPackingTableProps) {
+  const { t } = useTranslation();
   const listParams = useMemo<CommissioningHarvestSharePlanningListParams>(
     () => ({
       year,
@@ -141,13 +145,16 @@ function ShareOptionPackingTable({
       // page reads it.
       is_past: isWeekInPast(year, week),
     }),
-    [year, week, shareOption],
+    [year, week, currentWeek, shareOption],
   );
 
-  const { data: rawData, isFetching } =
+  const { data: rawData, isFetching, isError, refetch } =
     useCommissioningHarvestSharePlanningList<
       (HarvestSharePlanningRow & Record<string, unknown>)[]
     >(listParams, { query: { enabled: week !== null } });
+  // A failed refetch keeps the rows it already has; only a plan never loaded
+  // is missing from the list.
+  const loadFailed = isError && rawData === undefined;
 
   const rows = useMemo(
     () => buildRows(rawData, deliveryDayId),
@@ -155,13 +162,29 @@ function ShareOptionPackingTable({
   );
 
   useEffect(() => {
-    onRowsChange?.(shareOption, isFetching ? null : rows);
-  }, [shareOption, rows, isFetching, onRowsChange]);
+    onRowsChange?.(shareOption, isFetching || loadFailed ? null : rows);
+  }, [shareOption, rows, isFetching, loadFailed, onRowsChange]);
 
   return (
     <section className="commissioning-list-packing-section">
       {showHeading && (
         <h3 className="commissioning-list-packing-section__heading">{label}</h3>
+      )}
+      {loadFailed && !isFetching && (
+        <Alert
+          type="error"
+          showIcon
+          message={t("commissioning.share_option_load_failed", {
+            option: label,
+          })}
+          description={t("table.load_failed_hint")}
+          action={
+            <Button size="small" onClick={() => refetch()}>
+              {t("table.retry")}
+            </Button>
+          }
+          className="editable-table-banner"
+        />
       )}
       <EditableTable
         key={`${year}-${week}-${deliveryDayId}-${shareOption}`}
@@ -191,8 +214,13 @@ export default function CommissioningListPacking() {
   // One table per ACTIVE share option — this list is the total of everything
   // needed for packing AND bulk, so it covers every option (bulk or boxed),
   // not just the bulk-packed ones.
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    currentWeek,
+  } = useYearWeekState();
   const [selectedDeliveryDayId, setSelectedDeliveryDayId] = useState<
     string | null
   >(null);
@@ -321,7 +349,8 @@ export default function CommissioningListPacking() {
     ],
   );
 
-  // The PDF covers every share option, so it waits for all of their rows.
+  // The PDF covers every share option, so it waits for all of their rows; a
+  // table whose plan failed to load reports none and says so itself.
   const allRowsLoaded =
     !shareOptionsLoading &&
     shareOptionValues.every((value) => Array.isArray(rowsByOption[value]));
@@ -379,6 +408,7 @@ export default function CommissioningListPacking() {
           columns={columns}
           year={selectedYear}
           week={selectedWeek}
+          currentWeek={currentWeek}
           deliveryDayId={selectedDeliveryDayId}
           onRowsChange={handleRowsChange}
         />

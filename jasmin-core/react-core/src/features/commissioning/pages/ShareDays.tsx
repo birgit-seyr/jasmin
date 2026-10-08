@@ -1,8 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
-import dayjs from "dayjs";
-import { useCallback, useMemo, useState, type Key } from "react";
+import { useCallback, useMemo, type Key, type ReactNode } from "react";
 import { hasWeekBegun, isWeekInPast } from "@shared/utils";
-import { getWeekdayChoices } from "@shared/utils/weekdayChoices";
+import {
+  getWeekdayChoices,
+  type WeekdayChoice,
+} from "@shared/utils/weekdayChoices";
 import { useTranslation } from "react-i18next";
 import {
   commissioningSharesBulkUpdateUpdate,
@@ -28,11 +30,29 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, PastWarningMessage } from "@shared/ui";
-import { useInvalidateAfterTableMutation } from "@hooks/index";
+import { useInvalidateAfterTableMutation, useYearWeekState } from "@hooks/index";
+
+/** A weekday cell: the day's short name, marked when it differs from the
+ *  share type's usual day. */
+function weekdayCell(
+  value: unknown,
+  weekdayChoices: WeekdayChoice[],
+  changed = false,
+): ReactNode {
+  if (typeof value !== "number") return "-";
+  const label =
+    weekdayChoices.find((choice) => choice.value === value)?.label ?? value;
+  return changed ? <span className="changed-day">{label}</span> : label;
+}
 
 export default function ShareDays() {
-  const [selectedYear, setSelectedYear] = useState(dayjs().isoWeekYear());
-  const [selectedWeek, setSelectedWeek] = useState(dayjs().isoWeek());
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    currentWeek,
+  } = useYearWeekState();
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
     [selectedYear, selectedWeek],
@@ -50,9 +70,10 @@ export default function ShareDays() {
   const listParams = useMemo<CommissioningSharesGetDaysListParams>(
     () => ({
       year: selectedYear,
-      delivery_week: selectedWeek,
+      // The week picker offers no "all weeks", so a week is always picked.
+      delivery_week: selectedWeek ?? currentWeek,
     }),
-    [selectedYear, selectedWeek],
+    [selectedYear, selectedWeek, currentWeek],
   );
 
   const { t } = useTranslation();
@@ -93,11 +114,7 @@ export default function ShareDays() {
       const dataToSend = Object.keys(formData).reduce<
         Record<string, unknown>
       >((acc, fieldKey) => {
-        if (
-          formData[fieldKey] === "" ||
-          formData[fieldKey] === "undefined" ||
-          formData[fieldKey] === undefined
-        ) {
+        if (formData[fieldKey] === "" || formData[fieldKey] === undefined) {
           acc[fieldKey] = null;
         } else {
           acc[fieldKey] = formData[fieldKey];
@@ -109,7 +126,7 @@ export default function ShareDays() {
         dataToSend as unknown as Share,
         {
           year: selectedYear,
-          delivery_week: selectedWeek,
+          delivery_week: selectedWeek ?? currentWeek,
           day_number: deliveryDay,
         },
       );
@@ -134,7 +151,7 @@ export default function ShareDays() {
         id: updatedDayData.id || (updatedDayData.delivery_day as number) + 1,
       } as TableRecord;
     },
-    [selectedYear, selectedWeek],
+    [selectedYear, selectedWeek, currentWeek],
   );
 
   const apiFunctions = useMemo<ApiFunctions>(
@@ -144,17 +161,6 @@ export default function ShareDays() {
         delete: (id) => commissioningSharesDestroy(id),
       }),
     [],
-  );
-
-  const customSave = useCallback(
-    (transformedData: Record<string, unknown>) => {
-      return {
-        ...transformedData,
-        year: selectedYear,
-        delivery_week: selectedWeek,
-      };
-    },
-    [selectedYear, selectedWeek],
   );
 
   const columns = useMemo<EditableColumnConfig<TableRecord>[]>(
@@ -168,11 +174,7 @@ export default function ShareDays() {
         align: "center",
         width: "7em",
         options: weekdayChoices,
-        render: (value: unknown) => {
-          if (typeof value !== "number") return "-";
-          const day = weekdayChoices.find((d) => d.value === value);
-          return day ? day.label : value;
-        },
+        render: (value: unknown) => weekdayCell(value, weekdayChoices),
         disabled: true,
       },
       {
@@ -184,34 +186,9 @@ export default function ShareDays() {
         align: "center",
         width: "9em",
         options: weekdayChoices,
-        render: (value: unknown) => {
-          if (typeof value !== "number") return "-";
-          const day = weekdayChoices.find((d) => d.value === value);
-          return <span className="changed-day">{day ? day.label : value}</span>;
-        },
+        render: (value: unknown) => weekdayCell(value, weekdayChoices, true),
         disabled: false,
       },
-      // {
-      //   title: t("configuration.default_get_current_stock_day"),
-      //   dataIndex: "get_current_stock_day",
-      //   key: "get_current_stock_day",
-      //   inputType: "select",
-      //   required: false,
-      //   align: "center" as const,
-      //   width: "5em",
-      //   options: weekdayChoices,
-      //   render: (value: unknown, record: TableRecord) => {
-      //     if (typeof value !== "number") return "-";
-      //     const day = weekdayChoices.find((d) => d.value === value);
-      //     const displayValue = day ? day.label : value;
-
-      //     if (record.get_current_stock_day_changed) {
-      //       return <span className="changed-day">{displayValue}</span>;
-      //     }
-
-      //     return displayValue;
-      //   },
-      // },
       {
         title: t("configuration.default_washing_day"),
         dataIndex: "washing_day",
@@ -221,17 +198,8 @@ export default function ShareDays() {
         width: "7em",
         align: "center",
         options: weekdayChoices,
-        render: (value: unknown, record: TableRecord) => {
-          if (typeof value !== "number") return "-";
-          const day = weekdayChoices.find((d) => d.value === value);
-          const displayValue = day ? day.label : value;
-
-          if (record.washing_day_changed) {
-            return <span className="changed-day">{displayValue}</span>;
-          }
-
-          return displayValue;
-        },
+        render: (value: unknown, record: TableRecord) =>
+          weekdayCell(value, weekdayChoices, !!record.washing_day_changed),
       },
       {
         title: t("configuration.default_cleaning_day"),
@@ -242,17 +210,8 @@ export default function ShareDays() {
         align: "center",
         width: "7em",
         options: weekdayChoices,
-        render: (value: unknown, record: TableRecord) => {
-          if (typeof value !== "number") return "-";
-          const day = weekdayChoices.find((d) => d.value === value);
-          const displayValue = day ? day.label : value;
-
-          if (record.cleaning_day_changed) {
-            return <span className="changed-day">{displayValue}</span>;
-          }
-
-          return displayValue;
-        },
+        render: (value: unknown, record: TableRecord) =>
+          weekdayCell(value, weekdayChoices, !!record.cleaning_day_changed),
       },
       {
         title: t("configuration.default_harvesting_day"),
@@ -263,17 +222,8 @@ export default function ShareDays() {
         width: "7em",
         align: "center",
         options: weekdayChoices,
-        render: (value: unknown, record: TableRecord) => {
-          if (typeof value !== "number") return "-";
-          const day = weekdayChoices.find((d) => d.value === value);
-          const displayValue = day ? day.label : value;
-
-          if (record.harvesting_day_changed) {
-            return <span className="changed-day">{displayValue}</span>;
-          }
-
-          return displayValue;
-        },
+        render: (value: unknown, record: TableRecord) =>
+          weekdayCell(value, weekdayChoices, !!record.harvesting_day_changed),
       },
       {
         title: t("configuration.default_packing_day"),
@@ -284,17 +234,8 @@ export default function ShareDays() {
         width: "7em",
         align: "center",
         options: weekdayChoices,
-        render: (value: unknown, record: TableRecord) => {
-          if (typeof value !== "number") return "-";
-          const day = weekdayChoices.find((d) => d.value === value);
-          const displayValue = day ? day.label : value;
-
-          if (record.packing_day_changed) {
-            return <span className="changed-day">{displayValue}</span>;
-          }
-
-          return displayValue;
-        },
+        render: (value: unknown, record: TableRecord) =>
+          weekdayCell(value, weekdayChoices, !!record.packing_day_changed),
       },
     ],
     [t, weekdayChoices],
@@ -336,7 +277,6 @@ export default function ShareDays() {
         loading={isFetching}
         onSaveSuccess={onSaveSuccess}
         onDeleteSuccess={onDeleteSuccess}
-        customSave={customSave}
         customUpdate={customUpdate}
         permissions={permissions}
         className="w-max custom-jasmin-table"

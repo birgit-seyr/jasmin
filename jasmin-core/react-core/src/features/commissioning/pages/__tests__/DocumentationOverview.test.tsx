@@ -42,7 +42,6 @@ vi.mock("@hooks/index", async () => {
   const actual = await import("@hooks/useYearWeekState");
   return {
     useYearWeekState: actual.useYearWeekState,
-    currentWeek: actual.currentWeek,
   };
 });
 

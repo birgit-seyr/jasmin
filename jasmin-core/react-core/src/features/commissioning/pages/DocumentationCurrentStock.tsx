@@ -41,7 +41,6 @@ import { useRoles } from "@shared/auth";
 
 import {
   useInvalidateAfterTableMutation,
-  currentWeek,
   useIsMobile,
   useNoteColumn,
   useNumberFormat,
@@ -55,17 +54,22 @@ import {
   useShareArticles,
 } from "@features/commissioning/hooks";
 
-const currentDay = dayjs().isoWeekday();
-
 const shareArticleFilters = {
   is_active: true,
 };
 
 export default function DocumentationCurrentStock() {
   const { isStaff } = useRoles();
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
-  const [selectedDay, setSelectedDay] = useState<number | null>(currentDay - 1);
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    currentWeek,
+  } = useYearWeekState();
+  const [selectedDay, setSelectedDay] = useState<number | null>(
+    () => dayjs().isoWeekday() - 1,
+  );
   const [selectedStorage, setSelectedStorage] = useState<string | null>(null);
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
@@ -146,7 +150,7 @@ export default function DocumentationCurrentStock() {
       selectedWeek ?? currentWeek,
       selectedDay ?? 0,
     );
-  }, [selectedYear, selectedWeek, selectedDay]);
+  }, [selectedYear, selectedWeek, currentWeek, selectedDay]);
 
   const customSave = useCallback(
     (transformedData: Record<string, unknown>) => {
@@ -175,7 +179,7 @@ export default function DocumentationCurrentStock() {
         storage: selectedStorage ?? undefined,
       };
     },
-    [currentDate, selectedYear, selectedWeek, selectedDay, selectedStorage],
+    [currentDate, selectedYear, selectedWeek, currentWeek, selectedDay, selectedStorage],
   );
 
   const customEdit = useCallback((record: TableRecord, form: FormInstance) => {
@@ -210,7 +214,7 @@ export default function DocumentationCurrentStock() {
       const storageId = row.storage ?? selectedStorage ?? "None";
       return `${shareArticleId}_${unit}_${size}_${storageId}_${selectedYear}_${selectedWeek ?? currentWeek}_${selectedDay ?? 0}`;
     },
-    [selectedYear, selectedWeek, selectedDay, selectedStorage],
+    [selectedYear, selectedWeek, currentWeek, selectedDay, selectedStorage],
   );
 
   const customUpdate = useCallback(
