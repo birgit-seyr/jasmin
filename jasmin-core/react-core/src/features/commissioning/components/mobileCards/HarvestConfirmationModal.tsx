@@ -2,6 +2,7 @@ import { Modal } from "antd";
 import { useTranslation } from "react-i18next";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import NumberInput from "@shared/ui/NumberInput";
+import "./HarvestConfirmationModal.css";
 
 interface HarvestConfirmationModalProps {
   record: TableRecord | null;
@@ -34,12 +35,12 @@ export function HarvestConfirmationModal({
       centered
     >
       {record && (
-        <div style={{ textAlign: "center", padding: "8px 0" }}>
-          <div style={{ fontWeight: 600, marginBottom: 12 }}>
+        <div className="harvest-confirmation">
+          <div className="harvest-confirmation-article">
             {(record.computed_article_with_size as string) ||
               (record.share_article_name as string)}
           </div>
-          <div style={{ color: "var(--color-text-muted)", fontSize: "0.85em", marginBottom: 12 }}>
+          <div className="harvest-confirmation-expected">
             {t("commissioning.expected_harvest")}:{" "}
             {(record.computed_total_amount as number) || 0}{" "}
             {record.computed_unit_label as string}
@@ -51,7 +52,7 @@ export function HarvestConfirmationModal({
             min={0}
             precision={2}
             size="large"
-            style={{ width: "100%", fontSize: 18 }}
+            className="harvest-confirmation-amount"
             addonAfter={record.computed_unit_label as string}
           />
         </div>

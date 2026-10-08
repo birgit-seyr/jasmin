@@ -200,9 +200,7 @@ export const JobProgressDrawer: FC<JobProgressDrawerProps> = ({
               </Title>
               <Table<PerItemResult>
                 size="small"
-                rowKey={(row, idx) =>
-                  row.reseller_id ?? row.order_id ?? String(idx ?? 0)
-                }
+                rowKey={(row) => row.reseller_id ?? row.order_id ?? ""}
                 pagination={false}
                 dataSource={rows}
                 columns={[

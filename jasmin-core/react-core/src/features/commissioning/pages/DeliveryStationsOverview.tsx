@@ -161,7 +161,7 @@ function TourTable({
         pagination={false}
         size="small"
         className="custom-jasmin-table w-max"
-        rowKey={(record) => record.delivery_station_day_id}
+        rowKey="delivery_station_day_id"
         bordered
         locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
       />

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   __csvInternalsForTests,
   buildCsvString,
+  csvDecimal,
   resolveCsvDialect,
 } from "../csv";
 
@@ -117,5 +118,41 @@ describe("buildCsvString", () => {
       resolveCsvDialect("en"),
     );
     expect(csv).toBe("a,b\nx,1.5");
+  });
+});
+
+describe("csvDecimal", () => {
+  const de = resolveCsvDialect("de");
+  const en = resolveCsvDialect("en");
+
+  it("writes a decimal string the API sends with the dialect's decimal separator", () => {
+    expect(formatCsvValue(csvDecimal("2.50"), de)).toBe("2,50");
+    expect(formatCsvValue(csvDecimal("2.50"), en)).toBe("2.50");
+    expect(formatCsvValue(csvDecimal("12"), de)).toBe("12");
+  });
+
+  it("writes a negative decimal string without a formula guard", () => {
+    expect(escapeCsvValue(csvDecimal("-0.40"), de)).toBe("-0,40");
+  });
+
+  it("writes a number the way an unmarked number is written", () => {
+    expect(formatCsvValue(csvDecimal(1.5), de)).toBe("1,5");
+  });
+
+  it("writes nothing for an empty value", () => {
+    expect(formatCsvValue(csvDecimal(null), de)).toBe("");
+    expect(formatCsvValue(csvDecimal(undefined), de)).toBe("");
+    expect(formatCsvValue(csvDecimal(""), de)).toBe("");
+  });
+
+  it("keeps a value that is not a decimal as text, formula guard included", () => {
+    expect(escapeCsvValue(csvDecimal("n/a"), de)).toBe("n/a");
+    expect(escapeCsvValue(csvDecimal("=1+1"), de)).toBe("'=1+1");
+  });
+
+  it("leaves a decimal-looking string in an unmarked cell as it is", () => {
+    expect(buildCsvString(["no", "price"], [["1.10", csvDecimal("1.10")]], de)).toBe(
+      "no;price\n1.10;1,10",
+    );
   });
 });

@@ -86,17 +86,25 @@ export default function ExternalCodeMappingsModal({
     { query: { enabled: open } },
   );
 
+  // Dated like the delivery days: a variation replaced from a week on and
+  // its successor share their name and size, and the weekly import asks the
+  // office to map the version valid then.
   const variationOptions = useMemo<SelectOption[]>(
     () =>
       (variationsData ?? []).map((v) => {
         const sizeLabel = getShareTypeVariationSizeLabel(v.size);
-        const parts = [v.share_type_name, sizeLabel].filter(Boolean);
+        const name =
+          [v.share_type_name, sizeLabel].filter(Boolean).join(" · ") ||
+          t("import_shares.mappings.no_label");
+        const validity = [formatDate(v.valid_from), formatDate(v.valid_until)]
+          .filter(Boolean)
+          .join(" → ");
         return {
           value: v.id as string,
-          label: `${v.id} — ${parts.join(" · ") || t("import_shares.mappings.no_label")}`,
+          label: `${v.id} — ${[name, validity].filter(Boolean).join(" · ")}`,
         };
       }),
-    [variationsData, getShareTypeVariationSizeLabel, t],
+    [variationsData, getShareTypeVariationSizeLabel, t, formatDate],
   );
 
   const stationOptions = useMemo<SelectOption[]>(
@@ -170,17 +178,12 @@ export default function ExternalCodeMappingsModal({
     [variationOptions, stationOptions, dayOptions],
   );
 
+  // Only the mapping's own kind names its object: an id of another kind's
+  // object is one the import can't resolve, so it shows as the bare id.
   const internalIdLabel = (kind: string | undefined, id: string) => {
     if (!id) return "";
-    // Try the kind-specific list first, then fall back to all options
     const kindList = kind ? (optionsByKind[kind] ?? []) : [];
-    const allOptions = [...variationOptions, ...stationOptions, ...dayOptions];
-    return (
-      (
-        kindList.find((o) => o.value === id) ??
-        allOptions.find((o) => o.value === id)
-      )?.label ?? id
-    );
+    return kindList.find((o) => o.value === id)?.label ?? id;
   };
 
   const columns: any[] = [
@@ -252,7 +255,7 @@ export default function ExternalCodeMappingsModal({
         onDeleteSuccess={() => void refetch()}
         focusIndex="external_code"
         uniqueCheck={["kind", "external_code"]}
-        uniqueCheckMessage={t("validation.unique.name")}
+        uniqueCheckMessage={t("validation.unique.external_code_mapping")}
         permissions={permissions}
       />
 

@@ -75,6 +75,28 @@ describe("JobProgressDrawer", () => {
     expect(screen.getByText("job_progress.failure")).toBeInTheDocument();
   });
 
+  it("keys each row by its order or reseller, never by its position", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    useJobMock.mockReturnValue(
+      finishedJob({
+        results: [
+          { order_id: "ord-1", document_number: "RE-1", success: true },
+          { reseller_id: "res-1", reseller_name: "Hofladen", success: true },
+        ],
+        errors: [{ order_id: "ord-3", error: "PDF not yet uploaded", success: false }],
+      }),
+    );
+
+    render(<JobProgressDrawer jobId="job-1" onClose={vi.fn()} />);
+
+    const rowKeys = Array.from(document.querySelectorAll("tr[data-row-key]")).map((row) =>
+      row.getAttribute("data-row-key"),
+    );
+    expect(rowKeys).toEqual(["ord-1", "res-1", "ord-3"]);
+    expect(consoleError.mock.calls.flat().join(" ")).not.toContain("rowKey");
+    consoleError.mockRestore();
+  });
+
   it("still lists a failure the offers job keeps inside its results", () => {
     useJobMock.mockReturnValue(
       finishedJob({

@@ -42,6 +42,7 @@ import {
   VariationsTotalsCard,
 } from "@features/commissioning/components";
 import {
+  useDateFormat,
   useIsMobile,
   useTenantSettingToggle,
   useYearWeekState,
@@ -76,7 +77,8 @@ export default function HarvestingList() {
     [selectedYear, selectedWeek],
   );
   const isMobile = useIsMobile();
-  const { canEdit } = useRoles();
+  const { canEdit, isOffice } = useRoles();
+  const { dateFormat } = useDateFormat();
   const [isGardenerView, setIsGardenerView] = useState(isMobile);
   const { t } = useTranslation();
 
@@ -96,6 +98,7 @@ export default function HarvestingList() {
     plotGroupFirstIds,
     crateSummary,
     deliveryDaysForHarvesting,
+    deliveryDateOf,
     variationsTotalsFilters,
     variationsTotals,
     invalidateData,
@@ -231,6 +234,9 @@ export default function HarvestingList() {
           relatedDayNumbers={deliveryDaysForHarvesting}
           selectedWeek={selectedWeek ?? currentWeek}
           selectedYear={selectedYear}
+          formatDate={(day) =>
+            deliveryDateOf(day).format(`dddd, ${dateFormat}`)
+          }
         />
       )}
 
@@ -240,6 +246,7 @@ export default function HarvestingList() {
         onViewChange={setIsGardenerView}
         roundUpToFullPU={roundUpToFullPU}
         onRoundUpChange={handleRoundUpToFullVPEChange}
+        canChangeRoundUp={isOffice}
       />
 
       {!isMobile && (

@@ -9,11 +9,28 @@ export interface VariationsTotalEntry {
   totalQuantity: number;
 }
 
+/**
+ * A delivery day in a week other than the filters' own — a harvest on Saturday
+ * serves Monday's delivery of the next week.
+ */
+export interface VariationsTotalsDeliveryDay {
+  id: number | string;
+  year: number;
+  delivery_week: number;
+}
+
 export interface VariationsTotalsFilters {
   year?: number | null;
   delivery_week?: number | null;
-  /** sharesdeliveryday ID, or an array of IDs to aggregate across. */
-  delivery_day?: number | string | (number | string)[] | null;
+  /**
+   * sharesdeliveryday ID, or an array of them to aggregate across. An array
+   * entry may carry its own year and week, which then replace the filters'.
+   */
+  delivery_day?:
+    | number
+    | string
+    | (number | string | VariationsTotalsDeliveryDay)[]
+    | null;
   tour?: number | string | null;
   delivery_station?: number | string | null;
   share_type?: number | string | null;
@@ -28,32 +45,36 @@ export interface VariationsTotalsFilters {
  * same card on the first PDF page — so both display identical numbers.
  *
  * Accepts ``delivery_day`` either as a scalar (single day) or an array of
- * day IDs (e.g. when one harvest day serves multiple delivery days);
- * issues one query per ID via ``useQueries`` and aggregates client-side.
+ * day IDs (e.g. when one harvest day serves multiple delivery days), each
+ * optionally in a week of its own; issues one query per day via
+ * ``useQueries`` and aggregates client-side.
  */
 export function useAggregatedVariationsTotals(
   filters?: VariationsTotalsFilters,
 ): { entries: VariationsTotalEntry[]; loading: boolean } {
-  const deliveryDayIds = useMemo<string[]>(() => {
+  const deliveryDays = useMemo(() => {
     const raw = filters?.delivery_day;
     if (raw == null) return [];
     const arr = Array.isArray(raw) ? raw : [raw];
-    return arr.map(String);
-  }, [filters?.delivery_day]);
+    return arr.map((day) =>
+      typeof day === "object"
+        ? { id: String(day.id), year: day.year, week: day.delivery_week }
+        : { id: String(day), year: filters?.year, week: filters?.delivery_week },
+    );
+  }, [filters?.delivery_day, filters?.year, filters?.delivery_week]);
 
-  const canFetch = !!(
-    filters?.year &&
-    filters.delivery_week &&
-    deliveryDayIds.length > 0
-  );
+  const canFetch =
+    !!filters &&
+    deliveryDays.length > 0 &&
+    deliveryDays.every((day) => day.year && day.week);
 
   const queries = useQueries({
     queries: canFetch
-      ? deliveryDayIds.map((dayId) => {
+      ? deliveryDays.map((day) => {
           const params: CommissioningShareTypeVariationsTotalsRetrieveParams = {
-            year: filters.year as number,
-            delivery_week: filters.delivery_week as number,
-            delivery_day: dayId,
+            year: day.year as number,
+            delivery_week: day.week as number,
+            delivery_day: day.id,
             ...(filters.tour != null && { tour: Number(filters.tour) }),
             ...(filters.delivery_station != null && {
               delivery_station: String(filters.delivery_station),

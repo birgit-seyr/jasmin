@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 
@@ -29,15 +29,22 @@ export interface ModalMutationOptions<T> {
  *
  * Validation stays with the caller (or ``EditFormModal``) so validation
  * failures never surface a toast — only the action's own errors do.
+ *
+ * While an action runs, a further ``run`` is ignored and resolves to
+ * ``undefined``: the OK button is disabled while saving, but Enter in the form
+ * and a click racing an Enter would otherwise send the save twice.
  */
 export function useModalMutation() {
   const [saving, setSaving] = useState(false);
+  const inFlight = useRef(false);
 
   const run = useCallback(
     async <T,>(
       action: () => Promise<T>,
       options?: ModalMutationOptions<T>,
     ): Promise<T | undefined> => {
+      if (inFlight.current) return undefined;
+      inFlight.current = true;
       setSaving(true);
       try {
         const result = await action();
@@ -48,6 +55,7 @@ export function useModalMutation() {
         notify.error(getErrorMessage(error, options?.errorMessage));
         return undefined;
       } finally {
+        inFlight.current = false;
         setSaving(false);
       }
     },

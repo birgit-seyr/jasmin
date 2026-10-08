@@ -163,3 +163,20 @@ describe("useHarvestingListData — the Total cell", () => {
     ]);
   });
 });
+
+describe("useHarvestingListData — the per-PU hint", () => {
+  it("writes the amount per PU at its unit's precision", () => {
+    const { filteredData } = renderRows(
+      [
+        summaryRow("carrots", "KG", "20.3", "4.5"),
+        summaryRow("pumpkins", "PCS", "12.5", "2.5"),
+      ],
+      false,
+    );
+    const hintOf = (id: string) =>
+      filteredData.find((row) => row.id === id)?.computed_amount_per_pu_text;
+
+    expect(hintOf("carrots")).toBe(`4,50 ${KG}/${PU}`);
+    expect(hintOf("pumpkins")).toBe(`2,5 ${PCS}/${PU}`);
+  });
+});

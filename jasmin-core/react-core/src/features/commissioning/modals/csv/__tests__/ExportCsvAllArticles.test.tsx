@@ -553,6 +553,17 @@ describe("ExportCsvAllArticles file", () => {
     ]);
   });
 
+  it("writes the prices and tax rates with the decimal comma of the tenant's German format", async () => {
+    const { user } = await renderLoaded();
+
+    const { content } = await download(user);
+
+    const prices = [TAX_RATE, boxPrice("kg"), resellerPrice("kg", 1, 1), cratePriceHeader()];
+    const records = describedBy(recordsOf(content, ";"), prices);
+    expect(records[0]).toEqual(["10,00", "2,50", "2,20", ""]);
+    expect(records[4]).toEqual(["20,00", "", "", "1,20"]);
+  });
+
   it("writes a reseller price column for each of the tenant's offer tiers", async () => {
     tenantState.settings = { csv_format: "en", used_tiers_for_offers: [1, 5, 10] };
     const { user } = await renderLoaded();

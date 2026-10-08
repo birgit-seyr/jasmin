@@ -1,15 +1,19 @@
 import { useCallback, useState } from "react";
 import type { Key } from "react";
+import { useTranslation } from "react-i18next";
 import { commissioningHarvestPartialUpdate } from "@shared/api/generated/commissioning/commissioning";
 import type { Harvest } from "@shared/api/generated/models";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
+import { notify } from "@shared/utils";
+import { getServerErrorMessage } from "@shared/utils/apiError";
 import { roundHalfUp } from "@shared/utils/lineNetto";
 
 /**
  * Manages the "confirm harvest" modal state for the harvesting list mobile
  * view: which record is being confirmed, the input amount, save state and
  * the in-memory set of already-confirmed keys (so the button colour switches
- * to green immediately, even before the data refetches).
+ * to green immediately, even before the data refetches). A refused save
+ * keeps the dialog open with its amount and tells the user why.
  */
 export function useHarvestConfirmation(params: {
   selectedYear: number;
@@ -20,6 +24,7 @@ export function useHarvestConfirmation(params: {
 }) {
   const { selectedYear, selectedWeek, selectedDay, fallbackWeek, onSaved } =
     params;
+  const { t } = useTranslation();
 
   const [record, setRecord] = useState<TableRecord | null>(null);
   const [amount, setAmount] = useState<number | null>(null);
@@ -63,8 +68,9 @@ export function useHarvestConfirmation(params: {
       onSaved();
       close();
     } catch (err) {
-       
-      console.error("Failed to save harvest amount:", err);
+      notify.error(
+        getServerErrorMessage(err) ?? t("commissioning.harvest_save_failed"),
+      );
     } finally {
       setSaving(false);
     }
@@ -77,6 +83,7 @@ export function useHarvestConfirmation(params: {
     fallbackWeek,
     onSaved,
     close,
+    t,
   ]);
 
   const isConfirmed = useCallback(

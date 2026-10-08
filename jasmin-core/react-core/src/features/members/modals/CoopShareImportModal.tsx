@@ -1,5 +1,6 @@
-import { Alert, Card, Modal, Space, Table, Typography } from "antd";
+import { Alert, Card, Modal, Space, Typography } from "antd";
 import { useTranslation } from "react-i18next";
+import CsvColumnsTable from "@shared/ui/CsvColumnsTable";
 import DownloadCsvTemplateButton from "@shared/ui/DownloadCsvTemplateButton";
 
 const { Paragraph, Text } = Typography;
@@ -99,29 +100,12 @@ export default function CoopShareImportModal({
         />
 
         <Card size="small" title={t("onboarding.columns_title")}>
-          <Table
-            size="small"
-            pagination={false}
-            rowKey="key"
-            dataSource={columnDocRows}
-            columns={[
-              {
-                title: t("onboarding.col_field"),
-                dataIndex: "field",
-                render: (f: string) => <code>{f}</code>,
-              },
-              {
-                title: t("onboarding.col_required"),
-                dataIndex: "req",
-                render: (r: boolean) => (r ? t("common.yes") : t("common.no")),
-              },
-              {
-                title: t("onboarding.col_meaning"),
-                dataIndex: "key",
-                key: "meaning",
-                render: (k: string) => t(`onboarding.coop_help.${k}`),
-              },
-            ]}
+          <CsvColumnsTable
+            rows={columnDocRows.map(({ key, field, req }) => ({
+              field,
+              required: req,
+              meaning: t(`onboarding.coop_help.${key}`),
+            }))}
           />
           <div style={{ marginTop: 12 }}>
             {uploadAllowed ? (

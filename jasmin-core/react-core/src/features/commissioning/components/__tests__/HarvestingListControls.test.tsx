@@ -1,7 +1,8 @@
 /**
  * HarvestingListControls: the office / gardener view switch and the "round up
  * to full PU" checkbox above the harvesting list. The phone shows only the
- * checkbox, as the page forces the gardener view there.
+ * checkbox, as the page forces the gardener view there. The checkbox saves a
+ * tenant setting, which only the office may change, so other roles don't see it.
  */
 
 import { render, screen } from "@testing-library/react";
@@ -30,6 +31,7 @@ const renderControls = (
     onViewChange: vi.fn(),
     roundUpToFullPU: false,
     onRoundUpChange: vi.fn(),
+    canChangeRoundUp: true,
     ...overrides,
   };
   render(<HarvestingListControls {...props} />);
@@ -85,5 +87,24 @@ describe("HarvestingListControls on the phone", () => {
     await user.click(roundUpCheckbox());
     expect(props.onRoundUpChange).toHaveBeenCalledTimes(1);
     expect(props.onRoundUpChange).toHaveBeenLastCalledWith(true);
+  });
+});
+
+describe("HarvestingListControls for a role that can't change tenant settings", () => {
+  const roundUpCheckboxOrNull = () =>
+    screen.queryByRole("checkbox", { name: "commissioning.round_up_to_full_vpe" });
+
+  it("keeps the view switch on desktop but offers no round-up checkbox", () => {
+    renderControls({ canChangeRoundUp: false });
+
+    expect(officeButton()).toBeInTheDocument();
+    expect(gardenerButton()).toBeInTheDocument();
+    expect(roundUpCheckboxOrNull()).not.toBeInTheDocument();
+  });
+
+  it("offers no round-up checkbox on the phone", () => {
+    renderControls({ isMobile: true, canChangeRoundUp: false });
+
+    expect(roundUpCheckboxOrNull()).not.toBeInTheDocument();
   });
 });

@@ -36,8 +36,12 @@ export default function ExportCsvPricesCrate({
     () => [
       { key: "short_name", label: t("commissioning.name") },
       { key: "name", label: t("commissioning.name") },
-      { key: "price", label: `${t("commissioning.price")} (${currencySymbol})` },
-      { key: "tax_rate", label: t("commissioning.tax_rate") },
+      {
+        key: "price",
+        label: `${t("commissioning.price")} (${currencySymbol})`,
+        decimal: true,
+      },
+      { key: "tax_rate", label: t("commissioning.tax_rate"), decimal: true },
     ],
     [t, currencySymbol],
   );

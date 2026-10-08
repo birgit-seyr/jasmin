@@ -5,6 +5,7 @@ import { DownloadOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import {
   buildCsvString,
+  csvDecimal,
   downloadCsvBlob,
   resolveCsvDialect,
 } from "@shared/utils";
@@ -26,6 +27,20 @@ interface CsvExportModalProps {
   data: Record<string, unknown>[];
   filename?: string;
 }
+
+// The grid's input types whose values are decimals. The API sends a decimal as
+// a string, so only the column's type tells it apart from text.
+const DECIMAL_INPUT_TYPES = new Set([
+  "number",
+  "decimal1",
+  "decimal2",
+  "decimal3",
+  "positive_decimal2",
+  "positive_decimal3",
+  "negative_decimal2",
+  "negative_decimal3",
+  "percentage",
+]);
 
 function getColumnTitle(title: ReactNode): string {
   if (typeof title === "string") return title;
@@ -116,7 +131,12 @@ export default function ExportCsv({
 
     const headers = selectedCols.map((col) => getColumnTitle(col.title));
     const rows = data.map((row) =>
-      selectedCols.map((col) => row[col.dataIndex as string]),
+      selectedCols.map((col) => {
+        const value = row[col.dataIndex as string];
+        return DECIMAL_INPUT_TYPES.has(col.inputType as string)
+          ? csvDecimal(value)
+          : value;
+      }),
     );
     downloadCsvBlob(buildCsvString(headers, rows, dialect), filename);
     onClose();

@@ -23,9 +23,6 @@
     "drafts_notice": "Importierte Abos werden als unbestätigte Entwürfe angelegt (keine Lieferungen, keine Abrechnung). Das Büro bestätigt sie anschließend im normalen Ablauf – dabei entstehen Lieferungen und Abrechnungen unter den üblichen Kapazitätsprüfungen."
   },
   "columns_title": "Spalten der Abo-CSV",
-  "col_field": "Feld",
-  "col_required": "Pflicht",
-  "col_meaning": "Bedeutung",
   "sub_col": {
     "member_number": "Mitgliedsnummer",
     "share_type": "Ernte-Anteil (Typ)",

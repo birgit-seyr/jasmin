@@ -1,6 +1,8 @@
 export { default as ToolTipIcon } from './ToolTipIcon';
 export { default as ExplainerText } from './ExplainerText';
 export { default as DownloadCsvTemplateButton } from './DownloadCsvTemplateButton';
+export { default as CsvColumnsTable } from './CsvColumnsTable';
+export type { CsvColumnHelp } from './CsvColumnsTable';
 export { default as SepaMandateStatusTag } from './SepaMandateStatusTag';
 export { default as BulkActionButton } from './BulkActionButton';
 export { default as IconActionButton } from './IconActionButton';

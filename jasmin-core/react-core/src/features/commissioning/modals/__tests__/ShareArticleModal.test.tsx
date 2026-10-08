@@ -450,6 +450,24 @@ describe("ShareArticleModal saving", () => {
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
 
+  it("saves once when Enter is pressed again while the save runs", async () => {
+    let answer: (article: ShareArticle) => void = () => {};
+    api.createArticle.mockImplementation(() => new Promise((resolve) => (answer = resolve)));
+    const { user, onSuccess } = await renderPage();
+    await openDialog(user);
+    await fillArticle(user, "Kale", BUNCH);
+
+    await user.type(nameInput(), "{Enter}");
+    await createdOnce();
+    await user.type(nameInput(), "{Enter}{Enter}");
+
+    expect(api.createArticle).toHaveBeenCalledTimes(1);
+    answer({ id: "article-kale", name: "Kale", default_movement_unit: "BUNCH" });
+    await dialogClosed();
+    expect(api.createArticle).toHaveBeenCalledTimes(1);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
   it("shows that it saves until the server answers", async () => {
     let answer: (article: ShareArticle) => void = () => {};
     api.createArticle.mockImplementation(() => new Promise((resolve) => (answer = resolve)));

@@ -505,3 +505,18 @@
   white-space: normal;
   max-width: 100%;
 }
+
+/* An inline-edit cell keeps its error message out of the borderless layout
+   but in the explain node AntD's Form.Item points the control's
+   aria-describedby at, so screen readers still read it. */
+.editable-cell-form-item .ant-form-item-explain {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

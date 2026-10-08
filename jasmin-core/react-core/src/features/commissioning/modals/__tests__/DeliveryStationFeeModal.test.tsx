@@ -350,6 +350,37 @@ describe("DeliveryStationFeeModal saving", () => {
     expect(api.updateStation).toHaveBeenCalledTimes(1);
   });
 
+  it("saves once when Enter is pressed again while the save runs", async () => {
+    let answer: (saved: DeliveryStation) => void = () => {};
+    api.updateStation.mockImplementation(() => new Promise((resolve) => (answer = resolve)));
+    const { user, onClose } = await renderLoaded();
+
+    await typeFee(user, "2{Enter}");
+    await savedOnce();
+    await user.type(feeInput(), "{Enter}{Enter}");
+
+    expect(api.updateStation).toHaveBeenCalledTimes(1);
+    answer({ ...SCHOOL, fee_per_box_net: "2.00" });
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(api.updateStation).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves once when Enter follows a click on save while the save runs", async () => {
+    let answer: (saved: DeliveryStation) => void = () => {};
+    api.updateStation.mockImplementation(() => new Promise((resolve) => (answer = resolve)));
+    const { user, onClose } = await renderLoaded();
+
+    await typeFee(user, "2");
+    await user.click(saveButton());
+    await savedOnce();
+    await user.type(feeInput(), "{Enter}");
+
+    expect(api.updateStation).toHaveBeenCalledTimes(1);
+    answer({ ...SCHOOL, fee_per_box_net: "2.00" });
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(api.updateStation).toHaveBeenCalledTimes(1);
+  });
+
   it("closes without saving on cancel", async () => {
     const { user, onClose, onSaved } = await renderLoaded();
 
@@ -396,5 +427,98 @@ describe("DeliveryStationFeeModal on a tenant that writes a decimal comma", () =
 
     await savedOnce();
     expect(sentFee()).toBe("2.75");
+  });
+});
+
+// ── Monthly and yearly fees ─────────────────────────────────────────────────
+
+describe("DeliveryStationFeeModal monthly and yearly fees", () => {
+  // Paid 35.00 a month.
+  const CHURCH_HALL = station({
+    id: "st-church-hall", number: 3, short_name: "Church hall", fee_per_month_net: "35.00",
+  });
+
+  beforeEach(() => {
+    serverStations = [SCHOOL, FARM_SHOP, CHURCH_HALL];
+  });
+
+  const monthInput = () => within(dialog()).getByLabelText("delivery_stations.fee_per_month_net");
+  const yearInput = () => within(dialog()).getByLabelText("delivery_stations.fee_per_year_net");
+  const sent = () => api.updateStation.mock.lastCall?.[1] as Row | undefined;
+
+  it("shows a station's fee per month and per year", async () => {
+    await renderLoaded(CHURCH_HALL);
+
+    await waitFor(() => expect(monthInput()).toHaveValue("35.00"));
+    expect(yearInput()).toHaveValue("0.00");
+    expect(feeInput()).toHaveValue("0.00");
+  });
+
+  it("saves a changed fee per month as a decimal string", async () => {
+    const { user, onClose } = await renderLoaded(CHURCH_HALL);
+
+    await user.clear(monthInput());
+    await user.type(monthInput(), "40.50");
+    await user.click(saveButton());
+
+    await savedOnce();
+    expect(sent()?.fee_per_month_net).toBe("40.5");
+    expect(stored("st-church-hall")?.fee_per_month_net).toBe("40.5");
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it("saves a fee per year in place of a cleared fee per month", async () => {
+    const { user } = await renderLoaded(CHURCH_HALL);
+
+    await user.clear(monthInput());
+    await user.clear(yearInput());
+    await user.type(yearInput(), "400");
+    await user.click(saveButton());
+
+    await savedOnce();
+    expect(stored("st-church-hall")).toEqual({ ...CHURCH_HALL, fee_per_month_net: "0", fee_per_year_net: "400" });
+  });
+
+  it("never sends a fee per month or per year below zero", async () => {
+    const { user } = await renderLoaded(CHURCH_HALL);
+
+    await user.clear(monthInput());
+    await user.type(monthInput(), "-5");
+    await user.click(saveButton());
+    await flushMicrotasks();
+
+    for (const [, payload] of api.updateStation.mock.calls) {
+      expect(Number((payload as Row).fee_per_month_net)).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("refuses a second fee, as a station is paid in one way only", async () => {
+    const { user, onClose } = await renderLoaded(SCHOOL);
+
+    await user.clear(monthInput());
+    await user.type(monthInput(), "20");
+    await user.click(saveButton());
+
+    expect(await within(dialog()).findAllByText("delivery_stations.fee_only_one")).not.toHaveLength(0);
+    await flushMicrotasks();
+    expect(api.updateStation).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+// ── Clearing a fee ──────────────────────────────────────────────────────────
+
+describe("DeliveryStationFeeModal clearing a fee", () => {
+  it("saves a cleared fee per box as no fee, which the server takes", async () => {
+    const { user, onClose } = await renderLoaded();
+
+    await user.clear(feeInput());
+    await user.click(saveButton());
+
+    await savedOnce();
+    expect(sentFee()).toBe("0");
+    expect(stored("st-school")?.fee_per_box_net).toBe("0");
+    expect(notify.error).not.toHaveBeenCalled();
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 });

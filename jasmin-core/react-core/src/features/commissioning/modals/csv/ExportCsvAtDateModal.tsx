@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import dayjs, { Dayjs } from "dayjs";
 import {
   buildCsvString,
+  csvDecimal,
   downloadCsvBlob,
   resolveCsvDialect,
   toApiDate,
@@ -15,11 +16,11 @@ import { useTenant, useDateFormat } from "@hooks/index";
 export interface PriceColumn {
   key: string;
   label: string;
+  /** The column holds decimal amounts, written in the tenant's CSV dialect. */
+  decimal?: boolean;
 }
 
-export interface ExportCsvColumn {
-  key: string;
-  label: string;
+export interface ExportCsvColumn extends PriceColumn {
   /** Optional per-cell value transform (boolean → ja/nein, null → "", …). */
   render?: (value: unknown, row: Record<string, unknown>) => unknown;
 }
@@ -88,15 +89,18 @@ export default function ExportCsvAtDateModal({
     const csvRows = rows.map((row) =>
       columns.map((c) => {
         const raw = row[c.key];
-        return c.render ? c.render(raw, row) : (raw ?? "");
+        const value = c.render ? c.render(raw, row) : (raw ?? "");
+        return c.decimal ? csvDecimal(value) : value;
       }),
     );
+    // The rows are those of the date last loaded, which the picker may have
+    // moved away from since.
     downloadCsvBlob(
       buildCsvString(headers, csvRows, dialect),
-      `${filenamePrefix}_${selectedDate.format("YYYY-MM-DD")}`,
+      `${filenamePrefix}_${loadedDate}`,
     );
     onClose();
-  }, [rows, columns, selectedDate, filenamePrefix, onClose, dialect]);
+  }, [rows, columns, loadedDate, filenamePrefix, onClose, dialect]);
 
   const handleClose = useCallback(() => {
     setLoadedDate(null);

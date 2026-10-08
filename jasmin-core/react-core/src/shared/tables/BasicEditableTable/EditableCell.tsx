@@ -281,12 +281,13 @@ const EditingCell = <T extends TableRecord = TableRecord>({
   const ariaLabel = nodeText(columnConfig?.title) || dataIndex;
 
   // Expose validation errors to assistive tech without changing the borderless
-  // visual: keep AntD's `help=""` (no visible explain node) and instead point
-  // the control's `aria-invalid`/`aria-describedby` at an off-screen .sr-only
-  // node carrying the message — covers both rules-path errors and the
-  // server/unique-check errors in `formErrors` that bypass AntD's validation.
+  // visual. AntD's Form.Item points the control's `aria-describedby` at its own
+  // explain node whenever it has a rule error or a `help`, overriding any
+  // describedby the control carries, so the message has to live in that node:
+  // `help` carries the table's own errors (server/unique-check errors in
+  // `formErrors` that bypass AntD's validation), AntD fills it with the rule
+  // errors otherwise, and `.editable-cell-form-item` hides it visually.
   const errorMessage = getErrorMessage();
-  const errorDescriptionId = `editable-cell-error-${dataIndex}`;
 
   const getInputNode = () => {
     const wrappedOnFieldChange = columnConfig?.onFieldChange
@@ -317,7 +318,6 @@ const EditingCell = <T extends TableRecord = TableRecord>({
         onKeyDown={handleKeyDown}
         aria-label={ariaLabel}
         aria-invalid={errorMessage ? true : undefined}
-        aria-describedby={errorMessage ? errorDescriptionId : undefined}
         style={{
           textAlign: columnConfig?.align || "left",
         }}
@@ -344,13 +344,14 @@ const EditingCell = <T extends TableRecord = TableRecord>({
     >
       <Form.Item
         name={dataIndex}
+        className="editable-cell-form-item"
         style={{ margin: 0 }}
         validateStatus={errorMessage ? "error" : "success"}
         valuePropName={valuePropName}
         getValueFromEvent={getValueFromEvent}
         getValueProps={getValueProps}
         hasFeedback={false}
-        help=""
+        help={errorMessage ? <span role="alert">{errorMessage}</span> : undefined}
         rules={[
           {
             required: required,
@@ -361,11 +362,6 @@ const EditingCell = <T extends TableRecord = TableRecord>({
       >
         {getInputNode()}
       </Form.Item>
-      {errorMessage && (
-        <span id={errorDescriptionId} className="sr-only" role="alert">
-          {errorMessage}
-        </span>
-      )}
     </td>
   );
 };

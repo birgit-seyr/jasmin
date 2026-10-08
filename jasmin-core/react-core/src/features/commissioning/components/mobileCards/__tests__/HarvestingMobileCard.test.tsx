@@ -248,19 +248,17 @@ describe("HarvestingMobileCard actions", () => {
     expect(handlers.onEdit).not.toHaveBeenCalled();
   });
 
-  it("colours the confirm button green once confirmed and red before", () => {
+  // HarvestingMobileCard.css colours the button green through `is-confirmed`
+  // and red without it; jsdom loads no stylesheet, so the class is the contract.
+  it("marks the confirm button confirmed once confirmed and not before", () => {
     const { unmount } = renderCard({ isConfirmed: true });
-    expect(confirmButton()).toHaveStyle({
-      backgroundColor: "var(--color-success-bg)",
-      borderColor: "var(--color-success-border)",
-    });
+    expect(confirmButton()).toHaveClass("harvest-confirm-button", "is-confirmed");
+    expect(confirmButton()).not.toHaveAttribute("style");
     unmount();
 
     renderCard({ isConfirmed: false });
-    expect(confirmButton()).toHaveStyle({
-      backgroundColor: "var(--color-error-bg)",
-      borderColor: "var(--color-error-border)",
-    });
+    expect(confirmButton()).toHaveClass("harvest-confirm-button");
+    expect(confirmButton()).not.toHaveClass("is-confirmed");
   });
 
   it.skip("names the confirm button for screen readers by what it does", () => {

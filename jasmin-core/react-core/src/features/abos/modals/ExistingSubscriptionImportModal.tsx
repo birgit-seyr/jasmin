@@ -1,6 +1,7 @@
-import { Alert, Card, Modal, Space, Steps, Table, Typography } from "antd";
+import { Alert, Card, Modal, Space, Steps, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import CsvColumnsTable from "@shared/ui/CsvColumnsTable";
 import DownloadCsvTemplateButton from "@shared/ui/DownloadCsvTemplateButton";
 
 const { Paragraph, Text } = Typography;
@@ -170,29 +171,12 @@ export default function ExistingSubscriptionImportModal({
                   message={t("onboarding.stage3.drafts_notice")}
                 />
                 <Card size="small" title={t("onboarding.columns_title")}>
-                  <Table
-                    size="small"
-                    pagination={false}
-                    dataSource={columnDocRows}
-                    columns={[
-                      {
-                        title: t("onboarding.col_field"),
-                        dataIndex: "field",
-                        render: (f: string) => <code>{f}</code>,
-                      },
-                      {
-                        title: t("onboarding.col_required"),
-                        dataIndex: "req",
-                        render: (r: boolean) =>
-                          r ? t("common.yes") : t("common.no"),
-                      },
-                      {
-                        title: t("onboarding.col_meaning"),
-                        dataIndex: "key",
-                        key: "meaning",
-                        render: (k: string) => t(`onboarding.sub_help.${k}`),
-                      },
-                    ]}
+                  <CsvColumnsTable
+                    rows={columnDocRows.map(({ key, field, req }) => ({
+                      field,
+                      required: req,
+                      meaning: t(`onboarding.sub_help.${key}`),
+                    }))}
                   />
                   <div style={{ marginTop: 12 }}>
                     {uploadAllowed ? (

@@ -17,17 +17,36 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText } from "@shared/ui";
-import { buildCsvString, mondayOfIsoWeek, toApiDate } from "@shared/utils";
-import { useCurrency } from "@hooks/index";
+import {
+  buildCsvString,
+  csvDecimal,
+  mondayOfIsoWeek,
+  resolveCsvDialect,
+  toApiDate,
+} from "@shared/utils";
+import { useCurrency, useTenant } from "@hooks/index";
 
 type FeeRow = DeliveryStationFees & TableRecord;
+
+// The units the fees endpoint counts a quantity in; a station without a fee
+// has none.
+const FEE_QUANTITY_UNIT_KEYS: Record<string, string> = {
+  boxes: "commissioning.fee_quantity_unit.boxes",
+  months: "commissioning.fee_quantity_unit.months",
+  years: "commissioning.fee_quantity_unit.years",
+};
 
 /** What the solawi owes each fee-carrying delivery station over a period. The
  * on-screen table is driven by a year + week selector ("all weeks" = the whole
  * year); the CSV button still exports an office-chosen date range. */
 export default function DeliveryStationFees() {
   const { t } = useTranslation();
-  const { currencySymbol } = useCurrency();
+  const { formatCurrency } = useCurrency();
+  const { getSetting } = useTenant();
+  const csvDialect = useMemo(
+    () => resolveCsvDialect(getSetting("csv_format", "de") as string),
+    [getSetting],
+  );
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState(() => dayjs().year());
   // null week = "all delivery weeks" → the whole year (so the table isn't empty
@@ -44,6 +63,15 @@ export default function DeliveryStationFees() {
           none: "commissioning.fee_type_none",
         }[feeType] ?? "commissioning.fee_type_none",
       ),
+    [t],
+  );
+
+  // The billed quantity with its unit by name: "30 boxes", "1 month".
+  const quantityLabel = useCallback(
+    (quantity: number, unit: string) =>
+      unit in FEE_QUANTITY_UNIT_KEYS
+        ? `${quantity} ${t(FEE_QUANTITY_UNIT_KEYS[unit], { count: quantity })}`
+        : String(quantity),
     [t],
   );
 
@@ -109,17 +137,17 @@ export default function DeliveryStationFees() {
         key: "rate_net",
         align: "right",
         render: (value, record) =>
-          `${value} ${currencySymbol} / ${feeTypeLabel(record.fee_type as string)}`,
+          `${formatCurrency(Number(value))} / ${feeTypeLabel(record.fee_type as string)}`,
       },
       {
         title: t("commissioning.total_net"),
         dataIndex: "total_net",
         key: "total_net",
         align: "right",
-        render: (value) => `${value} ${currencySymbol}`,
+        render: (value) => formatCurrency(Number(value)),
       },
     ],
-    [t, feeTypeLabel, currencySymbol],
+    [t, feeTypeLabel, formatCurrency],
   );
 
   const fetchFeesCsv = useCallback(
@@ -138,13 +166,13 @@ export default function DeliveryStationFees() {
       const csvRows = feeRows.map((row: DeliveryStationFees) => [
         row.delivery_station_name ?? row.delivery_station,
         feeTypeLabel(row.fee_type),
-        `${row.quantity} ${row.quantity_unit}`,
-        row.rate_net,
-        row.total_net,
+        quantityLabel(row.quantity, row.quantity_unit),
+        csvDecimal(row.rate_net),
+        csvDecimal(row.total_net),
       ]);
-      return buildCsvString(headers, csvRows);
+      return buildCsvString(headers, csvRows, csvDialect);
     },
-    [feeTypeLabel, t],
+    [feeTypeLabel, quantityLabel, t, csvDialect],
   );
 
   return (

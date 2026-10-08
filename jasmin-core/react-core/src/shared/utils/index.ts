@@ -42,7 +42,7 @@ export {
 } from './purchasedName';
 export { default as notify } from './notify';
 export { logger } from './logger';
-export { buildCsvString, downloadCsvBlob, resolveCsvDialect } from './csv';
+export { buildCsvString, csvDecimal, downloadCsvBlob, resolveCsvDialect } from './csv';
 export { downloadBlob } from './downloadBlob';
 export { openStoredPdf } from './openStoredPdf';
 export { zipFilesToBlob } from './zip';

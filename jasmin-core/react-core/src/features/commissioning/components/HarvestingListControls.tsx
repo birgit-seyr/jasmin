@@ -2,7 +2,8 @@
  * Office/gardener view toggle + "round up to full VPE" checkbox for
  * the HarvestingList page. Desktop shows both controls in a row;
  * mobile shows only the checkbox (the gardener view is forced on
- * mobile by the page).
+ * mobile by the page). The checkbox saves a tenant setting, which only
+ * the office may change, so it is left out for every other role.
  */
 
 import { AppstoreOutlined, UnorderedListOutlined } from "@ant-design/icons";
@@ -15,16 +16,20 @@ export default function HarvestingListControls({
   onViewChange,
   roundUpToFullPU,
   onRoundUpChange,
+  canChangeRoundUp,
 }: {
   isMobile: boolean;
   isGardenerView: boolean;
   onViewChange: (isGardenerView: boolean) => void;
   roundUpToFullPU: boolean;
   onRoundUpChange: (checked: boolean) => void;
+  /** Whether the user may save tenant settings, which the checkbox does. */
+  canChangeRoundUp: boolean;
 }) {
   const { t } = useTranslation();
 
   if (isMobile) {
+    if (!canChangeRoundUp) return null;
     return (
       <div style={{ marginBottom: "8px" }}>
         <label
@@ -73,20 +78,22 @@ export default function HarvestingListControls({
           {t("commissioning.gardener_view")}
         </Button>
       </Space.Compact>
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          cursor: "pointer",
-        }}
-      >
-        <Checkbox
-          checked={roundUpToFullPU}
-          onChange={(e) => onRoundUpChange(e.target.checked)}
-        />
-        <span>{t("commissioning.round_up_to_full_vpe")}</span>
-      </label>
+      {canChangeRoundUp && (
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            cursor: "pointer",
+          }}
+        >
+          <Checkbox
+            checked={roundUpToFullPU}
+            onChange={(e) => onRoundUpChange(e.target.checked)}
+          />
+          <span>{t("commissioning.round_up_to_full_vpe")}</span>
+        </label>
+      )}
     </div>
   );
 }

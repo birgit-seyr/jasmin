@@ -36,19 +36,56 @@ function formatDate(value: Date, format: CsvDialect["dateFormat"]): string {
 }
 
 /**
+ * A cell whose value is a decimal amount. The API sends money and other
+ * decimals as strings ("2.50"), which can't be told apart from text such as an
+ * article number "1.10", so a column marks its values with this to have them
+ * written with the dialect's decimal separator.
+ */
+class CsvDecimalCell {
+  constructor(readonly value: unknown) {}
+}
+
+export function csvDecimal(value: unknown): CsvDecimalCell {
+  return new CsvDecimalCell(value);
+}
+
+// The canonical form the API sends a decimal in: digits with an optional
+// point, no grouping, no exponent.
+const DECIMAL_STRING = /^-?\d+(\.\d+)?$/;
+
+function withDecimalSeparator(text: string, dialect: CsvDialect): string {
+  return dialect.decimalSeparator === "."
+    ? text
+    : text.replace(".", dialect.decimalSeparator);
+}
+
+/**
+ * The value a cell is written from: a marked decimal that is a number or a
+ * canonical decimal string stays marked; anything else in a marked cell is
+ * written as the plain value it is, so text keeps its formula guard.
+ */
+function unwrapCell(raw: unknown): unknown {
+  if (!(raw instanceof CsvDecimalCell)) return raw;
+  const { value } = raw;
+  if (typeof value === "number") return value;
+  if (typeof value === "string" && DECIMAL_STRING.test(value)) return raw;
+  return value;
+}
+
+/**
  * Convert a value to its dialect-specific string representation.
- * Numbers get the dialect decimal separator, Dates the dialect date format.
+ * Numbers and marked decimals get the dialect decimal separator, Dates the
+ * dialect date format.
  */
 function formatCsvValue(raw: unknown, dialect: CsvDialect): string {
-  if (raw === null || raw === undefined) return "";
-  if (raw instanceof Date) return formatDate(raw, dialect.dateFormat);
-  if (typeof raw === "number") {
-    const text = Number.isInteger(raw) ? String(raw) : String(raw);
-    return dialect.decimalSeparator === "."
-      ? text
-      : text.replace(".", dialect.decimalSeparator);
+  const cell = unwrapCell(raw);
+  if (cell === null || cell === undefined) return "";
+  if (cell instanceof CsvDecimalCell) {
+    return withDecimalSeparator(String(cell.value), dialect);
   }
-  return String(raw);
+  if (cell instanceof Date) return formatDate(cell, dialect.dateFormat);
+  if (typeof cell === "number") return withDecimalSeparator(String(cell), dialect);
+  return String(cell);
 }
 
 // CSV formula-injection trigger chars (OWASP): a spreadsheet treats a cell
@@ -63,12 +100,13 @@ function escapeCsvValue(
   raw: unknown,
   dialect: CsvDialect = PRESETS.de,
 ): string {
-  let str = formatCsvValue(raw, dialect);
+  const cell = unwrapCell(raw);
+  let str = formatCsvValue(cell, dialect);
   // Formula-injection neutralization: prefix a genuine TEXT cell that starts
   // with a formula trigger with a ``'`` so Excel/Sheets treat it as text.
-  // Only string inputs — a numeric -5 or a Date must not be prefixed
-  // (matches csv_safety.py, which guards on ``isinstance(value, str)``).
-  if (typeof raw === "string" && CSV_FORMULA_LEAD.test(str)) {
+  // Only string inputs — a numeric -5, a marked decimal or a Date must not be
+  // prefixed (matches csv_safety.py, which guards on ``isinstance(value, str)``).
+  if (typeof cell === "string" && CSV_FORMULA_LEAD.test(str)) {
     str = `'${str}`;
   }
   if (str.includes(dialect.delimiter) || str.includes('"') || str.includes("\n")) {

@@ -116,8 +116,10 @@ import ExternalCodeMappingsModal from "../ExternalCodeMappingsModal";
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
+// The small vegetable box ran until the end of 2025, when a new one took over.
 const VARIATIONS: ShareTypeVariation[] = [
-  { id: "var-veg-s", share_type: "st-veg", share_type_name: "Vegetables", size: "S", valid_from: "2025-01-06" },
+  { id: "var-veg-s", share_type: "st-veg", share_type_name: "Vegetables", size: "S", valid_from: "2025-01-06", valid_until: "2025-12-28" },
+  { id: "var-veg-s-2026", share_type: "st-veg", share_type_name: "Vegetables", size: "S", valid_from: "2025-12-29", valid_until: null },
   { id: "var-veg-l", share_type: "st-veg", share_type_name: "Vegetables", size: "L", valid_from: "2025-01-06" },
   { id: "var-bread", share_type: "st-bread", share_type_name: "Bread", size: "ONE_SIZE", valid_from: "2025-01-06" },
 ];
@@ -137,9 +139,10 @@ const DELIVERY_DAYS: SharesDeliveryDay[] = [
 ];
 
 // The internal objects as the modal labels them, dated in the default format.
-const VEG_S = "var-veg-s — Vegetables · commissioning.S";
-const VEG_L = "var-veg-l — Vegetables · commissioning.L";
-const BREAD = "var-bread — Bread · commissioning.ONE_SIZE";
+const VEG_S = "var-veg-s — Vegetables · commissioning.S · 06.01.2025 → 28.12.2025";
+const VEG_S_2026 = "var-veg-s-2026 — Vegetables · commissioning.S · 29.12.2025";
+const VEG_L = "var-veg-l — Vegetables · commissioning.L · 06.01.2025";
+const BREAD = "var-bread — Bread · commissioning.ONE_SIZE · 06.01.2025";
 const MILL = "station-mill — Mill · Vienna";
 const FARM = "station-farm — Farm";
 const UNNAMED_STATION = "station-new — import_shares.mappings.no_label";
@@ -521,6 +524,31 @@ describe("ExternalCodeMappingsModal contents", () => {
     expect(cellOf(rowOf("VEG-XL"), INTERNAL).textContent).toBe("var-veg-xl");
   });
 
+  it("dates the variations in the tenant's format, so a replaced one tells from its successor", async () => {
+    tenantSettings.values = { date_format: "MM/DD/YYYY" };
+    await renderOpen();
+
+    expect(cellOf(rowOf("VEG-S"), INTERNAL).textContent).toBe(
+      "var-veg-s — Vegetables · commissioning.S · 01/06/2025 → 12/28/2025",
+    );
+    await editMapping("VEG-S");
+    expect((await optionsOf(INTERNAL)).slice(0, 2)).toEqual([
+      "var-veg-s — Vegetables · commissioning.S · 01/06/2025 → 12/28/2025",
+      "var-veg-s-2026 — Vegetables · commissioning.S · 12/29/2025",
+    ]);
+  });
+
+  it("shows an id of another kind's object as unknown", async () => {
+    server.mappings.push(
+      { id: "map-stn-veg", kind: "station", external_code: "STN-VEG", internal_id: "var-veg-s", note: null },
+      { id: "map-day-mill", kind: "day", external_code: "DAY-MILL", internal_id: "station-mill", note: null },
+    );
+    await renderOpen();
+
+    expect(cellOf(rowOf("STN-VEG"), INTERNAL).textContent).toBe("var-veg-s");
+    expect(cellOf(rowOf("DAY-MILL"), INTERNAL).textContent).toBe("station-mill");
+  });
+
   it("dates the delivery days in the tenant's format", async () => {
     tenantSettings.values = { date_format: "MM/DD/YYYY" };
     await renderOpen();
@@ -556,7 +584,7 @@ describe("ExternalCodeMappingsModal contents", () => {
 
 describe("ExternalCodeMappingsModal picker", () => {
   it.each([
-    { kind: "variation", code: "VEG-S", current: VEG_S, offered: [VEG_S, VEG_L, BREAD] },
+    { kind: "variation", code: "VEG-S", current: VEG_S, offered: [VEG_S, VEG_S_2026, VEG_L, BREAD] },
     { kind: "station", code: "STN-001", current: MILL, offered: [MILL, FARM, UNNAMED_STATION] },
     { kind: "day", code: "TUE", current: TUE_2025, offered: [TUE_2025, TUE, THU] },
   ])(
@@ -577,6 +605,7 @@ describe("ExternalCodeMappingsModal picker", () => {
     expect(await optionsOf(KIND)).toEqual([VARIATION, STATION, DAY]);
     expect(await optionsOf(INTERNAL)).toEqual([
       VEG_S,
+      VEG_S_2026,
       VEG_L,
       BREAD,
       MILL,
@@ -675,7 +704,9 @@ describe("ExternalCodeMappingsModal adding", () => {
     await save();
 
     expect(
-      await within(dialog()).findByText(/ — table\.save_failed_hint$/),
+      await within(dialog()).findByText(
+        "validation.unique.external_code_mapping — table.save_failed_hint",
+      ),
     ).toBeInTheDocument();
     await act(() => flushMicrotasks());
     expect(api.create).not.toHaveBeenCalled();

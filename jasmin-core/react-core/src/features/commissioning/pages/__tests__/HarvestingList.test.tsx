@@ -433,7 +433,7 @@ function cardOf(name: string): HTMLElement {
 const amountsOn = (card: HTMLElement) => cellTexts(card.querySelectorAll("tr"));
 const confirmButtonOf = (name: string) => within(cardOf(name)).getByTitle(CONFIRM);
 /** The round button turns green once the harvest is confirmed and stays red until then. */
-const looksConfirmed = (button: HTMLElement) => button.style.backgroundColor === "var(--color-success-bg)";
+const looksConfirmed = (button: HTMLElement) => button.classList.contains("is-confirmed");
 const confirmDialog = () => screen.findByRole("dialog", { name: CONFIRM });
 
 /** The crates the day's harvest needs, as the phone's card lists them. */
@@ -528,7 +528,7 @@ describe("loading and rows", () => {
       [under(PLANNED, SHARES)]: "30,00", [under(PLANNED, ORDERS)]: "20,00", [under(IN_STOCK, SHARES)]: "10,00", [under(IN_STOCK, ORDERS)]: "",
       [under(TO_HARVEST, SHARES)]: "20,00", [under(TO_HARVEST, ORDERS)]: "20,00", [under(ADDED, SHARES)]: "5,00", [under(ADDED, ORDERS)]: "",
       [under(TOTAL, SHARES)]: `25,00 ${KG} / 2,5 ${PU}`, [under(TOTAL, ORDERS)]: `20,00 ${KG} / 2,0 ${PU}`,
-      [PER_PU]: `10,0 ${KG}/${PU}`, [CRATE]: "E2",
+      [PER_PU]: `10,00 ${KG}/${PU}`, [CRATE]: "E2",
       [NOTE]: "Pull by hand, Early variety / commissioning.plot: Field A, commissioning.bed_number: 3",
     });
     expect(cellsOf(rowOf("Lettuce"))).toMatchObject({
@@ -635,7 +635,7 @@ describe("choosing the day and the week", () => {
     expect(lastListRequest()).toEqual(listRequest({ delivery_week: 42 }));
     expect(deliveryDaysShown()).toBe("commissioning.delivery_day_sharesWednesday, 14.10.2026 / Thursday, 15.10.2026");
     expect(api.shares).toHaveBeenCalledWith({ year: 2026, delivery_week: 43 });
-    expect(api.deliveryDays).toHaveBeenLastCalledWith({ active_at_date: "2026-10-17" });
+    expect(api.deliveryDays).toHaveBeenCalledWith({ active_at_date: "2026-10-24" }); // The week after, for a harvest serving it.
 
     await choose(YEAR, "2027");
     await waitFor(() => expect(articlesListed()).toEqual(["Leeks"]));
@@ -654,7 +654,7 @@ describe("team view", () => {
     // Beetroot needs no harvest: its stock covers the plan.
     expect(articlesListed()).toEqual(["Lettuce (commissioning.large)", "Carrots", "Leeks", "Radishes"]);
     expect(cellsOf(rowOf("Carrots"))).toMatchObject({
-      [TEAM_SHARES]: `25,00 ${KG} / 2,5 ${PU}`, [TEAM_ORDERS]: `20,00 ${KG} / 2,0 ${PU}`, [PER_PU]: `10,0 ${KG}/${PU}`, [CRATE]: "E2",
+      [TEAM_SHARES]: `25,00 ${KG} / 2,5 ${PU}`, [TEAM_ORDERS]: `20,00 ${KG} / 2,0 ${PU}`, [PER_PU]: `10,00 ${KG}/${PU}`, [CRATE]: "E2",
       [NOTE]: "Pull by hand, Early variety / commissioning.plot: Field A, commissioning.bed_number: 3",
     });
     expect(screen.queryByRole("button", { name: ADD_ROW })).not.toBeInTheDocument();
@@ -761,7 +761,7 @@ describe("correcting the plan", () => {
     await save();
     await waitFor(() =>
       expect(cellsOf(rowOf("Carrots"))).toMatchObject({
-        [PER_PU]: `5,0 ${KG}/${PU}`, [CRATE]: "E1", [under(TOTAL, SHARES)]: `25,00 ${KG} / 5,0 ${PU}`,
+        [PER_PU]: `5,00 ${KG}/${PU}`, [CRATE]: "E1", [under(TOTAL, SHARES)]: `25,00 ${KG} / 5,0 ${PU}`,
         [NOTE]: "Leave the tops on, Early variety / commissioning.plot: Field A, commissioning.bed_number: 3",
       }),
     );
@@ -883,10 +883,10 @@ describe("download", () => {
       rows: [
         ["Lettuce (commissioning.large)", `66,0 ${PCS} - 5,5 ${PU}`, "", `12,0 ${PCS}/${PU}`, "E1", plot("Field A", 1), "☐"],
         [
-          "Carrots", `25,00 ${KG} - 2,5 ${PU}`, `20,00 ${KG} - 2,0 ${PU}`, `10,0 ${KG}/${PU}`, "E2",
+          "Carrots", `25,00 ${KG} - 2,5 ${PU}`, `20,00 ${KG} - 2,0 ${PU}`, `10,00 ${KG}/${PU}`, "E2",
           `Pull by hand, Early variety\n${plot("Field A", 3)}`, "☐",
         ],
-        ["Leeks", `16,00 ${KG} - 2,0 ${PU}`, "", `8,0 ${KG}/${PU}`, "E2", plot("Field B", 2), "☐"],
+        ["Leeks", `16,00 ${KG} - 2,0 ${PU}`, "", `8,00 ${KG}/${PU}`, "E2", plot("Field B", 2), "☐"],
         ["Radishes", "", `20,0 ${BUNCHES}`, "", "", "For the farm shop\ncommissioning.plot: Greenhouse", "☐"],
       ],
     });
@@ -906,7 +906,7 @@ describe("on a phone", () => {
     expect(within(cardOf("Lettuce")).getByText("commissioning.large")).toBeInTheDocument();
     const carrots = cardOf("Carrots");
     expect(within(carrots).getByText("commissioning.bed_number: 3")).toBeInTheDocument();
-    expect(within(carrots).getByText(`10,0 ${KG}/${PU}`)).toBeInTheDocument();
+    expect(within(carrots).getByText(`10,00 ${KG}/${PU}`)).toBeInTheDocument();
     expect(amountsOn(carrots)).toEqual([
       [`${SHARES}:`, `25,00 ${KG}`, `2,5 ${PU}`], [`${ORDERS}:`, `20,00 ${KG}`, `2,0 ${PU}`], ["Σ", `45,00 ${KG}`, `4,5 ${PU}`],
     ]);

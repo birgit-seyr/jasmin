@@ -191,6 +191,7 @@ export default function ExportCsvAllArticles({
     const sharedPrices: ExportCsvColumn[] = pricePart.map((c: PriceColumn) => ({
       key: c.key,
       label: c.label,
+      decimal: c.decimal,
       render:
         c.key === "tax_rate"
           ? undefined
@@ -202,6 +203,7 @@ export default function ExportCsvAllArticles({
       {
         key: "crate_price",
         label: `${t("commissioning.crate_price")} (${currencySymbol})`,
+        decimal: true,
       },
     ];
 

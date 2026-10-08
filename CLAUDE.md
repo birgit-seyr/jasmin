@@ -535,6 +535,13 @@ before the group's open row — in the backend's own words (`errors.time_bound.*
 and lets a later row succeed the open one. Don't hand-roll period checks with
 `uniqueCheck` combinations or in `customSave`.
 
+**Row keys.** A table of server rows names the field holding the row's id —
+`rowKey="id"`, or `"delivery_station_day_id"` where the payload calls it that; a
+`rowKey` function only builds a composite key and never takes AntD's deprecated
+row index. `EditableTable` keys its rows on `id` itself, and an id names one
+record for as long as the table is mounted — a page whose ids repeat across the
+views it switches between gives each view its own `key`.
+
 ### Structure & imports
 
 **Domain-first.** There is no single global modals folder. A modal that is

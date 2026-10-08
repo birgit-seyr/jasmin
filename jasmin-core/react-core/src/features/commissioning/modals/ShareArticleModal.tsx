@@ -37,7 +37,7 @@ const ShareArticleModal: FC<ShareArticleModalProps> = ({
     }
   }, [isOpen, isVisible, openModal, closeModal, defaultValues]);
 
-  const handleSave = () => {
+  const handleSave = () =>
     saveShareArticle((savedData: unknown) => {
       if (onSuccess) {
         onSuccess(savedData as Record<string, unknown>);
@@ -46,7 +46,6 @@ const ShareArticleModal: FC<ShareArticleModalProps> = ({
         onClose();
       }
     });
-  };
 
   const handleCancel = () => {
     closeModal();

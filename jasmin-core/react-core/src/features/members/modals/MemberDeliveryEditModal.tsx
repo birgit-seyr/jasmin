@@ -136,12 +136,11 @@ const MemberDeliveryEditModal: FC<MemberDeliveryEditModalProps> = ({
     }
   }, [visible, delivery, isVisible, openModal, closeModal]);
 
-  const handleSave = () => {
+  const handleSave = () =>
     saveDelivery(() => {
       onSuccess();
       onCancel();
     });
-  };
 
   const handleCancel = () => {
     closeModal();

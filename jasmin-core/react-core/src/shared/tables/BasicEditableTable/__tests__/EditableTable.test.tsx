@@ -133,3 +133,53 @@ describe("EditableTable select search", () => {
     ]);
   });
 });
+
+describe("EditableTable cell errors for screen readers", () => {
+  const requiredColumns: EditableColumnConfig<Row>[] = [
+    { title: "Name", dataIndex: "name", inputType: "text", editable: true, required: true },
+    { title: "Amount", dataIndex: "amount", inputType: "number", editable: true },
+  ];
+
+  async function editCarrots(columns: EditableColumnConfig<Row>[], uniqueCheck?: string) {
+    render(
+      <EditableTable<Row>
+        columns={columns}
+        initialData={ROWS}
+        permissions={{ canAdd: true, canEdit: true, canDelete: true }}
+        apiFunctions={{ create: vi.fn(), update: vi.fn(), delete: vi.fn() }}
+        uniqueCheck={uniqueCheck}
+        uniqueCheckMessage="This name is taken"
+      />,
+    );
+    await userEvent.click((await screen.findAllByRole("button", { name: "table.edit" }))[0]);
+    return screen.getByRole("textbox", { name: "Name" });
+  }
+
+  it("describes an emptied required cell by its required error", async () => {
+    const nameInput = await editCarrots(requiredColumns);
+
+    await userEvent.clear(nameInput);
+    await userEvent.click(screen.getByRole("button", { name: "table.save" }));
+
+    await waitFor(() => expect(nameInput).toHaveAccessibleDescription("table.required"));
+    expect(nameInput).toBeInvalid();
+  });
+
+  it("describes a cell the table refused by the table's own reason", async () => {
+    const nameInput = await editCarrots(COLUMNS, "name");
+
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "Leeks");
+    await userEvent.click(screen.getByRole("button", { name: "table.save" }));
+
+    await waitFor(() => expect(nameInput).toHaveAccessibleDescription("This name is taken"));
+    expect(nameInput).toBeInvalid();
+  });
+
+  it("describes a valid cell by nothing", async () => {
+    const nameInput = await editCarrots(requiredColumns);
+
+    expect(nameInput).toHaveAccessibleDescription("");
+    expect(nameInput).toBeValid();
+  });
+});

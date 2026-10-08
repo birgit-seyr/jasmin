@@ -35,12 +35,13 @@ export function useSharePriceCsvColumns(): PriceColumn[] {
       (tier, i) => ({ tier, idx: (i + 1) as 1 | 2 | 3 }),
     );
     const cols: PriceColumn[] = [
-      { key: "tax_rate", label: t("commissioning.tax_rate") },
+      { key: "tax_rate", label: t("commissioning.tax_rate"), decimal: true },
     ];
     for (const unit of units) {
       cols.push({
         key: `net_price_for_boxes_${unit}`,
         label: t(`commissioning.box_price_${unit}`, { currencySymbol }),
+        decimal: true,
       });
     }
     for (const unit of units) {
@@ -51,6 +52,7 @@ export function useSharePriceCsvColumns(): PriceColumn[] {
             tier,
             currencySymbol,
           }),
+          decimal: true,
         });
       }
     }

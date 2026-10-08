@@ -1,0 +1,21 @@
+/* The phone's harvest confirmation dialog. */
+.harvest-confirmation {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.harvest-confirmation-article {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.harvest-confirmation-expected {
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+  margin-bottom: 12px;
+}
+
+.harvest-confirmation-amount {
+  width: 100%;
+  font-size: 18px;
+}

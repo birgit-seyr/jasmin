@@ -1,7 +1,8 @@
-import { Alert, Button, Card, Modal, Space, Table, Typography } from "antd";
+import { Alert, Button, Card, Modal, Space, Typography } from "antd";
 import { useState, type ComponentProps, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useRoles } from "@shared/auth";
+import CsvColumnsTable from "@shared/ui/CsvColumnsTable";
 import DownloadCsvTemplateButton from "@shared/ui/DownloadCsvTemplateButton";
 
 const { Paragraph, Text } = Typography;
@@ -85,32 +86,12 @@ export function CsvImportModal({
 
         <Card size="small" title={t("csv_upload.columns_title")}>
           {showHelpTable ? (
-            <Table
-              size="small"
-              pagination={false}
-              rowKey="field"
-              dataSource={documented.map((col) => ({
+            <CsvColumnsTable
+              rows={documented.map((col) => ({
                 field: String(col.dataIndex),
                 required: col.required === true,
                 meaning: help?.[String(col.dataIndex)] ?? "",
               }))}
-              columns={[
-                {
-                  title: t("csv_upload.col_field"),
-                  dataIndex: "field",
-                  render: (field: string) => <code>{field}</code>,
-                },
-                {
-                  title: t("csv_upload.col_required"),
-                  dataIndex: "required",
-                  render: (required: boolean) =>
-                    required ? t("common.yes") : t("common.no"),
-                },
-                {
-                  title: t("csv_upload.col_meaning"),
-                  dataIndex: "meaning",
-                },
-              ]}
             />
           ) : (
             <Text type="secondary">

@@ -15,6 +15,16 @@ import NumberInput from "@shared/ui/NumberInput";
 
 const { Paragraph } = Typography;
 
+// Billing reads the first non-zero of these, in this order, so a station is
+// paid in one way only.
+const FEE_FIELDS = [
+  "fee_per_box_net",
+  "fee_per_month_net",
+  "fee_per_year_net",
+] as const;
+
+const isFee = (value: unknown) => Number(value ?? 0) > 0;
+
 interface DeliveryStationFeeModalProps {
   open: boolean;
   deliveryStation: DeliveryStation | null;
@@ -23,11 +33,11 @@ interface DeliveryStationFeeModalProps {
 }
 
 /**
- * Per-row modal for the pickup-station fees the solawi owes a station. NET,
+ * Per-row modal for the pickup-station fees the farm owes a station. NET,
  * either/or: at most one of per-box / per-month / per-year applies (the other
- * two stay 0). fees_billing_period is the billing cadence. Fees are
- * Decimal-as-string on the wire, so the number fields' values are coerced to
- * String before the partial update. Mirrors ResellerInvoiceSettingsModal.
+ * two stay 0). Fees are Decimal-as-string on the wire, so the number fields'
+ * values are coerced to String before the partial update. Mirrors
+ * ResellerInvoiceSettingsModal.
  */
 export const DeliveryStationFeeModal: FC<DeliveryStationFeeModalProps> = ({
   open,
@@ -55,7 +65,6 @@ export const DeliveryStationFeeModal: FC<DeliveryStationFeeModalProps> = ({
             fee_per_box_net: deliveryStation.fee_per_box_net,
             fee_per_month_net: deliveryStation.fee_per_month_net,
             fee_per_year_net: deliveryStation.fee_per_year_net,
-            fees_billing_period: deliveryStation.fees_billing_period ?? null,
           }
         : null,
     [deliveryStation],
@@ -68,14 +77,16 @@ export const DeliveryStationFeeModal: FC<DeliveryStationFeeModalProps> = ({
       async () => {
         // Money fields are Decimal-as-string on the wire; NumberInput yields a
         // number → coerce back to String so the server DecimalField keeps cents.
+        // A cleared field means no fee, which the server stores as 0: it
+        // refuses null.
         const payload: Record<string, unknown> = { ...values };
-        for (const key of [
-          "fee_per_box_net",
-          "fee_per_month_net",
-          "fee_per_year_net",
-        ]) {
-          if (typeof payload[key] === "number")
-            payload[key] = String(payload[key]);
+        for (const key of FEE_FIELDS) {
+          const value = payload[key];
+          if (value === null || value === undefined || value === "") {
+            payload[key] = "0";
+          } else if (typeof value === "number") {
+            payload[key] = String(value);
+          }
         }
         await commissioningDeliveryStationsPartialUpdate(
           String(deliveryStation.id ?? ""),
@@ -109,49 +120,32 @@ export const DeliveryStationFeeModal: FC<DeliveryStationFeeModalProps> = ({
       loading={saving}
       requiredMark={false}
     >
-      <Form.Item
-        name="fee_per_box_net"
-        label={t("delivery_stations.fee_per_box_net")}
-      >
-        <NumberInput
-          min={0}
-          step={0.01}
-          suffix={currencySymbol}
-          className="w-full"
-        />
-      </Form.Item>
-      {/* <Form.Item
-        name="fee_per_month_net"
-        label={t("delivery_stations.fee_per_month_net")}
-      >
-        <NumberInput
-          min={0}
-          step={0.01}
-          suffix={currencySymbol}
-          className="w-full"
-        />
-      </Form.Item>
-      <Form.Item
-        name="fee_per_year_net"
-        label={t("delivery_stations.fee_per_year_net")}
-      >
-        <NumberInput
-          min={0}
-          step={0.01}
-          suffix={currencySymbol}
-          className="w-full"
-        />
-      </Form.Item>
-      <Form.Item
-        name="fees_billing_period"
-        label={t("delivery_stations.fees_billing_period")}
-      >
-        <Select
-          allowClear
-          options={billingPeriodOptions}
-          placeholder={t("delivery_stations.fees_billing_period_placeholder")}
-        />
-      </Form.Item> */}
+      {FEE_FIELDS.map((name) => (
+        <Form.Item
+          key={name}
+          name={name}
+          label={t(`delivery_stations.${name}`)}
+          dependencies={FEE_FIELDS.filter((other) => other !== name)}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator: (_, value) =>
+                isFee(value) &&
+                FEE_FIELDS.some(
+                  (other) => other !== name && isFee(getFieldValue(other)),
+                )
+                  ? Promise.reject(new Error(t("delivery_stations.fee_only_one")))
+                  : Promise.resolve(),
+            }),
+          ]}
+        >
+          <NumberInput
+            min={0}
+            step={0.01}
+            suffix={currencySymbol}
+            className="w-full"
+          />
+        </Form.Item>
+      ))}
     </EditFormModal>
   );
 };

@@ -364,6 +364,22 @@ describe("DeliveryStationFees rows", () => {
     expect(amountsOf("School")).toEqual(["520 x", `0.80 CHF / ${PER_BOX}`, "416.00 CHF"]);
   });
 
+  it("writes the amounts in the tenant's number format", async () => {
+    tenantState.settings = { number_locale: "de-DE" };
+    feeStations = [{ ...OLD_MILL, rateCents: 123450 }];
+    renderPage();
+
+    await screen.findByText("Old mill");
+    expect(amountsOf("Old mill")).toEqual(["1 x", `1.234,50 € / ${PER_YEAR}`, "1.234,50 €"]);
+  });
+
+  it("puts a dollar sign in front of the amount", async () => {
+    tenantState.settings = { ...tenantState.settings, currency: "USD" };
+    await renderLoaded();
+
+    expect(amountsOf("Farm shop")).toEqual(["312 x", `$1.50 / ${PER_BOX}`, "$468.00"]);
+  });
+
   it("finds a station by its name", async () => {
     const { user } = await renderLoaded();
 
@@ -517,6 +533,37 @@ describe("DeliveryStationFees CSV", () => {
       [120, 120],
       [35, 35],
     ]);
+  });
+
+  async function downloadLastMonth(user: User) {
+    const dialog = await openExport(user);
+    await pickPreset(user, dialog, "common.last_month");
+    await user.click(downloadIn(dialog));
+    await waitFor(() => expect(downloads.files).toHaveLength(1));
+    return (await readText(downloads.files[0].blob)).replace(/^﻿/, "").split("\n");
+  }
+
+  it("writes the amounts with a decimal comma and the unit by name in the German format", async () => {
+    const { user } = await renderLoaded();
+
+    const [, ...lines] = await downloadLastMonth(user);
+
+    expect(lines).toEqual([
+      `Farm shop;${PER_BOX};30 commissioning.fee_quantity_unit.boxes;1,50;45,00`,
+      `School;${PER_BOX};40 commissioning.fee_quantity_unit.boxes;0,80;32,00`,
+      `Old mill;${PER_YEAR};1 commissioning.fee_quantity_unit.years;120,00;120,00`,
+      `st-church-hall;${PER_MONTH};1 commissioning.fee_quantity_unit.months;35,00;35,00`,
+    ]);
+  });
+
+  it("writes the tenant's English format: commas between cells, points in amounts", async () => {
+    tenantState.settings = { ...tenantState.settings, csv_format: "en" };
+    const { user } = await renderLoaded();
+
+    const [header, firstLine] = await downloadLastMonth(user);
+
+    expect(header).toBe([STATION, "commissioning.fee_type", QUANTITY, RATE, TOTAL].join(","));
+    expect(firstLine).toBe(`Farm shop,${PER_BOX},30 commissioning.fee_quantity_unit.boxes,1.50,45.00`);
   });
 
   it("closes the export without asking for fees on cancel", async () => {

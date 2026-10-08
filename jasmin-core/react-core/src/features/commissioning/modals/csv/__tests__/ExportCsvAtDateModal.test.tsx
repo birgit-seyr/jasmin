@@ -81,7 +81,7 @@ function usePriceRows(loadedDate: string | null) {
 
 const COLUMNS: ExportCsvColumn[] = [
   { key: "name", label: "Name" },
-  { key: "amount", label: "Amount" },
+  { key: "amount", label: "Amount", decimal: true },
   { key: "note", label: "Note" },
   {
     key: "is_active",
@@ -336,7 +336,7 @@ describe("ExportCsvAtDateModal download", () => {
     expect(file.name).toBe("prices_2026-10-12.csv");
   });
 
-  it.skip("names the file after the date its rows were loaded for, not a date picked afterwards", async () => {
+  it("names the file after the date its rows were loaded for, not a date picked afterwards", async () => {
     const { user } = await renderLoaded();
 
     await pickDate(user, "2026-10-12");
@@ -346,12 +346,31 @@ describe("ExportCsvAtDateModal download", () => {
     expect(file.name).toBe("prices_2026-10-07.csv");
   });
 
-  it.skip("writes the decimal strings the API sends with the tenant's decimal comma", async () => {
+  it("writes the decimal strings the API sends with the tenant's decimal comma", async () => {
     api.listRows.mockResolvedValue([{ ...CARROTS, amount: "2.50" }]);
     const { user } = await renderLoaded();
 
     const file = await download(user);
 
     expect(file.content.slice(1).split("\n")[1]).toBe("Carrots;2,50;;yes (kg)");
+  });
+
+  it("keeps the decimal point of the tenant's English format", async () => {
+    tenantState.settings = { csv_format: "en" };
+    api.listRows.mockResolvedValue([{ ...CARROTS, amount: "-2.50" }]);
+    const { user } = await renderLoaded();
+
+    const file = await download(user);
+
+    expect(file.content.slice(1).split("\n")[1]).toBe("Carrots,-2.50,,yes (kg)");
+  });
+
+  it("leaves a decimal-looking text in a column not marked as decimal as it is", async () => {
+    api.listRows.mockResolvedValue([{ ...CARROTS, note: "1.10" }]);
+    const { user } = await renderLoaded();
+
+    const file = await download(user);
+
+    expect(file.content.slice(1).split("\n")[1]).toBe("Carrots;2,5;1.10;yes (kg)");
   });
 });

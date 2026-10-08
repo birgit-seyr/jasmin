@@ -56,3 +56,36 @@
 .harvest-amounts-table tr.has-border-top td {
   padding-top: 2px;
 }
+
+/* Holds the round confirm button beside the card's content. */
+.harvest-confirm-action {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+/* The round confirm button: red until the harvest is confirmed, then green.
+   The colours hold on hover and press too, which takes selectors that
+   outrank AntD's own hover and active rules. */
+.harvest-confirm-action .harvest-confirm-button.ant-btn {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+}
+
+.harvest-confirm-action .harvest-confirm-button.ant-btn,
+.harvest-confirm-action .harvest-confirm-button.ant-btn:not(:disabled):not(.ant-btn-disabled):hover,
+.harvest-confirm-action .harvest-confirm-button.ant-btn:not(:disabled):not(.ant-btn-disabled):active {
+  background-color: var(--color-error-bg);
+  border-color: var(--color-error-border);
+  color: var(--color-error-text);
+}
+
+.harvest-confirm-action .harvest-confirm-button.ant-btn.is-confirmed,
+.harvest-confirm-action .harvest-confirm-button.ant-btn.is-confirmed:not(:disabled):not(.ant-btn-disabled):hover,
+.harvest-confirm-action .harvest-confirm-button.ant-btn.is-confirmed:not(:disabled):not(.ant-btn-disabled):active {
+  background-color: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--color-share-content);
+}

@@ -24,11 +24,13 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
+// The tenant's CSV format, per test.
+const tenantState = vi.hoisted(() => ({ csvFormat: "en" }));
 vi.mock("@hooks/configuration/useTenant", async () => {
   const { makeUseTenantMock } = await import("@/test/tenantMock");
   const tenant = makeUseTenantMock({
     getSetting: (key: string, defaultValue?: unknown) =>
-      key === "csv_format" ? "en" : defaultValue,
+      key === "csv_format" ? tenantState.csvFormat : defaultValue,
   });
   return { useTenant: () => tenant };
 });
@@ -78,6 +80,7 @@ const ROWS = [
 ];
 
 beforeEach(() => {
+  tenantState.csvFormat = "en";
   downloads.files = [];
 });
 
@@ -154,5 +157,45 @@ describe("ExportCsv columns", () => {
 
     const [header] = await downloadedLines();
     expect(header).toBe("Active,Name,Description");
+  });
+});
+
+describe("ExportCsv decimals", () => {
+  // The API sends decimals as strings; the grid's input type says which
+  // columns hold them. An article number is text, however it looks.
+  const ARTICLE_NUMBER = { title: <>No.</>, dataIndex: "article_number", key: "article_number", inputType: "text" };
+  const KG_PER_PIECE = {
+    title: <>Kg per piece</>, dataIndex: "kg_per_piece_S", key: "kg_per_piece_S", inputType: "positive_decimal3",
+  };
+  const PIECES_PER_KG = {
+    title: <>Pieces per kg</>, dataIndex: "pieces_per_kg_S", key: "pieces_per_kg_S", inputType: "positive_integer",
+  };
+  const DECIMAL_COLUMNS = [ARTICLE_NUMBER, NAME, KG_PER_PIECE, PIECES_PER_KG];
+  const DECIMAL_ROWS = [
+    { key: "a", id: "a", article_number: "1.10", name: "Leeks", kg_per_piece_S: "0.250", pieces_per_kg_S: 4 },
+    { key: "b", id: "b", article_number: "2", name: "Kale", kg_per_piece_S: null, pieces_per_kg_S: null },
+  ];
+
+  it("writes a decimal column with the decimal comma of the tenant's German format, leaving text as it is", async () => {
+    tenantState.csvFormat = "de";
+    const user = userEvent.setup();
+    render(<ExportCsv open onClose={() => {}} columns={DECIMAL_COLUMNS} data={DECIMAL_ROWS} filename="Articles" />);
+
+    await user.click(screen.getByRole("button", { name: /common\.download/ }));
+
+    expect(await downloadedLines()).toEqual([
+      "No.;Name;Kg per piece;Pieces per kg",
+      "1.10;Leeks;0,250;4",
+      "2;Kale;;",
+    ]);
+  });
+
+  it("keeps the decimal point in the tenant's English format", async () => {
+    const user = userEvent.setup();
+    render(<ExportCsv open onClose={() => {}} columns={DECIMAL_COLUMNS} data={DECIMAL_ROWS} filename="Articles" />);
+
+    await user.click(screen.getByRole("button", { name: /common\.download/ }));
+
+    expect((await downloadedLines())[1]).toBe("1.10,Leeks,0.250,4");
   });
 });

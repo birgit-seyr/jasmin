@@ -33,7 +33,7 @@ const INCOME_COLOR = "#3f8600";
 const INCOME_COLOR_DARK = "#73d13d";
 
 interface PriceRow {
-  key: string;
+  id: string;
   name: string;
   reference: number;
   avg: number | null;
@@ -133,7 +133,7 @@ export default function DashboardAbos() {
         ? prices.reduce((a, b) => a + b, 0) / prices.length
         : null;
       return {
-        key: v.id ?? "",
+        id: v.id ?? "",
         name: [v.share_type_name, getShareTypeVariationSizeLabel(v.size)]
           .filter(Boolean)
           .join(" · "),
@@ -206,6 +206,7 @@ export default function DashboardAbos() {
           >
             <Table<PriceRow>
               size="small"
+              rowKey="id"
               pagination={false}
               columns={priceColumns}
               dataSource={priceRows}

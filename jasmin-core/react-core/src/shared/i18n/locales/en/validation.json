@@ -4,6 +4,7 @@
     "share_article_unit_size_must_be_unique": "The combination of article/unit/size must be unique.",
     "crate_type": "This crate type is already listed — change its line instead.",
     "delivery_note_modal_crate": "This crate type is already on the delivery note — change its line instead.",
+    "external_code_mapping": "This code is already mapped for this kind — change its line instead.",
     "documentation_purchase": "Entry in the purchase documentation must be unique.",
     "invoice_modal_crate": "This crate type is already on the invoice — change its line instead.",
     "list_share_articles": "The combination in the share article must be unique.",

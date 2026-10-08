@@ -545,7 +545,7 @@ export default function DeliveryStationsDetails() {
           size="small"
           loading={loading}
           className="custom-jasmin-table w-max"
-          rowKey={(record) => record.id || record.name}
+          rowKey="id"
           bordered
           style={{ width: "max-content", marginTop: "2em" }}
           locale={{

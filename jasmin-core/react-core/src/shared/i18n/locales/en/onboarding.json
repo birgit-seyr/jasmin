@@ -23,9 +23,6 @@
     "drafts_notice": "Imported subscriptions land as unconfirmed drafts (no deliveries, no billing). The office confirms them afterwards through the normal flow — that's where deliveries and charges are created under the usual capacity checks."
   },
   "columns_title": "Subscription CSV columns",
-  "col_field": "Field",
-  "col_required": "Required",
-  "col_meaning": "Meaning",
   "sub_col": {
     "member_number": "Member number",
     "share_type": "Share type",

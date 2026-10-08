@@ -117,6 +117,30 @@ describe("VariationsTotalsCard", () => {
     ]);
   });
 
+  it("asks for a delivery day given with its own week in that week", async () => {
+    server.totalsByDay = {
+      "day-sat": [row("veg-s", "S", 4)],
+      "day-mon": [row("veg-s", "S", 6)],
+    };
+
+    renderCard({
+      filters: {
+        year: 2026,
+        delivery_week: 53,
+        delivery_day: [
+          "day-sat",
+          { id: "day-mon", year: 2027, delivery_week: 1 },
+        ],
+      },
+    });
+
+    await waitFor(() => expect(listedRows()).toEqual(["Vegetables commissioning.S: 10"]));
+    expect(server.totalsRequests).toEqual([
+      { year: 2026, delivery_week: 53, delivery_day: "day-sat" },
+      { year: 2027, delivery_week: 1, delivery_day: "day-mon" },
+    ]);
+  });
+
   it("orders a share type's sizes by their sort order, not by the API's order", async () => {
     server.totalsByDay = {
       "day-tue": [row("veg-m", "M", 4), row("veg-s", "S", 9)],

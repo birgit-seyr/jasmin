@@ -4,6 +4,7 @@
       "share_article_unit_size_must_be_unique": "Kombination aus Artikel/Einheit/Größe muss einzigartig sein.",
       "crate_type": "Dieser Kistentyp ist schon aufgeführt — bitte seine Zeile bearbeiten.",
       "delivery_note_modal_crate": "Dieser Kistentyp steht schon im Lieferschein — bitte seine Zeile bearbeiten.",
+      "external_code_mapping": "Dieser Code ist für diesen Typ schon zugeordnet — bitte seine Zeile bearbeiten.",
       "documentation_purchase": "Eintrag in der Einkaufsdokumentation muss einzigartig sein.",
       "invoice_modal_crate": "Dieser Kistentyp steht schon in der Rechnung — bitte seine Zeile bearbeiten.",
       "list_share_articles": "Kombination im Anteilsartikel muss einzigartig sein.",

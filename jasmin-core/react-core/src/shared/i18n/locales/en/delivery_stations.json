@@ -55,6 +55,7 @@
   "fees_billing_period_placeholder": "Select period",
   "fee_saved": "Fees saved",
   "fee_save_error": "Could not save fees",
+  "fee_only_one": "Only one fee applies: per box, per month or per year.",
   "infos": "Info",
   "takeover_title": "Replace the running delivery day?",
   "takeover_text": "From {{from}}, the new entry replaces the {{weekday}} delivery that has applied since {{since}}. The old one ends on {{until}}, and its deliveries and reservations from {{from}} on move to the new entry.",
