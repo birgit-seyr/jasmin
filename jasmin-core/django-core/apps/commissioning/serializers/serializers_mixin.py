@@ -1,12 +1,18 @@
+import copy
+from typing import ClassVar
+
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import models
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.shared.iban_validator import validate_iban
+from core.errors import JasminError
 
 from ..utils import (
     build_storage_fields,
+    extract_selected_storage_id,
     extract_storage_fields_from_data,
 )
 from ..utils.deletion_utils import bulk_deletable_pks, can_delete_instance
@@ -488,6 +494,54 @@ class StorageFieldsMixin:
         validated_data.update(storage_fields)
 
         return validated_data
+
+
+# Refuses a write that would break one of the model's unique constraints with
+# that constraint's own coded error, instead of DRF's generic unique-together
+# message (which names the raw fields) or the database's IntegrityError.
+#
+# ``UNIQUE_CONSTRAINT_ERRORS`` maps a constraint name to its error class and
+# message. The check is the constraint's own ``validate()``, so its fields,
+# condition and NULL handling are the database's. Set ``Meta.validators = []``
+# alongside, or DRF adds its generic check first.
+#
+# A ``storage_<id>`` flag set to true moves the row to that storage, as
+# ``GenericDocumentationService`` does when it saves, so the check runs against
+# the storage the row will land on.
+#
+# A comment, not a docstring: drf-spectacular describes a serializer's schema
+# component with the first docstring in its MRO, and this mixin comes first.
+class UniqueConstraintErrorsMixin:
+    UNIQUE_CONSTRAINT_ERRORS: ClassVar[dict[str, tuple[type[JasminError], str]]] = {}
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        model = self.Meta.model
+        constraints = {
+            constraint.name: constraint for constraint in model._meta.constraints
+        }
+        candidate = self._unique_candidate(model, attrs)
+        for name, (error_class, message) in self.UNIQUE_CONSTRAINT_ERRORS.items():
+            try:
+                constraints[name].validate(model, candidate)
+            except DjangoValidationError:
+                raise error_class(
+                    message, details={"non_field_errors": [message]}
+                ) from None
+        return attrs
+
+    def _unique_candidate(self, model, attrs):
+        """The row as it would be saved: the stored row (or a new one) with the
+        validated values on top."""
+        instance = getattr(self, "instance", None)
+        candidate = copy.copy(instance) if instance is not None else model()
+        for field in model._meta.concrete_fields:
+            if field.name in attrs:
+                setattr(candidate, field.name, attrs[field.name])
+        storage_id = extract_selected_storage_id(attrs)
+        if storage_id:
+            candidate.storage_id = storage_id
+        return candidate
 
 
 # Shared DIFF_FIELDS sets for DifferenceTrackingMixin subclasses (the reseller

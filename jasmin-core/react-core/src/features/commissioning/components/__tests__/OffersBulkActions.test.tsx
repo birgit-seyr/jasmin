@@ -58,9 +58,11 @@ import OffersBulkActions from "../OffersBulkActions";
 
 type OfferGroups = ReturnType<typeof useOffersData>["otherOfferGroups"];
 
-const MARKET = { id: "group-market", number: 2, name: "Market stall" };
-const SHOP = { id: "group-shop", number: 3, name: "Farm shop" };
-const OTHER_GROUPS = [MARKET, SHOP] as OfferGroups;
+// Shaped as useOfferGroups hands them over: each row carries its id as the
+// option ``value`` too.
+const MARKET = { id: "group-market", value: "group-market", label: "Market stall", number: 2, name: "Market stall" };
+const SHOP = { id: "group-shop", value: "group-shop", label: "Farm shop", number: 3, name: "Farm shop" };
+const OTHER_GROUPS: OfferGroups = [MARKET, SHOP];
 
 const SELECTED = ["offer-carrots", "offer-lemons"];
 

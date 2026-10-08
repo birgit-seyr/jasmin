@@ -138,12 +138,12 @@ h5 {
   color: var(--color-primary);
 }
 
-/* An offer's amount still to be had, in the offers table: red once none is left. */
-.offer-amount-none-left {
+/* An amount still to be had, such as an offer's: red once none is left. */
+.amount-none-left {
   color: var(--color-error-text);
 }
 
-.offer-amount-left {
+.amount-left {
   color: var(--color-success-text);
 }
 

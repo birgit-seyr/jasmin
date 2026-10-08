@@ -1,6 +1,11 @@
 {
   "purchase": {
-    "organic_certificate_required": "Für Bio oder Umstellung muss der Lieferant für diese Kalenderwoche ein gültiges Bio-Zertifikat besitzen."
+    "organic_certificate_required": "Für Bio oder Umstellung muss der Lieferant für diese Kalenderwoche ein gültiges Bio-Zertifikat besitzen.",
+    "already_documented": "Dieser Artikel ist in dieser Einheit und Größe für diesen Tag bereits als Zukauf von diesem Lieferanten dokumentiert.",
+    "already_documented_without_seller": "Dieser Artikel ist in dieser Einheit und Größe für diese Woche und dieses Lager bereits als Zukauf ohne Lieferanten dokumentiert."
+  },
+  "harvest": {
+    "already_documented": "Dieser Artikel ist in dieser Einheit und Größe für diesen Tag und dieses Lager bereits als Ernte dokumentiert."
   },
   "waste": {
     "already_documented": "Dieser Artikel ist in dieser Einheit und Größe für diesen Tag und dieses Lager bereits als Ausschuss dokumentiert."

@@ -79,7 +79,6 @@ vi.mock("@shared/api/generated/commissioning/commissioning", async () => {
     getCommissioningSharesGetDaysListQueryKey: queryKey,
     commissioningSharesBulkUpdateUpdate: (body: unknown, params: unknown) =>
       api.saveDays(body, params),
-    commissioningSharesCreate: vi.fn(),
   };
 });
 

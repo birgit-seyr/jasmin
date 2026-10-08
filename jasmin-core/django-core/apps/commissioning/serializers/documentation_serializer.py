@@ -1,10 +1,12 @@
 from typing import TypedDict
 
-from django.db import models
 from rest_framework import serializers
 
 from ..errors import (
+    HarvestAlreadyDocumented,
     OfferGroupNotFound,
+    PurchaseAlreadyDocumented,
+    PurchaseWithoutSellerAlreadyDocumented,
     ShareTypeVariationNotFound,
     WasteAlreadyDocumented,
 )
@@ -23,6 +25,7 @@ from .serializers_mixin import (
     DeletableMixin,
     NameFieldMixin,
     StorageFieldsMixin,
+    UniqueConstraintErrorsMixin,
 )
 
 
@@ -133,7 +136,22 @@ class ForecastSerializer(NameFieldMixin, DeletableMixin, serializers.ModelSerial
         return data
 
 
-class PurchaseSerializer(StorageFieldsMixin, serializers.ModelSerializer):
+class PurchaseSerializer(
+    UniqueConstraintErrorsMixin, StorageFieldsMixin, serializers.ModelSerializer
+):
+    UNIQUE_CONSTRAINT_ERRORS = {
+        "purchase_unique_year_week_day_article_unit_size_seller": (
+            PurchaseAlreadyDocumented,
+            "This article in this unit and size is already documented as a "
+            "purchase from this supplier for this day.",
+        ),
+        "purchase_unique_no_seller_year_week_day_article_unit_size_storage": (
+            PurchaseWithoutSellerAlreadyDocumented,
+            "This article in this unit and size is already documented as a "
+            "purchase without a supplier for this week and storage.",
+        ),
+    }
+
     seller_first_name = serializers.CharField(read_only=True)
     seller_last_name = serializers.CharField(read_only=True)
     seller_company_name = serializers.CharField(read_only=True)
@@ -143,6 +161,8 @@ class PurchaseSerializer(StorageFieldsMixin, serializers.ModelSerializer):
         fields = "__all__"
         # ``created_by`` is stamped by ``PurchaseViewSet.create``.
         read_only_fields = AUDIT_READONLY_FIELDS
+        # Uniqueness is checked by ``UniqueConstraintErrorsMixin``.
+        validators: list = []
 
     def validate(self, attrs):
         from isoweek import Week
@@ -185,59 +205,49 @@ class PurchaseSerializer(StorageFieldsMixin, serializers.ModelSerializer):
         return attrs
 
 
-class HarvestSerializer(StorageFieldsMixin, serializers.ModelSerializer):
+class HarvestSerializer(
+    UniqueConstraintErrorsMixin, StorageFieldsMixin, serializers.ModelSerializer
+):
+    UNIQUE_CONSTRAINT_ERRORS = {
+        "harvest_unique_year_week_day_article_unit_size_storage": (
+            HarvestAlreadyDocumented,
+            "This article in this unit and size is already documented as "
+            "harvest for this day and storage.",
+        ),
+    }
+
     class Meta:
         model = Harvest
         fields = "__all__"
         # Harvests are finalized through ``/bulk_finalize/``; ``created_by`` is
         # stamped by ``HarvestViewSet.create``.
         read_only_fields = (*AUDIT_READONLY_FIELDS, *FINALIZATION_READONLY_FIELDS)
+        # Uniqueness is checked by ``UniqueConstraintErrorsMixin``.
+        validators: list = []
 
 
-# Read off the model's constraint so the check and the database agree on the key.
-_WASTE_UNIQUE_FIELDS = next(
-    constraint.fields
-    for constraint in Waste._meta.constraints
-    if isinstance(constraint, models.UniqueConstraint)
-    and constraint.name == "waste_unique_year_week_day_article_unit_size_storage"
-)
-
-
-class WasteSerializer(StorageFieldsMixin, NameFieldMixin, serializers.ModelSerializer):
+class WasteSerializer(
+    UniqueConstraintErrorsMixin,
+    StorageFieldsMixin,
+    NameFieldMixin,
+    serializers.ModelSerializer,
+):
     NAME_FIELDS = ["share_article_name"]
+    UNIQUE_CONSTRAINT_ERRORS = {
+        "waste_unique_year_week_day_article_unit_size_storage": (
+            WasteAlreadyDocumented,
+            "This article in this unit and size is already documented as "
+            "waste for this day and storage.",
+        ),
+    }
 
     class Meta:
         model = Waste
         fields = "__all__"
         # ``created_by`` is stamped by ``WasteViewSet.create``.
         read_only_fields = AUDIT_READONLY_FIELDS
-        # The per-day uniqueness is checked in ``validate`` so a duplicate is
-        # refused with its own code instead of DRF's generic unique-together
-        # message, which names the raw fields.
+        # Uniqueness is checked by ``UniqueConstraintErrorsMixin``.
         validators: list = []
-
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-        key = {
-            field: attrs.get(field, getattr(self.instance, field, None))
-            for field in _WASTE_UNIQUE_FIELDS
-        }
-        # A NULL never collides in Postgres, and the constraint only covers rows
-        # with a day.
-        if any(value is None for value in key.values()):
-            return attrs
-        duplicates = Waste.objects.filter(**key)
-        if self.instance is not None:
-            duplicates = duplicates.exclude(pk=self.instance.pk)
-        if duplicates.exists():
-            message = (
-                "This article in this unit and size is already documented as "
-                "waste for this day and storage."
-            )
-            raise WasteAlreadyDocumented(
-                message, details={"non_field_errors": [message]}
-            )
-        return attrs
 
 
 class DocumentationAggregationItemSerializer(serializers.Serializer):

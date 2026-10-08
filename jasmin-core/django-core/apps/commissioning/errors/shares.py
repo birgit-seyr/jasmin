@@ -109,6 +109,30 @@ class WasteAlreadyDocumented(BadRequestError):
     code = "waste.already_documented"
 
 
+class HarvestAlreadyDocumented(BadRequestError):
+    """A harvest of this article in this unit and size is already documented
+    for the day and storage — ``Harvest`` holds one row per (year, week, day,
+    article, unit, size, storage); the office corrects that row's amount."""
+
+    code = "harvest.already_documented"
+
+
+class PurchaseAlreadyDocumented(BadRequestError):
+    """A purchase of this article in this unit and size from this seller is
+    already documented for the day — ``Purchase`` holds one row per (year,
+    week, day, article, unit, size, seller) when it has a seller and a day."""
+
+    code = "purchase.already_documented"
+
+
+class PurchaseWithoutSellerAlreadyDocumented(BadRequestError):
+    """A purchase of this article in this unit and size without a seller is
+    already documented for the week, day and storage — a missing day counts as
+    the same day here."""
+
+    code = "purchase.already_documented_without_seller"
+
+
 class DataImportInvalid(BadRequestError):
     """The uploaded CSV cannot be imported as a whole (unknown model,
     undecodable file, wrong extension, missing data row). Per-row failures

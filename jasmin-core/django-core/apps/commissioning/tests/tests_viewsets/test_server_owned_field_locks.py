@@ -25,7 +25,6 @@ from rest_framework import status
 from apps.commissioning.models import (
     DeliveryNoteContent,
     InvoiceResellerContent,
-    Share,
     ShareContent,
     ShareDelivery,
 )
@@ -752,9 +751,7 @@ class TestShareDayLocks:
     """``SharesDayChangeService`` owns the six weekday columns on a Share: it
     refuses a past week and rebuilds the theoretical rows and movements that
     snapshotted the old day. A plain PATCH does neither, so the columns lock
-    once the row exists. Create leaves them open — the day grid lays out a new
-    week through this endpoint, and a NULL day field would be backfilled from
-    the delivery day's defaults instead of the days the office picked.
+    once the row exists.
     """
 
     def test_patch_cannot_move_a_weekday(self, api_client, tenant):
@@ -782,32 +779,3 @@ class TestShareDayLocks:
         assert share.harvesting_day == original_harvesting_day
         assert share.washing_day == original_washing_day
         assert share.changed_day_number is None
-
-    def test_create_still_sets_every_weekday(self, api_client, tenant):
-        delivery_day = SharesDeliveryDayFactory()
-
-        resp = api_client.post(
-            reverse("share-list"),
-            {
-                "year": 2026,
-                "delivery_week": 15,
-                "delivery_day": delivery_day.pk,
-                "share_type_variation": ShareTypeVariationFactory().pk,
-                "changed_day_number": 4,
-                "harvesting_day": 5,
-                "packing_day": 6,
-                "washing_day": 3,
-                "cleaning_day": 2,
-                "get_current_stock_day": 1,
-            },
-            format="json",
-        )
-
-        assert resp.status_code == status.HTTP_201_CREATED, resp.data
-        share = Share.objects.get(pk=resp.data["id"])
-        assert share.changed_day_number == 4
-        assert share.harvesting_day == 5
-        assert share.packing_day == 6
-        assert share.washing_day == 3
-        assert share.cleaning_day == 2
-        assert share.get_current_stock_day == 1

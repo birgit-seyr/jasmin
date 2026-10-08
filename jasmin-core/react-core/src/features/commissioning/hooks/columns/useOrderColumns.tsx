@@ -261,15 +261,11 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
       align: "center",
       width: "10em",
       render: (value: unknown) => {
-        const displayValue = value == null ? 0 : value;
+        const available = value == null ? 0 : Number(value);
+        const amountClass = available === 0 ? "amount-none-left" : "amount-left";
         return (
-          <span
-            style={{
-              fontSize: "0.8em",
-              color: displayValue === 0 ? "darkred" : "darkgreen",
-            }}
-          >
-            {`${format(Number(displayValue), 1)} ${t("commissioning.pu")}`}
+          <span className={`text-xs ${amountClass}`}>
+            {`${format(available, 1)} ${t("commissioning.pu")}`}
           </span>
         );
       },

@@ -50,7 +50,7 @@ export const functionLengthPins = {
   "src/features/abos/modals/NewSubscriptionModal.tsx": 892,
   "src/features/abos/pages/WaitingListAbos.tsx": 469,
   "src/features/commissioning/hooks/columns/useHarvestingListColumns.tsx": 458,
-  "src/features/commissioning/hooks/columns/useOrderColumns.tsx": 433,
+  "src/features/commissioning/hooks/columns/useOrderColumns.tsx": 429,
   "src/features/commissioning/hooks/columns/useShareArticleListColumns.tsx": 490,
   "src/features/commissioning/hooks/useOrdersData.ts": 616,
   "src/features/commissioning/modals/DeliveryStationDetailModal.tsx": 415,

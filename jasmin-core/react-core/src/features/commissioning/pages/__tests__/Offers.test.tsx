@@ -29,8 +29,9 @@ import { flushMicrotasks, profileRenders } from "@/test/profileRenders";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: unknown) =>
-      typeof fallback === "string" ? fallback : key,
+    // Interpolation values are appended, so a message's counts can be asserted.
+    t: (key: string, values?: unknown) =>
+      typeof values === "string" ? values : values ? `${key} ${JSON.stringify(values)}` : key,
     i18n: { language: "de", changeLanguage: () => Promise.resolve() },
   }),
   Trans: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
@@ -477,9 +478,7 @@ describe("Offers creation", () => {
     );
 
     await waitFor(() =>
-      expect(notifyMock.success).toHaveBeenCalledWith(
-        "commissioning.offers_created",
-      ),
+      expect(notifyMock.success).toHaveBeenCalledWith('commissioning.offers_created {"created":12}'),
     );
     // No offer group: creation always covers every group.
     expect(api.createOffers).toHaveBeenCalledWith({
@@ -845,45 +844,45 @@ describe("Offers bulk actions", () => {
   });
 
   it("copies the selected offers to next week after confirmation", async () => {
-    api.copyToNextWeek.mockResolvedValue({});
+    api.copyToNextWeek.mockResolvedValue({
+      total_requested: 2, total_copied: 2, skipped_count: 0, copied_offers: ["c-1", "c-2"],
+    });
     renderPage();
     await selectBothOffers();
 
     await userEvent.click(
-      screen.getByRole("button", {
-        name: "commissioning.copy_selected_to_next_week",
-      }),
+      screen.getByRole("button", { name: "commissioning.copy_selected_to_next_week" }),
     );
     await userEvent.click(await screen.findByRole("button", { name: "common.yes" }));
 
     await waitFor(() =>
-      expect(api.copyToNextWeek).toHaveBeenCalledWith({
-        ids: ["offer-1", "offer-2"],
-      }),
+      expect(api.copyToNextWeek).toHaveBeenCalledWith({ ids: ["offer-1", "offer-2"] }),
     );
     expect(notifyMock.success).toHaveBeenCalledWith(
-      "commissioning.copied_to_next_week",
+      'commissioning.copied_to_next_week {"count":2,"skipped":0}',
     );
   });
 
   it("copies the selected offers into each other offer group of the week", async () => {
-    api.copyToOfferGroup.mockResolvedValue({});
+    api.copyToOfferGroup.mockResolvedValue({
+      total_requested: 2, total_copied: 1, skipped_count: 1, copied_offers: ["c-1"],
+    });
     renderPage();
     await selectBothOffers();
 
     // Only the other group is offered as a copy target.
     await userEvent.click(
-      screen.getByRole("button", { name: "commissioning.copy_to_offer_group" }),
+      screen.getByRole("button", { name: /^commissioning\.copy_to_offer_group .*"Shops"/ }),
     );
     await userEvent.click(await screen.findByRole("button", { name: "common.yes" }));
 
     await waitFor(() =>
       expect(api.copyToOfferGroup).toHaveBeenCalledWith({
-        ids: ["offer-1", "offer-2"],
-        year: YEAR,
-        delivery_week: WEEK,
-        offer_group: "og-2",
+        ids: ["offer-1", "offer-2"], year: YEAR, delivery_week: WEEK, offer_group: "og-2",
       }),
+    );
+    expect(notifyMock.success).toHaveBeenCalledWith(
+      'commissioning.copied_to_offer_group_some_skipped {"count":1,"skipped":1,"offerGroup":"Shops"}',
     );
   });
 });

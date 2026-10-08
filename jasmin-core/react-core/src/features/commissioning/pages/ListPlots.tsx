@@ -47,7 +47,7 @@ export default function ListPlots() {
       // to string); cast the one hook column rather than loosen the whole array.
       isActiveColumn as EditableColumnConfig<PlotRow>,
       {
-        title: <>{t("resellers.name")}</>,
+        title: <>{t("commissioning.name")}</>,
         dataIndex: "name",
         key: "name",
         inputType: "text",

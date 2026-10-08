@@ -271,6 +271,91 @@ class TestHarvestViewSet:
         resp = api_client.get(self.URL)
         assert len(resp.data) >= 1
 
+    KEY = {
+        "year": 2026,
+        "delivery_week": 28,
+        "day_number": 1,
+        "unit": "KG",
+        "size": "M",
+    }
+
+    def _post_harvest(self, api_client, article, storage):
+        return api_client.post(
+            self.URL,
+            {
+                **self.KEY,
+                "share_article": str(article.id),
+                "amount": "3",
+                "storage": str(storage.id),
+            },
+            format="json",
+        )
+
+    def test_same_article_on_the_same_day_in_the_same_storage_is_refused(
+        self, api_client, tenant
+    ):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        HarvestFactory(**self.KEY, share_article=article, storage=storage)
+
+        resp = self._post_harvest(api_client, article, storage)
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "harvest.already_documented"
+        assert "non_field_errors" in resp.data["details"]
+        assert Harvest.objects.filter(share_article=article).count() == 1
+
+    def test_same_article_on_the_same_day_in_another_storage_is_recorded(
+        self, api_client, tenant
+    ):
+        article = ShareArticleFactory()
+        HarvestFactory(
+            **self.KEY,
+            share_article=article,
+            storage=StorageFactory(is_short_term_harvest_storage=True),
+        )
+
+        resp = self._post_harvest(api_client, article, StorageFactory())
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert Harvest.objects.filter(share_article=article).count() == 2
+
+    def test_moving_a_harvest_onto_a_documented_one_is_refused(
+        self, api_client, tenant
+    ):
+        article = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        HarvestFactory(**self.KEY, share_article=article, storage=storage)
+        other = HarvestFactory(
+            **self.KEY, share_article=article, storage=StorageFactory()
+        )
+
+        resp = api_client.patch(
+            reverse("harvest-detail", args=[other.pk]),
+            {"storage": str(storage.id)},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "harvest.already_documented"
+        other.refresh_from_db()
+        assert other.storage_id != storage.id
+
+    def test_saving_a_harvest_unchanged_is_not_a_duplicate_of_itself(
+        self, api_client, tenant
+    ):
+        harvest = HarvestFactory(
+            **self.KEY, storage=StorageFactory(is_short_term_harvest_storage=True)
+        )
+
+        resp = api_client.patch(
+            reverse("harvest-detail", args=[harvest.pk]),
+            {"amount": "4", "storage": str(harvest.storage_id)},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+
 
 # ---------------------------------------------------------------------------
 # PurchaseViewSet
@@ -310,6 +395,154 @@ class TestPurchaseViewSet:
         assert resp.status_code == status.HTTP_201_CREATED, resp.data
         purchase = Purchase.objects.get(id=resp.data["id"])
         assert purchase.storage_id == storage.id
+
+    KEY = {"year": 2026, "delivery_week": 28, "unit": "KG", "size": "M"}
+
+    def _post_purchase(self, api_client, article, storage, **extra):
+        return api_client.post(
+            self.URL,
+            {
+                **self.KEY,
+                "share_article": str(article.id),
+                "amount": "5",
+                "storage": str(storage.id),
+                **extra,
+            },
+            format="json",
+        )
+
+    def test_same_article_from_the_same_seller_on_the_same_day_is_refused(
+        self, api_client, tenant
+    ):
+        article = ShareArticleFactory(is_purchased=True)
+        seller = ResellerFactory()
+        PurchaseFactory(
+            **self.KEY,
+            day_number=1,
+            share_article=article,
+            seller=seller,
+            storage=StorageFactory(),
+        )
+
+        resp = self._post_purchase(
+            api_client,
+            article,
+            StorageFactory(),
+            day_number=1,
+            seller=str(seller.id),
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "purchase.already_documented"
+        assert "non_field_errors" in resp.data["details"]
+        assert Purchase.objects.filter(share_article=article).count() == 1
+
+    def test_same_article_from_another_seller_is_recorded(self, api_client, tenant):
+        article = ShareArticleFactory(is_purchased=True)
+        storage = StorageFactory()
+        PurchaseFactory(
+            **self.KEY,
+            day_number=1,
+            share_article=article,
+            seller=ResellerFactory(),
+            storage=storage,
+        )
+
+        resp = self._post_purchase(
+            api_client,
+            article,
+            storage,
+            day_number=1,
+            seller=str(ResellerFactory().id),
+        )
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert Purchase.objects.filter(share_article=article).count() == 2
+
+    def test_same_article_without_a_seller_in_the_same_storage_is_refused(
+        self, api_client, tenant
+    ):
+        """The page sends no day; the no-seller key treats two missing days as
+        the same day."""
+        article = ShareArticleFactory(is_purchased=True)
+        storage = StorageFactory()
+        PurchaseFactory(
+            **self.KEY,
+            day_number=None,
+            share_article=article,
+            seller=None,
+            storage=storage,
+        )
+
+        resp = self._post_purchase(api_client, article, storage)
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "purchase.already_documented_without_seller"
+        assert Purchase.objects.filter(share_article=article).count() == 1
+
+    def test_same_article_without_a_seller_in_another_storage_is_recorded(
+        self, api_client, tenant
+    ):
+        article = ShareArticleFactory(is_purchased=True)
+        PurchaseFactory(
+            **self.KEY,
+            day_number=None,
+            share_article=article,
+            seller=None,
+            storage=StorageFactory(),
+        )
+
+        resp = self._post_purchase(api_client, article, StorageFactory())
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert Purchase.objects.filter(share_article=article).count() == 2
+
+    def test_moving_a_purchase_onto_a_documented_one_is_refused(
+        self, api_client, tenant
+    ):
+        article = ShareArticleFactory(is_purchased=True)
+        seller = ResellerFactory()
+        storage = StorageFactory()
+        PurchaseFactory(
+            **self.KEY,
+            day_number=1,
+            share_article=article,
+            seller=seller,
+            storage=storage,
+        )
+        other = PurchaseFactory(
+            **self.KEY,
+            day_number=1,
+            share_article=article,
+            seller=ResellerFactory(),
+            storage=storage,
+        )
+
+        resp = api_client.patch(
+            reverse("purchase-detail", args=[other.pk]),
+            {"seller": str(seller.id)},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "purchase.already_documented"
+        other.refresh_from_db()
+        assert other.seller_id != seller.id
+
+    def test_saving_a_purchase_unchanged_is_not_a_duplicate_of_itself(
+        self, api_client, tenant
+    ):
+        purchase = PurchaseFactory(
+            **self.KEY, day_number=None, seller=None, storage=StorageFactory()
+        )
+
+        resp = api_client.patch(
+            reverse("purchase-detail", args=[purchase.pk]),
+            {"amount": "6", "storage": str(purchase.storage_id)},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
 
 
 # ---------------------------------------------------------------------------

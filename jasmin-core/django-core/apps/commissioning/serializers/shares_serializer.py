@@ -578,7 +578,7 @@ class ShareSerializer(ReadOnlyOnUpdateMixin, serializers.ModelSerializer):
     # The weekday columns belong to ``SharesDayChangeService`` (past-week guard
     # plus the theoretical / movement rebuild), reached through
     # ``/shares/bulk_update/``. A plain PATCH would move a day without either,
-    # so they lock once the row exists; create still sets them.
+    # so they are read-only on update.
     READ_ONLY_ON_UPDATE = SHARE_DAY_FIELDS
 
     delivery_day_number = serializers.IntegerField(read_only=True)

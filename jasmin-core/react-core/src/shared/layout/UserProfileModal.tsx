@@ -20,10 +20,21 @@ import { gdprRequestDeletionCreate } from "@shared/api/generated/gdpr/gdpr";
 import { useAuth } from "@shared/contexts/AuthContext";
 import { RoleTags, useRoles } from "@shared/auth";
 import { notify } from "@shared/utils";
+import { getServerErrorMessage } from "@shared/utils/apiError";
 import TwoFactorPanel from "@shared/profile/TwoFactorPanel";
 import MyDataTab from "./MyDataTab";
 
 const { Paragraph } = Typography;
+
+/** AntD's ``validateFields`` rejects with ``{ errorFields, ... }``; the form
+ * already marks those fields, so a toast on top would only repeat them. */
+function isFormValidationError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    Array.isArray((err as { errorFields?: unknown }).errorFields)
+  );
+}
 
 export type UserProfileTab = "profile" | "my_data" | "two_factor";
 
@@ -66,8 +77,10 @@ export default function UserProfileModal({
       });
       notify.success(t("profile.saved"));
       setEditMode(false);
-    } catch {
-      notify.error(t("profile.save_error"));
+    } catch (err) {
+      if (!isFormValidationError(err)) {
+        notify.error(getServerErrorMessage(err) ?? t("profile.save_error"));
+      }
     } finally {
       setSaving(false);
     }
@@ -80,8 +93,10 @@ export default function UserProfileModal({
       setDeleteConfirmVisible(false);
       onClose();
       await logout();
-    } catch (error) {
-      console.error("Operation failed:", error);
+    } catch (err) {
+      notify.error(
+        getServerErrorMessage(err) ?? t("gdpr.request_deletion_failed"),
+      );
       setDeleting(false);
     }
   };
@@ -130,7 +145,7 @@ export default function UserProfileModal({
           </Form.Item>
         </Form>
       )}
-      <div className="flex-end" style={{ marginTop: 16 }}>
+      <div className="flex-end mt-16">
         {editMode ? (
           <Space>
             <Button onClick={() => setEditMode(false)}>
@@ -226,7 +241,7 @@ export default function UserProfileModal({
           description={t("gdpr.deletion_warning_description")}
           type="error"
           showIcon
-          style={{ marginBottom: 16 }}
+          className="mb-16"
         />
         <Paragraph>{t("gdpr.deletion_consequences")}</Paragraph>
       </Modal>

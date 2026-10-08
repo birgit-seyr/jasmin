@@ -128,8 +128,9 @@ export default function UserMenu() {
                 isCurrent={language === lang.code}
               />
             ),
+            // LocaleContext has already told the user about a failed save.
             onClick: () => {
-              void saveLanguage(lang.code);
+              saveLanguage(lang.code).catch(() => undefined);
             },
           })),
         },
@@ -167,7 +168,7 @@ export default function UserMenu() {
               </Space>
             ),
             onClick: () => {
-              void saveThemePreference(preference);
+              saveThemePreference(preference).catch(() => undefined);
             },
           })),
         },

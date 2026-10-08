@@ -21,6 +21,8 @@ import { notify } from '@shared/utils';
 import { getErrorMessage } from "@shared/utils/apiError";
 import { getShareTypeVariationSizeLabelPure } from "@hooks/index";
 
+import "./VirtualComponentModal.css";
+
 const { Text } = Typography;
 
 interface VirtualComponentModalProps {
@@ -206,7 +208,7 @@ export default function VirtualComponentModal({
       }
     >
       {loading ? (
-        <div style={{ textAlign: "center", padding: "40px" }}>
+        <div className="virtual-components-loading">
           <Spin size="large" />
         </div>
       ) : (
@@ -217,23 +219,11 @@ export default function VirtualComponentModal({
             </Text>
           ) : (
             <>
-              <div
-                style={{
-                  maxHeight: "300px",
-                  overflowY: "auto",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "6px",
-                  padding: "12px",
-                }}
-              >
+              <div className="virtual-components-list">
                 {availableVariations.map((variation) => (
                   <div
                     key={String(variation.id)}
-                    className="flex-between"
-                    style={{
-                      padding: "8px 0",
-                      borderBottom: "1px solid var(--color-bg-hover)",
-                    }}
+                    className="flex-between virtual-components-row"
                   >
                     <Checkbox
                       checked={isSelected(variation.id!)}
@@ -242,14 +232,13 @@ export default function VirtualComponentModal({
                       }
                     >
                       <Text strong>
-                        {(variation as unknown as { name?: string }).name ||
-                          getShareTypeVariationSizeLabelPure(variation.size, t)}
+                        {getShareTypeVariationSizeLabelPure(variation.size, t)}
                       </Text>
                     </Checkbox>
 
                     {isSelected(variation.id!) ? (
                       <Space size="small">
-                        <Text type="secondary" style={{ fontSize: "0.85em" }}>
+                        <Text type="secondary" className="text-label-sm">
                           {t("commissioning.quantity")}:
                         </Text>
                         <NumberInput
@@ -262,7 +251,7 @@ export default function VirtualComponentModal({
                             handleQuantityChange(variation.id!, value)
                           }
                           onKeyDown={handleQuantityKeyDown}
-                          style={{ width: "70px" }}
+                          className="virtual-components-quantity"
                           size="small"
                         />
                       </Space>

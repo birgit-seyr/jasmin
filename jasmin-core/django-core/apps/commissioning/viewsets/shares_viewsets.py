@@ -1216,8 +1216,8 @@ class ShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     # data, not personal data, so this viewset's ``read_permission`` covers it.
     read_actions = frozenset({"get_days", "export_csv"})
     serializer_class = ShareSerializer
-    # No DELETE: cascading a Share skips recompute, snapshots and charge re-planning.
-    http_method_names = ["get", "post", "put", "patch", "head", "options"]
+    # Recompute and the delivery services build and remove shares (no POST/DELETE).
+    http_method_names = ["get", "put", "patch", "head", "options"]
 
     @extend_schema(
         parameters=[

@@ -1,0 +1,21 @@
+.virtual-components-loading {
+  text-align: center;
+  padding: 40px;
+}
+
+.virtual-components-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.virtual-components-row {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-bg-hover);
+}
+
+.virtual-components-quantity {
+  width: 70px;
+}

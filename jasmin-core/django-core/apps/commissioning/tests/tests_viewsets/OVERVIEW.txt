@@ -257,7 +257,7 @@ test_documentation_past_week_guard.py (29 tests)
                                                unfinalize with a read-only-week row → 409, nothing
                                                unfinalized; the grace week unfinalizes
 
-test_documentation_viewsets.py (75 tests)
+test_documentation_viewsets.py (85 tests)
 ─────────────────────────────────────────
   TestPlotViewSet                          6   list, is_active filter, create, retrieve, delete
   TestWasteViewSet                         8   list; create with a page-level storage; plain storage required;
@@ -265,8 +265,17 @@ test_documentation_viewsets.py (75 tests)
                                                storage with waste.already_documented and recorded in
                                                another; moving a waste onto a documented one is refused;
                                                an unchanged save is no duplicate of itself
-  TestHarvestViewSet                       2   list
-  TestPurchaseViewSet                      3   list; create with a page-level storage
+  TestHarvestViewSet                       6   list; the same article, unit and size on a day is refused in one
+                                               storage with harvest.already_documented and recorded in
+                                               another; a PATCH onto a documented key is refused; saving a
+                                               harvest unchanged is fine
+  TestPurchaseViewSet                      9   list; create with a page-level storage; the same article, unit
+                                               and size from one seller on a day is refused with
+                                               purchase.already_documented and recorded from another; without
+                                               a seller, one storage refuses it (two missing days are one day)
+                                               with purchase.already_documented_without_seller and another
+                                               records it; a PATCH onto a documented key is refused; saving a
+                                               purchase unchanged is fine
   TestForecastViewSet                      4   week scope required, list, filter by year/week
   TestForecastInvalidVariation             2   unknown variation on create / update → 404
   TestForecastPartialUpdate                4   a PATCH of only the amount or the note succeeds; one without
@@ -564,7 +573,7 @@ test_resellers_viewsets.py (109 tests)
                                                number or one defusedxml refuses; a matching body passes, a
                                                malformed one is tolerated
 
-test_server_owned_field_locks.py (34 tests) — generic writes cannot set server-owned columns
+test_server_owned_field_locks.py (33 tests) — generic writes cannot set server-owned columns
 ────────────────────────────────────────────────────────────────────────────────────────────
   TestInvoiceLineLocks                     3   PATCH cannot re-point a draft line onto a finalized invoice;
                                                finalization / source_* / order_content / delivery_note_contents
@@ -586,9 +595,8 @@ test_server_owned_field_locks.py (34 tests) — generic writes cannot set server
   TestTheoreticalProvenanceLocks          12   PATCH cannot re-point or attach the source share / order content
                                                line of a theoretical row
   TestTheoreticalHarvestForecastLock       2   PATCH cannot re-point or attach a theoretical harvest's forecast
-  TestShareDayLocks                        2   PATCH cannot move a share's weekday columns
-                                               (SharesDayChangeService owns them); create still sets every
-                                               weekday
+  TestShareDayLocks                        1   PATCH cannot move a share's weekday columns
+                                               (SharesDayChangeService owns them)
 
 test_share_day_bulk_update_rules.py (4 tests) — share days bulk_update (frozen clock)
 ───────────────────────────────────────────────────────────────────────────────────
@@ -611,9 +619,10 @@ test_shares_viewsets.py (147 tests)
                                                include_future, create inside / outside the share type's range,
                                                filters (share_type, physical, internal_name)
   TestShareTypeVariationGrossPriceViewSet  4   list, filter by variation, not deletable when subscribed
-  TestShareViewSet                         5   list, filter year/week, get_days action, DELETE refused (405)
-  TestShareDayFieldsLockedOnUpdate         2   a plain PATCH drops the day keys (moving a day goes through
-                                               /shares/bulk_update/); create still sets them
+  TestShareViewSet                         6   list, filter year/week, get_days action, POST and DELETE
+                                               refused (405)
+  TestShareDayFieldsLockedOnUpdate         1   a plain PATCH drops the day keys (moving a day goes through
+                                               /shares/bulk_update/)
   TestShareBulkUpdateAction                2   missing year → 400; an empty week succeeds
   TestShareBulkUpdateDayValidation         4   the day body runs its request serializer: "abc" and an
                                                out-of-range day → 400 with the field, a valid day is

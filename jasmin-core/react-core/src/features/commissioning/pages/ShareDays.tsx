@@ -8,7 +8,6 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   commissioningSharesBulkUpdateUpdate,
-  commissioningSharesCreate,
   getCommissioningSharesGetDaysListQueryKey,
   useCommissioningSharesGetDaysList,
 } from "@shared/api/generated/commissioning/commissioning";
@@ -21,10 +20,8 @@ import { WeekSelector } from "@shared/selectors";
 import {
   EditableTable,
   gatedByPermissionOnlyEdit,
-  wrapApiFunctions,
 } from "@shared/tables";
 import type {
-  ApiFunctions,
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
@@ -153,14 +150,6 @@ export default function ShareDays() {
     [selectedYear, selectedWeek, currentWeek],
   );
 
-  const apiFunctions = useMemo<ApiFunctions>(
-    () =>
-      wrapApiFunctions<Share & TableRecord>({
-        create: (payload) => commissioningSharesCreate(payload),
-      }),
-    [],
-  );
-
   const columns = useMemo<EditableColumnConfig<TableRecord>[]>(
     () => [
       {
@@ -269,7 +258,6 @@ export default function ShareDays() {
       <EditableTable
         key={`${selectedYear}-${selectedWeek}`}
         columns={columns}
-        apiFunctions={apiFunctions}
         focusIndex="delivery_day"
         initialData={data}
         loading={isFetching}

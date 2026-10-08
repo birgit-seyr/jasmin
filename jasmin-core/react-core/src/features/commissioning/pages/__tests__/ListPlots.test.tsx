@@ -194,7 +194,7 @@ async function renderLoaded() {
 
 const TITLE = "commissioning.list_plots";
 const ACTIVE = "commissioning.is_active";
-const NAME = "resellers.name";
+const NAME = "commissioning.name";
 const DUPLICATE_NAME = "validation.unique.name — table.save_failed_hint";
 
 const bodyRows = () =>

@@ -684,6 +684,30 @@ class TestShareViewSet:
         assert Share.objects.filter(pk=share.pk).exists()
         assert ShareDelivery.objects.filter(pk=delivery.pk).exists()
 
+    def test_create_is_refused(self, api_client, tenant):
+        """Shares are built by recompute and the delivery services; a share
+        created by hand would have no contents, deliveries or movements."""
+        delivery_day = SharesDeliveryDayFactory()
+        variation = ShareTypeVariationFactory()
+        before = Share.objects.count()
+
+        resp = api_client.post(
+            self.URL,
+            {
+                "year": 2026,
+                "delivery_week": 15,
+                "delivery_day": delivery_day.pk,
+                "share_type_variation": variation.pk,
+            },
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+        assert Share.objects.count() == before
+        assert not Share.objects.filter(
+            delivery_day=delivery_day, share_type_variation=variation
+        ).exists()
+
 
 # ---------------------------------------------------------------------------
 # ShareViewSet — the weekday columns belong to SharesDayChangeService
@@ -693,7 +717,7 @@ class TestShareDayFieldsLockedOnUpdate:
     """Moving a day rebuilds the week's theoretical objects and movements and
     is refused for a past week — both live in ``SharesDayChangeService``, behind
     ``/shares/bulk_update/``. A plain PATCH drops the day keys instead of
-    writing them straight to the column; create still sets them.
+    writing them straight to the column.
     """
 
     def test_patch_drops_the_day_keys(self, api_client, tenant):
@@ -722,29 +746,6 @@ class TestShareDayFieldsLockedOnUpdate:
         assert share.packing_day == original_packing_day
         assert share.changed_day_number is None
         assert share.weight1 == Decimal("2.500")
-
-    def test_create_still_sets_the_day_fields(self, api_client, tenant):
-        """``ShareDays.tsx`` creates rows through this endpoint, so the lock is
-        update-only."""
-        delivery_day = SharesDeliveryDayFactory()
-        variation = ShareTypeVariationFactory()
-        resp = api_client.post(
-            reverse("share-list"),
-            {
-                "year": 2026,
-                "delivery_week": 15,
-                "delivery_day": delivery_day.pk,
-                "share_type_variation": variation.pk,
-                "harvesting_day": 3,
-                "changed_day_number": 4,
-            },
-            format="json",
-        )
-
-        assert resp.status_code == status.HTTP_201_CREATED
-        share = Share.objects.get(pk=resp.data["id"])
-        assert share.harvesting_day == 3
-        assert share.changed_day_number == 4
 
 
 # ---------------------------------------------------------------------------

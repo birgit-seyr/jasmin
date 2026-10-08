@@ -25679,65 +25679,7 @@ export function useCommissioningSharesList<TData = Awaited<ReturnType<typeof com
 
 
 
-export const commissioningSharesCreate = (
-    share: NonReadonly<Share>,
- signal?: AbortSignal
-) => {
-      
-      
-      return axiosService<Share>(
-      {url: `/api/commissioning/shares/`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: share, signal
-    },
-      );
-    }
-  
-
-
-export const getCommissioningSharesCreateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesCreate>>, TError,{data: NonReadonly<Share>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesCreate>>, TError,{data: NonReadonly<Share>}, TContext> => {
-
-const mutationKey = ['commissioningSharesCreate'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningSharesCreate>>, {data: NonReadonly<Share>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  commissioningSharesCreate(data,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CommissioningSharesCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningSharesCreate>>>
-    export type CommissioningSharesCreateMutationBody = NonReadonly<Share>
-    export type CommissioningSharesCreateMutationError = ErrorResponse
-
-    export const useCommissioningSharesCreate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesCreate>>, TError,{data: NonReadonly<Share>}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof commissioningSharesCreate>>,
-        TError,
-        {data: NonReadonly<Share>},
-        TContext
-      > => {
-
-      const mutationOptions = getCommissioningSharesCreateMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    export const commissioningSharesRetrieve = (
+export const commissioningSharesRetrieve = (
     id: string,
  signal?: AbortSignal
 ) => {

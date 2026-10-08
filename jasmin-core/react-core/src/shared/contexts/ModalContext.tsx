@@ -7,9 +7,12 @@ import {
   useMemo,
 } from "react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext";
 import { authPartialUpdate } from "@shared/api/generated/auth/auth";
 import type { UserProfileUpdateRequest } from "@shared/api/generated/models";
+import { notify } from "@shared/utils";
+import { getServerErrorMessage } from "@shared/utils/apiError";
 
 const EDIT_MODES = {
   INLINE: "inline",
@@ -36,7 +39,8 @@ interface ModalContextValue {
 const ModalContext = createContext<ModalContextValue | undefined>(undefined);
 
 export function ModalProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { t } = useTranslation();
+  const { user, updateUser } = useAuth();
   const [editMode, setEditMode] = useState<EditMode>(
     (user?.edit_mode as EditMode) || EDIT_MODES.INLINE,
   );
@@ -67,42 +71,29 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 
         // edit_mode is a client-side preference — the profile PATCH endpoint
         // ignores unknown fields, so we send it through the typed client as a
-        // best-effort hint and rely on localStorage below for persistence.
+        // best-effort hint and rely on the stored signed-in user for
+        // persistence.
         await authPartialUpdate(
           String(user.id),
           newPreferences as unknown as UserProfileUpdateRequest,
         );
 
-        // Update local state
         if (newPreferences.edit_mode) {
           setEditMode(newPreferences.edit_mode);
-        }
-
-        // Update auth data in localStorage
-        try {
-          const storedAuth = localStorage.getItem("auth");
-          if (storedAuth) {
-            const auth = JSON.parse(storedAuth);
-            if (auth.user) {
-              if (newPreferences.edit_mode)
-                auth.user.edit_mode = newPreferences.edit_mode;
-              localStorage.setItem("auth", JSON.stringify(auth));
-            }
-          }
-        } catch (storageError) {
-          console.error("Failed to update stored auth:", storageError);
+          // ``updateUser`` also keeps the stored ``auth`` entry.
+          updateUser({ edit_mode: newPreferences.edit_mode });
         }
       } catch (err) {
-        console.error("Failed to save edit mode preferences:", err);
         const errorMessage =
-          (err as Error).message || "Failed to save edit mode preferences";
+          getServerErrorMessage(err) ?? t("profile.preferences_save_error");
+        notify.error(errorMessage);
         setError(errorMessage);
         throw err;
       } finally {
         setLoading(false);
       }
     },
-    [user],
+    [user, updateUser, t],
   );
 
   const saveEditMode = useCallback(
@@ -118,7 +109,8 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   const toggleEditMode = useCallback(() => {
     const newMode =
       editMode === EDIT_MODES.INLINE ? EDIT_MODES.MODAL : EDIT_MODES.INLINE;
-    saveEditMode(newMode);
+    // savePreferences has already told the user about a failed save.
+    saveEditMode(newMode).catch(() => undefined);
   }, [editMode, saveEditMode]);
 
   // Memoized so consumers of useModal() (e.g. every mounted EditableTable)

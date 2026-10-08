@@ -17,15 +17,18 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
-const { authPartialUpdate, notify, updateUser } = vi.hoisted(() => ({
-  authPartialUpdate: vi.fn(),
-  notify: { error: vi.fn(), success: vi.fn() },
-  updateUser: vi.fn(),
-}));
+const { authPartialUpdate, gdprRequestDeletionCreate, logout, notify, updateUser } =
+  vi.hoisted(() => ({
+    authPartialUpdate: vi.fn(),
+    gdprRequestDeletionCreate: vi.fn(),
+    logout: vi.fn(),
+    notify: { error: vi.fn(), success: vi.fn() },
+    updateUser: vi.fn(),
+  }));
 
 vi.mock("@shared/api/generated/auth/auth", () => ({ authPartialUpdate }));
 vi.mock("@shared/api/generated/gdpr/gdpr", () => ({
-  gdprRequestDeletionCreate: vi.fn(),
+  gdprRequestDeletionCreate,
 }));
 vi.mock("@shared/utils/notify", () => ({ default: notify }));
 vi.mock("@shared/contexts/AuthContext", () => ({
@@ -37,7 +40,7 @@ vi.mock("@shared/contexts/AuthContext", () => ({
       last_name: "Lovelace",
       roles: ["member"],
     },
-    logout: vi.fn(),
+    logout,
     updateUser,
   }),
 }));
@@ -45,7 +48,11 @@ vi.mock("@shared/profile/TwoFactorPanel", () => ({
   default: () => <div data-testid="two-factor-panel" />,
 }));
 vi.mock("../MyDataTab", () => ({
-  default: () => <div data-testid="my-data-tab" />,
+  default: ({ onRequestDeletion }: { onRequestDeletion: () => void }) => (
+    <button type="button" onClick={onRequestDeletion}>
+      request-deletion
+    </button>
+  ),
 }));
 
 import UserProfileModal from "../UserProfileModal";
@@ -68,6 +75,8 @@ let consoleError: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   authPartialUpdate.mockReset();
+  gdprRequestDeletionCreate.mockReset();
+  logout.mockReset();
   notify.error.mockReset();
   notify.success.mockReset();
   updateUser.mockReset();
@@ -105,5 +114,80 @@ describe("UserProfileModal profile save", () => {
     );
     expect(updateUser).not.toHaveBeenCalled();
     expect(consoleError).not.toHaveBeenCalled();
+  });
+});
+
+describe("UserProfileModal profile validation", () => {
+  it("leaves an empty name to the form's own message instead of a failed-save toast", async () => {
+    render(<UserProfileModal open onClose={vi.fn()} />);
+    await userEvent.click(await screen.findByRole("button", { name: "common.edit" }));
+    await userEvent.clear(screen.getByLabelText("profile.first_name"));
+    await userEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "common.save" })).not.toHaveClass(
+        "ant-btn-loading",
+      ),
+    );
+    expect(authPartialUpdate).not.toHaveBeenCalled();
+    expect(notify.error).not.toHaveBeenCalled();
+  });
+});
+
+describe("UserProfileModal deletion request", () => {
+  async function requestDeletion() {
+    render(<UserProfileModal open onClose={vi.fn()} initialTab="my_data" />);
+    await userEvent.click(await screen.findByRole("button", { name: "request-deletion" }));
+    await userEvent.click(await screen.findByRole("button", { name: "gdpr.confirm_delete" }));
+  }
+
+  it("signs the user out once the request is sent", async () => {
+    gdprRequestDeletionCreate.mockResolvedValue({});
+
+    await requestDeletion();
+
+    await waitFor(() => expect(logout).toHaveBeenCalled());
+    expect(notify.error).not.toHaveBeenCalled();
+  });
+
+  it("tells the user a refused request failed, with the server's reason", async () => {
+    gdprRequestDeletionCreate.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 400, data: { message: "Open invoices remain" } },
+    });
+
+    await requestDeletion();
+
+    await waitFor(() =>
+      expect(notify.error).toHaveBeenCalledWith("Open invoices remain"),
+    );
+    expect(logout).not.toHaveBeenCalled();
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it("falls back to its own message when the server gives no reason", async () => {
+    gdprRequestDeletionCreate.mockRejectedValue(new Error("Network Error"));
+
+    await requestDeletion();
+
+    await waitFor(() =>
+      expect(notify.error).toHaveBeenCalledWith("gdpr.request_deletion_failed"),
+    );
+  });
+});
+
+describe("UserProfileModal layout", () => {
+  it("spaces the profile's action row with the shared utility", async () => {
+    render(<UserProfileModal open onClose={vi.fn()} />);
+
+    const editButton = await screen.findByRole("button", { name: "common.edit" });
+    expect(editButton.parentElement).toHaveClass("mt-16");
+  });
+
+  it("spaces the deletion warning with the shared utility", async () => {
+    render(<UserProfileModal open onClose={vi.fn()} initialTab="my_data" />);
+    await userEvent.click(await screen.findByRole("button", { name: "request-deletion" }));
+
+    expect(await screen.findByRole("alert")).toHaveClass("mb-16");
   });
 });

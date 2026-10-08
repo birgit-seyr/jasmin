@@ -310,7 +310,7 @@ export function useOffersColumns({
         render: (_: unknown, record: TableRecord) => {
           const amount = record.amount ? Number(record.amount) : 0;
           const amountClass =
-            amount === 0 ? "offer-amount-none-left" : "offer-amount-left";
+            amount === 0 ? "amount-none-left" : "amount-left";
           // An order leaves a fraction of a PU behind; show the digits it
           // has (up to the column's 3), so "2,500" can't read as thousands.
           const fractionDigits =
