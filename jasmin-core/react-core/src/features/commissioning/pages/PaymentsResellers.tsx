@@ -12,7 +12,6 @@ import {
   useCommissioningOrdersOverviewList,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
-  BulkDocumentRequest,
   CombinedOrderOverview,
   CommissioningOrdersOverviewListParams,
   SetInvoiceNoteRequest,
@@ -78,8 +77,8 @@ export default function PaymentsResellers() {
 
   const { data: rawData, isFetching } =
     useCommissioningOrdersOverviewList(listParams);
-  const data = useMemo(
-    () => (rawData ?? []) as unknown as CombinedOrderOverviewRow[],
+  const data = useMemo<CombinedOrderOverviewRow[]>(
+    () => (rawData ?? []).map((item) => ({ ...item, key: item.id })),
     [rawData],
   );
 
@@ -204,9 +203,7 @@ export default function PaymentsResellers() {
                     <BulkActionButton
                       selectedIds={[record.id]}
                       apiFunction={(payload) =>
-                        commissioningBulkSetToPaidDocumentsCreate(
-                          payload as unknown as BulkDocumentRequest,
-                        )
+                        commissioningBulkSetToPaidDocumentsCreate(payload)
                       }
                       buttonText={t("commissioning.set_to_paid")}
                       buttonProps={{ type: "primary" }}
@@ -296,9 +293,7 @@ export default function PaymentsResellers() {
           <BulkActionButton
             selectedIds={selectedRowKeys}
             apiFunction={(payload) =>
-              commissioningBulkSetToPaidDocumentsCreate(
-                payload as unknown as BulkDocumentRequest,
-              )
+              commissioningBulkSetToPaidDocumentsCreate(payload)
             }
             buttonText={t("commissioning.set_to_paid_bulk")}
             buttonProps={{ type: "primary" }}
@@ -316,7 +311,7 @@ export default function PaymentsResellers() {
             selectedIds={selectedRowKeys}
             apiFunction={(payload) =>
               commissioningBulkSetToPaidDocumentsCreate(
-                payload as unknown as BulkDocumentRequest,
+                payload,
                 { undo: true },
               )
             }
@@ -335,9 +330,7 @@ export default function PaymentsResellers() {
           <BulkActionButton
             selectedIds={selectedRowKeys}
             apiFunction={(payload) =>
-              commissioningBulkSendInvoiceRemindersViaEmailCreate(
-                payload as unknown as BulkDocumentRequest,
-              )
+              commissioningBulkSendInvoiceRemindersViaEmailCreate(payload)
             }
             buttonText={t("commissioning.send_reminders_bulk_via_email")}
             buttonProps={{ type: "primary" }}

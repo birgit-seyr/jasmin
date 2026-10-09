@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from ..errors import MemberNumberUnknown
 from ..models import CoopShare, Member
 
 
@@ -57,8 +58,10 @@ class CoopShareImportSerializer(serializers.Serializer):
     def _resolve_member(number: int) -> Member:
         member = Member.objects.filter(member_number=number).first()
         if member is None:
-            raise serializers.ValidationError(
-                {"member_number": f"No member with number {number}."}
+            raise MemberNumberUnknown(
+                f"No member with number {number}.",
+                field="member_number",
+                details={"member_number": number},
             )
         return member
 

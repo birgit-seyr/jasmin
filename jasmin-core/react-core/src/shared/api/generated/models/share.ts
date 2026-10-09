@@ -29,42 +29,18 @@ export interface Share {
    * @maximum 53
    */
   delivery_week: number;
-  /**
-   * @minimum 0
-   * @maximum 32767
-   * @nullable
-   */
-  changed_day_number?: ShareChangedDayNumber;
-  /**
-   * @minimum 0
-   * @maximum 32767
-   * @nullable
-   */
-  harvesting_day?: ShareHarvestingDay;
-  /**
-   * @minimum 0
-   * @maximum 32767
-   * @nullable
-   */
-  packing_day?: SharePackingDay;
-  /**
-   * @minimum 0
-   * @maximum 32767
-   * @nullable
-   */
-  washing_day?: ShareWashingDay;
-  /**
-   * @minimum 0
-   * @maximum 32767
-   * @nullable
-   */
-  cleaning_day?: ShareCleaningDay;
-  /**
-   * @minimum 0
-   * @maximum 32767
-   * @nullable
-   */
-  get_current_stock_day?: ShareGetCurrentStockDay;
+  /** @nullable */
+  readonly changed_day_number?: ShareChangedDayNumber;
+  /** @nullable */
+  readonly harvesting_day?: ShareHarvestingDay;
+  /** @nullable */
+  readonly packing_day?: SharePackingDay;
+  /** @nullable */
+  readonly washing_day?: ShareWashingDay;
+  /** @nullable */
+  readonly cleaning_day?: ShareCleaningDay;
+  /** @nullable */
+  readonly get_current_stock_day?: ShareGetCurrentStockDay;
   /**
    * @nullable
    * @pattern ^-?\d{0,7}(?:\.\d{0,3})?$

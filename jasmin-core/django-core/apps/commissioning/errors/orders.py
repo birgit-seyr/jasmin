@@ -46,6 +46,19 @@ class OfferGroupCannotDeleteDefault(ConflictError):
     code = "offer_group.cannot_delete_default"
 
 
+class OfferGroupNameUnknown(BadRequestError):
+    """An imported reseller row names an offer group no offer group carries."""
+
+    code = "offer_group.name_unknown"
+
+
+class OfferGroupNameAmbiguous(BadRequestError):
+    """An imported reseller row names an offer group more than one offer group
+    carries (names are not unique, and match ignoring case)."""
+
+    code = "offer_group.name_ambiguous"
+
+
 # --------------------------------------------------------------------------- #
 # Orders / delivery notes / invoices                                          #
 # --------------------------------------------------------------------------- #

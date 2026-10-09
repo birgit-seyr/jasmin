@@ -61,6 +61,9 @@
     "term_already_renewed": "Subscription {{predecessor}} already continues with {{renewal}} from {{renewal_valid_from}}. Confirm or edit that one — or delete it first — instead of adding another.",
     "term_predecessor_ambiguous": "{{count}} subscriptions of this member and share type end on {{valid_until}}, so it can't be told which one this one continues. Renew the right one with “Renew selected” in the subscription list and adjust the draft."
   },
+  "payment_cycle": {
+    "unknown": "There is no payment cycle \"{{payment_cycle}}\"."
+  },
   "member": {
     "already_confirmed": "This member is already confirmed.",
     "link_conflict": "Cannot link — this user is already attached to a different member.",
@@ -94,7 +97,8 @@
       "effective_at_required": "An effective date is required."
     },
     "confirmed_immutable": "A confirmed member can't be deleted — end the membership via cancellation instead.",
-    "exit_before_transfer": "The exit date is before a coop share transfer of this member ({{transfer_date}}). A member can't leave before their own transfer: if the exit really is earlier, the transfer was recorded wrongly."
+    "exit_before_transfer": "The exit date is before a coop share transfer of this member ({{transfer_date}}). A member can't leave before their own transfer: if the exit really is earlier, the transfer was recorded wrongly.",
+    "number_unknown": "No member has member number {{member_number}}."
   },
   "coop_share": {
     "contract_agreement_required": "Please agree to the cooperative-share contract to subscribe cooperative shares.",
@@ -137,7 +141,9 @@
     "succession_has_active_variations": "Can't start a new share type while the current one still has variations active on or after this date. End those variations first, or choose a later start date.",
     "shortening_strands_variation": "Can't end this share type on the given date: some variations are open or end after it and would outlive their parent. End or shorten those variations first, or choose a later end date.",
     "invalid_share_option": "Invalid share option.",
-    "in_use": "This share type is still in use (by variations or subscriptions, say) and can't be deleted."
+    "in_use": "This share type is still in use (by variations or subscriptions, say) and can't be deleted.",
+    "name_unknown": "No share type is named \"{{share_type}}\".",
+    "name_ambiguous": "{{matches}} share types are named \"{{share_type}}\" — give them distinct names."
   },
   "time_bound": {
     "succession_start_before_predecessor": "Can't start a new record before the existing open record it would succeed. Choose a start date on or after the existing record's, or close the existing record first.",
@@ -155,7 +161,9 @@
     "missing_bulk": "One or more of the given share type variations do not exist.",
     "over_capacity": "This share type is sold out for the selected period.",
     "capacity_below_occupancy": "Capacity can't be lowered below what's already subscribed for a current or upcoming week.",
-    "gross_price_in_use": "This price can't be deleted because the share type variation already has subscriptions."
+    "gross_price_in_use": "This price can't be deleted because the share type variation already has subscriptions.",
+    "size_unknown": "Share type \"{{share_type}}\" has no variation of size \"{{size}}\" active on {{date}}.",
+    "size_ambiguous": "Share type \"{{share_type}}\" has {{matches}} variations of size \"{{size}}\" active on {{date}}."
   },
   "tenant": {
     "app_icon_invalid": "The app icon must be a square PNG, JPEG or WEBP image of 512x512 to 4096x4096 pixels and at most 2 MB.",
@@ -195,7 +203,8 @@
   "delivery_day": {
     "not_found": "Delivery day not found.",
     "valid_from_in_past": "A new delivery day or station-day cannot start in the past — pick a date from today onward.",
-    "valid_from_move_into_past": "The start cannot be moved into a past week — the Monday of the current week is the earliest possible. Only in onboarding mode can the start be dated further back."
+    "valid_from_move_into_past": "The start cannot be moved into a past week — the Monday of the current week is the earliest possible. Only in onboarding mode can the start be dated further back.",
+    "number_unknown": "No delivery day {{delivery_day}} is active on {{date}}."
   },
   "delivery_station": {
     "over_capacity": "This delivery station is full for week {{week}}/{{year}} ({{occupied}}/{{capacity}}). Please pick another station.",
@@ -257,7 +266,9 @@
   },
   "offer_group": {
     "not_found": "Offer group not found.",
-    "cannot_delete_default": "The default offer group cannot be deleted."
+    "cannot_delete_default": "The default offer group cannot be deleted.",
+    "name_unknown": "No offer group is named \"{{offer_group_name}}\".",
+    "name_ambiguous": "More than one offer group is named \"{{offer_group_name}}\" — give them distinct names."
   },
   "export": {
     "invalid_dates": "Invalid date range for export — please check the start and end dates."
@@ -338,7 +349,9 @@
     "shortening_strands_children": "This station-day can't end on that date: future deliveries or capacity reservations would outlive it and be stranded. Create a successor station-day (which migrates them), or pick a later end date.",
     "start_move_strands_children": "This station-day can't start on that date: existing deliveries or capacity reservations fall before it and would no longer be covered. Pick an earlier start date, or move them first.",
     "starts_before_delivery_day": "A station-day cannot start before its delivery day. Move the delivery day's start first, or pick a start on or after it.",
-    "in_use": "This pickup day cannot be deleted while deliveries still reference it. Move or end those deliveries first."
+    "in_use": "This pickup day cannot be deleted while deliveries still reference it. Move or end those deliveries first.",
+    "unknown": "No delivery station \"{{delivery_station}}\" is served on delivery day {{delivery_day}} on {{date}}.",
+    "ambiguous": "{{matches}} delivery stations named \"{{delivery_station}}\" are served on delivery day {{delivery_day}} on {{date}} — give them distinct short names."
   },
   "inventory_entry": {
     "not_found": "Inventory entry not found."
@@ -346,7 +359,10 @@
   "data_import": {
     "invalid": "The uploaded file could not be imported — please check the file and try again.",
     "too_many_rows": "The file has more than {{max_rows}} rows; an import takes at most {{max_rows}} rows. Please split the file.",
-    "over_member_limit": "The file has more than {{max_rows}} rows and more members than the weekly limit for new members still allows ({{remaining}}). Splitting it won't help: a platform administrator has to raise the limit first."
+    "over_member_limit": "The file has more than {{max_rows}} rows and more members than the weekly limit for new members still allows ({{remaining}}). Splitting it won't help: a platform administrator has to raise the limit first.",
+    "row_invalid": "Invalid values: {{message}}",
+    "row_unreadable": "The row could not be read: {{reason}}",
+    "row_failed": "The row could not be saved: {{message}}"
   },
   "customer": {
     "profile_not_linked": "No reseller profile is linked to this user account."

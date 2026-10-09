@@ -247,12 +247,8 @@ export default function Forecast() {
     listParams,
     { query: { enabled: columnsReady } },
   );
-  const data = useMemo(
-    () =>
-      (rawData ?? []).map((item) => ({
-        ...item,
-        key: (item as unknown as ForecastModel).id ?? "",
-      })) as unknown as TableRecord[],
+  const data = useMemo<TableRecord[]>(
+    () => (rawData ?? []).map((item) => ({ ...item, key: item.id })),
     [rawData],
   );
   const invalidateData = useCallback(() => {
@@ -508,7 +504,7 @@ export default function Forecast() {
               const body: BulkFinalizeRequest = {
                 model: "forecast",
                 app_label: "commissioning",
-                ids: payload.ids as string[],
+                ids: payload.ids,
               };
               return commissioningBulkFinalizeCreate(body);
             }}

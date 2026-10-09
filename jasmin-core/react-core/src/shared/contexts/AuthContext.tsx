@@ -41,6 +41,9 @@ import { TenantContext } from "./TenantContext";
  */
 interface AuthUser {
   id: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
   roles?: string[];
   user_language?: string;
   theme?: string;

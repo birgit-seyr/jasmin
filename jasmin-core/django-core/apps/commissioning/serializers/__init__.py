@@ -104,6 +104,7 @@ from .my_data_serializer import (
     MyMemberDataUpdateSerializer,
     MySubscriptionSubscribeSerializer,
 )
+from .reseller_import_serializer import ResellerImportSerializer
 from .resellers_serializer import (
     CommissioningListResellersEntry,
     CommissioningListResellersOrder,

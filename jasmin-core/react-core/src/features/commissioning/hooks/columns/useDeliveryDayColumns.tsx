@@ -18,15 +18,7 @@ import {
   variationColumnKey,
 } from "./columnKeys";
 
-// Orval types delivery_stations as string, but runtime data is an array of objects
-interface DeliveryStation {
-  id: string;
-  short_name: string;
-}
-
-export type DeliveryDay = Omit<ShareDeliveryDayOption, "delivery_stations"> & {
-  delivery_stations?: DeliveryStation[];
-};
+export type DeliveryDay = ShareDeliveryDayOption;
 
 const AMOUNT_COLUMN_WIDTH = "5.5em";
 

@@ -3,9 +3,12 @@ import { Alert, Button, Modal, Upload } from "antd";
 import { isValidElement, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import axiosService from "@shared/services/api";
-import { getErrorMessage } from "@shared/utils/apiError";
+import { getErrorMessage, messageForErrorCode } from "@shared/utils/apiError";
 import { downloadBlob, notify } from "@shared/utils";
-import type { DataImportResponse } from "@shared/api/generated/models";
+import type {
+  DataImportErrorItem,
+  DataImportResponse,
+} from "@shared/api/generated/models";
 import ToolTipIcon from "./ToolTipIcon";
 
 /**
@@ -92,6 +95,15 @@ interface DownloadCsvTemplateButtonProps {
    * cells — for a page whose rows all share values its template leaves out.
    */
   fixedValues?: Record<string, unknown>;
+}
+
+// A failed row in the office's language when its code has a translation,
+// otherwise in the server's words.
+function rowErrorMessage(rowError: DataImportErrorItem): string {
+  const translated = rowError.code
+    ? messageForErrorCode(rowError.code, rowError.details)
+    : undefined;
+  return translated ?? rowError.error;
 }
 
 // Maps an EditableColumnConfig `inputType` to a short, comma-free type hint
@@ -407,7 +419,9 @@ export default function DownloadCsvTemplateButton({
                           >
                             {err.row}
                           </td>
-                          <td style={{ verticalAlign: "top" }}>{err.error}</td>
+                          <td style={{ verticalAlign: "top" }}>
+                            {rowErrorMessage(err)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

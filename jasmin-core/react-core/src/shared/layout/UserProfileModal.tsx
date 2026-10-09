@@ -104,8 +104,8 @@ export default function UserProfileModal({
   const handleOpen = () => {
     if (user) {
       form.setFieldsValue({
-        first_name: (user as Record<string, unknown>).first_name || "",
-        last_name: (user as Record<string, unknown>).last_name || "",
+        first_name: user.first_name ?? "",
+        last_name: user.last_name ?? "",
       });
     }
   };
@@ -115,13 +115,13 @@ export default function UserProfileModal({
       {!editMode ? (
         <Descriptions column={1} bordered size="small">
           <Descriptions.Item label={t("profile.email")}>
-            {(user as Record<string, unknown> | null)?.email as string}
+            {user?.email}
           </Descriptions.Item>
           <Descriptions.Item label={t("profile.first_name")}>
-            {(user as Record<string, unknown> | null)?.first_name as string}
+            {user?.first_name}
           </Descriptions.Item>
           <Descriptions.Item label={t("profile.last_name")}>
-            {(user as Record<string, unknown> | null)?.last_name as string}
+            {user?.last_name}
           </Descriptions.Item>
           <Descriptions.Item label={t("profile.role")}>
             <RoleTags roles={roles} />

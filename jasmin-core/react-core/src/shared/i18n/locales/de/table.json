@@ -28,6 +28,7 @@
     "load_failed_title": "Laden fehlgeschlagen",
     "load_failed_hint": "Bitte erneut versuchen.",
     "retry": "Erneut versuchen",
-    "bulk_partial_skipped": "{{skipped}} von {{total}} Zeile(n) übersprungen: {{reason}}"
+    "bulk_partial_skipped": "{{skipped}} von {{total}} Zeile(n) übersprungen: {{reason}}",
+    "bulk_select_at_least_one": "Bitte mindestens eine Zeile auswählen."
 
   }

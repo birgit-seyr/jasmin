@@ -18,7 +18,6 @@ queries (one per reverse relation) instead of N*R — see
 export interface OfferGroup {
   readonly id?: string;
   readonly reseller_names?: string;
-  is_active?: boolean;
   /**
    * @minimum 0
    * @maximum 2147483647

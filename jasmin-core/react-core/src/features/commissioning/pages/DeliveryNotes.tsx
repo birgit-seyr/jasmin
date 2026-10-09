@@ -15,7 +15,6 @@ import {
 import { generatePdfFilename, notify } from "@shared/utils";
 import { getServerErrorMessage } from "@shared/utils/apiError";
 import type {
-  BulkDocumentRequest,
   BulkOperationResponse,
   CombinedOrderOverview,
   CommissioningOrdersOverviewListParams,
@@ -179,22 +178,6 @@ export default function DeliveryNotes() {
     );
   }, [selectedFinalizedDeliveryNoteIds, t, selectedYear]);
 
-  const bulkCreateDocuments = useCallback(
-    (payload: Record<string, unknown>) =>
-      commissioningBulkCreateDocumentsFromOrdersCreate(
-        payload as unknown as BulkDocumentRequest,
-      ),
-    [],
-  );
-
-  const bulkFinalizeDocuments = useCallback(
-    (payload: Record<string, unknown>) =>
-      commissioningBulkFinalizeDocumentsCreate(
-        payload as unknown as BulkDocumentRequest,
-      ),
-    [],
-  );
-
   const handleOpenModal = useCallback((record: CombinedOrderOverview) => {
     setSelectedDeliveryNoteId(record.delivery_note_id);
     setModalVisible(true);
@@ -217,7 +200,7 @@ export default function DeliveryNotes() {
     [],
   );
 
-  const columns = useMemo<EditableColumnConfig<TableRecord>[]>(
+  const columns = useMemo<EditableColumnConfig<DeliveryNoteOverviewRow>[]>(
     () => [
       {
         title: <>{t("resellers.order_date")}</>,
@@ -244,10 +227,9 @@ export default function DeliveryNotes() {
         disabled: true,
         sortable: true,
         render: (value: unknown, record) => {
-          const r = record as unknown as CombinedOrderOverview;
           return (
             <>
-              {r.order_is_finalized ? (
+              {record.order_is_finalized ? (
                 <>
                   <CheckOutlined aria-hidden className="icon-check-success" />
                   <span className="sr-only">
@@ -300,10 +282,9 @@ export default function DeliveryNotes() {
         disabled: true,
         sortable: true,
         render: (value: unknown, record) => {
-          const r = record as unknown as CombinedOrderOverview;
           return (
             <>
-              {r.delivery_note_is_finalized ? (
+              {record.delivery_note_is_finalized ? (
                 <>
                   <CheckOutlined aria-hidden className="icon-check-success" />
                   <span className="sr-only">
@@ -326,8 +307,7 @@ export default function DeliveryNotes() {
         key: "actions",
         readOnly: true,
         disabled: true,
-        render: (_: unknown, rec) => {
-          const record = rec as unknown as CombinedOrderOverview;
+        render: (_: unknown, record) => {
           return (
             <div className="button-row">
               <>
@@ -376,7 +356,7 @@ export default function DeliveryNotes() {
                 {!record.has_delivery_note && (
                   <BulkActionButton
                     selectedIds={[record.id]}
-                    apiFunction={bulkCreateDocuments}
+                    apiFunction={commissioningBulkCreateDocumentsFromOrdersCreate}
                     buttonText={t("commissioning.create_delivery_note")}
                     buttonProps={{ type: "primary" }}
                     disabled={!record.order_number || data.length === 0}
@@ -389,7 +369,7 @@ export default function DeliveryNotes() {
                   record.has_delivery_note && (
                     <BulkActionButton
                       selectedIds={[record.id]}
-                      apiFunction={bulkFinalizeDocuments}
+                      apiFunction={commissioningBulkFinalizeDocumentsCreate}
                       buttonText={t("commissioning.finalize_delivery_note")}
                       buttonProps={{ type: "primary" }}
                       onSuccess={handleFinalizeDeliveryNotesSuccess}
@@ -402,7 +382,7 @@ export default function DeliveryNotes() {
                     <BulkActionButton
                       selectedIds={[record.id]}
                       apiFunction={(payload) =>
-                        commissioningBulkDeleteDocumentsCreate(payload as never)
+                        commissioningBulkDeleteDocumentsCreate(payload)
                       }
                       buttonText={t("commissioning.delete_delivery_note")}
                       buttonProps={{ type: "primary", danger: true }}
@@ -438,12 +418,10 @@ export default function DeliveryNotes() {
               disabled: true,
               sortable: true,
             },
-          ] as EditableColumnConfig<TableRecord>[])
+          ] as EditableColumnConfig<DeliveryNoteOverviewRow>[])
         : []),
     ],
     [
-      bulkCreateDocuments,
-      bulkFinalizeDocuments,
       data.length,
       formatDate,
       handleFinalizeDeliveryNotesSuccess,
@@ -489,7 +467,7 @@ export default function DeliveryNotes() {
       <div className="button-row">
         <BulkActionButton
           selectedIds={selectedRowKeys}
-          apiFunction={bulkCreateDocuments}
+          apiFunction={commissioningBulkCreateDocumentsFromOrdersCreate}
           buttonText={t("commissioning.create_delivery_notes_bulk")}
           buttonProps={{ type: "primary" }}
           disabled={
@@ -505,7 +483,7 @@ export default function DeliveryNotes() {
         />
         <BulkActionButton
           selectedIds={selectedRowKeys}
-          apiFunction={bulkFinalizeDocuments}
+          apiFunction={commissioningBulkFinalizeDocumentsCreate}
           buttonText={t("commissioning.finalize_delivery_notes")}
           buttonProps={{ type: "primary", danger: true }}
           disabled={

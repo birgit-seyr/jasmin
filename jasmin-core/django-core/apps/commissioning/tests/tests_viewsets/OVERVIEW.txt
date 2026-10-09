@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-1226 tests | 235 test classes | 43 files
+1241 tests | 235 test classes | 43 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 Counts are collected cases, so a parametrized method counts once per case.
@@ -520,7 +520,7 @@ test_reseller_content_query_count.py (4 tests)
   TestInvoiceResellerContentQueryCount     2   list is scale-invariant; missing invoice_id refused
   TestDeliveryNoteResellerContentQueryCount 2  list is scale-invariant; missing delivery_note_id refused
 
-test_resellers_viewsets.py (109 tests)
+test_resellers_viewsets.py (114 tests)
 ──────────────────────────────────────
   TestResellerViewSet                     10   list, filter is_reseller / is_active_reseller, retrieve, IBAN never
                                                returned in plaintext, delete (delete_context required: a bare or
@@ -537,7 +537,9 @@ test_resellers_viewsets.py (109 tests)
   TestCrewTierReadsResellerContext         6   staff see resellers, offers and a reseller's order contents; a
                                                customer still sees only their own reseller and offer group, one
                                                without a linked reseller nothing
-  TestOfferGroupViewSet                    2   list
+  TestOfferGroupViewSet                    7   list; no is_active on a group, and an earlier bundle's
+                                               is_active (query, create, PATCH) is ignored; the kept
+                                               column defaults to true for inserts that leave it out
   TestOfferViewSet                        10   list, the required year/delivery_week scope (bare list → 400, detail
                                                route exempt), plain array without pagination params, envelope with
                                                ?limit=, unusable limit → 400
@@ -609,7 +611,7 @@ test_shares_delivery_day_query_count.py (1 test)
 ────────────────────────────────────────────────
   (module-level)                           1   list can_be_deleted matches the per-instance answer
 
-test_shares_viewsets.py (147 tests)
+test_shares_viewsets.py (148 tests)
 ───────────────────────────────────
   TestShareTypeViewSet                    16   list, include_future (current + upcoming, not past), variation
                                                sizes and validity bounds, deletability, filter share_option
@@ -621,7 +623,7 @@ test_shares_viewsets.py (147 tests)
   TestShareTypeVariationGrossPriceViewSet  4   list, filter by variation, not deletable when subscribed
   TestShareViewSet                         6   list, filter year/week, get_days action, POST and DELETE
                                                refused (405)
-  TestShareDayFieldsLockedOnUpdate         1   a plain PATCH drops the day keys (moving a day goes through
+  TestShareDayFieldsLockedOnUpdate         2   a plain PATCH drops the day keys (moving a day goes through
                                                /shares/bulk_update/)
   TestShareBulkUpdateAction                2   missing year → 400; an empty week succeeds
   TestShareBulkUpdateDayValidation         4   the day body runs its request serializer: "abc" and an

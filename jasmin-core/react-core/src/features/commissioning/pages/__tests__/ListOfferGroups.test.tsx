@@ -1,9 +1,8 @@
 /**
  * ListOfferGroups: the groups the farm sorts its resellers into for offers —
  * number, name and, per price tier beyond the first, the discount the group
- * gets — edited inline. Rendered through the real CrudListPage, EditableTable
- * and active column; the generated commissioning client is the mocking
- * boundary: its list hook is a real TanStack query around a spy that answers
+ * gets — edited inline. Rendered through the real CrudListPage and
+ * EditableTable; the generated commissioning client is the mocking boundary: its list hook is a real TanStack query around a spy that answers
  * from an in-memory farm, whose mutations check a group the way the backend's
  * serializer does and echo the saved group.
  *
@@ -88,7 +87,7 @@ const TODAY = "2026-10-07";
 
 /** An offer group as the list endpoint carries it. */
 const group = (fields: Partial<OfferGroup> & { id: string; number: number }): OfferGroup => ({
-  is_active: true, name: null, note: null, rabatt_price_tier_2: null, rabatt_price_tier_3: null,
+  name: null, note: null, rabatt_price_tier_2: null, rabatt_price_tier_3: null,
   is_default: false, can_be_deleted: true, reseller_names: "", ...fields,
 });
 
@@ -100,11 +99,11 @@ const GASTRO = group({
 });
 // Without a name of its own, and a discount on the second tier only.
 const UNNAMED = group({ id: "og-unnamed", number: 4, rabatt_price_tier_2: 3 });
-// No longer used.
-const RETIRED = group({ id: "og-retired", number: 9, name: "Wochenmarkt 2024", is_active: false });
+// Numbered well apart from the others.
+const MARKET = group({ id: "og-market", number: 9, name: "Wochenmarkt 2024" });
 
 // The fields a client can write; the serializer ignores everything else.
-const WRITABLE = ["is_active", "number", "name", "note", "rabatt_price_tier_2", "rabatt_price_tier_3"];
+const WRITABLE = ["number", "name", "note", "rabatt_price_tier_2", "rabatt_price_tier_3"];
 
 /** The writable fields a request body carries, as the JSON encoding leaves them. */
 const writableFields = (payload: Row): Row =>
@@ -171,7 +170,7 @@ beforeEach(() => {
   vi.setSystemTime(NOW);
   auth.roles = ["office"];
   tenantSettings.values = { used_tiers_for_offers: [1, 3, 5] };
-  serverGroups = [STANDARD, GASTRO, UNNAMED, RETIRED];
+  serverGroups = [STANDARD, GASTRO, UNNAMED, MARKET];
   let createdCount = 0;
   api.listGroups.mockReset().mockImplementation(async () => [...serverGroups]);
   api.createGroup.mockReset().mockImplementation(async (payload: Row) => {
@@ -233,7 +232,6 @@ async function renderLoaded() {
 }
 
 const TITLE = "commissioning.list_offer_groups";
-const ACTIVE = "commissioning.is_active";
 const NUMBER = "#";
 const NAME = "resellers.name";
 const TIER_3 = "commissioning.rabatt_price_tier 3";
@@ -281,7 +279,6 @@ const heading = () => screen.getByRole("heading", { level: 1, name: TITLE });
 type User = ReturnType<typeof userEvent.setup>;
 
 const input = (label: string) => within(editingRow()).getByLabelText(label);
-const activeCheckbox = () => within(editingRow()).getByRole("checkbox", { name: ACTIVE });
 
 // The table puts the cursor into a row a frame after the row opens for
 // editing, so a test waits for it before typing.
@@ -294,7 +291,7 @@ async function startNewRow(user: User) {
 
 async function editRow(user: User, row: HTMLElement) {
   await user.click(rowButton(row, "table.edit")!);
-  await cursorIn(activeCheckbox);
+  await cursorIn(() => input(NUMBER));
 }
 
 const saveRow = (user: User) => user.click(screen.getByRole("button", { name: "table.save" }));
@@ -316,7 +313,7 @@ const silenceConsoleErrors = () => vi.spyOn(console, "error").mockImplementation
 // ── Loading and layout ──────────────────────────────────────────────────────
 
 describe("ListOfferGroups loading and layout", () => {
-  it("loads every group, inactive ones included, with one unfiltered request", async () => {
+  it("loads every group with one unfiltered request", async () => {
     renderPage();
 
     expect(await screen.findByText("Gastro")).toBeInTheDocument();
@@ -341,7 +338,7 @@ describe("ListOfferGroups loading and layout", () => {
     await renderLoaded();
 
     expect(heading()).toBeVisible();
-    expect(columnTitles()).toEqual(["table.actions", ACTIVE, NUMBER, NAME, TIER_3, TIER_5]);
+    expect(columnTitles()).toEqual(["table.actions", NUMBER, NAME, TIER_3, TIER_5]);
     expect(screen.getByText("common.info")).toBeInTheDocument();
     expect(screen.getByText("explainers.list_offer_groups")).toBeInTheDocument();
   });
@@ -350,7 +347,7 @@ describe("ListOfferGroups loading and layout", () => {
     tenantSettings.values = {};
     await renderLoaded();
 
-    expect(columnTitles()).toEqual(["table.actions", ACTIVE, NUMBER, NAME]);
+    expect(columnTitles()).toEqual(["table.actions", NUMBER, NAME]);
   });
 
   it("caps the discount columns at the third tier, which is as far as a group stores them", async () => {
@@ -358,7 +355,7 @@ describe("ListOfferGroups loading and layout", () => {
     await renderLoaded();
 
     expect(columnTitles()).toEqual([
-      "table.actions", ACTIVE, NUMBER, NAME,
+      "table.actions", NUMBER, NAME,
       "commissioning.rabatt_price_tier 2", "commissioning.rabatt_price_tier 10",
     ]);
   });
@@ -405,7 +402,6 @@ describe("ListOfferGroups rows", () => {
     expect(cellTexts(rowNumbered(4), [NAME, TIER_3, TIER_5])).toEqual({
       [NAME]: "", [TIER_3]: "3 %", [TIER_5]: "",
     });
-    expect(within(cellOf(rowOf("Gastro"), ACTIVE)).getByRole("checkbox")).toBeChecked();
   });
 
   it("marks the default group with a lock and offers no delete for it", async () => {
@@ -419,26 +415,21 @@ describe("ListOfferGroups rows", () => {
     expect(rowButton(rowOf("Gastro"), "table.delete")).toBeEnabled();
   });
 
-  it("hides the groups no longer used until asked to show them", async () => {
-    const { user } = await renderLoaded();
-
-    expect(shownNumbers()).toEqual(["1", "2", "4"]);
-
-    await user.click(screen.getByText("commissioning.hide_inactive"));
+  it("shows every group, with no switch to hide any", async () => {
+    await renderLoaded();
 
     expect(shownNumbers()).toEqual(["1", "2", "4", "9"]);
-    expect(within(cellOf(rowOf("Wochenmarkt 2024"), ACTIVE)).getByRole("checkbox")).not.toBeChecked();
+    expect(screen.queryByText("commissioning.hide_inactive")).not.toBeInTheDocument();
   });
 });
 
 // ── New group ───────────────────────────────────────────────────────────────
 
 describe("ListOfferGroups new group", () => {
-  it("adds an active group with its number, name and discounts, stamped with today", async () => {
+  it("adds a group with its number, name and discounts, stamped with today", async () => {
     const { user } = await renderLoaded();
 
     await startNewRow(user);
-    expect(activeCheckbox()).toBeChecked();
     await typeInto(user, NUMBER, "3");
     await typeInto(user, NAME, "Kantinen");
     await typeInto(user, TIER_3, "4");
@@ -448,10 +439,11 @@ describe("ListOfferGroups new group", () => {
     await createdOnce();
     expect(api.createGroup.mock.calls[0][0]).toEqual(
       expect.objectContaining({
-        is_active: true, number: "3", name: "Kantinen",
+        number: "3", name: "Kantinen",
         rabatt_price_tier_2: "4", rabatt_price_tier_3: "8", valid_from: TODAY,
       }),
     );
+    expect(api.createGroup.mock.calls[0][0]).not.toHaveProperty("is_active");
     expect(stored("og-new-1")).toEqual(
       group({ id: "og-new-1", number: 3, name: "Kantinen", rabatt_price_tier_2: 4, rabatt_price_tier_3: 8 }),
     );
@@ -486,7 +478,7 @@ describe("ListOfferGroups new group", () => {
     expect(api.createGroup).not.toHaveBeenCalled();
   });
 
-  it("refuses a number another group has, inactive ones included, and takes a free one", async () => {
+  it("refuses a number another group has and takes a free one", async () => {
     const { user } = await renderLoaded();
 
     await startNewRow(user);
@@ -538,10 +530,11 @@ describe("ListOfferGroups editing and deleting", () => {
     expect(api.updateGroup.mock.calls[0][0]).toBe("og-gastro");
     expect(api.updateGroup.mock.calls[0][1]).toEqual(
       expect.objectContaining({
-        is_active: true, number: "2", name: "Gastro",
+        number: "2", name: "Gastro",
         rabatt_price_tier_2: "7", rabatt_price_tier_3: "10", valid_from: TODAY,
       }),
     );
+    expect(api.updateGroup.mock.calls[0][1]).not.toHaveProperty("is_active");
     expect(stored("og-gastro")).toEqual({ ...GASTRO, rabatt_price_tier_2: 7 });
     await waitFor(() => expect(cellOf(rowOf("Gastro"), TIER_3)).toHaveTextContent("7 %"));
     expect(api.listGroups).toHaveBeenCalledTimes(1);
@@ -572,18 +565,6 @@ describe("ListOfferGroups editing and deleting", () => {
     expect(api.updateGroup).not.toHaveBeenCalled();
   });
 
-  it("retires a group when the office unticks it as active", async () => {
-    const { user } = await renderLoaded();
-
-    await editRow(user, rowOf("Gastro"));
-    await user.click(activeCheckbox());
-    await saveRow(user);
-
-    await updatedOnce();
-    expect(api.updateGroup).toHaveBeenCalledWith("og-gastro", expect.objectContaining({ is_active: false }));
-    expect(stored("og-gastro")?.is_active).toBe(false);
-  });
-
   it("removes a group after confirmation and reloads the list", async () => {
     const { user } = await renderLoaded();
 
@@ -591,7 +572,7 @@ describe("ListOfferGroups editing and deleting", () => {
 
     await waitFor(() => expect(api.destroyGroup).toHaveBeenCalledWith("og-unnamed"));
     await waitFor(() => expect(api.listGroups).toHaveBeenCalledTimes(2));
-    expect(shownNumbers()).toEqual(["1", "2"]);
+    expect(shownNumbers()).toEqual(["1", "2", "9"]);
   });
 
   it("shows why the server refused to delete a group and keeps it", async () => {

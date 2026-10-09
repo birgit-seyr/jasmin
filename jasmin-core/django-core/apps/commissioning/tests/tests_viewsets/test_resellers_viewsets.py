@@ -7,6 +7,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from django.db import connection
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -16,6 +17,7 @@ from apps.commissioning.models import (
     CrateDeliveryNoteContent,
     CrateOrderContent,
     InvoiceResellerContent,
+    OfferGroup,
     Order,
     OrganicCertificate,
     Reseller,
@@ -500,6 +502,52 @@ class TestOfferGroupViewSet:
         OfferGroupFactory()
         resp = api_client.get(self.URL)
         assert len(resp.data) >= 1
+
+    def test_a_group_carries_no_active_flag(self, api_client, tenant):
+        OfferGroupFactory()
+        resp = api_client.get(self.URL)
+        assert resp.status_code == status.HTTP_200_OK
+        assert all("is_active" not in row for row in resp.data)
+
+    def test_an_active_flag_in_the_query_is_ignored(self, api_client, tenant):
+        # A browser still running an earlier bundle may send it.
+        group = OfferGroupFactory()
+        resp = api_client.get(self.URL, {"is_active": "false"})
+        assert resp.status_code == status.HTTP_200_OK
+        assert group.pk in {row["id"] for row in resp.data}
+
+    def test_a_create_carrying_an_active_flag_is_accepted(self, api_client, tenant):
+        # An earlier bundle still sends ``is_active``; the serializer drops it.
+        resp = api_client.post(
+            self.URL,
+            {"number": 4711, "name": "Kantinen", "is_active": False},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert "is_active" not in resp.data
+        assert OfferGroup.objects.get(pk=resp.data["id"]).name == "Kantinen"
+
+    def test_an_update_carrying_an_active_flag_is_accepted(self, api_client, tenant):
+        group = OfferGroupFactory()
+        resp = api_client.patch(
+            reverse("offer_group-detail", args=[group.pk]),
+            {"name": "Gastro", "is_active": False},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        group.refresh_from_db()
+        assert group.name == "Gastro"
+
+    def test_the_kept_column_defaults_to_active(self, tenant):
+        # The column stays for releases that still read it; an insert from
+        # this code leaves it out, so the database fills in ``true``.
+        group = OfferGroupFactory()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT is_active FROM commissioning_offergroup WHERE id = %s",
+                [group.pk],
+            )
+            assert cursor.fetchone() == (True,)
 
 
 # ---------------------------------------------------------------------------

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Button } from "antd";
-import axiosService from "@shared/services/api";
 import i18n from "@shared/i18n";
 import { notify } from '@shared/utils';
 import { getErrorMessage, messageForErrorCode } from '@shared/utils/apiError';
@@ -31,16 +30,25 @@ const partialFailures = (data: unknown): BulkItemFailure[] => {
 const failureReason = ({ code, error }: BulkItemFailure): string =>
   (code && messageForErrorCode(code)) || error || "";
 
-// Generic over the response body: ``TResponse`` infers from the
-// ``apiFunction`` return type, so ``onSuccess`` receives the typed body
-// (e.g. ``BulkOperationResponse`` from the generated bulk endpoints)
-// instead of ``unknown``. Defaults to ``unknown`` for the ``apiEndpoint``
-// path and for callers that ignore the response.
-interface BulkActionButtonProps<TResponse = unknown> {
+/** The body a bulk endpoint receives: the selected ids next to the caller's
+ * own fields (e.g. ``{ model: "invoice" }``). Model ids are strings, so the
+ * selected row keys travel as strings. */
+export type BulkActionRequest<TPayload extends object> = TPayload & {
+  ids: string[];
+};
+
+// Generic over the request and the response body. ``TPayload`` infers from
+// the ``payload`` prop alone (``const``, so ``{ model: "invoice" }`` keeps
+// its literal; ``NoInfer`` keeps ``apiFunction`` from widening it), so a
+// generated client function takes the request as it is, and one that needs
+// more than the ids refuses to compile without the ``payload`` carrying it.
+// ``TResponse`` infers from the ``apiFunction`` return type, so
+// ``onSuccess`` receives the typed body.
+interface BulkActionButtonProps<TPayload extends object, TResponse> {
   selectedIds?: (string | number)[];
-  apiEndpoint?: string;
-  apiFunction?: (payload: Record<string, unknown>) => Promise<TResponse>;
-  method?: string;
+  apiFunction: (
+    request: BulkActionRequest<NoInfer<TPayload>>,
+  ) => Promise<TResponse>;
   buttonText: ReactNode;
   buttonProps?: Record<string, unknown>;
   onSuccess?: (data: TResponse, selectedIds: (string | number)[]) => void;
@@ -49,18 +57,19 @@ interface BulkActionButtonProps<TResponse = unknown> {
   confirmMessage?: string;
   successMessage?: string;
   errorMessage?: string;
-  payload?: Record<string, unknown>;
+  payload?: TPayload;
   refreshData?: () => Promise<void> | void;
   icon?: ReactNode;
   style?: CSSProperties;
   onClearSelection?: () => void;
 }
 
-const BulkActionButton = <TResponse = unknown,>({
+const BulkActionButton = <
+  const TPayload extends object = Record<never, never>,
+  TResponse = unknown,
+>({
   selectedIds = [],
-  apiEndpoint,
   apiFunction,
-  method = "POST",
   buttonText,
   buttonProps = {},
   onSuccess,
@@ -69,17 +78,17 @@ const BulkActionButton = <TResponse = unknown,>({
   confirmMessage,
   successMessage,
   errorMessage,
-  payload = {},
+  payload,
   refreshData,
   icon,
   style = {},
   onClearSelection,
-}: BulkActionButtonProps<TResponse>) => {
+}: BulkActionButtonProps<TPayload, TResponse>) => {
   const [loading, setLoading] = useState(false);
 
   const handleClick = async () => {
     if (selectedIds.length === 0) {
-      notify.warning("Please select at least one item");
+      notify.warning(i18n.t("table.bulk_select_at_least_one"));
       return;
     }
 
@@ -91,47 +100,15 @@ const BulkActionButton = <TResponse = unknown,>({
     setLoading(true);
 
     try {
-      const requestPayload = {
-        ids: selectedIds,
+      // Without a ``payload`` prop ``TPayload`` is the empty default, so the
+      // spread of ``undefined`` still yields the declared request.
+      const request = {
         ...payload,
-      };
+        ids: selectedIds.map(String),
+      } as BulkActionRequest<TPayload>;
+      const responseData = await apiFunction(request);
 
-      let responseData: TResponse;
-
-      if (apiFunction) {
-        responseData = await apiFunction(requestPayload);
-      } else if (apiEndpoint) {
-        let response;
-        switch (method.toUpperCase()) {
-          case "POST":
-            response = await axiosService.post(apiEndpoint, requestPayload);
-            break;
-          case "PUT":
-            response = await axiosService.put(apiEndpoint, requestPayload);
-            break;
-          case "PATCH":
-            response = await axiosService.patch(apiEndpoint, requestPayload);
-            break;
-          case "DELETE":
-            response = await axiosService.delete(apiEndpoint, {
-              data: requestPayload,
-            });
-            break;
-          default:
-            throw new Error(`Unsupported method: ${method}`);
-        }
-        responseData = response.data;
-
-        if (response.status >= 200 && response.status < 300) {
-          if (onClearSelection) {
-            onClearSelection();
-          }
-        }
-      } else {
-        throw new Error("Either apiEndpoint or apiFunction must be provided");
-      }
-
-      if (apiFunction && onClearSelection) {
+      if (onClearSelection) {
         onClearSelection();
       }
 

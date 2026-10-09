@@ -19,7 +19,7 @@ import {
 } from "@shared/tables";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import { useDateFormat } from "@hooks/index";
-import { useIsActiveColumn, useOfferTiers } from "@features/commissioning/hooks";
+import { useOfferTiers } from "@features/commissioning/hooks";
 
 type OfferGroupRow = OfferGroup & TableRecord;
 
@@ -31,11 +31,14 @@ const offerGroupsResource: CrudResource<OfferGroupRow> = {
   getListQueryKey: getCommissioningOfferGroupsListQueryKey,
 };
 
+// A group has no active flag, so a new row starts empty. Module-level, since
+// the list hook needs a stable object to keep its edit callback stable.
+const NEW_ROW_DEFAULTS: Record<string, unknown> = {};
+
 export default function ListOfferGroups() {
   const { t } = useTranslation();
   const { isOffice } = useRoles();
   const { formatDateForAPI } = useDateFormat();
-  const isActiveColumn = useIsActiveColumn();
   // Same tier source as the offers price columns, so these tier-rabatt columns
   // always match the tiers the tenant actually has.
   const finalTiers = useOfferTiers();
@@ -54,7 +57,6 @@ export default function ListOfferGroups() {
 
   const columns = useMemo<any[]>(
     () => [
-      isActiveColumn,
       {
         title: "#",
         dataIndex: "number",
@@ -105,7 +107,7 @@ export default function ListOfferGroups() {
         };
       }),
     ],
-    [isActiveColumn, t, finalTiers],
+    [t, finalTiers],
   );
 
   return (
@@ -114,6 +116,8 @@ export default function ListOfferGroups() {
       explainerKey="explainers.list_offer_groups"
       resource={offerGroupsResource}
       permissions={permissions}
+      withHideInactive={false}
+      newRowDefaults={NEW_ROW_DEFAULTS}
       columns={columns}
       customSave={customSave}
       deleteContext="resellers"

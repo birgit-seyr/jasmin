@@ -47,6 +47,14 @@ class TestCoopShareImport:
         assert "member" in result.errors[0]["error"].lower()
         assert CoopShare.objects.count() == 0
 
+    def test_unknown_member_carries_its_code(self, tenant):
+        result = import_rows_from_csv("coop_share", _csv("999,1,100,false,"))
+
+        row_error = result.errors[0]
+        assert row_error["code"] == "member.number_unknown"
+        assert row_error["field"] == "member_number"
+        assert row_error["details"] == {"member_number": 999}
+
     def test_dry_run_persists_nothing(self, tenant):
         MemberFactory(member_number=555)
         result = import_rows_from_csv(

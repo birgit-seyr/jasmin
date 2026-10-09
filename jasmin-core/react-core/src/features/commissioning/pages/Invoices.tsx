@@ -43,6 +43,7 @@ import { getErrorMessage } from "@shared/utils/apiError";
 import { EditableTable, READ_ONLY_PERMISSION } from "@shared/tables";
 import type {
   EditableColumnConfig,
+  EditableTableProps,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import {
@@ -287,8 +288,8 @@ export default function Invoices() {
     return sortedGroups;
   }, [filteredData, groupingMode, t, data]);
 
-  const handleOpenModal = useCallback((record: Record<string, unknown>) => {
-    setSelectedInvoiceId(record.invoice_id as string);
+  const handleOpenModal = useCallback((record: CombinedOrderOverview) => {
+    setSelectedInvoiceId(record.invoice_id);
     setModalVisible(true);
   }, []);
 
@@ -301,9 +302,9 @@ export default function Invoices() {
   }, [invalidateData]);
 
   const handleOpenStornoModal = useCallback(
-    (record: Record<string, unknown>) => {
-      setStornoTargetInvoiceId(record.invoice_id as string);
-      setStornoTargetLabel((record.invoice_number as string) ?? "");
+    (record: CombinedOrderOverview) => {
+      setStornoTargetInvoiceId(record.invoice_id);
+      setStornoTargetLabel(record.invoice_number ?? "");
       setStornoModalVisible(true);
     },
     [],
@@ -359,7 +360,7 @@ export default function Invoices() {
     ],
   );
 
-  const normalColumns = useMemo<EditableColumnConfig<TableRecord>[]>(
+  const normalColumns = useMemo<EditableColumnConfig<InvoiceOverviewRow>[]>(
     () => [
       {
         title: t("resellers.delivery_note_date"),
@@ -381,9 +382,9 @@ export default function Invoices() {
 
         sortable: true,
 
-        render: (value: unknown, record: Record<string, unknown>) => (
+        render: (value: unknown, record) => (
           <span className="dn-number-cell">
-            {(record.delivery_note_is_finalized as boolean) ? (
+            {record.delivery_note_is_finalized ? (
               <>
                 <CheckOutlined aria-hidden className="icon-check-success" />
                 <span className="sr-only">{t("commissioning.finalized")}</span>
@@ -394,14 +395,14 @@ export default function Invoices() {
               </span>
             )}
             {value as string}
-            {(record.delivery_note_id as string | null | undefined) && (
+            {record.delivery_note_id && (
               <DeliveryNotePDFButtons
-                deliveryNoteId={record.delivery_note_id as string}
+                deliveryNoteId={record.delivery_note_id}
                 buttonSize="small"
                 buttonType="text"
                 buttonText=""
                 ariaLabel={t("commissioning.download_delivery_note_n", {
-                  number: record.delivery_note_number as string,
+                  number: record.delivery_note_number,
                 })}
                 icon={<DownloadOutlined />}
                 className="dn-number-download"
@@ -436,9 +437,9 @@ export default function Invoices() {
         disabled: true,
         sortable: true,
 
-        render: (value: unknown, record: Record<string, unknown>) => (
+        render: (value: unknown, record) => (
           <>
-            {(record.order_is_finalized as boolean) ? (
+            {record.order_is_finalized ? (
               <>
                 <CheckOutlined aria-hidden className="icon-check-success" />
                 <span className="sr-only">{t("commissioning.finalized")}</span>
@@ -473,9 +474,9 @@ export default function Invoices() {
         inputType: "text",
 
         sortable: true,
-        render: (value: unknown, record: Record<string, unknown>) => (
+        render: (value: unknown, record) => (
           <>
-            {(record.has_finalized_invoice as boolean) ? (
+            {record.has_finalized_invoice ? (
               <>
                 <CheckOutlined aria-hidden className="icon-check-success" />
                 <span className="sr-only">{t("commissioning.finalized")}</span>
@@ -490,7 +491,7 @@ export default function Invoices() {
               <Tag color="red" bordered={false}>
                 {t("commissioning.storno_short")}
                 {record.invoice_storno_number
-                  ? ` ${record.invoice_storno_number as string}`
+                  ? ` ${record.invoice_storno_number}`
                   : ""}
               </Tag>
             ) : null}
@@ -514,7 +515,7 @@ export default function Invoices() {
         readOnly: true,
         disabled: true,
         width: "32em",
-        render: (_: unknown, record: Record<string, unknown>) => (
+        render: (_: unknown, record) => (
           <div className="button-row">
             <>
               {record.has_invoice && (
@@ -525,10 +526,10 @@ export default function Invoices() {
               )}
               {!record.has_finalized_invoice && record.has_invoice && (
                 <BulkActionButton
-                  selectedIds={[record.id as string]}
+                  selectedIds={[record.id]}
                   apiFunction={(payload) =>
                     commissioningBulkFinalizeDocumentsCreate({
-                      ids: payload.ids as string[],
+                      ids: payload.ids,
                       model: "invoice" as const,
                     })
                   }
@@ -540,10 +541,10 @@ export default function Invoices() {
               )}
               {!record.has_finalized_invoice && record.has_invoice && (
                 <BulkActionButton
-                  selectedIds={[record.id as string]}
+                  selectedIds={[record.id]}
                   apiFunction={(payload) =>
                     commissioningBulkDeleteDocumentsCreate({
-                      ids: payload.ids as string[],
+                      ids: payload.ids,
                       model: "invoice" as const,
                     })
                   }
@@ -555,7 +556,7 @@ export default function Invoices() {
               )}
               {record.has_finalized_invoice && (
                 <InvoicePDFButtons
-                  invoiceId={record.invoice_id as string}
+                  invoiceId={record.invoice_id}
                   buttonText={t("commissioning.pdf")}
                   buttonSize="small"
                 />
@@ -571,17 +572,17 @@ export default function Invoices() {
               )}
               {record.invoice_storno_id && (
                 <InvoicePDFButtons
-                  invoiceId={record.invoice_storno_id as string}
-                  buttonText={`${t("commissioning.storno_pdf")} ${(record as unknown as CombinedOrderOverview).invoice_storno_number || ""}`}
+                  invoiceId={record.invoice_storno_id}
+                  buttonText={`${t("commissioning.storno_pdf")} ${record.invoice_storno_number || ""}`}
                   buttonSize="small"
                 />
               )}
               {!record.has_invoice && (
                 <BulkActionButton
-                  selectedIds={[record.id as string]}
+                  selectedIds={[record.id]}
                   apiFunction={(payload) =>
                     commissioningBulkCreateDocumentsFromOrdersCreate({
-                      ids: payload.ids as string[],
+                      ids: payload.ids,
                       model: "invoice" as const,
                     })
                   }
@@ -641,7 +642,7 @@ export default function Invoices() {
     {
       key,
       ...extra
-    }: { key?: string } & Partial<Parameters<typeof EditableTable>[0]> = {},
+    }: { key?: string } & Partial<EditableTableProps<InvoiceOverviewRow>> = {},
   ) => (
     <EditableTable
       key={key}
@@ -764,7 +765,7 @@ export default function Invoices() {
           selectedIds={selectedRowKeys}
           apiFunction={(payload) =>
             commissioningBulkCreateSummaryInvoiceFromOrdersCreate({
-              ids: payload.ids as string[],
+              ids: payload.ids,
             })
           }
           buttonText={t("commissioning.create_summary_invoice_for_selected")}
@@ -783,7 +784,7 @@ export default function Invoices() {
           selectedIds={selectedRowKeys}
           apiFunction={(payload) =>
             commissioningBulkCreateDocumentsFromOrdersCreate({
-              ids: payload.ids as string[],
+              ids: payload.ids,
               model: "invoice" as const,
             })
           }
@@ -812,7 +813,7 @@ export default function Invoices() {
           selectedIds={selectedRowKeys}
           apiFunction={(payload) =>
             commissioningBulkDeleteDocumentsCreate({
-              ids: payload.ids as string[],
+              ids: payload.ids,
               model: "invoice" as const,
             })
           }
@@ -837,7 +838,7 @@ export default function Invoices() {
           selectedIds={selectedRowKeys}
           apiFunction={(payload) =>
             commissioningBulkFinalizeDocumentsCreate({
-              ids: payload.ids as string[],
+              ids: payload.ids,
               model: "invoice" as const,
             })
           }

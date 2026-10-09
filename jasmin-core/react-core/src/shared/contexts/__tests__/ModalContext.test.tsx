@@ -1,10 +1,12 @@
 /**
- * ModalProvider: saving the edit mode to the profile. A failed save is shown
- * through notify, with the server's reason or a translated fallback, and
- * rethrown to a caller that awaits it; the toggle takes the rejection up
- * itself, so it never surfaces as an unhandled one.
+ * ModalProvider: the edit mode is a device-local preference. It lives on the
+ * signed-in user kept in the stored ``auth`` entry, so it survives a reload,
+ * and it is never sent to the server. When the browser refuses to store it,
+ * the mode still switches for this session and the user is told it was not
+ * saved.
  */
 import { act, render, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("react-i18next", () => ({
@@ -17,30 +19,22 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
-const { notify, updateUser } = vi.hoisted(() => ({
+const { notify, profileUpdate, apiPost } = vi.hoisted(() => ({
   notify: { error: vi.fn(), success: vi.fn() },
-  updateUser: vi.fn(),
+  profileUpdate: vi.fn(),
+  apiPost: vi.fn(),
 }));
 
-// A plain function, not ``vi.fn``: a mock subscribes to the promise it
-// returns, which would take up the rejection the toggle has to handle.
-let profileUpdate: () => Promise<unknown> = () => Promise.resolve({});
-const profileUpdates: unknown[][] = [];
 vi.mock("@shared/api/generated/auth/auth", () => ({
-  authPartialUpdate: (...args: unknown[]) => {
-    profileUpdates.push(args);
-    return profileUpdate();
-  },
+  authPartialUpdate: profileUpdate,
+}));
+vi.mock("@shared/services/api", () => ({
+  default: { post: apiPost },
+  performRefresh: () => Promise.resolve("token"),
 }));
 vi.mock("@shared/utils/notify", () => ({ default: notify }));
 
-const auth: { user: { id: string; edit_mode?: string } | null } = {
-  user: { id: "u1" },
-};
-vi.mock("../AuthContext", () => ({
-  useAuth: () => ({ user: auth.user, updateUser }),
-}));
-
+import { AuthProvider } from "../AuthContext";
 import { ModalProvider, useModal } from "../ModalContext";
 
 let probed: ReturnType<typeof useModal> | null = null;
@@ -51,79 +45,69 @@ function Probe() {
 
 function renderProvider() {
   return render(
-    <ModalProvider>
-      <Probe />
-    </ModalProvider>,
+    <MemoryRouter>
+      <AuthProvider>
+        <ModalProvider>
+          <Probe />
+        </ModalProvider>
+      </AuthProvider>
+    </MemoryRouter>,
   );
 }
 
-let consoleError: ReturnType<typeof vi.spyOn>;
+function storedUser() {
+  return JSON.parse(localStorage.getItem("auth") ?? "{}").user;
+}
 
 beforeEach(() => {
-  auth.user = { id: "u1" };
   probed = null;
-  profileUpdate = () => Promise.resolve({});
-  profileUpdates.length = 0;
+  localStorage.clear();
+  localStorage.setItem("auth", JSON.stringify({ user: { id: "u1" } }));
   notify.error.mockReset();
-  updateUser.mockReset();
-  consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  profileUpdate.mockReset();
+  apiPost.mockReset();
 });
 
 afterEach(() => {
-  consoleError.mockRestore();
+  vi.restoreAllMocks();
 });
 
 describe("ModalProvider edit mode", () => {
-  it("saves the mode to the profile and the signed-in user", async () => {
+  it("keeps the toggled mode on the stored user without asking the server", async () => {
     renderProvider();
-
-    await act(() => probed!.saveEditMode("modal"));
-
-    expect(profileUpdates).toEqual([["u1", { edit_mode: "modal" }]]);
-    expect(updateUser).toHaveBeenCalledWith({ edit_mode: "modal" });
-    expect(probed?.editMode).toBe("modal");
-    expect(notify.error).not.toHaveBeenCalled();
-  });
-
-  it("shows the server's reason for a refused save and rethrows it", async () => {
-    const refusal = {
-      isAxiosError: true,
-      response: { status: 400, data: { message: "Not allowed" } },
-    };
-    profileUpdate = () => Promise.reject(refusal);
-    renderProvider();
-
-    await act(() =>
-      expect(probed!.saveEditMode("modal")).rejects.toBe(refusal),
-    );
-
-    expect(notify.error).toHaveBeenCalledWith("Not allowed");
-    expect(probed?.error).toBe("Not allowed");
-    expect(probed?.editMode).toBe("inline");
-    expect(updateUser).not.toHaveBeenCalled();
-    expect(consoleError).not.toHaveBeenCalled();
-  });
-
-  it("falls back to the translated message when the server gives no reason", async () => {
-    profileUpdate = () => Promise.reject(new Error("Network Error"));
-    renderProvider();
-
-    await act(() => probed!.saveEditMode("modal").catch(() => undefined));
-
-    expect(notify.error).toHaveBeenCalledWith("profile.preferences_save_error");
-    expect(consoleError).not.toHaveBeenCalled();
-  });
-
-  it("lets the toggle's refused save end in the message alone", async () => {
-    profileUpdate = () => Promise.reject(new Error("Network Error"));
-    renderProvider();
+    await waitFor(() => expect(probed?.editMode).toBe("inline"));
 
     act(() => probed!.toggleEditMode());
 
-    await waitFor(() =>
-      expect(notify.error).toHaveBeenCalledWith("profile.preferences_save_error"),
-    );
-    await waitFor(() => expect(probed?.loading).toBe(false));
-    expect(probed?.editMode).toBe("inline");
+    expect(probed?.editMode).toBe("modal");
+    expect(storedUser()).toEqual({ id: "u1", edit_mode: "modal" });
+    expect(profileUpdate).not.toHaveBeenCalled();
+    expect(apiPost).not.toHaveBeenCalled();
+    expect(notify.error).not.toHaveBeenCalled();
+  });
+
+  it("opens in the stored mode after a reload", async () => {
+    const first = renderProvider();
+    await waitFor(() => expect(probed?.editMode).toBe("inline"));
+    act(() => probed!.toggleEditMode());
+    first.unmount();
+
+    renderProvider();
+
+    await waitFor(() => expect(probed?.isModalMode).toBe(true));
+  });
+
+  it("switches for the session and says so when the browser refuses to store it", async () => {
+    renderProvider();
+    await waitFor(() => expect(probed?.editMode).toBe("inline"));
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("full", "QuotaExceededError");
+    });
+
+    act(() => probed!.toggleEditMode());
+
+    expect(probed?.editMode).toBe("modal");
+    expect(notify.error).toHaveBeenCalledWith("profile.preferences_save_error");
+    expect(profileUpdate).not.toHaveBeenCalled();
   });
 });

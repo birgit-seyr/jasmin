@@ -10,7 +10,6 @@ import {
   commissioningHarvestPartialUpdate,
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
-  HarvestBulkSetAsExpectedRequest,
   Harvest,
 } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
@@ -170,12 +169,9 @@ export default function DocumentationHarvest() {
     const formValues: Record<string, unknown> = {};
     const recordUpdates: Record<string, unknown> = {};
 
-    if (
-      (record as Record<string, unknown>).harvest_amount !== null &&
-      (record as Record<string, unknown>).harvest_amount !== undefined
-    ) {
-      formValues.amount = (record as Record<string, unknown>).harvest_amount;
-      recordUpdates.amount = (record as Record<string, unknown>).harvest_amount;
+    if (record.harvest_amount !== null && record.harvest_amount !== undefined) {
+      formValues.amount = record.harvest_amount;
+      recordUpdates.amount = record.harvest_amount;
     }
 
     if (Object.keys(formValues).length > 0) {
@@ -280,16 +276,15 @@ export default function DocumentationHarvest() {
         if (record.key === -1 || !record.id) {
           return true;
         }
-        const r = record as Record<string, unknown>;
         if (
-          r.theoretical_harvest_amount != null &&
-          r.theoretical_harvest_amount != 0
+          record.theoretical_harvest_amount != null &&
+          record.theoretical_harvest_amount != 0
         ) {
           return false;
         }
         if (
-          r.additional_theoretical_harvest_amount != null &&
-          r.additional_theoretical_harvest_amount != 0
+          record.additional_theoretical_harvest_amount != null &&
+          record.additional_theoretical_harvest_amount != 0
         ) {
           return false;
         }
@@ -334,7 +329,7 @@ export default function DocumentationHarvest() {
               commissioningBulkFinalizeCreate({
                 model: "harvest",
                 app_label: "commissioning",
-                ids: payload.ids as string[],
+                ids: payload.ids,
               })
             }
             buttonText={t("commissioning.finalize")}
@@ -351,25 +346,27 @@ export default function DocumentationHarvest() {
               selectedIds={selectedRowKeys}
               apiFunction={(payload) =>
                 commissioningHarvestBulkSetAsExpectedCreate({
-                  selectedData: (payload.ids as string[]).map((id) => {
+                  // A row without an article can't be set as expected — the
+                  // button is enabled only for rows with a theoretical amount.
+                  selectedData: payload.ids.flatMap((id) => {
                     const row = data.find((item) => item.id === id);
-                    return {
-                      id: (row as Record<string, unknown>)?.share_article,
-                      theoretical_harvest_amount: String(
-                        (row as Record<string, unknown>)
-                          ?.theoretical_harvest_amount,
-                      ),
-                      theoretical_harvest_unit: (row as Record<string, unknown>)
-                        ?.unit,
-                      theoretical_harvest_size: (row as Record<string, unknown>)
-                        ?.size,
-                      year: selectedYear,
-                      delivery_week: selectedWeek ?? currentWeek,
-                      day_number: selectedDay ?? 0,
-                      storage: selectedStorage,
-                    };
+                    if (!row?.share_article) return [];
+                    return [
+                      {
+                        id: row.share_article,
+                        theoretical_harvest_amount: String(
+                          row.theoretical_harvest_amount,
+                        ),
+                        theoretical_harvest_unit: row.unit,
+                        theoretical_harvest_size: row.size,
+                        year: selectedYear,
+                        delivery_week: selectedWeek ?? currentWeek,
+                        day_number: selectedDay ?? 0,
+                        storage: selectedStorage,
+                      },
+                    ];
                   }),
-                } as unknown as HarvestBulkSetAsExpectedRequest)
+                })
               }
               buttonText={
                 t("commissioning.set_as_expected_harvest_for", {
@@ -383,11 +380,10 @@ export default function DocumentationHarvest() {
                 selectedRowKeys.length === 0 ||
                 selectedRowKeys.some((key) => {
                   const row = data.find((item) => item.id === key);
-                  const rowData = row as Record<string, unknown> | undefined;
                   return (
-                    rowData?.theoretical_harvest_amount == null ||
-                    rowData.theoretical_harvest_amount === 0 ||
-                    (rowData.harvest_amount as number) > 0
+                    row?.theoretical_harvest_amount == null ||
+                    row.theoretical_harvest_amount === 0 ||
+                    Number(row.harvest_amount) > 0
                   );
                 })
               }

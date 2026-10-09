@@ -124,11 +124,22 @@ class DataImportResultItemSerializer(serializers.Serializer):
 
 
 class DataImportErrorItemSerializer(serializers.Serializer):
-    """One row that failed, with its reason and the parsed row echoed back."""
+    """One row that failed, with its reason and the parsed row echoed back.
+
+    ``error`` is the reason in the server's words. ``code`` is the stable error
+    code the frontend translates, with ``details`` as the translation's values:
+    a ``JasminError``'s own code, or ``data_import.row_invalid`` (values that
+    failed validation), ``data_import.row_unreadable`` (a line the CSV parser
+    refused) or ``data_import.row_failed`` (any other failure). ``field`` names
+    the column at fault when there is exactly one.
+    """
 
     row = serializers.IntegerField()
     error = serializers.CharField()
     data = serializers.DictField()
+    code = serializers.CharField()
+    field = serializers.CharField(required=False)
+    details = serializers.DictField(required=False)
 
 
 class DataImportResponseSerializer(serializers.Serializer):

@@ -9,10 +9,7 @@ import {
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext";
-import { authPartialUpdate } from "@shared/api/generated/auth/auth";
-import type { UserProfileUpdateRequest } from "@shared/api/generated/models";
 import { notify } from "@shared/utils";
-import { getServerErrorMessage } from "@shared/utils/apiError";
 
 const EDIT_MODES = {
   INLINE: "inline",
@@ -21,16 +18,9 @@ const EDIT_MODES = {
 
 type EditMode = (typeof EDIT_MODES)[keyof typeof EDIT_MODES];
 
-interface ModalPreferences {
-  edit_mode?: EditMode;
-}
-
 interface ModalContextValue {
   editMode: EditMode;
-  loading: boolean;
-  error: string | null;
-  saveEditMode: (newMode: EditMode) => Promise<void>;
-  savePreferences: (newPreferences: ModalPreferences) => Promise<void>;
+  saveEditMode: (newMode: EditMode) => void;
   toggleEditMode: () => void;
   isModalMode: boolean;
   isInlineMode: boolean;
@@ -38,79 +28,51 @@ interface ModalContextValue {
 
 const ModalContext = createContext<ModalContextValue | undefined>(undefined);
 
+function asEditMode(value: unknown): EditMode | null {
+  return value === EDIT_MODES.INLINE || value === EDIT_MODES.MODAL
+    ? value
+    : null;
+}
+
+/**
+ * The edit mode is a device-local preference: it is kept on the signed-in
+ * user in the stored ``auth`` entry and never sent to the server.
+ */
 export function ModalProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const { user, updateUser } = useAuth();
   const [editMode, setEditMode] = useState<EditMode>(
-    (user?.edit_mode as EditMode) || EDIT_MODES.INLINE,
+    asEditMode(user?.edit_mode) ?? EDIT_MODES.INLINE,
   );
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // Initialize edit mode from user
   useEffect(() => {
-    if (user?.edit_mode) {
-      setEditMode(user.edit_mode as EditMode);
+    const storedMode = asEditMode(user?.edit_mode);
+    if (storedMode) {
+      setEditMode(storedMode);
     }
   }, [user]);
 
-  // Save preferences to backend
-  const savePreferences = useCallback(
-    async (newPreferences: ModalPreferences) => {
-      if (!user) {
-        // If no user, just update local state
-        if (newPreferences.edit_mode) {
-          setEditMode(newPreferences.edit_mode);
-        }
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        // edit_mode is a client-side preference — the profile PATCH endpoint
-        // ignores unknown fields, so we send it through the typed client as a
-        // best-effort hint and rely on the stored signed-in user for
-        // persistence.
-        await authPartialUpdate(
-          String(user.id),
-          newPreferences as unknown as UserProfileUpdateRequest,
-        );
-
-        if (newPreferences.edit_mode) {
-          setEditMode(newPreferences.edit_mode);
-          // ``updateUser`` also keeps the stored ``auth`` entry.
-          updateUser({ edit_mode: newPreferences.edit_mode });
-        }
-      } catch (err) {
-        const errorMessage =
-          getServerErrorMessage(err) ?? t("profile.preferences_save_error");
-        notify.error(errorMessage);
-        setError(errorMessage);
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [user, updateUser, t],
-  );
-
   const saveEditMode = useCallback(
-    async (newMode: EditMode) => {
+    (newMode: EditMode) => {
       if (newMode === editMode) {
         return;
       }
-      await savePreferences({ edit_mode: newMode });
+      setEditMode(newMode);
+      try {
+        updateUser({ edit_mode: newMode });
+      } catch {
+        // The browser refused the stored entry (quota, blocked storage):
+        // the mode still applies for this session.
+        notify.error(t("profile.preferences_save_error"));
+      }
     },
-    [editMode, savePreferences],
+    [editMode, updateUser, t],
   );
 
   const toggleEditMode = useCallback(() => {
-    const newMode =
-      editMode === EDIT_MODES.INLINE ? EDIT_MODES.MODAL : EDIT_MODES.INLINE;
-    // savePreferences has already told the user about a failed save.
-    saveEditMode(newMode).catch(() => undefined);
+    saveEditMode(
+      editMode === EDIT_MODES.INLINE ? EDIT_MODES.MODAL : EDIT_MODES.INLINE,
+    );
   }, [editMode, saveEditMode]);
 
   // Memoized so consumers of useModal() (e.g. every mounted EditableTable)
@@ -119,15 +81,12 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   const value: ModalContextValue = useMemo(
     () => ({
       editMode,
-      loading,
-      error,
       saveEditMode,
-      savePreferences,
       toggleEditMode,
       isModalMode: editMode === EDIT_MODES.MODAL,
       isInlineMode: editMode === EDIT_MODES.INLINE,
     }),
-    [editMode, loading, error, saveEditMode, savePreferences, toggleEditMode],
+    [editMode, saveEditMode, toggleEditMode],
   );
 
   return (

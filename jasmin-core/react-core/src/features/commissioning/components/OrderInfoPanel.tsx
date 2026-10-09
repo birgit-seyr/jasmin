@@ -1,5 +1,6 @@
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
 import { Input } from "antd";
+import type { GetRef } from "antd";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BulkActionButton, ToolTipIcon, ViewDetailsButton } from "@shared/ui";
@@ -55,7 +56,7 @@ export function OrderInfoPanel({
   } = orderState;
 
   const [isEditingNote, setIsEditingNote] = useState(false);
-  const noteRef = useRef<ReturnType<typeof Input.TextArea> | null>(null);
+  const noteRef = useRef<GetRef<typeof Input.TextArea>>(null);
 
   return (
     <div className="order-info">
@@ -100,7 +101,7 @@ export function OrderInfoPanel({
           </span>
           {isEditingNote ? (
             <Input.TextArea
-              ref={noteRef as never}
+              ref={noteRef}
               value={orderNote}
               onChange={(e) => onOrderNoteChange(e.target.value)}
               placeholder={t("commissioning.note")}
@@ -181,9 +182,7 @@ export function OrderInfoPanel({
             <BulkActionButton
               selectedIds={orderId ? [orderId] : []}
               apiFunction={(payload) =>
-                commissioningBulkCreateDocumentsFromOrdersCreate(
-                  payload as never,
-                )
+                commissioningBulkCreateDocumentsFromOrdersCreate(payload)
               }
               buttonText={t("commissioning.create_delivery_note")}
               buttonProps={{ type: "primary" }}
@@ -197,7 +196,7 @@ export function OrderInfoPanel({
             <BulkActionButton
               selectedIds={orderId ? [orderId] : []}
               apiFunction={(payload) =>
-                commissioningBulkFinalizeDocumentsCreate(payload as never)
+                commissioningBulkFinalizeDocumentsCreate(payload)
               }
               buttonText={t("commissioning.finalize_delivery_note")}
               buttonProps={{ type: "primary" }}
@@ -210,7 +209,7 @@ export function OrderInfoPanel({
             <BulkActionButton
               selectedIds={orderId ? [orderId] : []}
               apiFunction={(payload) =>
-                commissioningBulkDeleteDocumentsCreate(payload as never)
+                commissioningBulkDeleteDocumentsCreate(payload)
               }
               buttonText={t("commissioning.delete_delivery_note")}
               buttonProps={{ type: "primary", danger: true }}
@@ -258,9 +257,7 @@ export function OrderInfoPanel({
             <BulkActionButton
               selectedIds={orderId ? [orderId] : []}
               apiFunction={(payload) =>
-                commissioningBulkCreateDocumentsFromOrdersCreate(
-                  payload as never,
-                )
+                commissioningBulkCreateDocumentsFromOrdersCreate(payload)
               }
               buttonText={t("commissioning.create_invoice")}
               buttonProps={{ type: "primary" }}
@@ -274,7 +271,7 @@ export function OrderInfoPanel({
             <BulkActionButton
               selectedIds={orderId ? [orderId] : []}
               apiFunction={(payload) =>
-                commissioningBulkFinalizeDocumentsCreate(payload as never)
+                commissioningBulkFinalizeDocumentsCreate(payload)
               }
               buttonText={t("commissioning.finalize_invoice")}
               buttonProps={{ type: "primary" }}
@@ -287,7 +284,7 @@ export function OrderInfoPanel({
             <BulkActionButton
               selectedIds={orderId ? [orderId] : []}
               apiFunction={(payload) =>
-                commissioningBulkDeleteDocumentsCreate(payload as never)
+                commissioningBulkDeleteDocumentsCreate(payload)
               }
               buttonText={t("commissioning.delete_invoice")}
               buttonProps={{ type: "primary", danger: true }}

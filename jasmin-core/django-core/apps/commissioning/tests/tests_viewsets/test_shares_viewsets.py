@@ -24,7 +24,9 @@ from apps.commissioning.models import (
     ShareTypeVariationGrossPrice,
     VirtualVariationComponent,
 )
+from apps.commissioning.serializers import ShareSerializer
 from apps.commissioning.services.share_demand_service import ExternalDemandBackend
+from apps.commissioning.services.shares_day_change_service import SHARE_DAY_FIELDS
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
     DeliveryStationFactory,
@@ -746,6 +748,13 @@ class TestShareDayFieldsLockedOnUpdate:
         assert share.packing_day == original_packing_day
         assert share.changed_day_number is None
         assert share.weight1 == Decimal("2.500")
+
+    def test_the_day_fields_are_read_only_without_an_instance_too(self):
+        # The API creates no shares, so the schema documents the day fields as
+        # read-only in every request body, not only in an update's.
+        fields = ShareSerializer().fields
+
+        assert all(fields[name].read_only for name in SHARE_DAY_FIELDS)
 
 
 # ---------------------------------------------------------------------------

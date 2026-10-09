@@ -247,6 +247,7 @@ export * from './currentTenantEmail';
 export * from './currentTenantWebsite';
 export * from './dataImportErrorItem';
 export * from './dataImportErrorItemData';
+export * from './dataImportErrorItemDetails';
 export * from './dataImportResponse';
 export * from './dataImportResultItem';
 export * from './dayNumberEnum';

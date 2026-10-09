@@ -5,9 +5,5 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
-import type { DayNumberEnum } from './dayNumberEnum';
 
-/**
- * @nullable
- */
-export type ShareCleaningDay = DayNumberEnum | null;
+export type DataImportErrorItemDetails = {[key: string]: unknown};

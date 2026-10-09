@@ -40,7 +40,6 @@ logger = logging.getLogger(__name__)
 
 
 class OfferGroup(JasminModel):
-    is_active = models.BooleanField(default=True, db_index=True)
     number = models.PositiveIntegerField(unique=True)
     name = models.CharField(max_length=200, blank=True, null=True)
     note = models.CharField(max_length=500, blank=True, null=True)

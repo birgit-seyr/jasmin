@@ -15,9 +15,10 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
-const { notifyMock, postMock } = vi.hoisted(() => ({
+const { notifyMock, postMock, messageForErrorCodeMock } = vi.hoisted(() => ({
   notifyMock: { success: vi.fn(), error: vi.fn() },
   postMock: vi.fn(),
+  messageForErrorCodeMock: vi.fn(),
 }));
 
 vi.mock("@shared/utils", () => ({
@@ -27,6 +28,11 @@ vi.mock("@shared/utils", () => ({
 
 vi.mock("@shared/services/api", () => ({
   default: { post: postMock },
+}));
+
+vi.mock("@shared/utils/apiError", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@shared/utils/apiError")>()),
+  messageForErrorCode: messageForErrorCodeMock,
 }));
 
 import DownloadCsvTemplateButton from "../DownloadCsvTemplateButton";
@@ -52,6 +58,7 @@ beforeEach(() => {
   notifyMock.success.mockReset();
   notifyMock.error.mockReset();
   postMock.mockReset();
+  messageForErrorCodeMock.mockReset();
 });
 
 describe("DownloadCsvTemplateButton upload", () => {
@@ -86,5 +93,75 @@ describe("DownloadCsvTemplateButton upload", () => {
     );
     expect(onImported).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("DownloadCsvTemplateButton row errors", () => {
+  const failedImport = {
+    model_name: "subscription",
+    total_rows: 2,
+    successful: 0,
+    failed: 2,
+    results: [],
+    errors: [
+      {
+        row: 4,
+        error: "MemberNumberUnknown: No member with number 9999.",
+        data: {},
+        code: "member.number_unknown",
+        field: "member_number",
+        details: { member_number: 9999 },
+      },
+      {
+        row: 5,
+        error: "quantity: A valid integer is required.",
+        data: {},
+        code: "data_import.row_invalid",
+        field: "quantity",
+      },
+    ],
+  };
+
+  it("shows a coded row error in its translation, else the server's text", async () => {
+    messageForErrorCodeMock.mockImplementation(
+      (code: string, details?: Record<string, unknown>) =>
+        code === "member.number_unknown"
+          ? `Kein Mitglied hat die Mitgliedsnummer ${String(details?.member_number)}.`
+          : undefined,
+    );
+    postMock.mockResolvedValue({ data: failedImport });
+    const { input } = renderButton();
+
+    await userEvent.upload(input, csvFile());
+
+    expect(
+      await screen.findByText("Kein Mitglied hat die Mitgliedsnummer 9999."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("quantity: A valid integer is required."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("MemberNumberUnknown: No member with number 9999."),
+    ).not.toBeInTheDocument();
+    expect(messageForErrorCodeMock).toHaveBeenCalledWith(
+      "member.number_unknown",
+      { member_number: 9999 },
+    );
+  });
+
+  it("shows the server's text for a row error without a code", async () => {
+    postMock.mockResolvedValue({
+      data: {
+        ...failedImport,
+        failed: 1,
+        errors: [{ row: 4, error: "Something broke.", data: {} }],
+      },
+    });
+    const { input } = renderButton();
+
+    await userEvent.upload(input, csvFile());
+
+    expect(await screen.findByText("Something broke.")).toBeInTheDocument();
+    expect(messageForErrorCodeMock).not.toHaveBeenCalled();
   });
 });

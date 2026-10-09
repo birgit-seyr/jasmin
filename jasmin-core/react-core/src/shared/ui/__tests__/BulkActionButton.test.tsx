@@ -4,30 +4,22 @@ import userEvent from "@testing-library/user-event";
 
 // vi.mock factories are hoisted to the top of the file, so any closed-over
 // variable must be created via vi.hoisted() to survive the lift.
-const { notify, axiosMock } = vi.hoisted(() => ({
+const { notify } = vi.hoisted(() => ({
   notify: {
     success: vi.fn(),
     error: vi.fn(),
     warning: vi.fn(),
     info: vi.fn(),
   },
-  axiosMock: {
-    post: vi.fn(),
-    put: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn(),
-  },
 }));
 
 vi.mock("@shared/utils", () => ({ notify }));
-vi.mock("@shared/services/api", () => ({ default: axiosMock }));
 
 import i18n from "@shared/i18n";
 import BulkActionButton from "../BulkActionButton";
 
 beforeEach(() => {
   Object.values(notify).forEach((fn) => fn.mockReset());
-  Object.values(axiosMock).forEach((fn) => fn.mockReset());
 });
 
 describe("BulkActionButton", () => {
@@ -155,20 +147,44 @@ describe("BulkActionButton", () => {
     expect(notify.warning.mock.calls[0][0]).toContain("Something odd happened");
   });
 
-  it("warns and does not hit the API when selection is empty even if it could click", async () => {
-    // selectedIds=[] makes the button disabled, so we test the early-return
-    // branch via direct re-render with at least 1, then 0. Easier: enable it
-    // via apiFunction trick — but the disabled check happens at the DOM level
-    // first, so the early notify.warning branch is unreachable from a click.
-    // We can still assert the contract: with 0 ids, the button is disabled.
+  it("asks for a selection in the user's language when clicked with none", async () => {
+    const apiFunction = vi.fn().mockResolvedValue({});
     render(
       <BulkActionButton
         selectedIds={[]}
-        apiFunction={vi.fn()}
+        apiFunction={apiFunction}
         buttonText="x"
+        buttonProps={{ disabled: false }}
       />,
     );
-    expect(screen.getByRole("button", { name: "x" })).toBeDisabled();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "x" }));
+
+    const message = i18n.t("table.bulk_select_at_least_one");
+    expect(message).not.toBe("table.bulk_select_at_least_one");
+    expect(notify.warning).toHaveBeenCalledWith(message);
+    expect(apiFunction).not.toHaveBeenCalled();
+  });
+
+  it("sends the selected ids as strings, the way model ids travel", async () => {
+    const apiFunction = vi.fn().mockResolvedValue({});
+    render(
+      <BulkActionButton
+        selectedIds={["a", 7]}
+        apiFunction={apiFunction}
+        buttonText="Run"
+        payload={{ model: "invoice" }}
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /run/i }));
+
+    expect(apiFunction).toHaveBeenCalledWith({
+      ids: ["a", "7"],
+      model: "invoice",
+    });
   });
 
   it("respects the confirmMessage — cancelling the prompt aborts the call", async () => {
@@ -190,48 +206,6 @@ describe("BulkActionButton", () => {
     expect(confirmSpy).toHaveBeenCalledWith("Are you sure?");
     expect(apiFunction).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
-  });
-
-  it("dispatches a POST via apiEndpoint when no apiFunction is provided", async () => {
-    axiosMock.post.mockResolvedValue({ status: 200, data: { id: 1 } });
-    const onClearSelection = vi.fn();
-
-    render(
-      <BulkActionButton
-        selectedIds={["x"]}
-        apiEndpoint="/api/things/bulk/"
-        buttonText="Run"
-        onClearSelection={onClearSelection}
-      />,
-    );
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /run/i }));
-
-    expect(axiosMock.post).toHaveBeenCalledWith("/api/things/bulk/", {
-      ids: ["x"],
-    });
-    expect(onClearSelection).toHaveBeenCalledTimes(1);
-  });
-
-  it("dispatches a DELETE with the payload under `data` (axios contract)", async () => {
-    axiosMock.delete.mockResolvedValue({ status: 204, data: null });
-
-    render(
-      <BulkActionButton
-        selectedIds={["x", "y"]}
-        apiEndpoint="/api/things/"
-        method="DELETE"
-        buttonText="Trash"
-      />,
-    );
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /trash/i }));
-
-    expect(axiosMock.delete).toHaveBeenCalledWith("/api/things/", {
-      data: { ids: ["x", "y"] },
-    });
   });
 
   it("surfaces a friendly error notification when the API rejects", async () => {

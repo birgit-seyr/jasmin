@@ -49,13 +49,15 @@ import type {
   CommissioningHarvestSharePlanningListParams,
   DefaultShareArticleInShare,
   HarvestSharePlanningCreateRequest,
-  HarvestSharePlanningRow,
-  HarvestSharePlanningUpdateRequest,
 } from "@shared/api/generated/models";
 import { ShareTypeEnum } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { PlanningModeSelector, WeekSelector } from "@shared/selectors";
-import { EditableTable, gatedByPermission } from "@shared/tables";
+import {
+  EditableTable,
+  gatedByPermission,
+  wrapApiFunctions,
+} from "@shared/tables";
 import type {
   ApiFunctions,
   TableRecord,
@@ -95,6 +97,13 @@ const KG_WEIGHT_ARTICLE_BASE: Record<string, string | null> = {
   PIECES: "kg_per_piece",
   BUNCH: "kg_per_bunch",
 };
+
+/**
+ * A planning-list row as the cache holds it: the generated
+ * ``HarvestSharePlanningRow`` plus its dynamic ``day_*`` cells, or the
+ * table's echo of a saved row, which carries the same keys untyped.
+ */
+type PlanningListCacheRow = Record<string, unknown> & { id?: string | number };
 
 interface PlanningShareContentBaseProps {
   shareOption: ShareTypeEnum;
@@ -194,7 +203,7 @@ export default function PlanningShareContentBase({
   // AND the BackupModal consume this same hook, so their day/variation
   // sets can never diverge.
   const {
-    shareDeliveryDays: rawShareDeliveryDays,
+    shareDeliveryDays,
     shareTypeVariations,
     toursExist,
     activeAtDate,
@@ -243,12 +252,6 @@ export default function PlanningShareContentBase({
   );
   const { shareArticles: pricingArticles } = useShareArticles(
     pricingArticleFilters,
-  );
-
-  // Cast to extended type that correctly types delivery_stations as array
-  const shareDeliveryDays = useMemo(
-    () => rawShareDeliveryDays as unknown as DeliveryDay[],
-    [rawShareDeliveryDays],
   );
 
   // When the selected week has no share-type variations or no
@@ -724,33 +727,28 @@ export default function PlanningShareContentBase({
     }
   }, [daysOk, toursOk, toursExist]);
 
-  const apiFunctions: ApiFunctions = useMemo(
-    () => ({
-      create: (data) =>
-        commissioningHarvestSharePlanningCreate(
-          data as unknown as HarvestSharePlanningCreateRequest,
-        ).then((d) => ({ data: d as unknown as TableRecord })),
-      update: (id, data) =>
-        commissioningHarvestSharePlanningUpdate(
-          id,
-          data as unknown as HarvestSharePlanningUpdateRequest,
-        ).then((d) => ({ data: d as unknown as TableRecord })),
-      delete: (id) => commissioningHarvestSharePlanningDestroy(id),
-    }),
+  const apiFunctions = useMemo<ApiFunctions>(
+    () =>
+      // The update request is the create request with every field optional,
+      // so a row that satisfies the create shape serves both.
+      wrapApiFunctions<HarvestSharePlanningCreateRequest & TableRecord>({
+        create: (payload) => commissioningHarvestSharePlanningCreate(payload),
+        update: (id, payload) =>
+          commissioningHarvestSharePlanningUpdate(id, payload),
+        delete: (id) => commissioningHarvestSharePlanningDestroy(id),
+      }),
     [],
   );
 
   const { data: rawData, isFetching } =
-    useCommissioningHarvestSharePlanningList<
-      (HarvestSharePlanningRow & Record<string, unknown>)[]
-    >(listParams, {
+    useCommissioningHarvestSharePlanningList(listParams, {
       // Don't fetch the planning grid when there are no variation columns
       // (no share-type variations / delivery-station days) — the banner shows
       // instead, so the rows would never render.
       query: { enabled: hasVariationColumns },
     });
-  const data = useMemo(
-    () => (rawData ?? []) as unknown as TableRecord[],
+  const data = useMemo<TableRecord[]>(
+    () => (rawData ?? []).map((row) => ({ ...row, key: row.id })),
     [rawData],
   );
 
@@ -1004,30 +1002,29 @@ export default function PlanningShareContentBase({
       // cell's backing ShareContent is deleted server-side and its key is
       // simply ABSENT from the response — a plain spread-merge would keep
       // the stale amount forever.
-      queryClient.setQueryData<
-        (HarvestSharePlanningRow & Record<string, unknown>)[]
-      >(getCommissioningHarvestSharePlanningListQueryKey(listParams), (old) => {
-        if (!old) return old;
-        const saved = savedRecord as unknown as HarvestSharePlanningRow &
-          Record<string, unknown>;
-        if (!old.some((row) => row.id === saved.id)) {
-          // Freshly-created slot the cache doesn't know yet — prepend it
-          // (EditableTable pins new rows to the top anyway).
-          return action === "create" ? [saved, ...old] : old;
-        }
-        return old.map((row) =>
-          row.id === saved.id
-            ? {
-                ...(Object.fromEntries(
-                  Object.entries(row).filter(
-                    ([cellKey]) => !cellKey.startsWith("day_"),
+      queryClient.setQueryData<PlanningListCacheRow[]>(
+        getCommissioningHarvestSharePlanningListQueryKey(listParams),
+        (old) => {
+          if (!old) return old;
+          if (!old.some((row) => row.id === savedRecord.id)) {
+            // Freshly-created slot the cache doesn't know yet — prepend it
+            // (EditableTable pins new rows to the top anyway).
+            return action === "create" ? [savedRecord, ...old] : old;
+          }
+          return old.map((row) =>
+            row.id === savedRecord.id
+              ? {
+                  ...Object.fromEntries(
+                    Object.entries(row).filter(
+                      ([cellKey]) => !cellKey.startsWith("day_"),
+                    ),
                   ),
-                ) as HarvestSharePlanningRow & Record<string, unknown>),
-                ...saved,
-              }
-            : row,
-        );
-      });
+                  ...savedRecord,
+                }
+              : row,
+          );
+        },
+      );
     },
     [refetchGranularity, invalidateData, queryClient, listParams],
   );
@@ -1145,7 +1142,7 @@ export default function PlanningShareContentBase({
             selectedIds={selectedRowKeys}
             apiFunction={(payload) =>
               commissioningBulkFinalizeShareContentCreate({
-                ids: payload.ids as string[],
+                ids: payload.ids,
               })
             }
             buttonText={t("commissioning.finalize")}
@@ -1157,7 +1154,7 @@ export default function PlanningShareContentBase({
             selectedIds={selectedRowKeys}
             apiFunction={(payload) =>
               commissioningBulkUnfinalizeShareContentCreate({
-                ids: payload.ids as string[],
+                ids: payload.ids,
               })
             }
             buttonText={t("commissioning.unfinalize")}

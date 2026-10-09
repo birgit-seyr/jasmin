@@ -93,10 +93,22 @@
   top: 8px;
 }
 
-/* The user menu marks the language in effect with a check mark at the end of
-   its entry (LanguageMenuItemLabel). */
-.language-menu-item__check {
+/* The user menu marks the language and the theme in effect with a check mark
+   at the end of its entry (LanguageMenuItemLabel, UserMenu). */
+.language-menu-item__check,
+.theme-menu-item__check {
   margin-left: auto;
+}
+
+.user-menu-button__caret {
+  font-size: 10px;
+}
+
+/* The edit-mode toggle in the top bar shows in the primary green — the same
+   green AntD's colorPrimary is set to. Doubled with .ant-btn so it outranks
+   the text button's own colour. */
+.ant-btn.modal-toggle-button {
+  color: var(--color-primary-hover);
 }
 
 /* The user menu's initials avatar. Doubled with .ant-avatar so it outranks

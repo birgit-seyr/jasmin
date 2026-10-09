@@ -348,7 +348,7 @@
   "planning_mode_tours": "nach Touren planen",
   "planning_mode_stations": "nach Verteilstationen planen",
   "short_name": "Kürzel",
-  "confirm_copy_to_offer_group": "Wirklich kopieren?",
+  "confirm_copy_to_offer_group": "Wirklich in {{offerGroup}} kopieren?",
   "theoretical_purchase": "berechnete Menge",
   "packing_day": "Packtag: ",
   "harvest_day_label": "Erntetag",

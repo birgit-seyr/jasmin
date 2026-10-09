@@ -18,6 +18,7 @@ from apps.commissioning.models.choices import PaymentCycleOptions
 from apps.commissioning.services.data_import import import_rows_from_csv
 from apps.commissioning.tests.factories import (
     MemberFactory,
+    SharesDeliveryDayFactory,
     ShareTypeVariationFactory,
 )
 
@@ -378,3 +379,106 @@ class TestImportedNextTermContinuesTheTermBefore:
         assert result.successful == 2, result.errors
         _first, following = self._terms()
         assert following.previous_subscription_id is None
+
+
+_STATION_HEADER = (
+    "member_number,share_type,size,payment_cycle,delivery_station,delivery_day,"
+    "valid_from,valid_until,quantity,is_trial"
+)
+
+
+def _station_csv(*rows: str) -> bytes:
+    """3-row template CSV including the delivery station and day columns."""
+    return (
+        "\n".join([_STATION_HEADER, _STATION_HEADER, _STATION_HEADER, *rows]) + "\n"
+    ).encode("utf-8")
+
+
+@pytest.mark.django_db
+class TestUnresolvedNaturalKeysCarryTheirCodes:
+    """A natural key the import cannot resolve fails the row with a coded error
+    naming the column and the value, so the office reads it in its language."""
+
+    @pytest.fixture(autouse=True)
+    def _freeze(self):
+        with time_machine.travel(_FROZEN, tick=False):
+            yield
+
+    @pytest.fixture()
+    def natural_key(self, tenant):
+        MemberFactory(member_number=4244)
+        variation = ShareTypeVariationFactory()
+        PaymentCycle.objects.get_or_create(choice=PaymentCycleOptions.MONTHLY)
+        return variation.share_type.name, variation.size
+
+    @staticmethod
+    def _row_error(row: str) -> dict:
+        result = import_rows_from_csv("subscription", _station_csv(row))
+        assert result.successful == 0, result.results
+        return result.errors[0]
+
+    def test_an_unknown_member_number(self, natural_key):
+        share_type, size = natural_key
+        row_error = self._row_error(
+            f"9999,{share_type},{size},MONTHLY,,,{_VALID_FROM},{_VALID_UNTIL},1,false"
+        )
+        assert row_error["code"] == "member.number_unknown"
+        assert row_error["field"] == "member_number"
+        assert row_error["details"] == {"member_number": 9999}
+
+    def test_an_unknown_payment_cycle(self, natural_key):
+        share_type, size = natural_key
+        row_error = self._row_error(
+            f"4244,{share_type},{size},FORTNIGHTLY,,,"
+            f"{_VALID_FROM},{_VALID_UNTIL},1,false"
+        )
+        assert row_error["code"] == "payment_cycle.unknown"
+        assert row_error["field"] == "payment_cycle"
+        assert row_error["details"] == {"payment_cycle": "FORTNIGHTLY"}
+
+    def test_an_unknown_share_type(self, natural_key):
+        _share_type, size = natural_key
+        row_error = self._row_error(
+            f"4244,Nope,{size},MONTHLY,,,{_VALID_FROM},{_VALID_UNTIL},1,false"
+        )
+        assert row_error["code"] == "share_type.name_unknown"
+        assert row_error["field"] == "share_type"
+        assert row_error["details"] == {"share_type": "Nope"}
+
+    def test_a_size_the_share_type_has_no_variation_in(self, natural_key):
+        share_type, _size = natural_key
+        row_error = self._row_error(
+            f"4244,{share_type},XXL,MONTHLY,,,{_VALID_FROM},{_VALID_UNTIL},1,false"
+        )
+        assert row_error["code"] == "share_type_variation.size_unknown"
+        assert row_error["field"] == "size"
+        assert row_error["details"] == {
+            "share_type": share_type,
+            "size": "XXL",
+            "date": _VALID_FROM,
+        }
+
+    def test_a_delivery_day_no_day_is_active_on(self, natural_key):
+        share_type, size = natural_key
+        row_error = self._row_error(
+            f"4244,{share_type},{size},MONTHLY,North,5,"
+            f"{_VALID_FROM},{_VALID_UNTIL},1,false"
+        )
+        assert row_error["code"] == "delivery_day.number_unknown"
+        assert row_error["field"] == "delivery_day"
+        assert row_error["details"] == {"delivery_day": 5, "date": _VALID_FROM}
+
+    def test_a_station_without_that_delivery_day(self, natural_key):
+        share_type, size = natural_key
+        SharesDeliveryDayFactory(day_number=3)
+        row_error = self._row_error(
+            f"4244,{share_type},{size},MONTHLY,Nowhere,3,"
+            f"{_VALID_FROM},{_VALID_UNTIL},1,false"
+        )
+        assert row_error["code"] == "delivery_station_day.unknown"
+        assert row_error["field"] == "delivery_station"
+        assert row_error["details"] == {
+            "delivery_station": "Nowhere",
+            "delivery_day": 3,
+            "date": _VALID_FROM,
+        }

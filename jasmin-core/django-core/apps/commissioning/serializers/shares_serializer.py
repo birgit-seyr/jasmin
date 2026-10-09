@@ -574,13 +574,7 @@ class ShareContentSerializer(serializers.ModelSerializer):
         read_only_fields = (*AUDIT_READONLY_FIELDS, *FINALIZATION_READONLY_FIELDS)
 
 
-class ShareSerializer(ReadOnlyOnUpdateMixin, serializers.ModelSerializer):
-    # The weekday columns belong to ``SharesDayChangeService`` (past-week guard
-    # plus the theoretical / movement rebuild), reached through
-    # ``/shares/bulk_update/``. A plain PATCH would move a day without either,
-    # so they are read-only on update.
-    READ_ONLY_ON_UPDATE = SHARE_DAY_FIELDS
-
+class ShareSerializer(serializers.ModelSerializer):
     delivery_day_number = serializers.IntegerField(read_only=True)
     share_type_name = serializers.CharField(read_only=True)
     share_type_variation_size = serializers.CharField(read_only=True)
@@ -591,6 +585,11 @@ class ShareSerializer(ReadOnlyOnUpdateMixin, serializers.ModelSerializer):
     class Meta:
         model = Share
         fields = "__all__"
+        # The weekday columns belong to ``SharesDayChangeService`` (past-week
+        # guard plus the theoretical / movement rebuild), reached through
+        # ``/shares/bulk_update/``. A plain PATCH would move a day without
+        # either, and the API creates no shares, so they are never written here.
+        read_only_fields = SHARE_DAY_FIELDS
 
 
 class _ShareDayNumberField(serializers.IntegerField):

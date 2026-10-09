@@ -17,8 +17,6 @@ import {
 import type {
   CommissioningCurrentStockComparisonListParams,
   CommissioningCurrentStockComparisonPartialUpdateBody,
-  InventoryEntry,
-  StockComparison,
 } from "@shared/api/generated/models";
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { StorageSelector } from "@features/commissioning/selectors";
@@ -129,11 +127,7 @@ export default function DocumentationCurrentStock() {
   const { data: rawData, isFetching } =
     useCommissioningCurrentStockComparisonList(listParams);
   const data = useMemo<TableRecord[]>(
-    () =>
-      ((rawData ?? []) as StockComparison[]).map((item) => ({
-        ...item,
-        key: item.id,
-      })) as unknown as TableRecord[],
+    () => (rawData ?? []).map((item) => ({ ...item, key: item.id })),
     [rawData],
   );
   const invalidateData = useCallback(() => {
@@ -222,11 +216,12 @@ export default function DocumentationCurrentStock() {
       const compositeId =
         key === -1 ? buildCompositeId(transformedRow) : String(key);
       // ``composite_id`` is the PATH param, not a query param.
-      const result = await commissioningCurrentStockComparisonPartialUpdate(
+      const entry = await commissioningCurrentStockComparisonPartialUpdate(
         String(compositeId),
-        transformedRow as unknown as CommissioningCurrentStockComparisonPartialUpdateBody,
+        // The table hands the whole row untyped, slot fields from customSave
+        // included; the server reads only the body's fields from it.
+        transformedRow as CommissioningCurrentStockComparisonPartialUpdateBody,
       );
-      const entry = result as InventoryEntry;
       return { ...entry, key: entry.id };
     },
     [buildCompositeId],
@@ -374,7 +369,7 @@ export default function DocumentationCurrentStock() {
             selectedIds={selectedRowKeys}
             apiFunction={(payload) =>
               commissioningCurrentStockBulkFinalizeCreate({
-                ids: payload.ids as string[],
+                ids: payload.ids,
               })
             }
             buttonText={t("commissioning.finalize")}
@@ -391,7 +386,7 @@ export default function DocumentationCurrentStock() {
             selectedIds={selectedRowKeys}
             apiFunction={(payload) =>
               commissioningCurrentStockBulkSetAsExpectedCreate({
-                ids: payload.ids as string[],
+                ids: payload.ids,
               })
             }
             buttonText={t("commissioning.set_as_expected_stock")}
@@ -404,7 +399,7 @@ export default function DocumentationCurrentStock() {
             selectedIds={selectedRowKeys}
             apiFunction={(payload) =>
               commissioningCurrentStockBulkSetToZeroCreate({
-                ids: payload.ids as string[],
+                ids: payload.ids,
               })
             }
             buttonText={t("commissioning.set_to_zero")}

@@ -34,10 +34,12 @@ import io
 from dataclasses import dataclass, field
 from typing import Any
 
+from django.core.exceptions import NON_FIELD_ERRORS
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import DatabaseError, transaction
 from rest_framework import serializers as drf_serializers
 from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.settings import api_settings as drf_api_settings
 
 from core.errors import JasminError
 
@@ -47,7 +49,7 @@ from ..serializers import (
     CrateSerializer,
     DeliveryStationSerializer,
     MemberImportSerializer,
-    ResellerSerializer,
+    ResellerImportSerializer,
     ShareArticleSerializer,
     SubscriptionImportSerializer,
 )
@@ -67,7 +69,9 @@ MODEL_IMPORT_REGISTRY: dict[str, type[drf_serializers.BaseSerializer]] = {
     # member by that natural key).
     "member": MemberImportSerializer,
     "delivery_station": DeliveryStationSerializer,
-    "reseller": ResellerSerializer,
+    # Resolves the template's ``offer_group_name`` column to the offer group
+    # (see ``ResellerImportSerializer``); the grid sends the id instead.
+    "reseller": ResellerImportSerializer,
     # Subscriptions resolve their FKs by natural key (see
     # ``SubscriptionImportSerializer``) and land as unconfirmed drafts.
     "subscription": SubscriptionImportSerializer,
@@ -265,6 +269,60 @@ def _flatten_drf_errors(errors: Any) -> str:
     if isinstance(errors, list):
         return ", ".join(_flatten_drf_errors(item) for item in errors)
     return str(errors)
+
+
+def _only_field(errors: Any) -> str | None:
+    """The one column an error dict names, or ``None`` when it names several or
+    none (a list, or only non-field errors)."""
+    if not isinstance(errors, dict) or len(errors) != 1:
+        return None
+    (field_name,) = errors
+    if field_name in (drf_api_settings.NON_FIELD_ERRORS_KEY, NON_FIELD_ERRORS):
+        return None
+    return str(field_name)
+
+
+def _error_code(
+    code: str,
+    *,
+    field: str | None = None,
+    details: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """The coded half of a failed row, beside its readable ``error``.
+
+    ``code`` is a stable error code the frontend translates, with ``details`` as
+    the translation's values; ``field`` names the column at fault when there is
+    exactly one.
+    """
+    coded: dict[str, Any] = {"code": code}
+    if field:
+        coded["field"] = field
+    if details:
+        coded["details"] = details
+    return coded
+
+
+def _validation_error_code(errors: Any) -> dict[str, Any]:
+    """A row whose values failed validation: ``data_import.row_invalid``, with
+    the flattened validation messages as the ``message`` detail."""
+    return _error_code(
+        "data_import.row_invalid",
+        field=_only_field(errors),
+        details={"message": _flatten_drf_errors(errors)},
+    )
+
+
+def _exception_error_code(exc: Exception) -> dict[str, Any]:
+    """A row whose save raised, coded by what it raised: a ``JasminError``
+    keeps its own code, field and details."""
+    if isinstance(exc, JasminError):
+        return _error_code(exc.code, field=exc.field, details=exc.details)
+    if isinstance(exc, DRFValidationError):
+        return _validation_error_code(exc.detail)
+    if isinstance(exc, DjangoValidationError):
+        messages = exc.message_dict if hasattr(exc, "error_dict") else exc.messages
+        return _validation_error_code(messages)
+    return _error_code("data_import.row_failed", details={"message": str(exc)})
 
 
 def _decode_csv(file_bytes: bytes) -> str:
@@ -615,6 +673,10 @@ def import_rows_from_csv(
                         "row": row_number,
                         "error": f"Row could not be read: {line.parse_error}",
                         "data": {},
+                        **_error_code(
+                            "data_import.row_unreadable",
+                            details={"reason": line.parse_error},
+                        ),
                     }
                 )
                 continue
@@ -680,6 +742,7 @@ def import_rows_from_csv(
                             "row": row_number,
                             "error": _flatten_drf_errors(serializer.errors),
                             "data": payload,
+                            **_validation_error_code(serializer.errors),
                         }
                     )
             except (
@@ -706,6 +769,7 @@ def import_rows_from_csv(
                         "row": row_number,
                         "error": f"{type(exc).__name__}: {exc}",
                         "data": payload,
+                        **_exception_error_code(exc),
                     }
                 )
 

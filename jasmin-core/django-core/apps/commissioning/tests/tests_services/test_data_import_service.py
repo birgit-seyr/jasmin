@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 import datetime
+import uuid
 from unittest.mock import patch
 
 import pytest
@@ -47,7 +48,7 @@ from apps.commissioning.services.data_import import (
     get_serializer_for_model,
     import_rows_from_csv,
 )
-from apps.commissioning.tests.factories import JasminUserFactory
+from apps.commissioning.tests.factories import JasminUserFactory, OfferGroupFactory
 from apps.shared.tenants.models import RateLimitedAction
 from apps.shared.tenants.rate_limits import remaining_weekly_quota
 
@@ -1081,48 +1082,120 @@ class TestResellerAndDeliveryStationImport:
         assert not DeliveryStation.objects.filter(short_name="NOCITY").exists()
 
 
-# The template the resellers page hands out names the offer group by
-# ``offer_group_name``, a column the reseller serializer does not read.
-_RESELLER_TEMPLATE_CSV = b"".join(
-    [
-        b"Company,Address,ZIP,City,Email,Offer group\n",
-        b"company_name,address,zip_code,city,email,offer_group_name\n",
-        b"string,string,string,string,string,string\n",
-        b"Kern Farm Shop,4 Market Lane,8010,Graz,shop@example.org,Restaurants\n",
-    ]
-)
+def _reseller_template_csv(offer_group_name: str, *, offer_group_id: str = "") -> bytes:
+    """The template the resellers page hands out, which names the offer group by
+    ``offer_group_name``; an ``offer_group`` id column is optional."""
+    return "".join(
+        [
+            "Company,Address,ZIP,City,Email,Offer group,Offer group id\n",
+            "company_name,address,zip_code,city,email,offer_group_name,offer_group\n",
+            "string,string,string,string,string,string,string\n",
+            "Kern Farm Shop,4 Market Lane,8010,Graz,shop@example.org,"
+            f"{offer_group_name},{offer_group_id}\n",
+        ]
+    ).encode()
 
 
 @pytest.mark.django_db
 class TestImportedResellerOfferGroup:
-    """An imported reseller sees the offers of the tenant's default offer group,
-    as one the office creates in the grid does."""
+    """An imported reseller joins the offer group its row names, or the tenant's
+    default offer group when the row names none, as one the office creates in
+    the grid does."""
 
-    def _import(self):
+    def _import(self, csv_bytes: bytes, *, dry_run: bool = False):
         return import_rows_from_csv(
             "reseller",
-            _RESELLER_TEMPLATE_CSV,
+            csv_bytes,
+            dry_run=dry_run,
             options=ImportOptions(fixed_values={"is_reseller": True}),
         )
 
-    def test_an_imported_reseller_gets_the_default_offer_group(self, tenant):
-        result = self._import()
+    @staticmethod
+    def _imported_shop() -> Reseller:
+        return Reseller.objects.get(contact__company_name="Kern Farm Shop")
+
+    def test_the_named_offer_group_is_assigned(self, tenant):
+        group = OfferGroupFactory(name=f"Restaurants {uuid.uuid4().hex[:8]}")
+
+        result = self._import(_reseller_template_csv(group.name))
 
         assert result.failed == 0, result.errors
-        shop = Reseller.objects.get(contact__company_name="Kern Farm Shop")
+        shop = self._imported_shop()
         assert shop.is_reseller is True
-        assert shop.offer_group_id == OfferGroup.get_default().pk
+        assert shop.offer_group_id == group.pk
+
+    def test_the_name_matches_ignoring_case_and_surrounding_spaces(self, tenant):
+        group = OfferGroupFactory(name=f"Restaurants {uuid.uuid4().hex[:8]}")
+
+        result = self._import(_reseller_template_csv(f"  {group.name.upper()} "))
+
+        assert result.failed == 0, result.errors
+        assert self._imported_shop().offer_group_id == group.pk
+
+    def test_an_unknown_name_fails_the_row(self, tenant):
+        result = self._import(_reseller_template_csv("No Such Group"))
+
+        assert result.successful == 0
+        assert result.errors[0]["row"] == 4
+        assert "OfferGroupNameUnknown" in result.errors[0]["error"]
+        assert "No Such Group" in result.errors[0]["error"]
+        assert not Reseller.objects.filter(
+            contact__company_name="Kern Farm Shop"
+        ).exists()
+
+    def test_a_name_two_groups_share_fails_the_row(self, tenant):
+        name = f"Restaurants {uuid.uuid4().hex[:8]}"
+        OfferGroupFactory(name=name)
+        OfferGroupFactory(name=name.lower())
+
+        result = self._import(_reseller_template_csv(name))
+
+        assert result.successful == 0
+        assert "OfferGroupNameAmbiguous" in result.errors[0]["error"]
+
+    def test_the_dry_run_reports_an_unknown_name(self, tenant):
+        result = self._import(_reseller_template_csv("No Such Group"), dry_run=True)
+
+        assert result.successful == 0
+        assert "OfferGroupNameUnknown" in result.errors[0]["error"]
+
+    def test_the_dry_run_accepts_a_known_name_and_saves_nothing(self, tenant):
+        group = OfferGroupFactory(name=f"Restaurants {uuid.uuid4().hex[:8]}")
+
+        result = self._import(_reseller_template_csv(group.name), dry_run=True)
+
+        assert result.failed == 0, result.errors
+        assert result.successful == 1
+        assert not Reseller.objects.filter(
+            contact__company_name="Kern Farm Shop"
+        ).exists()
+
+    def test_an_offer_group_id_wins_over_the_name(self, tenant):
+        named = OfferGroupFactory(name=f"Restaurants {uuid.uuid4().hex[:8]}")
+        by_id = OfferGroupFactory()
+
+        result = self._import(
+            _reseller_template_csv(named.name, offer_group_id=by_id.pk)
+        )
+
+        assert result.failed == 0, result.errors
+        assert self._imported_shop().offer_group_id == by_id.pk
+
+    def test_an_empty_cell_gets_the_default_offer_group(self, tenant):
+        result = self._import(_reseller_template_csv(""))
+
+        assert result.failed == 0, result.errors
+        assert self._imported_shop().offer_group_id == OfferGroup.get_default().pk
 
     def test_without_a_default_offer_group_the_reseller_is_imported_without_one(
         self, tenant
     ):
         OfferGroup.objects.filter(is_default=True).update(is_default=False)
 
-        result = self._import()
+        result = self._import(_reseller_template_csv(""))
 
         assert result.failed == 0, result.errors
-        shop = Reseller.objects.get(contact__company_name="Kern Farm Shop")
-        assert shop.offer_group is None
+        assert self._imported_shop().offer_group is None
 
 
 # The template the extra articles page hands out: the grid locks the unit and
@@ -1217,3 +1290,72 @@ class TestImportFixedValues:
         carrots = ShareArticle.objects.get(article_number="SA-200")
         assert carrots.is_extra is False
         assert carrots.default_movement_unit == UnitOptions.KG
+
+
+@pytest.mark.django_db
+class TestRowErrorCodes:
+    """Each failed row carries a stable ``code`` (and the ``field`` and
+    ``details`` when the failure names them) beside its readable ``error``, so
+    the frontend can show the failure in the office's language."""
+
+    _CRATE_TEMPLATE = b"Name,Number\nname,number\ntext,int\n"
+
+    def test_a_jasmin_error_row_carries_its_code_field_and_details(self, tenant):
+        result = import_rows_from_csv(
+            "reseller",
+            _reseller_template_csv("No Such Group"),
+            options=ImportOptions(fixed_values={"is_reseller": True}),
+        )
+
+        row_error = result.errors[0]
+        assert row_error["code"] == "offer_group.name_unknown"
+        assert row_error["field"] == "offer_group_name"
+        assert row_error["details"] == {"offer_group_name": "No Such Group"}
+        assert row_error["error"] == (
+            "OfferGroupNameUnknown: No offer group named 'No Such Group'."
+        )
+
+    def test_a_field_error_row_carries_the_generic_code_and_its_field(self, tenant):
+        result = import_rows_from_csv("crate", self._CRATE_TEMPLATE + b",2\n")
+
+        row_error = result.errors[0]
+        assert row_error["code"] == "data_import.row_invalid"
+        assert row_error["field"] == "name"
+        assert row_error["error"].startswith("name: ")
+        assert row_error["details"] == {"message": row_error["error"]}
+
+    def test_errors_on_several_fields_name_no_single_field(self, tenant):
+        result = import_rows_from_csv("crate", self._CRATE_TEMPLATE + b",abc\n")
+
+        row_error = result.errors[0]
+        assert row_error["code"] == "data_import.row_invalid"
+        assert "field" not in row_error
+
+    def test_an_unreadable_row_carries_its_own_code(self, tenant):
+        csv_bytes = self._CRATE_TEMPLATE + _oversized_quoted_cell() + b",2\n"
+
+        result = import_rows_from_csv("crate", csv_bytes)
+
+        row_error = result.errors[0]
+        assert row_error["code"] == "data_import.row_unreadable"
+        assert row_error["error"].startswith("Row could not be read: ")
+        assert "field larger than field limit" in row_error["details"]["reason"]
+
+    def test_an_unexpected_failure_carries_the_generic_failure_code(self, tenant):
+        JasminUserFactory(email="linkfails@example.com")
+        csv_bytes = (
+            b"First,Last,Email\n"
+            b"first_name,last_name,email\n"
+            b"text,text,email\n"
+            b"Link,Fails,linkfails@example.com\n"
+        )
+        with patch(
+            "apps.commissioning.services.member_service.MemberService.link_to_user",
+            side_effect=DatabaseError("simulated link failure"),
+        ):
+            result = import_rows_from_csv("member", csv_bytes)
+
+        row_error = result.errors[0]
+        assert row_error["code"] == "data_import.row_failed"
+        assert row_error["error"] == "DatabaseError: simulated link failure"
+        assert row_error["details"] == {"message": "simulated link failure"}

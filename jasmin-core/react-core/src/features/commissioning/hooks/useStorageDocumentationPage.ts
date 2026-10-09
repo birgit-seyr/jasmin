@@ -16,8 +16,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
-
 import {
   useDocumentationSummaryPage,
   type DocumentationModel,
@@ -55,7 +53,7 @@ export function useStorageDocumentationPage({
   const { rawData, selectedYear, selectedWeek, currentWeek, selectedDay } =
     summary;
 
-  const data = useMemo<TableRecord[]>(() => {
+  const data = useMemo<DocumentationSummaryRecord[]>(() => {
     // Directional cast at the orval boundary: raw rows lack the table-only
     // ``key`` until the map below adds it.
     const items = (rawData ?? []) as DocumentationSummaryRecord[];

@@ -23,7 +23,6 @@ class OfferGroupFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = OfferGroup
 
-    is_active = True
     # Start well above the seeded default offer group's number (1) so factory
     # rows never collide with it on the unique ``number``.
     number = factory.Sequence(lambda n: n + 1001)

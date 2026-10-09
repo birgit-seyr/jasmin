@@ -29101,8 +29101,15 @@ components:
       - name
     DataImportErrorItem:
       type: object
-      description: One row that failed, with its reason and the parsed row echoed
-        back.
+      description: |-
+        One row that failed, with its reason and the parsed row echoed back.
+
+        ``error`` is the reason in the server's words. ``code`` is the stable error
+        code the frontend translates, with ``details`` as the translation's values:
+        a ``JasminError``'s own code, or ``data_import.row_invalid`` (values that
+        failed validation), ``data_import.row_unreadable`` (a line the CSV parser
+        refused) or ``data_import.row_failed`` (any other failure). ``field`` names
+        the column at fault when there is exactly one.
       properties:
         row:
           type: integer
@@ -29111,7 +29118,15 @@ components:
         data:
           type: object
           additionalProperties: {}
+        code:
+          type: string
+        field:
+          type: string
+        details:
+          type: object
+          additionalProperties: {}
       required:
+      - code
       - data
       - error
       - row
@@ -33377,8 +33392,6 @@ components:
         reseller_names:
           type: string
           readOnly: true
-        is_active:
-          type: boolean
         number:
           type: integer
           maximum: 2147483647
@@ -36517,39 +36530,33 @@ components:
         changed_day_number:
           allOf:
           - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
           nullable: true
-          minimum: 0
-          maximum: 32767
         harvesting_day:
           allOf:
           - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
           nullable: true
-          minimum: 0
-          maximum: 32767
         packing_day:
           allOf:
           - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
           nullable: true
-          minimum: 0
-          maximum: 32767
         washing_day:
           allOf:
           - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
           nullable: true
-          minimum: 0
-          maximum: 32767
         cleaning_day:
           allOf:
           - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
           nullable: true
-          minimum: 0
-          maximum: 32767
         get_current_stock_day:
           allOf:
           - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
           nullable: true
-          minimum: 0
-          maximum: 32767
         weight1:
           type: string
           format: decimal

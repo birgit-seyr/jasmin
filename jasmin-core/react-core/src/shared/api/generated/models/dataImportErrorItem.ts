@@ -6,12 +6,23 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { DataImportErrorItemData } from './dataImportErrorItemData';
+import type { DataImportErrorItemDetails } from './dataImportErrorItemDetails';
 
 /**
  * One row that failed, with its reason and the parsed row echoed back.
+
+``error`` is the reason in the server's words. ``code`` is the stable error
+code the frontend translates, with ``details`` as the translation's values:
+a ``JasminError``'s own code, or ``data_import.row_invalid`` (values that
+failed validation), ``data_import.row_unreadable`` (a line the CSV parser
+refused) or ``data_import.row_failed`` (any other failure). ``field`` names
+the column at fault when there is exactly one.
  */
 export interface DataImportErrorItem {
   row: number;
   error: string;
   data: DataImportErrorItemData;
+  code: string;
+  field?: string;
+  details?: DataImportErrorItemDetails;
 }

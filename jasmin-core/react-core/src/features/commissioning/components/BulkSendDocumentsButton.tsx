@@ -55,7 +55,7 @@ export default function BulkSendDocumentsButton({
         selectedIds={finalizedOrderIds}
         apiFunction={(payload) =>
           commissioningBulkSendDocumentsViaEmailCreate({
-            ids: payload.ids as string[],
+            ids: payload.ids,
             model,
           })
         }

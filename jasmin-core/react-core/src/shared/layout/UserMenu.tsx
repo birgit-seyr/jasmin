@@ -161,7 +161,7 @@ export default function UserMenu() {
               <Space>
                 <span>{label}</span>
                 {themePreference === preference && (
-                  <span aria-hidden style={{ marginLeft: "auto" }}>
+                  <span aria-hidden className="theme-menu-item__check">
                     ✓
                   </span>
                 )}
@@ -220,7 +220,7 @@ export default function UserMenu() {
             {!isMobile && (
               <>
                 <span>{displayName}</span>
-                <DownOutlined style={{ fontSize: 10 }} />
+                <DownOutlined className="user-menu-button__caret" />
               </>
             )}
           </Space>

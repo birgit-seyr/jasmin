@@ -6,11 +6,11 @@
 
 apps/commissioning/models/members.py: 1129
 apps/commissioning/models/mixin.py: 1413
-apps/commissioning/models/resellers.py: 1332
+apps/commissioning/models/resellers.py: 1331
 apps/commissioning/models/shares.py: 1158
 apps/commissioning/serializers/members_serializer.py: 1122
 apps/commissioning/serializers/resellers_serializer.py: 1313
-apps/commissioning/serializers/shares_serializer.py: 1067
+apps/commissioning/serializers/shares_serializer.py: 1066
 apps/commissioning/services/default_share_content_service.py: 1184
 apps/commissioning/services/documentation_summary_service.py: 1086
 apps/commissioning/services/invoice_service.py: 1111

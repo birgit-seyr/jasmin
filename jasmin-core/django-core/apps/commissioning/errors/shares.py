@@ -141,6 +141,70 @@ class DataImportInvalid(BadRequestError):
     code = "data_import.invalid"
 
 
+# The natural keys a data-list import row names its related rows by. Each one
+# is raised for one row and comes back as that row's error, with ``field``
+# naming the column and ``details`` the value it could not resolve.
+
+
+class MemberNumberUnknown(BadRequestError):
+    """No member carries the row's ``member_number``."""
+
+    code = "member.number_unknown"
+
+
+class PaymentCycleUnknown(BadRequestError):
+    """No payment cycle carries the row's ``payment_cycle`` choice."""
+
+    code = "payment_cycle.unknown"
+
+
+class ShareTypeNameUnknown(BadRequestError):
+    """No share type carries the row's ``share_type`` name."""
+
+    code = "share_type.name_unknown"
+
+
+class ShareTypeNameAmbiguous(BadRequestError):
+    """More than one share type carries the row's ``share_type`` name."""
+
+    code = "share_type.name_ambiguous"
+
+
+class ShareTypeVariationSizeUnknown(BadRequestError):
+    """The share type has no variation of the row's ``size`` active on the
+    row's start date."""
+
+    code = "share_type_variation.size_unknown"
+
+
+class ShareTypeVariationSizeAmbiguous(BadRequestError):
+    """The share type has more than one variation of the row's ``size`` active
+    on the row's start date."""
+
+    code = "share_type_variation.size_ambiguous"
+
+
+class DeliveryDayNumberUnknown(BadRequestError):
+    """No delivery day with the row's ``delivery_day`` number is active on the
+    row's start date."""
+
+    code = "delivery_day.number_unknown"
+
+
+class DeliveryStationDayUnknown(BadRequestError):
+    """No station named by the row's ``delivery_station`` is served on its
+    delivery day on the row's start date."""
+
+    code = "delivery_station_day.unknown"
+
+
+class DeliveryStationDayAmbiguous(BadRequestError):
+    """More than one station named by the row's ``delivery_station`` is served
+    on its delivery day on the row's start date (short names are not unique)."""
+
+    code = "delivery_station_day.ambiguous"
+
+
 # --------------------------------------------------------------------------- #
 # Weekly share-demand imports                                                 #
 # --------------------------------------------------------------------------- #

@@ -35,6 +35,15 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from ..errors import (
+    DeliveryDayNumberUnknown,
+    DeliveryStationDayAmbiguous,
+    DeliveryStationDayUnknown,
+    MemberNumberUnknown,
+    PaymentCycleUnknown,
+    ShareTypeNameAmbiguous,
+    ShareTypeNameUnknown,
+    ShareTypeVariationSizeAmbiguous,
+    ShareTypeVariationSizeUnknown,
     SubscriptionTermAlreadyRenewed,
     SubscriptionTermPredecessorAmbiguous,
 )
@@ -95,14 +104,16 @@ class SubscriptionImportSerializer(serializers.Serializer):
     is_trial = serializers.BooleanField(required=False, default=False)
     subscription_number = serializers.IntegerField(required=False, allow_null=True)
 
-    # ── FK resolvers (raise a per-field ValidationError the row loop catches) ──
+    # ── FK resolvers (each raises a coded error the row loop reports) ──
 
     @staticmethod
     def _resolve_member(number: int) -> Member:
         member = Member.objects.filter(member_number=number).first()
         if member is None:
-            raise serializers.ValidationError(
-                {"member_number": f"No member with number {number}."}
+            raise MemberNumberUnknown(
+                f"No member with number {number}.",
+                field="member_number",
+                details={"member_number": number},
             )
         return member
 
@@ -110,8 +121,10 @@ class SubscriptionImportSerializer(serializers.Serializer):
     def _resolve_payment_cycle(choice: str) -> PaymentCycle:
         cycle = PaymentCycle.objects.filter(choice=choice).first()
         if cycle is None:
-            raise serializers.ValidationError(
-                {"payment_cycle": f"No payment cycle '{choice}'."}
+            raise PaymentCycleUnknown(
+                f"No payment cycle '{choice}'.",
+                field="payment_cycle",
+                details={"payment_cycle": choice},
             )
         return cycle
 
@@ -121,17 +134,17 @@ class SubscriptionImportSerializer(serializers.Serializer):
     ) -> ShareTypeVariation:
         share_types = list(ShareType.objects.filter(name=share_type_name))
         if not share_types:
-            raise serializers.ValidationError(
-                {"share_type": f"No share type named '{share_type_name}'."}
+            raise ShareTypeNameUnknown(
+                f"No share type named '{share_type_name}'.",
+                field="share_type",
+                details={"share_type": share_type_name},
             )
         if len(share_types) > 1:
-            raise serializers.ValidationError(
-                {
-                    "share_type": (
-                        f"Share type name '{share_type_name}' is ambiguous "
-                        f"({len(share_types)} matches)."
-                    )
-                }
+            raise ShareTypeNameAmbiguous(
+                f"Share type name '{share_type_name}' is ambiguous "
+                f"({len(share_types)} matches).",
+                field="share_type",
+                details={"share_type": share_type_name, "matches": len(share_types)},
             )
         share_type = share_types[0]
         matches = list(
@@ -139,23 +152,24 @@ class SubscriptionImportSerializer(serializers.Serializer):
                 active_on_date_q(on_date), share_type=share_type, size=size
             )
         )
+        details = {
+            "share_type": share_type_name,
+            "size": size,
+            "date": on_date.isoformat(),
+        }
         if not matches:
-            raise serializers.ValidationError(
-                {
-                    "size": (
-                        f"No '{share_type_name}' variation of size '{size}' "
-                        f"active on {on_date}."
-                    )
-                }
+            raise ShareTypeVariationSizeUnknown(
+                f"No '{share_type_name}' variation of size '{size}' "
+                f"active on {on_date}.",
+                field="size",
+                details=details,
             )
         if len(matches) > 1:
-            raise serializers.ValidationError(
-                {
-                    "size": (
-                        f"'{share_type_name}' / size '{size}' is ambiguous on "
-                        f"{on_date} ({len(matches)} active variations)."
-                    )
-                }
+            raise ShareTypeVariationSizeAmbiguous(
+                f"'{share_type_name}' / size '{size}' is ambiguous on "
+                f"{on_date} ({len(matches)} active variations).",
+                field="size",
+                details={**details, "matches": len(matches)},
             )
         return matches[0]
 
@@ -171,8 +185,10 @@ class SubscriptionImportSerializer(serializers.Serializer):
             .first()
         )
         if day is None:
-            raise serializers.ValidationError(
-                {"delivery_day": f"No delivery day {day_number} active on {on_date}."}
+            raise DeliveryDayNumberUnknown(
+                f"No delivery day {day_number} active on {on_date}.",
+                field="delivery_day",
+                details={"delivery_day": day_number, "date": on_date.isoformat()},
             )
         # ``short_name`` is NOT unique, so resolve the station-day directly by
         # joining on it (rather than picking one station with ``.first()``): the
@@ -184,23 +200,24 @@ class SubscriptionImportSerializer(serializers.Serializer):
                 delivery_day=day,
             )
         )
+        details = {
+            "delivery_station": station_name,
+            "delivery_day": day_number,
+            "date": on_date.isoformat(),
+        }
         if not matches:
-            raise serializers.ValidationError(
-                {
-                    "delivery_station": (
-                        f"No station '{station_name}' with day {day_number} "
-                        f"active on {on_date}."
-                    )
-                }
+            raise DeliveryStationDayUnknown(
+                f"No station '{station_name}' with day {day_number} "
+                f"active on {on_date}.",
+                field="delivery_station",
+                details=details,
             )
         if len(matches) > 1:
-            raise serializers.ValidationError(
-                {
-                    "delivery_station": (
-                        f"Station '{station_name}' / day {day_number} is "
-                        f"ambiguous on {on_date} ({len(matches)} active matches)."
-                    )
-                }
+            raise DeliveryStationDayAmbiguous(
+                f"Station '{station_name}' / day {day_number} is "
+                f"ambiguous on {on_date} ({len(matches)} active matches).",
+                field="delivery_station",
+                details={**details, "matches": len(matches)},
             )
         return matches[0]
 
