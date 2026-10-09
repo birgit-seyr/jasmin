@@ -1,5 +1,6 @@
 import { DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { Alert, Button, Modal, Upload } from "antd";
+import type { RcFile } from "antd/es/upload";
 import { isValidElement, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import axiosService from "@shared/services/api";
@@ -9,6 +10,7 @@ import type {
   DataImportErrorItem,
   DataImportResponse,
 } from "@shared/api/generated/models";
+import ReadOnlyReportTable from "@shared/tables/ReadOnlyReportTable";
 import ToolTipIcon from "./ToolTipIcon";
 
 /**
@@ -106,48 +108,52 @@ function rowErrorMessage(rowError: DataImportErrorItem): string {
   return translated ?? rowError.error;
 }
 
-// Maps an EditableColumnConfig `inputType` to a short, comma-free type hint
-// suitable for a CSV row. The hint row is meant to be visible (Excel renders
-// it as row 2) and skipped on upload (`skiprows=1` in pandas, `header=1` etc).
-const TYPE_HINTS: Record<string, string> = {
-  text: "string",
-  optional: "string",
-  select: "string",
-  checkbox: "true|false",
-  switch: "true|false",
-  date: "YYYY-MM-DD",
-  datepicker: "YYYY-MM-DD",
-  time: "HH:MM",
-  number: "number",
-  integer: "integer",
-  positive_integer: "integer (>=0)",
-  negative_integer: "integer (<=0)",
-  decimal1: "decimal (1dp)",
-  decimal2: "decimal (2dp)",
-  decimal3: "decimal (3dp)",
-  positive_decimal2: "decimal (>=0 2dp)",
-  negative_decimal2: "decimal (<=0 2dp)",
-  positive_decimal3: "decimal (>=0 3dp)",
-  negative_decimal3: "decimal (<=0 3dp)",
-  percentage: "percentage",
-  kw: "week number",
+// Maps an EditableColumnConfig `inputType` to the i18n key of a short,
+// comma-free type hint for the template's third row. The importer skips that
+// row by position, so the hint is written in the office's language.
+const TYPE_HINT_KEYS: Record<string, string> = {
+  text: "csv_upload.type_hint.text",
+  optional: "csv_upload.type_hint.text",
+  select: "csv_upload.type_hint.text",
+  checkbox: "csv_upload.type_hint.true_false",
+  switch: "csv_upload.type_hint.true_false",
+  date: "csv_upload.type_hint.date",
+  datepicker: "csv_upload.type_hint.date",
+  time: "csv_upload.type_hint.time",
+  number: "csv_upload.type_hint.number",
+  integer: "csv_upload.type_hint.integer",
+  positive_integer: "csv_upload.type_hint.integer_non_negative",
+  negative_integer: "csv_upload.type_hint.integer_non_positive",
+  decimal1: "csv_upload.type_hint.decimal_1dp",
+  decimal2: "csv_upload.type_hint.decimal_2dp",
+  decimal3: "csv_upload.type_hint.decimal_3dp",
+  positive_decimal2: "csv_upload.type_hint.decimal_non_negative_2dp",
+  negative_decimal2: "csv_upload.type_hint.decimal_non_positive_2dp",
+  positive_decimal3: "csv_upload.type_hint.decimal_non_negative_3dp",
+  negative_decimal3: "csv_upload.type_hint.decimal_non_positive_3dp",
+  percentage: "csv_upload.type_hint.percentage",
+  kw: "csv_upload.type_hint.week_number",
 };
 
-function typeHintFor(col: ColumnLike): string {
-  const inputType = col.inputType;
-  // For select inputs with an explicit static option list, surface the
-  // actual values so the user can copy them verbatim into the cell.
-  // Per-row option functions and async-loaded options fall back to
-  // "string" (we have no record to evaluate against at download time).
+function typeHintKeyFor(col: ColumnLike): string {
+  return (
+    (col.inputType && TYPE_HINT_KEYS[col.inputType]) ||
+    "csv_upload.type_hint.text"
+  );
+}
+
+function selectValuesHint(col: ColumnLike): string | undefined {
+  // A select with a static option list lists its values, so the user can
+  // copy them verbatim into the cell. Per-row option functions have no record
+  // to evaluate against at download time and fall back to the text hint.
   if (
-    inputType === "select" &&
+    col.inputType === "select" &&
     Array.isArray(col.options) &&
     col.options.length > 0
   ) {
     return col.options.map((opt) => String(opt.value)).join("|");
   }
-  if (!inputType) return "string";
-  return TYPE_HINTS[inputType] ?? "string";
+  return undefined;
 }
 
 // Best-effort extraction of plain text from a ReactNode. Handles strings,
@@ -204,8 +210,8 @@ export default function DownloadCsvTemplateButton({
   const [resultOpen, setResultOpen] = useState(false);
   const [wasDryRun, setWasDryRun] = useState(false);
 
-  const handleUpload = async (file: File, dryRun = false): Promise<boolean> => {
-    if (!modelName) return false;
+  const handleUpload = async (file: RcFile, dryRun: boolean): Promise<void> => {
+    if (!modelName) return;
     setUploading(true);
     try {
       const form = new FormData();
@@ -240,8 +246,12 @@ export default function DownloadCsvTemplateButton({
     } finally {
       setUploading(false);
     }
-    // Always return false so antd's Upload doesn't keep the file in its
-    // internal list — we manage the lifecycle ourselves.
+  };
+
+  // handleUpload reports its own failures, so nothing is left to await here.
+  // Returning false stops antd's Upload from posting the file itself.
+  const startUpload = (file: RcFile, dryRun = false): false => {
+    void handleUpload(file, dryRun);
     return false;
   };
 
@@ -275,15 +285,17 @@ export default function DownloadCsvTemplateButton({
     //   row 1: machine-readable dataIndex names (the actual upload schema)
     //   row 2: short, comma-free type hint per column
     // When `headers` is given explicitly we don't have access to column titles
-    // or inputType — both fall back to the dataIndex / "string".
+    // or inputType — both fall back to the dataIndex / the text hint.
     const titleRow = headers
       ? derivedHeaders
       : usableColumns.map(
           (col, i) => extractText(col.title) || derivedHeaders[i],
         );
     const typeRow = headers
-      ? derivedHeaders.map(() => "string")
-      : usableColumns.map((col) => typeHintFor(col));
+      ? derivedHeaders.map(() => t("csv_upload.type_hint.text"))
+      : usableColumns.map(
+          (col) => selectValuesHint(col) ?? t(typeHintKeyFor(col)),
+        );
 
     const csv =
       [titleRow, derivedHeaders, typeRow]
@@ -308,38 +320,30 @@ export default function DownloadCsvTemplateButton({
         </Button>
         <ToolTipIcon title={t("tooltip.explainer_csv_template")} />
       </div>
-      <div className="mb-1em">
-        {allowDryRun && modelName && (
-          <span>
-            <Upload
-              accept=".csv,text/csv"
-              showUploadList={false}
-              beforeUpload={(file) => {
-                handleUpload(file as unknown as File, true);
-                return false;
-              }}
-              disabled={uploading}
+      {allowDryRun && modelName && (
+        <div className="mb-1em">
+          <Upload
+            accept=".csv,text/csv"
+            showUploadList={false}
+            beforeUpload={(file) => startUpload(file, true)}
+            disabled={uploading}
+          >
+            <Button
+              className="csv-template-button"
+              icon={<UploadOutlined />}
+              loading={uploading}
             >
-              <Button
-                className="csv-template-button"
-                icon={<UploadOutlined />}
-                loading={uploading}
-              >
-                {t("csv_upload.validate")}
-              </Button>
-            </Upload>
-            <ToolTipIcon title={t("tooltip.explainer_csv_validate")} />
-          </span>
-        )}
-      </div>
+              {t("csv_upload.validate")}
+            </Button>
+          </Upload>
+          <ToolTipIcon title={t("tooltip.explainer_csv_validate")} />
+        </div>
+      )}
       <div>
         <Upload
           accept=".csv,text/csv"
           showUploadList={false}
-          beforeUpload={(file) => {
-            handleUpload(file as unknown as File);
-            return false;
-          }}
+          beforeUpload={(file) => startUpload(file)}
           disabled={uploading}
         >
           <Button
@@ -368,12 +372,10 @@ export default function DownloadCsvTemplateButton({
                 total: result.total_rows,
                 successful: result.successful,
                 failed: result.failed,
-                defaultValue:
-                  "{{total}} rows • {{successful}} imported • {{failed}} failed",
               })}
             </p>
             {wasDryRun && (
-              <p style={{ color: "var(--color-primary)", fontWeight: 500 }}>
+              <p className="csv-import-result__dry-run">
                 {t("csv_upload.dry_run_notice")}
               </p>
             )}
@@ -381,52 +383,39 @@ export default function DownloadCsvTemplateButton({
               <Alert
                 type="warning"
                 showIcon
-                style={{ marginTop: "1em" }}
+                className="mt-1em"
                 message={t("csv_upload.no_rows")}
               />
             ) : result.errors.length === 0 ? (
               <Alert
                 type="success"
                 showIcon
-                style={{ marginTop: "1em" }}
+                className="mt-1em"
                 message={t("csv_upload.all_ok")}
               />
             ) : (
               <>
-                <p style={{ marginTop: "1em", fontWeight: 500 }}>
+                <p className="csv-import-result__errors-heading">
                   {t("csv_upload.errors_heading")}
                 </p>
-                <div style={{ maxHeight: 320, overflow: "auto" }}>
-                  <table style={{ width: "100%", fontSize: "0.85em" }}>
-                    <thead>
-                      <tr>
-                        <th style={{ textAlign: "left", paddingRight: "1em" }}>
-                          {t("csv_upload.col_row")}
-                        </th>
-                        <th style={{ textAlign: "left" }}>
-                          {t("csv_upload.col_error")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.errors.map((err) => (
-                        <tr key={err.row}>
-                          <td
-                            style={{
-                              verticalAlign: "top",
-                              paddingRight: "1em",
-                            }}
-                          >
-                            {err.row}
-                          </td>
-                          <td style={{ verticalAlign: "top" }}>
-                            {rowErrorMessage(err)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <ReadOnlyReportTable<DataImportErrorItem>
+                  rowKey="row"
+                  pagination={false}
+                  scroll={{ y: 320 }}
+                  dataSource={result.errors}
+                  columns={[
+                    {
+                      title: t("csv_upload.col_row"),
+                      dataIndex: "row",
+                      width: 80,
+                    },
+                    {
+                      title: t("csv_upload.col_error"),
+                      key: "error",
+                      render: (_, rowError) => rowErrorMessage(rowError),
+                    },
+                  ]}
+                />
               </>
             )}
           </div>

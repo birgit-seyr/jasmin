@@ -4401,7 +4401,7 @@ export function useCommissioningCrateContentsDeliveryNoteRetrieve<TData = Awaite
 
 
 /**
- * Set the amount, price, rabatt and tax rate of one crate line of a delivery note, through adjustment entries. The id names the line; a bare crate type id names every line of that type.
+ * Set the amount, price, rabatt, tax rate and note of one crate line of a delivery note, through adjustment entries. The id names the line; a bare crate type id names every line of that type.
  */
 export const commissioningCrateContentsDeliveryNoteUpdate = (
     id: string,
@@ -4817,7 +4817,7 @@ export function useCommissioningCrateContentsInvoiceRetrieve<TData = Awaited<Ret
 
 
 /**
- * Set the amount, price, rabatt and tax rate of one crate line of an invoice, through adjustment entries. The id names the line; a bare crate type id names every line of that type.
+ * Set the amount, price, rabatt, tax rate and note of one crate line of an invoice, through adjustment entries. The id names the line; a bare crate type id names every line of that type.
  */
 export const commissioningCrateContentsInvoiceUpdate = (
     id: string,

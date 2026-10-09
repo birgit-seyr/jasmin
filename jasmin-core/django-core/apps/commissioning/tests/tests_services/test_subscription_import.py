@@ -482,3 +482,154 @@ class TestUnresolvedNaturalKeysCarryTheirCodes:
             "delivery_day": 3,
             "date": _VALID_FROM,
         }
+
+
+@pytest.mark.django_db
+class TestImportRulesCarryTheirCodes:
+    """A row the import refuses by one of its own rules fails with a coded error
+    naming the column, so the office reads the reason in its language."""
+
+    @pytest.fixture(autouse=True)
+    def _freeze(self):
+        with time_machine.travel(_FROZEN, tick=False):
+            yield
+
+    @pytest.fixture()
+    def natural_key(self, tenant):
+        MemberFactory(member_number=4245)
+        variation = ShareTypeVariationFactory()
+        PaymentCycle.objects.get_or_create(choice=PaymentCycleOptions.MONTHLY)
+        return variation.share_type.name, variation.size
+
+    def test_a_station_without_a_delivery_day(self, natural_key):
+        share_type, size = natural_key
+        result = import_rows_from_csv(
+            "subscription",
+            _station_csv(
+                f"4245,{share_type},{size},MONTHLY,North,,"
+                f"{_VALID_FROM},{_VALID_UNTIL},1,false"
+            ),
+        )
+        row_error = result.errors[0]
+        assert row_error["code"] == "subscription.import.station_day_incomplete"
+        assert row_error["field"] == "delivery_day"
+
+    def test_a_delivery_day_without_a_station(self, natural_key):
+        share_type, size = natural_key
+        result = import_rows_from_csv(
+            "subscription",
+            _station_csv(
+                f"4245,{share_type},{size},MONTHLY,,3,"
+                f"{_VALID_FROM},{_VALID_UNTIL},1,false"
+            ),
+        )
+        row_error = result.errors[0]
+        assert row_error["code"] == "subscription.import.station_day_incomplete"
+        assert row_error["field"] == "delivery_station"
+
+    def test_a_subscription_imported_before(self, natural_key):
+        share_type, size = natural_key
+        csv_bytes = _numbered_csv(
+            f"4245,{share_type},{size},MONTHLY,{_VALID_FROM},{_VALID_UNTIL},"
+            "1,false,7001"
+        )
+        assert import_rows_from_csv("subscription", csv_bytes).successful == 1
+
+        row_error = import_rows_from_csv("subscription", csv_bytes).errors[0]
+
+        assert row_error["code"] == "subscription.import.already_imported"
+        assert row_error["field"] == "subscription_number"
+        assert row_error["details"] == {
+            "subscription_number": 7001,
+            "valid_from": _VALID_FROM,
+            "member_number": 4245,
+        }
+
+    @staticmethod
+    def _import_first_term_with_next(share_type, size, next_from, next_until):
+        import_rows_from_csv(
+            "subscription",
+            _csv(
+                f"4245,{share_type},{size},MONTHLY,{_VALID_FROM},{_VALID_UNTIL},"
+                "1,false"
+            ),
+        )
+        first = Subscription.objects.get()
+        Subscription.objects.create(
+            member=first.member,
+            share_type_variation=first.share_type_variation,
+            payment_cycle=first.payment_cycle,
+            previous_subscription=first,
+            valid_from=next_from,
+            valid_until=next_until,
+            quantity=1,
+            admin_confirmed=False,
+        )
+
+    def test_a_next_term_already_there_from_the_same_day(self, natural_key):
+        share_type, size = natural_key
+        self._import_first_term_with_next(
+            share_type,
+            size,
+            datetime.date(2026, 12, 28),
+            datetime.date(2027, 12, 26),
+        )
+
+        row_error = import_rows_from_csv(
+            "subscription",
+            _csv(
+                f"4245,{share_type},{size},MONTHLY,{_NEXT_FROM},{_NEXT_UNTIL},1,false"
+            ),
+        ).errors[0]
+
+        assert row_error["code"] == "subscription.import.term_already_imported"
+        assert row_error["field"] == "valid_from"
+        assert row_error["details"]["renewal_valid_from"] == _NEXT_FROM
+        assert set(row_error["details"]) == {
+            "predecessor",
+            "renewal",
+            "renewal_valid_from",
+        }
+
+    def test_a_next_term_already_there_from_another_day(self, natural_key):
+        share_type, size = natural_key
+        self._import_first_term_with_next(
+            share_type,
+            size,
+            datetime.date(2027, 1, 4),
+            datetime.date(2027, 12, 26),
+        )
+
+        row_error = import_rows_from_csv(
+            "subscription",
+            _csv(
+                f"4245,{share_type},{size},MONTHLY,{_NEXT_FROM},{_NEXT_UNTIL},1,false"
+            ),
+        ).errors[0]
+
+        assert row_error["code"] == "subscription.term_already_renewed"
+        assert row_error["field"] == "valid_from"
+        assert row_error["details"]["renewal_valid_from"] == "2027-01-04"
+
+    def test_two_terms_the_row_may_continue(self, natural_key):
+        share_type, size = natural_key
+        import_rows_from_csv(
+            "subscription",
+            _numbered_csv(
+                f"4245,{share_type},{size},MONTHLY,{_VALID_FROM},{_VALID_UNTIL},"
+                "1,false,7001",
+                f"4245,{share_type},{size},MONTHLY,{_VALID_FROM},{_VALID_UNTIL},"
+                "1,false,7002",
+            ),
+        )
+
+        row_error = import_rows_from_csv(
+            "subscription",
+            _numbered_csv(
+                f"4245,{share_type},{size},MONTHLY,{_NEXT_FROM},{_NEXT_UNTIL},1,false,"
+            ),
+        ).errors[0]
+
+        assert row_error["code"] == ("subscription.import.term_predecessor_ambiguous")
+        assert row_error["field"] == "subscription_number"
+        assert row_error["details"] == {"valid_until": _VALID_UNTIL, "count": 2}

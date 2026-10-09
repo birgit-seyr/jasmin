@@ -13,7 +13,7 @@ Money is sent as canonical 2dp STRINGS (``price_per_unit`` /
 ``line_netto``), matching the DN/invoice ``CrateItemSummarySerializer``
 — never JSON floats — so full precision survives the wire and the
 client does not recompute line totals in floating point. ``rabatt`` /
-``tax_rate`` stay numeric. ``note`` / ``order_id`` / ``order_number`` /
+``tax_rate`` stay numeric. ``order_id`` / ``order_number`` /
 ``order_number_prefix`` only appear on create.
  */
 export interface CrateOrderSummary {
@@ -26,8 +26,13 @@ export interface CrateOrderSummary {
   rabatt: number;
   line_netto: string;
   tax_rate: number;
-  /** @nullable */
+  /**
+   * The line's note: its rows' distinct notes, joined by '; '.
+   * @nullable
+   */
   note?: string | null;
+  /** How many crates of the line come with order lines. Those follow their order line, so the line's price and rabatt cannot change here, nor its amount drop below this. */
+  offer_bound_amount?: number;
   order_id?: string;
   /** @nullable */
   order_number?: string | null;

@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import auth_views, backup_views
+from .views import auth_views
 from .viewsets import OpsChecklistViewSet, TenantManagementViewSet
 
 app_name = "super_admin"
@@ -47,15 +47,4 @@ urlpatterns = [
     #   POST   /tenants/<pk>/create-user/
     #   PATCH  /tenants/<pk>/users/<user_id>/roles/
     path("", include(router.urls)),
-    # Backup Management (RPC-style — keeps function views)
-    path(
-        "backups/",
-        backup_views.super_admin_list_backups_view,
-        name="super-admin-list-backups",
-    ),
-    path(
-        "backups/trigger/",
-        backup_views.super_admin_trigger_backup_view,
-        name="super-admin-trigger-backup",
-    ),
 ]

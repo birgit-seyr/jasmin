@@ -5,13 +5,14 @@ The shape returned by ``build_crate_summary_row`` matches the
 as strings, ``rabatt`` and ``tax_rate`` as floats. Per-scope extras
 (``order_*`` / ``delivery_note_*`` / ``invoice_*``) are merged via the
 ``extras`` argument so the dict keeps a stable layout across callers.
-Each summary row is one crate line, named as ``crate_lines`` describes.
+Each summary row is one crate line, named as ``crate_lines`` describes, and
+carries the line's note (``crate_line_note``).
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from decimal import Decimal
 from typing import Any
 
@@ -19,6 +20,23 @@ from apps.shared.money import CENT
 
 from ..models.mixin import line_netto
 from .crate_lines import crate_line_id, crate_line_key, resolve_crate_line
+
+#: Per-line extras a caller adds to each summary row, from the line's rows.
+LineExtras = Callable[[list[Any]], dict[str, Any]]
+
+
+def crate_line_note(rows: Iterable[Any]) -> str | None:
+    """The note of the crate line made of ``rows``: the distinct non-blank
+    notes of its rows in row-pk order, joined by "; ", or None when no row has
+    one. The rows of a line usually agree, as a write puts its note on every
+    row, but rows that came together by a merge or a copy may not, and
+    showing only one of their notes would let the next save of the line
+    overwrite the others unseen."""
+    notes: list[str] = []
+    for row in sorted(rows, key=lambda row: str(row.pk)):
+        if row.note and row.note.strip() and row.note not in notes:
+            notes.append(row.note)
+    return "; ".join(notes) or None
 
 
 def build_crate_summary_row(
@@ -58,6 +76,9 @@ def build_crate_summary_row(
         "rabatt": float(rabatt_d),
         "line_netto": str(line.quantize(CENT)),
         "tax_rate": float(tax_rate),
+        # ``summarize_crate_items`` sets the note of a line of rows; the
+        # empty placeholder row has none.
+        "note": None,
     }
     if extras:
         row.update(extras)
@@ -68,6 +89,7 @@ def summarize_crate_items(
     crate_items: Iterable[Any],
     *,
     extras: dict[str, Any] | None = None,
+    line_extras: LineExtras | None = None,
 ) -> list[dict[str, Any]]:
     """Group crate line items into display summary rows.
 
@@ -79,7 +101,8 @@ def summarize_crate_items(
     totals never diverge. Homogeneous groups also avoid the
     ``max(None, Decimal)`` TypeError that a NULL ``price_per_unit`` mixed with
     a non-null one would raise. Each row's ``id`` is its line's id, while
-    ``crate_type`` stays the crate type id.
+    ``crate_type`` stays the crate type id. ``line_extras`` adds the fields it
+    returns for each line's rows to that line's row.
     """
     groups: dict[tuple, list] = defaultdict(list)
     for crate_item in crate_items:
@@ -105,6 +128,9 @@ def summarize_crate_items(
             extras=extras,
         )
         row["id"] = crate_line_id(items)
+        row["note"] = crate_line_note(items)
+        if line_extras is not None:
+            row.update(line_extras(items))
         rows.append(row)
     return rows
 
@@ -114,6 +140,7 @@ def summarize_crate_line(
     row_pk: str | None,
     *,
     extras: dict[str, Any] | None = None,
+    line_extras: LineExtras | None = None,
 ) -> dict[str, Any] | None:
     """The summary row of the line that holds the row ``row_pk`` among
     ``type_rows`` (the rows of one crate type on one document), or of the
@@ -121,5 +148,5 @@ def summarize_crate_line(
     line."""
     rows = list(type_rows)
     line = rows if row_pk is None else resolve_crate_line(rows, row_pk)
-    summary = summarize_crate_items(line or [], extras=extras)
+    summary = summarize_crate_items(line or [], extras=extras, line_extras=line_extras)
     return summary[0] if summary else None

@@ -107,16 +107,18 @@ def _crate_update_fields(
 
     ``update_fields`` is written to every row of the crate line, so it carries
     only the keys the client sent: a body without ``price_per_unit``,
-    ``rabatt`` or ``tax_rate`` keeps the stored values instead of clearing the
-    price and discount of a document line. ``tax_rate`` is NOT NULL, so an
-    explicit null resolves the crate's rate and writes that.
+    ``rabatt``, ``tax_rate`` or ``note`` keeps the stored values instead of
+    clearing the price, discount or note of a document line. ``tax_rate`` is
+    NOT NULL, so an explicit null resolves the crate's rate and writes that.
 
     ``new_row_defaults`` covers a row the service creates for the amount
     difference when the line has no rows: an omitted ``rabatt`` stores 0 (as
     ``create`` does) and an omitted ``tax_rate`` the resolved rate.
     """
     update_fields: dict[str, Any] = {
-        field: data[field] for field in ("price_per_unit", "rabatt") if field in data
+        field: data[field]
+        for field in ("price_per_unit", "rabatt", "note")
+        if field in data
     }
     new_row_defaults: dict[str, Any] = {}
     if "rabatt" not in data:
@@ -400,8 +402,8 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
     @transaction.atomic
     @extend_schema(
         description=(
-            "Set the amount, price, rabatt and tax rate of one crate line of a "
-            "delivery note, through adjustment entries. The id names the line; a "
+            "Set the amount, price, rabatt, tax rate and note of one crate line "
+            "of a delivery note, through adjustment entries. The id names the line; a "
             "bare crate type id names every line of that type."
         ),
         request=CrateDeliveryNoteContentWriteRequestSerializer,
@@ -640,8 +642,8 @@ class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelVie
     @transaction.atomic
     @extend_schema(
         description=(
-            "Set the amount, price, rabatt and tax rate of one crate line of an "
-            "invoice, through adjustment entries. The id names the line; a bare "
+            "Set the amount, price, rabatt, tax rate and note of one crate line "
+            "of an invoice, through adjustment entries. The id names the line; a bare "
             "crate type id names every line of that type."
         ),
         request=CrateInvoiceContentWriteRequestSerializer,

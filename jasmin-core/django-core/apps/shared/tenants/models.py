@@ -619,7 +619,6 @@ class TenantSettings(JasminModel):
         choices=[("basic", "Basic"), ("tours", "Tours"), ("stations", "Stations")],
         default="basic",
     )
-    uses_pledge_round = models.BooleanField(default=False)
 
     # When True the tenant uploads weekly share-amount totals via CSV
     # (``ExternalShareDemand``) instead of having Jasmin derive them from
@@ -671,17 +670,6 @@ class TenantSettings(JasminModel):
             "collection date with this day of the chosen month (today, if that "
             "day has passed); the office can change it. Nothing moves it for "
             "SEPA lead times or TARGET banking days."
-        ),
-    )
-
-    # Nothing reads this: every deletion request waits for an office/admin
-    # approval after the email-confirm step (``GDPRService.request_deletion``).
-    # It stays because the settings API still reads and writes it.
-    require_admin_approval_for_gdpr_deletion = models.BooleanField(
-        default=True,
-        help_text=(
-            "Has no effect: every deletion request needs an office/admin "
-            "approval after the email-confirm step, whatever this says."
         ),
     )
 

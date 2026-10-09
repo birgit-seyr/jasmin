@@ -1,29 +1,40 @@
 // The CSV template button's upload: the import endpoint is mocked at the axios
 // boundary, and the toasts are read off the shared `notify`.
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// German copy for the type-hint keys, so the template can be read as a German
+// office would get it; every other key comes back as itself.
+const germanTypeHints: Record<string, string> = {
+  "csv_upload.type_hint.text": "Text",
+  "csv_upload.type_hint.decimal_2dp": "Dezimalzahl (2 Nachkommastellen)",
+  "csv_upload.type_hint.week_number": "Kalenderwoche",
+};
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: unknown) =>
-      typeof fallback === "string" ? fallback : key,
+      germanTypeHints[key] ??
+      (typeof fallback === "string" ? fallback : key),
     i18n: { language: "de", changeLanguage: () => Promise.resolve() },
   }),
   Trans: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
-const { notifyMock, postMock, messageForErrorCodeMock } = vi.hoisted(() => ({
-  notifyMock: { success: vi.fn(), error: vi.fn() },
-  postMock: vi.fn(),
-  messageForErrorCodeMock: vi.fn(),
-}));
+const { notifyMock, postMock, messageForErrorCodeMock, downloadBlobMock } =
+  vi.hoisted(() => ({
+    notifyMock: { success: vi.fn(), error: vi.fn() },
+    postMock: vi.fn(),
+    messageForErrorCodeMock: vi.fn(),
+    downloadBlobMock: vi.fn(),
+  }));
 
 vi.mock("@shared/utils", () => ({
   notify: notifyMock,
-  downloadBlob: vi.fn(),
+  downloadBlob: downloadBlobMock,
 }));
 
 vi.mock("@shared/services/api", () => ({
@@ -59,6 +70,78 @@ beforeEach(() => {
   notifyMock.error.mockReset();
   postMock.mockReset();
   messageForErrorCodeMock.mockReset();
+  downloadBlobMock.mockReset();
+});
+
+function readBlob(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+}
+
+describe("DownloadCsvTemplateButton template", () => {
+  it("writes the type-hint row in the office's language", async () => {
+    render(
+      <DownloadCsvTemplateButton
+        columns={[
+          { dataIndex: "name", title: "Name", inputType: "text" },
+          { dataIndex: "price", title: "Preis", inputType: "decimal2" },
+          { dataIndex: "week", title: "KW", inputType: "kw" },
+        ]}
+        filename="articles"
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /download.csv_template/ }),
+    );
+
+    expect(downloadBlobMock).toHaveBeenCalledTimes(1);
+    const [blob, filename] = downloadBlobMock.mock.calls[0] as [Blob, string];
+    expect(filename).toBe("articles.csv");
+    const rows = (await readBlob(blob)).trimEnd().split("\n");
+    expect(rows).toEqual([
+      "Name,Preis,KW",
+      "name,price,week",
+      "Text,Dezimalzahl (2 Nachkommastellen),Kalenderwoche",
+    ]);
+  });
+
+  it("renders no empty dry-run wrapper when the dry run is off", () => {
+    const { container } = render(
+      <DownloadCsvTemplateButton
+        columns={[{ dataIndex: "name", title: "Name" }]}
+        filename="articles"
+        modelName="ShareArticle"
+      />,
+    );
+
+    const emptyDivs = Array.from(container.querySelectorAll("div")).filter(
+      (div) => div.childElementCount === 0 && div.textContent === "",
+    );
+    expect(emptyDivs).toEqual([]);
+    expect(
+      screen.queryByRole("button", { name: /csv_upload.validate/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers the dry run when it is on", () => {
+    render(
+      <DownloadCsvTemplateButton
+        columns={[{ dataIndex: "name", title: "Name" }]}
+        filename="articles"
+        modelName="ShareArticle"
+        allowDryRun
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /csv_upload.validate/ }),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("DownloadCsvTemplateButton upload", () => {
@@ -147,6 +230,42 @@ describe("DownloadCsvTemplateButton row errors", () => {
       "member.number_unknown",
       { member_number: 9999 },
     );
+  });
+
+  it("lists each failed row in a table with its row number and message", async () => {
+    messageForErrorCodeMock.mockImplementation((code: string) =>
+      code === "member.number_unknown" ? "Unknown member number." : undefined,
+    );
+    postMock.mockResolvedValue({ data: failedImport });
+    const { input } = renderButton();
+
+    await userEvent.upload(input, csvFile());
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText("csv_upload.errors_heading"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("columnheader", { name: "csv_upload.col_row" }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("columnheader", { name: "csv_upload.col_error" }),
+    ).toBeInTheDocument();
+    const rows = within(dialog)
+      .getAllByRole("row")
+      .filter((row) => row.getAttribute("data-row-key") !== null);
+    expect(rows.map((row) => row.getAttribute("data-row-key"))).toEqual([
+      "4",
+      "5",
+    ]);
+    expect(within(rows[0]).getByText("4")).toBeInTheDocument();
+    expect(
+      within(rows[0]).getByText("Unknown member number."),
+    ).toBeInTheDocument();
+    expect(within(rows[1]).getByText("5")).toBeInTheDocument();
+    expect(
+      within(rows[1]).getByText("quantity: A valid integer is required."),
+    ).toBeInTheDocument();
   });
 
   it("shows the server's text for a row error without a code", async () => {

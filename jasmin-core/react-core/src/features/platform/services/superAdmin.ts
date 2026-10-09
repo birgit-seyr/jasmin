@@ -1,5 +1,5 @@
 /**
- * Super-admin resource endpoints (tenants, backups, ops-checklist).
+ * Super-admin resource endpoints (tenants, ops-checklist, support tickets).
  *
  * These live on the public schema, so ``make generate-schema`` (which runs
  * under ``tenant_urls``) never includes them — there is no Orval client for
@@ -21,8 +21,6 @@ export const SUPER_ADMIN_ENDPOINTS = {
     `/api/super-admin/tenants/${tenantId}/create-user/`,
   tenantUserRoles: (tenantId: string, userId: string) =>
     `/api/super-admin/tenants/${tenantId}/users/${userId}/roles/`,
-  backups: "/api/super-admin/backups/",
-  triggerBackup: "/api/super-admin/backups/trigger/",
   opsChecklist: "/api/super-admin/ops-checklist/",
   // OpsChecklistItem has an int PK (a public-schema model), unlike the
   // STR-id tenant resources above — hence ``string | number``.

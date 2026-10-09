@@ -475,12 +475,18 @@ class SubscriptionTermAlreadyRenewed(ConflictError):
     code = "subscription.term_already_renewed"
 
     def __init__(
-        self, *, predecessor: str, renewal: str, renewal_valid_from: str
+        self,
+        *,
+        predecessor: str,
+        renewal: str,
+        renewal_valid_from: str,
+        field: str | None = None,
     ) -> None:
         super().__init__(
             f"Subscription {predecessor} already continues with {renewal} from "
             f"{renewal_valid_from}; confirm or edit that one, or delete it "
             "first, instead of adding another next term.",
+            field=field,
             details={
                 "predecessor": predecessor,
                 "renewal": renewal,
@@ -500,6 +506,90 @@ class SubscriptionTermPredecessorAmbiguous(ConflictError):
         super().__init__(
             f"{count} subscriptions of this member and share type end on "
             f"{valid_until}; it can't be told which one this one continues.",
+            details={"valid_until": valid_until, "count": count},
+        )
+
+
+# --------------------------------------------------------------------------- #
+# Subscription import                                                         #
+# --------------------------------------------------------------------------- #
+# The rules the data-list import holds a subscription row to. Each one is
+# raised for one row and comes back as that row's error, with ``field`` naming
+# the column at fault.
+
+
+class SubscriptionImportStationDayIncomplete(BadRequestError):
+    """A row names a delivery station without a delivery day, or a day without
+    a station — a station-day takes both, or the row leaves both blank."""
+
+    code = "subscription.import.station_day_incomplete"
+
+    def __init__(self, *, missing: str) -> None:
+        super().__init__(
+            "Provide both delivery_station and delivery_day, or neither.",
+            field=missing,
+        )
+
+
+class SubscriptionAlreadyImported(ConflictError):
+    """The member already has a subscription with the row's
+    ``subscription_number`` starting on its ``valid_from`` — the file, or this
+    row, was imported before. The number names a renewal chain rather than one
+    subscription, so the start date is part of what makes the row a repeat."""
+
+    code = "subscription.import.already_imported"
+
+    def __init__(
+        self, *, subscription_number: int, valid_from: str, member_number: int
+    ) -> None:
+        super().__init__(
+            f"Subscription {subscription_number} starting {valid_from} already "
+            f"exists for member {member_number}; skipped (already imported).",
+            field="subscription_number",
+            details={
+                "subscription_number": subscription_number,
+                "valid_from": valid_from,
+                "member_number": member_number,
+            },
+        )
+
+
+class SubscriptionTermAlreadyImported(ConflictError):
+    """The term a row continues already has its next term starting the row's
+    own ``valid_from`` — imported before, or drafted by the renewal sweep, so
+    the row would duplicate it."""
+
+    code = "subscription.import.term_already_imported"
+
+    def __init__(
+        self, *, predecessor: str, renewal: str, renewal_valid_from: str
+    ) -> None:
+        super().__init__(
+            f"Subscription {predecessor} already continues with {renewal} from "
+            f"{renewal_valid_from}; skipped (imported before, or drafted by the "
+            "renewal; delete that draft first if this row should replace it).",
+            field="valid_from",
+            details={
+                "predecessor": predecessor,
+                "renewal": renewal,
+                "renewal_valid_from": renewal_valid_from,
+            },
+        )
+
+
+class SubscriptionImportTermPredecessorAmbiguous(ConflictError):
+    """Several terms of the member and share type end the day before the row
+    starts, and the row has no ``subscription_number`` that picks one of them
+    out as the term it continues."""
+
+    code = "subscription.import.term_predecessor_ambiguous"
+
+    def __init__(self, *, valid_until: str, count: int) -> None:
+        super().__init__(
+            f"{count} subscriptions of this member and share type end on "
+            f"{valid_until}; give this row the subscription_number of the one "
+            "it continues.",
+            field="subscription_number",
             details={"valid_until": valid_until, "count": count},
         )
 

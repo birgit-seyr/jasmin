@@ -20,7 +20,8 @@ from apps.commissioning.services.crate_summary import summarize_crate_items
 from core.errors import ConflictError
 
 
-def _row(pk, price="2.50", rabatt=None, tax="19.00", amount=1):
+def _row(pk, price="2.50", rabatt=None, tax="19.00", amount=1, **extra):
+    fields = {"note": None, **extra}
     return SimpleNamespace(
         pk=pk,
         crate_type_id="crate1",
@@ -30,6 +31,7 @@ def _row(pk, price="2.50", rabatt=None, tax="19.00", amount=1):
         tax_rate=Decimal(tax),
         amount=amount,
         line_netto=Decimal(price) * amount,
+        **fields,
     )
 
 
@@ -61,6 +63,48 @@ class TestCrateLineNames:
             ("crate1_rowA", 3),
         ]
         assert {line["crate_type"] for line in summary} == {"crate1"}
+
+
+class TestCrateLineNotes:
+    """A summary row carries its line's note: the distinct notes of the line's
+    rows in row order, so no row's note is hidden behind another's."""
+
+    @pytest.mark.parametrize(
+        ("notes", "expected"),
+        [
+            ((None, None), None),
+            (("", None), None),
+            (("Pallet", "Pallet"), "Pallet"),
+            ((None, "Pallet"), "Pallet"),
+            (("Bring back", "Pallet", "Bring back"), "Bring back; Pallet"),
+        ],
+    )
+    def test_a_line_shows_the_distinct_notes_of_its_rows(self, notes, expected):
+        rows = [_row(f"row{index}", note=note) for index, note in enumerate(notes)]
+
+        (line,) = summarize_crate_items(rows)
+
+        assert line["note"] == expected
+
+    def test_the_notes_follow_the_rows_pk_order(self):
+        rows = [_row("rowB", note="Second"), _row("rowA", note="First")]
+
+        (line,) = summarize_crate_items(rows)
+
+        assert line["note"] == "First; Second"
+
+    def test_each_line_keeps_its_own_note(self):
+        rows = [
+            _row("rowA", price="2.00", note="Old price"),
+            _row("rowB", price="2.50", note="New price"),
+        ]
+
+        summary = summarize_crate_items(rows)
+
+        assert {line["price_per_unit"]: line["note"] for line in summary} == {
+            "2.00": "Old price",
+            "2.50": "New price",
+        }
 
 
 class TestParseCrateLineId:

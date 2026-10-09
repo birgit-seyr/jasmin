@@ -53,8 +53,8 @@ from apps.gdpr.services import GDPRService
 
 @pytest.mark.django_db
 class TestRequestDeletion:
-    def test_member_without_gate_disabled_inherits_default_admin_gate(self, tenant):
-        """Default tenant setting is ON, so a fresh request stamps
+    def test_member_request_requires_admin_approval(self, tenant):
+        """Every request waits for an admin, so a fresh request stamps
         ``requires_admin_approval=True`` even for a regular member."""
         user = JasminUserFactory(
             roles=["member"], email="alice@example.com", first_name="Alice"

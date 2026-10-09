@@ -1004,7 +1004,7 @@ class OpsChecklistViewSet(ViewSet):
     # stored SMTP password + flips is_verified=False platform-wide). That's
     # exactly the blast radius a stolen super-admin session must NOT be able
     # to fire without a fresh password re-confirmation — same gate as
-    # ``super_admin_trigger_backup_view`` and ``TenantManagementViewSet``.
+    # ``TenantManagementViewSet``.
     _STEP_UP_ACTIONS = frozenset({"run_rotation"})
 
     def get_permissions(self):

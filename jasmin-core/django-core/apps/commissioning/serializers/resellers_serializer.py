@@ -18,6 +18,7 @@ from ..models import (
     Reseller,
 )
 from ..utils.iso_week_utils import date_from_order
+from .crates_serializer import CrateItemSummarySerializer
 from .serializers_mixin import (
     ARTICLE_DIFF_FIELDS,
     CRATE_DIFF_FIELDS,
@@ -429,55 +430,6 @@ class InvoiceResellerContentSerializer(
         attrs = super().validate(attrs)
         validate_single_item_reference(attrs, self.instance)
         return attrs
-
-
-class CrateItemSummarySerializer(serializers.Serializer):
-    """Aggregated crate summary returned by Invoice/DeliveryNote `crate_items`."""
-
-    id = serializers.CharField()
-    crate_type = serializers.CharField()
-    crate_type_name = serializers.CharField(allow_null=True)
-    amount = serializers.IntegerField()
-    price_per_unit = serializers.CharField()
-    rabatt = serializers.FloatField()
-    line_netto = serializers.CharField()
-    tax_rate = serializers.FloatField()
-    invoice_id = serializers.CharField(required=False, allow_null=True)
-    invoice_number = serializers.CharField(required=False, allow_null=True)
-    invoice_prefix = serializers.CharField(required=False, allow_null=True)
-    invoice_is_finalized = serializers.BooleanField(required=False)
-    delivery_note_id = serializers.CharField(required=False, allow_null=True)
-    delivery_note_number = serializers.CharField(required=False, allow_null=True)
-    delivery_note_prefix = serializers.CharField(required=False, allow_null=True)
-    delivery_note_is_finalized = serializers.BooleanField(required=False)
-
-
-class CrateOrderSummarySerializer(serializers.Serializer):
-    """Aggregated crate summary returned by ``CrateOrderContentViewSet``.
-
-    Money is sent as canonical 2dp STRINGS (``price_per_unit`` /
-    ``line_netto``), matching the DN/invoice ``CrateItemSummarySerializer``
-    — never JSON floats — so full precision survives the wire and the
-    client does not recompute line totals in floating point. ``rabatt`` /
-    ``tax_rate`` stay numeric. ``note`` / ``order_id`` / ``order_number`` /
-    ``order_number_prefix`` only appear on create.
-    """
-
-    id = serializers.CharField()
-    crate_type = serializers.CharField()
-    crate_type_name = serializers.CharField(allow_null=True)
-    amount = serializers.IntegerField()
-    price_per_unit = serializers.CharField()
-    rabatt = serializers.FloatField()
-    line_netto = serializers.CharField()
-    tax_rate = serializers.FloatField()
-    note = serializers.CharField(required=False, allow_null=True)
-    order_id = serializers.CharField(required=False)
-    # ``display_number`` (e.g. "39v"), a STRING — mirrors OrderContentItem so
-    # the frontend formats "{prefix}-{display_number}" the same on create and
-    # on reload.
-    order_number = serializers.CharField(required=False, allow_null=True)
-    order_number_prefix = serializers.CharField(required=False, allow_null=True)
 
 
 class OrderContentItemSerializer(serializers.Serializer):

@@ -116,7 +116,10 @@ class TestSepaMandateImport:
         body = resp.json()
         assert body["successful"] == 1
         assert body["failed"] == 1
-        assert "already has a billing profile" in body["errors"][0]["error"]
+        error = body["errors"][0]
+        assert error["code"] == "billing_profile.already_exists"
+        assert error["field"] == "member_number"
+        assert error["details"] == {"member_number": 1001}
 
         # The existing mandate was NOT overwritten.
         existing.refresh_from_db()
@@ -136,7 +139,39 @@ class TestSepaMandateImport:
         body = resp.json()
         assert body["successful"] == 0
         assert body["failed"] == 2
+        assert {error["code"] for error in body["errors"]} == {"member.number_unknown"}
+        assert body["errors"][0]["field"] == "member_number"
+        assert body["errors"][0]["details"] == {"member_number": 1001}
         assert BillingProfile.objects.count() == 0
+
+    def test_taken_mandate_reference_is_a_row_error(self, step_up_client):
+        # Row 1 names MND-LEGACY-0001, which another member's mandate already
+        # carries; row 2 leaves the reference blank and still imports.
+        MemberFactory(member_number=1001)
+        MemberFactory(member_number=1002)
+        BillingProfile.objects.create(
+            member=MemberFactory(member_number=1003),
+            payment_method=PaymentMethodOptions.SEPA_DIRECT_DEBIT,
+            iban="CH9300762011623852957",
+            account_holder="Other Holder",
+            sepa_mandate_reference="MND-LEGACY-0001",
+            sepa_mandate_signed_at="2020-01-01",
+        )
+
+        resp = step_up_client.post(
+            URL,
+            {"model_name": "sepa_mandate", "file": _upload()},
+            format="multipart",
+        )
+        assert resp.status_code == 200, resp.content
+        body = resp.json()
+        assert body["successful"] == 1
+        assert body["failed"] == 1
+        error = body["errors"][0]
+        assert error["code"] == "billing_profile.mandate_reference_taken"
+        assert error["field"] == "sepa_mandate_reference"
+        assert error["details"] == {"sepa_mandate_reference": "MND-LEGACY-0001"}
+        assert not BillingProfile.objects.filter(member__member_number=1001).exists()
 
     def test_real_import_without_step_up_is_refused(self, api_client):
         MemberFactory(member_number=1001)
@@ -299,3 +334,53 @@ class TestSepaMandateImportSignatureDate:
         serializer = SepaMandateImportSerializer(data=self._row("2026-03-03"))
 
         assert serializer.is_valid(), serializer.errors
+
+
+@pytest.mark.django_db
+class TestSepaMandateImportIban:
+    """The import stores the IBAN in its canonical form and refuses one that is
+    not a valid IBAN, like the office and self-service writes do: pain.008's XSD
+    refuses a lower-case debtor IBAN, which aborts the whole batch."""
+
+    @staticmethod
+    def _import(step_up_client, iban: str):
+        csv = (
+            "Member no.,Account holder,IBAN,Ref,Signed,Paper\n"
+            "member_number,account_holder,iban,sepa_mandate_reference,"
+            "sepa_mandate_signed_at,sepa_mandate_paper_received_at\n"
+            "integer,text,text,text,date,date\n"
+            f"5001,Ada Lovelace,{iban},,2024-03-04,\n"
+        ).encode()
+        return step_up_client.post(
+            URL,
+            {
+                "model_name": "sepa_mandate",
+                "file": SimpleUploadedFile("m.csv", csv, content_type="text/csv"),
+            },
+            format="multipart",
+        )
+
+    def test_spaced_lower_case_iban_is_stored_normalised(self, step_up_client):
+        member = MemberFactory(member_number=5001)
+
+        resp = self._import(step_up_client, "de89 3704 0044 0532 0130 00")
+        assert resp.status_code == 200, resp.content
+        assert resp.json()["successful"] == 1, resp.json()["errors"]
+
+        profile = BillingProfile.objects.get(member=member)
+        assert profile.iban == "DE89370400440532013000"
+        member.refresh_from_db()
+        assert member.iban == "DE89370400440532013000"
+
+    def test_invalid_iban_is_a_coded_row_error(self, step_up_client):
+        MemberFactory(member_number=5001)
+
+        resp = self._import(step_up_client, "DE00 3704 0044 0532 0130 00")
+        assert resp.status_code == 200, resp.content
+        body = resp.json()
+        assert body["successful"] == 0
+        assert body["failed"] == 1
+        error = body["errors"][0]
+        assert error["code"] == "billing_profile.iban_invalid"
+        assert error["field"] == "iban"
+        assert BillingProfile.objects.count() == 0

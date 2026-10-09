@@ -10,17 +10,23 @@ rely on: they key their rows by this id.
 
 An id without ``_`` is a bare crate type id and names every line of that type,
 the way a page that still lists one line per crate type addresses them. Jasmin
-ids never contain ``_``, so the two forms can't be confused.
+ids never contain ``_``, so the two forms can't be confused. The current
+crate tables never send one; each write that does is logged
+(``crate_line.bare_type_id``), so the form can be refused once the logs have
+shown none for a while.
 """
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from typing import Any, NamedTuple
 
 from core.errors import ConflictError
 
 from ..utils.composite_id_utils import parse_composite_pk
+
+logger = logging.getLogger(__name__)
 
 
 class CrateLineId(NamedTuple):
@@ -57,6 +63,7 @@ def parse_crate_line_id(raw: str) -> CrateLineId:
     """Parse a crate line id, or a bare crate type id. A malformed one raises
     ``CompositeIdInvalid`` (400, ``crate_line.invalid_id``)."""
     if raw and "_" not in raw:
+        logger.info("crate_line.bare_type_id: a crate write named crate type %s", raw)
         return CrateLineId(crate_type_id=raw, row_pk=None)
     parts = parse_composite_pk(
         raw,

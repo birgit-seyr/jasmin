@@ -29,7 +29,59 @@ import {
 } from "@shared/utils";
 import { parseDecimalInput } from "@shared/utils/numberFormat";
 import { pickTierPrice } from "@shared/utils/tierPrice";
+import type { CrateOption } from "../useCrates";
+import type { CrateOrderContentRow } from "../useOrdersData";
 import { useAmountUnitSizeColumns } from "./useAmountUnitSizeColumns";
+
+type CrateColumn = EditableColumnConfig<CrateOrderContentRow>;
+
+/**
+ * A line holding deposit crates bills them at the price and discount their
+ * order lines give them, set anew whenever those are saved, so the server
+ * refuses changing either (`crate_line.offer_bound_fields`).
+ */
+const holdsOfferBoundCrates = (record: CrateOrderContentRow) =>
+  (record.offer_bound_amount ?? 0) > 0;
+
+/**
+ * A line holding nothing but deposit crates takes its note from the order
+ * lines too: the server refuses a note change unless added crates remain
+ * after the write (`crate_line.offer_bound_fields`). The amount is the one
+ * being edited, so raising it above the deposit crates unlocks the note.
+ */
+const holdsOnlyOfferBoundCrates = (record: CrateOrderContentRow) =>
+  holdsOfferBoundCrates(record) &&
+  Number(record.amount) <= (record.offer_bound_amount ?? 0);
+
+/**
+ * The order's crate columns: a new line picks a crate type the order doesn't
+ * list yet, a line holding deposit crates keeps its price and discount, and
+ * one holding only deposit crates keeps its note.
+ */
+function orderCrateColumns(
+  columns: CrateColumn[],
+  crateOptions: CrateOption[],
+  dataCrates: Record<string, unknown>[],
+): CrateColumn[] {
+  const usedCrateTypes = new Set(dataCrates.map((item) => item.crate_type));
+  const availableOptions = crateOptions.filter(
+    (opt) => !usedCrateTypes.has(opt.value as string),
+  );
+  return columns.map((col) => {
+    if (col.key === "crate_type_name") {
+      // CrateOption's union includes the null "clear" placeholder shape,
+      // which SelectOption can't express — the widening useCratesColumns makes.
+      return { ...col, options: availableOptions as CrateColumn["options"] };
+    }
+    if (col.key === "price_per_unit" || col.key === "rabatt") {
+      return { ...col, disabled: holdsOfferBoundCrates };
+    }
+    if (col.key === "note") {
+      return { ...col, disabled: holdsOnlyOfferBoundCrates };
+    }
+    return col;
+  });
+}
 
 interface UseOrderColumnsParams {
   /** The Orders page scope (``useOrdersData``'s ``listParams``). */
@@ -97,7 +149,7 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
     },
   });
   const { cratesColumns: columnsCrates, crates: crateOptions } =
-    useCratesColumns({ showNote: false });
+    useCratesColumns();
   const { noteColumn } = useNoteColumn();
 
   // Offer-based order line: the per-unit price is the SELECTED offer's tier
@@ -131,17 +183,10 @@ export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {
     [offers, finalTiers],
   );
 
-  const filteredColumnsCrates = useMemo(() => {
-    const usedCrateTypes = new Set(dataCrates.map((item) => item.crate_type));
-    const availableOptions = crateOptions.filter(
-      (opt) => !usedCrateTypes.has(opt.value as string),
-    );
-    return columnsCrates.map((col) =>
-      col.key === "crate_type_name"
-        ? { ...col, options: availableOptions }
-        : col,
-    );
-  }, [columnsCrates, crateOptions, dataCrates]);
+  const filteredColumnsCrates = useMemo(
+    () => orderCrateColumns(columnsCrates, crateOptions, dataCrates),
+    [columnsCrates, crateOptions, dataCrates],
+  );
 
   const columnsPrices: EditableColumnConfig<TableRecord>[] = [
     {

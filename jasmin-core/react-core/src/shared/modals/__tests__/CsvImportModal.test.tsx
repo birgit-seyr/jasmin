@@ -138,6 +138,41 @@ describe("CsvImportButton", () => {
       });
     });
 
+    it("lists a dry run's failed rows with their row number and message", async () => {
+      post.mockClear();
+      post.mockResolvedValue({
+        data: {
+          model_name: "share_article",
+          total_rows: 3,
+          successful: 1,
+          failed: 2,
+          results: [],
+          errors: [
+            { row: 3, error: "name: This field is required.", data: {} },
+            { row: 4, error: "number: A valid integer is required.", data: {} },
+          ],
+        },
+      });
+      renderButton();
+      await open();
+
+      await userEvent.upload(
+        screen.getByText("csv_upload.validate").closest("span.ant-upload")!
+          .querySelector<HTMLInputElement>('input[type="file"]')!,
+        new File(["name\n\n"], "things.csv", { type: "text/csv" }),
+      );
+
+      expect(
+        await screen.findByText("csv_upload.dry_run_notice"),
+      ).toBeInTheDocument();
+      expect(sentForm().get("dry_run")).toBe("true");
+      const row3 = document.querySelector('tr[data-row-key="3"]');
+      const row4 = document.querySelector('tr[data-row-key="4"]');
+      expect(row3).toHaveTextContent("3");
+      expect(row3).toHaveTextContent("name: This field is required.");
+      expect(row4).toHaveTextContent("number: A valid integer is required.");
+    });
+
     it("sends no fixed values when the page has none", async () => {
       post.mockClear();
       renderButton();

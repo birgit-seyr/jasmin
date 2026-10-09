@@ -45,7 +45,7 @@ docker run --rm \
     -v jasmin-platform_certbot_conf:/etc/letsencrypt \
     -v jasmin-platform_certbot_www:/var/www/certbot \
     -v "$(realpath "${CREDENTIALS}"):/linode.ini:ro" \
-    certbot/dns-linode:latest \
+    certbot/dns-linode:v5.6.0 \
     certonly \
     --dns-linode \
     --dns-linode-credentials /linode.ini \

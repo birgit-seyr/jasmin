@@ -55,7 +55,6 @@ import { DiffCell, ToolTipIcon } from "@shared/ui";
 import { useRoles } from "@shared/auth";
 
 type InvoiceContentRecord = InvoiceResellerContent & TableRecord;
-type CrateContentRecord = CrateContentInvoiceReseller & TableRecord;
 
 interface InvoiceModalProps {
   visible: boolean;
@@ -73,7 +72,7 @@ export default function InvoiceModal({
   const { getSetting } = useTenant();
   // The setting gates crate CREATION (backend). The table shows when the tenant
   // puts crates on documents OR the invoice already HAS crate rows (see the
-  // ``|| lineItemsCrates.length`` at the render site) — so existing crates,
+  // ``|| crate_items?.length`` at the render site) — so existing crates,
   // incl. on finalized/immutable invoices, still show and reconcile to the total.
   const showCratesOnDocuments = Boolean(
     getSetting("crates_should_be_on_documents", true),
@@ -92,10 +91,6 @@ export default function InvoiceModal({
 
   const lineItems = useMemo(
     () => (invoiceData?.line_items ?? []) as InvoiceContentRecord[],
-    [invoiceData],
-  );
-  const lineItemsCrates = useMemo(
-    () => (invoiceData?.crate_items ?? []) as unknown as CrateContentRecord[],
     [invoiceData],
   );
   const isFinalized = invoiceData?.is_finalized ?? false;
@@ -271,7 +266,7 @@ export default function InvoiceModal({
 
   const { rows: liveCrateItems, tableProps: crateTableProps } =
     useDocumentCrateTable({
-      crateItems: lineItemsCrates,
+      crateItems: invoiceData?.crate_items,
       documentField: "invoice_id",
       documentId: invoiceId,
       canWrite: !isFinalized && isOffice,
@@ -437,7 +432,7 @@ export default function InvoiceModal({
             onSaveSuccess={handleSaveSuccess}
             onDeleteSuccess={handleDeleteSuccess}
           />
-          {(showCratesOnDocuments || lineItemsCrates.length > 0) && (
+          {(showCratesOnDocuments || !!invoiceData.crate_items?.length) && (
             <>
               <div
                 style={{

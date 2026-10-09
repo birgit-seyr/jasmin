@@ -4,8 +4,10 @@ Three viewsets (:class:`CrateOrderContentViewSet`,
 :class:`CrateDeliveryNoteContentViewSet`,
 :class:`CrateContentInvoiceResellerViewSet`) all maintain crate quantities the
 same way: they sum ``amount`` over a scoped queryset, compute the delta to a
-desired new total, and either adjust an existing "manual adjustment" row,
-delete it if it zeroes out, or create a new one for the difference.
+desired new total, and either adjust an existing row, delete it if it zeroes
+out, or create a new one for the difference. A row's note is the office's
+own text: the service leaves it as it is, and a new row takes the one
+``update_fields`` or ``create_kwargs`` carry.
 
 This service centralises that algorithm so the viewsets only need to declare
 the scope, the adjustment-row scope, and the FK kwargs for new rows.
@@ -43,12 +45,12 @@ class CrateContentService:
            both read the same ``current_total``, both compute the same
            delta, and both create offsetting adjustment rows — silently
            doubling the correction. No UNIQUE constraint catches that.
-        2. Bulk-update ``update_fields`` (price_per_unit, rabatt, [tax_rate]) on
-           every row in ``scope_qs``.
+        2. Bulk-update ``update_fields`` (the price, rabatt, tax rate and note
+           the caller sends) on every row in ``scope_qs``.
         3. Re-aggregate ``Sum('amount')`` and compute the delta.
         4. If delta is zero, return.
-        5. Otherwise look up an existing manual-adjustment row in
-           ``adjustment_qs`` (defaults to ``scope_qs``):
+        5. Otherwise look up an existing row to adjust in ``adjustment_qs``
+           (defaults to ``scope_qs``):
            - if found: add the delta. If the row reaches 0, delete it; else save.
            - if not found: create a new row with ``create_kwargs`` + delta + update_fields.
 
@@ -71,8 +73,6 @@ class CrateContentService:
             .select_for_update()
             .first()
         )
-        note = f"{'+' if difference > 0 else ''}{difference}"
-
         if adjustment is not None:
             adjustment.amount += difference
             if adjustment.amount == 0:
@@ -80,7 +80,6 @@ class CrateContentService:
                 return
             for field, value in update_fields.items():
                 setattr(adjustment, field, value)
-            adjustment.note = note
             adjustment.save()
             return
 
@@ -88,5 +87,4 @@ class CrateContentService:
             **create_kwargs,
             amount=difference,
             **update_fields,
-            note=note,
         )

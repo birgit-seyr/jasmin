@@ -875,10 +875,9 @@ class TestBillingProfileMandateWriteRules:
         self, step_up_client, tenant_settings, subscription, billing_profile
     ):
         # The office SEPA modal clears its fields on open, so the operator
-        # retypes the IBAN — off a statement, spaced and lower-cased. The
-        # pain.008 debtor block only strips spaces and the XSD demands an
-        # upper-case country code, so storing it as typed kills the whole
-        # batch at the next run, for every member in it.
+        # retypes the IBAN — off a statement, spaced and lower-cased. The XSD
+        # demands an upper-case country code, so an IBAN kept as typed would
+        # kill the whole batch at the next run, for every member in it.
         self._mark_used(billing_profile)
 
         resp = step_up_client.patch(

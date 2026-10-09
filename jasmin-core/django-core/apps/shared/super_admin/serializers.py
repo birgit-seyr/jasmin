@@ -322,19 +322,6 @@ class UpdateUserRolesResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
 
 
-# --- Backups ---
-
-
-class BackupFileSerializer(serializers.Serializer):
-    """One encrypted backup file on disk, as listed by the
-    backup-list endpoint."""
-
-    filename = serializers.CharField()
-    size_bytes = serializers.IntegerField()
-    size_human = serializers.CharField()
-    created_at = serializers.DateTimeField()
-
-
 # --- Ops Checklist ------------------------------------------------------------
 
 

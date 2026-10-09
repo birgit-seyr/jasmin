@@ -51,16 +51,6 @@
     "november": "November",
     "december": "Dezember"
   },
-  "gdpr": {
-    "deletion_gate": {
-      "title": "Löschanträge",
-      "description": "Steuert, wie DSGVO-Löschanträge (Art. 17) bearbeitet werden."
-    },
-    "require_admin_approval": {
-      "label": "Admin-Freigabe für Löschanträge erforderlich",
-      "description": "Wenn aktiv (Standard), muss das Büro jeden Löschantrag nach der E-Mail-Bestätigung manuell freigeben. Wenn deaktiviert, wird der Antrag direkt nach dem Klick auf den Bestätigungslink ausgeführt — schneller, aber ohne menschliche Endprüfung. Löschungen von Konten mit Staff-/Admin-Rolle benötigen unabhängig von dieser Einstellung immer eine manuelle Freigabe."
-    }
-  },
   "members": {
     "title": "Mitglieder-Einstellungen",
     "registration": {

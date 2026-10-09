@@ -1,11 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import axiosService from "@shared/services/api";
 import { SUPER_ADMIN_ENDPOINTS } from "@features/platform/services/superAdmin";
 import { useAuth } from "@shared/contexts/AuthContext";
 import { getErrorMessage } from "@shared/utils/apiError";
-import { notify } from "@shared/utils";
 import CreateTenantModal from "@features/platform/modals/CreateTenantModal";
 
 interface Tenant {
@@ -18,16 +18,10 @@ interface Tenant {
   user_count?: number;
 }
 
-interface Backup {
-  filename: string;
-  size_human: string;
-  created_at: string;
-}
-
 export default function SuperAdminDashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const {
     isAuthenticated,
     isSuperAdmin,
@@ -63,49 +57,14 @@ export default function SuperAdminDashboard() {
     },
   });
 
-  const backupsQuery = useQuery<Backup[]>({
-    queryKey: ["super-admin", "backups"],
-    enabled: authorized,
-    // Backups may not be configured yet — swallow errors to an empty list.
-    queryFn: async () => {
-      try {
-        const response = await axiosService.get(SUPER_ADMIN_ENDPOINTS.backups);
-        return response.data.backups as Backup[];
-      } catch {
-        return [];
-      }
-    },
-  });
-
-  const triggerBackupMutation = useMutation({
-    mutationFn: async () => {
-      await axiosService.post(SUPER_ADMIN_ENDPOINTS.triggerBackup);
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ["super-admin", "backups"],
-      });
-    },
-    onError: (error) => {
-      notify.error(getErrorMessage(error, "Failed to start the backup"));
-    },
-  });
-
   const tenants = tenantsQuery.data ?? [];
-  const backups = backupsQuery.data ?? [];
   const loading = tenantsQuery.isPending;
   const error = tenantsQuery.isError
     ? getErrorMessage(tenantsQuery.error, "Failed to load tenants")
     : null;
-  const backupLoading = backupsQuery.isPending;
-  const backupTriggering = triggerBackupMutation.isPending;
 
   const refetchTenants = () => {
     void tenantsQuery.refetch();
-  };
-
-  const triggerBackup = () => {
-    triggerBackupMutation.mutate();
   };
 
   const handleLogout = async () => {
@@ -249,57 +208,13 @@ export default function SuperAdminDashboard() {
           )}
         </div>
 
-        {/* Database Backups */}
-        <div className="sa-section" style={{ marginTop: "30px" }}>
+        {/* The backup sidecar owns the backups; the backend container can
+            neither see nor make them, so the dashboard only says where they are. */}
+        <div className="sa-section sa-section--spaced">
           <div className="sa-section-header">
-            <h2 className="sa-section-title">Database Backups</h2>
-            <button
-              onClick={triggerBackup}
-              disabled={backupTriggering}
-              className="sa-btn sa-btn--success"
-            >
-              {backupTriggering ? "Creating backup..." : "Backup Now"}
-            </button>
+            <h2 className="sa-section-title">{t("platform.backups.title")}</h2>
           </div>
-
-          {backupLoading ? (
-            <div className="sa-section-empty">Loading backups...</div>
-          ) : backups.length === 0 ? (
-            <div className="sa-section-empty">
-              No backups found. Trigger a backup or configure the backup
-              container.
-            </div>
-          ) : (
-            <table className="sa-table">
-              <thead>
-                <tr>
-                  <th>Filename</th>
-                  <th>Size</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {backups.map((backup) => (
-                  <tr key={backup.filename}>
-                    <td>
-                      <code style={{ fontSize: "13px" }}>
-                        {backup.filename}
-                      </code>
-                    </td>
-                    <td>{backup.size_human}</td>
-                    <td>
-                      {new Date(backup.created_at).toLocaleString("de-DE")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          <div className="sa-section-footer">
-            Backups are encrypted (AES-256) and automatically pruned after 30
-            days.
-          </div>
+          <p className="sa-section-note">{t("platform.backups.note")}</p>
         </div>
       </div>
 

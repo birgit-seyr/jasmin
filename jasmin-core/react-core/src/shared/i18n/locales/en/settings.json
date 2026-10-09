@@ -1,29 +1,29 @@
 {
-  "title": "App Settings",
-  "save": "Save Settings",
+  "title": "App settings",
+  "save": "Save settings",
   "save_failed": "Failed to save setting.",
-  "reset": "Reset Changes",
+  "reset": "Reset changes",
   "unsaved_changes": "You have unsaved changes",
   "save_success": "Settings saved successfully",
   "unsaved_changes_warning": "You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.",
-  "unsaved_changes_title": "Unsaved Changes",
+  "unsaved_changes_title": "Unsaved changes",
   "operating_mode": {
-    "title": "Operating Mode"
+    "title": "Operating mode"
   },
   "general": {
-    "title": "General Settings",
+    "title": "General settings",
     "currency": "Currency",
     "timezone": "Timezone",
     "language": "Language",
-    "dateFormat": "Date Format",
-    "csvFormat": "CSV Format",
-    "numberLocale": "Number Format",
+    "dateFormat": "Date format",
+    "csvFormat": "CSV format",
+    "numberLocale": "Number format",
     "csvFormat_de": "German (Excel: ; separator, , decimals, dd.mm.yyyy)",
     "csvFormat_en": "English (Excel: , separator, . decimals, yyyy-mm-dd)",
-    "timeFormat": "Time Format"
+    "timeFormat": "Time format"
   },
   "navigation": {
-    "title": "Display Modules",
+    "title": "Display modules",
     "show_members": "Members module",
     "show_abos": "Subscriptions module",
     "show_commissioning": "Commissioning module",
@@ -34,7 +34,7 @@
     "locked_by_weekly_upload": "This module is locked because the weekly share amounts are uploaded, so there are no members or subscriptions in the system."
   },
   "ai": {
-    "title": "AI Settings",
+    "title": "AI settings",
     "claude_enabled": "Enable Claude AI"
   },
   "months": {
@@ -51,58 +51,48 @@
     "november": "November",
     "december": "December"
   },
-  "gdpr": {
-    "deletion_gate": {
-      "title": "Deletion requests",
-      "description": "Controls how GDPR deletion requests (Art. 17) are handled."
-    },
-    "require_admin_approval": {
-      "label": "Require admin approval for deletion requests",
-      "description": "When on (default), the office must manually approve each deletion request after the email confirmation step. When off, the request is executed immediately when the user clicks the confirmation link — faster, but without a human in the loop. Deletions of staff/admin accounts always require manual approval regardless of this setting."
-    }
-  },
   "members": {
-    "title": "Member Settings",
+    "title": "Member settings",
     "registration": {
       "title": "Registration"
     },
     "allows_self_registration": "Allow self-registration",
     "allows_self_registration_desc": "When on, people can register themselves via the login page. When off, the register buttons are hidden AND the registration endpoints are blocked server-side.",
     "trial": {
-      "title": "Trial Members"
+      "title": "Trial members"
     },
-    "allows_trial_members": "Allow Trial Members",
+    "allows_trial_members": "Allow trial members",
     "allows_trial_members_desc": "Enable trial memberships for new users",
-    "only_members_trial_subs": "Only Members Can Have Trial Subscriptions",
+    "only_members_trial_subs": "Only members can have trial subscriptions",
     "only_members_trial_subs_desc": "Restrict trial subscriptions to existing members",
     "subscriptions": {
-      "title": "Subscription Rules"
+      "title": "Subscription rules"
     },
-    "must_have_subscriptions": "Members Must Have Subscriptions",
+    "must_have_subscriptions": "Members must have subscriptions",
     "must_have_subscriptions_desc": "All members must have at least one subscription",
-    "only_members_subscriptions": "Only Members Can Have Subscriptions",
+    "only_members_subscriptions": "Only members can have subscriptions",
     "only_members_subscriptions_desc": "Subscriptions only for registered members",
-    "staff_special_conditions": "Special Conditions for Staff Subscriptions",
+    "staff_special_conditions": "Special conditions for staff subscriptions",
     "staff_special_conditions_desc": "Apply special pricing/conditions for staff",
     "loans": {
-      "title": "Member Loans"
+      "title": "Member loans"
     },
-    "uses_member_loans": "Enable Member Loans",
+    "uses_member_loans": "Enable member loans",
     "uses_member_loans_desc": "Allow members to take loans from the cooperative",
     "coop_shares": {
-      "title": "Cooperative Shares"
+      "title": "Cooperative shares"
     },
-    "has_coop_shares": "Use Cooperative Shares",
+    "has_coop_shares": "Use cooperative shares",
     "has_coop_shares_desc": "Enable cooperative share system",
-    "value_one_share": "Value Per Cooperative Share",
+    "value_one_share": "Value per cooperative share",
     "value_one_share_desc": "Monetary value of one cooperative share",
-    "min_shares": "Minimum Number of Shares",
-    "min_shares_desc": "Minimum shares required for membership",
-    "max_shares": "Maximum Number of Shares",
-    "max_shares_desc": "Maximum shares per member",
+    "min_shares": "Minimum number of cooperative shares",
+    "min_shares_desc": "Minimum cooperative shares required for membership",
+    "max_shares": "Maximum number of cooperative shares",
+    "max_shares_desc": "Maximum cooperative shares per member",
     "info_sentence_about_coop_shares": "Explanation of the cooperative shares",
     "info_sentence_about_coop_shares_desc": "Shown to applicants in the registration's cooperative-shares step, under the general introduction — for example what the shares are for and when they are paid back.",
-    "coop_payback_retention": "Retention period for cancelled members' shares",
+    "coop_payback_retention": "Retention period for canceled members' cooperative shares",
     "coop_payback_retention_desc": "Months that cooperative shares stay in the cooperative after a member exits before they become due to be paid back (0 = due immediately).",
     "months_suffix": "months",
     "paper_signature": {
@@ -115,11 +105,11 @@
   },
   "payments": {
     "strategy": {
-      "title": "Billing Strategy",
+      "title": "Billing strategy",
       "description": "How member subscription charges are computed for each payment cycle."
     },
     "due": {
-      "title": "Due Date"
+      "title": "Due date"
     },
     "sepa": {
       "title": "SEPA collection"
@@ -141,7 +131,7 @@
     "sepa_collection_day_desc": "Default day of the month the bank should execute the SEPA direct-debit collection. Pre-filled as the collection date when an office user creates a billing run. Capped at 28."
   },
   "shares": {
-    "title": "Share Settings"
+    "title": "Share settings"
   },
   "commissioning": {
     "layout": {
@@ -156,88 +146,88 @@
     "allow_upload_for_data_lists_desc": "To load larger amounts of data into the data lists (e.g. vegetables for shares), CSV files can be used for upload.",
     "uploads_weekly_amount_desc": "Via a CSV file",
     "show_seller_name_in_share": "Show the supplier name for bought-in items in crates to members.",
-    "packing_mode": "Packing Mode",
+    "packing_mode": "Packing mode",
     "packing_mode_description": "How members receive their shares. Boxes: all shares pre-packed per delivery station. Bulk: members pick from bulk crates. Mixed: per share-type variation choice.",
     "packing_mode_boxes": "Crates are pre-packed / ready-made crates are delivered to the delivery stations",
     "packing_mode_bulk": "Members pack their own crates at the delivery stations",
     "packing_mode_mixed": "Mixed (selectable per share type)",
-    "number_packing_stations": "Number of Packing Stations",
+    "number_packing_stations": "Number of packing stations",
     "show_size_column": "Show vegetable sizes column",
     "distribute_forecast_by_weight": "Distribute forecast amount across sizes by weight (prefill empty cells)",
     "show_summary_in_harvest_share_planning_on_top": "Show summary rows at the top of crate planning",
     "sales": {
-      "title": "Sales Channels"
+      "title": "Sales channels"
     },
     "default_planning_mode_basic": "by days",
     "default_planning_mode_tours": "by tours",
     "default_planning_mode_stations": "by delivery stations",
     "default_planning_mode": "Planning is done: ",
     "default_planning_mode_description": "This is only the default setting. It can be changed every week.",
-    "has_markets": "Sell at Markets",
-    "sells_to_resellers": "Sells to Resellers",
+    "has_markets": "Sell at markets",
+    "sells_to_resellers": "Sells to resellers",
     "crates_should_be_on_documents": "Crates are charged",
     "crates_should_be_on_documents_desc": "Crates get a price and are listed on orders, delivery notes and invoices.",
-    "different_offer_groups": "Different Offer Groups",
+    "different_offer_groups": "Different offer groups",
     "tax_rates": {
-      "title": "Default Tax Rates",
+      "title": "Default tax rates",
       "description": "These default tax rates will be pre-filled when creating new pricing records. They can be adjusted at any point throughout the app."
     },
-    "default_tax_rate_articles": "Default Tax Rate Articles (%)",
-    "default_tax_rate_crates": "Default Tax Rate Crates (%)",
-    "default_tax_rate_shares": "Default Tax Rate Shares (%)",
+    "default_tax_rate_articles": "Default tax rate for articles (%)",
+    "default_tax_rate_crates": "Default tax rate for crates (%)",
+    "default_tax_rate_shares": "Default tax rate for shares (%)",
     "planning": {
       "title": "Interfaces"
     },
-    "uploads_weekly_amount": "Upload Weekly Share Amounts",
-    "manual_weekly_amount": "Manual Weekly Share Amount Entry",
+    "uploads_weekly_amount": "Upload weekly share amounts",
+    "manual_weekly_amount": "Manual weekly share amount entry",
     "season": {
-      "title": "Season Settings"
+      "title": "Season settings"
     },
-    "season_start": "Season Start",
-    "season_start_week": "Season Start (KW 1–53)",
+    "season_start": "Season start",
+    "season_start_week": "Season start (week 1–53)",
     "min_weeks_from_creation_to_start_delivery": "Lead time before delivery start (weeks)",
     "min_weeks_from_creation_to_start_delivery_desc": "Minimum number of weeks between creating a subscription and the earliest possible delivery start. The earliest selectable start date (valid from) is the first Monday on or after today plus this many weeks. 0 = from next Monday.",
     "shares": {
-      "title": "Share Types"
+      "title": "Share types"
     },
-    "has_veg_shares": "Vegetable Shares",
-    "has_fruit_shares": "Fruit Shares",
-    "has_chicken_shares": "Chicken Shares",
-    "has_oil_shares": "Oil Shares",
-    "has_honey_shares": "Honey Shares",
-    "has_grain_shares": "Grain Shares",
-    "has_bread_shares": "Bread Shares",
+    "has_veg_shares": "Vegetable shares",
+    "has_fruit_shares": "Fruit shares",
+    "has_chicken_shares": "Chicken shares",
+    "has_oil_shares": "Oil shares",
+    "has_honey_shares": "Honey shares",
+    "has_grain_shares": "Grain shares",
+    "has_bread_shares": "Bread shares",
     "share_types": {
       "title": "Share types"
     },
     "trial": {
-      "title": "Trial Shares",
+      "title": "Trial shares",
       "description": "Controls whether trial memberships are possible and which conditions apply to them."
     },
-    "allows_trial_shares": "Allow Trial Shares",
-    "trial_duration": "Trial Share Duration (Number of Deliveries)",
-    "allows_trial_subscriptions": "Allow Trial Subscriptions",
-    "allowed_trial_subscription_duration": "Allowed Trial Subscription Duration (Weeks)",
+    "allows_trial_shares": "Allow trial shares",
+    "trial_duration": "Trial share duration (number of deliveries)",
+    "allows_trial_subscriptions": "Allow trial subscriptions",
+    "allowed_trial_subscription_duration": "Allowed trial subscription duration (weeks)",
     "allowed_trial_subscription_duration_desc": "Maximum term of a trial membership.",
-    "allows_trial_subscriptions_for_trial_members": "Trial Subscriptions for Trial Members",
+    "allows_trial_subscriptions_for_trial_members": "Trial subscriptions for trial members",
     "allows_trial_subscriptions_for_trial_members_desc": "Determines whether trial members can also take out trial subscriptions.",
-    "uses_jokers_for_trial_subscriptions": "Use Jokers for Trial Subscriptions",
+    "uses_jokers_for_trial_subscriptions": "Use jokers for trial subscriptions",
     "uses_jokers_for_trial_subscriptions_desc": "Determines whether jokers are also counted against trial subscriptions.",
     "jokers": {
-      "title": "Joker System"
+      "title": "Joker system"
     },
-    "uses_jokers": "Enable Jokers",
-    "jokers_for_trial": "Use Jokers for Trial Subscriptions",
-    "donation_jokers": "Enable Donation Jokers",
+    "uses_jokers": "Enable jokers",
+    "jokers_for_trial": "Use jokers for trial subscriptions",
+    "donation_jokers": "Enable donation jokers",
     "subscriptions": {
-      "title": "Subscription Management"
+      "title": "Subscription management"
     },
-    "end_at_season_end": "Subscriptions End at Season End",
-    "end_after_year": "Subscriptions End After One Year",
-    "auto_renewed": "Auto-Renew Subscriptions",
-    "min_weeks_cancel": "Minimum Weeks to Cancel Before End",
-    "min_weeks_cancel_description": "Minimum number of weeks before its end by which a subscription must be cancelled.",
-    "share_type_changes": "Allow Share Size Changes During Active Subscription",
+    "end_at_season_end": "Subscriptions end at season end",
+    "end_after_year": "Subscriptions end after one year",
+    "auto_renewed": "Auto-renew subscriptions",
+    "min_weeks_cancel": "Minimum weeks to cancel before end",
+    "min_weeks_cancel_description": "Minimum number of weeks before its end by which a subscription must be canceled.",
+    "share_type_changes": "Allow share size changes during an active subscription",
     "allows_share_type_variation_optin": "Allow on-off shares (opt-in per delivery)",
     "allows_share_type_variation_optin_desc": "Individual share variations can be released so that they can be added spontaneously on a week-by-week basis.",
     "allows_waiting_list_for_subscriptions": "Allow waiting list for subscriptions",
@@ -249,7 +239,7 @@
     "default_amount_of_donation_jokers": "Additional donation jokers",
     "default_amount_of_donation_jokers_description": "This can be adjusted for individual share types."
   },
-  "configure_prices": "Configure Prices & Sizes",
+  "configure_prices": "Configure prices & sizes",
   "reseller": {
     "footer_left_placeholder": "Enter left footer (e.g. company contact details)...",
     "footer_middle_placeholder": "Enter middle footer (e.g. bank details)...",
@@ -282,26 +272,26 @@
     "delivery_greeting_2_placeholder": "Enter additional greeting text...",
     "delivery_greeting_3_placeholder": "Enter additional greeting text...",
     "payment_numbering": {
-      "title": "Payment Terms & Document Numbering"
+      "title": "Payment terms & document numbering"
     },
-    "payment_terms": "Payment Terms (Days)",
+    "payment_terms": "Payment terms (days)",
     "payment_terms_desc": "Number of days until payment is due for resellers",
-    "order_prefix": "Order Number Prefix",
+    "order_prefix": "Order number prefix",
     "order_prefix_desc": "Prefix for order numbers (e.g. OR-2024-001)",
-    "order_numbers_reset": "Reset Order Numbers at Year End",
+    "order_numbers_reset": "Reset order numbers at year end",
     "order_numbers_reset_desc": "Start order numbering at 1 each year. Fixed once the first order exists.",
-    "delivery_note_prefix": "Delivery Note Prefix",
-    "delivery_note_reset": "Reset Delivery Note Numbers at Year End",
+    "delivery_note_prefix": "Delivery note prefix",
+    "delivery_note_reset": "Reset delivery note numbers at year end",
     "delivery_note_numbers_reset_desc": "Start delivery note numbering at 1 each year. Fixed once the first delivery note exists.",
-    "invoice_prefix": "Invoice Number Prefix",
-    "correction_prefix": "Correction Invoice Prefix",
-    "invoice_reset": "Reset Invoice Numbers at Year End",
+    "invoice_prefix": "Invoice number prefix",
+    "correction_prefix": "Correction invoice prefix",
+    "invoice_reset": "Reset invoice numbers at year end",
     "invoice_numbers_reset_desc": "Start invoice numbering at 1 each year. Fixed once the first invoice exists.",
     "offer_settings": {
-      "title": "Offer Settings",
+      "title": "Offer settings",
       "description": "Configuration of price tiers for offers to resellers. Up to three tiers can be defined."
     },
-    "offer_tiers": "Price Tiers",
+    "offer_tiers": "Price tiers",
     "offer_tiers_desc": "Tiered pricing starting from a certain number of packaging units (PU). The first tier always starts from 1 PU.",
     "offer_tier_from": "from",
     "offer_tier_pu": "PU",
@@ -309,35 +299,35 @@
     "offer_prices_are_per_pu": "Show prices per packaging unit in offers",
     "offer_prices_are_per_pu_desc": "When enabled, prices in offers will be displayed per packaging unit (PU) instead of per kilogram/piece.",
     "footer": {
-      "title": "Document Footers"
+      "title": "Document footers"
     },
-    "footer_left": "Left Column",
-    "footer_middle": "Middle Column",
-    "footer_right": "Right Column",
+    "footer_left": "Left column",
+    "footer_middle": "Middle column",
+    "footer_right": "Right column",
     "invoice_text": {
-      "title": "Invoice Text Lines"
+      "title": "Invoice text lines"
     },
-    "invoice_entry_1": "Introduction Line 1",
-    "invoice_entry_2": "Introduction Line 2",
-    "invoice_entry_3": "Introduction Line 3",
-    "invoice_greeting_1": "Greeting Line 1",
-    "invoice_greeting_2": "Greeting Line 2",
-    "invoice_greeting_3": "Greeting Line 3",
+    "invoice_entry_1": "Introduction line 1",
+    "invoice_entry_2": "Introduction line 2",
+    "invoice_entry_3": "Introduction line 3",
+    "invoice_greeting_1": "Greeting line 1",
+    "invoice_greeting_2": "Greeting line 2",
+    "invoice_greeting_3": "Greeting line 3",
     "offer_text": {
-      "title": "Offer Text Lines"
+      "title": "Offer text lines"
     },
-    "offer_entry_1": "Introduction Line 1",
-    "offer_entry_2": "Introduction Line 2",
-    "offer_entry_3": "Introduction Line 3",
+    "offer_entry_1": "Introduction line 1",
+    "offer_entry_2": "Introduction line 2",
+    "offer_entry_3": "Introduction line 3",
     "offer_entry_1_description": "This text appears on offers sent to resellers above the article table. First line.",
     "offer_entry_2_description": "This text appears on offers sent to resellers above the article table. Second line.",
     "offer_entry_3_description": "This text appears on offers sent to resellers above the article table. Third line.",
     "offer_entry_1_placeholder": "Enter offer introduction text...",
     "offer_entry_2_placeholder": "Enter additional offer text...",
     "offer_entry_3_placeholder": "Enter additional offer text...",
-    "offer_greeting_1": "Greeting Line 1",
-    "offer_greeting_2": "Greeting Line 2",
-    "offer_greeting_3": "Greeting Line 3",
+    "offer_greeting_1": "Greeting line 1",
+    "offer_greeting_2": "Greeting line 2",
+    "offer_greeting_3": "Greeting line 3",
     "offer_greeting_1_description": "This text appears on offers sent to resellers below the article table. First line.",
     "offer_greeting_2_description": "This text appears on offers sent to resellers below the article table. Second line.",
     "offer_greeting_3_description": "This text appears on offers sent to resellers below the article table. Third line.",
@@ -356,30 +346,30 @@
       "offer": "Preview offer"
     },
     "delivery_text": {
-      "title": "Delivery Note Text Lines"
+      "title": "Delivery note text lines"
     },
-    "delivery_entry_1": "Introduction Line 1",
-    "delivery_entry_2": "Introduction Line 2",
-    "delivery_entry_3": "Introduction Line 3",
-    "delivery_greeting_1": "Greeting Line 1",
-    "delivery_greeting_2": "Greeting Line 2",
-    "delivery_greeting_3": "Greeting Line 3"
+    "delivery_entry_1": "Introduction line 1",
+    "delivery_entry_2": "Introduction line 2",
+    "delivery_entry_3": "Introduction line 3",
+    "delivery_greeting_1": "Greeting line 1",
+    "delivery_greeting_2": "Greeting line 2",
+    "delivery_greeting_3": "Greeting line 3"
   },
   "saved": "Saved",
   "saving": "Saving …",
   "subscriptions": {
     "trial": {
-      "title": "Trial Membership",
+      "title": "Trial membership",
       "description": "Controls whether trial memberships are possible and which conditions apply to them."
     },
-    "allows_trial_subscriptions": "Allow Trial Subscriptions",
+    "allows_trial_subscriptions": "Allow trial subscriptions",
     "trial_subscriptions_have_different_prices": "Trial subscriptions have different prices",
     "trial_subscriptions_have_different_prices_desc": "If enabled, each size can carry its own price (and solidarity floor) for trial subscriptions. Otherwise trials use the regular prices.",
-    "allowed_trial_subscription_duration": "Allowed Trial Subscription Duration (Weeks)",
+    "allowed_trial_subscription_duration": "Allowed trial subscription duration (weeks)",
     "allowed_trial_subscription_duration_desc": "Maximum term of a trial membership.",
-    "allows_trial_subscriptions_for_trial_members": "Trial Subscriptions for Trial Members",
+    "allows_trial_subscriptions_for_trial_members": "Trial subscriptions for trial members",
     "allows_trial_subscriptions_for_trial_members_desc": "Determines whether trial members can also take out trial subscriptions.",
-    "uses_jokers_for_trial_subscriptions": "Use Jokers for Trial Subscriptions",
+    "uses_jokers_for_trial_subscriptions": "Use jokers for trial subscriptions",
     "uses_jokers_for_trial_subscriptions_desc": "Determines whether jokers are also counted against trial subscriptions.",
     "share_types": {
       "title": "Share types"

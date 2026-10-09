@@ -129,6 +129,28 @@ class CrateNetPriceInUse(ConflictError):
     code = "crate.net_price_in_use"
 
 
+class CrateLineOfferBound(ConflictError):
+    """A write to an order's crate line would lower or delete the deposit
+    crates that come with its order lines. Those crates follow their order
+    line, which sets them anew whenever it is saved, so the office changes the
+    order line instead. ``details.offer_bound_amount`` is how many crates of
+    the line come with order lines."""
+
+    code = "crate_line.offer_bound"
+
+
+class CrateLineOfferBoundFields(ConflictError):
+    """A write to an order's crate line would change the price, rabatt or note
+    of the deposit crates that come with its order lines. The order line
+    rebuilds those rows at the crate's dated price, with no rabatt and no
+    note, whenever it is saved, so the change would not last. A note goes on
+    the crates added directly to the order, so it is refused only when none of
+    those remain after the write. ``details.offer_bound_amount`` is how many
+    crates of the line come with order lines."""
+
+    code = "crate_line.offer_bound_fields"
+
+
 class CratesDisabledOnDocuments(BadRequestError):
     """A crate write was attempted while the tenant keeps crates OFF documents
     (``crates_should_be_on_documents=False``): crates are neither priced nor put

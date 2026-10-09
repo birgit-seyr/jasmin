@@ -1302,7 +1302,7 @@ class BillingRunService:
                 )
             mandate_ref = (billing_profile.sepa_mandate_reference or "").strip()
             mandate_signed = billing_profile.sepa_mandate_signed_at
-            debtor_iban = billing_profile.iban.replace(" ", "")
+            debtor_iban = normalized_iban(billing_profile.iban)
             debtor_name = billing_profile.account_holder.strip()
             if not (mandate_ref and mandate_signed and debtor_iban and debtor_name):
                 raise SepaExportInvalid(

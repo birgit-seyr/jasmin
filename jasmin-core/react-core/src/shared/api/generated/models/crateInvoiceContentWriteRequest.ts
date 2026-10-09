@@ -11,7 +11,7 @@
 
 ``tax_rate`` null or omitted resolves the crate's rate for the invoice
 date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
-keeps the stored value.
+/ ``note`` keeps the stored value.
  */
 export interface CrateInvoiceContentWriteRequest {
   invoice_id: string;

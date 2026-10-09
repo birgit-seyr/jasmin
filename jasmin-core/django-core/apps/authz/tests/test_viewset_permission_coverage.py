@@ -120,7 +120,6 @@ _EXPECTED_VIEW_MODULES = frozenset(
         "apps.shared.super_admin.views",
         "apps.shared.super_admin.views.auth_views",
         "apps.shared.super_admin.views.authentication",
-        "apps.shared.super_admin.views.backup_views",
         "apps.shared.super_admin.viewsets",
         "apps.shared.support.admin_viewsets",
         "apps.shared.support.viewsets",

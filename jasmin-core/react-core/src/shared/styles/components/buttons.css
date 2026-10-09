@@ -65,7 +65,7 @@
 .done-state {
   cursor: default !important;
   background-color: var(--color-primary) !important;
-  color: white !important;
+  color: var(--color-text-on-solid) !important;
 }
 
 .mark-state {
@@ -120,7 +120,7 @@
 
 .csv-template-button {
   background-color: var(--color-primary) !important;
-  color: white !important;
+  color: var(--color-text-on-solid) !important;
 }
 
 /* A primary button in the darker hover shade, held in every state (hover and

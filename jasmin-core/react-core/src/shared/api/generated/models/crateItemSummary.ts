@@ -19,6 +19,11 @@ export interface CrateItemSummary {
   rabatt: number;
   line_netto: string;
   tax_rate: number;
+  /**
+   * The line's note: its rows' distinct notes, joined by '; '.
+   * @nullable
+   */
+  note?: string | null;
   /** @nullable */
   invoice_id?: string | null;
   /** @nullable */

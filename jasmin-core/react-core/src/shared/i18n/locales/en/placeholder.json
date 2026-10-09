@@ -1,12 +1,12 @@
 {
-  "delivery_station_selector": "Select Delivery Station",
-  "delivery_station_day_selector": "Select Delivery Station Day",
-  "share_type_selector": "Select Sharetype",
-  "storage_selector": "Select Storage",
-  "reseller_selector": "Select Reseller",
-  "offer_group_selector": "Select Offer Group",
-  "seller_selector": "Select Supplier",
-  "member_selector": "Select Member",
-  "share_article_selector": "Select Vegetable/Fruit",
+  "delivery_station_selector": "Select delivery station",
+  "delivery_station_day_selector": "Select delivery station day",
+  "share_type_selector": "Select share type",
+  "storage_selector": "Select storage",
+  "reseller_selector": "Select reseller",
+  "offer_group_selector": "Select offer group",
+  "seller_selector": "Select supplier",
+  "member_selector": "Select member",
+  "share_article_selector": "Select vegetable/fruit",
   "shares_delivery_day_selector": "Select delivery day"
 }

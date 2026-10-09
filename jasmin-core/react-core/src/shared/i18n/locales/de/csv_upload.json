@@ -28,5 +28,24 @@
     "share_article": "Anteilsartikel",
     "delivery_station": "Lieferstationen",
     "reseller": "Wiederverkäufer"
+  },
+  "type_hint": {
+    "text": "Text",
+    "true_false": "true|false",
+    "date": "JJJJ-MM-TT",
+    "time": "HH:MM",
+    "number": "Zahl",
+    "integer": "Ganzzahl",
+    "integer_non_negative": "Ganzzahl (>=0)",
+    "integer_non_positive": "Ganzzahl (<=0)",
+    "decimal_1dp": "Dezimalzahl (1 Nachkommastelle)",
+    "decimal_2dp": "Dezimalzahl (2 Nachkommastellen)",
+    "decimal_3dp": "Dezimalzahl (3 Nachkommastellen)",
+    "decimal_non_negative_2dp": "Dezimalzahl (>=0; 2 Nachkommastellen)",
+    "decimal_non_positive_2dp": "Dezimalzahl (<=0; 2 Nachkommastellen)",
+    "decimal_non_negative_3dp": "Dezimalzahl (>=0; 3 Nachkommastellen)",
+    "decimal_non_positive_3dp": "Dezimalzahl (<=0; 3 Nachkommastellen)",
+    "percentage": "Prozent",
+    "week_number": "Kalenderwoche"
   }
 }

@@ -29,9 +29,11 @@ from .coop_share_import_serializer import CoopShareImportSerializer
 from .crates_serializer import (
     CrateDeliveryNoteContentWriteRequestSerializer,
     CrateInvoiceContentWriteRequestSerializer,
+    CrateItemSummarySerializer,
     CrateOrderContentCreateRequestSerializer,
     CrateOrderContentSerializer,
     CrateOrderContentUpdateRequestSerializer,
+    CrateOrderSummarySerializer,
 )
 from .delivery_serializer import (
     DeliveryExceptionPeriodSerializer,
@@ -111,8 +113,6 @@ from .resellers_serializer import (
     CommissioningListResellersOrderContent,
     CrateContentInvoiceResellerSerializer,
     CrateDeliveryNoteContentSerializer,
-    CrateItemSummarySerializer,
-    CrateOrderSummarySerializer,
     CreateStornoRequestSerializer,
     DeliveryNoteResellerContentSerializer,
     DeliveryNoteResellerSerializer,

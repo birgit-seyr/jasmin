@@ -91,7 +91,7 @@ const ALLOWED: ReadonlyArray<{ path: string; why: string }> = [
   // super-admin URLs don't fully flow through orval yet.
   {
     path: "src/features/platform/pages/SuperAdminDashboard.tsx",
-    why: "Super-admin dashboard (tenants list + backup trigger); not yet routed through generated clients.",
+    why: "Super-admin dashboard (tenants list); not yet routed through generated clients.",
   },
   {
     path: "src/features/platform/pages/SuperAdminLoginPage.tsx",

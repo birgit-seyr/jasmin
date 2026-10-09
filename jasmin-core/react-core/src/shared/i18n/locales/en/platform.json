@@ -5,5 +5,9 @@
     "rotation_failed": "Could not run the rotation.",
     "secret_copied": "Secret copied to clipboard.",
     "copy_failed": "Couldn't write to the clipboard. Select the text and copy it manually."
+  },
+  "backups": {
+    "title": "Database backups",
+    "note": "The backup service makes the backups: an encrypted (AES-256) database dump and a media archive every night, plus a database dump before each deploy. Daily backups are kept for 30 days, then one per week for a year, then one per month indefinitely. If no new backup appears, the operators get an email. On the server, \"docker compose exec backup tail /var/log/backup.log\" shows the recent runs, and \"scripts/restore_drill.sh\" tests a restore."
   }
 }

@@ -70,6 +70,72 @@ class CrateOrderContentUpdateRequestSerializer(serializers.Serializer):
     )
 
 
+class CrateItemSummarySerializer(serializers.Serializer):
+    """Aggregated crate summary returned by Invoice/DeliveryNote `crate_items`."""
+
+    id = serializers.CharField()
+    crate_type = serializers.CharField()
+    crate_type_name = serializers.CharField(allow_null=True)
+    amount = serializers.IntegerField()
+    price_per_unit = serializers.CharField()
+    rabatt = serializers.FloatField()
+    line_netto = serializers.CharField()
+    tax_rate = serializers.FloatField()
+    note = serializers.CharField(
+        required=False,
+        allow_null=True,
+        help_text="The line's note: its rows' distinct notes, joined by '; '.",
+    )
+    invoice_id = serializers.CharField(required=False, allow_null=True)
+    invoice_number = serializers.CharField(required=False, allow_null=True)
+    invoice_prefix = serializers.CharField(required=False, allow_null=True)
+    invoice_is_finalized = serializers.BooleanField(required=False)
+    delivery_note_id = serializers.CharField(required=False, allow_null=True)
+    delivery_note_number = serializers.CharField(required=False, allow_null=True)
+    delivery_note_prefix = serializers.CharField(required=False, allow_null=True)
+    delivery_note_is_finalized = serializers.BooleanField(required=False)
+
+
+class CrateOrderSummarySerializer(serializers.Serializer):
+    """Aggregated crate summary returned by ``CrateOrderContentViewSet``.
+
+    Money is sent as canonical 2dp STRINGS (``price_per_unit`` /
+    ``line_netto``), matching the DN/invoice ``CrateItemSummarySerializer``
+    — never JSON floats — so full precision survives the wire and the
+    client does not recompute line totals in floating point. ``rabatt`` /
+    ``tax_rate`` stay numeric. ``order_id`` / ``order_number`` /
+    ``order_number_prefix`` only appear on create.
+    """
+
+    id = serializers.CharField()
+    crate_type = serializers.CharField()
+    crate_type_name = serializers.CharField(allow_null=True)
+    amount = serializers.IntegerField()
+    price_per_unit = serializers.CharField()
+    rabatt = serializers.FloatField()
+    line_netto = serializers.CharField()
+    tax_rate = serializers.FloatField()
+    note = serializers.CharField(
+        required=False,
+        allow_null=True,
+        help_text="The line's note: its rows' distinct notes, joined by '; '.",
+    )
+    offer_bound_amount = serializers.IntegerField(
+        required=False,
+        help_text=(
+            "How many crates of the line come with order lines. Those follow "
+            "their order line, so the line's price and rabatt cannot change "
+            "here, nor its amount drop below this."
+        ),
+    )
+    order_id = serializers.CharField(required=False)
+    # ``display_number`` (e.g. "39v"), a STRING — mirrors OrderContentItem so
+    # the frontend formats "{prefix}-{display_number}" the same on create and
+    # on reload.
+    order_number = serializers.CharField(required=False, allow_null=True)
+    order_number_prefix = serializers.CharField(required=False, allow_null=True)
+
+
 # The two write bodies below are what the crate lines on delivery notes and
 # invoices are built from. ``create`` inserts a row and ``update`` rewrites the
 # rows of one crate line through ``QuerySet.update()``; neither path runs
@@ -89,7 +155,7 @@ class CrateDeliveryNoteContentWriteRequestSerializer(serializers.Serializer):
 
     ``tax_rate`` null or omitted resolves the crate's rate for the delivery
     date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
-    keeps the stored value.
+    / ``note`` keeps the stored value.
     """
 
     delivery_note_id = serializers.CharField()
@@ -114,7 +180,7 @@ class CrateInvoiceContentWriteRequestSerializer(serializers.Serializer):
 
     ``tax_rate`` null or omitted resolves the crate's rate for the invoice
     date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
-    keeps the stored value.
+    / ``note`` keeps the stored value.
     """
 
     invoice_id = serializers.CharField()

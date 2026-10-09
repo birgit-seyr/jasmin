@@ -8,7 +8,11 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
-from apps.commissioning.errors import CratesDisabledOnDocuments
+from apps.commissioning.errors import (
+    CrateLineOfferBound,
+    CrateLineOfferBoundFields,
+    CratesDisabledOnDocuments,
+)
 from apps.commissioning.models import CrateOrderContent, Order
 from apps.commissioning.services.crate_order_content_service import (
     CrateOrderContentService,
@@ -99,6 +103,32 @@ class TestGetCratesSummaryForPeriod:
         # max-inflated 9 * 3.00 = 27.00 a max() aggregation would give.
         total = sum(Decimal(row["line_netto"]) for row in summary)
         assert total == Decimal("24.50")
+
+    def test_each_line_says_how_many_crates_come_with_order_lines(self, tenant):
+        reseller = ResellerFactory()
+        order = OrderFactory(
+            reseller=reseller, year=2026, delivery_week=15, day_number=2
+        )
+        crate = CrateFactory()
+        _make_coc(order, crate, amount=5)
+        CrateOrderContent.objects.create(
+            order=order,
+            crate_type=crate,
+            amount=2,
+            price_per_unit=Decimal("2.50"),
+            tax_rate=Decimal("19.00"),
+            note="Pallet",
+        )
+
+        (line,) = CrateOrderContentService.get_crates_summary_for_period(
+            2026, 15, 2, reseller
+        )
+
+        assert (line["amount"], line["offer_bound_amount"], line["note"]) == (
+            7,
+            5,
+            "Pallet",
+        )
 
     def test_empty_for_different_reseller(self, tenant):
         r1 = ResellerFactory()
@@ -225,6 +255,39 @@ class TestCreateCrateOrderContent:
             == 1
         )
 
+    def test_create_answers_with_the_note_of_the_line_it_joins(self, tenant):
+        reseller = ResellerFactory()
+        order = OrderFactory(
+            reseller=reseller, year=2026, delivery_week=15, day_number=2
+        )
+        crate = CrateFactory()
+        _make_coc(order, crate, amount=4, price=Decimal("2.00"))
+        CrateOrderContent.objects.create(
+            order=order,
+            crate_type=crate,
+            amount=1,
+            price_per_unit=Decimal("2.00"),
+            tax_rate=Decimal("19.00"),
+            note="Pallet",
+        )
+
+        result = CrateOrderContentService.create_crate_order_content(
+            crate_type_id=crate.pk,
+            amount=Decimal("2"),
+            year=2026,
+            delivery_week=15,
+            day_number=2,
+            reseller=reseller.pk,
+            price_per_unit=Decimal("2.00"),
+            tax_rate=Decimal("19.00"),
+        )
+
+        assert (result["amount"], result["offer_bound_amount"], result["note"]) == (
+            7,
+            4,
+            "Pallet",
+        )
+
     def test_explicit_zero_price_is_preserved(self, tenant):
         """An explicit ``price_per_unit=0`` (a legitimate zero-deposit
         crate) must NOT be overwritten by the crate's dated pricing. A falsy
@@ -319,7 +382,13 @@ class TestUpdateCrateOrderContentLine:
             reseller=reseller, year=2026, delivery_week=15, day_number=2
         )
         crate = CrateFactory()
-        deposit = _make_coc(order, crate, amount=4, price=Decimal("2.50"))
+        deposit = CrateOrderContent.objects.create(
+            order=order,
+            crate_type=crate,
+            amount=4,
+            price_per_unit=Decimal("2.50"),
+            tax_rate=Decimal("19.00"),
+        )
         line_id = f"{crate.pk}_{deposit.pk}"
 
         result = _update(
@@ -339,10 +408,37 @@ class TestUpdateCrateOrderContentLine:
             "2.60",
         )
 
-    def test_a_bare_crate_type_id_lowers_the_type_on_its_own_rows(self, tenant):
+    def test_a_bare_crate_type_id_lowers_the_type_on_its_added_rows(self, tenant):
         """A page that names a line by its crate type alone lowers the type's
-        total; the crates come off its rows, and no row is added or left below
-        zero."""
+        total; the crates come off the rows added to the order, and no row is
+        added or left below zero."""
+        reseller = ResellerFactory()
+        order = OrderFactory(
+            reseller=reseller, year=2026, delivery_week=15, day_number=2
+        )
+        crate = CrateFactory()
+        deposit = _make_coc(order, crate, amount=2)
+        for amount in (2, 1):
+            CrateOrderContent.objects.create(
+                order=order,
+                crate_type=crate,
+                amount=amount,
+                price_per_unit=Decimal("2.50"),
+                tax_rate=Decimal("19.00"),
+            )
+
+        result = _update(reseller, crate.pk, amount=3)
+
+        amounts = CrateOrderContent.objects.filter(crate_type=crate).values_list(
+            "amount", flat=True
+        )
+        assert sum(amounts) == 3
+        assert min(amounts) > 0
+        deposit.refresh_from_db()
+        assert deposit.amount == 2
+        assert result["amount"] == 3
+
+    def test_a_reduction_below_the_deposit_crates_is_refused(self, tenant):
         reseller = ResellerFactory()
         order = OrderFactory(
             reseller=reseller, year=2026, delivery_week=15, day_number=2
@@ -351,15 +447,41 @@ class TestUpdateCrateOrderContentLine:
         _make_coc(order, crate, amount=2)
         _make_coc(order, crate, amount=1)
 
-        result = _update(reseller, crate.pk, amount=2)
+        with pytest.raises(CrateLineOfferBound) as raised:
+            _update(reseller, crate.pk, amount=2)
 
+        assert raised.value.details == {"offer_bound_amount": 3}
         amounts = CrateOrderContent.objects.filter(crate_type=crate).values_list(
             "amount", flat=True
         )
-        assert sum(amounts) == 2
-        assert min(amounts) > 0
-        assert not CrateOrderContent.objects.filter(order=order).exists()
-        assert result["amount"] == 2
+        assert sorted(amounts) == [1, 2]
+
+    @pytest.mark.parametrize(
+        "change",
+        [{"price_per_unit": Decimal("3.00")}, {"rabatt": 10}, {"note": "Pallet"}],
+        ids=["price", "rabatt", "note"],
+    )
+    def test_a_price_rabatt_or_note_on_deposit_crates_is_refused(self, tenant, change):
+        """The order line rebuilds its deposit rows at the dated price, with no
+        rabatt and no note, so the change would not last."""
+        reseller = ResellerFactory()
+        order = OrderFactory(
+            reseller=reseller, year=2026, delivery_week=15, day_number=2
+        )
+        crate = CrateFactory()
+        deposit = _make_coc(order, crate, amount=4)
+
+        with pytest.raises(CrateLineOfferBoundFields) as raised:
+            _update(reseller, f"{crate.pk}_{deposit.pk}", amount=4, **change)
+
+        assert raised.value.code == "crate_line.offer_bound_fields"
+        assert raised.value.details == {"offer_bound_amount": 4}
+        deposit.refresh_from_db()
+        assert (deposit.price_per_unit, deposit.rabatt, deposit.note) == (
+            Decimal("2.50"),
+            None,
+            None,
+        )
 
     def test_a_type_without_rows_in_the_period_is_not_found(self, tenant):
         reseller = ResellerFactory()
@@ -374,14 +496,20 @@ class TestUpdateCrateOrderContentLine:
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestDeleteCrateOrderContentLine:
-    def test_deletes_matching_records(self, tenant):
+    def test_deletes_the_rows_added_to_the_order(self, tenant):
         reseller = ResellerFactory()
         order = OrderFactory(
             reseller=reseller, year=2026, delivery_week=15, day_number=2
         )
         crate = CrateFactory()
-        _make_coc(order, crate, amount=5)
-        _make_coc(order, crate, amount=3)
+        for amount in (5, 3):
+            CrateOrderContent.objects.create(
+                order=order,
+                crate_type=crate,
+                amount=amount,
+                price_per_unit=Decimal("2.50"),
+                tax_rate=Decimal("19.00"),
+            )
 
         deleted = CrateOrderContentService.delete_crate_order_content_line(
             line_id=crate.pk,
@@ -394,6 +522,27 @@ class TestDeleteCrateOrderContentLine:
         assert deleted is True
         assert CrateOrderContent.objects.filter(crate_type=crate).count() == 0
 
+    def test_deposit_crates_alone_are_refused(self, tenant):
+        """Deposit crates come with their order line; the period branch leaves
+        them to it like the order branch does."""
+        reseller = ResellerFactory()
+        order = OrderFactory(
+            reseller=reseller, year=2026, delivery_week=15, day_number=2
+        )
+        crate = CrateFactory()
+        _make_coc(order, crate, amount=5)
+
+        with pytest.raises(CrateLineOfferBound):
+            CrateOrderContentService.delete_crate_order_content_line(
+                line_id=crate.pk,
+                year=2026,
+                delivery_week=15,
+                day_number=2,
+                reseller=reseller,
+            )
+
+        assert CrateOrderContent.objects.filter(crate_type=crate).count() == 1
+
     def test_a_line_id_deletes_only_its_line_in_the_period(self, tenant):
         reseller = ResellerFactory()
         order = OrderFactory(
@@ -401,7 +550,13 @@ class TestDeleteCrateOrderContentLine:
         )
         crate = CrateFactory()
         kept = _make_coc(order, crate, amount=5, price=Decimal("2.00"))
-        removed = _make_coc(order, crate, amount=3, price=Decimal("2.50"))
+        removed = CrateOrderContent.objects.create(
+            order=order,
+            crate_type=crate,
+            amount=3,
+            price_per_unit=Decimal("2.50"),
+            tax_rate=Decimal("19.00"),
+        )
 
         deleted = CrateOrderContentService.delete_crate_order_content_line(
             line_id=f"{crate.pk}_{removed.pk}",

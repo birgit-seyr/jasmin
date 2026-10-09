@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import type { CrateItemSummary } from "@shared/api/generated/models/crateItemSummary";
 import { sameCellValue } from "@shared/tables/BasicEditableTable/duplicateErrors";
 import { RowSaveRefused } from "@shared/tables/BasicEditableTable/RowSaveRefused";
 import type {
@@ -29,7 +30,7 @@ export function refuseRepeatedCrateType(
 
 interface DocumentCrateTableOptions {
   /** The document's crate lines, as its retrieve lists them. */
-  crateItems: TableRecord[];
+  crateItems: readonly CrateItemSummary[] | undefined;
   /** The field that names the document in a crate line's write body. */
   documentField: "delivery_note_id" | "invoice_id";
   documentId: string | null;
@@ -69,6 +70,10 @@ export function useDocumentCrateTable({
   const { cratesColumns, crates: crateOptions } = useCratesColumns({
     without_price: withoutPrice,
   });
+  const lines = useMemo<(CrateItemSummary & TableRecord)[]>(
+    () => (crateItems ?? []).map((item) => ({ ...item, key: item.id })),
+    [crateItems],
+  );
 
   // The table reports its rows after each save and delete; they stand until
   // the document is read again.
@@ -76,11 +81,10 @@ export function useDocumentCrateTable({
     from: TableRecord[];
     rows: TableRecord[];
   } | null>(null);
-  const rows = reported?.from === crateItems ? reported.rows : crateItems;
+  const rows = reported?.from === lines ? reported.rows : lines;
   const onDataChange = useCallback(
-    (tableRows: TableRecord[]) =>
-      setReported({ from: crateItems, rows: tableRows }),
-    [crateItems],
+    (tableRows: TableRecord[]) => setReported({ from: lines, rows: tableRows }),
+    [lines],
   );
 
   const unlistedCrateTypes = useMemo(() => {
@@ -128,7 +132,7 @@ export function useDocumentCrateTable({
     tableProps: {
       columns,
       apiFunctions,
-      initialData: crateItems,
+      initialData: lines,
       permissions,
       customSave,
       customDelete,

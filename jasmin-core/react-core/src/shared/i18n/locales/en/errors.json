@@ -59,7 +59,13 @@
     "cancel_draft": "Draft subscriptions cannot be cancelled — delete them instead.",
     "renewal_chain_number_missing": "The predecessor subscription has no subscription number to inherit — fix the predecessor's numbering first, then renew again.",
     "term_already_renewed": "Subscription {{predecessor}} already continues with {{renewal}} from {{renewal_valid_from}}. Confirm or edit that one — or delete it first — instead of adding another.",
-    "term_predecessor_ambiguous": "{{count}} subscriptions of this member and share type end on {{valid_until}}, so it can't be told which one this one continues. Renew the right one with “Renew selected” in the subscription list and adjust the draft."
+    "term_predecessor_ambiguous": "{{count}} subscriptions of this member and share type end on {{valid_until}}, so it can't be told which one this one continues. Renew the right one with “Renew selected” in the subscription list and adjust the draft.",
+    "import": {
+      "station_day_incomplete": "Provide both the delivery station and the delivery day, or leave both blank.",
+      "already_imported": "Subscription {{subscription_number}} starting {{valid_from}} already exists for member {{member_number}}. The row was skipped (already imported).",
+      "term_already_imported": "Subscription {{predecessor}} already continues with {{renewal}} from {{renewal_valid_from}}. The row was skipped (imported before, or drafted by the renewal). Delete that draft first if this row should replace it.",
+      "term_predecessor_ambiguous": "{{count}} subscriptions of this member and share type end on {{valid_until}}, so it can't be told which one this row continues. Put the subscription number of the one it continues in the row's subscription_number column."
+    }
   },
   "payment_cycle": {
     "unknown": "There is no payment cycle \"{{payment_cycle}}\"."
@@ -372,6 +378,9 @@
     "date_format": "Invalid document date — please use the YYYY-MM-DD format."
   },
   "billing_profile": {
+    "already_exists": "Member {{member_number}} already has a billing profile. The import only creates new ones and never overwrites an existing profile or mandate.",
+    "mandate_reference_taken": "The mandate reference {{sepa_mandate_reference}} is already in use.",
+    "iban_invalid": "The IBAN is not valid. Check the country code, the length and the check digits.",
     "iban_locked": "The SEPA mandate has already been used — its IBAN can no longer be changed. To use a different account, replace the mandate (a new mandate with a new mandate reference); the account must not be swapped silently.",
     "mandate_already_used": "This SEPA mandate has already been collected against. The bank details can no longer be changed here — that requires a new mandate. Please contact the office.",
     "mandate_deactivated": "The office has deactivated this SEPA mandate. It can't be reactivated here — please contact the office.",
@@ -402,7 +411,9 @@
   },
   "crate_line": {
     "invalid_id": "Invalid crate line — please reload the page and try again.",
-    "changed": "The crate lines have changed in the meantime — please reload the page and make the change again."
+    "changed": "The crate lines have changed in the meantime — please reload the page and make the change again.",
+    "offer_bound": "These crates come with order lines and follow their amounts — change the order line instead. Crates added here can be changed here.",
+    "offer_bound_fields": "The price, discount and note of these crates come from their order lines and are set anew whenever those are saved — change the order line instead. Only crates added here take a note."
   },
   "amount": {
     "invalid": "Invalid amount — please enter a valid number."
@@ -583,10 +594,7 @@
     "account_locked": "Too many failed login attempts — this account is temporarily locked. Please try again later.",
     "refresh_token_missing": "Session expired — please sign in again.",
     "refresh_token_invalid": "Session invalid or expired — please sign in again.",
-    "not_super_admin_token": "This session has no platform permission — please sign in as a platform administrator.",
-    "backup_script_missing": "The backup script was not found on the server. Please check the server configuration.",
-    "backup_failed": "The backup failed. Please check the server log and try again.",
-    "backup_timed_out": "The backup took too long and was aborted. Please try again later."
+    "not_super_admin_token": "This session has no platform permission — please sign in as a platform administrator."
   },
   "accounting": {
     "email_missing": "No accounting email is configured — please add one in the email configuration."

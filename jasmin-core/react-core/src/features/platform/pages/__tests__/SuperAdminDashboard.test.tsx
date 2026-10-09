@@ -1,7 +1,8 @@
 /**
- * The super-admin dashboard: the tenant list with its counts, the database
- * backups, and the create-tenant modal. Super-admin endpoints have no
- * generated client, so the shared axios instance is the boundary mocked here.
+ * The super-admin dashboard: the tenant list with its counts, the note on
+ * where the database backups live, and the create-tenant modal. Super-admin
+ * endpoints have no generated client, so the shared axios instance is the
+ * boundary mocked here.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -36,8 +37,6 @@ vi.mock("@shared/contexts/AuthContext", () => ({
 import SuperAdminDashboard from "../SuperAdminDashboard";
 
 const TENANTS_URL = "/api/super-admin/tenants/";
-const BACKUPS_URL = "/api/super-admin/backups/";
-const TRIGGER_BACKUP_URL = "/api/super-admin/backups/trigger/";
 
 interface TenantFixture {
   id: number;
@@ -47,12 +46,6 @@ interface TenantFixture {
   is_active?: boolean;
   created_on?: string;
   user_count?: number;
-}
-
-interface BackupFixture {
-  filename: string;
-  size_human: string;
-  created_at: string;
 }
 
 const NORTH: TenantFixture = {
@@ -78,19 +71,11 @@ const SOUTH: TenantFixture = {
 // A tenant row that carries none of the optional fields.
 const EAST: TenantFixture = { id: 9, schema_name: "farm_east", name: "East Farm" };
 
-const NIGHTLY: BackupFixture = {
-  filename: "jasmin-2026-10-04.sql.gpg",
-  size_human: "12.4 MB",
-  created_at: "2026-10-04T01:00:00Z",
-};
-
 // What the mocked backend currently returns; a test changes it to simulate a
 // server-side change that a refetch then picks up.
 let backend: {
   tenants: TenantFixture[];
   tenantsError: unknown;
-  backups: BackupFixture[];
-  backupsError: unknown;
 };
 
 function serveGets(overrides: Record<string, () => Promise<unknown>> = {}) {
@@ -101,11 +86,6 @@ function serveGets(overrides: Record<string, () => Promise<unknown>> = {}) {
       return backend.tenantsError
         ? Promise.reject(backend.tenantsError)
         : Promise.resolve({ data: backend.tenants });
-    }
-    if (url === BACKUPS_URL) {
-      return backend.backupsError
-        ? Promise.reject(backend.backupsError)
-        : Promise.resolve({ data: { backups: backend.backups } });
     }
     return Promise.reject(new Error(`Unexpected GET ${url}`));
   });
@@ -136,8 +116,6 @@ beforeEach(() => {
   backend = {
     tenants: [NORTH, SOUTH],
     tenantsError: null,
-    backups: [NIGHTLY],
-    backupsError: null,
   };
   api.get.mockReset();
   serveGets();
@@ -203,12 +181,9 @@ function tenantCells(schemaName: string): Record<string, HTMLElement> {
 
 function backupsSection(): HTMLElement {
   return screen
-    .getByRole("heading", { level: 2, name: "Database Backups" })
+    .getByRole("heading", { level: 2, name: "platform.backups.title" })
     .closest(".sa-section") as HTMLElement;
 }
-
-const NO_BACKUPS =
-  "No backups found. Trigger a backup or configure the backup container.";
 
 describe("SuperAdminDashboard access", () => {
   it.each([
@@ -419,120 +394,19 @@ describe("SuperAdminDashboard tenant age", () => {
 });
 
 describe("SuperAdminDashboard backups", () => {
-  it("lists the backups with their size and creation time", async () => {
+  it("points to the backup service instead of listing or starting backups", async () => {
     renderPage();
     await findTenantsSection();
 
-    const row = (await screen.findByText(NIGHTLY.filename)).closest(
-      "tr",
-    ) as HTMLElement;
-    expect(within(row).getByText("12.4 MB")).toBeInTheDocument();
+    const section = backupsSection();
     expect(
-      within(row).getByText(
-        new Date(NIGHTLY.created_at).toLocaleString("de-DE"),
-      ),
+      within(section).getByText("platform.backups.note"),
     ).toBeInTheDocument();
-  });
-
-  it("shows a loading text until the backups arrive", async () => {
-    const backups = deferred();
-    serveGets({ [BACKUPS_URL]: () => backups.promise });
-    renderPage();
-    await findTenantsSection();
-
+    expect(within(section).queryByRole("button")).not.toBeInTheDocument();
+    expect(within(section).queryByRole("table")).not.toBeInTheDocument();
     expect(
-      within(backupsSection()).getByText("Loading backups..."),
-    ).toBeInTheDocument();
-
-    backups.resolve({ data: { backups: [NIGHTLY] } });
-    expect(await screen.findByText(NIGHTLY.filename)).toBeInTheDocument();
-  });
-
-  it("shows the backup hint when there are no backups yet", async () => {
-    backend.backups = [];
-    renderPage();
-    await findTenantsSection();
-
-    expect(await screen.findByText(NO_BACKUPS)).toBeInTheDocument();
-    expect(
-      within(backupsSection()).queryByRole("table"),
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows the backup hint when the backups cannot be listed", async () => {
-    backend.backupsError = apiError("Backup volume is not mounted", 500);
-    renderPage();
-    await findTenantsSection();
-
-    expect(await screen.findByText(NO_BACKUPS)).toBeInTheDocument();
-    expect(
-      within(backupsSection()).queryByRole("table"),
-    ).not.toBeInTheDocument();
-  });
-
-  it("starts a backup and reloads the list", async () => {
-    const started = deferred();
-    api.post.mockReturnValue(started.promise);
-    const user = userEvent.setup();
-    renderPage();
-    await screen.findByText(NIGHTLY.filename);
-
-    await user.click(screen.getByRole("button", { name: "Backup Now" }));
-
-    expect(api.post).toHaveBeenCalledWith(TRIGGER_BACKUP_URL);
-    expect(
-      screen.getByRole("button", { name: "Creating backup..." }),
-    ).toBeDisabled();
-
-    backend.backups = [
-      {
-        filename: "jasmin-2026-10-05.sql.gpg",
-        size_human: "12.5 MB",
-        created_at: "2026-10-05T10:00:00Z",
-      },
-      NIGHTLY,
-    ];
-    started.resolve({ data: {} });
-
-    expect(
-      await screen.findByText("jasmin-2026-10-05.sql.gpg"),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByRole("button", { name: "Backup Now" }),
-    ).toBeEnabled();
-    expect(getCalls(BACKUPS_URL)).toBe(2);
-  });
-
-  it("reports a backup that could not be started", async () => {
-    api.post.mockRejectedValue(apiError("Backup container unreachable", 502));
-    const user = userEvent.setup();
-    renderPage();
-    await screen.findByText(NIGHTLY.filename);
-
-    await user.click(screen.getByRole("button", { name: "Backup Now" }));
-
-    await waitFor(() =>
-      expect(notify.error).toHaveBeenCalledWith("Backup container unreachable"),
-    );
-    expect(
-      await screen.findByRole("button", { name: "Backup Now" }),
-    ).toBeEnabled();
-    expect(getCalls(BACKUPS_URL)).toBe(1);
-  });
-});
-
-describe("SuperAdminDashboard backup failure without a reason", () => {
-  it("says the backup could not be started", async () => {
-    api.post.mockRejectedValue({ isAxiosError: true, response: { status: 502 } });
-    const user = userEvent.setup();
-    renderPage();
-    await screen.findByText(NIGHTLY.filename);
-
-    await user.click(screen.getByRole("button", { name: "Backup Now" }));
-
-    await waitFor(() =>
-      expect(notify.error).toHaveBeenCalledWith("Failed to start the backup"),
-    );
+      api.get.mock.calls.every(([url]) => !String(url).includes("backups")),
+    ).toBe(true);
   });
 });
 

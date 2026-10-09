@@ -2,16 +2,27 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.commissioning.serializers.import_natural_keys import (
+    resolve_member_by_number,
+)
 from apps.commissioning.serializers.serializers_mixin import (
     MemberStringFieldMixin,
 )
 from apps.shared.iban_validator import validate_iban as validate_iban_format
 from apps.shared.pii_masking import MaskedIBANFieldMixin
 
-from .errors import IbanLocked, MandateReferenceLocked, SepaMandateSignedInFuture
+from .errors import (
+    BillingProfileAlreadyExists,
+    BillingProfileIbanInvalid,
+    IbanLocked,
+    MandateReferenceLocked,
+    MandateReferenceTaken,
+    SepaMandateSignedInFuture,
+)
 from .models import BillingProfile, BillingRun, ChargeSchedule
 
 
@@ -23,12 +34,12 @@ def normalized_iban(value: str) -> str:
     on one save and unspaced on the next; comparing the raw strings would read
     a re-typed identical IBAN as a change of account.
 
-    This is also the form that gets STORED. pain.008.001.02 restricts the
-    debtor IBAN to ``[A-Z]{2}[0-9]{2}[a-zA-Z0-9]{1,30}`` and the export only
-    strips spaces, so a lower-cased IBAN kept as typed fails XSD validation —
-    which aborts the whole batch, for every member in the run, not just this
-    one. Normalising on the way in keeps the comparison form and the stored
-    form the same.
+    This is also the form that gets STORED, and the SEPA export applies it
+    once more. pain.008.001.02 restricts the debtor IBAN to
+    ``[A-Z]{2}[0-9]{2}[a-zA-Z0-9]{1,30}``, so a lower-cased IBAN fails XSD
+    validation — which aborts the whole batch, for every member in the run,
+    not just this one. Normalising on the way in keeps the comparison form and
+    the stored form the same.
     """
     return "".join(value.split()).upper()
 
@@ -370,7 +381,8 @@ class SepaMandateImportSerializer(serializers.Serializer):
 
       member_number                  int   — Member.member_number (unique)
       account_holder                 str   — name on the bank account
-      iban                           str   — validated IBAN
+      iban                           str   — validated IBAN, stored without
+                                             whitespace and upper-cased
       sepa_mandate_reference         str   — optional; blank → auto-generated
       sepa_mandate_signed_at         date  — signed date (YYYY-MM-DD)
       sepa_mandate_paper_received_at date  — optional; paper mandate received
@@ -385,32 +397,43 @@ class SepaMandateImportSerializer(serializers.Serializer):
         required=False, allow_null=True
     )
 
+    def validate_iban(self, value):
+        # Checked and stored in the canonical form, like the office and
+        # self-service writes. Raised as a coded error rather than a field
+        # validation message so the import reports it under its own code.
+        iban = normalized_iban(value)
+        try:
+            validate_iban_format(iban)
+        except DjangoValidationError as exc:
+            raise BillingProfileIbanInvalid(
+                "The IBAN is not valid: check the country code, the length and "
+                "the check digits.",
+                field="iban",
+            ) from exc
+        return iban
+
     def validate_sepa_mandate_signed_at(self, value):
         return validate_mandate_signature_date(value)
 
-    @staticmethod
-    def _resolve_member(number: int):
-        from apps.commissioning.models import Member
-
-        member = Member.objects.filter(member_number=number).first()
-        if member is None:
-            raise serializers.ValidationError(
-                {"member_number": f"No member with number {number}."}
-            )
-        return member
-
     def validate(self, attrs):
-        member = self._resolve_member(attrs["member_number"])
+        member = resolve_member_by_number(attrs["member_number"])
         # Create-only: never touch an existing profile / live mandate.
         if BillingProfile.objects.filter(member=member).exists():
-            raise serializers.ValidationError(
-                {
-                    "member_number": (
-                        f"Member {attrs['member_number']} already has a billing "
-                        "profile — skipped (create-only import; an existing "
-                        "profile/mandate is never overwritten)."
-                    )
-                }
+            raise BillingProfileAlreadyExists(
+                f"Member {attrs['member_number']} already has a billing profile; "
+                "the import never overwrites an existing profile or mandate.",
+                field="member_number",
+                details={"member_number": attrs["member_number"]},
+            )
+        reference = attrs.get("sepa_mandate_reference")
+        if (
+            reference
+            and BillingProfile.objects.filter(sepa_mandate_reference=reference).exists()
+        ):
+            raise MandateReferenceTaken(
+                f"Mandate reference {reference} is already in use.",
+                field="sepa_mandate_reference",
+                details={"sepa_mandate_reference": reference},
             )
         attrs["_member"] = member
         return attrs

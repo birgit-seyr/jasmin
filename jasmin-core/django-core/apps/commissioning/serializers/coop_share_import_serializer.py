@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from ..errors import MemberNumberUnknown
-from ..models import CoopShare, Member
+from ..models import CoopShare
+from .import_natural_keys import resolve_member_by_number
 
 
 class CoopShareImportSerializer(serializers.Serializer):
@@ -54,17 +54,6 @@ class CoopShareImportSerializer(serializers.Serializer):
     paid_at = serializers.DateTimeField(required=False, allow_null=True)
     note = serializers.CharField(required=False, allow_blank=True)
 
-    @staticmethod
-    def _resolve_member(number: int) -> Member:
-        member = Member.objects.filter(member_number=number).first()
-        if member is None:
-            raise MemberNumberUnknown(
-                f"No member with number {number}.",
-                field="member_number",
-                details={"member_number": number},
-            )
-        return member
-
     def validate_amount_of_coop_shares(self, value):
         from ..services.coop_share_service import CoopShareService
 
@@ -75,7 +64,7 @@ class CoopShareImportSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs):
-        attrs["_member"] = self._resolve_member(attrs["member_number"])
+        attrs["_member"] = resolve_member_by_number(attrs["member_number"])
         return attrs
 
     def create(self, validated_data) -> CoopShare:

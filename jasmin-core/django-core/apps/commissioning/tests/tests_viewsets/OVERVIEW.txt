@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-1241 tests | 235 test classes | 43 files
+1256 tests | 236 test classes | 43 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 Counts are collected cases, so a parametrized method counts once per case.
@@ -128,7 +128,7 @@ test_coop_share_transfer.py (50 tests) — office coop share transfer between me
                                                keeps shares (409) and its minimum (400); a row no transfer
                                                created → 400; anonymous refused
 
-test_crate_line_ids.py (44 tests) — a crate line is one crate type at one price, rabatt and tax rate
+test_crate_line_ids.py (79 tests) — a crate line is one crate type at one price, rabatt and tax rate
 ────────────────────────────────────────────────────────────────────────────────────────────────────
   TestDocumentCrateLineIds                32   per delivery note / invoice: each line has an id of its own,
                                                kept through a price edit and shared with the document's
@@ -141,16 +141,33 @@ test_crate_line_ids.py (44 tests) — a crate line is one crate type at one pric
                                                another document's row is never touched; a malformed id or
                                                another crate type's line → 400 crate_line.invalid_id; create
                                                answers with its new row's line
+  TestDocumentCrateLineNotes              16   per delivery note / invoice: an update writes its note on every
+                                               row of its line; an amount change without a note keeps the
+                                               line's notes; a line written anew takes the note sent, else none;
+                                               the crate lines, the document's crate_items and an update's
+                                               answer carry each line's note
   TestSummaryInvoiceAcrossACratePriceChange 1 a summary invoice billing a crate at two prices corrects one price
                                                band on its own
-  TestOrderCrateLineIds                   11   two rows set to 5 give 5, not 10; a direct line edit leaves the
+  TestOrderCrateLineIds                   19   two rows set to 5 give 5, not 10; a direct line edit leaves the
                                                offer-bound line alone; a bare crate type id sets the type total;
-                                               a reduction comes off the direct rows before the deposit rows,
-                                               never below zero, and the row naming the line keeps a crate, so
-                                               a lowered deposit line leaves nothing behind its deleted order
-                                               line or on the delivery note; a finalized order → 409; a delete
-                                               removes only its line's direct rows; a gone row → 409; a
-                                               malformed id → 400; create answers with its new row's line
+                                               a reduction below the deposit crates (by line or by crate type)
+                                               → 409 crate_line.offer_bound; a reduction comes off the rows
+                                               added to the order, never below zero, the answer naming the line
+                                               by a row it keeps; an increase carries the note sent on its
+                                               added row, not the deposit row, and keeps the notes otherwise;
+                                               a finalized order → 409; a delete removes only its line's
+                                               direct rows, a line of deposit crates alone → 409
+                                               crate_line.offer_bound, a mixed line keeps its deposits; a gone
+                                               row → 409; a malformed id → 400; create answers with its new
+                                               row's line
+  TestOrderCrateLineOfferBoundFields      11   a price or rabatt change on a line holding deposit crates (alone
+                                               or mixed, by line or by crate type) → 409
+                                               crate_line.offer_bound_fields, nothing written; the line's own
+                                               values sent back with an amount change go through; a note on
+                                               deposit crates alone, or with a reduction to them, → 409, on a
+                                               mixed line it goes on the added crates; a line of added crates
+                                               still takes a new price, rabatt and note; the crate lines carry
+                                               offer_bound_amount and the line's note
 
 test_crates_viewsets.py (48 tests)
 ──────────────────────────────────

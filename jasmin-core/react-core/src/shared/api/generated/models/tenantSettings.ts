@@ -205,7 +205,6 @@ export interface TenantSettings {
    */
   max_delivery_station_changes?: number;
   default_planning_granularity?: DefaultPlanningGranularityEnum;
-  uses_pledge_round?: boolean;
   uploads_weekly_share_amount?: boolean;
   /** @pattern ^-?\d{0,3}(?:\.\d{0,2})?$ */
   default_tax_rate_articles?: string;
@@ -228,8 +227,6 @@ export interface TenantSettings {
    * @maximum 28
    */
   sepa_collection_day_of_month?: number;
-  /** Has no effect: every deletion request needs an office/admin approval after the email-confirm step, whatever this says. */
-  require_admin_approval_for_gdpr_deletion?: boolean;
   requires_paper_signature_for_membership?: boolean;
   requires_paper_signature_for_cancellation_of_membership?: boolean;
   requires_paper_signature_for_sepa_mandate?: boolean;

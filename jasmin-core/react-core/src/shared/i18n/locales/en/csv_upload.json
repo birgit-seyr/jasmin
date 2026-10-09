@@ -28,5 +28,24 @@
     "share_article": "Share articles",
     "delivery_station": "Delivery stations",
     "reseller": "Resellers"
+  },
+  "type_hint": {
+    "text": "string",
+    "true_false": "true|false",
+    "date": "YYYY-MM-DD",
+    "time": "HH:MM",
+    "number": "number",
+    "integer": "integer",
+    "integer_non_negative": "integer (>=0)",
+    "integer_non_positive": "integer (<=0)",
+    "decimal_1dp": "decimal (1dp)",
+    "decimal_2dp": "decimal (2dp)",
+    "decimal_3dp": "decimal (3dp)",
+    "decimal_non_negative_2dp": "decimal (>=0 2dp)",
+    "decimal_non_positive_2dp": "decimal (<=0 2dp)",
+    "decimal_non_negative_3dp": "decimal (>=0 3dp)",
+    "decimal_non_positive_3dp": "decimal (<=0 3dp)",
+    "percentage": "percentage",
+    "week_number": "week number"
   }
 }

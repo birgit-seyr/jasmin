@@ -32,10 +32,12 @@ export PGPASSWORD="${POSTGRES_PASSWORD}"
 # GDPR: encryption passphrase (required)
 BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY must be set}"
 
-# Optional off-host push (scaffold). Set RCLONE_REMOTE (e.g.
-# "storagebox:jasmin-backups") and provide an rclone config via RCLONE_CONFIG (a
-# file mounted read-only into this container) to copy every freshly written,
-# already-encrypted artifact off-host. Unset -> local-only backups (a no-op).
+# Optional off-host push. The rclone config lives at /backups/rclone.conf (the
+# ./backups mount), created with
+#   docker compose run --rm --entrypoint rclone backup --config /backups/rclone.conf config
+# With RCLONE_REMOTE (e.g. "storagebox:jasmin-backups") and
+# RCLONE_CONFIG=/backups/rclone.conf set in .env, every freshly written,
+# already-encrypted artifact is copied off-host. Unset -> local-only backups.
 RCLONE_REMOTE="${RCLONE_REMOTE:-}"
 
 # ── Helpers ────────────────────────────────────────────────────

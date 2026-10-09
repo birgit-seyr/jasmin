@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Restore drill — restores a backup into a throwaway sandbox postgres and
 # writes a per-table row-count comparison vs the live prod DB, dry-runs the
-# GDPR erasure replay against the restored data, then unpacks the newest
+# GDPR erasure replay against the restored data, then unpacks the chosen
 # media archive to prove that half restores too.
 #
 # Usage:
@@ -11,6 +11,18 @@
 #
 #     MEDIA_ARCHIVE=./backups/bar_media_20260525_020000.tar.gz.gpg \
 #         ./scripts/restore_drill.sh                   # pin the media archive
+#
+#     DRILL_PICK=random ./scripts/restore_drill.sh     # a random older dump
+#                                                      # and media archive
+#
+# Artifact choice:
+#     By default the drill opens the newest dump and the newest media archive.
+#     DRILL_PICK=random instead picks, independently for each, a random one of
+#     the artifacts OLDER than the newest — the weeklies and monthlies the GFS
+#     retention keeps are otherwise never opened until they are needed. With
+#     only one artifact present it falls back to that one. An explicit backup
+#     path or MEDIA_ARCHIVE always wins. Expect the row-count comparison to
+#     show more drift against live for an older dump.
 #
 # Requires:
 #     - docker
@@ -66,13 +78,38 @@ MEDIA_FAILED=0
 APP_ENV_FILE=""
 REPLAY_STATUS="not run"
 REPLAY_FAILED=0
+# "newest" (default) or "random" — see "Artifact choice" in the header.
+DRILL_PICK="${DRILL_PICK:-newest}"
+case "$DRILL_PICK" in
+    newest | random) ;;
+    *)
+        echo "ERROR: DRILL_PICK must be 'newest' or 'random', got '$DRILL_PICK'." >&2
+        exit 1
+        ;;
+esac
+
+# Print one artifact path from the paths on stdin, which arrive newest first
+# (``ls -t``): the newest, or with DRILL_PICK=random a random older one.
+pick_artifact() {
+    local paths=()
+    local path
+    while IFS= read -r path; do
+        [ -n "$path" ] && paths+=("$path")
+    done
+    [ "${#paths[@]}" -gt 0 ] || return 0
+    if [ "$DRILL_PICK" = "random" ] && [ "${#paths[@]}" -gt 1 ]; then
+        printf '%s\n' "${paths[1 + RANDOM % (${#paths[@]} - 1)]}"
+    else
+        printf '%s\n' "${paths[0]}"
+    fi
+}
 
 # ── Argument: backup file ──────────────────────────────────────────────────
 BACKUP="${1:-}"
 if [ -z "$BACKUP" ]; then
-    # Pick the newest backup under ./backups/. ``ls -t`` sorts by mtime
+    # Pick from the backups under ./backups/. ``ls -t`` sorts by mtime
     # descending; redirect stderr because either glob may not match.
-    BACKUP="$(ls -t backups/*.sql.gz.gpg backups/*.sql 2>/dev/null | head -n 1 || true)"
+    BACKUP="$(ls -t backups/*.sql.gz.gpg backups/*.sql 2>/dev/null | pick_artifact || true)"
 fi
 
 if [ -z "$BACKUP" ] || [ ! -f "$BACKUP" ]; then
@@ -96,6 +133,7 @@ BACKUP_MTIME=$(date -r "$BACKUP" '+%Y-%m-%d %H:%M:%S')
     echo "# Restore drill — $(date '+%Y-%m-%d %H:%M:%S')"
     echo ""
     echo "- **Backup file:** \`$BACKUP\`"
+    echo "- **Artifact choice:** ${DRILL_PICK}"
     echo "- **Backup mtime:** $BACKUP_MTIME"
     echo "- **Operator:** $(whoami)"
     echo "- **Host:** $(hostname)"
@@ -320,7 +358,7 @@ fi
 # The extract target is a throwaway mktemp dir removed by the exit trap. It is
 # never media_volume: that holds the live uploads, and the drill must not be
 # able to write anywhere near them. ./backups/ is read-only here too.
-MEDIA_ARCHIVE="${MEDIA_ARCHIVE:-$(ls -t backups/*_media_*.tar.gz.gpg 2>/dev/null | head -n 1 || true)}"
+MEDIA_ARCHIVE="${MEDIA_ARCHIVE:-$(ls -t backups/*_media_*.tar.gz.gpg 2>/dev/null | pick_artifact || true)}"
 
 {
     echo ""

@@ -6,7 +6,6 @@ Submodules:
                               (used as ``authentication_classes = [...]`` on
                               viewsets; not a "view" despite living here, so
                               it keeps no ``_views`` suffix).
-  - ``backup_views``        — backup list / trigger RPC endpoints.
 
 The DRF ``viewsets.py`` (TenantManagementViewSet) lives at the
 super_admin top level — separate concern, separate file.
@@ -23,7 +22,3 @@ from .auth_views import (  # noqa: F401
     super_admin_token_refresh_view,
 )
 from .authentication import SuperAdminJWTAuthentication  # noqa: F401
-from .backup_views import (  # noqa: F401
-    super_admin_list_backups_view,
-    super_admin_trigger_backup_view,
-)

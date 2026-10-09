@@ -1,0 +1,372 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index b619e7c..8e8944a 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -308,7 +308,8 @@ jobs:
+             -keyout /etc/letsencrypt/live/$FRONTEND_DOMAIN/privkey.pem \
+             -out /etc/letsencrypt/live/$FRONTEND_DOMAIN/fullchain.pem \
+             -subj "/CN=$FRONTEND_DOMAIN" >/dev/null 2>&1
+-          cp /work/super_admin_allowed_ips.conf /etc/nginx/super_admin_allowed_ips.conf
++          mkdir -p /etc/nginx/super_admin_allowlist
++          cp /work/super_admin_allowlist/super_admin_allowed_ips.conf /etc/nginx/super_admin_allowlist/super_admin_allowed_ips.conf
+           # Security-header snippets included by the template; the
+           # gateway mounts these too, so they must be present for `nginx -t`.
+           cp /work/security_headers.conf /etc/nginx/security_headers.conf
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 5f51db0..3904f72 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -1139,6 +1139,9 @@ prefix of those the database has applied.
+ `pg_dump` plus a media archive (`backups/backup.sh`), with an rclone off-host
+ push scaffold; deploy.sh adds a DB-only `predeploy` dump before every deploy.
+ `BACKUP_ENCRYPTION_KEY` is required; compose refuses to start without it.
++The dumps log in as a read-only role (`BACKUP_DB_USER` / `BACKUP_DB_PASSWORD`,
++granted `pg_read_all_data`); while those are unset, compose falls back to the
++owner and backup.sh and deploy.sh warn.
+ Don't hand-roll `pg_dump`; that skips the encrypted path. The restore procedure
+ is in the header of `backups/restore.sh`.
+ 
+diff --git a/backups/backup.sh b/backups/backup.sh
+index eb2875e..039b73d 100644
+--- a/backups/backup.sh
++++ b/backups/backup.sh
+@@ -25,9 +25,16 @@ SELF="/usr/local/bin/backup.sh"
+ DB_HOST="${POSTGRES_HOST:-postgres}"
+ DB_PORT="${POSTGRES_PORT:-5432}"
+ DB_NAME="${POSTGRES_DB}"
+-DB_USER="${POSTGRES_USER}"
+-
+-export PGPASSWORD="${POSTGRES_PASSWORD}"
++# The dumps and the ledger only read, so they log in as a read-only role
++# (pg_read_all_data): a compromised backup container must not be able to
++# write to or drop the database. docker-compose.yml falls back to the owner's
++# credentials while BACKUP_DB_USER is unset in .env; POSTGRES_USER here is
++# only the owner's name, passed so that fallback can be reported.
++DB_USER="${BACKUP_DB_USER:?BACKUP_DB_USER must be set}"
++export PGPASSWORD="${BACKUP_DB_PASSWORD:?BACKUP_DB_PASSWORD must be set}"
++if [ "$DB_USER" = "${POSTGRES_USER:-}" ]; then
++    echo "[$(date)] WARN: dumping as the database owner ${DB_USER}; set BACKUP_DB_USER and BACKUP_DB_PASSWORD in .env to the read-only backup role" >&2
++fi
+ 
+ # GDPR: encryption passphrase (required)
+ BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY must be set}"
+diff --git a/backups/restore.sh b/backups/restore.sh
+index d276f22..a238302 100644
+--- a/backups/restore.sh
++++ b/backups/restore.sh
+@@ -14,9 +14,13 @@ set -eu
+ #      Nothing may write to the database or serve from it while it is
+ #      replaced, and nothing may serve the personal data the restore brings
+ #      back before step 3 has erased it again.
+-#   2. docker compose exec backup /backups/restore.sh /backups/<file>.sql.gz.gpg
++#   2. export POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)"
++#      docker compose exec -e POSTGRES_PASSWORD backup \
++#          sh /backups/restore.sh /backups/<file>.sql.gz.gpg
+ #      Refreshes the GDPR deletion ledger from the live database first, then
+-#      restores.
++#      restores. The restore writes, so it runs as the database owner, whose
++#      password the backup container does not hold: ``-e POSTGRES_PASSWORD``
++#      hands it over from the shell for this one command.
+ #   3. Only when the media volume is lost or damaged: unpack the media archive
+ #      taken with that backup (<db>_media_<timestamp>.tar.gz.gpg), BEFORE the
+ #      replay — the replay deletes the files of everyone erased since:
+@@ -48,9 +52,10 @@ BACKUP_FILE="${1:?Usage: restore.sh <backup_file.sql.gz.gpg>}"
+ DB_HOST="${POSTGRES_HOST:-postgres}"
+ DB_PORT="${POSTGRES_PORT:-5432}"
+ DB_NAME="${POSTGRES_DB}"
+-DB_USER="${POSTGRES_USER}"
+-
+-export PGPASSWORD="${POSTGRES_PASSWORD}"
++# The owner, not the read-only role backup.sh dumps with: the restore drops
++# and recreates every object.
++DB_USER="${POSTGRES_USER:?POSTGRES_USER must be set}"
++export PGPASSWORD="${POSTGRES_PASSWORD:?pass the owner password: docker compose exec -e POSTGRES_PASSWORD backup ... (see the header)}"
+ BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY must be set}"
+ 
+ LEDGER_FILE="/backups/gdpr-deletion-ledger.jsonl"
+diff --git a/docker-compose.yml b/docker-compose.yml
+index 4151331..5e2cfa2 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -280,8 +280,15 @@ services:
+     pids_limit: 128
+     environment:
+       POSTGRES_DB: ${POSTGRES_DB}
++      # The owner's name only, without its password: backup.sh warns when it
++      # dumps as the owner, and restore.sh restores as it with the password
++      # handed in at `docker compose exec -e POSTGRES_PASSWORD` time.
+       POSTGRES_USER: ${POSTGRES_USER}
+-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
++      # The read-only login (pg_read_all_data) the dumps and the GDPR ledger
++      # run as. Unset in .env -> the owner's credentials, so backups keep
++      # running until the role exists.
++      BACKUP_DB_USER: ${BACKUP_DB_USER:-${POSTGRES_USER}}
++      BACKUP_DB_PASSWORD: ${BACKUP_DB_PASSWORD:-${POSTGRES_PASSWORD}}
+       POSTGRES_HOST: postgres
+       POSTGRES_PORT: "5432"
+       # Required — the symmetric passphrase for the *.sql.gz.gpg dumps. Compose
+@@ -355,7 +362,10 @@ services:
+       FRONTEND_PORT: "80"
+     volumes:
+       - ./nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+-      - ./nginx/super_admin_allowed_ips.conf:/etc/nginx/super_admin_allowed_ips.conf:ro
++      # The directory, not the file: a file bind-mount pins the inode, so an
++      # edit that replaces the file (vim, sed -i, cp) would stay invisible to
++      # `nginx -s reload` until the container restarts.
++      - ./nginx/super_admin_allowlist:/etc/nginx/super_admin_allowlist:ro
+       - ./nginx/security_headers.conf:/etc/nginx/security_headers.conf:ro
+       - ./nginx/security_headers_admin.conf:/etc/nginx/security_headers_admin.conf:ro
+       - static_volume:/app/staticfiles:ro
+diff --git a/jasmin-core/django-core/config/settings.py b/jasmin-core/django-core/config/settings.py
+index cbf921e..953fc13 100644
+--- a/jasmin-core/django-core/config/settings.py
++++ b/jasmin-core/django-core/config/settings.py
+@@ -575,7 +575,7 @@ TENANT_APPS = [
+     # by TOTP — instead the super-admin host is locked down by an IP
+     # allowlist enforced AT THE NGINX GATEWAY (a dedicated server block
+     # in nginx/nginx.conf.template that includes
+-    # nginx/super_admin_allowed_ips.conf, terminating in ``deny all;``).
++    # nginx/super_admin_allowlist/, terminating in ``deny all;``).
+     # The ``gateway`` CI job (scripts/verify_super_admin_allowlist.sh)
+     # asserts the block + allowlist stay wired so this exemption can't
+     # silently become single-factor-password-only. As app-layer
+@@ -793,7 +793,7 @@ AXES_CLIENT_IP_CALLABLE = "apps.shared.request_utils.client_ip"
+ #   SUPER_ADMIN_ALLOWED_IPS="203.0.113.42,198.51.100.0/29,2001:db8::/64"
+ # UNSET / empty -> middleware is a no-op (dev, and deployments relying solely on
+ # the nginx allowlist, keep working). Keep this in sync with
+-# nginx/super_admin_allowed_ips.conf when set.
++# nginx/super_admin_allowlist/super_admin_allowed_ips.conf when set.
+ SUPER_ADMIN_ALLOWED_IPS = [
+     entry.strip()
+     for entry in os.environ.get("SUPER_ADMIN_ALLOWED_IPS", "").split(",")
+@@ -948,9 +948,9 @@ TWO_FACTOR_ENROLMENT_LIFETIME = timedelta(minutes=15)
+ # which leaves the whole enrolment-mandate login branch unreachable.
+ # Super-admin (public schema) is not eligible for this gate — its host is
+ # instead IP-restricted at the nginx gateway (see the django_otp note in
+-# TENANT_APPS and nginx/super_admin_allowed_ips.conf). That allowlist is
+-# the ONLY thing standing in for 2FA on super-admin, so it is not optional
+-# infra — the ``gateway`` CI job verifies it.
++# TENANT_APPS and nginx/super_admin_allowlist/super_admin_allowed_ips.conf).
++# That allowlist is the ONLY thing standing in for 2FA on super-admin, so it
++# is not optional infra — the ``gateway`` CI job verifies it.
+ TWO_FACTOR_REQUIRED_ROLES: list[str] = [
+     _role.strip()
+     for _role in os.environ.get("TWO_FACTOR_REQUIRED_ROLES", "").split(",")
+diff --git a/nginx/nginx.conf.template b/nginx/nginx.conf.template
+index b1e3689..9dca4e6 100644
+--- a/nginx/nginx.conf.template
++++ b/nginx/nginx.conf.template
+@@ -343,13 +343,10 @@ http {
+     # this block handles ALL traffic to ${SUPER_ADMIN_SUBDOMAIN}.${FRONTEND_DOMAIN}
+     # while tenant subdomains continue to be served by the wildcard block.
+     #
+-    # Edit nginx/super_admin_allowed_ips.conf to add/remove allowed IPs,
+-    # then: docker compose exec gateway nginx -s reload
+-    # CAVEAT: that file is bind-mounted as a SINGLE FILE, so an inode-
+-    # replacing edit (vim / sed -i / cp) leaves this container serving the
+-    # stale allowlist even after `nginx -s reload`. Run
+-    # `docker compose restart gateway` after such an edit (the durable fix
+-    # is a directory bind-mount).
++    # Edit nginx/super_admin_allowlist/super_admin_allowed_ips.conf to
++    # add/remove allowed IPs, then: docker compose exec gateway nginx -s reload
++    # The gateway mounts that file's directory, not the file, so the reload
++    # sees an edit however the editor writes it.
+     server {
+         listen      443 ssl;
+         listen      [::]:443 ssl;
+@@ -357,7 +354,13 @@ http {
+         server_name ${SUPER_ADMIN_SUBDOMAIN}.${FRONTEND_DOMAIN};
+ 
+         # IP allowlist - checked before any routing. Returns 403 for non-allowed.
+-        include /etc/nginx/super_admin_allowed_ips.conf;
++        # The include names one file, not a glob: a glob that matches nothing
++        # loads silently, while a missing file stops nginx from starting.
++        include /etc/nginx/super_admin_allowlist/super_admin_allowed_ips.conf;
++        # The allowlist ends in its own `deny all;`; this one keeps the host
++        # closed if an edit ever drops that line (first match wins, so the
++        # allowlist's `allow` lines above still apply).
++        deny all;
+ 
+         ssl_certificate     /etc/letsencrypt/live/${FRONTEND_DOMAIN}/fullchain.pem;
+         ssl_certificate_key /etc/letsencrypt/live/${FRONTEND_DOMAIN}/privkey.pem;
+diff --git a/scripts/deploy.sh b/scripts/deploy.sh
+index 0cab459..ade266a 100755
+--- a/scripts/deploy.sh
++++ b/scripts/deploy.sh
+@@ -67,6 +67,21 @@ for v in $REQUIRED; do
+ done
+ [ -z "$missing" ] || die "missing/empty required .env vars:$missing"
+ 
++# 1b-bis. The backup service dumps as a read-only role (BACKUP_DB_USER, granted
++# pg_read_all_data) and falls back to the database owner while it is unset.
++# Half a pair would log in with the wrong password and fail every backup.
++BACKUP_DB_USER_VALUE="$(envval BACKUP_DB_USER)"
++BACKUP_DB_PASSWORD_VALUE="$(envval BACKUP_DB_PASSWORD)"
++if [ -n "$BACKUP_DB_USER_VALUE" ] && [ -z "$BACKUP_DB_PASSWORD_VALUE" ]; then
++    die "BACKUP_DB_USER is set but BACKUP_DB_PASSWORD is empty — set both, or neither."
++fi
++if [ -z "$BACKUP_DB_USER_VALUE" ] && [ -n "$BACKUP_DB_PASSWORD_VALUE" ]; then
++    die "BACKUP_DB_PASSWORD is set but BACKUP_DB_USER is empty — set both, or neither."
++fi
++if [ -z "$BACKUP_DB_USER_VALUE" ] || [ "$BACKUP_DB_USER_VALUE" = "$(envval POSTGRES_USER)" ]; then
++    log "WARN: backups dump as the database owner — create the read-only backup role and set BACKUP_DB_USER/BACKUP_DB_PASSWORD in .env"
++fi
++
+ PROJECT="$(envval COMPOSE_PROJECT_NAME)"
+ DOMAIN="$(envval FRONTEND_DOMAIN)"
+ EMAIL="$(envval EMAIL_ADMIN)"
+@@ -210,8 +225,8 @@ log "https://${DOMAIN}/health/ -> HTTP ${code} (expect 200)"
+ echo ""
+ echo "✅ Deploy run complete."
+ echo "   Next (see the runbook, Phase 2.5+):"
+-echo "   1. Add your IP to nginx/super_admin_allowed_ips.conf, then:"
+-echo "        docker compose restart gateway"
++echo "   1. Add your IP to nginx/super_admin_allowlist/super_admin_allowed_ips.conf, then:"
++echo "        docker compose exec gateway nginx -s reload"
+ echo "   2. Log in at https://${ADMIN_HOST}.${DOMAIN} and create your tenants."
+ echo "   3. Configure EACH tenant's own SMTP before inviting its users."
+ echo "   4. Wire off-host backups (Phase 3), then run scripts/restore_drill.sh."
+diff --git a/scripts/update.sh b/scripts/update.sh
+index 7f43da7..fba2062 100755
+--- a/scripts/update.sh
++++ b/scripts/update.sh
+@@ -10,8 +10,9 @@
+ #
+ # It:
+ #   1. refuses to run if the working tree has unexpected local changes
+-#      (nginx/super_admin_allowed_ips.conf is the one EXPECTED server-local
+-#      edit — operator IPs live only on the server, never in git)
++#      (nginx/super_admin_allowlist/super_admin_allowed_ips.conf is the one
++#      EXPECTED server-local edit — operator IPs live only on the server,
++#      never in git)
+ #   2. fetches + shows what's incoming, fast-forwards to origin/main
+ #   3. hands off to deploy.sh (env validation, image build, an encrypted
+ #      snapshot of the database, compose up, wait-for-healthy, smoke test) —
+@@ -34,7 +35,7 @@ cd "$REPO_ROOT"
+ # server. Untracked files (.env, deploy.log, backups/*, certbots/linode.ini)
+ # are fine: git pull never touches them.
+ dirt="$(git status --porcelain --untracked-files=no \
+-        | grep -vE '^.M nginx/super_admin_allowed_ips\.conf$' || true)"
++        | grep -vE '^.M nginx/super_admin_allowlist/super_admin_allowed_ips\.conf$' || true)"
+ if [ -n "$dirt" ]; then
+     echo "❌ Unexpected local changes on the server — resolve before updating:" >&2
+     echo "$dirt" >&2
+diff --git a/scripts/validate_gateway_config.sh b/scripts/validate_gateway_config.sh
+index f2f0491..c307131 100755
+--- a/scripts/validate_gateway_config.sh
++++ b/scripts/validate_gateway_config.sh
+@@ -32,7 +32,7 @@ docker run --rm \
+     -e BACKEND_HOST=backend -e BACKEND_PORT=8000 \
+     -e FRONTEND_HOST=frontend -e FRONTEND_PORT=80 \
+     -v "$REPO_ROOT/nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro" \
+-    -v "$REPO_ROOT/nginx/super_admin_allowed_ips.conf:/etc/nginx/super_admin_allowed_ips.conf:ro" \
++    -v "$REPO_ROOT/nginx/super_admin_allowlist:/etc/nginx/super_admin_allowlist:ro" \
+     -v "$REPO_ROOT/nginx/security_headers.conf:/etc/nginx/security_headers.conf:ro" \
+     -v "$REPO_ROOT/nginx/security_headers_admin.conf:/etc/nginx/security_headers_admin.conf:ro" \
+     -v "${PROJECT}_certbot_conf:/etc/letsencrypt:ro" \
+diff --git a/scripts/verify_super_admin_allowlist.sh b/scripts/verify_super_admin_allowlist.sh
+index 39bfd42..ff1f309 100755
+--- a/scripts/verify_super_admin_allowlist.sh
++++ b/scripts/verify_super_admin_allowlist.sh
+@@ -32,7 +32,7 @@ set -eu
+ 
+ repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+ template="$repo_root/nginx/nginx.conf.template"
+-allowlist="$repo_root/nginx/super_admin_allowed_ips.conf"
++allowlist="$repo_root/nginx/super_admin_allowlist/super_admin_allowed_ips.conf"
+ 
+ fail() {
+     echo "FAIL: $1" >&2
+@@ -52,12 +52,12 @@ allow_directives=$(grep -vE '^[[:space:]]*(#|$)' "$allowlist" || true)
+ last_directive=$(printf '%s\n' "$allow_directives" | tail -n 1)
+ printf '%s\n' "$last_directive" \
+     | grep -qE '^[[:space:]]*deny[[:space:]]+all;[[:space:]]*$' \
+-    || fail "nginx/super_admin_allowed_ips.conf must end in 'deny all;' (last directive: '${last_directive}')"
++    || fail "nginx/super_admin_allowlist/super_admin_allowed_ips.conf must end in 'deny all;' (last directive: '${last_directive}')"
+ 
+ # --- 1b) no blanket allow (first-match-wins would open the host) -----------
+ if printf '%s\n' "$allow_directives" \
+     | grep -qE '^[[:space:]]*allow[[:space:]]+(all|0\.0\.0\.0/0|::/0);'; then
+-    fail "nginx/super_admin_allowed_ips.conf has a blanket 'allow' (all / 0.0.0.0/0 / ::/0) — that opens the super-admin host to everyone"
++    fail "nginx/super_admin_allowlist/super_admin_allowed_ips.conf has a blanket 'allow' (all / 0.0.0.0/0 / ::/0) — that opens the super-admin host to everyone"
+ fi
+ 
+ # --- render the template the way docker-compose's gateway command does ------
+@@ -85,7 +85,7 @@ printf '%s\n' "$rendered" | awk -v host="$super_admin_host" '
+         }
+         if (in_server) {
+             if (line ~ /server_name/) cur_name = cur_name " " line
+-            if (line ~ /include[[:space:]]+\/etc\/nginx\/super_admin_allowed_ips\.conf;/) cur_include = 1
++            if (line ~ /include[[:space:]]+\/etc\/nginx\/super_admin_allowlist\/super_admin_allowed_ips\.conf;/) cur_include = 1
+         }
+         o = gsub(/\{/, "{"); c = gsub(/\}/, "}"); depth += o - c
+         if (in_server && depth <= server_base) {
+diff --git a/nginx/super_admin_allowed_ips.conf b/nginx/super_admin_allowed_ips.conf
+deleted file mode 100644
+index 30ebdf0..0000000
+--- a/nginx/super_admin_allowed_ips.conf
++++ /dev/null
+@@ -1,30 +0,0 @@
+-# =============================================================================
+-# Super-admin IP allowlist
+-#
+-# Only IPs listed here can reach https://admin.${FRONTEND_DOMAIN}.
+-# Tenant subdomains (tenant1.${FRONTEND_DOMAIN}, ...) are NOT affected by
+-# this file — they remain publicly reachable.
+-#
+-# Edit this file with your current IP, then reload nginx (no rebuild needed):
+-#     docker compose exec gateway nginx -s reload
+-#
+-# CAVEAT: this file is bind-mounted into the gateway as a SINGLE FILE, so an
+-# inode-replacing edit (vim / `sed -i` / `cp`) leaves the container serving the
+-# stale content even after `nginx -s reload`. After such an edit, run
+-#     docker compose restart gateway
+-# instead (or edit in place with `>>`). The durable fix is a directory
+-# bind-mount.
+-#
+-# Find your current IP: https://ifconfig.me/ or `curl -s ifconfig.me`
+-#
+-# Examples:
+-#     allow 203.0.113.42;          # home
+-#     allow 198.51.100.0/29;       # office /29
+-#     allow 2001:db8::/64;         # IPv6 prefix
+-#
+-# IMPORTANT: leave `deny all;` as the last line.
+-# =============================================================================
+-
+-# allow 203.0.113.42;          # <-- replace with your IP
+-
+-deny all;
+diff --git a/nginx/super_admin_allowlist/super_admin_allowed_ips.conf b/nginx/super_admin_allowlist/super_admin_allowed_ips.conf
+new file mode 100644
+index 0000000..3b5630c
+--- /dev/null
++++ b/nginx/super_admin_allowlist/super_admin_allowed_ips.conf
+@@ -0,0 +1,27 @@
++# =============================================================================
++# Super-admin IP allowlist
++#
++# Only IPs listed here can reach https://admin.${FRONTEND_DOMAIN}.
++# Tenant subdomains (tenant1.${FRONTEND_DOMAIN}, ...) are NOT affected by
++# this file — they remain publicly reachable.
++#
++# Edit this file with your current IP, then reload nginx (no rebuild needed):
++#     docker compose exec gateway nginx -s reload
++#
++# The gateway mounts this file's DIRECTORY, so any kind of edit — in place,
++# vim, `sed -i`, `cp` — is what the reload reads. Keep the file name: the
++# gateway includes exactly this path, and nginx refuses to start without it.
++#
++# Find your current IP: https://ifconfig.me/ or `curl -s ifconfig.me`
++#
++# Examples:
++#     allow 203.0.113.42;          # home
++#     allow 198.51.100.0/29;       # office /29
++#     allow 2001:db8::/64;         # IPv6 prefix
++#
++# IMPORTANT: leave `deny all;` as the last line.
++# =============================================================================
++
++# allow 203.0.113.42;          # <-- replace with your IP
++
++deny all;

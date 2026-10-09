@@ -38,18 +38,20 @@ from ..errors import (
     DeliveryDayNumberUnknown,
     DeliveryStationDayAmbiguous,
     DeliveryStationDayUnknown,
-    MemberNumberUnknown,
     PaymentCycleUnknown,
     ShareTypeNameAmbiguous,
     ShareTypeNameUnknown,
     ShareTypeVariationSizeAmbiguous,
     ShareTypeVariationSizeUnknown,
+    SubscriptionAlreadyImported,
+    SubscriptionImportStationDayIncomplete,
+    SubscriptionImportTermPredecessorAmbiguous,
+    SubscriptionTermAlreadyImported,
     SubscriptionTermAlreadyRenewed,
     SubscriptionTermPredecessorAmbiguous,
 )
 from ..models import (
     DeliveryStationDay,
-    Member,
     PaymentCycle,
     SharesDeliveryDay,
     ShareType,
@@ -57,6 +59,7 @@ from ..models import (
     Subscription,
 )
 from ..models.managers import active_on_date_q
+from .import_natural_keys import resolve_member_by_number
 
 
 class SubscriptionImportSerializer(serializers.Serializer):
@@ -105,17 +108,6 @@ class SubscriptionImportSerializer(serializers.Serializer):
     subscription_number = serializers.IntegerField(required=False, allow_null=True)
 
     # ── FK resolvers (each raises a coded error the row loop reports) ──
-
-    @staticmethod
-    def _resolve_member(number: int) -> Member:
-        member = Member.objects.filter(member_number=number).first()
-        if member is None:
-            raise MemberNumberUnknown(
-                f"No member with number {number}.",
-                field="member_number",
-                details={"member_number": number},
-            )
-        return member
 
     @staticmethod
     def _resolve_payment_cycle(choice: str) -> PaymentCycle:
@@ -223,7 +215,7 @@ class SubscriptionImportSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         valid_from = attrs["valid_from"]
-        attrs["_member"] = self._resolve_member(attrs["member_number"])
+        attrs["_member"] = resolve_member_by_number(attrs["member_number"])
         attrs["_payment_cycle"] = self._resolve_payment_cycle(attrs["payment_cycle"])
         attrs["_variation"] = self._resolve_variation(
             attrs["share_type"], attrs["size"], valid_from
@@ -234,12 +226,8 @@ class SubscriptionImportSerializer(serializers.Serializer):
         if station and day is not None:
             attrs["_station_day"] = self._resolve_station_day(station, day, valid_from)
         elif station or day is not None:
-            raise serializers.ValidationError(
-                {
-                    "delivery_station": (
-                        "Provide BOTH delivery_station and delivery_day, or neither."
-                    )
-                }
+            raise SubscriptionImportStationDayIncomplete(
+                missing="delivery_day" if station else "delivery_station"
             )
         else:
             attrs["_station_day"] = None
@@ -260,14 +248,10 @@ class SubscriptionImportSerializer(serializers.Serializer):
                 valid_from=valid_from,
             ).exists()
         ):
-            raise serializers.ValidationError(
-                {
-                    "subscription_number": (
-                        f"Subscription {subscription_number} starting {valid_from} "
-                        f"already exists for member {attrs['member_number']} — "
-                        "skipped (already imported)."
-                    )
-                }
+            raise SubscriptionAlreadyImported(
+                subscription_number=subscription_number,
+                valid_from=valid_from.isoformat(),
+                member_number=attrs["member_number"],
             )
         attrs["_previous_subscription"] = (
             None if attrs["is_trial"] else self._resolve_previous_term(attrs)
@@ -289,24 +273,12 @@ class SubscriptionImportSerializer(serializers.Serializer):
             )
         except SubscriptionTermAlreadyRenewed as exc:
             if exc.details["renewal_valid_from"] == valid_from.isoformat():
-                message = (
-                    f"Subscription {exc.details['predecessor']} already continues "
-                    f"with {exc.details['renewal']} from {valid_from} — skipped "
-                    "(imported before, or drafted by the renewal; delete that "
-                    "draft first if this row should replace it)."
-                )
-            else:
-                message = exc.message
-            raise serializers.ValidationError({"valid_from": message}) from exc
-        except SubscriptionTermPredecessorAmbiguous as exc:
-            raise serializers.ValidationError(
-                {
-                    "subscription_number": (
-                        f"{exc.message} Give this row the subscription_number of "
-                        "the one it continues."
-                    )
-                }
+                raise SubscriptionTermAlreadyImported(**exc.details) from exc
+            raise SubscriptionTermAlreadyRenewed(
+                **exc.details, field="valid_from"
             ) from exc
+        except SubscriptionTermPredecessorAmbiguous as exc:
+            raise SubscriptionImportTermPredecessorAmbiguous(**exc.details) from exc
 
     def create(self, validated_data) -> Subscription:
         # Draft only — no capacity reservation, no live guards, no

@@ -32,7 +32,7 @@ import time_machine
 
 from apps.payments.constants import ChargeStatus
 from apps.payments.errors import SepaExportInvalid
-from apps.payments.models import ChargeSchedule
+from apps.payments.models import BillingProfile, ChargeSchedule
 from apps.payments.services import BillingRunService
 
 
@@ -210,6 +210,29 @@ class TestPain008AmountAndDebtor:
         )
         assert dbtr_nm is not None and dbtr_iban is not None
         assert dbtr_nm.text == billing_profile.account_holder
+        assert dbtr_iban.text == "DE89370400440532013000"
+
+    def test_a_stored_lower_case_iban_is_exported_upper_case(
+        self, tenant, tenant_settings, billing_profile, subscription, member
+    ):
+        # Rows stored before every write path normalised can hold a spaced,
+        # lower-case IBAN; the XSD's upper-case country code would refuse it
+        # and abort the batch for every member in the run.
+        BillingProfile.objects.filter(pk=billing_profile.pk).update(
+            iban="de89 3704 0044 0532 0130 00"
+        )
+
+        root = _export_and_parse(_run_with_one_charge(member, subscription))
+        dbtr_iban = _find(
+            root,
+            "CstmrDrctDbtInitn",
+            "PmtInf",
+            "DrctDbtTxInf",
+            "DbtrAcct",
+            "Id",
+            "IBAN",
+        )
+        assert dbtr_iban is not None
         assert dbtr_iban.text == "DE89370400440532013000"
 
     def test_mandate_id_uses_billing_profile_reference(

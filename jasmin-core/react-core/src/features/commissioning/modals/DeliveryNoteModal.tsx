@@ -34,7 +34,6 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 
 type DeliveryNoteContentRecord = DeliveryNoteResellerContent & TableRecord;
-type CrateContentRecord = CrateDeliveryNoteContent & TableRecord;
 
 interface DeliveryNoteModalProps {
   visible: boolean;
@@ -53,7 +52,7 @@ export default function DeliveryNoteModal({
   const { getSetting } = useTenant();
   // The setting gates crate CREATION (backend). The table shows when the tenant
   // puts crates on documents OR the document already HAS crate rows (see the
-  // ``|| lineItemsCrates.length`` at the render site) — so existing crates,
+  // ``|| crate_items?.length`` at the render site) — so existing crates,
   // incl. on finalized/immutable docs, still show and reconcile to the total.
   const showCratesOnDocuments = Boolean(
     getSetting("crates_should_be_on_documents", true),
@@ -75,11 +74,6 @@ export default function DeliveryNoteModal({
 
   const lineItems = useMemo(
     () => (deliveryNoteData?.line_items ?? []) as DeliveryNoteContentRecord[],
-    [deliveryNoteData],
-  );
-  const lineItemsCrates = useMemo(
-    () =>
-      (deliveryNoteData?.crate_items ?? []) as unknown as CrateContentRecord[],
     [deliveryNoteData],
   );
   const isFinalized = deliveryNoteData?.is_finalized ?? false;
@@ -243,7 +237,7 @@ export default function DeliveryNoteModal({
   );
 
   const { tableProps: crateTableProps } = useDocumentCrateTable({
-    crateItems: lineItemsCrates,
+    crateItems: deliveryNoteData?.crate_items,
     documentField: "delivery_note_id",
     documentId: deliveryNoteId,
     canWrite: !isFinalized && isOffice,
@@ -308,7 +302,7 @@ export default function DeliveryNoteModal({
               "validation.unique.share_article_unit_size_must_be_unique",
             )}
           />
-          {(showCratesOnDocuments || lineItemsCrates.length > 0) && (
+          {(showCratesOnDocuments || !!deliveryNoteData.crate_items?.length) && (
             <>
               <div style={{ marginTop: "4em", marginBottom: "-1em" }}>
                 <h5>{t("commissioning.crates")}</h5>

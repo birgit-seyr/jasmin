@@ -5,5 +5,9 @@
     "rotation_failed": "Die Rotation konnte nicht ausgeführt werden.",
     "secret_copied": "Secret in die Zwischenablage kopiert.",
     "copy_failed": "Die Zwischenablage ist nicht beschreibbar. Bitte den Text markieren und manuell kopieren."
+  },
+  "backups": {
+    "title": "Datenbank-Backups",
+    "note": "Die Backups macht der Backup-Dienst: jede Nacht einen verschlüsselten (AES-256) Datenbank-Dump und ein Medien-Archiv, dazu vor jedem Deploy einen Datenbank-Dump. Tägliche Backups bleiben 30 Tage, danach eines pro Woche für ein Jahr, danach eines pro Monat unbefristet. Bleibt ein neues Backup aus, geht eine E-Mail an die Betreiber. Auf dem Server zeigt „docker compose exec backup tail /var/log/backup.log“ die letzten Läufe, und „scripts/restore_drill.sh“ testet eine Wiederherstellung."
   }
 }

@@ -59,7 +59,13 @@
     "cancel_draft": "Abo-Entwürfe können nicht gekündigt werden — bitte stattdessen löschen.",
     "renewal_chain_number_missing": "Das Vorgänger-Abo hat keine Abo-Nummer, die vererbt werden kann — bitte zuerst die Nummerierung des Vorgängers korrigieren und dann erneut verlängern.",
     "term_already_renewed": "Abo {{predecessor}} hat schon eine Folgelaufzeit: {{renewal}} ab {{renewal_valid_from}}. Bestätige oder bearbeite diese – oder lösche sie zuerst –, statt eine weitere anzulegen.",
-    "term_predecessor_ambiguous": "{{count}} Abos dieses Mitglieds mit dieser Anteilsart enden am {{valid_until}}, daher ist nicht erkennbar, welches dieses Abo fortsetzt. Verlängere das richtige über „verlängern“ in der Abo-Liste und passe den Entwurf an."
+    "term_predecessor_ambiguous": "{{count}} Abos dieses Mitglieds mit dieser Anteilsart enden am {{valid_until}}, daher ist nicht erkennbar, welches dieses Abo fortsetzt. Verlängere das richtige über „verlängern“ in der Abo-Liste und passe den Entwurf an.",
+    "import": {
+      "station_day_incomplete": "Bitte Verteilstation und Liefertag beide angeben – oder beide leer lassen.",
+      "already_imported": "Abo {{subscription_number}} ab {{valid_from}} gibt es für Mitglied {{member_number}} schon – die Zeile wurde übersprungen (schon importiert).",
+      "term_already_imported": "Abo {{predecessor}} hat schon eine Folgelaufzeit: {{renewal}} ab {{renewal_valid_from}}. Die Zeile wurde übersprungen (schon importiert oder von der Verlängerung als Entwurf angelegt). Soll die Zeile diesen Entwurf ersetzen, lösche ihn zuerst.",
+      "term_predecessor_ambiguous": "{{count}} Abos dieses Mitglieds mit dieser Anteilsart enden am {{valid_until}}, daher ist nicht erkennbar, welches diese Zeile fortsetzt. Gib der Zeile in der Spalte subscription_number die Abo-Nummer des Abos, das sie fortsetzt."
+    }
   },
   "payment_cycle": {
     "unknown": "Den Zahlungsrhythmus „{{payment_cycle}}“ gibt es nicht."
@@ -372,6 +378,9 @@
     "date_format": "Ungültiges Belegdatum — bitte im Format JJJJ-MM-TT angeben."
   },
   "billing_profile": {
+    "already_exists": "Mitglied {{member_number}} hat bereits ein Zahlungsprofil. Der Import legt nur neue an und überschreibt kein bestehendes Profil oder Mandat.",
+    "mandate_reference_taken": "Die Mandatsreferenz {{sepa_mandate_reference}} ist bereits vergeben.",
+    "iban_invalid": "Die IBAN ist ungültig. Bitte Ländercode, Länge und Prüfziffern prüfen.",
     "iban_locked": "Das SEPA-Mandat wurde bereits eingesetzt — die IBAN kann nicht mehr geändert werden. Für ein anderes Konto bitte das Mandat ersetzen (neues Mandat mit neuer Mandatsreferenz); ein stilles Austauschen des Kontos ist nicht zulässig.",
     "mandate_already_used": "Über dieses SEPA-Mandat wurde bereits eingezogen. Die Bankverbindung kann hier nicht mehr geändert werden – dafür muss ein neues Mandat erteilt werden. Bitte wende dich dafür an das Büro.",
     "mandate_deactivated": "Das Büro hat dieses SEPA-Mandat deaktiviert. Es kann hier nicht wieder aktiviert werden – bitte wende dich dafür an das Büro.",
@@ -402,7 +411,9 @@
   },
   "crate_line": {
     "invalid_id": "Ungültige Kisten-Position — bitte die Seite neu laden und erneut versuchen.",
-    "changed": "Die Kisten-Positionen haben sich inzwischen geändert — bitte die Seite neu laden und die Änderung erneut vornehmen."
+    "changed": "Die Kisten-Positionen haben sich inzwischen geändert — bitte die Seite neu laden und die Änderung erneut vornehmen.",
+    "offer_bound": "Diese Kisten gehören zu Bestellpositionen und richten sich nach deren Menge — bitte die Bestellposition ändern. Hinzugefügte Kisten lassen sich hier ändern.",
+    "offer_bound_fields": "Preis, Rabatt und Notiz dieser Kisten kommen aus ihren Bestellpositionen und werden bei deren nächster Speicherung neu gesetzt — bitte die Bestellposition ändern. Eine Notiz nehmen nur hier hinzugefügte Kisten an."
   },
   "amount": {
     "invalid": "Menge ungültig — bitte eine gültige Zahl eingeben."
@@ -583,10 +594,7 @@
     "account_locked": "Zu viele fehlgeschlagene Login-Versuche — dieser Account ist vorübergehend gesperrt. Bitte später erneut versuchen.",
     "refresh_token_missing": "Sitzung abgelaufen — bitte erneut anmelden.",
     "refresh_token_invalid": "Sitzung ungültig oder abgelaufen — bitte erneut anmelden.",
-    "not_super_admin_token": "Diese Sitzung hat keine Plattform-Berechtigung — bitte als Plattform-Administrator:in anmelden.",
-    "backup_script_missing": "Das Backup-Skript wurde auf dem Server nicht gefunden. Bitte die Server-Konfiguration prüfen.",
-    "backup_failed": "Das Backup ist fehlgeschlagen. Bitte das Server-Log prüfen und erneut versuchen.",
-    "backup_timed_out": "Das Backup hat zu lange gedauert und wurde abgebrochen. Bitte es später erneut versuchen."
+    "not_super_admin_token": "Diese Sitzung hat keine Plattform-Berechtigung — bitte als Plattform-Administrator:in anmelden."
   },
   "accounting": {
     "email_missing": "Es ist keine Buchhaltungs-E-Mail hinterlegt — bitte in der E-Mail-Konfiguration eintragen."

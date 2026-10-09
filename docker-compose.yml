@@ -293,18 +293,20 @@ services:
       # Uploaded media (invoice/delivery-note PDFs, e-invoice XML, tenant
       # logos) is archived alongside the DB dump from this read-only mount.
       MEDIA_DIR: /app/media
-      # Off-host push scaffold: set RCLONE_REMOTE (+ mount an rclone config and
-      # point RCLONE_CONFIG at it) to copy each encrypted artifact off-host.
-      # Unset -> local-only backups.
+      # Off-host push: set RCLONE_REMOTE (e.g. "storagebox:jasmin-backups") and
+      # RCLONE_CONFIG=/backups/rclone.conf in .env to copy each encrypted
+      # artifact off-host. The config lives in ./backups, already mounted below,
+      # so no compose edit is needed. Unset -> local-only backups.
       RCLONE_REMOTE: ${RCLONE_REMOTE:-}
       RCLONE_CONFIG: ${RCLONE_CONFIG:-}
     volumes:
       - ./backups:/backups:rw
       # Read-only source for the media archive step in backup.sh.
       - media_volume:/app/media:ro
-      # To enable the off-host push, mount an rclone config and set
-      # RCLONE_CONFIG=/rclone.conf (+ RCLONE_REMOTE) in .env:
-      # - ./backups/rclone.conf:/rclone.conf:ro
+      # This mount also carries the rclone config for the off-host push. Create
+      # it with
+      #   docker compose run --rm --entrypoint rclone backup --config /backups/rclone.conf config
+      # then set RCLONE_REMOTE and RCLONE_CONFIG=/backups/rclone.conf in .env.
     depends_on:
       postgres: { condition: service_healthy }
     networks: [jasmin-net]
@@ -521,16 +523,19 @@ services:
       - certbot_conf:/etc/letsencrypt
       - certbot_www:/var/www/certbot
       - ./certbots/linode.ini:/linode.ini:ro
+    # Same-indent lines so ``>`` folds this into one command line (see the
+    # gateway's command): a deeper-indented line keeps its newline, and sh
+    # would run a bare ``certbot renew`` and then each flag as a command.
     entrypoint: >
       /bin/sh -c "trap exit TERM;
-                  while :; do
-                      certbot renew
-                          --dns-linode
-                          --dns-linode-credentials /linode.ini
-                          --dns-linode-propagation-seconds 120
-                          --quiet;
-                      sleep 12h & wait $${!};
-                  done"
+      while :; do
+      certbot renew
+      --dns-linode
+      --dns-linode-credentials /linode.ini
+      --dns-linode-propagation-seconds 120
+      --quiet;
+      sleep 12h & wait $${!};
+      done"
 
 volumes:
   postgres_data:

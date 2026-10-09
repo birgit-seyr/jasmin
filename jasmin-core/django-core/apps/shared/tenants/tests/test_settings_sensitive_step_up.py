@@ -66,20 +66,6 @@ class TestSensitiveSettingsStepUp:
         resp = _update(api_client, tenant, payment_terms_reseller_in_days=30)
         assert resp.status_code == 200
 
-    def test_gdpr_deletion_gate_skips_step_up(self, api_client, tenant):
-        # The setting has no effect — every deletion request waits for an
-        # admin approval — so changing it is not high-impact.
-        resp = _update(
-            api_client, tenant, require_admin_approval_for_gdpr_deletion=False
-        )
-        try:
-            assert resp.status_code == 200
-        finally:
-            current = TenantSettings.get_current_settings(tenant=tenant)
-            if current is not None:
-                current.require_admin_approval_for_gdpr_deletion = True
-                current.save(update_fields=["require_admin_approval_for_gdpr_deletion"])
-
     def test_echoing_unchanged_sensitive_value_skips_step_up(self, api_client, tenant):
         # Resending the CURRENT collection day is a no-op — the step-up gate
         # fires only on an actual change, so this passes without a step-up

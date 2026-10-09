@@ -28,7 +28,6 @@ from apps.commissioning.models import (
 )
 from apps.commissioning.services.delivery_note_service import DeliveryNoteService
 from apps.commissioning.services.invoice_service import InvoiceService
-from apps.commissioning.services.order_content_service import OrderContentService
 from apps.commissioning.services.order_service import OrderService
 from apps.commissioning.tests.factories import (
     CrateFactory,
@@ -87,7 +86,7 @@ def document(request, tenant):
     )
 
 
-def _row(document, amount, price, rabatt=0):
+def _row(document, amount, price, rabatt=0, **fields):
     return document.model.objects.create(
         **{document.parent_field: document.parent},
         crate_type=document.crate,
@@ -95,6 +94,7 @@ def _row(document, amount, price, rabatt=0):
         price_per_unit=Decimal(price),
         rabatt=rabatt,
         tax_rate=TAX,
+        **fields,
     )
 
 
@@ -393,6 +393,117 @@ class TestDocumentCrateLineIds:
 
 
 @pytest.mark.django_db
+class TestDocumentCrateLineNotes:
+    def test_an_update_writes_its_note_on_every_row_of_its_line(
+        self, api_client, document
+    ):
+        other = _row(document, 5, "2.00", note="Other line")
+        first = _row(document, 2, "2.50")
+        second = _row(document, 1, "2.50")
+
+        resp = _patch(
+            api_client,
+            document,
+            _line_id(document.crate, first, second),
+            amount=3,
+            note="Pallet",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert {row.note for row in _rows(document, "2.50")} == {"Pallet"}
+        other.refresh_from_db()
+        assert other.note == "Other line"
+
+    @pytest.mark.parametrize("amount", [2, 5])
+    def test_an_amount_change_keeps_the_notes_of_the_line(
+        self, api_client, document, amount
+    ):
+        """A write without a note leaves the notes of the line as they are,
+        on the rows that take the change too."""
+        named = _row(document, 2, "2.50", note="Pallet", id="A" * 12)
+        other = _row(document, 1, "2.50", note="Bring back", id="B" * 12)
+
+        resp = _patch(
+            api_client, document, _line_id(document.crate, named), amount=amount
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        notes = {row.pk: row.note for row in _rows(document)}
+        assert notes[named.pk] == "Pallet"
+        assert notes.get(other.pk, "Bring back") == "Bring back"
+        assert set(notes.values()) <= {"Pallet", "Bring back"}
+
+    def test_a_line_of_one_row_keeps_its_note_through_an_amount_change(
+        self, api_client, document
+    ):
+        row = _row(document, 2, "2.50", note="Pallet")
+
+        resp = _patch(api_client, document, _line_id(document.crate, row), amount=4)
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        row.refresh_from_db()
+        assert (row.amount, row.note) == (4, "Pallet")
+
+    def test_a_line_written_anew_takes_the_note_sent_with_it(
+        self, api_client, document
+    ):
+        gone = _row(document, 3, "2.50")
+        line_id = _line_id(document.crate, gone)
+        document.model.objects.filter(pk=gone.pk).delete()
+
+        resp = _patch(
+            api_client,
+            document,
+            line_id,
+            amount=4,
+            price_per_unit="2.50",
+            note="Pallet",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        (written,) = _rows(document)
+        assert written.note == "Pallet"
+
+    def test_a_line_written_anew_without_a_note_has_none(self, api_client, document):
+        resp = _patch(api_client, document, document.crate.id, amount=4)
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        (written,) = _rows(document)
+        assert not written.note
+
+    def test_the_crate_lines_and_the_document_show_each_lines_note(
+        self, api_client, document
+    ):
+        """The note column reads the summary, so the note stays visible after
+        the document is read again."""
+        _row(document, 5, "2.00", note="Pallet")
+        _row(document, 3, "2.50")
+
+        lines = _lines(api_client, document)
+        retrieved = api_client.get(document.retrieve_url)
+
+        assert {price: line["note"] for price, line in lines.items()} == {
+            "2.00": "Pallet",
+            "2.50": None,
+        }
+        assert retrieved.status_code == status.HTTP_200_OK, retrieved.data
+        assert {
+            line["price_per_unit"]: line["note"]
+            for line in retrieved.data["crate_items"]
+        } == {"2.00": "Pallet", "2.50": None}
+
+    def test_an_update_answers_with_its_lines_note(self, api_client, document):
+        row = _row(document, 2, "2.50")
+
+        resp = _patch(
+            api_client, document, _line_id(document.crate, row), amount=2, note="Pallet"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert resp.data["note"] == "Pallet"
+
+
+@pytest.mark.django_db
 class TestSummaryInvoiceAcrossACratePriceChange:
     def test_one_price_band_is_corrected_on_its_own(self, api_client, tenant):
         """A summary invoice over two delivery notes bills a crate at the old
@@ -565,46 +676,48 @@ class TestOrderCrateLineIds:
         lines = api_client.get(reverse("crate_contents-list"), _order_body(order)).data
         assert [line["id"] for line in lines] == [resp.data["id"]]
 
-    def test_lowering_a_deposit_line_leaves_nothing_behind_its_order_line(
+    def test_a_reduction_below_a_lines_deposit_crates_is_refused(
         self, api_client, order
     ):
-        """A line of deposit crates takes a reduction on its own rows. No row is
-        added to the order that would outlive them, so deleting their order
-        line takes the line off the order and off its delivery note."""
+        """Deposit crates come with their order line, which sets them anew
+        whenever it is saved, so a reduction below them is refused: the
+        office changes the order line instead."""
         crate = CrateFactory()
         deposit = _offer_bound_row(order, crate, 4)
-        # A goods line without crates keeps the order once the deposit's is gone.
-        OrderContentFactory(order=order)
+        direct = _direct_row(order, crate, 2)
 
-        resp = _order_patch(api_client, order, _line_id(crate, deposit), amount=3)
+        resp = _order_patch(
+            api_client, order, _line_id(crate, deposit, direct), amount=3
+        )
 
-        assert resp.status_code == status.HTTP_200_OK, resp.data
-        assert (resp.data["id"], resp.data["amount"]) == (_line_id(crate, deposit), 3)
+        assert resp.status_code == status.HTTP_409_CONFLICT, resp.data
+        assert resp.data["code"] == "crate_line.offer_bound"
+        assert resp.data["details"] == {"offer_bound_amount": 4}
         deposit.refresh_from_db()
-        assert deposit.amount == 3
-        assert _order_rows(order, crate) == [deposit]
+        direct.refresh_from_db()
+        assert (deposit.amount, direct.amount) == (4, 2)
 
-        OrderContentService.delete_order_content(deposit.order_content_id)
-
-        assert _order_rows(order, crate) == []
-        delivery_note = DeliveryNoteService.create_from_order(order=order)
-        assert not delivery_note.crate_items.exists()
-
-    @pytest.mark.parametrize(
-        ("named", "expected"),
-        [
-            # The direct row goes first; the deposit gives only what is left.
-            ("deposit", {"deposit": 3}),
-            # The direct row names the line, so it keeps one crate.
-            ("direct", {"direct": 1, "deposit": 2}),
-        ],
-    )
-    def test_a_reduction_comes_off_the_direct_rows_first_and_never_below_zero(
-        self, api_client, order, named, expected
+    def test_a_bare_crate_type_id_cannot_lower_the_deposit_crates(
+        self, api_client, order
     ):
-        """Crates come off the rows added to the order before the deposit rows,
-        which their order line rebuilds. No row goes below zero, and the row
-        that names the line keeps at least one crate, so the line keeps its id."""
+        crate = CrateFactory()
+        _offer_bound_row(order, crate, 2)
+        _offer_bound_row(order, crate, 1)
+
+        resp = _order_patch(api_client, order, crate.id, amount=2)
+
+        assert resp.status_code == status.HTTP_409_CONFLICT, resp.data
+        assert resp.data["code"] == "crate_line.offer_bound"
+        assert sum(row.amount for row in _order_rows(order, crate)) == 3
+
+    @pytest.mark.parametrize("named", ["deposit", "direct"])
+    @pytest.mark.parametrize(("amount", "direct_left"), [(5, 1), (4, 0)])
+    def test_a_reduction_comes_off_the_rows_added_to_the_order(
+        self, api_client, order, named, amount, direct_left
+    ):
+        """The crates come off the rows added directly to the order; the
+        deposit rows keep what their order line made. When the row that named
+        the line goes, the answer names the line by a row it keeps."""
         crate = CrateFactory()
         named_id, other_id = "A" * 12, "B" * 12
         deposit = _offer_bound_row(
@@ -613,17 +726,48 @@ class TestOrderCrateLineIds:
         direct = _direct_row(
             order, crate, 2, id=named_id if named == "direct" else other_id
         )
-        line_id = _line_id(crate, deposit, direct)
 
-        resp = _order_patch(api_client, order, line_id, amount=3)
+        resp = _order_patch(
+            api_client, order, _line_id(crate, deposit, direct), amount=amount
+        )
 
         assert resp.status_code == status.HTTP_200_OK, resp.data
-        assert (resp.data["id"], resp.data["amount"]) == (line_id, 3)
-        kinds = {
-            ("deposit" if row.order_content_id else "direct"): row.amount
-            for row in _order_rows(order, crate)
-        }
-        assert kinds == expected
+        rows = _order_rows(order, crate)
+        assert resp.data["amount"] == amount
+        assert resp.data["id"] == _line_id(crate, *rows)
+        deposit.refresh_from_db()
+        assert deposit.amount == 4
+        assert sum(row.amount for row in rows if row.order_id) == direct_left
+        assert all(row.amount > 0 for row in rows)
+
+    def test_an_increase_on_a_deposit_line_carries_the_note_sent(
+        self, api_client, order
+    ):
+        """The note goes on the crates added to the order; the deposit row
+        takes none, as its order line would drop it on its next save."""
+        crate = CrateFactory()
+        deposit = _offer_bound_row(order, crate, 4)
+
+        resp = _order_patch(
+            api_client, order, _line_id(crate, deposit), amount=6, note="Pallet"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert resp.data["note"] == "Pallet"
+        deposit.refresh_from_db()
+        assert deposit.note is None
+        (added,) = CrateOrderContent.objects.filter(order=order, crate_type=crate)
+        assert (added.amount, added.note) == (2, "Pallet")
+
+    def test_an_increase_without_a_note_leaves_the_notes_alone(self, api_client, order):
+        crate = CrateFactory()
+        row = _direct_row(order, crate, 2, note="Pallet")
+
+        resp = _order_patch(api_client, order, _line_id(crate, row), amount=5)
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        row.refresh_from_db()
+        assert (row.amount, row.note) == (5, "Pallet")
 
     def test_a_finalized_order_refuses_a_line_write(self, api_client, order):
         crate = CrateFactory()
@@ -648,6 +792,34 @@ class TestOrderCrateLineIds:
 
         assert resp.status_code == status.HTTP_204_NO_CONTENT
         assert [row.pk for row in _order_rows(order, crate)] == [kept.pk]
+
+    @pytest.mark.parametrize("by_type", [False, True])
+    def test_a_line_of_deposit_crates_alone_cannot_be_deleted(
+        self, api_client, order, by_type
+    ):
+        crate = CrateFactory()
+        deposit = _offer_bound_row(order, crate, 4)
+
+        resp = _order_delete(
+            api_client, order, crate.id if by_type else _line_id(crate, deposit)
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT, resp.data
+        assert resp.data["code"] == "crate_line.offer_bound"
+        assert resp.data["details"] == {"offer_bound_amount": 4}
+        assert _order_rows(order, crate) == [deposit]
+
+    def test_a_delete_takes_the_added_crates_off_a_deposit_line(
+        self, api_client, order
+    ):
+        crate = CrateFactory()
+        deposit = _offer_bound_row(order, crate, 4)
+        _direct_row(order, crate, 2)
+
+        resp = _order_delete(api_client, order, _line_id(crate, deposit))
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        assert _order_rows(order, crate) == [deposit]
 
     def test_a_line_whose_row_is_gone_is_refused(self, api_client, order):
         crate = CrateFactory()
@@ -699,3 +871,161 @@ class TestOrderCrateLineIds:
         assert resp.data["amount"] == 3
         lines = api_client.get(reverse("crate_contents-list"), _order_body(order)).data
         assert resp.data["id"] in {line["id"] for line in lines}
+
+
+@pytest.mark.django_db
+class TestOrderCrateLineOfferBoundFields:
+    """An order line rebuilds its deposit rows at the dated price with no rabatt
+    and no note whenever it is saved, so a price, rabatt or note written onto
+    them would not last: such a write is refused, and a note goes on the
+    crates added directly to the order."""
+
+    @pytest.mark.parametrize("mixed", [False, True])
+    @pytest.mark.parametrize(
+        "change", [{"price_per_unit": "3.00"}, {"rabatt": 10}], ids=["price", "rabatt"]
+    )
+    def test_a_price_or_rabatt_change_on_a_deposit_line_is_refused(
+        self, api_client, order, mixed, change
+    ):
+        crate = CrateFactory()
+        deposit = _offer_bound_row(order, crate, 4)
+        rows = [deposit]
+        if mixed:
+            rows.append(_direct_row(order, crate, 2))
+
+        resp = _order_patch(
+            api_client,
+            order,
+            _line_id(crate, *rows),
+            amount=6 if mixed else 4,
+            **change,
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT, resp.data
+        assert resp.data["code"] == "crate_line.offer_bound_fields"
+        assert resp.data["details"] == {"offer_bound_amount": 4}
+        assert {
+            (row.price_per_unit, row.rabatt) for row in _order_rows(order, crate)
+        } == {(Decimal("2.50"), None)}
+
+    def test_a_bare_crate_type_id_cannot_reprice_the_deposit_crates(
+        self, api_client, order
+    ):
+        crate = CrateFactory()
+        _offer_bound_row(order, crate, 4)
+
+        resp = _order_patch(
+            api_client, order, crate.id, amount=4, price_per_unit="3.00"
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT, resp.data
+        assert resp.data["code"] == "crate_line.offer_bound_fields"
+
+    def test_the_lines_own_values_sent_back_are_no_change(self, api_client, order):
+        """The crate table sends the line's price and rabatt with every save; an
+        amount change that sends them unchanged goes through."""
+        crate = CrateFactory()
+        deposit = _offer_bound_row(order, crate, 4)
+
+        resp = _order_patch(
+            api_client,
+            order,
+            _line_id(crate, deposit),
+            amount=6,
+            price_per_unit="2.50",
+            rabatt=0,
+            note="",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert resp.data["amount"] == 6
+        deposit.refresh_from_db()
+        assert (deposit.amount, deposit.rabatt, deposit.note) == (4, None, None)
+
+    def test_a_note_on_a_line_of_deposit_crates_alone_is_refused(
+        self, api_client, order
+    ):
+        crate = CrateFactory()
+        deposit = _offer_bound_row(order, crate, 4)
+
+        resp = _order_patch(
+            api_client, order, _line_id(crate, deposit), amount=4, note="Pallet"
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT, resp.data
+        assert resp.data["code"] == "crate_line.offer_bound_fields"
+        deposit.refresh_from_db()
+        assert deposit.note is None
+
+    def test_a_note_on_a_mixed_line_goes_on_its_added_crates(self, api_client, order):
+        crate = CrateFactory()
+        deposit = _offer_bound_row(order, crate, 4)
+        direct = _direct_row(order, crate, 2)
+
+        resp = _order_patch(
+            api_client, order, _line_id(crate, deposit, direct), amount=6, note="Pallet"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert resp.data["note"] == "Pallet"
+        deposit.refresh_from_db()
+        direct.refresh_from_db()
+        assert (deposit.note, direct.note) == (None, "Pallet")
+
+    def test_a_note_with_a_reduction_to_the_deposit_crates_is_refused(
+        self, api_client, order
+    ):
+        """The reduction takes the added crates off, and the note with them."""
+        crate = CrateFactory()
+        deposit = _offer_bound_row(order, crate, 4)
+        direct = _direct_row(order, crate, 2)
+
+        resp = _order_patch(
+            api_client, order, _line_id(crate, deposit, direct), amount=4, note="Pallet"
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT, resp.data
+        assert resp.data["code"] == "crate_line.offer_bound_fields"
+        direct.refresh_from_db()
+        assert (direct.amount, direct.note) == (2, None)
+
+    def test_a_line_of_added_crates_still_takes_a_new_price(self, api_client, order):
+        crate = CrateFactory()
+        direct = _direct_row(order, crate, 2)
+
+        resp = _order_patch(
+            api_client,
+            order,
+            _line_id(crate, direct),
+            amount=2,
+            price_per_unit="3.00",
+            rabatt=5,
+            note="Pallet",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        direct.refresh_from_db()
+        assert (direct.price_per_unit, direct.rabatt, direct.note) == (
+            Decimal("3.00"),
+            5,
+            "Pallet",
+        )
+
+    def test_the_crate_lines_say_how_many_crates_come_with_order_lines(
+        self, api_client, order
+    ):
+        crate = CrateFactory()
+        _offer_bound_row(order, crate, 4)
+        _direct_row(order, crate, 2, note="Pallet")
+        _direct_row(order, crate, 3, price="2.00")
+
+        lines = api_client.get(reverse("crate_contents-list"), _order_body(order)).data
+
+        assert {
+            line["price_per_unit"]: (
+                line["amount"],
+                line["offer_bound_amount"],
+                line["note"],
+            )
+            for line in lines
+        } == {"2.50": (6, 4, "Pallet"), "2.00": (3, 0, None)}

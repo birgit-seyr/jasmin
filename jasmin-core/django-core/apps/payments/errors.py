@@ -95,6 +95,14 @@ class IbanLocked(BadRequestError):
     code = "billing_profile.iban_locked"
 
 
+class BillingProfileIbanInvalid(BadRequestError):
+    """The IBAN is not a valid IBAN, even with its spaces removed and its
+    letters upper-cased: wrong length for its country, or wrong check digits.
+    Raised by the mandate import, which reports it per row."""
+
+    code = "billing_profile.iban_invalid"
+
+
 class SepaMandateSignedInFuture(BadRequestError):
     """``sepa_mandate_signed_at`` lies in the future. A mandate cannot be signed
     after today, and such a value aborts the entire pain.008 batch at export
@@ -133,6 +141,22 @@ class SepaMandateTextNotCurrent(BadRequestError):
     code = "billing_profile.sepa_mandate_text_not_current"
 
 
+class BillingProfileAlreadyExists(ConflictError):
+    """The mandate import names a member who already has a billing profile. The
+    import only creates: a live mandate at the bank must never be redirected by
+    a CSV row, so the member's existing profile is left as it is."""
+
+    code = "billing_profile.already_exists"
+
+
+class MandateReferenceTaken(ConflictError):
+    """The mandate import names a SEPA mandate reference another billing profile
+    already carries. The bank identifies a mandate by its reference, so two
+    members cannot share one."""
+
+    code = "billing_profile.mandate_reference_taken"
+
+
 __all__ = [
     "BillingRunInvalidPeriod",
     "BillingRunInvalidCollectionDate",
@@ -148,4 +172,6 @@ __all__ = [
     "SepaMandateAlreadyUsed",
     "SepaMandateDeactivated",
     "SepaMandateTextNotCurrent",
+    "BillingProfileAlreadyExists",
+    "MandateReferenceTaken",
 ]

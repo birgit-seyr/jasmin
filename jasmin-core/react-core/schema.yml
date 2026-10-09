@@ -4263,8 +4263,8 @@ paths:
           description: Error response.
     put:
       operationId: commissioning_crate_contents_delivery_note_update
-      description: Set the amount, price, rabatt and tax rate of one crate line of
-        a delivery note, through adjustment entries. The id names the line; a bare
+      description: Set the amount, price, rabatt, tax rate and note of one crate line
+        of a delivery note, through adjustment entries. The id names the line; a bare
         crate type id names every line of that type.
       parameters:
       - in: path
@@ -4577,8 +4577,8 @@ paths:
           description: Error response.
     put:
       operationId: commissioning_crate_contents_invoice_update
-      description: Set the amount, price, rabatt and tax rate of one crate line of
-        an invoice, through adjustment entries. The id names the line; a bare crate
+      description: Set the amount, price, rabatt, tax rate and note of one crate line
+        of an invoice, through adjustment entries. The id names the line; a bare crate
         type id names every line of that type.
       parameters:
       - in: path
@@ -28493,7 +28493,7 @@ components:
 
         ``tax_rate`` null or omitted resolves the crate's rate for the delivery
         date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
-        keeps the stored value.
+        / ``note`` keeps the stored value.
       properties:
         delivery_note_id:
           type: string
@@ -28531,7 +28531,7 @@ components:
 
         ``tax_rate`` null or omitted resolves the crate's rate for the invoice
         date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
-        keeps the stored value.
+        / ``note`` keeps the stored value.
       properties:
         invoice_id:
           type: string
@@ -28585,6 +28585,11 @@ components:
         tax_rate:
           type: number
           format: double
+        note:
+          type: string
+          nullable: true
+          description: 'The line''s note: its rows'' distinct notes, joined by '';
+            ''.'
         invoice_id:
           type: string
           nullable: true
@@ -28781,7 +28786,7 @@ components:
         ``line_netto``), matching the DN/invoice ``CrateItemSummarySerializer``
         — never JSON floats — so full precision survives the wire and the
         client does not recompute line totals in floating point. ``rabatt`` /
-        ``tax_rate`` stay numeric. ``note`` / ``order_id`` / ``order_number`` /
+        ``tax_rate`` stay numeric. ``order_id`` / ``order_number`` /
         ``order_number_prefix`` only appear on create.
       properties:
         id:
@@ -28806,6 +28811,13 @@ components:
         note:
           type: string
           nullable: true
+          description: 'The line''s note: its rows'' distinct notes, joined by '';
+            ''.'
+        offer_bound_amount:
+          type: integer
+          description: How many crates of the line come with order lines. Those follow
+            their order line, so the line's price and rabatt cannot change here, nor
+            its amount drop below this.
         order_id:
           type: string
         order_number:
@@ -39738,8 +39750,6 @@ components:
           minimum: 0
         default_planning_granularity:
           $ref: '#/components/schemas/DefaultPlanningGranularityEnum'
-        uses_pledge_round:
-          type: boolean
         uploads_weekly_share_amount:
           type: boolean
         default_tax_rate_articles:
@@ -39775,10 +39785,6 @@ components:
             date with this day of the chosen month (today, if that day has passed);
             the office can change it. Nothing moves it for SEPA lead times or TARGET
             banking days.
-        require_admin_approval_for_gdpr_deletion:
-          type: boolean
-          description: 'Has no effect: every deletion request needs an office/admin
-            approval after the email-confirm step, whatever this says.'
         requires_paper_signature_for_membership:
           type: boolean
         requires_paper_signature_for_cancellation_of_membership:
@@ -40049,8 +40055,6 @@ components:
           minimum: 0
         default_planning_granularity:
           $ref: '#/components/schemas/DefaultPlanningGranularityEnum'
-        uses_pledge_round:
-          type: boolean
         uploads_weekly_share_amount:
           type: boolean
         billing_strategy:
@@ -40074,10 +40078,6 @@ components:
             date with this day of the chosen month (today, if that day has passed);
             the office can change it. Nothing moves it for SEPA lead times or TARGET
             banking days.
-        require_admin_approval_for_gdpr_deletion:
-          type: boolean
-          description: 'Has no effect: every deletion request needs an office/admin
-            approval after the email-confirm step, whatever this says.'
         requires_paper_signature_for_membership:
           type: boolean
         requires_paper_signature_for_cancellation_of_membership:
